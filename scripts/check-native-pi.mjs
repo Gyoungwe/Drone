@@ -239,7 +239,7 @@ export function scanNativePiRegistrations(rootDir = path.resolve(SCRIPT_DIR, "..
 	return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function validateNativePiFixture(records, fixture) {
+export function validateNativePiFixture(records, fixture, rootDir = path.resolve(SCRIPT_DIR, "..")) {
 	const mappings = fixture?.tools ?? fixture?.mappings;
 	const errors = [];
 	if (fixture?.version !== 1) errors.push("fixture version must be 1");
@@ -264,8 +264,22 @@ export function validateNativePiFixture(records, fixture) {
 		if (typeof mapping.targetPackage !== "string" || !mapping.targetPackage.trim())
 			errors.push(`${record.name}: targetPackage must be a non-empty string`);
 	}
-	for (const name of Object.keys(mappings))
-		if (!seen.has(name)) errors.push(`fixture mapping has no source registration: ${name}`);
+	for (const [name, mapping] of Object.entries(mappings)) {
+		if (seen.has(name)) continue;
+		// A plugin-owned registration is intentionally absent from the host source
+		// scan. Keep its host entry in the migration map, but require an existing
+		// forwarding boundary so a stale path cannot silently pass the check.
+		if (mapping?.delegated === true) {
+			if (typeof mapping.source !== "string" || !fs.existsSync(path.join(rootDir, mapping.source)))
+				errors.push(`delegated fixture source is missing for ${name}: ${mapping.source ?? ""}`);
+			if (mapping.nativePiAvailable !== true)
+				errors.push(`${name}: delegated nativePiAvailable must be true`);
+			if (typeof mapping.targetPackage !== "string" || !mapping.targetPackage.trim())
+				errors.push(`${name}: delegated targetPackage must be a non-empty string`);
+			continue;
+		}
+		errors.push(`fixture mapping has no source registration: ${name}`);
+	}
 	return errors;
 }
 

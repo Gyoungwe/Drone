@@ -566,6 +566,8 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const knowledgeMaintenance = new KnowledgeMaintenanceService({
 		path: join(getAgentDir(), "knowledge-maintenance.json"),
 		readOverview: (cwd) => sessions.knowledge.overview({ cwd }),
+		readGraph: (_cwd, revision) =>
+			sessions.knowledge.graph({ revision, limit: 5000, view: "all", mergeMirrors: false }),
 		readNote: (cwd, path, revision) => sessions.knowledge.read({ cwd, path, revision }),
 		setTopic: async (cwd, path, topic, revision) => {
 			await sessions.knowledge.setMaintenanceTopic({ cwd, notePath: path, topic, revision });
@@ -580,14 +582,24 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				revision,
 			});
 		},
-		complete: async (prompt) => {
+		complete: async (prompt, selectedModel) => {
 			const runtime = await sessions.getModelRuntime();
-			const provider = (await sessions.settings.listProviders()).find(
-				(item) => item.configured && item.models.length > 0,
-			);
-			if (!provider) throw new Error("No configured model is available for knowledge maintenance");
-			const model =
-				runtime.getModel(provider.id, provider.models[0]?.id ?? "") ?? runtime.getModels(provider.id)[0];
+			const providers = await sessions.settings.listProviders();
+			let model: ReturnType<typeof runtime.getModel> | undefined;
+			if (selectedModel) {
+				const separator = selectedModel.indexOf("/");
+				const providerId = separator > 0 ? selectedModel.slice(0, separator) : "";
+				const modelId = separator > 0 ? selectedModel.slice(separator + 1) : "";
+				if (!providerId || !modelId) throw new Error("Invalid knowledge maintenance model");
+				const provider = providers.find((item) => item.id === providerId && item.configured);
+				if (!provider) throw new Error("Selected knowledge maintenance model is unavailable");
+				model = runtime.getModel(provider.id, modelId);
+			} else {
+				const provider = providers.find((item) => item.configured && item.models.length > 0);
+				if (provider)
+					model =
+						runtime.getModel(provider.id, provider.models[0]?.id ?? "") ?? runtime.getModels(provider.id)[0];
+			}
 			if (!model) throw new Error("No configured model is available for knowledge maintenance");
 			const response = await runtime.completeSimple(
 				model,

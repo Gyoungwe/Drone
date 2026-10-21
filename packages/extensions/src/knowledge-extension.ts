@@ -1,7 +1,15 @@
-export {
-	registerKnowledgeInterface,
+import { configureKnowledgeExtensionRuntime } from "./internal/knowledge-runtime";
+import {
+	registerKnowledgeInterface as registerPluginKnowledgeInterface,
 	registerWikiReviewAcceptance,
-} from "./internal/knowledge-extension";
+} from "@gyoungwe/pi-knowledge/host";
+
+export function registerKnowledgeInterface(pi: any, options?: any): any {
+	configureKnowledgeExtensionRuntime();
+	return registerPluginKnowledgeInterface(pi, options);
+}
+
+export { registerWikiReviewAcceptance };
 
 // Keep the deterministic policy benchmark on the same generated entry as the
 // production knowledge extension. The policy itself remains owned by the

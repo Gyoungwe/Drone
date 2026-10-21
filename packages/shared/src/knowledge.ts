@@ -645,6 +645,8 @@ export interface KnowledgeMaintenanceSettings {
 	enabled: boolean;
 	maxItems: number;
 	dailyLimit: number;
+	/** Optional provider/model key (`provider/id`); null uses the first configured model. */
+	model?: string | null;
 }
 export interface KnowledgeMaintenanceRun {
 	startedAt: string;

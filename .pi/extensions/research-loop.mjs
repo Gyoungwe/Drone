@@ -686,7 +686,7 @@ var init_wiki_policy = __esm({
 function runtimeSlot(domain, key, factory) {
   let hostProxy;
   let provider;
-  const resolve12 = () => {
+  const resolve13 = () => {
     if (hostSlotProvider) {
       if (provider !== hostSlotProvider) {
         provider = hostSlotProvider;
@@ -700,14 +700,14 @@ function runtimeSlot(domain, key, factory) {
   };
   return new Proxy({}, {
     get: (_target, property) => {
-      const state5 = resolve12();
+      const state5 = resolve13();
       const value = Reflect.get(state5, property);
       return typeof value === "function" ? value.bind(state5) : value;
     },
-    set: (_target, property, value) => Reflect.set(resolve12(), property, value),
-    ownKeys: () => Reflect.ownKeys(resolve12()),
+    set: (_target, property, value) => Reflect.set(resolve13(), property, value),
+    ownKeys: () => Reflect.ownKeys(resolve13()),
     getOwnPropertyDescriptor: (_target, property) => {
-      const descriptor = Reflect.getOwnPropertyDescriptor(resolve12(), property);
+      const descriptor = Reflect.getOwnPropertyDescriptor(resolve13(), property);
       return descriptor ? { ...descriptor, configurable: true } : void 0;
     }
   });
@@ -768,8 +768,8 @@ var init_runtime_host = __esm({
     defaultRunRuntimeExclusive = async (_namespace, key, work) => {
       const previous = locks.get(key) ?? Promise.resolve();
       let release;
-      const current = new Promise((resolve12) => {
-        release = resolve12;
+      const current = new Promise((resolve13) => {
+        release = resolve13;
       });
       locks.set(key, previous.then(() => current));
       await previous;
@@ -1442,7 +1442,7 @@ function deliverKnowledgeUi(value) {
     state.flows.set(value.flow.sessionId, structuredClone(value.flow));
     while (state.flows.size > MAX_SESSIONS) state.flows.delete(state.flows.keys().next().value);
   }
-  state.seq = Math.max(state.seq, Number(value.sequence) || 0);
+  state.seq = Number(value.sequence) || state.seq + 1;
   for (const fn of state.listeners) {
     try {
       fn(structuredClone(value));
@@ -1472,7 +1472,6 @@ var init_ui_state = __esm({
   "src/core/ui-state.ts"() {
     "use strict";
     init_config();
-    init_runtime_host();
     init_runtime_host();
     init_runtime_host();
     init_flow_cards();
@@ -1795,7 +1794,7 @@ async function renameWithRetry(from, to, options = {}) {
     } catch (error) {
       const code = error?.code;
       if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts) throw error;
-      await new Promise((resolve12) => setTimeout(resolve12, delay * attempt));
+      await new Promise((resolve13) => setTimeout(resolve13, delay * attempt));
     }
   }
 }
@@ -2760,6 +2759,13 @@ var EXPERIENCE_LIMITS = Object.freeze({
   maxSchedulerJobIdChars: 180,
   maxQueryChars: 200
 });
+init_runtime_host();
+init_config();
+init_flow_cards();
+init_runtime_host();
+init_topic_memory();
+init_ui_state();
+init_wiki_review();
 
 // packages/research/src/claim-bindings.ts
 var RELATIONSHIPS = ["direct", "indirect", "hypothesis", "unsupported"];

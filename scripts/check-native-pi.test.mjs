@@ -16,7 +16,7 @@ const fixture = JSON.parse(fs.readFileSync(DEFAULT_FIXTURE, "utf8"));
 
 test("native Pi scan maps direct, task-helper, and factory registrations", () => {
 	const records = scanNativePiRegistrations(rootDir);
-	assert.ok(records.length >= 50);
+	assert.ok(records.length >= 40);
 	assert.ok(records.some((record) => record.name === "task_plan" && record.registration === "task-helper"));
 	assert.ok(
 		records.some(
@@ -36,6 +36,10 @@ test("checked-in fixture covers every discovered registration", () => {
 	const mapped = applyFixture(records, fixture);
 	assert.equal(mapped.length, records.length);
 	assert.ok(mapped.every((entry) => entry.nativePiAvailable === true));
+	assert.ok(
+		Object.values(fixture.tools).some((mapping) => mapping.delegated === true),
+		"plugin-owned registrations must be marked as delegated",
+	);
 	assert.deepEqual([...new Set(mapped.map((entry) => entry.targetPackage))].sort(), [
 		"pi-core",
 		"pi-knowledge",

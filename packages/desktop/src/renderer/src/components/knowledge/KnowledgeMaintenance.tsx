@@ -26,8 +26,22 @@ export function KnowledgeMaintenance({
 	const [error, setError] = useState<string | null>(null),
 		[message, setMessage] = useState<string | null>(null),
 		[confirm, setConfirm] = useState(false);
-	const [automatic, setAutomatic] = useState({ enabled: false, maxItems: 5, dailyLimit: 20 });
-	const [runs, setRuns] = useState<Array<{ startedAt: string; processed: number; modelCalls: number }>>([]);
+	const [automatic, setAutomatic] = useState({
+		enabled: false,
+		maxItems: 5,
+		dailyLimit: 20,
+		model: null as string | null,
+	});
+	const models = useSessionsStore((s) => s.models);
+	const [runs, setRuns] = useState<
+		Array<{
+			startedAt: string;
+			processed: number;
+			modelCalls: number;
+			items: Array<{ id: string; kind: string; status: string; reason?: string }>;
+		}>
+	>([]);
+	const [expandedRun, setExpandedRun] = useState<string | null>(null);
 	useEffect(() => {
 		setOffset(0);
 		setPage(null);
@@ -62,7 +76,7 @@ export function KnowledgeMaintenance({
 		void Promise.all([getPi().getKnowledgeMaintenanceSettings(), getPi().getKnowledgeMaintenanceRuns()])
 			.then(([settings, history]) => {
 				if (!live) return;
-				setAutomatic(settings);
+				setAutomatic({ ...settings, model: settings.model ?? null });
 				setRuns(history);
 			})
 			.catch((e) => live && setError(String(e?.message || e)));
@@ -131,6 +145,7 @@ export function KnowledgeMaintenance({
 			setBusy(false);
 		}
 	}
+	const latestRun = runs[0];
 	return (
 		<div className="space-y-4" data-testid="knowledge-maintenance">
 			<section className="rounded-xl border border-border p-3" data-testid="automatic-knowledge-maintenance">
@@ -144,6 +159,21 @@ export function KnowledgeMaintenance({
 					</Button>
 				</div>
 				<div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+					<label>
+						{t("maintenanceModel")}{" "}
+						<select
+							className="rounded border border-border bg-transparent px-1"
+							value={automatic.model ?? ""}
+							onChange={(e) => void saveAutomatic({ ...automatic, model: e.target.value || null })}
+						>
+							<option value="">{t("maintenanceModelDefault")}</option>
+							{models.map((model) => (
+								<option key={`${model.provider}/${model.id}`} value={`${model.provider}/${model.id}`}>
+									{model.label || model.id}
+								</option>
+							))}
+						</select>
+					</label>
 					<label>
 						{t("maintenanceItems")}{" "}
 						<input
@@ -177,10 +207,37 @@ export function KnowledgeMaintenance({
 						{t("runAutomaticMaintenance")}
 					</Button>
 				</div>
-				{runs[0] && (
-					<p className="mt-2 text-[11px] text-ink-faint">
-						{t("lastAutomaticMaintenance")}: {runs[0].processed} · {runs[0].modelCalls}
-					</p>
+				{latestRun && (
+					<div className="mt-2 text-[11px] text-ink-faint">
+						<button
+							type="button"
+							className="underline"
+							onClick={() =>
+								setExpandedRun((current) => (current === latestRun.startedAt ? null : latestRun.startedAt))
+							}
+						>
+							{t("lastAutomaticMaintenance")}: {latestRun.processed} · {latestRun.modelCalls}
+						</button>
+						{expandedRun === latestRun.startedAt && (
+							<ul className="mt-2 space-y-1 text-ink-dim">
+								{latestRun.items.map((item) => (
+									<li key={item.id} className="flex items-center justify-between gap-2">
+										<span className="truncate">
+											{item.kind} · {item.status}
+											{item.reason ? ` · ${item.reason}` : ""}
+										</span>
+										<button
+											type="button"
+											className="shrink-0 underline"
+											onClick={() => void getPi().openKnowledgeTarget({ cwd, path: item.id, revision })}
+										>
+											{t("openTarget")}
+										</button>
+									</li>
+								))}
+							</ul>
+						)}
+					</div>
 				)}
 			</section>
 			<p className="text-xs leading-relaxed text-ink-dim">{t("maintenanceHint")}</p>

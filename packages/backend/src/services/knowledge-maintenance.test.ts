@@ -23,9 +23,15 @@ async function fixture(problems: Array<{ path: string; kind?: string; message?: 
 	const calls: string[] = [];
 	const service = new KnowledgeMaintenanceService({
 		path: join(root, "state.json"),
-		readOverview: async () => ({
-			binding: { revision: 1 },
-			index: { revision: 1, problems },
+		readOverview: async () => ({ binding: { revision: 1 }, index: { revision: 1, problems: [] } }),
+		readGraph: async () => ({
+			nodes: problems.map((problem, index) => ({
+				path: problem.path,
+				title: problem.kind === "missing-topic" ? `PMC${index + 1}.pdf` : basename(problem.path, ".md"),
+				kind: "note",
+				degree: 0,
+			})),
+			edges: [],
 		}),
 		readNote: async (_cwd, path) => ({ title: basename(path, ".md"), text: "# Note", missing: false }),
 		complete: async () => JSON.stringify({ topic: "Stable topic" }),
@@ -93,7 +99,16 @@ describe("KnowledgeMaintenanceService scheduling", () => {
 			}
 			const service = new KnowledgeMaintenanceService({
 				path: join(root, "state.json"),
-				readOverview: async () => ({ binding: { revision: 1 }, index: { revision: 1, problems } }),
+				readOverview: async () => ({ binding: { revision: 1 }, index: { revision: 1, problems: [] } }),
+				readGraph: async () => ({
+					nodes: problems.map((problem, index) => ({
+						path: problem.path,
+						title: `PMC${index + 1}.pdf`,
+						kind: "note",
+						degree: 0,
+					})),
+					edges: [],
+				}),
 				readNote: async (_cwd, path) => ({
 					title: basename(path, ".md"),
 					text: await readFile(join(vault, path), "utf8"),

@@ -35,9 +35,8 @@ test("extension build check detects transitive dependency drift", async () => {
 	try {
 		const built = await runNode("scripts/build-extensions.mjs", ["--force", "--out-dir", outDir]);
 		assert.equal(built.status, 0, built.output);
-		await failsAfterDependencyEdit(
-			join(root, "packages/extensions/src/internal/knowledge-extension.ts"),
-			() => runNode("scripts/check-extensions-build.mjs", ["--out-dir", outDir]),
+		await failsAfterDependencyEdit(join(root, "packages/extensions/src/knowledge-extension.ts"), () =>
+			runNode("scripts/check-extensions-build.mjs", ["--out-dir", outDir]),
 		);
 	} finally {
 		await rm(outDir, { recursive: true, force: true });

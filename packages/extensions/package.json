@@ -20,7 +20,6 @@
 	},
 	"exports": {
 		"./knowledge-extension": "./src/knowledge-extension.ts",
-		"./internal/knowledge-extension": "./src/internal/knowledge-extension.ts",
 		"./workspace-config": "./src/workspace-config.ts",
 		"./research-loop": "./src/research-loop.ts",
 		"./research-host": "./src/internal/research-host-entry.ts",

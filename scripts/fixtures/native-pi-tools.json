@@ -27,10 +27,11 @@
       "targetPackage": "pi-core"
     },
     "research_archive_explainer": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_archive_source": {
       "source": "packages/extensions/src/source-archive.ts",
@@ -45,16 +46,18 @@
       "targetPackage": "pi-research"
     },
     "research_archive_topic": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_check_answer": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_create_project": {
       "source": "packages/extensions/src/obsidian-workbench.ts",
@@ -63,10 +66,11 @@
       "targetPackage": "pi-knowledge"
     },
     "research_delegate_knowledge": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_deposit_research_note": {
       "source": "packages/pi-research/src/evidence-loop.ts",
@@ -99,10 +103,11 @@
       "targetPackage": "pi-research"
     },
     "research_knowledge_status": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_loop": {
       "source": "packages/extensions/src/research-loop.ts",
@@ -111,10 +116,11 @@
       "targetPackage": "pi-research"
     },
     "research_maintain_knowledge": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_methods": {
       "source": "packages/extensions/src/source-archive.ts",
@@ -123,10 +129,11 @@
       "targetPackage": "pi-research"
     },
     "research_prepare_knowledge": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_read_source": {
       "source": "packages/pi-research/src/evidence-loop.ts",
@@ -135,16 +142,18 @@
       "targetPackage": "pi-research"
     },
     "research_propose_wiki_update": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_read_knowledge": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_reconcile_literature": {
       "source": "packages/extensions/src/source-archive.ts",
@@ -159,22 +168,25 @@
       "targetPackage": "pi-research"
     },
     "research_restore_evidence": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_resume_topic": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_search_explainers": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_search_sources": {
       "source": "packages/pi-research/src/evidence-loop.ts",
@@ -183,10 +195,11 @@
       "targetPackage": "pi-research"
     },
     "research_search_knowledge": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_setup_obsidian": {
       "source": "packages/extensions/src/obsidian-workbench.ts",
@@ -237,22 +250,25 @@
       "targetPackage": "pi-knowledge"
     },
     "research_task_status": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_topics": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_update_topic": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_verify_literature": {
       "source": "packages/extensions/src/source-archive.ts",
@@ -261,10 +277,11 @@
       "targetPackage": "pi-research"
     },
     "research_wiki_review_status": {
-      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "source": "packages/extensions/src/knowledge-extension.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-knowledge"
+      "targetPackage": "pi-knowledge",
+      "delegated": true
     },
     "research_wikiskill_gate": {
       "source": "packages/extensions/src/research-wikiskill.ts",

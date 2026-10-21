@@ -9,6 +9,14 @@
 export const KNOWLEDGE_CONTRACT_VERSION = 1 as const;
 export type KnowledgeContractVersion = typeof KNOWLEDGE_CONTRACT_VERSION;
 
+/** Host callbacks used by the installable knowledge extension without importing Drone packages. */
+export interface KnowledgeExtensionHost {
+	readonly bindAcceptanceVerifierEvents?: (pi: unknown) => void;
+	readonly registerAcceptanceVerifier?: (name: string, definition: unknown) => unknown;
+	readonly registerTaskRuntime?: (pi: unknown, options: unknown) => unknown;
+	readonly registerTool?: (pi: unknown, definition: unknown) => void;
+}
+
 export type ContractParentRef =
 	| string
 	| {

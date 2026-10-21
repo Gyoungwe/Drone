@@ -16,15 +16,16 @@ interface StoredState {
 
 const defaults = (): StoredState => ({
 	version: 1,
-	settings: { enabled: false, maxItems: 5, dailyLimit: 20 },
+	settings: { enabled: false, maxItems: 5, dailyLimit: 20, model: null },
 	runs: [],
 });
 
 export interface KnowledgeMaintenanceOptions {
 	path: string;
 	readOverview: (cwd: string) => Promise<any>;
+	readGraph?: (cwd: string, revision: number) => Promise<any>;
 	readNote: (cwd: string, path: string, revision: number) => Promise<any>;
-	complete: (prompt: string) => Promise<string>;
+	complete: (prompt: string, model?: string | null) => Promise<string>;
 	setTopic?: (cwd: string, path: string, topic: string, revision: number) => Promise<void>;
 	proposeWiki?: (
 		cwd: string,
@@ -59,6 +60,7 @@ export class KnowledgeMaintenanceService {
 				enabled: settings.enabled === true,
 				maxItems: Math.min(50, settings.maxItems),
 				dailyLimit: Math.min(100, settings.dailyLimit),
+				model: settings.model?.trim() || null,
 			};
 		});
 		return this.getSettings();
@@ -109,19 +111,8 @@ export class KnowledgeMaintenanceService {
 		const settings = state.settings;
 		const overview = await this.options.readOverview(cwd);
 		const revision = Number(overview?.binding?.revision || overview?.index?.revision || 1);
-		const items = planMaintenance(
-			{
-				items: (overview?.index?.problems || []).map((item: any) => ({
-					id: item.path,
-					kind: item.kind,
-					path: item.path,
-					title: item.title,
-					detail: item.message,
-				})),
-			},
-			overview?.graph,
-			settings,
-		);
+		const graph = this.options.readGraph ? await this.options.readGraph(cwd, revision) : overview?.graph;
+		const items = planMaintenance(null, graph, settings);
 		const today = new Date().toISOString().slice(0, 10);
 		const usedToday = state.runs
 			.filter((run) => run.startedAt.slice(0, 10) === today)
@@ -130,7 +121,12 @@ export class KnowledgeMaintenanceService {
 		const result = await runMaintenance(items, {
 			readNote: async (path) => {
 				const note = await this.options.readNote(cwd, path, revision);
-				return { title: note.title, markdown: note.text || note.excerpt || "", exists: !note.missing };
+				return {
+					title: note.title,
+					markdown: note.text || note.excerpt || "",
+					sourceMarkdown: note.text || note.excerpt || "",
+					exists: !note.missing,
+				};
 			},
 			complete: this.options.complete,
 			setTopic: async (path, topic) => {
@@ -162,6 +158,7 @@ export class KnowledgeMaintenanceService {
 				}
 			},
 			budget: { modelCalls: remainingBudget },
+			model: settings.model,
 		});
 		const run: KnowledgeMaintenanceRun = {
 			startedAt: result.startedAt,

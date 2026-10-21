@@ -31,6 +31,7 @@ A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收
 插件化 v2 的 P1 迁移边界与 extensions 归属清单见 [pluginization/p1-inventory.md](pluginization/p1-inventory.md)；执行主计划见 [pluginization/v2-plan.md](pluginization/v2-plan.md)，本轮验收记录见 [pluginization/P1-evidence.md](pluginization/P1-evidence.md)。
 P2 知识源码与插件入口迁移、插件仓库全量门禁和 Git 历史验收见 [pluginization/P2-evidence.md](pluginization/P2-evidence.md)。
 P3 宿主消费锁定的 `@gyoungwe/pi-knowledge`、本地 macOS DMG/ZIP 构建与资源验收见 [pluginization/P3-evidence.md](pluginization/P3-evidence.md)；P4 自动维护调度、IPC、UI 和插件测试见 [pluginization/P4-evidence.md](pluginization/P4-evidence.md)。
+P4/P5 外部验收记录见 [pluginization/acceptance-1.md](pluginization/acceptance-1.md)、[pluginization/acceptance-2.md](pluginization/acceptance-2.md) 与 [pluginization/acceptance-3.md](pluginization/acceptance-3.md)（`acceptance-3.md` 为最终复核）。
 两份计划的旧执行日志已按 30 行上限归档到 [`docs/archive/`](archive/)。
 插件化前端交接、宿主/插件仓库边界和 UI 验收顺序见 [pluginization-ui-handoff.md](pluginization-ui-handoff.md)；设计稿源文件见 [Drone 插件化界面.html](design/plugin-ui/Drone%20插件化界面.html)，构建产物四视图视觉对照由 [`scripts/check-visual-design-comparison.mjs`](../scripts/check-visual-design-comparison.mjs) 生成 [视觉证据](releases/visual/drone-visual-comparison.json)；资源搜索连接器设计见 [resource-search-connectors.md](resource-search-connectors.md)；科研工作台 v3 规划见 [scientific-workbench-v3-plan.md](scientific-workbench-v3-plan.md)。
 
