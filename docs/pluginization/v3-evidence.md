@@ -2,7 +2,7 @@
 
 分支：两个仓库的 `main`（v2 已合并；v3 实现与规范更新随本次提交合并）。以下命令均在干净工作树上重跑。
 
-最终远程头：Drone `main`=`2a60b03a`；drone-plugins `main`=`bc2bc771`。
+实现基线：Drone `c9fd4365`；drone-plugins `bc2bc771`。两个仓库的远程 `main` 还包含本证据文件的后续文档提交。
 
 ## T1 清单检查器与 tools
 
