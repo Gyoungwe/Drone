@@ -7,7 +7,7 @@
 - v3 T3 的真实安装包三页面验收尚未执行；代码级挂载、卸载和默认恢复测试已通过。
 - v3 T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，尚未完成完整迁移。
 - PR1–PR5 的代码/文档实现已完成，PR6 的评估脚本和结果已完成；PR1–PR4、PR5 的真实会话/安装包验收仍待执行，PR6 的集成结论留待下一轮决定。本计划不把 fixture 或 loader 单独加载当作真实验收。
-- PR2/PR4 仍有一个实现边界需要在正向验收前确认：`@gyoungwe/pi-research` 的 `research_search_sources` 当前发现 Markdown/文本来源，PDF 页码依赖上游 PDF worker 先生成带 `[[page:N]]` 的文本记录；它不会直接枚举并解析项目目录中的 `.pdf`。如果验收要求把原始 PDF 文件夹直接作为输入，需要下一轮补 host-to-plugin 的 PDF 读取桥接。
+- PR2/PR4 的原始 PDF 输入桥接已补齐：`@gyoungwe/pi-research` 现在直接发现并解析项目目录中的 `.pdf`，生成带 `[[page:N]]` 的文本和页码回执；真实会话中的点击引用仍待有效模型凭证和测试 PDF 验收。
 
 ### 2026-10-22 实机抽检记录
 
@@ -38,7 +38,7 @@
 
 ### PR2：引用跳转到 PDF 原文页码（代码完成，真实验收待执行）
 
-让 `pdf-worker.ts` 按页保留文本边界，`research_read_source` 返回 `[[page:N]]` 并在来源回执记录页码范围；学术回答引用支持 `#page=N`，只有模型实际读到该页时才允许生成页码。
+让 `pdf-worker.ts` 按页保留文本边界；同时 `@gyoungwe/pi-research` 直接读取项目 PDF，并让 `research_read_source` 返回 `[[page:N]]` 和来源回执页码范围。学术回答引用支持 `#page=N`，只有模型实际读到该页时才允许生成页码。
 
 `Markdown.tsx` 解析页码，`PreviewRendererProps` 增加 `initialPage`，`PdfViewer` 打开时跳到目标页；越界回退第一页并提示，Vault 笔记引用保持原行为。
 

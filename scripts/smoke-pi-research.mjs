@@ -5,7 +5,7 @@
 // deposit -> source-grounded answer, and removes the fixture afterwards.
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -83,6 +83,9 @@ async function runFixture(packageRoot, label) {
 		join(sources, "article-b.md"),
 		"---\nid: article-b\ntitle: Pollinator transcriptome\ndoi: 10.1234/bee.b\nuri: https://example.org/bee-b\n---\n\n# Pollinator transcriptome\n\nThe transcriptome reports marker-b after exposure and records a different cohort.\n",
 	);
+	const pdfFixture = join(root, "fixtures/pdf-hard/1706.03762.pdf");
+	if (await stat(pdfFixture).catch(() => null)) await cp(pdfFixture, join(sources, "paper.pdf"));
+	const hasPdf = Boolean(await stat(join(sources, "paper.pdf")).catch(() => null));
 	const extension = await loadTools(packageRoot, project, agentDir);
 	const ctx = await fakeContext(project);
 	const searched = await invoke(
@@ -91,8 +94,8 @@ async function runFixture(packageRoot, label) {
 		{ query: "bee marker", source_dir: "sources", limit: 4 },
 		ctx,
 	);
-	assert.equal(searched.details.count, 2, JSON.stringify(searched.details));
-	const ids = searched.details.hits.map((hit) => hit.source_id);
+	assert(searched.details.count >= 2, JSON.stringify(searched.details));
+	const ids = searched.details.hits.filter((hit) => hit.path.endsWith(".md")).map((hit) => hit.source_id);
 	assert.deepEqual(ids.sort(), ["article-a", "article-b"]);
 	for (const id of ids) {
 		const read = await invoke(extension, "research_read_source", { source_id: id }, ctx);
@@ -115,6 +118,20 @@ async function runFixture(packageRoot, label) {
 	assert.equal(deposited.details.status, "written");
 	assert.equal(deposited.details.scientificallyVerified, false);
 	assert.equal((await readFile(join(project, deposited.details.path), "utf8")).includes("bee-a"), true);
+	if (hasPdf) {
+		const pdfSearch = await invoke(
+			extension,
+			"research_search_sources",
+			{ query: "attention transformer", source_dir: "sources", limit: 4 },
+			ctx,
+		);
+		const pdfHit = pdfSearch.details.hits.find((hit) => hit.path === "paper.pdf");
+		assert(pdfHit, "PDF source was not discovered");
+		const pdfRead = await invoke(extension, "research_read_source", { source_id: pdfHit.source_id }, ctx);
+		assert(pdfRead.details.content.includes("[[page:1]]"), "PDF page marker is missing");
+		assert.equal(pdfRead.details.read_receipt.page_start, 1);
+		assert(pdfRead.details.read_receipt.page_end >= 1);
+	}
 	const answered = await invoke(
 		extension,
 		"research_answer_sources",
@@ -127,7 +144,12 @@ async function runFixture(packageRoot, label) {
 	assert(answered.details.answer.includes("marker-a"));
 	assert(answered.details.answer.includes("marker-b"));
 	const status = await invoke(extension, "research_status", {}, ctx);
-	assert.deepEqual(status.details, { searches: 1, reads: 2, deposits: 1, answerable: true });
+	assert.deepEqual(status.details, {
+		searches: hasPdf ? 2 : 1,
+		reads: hasPdf ? 3 : 2,
+		deposits: 1,
+		answerable: true,
+	});
 	await rm(base, { recursive: true, force: true });
 	return { packageRoot, sources: 2, reads: 2, answerable: true };
 }

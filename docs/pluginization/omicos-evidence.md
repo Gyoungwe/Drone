@@ -28,11 +28,13 @@
 - PDF worker 按页输出 `[[page:N]]` 边界，允许受控扩大读取页数，并刷新 checked-in compiled artifact 与 manifest。
 - `research_read_source` 从实际读取文本解析页码范围；来源回执和 citations 记录 `page_start/page_end/pages`，仅在读到页时生成 `#page=N`。
 - Markdown 资源链接保留 fragment；预览宿主把 `page=N` 传给 PDF viewer，越界回到第 1 页并显示双语提示。
-- 当前边界：`@gyoungwe/pi-research` 直接搜索的是 Markdown/文本来源；原始 `.pdf` 必须先由宿主 PDF worker 转成带 `[[page:N]]` 的来源记录，插件本身不会直接枚举或解析 PDF 文件夹。PR4 技能的“项目内 PDF 文件夹”正向验收也因此需要先确认宿主预处理路径，不能把现有 loader 结果当作完成证明。
+- `@gyoungwe/pi-research` 已补直接 PDF 桥接：`research_search_sources` 会发现项目目录中的 `.pdf`，使用随包的 pdf.js 生成带 `[[page:N]]` 的文本；`research_read_source` 的回执记录实际页码范围，引用 URI 保留相对 PDF 路径。宿主 `pdf-worker.ts` 路径仍保留用于其他任务运行时。
 
 已运行：
 
 - `npx vitest run packages/pi-research/src/evidence-loop.test.ts packages/desktop/src/renderer/src/components/preview/preview-registry.test.ts packages/desktop/src/renderer/src/components/preview/viewers/viewers.test.tsx`：13 tests passed（含 integration mirror）。
+- `node scripts/smoke-pi-research.mjs`：直接源码包与 `npm pack` 解包均发现并读取 PDF，回执包含 `page_start/page_end` 和 `[[page:1]]`。
+- `npm run check:pi-research`、`npm run check:arch`、`npm run check:public-plugin-host`：通过。
 - `npm run typecheck`：通过。
 - `npx biome check`：相关文件通过。
 

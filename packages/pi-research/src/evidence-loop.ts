@@ -3,11 +3,20 @@ import type { Dirent } from "node:fs";
 import { access, mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import { createEvidenceGate } from "@drone/research/evidence-gate";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { WorkerMessageHandler } from "pdfjs-dist/legacy/build/pdf.worker.mjs";
+
+// pdf.js disables worker threads in Node. Register its bundled handler so the
+// published extension can read PDFs without relying on a host checkout's worker file.
+(globalThis as { pdfjsWorker?: { WorkerMessageHandler: typeof WorkerMessageHandler } }).pdfjsWorker = {
+	WorkerMessageHandler,
+};
 
 const MAX_SOURCE_BYTES = 256 * 1024;
+const MAX_PDF_BYTES = 32 * 1024 * 1024;
 const MAX_RESULTS = 12;
 const MAX_READ_CHARS = 12_000;
-const SOURCE_EXTENSIONS = new Set([".md", ".markdown", ".txt"]);
+const SOURCE_EXTENSIONS = new Set([".md", ".markdown", ".txt", ".pdf"]);
 
 type SourceRecord = {
 	id: string;
@@ -87,6 +96,33 @@ function titleOf(path: string, fields: Record<string, string>, body: string): st
 	return fields.title || body.match(/^#\s+(.+)$/m)?.[1]?.trim() || basename(path, extname(path));
 }
 
+async function readPdfText(path: string): Promise<string> {
+	const data = new Uint8Array(await readFile(path));
+	const document = await getDocument({
+		data,
+		useWorkerFetch: false,
+		disableFontFace: true,
+		verbosity: 0,
+	}).promise;
+	const pages: string[] = [];
+	try {
+		for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+			const page = await document.getPage(pageNumber);
+			const content = await page.getTextContent();
+			const text = content.items
+				.map((item) => ("str" in item ? item.str : ""))
+				.join(" ")
+				.replace(/\s+/gu, " ")
+				.trim();
+			pages.push(`[[page:${pageNumber}]]${text ? `\n${text}` : ""}`);
+			page.cleanup();
+		}
+	} finally {
+		await document.cleanup();
+	}
+	return pages.join("\n\n");
+}
+
 function sourceId(relativePath: string, fields: Record<string, string>, text: string): string {
 	const declared = fields.id || fields.source_id;
 	if (declared && /^[A-Za-z0-9._:-]{1,120}$/.test(declared)) return declared;
@@ -113,8 +149,10 @@ async function walk(root: string, out: string[] = []): Promise<string[]> {
 
 async function readSource(root: string, path: string): Promise<SourceRecord | null> {
 	const info = await stat(path);
-	if (!info.isFile() || info.size > MAX_SOURCE_BYTES) return null;
-	const text = await readFile(path, "utf8");
+	const isPdf = extname(path).toLowerCase() === ".pdf";
+	const maxBytes = isPdf ? MAX_PDF_BYTES : MAX_SOURCE_BYTES;
+	if (!info.isFile() || info.size > maxBytes) return null;
+	const text = isPdf ? await readPdfText(path) : await readFile(path, "utf8");
 	const { fields, body } = parseFrontmatter(text);
 	const relativePath = relative(root, path).split(sep).join("/");
 	const id = sourceId(relativePath, fields, text);
@@ -124,7 +162,10 @@ async function readSource(root: string, path: string): Promise<SourceRecord | nu
 		path,
 		relativePath,
 		title: titleOf(path, fields, body),
-		uri: fields.uri || fields.url || (fields.doi ? `https://doi.org/${fields.doi}` : `source://${id}`),
+		uri:
+			fields.uri ||
+			fields.url ||
+			(fields.doi ? `https://doi.org/${fields.doi}` : isPdf ? relativePath : `source://${id}`),
 		doi: fields.doi || null,
 		text,
 		hash: createHash("sha256").update(text).digest("hex"),
