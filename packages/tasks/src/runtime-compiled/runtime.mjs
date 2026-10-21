@@ -193,20 +193,21 @@ const TASK_RUNTIME_REGISTRY = "__drone_task_runtime_v1";
 const localTaskRuntimeRegistry = /* @__PURE__ */ new WeakMap();
 function taskRuntimeRegistry(pi) {
   if (!pi || typeof pi !== "object" && typeof pi !== "function") return null;
-  const attached = pi[TASK_RUNTIME_REGISTRY];
+  const owner = pi.events && (typeof pi.events === "object" || typeof pi.events === "function") ? pi.events : pi;
+  const attached = owner[TASK_RUNTIME_REGISTRY];
   if (attached && attached.version === 1) return attached;
-  const local = localTaskRuntimeRegistry.get(pi);
+  const local = localTaskRuntimeRegistry.get(owner);
   if (local) return local;
   const registry = { version: 1, journal: null };
-  if (Object.isExtensible(pi)) {
-    Object.defineProperty(pi, TASK_RUNTIME_REGISTRY, {
+  if (Object.isExtensible(owner)) {
+    Object.defineProperty(owner, TASK_RUNTIME_REGISTRY, {
       value: registry,
       enumerable: false,
       configurable: false,
       writable: false
     });
   } else {
-    localTaskRuntimeRegistry.set(pi, registry);
+    localTaskRuntimeRegistry.set(owner, registry);
   }
   return registry;
 }

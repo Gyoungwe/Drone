@@ -67,6 +67,22 @@ describe("acceptance verifier registry (hook 2)", () => {
 		expect(tools.size).toBe(5);
 	});
 
+	it("uses the shared event bus when extension facades are sealed per bundle", () => {
+		const tools = new Map();
+		const listeners = new Map();
+		const events = { on() {}, emit: async () => {} };
+		const registerTool = (tool) => tools.set(tool.name, tool);
+		const registerCommand = () => {};
+		const on = (name) => listeners.set(name, (listeners.get(name) || 0) + 1);
+		const first = Object.freeze({ registerTool, registerCommand, on, events });
+		const second = Object.freeze({ registerTool, registerCommand, on, events });
+
+		const journal = registerTaskRuntime(first);
+		expect(registerTaskRuntime(second, { readKnowledgeBinding: async () => null })).toBe(journal);
+		expect(listeners.size).toBe(12);
+		expect(tools.size).toBe(5);
+	});
+
 	it("rejects host-owned kinds, malformed kinds and reserved field names", () => {
 		expect(() => registerAcceptanceVerifier("file")).toThrow(/owned by the host/);
 		expect(() => registerAcceptanceVerifier("Bad-Kind")).toThrow(/must match/);

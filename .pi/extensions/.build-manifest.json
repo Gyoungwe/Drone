@@ -17,16 +17,16 @@
 			"output": "knowledge-extension.mjs",
 			"status": "generated",
 			"sourceSha256": "ae2078b76ab6866bf7c0543bfbc9e3053dc2266d99bd659ea4ce47fea414dadb",
-			"inputsSha256": "f4539eeaf6a6592da812e235a30416b4742c0981ebdecd854ea0dd7d9e9940f0",
-			"outputSha256": "e36c71d53fc91b1cb75abf4383a2cb04806870300fbfddd59466c270d2abccac"
+			"inputsSha256": "cefa2d92635086ff3f3ef1e6d4270b96a51899894a050c5fd2b8ab36d048a715",
+			"outputSha256": "3f919c759f9b3a7c1df5907bfffae4cfe8e778f2ba885a4d6130b34021e9e4ac"
 		},
 		"obsidian-workbench": {
 			"source": "obsidian-workbench.ts",
 			"output": "obsidian-workbench.mjs",
 			"status": "generated",
 			"sourceSha256": "9d002426142cf1c0cc3345462df95e9a5ed7e47d78a897cb3c43ee4a9d97d3a0",
-			"inputsSha256": "4afe962615a097898b9cecdfbfdb5b255083c9def09a8eac4c59dcf387579f8a",
-			"outputSha256": "008e8fc01353f5c580e2c6ca3bd328e9ba03105db7c6ce4ff0ed75af99e76b7f"
+			"inputsSha256": "880483f789aa53754f03979dadd7961afac854c0895b35189793d67249dcb22a",
+			"outputSha256": "710f543e961b1d94e7da00b769dde675d13888aef4f4d478abadbd06d3336be5"
 		},
 		"research-loop": {
 			"source": "research-loop.ts",
@@ -65,16 +65,16 @@
 			"output": "source-archive.mjs",
 			"status": "generated",
 			"sourceSha256": "488400db91da24a2e147afbc29fecf984aa3e8af2f99aa51fc2ae42fff8ac815",
-			"inputsSha256": "aa6d5cf7cb40ca3f3b8c4c86e9d1cfc7ac574505308f53bb5d8c5005a806ddf5",
-			"outputSha256": "d37f1e27af503f036e86193e629838a81a7c80961f4c872697e2edf972414084"
+			"inputsSha256": "5812e3591bf0003a5562fbeb5446ffdc6de946684e05f2639f3be52547b48a25",
+			"outputSha256": "45eae9647b0fd3449fdcc1fafc87e579b9e06c466dc6fbb575d081e258b33b15"
 		},
 		"subagent-mcp-readonly": {
 			"source": "subagent-mcp-readonly.ts",
 			"output": "subagent-mcp-readonly.mjs",
 			"status": "generated",
 			"sourceSha256": "08b10aac2ab29c9cb314efe11434f43671903ab2e50c11d430f3aaa12d843728",
-			"inputsSha256": "c8edc719f64962f3edb8d587c4fb1cfa8a7793e45049bda9861d584565de1d12",
-			"outputSha256": "3b712dd7f2ebda670b2644339153624011ed6308e4d1fdd4fe0ea7b36f6bbbc1"
+			"inputsSha256": "4c917c95359fd027d1ea445ffe5771a74e0d84026a7e9f7037ddf705d7720686",
+			"outputSha256": "007b98f78df0a99b5dc504ce55ca70416f047aa119c9fe5570678ef0fb411e86"
 		},
 		"subagent-research": {
 			"source": "subagent-research.ts",
