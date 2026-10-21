@@ -4,7 +4,14 @@
   "publisher": "gyoungwe",
   "publishedThisRun": [
     "@gyoungwe/plugin-api@1.1.0",
-    "@gyoungwe/pi-knowledge@0.2.0"
+    "@gyoungwe/pi-core@0.1.6",
+    "@gyoungwe/pi-knowledge@0.2.0",
+    "@gyoungwe/pi-research@0.1.1",
+    "@gyoungwe/research-suite@0.1.6",
+    "@gyoungwe/pi-analysis@0.1.1",
+    "@gyoungwe/pi-evidence@0.1.1",
+    "@gyoungwe/pi-connectors@0.1.1",
+    "@gyoungwe/desktop-ui-pack@0.1.1"
   ],
   "packages": [
     {
@@ -17,10 +24,10 @@
     },
     {
       "name": "@gyoungwe/pi-core",
-      "version": "0.1.5",
-      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-core/-/pi-core-0.1.5.tgz",
-      "integrity": "sha512-Gy/0sav1CVGYJDand6adPFyHhIGWTAwcGUNh56TOeJhtx7foLXW3Q6jeNgK0au4dVMR4S07HJvIUKpGonZdbDQ==",
-      "shasum": "c00d925c9953af95888e6f51a53bf73679fe0221",
+      "version": "0.1.6",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-core/-/pi-core-0.1.6.tgz",
+      "integrity": "sha512-xTapi0SNzc6ExWjamTtXCFYop/gYh9X5YCLPJwYyB35k9mAfDfFqFG/7hA6C0ZdsEWCqnSlLfwE3AmCeogA+SQ==",
+      "shasum": "69484cfffb1c7fce4ec4f7c7c48bd485a979ec83",
       "consumerInstallLoad": "PASS"
     },
     {
@@ -33,56 +40,56 @@
     },
     {
       "name": "@gyoungwe/pi-research",
-      "version": "0.1.0",
-      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-research/-/pi-research-0.1.0.tgz",
-      "integrity": "sha512-No+mnaFsppHrciazuspkcMqKv76Oqh7eg5A7abtpJjEkXwg0Isyis90RzUXEqRS035L9GUiPvhxhZK6JAoTKSA==",
-      "shasum": "ac3c20d6a601b76be1ba39abf87267f391c0d490",
+      "version": "0.1.1",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-research/-/pi-research-0.1.1.tgz",
+      "integrity": "sha512-3P1h7ccThxHzICkjzGU7+sJHGsY04ZT/LQ+a8LUEGB9IimquHHMigHwIXiWphxe0TslTaBehE8fhJLoYvJyoNA==",
+      "shasum": "752c2de46e55c7d23b201c6b386c2b6bae7e0033",
       "consumerInstallLoad": "PASS"
     },
     {
       "name": "@gyoungwe/research-suite",
-      "version": "0.1.5",
-      "tarball": "https://registry.npmjs.org/@gyoungwe/research-suite/-/research-suite-0.1.5.tgz",
-      "integrity": "sha512-N4Zq6KFRVfgUs59Dl3+tkHGRYT1XCh6vBeBaOLoDbUzveXOJ5EE3fhrrn+x28+780XqCmhbb+rdJA+ZMq6hCpQ==",
-      "shasum": "3c82af7563b6539e19cbbdb5bd11cc4bfc2d486b",
+      "version": "0.1.6",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/research-suite/-/research-suite-0.1.6.tgz",
+      "integrity": "sha512-7nvUezuhBAjiT9BpJF64gxWhrQzDhW8gMKelsu7t/HJ8h22G3lzbR7lAiI8AfIOFANg9bxpYy9vvgMr95oF0xw==",
+      "shasum": "a08e617c7650fa8d60ae52e2981d77e0cc54d3a4",
+      "consumerInstallLoad": "PASS",
       "bundledDependencies": [
         "@gyoungwe/plugin-api",
         "@gyoungwe/pi-core",
         "@gyoungwe/pi-knowledge",
         "@gyoungwe/pi-research"
-      ],
-      "consumerInstallLoad": "PASS"
+      ]
     },
     {
       "name": "@gyoungwe/pi-analysis",
-      "version": "0.1.0",
-      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-analysis/-/pi-analysis-0.1.0.tgz",
-      "integrity": "sha512-9uy6I/9MmQQWG4SNgFhM1Q2/VoCB5IC5Nf0XAvn9IhzepQyUzEUzeYf6HwgzaBcCzHMW+owez2EYEjfxqPzuhA==",
-      "shasum": "144df91bdd85c5a781ffcab5f94eaa5dd1ac1437",
+      "version": "0.1.1",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-analysis/-/pi-analysis-0.1.1.tgz",
+      "integrity": "sha512-JD9A8F3xVVHse+PBzxoM189zgQD837mhZXoZEFxv2Y+H/XwQHasZk5XyhkFKC4H2KHueL6EBJeYwpHD2h5Gjbw==",
+      "shasum": "d53112604a45ef909c20ae6c3054d8246d963ec8",
       "consumerInstallLoad": "PASS"
     },
     {
       "name": "@gyoungwe/pi-evidence",
-      "version": "0.1.0",
-      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-evidence/-/pi-evidence-0.1.0.tgz",
-      "integrity": "sha512-/yZEXNPnXvx2AH6jmJFaomj4mpOvTSF+I8GaDZXXk+T2farPjRD+PPUgMV2rQy0DiZ8wDsQy08l8O800a8I5Cw==",
-      "shasum": "4826a8f5663be2af382cecc227254a547d5f44af",
+      "version": "0.1.1",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-evidence/-/pi-evidence-0.1.1.tgz",
+      "integrity": "sha512-qYsLkhpz6o7Fh9773TNBYFYFTKqnvAO9khAkZPs7jRXrMKUTO6CWCBpo0Vc7qTC/owN5hoTR9X+uF5zqFBpMow==",
+      "shasum": "a0cec6d35a4def4e5242a63be64a5769547540de",
       "consumerInstallLoad": "PASS"
     },
     {
       "name": "@gyoungwe/pi-connectors",
-      "version": "0.1.0",
-      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-connectors/-/pi-connectors-0.1.0.tgz",
-      "integrity": "sha512-mly3eufpCDzpUtQ4eew93pgvqI4bgRVFuGspnHQ2BppoSJiV6q3PqrDVhK3atVa/WNHYgfJsP+jvfSjBuvmM+A==",
-      "shasum": "1629eb468f607f7be969d347cd03aff2dc0d03e3",
+      "version": "0.1.1",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-connectors/-/pi-connectors-0.1.1.tgz",
+      "integrity": "sha512-Q5sX7cJTLhmUdn6FxCpGZyPCrUgEIimqxbPkDRymUY7k+7RKT2NM3cgPmYI24Rdh9jDUEnv+oXSfue9xBLyStg==",
+      "shasum": "075d1b7308b19ecc47d2ed85437cf63e7f21fb79",
       "consumerInstallLoad": "PASS"
     },
     {
       "name": "@gyoungwe/desktop-ui-pack",
-      "version": "0.1.0",
-      "tarball": "https://registry.npmjs.org/@gyoungwe/desktop-ui-pack/-/desktop-ui-pack-0.1.0.tgz",
-      "integrity": "sha512-YIrwxhDCjU9yAe+f+ip1yOND43ma737EjvhB7qe9NqMVn2xTKYSX+CTtqFq0qSeOEkyYNZVI38nz29WI+Njdtw==",
-      "shasum": "73e79d49b0678a0379fbdb7f1ec4d7ebb2b455e5",
+      "version": "0.1.1",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/desktop-ui-pack/-/desktop-ui-pack-0.1.1.tgz",
+      "integrity": "sha512-yb4hNWUzlA421Hpldu5PoTFz+IhpNB+irJAtJQVbeScGNuhTPczJBcSP5GmUyfmpLAZgRIRvBGDjmvPI9iSO5g==",
+      "shasum": "ee7295440c3d300b0372e641a28a7a6b287f785f",
       "consumerInstallLoad": "PASS"
     }
   ],
@@ -95,8 +102,9 @@
     "commands": [
       "npm run check:public-plugin-host",
       "npm run check:pi-compat -- --targets locked,latest",
-      "npm run check:plugin-api -- --migration --lifecycle"
+      "npm run check:plugin-api -- --migration --lifecycle",
+      "npm run check (drone-plugins)"
     ],
-    "notes": "Only plugin-api@1.1.0 and pi-knowledge@0.2.0 were newly published in this run; the other listed immutable versions were already present in the official registry and were re-verified from clean consumer prefixes."
+    "notes": "All listed versions match the current source tarballs. The immutable versions superseded earlier registry artifacts where their local tarball digest differed; each new version was published in dependency order and verified from a clean official-registry consumer prefix."
   }
 }
