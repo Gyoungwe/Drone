@@ -25,6 +25,7 @@ Drone 分支：`codex/pluginize-v2-p2`（文档提交待生成）
 | `npm run --workspace @gyoungwe/pi-knowledge build:check` | PASS；source/output hashes 一致 |
 | `npm run --workspace @gyoungwe/pi-knowledge smoke` | PASS；npm pack 121 files，两个工具、`/drone-init` 和 worker hash 校验通过 |
 | `npm run check`（`drone-plugins`） | PASS；manifest、全 workspace build/typecheck、各插件测试/smoke、clean tarball install、pack check 全通过 |
+| clean checkout：`npm ci --ignore-scripts && npm run build && npm run check:pi-knowledge` | PASS；`/tmp/drone-plugins-p2-clean` 从 `badebad` 重新生成并通过 `build:check` |
 | `git diff --check` | PASS；无空白错误 |
 
 clean-install smoke 的最终摘要：六个插件安装成功，Pi loader 发现 `pi-analysis`、`pi-evidence`、`pi-connectors` 和 research suite；`pi-knowledge` 注册 2 个工具，未配置状态为 `unconfigured`。
