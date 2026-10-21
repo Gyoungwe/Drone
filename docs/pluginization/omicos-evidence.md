@@ -86,4 +86,15 @@
 
 ## PR6：PDF 解析质量评估
 
-状态：评估脚本与结果待完成。
+状态：评估脚本与本地结果完成；真实会话验收不适用，结论待用户决定是否进入下一轮集成。
+
+- `fixtures/pdf-hard/manifest.json` 登记 10 篇 arXiv 开放获取论文、来源 URL、许可证和分类，覆盖双栏、公式密集、跨页表格、扫描版派生样本各至少 2 篇；参考文本与扫描派生说明一并保存。
+- `scripts/eval-pdf-parsing.mjs` 可重跑当前 `pdf.js`，并在 `MINERU_BIN` 或 `GROBID_URL` 未配置时逐篇报告 `unavailable`；本轮没有安装或接入 MinerU/GROBID。
+- [`docs/evals/pdf-parsing-2026-10-22.json`](../evals/pdf-parsing-2026-10-22.json) 记录正文字符召回、表格结构、公式可读性、参考文献计数和耗时；结论文档记录安装体积与本地/API 取舍。
+
+已运行：
+
+- `node scripts/eval-pdf-parsing.mjs --out /tmp/drone-pdf-eval.json --conclusion /tmp/drone-pdf-eval.md`：10/10 篇由 pdf.js 完成解析；MinerU、GROBID 各 10/10 条明确为 unavailable。
+- `npx biome check scripts/eval-pdf-parsing.mjs`：通过。
+
+限制：参考文本是可重跑的 `pdftotext` 对照代理，不等同人工逐页真值；表格和公式指标是启发式，需人工抽样后再决定集成。此 PR 不改变安装包或默认解析流程。

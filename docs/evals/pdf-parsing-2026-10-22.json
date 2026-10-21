@@ -1,0 +1,379 @@
+{
+  "schema": 1,
+  "kind": "pdf-parsing-evaluation",
+  "generatedAt": "2026-10-21T18:22:44.958Z",
+  "startedAt": "2026-10-21T18:22:42.935Z",
+  "manifest": "fixtures/pdf-hard/manifest.json",
+  "licenseUrl": "https://info.arxiv.org/help/license/index.html",
+  "fixtureCount": 10,
+  "categories": [
+    "cross-page-table",
+    "double-column",
+    "formula-dense",
+    "mixed",
+    "scanned"
+  ],
+  "engines": {
+    "pdf.js": [
+      {
+        "id": "1706.03762",
+        "categories": [
+          "double-column",
+          "formula-dense"
+        ],
+        "status": "ok",
+        "elapsedMs": 477,
+        "pages": 15,
+        "bodyCharRecall": 1,
+        "tableStructure": "preserved",
+        "formulaReadability": "readable",
+        "referenceCount": 2,
+        "extractedCharacters": 41462
+      },
+      {
+        "id": "1810.04805",
+        "categories": [
+          "double-column",
+          "formula-dense"
+        ],
+        "status": "ok",
+        "elapsedMs": 118,
+        "pages": 16,
+        "bodyCharRecall": 0.9999,
+        "tableStructure": "preserved",
+        "formulaReadability": "readable",
+        "referenceCount": 0,
+        "extractedCharacters": 67145
+      },
+      {
+        "id": "1512.03385",
+        "categories": [
+          "double-column",
+          "mixed"
+        ],
+        "status": "ok",
+        "elapsedMs": 109,
+        "pages": 12,
+        "bodyCharRecall": 1,
+        "tableStructure": "preserved",
+        "formulaReadability": "readable",
+        "referenceCount": 0,
+        "extractedCharacters": 61995
+      },
+      {
+        "id": "1409.0575",
+        "categories": [
+          "double-column",
+          "cross-page-table"
+        ],
+        "status": "ok",
+        "elapsedMs": 209,
+        "pages": 43,
+        "bodyCharRecall": 0.9999,
+        "tableStructure": "preserved",
+        "formulaReadability": "readable",
+        "referenceCount": 12,
+        "extractedCharacters": 202286
+      },
+      {
+        "id": "2005.11401",
+        "categories": [
+          "formula-dense",
+          "cross-page-table"
+        ],
+        "status": "ok",
+        "elapsedMs": 104,
+        "pages": 19,
+        "bodyCharRecall": 0.9996,
+        "tableStructure": "preserved",
+        "formulaReadability": "readable",
+        "referenceCount": 21,
+        "extractedCharacters": 71358
+      },
+      {
+        "id": "2106.09685",
+        "categories": [
+          "double-column",
+          "formula-dense"
+        ],
+        "status": "ok",
+        "elapsedMs": 302,
+        "pages": 26,
+        "bodyCharRecall": 0.997,
+        "tableStructure": "preserved",
+        "formulaReadability": "readable",
+        "referenceCount": 6,
+        "extractedCharacters": 89769
+      },
+      {
+        "id": "2203.02155",
+        "categories": [
+          "double-column",
+          "mixed"
+        ],
+        "status": "ok",
+        "elapsedMs": 273,
+        "pages": 68,
+        "bodyCharRecall": 1,
+        "tableStructure": "preserved",
+        "formulaReadability": "readable",
+        "referenceCount": 3,
+        "extractedCharacters": 186065
+      },
+      {
+        "id": "2003.10130",
+        "categories": [
+          "scanned",
+          "formula-dense"
+        ],
+        "status": "ok",
+        "elapsedMs": 2,
+        "pages": 6,
+        "bodyCharRecall": 0,
+        "tableStructure": "lost",
+        "formulaReadability": "lost",
+        "referenceCount": 0,
+        "extractedCharacters": 5
+      },
+      {
+        "id": "1607.06450",
+        "categories": [
+          "scanned",
+          "formula-dense"
+        ],
+        "status": "ok",
+        "elapsedMs": 2,
+        "pages": 6,
+        "bodyCharRecall": 0,
+        "tableStructure": "lost",
+        "formulaReadability": "lost",
+        "referenceCount": 0,
+        "extractedCharacters": 5
+      },
+      {
+        "id": "1803.01271",
+        "categories": [
+          "double-column",
+          "mixed"
+        ],
+        "status": "ok",
+        "elapsedMs": 240,
+        "pages": 14,
+        "bodyCharRecall": 1,
+        "tableStructure": "preserved",
+        "formulaReadability": "readable",
+        "referenceCount": 0,
+        "extractedCharacters": 64253
+      }
+    ],
+    "MinerU": [
+      {
+        "id": "1706.03762",
+        "categories": [
+          "double-column",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 11
+      },
+      {
+        "id": "1810.04805",
+        "categories": [
+          "double-column",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 10
+      },
+      {
+        "id": "1512.03385",
+        "categories": [
+          "double-column",
+          "mixed"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 10
+      },
+      {
+        "id": "1409.0575",
+        "categories": [
+          "double-column",
+          "cross-page-table"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 11
+      },
+      {
+        "id": "2005.11401",
+        "categories": [
+          "formula-dense",
+          "cross-page-table"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 11
+      },
+      {
+        "id": "2106.09685",
+        "categories": [
+          "double-column",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 10
+      },
+      {
+        "id": "2203.02155",
+        "categories": [
+          "double-column",
+          "mixed"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 11
+      },
+      {
+        "id": "2003.10130",
+        "categories": [
+          "scanned",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 10
+      },
+      {
+        "id": "1607.06450",
+        "categories": [
+          "scanned",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 10
+      },
+      {
+        "id": "1803.01271",
+        "categories": [
+          "double-column",
+          "mixed"
+        ],
+        "status": "unavailable",
+        "reason": "command mineru not found",
+        "elapsedMs": 9
+      }
+    ],
+    "GROBID": [
+      {
+        "id": "1706.03762",
+        "categories": [
+          "double-column",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      },
+      {
+        "id": "1810.04805",
+        "categories": [
+          "double-column",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      },
+      {
+        "id": "1512.03385",
+        "categories": [
+          "double-column",
+          "mixed"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      },
+      {
+        "id": "1409.0575",
+        "categories": [
+          "double-column",
+          "cross-page-table"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      },
+      {
+        "id": "2005.11401",
+        "categories": [
+          "formula-dense",
+          "cross-page-table"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      },
+      {
+        "id": "2106.09685",
+        "categories": [
+          "double-column",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      },
+      {
+        "id": "2203.02155",
+        "categories": [
+          "double-column",
+          "mixed"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      },
+      {
+        "id": "2003.10130",
+        "categories": [
+          "scanned",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      },
+      {
+        "id": "1607.06450",
+        "categories": [
+          "scanned",
+          "formula-dense"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      },
+      {
+        "id": "1803.01271",
+        "categories": [
+          "double-column",
+          "mixed"
+        ],
+        "status": "unavailable",
+        "reason": "GROBID_URL is not set",
+        "elapsedMs": 0
+      }
+    ]
+  },
+  "limitations": [
+    "The reference text is a checked-in pdftotext extraction of the openly downloadable source; it is a repeatable proxy for manual body text, not a claim of scientific ground truth.",
+    "MinerU and GROBID are optional and were not installed or added to the Drone runtime. Unavailable engines are reported as such.",
+    "Table and formula metrics are deterministic layout/text heuristics and require human review before an integration decision."
+  ]
+}
