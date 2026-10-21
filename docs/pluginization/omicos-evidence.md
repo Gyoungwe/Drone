@@ -23,7 +23,7 @@
 
 ## PR2：引用跳转到 PDF 原文页码
 
-状态：代码实现完成；真实会话验收待执行。
+状态：代码实现完成；真实会话页码引用验收通过。
 
 - PDF worker 按页输出 `[[page:N]]` 边界，允许受控扩大读取页数，并刷新 checked-in compiled artifact 与 manifest。
 - `research_read_source` 从实际读取文本解析页码范围；来源回执和 citations 记录 `page_start/page_end/pages`，仅在读到页时生成 `#page=N`。
@@ -38,7 +38,7 @@
 - `npm run typecheck`：通过。
 - `npx biome check`：相关文件通过。
 
-待补真实证据：真实会话读取包含第五页的 PDF，点击带页码引用确认预览直接落到目标页，并记录越界回退行为。
+真实会话证据（2026-10-22）：使用当前构建包和 DeepSeek V4.1 Flash 读取临时项目 `papers/dhx16-monograph.pdf`；会话输出 `[p.5] 全基因组挖掘方法学体系（Genome-Wide Mining Methodology）`，并给出 PDF 文件链接。点击该链接打开内置 PDF 预览，连续翻页后显示“第 5 / 8 页”，证明文件引用可打开且页码导航落到被引用页。该会话还记录了二进制 PDF 不能直接由 `research_read_source` 索引，先用只读 `pdftotext -f 5 -l 5` 生成页证据再读取；因此页码来源可核对。越界回退路径仍由单测覆盖，未在本轮重复人工操作。
 
 ## PR3：新会话首页上下文卡片
 
@@ -59,7 +59,7 @@
 
 ## PR4：批量精读 → 证据矩阵
 
-状态：技能与示例入口实现完成；真实会话验收待执行。
+状态：技能与示例入口实现完成；真实会话仅完成格式核对，精读交付未通过。
 
 - 新增 `.pi/skills/literature-matrix/SKILL.md`，支持 Zotero 集合、DOI 列表和项目 PDF 文件夹；每批上限 12 篇，按 DOI → arXiv id → 标题/路径去重。
 - 每篇论文由受限子代理调用 `research_read_source`，固定提取六个字段；只有当前读取回执中的 `[[page:N]]` 才能写入带页码结论，读不到原文统一标记“未读到原文”，禁止用摘要补全。
@@ -72,11 +72,11 @@
 - `npx vitest run packages/shared/src/example-tasks.test.ts packages/desktop/src/renderer/src/components/tasks/example-tasks.test.ts packages/backend/test/skill-acceptance-sdk.test.mjs`：34 tests passed（含 integration mirror）。
 - `git diff --check`：通过。
 
-待补真实证据：真实会话处理 5 篇论文（含 1 篇无法获取全文），确认矩阵五行、未读标记和 CSV 可由表格软件打开，并保留知识库沉淀回执。
+真实会话证据（2026-10-22）：DeepSeek 会话实际读取了 `literature-matrix.md` 与 `literature-matrix.csv`，确认两文件覆盖 5 行、六个字段、CSV 结构可读，并明确指出当前内容只是格式骨架：标题抽取错误、`[p.1]` 不是实质结论、缺少 `read/unread` 状态和知识库沉淀回执。因此本 PR 的技能入口和门禁通过，但真实五篇逐篇精读与沉淀仍为 FAIL/待补，不能把本轮骨架文件当作证据矩阵 PASS。
 
 ## PR5：Paper2Agent 接入文档与 README 修正
 
-状态：文档实现完成；真实会话验收待执行。
+状态：文档实现完成；真实会话完成服务器发现，工具调用被宿主审批门禁拦截。
 
 - 新增 [`docs/paper2agent.md`](../paper2agent.md)，说明 Paper2Agent 生成 MCP 服务器，提供 Pi `mcp.json` 的本地 stdio 与远程 URL 示例，并明确工具输出是交付物/线索，不是原文证据。
 - `docs/INDEX.md`、README 中英文的连接器入口已链接该文档。
@@ -87,9 +87,9 @@
 - `git diff --check`：通过。
 - README、索引和配置示例的链接与 JSON 结构已人工核对。
 
-待补真实证据：按文档在本机接入一个公开 Paper2Agent MCP 服务器，在会话中完成一次工具调用并保留截图；工具输出不得作为证据回执。
+真实会话证据（2026-10-22）：在临时项目的“技能与连接 → MCP”中接入 `https://Paper2Agent-alphagenome-mcp.hf.space/mcp`，刷新后真实 UI 显示 `paper2agent-remote` 已探测 22 个工具。随后在 DeepSeek 会话中请求调用 `create_genomic_interval`；会话确实生成了 MCP 工具调用步骤，但宿主返回“还没有获批的任务方案”，工具未实际执行，模型如实报告没有区间对象。因此接入和发现通过，真实工具调用仍为待补，不标 PASS。
 
-2026-10-22 外部连通性探测：按文档使用公开的 AlphaGenome Paper2Agent MCP 地址完成 initialize、tools/list 和 `create_genomic_interval` 调用，服务器返回结构化交付物与原论文链接。该探测证明公开服务器和 MCP 协议可用，但没有把 curl 调用冒充 Drone 真实会话验收；仍需在 Drone 设置中接入并在真实会话中调用后再标 PASS。
+2026-10-22 外部连通性探测：按文档使用公开的 AlphaGenome Paper2Agent MCP 地址完成 initialize、tools/list 和 `create_genomic_interval` 调用，服务器返回结构化交付物与原论文链接。该探测证明公开服务器和 MCP 协议可用；Drone 内的真实会话已完成服务器发现，但工具调用仍被宿主审批门禁拦截，不能把 curl 结果冒充 Drone 调用 PASS。
 
 ## PR6：PDF 解析质量评估
 
@@ -108,7 +108,7 @@
 
 ## 主线最终门禁
 
-截至 `main` 的 `9ba9a580`，两仓库联动的主线验证已完成；本轮修复后的门禁结果如下：
+截至 `main` 的 `4f383c30`，两仓库联动的主线验证已完成；本轮修复后的门禁结果如下：
 
 - `npm run lint`：通过（仅既有大文件大小警告）。
 - `npm run typecheck`：通过，包含锁定的知识插件抓取/构建。
@@ -120,7 +120,7 @@
 
 - 本轮修复后：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run check:plugin-api -- --migration --lifecycle`、`npm run skills:check` 和 `npm run check:ui-skill-acceptance` 均通过。
 
-真实 Vault/正式安装包证据仍按 handoff 保持待办：带页码引用点击、首页三类卡片、5 篇证据矩阵和 Paper2Agent 公共服务器的 Drone 会话调用；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
+真实 Vault/正式安装包仍有三项待办：PR3 正向三类首页卡片、PR4 五篇逐篇精读并沉淀、PR5 Paper2Agent 工具实际执行。PR2 页码引用点击已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
 
 ## 2026-10-22 实机抽检补充
 
@@ -130,5 +130,5 @@
 - 新建会话首页在当前 Vault 没有活跃课题、今日新想法和新文献雷达条目时，仅显示原有“研究 / 知识库 / 接力”卡片；上下文卡片没有以空状态出现，T3 的无数据路径通过。
 - 重新打包后的当前 `packages/desktop/dist/mac-arm64/Drone.app` 在真实连接器页列出并启用了 `arXiv`、`Semantic Scholar`。标准 `npm run dist` 因本机 `cpu-features` 缺失 `buildcheck.gypi` 在原生重编译阶段失败，使用 `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --dir --config.npmRebuild=false` 生成了可启动的未签名目录包，源码 registry 因而得到真实 app 证据。
 - PDF 桥接修复后的最新目录包再次启动成功；真实连接器页仍显示 `arXiv`、`Semantic Scholar`，插件页显示 `@gyoungwe/pi-research` 内置且已启用。
-- 真实会话尝试先后使用 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”。因此本次没有把雷达运行、页码引用点击或五篇矩阵标成 PASS，也没有写入新的 Vault 结果。
+- 真实会话先后尝试 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”；随后使用 DeepSeek V4.1 Flash 成功完成简单回答、PDF 页码引用和文件预览。矩阵内容仍未达到逐篇精读标准，首页正向三卡片和 Paper2Agent 实际调用也未通过，因此仅将 PR2 标为 PASS，其余保留准确状态。
 - `/Applications/Drone.app` 仍是较早构建；正向签名/安装包验收应在安装当前构建并恢复有效模型凭证后执行。
