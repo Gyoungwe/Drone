@@ -36,7 +36,7 @@ alwaysWith: research
 
 1. 在项目目录写入 `literature-matrix.md` 和 `literature-matrix.csv`（如已存在则在用户授权范围内更新本批，不覆盖其他项目文件）。Markdown 表格列为：论文、DOI/定位、研究问题、方法、数据/样本、主要结论（页码）、局限、与研究问题的关系、原文状态。CSV 使用 UTF-8，第一行为固定字段名；对单元格中的逗号、引号和换行做标准 CSV 转义，确保可被表格软件打开。
 2. 矩阵行必须保留 `read` / `unread` 状态。`unread` 行的六个字段不得写摘要推断；可以写“未读到原文（原因）”。在文档开头注明研究问题、来源范围、批次编号和未处理的剩余数量。
-3. 仅在至少有一篇来源被 `research_read_source` 成功读取后，父会话才调用 `research_deposit_knowledge`，使用 `type: "evidence"`，标题包含研究问题和批次，Markdown 使用矩阵正文，`source_links` 只放实际读取来源的 URI/DOI/项目路径。不可读论文保留在矩阵中，但不得作为已验证来源链接或引用。
+3. 父会话调用 `research_deposit_knowledge`，使用 `type: "evidence"`，标题包含研究问题和批次，Markdown 使用矩阵正文，`source_links` 只放实际读取来源的 URI/DOI/项目路径；有未读行时将 `status` 设为 `unverified`，即使整批都未读到原文也要沉淀矩阵的缺口记录。不可读论文保留在矩阵中，但不得作为已验证来源链接或引用。
 4. 沉淀返回的 Vault 路径和写入状态要记录在矩阵末尾；工具失败时保留本地 Markdown/CSV，报告失败原因，不声称已写入知识库。不要调用原始 Obsidian 写接口或用 `research_deposit_research_note` 冒充 `research_deposit_knowledge`。
 
 ## 证据纪律
