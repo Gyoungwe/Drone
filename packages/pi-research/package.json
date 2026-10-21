@@ -1,6 +1,6 @@
 {
 	"name": "@gyoungwe/pi-research",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Evidence-gated research retrieval, reading, deposition and source-grounded answer tools for native Pi",
 	"keywords": [
 		"pi-package",
