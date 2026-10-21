@@ -1,6 +1,12 @@
 import type { KnowledgeMaintenanceRun, KnowledgeMaintenanceSettings } from "@drone/shared";
 import { type MaintenanceItem, planMaintenance, runMaintenance } from "@gyoungwe/pi-knowledge/host";
 import { JsonStore } from "../json-store";
+import { createLogger } from "../log";
+
+const log = createLogger("knowledge-maintenance");
+const DAY_MS = 24 * 60 * 60 * 1000;
+const CHECK_INTERVAL_MS = 60 * 60 * 1000;
+const CONTENT_DEBOUNCE_MS = 10 * 60 * 1000;
 
 interface StoredState {
 	version: 1;
@@ -31,6 +37,7 @@ export interface KnowledgeMaintenanceOptions {
 export class KnowledgeMaintenanceService {
 	private readonly store: JsonStore<StoredState>;
 	private timer: ReturnType<typeof setInterval> | null = null;
+	private contentTimer: ReturnType<typeof setTimeout> | null = null;
 	private running: Promise<KnowledgeMaintenanceRun> | null = null;
 
 	constructor(private readonly options: KnowledgeMaintenanceOptions) {
@@ -61,19 +68,34 @@ export class KnowledgeMaintenanceService {
 	}
 	start(cwd: string): void {
 		if (this.timer) return;
-		const tick = () => void this.runIfDue(cwd).catch(() => undefined);
-		this.timer = setInterval(tick, 60 * 60 * 1000);
+		const tick = () =>
+			void this.runIfDue(cwd).catch((error) => log.warn("scheduled maintenance failed", error));
+		this.timer = setInterval(tick, CHECK_INTERVAL_MS);
 		this.timer.unref?.();
+	}
+	notifyContentChanged(cwd: string): void {
+		if (this.contentTimer) clearTimeout(this.contentTimer);
+		this.contentTimer = setTimeout(() => {
+			this.contentTimer = null;
+			void this.runIfEnabled(cwd).catch((error) => log.warn("content-triggered maintenance failed", error));
+		}, CONTENT_DEBOUNCE_MS);
+		this.contentTimer.unref?.();
 	}
 	dispose(): void {
 		if (this.timer) clearInterval(this.timer);
+		if (this.contentTimer) clearTimeout(this.contentTimer);
 		this.timer = null;
+		this.contentTimer = null;
 	}
 	private async runIfDue(cwd: string): Promise<void> {
 		const state = await this.store.read();
 		if (!state.settings.enabled) return;
 		const latest = state.runs[0]?.startedAt ? Date.parse(state.runs[0].startedAt) : 0;
-		if (Date.now() - latest < 24 * 60 * 60 * 1000) return;
+		if (Date.now() - latest < DAY_MS) return;
+		await this.runIfEnabled(cwd);
+	}
+	private async runIfEnabled(cwd: string): Promise<void> {
+		if (!(await this.getSettings()).enabled) return;
 		await this.runNow(cwd);
 	}
 	async runNow(cwd: string): Promise<KnowledgeMaintenanceRun> {
@@ -83,7 +105,8 @@ export class KnowledgeMaintenanceService {
 		return this.running;
 	}
 	private async runOnce(cwd: string): Promise<KnowledgeMaintenanceRun> {
-		const settings = await this.getSettings();
+		const state = await this.store.read();
+		const settings = state.settings;
 		const overview = await this.options.readOverview(cwd);
 		const revision = Number(overview?.binding?.revision || overview?.index?.revision || 1);
 		const items = planMaintenance(
@@ -99,6 +122,11 @@ export class KnowledgeMaintenanceService {
 			overview?.graph,
 			settings,
 		);
+		const today = new Date().toISOString().slice(0, 10);
+		const usedToday = state.runs
+			.filter((run) => run.startedAt.slice(0, 10) === today)
+			.reduce((total, run) => total + run.modelCalls, 0);
+		const remainingBudget = Math.max(0, settings.dailyLimit - usedToday);
 		const result = await runMaintenance(items, {
 			readNote: async (path) => {
 				const note = await this.options.readNote(cwd, path, revision);
@@ -113,6 +141,27 @@ export class KnowledgeMaintenanceService {
 				if (!this.options.proposeWiki) throw new Error("Wiki review host port unavailable");
 				await this.options.proposeWiki(cwd, item, proposal, revision);
 			},
+			validateWikiLinks: async (proposal) => {
+				const links =
+					typeof proposal.markdown === "string"
+						? [...proposal.markdown.matchAll(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|[^\]]+)?\]\]/g)]
+						: [];
+				for (const link of links) {
+					const target = String(link[1]).trim();
+					if (!target) continue;
+					const candidates = target.endsWith(".md") ? [target] : [`${target}.md`, `Wiki/${target}.md`];
+					let found = false;
+					for (const candidate of candidates) {
+						const note = await this.options.readNote(cwd, candidate, revision);
+						if (!note.missing) {
+							found = true;
+							break;
+						}
+					}
+					if (!found) throw new Error("unknown-wiki-target");
+				}
+			},
+			budget: { modelCalls: remainingBudget },
 		});
 		const run: KnowledgeMaintenanceRun = {
 			startedAt: result.startedAt,

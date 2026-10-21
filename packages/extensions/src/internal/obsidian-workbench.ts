@@ -286,7 +286,7 @@ export async function setSourceTopic({ cwd = process.cwd(), notePath, topic }: a
     const match = /^Library\/(Papers|Software)\/([^/]+\.md)$/.exec(relativePath);
     if (!match) throw new Error("note_path must be a Library/Papers or Library/Software note");
     const [, category, file] = match;
-    return updateVault(cwd, async (vault: any) => {
+    const result = await updateVault(cwd, async (vault: any) => {
         const note = await vaultPath(vault, "Library", category, file);
         const original = await readText(note);
         if (original == null) throw new Error(`Source note not found: ${relativePath}`);
@@ -311,6 +311,11 @@ export async function setSourceTopic({ cwd = process.cwd(), notePath, topic }: a
         }
         return { topic: value, note: relativePath, changed, updated };
     });
+    (process as unknown as { emit(event: string, ...args: unknown[]): boolean }).emit(
+        "drone:knowledge-deposited/v1",
+        { cwd },
+    );
+    return result;
 }
 
 /** Host-only maintenance ports. They keep Vault writes behind the existing

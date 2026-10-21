@@ -7970,6 +7970,11 @@ async function runMaintenance(items2, ports) {
   const results = [];
   let modelCalls = 0;
   for (const item of items2) {
+    if (ports.signal?.aborted) throw ports.signal.reason ?? new Error("maintenance aborted");
+    if (ports.budget && modelCalls >= ports.budget.modelCalls) {
+      results.push({ id: item.id, kind: item.kind, status: "skipped", reason: "daily-budget-exhausted" });
+      continue;
+    }
     try {
       const note = await ports.readNote(item.path);
       if (note.exists === false) {
@@ -7984,6 +7989,7 @@ async function runMaintenance(items2, ports) {
         await ports.setTopic(item.path, topic);
         results.push({ id: item.id, kind: item.kind, status: "topic-updated" });
       } else {
+        await ports.validateWikiLinks?.(output);
         await ports.proposeWiki(item, output);
         results.push({ id: item.id, kind: item.kind, status: "candidate-submitted" });
       }
@@ -26672,7 +26678,7 @@ async function setSourceTopic({ cwd = process.cwd(), notePath, topic }) {
   const match = /^Library\/(Papers|Software)\/([^/]+\.md)$/.exec(relativePath);
   if (!match) throw new Error("note_path must be a Library/Papers or Library/Software note");
   const [, category, file] = match;
-  return updateVault(cwd, async (vault) => {
+  const result2 = await updateVault(cwd, async (vault) => {
     const note = await vaultPath(vault, "Library", category, file);
     const original = await readText(note);
     if (original == null) throw new Error(`Source note not found: ${relativePath}`);
@@ -26694,6 +26700,11 @@ async function setSourceTopic({ cwd = process.cwd(), notePath, topic }) {
     }
     return { topic: value, note: relativePath, changed, updated };
   });
+  process.emit(
+    "drone:knowledge-deposited/v1",
+    { cwd }
+  );
+  return result2;
 }
 async function publishSourceNote({ cwd = process.cwd(), runDir, entry, topic = "" }) {
   const config = await loadWorkspaceConfig2(cwd);

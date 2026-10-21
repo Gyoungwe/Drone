@@ -219,7 +219,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，P2/P3/P4 工作头 `be86c1af9a4bc425cdf1bc2c206bffa9d74958c4`），宿主通过 `plugins.lock.json` 消费 `@gyoungwe/pi-knowledge@0.2.0`。插件仓库负责从源码构建 manifest、host 声明、native extension、worker 和 maintenance；Drone 负责 HostPort、Desktop UI/IPC、锁定下载和打包资源验收。它不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。
+`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，P2/P3/P4 工作头 `cdff35e23dd4f4d58e9684e2c4a632c81ccf34b7`），宿主通过 `plugins.lock.json` 消费 `@gyoungwe/pi-knowledge@0.2.0`。插件仓库负责从源码构建 manifest、host 声明、native extension、worker 和 maintenance；Drone 负责 HostPort、Desktop UI/IPC、锁定下载和打包资源验收。它不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 

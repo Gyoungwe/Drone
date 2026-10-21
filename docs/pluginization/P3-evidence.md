@@ -3,9 +3,9 @@
 日期：2026-10-21（Asia/Shanghai）
 Drone 分支：`codex/pluginize-v2-p2`
 `drone-plugins` 分支：`codex/pluginize-v2-p2`
-插件锁定头：`be86c1af9a4bc425cdf1bc2c206bffa9d74958c4`
+插件锁定头：`cdff35e23dd4f4d58e9684e2c4a632c81ccf34b7`
 插件包：`@gyoungwe/pi-knowledge@0.2.0`
-锁定 tarball SHA-256：`fdd54a8719ff8e13e137e08767ec457aa2b4f545d4fcada64d7758047868f2f4`
+锁定 tarball SHA-256：`4b8275c9a52b5709623fbcc3109a0d9f5a5f11cf095044f5356375e8acfb723c`
 
 ## 已完成
 
@@ -22,6 +22,7 @@ Drone 分支：`codex/pluginize-v2-p2`
 | `DRONE_PLUGINS_DIR=../drone-plugins npm run check:knowledge-runtime` | PASS；worker manifest hash 与插件构建产物一致 |
 | `DRONE_PLUGINS_DIR=../drone-plugins node scripts/check-knowledge-package.mjs --resources packages/desktop/dist/mac-arm64/Drone.app/Contents/Resources/research-workbench` | PASS；46 个 core tools、17 个必需知识工具、worker lifecycle `staged → verified → enabled` |
 | `npm run check:extensions -- --strict` | PASS；12 个 source/output 映射，0 个 legacy artifact 漂移 |
+| `npm run check:knowledge-runtime` | PASS；远程锁定插件构建、tarball SHA-256、worker manifest 和 integrity 一致 |
 | `npm run check:arch` | PASS；0 个新增架构违规 |
 | `DRONE_PLUGINS_DIR=../drone-plugins npm run build` | PASS；pi-core、pi-research、Electron main/preload/renderer 构建完成 |
 | `npm run lint` | PASS；仅保留 2 个既有大文件大小 warning |
@@ -34,10 +35,10 @@ Drone 分支：`codex/pluginize-v2-p2`
 
 | 产物 | SHA-256 |
 |---|---|
-| `drone-mac-arm64.dmg` | `e56a4d1e864e13f48aecef80d9c67a3f2df25321d8ac99d176e1dd24832d2060` |
-| `drone-mac-arm64.zip` | `03971a1b8828fc033e46d0d581f7e523cc74a93084f3f00256ead29df4b57929` |
-| `drone-mac-x64.dmg` | `bde259fbb92137e8685d2544a49698b379c4e34e469e81df8642e6fc519327d2` |
-| `drone-mac-x64.zip` | `02e0b9f4ef496028f9a4828d252ee13dd7457f7ed620000b10276a37f333ca1e` |
+| `drone-mac-arm64.dmg` | `3570db7f7f32456bf8d9ca58c90c8337320b499759dcc167b41f051b36864f1a` |
+| `drone-mac-arm64.zip` | `8600bd09ad5afd893b0e262a64e62d892a3eaf6161ce26e2d555cd662287050b` |
+| `drone-mac-x64.dmg` | `1091d2598422c35d858d58d299f360a2e6fd0910c7d68fc48fcb6628b539bb19` |
+| `drone-mac-x64.zip` | `5b05ef3f46b12d8e82fb36ae60f83adf0512995e66d6637c2125d4b98336f048` |
 
 打包后的 knowledge worker integrity：`eae35e78905022d937a890c55a0c61e2f8e373e08b49e9c4654eb5cb725e5216`。
 

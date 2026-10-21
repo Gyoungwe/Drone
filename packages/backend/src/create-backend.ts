@@ -600,6 +600,12 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			return completionText(response) ?? "";
 		},
 	});
+	const onKnowledgeDeposited = (payload: unknown) => {
+		if (!payload || typeof payload !== "object" || typeof (payload as { cwd?: unknown }).cwd !== "string")
+			return;
+		knowledgeMaintenance.notifyContentChanged((payload as { cwd: string }).cwd);
+	};
+	process.on("drone:knowledge-deposited/v1", onKnowledgeDeposited);
 	if (options.dailyDiscovery !== false) knowledgeMaintenance.start(options.defaultCwd ?? process.cwd());
 	const diagnostics: DiagnosticsServicePort = {
 		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
@@ -717,6 +723,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		dispose: () => {
 			dailyDiscovery.dispose();
 			knowledgeMaintenance.dispose();
+			process.off("drone:knowledge-deposited/v1", onKnowledgeDeposited);
 			detachInquiryComputeEvents();
 			sessions.dispose();
 			void compute.dispose();

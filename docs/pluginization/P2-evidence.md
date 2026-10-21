@@ -3,7 +3,7 @@
 日期：2026-10-21（Asia/Shanghai）
 Drone 分支：`codex/pluginize-v2-p2`
 `drone-plugins` 分支：`codex/pluginize-v2-p2`
-插件实现头：`be86c1af9a4bc425cdf1bc2c206bffa9d74958c4`
+插件实现头：`cdff35e23dd4f4d58e9684e2c4a632c81ccf34b7`
 源码历史合并提交：`f8687cf`（core）、`cf4489b`（test）；后续入口、host seam、维护模块和 manifest 更新均保留在上述插件头
 
 ## 已完成

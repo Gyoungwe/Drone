@@ -7970,6 +7970,11 @@ async function runMaintenance(items, ports) {
   const results = [];
   let modelCalls = 0;
   for (const item of items) {
+    if (ports.signal?.aborted) throw ports.signal.reason ?? new Error("maintenance aborted");
+    if (ports.budget && modelCalls >= ports.budget.modelCalls) {
+      results.push({ id: item.id, kind: item.kind, status: "skipped", reason: "daily-budget-exhausted" });
+      continue;
+    }
     try {
       const note = await ports.readNote(item.path);
       if (note.exists === false) {
@@ -7984,6 +7989,7 @@ async function runMaintenance(items, ports) {
         await ports.setTopic(item.path, topic);
         results.push({ id: item.id, kind: item.kind, status: "topic-updated" });
       } else {
+        await ports.validateWikiLinks?.(output);
         await ports.proposeWiki(item, output);
         results.push({ id: item.id, kind: item.kind, status: "candidate-submitted" });
       }
