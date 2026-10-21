@@ -21553,6 +21553,20 @@ var PackageLifecycleReceiptSchema = typebox_exports.Object(
   },
   { additionalProperties: false }
 );
+var RegistryPluginMetadataSchema = typebox_exports.Object(
+  {
+    name: typebox_exports.String({ minLength: 1 }),
+    version: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    description: typebox_exports.Optional(typebox_exports.String()),
+    capabilities: typebox_exports.Array(typebox_exports.String()),
+    tools: typebox_exports.Array(typebox_exports.String()),
+    permissions: typebox_exports.Optional(typebox_exports.Unknown()),
+    hosts: typebox_exports.Array(typebox_exports.String()),
+    packageKind: typebox_exports.Union([typebox_exports.Literal("pi"), typebox_exports.Literal("desktop-ui")]),
+    manifestDeclared: typebox_exports.Boolean()
+  },
+  { additionalProperties: false }
+);
 var PackagesContract = defineDomain("packages", {
   methods: {
     searchCatalog: {
@@ -21565,6 +21579,14 @@ var PackagesContract = defineDomain("packages", {
     latestPackageVersions: {
       args: typebox_exports.Tuple([typebox_exports.Array(typebox_exports.String({ minLength: 1 }), { maxItems: 50 })]),
       result: typebox_exports.Record(typebox_exports.String(), typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]))
+    },
+    /** Manifest declarations fetched from the npm registry before installation. */
+    pluginPackageMetadata: {
+      args: typebox_exports.Tuple([typebox_exports.Array(typebox_exports.String({ minLength: 1 }), { maxItems: 50 })]),
+      result: typebox_exports.Record(
+        typebox_exports.String(),
+        typebox_exports.Union([typebox_exports.Null(), typebox_exports.Unsafe(RegistryPluginMetadataSchema)])
+      )
     },
     installPackage: {
       args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),

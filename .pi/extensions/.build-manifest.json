@@ -33,8 +33,8 @@
 			"output": "research-loop.mjs",
 			"status": "generated",
 			"sourceSha256": "6678934764be217c111ef3eeef5d3b9961eaed8286abc7bd708899ef2a435c0a",
-			"inputsSha256": "34507b1daea7e84125a963589e512749a21e481ab57673d0965bae2cfe88113d",
-			"outputSha256": "78078d16635bd2ce106777f7da9ab56ebafb14912c1a9d2b06e55db2e7392481"
+			"inputsSha256": "a54879987df5f975d9b2af532689eca7ae9ebf7c5f0f0b9f5b4d15c56220c68c",
+			"outputSha256": "a6b1193a46ae33d0d58bb0bb57d9f07c4c5b84553b6b4e38294243c4bdf4673c"
 		},
 		"research-policy": {
 			"source": "research-policy.ts",
@@ -65,8 +65,8 @@
 			"output": "source-archive.mjs",
 			"status": "generated",
 			"sourceSha256": "488400db91da24a2e147afbc29fecf984aa3e8af2f99aa51fc2ae42fff8ac815",
-			"inputsSha256": "7f893ceddd884cbb7c81c561e15b6dbe345e7a6df02a2ac04e4ce1110db2aa09",
-			"outputSha256": "96fff4c1020f4dfcb5d0f6f13a9476222873a24df8084f9c125995a1b7350a3f"
+			"inputsSha256": "c4fa769f47d879a46422549bbf86e5ee32f0c36b967187b67e328984bce1f40c",
+			"outputSha256": "a8142a76e2e85c0cc786998e1af57037ac73cad7f545f0eef051c81e07bad3ec"
 		},
 		"subagent-mcp-readonly": {
 			"source": "subagent-mcp-readonly.ts",
@@ -97,9 +97,11 @@
 			"output": "zotero-literature.mjs",
 			"status": "generated",
 			"sourceSha256": "6b7b45a4d85c43b9ea9c3bd4af85e7796a2b470679f9a7bf7f69a1c01f60a2e9",
-			"inputsSha256": "27dd72f8ff80a171aa34b7061f2623a1fe212d5d4547f225dc5141fe498ea2bd",
-			"outputSha256": "37aec0db24a89c362afc30b60c62be64c40e10ac16d37149d1dda2d130f0f677"
+			"inputsSha256": "9f8a6dc7adb2082fe05cd205ec093978e0a95203fbdbd197826109970e380a92",
+			"outputSha256": "7c7853401cadfb26d771bd5506018d57efe77ee1b579847307840f5dcc2fba5d"
 		}
 	},
-	"legacyOutputs": ["knowledge-worker.mjs"]
+	"legacyOutputs": [
+		"knowledge-worker.mjs"
+	]
 }
