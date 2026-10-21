@@ -8,6 +8,13 @@
 - v3 T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，尚未完成完整迁移。
 - PR1–PR5 的代码/文档实现已完成，PR6 的评估脚本和结果已完成；PR1–PR4、PR5 的真实会话/安装包验收仍待执行，PR6 的集成结论留待下一轮决定。本计划不把 fixture 或 loader 单独加载当作真实验收。
 
+### 2026-10-22 实机抽检记录
+
+- 当前构建包 `packages/desktop/dist/mac-arm64/Drone.app` 已在真实 `Dronevault`（`/Users/gaoyangwei/Documents/Dronevault`）启动，知识库页读到 `ObsidianResearchVault` 的 100 篇笔记和真实来源记录。
+- 新建会话首页在该 Vault 没有活跃课题、今日新想法或 `radar.status=new` 条目时只显示原有卡片，未渲染空的“继续课题 / 今日发现 / 新文献”卡片；这是 T3 的负向路径证据，不能替代三张卡片的正向验收。
+- 真实会话连通性抽检使用已配置模型 `GPT-6.1 Sol`，结果为“模型请求失败：凭证无效”；此前 `Gemini 3.8 Flash` 也得到同样错误。当前无法在真实会话中运行雷达、学术回答或证据矩阵，相关条目继续保持待验收。
+- `/Applications/Drone.app` 的 `app.asar` 时间戳早于当前构建包；正式安装包正向验收必须在安装新构建包并恢复有效模型凭证后重跑。
+
 ## 共同约束
 
 - 复用现有连接器 registry、捕获流程、`JsonStore`、子代理和 `window.pi` host API，不新增安全门、确认流程或无需求的抽象层。

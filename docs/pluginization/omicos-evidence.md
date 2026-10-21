@@ -112,3 +112,12 @@
 - `npm run skills:check` 与 `npm run check:ui-skill-acceptance`：通过；UI-01、SKILL-01 PASS。
 
 真实 Vault/正式安装包证据仍按 handoff 保持待办：雷达实际运行与入库、带页码引用点击、首页三类卡片、5 篇证据矩阵和 Paper2Agent 公共服务器调用；这些不能由本地 fixture 或离线 loader 代替。
+
+## 2026-10-22 实机抽检补充
+
+使用当前构建包 `packages/desktop/dist/mac-arm64/Drone.app` 启动真实 Vault `/Users/gaoyangwei/Documents/Dronevault`：
+
+- 知识库页显示 `ObsidianResearchVault`、100 篇笔记和已有 arXiv/LoRA 来源记录，证明当前构建包能读取真实 Vault 状态。
+- 新建会话首页在当前 Vault 没有活跃课题、今日新想法和新文献雷达条目时，仅显示原有“研究 / 知识库 / 接力”卡片；上下文卡片没有以空状态出现，T3 的无数据路径通过。
+- 真实会话尝试先后使用 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”。因此本次没有把雷达运行、页码引用点击或五篇矩阵标成 PASS，也没有写入新的 Vault 结果。
+- `/Applications/Drone.app` 仍是较早构建；正向安装包验收应在安装当前构建并恢复有效模型凭证后执行。
