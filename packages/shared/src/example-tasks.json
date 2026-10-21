@@ -210,7 +210,27 @@
 		"contractNotes": {
 			"zh": "命中不等于已读；写入 Zotero 的只有精读过的几篇，已包含在这一次任务授权里",
 			"en": "A search hit is not a source read; only the closely read papers are written to Zotero, and that write is covered by the one task authorization"
-		}
+		},
+		"entrypoints": [
+			{
+				"id": "literature-matrix",
+				"command": "skill:literature-matrix",
+				"title": {
+					"zh": "批量精读 → 证据矩阵",
+					"en": "Batch close reading → evidence matrix"
+				},
+				"goal": {
+					"zh": "从 Zotero 集合、DOI 列表或项目 PDF 文件夹逐篇读取原文，生成带页码证据的 Markdown 和 CSV 矩阵。",
+					"en": "Read papers from a Zotero collection, DOI list or project PDF folder and produce a page-cited Markdown and CSV evidence matrix."
+				},
+				"inputs": ["papers", "question"],
+				"artifacts": ["literature-matrix.md", "literature-matrix.csv"],
+				"contractNotes": {
+					"zh": "每批最多 12 篇；读不到原文标记“未读到原文”，不得用摘要补全。",
+					"en": "At most 12 papers per batch; mark unreadable originals as “未读到原文” and never fill from abstracts."
+				}
+			}
+		]
 	},
 	{
 		"id": "analysis-explore",

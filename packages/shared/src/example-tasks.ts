@@ -36,6 +36,16 @@ export interface ExampleTaskMilestone {
 	/** Include this milestone only when the named input has the given value (e.g. optional Zotero filing). */
 	when?: { input: string; equals: string };
 }
+/** Optional secondary entry points for a direction that keeps the primary example card stable. */
+export interface ExampleTaskEntrypoint {
+	id: string;
+	command: string;
+	title: ExampleTaskText;
+	goal: ExampleTaskText;
+	inputs: string[];
+	artifacts: string[];
+	contractNotes?: ExampleTaskText;
+}
 export interface ExampleTask {
 	id: string;
 	direction: WorkflowDirection;
@@ -53,6 +63,8 @@ export interface ExampleTask {
 	artifacts: ExampleTaskText[];
 	/** Boundary reminder derived from the stage contract. */
 	contractNotes?: ExampleTaskText;
+	/** Additional slash-menu/task entry points for this direction. */
+	entrypoints?: ExampleTaskEntrypoint[];
 }
 
 export const EXAMPLE_TASK_ACCEPTANCE_KINDS: readonly ExampleTaskAcceptanceKind[] = [
