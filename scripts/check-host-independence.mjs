@@ -20,6 +20,19 @@ const optional = new Set([
 	"@gyoungwe/research-suite",
 ]);
 
+/** Return optional plugin imports that would couple the host to a package. */
+export function findHostImportViolations(file, source) {
+	const violations = [];
+	for (const match of source.matchAll(
+		/(?:from\s*|import\s*(?:\(\s*|\s+)|require\s*\(\s*)["'](@gyoungwe\/[^"']+)["']/gu,
+	)) {
+		const packageName = match[1].split("/").slice(0, 2).join("/");
+		if (optional.has(packageName) && !allowed.has(packageName))
+			violations.push(`${relative(root, file)}: optional plugin import ${packageName}`);
+	}
+	return violations;
+}
+
 async function walk(dir, files = []) {
 	for (const entry of await readdir(dir, { withFileTypes: true })) {
 		if (["node_modules", "dist", "out", "coverage"].includes(entry.name)) continue;
@@ -33,13 +46,7 @@ async function walk(dir, files = []) {
 const violations = [];
 for (const file of await walk(join(root, "packages"))) {
 	const source = await readFile(file, "utf8");
-	for (const match of source.matchAll(
-		/(?:from\s*|import\s*\(\s*|require\s*\(\s*)["'](@gyoungwe\/[^"']+)["']/gu,
-	)) {
-		const packageName = match[1].split("/").slice(0, 2).join("/");
-		if (optional.has(packageName) && !allowed.has(packageName))
-			violations.push(`${relative(root, file)}: optional plugin import ${packageName}`);
-	}
+	violations.push(...findHostImportViolations(file, source));
 }
 if (violations.length) {
 	console.error("Host independence check failed:");

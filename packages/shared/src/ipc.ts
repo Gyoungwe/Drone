@@ -276,6 +276,7 @@ export const IpcChannels = {
 	PackagesRemove: "packages:remove",
 	PackagesListConfigured: "packages:listConfigured",
 	PackagesLatestVersions: "packages:latestVersions",
+	PackagesPluginMetadata: "packages:pluginMetadata",
 	FileSaveDialog: "file:saveDialog",
 	FilePickPath: "file:pickPath",
 	FilePreview: "file:preview",
@@ -477,6 +478,9 @@ export interface PiApi
 	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
 	/** 查询 npm 上的最新版本（离线或失败返回 null）。 */
 	latestPackageVersions(names: string[]): Promise<Record<string, string | null>>;
+	pluginPackageMetadata(names: string[]): Promise<
+		Record<string, import("./plugin-sources").RegistryPluginMetadata | null>
+	>;
 	/** 弹保存对话框并写文件；用户取消返回 null，成功返回写入路径 */
 	saveFileDialog(defaultName: string, content: string): Promise<string | null>;
 	/** 弹打开对话框选文件或文件夹（示例任务表单的路径输入）；用户取消返回 null，不读文件内容 */

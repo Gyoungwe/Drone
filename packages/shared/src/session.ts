@@ -388,6 +388,8 @@ export interface HostPluginPackage {
 	hosts?: string[];
 	tools?: string[];
 	permissions?: unknown;
+	/** Whether permissions/tools/capabilities came from a Drone manifest. */
+	manifestDeclared?: boolean;
 }
 
 /** 资源加载诊断（collision 冲突/warning/error） */

@@ -15,7 +15,7 @@ vi.mock("electron", () => ({
 	shell: { openPath: vi.fn() },
 }));
 
-import { UiPluginManager } from "./manager";
+import { discoverInstalledUiPackages, UiPluginManager } from "./manager";
 
 describe("installed desktop-ui-pack discovery", () => {
 	let root = "";
@@ -25,6 +25,12 @@ describe("installed desktop-ui-pack discovery", () => {
 		if (root) await rm(root, { recursive: true, force: true });
 		if (originalResourcesPath) Object.defineProperty(process, "resourcesPath", originalResourcesPath);
 		else Reflect.deleteProperty(process, "resourcesPath");
+	});
+
+	it("keeps the host usable when the managed package root is empty", async () => {
+		root = await mkdtemp(join(tmpdir(), "drone-ui-pack-empty-root-"));
+		await mkdir(join(root, "agent", "npm", "node_modules"), { recursive: true });
+		expect(await discoverInstalledUiPackages(join(root, "agent", "npm", "node_modules"))).toEqual([]);
 	});
 
 	it("loads the installed package through the normal UI plugin lifecycle", async () => {

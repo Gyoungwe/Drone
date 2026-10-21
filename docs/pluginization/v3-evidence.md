@@ -1,6 +1,6 @@
 # 插件平台 v3 实现证据
 
-分支：`codex/plugin-platform-v3`（Drone 与 `drone-plugins`）。v2 已分别合并并推送到两边 `main`。
+分支：两个仓库的 `main`（v2 已合并；v3 实现与规范更新随本次提交合并）。以下命令均在干净工作树上重跑。
 
 ## T1 清单检查器与 tools
 
@@ -19,25 +19,27 @@
 
 - 新增 `knowledge.tab`、`home.section`、`skills.section`，同步 shared 区域目录、renderer 挂载、插件类型声明和 UI SPEC。
 - 知识库插件页签在核心页签之后追加；停用后回到默认内容；首页和技能页在无贡献时不渲染空壳。
-- 证据：`npm run typecheck --workspace @drone/desktop`、renderer plugin registry 对齐测试。
+- 证据：`npm run test --workspace @drone/desktop -- --run src/renderer/src/plugins/PluginRegions.test.tsx`（4 tests），`npm run typecheck --workspace @drone/desktop`。
 
 ## T4 宿主独立性
 
 - `scripts/check-host-independence.mjs` 已挂入 `npm run check:arch`，扫描生产源码中的可选插件 import，并验证空插件安装根。
-- 证据：`npm run check:arch` 通过。
+- 证据：`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch` 通过。现有 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外；其完整迁移不属于 v3 任务范围。
 
 ## T5 安装前声明
 
 - 插件行在安装前展示 capabilities、tools、permissions；缺失 manifest 时显示通用 Pi 包的未声明权限；安装动作先经过双语确认。
 - 注册表元数据保留版本、能力、工具和权限，已安装 manifest 的声明优先。
+- 证据：`npx vitest run packages/desktop/src/main/package-versions.test.ts packages/shared/src/host-api/packages.test.ts packages/shared/src/plugin-sources.test.ts`（16 tests）；覆盖 `@gyoungwe/pi-analysis` manifest 和无 manifest 的 L0 tarball。
 
 ## T6 工具重名诊断
 
 - 会话资源汇总按加载顺序记录首个工具注册；重复工具保留首个，并在 Skills & Connections 诊断中显示两份来源。
+- 证据：`npx vitest run packages/backend/test/research-skill-provenance.test.ts`（含双包同名工具场景）。
 
 ## T7 文档与登记
 
-- 更新 `docs/INDEX.md`、两个仓库 `AGENTS.md`、双仓库所有权说明和本证据文件；`drone-plugins/docs/PLUGIN-SPEC.md` 为清单合同入口。
+- 更新 `docs/INDEX.md`、双仓库所有权说明和本证据文件；`drone-plugins/docs/PLUGIN-SPEC.md` 已登记三类页面区域、通用 UI 发现、声明展示和宿主独立性要求。
 
 ## 回归
 

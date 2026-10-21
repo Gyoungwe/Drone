@@ -6,6 +6,7 @@ import type {
 	ConfiguredPackageInfo,
 	PackageLifecycleReceipt,
 } from "../packages";
+import type { RegistryPluginMetadata } from "../plugin-sources";
 import { defineDomain } from "./define";
 
 const CatalogPackageTypeSchema = Type.Union([
@@ -114,6 +115,21 @@ const PackageLifecycleReceiptSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
+const RegistryPluginMetadataSchema = Type.Object(
+	{
+		name: Type.String({ minLength: 1 }),
+		version: Type.Optional(Type.String({ minLength: 1 })),
+		description: Type.Optional(Type.String()),
+		capabilities: Type.Array(Type.String()),
+		tools: Type.Array(Type.String()),
+		permissions: Type.Optional(Type.Unknown()),
+		hosts: Type.Array(Type.String()),
+		packageKind: Type.Union([Type.Literal("pi"), Type.Literal("desktop-ui")]),
+		manifestDeclared: Type.Boolean(),
+	},
+	{ additionalProperties: false },
+);
+
 /** Host API contract for pi.dev community package discovery and management. */
 export const PackagesContract = defineDomain("packages", {
 	methods: {
@@ -127,6 +143,14 @@ export const PackagesContract = defineDomain("packages", {
 		latestPackageVersions: {
 			args: Type.Tuple([Type.Array(Type.String({ minLength: 1 }), { maxItems: 50 })]),
 			result: Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+		},
+		/** Manifest declarations fetched from the npm registry before installation. */
+		pluginPackageMetadata: {
+			args: Type.Tuple([Type.Array(Type.String({ minLength: 1 }), { maxItems: 50 })]),
+			result: Type.Record(
+				Type.String(),
+				Type.Union([Type.Null(), Type.Unsafe<RegistryPluginMetadata>(RegistryPluginMetadataSchema)]),
+			),
 		},
 		installPackage: {
 			args: Type.Tuple([Type.String({ minLength: 1 })]),

@@ -181,6 +181,7 @@ export class SessionResourceService {
 							hosts: [...source.hosts],
 							tools: [...source.tools],
 							permissions: source.permissions,
+						manifestDeclared: Boolean(manifestData),
 						}
 					: {}),
 			};

@@ -1,6 +1,6 @@
 import type { BackendServices, SessionServicePort } from "@drone/backend";
 import { IpcChannels, PackagesContract } from "@drone/shared";
-import { latestPackageVersions } from "../package-versions";
+import { latestPackageVersions, registryPluginMetadata } from "../package-versions";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** 社区包域：pi.dev 目录搜索 + 安装/卸载 + 已配置清单。 */
@@ -58,6 +58,7 @@ export function registerPackagesIpc(
 		},
 		listConfiguredPackages: () => packages.listConfiguredPackages(),
 		latestPackageVersions: (names) => latestPackageVersions(names),
+		pluginPackageMetadata: (names) => registryPluginMetadata(names),
 	};
 	bindContract(PackagesContract, implementation, {
 		channelForMethod: (_contract, method) =>
@@ -68,6 +69,7 @@ export function registerPackagesIpc(
 				removePackage: IpcChannels.PackagesRemove,
 				listConfiguredPackages: IpcChannels.PackagesListConfigured,
 				latestPackageVersions: IpcChannels.PackagesLatestVersions,
+				pluginPackageMetadata: IpcChannels.PackagesPluginMetadata,
 			})[method as keyof typeof PackagesContract.methods],
 	});
 }

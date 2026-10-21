@@ -4,6 +4,7 @@ import type {
 	ConfiguredPackageInfo,
 	PackageLifecycleOperation,
 	PackageLifecycleReceipt,
+	RegistryPluginMetadata,
 } from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
@@ -56,6 +57,10 @@ interface CatalogStore {
 	latestVersions: Record<string, string | null>;
 	checkingLatest: boolean;
 	checkLatestVersions: (names: string[]) => Promise<void>;
+	/** Registry declarations used by the pre-install confirmation. Null means unavailable. */
+	pluginMetadata: Record<string, RegistryPluginMetadata | null>;
+	loadingPluginMetadata: boolean;
+	loadPluginMetadata: (names: string[]) => Promise<void>;
 }
 
 export const useCatalogStore = create<CatalogStore>((set, get) => {
@@ -208,6 +213,8 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 
 		latestVersions: {},
 		checkingLatest: false,
+		pluginMetadata: {},
+		loadingPluginMetadata: false,
 		checkLatestVersions: async (names) => {
 			if (!names.length || typeof getPi().latestPackageVersions !== "function") return;
 			set({ checkingLatest: true });
@@ -218,6 +225,21 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 				// Offline or host without the method: rows fall back to the plain "installed" state.
 			} finally {
 				set({ checkingLatest: false });
+			}
+		},
+
+		loadPluginMetadata: async (names) => {
+			if (!names.length || typeof getPi().pluginPackageMetadata !== "function") return;
+			set({ loadingPluginMetadata: true });
+			try {
+				const found = await getPi().pluginPackageMetadata(names);
+				set((state) => ({ pluginMetadata: { ...state.pluginMetadata, ...found } }));
+			} catch {
+				set((state) => ({
+					pluginMetadata: Object.fromEntries(names.map((name) => [name, state.pluginMetadata[name] ?? null])),
+				}));
+			} finally {
+				set({ loadingPluginMetadata: false });
 			}
 		},
 

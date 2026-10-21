@@ -5,7 +5,7 @@ export type PiPluginSource = "pi-market" | "drone";
 
 export type PiPluginPackageKind = "pi" | "desktop-ui";
 
-/** Public Drone package names. Manifest details are read from host metadata when installed. */
+/** Public Drone package names. Manifest details are read from the host or npm registry. */
 export const DRONE_PLUGIN_PACKAGE_NAMES = [
 	"@gyoungwe/pi-core",
 	"@gyoungwe/pi-knowledge",
@@ -24,8 +24,7 @@ export const DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES = [
 	"@gyoungwe/pi-research",
 ] as const;
 
-/** Registry metadata shown before a package is installed. Keep this in the host contract so
- * the market never falls back to a blank version/description when the session has no resources. */
+/** Last-known fallback metadata used while the registry request is pending or unavailable. */
 export const DRONE_PLUGIN_METADATA: Readonly<
 	Record<
 		(typeof DRONE_PLUGIN_PACKAGE_NAMES)[number],
@@ -41,7 +40,7 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 	>
 > = {
 	"@gyoungwe/pi-core": {
-		version: "0.1.5",
+		version: "0.1.6",
 		description: "Portable task, authorization, status, delivery and memory tools for native Pi",
 		builtIn: true,
 		capabilities: ["tasks", "authorization", "memory"],
@@ -57,7 +56,7 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 		permissions: { filesystem: "vault", network: "none" },
 	},
 	"@gyoungwe/pi-research": {
-		version: "0.1.0",
+		version: "0.1.1",
 		description:
 			"Evidence-gated research retrieval, reading, deposition and source-grounded answer tools for native Pi",
 		builtIn: true,
@@ -66,28 +65,28 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 		permissions: { filesystem: "workspace", network: "read" },
 	},
 	"@gyoungwe/pi-analysis": {
-		version: "0.1.0",
+		version: "0.1.1",
 		description: "Portable scientific analysis adapters and readiness gates for native Pi",
 		capabilities: ["analysis", "readiness"],
 		tools: ["analysis_list_adapters", "analysis_assess_readiness"],
 		permissions: { filesystem: "workspace", network: "none" },
 	},
 	"@gyoungwe/pi-evidence": {
-		version: "0.1.0",
+		version: "0.1.1",
 		description: "Portable evidence manifests, provenance, checkpoints and replay proofs for native Pi",
 		capabilities: ["evidence", "provenance", "replay"],
 		tools: ["evidence_manifest", "evidence_checkpoint", "evidence_replay"],
 		permissions: { filesystem: "workspace", network: "none" },
 	},
 	"@gyoungwe/pi-connectors": {
-		version: "0.1.0",
+		version: "0.1.1",
 		description: "Host-neutral, read-only connector declarations and provenance receipts for native Pi",
 		capabilities: ["connectors", "receipts"],
 		tools: ["connector_list", "connector_get"],
 		permissions: { filesystem: "workspace", network: "read" },
 	},
 	"@gyoungwe/desktop-ui-pack": {
-		version: "0.1.0",
+		version: "0.1.1",
 		description: "Optional Drone Desktop UI contributions loaded by the installed package boundary",
 		packageKind: "desktop-ui",
 		capabilities: ["ui"],
@@ -95,7 +94,7 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 		permissions: { filesystem: "none", network: "none" },
 	},
 	"@gyoungwe/research-suite": {
-		version: "0.1.5",
+		version: "0.1.6",
 		description: "Bundled Drone native Pi research suite",
 		capabilities: ["research", "knowledge", "analysis"],
 		tools: ["research_loop_start", "knowledge_search", "analysis_assess_readiness"],
@@ -198,6 +197,18 @@ export interface DronePackageManifest {
 	readonly tools?: readonly string[];
 }
 
+export interface RegistryPluginMetadata {
+	readonly name: string;
+	readonly version?: string;
+	readonly description?: string;
+	readonly capabilities: readonly string[];
+	readonly tools: readonly string[];
+	readonly permissions?: unknown;
+	readonly hosts: readonly string[];
+	readonly packageKind: PiPluginPackageKind;
+	readonly manifestDeclared: boolean;
+}
+
 /**
  * A source-neutral package projection for the plugin page.
  *
@@ -222,6 +233,8 @@ export interface PiPluginSourceEntry {
 	readonly hosts: readonly string[];
 	readonly permissions?: unknown;
 	readonly tools: readonly string[];
+	readonly declarationSource: "installed" | "registry" | "fallback";
+	readonly manifestDeclared: boolean;
 }
 
 function strings(values: readonly unknown[] | undefined): string[] {
@@ -252,6 +265,8 @@ export function piMarketPluginSource(pkg: CatalogPackage): PiPluginSourceEntry |
 		uiContribution: false,
 		hosts: ["native-pi", "drone-desktop"],
 		tools: [],
+		declarationSource: "fallback",
+		manifestDeclared: false,
 	};
 }
 
@@ -301,6 +316,8 @@ export function dronePluginSource(
 		hosts: unique(strings(manifest?.hosts)),
 		permissions: manifest?.permissions,
 		tools: unique(strings(manifest?.tools)),
+		declarationSource: manifest ? "installed" : "fallback",
+		manifestDeclared: Boolean(manifest),
 	};
 }
 

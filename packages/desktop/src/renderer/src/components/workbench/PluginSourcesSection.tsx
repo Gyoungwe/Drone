@@ -4,6 +4,7 @@ import {
 	DRONE_PLUGIN_METADATA,
 	DRONE_PLUGIN_PACKAGE_NAMES,
 	type HostPluginPackage,
+	type RegistryPluginMetadata,
 	type PiPluginSourceEntry,
 } from "@drone/shared";
 import { useEffect, useMemo } from "react";
@@ -14,20 +15,27 @@ import { useUiPluginsStore } from "../../stores/ui-plugins";
 import { BrowseSection } from "../settings/extensions/BrowseSection";
 import { Switch } from "../ui/Switch";
 
-function packageEntry(packageName: string, host?: HostPluginPackage): PiPluginSourceEntry {
+function packageEntry(
+	packageName: string,
+	host?: HostPluginPackage,
+	registry?: RegistryPluginMetadata | null,
+): PiPluginSourceEntry {
 	const metadata = DRONE_PLUGIN_METADATA[packageName as keyof typeof DRONE_PLUGIN_METADATA];
+	const installed = Boolean(host);
+	const declared = installed ? (host?.manifestDeclared ? host : undefined) : (registry ?? undefined);
 	return {
 		packageName,
-		version: host?.version ?? metadata?.version,
-		description: host?.description ?? metadata?.description,
+		version: host?.version ?? registry?.version ?? metadata?.version,
+		description: host?.description ?? registry?.description ?? metadata?.description,
 		sources: ["drone"],
 		packageKind:
 			host?.packageKind ??
+			registry?.packageKind ??
 			metadata?.packageKind ??
 			(packageName === "@gyoungwe/desktop-ui-pack" ? "desktop-ui" : "pi"),
-		capabilities: host?.capabilities ?? metadata?.capabilities ?? [],
-		tools: host?.tools ?? metadata?.tools ?? [],
-		permissions: host?.permissions ?? metadata?.permissions,
+		capabilities: declared?.capabilities ?? [],
+		tools: declared?.tools ?? [],
+		permissions: declared?.permissions,
 		piExtensions: [],
 		piSkills: [],
 		piPrompts: [],
@@ -35,7 +43,9 @@ function packageEntry(packageName: string, host?: HostPluginPackage): PiPluginSo
 		pluginApi: host?.pluginApi,
 		piApiVersion: host?.piApiVersion,
 		minHostVersion: host?.minHostVersion,
-		hosts: host?.hosts ?? [],
+		hosts: installed ? (host?.manifestDeclared ? (host.hosts ?? []) : []) : (registry?.hosts ?? []),
+		declarationSource: installed ? "installed" : registry ? "registry" : "fallback",
+		manifestDeclared: installed ? host?.manifestDeclared === true : registry?.manifestDeclared === true,
 	};
 }
 
@@ -134,6 +144,20 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 					<p className="mt-1 text-[11px] text-ink-faint">
 						v{entry.version ?? "?"} · {entry.capabilities.join(" · ") || "Pi package"}
 					</p>
+					<p className="mt-1 text-[11px] text-ink-faint">
+						{t("skillsConnections.declaredCapabilities")}: {" "}
+						{entry.capabilities.length ? entry.capabilities.join(", ") : t("skillsConnections.undeclaredCapabilities")}
+						{" · "}
+						{t("skillsConnections.declaredHosts")}: {" "}
+						{entry.hosts.length ? entry.hosts.join(", ") : t("skillsConnections.undeclaredHosts")}
+					</p>
+					{!entry.manifestDeclared && (
+						<p className="mt-1 text-[11px] text-warn">
+							{entry.declarationSource === "fallback"
+								? t("skillsConnections.metadataAfterInstall")
+								: t("skillsConnections.undeclaredManifest")}
+						</p>
+					)}
 					<p className="mt-1 text-[11px] text-ink-faint">
 						{t("skillsConnections.declaredTools")}:{" "}
 						{entry.tools.length ? entry.tools.join(", ") : t("skillsConnections.undeclaredTools")}
@@ -243,7 +267,17 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 									className="rounded-full bg-ink px-2 py-1 text-[11px] text-canvas hover:opacity-90 disabled:opacity-60"
 									disabled={installing}
 									onClick={() => {
-										if (window.confirm(t("skillsConnections.installConfirm", { name: entry.packageName })))
+										const details = [
+											t("skillsConnections.declaredCapabilities") + ": " +
+												(entry.capabilities.length ? entry.capabilities.join(", ") : t("skillsConnections.undeclaredCapabilities")),
+											t("skillsConnections.declaredTools") + ": " +
+												(entry.tools.length ? entry.tools.join(", ") : t("skillsConnections.undeclaredTools")),
+											t("skillsConnections.declaredPermissions") + ": " +
+												(entry.permissions ? JSON.stringify(entry.permissions) : t("skillsConnections.undeclaredPermissions")),
+											t("skillsConnections.declaredHosts") + ": " +
+												(entry.hosts.length ? entry.hosts.join(", ") : t("skillsConnections.undeclaredHosts")),
+										];
+										if (window.confirm([t("skillsConnections.installConfirm", { name: entry.packageName }), ...details].join("\n")))
 											void install(entry.packageName);
 									}}
 								>
@@ -265,15 +299,18 @@ export function PluginSourcesSection() {
 	const uiPlugins = useUiPluginsStore((state) => state.plugins);
 	const setPluginEnabled = useUiPluginsStore((state) => state.setPluginEnabled);
 	const checkLatestVersions = useCatalogStore((state) => state.checkLatestVersions);
+	const pluginMetadata = useCatalogStore((state) => state.pluginMetadata);
+	const loadPluginMetadata = useCatalogStore((state) => state.loadPluginMetadata);
 	const entries = useMemo(
 		() =>
 			DRONE_PLUGIN_PACKAGE_NAMES.map((name) =>
 				packageEntry(
 					name,
 					hostPlugins.find((item) => item.name === name),
+					pluginMetadata[name],
 				),
 			),
-		[hostPlugins],
+		[hostPlugins, pluginMetadata],
 	);
 	const packageNames = useMemo(() => entries.map((entry) => entry.packageName), [entries]);
 	const builtinEntries = useMemo(
@@ -327,6 +364,9 @@ export function PluginSourcesSection() {
 	useEffect(() => {
 		if (installedNames) void checkLatestVersions(installedNames.split("|"));
 	}, [checkLatestVersions, installedNames]);
+	useEffect(() => {
+		void loadPluginMetadata(packageNames);
+	}, [loadPluginMetadata, packageNames]);
 	return (
 		<div className="space-y-5" data-testid="plugin-sources-section">
 			{/* One card for every plugin the user has or can add from Drone; the community market below is a

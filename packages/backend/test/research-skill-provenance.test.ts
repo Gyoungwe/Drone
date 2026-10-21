@@ -46,4 +46,58 @@ describe("research skill provenance", () => {
 		});
 		expect(resources.skills[0]).not.toHaveProperty("repositoryCommit");
 	});
+
+	it("reports duplicate tools with both package sources and keeps the first registration", async () => {
+		const extensions = [
+			{
+				path: "/tmp/first-package/dist/index.mjs",
+				sourceInfo: { source: "@example/first-package", scope: "user" },
+				tools: new Map([["shared_status", {}]]),
+				commands: new Map(),
+				flags: new Map(),
+				shortcuts: new Map(),
+				hidden: false,
+			},
+			{
+				path: "/tmp/second-package/dist/index.mjs",
+				sourceInfo: { source: "@example/second-package", scope: "user" },
+				tools: new Map([["shared_status", {}]]),
+				commands: new Map(),
+				flags: new Map(),
+				shortcuts: new Map(),
+				hidden: false,
+			},
+		];
+		const service = new SessionResourceService({
+			options: {},
+			registry: {},
+			sessionEngine: {},
+			capabilityRuntimes: new Map(),
+			mcp: {},
+			projectLoader: {},
+			requireSession: () =>
+				({
+					session: {
+						resourceLoader: {
+							getSkills: () => ({ skills: [], diagnostics: [] }),
+							getExtensions: () => ({ extensions, errors: [] }),
+						},
+					},
+				}) as never,
+			reapplyCapabilities: () => undefined,
+			log: { info: () => undefined, warn: () => undefined },
+		} as never);
+
+		const resources = await service.getLoadedResources("session");
+		expect(resources.extensions.map((extension) => extension.source)).toEqual([
+			"@example/first-package",
+			"@example/second-package",
+		]);
+		expect(resources.skillDiagnostics).toContainEqual({
+			type: "collision",
+			message:
+				'Tool "shared_status" is declared by @example/first-package and @example/second-package; keeping the first registration.',
+			path: "/tmp/second-package/dist/index.mjs",
+		});
+	});
 });
