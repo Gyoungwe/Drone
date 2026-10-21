@@ -13017,6 +13017,10 @@ var KnowledgeContract = defineDomain("knowledge", {
       args: OneObject(),
       result: ResultObject()
     },
+    decideDailyRadarPaper: {
+      args: OneObject(),
+      result: ResultObject()
+    },
     getTopics: {
       args: OneObject(),
       result: ResultObject()

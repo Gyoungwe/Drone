@@ -48,6 +48,25 @@ afterEach(() => {
 });
 
 describe("acceptance verifier registry (hook 2)", () => {
+	it("registers one task workbench per Pi host even when two extension graphs load it", () => {
+		const tools = new Map();
+		const listeners = new Map();
+		const pi = {
+			registerTool: (tool) => tools.set(tool.name, tool),
+			registerCommand: () => {},
+			on: (name, _listener) => listeners.set(name, (listeners.get(name) || 0) + 1),
+			events: { on() {}, emit: async () => {} },
+		};
+		const first = registerTaskRuntime(pi);
+		const second = registerTaskRuntime(pi, { readKnowledgeBinding: async () => null });
+
+		expect(second).toBe(first);
+		expect(listeners.size).toBe(12);
+		expect([...listeners.values()].every((count) => count === 1)).toBe(true);
+		expect(tools.has("task_plan")).toBe(true);
+		expect(tools.size).toBe(5);
+	});
+
 	it("rejects host-owned kinds, malformed kinds and reserved field names", () => {
 		expect(() => registerAcceptanceVerifier("file")).toThrow(/owned by the host/);
 		expect(() => registerAcceptanceVerifier("Bad-Kind")).toThrow(/must match/);

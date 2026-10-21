@@ -225,7 +225,44 @@ export function createTaskJournal({ persist = () => {}, now = () => new Date().t
 }
 
 export function registerTaskRuntime(pi, options = {}) {
-	if (process.env.DRONE_TASK_WORKBENCH !== "off") return registerWorkbench(pi, options);
+	// Several bundled extension graphs can load the task runtime into the same Pi
+	// host (for example pi-core and the knowledge extension). Keep one journal and
+	// one set of hooks per host; otherwise one instance can approve task_plan while
+	// another instance blocks the immediately following tool call.
+	const registry = taskRuntimeRegistry(pi);
+	if (registry?.journal) {
+		registry.journal.configure?.(options);
+		return registry.journal;
+	}
+	const journal =
+		process.env.DRONE_TASK_WORKBENCH !== "off" ? registerWorkbench(pi, options) : createLegacyTaskJournal(pi);
+	if (registry) registry.journal = journal;
+	return journal;
+}
+
+const TASK_RUNTIME_REGISTRY = "__drone_task_runtime_v1";
+const localTaskRuntimeRegistry = new WeakMap();
+function taskRuntimeRegistry(pi) {
+	if (!pi || (typeof pi !== "object" && typeof pi !== "function")) return null;
+	const attached = pi[TASK_RUNTIME_REGISTRY];
+	if (attached && attached.version === 1) return attached;
+	const local = localTaskRuntimeRegistry.get(pi);
+	if (local) return local;
+	const registry = { version: 1, journal: null };
+	if (Object.isExtensible(pi)) {
+		Object.defineProperty(pi, TASK_RUNTIME_REGISTRY, {
+			value: registry,
+			enumerable: false,
+			configurable: false,
+			writable: false,
+		});
+	} else {
+		localTaskRuntimeRegistry.set(pi, registry);
+	}
+	return registry;
+}
+
+function createLegacyTaskJournal(pi) {
 	const journal = createTaskJournal({ persist: (snapshot) => pi.appendEntry?.(TASK_ENTRY, snapshot) });
 	const attach = (ctx, force = false) => {
 		const id = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated";

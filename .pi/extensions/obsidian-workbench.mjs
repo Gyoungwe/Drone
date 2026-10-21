@@ -14286,7 +14286,7 @@ function shouldAskToContinue(task) {
 
 // packages/tasks/src/runtime-compiled/register.mjs
 function registerWorkbench(pi, options = {}) {
-  let context, activeSessionId, prepared = false, awaitingUser = false, halted = false;
+  let context, activeSessionId, prepared = false, awaitingUser = false, halted = false, readKnowledgeBinding2 = options.readKnowledgeBinding || (() => pi?.drone?.readKnowledgeBinding?.() || null);
   let pendingStatus = null;
   let providerTurnOpen = false;
   const authorize = async (cwd, path) => {
@@ -14361,7 +14361,9 @@ function registerWorkbench(pi, options = {}) {
     journal.attach(scope, ctx.sessionManager?.getBranch?.() || [], force);
     evidence.attach(scope, journal.snapshot()?.id, ctx.sessionManager?.getBranch?.() || [], force);
   };
-  const readKnowledgeBinding2 = options.readKnowledgeBinding || (() => pi?.drone?.readKnowledgeBinding?.() || null);
+  journal.configure = (nextOptions = {}) => {
+    if (nextOptions.readKnowledgeBinding) readKnowledgeBinding2 = nextOptions.readKnowledgeBinding;
+  };
   const bindingKey = async () => {
     const b = await readKnowledgeBinding2();
     return b ? `${b.vaultId}:${b.revision}` : null;
@@ -15061,7 +15063,37 @@ function createTaskJournal({ persist = () => {
   };
 }
 function registerTaskRuntime2(pi, options = {}) {
-  if (process.env.DRONE_TASK_WORKBENCH !== "off") return registerWorkbench(pi, options);
+  const registry3 = taskRuntimeRegistry(pi);
+  if (registry3?.journal) {
+    registry3.journal.configure?.(options);
+    return registry3.journal;
+  }
+  const journal = process.env.DRONE_TASK_WORKBENCH !== "off" ? registerWorkbench(pi, options) : createLegacyTaskJournal(pi);
+  if (registry3) registry3.journal = journal;
+  return journal;
+}
+var TASK_RUNTIME_REGISTRY = "__drone_task_runtime_v1";
+var localTaskRuntimeRegistry = /* @__PURE__ */ new WeakMap();
+function taskRuntimeRegistry(pi) {
+  if (!pi || typeof pi !== "object" && typeof pi !== "function") return null;
+  const attached = pi[TASK_RUNTIME_REGISTRY];
+  if (attached && attached.version === 1) return attached;
+  const local = localTaskRuntimeRegistry.get(pi);
+  if (local) return local;
+  const registry3 = { version: 1, journal: null };
+  if (Object.isExtensible(pi)) {
+    Object.defineProperty(pi, TASK_RUNTIME_REGISTRY, {
+      value: registry3,
+      enumerable: false,
+      configurable: false,
+      writable: false
+    });
+  } else {
+    localTaskRuntimeRegistry.set(pi, registry3);
+  }
+  return registry3;
+}
+function createLegacyTaskJournal(pi) {
   const journal = createTaskJournal({ persist: (snapshot) => pi.appendEntry?.(TASK_ENTRY, snapshot) });
   const attach = (ctx, force = false) => {
     const id2 = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated";

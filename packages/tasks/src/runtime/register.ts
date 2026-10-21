@@ -30,7 +30,9 @@ export function registerWorkbench(
 		activeSessionId: string | undefined,
 		prepared = false,
 		awaitingUser = false,
-		halted = false;
+		halted = false,
+		readKnowledgeBinding =
+			options.readKnowledgeBinding || (() => pi?.drone?.readKnowledgeBinding?.() || null);
 	// A tool_result hook runs BEFORE the SDK appends its toolResult message.
 	// Lock the entire provider turn, including future calls in a sequential batch.
 	let pendingStatus = null;
@@ -120,8 +122,9 @@ export function registerWorkbench(
 		journal.attach(scope, ctx.sessionManager?.getBranch?.() || [], force);
 		evidence.attach(scope, journal.snapshot()?.id, ctx.sessionManager?.getBranch?.() || [], force);
 	};
-	const readKnowledgeBinding =
-		options.readKnowledgeBinding || (() => pi?.drone?.readKnowledgeBinding?.() || null);
+	(journal as any).configure = (nextOptions: { readKnowledgeBinding?: typeof readKnowledgeBinding } = {}) => {
+		if (nextOptions.readKnowledgeBinding) readKnowledgeBinding = nextOptions.readKnowledgeBinding;
+	};
 	const bindingKey = async () => {
 		const b = await readKnowledgeBinding();
 		return b ? `${b.vaultId}:${b.revision}` : null;

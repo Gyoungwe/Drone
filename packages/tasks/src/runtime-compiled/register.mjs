@@ -20,7 +20,7 @@ import { restoreTaskToolOrder } from "./tool-protocol.mjs";
 import { shouldAskToContinue } from "./turn-end-prompt.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
 function registerWorkbench(pi, options = {}) {
-  let context, activeSessionId, prepared = false, awaitingUser = false, halted = false;
+  let context, activeSessionId, prepared = false, awaitingUser = false, halted = false, readKnowledgeBinding = options.readKnowledgeBinding || (() => pi?.drone?.readKnowledgeBinding?.() || null);
   let pendingStatus = null;
   let providerTurnOpen = false;
   const authorize = async (cwd, path) => {
@@ -95,7 +95,9 @@ function registerWorkbench(pi, options = {}) {
     journal.attach(scope, ctx.sessionManager?.getBranch?.() || [], force);
     evidence.attach(scope, journal.snapshot()?.id, ctx.sessionManager?.getBranch?.() || [], force);
   };
-  const readKnowledgeBinding = options.readKnowledgeBinding || (() => pi?.drone?.readKnowledgeBinding?.() || null);
+  journal.configure = (nextOptions = {}) => {
+    if (nextOptions.readKnowledgeBinding) readKnowledgeBinding = nextOptions.readKnowledgeBinding;
+  };
   const bindingKey = async () => {
     const b = await readKnowledgeBinding();
     return b ? `${b.vaultId}:${b.revision}` : null;
