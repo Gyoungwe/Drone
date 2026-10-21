@@ -98,3 +98,17 @@
 - `npx biome check scripts/eval-pdf-parsing.mjs`：通过。
 
 限制：参考文本是可重跑的 `pdftotext` 对照代理，不等同人工逐页真值；表格和公式指标是启发式，需人工抽样后再决定集成。此 PR 不改变安装包或默认解析流程。
+
+## 主线最终门禁
+
+截至 `main` 的 `5bd1c3a6`，两仓库联动的主线验证已完成：
+
+- `npm run lint`：通过（仅既有大文件大小警告）。
+- `npm run typecheck`：通过，包含锁定的知识插件抓取/构建。
+- `npm test`：通过；backend 231/231 文件、1896 tests，desktop 159/159、820 tests，其余 workspace 和脚本门禁均通过。
+- `npm run build`：通过，生成 Desktop renderer 和 Pi 包产物。
+- `npm run check:arch`：通过（0 baseline findings，宿主独立性通过）。
+- `npm run check:plugin-api`：通过 migration/lifecycle（安装、升级、回滚、卸载 PASS）。
+- `npm run skills:check` 与 `npm run check:ui-skill-acceptance`：通过；UI-01、SKILL-01 PASS。
+
+真实 Vault/正式安装包证据仍按 handoff 保持待办：雷达实际运行与入库、带页码引用点击、首页三类卡片、5 篇证据矩阵和 Paper2Agent 公共服务器调用；这些不能由本地 fixture 或离线 loader 代替。
