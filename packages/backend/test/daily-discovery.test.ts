@@ -137,6 +137,94 @@ describe("daily discovery outcome", () => {
 		expect(state.lastOutcome).toMatchObject({ kind: "radar-ran", added: 1 });
 	});
 
+	it("skips papers already represented by Vault notes or Zotero seeds", async () => {
+		const { service, options } = await setup("[]", []);
+		options.context.mockResolvedValue({
+			bound: true,
+			fresh: [],
+			related: [
+				{
+					path: "Library/existing.md",
+					title: "Existing atlas",
+					text: "DOI 10.1000/existing and arXiv:2401.12345",
+					mtime: 1,
+				},
+			],
+			topics: [{ id: "topic-1", title: "cell atlas" }],
+			zoteroSeeds: ["10.1000/zotero"],
+		});
+		Object.assign(options, {
+			radarSearch: vi.fn(async () => ({
+				query: "cell atlas",
+				hits: [
+					{
+						id: "openalex:existing",
+						title: "Existing atlas",
+						locator: "https://doi.org/10.1000/existing",
+						sourceType: "literature",
+						doi: "10.1000/existing",
+						publishedAt: new Date(10 * DAY - DAY).toISOString(),
+						sourceReceipt: {} as never,
+					},
+					{
+						id: "openalex/zotero",
+						title: "Zotero paper",
+						locator: "https://doi.org/10.1000/zotero",
+						sourceType: "literature",
+						doi: "10.1000/zotero",
+						publishedAt: new Date(10 * DAY - DAY).toISOString(),
+						sourceReceipt: {} as never,
+					},
+					{
+						id: "openalex/new",
+						title: "A New Atlas",
+						locator: "https://doi.org/10.1000/new",
+						sourceType: "literature",
+						doi: "10.1000/new",
+						publishedAt: new Date(10 * DAY - DAY).toISOString(),
+						sourceReceipt: {} as never,
+					},
+				],
+				failures: [],
+				connectors: ["openalex"],
+				complete: true,
+			})),
+		});
+		const state = await service.run();
+		expect(state.radar.map((paper) => paper.doi)).toEqual(["10.1000/new"]);
+	});
+
+	it("uses the title fallback when a Vault source has no identifier", async () => {
+		const { service, options } = await setup("[]", []);
+		options.context.mockResolvedValue({
+			bound: true,
+			fresh: [],
+			related: [{ path: "Library/existing.md", title: "Existing atlas", text: "Notes", mtime: 1 }],
+			topics: [{ id: "topic-1", title: "cell atlas" }],
+		});
+		Object.assign(options, {
+			radarSearch: vi.fn(async () => ({
+				query: "cell atlas",
+				hits: [
+					{
+						id: "openalex:existing",
+						title: "Existing atlas",
+						locator: "https://doi.org/10.1000/existing",
+						sourceType: "literature",
+						doi: "10.1000/existing",
+						publishedAt: new Date(10 * DAY - DAY).toISOString(),
+						sourceReceipt: {} as never,
+					},
+				],
+				failures: [],
+				connectors: ["openalex"],
+				complete: true,
+			})),
+		});
+		const state = await service.run();
+		expect(state.radar).toHaveLength(0);
+	});
+
 	it("does not count a retryable radar failure as today's run", async () => {
 		const { service, options } = await setup("[]", []);
 		options.context.mockResolvedValue({

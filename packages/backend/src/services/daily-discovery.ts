@@ -260,21 +260,31 @@ export class DailyDiscoveryService {
 		const existing = await this.store.read();
 		for (const paper of existing.radar ?? []) byKey.set(radarKey(paper), paper);
 		const recentCutoff = startedAt - FIRST_LOOKBACK_MS;
+		const knownSourceKeys = new Set<string>([
+			...context.fresh.flatMap((note) => sourceKeysFromNote(note.title, note.text)),
+			...context.related.flatMap((note) => sourceKeysFromNote(note.title, note.text)),
+			...(context.zoteroSeeds ?? []).map((seed) => `doi:${normalizeDoiValue(seed)}`),
+		]);
 		for (const { topic, response } of responses) {
 			for (const hit of response?.hits ?? []) {
 				if (!isRecentHit(hit, recentCutoff)) continue;
 				const key = radarHitKey(hit);
 				const previous = byKey.get(key);
+				if (!previous && radarHitKeys(hit).some((candidate) => knownSourceKeys.has(candidate))) continue;
 				const paper = toRadarPaper(hit, topic, startedAt, previous);
 				byKey.set(key, mergeRadarPaper(previous, paper));
 			}
 		}
 		for (const seed of (context.zoteroSeeds ?? []).slice(0, 12)) {
 			const response = await this.options.radarRecommend?.(seed);
+			if (!response) continue;
+			if (response.failures.some((failure) => failure.retryable))
+				throw new Error("Literature radar recommendation is temporarily unavailable; retry later");
 			for (const hit of response?.hits ?? []) {
 				if (!isRecentHit(hit, recentCutoff)) continue;
 				const key = radarHitKey(hit);
 				const previous = byKey.get(key);
+				if (!previous && radarHitKeys(hit).some((candidate) => knownSourceKeys.has(candidate))) continue;
 				byKey.set(key, mergeRadarPaper(previous, toRadarPaper(hit, undefined, startedAt, previous)));
 			}
 		}
@@ -336,6 +346,19 @@ export class DailyDiscoveryService {
 	}
 }
 
+function sourceKeysFromNote(title: string, text: string): string[] {
+	const keys = [`title:${normalizeTitle(title)}`];
+	for (const match of text.matchAll(/\b10\.\d{4,9}\/[^\s<>"']+/giu)) {
+		const doi = normalizeDoiValue(match[0].replace(/[),.;]+$/u, ""));
+		if (doi) keys.push(`doi:${doi}`);
+	}
+	for (const match of text.matchAll(/\b(?:arxiv:)?(\d{4}\.\d{4,5})(?:v\d+)?\b/giu)) {
+		const arxivId = match[1];
+		if (arxivId) keys.push(`arxiv:${arxivId.toLocaleLowerCase()}`);
+	}
+	return keys;
+}
+
 function normalizeTitle(value: string): string {
 	return value
 		.normalize("NFKC")
@@ -348,6 +371,14 @@ function radarHitKey(hit: ResearchConnectorHit): string {
 	if (hit.doi) return `doi:${normalizeDoiValue(hit.doi)}`;
 	if (hit.arxivId) return `arxiv:${hit.arxivId.toLocaleLowerCase()}`;
 	return `title:${normalizeTitle(hit.title)}`;
+}
+
+function radarHitKeys(hit: ResearchConnectorHit): string[] {
+	return [
+		...(hit.doi ? [`doi:${normalizeDoiValue(hit.doi)}`] : []),
+		...(hit.arxivId ? [`arxiv:${hit.arxivId.toLocaleLowerCase()}`] : []),
+		`title:${normalizeTitle(hit.title)}`,
+	];
 }
 
 function radarKey(paper: DailyDiscoveryRadarPaper): string {

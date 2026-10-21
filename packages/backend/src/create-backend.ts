@@ -335,6 +335,10 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				protocols: {
 					apiToken: process.env.PROTOCOLS_IO_API_TOKEN || process.env.PROTOCOLS_IO_API_KEY,
 				},
+				semanticScholar: {
+					apiKey: process.env.SEMANTIC_SCHOLAR_API_KEY,
+					apiBase: process.env.SEMANTIC_SCHOLAR_API_BASE,
+				},
 				institutional: {
 					ezproxyTemplate: process.env.DRONE_EZPROXY_TEMPLATE,
 					resolverUrl: process.env.DRONE_INSTITUTIONAL_RESOLVER,
