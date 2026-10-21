@@ -1,7 +1,7 @@
 {
 	"version": 1,
 	"generator": "scripts/build-pi-research.mjs",
-	"inputsSha256": "cdd46d96ba5316b64205360d9082347fc5cef5672fd2a724755006dbda6087c0",
+	"inputsSha256": "10115caff8c1b9fde20ec9e1a01279da226cd0959bb74971275be666441a4059",
 	"outputs": {
 		"dist/index.mjs": "c8e65a646f2fede4f3b5a43a215e5ccec87947a7e1b0a020d434a5e4d99d3eca"
 	}
