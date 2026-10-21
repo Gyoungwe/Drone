@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices } from "@drone/knowledge/service";
+import { closeKnowledgeServices } from "@drone/knowledge/host";
 import {
 	createAgentSession,
 	DefaultResourceLoader,

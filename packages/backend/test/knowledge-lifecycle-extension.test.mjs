@@ -4,8 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
-import { closeKnowledgeServices } from "@drone/knowledge/service";
-import { createTopicMemory } from "@drone/knowledge/topic-memory";
+import { closeKnowledgeServices, createTopicMemory } from "@drone/knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, project, vault, app;

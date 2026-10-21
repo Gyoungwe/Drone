@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkKnowledgeSnapshotReuse } from "@drone/knowledge";
+import { checkKnowledgeSnapshotReuse } from "@drone/knowledge/host";
 import { type ResearchConnector, ResearchConnectorRegistry } from "@drone/research";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";

@@ -7,8 +7,7 @@ import zoteroLiterature, {
 	identifyZoteroReceipt,
 	registerZoteroAcceptance,
 } from "@drone/extensions/zotero-literature";
-import { normalizeSourceLinks } from "@drone/knowledge";
-import { closeKnowledgeServices } from "@drone/knowledge/service";
+import { closeKnowledgeServices, normalizeSourceLinks } from "@drone/knowledge/host";
 import {
 	bootstrapZotero,
 	inspectZotero,

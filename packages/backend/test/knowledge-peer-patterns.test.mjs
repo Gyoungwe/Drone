@@ -4,15 +4,16 @@ import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import { buildResearchWikiPage } from "@drone/extensions/research-wikiloop";
-import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
-import { subscribeKnowledgeUi } from "@drone/knowledge/ui-state";
 import {
+	closeKnowledgeServices,
 	decideWikiProposal,
+	getKnowledgeService,
 	listWikiProposals,
 	mergeWikiProposal,
 	previewWikiProposal,
 	stageWikiProposal,
-} from "@drone/knowledge/wiki-review";
+	subscribeKnowledgeUi,
+} from "@drone/knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, cwd, vault, service, prep;

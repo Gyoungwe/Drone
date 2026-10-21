@@ -1,5 +1,4 @@
-import { createSpecialistBudget, decideSpecialistRun } from "@drone/knowledge";
-import { withSpecialistSlot } from "@drone/knowledge/specialist-host";
+import { createSpecialistBudget, decideSpecialistRun, withSpecialistSlot } from "@drone/knowledge/host";
 import { describe, expect, it } from "vitest";
 import { runKnowledgeSpecialist } from "../src/knowledge/specialist-runner";
 
@@ -44,9 +43,9 @@ describe("synthetic long-session specialist stress", () => {
 	it("transfers queued ownership without leaking active slots", async () => {
 		const work = () => new Promise((resolve) => setTimeout(resolve, 5));
 		const runs = [1, 2, 3, 4].map(() => withSpecialistSlot(undefined, work, { concurrency: 1 }));
-		expect((await import("@drone/knowledge/specialist-host")).specialistQueueSnapshot().active).toBe(1);
+		expect((await import("@drone/knowledge/host")).specialistQueueSnapshot().active).toBe(1);
 		await Promise.all(runs);
-		expect((await import("@drone/knowledge/specialist-host")).specialistQueueSnapshot()).toEqual({
+		expect((await import("@drone/knowledge/host")).specialistQueueSnapshot()).toEqual({
 			active: 0,
 			queueLength: 0,
 		});

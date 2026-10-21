@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { closeKnowledgeServices } from "@drone/knowledge/service";
+import { closeKnowledgeServices } from "@drone/knowledge/host";
 import { activeExampleTaskMilestones, composeExampleTaskPrompt, exampleTask } from "@drone/shared";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { getCurrentTools } from "@earendil-works/pi-ai/utils/transcript";

@@ -3,7 +3,7 @@ import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/p
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
+import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	configureBackendKnowledgeWorker,
@@ -45,7 +45,7 @@ beforeEach(async () => {
 	// The backend host is the composition root for packaged Desktop resources;
 	// explicitly re-install it after the extension source module has loaded.
 	configureBackendKnowledgeWorker();
-	binding = await (await import("@drone/knowledge/config")).readKnowledgeBinding();
+	binding = await (await import("@drone/knowledge/host")).readKnowledgeBinding();
 });
 
 afterEach(async () => {

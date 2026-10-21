@@ -1,4 +1,4 @@
-import { createToolBudget } from "@drone/knowledge/tool-budget";
+import { createToolBudget } from "@drone/knowledge/host";
 import { describe, expect, it } from "vitest";
 
 describe("knowledge tool-budget", () => {

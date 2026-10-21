@@ -1,5 +1,4 @@
-import { evaluateMetacognitivePublication } from "@drone/knowledge/metacognitive-policy";
-import { registerAnswerPublication } from "@drone/knowledge/publication";
+import { evaluateMetacognitivePublication, registerAnswerPublication } from "@drone/knowledge/host";
 import { AnalysisOrchestrator, assessAnalysisReadiness } from "@drone/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

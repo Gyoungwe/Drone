@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { saveKnowledgeBinding } from "@drone/knowledge/config";
+import { saveKnowledgeBinding } from "@drone/knowledge/host";
 import type { KnowledgeCloudNote } from "@drone/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { syncCloudNotes } from "./webdav-sync";

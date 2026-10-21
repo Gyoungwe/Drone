@@ -1,4 +1,4 @@
-import { stageWikiProposal, validateWikiSourcePaths } from "@drone/knowledge/wiki-review";
+import { stageWikiProposal, validateWikiSourcePaths } from "@drone/knowledge/host";
 import { expect, it } from "vitest";
 
 it.each(["results/run/paper.pdf", "https://example.org/paper", "../outside.md", "C:\\outside.md"])(

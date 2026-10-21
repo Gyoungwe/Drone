@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import "@drone/extensions/internal/obsidian-workbench";
-import { KnowledgeService } from "@drone/knowledge/service";
+import { KnowledgeService } from "@drone/knowledge/host";
 
 let root, vault, service;
 beforeEach(async () => {

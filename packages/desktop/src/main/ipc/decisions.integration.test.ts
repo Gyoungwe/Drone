@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createBackend } from "@drone/backend";
-import { evaluateMetacognitivePublication } from "@drone/knowledge";
+import { evaluateMetacognitivePublication } from "@drone/knowledge/host";
 import { IpcChannels } from "@drone/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

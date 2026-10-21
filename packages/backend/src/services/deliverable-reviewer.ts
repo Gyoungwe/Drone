@@ -9,7 +9,7 @@ import {
 	type ReviewerModelProvider,
 	type ReviewerProviderSelection,
 	type ReviewReadReceipt,
-} from "@drone/knowledge";
+} from "@drone/knowledge/host";
 import type { SessionEvent } from "@drone/shared";
 import { globalToolManifest } from "../tools/manifest";
 import type { InquiryReadOnlySnapshot } from "./inquiry";

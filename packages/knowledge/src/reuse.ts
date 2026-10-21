@@ -8,7 +8,7 @@ import {
 	type KnowledgeReuseLevel,
 	type KnowledgeSnapshot,
 	type KnowledgeSourceReceipt,
-} from "@drone/shared";
+} from "@gyoungwe/plugin-api/knowledge";
 import { projectIdentity } from "./config";
 
 /**

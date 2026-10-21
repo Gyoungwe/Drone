@@ -1,10 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { DailyIdea, DiscoveryNote } from "@drone/knowledge/daily-discovery";
-import {
-	buildDailyDiscoveryMessage,
-	DAILY_DISCOVERY_SYSTEM,
-	parseDailyIdeas,
-} from "@drone/knowledge/daily-discovery-prompt";
+import type { DailyIdea, DiscoveryNote } from "@drone/knowledge/host";
+import { buildDailyDiscoveryMessage, DAILY_DISCOVERY_SYSTEM, parseDailyIdeas } from "@drone/knowledge/host";
 import type { DailyDiscoveryIdea, DailyDiscoveryOutcome, DailyDiscoveryState } from "@drone/shared";
 import { JsonStore } from "../json-store";
 import { createLogger } from "../log";

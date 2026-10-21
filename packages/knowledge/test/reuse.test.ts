@@ -1,4 +1,4 @@
-import type { KnowledgeSourceReceipt } from "@drone/shared";
+import type { KnowledgeSourceReceipt } from "@gyoungwe/plugin-api/knowledge";
 import { describe, expect, it } from "vitest";
 import {
 	checkKnowledgeReceiptFreshness,

@@ -3,16 +3,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
+import * as knowledgeUiService from "@drone/knowledge/host";
+import * as knowledgeUiState from "@drone/knowledge/host";
+import * as knowledgeWikiModelReview from "@drone/knowledge/host";
 import {
 	configureKnowledgeRuntime,
 	configureKnowledgeWorker,
 	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
 	type KnowledgeWorkerLifecycleEvent,
 	type KnowledgeWorkerMetadata,
-} from "@drone/knowledge/runtime-host";
-import * as knowledgeUiService from "@drone/knowledge/ui-service";
-import * as knowledgeUiState from "@drone/knowledge/ui-state";
-import * as knowledgeWikiModelReview from "@drone/knowledge/wiki-model-review";
+} from "@drone/knowledge/host";
 import { getResearchRun, listResearchRuns } from "@drone/research/research-run-ui";
 import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
 import { KnowledgeWebDavService } from "./webdav";
@@ -237,7 +237,7 @@ export interface KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
-	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }>;
+	saveIdea(idea: import("@drone/knowledge/host").DailyIdea): Promise<{ path: string }>;
 	/** 记忆注入用的相关知识条目（复用知识库索引与语义向量）。 */
 	relatedForMemory(
 		cwd: string,
@@ -245,10 +245,7 @@ export interface KnowledgeUiServicePort {
 		limit?: number,
 	): Promise<Array<{ path: string; title: string; text: string }>>;
 	/** 观察记忆沉淀为本项目知识库「记忆」笔记。 */
-	saveMemory(
-		cwd: string,
-		memory: import("@drone/knowledge/memory-note").MemoryNoteInput,
-	): Promise<{ path: string }>;
+	saveMemory(cwd: string, memory: import("@drone/knowledge/host").MemoryNoteInput): Promise<{ path: string }>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -438,7 +435,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext> {
 		return this.call("dailyDiscoveryContext", { sinceMs });
 	}
-	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }> {
+	saveIdea(idea: import("@drone/knowledge/host").DailyIdea): Promise<{ path: string }> {
 		return this.call("saveDiscoveryIdea", { idea });
 	}
 	relatedForMemory(
@@ -450,7 +447,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	saveMemory(
 		cwd: string,
-		memory: import("@drone/knowledge/memory-note").MemoryNoteInput,
+		memory: import("@drone/knowledge/host").MemoryNoteInput,
 	): Promise<{ path: string }> {
 		return this.call("saveMemoryNote", { cwd, memory });
 	}

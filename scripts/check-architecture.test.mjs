@@ -62,3 +62,11 @@ test("architecture checker enforces installable Pi package dist R8 boundary", as
 	assert.match(source, /plugin dist host import/);
 	assert.match(source, /plugin dist package-boundary \.\.\/\.\./);
 });
+
+test("architecture checker enforces the plugin knowledge host entry", async () => {
+	const source = await readFile(checker, "utf8");
+	assert.match(source, /knowledge host entry required/);
+	assert.match(source, /const knowledgeImports/);
+	assert.equal(source.includes('const extension = rel.startsWith("packages/extensions/")'), true);
+	assert.equal(source.includes('const knowledge = rel.startsWith("packages/knowledge/")'), true);
+});

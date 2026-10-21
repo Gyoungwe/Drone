@@ -2,15 +2,17 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { readReviewMode, saveReviewMode } from "@drone/knowledge";
-import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
 import {
 	autoApplyWikiProposal,
+	closeKnowledgeServices,
 	decideWikiProposal,
+	getKnowledgeService,
+	readReviewMode,
+	saveReviewMode,
 	stageWikiProposal,
 	undoWikiUpdate,
 	wikiHistory,
-} from "@drone/knowledge/wiki-review";
+} from "@drone/knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 let root, cwd, vault, service, prep;

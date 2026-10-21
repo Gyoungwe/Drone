@@ -1,8 +1,7 @@
 import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readNoteFile } from "@drone/knowledge/files";
-import { createTopicMemory, topicRunHash } from "@drone/knowledge/topic-memory";
+import { createTopicMemory, readNoteFile, topicRunHash } from "@drone/knowledge/host";
 import { describe, expect, it } from "vitest";
 
 const MARKER = "DRONE-MEM-001";

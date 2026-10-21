@@ -1,4 +1,4 @@
-import { registerKnowledgeSpecialistHost } from "@drone/knowledge/specialist-host";
+import { registerKnowledgeSpecialistHost } from "@drone/knowledge/host";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { withNativeSubagentSlot } from "../tools/subagent/slots";
 import {

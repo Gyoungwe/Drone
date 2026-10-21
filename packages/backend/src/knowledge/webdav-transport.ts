@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { MAX_NOTE_BYTES, validateNote } from "@drone/knowledge/files";
+import { MAX_NOTE_BYTES, validateNote } from "@drone/knowledge/host";
 import { DOMParser } from "@xmldom/xmldom";
 
 export class KnowledgeWebDavError extends Error {

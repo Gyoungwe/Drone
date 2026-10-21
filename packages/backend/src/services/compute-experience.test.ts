@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { JobRecord } from "@drone/compute";
-import { createExperienceStore } from "@drone/knowledge";
+import { createExperienceStore } from "@drone/knowledge/host";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ComputeEvent } from "./compute";
 import { createComputeExperienceRecorder } from "./compute-experience";

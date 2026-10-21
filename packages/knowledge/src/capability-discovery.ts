@@ -1,4 +1,4 @@
-import type { CapabilitySourceReceipt, ContractParentRef } from "@drone/shared";
+import type { CapabilitySourceReceipt, ContractParentRef } from "@gyoungwe/plugin-api/knowledge";
 
 /** Narrow knowledge boundary consumed by capability discovery. It cannot write or execute. */
 export interface CapabilityKnowledgeSourcePort {

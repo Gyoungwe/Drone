@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { registerAnswerPublication } from "@drone/knowledge/publication";
+import { registerAnswerPublication } from "@drone/knowledge/host";
 import {
 	type HarnessWorkerAttempt,
 	PROTECTED_KNOWLEDGE_AGENTS,

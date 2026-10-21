@@ -2,21 +2,22 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { readKnowledgeBinding } from "@drone/knowledge/config";
-import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
-import { validateSpecialistHtml } from "@drone/knowledge/specialist-delivery";
 import {
+	beginKnowledgeFlow,
+	closeKnowledgeServices,
+	createKnowledgeSpecialists,
+	flowFor,
+	getKnowledgeService,
+	knowledgeReadStart,
+	noteKnowledgeSpecialist,
+	readKnowledgeBinding,
 	registerKnowledgeSpecialistHost,
 	setSpecialistSettings,
-	specialistSettings,
-	withSpecialistSlot,
-} from "@drone/knowledge/specialist-host";
-import {
-	createKnowledgeSpecialists,
-	knowledgeReadStart,
 	shouldOrientKnowledge,
-} from "@drone/knowledge/specialists";
-import { beginKnowledgeFlow, flowFor, noteKnowledgeSpecialist } from "@drone/knowledge/ui-state";
+	specialistSettings,
+	validateSpecialistHtml,
+	withSpecialistSlot,
+} from "@drone/knowledge/host";
 import { KNOWLEDGE_SPECIALISTS } from "@drone/shared";
 import { fauxToolCall as call, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { MAX_NOTE_BYTES } from "@drone/knowledge/files";
+import { MAX_NOTE_BYTES } from "@drone/knowledge/host";
 import type { KnowledgeCloudNote, KnowledgeCloudStatus, KnowledgeCloudWriteResult } from "@drone/shared";
 import {
 	createWebDavCredentialStore,

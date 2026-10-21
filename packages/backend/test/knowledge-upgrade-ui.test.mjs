@@ -2,8 +2,8 @@ import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices } from "@drone/knowledge/service";
-import * as ui from "@drone/knowledge/ui-service";
+import * as ui from "@drone/knowledge/host";
+import { closeKnowledgeServices } from "@drone/knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, bindingRevision;

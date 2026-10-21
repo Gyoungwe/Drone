@@ -66,6 +66,7 @@ export {
 	createVaultFileOnly,
 	initializeProjectContext,
 	initializeSharedNavigation,
+	replaceVaultFile,
 	type KnowledgeLayoutDependencies,
 	type NavigationUpdateResult,
 	type ReplaceVaultFileOptions,
@@ -212,6 +213,25 @@ export {
 	updateTopic,
 } from "./topic-memory";
 export { runNavigationMaintenance, updateNavigation } from "./maintenance";
+export * from "./daily-discovery";
+export * from "./daily-discovery-prompt";
+export * from "./memory-note";
+export * from "./project-identity";
+export * from "./related-notes";
+export {
+	configureKnowledgeWorker,
+	configureKnowledgeEvidence,
+	configureKnowledgeHost,
+	configureKnowledgeSetup,
+	createKnowledgeWorker,
+	emitKnowledgeWorkerLifecycle,
+	knowledgeWorkerMetadata,
+	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
+} from "./runtime-host";
+export type {
+	KnowledgeWorkerLifecycleEvent,
+	KnowledgeWorkerMetadata,
+} from "./runtime-host";
 export { configureKnowledgeRuntime } from "./runtime-host";
 export {
 	assignCommunities,

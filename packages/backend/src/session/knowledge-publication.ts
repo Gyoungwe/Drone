@@ -1,4 +1,4 @@
-import { publicationFallbackNotice } from "@drone/knowledge/publication-policy";
+import { publicationFallbackNotice } from "@drone/knowledge/host";
 import { type DroneRuntime, isUserAbortError, type SessionEvent, sanitizeProviderError } from "@drone/shared";
 import type { RawMessage } from "./messages";
 

@@ -10,11 +10,16 @@ import {
 } from "@drone/extensions/internal/obsidian-workbench";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import { loadWorkspaceConfig, saveWorkspaceConfig } from "@drone/extensions/workspace-config";
-import { readKnowledgeBinding, saveKnowledgeBinding } from "@drone/knowledge/config";
-import { runNavigationMaintenance } from "@drone/knowledge/maintenance";
-import { buildKnowledgeSearchExpression } from "@drone/knowledge/search-policy";
-import { closeKnowledgeServices, getKnowledgeService, KnowledgeService } from "@drone/knowledge/service";
-import { listWikiProposals } from "@drone/knowledge/wiki-review";
+import {
+	buildKnowledgeSearchExpression,
+	closeKnowledgeServices,
+	getKnowledgeService,
+	KnowledgeService,
+	listWikiProposals,
+	readKnowledgeBinding,
+	runNavigationMaintenance,
+	saveKnowledgeBinding,
+} from "@drone/knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveSubagentMcpAccess } from "../src/tools/subagent/runner";
 

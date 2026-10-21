@@ -9,7 +9,7 @@ import {
 	type EvolutionCandidate,
 	type KnowledgeReuseDecisionRecord,
 	type ContractParentRef,
-} from "@drone/shared";
+} from "@gyoungwe/plugin-api/knowledge";
 
 export interface EvolutionIndexStore {
 	read(): Promise<{

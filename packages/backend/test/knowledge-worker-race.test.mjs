@@ -2,8 +2,12 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { readKnowledgeBinding } from "@drone/knowledge/config";
-import { closeKnowledgeServices, getKnowledgeService, KnowledgeService } from "@drone/knowledge/service";
+import {
+	closeKnowledgeServices,
+	getKnowledgeService,
+	KnowledgeService,
+	readKnowledgeBinding,
+} from "@drone/knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, vault, cwd, app;

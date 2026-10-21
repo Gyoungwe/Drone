@@ -1,11 +1,11 @@
-import { readKnowledgeBinding } from "@drone/knowledge/config";
-import { readNoteFile } from "@drone/knowledge/files";
 import {
 	containedVaultFile,
 	createVaultFileOnly,
+	readKnowledgeBinding,
+	readNoteFile,
 	replaceVaultFile,
 	VaultFileConflictError,
-} from "@drone/knowledge/layout";
+} from "@drone/knowledge/host";
 import type {
 	KnowledgeApi,
 	KnowledgeCloudSyncItem,

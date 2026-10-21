@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { autoTopicCandidate, type TopicCandidateResult, topicRunHash } from "@drone/knowledge";
+import { autoTopicCandidate, type TopicCandidateResult, topicRunHash } from "@drone/knowledge/host";
 
 export const RESEARCH_SUMMARY_VERSION = 1;
 export const RESEARCH_SUMMARY_LIMITS = Object.freeze({

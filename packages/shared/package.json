@@ -3,6 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"dependencies": {
+		"@gyoungwe/plugin-api": "*",
 		"typebox": "1.3.7"
 	},
 	"type": "module",

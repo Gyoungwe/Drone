@@ -390,7 +390,7 @@ function normalizeRepair(value: unknown): ExperienceRepair | null {
 }
 
 function normalizeDiffValue(value: unknown): WorkflowSpecDiffValue | undefined {
-	if (value === null || typeof value === "boolean") return value;
+	if (value === null || typeof value === "boolean") return value as boolean | null;
 	if (typeof value === "number") return Number.isFinite(value) && Math.abs(value) <= 1e12 ? value : undefined;
 	if (typeof value === "string") return text(value, 240) || null;
 	return undefined;

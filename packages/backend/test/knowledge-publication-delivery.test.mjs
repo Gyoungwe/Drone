@@ -2,8 +2,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
-import { subscribeKnowledgeUi } from "@drone/knowledge/ui-state";
+import { closeKnowledgeServices, getKnowledgeService, subscribeKnowledgeUi } from "@drone/knowledge/host";
 import {
 	buildChatRows,
 	deriveTurnUsage,

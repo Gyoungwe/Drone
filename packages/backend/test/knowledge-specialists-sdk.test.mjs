@@ -2,9 +2,12 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
-import { flowFor } from "@drone/knowledge/ui-state";
-import { listWikiProposals } from "@drone/knowledge/wiki-review";
+import {
+	closeKnowledgeServices,
+	flowFor,
+	getKnowledgeService,
+	listWikiProposals,
+} from "@drone/knowledge/host";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { getCurrentSystemPrompt } from "@earendil-works/pi-ai/utils/transcript";
 import {

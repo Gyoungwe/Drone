@@ -1,4 +1,8 @@
-import { createSpecialistBudget, decideSpecialistRun, specialistRequestSignature } from "@drone/knowledge";
+import {
+	createSpecialistBudget,
+	decideSpecialistRun,
+	specialistRequestSignature,
+} from "@drone/knowledge/host";
 import { describe, expect, it } from "vitest";
 
 describe("knowledge orchestration policy", () => {

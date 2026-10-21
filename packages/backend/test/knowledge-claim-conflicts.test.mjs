@@ -1,4 +1,4 @@
-import { compareClaims } from "@drone/knowledge";
+import { compareClaims } from "@drone/knowledge/host";
 import { describe, expect, it } from "vitest";
 
 const claim = (overrides = {}) => ({

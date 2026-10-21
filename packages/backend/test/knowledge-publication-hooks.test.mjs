@@ -1,5 +1,4 @@
-import { projectKnowledgeEvent, registerAnswerPublication } from "@drone/knowledge/publication";
-import { createTaskFeedback } from "@drone/knowledge/task-feedback";
+import { createTaskFeedback, projectKnowledgeEvent, registerAnswerPublication } from "@drone/knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 function harness(

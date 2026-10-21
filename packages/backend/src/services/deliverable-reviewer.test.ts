@@ -2,7 +2,7 @@ import type {
 	DeliverableReviewFinding,
 	DeliverableReviewSnapshot,
 	ReviewerProviderSelection,
-} from "@drone/knowledge";
+} from "@drone/knowledge/host";
 import { describe, expect, it, vi } from "vitest";
 import { DeliverableReviewerService, isDeliverableWriter } from "./deliverable-reviewer";
 

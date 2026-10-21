@@ -3,10 +3,15 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { readKnowledgeBinding } from "@drone/knowledge/config";
-import { embedTexts, validateSemanticConfig } from "@drone/knowledge/semantic-provider";
-import { readSemanticSettings } from "@drone/knowledge/semantic-settings";
-import { closeKnowledgeServices, getKnowledgeService, KnowledgeService } from "@drone/knowledge/service";
+import {
+	closeKnowledgeServices,
+	embedTexts,
+	getKnowledgeService,
+	KnowledgeService,
+	readKnowledgeBinding,
+	readSemanticSettings,
+	validateSemanticConfig,
+} from "@drone/knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, vault, cwd, app;

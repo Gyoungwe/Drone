@@ -2,17 +2,18 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
-import * as ui from "@drone/knowledge/ui-service";
+import * as ui from "@drone/knowledge/host";
 import {
 	beginKnowledgeFlow,
+	closeKnowledgeServices,
 	flowFor,
+	getKnowledgeService,
 	noteKnowledgeRead,
 	publicationKnowledgeFlow,
+	stageWikiProposal,
 	subscribeKnowledgeUi,
 	updateKnowledgeFlow,
-} from "@drone/knowledge/ui-state";
-import { stageWikiProposal } from "@drone/knowledge/wiki-review";
+} from "@drone/knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, cwd, vault, service, prep, revision;
@@ -335,7 +336,7 @@ describe("bidirectional links and the knowledge network", () => {
 	it("links a newly deposited note to related existing notes", async () => {
 		await note("Library/Software/samtools.md", "# samtools\nSort and index BAM files.\n");
 		await service.request("reconcile");
-		const { findRelatedNotes } = await import("@drone/knowledge/related-notes");
+		const { findRelatedNotes } = await import("@drone/knowledge/host");
 		const related = await findRelatedNotes("samtools sort BAM");
 		expect(related).toContain("Library/Software/samtools.md");
 		const saved = await depositKnowledge({
@@ -343,10 +344,7 @@ describe("bidirectional links and the knowledge network", () => {
 			project: "project-a",
 			type: "method",
 			title: "Coordinate sorting with samtools",
-			markdown: (await import("@drone/knowledge/related-notes")).appendRelatedLinks(
-				"Sort before indexing.",
-				related,
-			),
+			markdown: (await import("@drone/knowledge/host")).appendRelatedLinks("Sort before indexing.", related),
 		});
 		expect(await readFile(saved.note, "utf8")).toContain("[[Library/Software/samtools]]");
 		await service.request("reconcile");

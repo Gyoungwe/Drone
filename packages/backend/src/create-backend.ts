@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
-import type { ExperienceStorePort } from "@drone/knowledge";
+import type { ExperienceStorePort } from "@drone/knowledge/host";
 import { createDefaultResearchWriteAdapters, ResearchWriteAdapterRegistry } from "@drone/research";
 import type {
 	AskRequest,

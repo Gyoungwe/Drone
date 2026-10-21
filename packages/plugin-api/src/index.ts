@@ -259,6 +259,8 @@ export interface DroneHostPort {
 	requestAuthorization(input: AuthorizationRequest): Promise<AuthorizationReceipt>;
 }
 
+export * from "./knowledge.js";
+
 /** Public, host-neutral analysis contract used by native Pi packages. */
 export const ANALYSIS_CONTRACT_VERSION = 1 as const;
 export type AnalysisMode = "exploratory" | "inferential";

@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { join, resolve } from "node:path";
 import { publishExplainer } from "./obsidian-workbench";
-import { deliveryContract } from "@drone/research/source-delivery";
 import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
 import { registerTaskRuntime } from "@drone/tasks/runtime";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
@@ -17,6 +16,7 @@ import { cardLink, flowCard } from "@drone/knowledge/flow-cards";
 import { runNavigationMaintenance } from "@drone/knowledge/maintenance";
 import { registerAnswerPublication } from "@drone/knowledge/publication";
 import { getKnowledgeService } from "@drone/knowledge/service";
+import { deliveryContract } from "@drone/knowledge/runtime-host";
 import { saveSpecialistExplainer } from "@drone/knowledge/specialist-delivery";
 import { createKnowledgeSpecialists } from "@drone/knowledge/specialists";
 import { createTaskFeedback, guardResearchToolResult } from "@drone/knowledge/task-feedback";
