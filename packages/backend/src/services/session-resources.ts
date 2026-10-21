@@ -13,6 +13,7 @@ import {
 	normalizeMcpStatus,
 	type PiPackageManifest,
 	RESEARCH_SKILL_SOURCES,
+	type ResourceDiagnosticInfo,
 	researchSkillProfile,
 	type SlashCommandInfo,
 } from "@drone/shared";
@@ -166,6 +167,8 @@ export class SessionResourceService {
 				description: metadata.description,
 				...(metadata.packageKind ? { packageKind: metadata.packageKind } : {}),
 				...(metadata.capabilities ? { capabilities: [...metadata.capabilities] } : {}),
+				...(metadata.tools ? { tools: [...metadata.tools] } : {}),
+				...(metadata.permissions ? { permissions: metadata.permissions } : {}),
 				source: source ? "drone" : "unknown",
 				...(source
 					? {
@@ -176,6 +179,8 @@ export class SessionResourceService {
 							pluginApi: source.pluginApi,
 							minHostVersion: source.minHostVersion,
 							hosts: [...source.hosts],
+							tools: [...source.tools],
+							permissions: source.permissions,
 						}
 					: {}),
 			};
@@ -276,6 +281,23 @@ export class SessionResourceService {
 		const skillResult =
 			loader.getAllSkillsIncludingDisabled?.() ?? allSkillsFromLoader(session.resourceLoader);
 		const extResult = session.resourceLoader.getExtensions();
+		const firstToolOwner = new Map<string, { path: string; source: string }>();
+		const toolCollisions: ResourceDiagnosticInfo[] = [];
+		for (const extension of extResult.extensions) {
+			for (const toolName of extension.tools.keys()) {
+				const owner = firstToolOwner.get(toolName);
+				if (!owner) {
+					firstToolOwner.set(toolName, { path: extension.path, source: extension.sourceInfo.source });
+					continue;
+				}
+				if (owner.path === extension.path) continue;
+				toolCollisions.push({
+					type: "collision",
+					message: `Tool "${toolName}" is declared by ${owner.source} and ${extension.sourceInfo.source}; keeping the first registration.`,
+					path: extension.path,
+				});
+			}
+		}
 		return {
 			skills: skillResult.skills.map((skill) => {
 				const upstream = this.skillRepository(skill.name, skill.filePath, skill.sourceInfo.source);
@@ -294,11 +316,14 @@ export class SessionResourceService {
 					disableModelInvocation: skill.disableModelInvocation,
 				};
 			}),
-			skillDiagnostics: skillResult.diagnostics.map((d) => ({
-				type: d.type,
-				message: d.message,
-				path: d.path,
-			})),
+			skillDiagnostics: [
+				...skillResult.diagnostics.map((d) => ({
+					type: d.type,
+					message: d.message,
+					path: d.path,
+				})),
+				...toolCollisions,
+			],
 			extensions: extResult.extensions.map((ext) => ({
 				name: this.extensionDisplayName(ext.path),
 				path: ext.path,
