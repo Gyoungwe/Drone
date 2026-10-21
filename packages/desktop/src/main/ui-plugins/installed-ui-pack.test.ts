@@ -124,4 +124,58 @@ describe("installed desktop-ui-pack discovery", () => {
 		if (!("manifest" in code)) throw new Error(code.error);
 		expect(code.manifest.main).toBe("src/index.ts");
 	});
+
+	it("discovers a UI entrypoint from any installed package scope", async () => {
+		root = await mkdtemp(join(tmpdir(), "drone-ui-generic-discovery-"));
+		electronState.userData = join(root, "user-data");
+		Object.defineProperty(process, "resourcesPath", {
+			configurable: true,
+			enumerable: originalResourcesPath?.enumerable ?? false,
+			value: fileURLToPath(new URL("../../../resources", import.meta.url)),
+			writable: true,
+		});
+		const installRoot = join(root, "agent", "npm", "node_modules");
+		const packageRoot = join(installRoot, "@example", "ui-fixture");
+		await mkdir(join(packageRoot, "ui", "src"), { recursive: true });
+		await writeFile(
+			join(packageRoot, "package.json"),
+			JSON.stringify({ name: "@example/ui-fixture", version: "1.0.0" }),
+		);
+		await writeFile(
+			join(packageRoot, "plugin.manifest.json"),
+			JSON.stringify({
+				schemaVersion: 1,
+				id: "drone-ui-fixture",
+				version: "1.0.0",
+				entrypoints: { ui: "./ui/plugin.json" },
+				hosts: ["drone-desktop"],
+			}),
+		);
+		await writeFile(
+			join(packageRoot, "ui", "plugin.json"),
+			JSON.stringify({
+				name: "ui-fixture",
+				droneUi: 1,
+				main: "src/index.ts",
+				contributions: [{ id: "status", region: "panel.tab", export: "Status", title: "Fixture" }],
+			}),
+		);
+		await writeFile(join(packageRoot, "ui", "src/index.ts"), "export function Status() { return null; }\n");
+		const brokenRoot = join(installRoot, "@example", "broken-ui");
+		await mkdir(brokenRoot, { recursive: true });
+		await writeFile(join(brokenRoot, "package.json"), JSON.stringify({ name: "@example/broken-ui" }));
+		await writeFile(
+			join(brokenRoot, "plugin.manifest.json"),
+			JSON.stringify({ entrypoints: { ui: "./missing/plugin.json" }, hosts: ["drone-desktop"] }),
+		);
+
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await manager.init();
+		expect(manager.info("ui-fixture")).toMatchObject({ enabled: false, invalidReason: undefined });
+		expect(manager.list().find((item) => item.name === "package-example-broken-ui")?.invalidReason).toContain(
+			"entrypoints.ui does not contain",
+		);
+		const code = await manager.readCode("ui-fixture");
+		expect("manifest" in code).toBe(true);
+	});
 });

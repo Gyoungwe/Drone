@@ -12,7 +12,7 @@ import {
 	writeFile,
 } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createLogger } from "@drone/backend";
 import {
 	KNOWN_UI_REGIONS,
@@ -42,9 +42,72 @@ function pluginsDir(): string {
  * The Desktop UI pack is discovered from that managed install root so the
  * host consumes the installed package rather than a copied source fallback.
  */
-function installedUiPackageDir(): string {
+function installedUiPackageRoot(): string {
 	const agentDir = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
-	return join(agentDir, "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "ui");
+	return join(agentDir, "npm", "node_modules");
+}
+
+export type InstalledUiDiscovery = { packageName: string; uiDir: string } | { packageName: string; error: string };
+
+export async function discoverInstalledUiPackages(root: string): Promise<InstalledUiDiscovery[]> {
+	const discoveries: InstalledUiDiscovery[] = [];
+	const packageDirs: string[] = [];
+	const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
+	for (const entry of entries) {
+		if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+		const path = join(root, entry.name);
+		if (entry.name.startsWith("@")) {
+			const scoped = await readdir(path, { withFileTypes: true }).catch(() => []);
+			for (const child of scoped) if (child.isDirectory()) packageDirs.push(join(path, child.name));
+		} else packageDirs.push(path);
+	}
+	for (const packageDir of packageDirs) {
+		const packageJsonPath = join(packageDir, "package.json");
+		const manifestPath = join(packageDir, "plugin.manifest.json");
+		const packageJson = await readFile(packageJsonPath, "utf8")
+			.then((value) => JSON.parse(value) as { name?: string })
+			.catch(() => null);
+		const packageName = typeof packageJson?.name === "string" ? packageJson.name : basename(packageDir);
+		const manifest = await readFile(manifestPath, "utf8")
+			.then((value) => JSON.parse(value) as { entrypoints?: { ui?: unknown }; hosts?: unknown })
+			.catch(() => null);
+		if (!manifest && existsSync(manifestPath)) {
+			discoveries.push({ packageName, error: "plugin.manifest.json is not valid JSON" });
+			continue;
+		}
+		if (!manifest) continue;
+		if (!Array.isArray(manifest.hosts) || !manifest.hosts.includes("drone-desktop")) {
+			discoveries.push({ packageName, error: "plugin.manifest.json does not declare host drone-desktop" });
+			continue;
+		}
+		if (typeof manifest.entrypoints?.ui !== "string") continue;
+		const packageRoot = resolve(packageDir);
+		const uiManifest = resolve(packageDir, manifest.entrypoints.ui);
+		const outside = relative(packageRoot, uiManifest);
+		if (isAbsolute(outside) || outside.startsWith("..")) {
+			discoveries.push({ packageName, error: "entrypoints.ui escapes the installed package" });
+			continue;
+		}
+		const uiDir = dirname(uiManifest);
+		if (!(await readFile(join(uiDir, "plugin.json"), "utf8").catch(() => null))) {
+			discoveries.push({
+				packageName,
+				error: `entrypoints.ui does not contain ${relative(packageDir, join(uiDir, "plugin.json"))}`,
+			});
+			continue;
+		}
+		discoveries.push({ packageName, uiDir });
+	}
+	return discoveries;
+}
+
+function packageDiagnosticName(packageName: string): string {
+	const slug = packageName
+		.replace(/^@/u, "")
+		.replaceAll("/", "-")
+		.replace(/[^a-z0-9-]/giu, "-")
+		.toLowerCase();
+	return `package-${slug || "unknown"}`;
 }
 
 /** 内置插件源码目录（随包分发，packaged 态在 .app 内只读）；init 时导出到用户插件目录 */
@@ -304,7 +367,8 @@ async function newestMtime(dir: string): Promise<number | null> {
 }
 
 export class UiPluginManager {
-	private readonly installedPackageDir: string;
+	private readonly installedPackageRoot: string;
+	private readonly legacyInstalledPackageDir?: string;
 	/** name → 扫描信息（scanAll 合成；buildError 是内存态，保留在 Map 里跨扫描存活） */
 	private infos = new Map<string, UiPluginInfo>();
 	/** name → 插件目录绝对路径（白名单：readCode/openDir 只接受扫描到的合法名） */
@@ -318,8 +382,9 @@ export class UiPluginManager {
 	/** 插件名 → 防抖重建定时器（连续保存只重建一次） */
 	private rebuildTimers = new Map<string, NodeJS.Timeout>();
 
-	constructor(options?: { installedPackageDir?: string }) {
-		this.installedPackageDir = options?.installedPackageDir ?? installedUiPackageDir();
+	constructor(options?: { installedPackageRoot?: string; installedPackageDir?: string }) {
+		this.installedPackageRoot = options?.installedPackageRoot ?? installedUiPackageRoot();
+		this.legacyInstalledPackageDir = options?.installedPackageDir;
 	}
 
 	/** 确保插件根目录存在、分发规范文档与内置插件、加载配置 + 首次扫描 */
@@ -399,26 +464,61 @@ export class UiPluginManager {
 				out.push(info);
 			}
 		}
-		// An installed desktop-ui-pack contributes through the same manifest/build
-		// path as a user plugin. A user directory wins on name collision so an
-		// explicit local override remains possible; package removal disappears on
-		// the next scan without leaving a stale copied plugin behind.
-		const installedManifest = await readManifest(this.installedPackageDir);
-		const installedName = installedManifest?.name;
-		if (
-			typeof installedName === "string" &&
-			NAME_RE.test(installedName) &&
-			!seen.has(installedName) &&
-			!validateManifest(installedName, installedManifest ?? {})
-		) {
+		// Installed packages are discovered from their own Drone manifest. The host
+		// never names an optional package; a damaged or incompatible package becomes
+		// a diagnostic row and cannot affect the user/built-in plugin scan.
+		const installed = this.legacyInstalledPackageDir
+			? []
+			: await discoverInstalledUiPackages(this.installedPackageRoot);
+		if (this.legacyInstalledPackageDir) {
+			installed.push({ packageName: "legacy-ui-fixture", uiDir: this.legacyInstalledPackageDir });
+		}
+		for (const candidate of installed) {
+			if ("error" in candidate) {
+				const name = packageDiagnosticName(candidate.packageName);
+				if (seen.has(name)) continue;
+				seen.add(name);
+				const info: UiPluginInfo = {
+					name,
+					slots: {},
+					contributions: [],
+					enabled: false,
+					trusted: false,
+					built: false,
+					invalidReason: `${candidate.packageName}: ${candidate.error}`,
+				};
+				this.infos.set(name, info);
+				out.push(info);
+				continue;
+			}
+			const installedManifest = await readManifest(candidate.uiDir);
+			const installedName = installedManifest?.name;
+			if (typeof installedName !== "string" || !NAME_RE.test(installedName) || seen.has(installedName))
+				continue;
+			const invalidReason = validateManifest(installedName, installedManifest ?? {});
+			if (invalidReason) {
+				const info: UiPluginInfo = {
+					name: installedName,
+					slots: {},
+					contributions: [],
+					enabled: false,
+					trusted: false,
+					built: false,
+					invalidReason: `${candidate.packageName}: ${invalidReason}`,
+				};
+				seen.add(installedName);
+				this.infos.set(installedName, info);
+				out.push(info);
+				continue;
+			}
 			try {
 				seen.add(installedName);
-				this.dirNames.set(installedName, this.installedPackageDir);
-				const info = await this.scanOne(installedName, this.installedPackageDir);
+				this.dirNames.set(installedName, candidate.uiDir);
+				const info = await this.scanOne(installedName, candidate.uiDir);
 				this.infos.set(installedName, info);
 				out.push(info);
 			} catch (err) {
-				log.error("installed desktop-ui-pack scan failed", err);
+				log.error("installed UI package scan failed", candidate.packageName, err);
 			}
 		}
 		// 清理幽灵条目：目录已删除/改名的插件从两个 Map 移除（否则面板显示已删除插件直到重启）
