@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { registerWorkbench } from "./register.mjs";
+import { bindRuntime, runtimeForHost } from "./runtime-bridge.mjs";
 import { isReadOnlyTool } from "./tool-manifest.mjs";
 const TASK_ENTRY = "drone-task-checkpoint-v1";
 const TASK_DOCUMENT_KIND = "drone.task.workbench";
@@ -180,9 +181,17 @@ function createTaskJournal({ persist = () => {
   };
 }
 function registerTaskRuntime(pi, options = {}) {
+  bindRuntime(pi);
+  const hostRuntime = runtimeForHost(pi);
+  hostRuntime.tasks ??= {};
+  if (hostRuntime.tasks.workbench?.journal) {
+    hostRuntime.tasks.workbench.journal.configure?.(options);
+    return hostRuntime.tasks.workbench.journal;
+  }
   const shared = requestSharedTaskRuntime(pi);
   if (shared?.journal) {
     shared.journal.configure?.(options);
+    hostRuntime.tasks.workbench = shared;
     return shared.journal;
   }
   const registry = taskRuntimeRegistry(pi);
@@ -192,6 +201,7 @@ function registerTaskRuntime(pi, options = {}) {
   }
   const journal = process.env.DRONE_TASK_WORKBENCH !== "off" ? registerWorkbench(pi, options) : createLegacyTaskJournal(pi);
   if (registry) registry.journal = journal;
+  hostRuntime.tasks.workbench = { version: 1, journal };
   publishTaskRuntimeRegistry(pi, registry);
   return journal;
 }

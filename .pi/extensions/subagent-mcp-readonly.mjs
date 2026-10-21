@@ -10774,9 +10774,17 @@ function createTaskJournal({ persist = () => {
   };
 }
 function registerTaskRuntime2(pi, options = {}) {
+  bindRuntime(pi);
+  const hostRuntime = runtimeForHost(pi);
+  hostRuntime.tasks ??= {};
+  if (hostRuntime.tasks.workbench?.journal) {
+    hostRuntime.tasks.workbench.journal.configure?.(options);
+    return hostRuntime.tasks.workbench.journal;
+  }
   const shared = requestSharedTaskRuntime(pi);
   if (shared?.journal) {
     shared.journal.configure?.(options);
+    hostRuntime.tasks.workbench = shared;
     return shared.journal;
   }
   const registry3 = taskRuntimeRegistry(pi);
@@ -10786,6 +10794,7 @@ function registerTaskRuntime2(pi, options = {}) {
   }
   const journal = process.env.DRONE_TASK_WORKBENCH !== "off" ? registerWorkbench(pi, options) : createLegacyTaskJournal(pi);
   if (registry3) registry3.journal = journal;
+  hostRuntime.tasks.workbench = { version: 1, journal };
   publishTaskRuntimeRegistry(pi, registry3);
   return journal;
 }
