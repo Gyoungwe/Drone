@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
 import { createDefaultResearchWriteAdapters, ResearchWriteAdapterRegistry } from "@drone/research";
@@ -533,8 +533,51 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	void discovery.init();
 	const dailyDiscovery = new DailyDiscoveryService({
 		path: join(getAgentDir(), "daily-discovery.json"),
-		context: (sinceMs) => sessions.knowledge.dailyContext(sinceMs),
+		context: async (sinceMs) => {
+			const base = await sessions.knowledge.dailyContext(sinceMs);
+			if (!base.bound) return base;
+			const cwd = options.defaultCwd ?? process.cwd();
+			const overview = await sessions.knowledge.overview({ cwd });
+			const revision = overview.binding?.revision;
+			if (revision == null) return { ...base, topics: [] };
+			const topics = await sessions.knowledge.topics({ cwd, bindingRevision: revision });
+			return {
+				...base,
+				zoteroSeeds: [...(await research.recentZoteroSeeds(Date.now() - 30 * 24 * 60 * 60 * 1000))],
+				topics: topics.topics
+					.filter((topic) => topic.status === "active")
+					.map((topic) => ({
+						id: topic.id,
+						title: topic.title,
+						aliases: topic.aliases,
+						entities: topic.entities,
+						sources: topic.sources.map((source) => source.path),
+					})),
+			};
+		},
 		saveIdea: (idea) => sessions.knowledge.saveIdea(idea),
+		radarSearch: (query, connectorIds, limit) => research.search({ query, connectorIds, limit }),
+		radarRecommend: (seed) => research.recommend(seed),
+		captureRadarPaper: async (paper) => {
+			const cwd = options.defaultCwd ?? process.cwd();
+			const relativePath = `.drone/radar/${paper.id}.md`;
+			await mkdir(join(cwd, ".drone", "radar"), { recursive: true });
+			const lines = [
+				`# ${paper.title}`,
+				"",
+				`- Source: ${paper.sourceConnectors.join(", ")}`,
+				`- Locator: ${paper.locator}`,
+				...(paper.doi ? [`- DOI: ${paper.doi}`] : []),
+				...(paper.arxivId ? [`- arXiv: ${paper.arxivId}`] : []),
+				...(paper.matchedTopicTitles.length ? [`- Topics: ${paper.matchedTopicTitles.join(", ")}`] : []),
+				"",
+				"> Radar metadata only. Read the original source before citing it.",
+				"",
+			];
+			await writeFile(join(cwd, relativePath), `${lines.join("\n")}\n`, "utf8");
+			const captured = await research.captureResearchResource({ cwd, relativePath });
+			return { path: captured.record.relativePath };
+		},
 		notify: (text) => void sessions.knowledge.notify(text, "info").catch(() => {}),
 		complete: async (system, message) => {
 			const runtime = await sessions.getModelRuntime();

@@ -35,6 +35,12 @@ export interface ResearchConnectorHit {
 	readonly locator: string;
 	readonly sourceType: ResearchConnectorKind;
 	readonly sourceReceipt: ResearchConnectorSourceReceipt;
+	/** Optional bibliographic fields used by literature radar and citation UI. */
+	readonly authors?: readonly string[];
+	readonly year?: number;
+	readonly doi?: string;
+	readonly publishedAt?: string;
+	readonly arxivId?: string;
 }
 
 export interface ResearchConnectorFailure {

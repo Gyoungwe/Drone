@@ -1,5 +1,12 @@
 import { randomUUID } from "node:crypto";
-import type { DailyDiscoveryIdea, DailyDiscoveryOutcome, DailyDiscoveryState } from "@drone/shared";
+import type {
+	DailyDiscoveryIdea,
+	DailyDiscoveryOutcome,
+	DailyDiscoveryRadarPaper,
+	DailyDiscoveryState,
+	ResearchConnectorHit,
+	ResearchSearchResponse,
+} from "@drone/shared";
 import type { DailyIdea, DiscoveryNote } from "@gyoungwe/pi-knowledge/host";
 import {
 	buildDailyDiscoveryMessage,
@@ -20,6 +27,7 @@ interface StoredState {
 	enabled: boolean;
 	lastRunAt: number;
 	ideas: DailyDiscoveryIdea[];
+	radar: DailyDiscoveryRadarPaper[];
 	/** 最近一次运行的结果说明（界面据此解释「为什么没有新想法」） */
 	lastOutcome?: DailyDiscoveryOutcome;
 }
@@ -46,12 +54,22 @@ export function completionText(response: {
 	return text.trim() ? text : null;
 }
 
-const defaultState = (): StoredState => ({ version: 1, enabled: true, lastRunAt: 0, ideas: [] });
+const defaultState = (): StoredState => ({ version: 1, enabled: true, lastRunAt: 0, ideas: [], radar: [] });
+
+export interface DailyDiscoveryTopic {
+	id: string;
+	title: string;
+	aliases?: string[];
+	entities?: string[];
+	sources?: string[];
+}
 
 export interface DailyDiscoveryContext {
 	bound: boolean;
 	fresh: DiscoveryNote[];
 	related: DiscoveryNote[];
+	topics?: DailyDiscoveryTopic[];
+	zoteroSeeds?: string[];
 }
 
 export interface DailyDiscoveryOptions {
@@ -64,6 +82,16 @@ export interface DailyDiscoveryOptions {
 	complete(system: string, message: string): Promise<string | null>;
 	/** 有新想法时通知界面 */
 	notify(text: string): void;
+	/** Literature radar search; disabled connectors are represented in failures. */
+	radarSearch?: (
+		query: string,
+		connectorIds: readonly string[],
+		limit: number,
+	) => Promise<ResearchSearchResponse>;
+	/** Optional Semantic Scholar recommendation lookup for DOI seeds. */
+	radarRecommend?: (seed: string) => Promise<ResearchSearchResponse>;
+	/** Capture a radar item through the host research capture flow. */
+	captureRadarPaper?: (paper: DailyDiscoveryRadarPaper) => Promise<{ path: string }>;
 	now?: () => number;
 }
 
@@ -110,6 +138,7 @@ export class DailyDiscoveryService {
 			lastError: this.lastError,
 			lastOutcome: state.lastOutcome ?? null,
 			ideas: state.ideas.filter((idea) => idea.status !== "dismissed"),
+			radar: (state.radar ?? []).filter((paper) => paper.status !== "dismissed"),
 		};
 	}
 
@@ -145,11 +174,12 @@ export class DailyDiscoveryService {
 			});
 			return this.getState();
 		}
+		const radarOutcome = await this.runRadar(context, startedAt);
 		if (!context.fresh.length) {
 			this.lastError = null;
 			await this.store.update((draft) => {
 				draft.lastRunAt = startedAt;
-				draft.lastOutcome = { kind: "no-new-notes", at: startedAt, since };
+				draft.lastOutcome = radarOutcome ?? { kind: "no-new-notes", at: startedAt, since };
 			});
 			return this.getState();
 		}
@@ -177,7 +207,12 @@ export class DailyDiscoveryService {
 		let added = 0;
 		await this.store.update((draft) => {
 			draft.lastRunAt = startedAt;
-			draft.lastOutcome = { kind: "ran", at: startedAt, notes: context.fresh.length, added: 0 };
+			draft.lastOutcome = radarOutcome ?? {
+				kind: "ran",
+				at: startedAt,
+				notes: context.fresh.length,
+				added: 0,
+			};
 			const known = new Set(draft.ideas.map((idea) => idea.title.toLowerCase()));
 			for (const idea of ideas) {
 				if (known.has(idea.title.toLowerCase())) continue;
@@ -189,6 +224,77 @@ export class DailyDiscoveryService {
 		});
 		if (added) this.options.notify(`每日发现：根据最近更新的笔记提出了 ${added} 条新想法，去知识库查看。`);
 		return this.getState();
+	}
+
+	private async runRadar(
+		context: DailyDiscoveryContext,
+		startedAt: number,
+	): Promise<Extract<DailyDiscoveryOutcome, { kind: `radar-${string}` }> | null> {
+		if (!this.options.radarSearch) return null;
+		const topics = (context.topics ?? []).filter((topic) => topic.title.trim());
+		if (!topics.length) return { kind: "radar-no-active-topics", at: startedAt };
+		const connectorIds = ["openalex", "pubmed", "europe-pmc", "arxiv", "semantic-scholar"] as const;
+		const queries: Array<{ topic: DailyDiscoveryTopic; query: string }> = [];
+		for (const topic of topics) {
+			const terms = [topic.title, ...(topic.aliases ?? []), ...(topic.entities ?? [])]
+				.map((value) => value.trim())
+				.filter(Boolean);
+			const unique = [...new Set(terms)];
+			for (const query of unique.slice(0, 2)) queries.push({ topic, query });
+		}
+		const limitedQueries = queries.slice(0, 12);
+		const responses = await Promise.all(
+			limitedQueries.map(async ({ topic, query }) => ({
+				topic,
+				response: await this.options.radarSearch?.(query, connectorIds, 10),
+			})),
+		);
+		const failures = responses.flatMap(({ response }) => response?.failures ?? []);
+		if (failures.some((failure) => failure.retryable)) {
+			throw new Error("Literature radar connector is temporarily unavailable; retry later");
+		}
+		const usableResponses = responses.filter(({ response }) => response?.complete);
+		if (usableResponses.length === 0 && failures.length > 0)
+			return { kind: "radar-connectors-disabled", at: startedAt };
+		const byKey = new Map<string, DailyDiscoveryRadarPaper>();
+		const existing = await this.store.read();
+		for (const paper of existing.radar ?? []) byKey.set(radarKey(paper), paper);
+		const recentCutoff = startedAt - FIRST_LOOKBACK_MS;
+		for (const { topic, response } of responses) {
+			for (const hit of response?.hits ?? []) {
+				if (!isRecentHit(hit, recentCutoff)) continue;
+				const key = radarHitKey(hit);
+				const previous = byKey.get(key);
+				const paper = toRadarPaper(hit, topic, startedAt, previous);
+				byKey.set(key, mergeRadarPaper(previous, paper));
+			}
+		}
+		for (const seed of (context.zoteroSeeds ?? []).slice(0, 12)) {
+			const response = await this.options.radarRecommend?.(seed);
+			for (const hit of response?.hits ?? []) {
+				if (!isRecentHit(hit, recentCutoff)) continue;
+				const key = radarHitKey(hit);
+				const previous = byKey.get(key);
+				byKey.set(key, mergeRadarPaper(previous, toRadarPaper(hit, undefined, startedAt, previous)));
+			}
+		}
+		const before = new Set((existing.radar ?? []).map(radarKey));
+		const sorted = [...byKey.values()]
+			.sort((a, b) => radarScore(b) - radarScore(a) || b.discoveredAt - a.discoveredAt)
+			.slice(0, 50);
+		const added = sorted.filter((paper) => !before.has(radarKey(paper)) && paper.status === "new").length;
+		await this.store.update((draft) => {
+			draft.radar = sorted;
+			draft.lastOutcome = {
+				kind: added ? "radar-ran" : "radar-no-new-papers",
+				at: startedAt,
+				...(added ? { added } : {}),
+			} as DailyDiscoveryOutcome;
+		});
+		if (added) this.options.notify(`新文献雷达：发现了 ${added} 篇近期文献，去知识库查看。`);
+		return added
+			? { kind: "radar-ran", at: startedAt, added }
+			: { kind: "radar-no-new-papers", at: startedAt };
 	}
 
 	async decide(id: string, action: "save" | "dismiss"): Promise<DailyDiscoveryState> {
@@ -209,4 +315,96 @@ export class DailyDiscoveryService {
 		}
 		return this.getState();
 	}
+
+	async decideRadarPaper(id: string, action: "capture" | "dismiss"): Promise<DailyDiscoveryState> {
+		const state = await this.store.read();
+		const paper = (state.radar ?? []).find((item) => item.id === id);
+		if (!paper) throw new Error("Radar paper not found");
+		if (action === "capture") {
+			if (!this.options.captureRadarPaper) throw new Error("Radar capture is unavailable");
+			await this.options.captureRadarPaper(paper);
+		}
+		await this.store.update((draft) => {
+			const target = (draft.radar ?? []).find((item) => item.id === id);
+			if (target) target.status = action === "capture" ? "captured" : "dismissed";
+		});
+		return this.getState();
+	}
+}
+
+function normalizeTitle(value: string): string {
+	return value
+		.normalize("NFKC")
+		.toLocaleLowerCase()
+		.replace(/[^\p{L}\p{N}]+/gu, " ")
+		.trim();
+}
+
+function radarHitKey(hit: ResearchConnectorHit): string {
+	if (hit.doi) return `doi:${normalizeDoiValue(hit.doi)}`;
+	if (hit.arxivId) return `arxiv:${hit.arxivId.toLocaleLowerCase()}`;
+	return `title:${normalizeTitle(hit.title)}`;
+}
+
+function radarKey(paper: DailyDiscoveryRadarPaper): string {
+	if (paper.doi) return `doi:${normalizeDoiValue(paper.doi)}`;
+	if (paper.arxivId) return `arxiv:${paper.arxivId.toLocaleLowerCase()}`;
+	return `title:${normalizeTitle(paper.title)}`;
+}
+
+function normalizeDoiValue(value: string): string {
+	return value
+		.trim()
+		.toLocaleLowerCase()
+		.replace(/^https?:\/\/doi\.org\//u, "")
+		.replace(/^doi:\s*/u, "");
+}
+
+function isRecentHit(hit: ResearchConnectorHit, cutoff: number): boolean {
+	return (
+		!hit.publishedAt || Number.isNaN(Date.parse(hit.publishedAt)) || Date.parse(hit.publishedAt) >= cutoff
+	);
+}
+
+function toRadarPaper(
+	hit: ResearchConnectorHit,
+	topic: DailyDiscoveryTopic | undefined,
+	discoveredAt: number,
+	previous?: DailyDiscoveryRadarPaper,
+): DailyDiscoveryRadarPaper {
+	return {
+		id: previous?.id ?? randomUUID(),
+		title: hit.title,
+		authors: [...(hit.authors ?? [])],
+		year: hit.year ?? null,
+		doi: hit.doi,
+		arxivId: hit.arxivId,
+		publishedAt: hit.publishedAt,
+		locator: hit.locator,
+		sourceConnectors: [hit.id.split(":", 1)[0] ?? hit.sourceType],
+		matchedTopicIds: topic ? [topic.id] : [],
+		matchedTopicTitles: topic ? [topic.title] : [],
+		relatedVaultPaths: topic?.sources ?? [],
+		discoveredAt: previous?.discoveredAt ?? discoveredAt,
+		status: previous?.status ?? "new",
+	};
+}
+
+function mergeRadarPaper(
+	previous: DailyDiscoveryRadarPaper | undefined,
+	next: DailyDiscoveryRadarPaper,
+): DailyDiscoveryRadarPaper {
+	if (!previous) return next;
+	return {
+		...previous,
+		authors: [...new Set([...previous.authors, ...next.authors])],
+		sourceConnectors: [...new Set([...previous.sourceConnectors, ...next.sourceConnectors])],
+		matchedTopicIds: [...new Set([...previous.matchedTopicIds, ...next.matchedTopicIds])],
+		matchedTopicTitles: [...new Set([...previous.matchedTopicTitles, ...next.matchedTopicTitles])],
+		relatedVaultPaths: [...new Set([...previous.relatedVaultPaths, ...next.relatedVaultPaths])],
+	};
+}
+
+function radarScore(paper: DailyDiscoveryRadarPaper): number {
+	return paper.matchedTopicIds.length + (paper.sourceConnectors.includes("semantic-scholar") ? 1 : 0);
 }

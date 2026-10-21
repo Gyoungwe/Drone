@@ -22,6 +22,11 @@ export interface ResearchProtocolsConnectorConfig {
 	readonly apiToken?: string;
 }
 
+export interface ResearchSemanticScholarConnectorConfig {
+	readonly apiBase?: string;
+	readonly apiKey?: string;
+}
+
 export interface ResearchInstitutionalConnectorConfig {
 	/** Optional resolver that receives a free-text query as `q`. */
 	readonly resolverUrl?: string;
@@ -55,6 +60,7 @@ export interface ResearchConnectorContext {
 	readonly config?: {
 		readonly zotero?: ResearchZoteroConnectorConfig;
 		readonly protocols?: ResearchProtocolsConnectorConfig;
+		readonly semanticScholar?: ResearchSemanticScholarConnectorConfig;
 		readonly institutional?: ResearchInstitutionalConnectorConfig;
 	};
 	readonly projectStorage?: ResearchProjectStoragePort;
@@ -66,6 +72,11 @@ export interface ResearchConnector {
 	readonly label: string;
 	search(
 		query: string,
+		options?: ResearchConnectorContext & { readonly limit?: number },
+	): Promise<readonly ResearchConnectorHit[]>;
+	/** Optional recommendation lookup for connectors that support seed papers. */
+	recommend?(
+		seed: string,
 		options?: ResearchConnectorContext & { readonly limit?: number },
 	): Promise<readonly ResearchConnectorHit[]>;
 }
@@ -356,6 +367,151 @@ export function createPubmedConnector(): ResearchConnector {
 							kind: "literature",
 							title,
 							payload: item,
+						}),
+					} satisfies ResearchConnectorHit,
+				];
+			});
+		},
+	};
+}
+
+function bibliographicAuthors(value: unknown): string[] {
+	return Array.isArray(value)
+		? value.flatMap((author) => {
+				const name = text((author as { name?: unknown })?.name);
+				return name ? [name] : [];
+			})
+		: [];
+}
+
+function semanticScholarHit(
+	item: any,
+	sourceRef: string,
+	kind: "literature" = "literature",
+): ResearchConnectorHit[] {
+	const paperId = text(item?.paperId) || text(item?.corpusId);
+	const title = text(item?.title);
+	if (!paperId || !title) return [];
+	const doi = text(item?.externalIds?.DOI) || undefined;
+	const locator = doi
+		? `https://doi.org/${doi}`
+		: text(item?.url) || `https://www.semanticscholar.org/paper/${paperId}`;
+	return [
+		{
+			id: `semantic-scholar:${paperId}`,
+			title,
+			summary: text(item?.abstract) || text(item?.venue) || "Semantic Scholar record",
+			locator,
+			sourceType: kind,
+			authors: bibliographicAuthors(item?.authors),
+			year: typeof item?.year === "number" ? item.year : undefined,
+			doi,
+			publishedAt: text(item?.publicationDate) || undefined,
+			sourceReceipt: receipt({ sourceRef, locator, kind, title, payload: item }),
+		},
+	];
+}
+
+/** Search Semantic Scholar's public graph API and optionally use an API key for higher limits. */
+export function createSemanticScholarConnector(): ResearchConnector {
+	const connector: ResearchConnector = {
+		id: "semantic-scholar",
+		kind: "literature",
+		label: "Semantic Scholar",
+		async search(query, options = {}) {
+			const limit = clampLimit(options.limit);
+			const config = options.config?.semanticScholar;
+			const apiBase = (text(config?.apiBase) || "https://api.semanticscholar.org").replace(/\/$/u, "");
+			const fields = "title,abstract,authors,year,externalIds,url,venue,publicationDate";
+			const headers: Record<string, string> = {};
+			if (text(config?.apiKey)) headers["x-api-key"] = text(config?.apiKey);
+			const { value } = await fetchJson(
+				`${apiBase}/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=${fields}`,
+				options,
+				headers,
+			);
+			const items = Array.isArray(value?.data) ? value.data : [];
+			return items
+				.slice(0, limit)
+				.flatMap((item: any) =>
+					semanticScholarHit(item, `semantic-scholar:${text(item?.paperId) || text(item?.corpusId)}`),
+				);
+		},
+	};
+	connector.recommend = async (seed, options = {}) => {
+		const limit = clampLimit(options.limit);
+		const config = options.config?.semanticScholar;
+		const apiBase = (text(config?.apiBase) || "https://api.semanticscholar.org").replace(/\/$/u, "");
+		const fields = "title,abstract,authors,year,externalIds,url,venue,publicationDate";
+		const headers: Record<string, string> = {};
+		if (text(config?.apiKey)) headers["x-api-key"] = text(config?.apiKey);
+		const { value } = await fetchJson(
+			`${apiBase}/recommendations/v1/papers/for/${encodeURIComponent(seed)}?limit=${limit}&fields=${fields}`,
+			options,
+			headers,
+		);
+		const items = Array.isArray(value?.recommendedPapers) ? value.recommendedPapers : [];
+		return items
+			.slice(0, limit)
+			.flatMap((item: any) =>
+				semanticScholarHit(
+					item,
+					`semantic-scholar:recommendation:${text(item?.paperId) || text(item?.corpusId)}`,
+				),
+			);
+	};
+	return connector;
+}
+
+function xmlTag(value: string, tag: string): string {
+	const match = value.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "iu"));
+	return text(match?.[1])
+		.replaceAll("&amp;", "&")
+		.replaceAll("&lt;", "<")
+		.replaceAll("&gt;", ">")
+		.replaceAll("&quot;", '"');
+}
+
+/** Search arXiv's Atom feed, ordered by submitted date by the upstream API. */
+export function createArxivConnector(): ResearchConnector {
+	return {
+		id: "arxiv",
+		kind: "literature",
+		label: "arXiv",
+		async search(query, options = {}) {
+			const limit = clampLimit(options.limit);
+			const response = await fetchResponse(
+				`https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=${limit}&sortBy=submittedDate&sortOrder=descending`,
+				options,
+			);
+			const xml = await response.text();
+			return [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/giu)].slice(0, limit).flatMap((match) => {
+				const entry = match[1] ?? "";
+				const rawId = xmlTag(entry, "id");
+				const arxivId = rawId.match(/arxiv\.org\/(?:abs|pdf)\/([^?#]+?)(?:\.pdf)?$/iu)?.[1];
+				const title = xmlTag(entry, "title");
+				if (!arxivId || !title) return [];
+				const locator = `https://arxiv.org/abs/${arxivId}`;
+				const authors = [
+					...entry.matchAll(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/giu),
+				].map((item) => text(item[1]).replaceAll("&amp;", "&"));
+				const publishedAt = xmlTag(entry, "published") || undefined;
+				return [
+					{
+						id: `arxiv:${arxivId}`,
+						title,
+						summary: xmlTag(entry, "summary") || "arXiv record",
+						locator,
+						sourceType: "literature",
+						authors,
+						publishedAt,
+						arxivId,
+						sourceReceipt: receipt({
+							sourceRef: `arxiv:${arxivId}`,
+							locator,
+							kind: "literature",
+							title,
+							payload: entry,
 						}),
 					} satisfies ResearchConnectorHit,
 				];
@@ -710,12 +866,14 @@ export function createProjectStorageConnector(): ResearchConnector {
 
 export function createDefaultResearchConnectors(): readonly ResearchConnector[] {
 	return [
+		createArxivConnector(),
 		createCrossrefConnector(),
 		createDoiConnector(),
 		createEuropePmcConnector(),
 		createEnaConnector(),
 		createOpenAlexConnector(),
 		createPubmedConnector(),
+		createSemanticScholarConnector(),
 		createZenodoConnector(),
 		createOsfConnector(),
 		createSraConnector(),
@@ -741,6 +899,34 @@ export class ResearchConnectorRegistry {
 
 	list(): readonly ResearchConnector[] {
 		return [...this.connectors.values()].sort((a, b) => a.id.localeCompare(b.id));
+	}
+
+	async recommend(
+		seed: string,
+		connectorId: string,
+		context: ResearchConnectorContext = {},
+		limit = 10,
+	): Promise<{ hits: readonly ResearchConnectorHit[]; failures: readonly ResearchConnectorFailure[] }> {
+		const connector = this.connectors.get(connectorId);
+		if (!connector) {
+			return {
+				hits: [],
+				failures: [
+					{
+						connectorId,
+						message: `Unknown research connector: ${connectorId}`,
+						retryable: false,
+						at: isoNow(),
+					},
+				],
+			};
+		}
+		if (!connector.recommend) return { hits: [], failures: [] };
+		try {
+			return { hits: await connector.recommend(seed, { ...context, limit }), failures: [] };
+		} catch (error) {
+			return { hits: [], failures: [failure(connector.id, error)] };
+		}
 	}
 
 	async search(

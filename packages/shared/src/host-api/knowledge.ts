@@ -280,6 +280,10 @@ export const KnowledgeContract = defineDomain("knowledge", {
 			args: OneObject<{ id: string; action: "save" | "dismiss" }>(),
 			result: ResultObject<DailyDiscoveryState>(),
 		},
+		decideDailyRadarPaper: {
+			args: OneObject<{ id: string; action: "capture" | "dismiss" }>(),
+			result: ResultObject<DailyDiscoveryState>(),
+		},
 		getTopics: {
 			args: OneObject<KnowledgeTopicsRequest>(),
 			result: ResultObject<KnowledgeTopicListResult>(),
@@ -373,6 +377,7 @@ export type KnowledgeSchemaTypes = {
 	getDailyDiscovery: [];
 	updateDailyDiscovery: Parameters<KnowledgeApi["updateDailyDiscovery"]>;
 	decideDailyIdea: Parameters<KnowledgeApi["decideDailyIdea"]>;
+	decideDailyRadarPaper: Parameters<KnowledgeApi["decideDailyRadarPaper"]>;
 	getTopics: Parameters<KnowledgeApi["getKnowledgeTopics"]>;
 	archiveTopic: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>;
 	getMaintenanceSettings: [];

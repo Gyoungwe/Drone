@@ -75,6 +75,7 @@ export function DailyIdeas({
 
 	if (!state) return null;
 	const ideas = state.ideas.filter((idea) => idea.status !== "dismissed");
+	const radar = state.radar.filter((paper) => paper.status !== "dismissed");
 	const runNote = ideas.length > 0 ? lastRunNote(state, t) : null;
 	return (
 		<section aria-label={t("dailyTitle")} data-testid="daily-ideas">
@@ -188,6 +189,70 @@ export function DailyIdeas({
 					))}
 				</ul>
 			)}
+			<section className="mt-4 border-t border-border pt-3" aria-label={t("dailyRadarTitle")}>
+				<h4 className="mb-2 text-xs font-semibold">{t("dailyRadarTitle")}</h4>
+				{radar.length === 0 ? (
+					<p className="text-[11px] text-ink-faint">{t("dailyRadarEmpty")}</p>
+				) : (
+					<ul className="space-y-2">
+						{radar.map((paper) => (
+							<li key={paper.id} className="rounded-xl border border-border p-3 text-xs">
+								<button
+									type="button"
+									className="text-left font-medium text-link hover:underline"
+									onClick={() => void getPi().openExternal(paper.locator)}
+								>
+									{paper.title}
+								</button>
+								{paper.authors.length > 0 && (
+									<p className="mt-1 text-[11px] text-ink-dim">{paper.authors.join(", ")}</p>
+								)}
+								<p className="mt-1 text-[11px] text-ink-faint">
+									{t("dailyRadarSource").replace("{source}", paper.sourceConnectors.join(", "))}
+								</p>
+								{paper.matchedTopicTitles.length > 0 && (
+									<p className="mt-1 text-[11px] text-ink-faint">
+										{t("dailyRadarTopics").replace("{topics}", paper.matchedTopicTitles.join("、"))}
+									</p>
+								)}
+								<div className="mt-2 flex gap-1">
+									<Button size="sm" onClick={() => void getPi().openExternal(paper.locator)}>
+										{t("dailyRadarOpen")}
+									</Button>
+									{paper.status === "captured" ? (
+										<span className="px-2 py-1 text-[11px] text-ink-faint">{t("dailyRadarCaptured")}</span>
+									) : (
+										<>
+											<Button
+												size="sm"
+												disabled={busy !== null}
+												onClick={() =>
+													void act(paper.id, () =>
+														getPi().decideDailyRadarPaper({ id: paper.id, action: "capture" }),
+													)
+												}
+											>
+												{t("dailyRadarCapture")}
+											</Button>
+											<Button
+												size="sm"
+												disabled={busy !== null}
+												onClick={() =>
+													void act(paper.id, () =>
+														getPi().decideDailyRadarPaper({ id: paper.id, action: "dismiss" }),
+													)
+												}
+											>
+												{t("dailyDismiss")}
+											</Button>
+										</>
+									)}
+								</div>
+							</li>
+						))}
+					</ul>
+				)}
+			</section>
 		</section>
 	);
 }

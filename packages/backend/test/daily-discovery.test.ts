@@ -102,6 +102,63 @@ describe("daily discovery outcome", () => {
 		const found = await setup(JSON.stringify([idea]));
 		expect((await found.service.run()).lastOutcome).toMatchObject({ kind: "ran", added: 1 });
 	});
+
+	it("runs the literature radar without fresh notes and deduplicates recent hits", async () => {
+		const { service, options } = await setup("[]", []);
+		options.context.mockResolvedValue({
+			bound: true,
+			fresh: [],
+			related: [],
+			topics: [{ id: "topic-1", title: "cell atlas", entities: ["single cell"] }],
+		});
+		const radarSearch = vi.fn(async () => ({
+			query: "cell atlas",
+			hits: [
+				{
+					id: "openalex:1",
+					title: "A Cell Atlas",
+					summary: "",
+					locator: "https://doi.org/10.1000/test",
+					sourceType: "literature",
+					doi: "10.1000/test",
+					publishedAt: new Date(10 * DAY - DAY).toISOString(),
+					sourceReceipt: {} as never,
+				},
+			],
+			failures: [],
+			connectors: ["openalex"],
+			complete: true,
+		}));
+		Object.assign(options, { radarSearch });
+		const state = await service.run();
+		expect(radarSearch).toHaveBeenCalled();
+		expect(state.radar).toHaveLength(1);
+		expect(state.radar[0]).toMatchObject({ title: "A Cell Atlas", doi: "10.1000/test" });
+		expect(state.lastOutcome).toMatchObject({ kind: "radar-ran", added: 1 });
+	});
+
+	it("does not count a retryable radar failure as today's run", async () => {
+		const { service, options } = await setup("[]", []);
+		options.context.mockResolvedValue({
+			bound: true,
+			fresh: [],
+			related: [],
+			topics: [{ id: "topic-1", title: "cell atlas" }],
+		});
+		Object.assign(options, {
+			radarSearch: vi.fn(async () => ({
+				query: "cell atlas",
+				hits: [],
+				failures: [
+					{ connectorId: "arxiv", message: "HTTP 429", retryable: true, at: new Date().toISOString() },
+				],
+				connectors: ["arxiv"],
+				complete: false,
+			})),
+		});
+		await expect(service.run()).rejects.toThrow(/temporarily unavailable/);
+		expect((await service.getState()).lastRunAt).toBeNull();
+	});
 });
 
 describe("completionText", () => {

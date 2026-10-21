@@ -6,7 +6,7 @@
 
 - v3 T3 的真实安装包三页面验收尚未执行；代码级挂载、卸载和默认恢复测试已通过。
 - v3 T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，尚未完成完整迁移。
-- 下列六个 OmicOS PR 均未开始实现；本计划不把 fixture 或 loader 单独加载当作真实验收。
+- PR1 已完成代码实现，真实会话验收待执行；PR2–PR6 尚未开始。本计划不把 fixture 或 loader 单独加载当作真实验收。
 
 ## 共同约束
 
@@ -17,7 +17,7 @@
 
 ## PR 顺序
 
-### PR1：新文献雷达与 Semantic Scholar / arXiv 连接器
+### PR1：新文献雷达与 Semantic Scholar / arXiv 连接器（代码完成，真实验收待执行）
 
 新增 `semantic-scholar` 和 `arxiv` 只读连接器，接入 `packages/research/src/connectors.ts` registry 和资料页逐项开关，默认开启；Semantic Scholar 支持无 key 工作、有 key 时从设置读取，429 必须作为 retryable 失败；本轮不做 bioRxiv/medRxiv。
 

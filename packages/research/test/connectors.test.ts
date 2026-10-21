@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	createArxivConnector,
 	createCrossrefConnector,
 	createDoiConnector,
 	createEnaConnector,
@@ -9,6 +10,7 @@ import {
 	createProjectStorageConnector,
 	createProtocolsConnector,
 	createPubmedConnector,
+	createSemanticScholarConnector,
 	createSraConnector,
 	createZenodoConnector,
 	createZoteroConnector,
@@ -24,6 +26,7 @@ describe("research connectors", () => {
 	it("exposes one complete default connector inventory", () => {
 		const ids = new ResearchConnectorRegistry().list().map((connector) => connector.id);
 		expect(ids).toEqual([
+			"arxiv",
 			"crossref",
 			"doi",
 			"ena",
@@ -34,11 +37,82 @@ describe("research connectors", () => {
 			"project-storage",
 			"protocols",
 			"pubmed",
+			"semantic-scholar",
 			"sra",
 			"zenodo",
 			"zotero",
 		]);
 		expect(new Set(ids).size).toBe(ids.length);
+	});
+
+	it("searches Semantic Scholar with optional API-key authentication and recommendations", async () => {
+		const requests: Array<{ url: string; key?: string }> = [];
+		const connector = createSemanticScholarConnector();
+		const options = {
+			config: { semanticScholar: { apiBase: "https://s2.example", apiKey: "secret" } },
+			fetchImpl: async (input: string | URL | Request, init?: RequestInit) => {
+				requests.push({ url: String(input), key: (init?.headers as Record<string, string>)?.["x-api-key"] });
+				return response({
+					data: [
+						{
+							paperId: "paper-1",
+							title: "A paper",
+							abstract: "Abstract",
+							authors: [{ name: "Ada" }],
+							year: 2026,
+							publicationDate: "2026-10-20",
+							externalIds: { DOI: "10.1000/example" },
+						},
+					],
+					recommendedPapers: [{ paperId: "paper-2", title: "Recommended" }],
+				});
+			},
+		};
+		const hits = await connector.search("single cell", options);
+		const recommendations = await connector.recommend?.("DOI:10.1000/seed", options);
+		expect(hits[0]).toMatchObject({
+			id: "semantic-scholar:paper-1",
+			locator: "https://doi.org/10.1000/example",
+			authors: ["Ada"],
+			year: 2026,
+		});
+		expect(recommendations?.[0]).toMatchObject({ id: "semantic-scholar:paper-2" });
+		expect(requests).toHaveLength(2);
+		expect(requests.every((request) => request.key === "secret")).toBe(true);
+		expect(requests[1]?.url).toContain("/recommendations/v1/papers/for/DOI%3A10.1000%2Fseed");
+	});
+
+	it("parses arXiv Atom entries in submitted-date order", async () => {
+		const hits = await createArxivConnector().search("genomics", {
+			fetchImpl: async () =>
+				new Response(
+					`<?xml version="1.0"?><feed>
+					<entry><id>http://arxiv.org/abs/2601.00001v2</id><title> First paper </title><summary> Summary </summary><published>2026-01-20T00:00:00Z</published><author><name>Ada &amp; Bob</name></author></entry>
+					<entry><id>http://arxiv.org/abs/2601.00002</id><title>Second paper</title><summary>Second summary</summary><published>2026-01-19T00:00:00Z</published></entry>
+					</feed>`,
+					{ status: 200, headers: { "content-type": "application/atom+xml" } },
+				),
+		});
+		expect(hits).toHaveLength(2);
+		expect(hits[0]).toMatchObject({
+			id: "arxiv:2601.00001v2",
+			locator: "https://arxiv.org/abs/2601.00001v2",
+			authors: ["Ada & Bob"],
+			arxivId: "2601.00001v2",
+			publishedAt: "2026-01-20T00:00:00Z",
+		});
+	});
+
+	it("marks Semantic Scholar rate limits as retryable failures", async () => {
+		const result = await new ResearchConnectorRegistry([createSemanticScholarConnector()]).search(
+			{ query: "genomics" },
+			{ fetchImpl: async () => response({ error: "rate limited" }, 429) },
+		);
+		expect(result.hits).toEqual([]);
+		expect(result.failures).toEqual([
+			expect.objectContaining({ connectorId: "semantic-scholar", retryable: true }),
+		]);
+		expect(result.complete).toBe(false);
 	});
 
 	it("normalizes Crossref records into read-only source receipts", async () => {

@@ -289,6 +289,33 @@ export class ResearchResourceService {
 		return items.filter((item) => !root || root === item.cwd).map((item) => structuredClone(item));
 	}
 
+	/** Read DOI seeds recently added to the configured Zotero library for radar recommendations. */
+	async recentZoteroSeeds(sinceMs: number): Promise<readonly string[]> {
+		const config = this.options.connectorContext?.config?.zotero;
+		if (!config?.libraryId) return [];
+		const libraryType = config.libraryType === "groups" ? "groups" : "users";
+		const apiBase = (config.apiBase || "https://api.zotero.org").replace(/\/$/u, "");
+		const url = `${apiBase}/${libraryType}/${encodeURIComponent(config.libraryId)}/items?sort=dateAdded&direction=desc&limit=50&format=json`;
+		const response = await (this.options.connectorContext?.fetchImpl ?? fetch)(url, {
+			headers: {
+				accept: "application/json",
+				"Zotero-API-Version": "3",
+				...(config.apiKey ? { "Zotero-API-Key": config.apiKey } : {}),
+			},
+		});
+		if (!response.ok) throw new Error(`Zotero HTTP ${response.status}`);
+		const items = (await response.json()) as unknown;
+		if (!Array.isArray(items)) return [];
+		return items.flatMap((item) => {
+			if (!item || typeof item !== "object") return [];
+			const data = "data" in item && item.data && typeof item.data === "object" ? item.data : item;
+			const added =
+				"dateAdded" in item ? String(item.dateAdded ?? "") : String((data as any).dateAdded ?? "");
+			const doi = String((data as any).DOI ?? "").trim();
+			return doi && Date.parse(added) >= sinceMs ? [doi] : [];
+		});
+	}
+
 	search(input: ResearchSearchRequest): Promise<ResearchSearchResponse> {
 		return this.searchEnabled(input);
 	}
@@ -296,6 +323,43 @@ export class ResearchResourceService {
 	async listConnectors(): Promise<readonly ResearchConnectorDescriptor[]> {
 		const disabled = await this.readDisabledConnectors();
 		return this.connectors.list().map((connector) => this.describe(connector, disabled));
+	}
+
+	/** Read-only recommendation seam used by the daily literature radar. */
+	async recommend(seed: string): Promise<ResearchSearchResponse> {
+		const descriptors = await this.listConnectors();
+		const connector = descriptors.find((item) => item.id === "semantic-scholar");
+		if (!connector?.enabled) {
+			return {
+				query: seed,
+				hits: [],
+				failures: connector
+					? [
+							{
+								connectorId: connector.id,
+								message: "Research connector is disabled",
+								retryable: false,
+								at: isoNow(),
+							},
+						]
+					: [],
+				connectors: ["semantic-scholar"],
+				complete: true,
+			};
+		}
+		const result = await this.connectors.recommend(
+			seed,
+			"semantic-scholar",
+			this.options.connectorContext,
+			10,
+		);
+		return {
+			query: seed,
+			hits: result.hits,
+			failures: result.failures,
+			connectors: ["semantic-scholar"],
+			complete: result.failures.length === 0,
+		};
 	}
 
 	async setConnectorEnabled(id: string, enabled: boolean): Promise<ResearchConnectorDescriptor> {

@@ -609,7 +609,28 @@ export interface DailyDiscoveryIdea {
 export type DailyDiscoveryOutcome =
 	| { kind: "not-bound"; at: number }
 	| { kind: "no-new-notes"; at: number; since: number }
-	| { kind: "ran"; at: number; notes: number; added: number };
+	| { kind: "ran"; at: number; notes: number; added: number }
+	| { kind: "radar-no-active-topics"; at: number }
+	| { kind: "radar-connectors-disabled"; at: number }
+	| { kind: "radar-no-new-papers"; at: number }
+	| { kind: "radar-ran"; at: number; added: number };
+
+export interface DailyDiscoveryRadarPaper {
+	id: string;
+	title: string;
+	authors: string[];
+	year: number | null;
+	doi?: string;
+	arxivId?: string;
+	publishedAt?: string;
+	locator: string;
+	sourceConnectors: string[];
+	matchedTopicIds: string[];
+	matchedTopicTitles: string[];
+	relatedVaultPaths: string[];
+	discoveredAt: number;
+	status: "new" | "captured" | "dismissed";
+}
 
 export interface DailyDiscoveryState {
 	enabled: boolean;
@@ -620,6 +641,8 @@ export interface DailyDiscoveryState {
 	lastOutcome?: DailyDiscoveryOutcome | null;
 	/** 未忽略的想法（最新在前） */
 	ideas: DailyDiscoveryIdea[];
+	/** 外部文献线索；未读原文前不得作为证据或引用。 */
+	radar: DailyDiscoveryRadarPaper[];
 }
 /** 知识库视图搜索框：共享知识 + 当前项目的只读检索 */
 export interface KnowledgeSearchRequest {
@@ -688,6 +711,7 @@ export interface KnowledgeApi {
 	/** enabled: 开关；run: 立即运行一次 */
 	updateDailyDiscovery(input: { enabled?: boolean; run?: boolean }): Promise<DailyDiscoveryState>;
 	decideDailyIdea(input: { id: string; action: "save" | "dismiss" }): Promise<DailyDiscoveryState>;
+	decideDailyRadarPaper(input: { id: string; action: "capture" | "dismiss" }): Promise<DailyDiscoveryState>;
 	getResearchRuns(input?: ResearchRunsRequest): Promise<{ items: ResearchRunListItem[]; total: number }>;
 	getResearchRun(input: ResearchRunRequest): Promise<ResearchRunDetail>;
 	getKnowledgeSemanticStatus(input?: {

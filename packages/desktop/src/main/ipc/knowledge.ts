@@ -32,12 +32,13 @@ export function registerKnowledgeIpc(
 	};
 	const dailyDiscovery: Pick<
 		BackendServices["dailyDiscovery"],
-		"getState" | "setEnabled" | "run" | "decide"
+		"getState" | "setEnabled" | "run" | "decide" | "decideRadarPaper"
 	> = (hostServices as Partial<Pick<BackendServices, "dailyDiscovery">> | undefined)?.dailyDiscovery ?? {
-		getState: async () => ({ enabled: false, lastRunAt: null, ideas: [] }),
+		getState: async () => ({ enabled: false, lastRunAt: null, ideas: [], radar: [] }),
 		setEnabled: unavailable,
 		run: unavailable,
 		decide: unavailable,
+		decideRadarPaper: unavailable,
 	};
 	const zotero =
 		hostServices?.zotero ??
@@ -117,6 +118,7 @@ export function registerKnowledgeIpc(
 			return input.run ? dailyDiscovery.run() : dailyDiscovery.getState();
 		},
 		decideDailyIdea: (input) => dailyDiscovery.decide(input.id, input.action),
+		decideDailyRadarPaper: (input) => dailyDiscovery.decideRadarPaper(input.id, input.action),
 		getTopics: (input) => knowledge.topics(input),
 		archiveTopic: (input) => knowledge.archiveTopic(input),
 		getMaintenanceSettings: () =>
@@ -177,6 +179,7 @@ export function registerKnowledgeIpc(
 				getDailyDiscovery: IpcChannels.KnowledgeDailyDiscovery,
 				updateDailyDiscovery: IpcChannels.KnowledgeDailyDiscoveryUpdate,
 				decideDailyIdea: IpcChannels.KnowledgeDailyIdeaDecide,
+				decideDailyRadarPaper: IpcChannels.KnowledgeDailyRadarPaperDecide,
 				getTopics: IpcChannels.KnowledgeTopics,
 				archiveTopic: IpcChannels.KnowledgeTopicArchive,
 				getMaintenanceSettings: IpcChannels.KnowledgeMaintenanceSettings,

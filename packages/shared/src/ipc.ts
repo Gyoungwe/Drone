@@ -165,6 +165,7 @@ export const IpcChannels = {
 	KnowledgeDailyDiscovery: "knowledge:dailyDiscovery",
 	KnowledgeDailyDiscoveryUpdate: "knowledge:dailyDiscoveryUpdate",
 	KnowledgeDailyIdeaDecide: "knowledge:dailyIdeaDecide",
+	KnowledgeDailyRadarPaperDecide: "knowledge:dailyRadarPaperDecide",
 	KnowledgeTopics: "knowledge:topics",
 	KnowledgeTopicArchive: "knowledge:topicArchive",
 	KnowledgeMaintenanceSettings: "knowledge:maintenanceSettings",
