@@ -36,7 +36,7 @@
 		"test:research-packaging": "python scripts/test-research-release.py",
 		"test:upgrade": "node scripts/check-upgrade-release.mjs --fixtures-only",
 		"validate:upgrade": "node scripts/check-upgrade-release.mjs --ui",
-		"check:arch": "node scripts/check-architecture.mjs",
+		"check:arch": "node scripts/check-architecture.mjs && node scripts/check-host-independence.mjs",
 		"test:arch": "node --test scripts/check-architecture.test.mjs",
 		"check:pi": "tsc -p .pi --pretty false",
 		"build:extensions": "node scripts/build-extensions.mjs",
