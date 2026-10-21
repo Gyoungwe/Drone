@@ -19,6 +19,7 @@
 		"research_task_status",
 		"research_archive_source",
 		"research_source_status",
+		"research_set_source_topic",
 		"research_verify_literature",
 		"research_loop",
 		"research_summarize_run",

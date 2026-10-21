@@ -21,6 +21,7 @@ import {
 	tokenizeKnowledgeText,
 } from "./search-policy";
 import { parseFrontmatter } from "./ingest-frontmatter";
+import { noteDisplayTitle } from "./note-title";
 import { createSemanticModel } from "./semantic-model";
 import { createRevisionCache } from "./graph-cache";
 
@@ -54,6 +55,28 @@ CREATE INDEX IF NOT EXISTS semantic_chunks_lookup ON semantic_chunks(fingerprint
 CREATE TABLE IF NOT EXISTS semantic_meta(fingerprint TEXT PRIMARY KEY, dimension INTEGER NOT NULL);
 `);
 if (priorSchemaVersion < 1) db.exec("PRAGMA user_version=1;");
+// Node titles now prefer an ingestion topic / frontmatter title over a file-name H1.
+// Refresh stored titles once from the indexed bodies; no file is re-read or rewritten.
+if (!db.prepare("SELECT value FROM meta WHERE key='titlePolicy'").get()) {
+	db.exec("BEGIN IMMEDIATE");
+	try {
+		const setTitle = db.prepare("UPDATE notes SET title=? WHERE id=?");
+		const setSearchTitle = db.prepare("UPDATE search SET title=? WHERE rowid=?");
+		let refreshed = 0;
+		for (const row of db.prepare("SELECT id,path,title,body FROM notes").all()) {
+			const title = noteDisplayTitle(row.body, row.path);
+			if (title === row.title) continue;
+			setTitle.run(title, row.id);
+			setSearchTitle.run(tokenizeKnowledgeText(title).join(" "), row.id);
+			refreshed++;
+		}
+		if (refreshed) db.prepare("UPDATE meta SET value=value+1 WHERE key='revision'").run();
+		db.prepare("INSERT OR REPLACE INTO meta VALUES('titlePolicy',1)").run();
+		db.exec("COMMIT");
+	} catch {
+		db.exec("ROLLBACK");
+	}
+}
 const semanticColumns = db
 	.prepare("PRAGMA table_info(semantic_chunks)")
 	.all()
@@ -185,7 +208,7 @@ async function updatePath(path, force = false) {
 				statements.clearProblem.run(path);
 				return statements.get.get(path);
 			}
-			const title = file.text.match(/^#\s+(.+)$/m)?.[1]?.trim() || path.split("/").at(-1).slice(0, -3);
+			const title = noteDisplayTitle(file.text, path);
 			const kind = /(?:^|\/)(?:Index|Context|Home)\.md$/i.test(path)
 				? "navigation"
 				: /(?:^|\/)Wiki\//.test(path)
@@ -414,17 +437,19 @@ function status() {
 		},
 	};
 }
+function noteCategory(row) {
+	const type = String(parseFrontmatter(row.body)?.data?.type || "").toLowerCase();
+	const value = `${type}/${String(row.path).toLowerCase()}`;
+	if (/paper|literature|文献|论文/.test(value)) return "paper";
+	if (/software|tool|软件/.test(value)) return "software";
+	if (/method|protocol|方法/.test(value)) return "method";
+	if (/idea|hypothes|想法|假设/.test(value)) return "idea";
+	return "other";
+}
 function categoryCounts() {
 	const counts = { paper: 0, software: 0, method: 0, idea: 0, other: 0 };
-	for (const row of db.prepare("SELECT path,body,kind FROM notes WHERE kind IN ('note','wiki')").all()) {
-		const type = String(parseFrontmatter(row.body)?.data?.type || "").toLowerCase();
-		const value = `${type}/${String(row.path).toLowerCase()}`;
-		if (/paper|literature|文献|论文/.test(value)) counts.paper++;
-		else if (/software|tool|软件/.test(value)) counts.software++;
-		else if (/method|protocol|方法/.test(value)) counts.method++;
-		else if (/idea|hypothes|想法|假设/.test(value)) counts.idea++;
-		else counts.other++;
-	}
+	for (const row of db.prepare("SELECT path,body,kind FROM notes WHERE kind IN ('note','wiki')").all())
+		counts[noteCategory(row)]++;
 	return counts;
 }
 function semanticStatus(fingerprint = null, project = null) {
@@ -443,6 +468,33 @@ function pending(project, limit = 20, kind = null) {
 			"SELECT * FROM jobs WHERE (scope='shared' OR scope=?) AND (? IS NULL OR kind=?) ORDER BY updated DESC LIMIT ?",
 		)
 		.all(project || "", kind, kind, limit);
+}
+/** Most recent notes per home category (the same classification as categoryCounts). */
+async function recentByCategory(project, limit = 10) {
+	await flushDirty();
+	const scope = project || "";
+	const groups = { paper: [], software: [], method: [], idea: [] };
+	const rows = db
+		.prepare(
+			"SELECT path,title,kind,signature,body FROM notes WHERE (scope='shared' OR scope=?) AND kind IN ('note','wiki')",
+		)
+		.all(scope);
+	for (const row of rows) {
+		const category = noteCategory(row);
+		if (!groups[category]) continue;
+		groups[category].push({
+			path: row.path,
+			title: row.title,
+			kind: row.kind,
+			updatedAt: Number.parseFloat(String(row.signature).split(":", 1)[0]) || 0,
+		});
+	}
+	const max = Math.max(1, Math.min(24, Math.floor(limit || 10)));
+	for (const key of Object.keys(groups))
+		groups[key] = groups[key]
+			.sort((left, right) => right.updatedAt - left.updatedAt || left.path.localeCompare(right.path))
+			.slice(0, max);
+	return groups;
 }
 async function recentNotes(project, limit = 8) {
 	// A deposit writes the Vault file before the watcher callback arrives.  Flush
@@ -1086,6 +1138,7 @@ async function dispatch(op, args) {
 		return { items, total, offset, nextOffset: offset + items.length < total ? offset + items.length : null };
 	}
 	if (op === "recentNotes") return { items: await recentNotes(args.project, args.limit), revision };
+	if (op === "recentByCategory") return { groups: await recentByCategory(args.project, args.limit), revision };
 	if (op === "jobs") return { ...status(), items: pending(args.project, 100, args.kind || null) };
 	if (op === "completeJob") {
 		db.prepare("DELETE FROM jobs WHERE key=? AND revision=?").run(args.key, args.revision);

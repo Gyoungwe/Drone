@@ -2,6 +2,7 @@ import { GRAPH_HEIGHT, GRAPH_WIDTH, graphNodeRadius, type Point } from "./graph-
 
 export interface ModelNode {
 	path: string;
+	title?: string;
 	degree: number;
 	kind?: string;
 	community?: number;
@@ -112,128 +113,179 @@ export function localNeighbourhood(
 	return seen;
 }
 
+interface Placed {
+	path: string;
+	x: number;
+	y: number;
+	vx: number;
+	vy: number;
+}
+
+/** Force layout of one cluster around (0,0); returns positions and the enclosing radius. */
+function layoutCluster(
+	paths: string[],
+	edges: readonly ModelEdge[],
+	radii: Map<string, number>,
+	iterations: number,
+): { points: Placed[]; radius: number } {
+	const points = paths.map((path, index) => {
+		const angle = index * 2.399963;
+		const r = 8 * Math.sqrt(index);
+		return { path, x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0 };
+	});
+	if (points.length > 1) {
+		const byPath = new Map(points.map((point) => [point.path, point]));
+		const local = edges.filter((edge) => byPath.has(edge.source) && byPath.has(edge.target));
+		const ideal = 26;
+		for (let step = 0; step < iterations; step++) {
+			const cooling = 1 - step / iterations;
+			for (let i = 0; i < points.length; i++) {
+				const a = points[i] as Placed;
+				for (let j = i + 1; j < points.length; j++) {
+					const b = points[j] as Placed;
+					let dx = a.x - b.x;
+					let dy = a.y - b.y;
+					let d2 = dx * dx + dy * dy;
+					if (d2 < 0.01) {
+						dx = 0.1 * (((i + j) % 3) - 1 || 1);
+						dy = 0.1;
+						d2 = 0.02;
+					}
+					const force = Math.min(4, (ideal * ideal) / d2) * 0.05;
+					a.vx += dx * force;
+					a.vy += dy * force;
+					b.vx -= dx * force;
+					b.vy -= dy * force;
+				}
+			}
+			for (const edge of local) {
+				const a = byPath.get(edge.source) as Placed;
+				const b = byPath.get(edge.target) as Placed;
+				const dx = b.x - a.x;
+				const dy = b.y - a.y;
+				const distance = Math.hypot(dx, dy) || 0.1;
+				const pull = ((distance - ideal) / distance) * (edge.type === "directory" ? 0.03 : 0.08);
+				a.vx += dx * pull;
+				a.vy += dy * pull;
+				b.vx -= dx * pull;
+				b.vy -= dy * pull;
+			}
+			for (const p of points) {
+				p.vx -= p.x * 0.01;
+				p.vy -= p.y * 0.01;
+				const speed = Math.hypot(p.vx, p.vy);
+				const max = 8 * cooling + 0.3;
+				if (speed > max) {
+					p.vx = (p.vx / speed) * max;
+					p.vy = (p.vy / speed) * max;
+				}
+				p.x += p.vx;
+				p.y += p.vy;
+				p.vx *= 0.6;
+				p.vy *= 0.6;
+			}
+		}
+		const cx = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+		const cy = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+		for (const p of points) {
+			p.x -= cx;
+			p.y -= cy;
+		}
+	}
+	const radius = Math.max(
+		...points.map((p) => Math.hypot(p.x, p.y) + (radii.get(p.path) ?? 6)),
+		radii.get(points[0]?.path ?? "") ?? 6,
+	);
+	return { points, radius };
+}
+
 /**
- * Force layout grouped by cluster: every cluster gets an anchor on a ring sized by its
- * share of notes, notes start near their anchor and are pulled towards it while links
- * and repulsion arrange them. Deterministic, no randomness, O(n²) per step (n ≤ 400).
+ * Cluster-first layout: each topic cluster is laid out on its own, then the clusters
+ * are packed as discs from the centre outwards (largest first) and the result is
+ * fitted to the canvas. There is no repulsion between clusters, so small groups no
+ * longer get pushed against the canvas edges. Deterministic.
  */
 export function clusterLayout(
 	nodes: readonly ModelNode[],
 	edges: readonly ModelEdge[],
 	clusters: Map<string, number>,
 	radii: Map<string, number>,
-	iterations = 200,
+	iterations = 160,
 ): Map<string, Point> {
-	const points = new Map<string, Point>();
-	if (nodes.length === 0) return points;
-	const cx = GRAPH_WIDTH / 2;
-	const cy = GRAPH_HEIGHT / 2;
+	const result = new Map<string, Point>();
+	if (nodes.length === 0) return result;
 	const members = new Map<number, string[]>();
 	for (const node of nodes) {
 		const id = clusters.get(node.path) ?? 0;
 		if (!members.has(id)) members.set(id, []);
 		members.get(id)?.push(node.path);
 	}
-	const ids = [...members.keys()].sort((a, b) => a - b);
-	// Singletons (orphans) are parked on an outer ring instead of each claiming an anchor.
-	const big = ids.filter((id) => (members.get(id)?.length ?? 0) > 1);
-	const anchors = new Map<number, { x: number; y: number }>();
-	big.forEach((id, index) => {
-		if (big.length === 1) {
-			anchors.set(id, { x: cx, y: cy });
-			return;
+	const groups = [...members.entries()]
+		.map(([id, paths]) => ({ id, ...layoutCluster(paths, edges, radii, iterations) }))
+		.sort((a, b) => b.points.length - a.points.length || a.id - b.id);
+	// Pack discs on widening elliptical rings that follow the canvas aspect ratio.
+	const aspect = GRAPH_WIDTH / GRAPH_HEIGHT;
+	const gap = 10;
+	const placed: { x: number; y: number; r: number }[] = [];
+	const centres = new Map<number, { x: number; y: number }>();
+	for (const group of groups) {
+		let spot = { x: 0, y: 0 };
+		if (placed.length > 0) {
+			search: for (let ring = 1; ring < 400; ring++) {
+				const step = ring * 6;
+				const count = Math.max(12, Math.round(ring * 3));
+				for (let k = 0; k < count; k++) {
+					const angle = (2 * Math.PI * k) / count + ring * 0.37;
+					const x = Math.cos(angle) * step * Math.sqrt(aspect);
+					const y = (Math.sin(angle) * step) / Math.sqrt(aspect);
+					if (placed.every((other) => Math.hypot(other.x - x, other.y - y) >= other.r + group.radius + gap)) {
+						spot = { x, y };
+						break search;
+					}
+				}
+			}
 		}
-		const angle = (2 * Math.PI * index) / big.length - Math.PI / 2;
-		const ring = index === 0 && big.length > 2 ? 0 : 1;
-		anchors.set(id, {
-			x: cx + Math.cos(angle) * GRAPH_WIDTH * 0.28 * ring,
-			y: cy + Math.sin(angle) * GRAPH_HEIGHT * 0.28 * ring,
-		});
-	});
-	const singles = ids.filter((id) => (members.get(id)?.length ?? 0) <= 1);
-	singles.forEach((id, index) => {
-		const angle = (2 * Math.PI * index) / Math.max(1, singles.length);
-		anchors.set(id, {
-			x: cx + Math.cos(angle) * GRAPH_WIDTH * 0.44,
-			y: cy + Math.sin(angle) * GRAPH_HEIGHT * 0.42,
-		});
-	});
-	for (const id of ids) {
-		const list = members.get(id) ?? [];
-		const anchor = anchors.get(id) ?? { x: cx, y: cy };
-		list.forEach((path, index) => {
-			const angle = index * 2.399963;
-			const r = 6 + 5 * Math.sqrt(index);
-			points.set(path, {
-				x: anchor.x + Math.cos(angle) * r,
-				y: anchor.y + Math.sin(angle) * r,
+		placed.push({ ...spot, r: group.radius });
+		centres.set(group.id, spot);
+	}
+	const minX = Math.min(...placed.map((d) => d.x - d.r));
+	const maxX = Math.max(...placed.map((d) => d.x + d.r));
+	const minY = Math.min(...placed.map((d) => d.y - d.r));
+	const maxY = Math.max(...placed.map((d) => d.y + d.r));
+	const margin = 18;
+	const scale = Math.min(
+		1.6,
+		(GRAPH_WIDTH - margin * 2) / Math.max(1, maxX - minX),
+		(GRAPH_HEIGHT - margin * 2) / Math.max(1, maxY - minY),
+	);
+	const offsetX = GRAPH_WIDTH / 2 - ((minX + maxX) / 2) * scale;
+	const offsetY = GRAPH_HEIGHT / 2 - ((minY + maxY) / 2) * scale;
+	for (const group of groups) {
+		const centre = centres.get(group.id) ?? { x: 0, y: 0 };
+		for (const p of group.points) {
+			const r = (radii.get(p.path) ?? 6) + 2;
+			result.set(p.path, {
+				x: Math.min(GRAPH_WIDTH - r, Math.max(r, offsetX + (centre.x + p.x) * scale)),
+				y: Math.min(GRAPH_HEIGHT - r, Math.max(r, offsetY + (centre.y + p.y) * scale)),
 				vx: 0,
 				vy: 0,
 			});
-		});
-	}
-	const list = nodes.map((node) => ({ path: node.path, p: points.get(node.path) as Point }));
-	const ideal = Math.max(18, Math.min(60, Math.sqrt((GRAPH_WIDTH * GRAPH_HEIGHT) / nodes.length) * 0.55));
-	for (let step = 0; step < iterations; step++) {
-		const cooling = 1 - step / iterations;
-		for (let i = 0; i < list.length; i++) {
-			const a = list[i] as (typeof list)[number];
-			for (let j = i + 1; j < list.length; j++) {
-				const b = list[j] as (typeof list)[number];
-				let dx = a.p.x - b.p.x;
-				let dy = a.p.y - b.p.y;
-				let d2 = dx * dx + dy * dy;
-				if (d2 < 0.01) {
-					dx = 0.1 * ((i % 3) - 1 || 1);
-					dy = 0.1;
-					d2 = 0.02;
-				}
-				const same = clusters.get(a.path) === clusters.get(b.path);
-				const force = ((same ? 0.5 : 1) * ideal * ideal) / d2;
-				a.p.vx += dx * force * 0.04;
-				a.p.vy += dy * force * 0.04;
-				b.p.vx -= dx * force * 0.04;
-				b.p.vy -= dy * force * 0.04;
-			}
-		}
-		for (const edge of edges) {
-			const a = points.get(edge.source);
-			const b = points.get(edge.target);
-			if (!a || !b) continue;
-			const dx = b.x - a.x;
-			const dy = b.y - a.y;
-			const distance = Math.hypot(dx, dy) || 0.1;
-			const pull = ((distance - ideal) / distance) * (edge.type === "directory" ? 0.02 : 0.06);
-			a.vx += dx * pull;
-			a.vy += dy * pull;
-			b.vx -= dx * pull;
-			b.vy -= dy * pull;
-		}
-		for (const { path, p } of list) {
-			const anchor = anchors.get(clusters.get(path) ?? 0) ?? { x: cx, y: cy };
-			p.vx += (anchor.x - p.x) * 0.02;
-			p.vy += (anchor.y - p.y) * 0.02;
-			const speed = Math.hypot(p.vx, p.vy);
-			const max = 10 * cooling + 0.4;
-			if (speed > max) {
-				p.vx = (p.vx / speed) * max;
-				p.vy = (p.vy / speed) * max;
-			}
-			const r = (radii.get(path) ?? 6) + 4;
-			p.x = Math.min(GRAPH_WIDTH - r, Math.max(r, p.x + p.vx));
-			p.y = Math.min(GRAPH_HEIGHT - r, Math.max(r, p.y + p.vy));
-			p.vx *= 0.6;
-			p.vy *= 0.6;
 		}
 	}
-	for (const point of points.values()) {
-		point.vx = 0;
-		point.vy = 0;
-	}
-	return points;
+	// Keep the caller's node order.
+	return new Map(nodes.map((node) => [node.path, result.get(node.path) as Point]));
 }
 
-export type HealthKind = "orphan" | "uncited" | "warning";
+export type HealthKind = "orphan" | "uncited" | "untitled" | "warning";
+
+/** Same rule as the knowledge worker: a file name ("PMC7022188.1.pdf") is not a topic. */
+export function looksLikeFileName(title: string): boolean {
+	const value = String(title || "").trim();
+	if (!value) return true;
+	if (/\.(?:pdf|html?|md|txt|docx?|xlsx?|csv|json|zip|tar|gz)$/i.test(value)) return true;
+	if (/^(?:PMC|PMID)?\d[\d.]*$/i.test(value)) return true;
+	return /^[a-z0-9]+(?:[-_][a-z0-9]+){2,}$/.test(value) && /\d{4,}|[a-f0-9]{12,}/.test(value);
+}
 export interface HealthFinding {
 	path: string;
 	kind: HealthKind;
@@ -262,6 +314,8 @@ export function graphHealth(
 		if (!linked.has(node.path) && node.degree === 0) findings.push({ path: node.path, kind: "orphan" });
 		else if ((node.kind === "wiki" || node.nodeType === "wiki") && (incoming.get(node.path) ?? 0) === 0)
 			findings.push({ path: node.path, kind: "uncited" });
+		if (node.title !== undefined && looksLikeFileName(node.title))
+			findings.push({ path: node.path, kind: "untitled" });
 		if (node.warnings?.length) findings.push({ path: node.path, kind: "warning" });
 	}
 	return findings;

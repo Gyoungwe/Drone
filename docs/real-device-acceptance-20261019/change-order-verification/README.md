@@ -272,3 +272,12 @@
 - 复用：问题点名已有 Wiki 标题时自动走本地知识（`probeTopic`）；"同类问题由本地回答"指标跨重启持久化。
 - 审计全文：`docs/knowledge-deposit-reuse-audit.md`。
 - 校验：tsc（web/node/knowledge/extensions）通过；biome 通过；vitest 新增 10 条通过。待重建后真机验收。
+
+## 补充 14（2026-10-21）真机反馈：分类切换无效、节点用文件名
+- 知识库首页「文献 / 软件 / 方法 / 想法」标签以前只过滤搜索结果，不过滤「最近沉淀」，没有搜索词时点了没反应。worker 新增 `recentByCategory`，标签切换后列表按分类显示该类最近笔记，标题显示当前分类。
+- 节点名称：`research_archive_source` 新增必填参数 `topic`（一句话主题），写入 frontmatter `topic:` 和笔记标题；文件 slug 仍按来源生成，重新归档会更新同一篇。worker 的节点标题优先级：topic > frontmatter title（标题是文件名时）> H1 > 文件名；首次启动按已索引正文一次性刷新标题，不改写任何文件。
+- 存量补主题：新工具 `research_set_source_topic`（只改 topic 和自动生成的文件名标题，保留人工修改，同步项目镜像）。知识网络健康检查新增「缺少主题」，交给对话处理会生成补主题的草稿。
+- 发现：`.pi/extensions/*.mjs` 是随包发布的扩展产物，原构建命令不会重新生成，上一轮的扩展改动（probeTopic 等）没有进 App。构建前需要先跑 `npm run build:extensions`。
+- 真机复测：分类标签切换已生效（软件 14 → 列出 14 篇软件笔记）。
+- 网络图布局：真机上大量 2 节点小簇被挤到画布四边。改为"先簇内布局、再按簇大小从中心向外圆盘打包、最后整体缩放到画布"，簇之间不再互相排斥（用真实 Vault 链接离线渲染对比，见 .local/graphcheck）。
+- 构建顺序补充：`build:extensions -- --force` 会重写 knowledge-worker.mjs，必须再跑 `npm run build:knowledge` 更新 `.knowledge-worker-manifest.json`，否则 App 拒绝启动知识库进程（总览全部"—"、待处理修改读取失败）。

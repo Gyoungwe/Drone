@@ -147,9 +147,24 @@ function labelText(node: GraphData["nodes"][number]): string {
 const HEALTH_COLORS: Record<HealthKind, string> = {
 	orphan: "#d0564a",
 	uncited: "#c9822b",
+	untitled: "#7b6fd0",
 	warning: "#b8860b",
 };
-const HEALTH_ORDER: HealthKind[] = ["orphan", "uncited", "warning"];
+const HEALTH_ORDER: HealthKind[] = ["untitled", "orphan", "uncited", "warning"];
+const HEALTH_COPY = {
+	orphan: { label: "graphHealthOrphan", hint: "graphHealthOrphanHint", prompt: "graphHealthOrphanPrompt" },
+	uncited: {
+		label: "graphHealthUncited",
+		hint: "graphHealthUncitedHint",
+		prompt: "graphHealthUncitedPrompt",
+	},
+	untitled: {
+		label: "graphHealthUntitled",
+		hint: "graphHealthUntitledHint",
+		prompt: "graphHealthUntitledPrompt",
+	},
+	warning: { label: "graphHealthWarning", hint: "graphHealthWarningHint", prompt: "handOffPrompt" },
+} as const satisfies Record<HealthKind, { label: string; hint: string; prompt: string }>;
 const LOCAL_LABEL_LIMIT = 24;
 
 function NodeMark({
@@ -452,12 +467,7 @@ export function KnowledgeGraph({
 		useSessionsStore.getState().createDraftSession(cwd ?? undefined);
 		const id = useSessionsStore.getState().activeSessionId;
 		if (!id) return;
-		const template =
-			kind === "orphan"
-				? t("graphHealthOrphanPrompt")
-				: kind === "uncited"
-					? t("graphHealthUncitedPrompt")
-					: t("handOffPrompt");
+		const template = t(HEALTH_COPY[kind].prompt);
 		useDraftStore
 			.getState()
 			.updateDraft(id, (entry) => ({ ...entry, text: template.replace("{path}", path) }));
@@ -1152,19 +1162,9 @@ export function KnowledgeGraph({
 									style={{ borderColor: HEALTH_COLORS[kind] }}
 								>
 									<p className="font-semibold" style={{ color: HEALTH_COLORS[kind] }}>
-										{kind === "orphan"
-											? t("graphHealthOrphan")
-											: kind === "uncited"
-												? t("graphHealthUncited")
-												: t("graphHealthWarning")}
+										{t(HEALTH_COPY[kind].label)}
 									</p>
-									<p className="mt-1 text-ink-dim">
-										{kind === "orphan"
-											? t("graphHealthOrphanHint")
-											: kind === "uncited"
-												? t("graphHealthUncitedHint")
-												: t("graphHealthWarningHint")}
-									</p>
+									<p className="mt-1 text-ink-dim">{t(HEALTH_COPY[kind].hint)}</p>
 									<Button
 										className="mt-2"
 										size="sm"
@@ -1241,11 +1241,7 @@ export function KnowledgeGraph({
 												className="inline-block h-2 w-2 rounded-full"
 												style={{ backgroundColor: HEALTH_COLORS[kind] }}
 											/>
-											{kind === "orphan"
-												? t("graphHealthOrphan")
-												: kind === "uncited"
-													? t("graphHealthUncited")
-													: t("graphHealthWarning")}
+											{t(HEALTH_COPY[kind].label)}
 											<span className="font-normal text-ink-faint">{rows.length}</span>
 										</p>
 										{rows.slice(0, 12).map((finding) => (

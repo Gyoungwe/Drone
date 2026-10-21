@@ -109,6 +109,17 @@ describe("knowledge graph model", () => {
 		]);
 	});
 
+	it("flags notes still named after a file", () => {
+		const findings = graphHealth(
+			[
+				{ path: "Library/Papers/p.md", degree: 1, kind: "note", title: "PMC7022188.1.pdf" },
+				{ path: "Library/Papers/q.md", degree: 1, kind: "note", title: "DHX16 剪接" },
+			],
+			[{ source: "Library/Papers/p.md", target: "Library/Papers/q.md", type: "link" }],
+		);
+		expect(findings).toEqual([{ path: "Library/Papers/p.md", kind: "untitled" }]);
+	});
+
 	it("maps types to shapes", () => {
 		expect(shapeFor("paper")).toBe("circle");
 		expect(shapeFor("wiki")).toBe("square");

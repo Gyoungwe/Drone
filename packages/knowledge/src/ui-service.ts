@@ -122,11 +122,19 @@ export async function knowledgeOverview({ cwd = null, sessionId = null } = {}) {
 		};
 	let index = null,
 		error = null,
-		recentNotes = [];
+		recentNotes = [],
+		recentByCategory = null;
 	try {
 		if (!(await stat(binding.vault)).isDirectory()) throw new Error("Vault is not a directory");
 		const service = await getKnowledgeService(binding);
 		recentNotes = (await service.request("recentNotes", { project: project.project, limit: 10 }))?.items || [];
+		try {
+			recentByCategory =
+				(await service.request("recentByCategory", { project: project.project, limit: 10 }))?.groups || null;
+		} catch {
+			// An older worker without the operation keeps the plain recent list.
+			recentByCategory = null;
+		}
 		index = await service.request("status", { flushPending: true });
 	} catch (e) {
 		error = String(e.message).slice(0, 500);
@@ -146,6 +154,7 @@ export async function knowledgeOverview({ cwd = null, sessionId = null } = {}) {
 				? (await wikiHistory(await getKnowledgeService(binding), project.project)).slice(0, 10)
 				: [],
 		recentNotes,
+		recentByCategory,
 		localAnswerRate: (sessionId ? flowFor(sessionId)?.localAnswerRate : null) ?? knowledgeAnswerRate(),
 		scope: "application",
 		binding,

@@ -195,6 +195,8 @@ export interface KnowledgeOverview {
 	reviewMode?: "automatic" | "strict";
 	wikiHistory?: { id: string; path: string; afterHash: string; reviewedAt: number; reviewMethod: string }[];
 	recentNotes?: KnowledgeRecentNote[];
+	/** Most recent notes per home category tab (paper/software/method/idea). */
+	recentByCategory?: Partial<Record<"paper" | "software" | "method" | "idea", KnowledgeRecentNote[]>> | null;
 	localAnswerRate?: KnowledgeAnswerMetric | null;
 	specialistSettings?: KnowledgeSpecialistSettings;
 	specialistSettingsError?: string;

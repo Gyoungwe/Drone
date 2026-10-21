@@ -466,6 +466,8 @@ var init_review_policy = __esm({
 
 // packages/knowledge/src/ui-state.ts
 import { randomUUID as randomUUID4 } from "node:crypto";
+import { mkdirSync, readFileSync as readFileSync3, renameSync, writeFileSync } from "node:fs";
+import { join as join10 } from "node:path";
 function deliverKnowledgeUi(value) {
   if (value.kind === "flow" && value.flow?.sessionId) {
     state.flows.set(value.flow.sessionId, structuredClone(value.flow));
@@ -484,6 +486,36 @@ function emitKnowledgeUi(event) {
   deliverKnowledgeUi(value);
   emitProcessEvent(UI_EVENT, { event: value, origin: uiModule });
   return value;
+}
+function loadAnswerStats() {
+  if (state.localAnswerStatsLoaded) return;
+  state.localAnswerStatsLoaded = true;
+  const file = metricsFile();
+  if (!file) return;
+  try {
+    const saved = JSON.parse(readFileSync3(file, "utf8"));
+    const answered = Math.max(0, Math.floor(Number(saved?.answered) || 0));
+    const total = Math.max(answered, Math.floor(Number(saved?.total) || 0));
+    if (total > state.localAnswerStats.total)
+      state.localAnswerStats = {
+        answered,
+        total,
+        rate: total ? answered / total : null,
+        updatedAt: Number(saved?.updatedAt) || null
+      };
+  } catch {
+  }
+}
+function saveAnswerStats() {
+  const file = metricsFile();
+  if (!file) return;
+  try {
+    mkdirSync(join10(file, ".."), { recursive: true });
+    const tmp = `${file}.${process.pid}.tmp`;
+    writeFileSync(tmp, JSON.stringify(state.localAnswerStats));
+    renameSync(tmp, file);
+  } catch {
+  }
 }
 function beginKnowledgeFlow(ctx, binding) {
   const id = sessionId(ctx);
@@ -549,6 +581,7 @@ function publicationKnowledgeFlow(ctx, proof) {
   const current = state.flows.get(id);
   const completed = ["released", "no-hits"].includes(proof.status);
   if (completed && !current.localAnswerRecorded) {
+    loadAnswerStats();
     const answered = Boolean(current.search && current.search.hits > 0);
     state.localAnswerStats = {
       answered: state.localAnswerStats.answered + (answered ? 1 : 0),
@@ -557,6 +590,7 @@ function publicationKnowledgeFlow(ctx, proof) {
       updatedAt: Date.now()
     };
     current.localAnswerRecorded = true;
+    saveAnswerStats();
   }
   const phase = proof.status === "setup-complete" ? "setup-complete" : proof.status === "released" ? "released" : proof.status === "no-hits" ? "no-hits" : proof.status === "blocked" ? "blocked" : proof.status === "evidence-only" ? "evidence-only" : proof.status === "unconfigured" ? "unconfigured" : "checking";
   updateKnowledgeFlow(ctx, {
@@ -732,10 +766,11 @@ function noteKnowledgeSpecialist(ctx, run) {
   else specialists[at] = safe2;
   updateKnowledgeFlow(ctx, { specialists: specialists.slice(-8) });
 }
-var state, UI_EVENT, uiModule, MAX_SESSIONS, MAX_RECORDS, sessionId, MAX_CARDS, empty;
+var state, UI_EVENT, uiModule, MAX_SESSIONS, MAX_RECORDS, sessionId, metricsFile, MAX_CARDS, empty;
 var init_ui_state = __esm({
   "packages/knowledge/src/ui-state.ts"() {
     "use strict";
+    init_config();
     init_runtime_host();
     init_runtime_host();
     init_runtime_host();
@@ -755,6 +790,14 @@ var init_ui_state = __esm({
     MAX_SESSIONS = 64;
     MAX_RECORDS = 40;
     sessionId = (ctx) => ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || null;
+    metricsFile = () => {
+      try {
+        const dir = knowledgeDirectory();
+        return dir ? join10(dir, "answer-metrics.json") : null;
+      } catch {
+        return null;
+      }
+    };
     MAX_CARDS = 32;
     empty = (value) => value === null || value === void 0 || value === "" || value === "unknown";
   }
@@ -774,7 +817,7 @@ __export(specialist_host_exports, {
 });
 import { randomUUID as randomUUID6 } from "node:crypto";
 import { mkdir as mkdir6, readFile as readFile5, rename as rename6, unlink as unlink3, writeFile as writeFile6 } from "node:fs/promises";
-import { join as join11 } from "node:path";
+import { join as join12 } from "node:path";
 function registerKnowledgeSpecialistHost(id, run) {
   if (!id || typeof run !== "function") throw new Error("A specialist host requires a session identity");
   if (state2.disposed) throw new Error("Knowledge specialist runtime has been disposed");
@@ -794,7 +837,7 @@ async function specialistSettings() {
   if (!dir) return { mode: "off", revision: 0, ...SPECIALIST_LIMITS };
   let data = { mode: "automatic", revision: 0 };
   try {
-    data = JSON.parse(await readFile5(join11(dir, "specialists.json"), "utf8"));
+    data = JSON.parse(await readFile5(join12(dir, "specialists.json"), "utf8"));
   } catch (e) {
     if (e.code !== "ENOENT") throw new Error("Knowledge specialist settings cannot be read");
   }
@@ -888,12 +931,12 @@ async function setSpecialistSettings({ mode, revision, bindingRevision, ...reque
         data[key] = Math.min(data[key] ?? SPECIALIST_LIMITS[key], SPECIALIST_LIMITS[key]);
       data.mode = mode;
       data.revision = revision + 1;
-      const dir = knowledgeDirectory(), temp = join11(dir, `specialists.${randomUUID6()}.tmp`);
+      const dir = knowledgeDirectory(), temp = join12(dir, `specialists.${randomUUID6()}.tmp`);
       await mkdir6(dir, { recursive: true, mode: 448 });
       try {
         await writeFile6(temp, `${JSON.stringify(data)}
 `, { flag: "wx", mode: 384 });
-        await rename6(temp, join11(dir, "specialists.json"));
+        await rename6(temp, join12(dir, "specialists.json"));
       } finally {
         await unlink3(temp).catch((e) => {
           if (e.code !== "ENOENT") throw e;
@@ -1018,15 +1061,36 @@ var init_specialist_host = __esm({
   }
 });
 
+// packages/knowledge/src/wiki-policy.ts
+function stripManagedHeader(body, pageTitle) {
+  let text3 = String(body).replace(/^\uFEFF/u, "").trim();
+  const fenced = text3.match(/^```(?:markdown|md)?[ \t]*\n([\s\S]*?)\n```\s*$/iu);
+  if (fenced?.[1] !== void 0) text3 = fenced[1].trim();
+  text3 = text3.replace(/^---[ \t]*\n[\s\S]*?\n---[ \t]*(?:\n|$)/u, "").trim();
+  const heading = text3.match(/^#[ \t]+([^\n]+)(?:\n+|$)/u);
+  if (heading?.[1] !== void 0) {
+    const found = heading[1].trim();
+    const expected = pageTitle?.trim();
+    if (!expected || found === expected || expected.startsWith(found) || found.startsWith(expected))
+      text3 = text3.slice(heading[0].length).trim();
+  }
+  return text3;
+}
+var init_wiki_policy = __esm({
+  "packages/knowledge/src/wiki-policy.ts"() {
+    "use strict";
+  }
+});
+
 // packages/knowledge/src/wiki-review.ts
 import { createHash as createHash6, randomUUID as randomUUID7 } from "node:crypto";
 import { link as link2, lstat as lstat4, mkdir as mkdir7, readdir as readdir3, readFile as readFile6, rename as rename7, unlink as unlink4, writeFile as writeFile7 } from "node:fs/promises";
-import { basename as basename4, dirname as dirname5, join as join12 } from "node:path";
+import { basename as basename4, dirname as dirname5, join as join13 } from "node:path";
 async function exclusive(key, operation) {
   return runRuntimeExclusive("wiki-review", key, operation);
 }
 function rootFor(service) {
-  return join12(knowledgeDirectory(), service.binding.vaultId, "wiki-review");
+  return join13(knowledgeDirectory(), service.binding.vaultId, "wiki-review");
 }
 function checkId(id) {
   if (typeof id !== "string" || !/^[0-9a-f-]{36}$/.test(id)) throw new Error("Invalid Wiki proposal id");
@@ -1059,7 +1123,7 @@ function immutableHash(p) {
 }
 async function atomicJson(path, value) {
   await mkdir7(dirname5(path), { recursive: true, mode: 448 });
-  const temp = join12(dirname5(path), `.${randomUUID7()}.tmp`);
+  const temp = join13(dirname5(path), `.${randomUUID7()}.tmp`);
   try {
     await writeFile7(temp, `${JSON.stringify(value, null, 2)}
 `, { flag: "wx", mode: 384 });
@@ -1085,7 +1149,7 @@ function managedParts(text3) {
   return { start, end, body: start < 0 ? "" : text3.slice(start + START2.length, end).trim() };
 }
 function normalizeCandidate(markdown) {
-  return String(markdown).replace(/^\uFEFF?\s*---\s*\n[\s\S]*?\n---\s*\n?/i, "").replace(/^\s*#\s+[^\n]+\n+/, "").trim();
+  return stripManagedHeader(markdown);
 }
 function proposedText(original, title, body) {
   const block = `${START2}
@@ -1113,10 +1177,10 @@ async function loadProposal(service, id, project) {
   const root = rootFor(service);
   let text3;
   try {
-    text3 = await readFile6(join12(root, "pending", `${id}.json`), "utf8");
+    text3 = await readFile6(join13(root, "pending", `${id}.json`), "utf8");
   } catch (error2) {
     if (error2.code !== "ENOENT") throw error2;
-    text3 = await readFile6(join12(root, "reviewed", `${id}.json`), "utf8");
+    text3 = await readFile6(join13(root, "reviewed", `${id}.json`), "utf8");
   }
   if (Buffer.byteLength(text3) > 256 * 1024) throw new Error("Wiki proposal exceeds its storage budget");
   const p = JSON.parse(text3);
@@ -1204,11 +1268,11 @@ ${refs}`
       throw new Error("Wiki proposal exceeds the bounded review storage size");
     const root = rootFor(service);
     await exclusive(root, async () => {
-      const directory = join12(root, "pending");
+      const directory = join13(root, "pending");
       await mkdir7(directory, { recursive: true, mode: 448 });
       if ((await readdir3(directory)).filter((name) => name.endsWith(".json")).length >= MAX_PENDING)
         throw new Error("Pending Wiki review limit reached; review existing candidates first");
-      await atomicJson(join12(directory, `${proposal.id}.json`), proposal);
+      await atomicJson(join13(directory, `${proposal.id}.json`), proposal);
     });
     invalidateKnowledgeUi();
     return {
@@ -1255,7 +1319,7 @@ async function mergeWikiProposal(service, ticket, cwd, id, { markdown, rationale
       const prior = managedParts(p.after).body.replace(/\n\n## Sources\n[\s\S]*$/, "").trim();
       const update = `## Research update \xB7 ${(/* @__PURE__ */ new Date()).toISOString()}
 
-${markdown.trim()}`;
+${normalizeCandidate(markdown)}`;
       const merged = [prior, update].filter(Boolean).join("\n\n");
       if (merged.length > 22e3)
         throw new Error("Pending topic synthesis is too large; review it before adding another round");
@@ -1281,7 +1345,7 @@ Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
         throw new Error("Merged Wiki proposal exceeds the bounded review storage size");
       await exclusive(
         rootFor(service),
-        () => atomicJson(join12(rootFor(service), "pending", `${p.id}.json`), updated)
+        () => atomicJson(join13(rootFor(service), "pending", `${p.id}.json`), updated)
       );
       invalidateKnowledgeUi();
       return {
@@ -1348,7 +1412,7 @@ async function listWikiProposals(service, project) {
   return withKnowledgeBinding(service.binding, async () => {
     let names;
     try {
-      names = await readdir3(join12(rootFor(service), "pending"));
+      names = await readdir3(join13(rootFor(service), "pending"));
     } catch (error2) {
       if (error2.code === "ENOENT") return { items: [], problems: [] };
       throw error2;
@@ -1356,7 +1420,7 @@ async function listWikiProposals(service, project) {
     const items = [], problems = [];
     for (const name of names.filter((name2) => /^[0-9a-f-]{36}\.json$/.test(name2)).sort().slice(0, MAX_PENDING)) {
       try {
-        const p = JSON.parse(await readFile6(join12(rootFor(service), "pending", name), "utf8"));
+        const p = JSON.parse(await readFile6(join13(rootFor(service), "pending", name), "utf8"));
         if (p.project !== project) continue;
         if (immutableHash(p) !== p.proposalHash) throw new Error("Wiki proposal content changed");
         items.push({
@@ -1378,7 +1442,7 @@ async function listWikiProposals(service, project) {
 async function ensureParent(vault, path) {
   let full = vault;
   for (const part of path.split("/").slice(0, -1)) {
-    full = join12(full, part);
+    full = join13(full, part);
     try {
       await mkdir7(full);
     } catch (error2) {
@@ -1408,8 +1472,8 @@ async function finish(service, p, status, review = { actor: "human" }) {
     humanReviewed: review.actor === "human",
     scientificallyVerified: false
   };
-  await atomicJson(join12(rootFor(service), "reviewed", `${p.id}.json`), updated);
-  await unlink4(join12(rootFor(service), "pending", `${p.id}.json`)).catch((error2) => {
+  await atomicJson(join13(rootFor(service), "reviewed", `${p.id}.json`), updated);
+  await unlink4(join13(rootFor(service), "pending", `${p.id}.json`)).catch((error2) => {
     if (error2.code !== "ENOENT") throw error2;
   });
   invalidateKnowledgeUi();
@@ -1449,7 +1513,7 @@ async function decideWikiProposal(service, id, project, expectedHash, decision, 
             throw new Error("Wiki changed after preview; no user edits were overwritten");
           await verifySources(service, p);
           await ensureParent(service.binding.vault, p.path);
-          const full = join12(service.binding.vault, p.path), temp = join12(dirname5(full), `.${basename4(full)}.${randomUUID7()}.tmp`);
+          const full = join13(service.binding.vault, p.path), temp = join13(dirname5(full), `.${basename4(full)}.${randomUUID7()}.tmp`);
           const mode = current ? (await lstat4(full)).mode & 511 : 384;
           try {
             await writeFile7(temp, p.after, { flag: "wx", mode });
@@ -1514,7 +1578,7 @@ async function wikiHistory(service, project) {
   return withKnowledgeBinding(service.binding, async () => {
     let names;
     try {
-      names = await readdir3(join12(rootFor(service), "reviewed"));
+      names = await readdir3(join13(rootFor(service), "reviewed"));
     } catch (error2) {
       if (error2.code === "ENOENT") return [];
       throw error2;
@@ -1566,6 +1630,7 @@ var init_wiki_review = __esm({
     init_files();
     init_review_policy();
     init_ui_state();
+    init_wiki_policy();
     AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
     START2 = "<!-- pi-agent:managed:start -->";
     END2 = "<!-- pi-agent:managed:end -->";
@@ -1656,17 +1721,17 @@ function compareClaimSets(previousClaims = [], incomingClaims = []) {
   }
   return comparisons;
 }
-var normalize2, tokens, overlap, field;
+var normalize2, tokens2, overlap, field;
 var init_claim_conflicts = __esm({
   "packages/knowledge/src/claim-conflicts.ts"() {
     "use strict";
     normalize2 = (value) => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[\u0000-\u001f\u007f]/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-    tokens = (value) => new Set(
+    tokens2 = (value) => new Set(
       normalize2(value).split(/\s+/).filter((token) => token.length > 1)
     );
     overlap = (left, right) => {
-      const a = tokens(left);
-      const b = tokens(right);
+      const a = tokens2(left);
+      const b = tokens2(right);
       if (!a.size || !b.size) return 0;
       let common = 0;
       for (const token of a) if (b.has(token)) common++;
@@ -1679,7 +1744,7 @@ var init_claim_conflicts = __esm({
 // packages/knowledge/src/topic-memory.ts
 import { createHash as createHash14, randomUUID as randomUUID15 } from "node:crypto";
 import { lstat as lstat10, mkdir as mkdir10, readFile as readFile11, realpath as realpath13, rename as rename9, unlink as unlink5, writeFile as writeFile10 } from "node:fs/promises";
-import { dirname as dirname8, isAbsolute as isAbsolute13, join as join16, relative as relative13, resolve as resolve17, sep as sep11 } from "node:path";
+import { dirname as dirname8, isAbsolute as isAbsolute13, join as join17, relative as relative13, resolve as resolve17, sep as sep11 } from "node:path";
 function projectKey(project) {
   const value = text2(project, 120);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) throw new Error("Invalid knowledge project");
@@ -1688,20 +1753,20 @@ function projectKey(project) {
 function memoryPath(directory, vaultId, project) {
   if (!isAbsolute13(directory) || !/^[a-f0-9]{24}$/.test(vaultId))
     throw new Error("Invalid topic memory binding");
-  return join16(resolve17(directory), vaultId, "topic-memory", `${projectKey(project)}.json`);
+  return join17(resolve17(directory), vaultId, "topic-memory", `${projectKey(project)}.json`);
 }
 async function ensureWithin(root, target) {
   const lexicalRoot = resolve17(root);
   const actualRoot = await realpath13(root).catch(() => lexicalRoot);
   const lexicalParent = resolve17(dirname8(target));
-  const rebased = lexicalParent.startsWith(lexicalRoot) ? join16(actualRoot, lexicalParent.slice(lexicalRoot.length)) : lexicalParent;
+  const rebased = lexicalParent.startsWith(lexicalRoot) ? join17(actualRoot, lexicalParent.slice(lexicalRoot.length)) : lexicalParent;
   const parent = await realpath13(rebased).catch(() => rebased);
   const rel = relative13(actualRoot, parent);
   if (isAbsolute13(rel) || rel === ".." || rel.startsWith(`..${sep11}`))
     throw new Error("Topic memory path escapes knowledge directory");
   let cursor = actualRoot;
   for (const part of relative13(actualRoot, rebased).split(sep11).filter(Boolean)) {
-    cursor = join16(cursor, part);
+    cursor = join17(cursor, part);
     try {
       if ((await lstat10(cursor)).isSymbolicLink())
         throw new Error("Topic memory path cannot traverse symlinks");
@@ -1866,7 +1931,7 @@ async function readDocument(path, vaultId, project) {
 }
 async function atomicWrite(path, value) {
   await mkdir10(dirname8(path), { recursive: true, mode: 448 });
-  const temp = join16(dirname8(path), `.${randomUUID15()}.tmp`);
+  const temp = join17(dirname8(path), `.${randomUUID15()}.tmp`);
   try {
     await writeFile10(temp, `${JSON.stringify(value, null, 2)}
 `, { flag: "wx", mode: 384 });
@@ -1880,13 +1945,13 @@ async function atomicWrite(path, value) {
 async function withLock(path, operation) {
   return runRuntimeExclusive("topic-memory", path, operation);
 }
-function tokens2(value) {
+function tokens3(value) {
   return new Set(
     text2(value, 6e3).toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((x) => x.length > 2)
   );
 }
 function overlap2(a, b) {
-  const left = tokens2(a), right = tokens2(b);
+  const left = tokens3(a), right = tokens3(b);
   if (!left.size || !right.size) return 0;
   let common = 0;
   for (const item of left) if (right.has(item)) common++;
@@ -2265,17 +2330,17 @@ var init_topic_memory = __esm({
 
 // packages/extensions/src/subagent-mcp-readonly.ts
 init_config();
-import { readFileSync as readFileSync3 } from "node:fs";
-import { join as join18, resolve as resolve19 } from "node:path";
+import { readFileSync as readFileSync4 } from "node:fs";
+import { join as join19, resolve as resolve19 } from "node:path";
 import { pathToFileURL as pathToFileURL3 } from "node:url";
 
 // packages/extensions/src/internal/knowledge-extension.ts
-import { join as join17, resolve as resolve18 } from "node:path";
+import { join as join18, resolve as resolve18 } from "node:path";
 
 // packages/extensions/src/internal/obsidian-workbench.ts
 import { createHash as createHash7, randomUUID as randomUUID8 } from "node:crypto";
 import { access as access2, mkdir as mkdir8, readdir as readdir4, readFile as readFile7, realpath as realpath6, rename as rename8, stat as stat2, writeFile as writeFile8 } from "node:fs/promises";
-import { basename as basename5, dirname as dirname7, isAbsolute as isAbsolute7, join as join14, relative as relative6, resolve as resolve9, sep as sep5 } from "node:path";
+import { basename as basename5, dirname as dirname7, isAbsolute as isAbsolute7, join as join15, relative as relative6, resolve as resolve9, sep as sep5 } from "node:path";
 
 // packages/extensions/src/workspace-config.ts
 import { access, mkdir as mkdir2, readFile as readFile3, realpath as realpath2, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
@@ -3029,7 +3094,7 @@ async function inspectObsidianSetup({ cwd, vault = null }) {
 init_runtime_host();
 
 // packages/knowledge/src/ui-service.ts
-import { dirname as dirname6, isAbsolute as isAbsolute6, join as join13, relative as relative5, resolve as resolve8 } from "node:path";
+import { dirname as dirname6, isAbsolute as isAbsolute6, join as join14, relative as relative5, resolve as resolve8 } from "node:path";
 init_runtime_host();
 init_runtime_host();
 init_runtime_host();
@@ -3155,6 +3220,27 @@ async function runNavigationMaintenance(service, project, limit = 3) {
 // packages/knowledge/src/ui-service.ts
 init_review_policy();
 
+// packages/knowledge/src/topic-probe.ts
+var STOP = new Set(
+  "what when where which with from that this have about into your their there these those does using used make more most some such than then them they will would could should also only over very just like".split(
+    " "
+  )
+);
+var tokens = (text3) => String(text3 || "").toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+function mentionedWikiTitle(query, titles) {
+  const q = String(query || "").toLocaleLowerCase();
+  if (q.trim().length < 3) return null;
+  const queryTokens = new Set(tokens(q).filter((t) => /[a-z0-9]/.test(t) && t.length >= 4 && !STOP.has(t)));
+  for (const raw of titles) {
+    const title = String(raw || "").toLocaleLowerCase().replace(/\.md$/, "").replace(/[-_]+/g, " ").trim();
+    if (!title) continue;
+    if (title.length >= 3 && q.includes(title)) return raw;
+    const lead = tokens(title).filter((t) => t.length >= 4 && !STOP.has(t));
+    if (lead.some((t) => queryTokens.has(t))) return raw;
+  }
+  return null;
+}
+
 // packages/knowledge/src/graph-retrieval.ts
 var GRAPH_RETRIEVAL_DEFAULTS = {
   seeds: 3,
@@ -3220,7 +3306,7 @@ init_config();
 init_files();
 init_review_policy();
 import { createHash as createHash5, randomUUID as randomUUID5 } from "node:crypto";
-import { join as join10, relative as relative4, resolve as resolve7, sep as sep4 } from "node:path";
+import { join as join11, relative as relative4, resolve as resolve7, sep as sep4 } from "node:path";
 
 // packages/knowledge/src/semantic-provider.ts
 import { URL as URL2 } from "node:url";
@@ -3772,7 +3858,7 @@ var KnowledgeService = class {
     const workerOptions = {
       workerData: {
         vault: binding.vault,
-        database: join10(directory, binding.vaultId, "index.sqlite"),
+        database: join11(directory, binding.vaultId, "index.sqlite"),
         workerVersion: this.workerVersion
       },
       execArgv: process.execArgv.filter(
@@ -4091,6 +4177,18 @@ var KnowledgeService = class {
    * 语义命中排前，词法补齐；1.5s 截止，语义失败只退回词法。只读，不需要会话 ticket。
    * @param {{ query: string, project?: string, limit?: number }} options
    */
+  /** Cheap lexical probe: the Wiki page whose title the question names, or null. */
+  async probeTopic({ query, project = "" }) {
+    const text3 = String(query || "").slice(0, 200);
+    if (!text3.trim()) return null;
+    return withKnowledgeBinding(this.binding, async () => {
+      const result2 = await this.request("search", { query: text3, wikiOnly: true, project, limit: 6 });
+      const hits = (result2?.hits || []).filter((hit) => hit.kind === "wiki");
+      const titles = hits.map((hit) => hit.title || String(hit.path || "").split("/").pop());
+      const title = mentionedWikiTitle(text3, titles);
+      return title ? hits[titles.indexOf(title)]?.path || null : null;
+    });
+  }
   async relatedForMemory({ query, project = "", limit = 4 }) {
     const text3 = String(query || "").slice(0, 2e3);
     if (!text3.trim()) return [];
@@ -4631,7 +4729,7 @@ async function getKnowledgeService(binding = null) {
   binding ||= await readKnowledgeBinding();
   const directory = knowledgeDirectory();
   if (!binding || !directory) throw new Error("No application knowledge Vault is bound");
-  const key = join10(directory, binding.vaultId, "index.sqlite");
+  const key = join11(directory, binding.vaultId, "index.sqlite");
   const transitions = pool.transitions || /* @__PURE__ */ new Map();
   pool.transitions = transitions;
   const transition = transitions.get(key) || (async () => {
@@ -4738,6 +4836,25 @@ function consumeKnowledgeReviewPreview(cwd, token) {
 
 // packages/extensions/src/internal/obsidian-workbench.ts
 init_config();
+
+// packages/knowledge/src/ingest-frontmatter.ts
+var KNOWLEDGE_TYPES = [
+  "paper",
+  "method",
+  "software",
+  "dataset",
+  "concept",
+  "entity",
+  "idea",
+  "claim",
+  "evidence",
+  "decision",
+  "question",
+  "wiki"
+];
+var RUN_RESULT_TYPES = ["run", "artifact", "explainer"];
+var NOTE_TYPES = [...KNOWLEDGE_TYPES, ...RUN_RESULT_TYPES];
+var MAX_FRONTMATTER_CHARS = 64 * 1024;
 
 // packages/extensions/src/internal/vault-profiles.ts
 var VAULT_PROFILES2 = {
@@ -4924,7 +5041,7 @@ async function configuredVault(cwd) {
   return canonical(obsidianVault);
 }
 async function vaultPath(vault, ...parts) {
-  const file = join14(vault, ...parts);
+  const file = join15(vault, ...parts);
   if (!contains(vault, await canonical(file)))
     throw new Error("Project path must stay inside the configured vault");
   return file;
@@ -4996,7 +5113,7 @@ async function childEntries(directory) {
 async function noteLinks(vault, directory) {
   const links = [];
   for (const entry of await childEntries(directory)) {
-    const file = join14(directory, entry.name);
+    const file = join15(directory, entry.name);
     if (entry.isDirectory())
       links.push(...await noteLinks(vault, file));
     else if (entry.isFile() && entry.name.endsWith(".md")) {
@@ -5150,7 +5267,7 @@ async function canonical(file) {
   } catch (error2) {
     if (error2.code !== "ENOENT" || dirname7(file) === file)
       throw error2;
-    return join14(await canonical(dirname7(file)), basename5(file));
+    return join15(await canonical(dirname7(file)), basename5(file));
   }
 }
 function contains(root, child) {
@@ -8927,7 +9044,7 @@ init_runtime_host();
 init_config();
 import { randomUUID as randomUUID13 } from "node:crypto";
 import { lstat as lstat7, mkdir as mkdir9, realpath as realpath11, writeFile as writeFile9 } from "node:fs/promises";
-import { isAbsolute as isAbsolute12, join as join15, relative as relative11, resolve as resolve15, sep as sep9 } from "node:path";
+import { isAbsolute as isAbsolute12, join as join16, relative as relative11, resolve as resolve15, sep as sep9 } from "node:path";
 var contained = (root, path) => {
   const rel = relative11(root, path);
   return !isAbsolute12(rel) && rel !== ".." && !rel.startsWith(`..${sep9}`);
@@ -8947,10 +9064,10 @@ async function saveSpecialistExplainer(c, ctx, { runDir, topicId, answer }) {
   if (answer.status !== "completed") return answer;
   const html = validateSpecialistHtml(answer.data.html), config = await loadWorkspaceConfig2(ctx.cwd);
   const root = await realpath11(config.resultsRoot), run = await realpath11(resolve15(ctx.cwd, runDir || ""));
-  if (!contained(root, run) || relative11(root, run).split(sep9).length !== 2 || !run.split(sep9).at(-1).startsWith("run-") || !(await lstat7(join15(run, "metadata.json"))).isFile())
+  if (!contained(root, run) || relative11(root, run).split(sep9).length !== 2 || !run.split(sep9).at(-1).startsWith("run-") || !(await lstat7(join16(run, "metadata.json"))).isFile())
     throw new Error("Explainer destination must be an existing research run");
   return withKnowledgeBinding(c.binding, async () => {
-    const artifactPath = join15(run, `show-me-${randomUUID13()}.html`);
+    const artifactPath = join16(run, `show-me-${randomUUID13()}.html`);
     const sources = await c.service.evidenceReceipts(c.ticket, ctx.cwd, answer.data.source_paths);
     await mkdir9(run, { recursive: true });
     await writeFile9(artifactPath, html, { flag: "wx", mode: 384 });
@@ -9123,11 +9240,11 @@ function createSpecialistBudget({
   const updateUsage = (usage = {}, usageTurn = turn) => {
     if (usageTurn !== turn) return false;
     const nonnegativeFinite = (value) => typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
-    const tokens3 = nonnegativeFinite(usage.totalTokens);
+    const tokens4 = nonnegativeFinite(usage.totalTokens);
     const cost = nonnegativeFinite(usage.cost);
-    if (tokens3 !== null) {
-      turnTokens += tokens3;
-      sessionTokens += tokens3;
+    if (tokens4 !== null) {
+      turnTokens += tokens4;
+      sessionTokens += tokens4;
     }
     if (cost !== null) {
       turnCost += cost;
@@ -10046,6 +10163,19 @@ function registerKnowledgeInterface(pi, { readOnly: readOnly2 = false, runtime =
   const OPERATIONAL_RESEARCH_TOOLS = /* @__PURE__ */ new Set(["research_zotero_update", "research_zotero_status"]);
   const knowledgeTool = (name) => /^research_/.test(String(name || "")) && !OPERATIONAL_RESEARCH_TOOLS.has(String(name));
   let turnKnowledgeRequested = false;
+  const probeNamedTopic = async (ctx, binding, prompt) => {
+    if (!binding || !String(prompt || "").trim()) return null;
+    try {
+      const service = await getKnowledgeService(binding);
+      const project = await currentProject(ctx.cwd, ctx);
+      return await Promise.race([
+        service.probeTopic({ query: prompt, project }),
+        new Promise((resolveProbe) => setTimeout(() => resolveProbe(null), 600))
+      ]);
+    } catch {
+      return null;
+    }
+  };
   let turnBinding = null;
   const promoteKnowledgeTurn = (ctx) => {
     if (turnKnowledgeRequested) return;
@@ -10177,7 +10307,7 @@ Topic memory receipt: ${JSON.stringify({ classification: memoryReceipt.classific
         });
         if (answer.status === "completed") {
           try {
-            const runDir = join17(event.result.details.run, "..");
+            const runDir = join18(event.result.details.run, "..");
             const archived = await saveSpecialistExplainer(current, ctx, {
               runDir,
               topicId: explainerTopicId(
@@ -11079,6 +11209,8 @@ ${text3}`, [
     try {
       const binding = await readKnowledgeBinding();
       turnBinding = binding;
+      if (binding && !turnKnowledgeRequested && await probeNamedTopic(ctx, binding, query))
+        turnKnowledgeRequested = true;
       publication.begin(!!binding && turnKnowledgeRequested);
       toolBudget.reset();
       if (binding && turnKnowledgeRequested) {
@@ -11190,6 +11322,8 @@ ${text3}`, [
       try {
         const binding = await readKnowledgeBinding();
         turnBinding = binding;
+        if (binding && !turnKnowledgeRequested && await probeNamedTopic(ctx, binding, event.prompt))
+          turnKnowledgeRequested = true;
         publication.begin(!!binding && turnKnowledgeRequested);
         toolBudget.reset();
         if (!binding || !turnKnowledgeRequested)
@@ -11263,14 +11397,14 @@ var OBSIDIAN_SUBAGENT_READ_TOOLS = [
 ];
 function readProjectServer(cwd) {
   try {
-    const raw = JSON.parse(readFileSync3(join18(resolve19(cwd), ".mcp.json"), "utf8"));
+    const raw = JSON.parse(readFileSync4(join19(resolve19(cwd), ".mcp.json"), "utf8"));
     return raw?.mcpServers?.["research-obsidian"] ?? null;
   } catch {
     return null;
   }
 }
 function readonlyMcpAdapterUrl(workbenchRoot = process.env.DRONE_RESEARCH_WORKBENCH_ROOT) {
-  return workbenchRoot ? pathToFileURL3(join18(resolve19(workbenchRoot), "npm/node_modules/pi-mcp-adapter/index.ts")) : new URL("../npm/node_modules/pi-mcp-adapter/index.ts", import.meta.url);
+  return workbenchRoot ? pathToFileURL3(join19(resolve19(workbenchRoot), "npm/node_modules/pi-mcp-adapter/index.ts")) : new URL("../npm/node_modules/pi-mcp-adapter/index.ts", import.meta.url);
 }
 async function loadMcpAdapter() {
   return import(

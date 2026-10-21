@@ -206,6 +206,12 @@
       "nativePiAvailable": true,
       "targetPackage": "pi-research"
     },
+    "research_set_source_topic": {
+      "source": "packages/extensions/src/source-archive.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
     "research_source_status": {
       "source": "packages/extensions/src/source-archive.ts",
       "registration": "registerTool",

@@ -11,6 +11,7 @@ import { knowledgeDirectory, readKnowledgeBinding, saveKnowledgeBinding } from "
 import { initializeProjectContext, initializeSharedNavigation } from "@drone/knowledge/layout";
 import { getKnowledgeService, notifyKnowledgeChange } from "@drone/knowledge/service";
 import { normalizeSourceLinks, onlineSourceLink } from "@drone/knowledge/source-links";
+import { looksLikeFileName } from "@drone/knowledge/note-title";
 import { resolveWorkspaceProject, runProject } from "@drone/knowledge/project-identity";
 import { runtimeSlot } from "@drone/tasks/runtime-bridge";
 import { LAYOUT, renderTemplate } from "./vault-layout";
@@ -238,7 +239,76 @@ export async function refreshProjectIndexes({ cwd = process.cwd(), project = nul
         ...(await refreshIndexes(vault, project, project === null, profile)),
     }));
 }
-export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }: any) {
+/** One-line topic used as the knowledge node name; never a file name. */
+export function normalizeSourceTopic(value: unknown): string {
+    return String(value ?? "")
+        .replace(/[<>\r\n]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 120);
+}
+/**
+ * Set frontmatter `topic` on an existing source note and replace its H1 only when that
+ * heading is the automatic one (file name or metadata title). Human headings stay.
+ */
+async function applySourceTopic(file: any, topic: string, autoTitles: string[]) {
+    const original = await readText(file);
+    if (original == null) return false;
+    const line = `topic: ${JSON.stringify(topic)}`;
+    let text = original;
+    if (text.startsWith("---\n")) {
+        const end = text.indexOf("\n---", 4);
+        if (end < 0) throw new Error(`Invalid frontmatter: ${file}`);
+        const frontmatter = text.slice(4, end);
+        const next = /^topic:.*$/m.test(frontmatter) ? frontmatter.replace(/^topic:.*$/m, line) : `${frontmatter}\n${line}`;
+        text = `---\n${next}${text.slice(end)}`;
+    }
+    else
+        text = `---\n${line}\n---\n\n${text}`;
+    text = text.replace(/^#\s+(.+)$/m, (heading: string, value: string) => autoTitles.includes(value.trim()) || looksLikeFileName(value) ? `# ${topic}` : heading);
+    if (text === original) return false;
+    const temporary = `${file}.${randomUUID()}.tmp`;
+    await writeFile(temporary, text, "utf8");
+    await rename(temporary, file);
+    if (knowledgeDirectory())
+        await notifyKnowledgeChange(file);
+    return true;
+}
+/** Backfill or correct the topic of an archived source note and its project mirrors. */
+export async function setSourceTopic({ cwd = process.cwd(), notePath, topic }: any) {
+    const value = normalizeSourceTopic(topic);
+    if (value.length < 4) throw new Error("topic must describe the source in a short phrase");
+    const relativePath = String(notePath || "").replace(/\\/g, "/").replace(/^\/+/, "");
+    const match = /^Library\/(Papers|Software)\/([^/]+\.md)$/.exec(relativePath);
+    if (!match) throw new Error("note_path must be a Library/Papers or Library/Software note");
+    const [, category, file] = match;
+    return updateVault(cwd, async (vault: any) => {
+        const note = await vaultPath(vault, "Library", category, file);
+        const original = await readText(note);
+        if (original == null) throw new Error(`Source note not found: ${relativePath}`);
+        const heading = original.match(/^#\s+(.+)$/m)?.[1]?.trim() || "";
+        const updated = [relativePath];
+        const changed = await applySourceTopic(note, value, [heading]);
+        let projects: string[] = [];
+        try {
+            projects = await readdir(join(vault, "Projects"));
+        }
+        catch {
+            projects = [];
+        }
+        for (const project of projects) {
+            try {
+                const mirror = await vaultPath(vault, "Projects", project, category, file);
+                if (await applySourceTopic(mirror, value, [heading])) updated.push(`Projects/${project}/${category}/${file}`);
+            }
+            catch {
+                /* invalid project names or missing mirrors are skipped */
+            }
+        }
+        return { topic: value, note: relativePath, changed, updated };
+    });
+}
+export async function publishSourceNote({ cwd = process.cwd(), runDir, entry, topic = "" }: any) {
     const config = await loadWorkspaceConfig(cwd);
     if (!config.obsidianVault)
         return { obsidian_note: null, knowledge_status: "not-configured" };
@@ -261,6 +331,9 @@ export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }: 
         .replace(/[<>\r\n]/g, " ")
         .trim()
         .slice(0, 200);
+    // The file slug stays tied to the source so re-archiving with a better topic updates the same note.
+    const sourceTopic = normalizeSourceTopic(topic);
+    const heading = sourceTopic || title;
     const slug = (title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
@@ -286,8 +359,12 @@ export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }: 
             .map((c: any) => `- ${onlineSourceLink(c.url, c.title || c.url)}`)
             .join("\n");
         const body = `[[Projects/${project}/Index]] | [[Library/Index]]\n\n${online}${doi ? ` | ${doi}` : ""}\n\n[Original file](${pathToFileURL(entry.path).href})\n\n## Provenance\n\n\`\`\`json\n${provenance}\n\`\`\`\n\n## Evidence status\n\nArchived source only; scientific claims have not been independently verified. This note is a source record, not a completed paper explanation or command reference.\n\n${entry.manualCoverage ? `Manual coverage: ${entry.manualCoverage.status}. Commands and parameters require reading the appropriate reference chapters; a landing page is not a complete manual.` : ""}${chapters ? `\n\n## Reference chapters (not yet archived)\n\n${chapters}` : ""}`;
-        await writeManagedIndex(note, `---\nid: pi-${randomUUID()}\ntype: ${category === "Papers" ? "paper" : "software"}\nsource_sha256: ${entry.sha256}\nsource_idempotency_key: ${entry.idempotency_key || "unknown"}\n---\n\n# ${title}`, body);
-        await writeManagedIndex(projectNote, `# ${title}`, `[[Library/${category}/${slug}]]\n\n[Run files](${pathToFileURL(runDir).href})`);
+        await writeManagedIndex(note, `---\nid: pi-${randomUUID()}\ntype: ${category === "Papers" ? "paper" : "software"}\nsource_sha256: ${entry.sha256}\nsource_idempotency_key: ${entry.idempotency_key || "unknown"}${sourceTopic ? `\ntopic: ${JSON.stringify(sourceTopic)}` : ""}\n---\n\n# ${heading}`, body);
+        await writeManagedIndex(projectNote, sourceTopic ? `---\ntopic: ${JSON.stringify(sourceTopic)}\n---\n\n# ${heading}` : `# ${heading}`, `[[Library/${category}/${slug}]]\n\n[Run files](${pathToFileURL(runDir).href})`);
+        if (sourceTopic) {
+            await applySourceTopic(note, sourceTopic, [title]);
+            await applySourceTopic(projectNote, sourceTopic, [title]);
+        }
         return {
             obsidian_note: note,
             project_note: projectNote,

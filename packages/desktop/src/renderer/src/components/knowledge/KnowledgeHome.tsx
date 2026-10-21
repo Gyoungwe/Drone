@@ -112,7 +112,15 @@ export function KnowledgeHome({
 		if (reviewId && cwd) useKnowledgeStore.getState().openReview({ cwd, sessionId, id: reviewId });
 	}, [cwd, reviewId, sessionId]);
 
-	const recent = (data?.recentNotes ?? []).slice(0, RECENT_LIMIT);
+	const allRecent = (data?.recentNotes ?? []).slice(0, RECENT_LIMIT);
+	// The category tabs filter the deposit list too, not only search hits.
+	const recent =
+		category === "all"
+			? allRecent
+			: (
+					data?.recentByCategory?.[category] ??
+					(data?.recentNotes ?? []).filter((item) => classifyKnowledgePath(item.path) === category)
+				).slice(0, RECENT_LIMIT);
 	const counts = useMemo(
 		() =>
 			data?.index?.categoryCounts
@@ -165,7 +173,10 @@ export function KnowledgeHome({
 			{binding && (
 				<div className="mt-5 grid min-h-0 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
 					<section aria-label={t("homeRecentDeposits")} className="min-w-0">
-						<h2 className="mb-2 text-xs font-medium text-ink-dim">{t("homeRecentDeposits")}</h2>
+						<h2 className="mb-2 text-xs font-medium text-ink-dim">
+							{t("homeRecentDeposits")}
+							{category === "all" ? "" : ` · ${categoryLabel(t, category)}`}
+						</h2>
 						{loading && !data ? (
 							<p role="status" className="py-4 text-xs text-ink-dim">
 								{t("loading")}

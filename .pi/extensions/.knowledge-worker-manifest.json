@@ -3,7 +3,7 @@
 	"generator": "scripts/build-knowledge-runtime.mjs",
 	"output": "knowledge-worker.mjs",
 	"source": "packages/extensions/src/knowledge-worker.ts",
-	"inputsSha256": "059771c2d5aedc415556d55f8e36f0d4763776a2795acaf11ad65970d09f8c1b",
-	"knowledgeSourceSha256": "ddebd9b724273179dab711219775aa94e1ca30b96d24e42ad50332342ef38750",
-	"outputSha256": "2e43eb26e985e9327d1cd288c5c790f4333cb696e4b7e18c35193b241e60196c"
+	"inputsSha256": "16b864c83c69263170bcd2f2947b1a0c97485d0527fffcde6f766041be7bb48f",
+	"knowledgeSourceSha256": "942971fcaafda38becdb256901807a367bf5c27c383841eb22aecc3f7470d9c1",
+	"outputSha256": "98640864b6c8e5ab002776f4d149a7ef6139d9479f6b1f82335a08eb3c7ea3fa"
 }

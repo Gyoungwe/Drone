@@ -143,7 +143,7 @@ var init_flow_cards = __esm({
 
 // packages/knowledge/src/config.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
-import { createHash as createHash7, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash6, randomUUID as randomUUID3 } from "node:crypto";
 import { mkdir as mkdir2, readFile as readFile4, realpath as realpath4, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
 import { basename as basename3, isAbsolute as isAbsolute5, join as join3, resolve as resolve5 } from "node:path";
 function createKnowledgeConfigState() {
@@ -162,7 +162,7 @@ function projectIdentity(cwd, configured2) {
   if (typeof configured2 === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured2)) return configured2;
   const path = resolve5(cwd);
   const stem = basename3(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
-  return `${stem}-${createHash7("sha256").update(path).digest("hex").slice(0, 10)}`;
+  return `${stem}-${createHash6("sha256").update(path).digest("hex").slice(0, 10)}`;
 }
 function validateBinding(value) {
   if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute5(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
@@ -341,12 +341,12 @@ var init_runtime_host = __esm({
 });
 
 // packages/knowledge/src/files.ts
-import { isAbsolute as isAbsolute9, join as join9, relative as relative7, sep as sep7 } from "node:path";
+import { isAbsolute as isAbsolute8, join as join8, relative as relative6, sep as sep6 } from "node:path";
 function allowedSegment(name) {
   return !!name && !name.startsWith(".") && !OMIT.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
 }
 function validateNote(path) {
-  if (typeof path !== "string" || isAbsolute9(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment))
+  if (typeof path !== "string" || isAbsolute8(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment))
     throw new Error("Expected an allowed Vault-relative Markdown path");
   const first = path.split("/")[0] ?? "";
   if (RESERVED2.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
@@ -385,7 +385,7 @@ var init_files = __esm({
 
 // packages/knowledge/src/review-policy.ts
 import { readFileSync as readFileSync2 } from "node:fs";
-import { join as join10 } from "node:path";
+import { join as join9 } from "node:path";
 function errorCode2(error) {
   return error && typeof error === "object" && "code" in error ? error.code : void 0;
 }
@@ -394,7 +394,7 @@ function readReviewMode() {
   const root = knowledgeDirectory();
   if (!root) return "automatic";
   try {
-    const value = JSON.parse(readFileSync2(join10(root, "review-policy.json"), "utf8"));
+    const value = JSON.parse(readFileSync2(join9(root, "review-policy.json"), "utf8"));
     const mode = value && typeof value === "object" && "mode" in value ? value.mode : void 0;
     return mode === "automatic" ? "automatic" : "strict";
   } catch (error) {
@@ -435,6 +435,7 @@ var state, UI_EVENT, uiModule, MAX_SESSIONS;
 var init_ui_state = __esm({
   "packages/knowledge/src/ui-state.ts"() {
     "use strict";
+    init_config();
     init_runtime_host();
     init_runtime_host();
     init_runtime_host();
@@ -467,9 +468,9 @@ __export(specialist_host_exports, {
   specialistSettings: () => specialistSettings,
   withSpecialistSlot: () => withSpecialistSlot
 });
-import { randomUUID as randomUUID8 } from "node:crypto";
-import { mkdir as mkdir6, readFile as readFile9, rename as rename7, unlink as unlink2, writeFile as writeFile7 } from "node:fs/promises";
-import { join as join13 } from "node:path";
+import { randomUUID as randomUUID6 } from "node:crypto";
+import { mkdir as mkdir5, readFile as readFile8, rename as rename6, unlink as unlink2, writeFile as writeFile6 } from "node:fs/promises";
+import { join as join12 } from "node:path";
 function registerKnowledgeSpecialistHost(id, run) {
   if (!id || typeof run !== "function") throw new Error("A specialist host requires a session identity");
   if (state2.disposed) throw new Error("Knowledge specialist runtime has been disposed");
@@ -489,7 +490,7 @@ async function specialistSettings() {
   if (!dir) return { mode: "off", revision: 0, ...SPECIALIST_LIMITS };
   let data = { mode: "automatic", revision: 0 };
   try {
-    data = JSON.parse(await readFile9(join13(dir, "specialists.json"), "utf8"));
+    data = JSON.parse(await readFile8(join12(dir, "specialists.json"), "utf8"));
   } catch (e) {
     if (e.code !== "ENOENT") throw new Error("Knowledge specialist settings cannot be read");
   }
@@ -583,12 +584,12 @@ async function setSpecialistSettings({ mode, revision, bindingRevision, ...reque
         data[key] = Math.min(data[key] ?? SPECIALIST_LIMITS[key], SPECIALIST_LIMITS[key]);
       data.mode = mode;
       data.revision = revision + 1;
-      const dir = knowledgeDirectory(), temp = join13(dir, `specialists.${randomUUID8()}.tmp`);
-      await mkdir6(dir, { recursive: true, mode: 448 });
+      const dir = knowledgeDirectory(), temp = join12(dir, `specialists.${randomUUID6()}.tmp`);
+      await mkdir5(dir, { recursive: true, mode: 448 });
       try {
-        await writeFile7(temp, `${JSON.stringify(data)}
+        await writeFile6(temp, `${JSON.stringify(data)}
 `, { flag: "wx", mode: 384 });
-        await rename7(temp, join13(dir, "specialists.json"));
+        await rename6(temp, join12(dir, "specialists.json"));
       } finally {
         await unlink2(temp).catch((e) => {
           if (e.code !== "ENOENT") throw e;
@@ -713,6 +714,13 @@ var init_specialist_host = __esm({
   }
 });
 
+// packages/knowledge/src/wiki-policy.ts
+var init_wiki_policy = __esm({
+  "packages/knowledge/src/wiki-policy.ts"() {
+    "use strict";
+  }
+});
+
 // packages/knowledge/src/wiki-review.ts
 var AUTOMATIC_AUTHORITY, MAX_AGE;
 var init_wiki_review = __esm({
@@ -723,6 +731,7 @@ var init_wiki_review = __esm({
     init_files();
     init_review_policy();
     init_ui_state();
+    init_wiki_policy();
     AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
     MAX_AGE = 24 * 60 * 60 * 1e3;
   }
@@ -9855,6 +9864,7 @@ var AppContract = defineDomain("app", {
       result: NullableString
     },
     pickDirectory: { args: typebox_exports.Tuple([]), result: NullableString },
+    formalKnowledgeVault: { args: typebox_exports.Tuple([]), result: NullableString },
     getGitBranch: { args: typebox_exports.Tuple([typebox_exports.String()]), result: NullableString },
     listGitBranches: { args: typebox_exports.Tuple([typebox_exports.String()]), result: GitBranchesSchema },
     checkoutBranch: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()]), result: typebox_exports.String() }
@@ -10767,6 +10777,11 @@ var PackagesContract = defineDomain("packages", {
       // values used by the catalog store.
       args: SearchCatalogArgsSchema,
       result: typebox_exports.Unsafe(CatalogSearchResultSchema)
+    },
+    /** Latest published npm version per package name (null when unknown/offline). */
+    latestPackageVersions: {
+      args: typebox_exports.Tuple([typebox_exports.Array(typebox_exports.String({ minLength: 1 }), { maxItems: 50 })]),
+      result: typebox_exports.Record(typebox_exports.String(), typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]))
     },
     installPackage: {
       args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
@@ -16622,134 +16637,17 @@ function flowCardBuilder(name) {
   return typeof builder === "function" ? builder : null;
 }
 
-// packages/extensions/src/internal/reply-focus.ts
-var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for factual research claims, not unrelated citations for ordinary chat. For a simple factual question that can be answered from existing local knowledge, take the light path: retrieve, answer, and auto-deposit a bounded note when appropriate; do not create a task_plan or ask for write authorization just to answer. For substantial tasks, do bounded read-only preparation and consolidate scope, assumptions, needed permissions and deliverables into one task_plan for one user authorization. After authorization, carry out routine steps and recoverable checks within that scope without repeatedly asking whether to continue. Respect prior decisions, especially declined installs. New risks or scope, missing credentials and genuinely unavailable user data still require a specific request; never infer consent. At completion, explain what changed, link actual outputs or show key figures, separate execution from validation, and give one next step only if needed. Keep internal counters and tool logs out of the main answer.";
+// packages/extensions/src/internal/obsidian-workbench.ts
+import { createHash as createHash9, randomUUID as randomUUID7 } from "node:crypto";
+import { access as access3, mkdir as mkdir6, readdir as readdir3, readFile as readFile9, realpath as realpath7, rename as rename7, stat as stat4, writeFile as writeFile7 } from "node:fs/promises";
+import { basename as basename5, dirname as dirname5, isAbsolute as isAbsolute10, join as join14, relative as relative9, resolve as resolve12, sep as sep8 } from "node:path";
+import { fileURLToPath as fileURLToPath2, pathToFileURL as pathToFileURL2 } from "node:url";
 
-// packages/extensions/src/internal/research-host.ts
-import { randomUUID as randomUUID10 } from "node:crypto";
-import { readFile as readFile12, realpath as realpath9, rename as rename9, writeFile as writeFile10 } from "node:fs/promises";
-import { isAbsolute as isAbsolute12, join as join17, relative as relative11, resolve as resolve14, sep as sep10 } from "node:path";
-
-// packages/research/src/literature-operations.ts
-import { createHash as createHash6, randomUUID as randomUUID3 } from "node:crypto";
-function destinationRecovery(receipt = {}) {
-  const zotero = receipt.zotero?.status || "unavailable";
-  const obsidian = receipt.obsidian?.status || "unavailable";
-  return {
-    zotero: {
-      status: zotero,
-      action: zotero === "verified" ? "reuse-existing-item" : zotero === "identity-mismatch" ? "resolve-identity-conflict" : "read-back-before-any-import",
-      autoWrite: false
-    },
-    obsidian: {
-      status: obsidian,
-      action: obsidian === "verified" ? "preserve-existing-note" : obsidian === "missing" ? "deposit-missing-note-with-authorization" : obsidian === "identity-mismatch" ? "review-note-conflict-preserve-human-content" : "wait-and-recheck-vault",
-      autoWrite: false
-    },
-    completed: zotero === "verified" && obsidian === "verified",
-    scientificallyVerified: false
-  };
-}
-function literatureOperationId(vault, revision, doi) {
-  const normalized = normalizeDoi(doi);
-  if (!normalized) throw new Error("Valid DOI required");
-  return createHash6("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
-}
-function createLiteratureOperations(ports) {
-  const now = ports.now || (() => (/* @__PURE__ */ new Date()).toISOString());
-  const createId = ports.createId || randomUUID3;
-  return {
-    async reconcileLiteratureOperation({ cwd = process.cwd(), runDir, doi, zoteroKey, notePath }, { verify = ports.verify } = {}) {
-      const normalized = normalizeDoi(doi);
-      if (!normalized) throw new Error("Valid DOI required");
-      const { file, vault, revision } = await ports.resolveRunJournal(cwd, runDir);
-      if (!vault) throw new Error("No bound Vault");
-      const id = literatureOperationId(vault, revision, normalized);
-      return ports.exclusive(file, async () => {
-        const journal = await ports.readJournal(file);
-        const previous = journal.operations[id];
-        if (previous && (previous.zoteroKey !== zoteroKey || previous.notePath !== notePath))
-          throw new Error(
-            "Operation identity changed; resolve the existing DOI/key/path mapping before retry"
-          );
-        const receipt = await verify({ doi: normalized, zotero_key: zoteroKey, note_path: notePath, vault });
-        const destinations = destinationRecovery(receipt);
-        const checkedAt = now();
-        const operation = {
-          id,
-          doi: normalized,
-          zoteroKey,
-          notePath,
-          vault,
-          revision,
-          status: destinations.completed ? "both-identities-verified" : "partial-or-unavailable",
-          attempts: (previous?.attempts || 0) + 1,
-          createdAt: previous?.createdAt || checkedAt,
-          checkedAt,
-          destinations,
-          receipt,
-          history: [
-            ...previous?.history || [],
-            { at: checkedAt, zotero: receipt.zotero?.status, obsidian: receipt.obsidian?.status }
-          ].slice(-32)
-        };
-        journal.operations[id] = operation;
-        await ports.writeJournal(file, journal);
-        return {
-          operation_id: id,
-          log_path: file,
-          status: operation.status,
-          destinations,
-          receipt,
-          attempts: operation.attempts,
-          writesToLibraries: 0
-        };
-      });
-    },
-    /** Append an observed write receipt; the journal never authorizes or drives a retry. */
-    async recordZoteroWrite({
-      cwd = process.cwd(),
-      runDir,
-      receipt
-    }) {
-      const doi = normalizeDoi(receipt?.doi);
-      if (!doi) throw new Error("Valid DOI required");
-      const { file } = await ports.resolveRunJournal(cwd, runDir);
-      return ports.exclusive(file, async () => {
-        const journal = await ports.readJournal(file);
-        const entry = {
-          id: createId(),
-          doi,
-          status: String(receipt.status || "unknown"),
-          reason: receipt.reason || null,
-          channel: receipt.channel || null,
-          zoteroKey: receipt.zoteroKey || null,
-          library: receipt.library || null,
-          collection: receipt.collection || null,
-          attachment: receipt.attachment || null,
-          fulltextStatus: receipt.fulltextStatus || null,
-          readBack: receipt.readBack || null,
-          consent: receipt.consent || null,
-          writesToLibraries: receipt.writesToLibraries || 0,
-          at: receipt.write?.at || now()
-        };
-        journal.writes = [...Array.isArray(journal.writes) ? journal.writes : [], entry].slice(-64);
-        await ports.writeJournal(file, journal);
-        return {
-          write_id: entry.id,
-          log_path: file,
-          writes: journal.writes.length,
-          autoRetry: false
-        };
-      });
-    }
-  };
-}
-
-// packages/research/src/research-loop.ts
-import { createHash as createHash8, randomUUID as randomUUID5 } from "node:crypto";
+// packages/extensions/src/workspace-config.ts
 import { access as access2, mkdir as mkdir3, readFile as readFile6, realpath as realpath5, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
 import { dirname as dirname2, isAbsolute as isAbsolute6, join as join5, relative as relative5, resolve as resolve7, sep as sep5 } from "node:path";
+init_config();
+init_flow_cards();
 
 // packages/knowledge/src/project-identity.ts
 init_config();
@@ -16831,772 +16729,6 @@ function runProject(metadataProject, resolution) {
   return resolution.project;
 }
 
-// packages/research/src/claim-bindings.ts
-var RELATIONSHIPS = ["direct", "indirect", "hypothesis", "unsupported"];
-function text2(value, label2, max = 4e3) {
-  if (typeof value !== "string" || !value.trim() || value.length > max) throw new Error(`Invalid ${label2}`);
-  return value.trim();
-}
-function validateClaimBindings(bindings, sources, reads) {
-  if (!Array.isArray(bindings) || bindings.length < 1 || bindings.length > 64)
-    throw new Error("Provide 1-64 structured claim_bindings");
-  const seen = /* @__PURE__ */ new Set();
-  return bindings.map((raw, index) => {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Invalid claim binding");
-    const binding = raw;
-    const claim = text2(binding.claim, "claim");
-    const limitations = text2(binding.limitations, "limitations");
-    if (seen.has(claim)) throw new Error("Duplicate claim binding");
-    seen.add(claim);
-    const relationship = binding.relationship;
-    if (!RELATIONSHIPS.includes(relationship))
-      throw new Error("Invalid support relationship");
-    if (!Array.isArray(binding.sources) || binding.sources.length > 12)
-      throw new Error("Invalid claim sources");
-    if (["direct", "indirect"].includes(String(relationship)) && binding.sources.length === 0)
-      throw new Error("Supported claims require observed source excerpts");
-    const refs = binding.sources.map((rawRef) => {
-      if (!rawRef || typeof rawRef !== "object" || Array.isArray(rawRef))
-        throw new Error("Invalid claim source");
-      const ref = rawRef;
-      const path = typeof ref.path === "string" ? ref.path : "";
-      const source = sources.find((candidate) => candidate.path === path);
-      const read = reads.get(path);
-      if (!source || !read || read.hash !== source.hash)
-        throw new Error("Claim source was not read and identity-verified in this scope");
-      const first = ref.start_line;
-      const last = ref.end_line;
-      if (!Number.isInteger(first) || !Number.isInteger(last) || first < read.startLine || last < first || last > read.endLine)
-        throw new Error("Claim source range is outside the observed read");
-      const quote = text2(ref.quote, "source quote", 6e3);
-      const excerpt = read.text.split(/\r?\n/).slice(first - read.startLine, last - read.startLine + 1).join("\n");
-      if (!excerpt.includes(quote)) throw new Error("Claim quote does not match the observed note range");
-      return {
-        path: source.path,
-        doi: source.doi,
-        zotero_key: source.zotero_key,
-        hash: source.hash,
-        start_line: first,
-        end_line: last,
-        quote,
-        ...ref.original_location ? { original_location: text2(ref.original_location, "historical original location", 600) } : {},
-        reading_basis: "current-scope-literature-note",
-        originalFulltextReadThisTurn: false
-      };
-    });
-    return {
-      id: `claim-${index + 1}`,
-      claim,
-      relationship,
-      limitations,
-      ...binding.organism ? { organism: text2(binding.organism, "organism", 600) } : {},
-      ...binding.method ? { method: text2(binding.method, "method", 1e3) } : {},
-      sources: refs,
-      supportAssessment: "model-asserted-unreviewed",
-      provenanceChecked: true,
-      scientificallyVerified: false
-    };
-  });
-}
-function claimBindingRefs(bindings) {
-  return bindings.map(
-    (binding) => `${binding.claim} [${binding.relationship}] -> ${binding.sources.map((source) => `${source.path}:${source.start_line}-${source.end_line}`).join(", ") || "no supporting source"}; limitation: ${binding.limitations}`
-  );
-}
-var CLAIM_BINDING_SCHEMA = {
-  type: "array",
-  minItems: 1,
-  maxItems: 64,
-  items: {
-    type: "object",
-    properties: {
-      claim: { type: "string" },
-      relationship: { type: "string", enum: [...RELATIONSHIPS] },
-      organism: { type: "string" },
-      method: { type: "string" },
-      limitations: { type: "string" },
-      sources: {
-        type: "array",
-        maxItems: 12,
-        items: {
-          type: "object",
-          properties: {
-            path: { type: "string" },
-            start_line: { type: "integer", minimum: 1 },
-            end_line: { type: "integer", minimum: 1 },
-            quote: { type: "string" },
-            original_location: { type: "string" }
-          },
-          required: ["path", "start_line", "end_line", "quote"]
-        }
-      }
-    },
-    required: ["claim", "relationship", "limitations", "sources"]
-  }
-};
-
-// packages/research/src/research-loop.ts
-var RESEARCH_STAGES = Object.freeze([
-  "created",
-  "local_query_recorded",
-  "external_search_recorded",
-  "sources_inspected",
-  "sources_archived",
-  "sources_reused",
-  "claims_bound",
-  "answerable"
-]);
-var RESEARCH_DOCUMENT_KIND = "drone.research.run";
-function createResearchLoop(ports) {
-  const loadWorkspaceConfig3 = ports.workspace;
-  const verifyLiteratureReceipt2 = ports.verifyLiteratureReceipt;
-  const sourceStatus2 = ports.sourceStatus;
-  const runtimeState3 = {
-    receiptLedger: /* @__PURE__ */ new Map(),
-    receiptQueues: /* @__PURE__ */ new Map(),
-    dispose() {
-      this.receiptLedger.clear();
-      this.receiptQueues.clear();
-    }
-  };
-  const runKey = (cwd, runDir) => resolve7(cwd, runDir);
-  function ledger(cwd, runDir) {
-    const key = runKey(cwd, runDir);
-    if (!runtimeState3.receiptLedger.has(key)) {
-      if (runtimeState3.receiptLedger.size >= 128)
-        runtimeState3.receiptLedger.delete(runtimeState3.receiptLedger.keys().next().value);
-      runtimeState3.receiptLedger.set(key, { reads: /* @__PURE__ */ new Map(), verified: /* @__PURE__ */ new Map() });
-    }
-    return runtimeState3.receiptLedger.get(key);
-  }
-  async function flushResearchReceipts({ cwd = process.cwd(), runDir } = {}) {
-    await runtimeState3.receiptQueues.get(runKey(cwd, runDir));
-  }
-  function resetResearchReceipts({ cwd = process.cwd(), runDir } = {}) {
-    if (runDir) runtimeState3.receiptLedger.delete(runKey(cwd, runDir));
-  }
-  async function reusableSources(cwd, runDir) {
-    const config = await loadWorkspaceConfig3(cwd);
-    if (!config.obsidianVault) return [];
-    const root = await realpath5(config.obsidianVault);
-    const state3 = ledger(cwd, runDir), result = [];
-    for (const [path, proof] of state3.verified) {
-      const read = state3.reads.get(path);
-      if (!read || read.hash !== proof.obsidian?.hash || read.vault !== root || read.revision !== (config.knowledgeBindingRevision || 0) || proof.obsidian?.vault !== root)
-        continue;
-      const current = await verifyLiteratureReceipt2({
-        doi: proof.doi,
-        zotero_key: proof.zoteroKey,
-        note_path: path,
-        vault: root
-      });
-      if (current.status !== "both-verified" || current.obsidian.hash !== read.hash) continue;
-      result.push({
-        path,
-        hash: read.hash,
-        doi: current.doi,
-        zotero_key: current.zoteroKey,
-        startLine: read.startLine,
-        endLine: read.endLine,
-        basis: "current-turn-literature-note-read-and-identity-check",
-        fulltext_status: current.zotero.fulltextStatus,
-        originalFulltextReadThisTurn: false,
-        evidence_profile: {
-          identity: "both-verified",
-          acquisition: current.zotero.fulltextStatus,
-          reading: {
-            kind: "literature-note",
-            scope: "current-turn",
-            startLine: read.startLine,
-            endLine: read.endLine
-          },
-          claimSupport: "not-assessed"
-        }
-      });
-    }
-    return result;
-  }
-  async function validateReuse(cwd, runDir, gate) {
-    if (!gate.reuse_count) return;
-    const fresh = await reusableSources(cwd, runDir);
-    if (gate.reused_sources.length !== gate.reuse_count || gate.reused_sources.some(
-      (old) => !fresh.some(
-        (now) => now.path === old.path && now.hash === old.hash && now.doi === old.doi && now.zotero_key === old.zotero_key
-      )
-    ))
-      throw new Error(
-        "Reused source changed or current-turn receipt is missing; re-read and verify the existing note, do not re-import it"
-      );
-  }
-  async function validateStoredClaimBindings(cwd, runDir, gate) {
-    if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
-      throw new Error("Structured claim_bindings are required before answerable");
-    return validateClaimBindings(
-      gate.claim_bindings,
-      [...await reusableSources(cwd, runDir), ...await archivedSourceRecords(cwd, runDir)],
-      ledger(cwd, runDir).reads
-    );
-  }
-  function safeSlug(value, label2) {
-    const text3 = String(value ?? "").trim();
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text3)) throw new Error(`${label2} must be lowercase kebab-case`);
-    return text3;
-  }
-  function topicIdFromResultSlug(value) {
-    const slug = safeSlug(value || "research-question", "result_slug");
-    const stable = slug.replace(/-20\d{6}(?:\d{6})?$/, "").replace(/-run-\d+$/, "");
-    return stable || slug;
-  }
-  function within2(root, target) {
-    const rel = relative5(resolve7(root), resolve7(target));
-    return rel === "" || !isAbsolute6(rel) && rel !== ".." && !rel.startsWith(`..${sep5}`);
-  }
-  function fileHash(bytes) {
-    return createHash8("sha256").update(bytes).digest("hex");
-  }
-  async function archivedSourceRecords(cwd, runDir) {
-    const archive = await sourceStatus2({ cwd, run_dir: resolve7(cwd, runDir) });
-    const records = [];
-    for (const item of archive.manifest?.items || []) {
-      if (item.status !== "downloaded" || !item.path || !item.sha256) continue;
-      const absolute = resolve7(cwd, item.path);
-      if (!within2(join5(resolve7(cwd, runDir), "sources"), absolute)) continue;
-      try {
-        if (!within2(await realpath5(join5(resolve7(cwd, runDir), "sources")), await realpath5(absolute)))
-          continue;
-        if (fileHash(await readFile6(absolute)) !== item.sha256) continue;
-      } catch {
-        continue;
-      }
-      const aliases = /* @__PURE__ */ new Set([
-        String(item.path),
-        absolute,
-        relative5(cwd, absolute),
-        relative5(resolve7(cwd, runDir), absolute)
-      ]);
-      for (const path of aliases)
-        records.push({
-          path,
-          hash: String(item.sha256),
-          doi: item.metadata?.doi || item.doi,
-          zotero_key: item.metadata?.zotero_key || item.zotero_key
-        });
-    }
-    return records;
-  }
-  async function recordArchivedRead(cwd, runDir, path, args, details, content) {
-    const absolute = resolve7(cwd, path);
-    const sourcesRoot = join5(resolve7(cwd, runDir), "sources");
-    if (!within2(sourcesRoot, absolute)) return false;
-    if (!within2(await realpath5(sourcesRoot), await realpath5(absolute))) return false;
-    if (details.truncation?.firstLineExceedsLimit) return false;
-    const returned = details.truncation?.content ?? content?.find((part) => part.type === "text")?.text;
-    if (typeof returned !== "string" || !returned.trim()) return false;
-    const bytes = await readFile6(absolute);
-    const sourceText = bytes.toString("utf8");
-    if (sourceText.includes("\0") || sourceText.startsWith("%PDF-")) return false;
-    const startLine = Number.isInteger(args.offset) && args.offset > 0 ? args.offset : 1;
-    const selected = sourceText.split("\n").slice(startLine - 1, args.limit ? startLine - 1 + args.limit : void 0);
-    const visible = returned.split("\n");
-    const lines = [];
-    for (let index = 0; index < Math.min(selected.length, visible.length, 2e3); index++) {
-      const shown = visible[index] ?? "";
-      if (selected[index] !== shown || lines.join("\n").length + shown.length > 9e4) break;
-      lines.push(shown);
-    }
-    const text3 = lines.join("\n");
-    if (!text3.trim()) return false;
-    const read = { hash: fileHash(bytes), text: text3, startLine, endLine: startLine + lines.length - 1 };
-    const aliases = /* @__PURE__ */ new Set([
-      String(path),
-      absolute,
-      relative5(cwd, absolute),
-      relative5(resolve7(cwd, runDir), absolute)
-    ]);
-    for (const alias of aliases) ledger(cwd, runDir).reads.set(alias, read);
-    return true;
-  }
-  async function readJson3(path) {
-    const value = JSON.parse(await readFile6(path, "utf8"));
-    if (!value || typeof value !== "object" || Array.isArray(value))
-      throw new Error(`Invalid JSON object: ${path}`);
-    if (path.endsWith("metadata.json") && !value.kind) {
-      return { ...value, kind: RESEARCH_DOCUMENT_KIND, version: 1 };
-    }
-    if (path.endsWith("metadata.json") && (value.kind !== RESEARCH_DOCUMENT_KIND || value.version !== 1))
-      throw new Error(`Unsupported research metadata document: ${path}`);
-    return value;
-  }
-  async function atomicJson2(path, value) {
-    await mkdir3(dirname2(path), { recursive: true });
-    const temp = `${path}.${randomUUID5()}.tmp`;
-    await writeFile4(temp, `${JSON.stringify(value, null, 2)}
-`, "utf8");
-    await rename4(temp, path);
-  }
-  function gateOf(metadata) {
-    const gate = metadata.evidence_gate && typeof metadata.evidence_gate === "object" ? metadata.evidence_gate : {};
-    return {
-      stage: RESEARCH_STAGES.includes(gate.stage) ? gate.stage : "created",
-      status: gate.status === "failed" ? "failed" : "ok",
-      answerable: gate.answerable === true,
-      events: Array.isArray(gate.events) ? gate.events : [],
-      claim_refs: Array.isArray(gate.claim_refs) ? gate.claim_refs : [],
-      claim_bindings: Array.isArray(gate.claim_bindings) ? gate.claim_bindings : [],
-      warnings: gate.claim_refs?.length && !gate.claim_bindings?.length ? ["legacy-unstructured-claims: support not assessed"] : [],
-      source_refs: Array.isArray(gate.source_refs) ? gate.source_refs : [],
-      archive_count: Number(gate.archive_count) || 0,
-      reuse_count: Number(gate.reuse_count) || 0,
-      reused_sources: Array.isArray(gate.reused_sources) ? gate.reused_sources : [],
-      scientificallyVerified: false
-    };
-  }
-  function researchNodes(gate) {
-    const current = RESEARCH_STAGES.indexOf(gate.stage);
-    return RESEARCH_STAGES.map((id, index) => ({
-      id,
-      state: gate.answerable || index < current ? "completed" : index === current ? "current" : "pending",
-      observed: (gate.events || []).some((event) => event.type === id && !event.skipped)
-    }));
-  }
-  function provenanceFor(gate, status2 = "pending") {
-    return {
-      status: status2,
-      source_refs: [...gate.source_refs],
-      claim_bindings: structuredClone(gate.claim_bindings),
-      updated_at: (/* @__PURE__ */ new Date()).toISOString()
-    };
-  }
-  function advance(gate, stage, details = {}) {
-    const current = RESEARCH_STAGES.indexOf(gate.stage);
-    const target = RESEARCH_STAGES.indexOf(stage);
-    if (target < 0) throw new Error(`Unknown research stage: ${stage}`);
-    if (target < current)
-      return {
-        ...gate,
-        events: [...gate.events, { type: stage, at: (/* @__PURE__ */ new Date()).toISOString(), repeated: true, ...details }]
-      };
-    return {
-      ...gate,
-      stage,
-      events: [...gate.events, { type: stage, at: (/* @__PURE__ */ new Date()).toISOString(), ...details }]
-    };
-  }
-  async function resolveRun(cwd, runDir) {
-    const config = await loadWorkspaceConfig3(cwd);
-    if (!runDir) throw new Error("run_dir is required for this action");
-    const path = resolve7(cwd, runDir);
-    if (!within2(config.resultsRoot, path))
-      throw new Error("run_dir must stay inside the configured results root");
-    const rel = relative5(config.resultsRoot, path).split(sep5);
-    if (rel.length !== 2 || !rel[1]?.startsWith("run-"))
-      throw new Error("run_dir must be directly inside a result slug");
-    await access2(join5(path, "metadata.json"));
-    return { config, path, metadataPath: join5(path, "metadata.json") };
-  }
-  async function startResearchRun({
-    cwd = process.cwd(),
-    project,
-    resultSlug,
-    query,
-    requiresProvenance = false
-  } = {}) {
-    const config = await loadWorkspaceConfig3(cwd);
-    project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
-    resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
-    if (typeof query !== "string" || !query.trim()) throw new Error("query is required");
-    const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-    const runId = `run-${stamp}-${randomUUID5().slice(0, 8)}`;
-    const runDir = join5(config.resultsRoot, resultSlug, runId);
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const metadata = {
-      kind: RESEARCH_DOCUMENT_KIND,
-      version: 1,
-      run_id: runId,
-      project,
-      result_slug: resultSlug,
-      topic_id: topicIdFromResultSlug(resultSlug),
-      query: query.trim(),
-      status: "running",
-      revision: 0,
-      requires_provenance: requiresProvenance === true,
-      started_at: now,
-      evidence_gate: {
-        stage: "created",
-        status: "ok",
-        answerable: false,
-        events: [{ type: "created", at: now }],
-        claim_refs: [],
-        source_refs: [],
-        archive_count: 0
-      },
-      research_nodes: researchNodes({ stage: "created", answerable: false, events: [{ type: "created" }] }),
-      provenance: provenanceFor({ source_refs: [], claim_bindings: [] })
-    };
-    await mkdir3(runDir, { recursive: true });
-    await atomicJson2(join5(runDir, "metadata.json"), metadata);
-    return { run_dir: runDir, metadata };
-  }
-  async function updateResearchLoopUnlocked({
-    cwd = process.cwd(),
-    runDir,
-    action,
-    query,
-    sourceRefs = [],
-    claimRefs = [],
-    claimBindings = [],
-    outcome,
-    notes,
-    expectedRevision
-  } = {}) {
-    const { path, metadataPath } = await resolveRun(cwd, runDir);
-    const metadata = await readJson3(metadataPath);
-    const revision = Number.isInteger(metadata.revision) ? metadata.revision : 0;
-    if (expectedRevision != null && Number(expectedRevision) !== revision)
-      throw new Error(`research run changed; expected revision ${expectedRevision}, found ${revision}`);
-    let gate = gateOf(metadata);
-    const detail = {
-      ...query ? { query: String(query).trim() } : {},
-      ...outcome ? { outcome } : {},
-      ...notes ? { notes } : {}
-    };
-    const requireStage = (stage) => {
-      if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf(stage))
-        throw new Error(`research loop must reach ${stage} before ${action}`);
-    };
-    if (action === "status") return { run_dir: path, metadata, evidence_gate: gate, revision };
-    if (action === "record_local") {
-      if (!query?.trim()) throw new Error("query is required");
-      gate = advance(gate, "local_query_recorded", detail);
-    } else if (action === "record_external") {
-      requireStage("local_query_recorded");
-      if (!query?.trim() && !notes?.trim())
-        throw new Error("record the external query or why external search was skipped");
-      gate = advance(gate, "external_search_recorded", detail);
-    } else if (action === "inspect_sources") {
-      requireStage("external_search_recorded");
-      if (!Array.isArray(sourceRefs) || sourceRefs.length === 0)
-        throw new Error("source_refs must list inspected original sources");
-      gate = advance(
-        { ...gate, source_refs: [.../* @__PURE__ */ new Set([...gate.source_refs, ...sourceRefs.map(String)])] },
-        "sources_inspected",
-        { ...detail, source_refs: sourceRefs }
-      );
-    } else if (action === "verify_archive") {
-      requireStage("sources_inspected");
-      const archive = await sourceStatus2({ cwd, run_dir: path, verify: true });
-      if (archive.verification && archive.verification.ok !== true) {
-        const failed = archive.verification.items?.filter((item) => item.ok !== true) || [];
-        throw new Error(
-          `Archived source verification failed: ${failed.map((item) => item.reason || item.path).join(", ") || "unknown"}`
-        );
-      }
-      const downloaded = (archive.manifest?.items || []).filter((item) => item.status === "downloaded");
-      const reused = await reusableSources(cwd, runDir);
-      if (!downloaded.length && !reused.length)
-        throw new Error(
-          "No available source: read an existing Library/Papers note this turn and verify its DOI/key with research_verify_literature, or archive an authorized new source. Do not repeat imports to clear this gate."
-        );
-      gate = advance(
-        { ...gate, archive_count: downloaded.length, reuse_count: reused.length, reused_sources: reused },
-        downloaded.length ? "sources_archived" : "sources_reused",
-        {
-          archived: downloaded.map((item) => ({ id: item.id, sha256: item.sha256, path: item.path })),
-          reused_sources: reused,
-          scientificallyVerified: false
-        }
-      );
-    } else if (action === "bind_claims") {
-      if (gate.stage === "sources_inspected") {
-        const available = await updateResearchLoopUnlocked({ cwd, runDir, action: "verify_archive" });
-        gate = available.evidence_gate;
-      }
-      requireStage("sources_archived");
-      await validateReuse(cwd, runDir, gate);
-      if (claimBindings.length) {
-        const checked = validateClaimBindings(
-          claimBindings,
-          [...await reusableSources(cwd, runDir), ...await archivedSourceRecords(cwd, runDir)],
-          ledger(cwd, runDir).reads
-        );
-        gate = { ...gate, claim_bindings: checked, warnings: [] };
-        claimRefs = claimBindingRefs(checked);
-      } else if (gate.claim_bindings.length) {
-        const checked = await validateStoredClaimBindings(cwd, runDir, gate);
-        gate = { ...gate, claim_bindings: checked, claim_refs: claimBindingRefs(checked), warnings: [] };
-        claimRefs = claimBindingRefs(checked);
-      } else if (claimRefs.length) {
-        throw new Error(
-          "Structured claim_bindings are required; legacy claim_refs cannot make a run answerable"
-        );
-      }
-      if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
-        throw new Error("Structured claim_bindings must contain at least one validated claim");
-      gate = advance({ ...gate, claim_refs: [...new Set(claimRefs.map(String))] }, "claims_bound", {
-        claim_refs: claimRefs
-      });
-    } else if (action === "finalize") {
-      requireStage("claims_bound");
-      await validateReuse(cwd, runDir, gate);
-      const checked = await validateStoredClaimBindings(cwd, runDir, gate);
-      const refs = claimBindingRefs(checked);
-      if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
-        throw new Error("archive verification and structured claim bindings are required before answerable");
-      if (metadata.requires_provenance === true) {
-        const provenance = await readJson3(join5(path, "reproducibility-manifest.json"));
-        if (provenance?.version !== 1)
-          throw new Error("This run requires a reproducibility manifest before it can become answerable");
-      }
-      gate = advance(
-        { ...gate, claim_bindings: checked, claim_refs: refs, warnings: [], status: "ok", answerable: true },
-        "answerable",
-        detail
-      );
-    } else if (action === "complete") {
-      return completeResearchGate({ cwd, runDir, claimRefs, claimBindings });
-    } else {
-      throw new Error(`unknown research_loop action: ${action}`);
-    }
-    metadata.evidence_gate = gate;
-    metadata.research_nodes = researchNodes(gate);
-    metadata.provenance = provenanceFor(gate, gate.answerable ? "host-verified" : "pending");
-    if (gate.answerable) {
-      metadata.status = "completed";
-      metadata.finalized_at = metadata.finalized_at || (/* @__PURE__ */ new Date()).toISOString();
-    }
-    metadata.updated_at = (/* @__PURE__ */ new Date()).toISOString();
-    metadata.revision = revision + 1;
-    await atomicJson2(metadataPath, metadata);
-    return { run_dir: path, evidence_gate: gate, revision: metadata.revision };
-  }
-  async function updateResearchLoop(input = {}) {
-    const cwd = input.cwd || process.cwd();
-    const key = runKey(cwd, input.runDir);
-    const work = () => updateResearchLoopUnlocked(input);
-    if (input.action === "complete" || !ports.exclusive) return work();
-    return ports.exclusive(key, work);
-  }
-  function isWikiPath(path) {
-    return /(?:^|[\\/])Wiki[\\/]/i.test(String(path || ""));
-  }
-  async function ensureStage(cwd, runDir, stage, fill) {
-    const current = await updateResearchLoop({ cwd, runDir, action: "status" });
-    if (RESEARCH_STAGES.indexOf(current.evidence_gate.stage) >= RESEARCH_STAGES.indexOf(stage))
-      return current;
-    return fill();
-  }
-  async function completeResearchGate({
-    cwd = process.cwd(),
-    runDir,
-    claimRefs = [],
-    claimBindings = []
-  } = {}) {
-    let status2 = await updateResearchLoop({ cwd, runDir, action: "status" });
-    let gate = status2.evidence_gate;
-    await validateReuse(cwd, runDir, gate);
-    if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_inspected"))
-      throw new Error("research loop must inspect sources before complete");
-    if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_archived"))
-      status2 = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
-    gate = status2.evidence_gate;
-    if (!claimBindings.length && !gate.claim_bindings.length)
-      throw new Error(
-        "Provide structured claim_bindings; legacy claim_refs cannot make a research run answerable"
-      );
-    if (claimBindings.length || RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("claims_bound"))
-      status2 = await updateResearchLoop({
-        cwd,
-        runDir,
-        action: "bind_claims",
-        claimRefs,
-        claimBindings
-      });
-    gate = status2.evidence_gate;
-    status2 = await updateResearchLoop({ cwd, runDir, action: "finalize" });
-    return status2;
-  }
-  function observeResearchReceipt(options = {}) {
-    if (!options.runDir) return Promise.resolve(null);
-    const key = runKey(options.cwd || process.cwd(), options.runDir);
-    const work = (runtimeState3.receiptQueues.get(key) || Promise.resolve()).catch(() => {
-    }).then(() => observeReceipt(options));
-    runtimeState3.receiptQueues.set(key, work);
-    void work.finally(() => {
-      if (runtimeState3.receiptQueues.get(key) === work) runtimeState3.receiptQueues.delete(key);
-    }).catch(() => {
-    });
-    return work;
-  }
-  async function observeReceipt({
-    cwd = process.cwd(),
-    runDir,
-    toolName,
-    args = {},
-    details = {},
-    content = [],
-    isError = false,
-    readBinding
-  } = {}) {
-    if (isError || !runDir || !toolName) return null;
-    try {
-      if (toolName === "research_reconcile_literature")
-        return observeReceipt({
-          cwd,
-          runDir,
-          toolName: "research_verify_literature",
-          args,
-          details: details.receipt || {},
-          isError
-        });
-      const query = String(args.query || details.query || "").trim();
-      if (toolName === "research_search_knowledge" && query && details.complete !== false)
-        return await updateResearchLoop({ cwd, runDir, action: "record_local", query });
-      if (["webfetch", "fetch_content", "web_search"].includes(toolName)) {
-        const url = String(args.url || details.url || query).trim();
-        if (!url) return null;
-        await ensureStage(
-          cwd,
-          runDir,
-          "local_query_recorded",
-          () => updateResearchLoop({ cwd, runDir, action: "record_local", query: url })
-        );
-        return await updateResearchLoop({
-          cwd,
-          runDir,
-          action: "record_external",
-          query: url,
-          notes: String(details.title || "")
-        });
-      }
-      if (toolName === "research_read_knowledge") {
-        const path = String(args.path || details.path || "");
-        if (!path || isWikiPath(path) || details.missing === true) return null;
-        await ensureStage(
-          cwd,
-          runDir,
-          "local_query_recorded",
-          () => updateResearchLoop({ cwd, runDir, action: "record_local", query: path })
-        );
-        await ensureStage(
-          cwd,
-          runDir,
-          "external_search_recorded",
-          () => updateResearchLoop({
-            cwd,
-            runDir,
-            action: "record_external",
-            notes: "Host: no extra web search before inspecting current sources."
-          })
-        );
-        if (/^Library\/Papers\/.+\.md$/.test(path) && /^[a-f0-9]{64}$/i.test(details.hash || "") && typeof details.text === "string" && details.text.trim() && Number.isInteger(details.startLine) && details.endLine >= details.startLine) {
-          const config = await loadWorkspaceConfig3(cwd);
-          if (config.obsidianVault)
-            ledger(cwd, runDir).reads.set(path, {
-              hash: details.hash,
-              text: details.text,
-              vault: readBinding ? readBinding.vault : await realpath5(config.obsidianVault),
-              revision: readBinding ? readBinding.revision : config.knowledgeBindingRevision || 0,
-              startLine: details.startLine,
-              endLine: details.endLine
-            });
-        }
-        const inspected = await updateResearchLoop({
-          cwd,
-          runDir,
-          action: "inspect_sources",
-          sourceRefs: [path]
-        });
-        if ((await reusableSources(cwd, runDir)).length)
-          return await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
-        return inspected;
-      }
-      if (toolName === "read") {
-        const path = String(args.path || details.path || "");
-        if (!path || details.missing === true) return null;
-        const archived = await recordArchivedRead(cwd, runDir, path, args, details, content);
-        if (!archived) return null;
-        await ensureStage(
-          cwd,
-          runDir,
-          "local_query_recorded",
-          () => updateResearchLoop({ cwd, runDir, action: "record_local", query: path })
-        );
-        await ensureStage(
-          cwd,
-          runDir,
-          "external_search_recorded",
-          () => updateResearchLoop({
-            cwd,
-            runDir,
-            action: "record_external",
-            notes: "Host recorded a read of the archived run source."
-          })
-        );
-        return updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [path] });
-      }
-      if (toolName === "research_verify_literature" && details.status === "both-verified" && details.obsidian?.status === "verified" && details.zotero?.status === "verified") {
-        const path = details.obsidian.path;
-        if (!/^Library\/Papers\/.+\.md$/.test(path || "")) return null;
-        ledger(cwd, runDir).verified.set(path, structuredClone(details));
-        if ((await reusableSources(cwd, runDir)).length)
-          return await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
-        return null;
-      }
-      if (toolName === "research_archive_source" && details.status === "downloaded") {
-        const ref = String(details.path || details.url || args.url || "");
-        if (!ref) return null;
-        await ensureStage(
-          cwd,
-          runDir,
-          "local_query_recorded",
-          () => updateResearchLoop({ cwd, runDir, action: "record_local", query: ref })
-        );
-        await ensureStage(
-          cwd,
-          runDir,
-          "external_search_recorded",
-          () => updateResearchLoop({
-            cwd,
-            runDir,
-            action: "record_external",
-            query: String(args.url || details.url || ref),
-            notes: "Host recorded the archived source URL as the external lookup."
-          })
-        );
-        await updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [ref] });
-        const archived = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
-        return archived;
-      }
-      if (toolName === "research_deposit_knowledge" && details.type === "claim" && details.note) return null;
-      return null;
-    } catch {
-      return null;
-    }
-  }
-  return {
-    startResearchRun,
-    updateResearchLoop,
-    completeResearchGate,
-    observeResearchReceipt,
-    flushResearchReceipts,
-    resetResearchReceipts,
-    topicIdFromResultSlug,
-    dispose: () => runtimeState3.dispose()
-  };
-}
-
-// packages/extensions/src/internal/obsidian-workbench.ts
-import { createHash as createHash11, randomUUID as randomUUID9 } from "node:crypto";
-import { access as access4, mkdir as mkdir7, readdir as readdir3, readFile as readFile10, realpath as realpath8, rename as rename8, stat as stat4, writeFile as writeFile8 } from "node:fs/promises";
-import { basename as basename5, dirname as dirname6, isAbsolute as isAbsolute11, join as join15, relative as relative10, resolve as resolve13, sep as sep9 } from "node:path";
-import { fileURLToPath as fileURLToPath2, pathToFileURL as pathToFileURL2 } from "node:url";
-
-// packages/extensions/src/workspace-config.ts
-import { access as access3, mkdir as mkdir4, readFile as readFile7, realpath as realpath6, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
-import { dirname as dirname3, isAbsolute as isAbsolute7, join as join6, relative as relative6, resolve as resolve8, sep as sep6 } from "node:path";
-init_config();
-init_flow_cards();
-
 // packages/extensions/src/internal/vault.ts
 var VAULT_PROFILES = {
   project: {
@@ -17670,11 +16802,11 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 });
 var CONFIG_NAME = ".pi/research-workspace.json";
 function configPath(cwd) {
-  return join6(cwd, CONFIG_NAME);
+  return join5(cwd, CONFIG_NAME);
 }
 function resolveConfiguredPath(cwd, value) {
   if (value == null || value === "") return null;
-  return resolve8(cwd, value);
+  return resolve7(cwd, value);
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
@@ -17699,7 +16831,7 @@ function validatePatch(config) {
 }
 async function loadWorkspaceConfig(cwd = process.cwd()) {
   if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
-    const desktop = JSON.parse(await readFile7(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
+    const desktop = JSON.parse(await readFile6(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
     return {
       ...DEFAULT_WORKSPACE_CONFIG,
       resultsRoot: desktop.resultsRoot,
@@ -17708,10 +16840,10 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
       mcpStatus: desktop.mcpStatus
     };
   }
-  const projectRoot = resolve8(cwd);
+  const projectRoot = resolve7(cwd);
   let raw = {};
   try {
-    raw = JSON.parse(await readFile7(configPath(projectRoot), "utf8"));
+    raw = JSON.parse(await readFile6(configPath(projectRoot), "utf8"));
   } catch (error) {
     if (error.code !== "ENOENT") raw = {};
   }
@@ -17754,10 +16886,10 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
 // packages/extensions/src/internal/knowledge-runtime.ts
 init_runtime_host();
 import { Worker } from "node:worker_threads";
-import { createHash as createHash9 } from "node:crypto";
+import { createHash as createHash7 } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { join as join7, resolve as resolve9 } from "node:path";
+import { join as join6, resolve as resolve8 } from "node:path";
 var configured = false;
 function configureKnowledgeExtensionRuntime() {
   if (configured) return;
@@ -17778,12 +16910,12 @@ function configureKnowledgeExtensionRuntime() {
       return new Worker(packageWorker, options);
     const developmentRoots = [
       process.env.DRONE_RESEARCH_WORKBENCH_ROOT,
-      resolve9(process.cwd(), ".pi", "extensions"),
-      resolve9(process.cwd(), "..", ".pi", "extensions"),
-      resolve9(process.cwd(), "..", "..", ".pi", "extensions")
+      resolve8(process.cwd(), ".pi", "extensions"),
+      resolve8(process.cwd(), "..", ".pi", "extensions"),
+      resolve8(process.cwd(), "..", "..", ".pi", "extensions")
     ].filter(Boolean);
     for (const root of developmentRoots) {
-      const sourceWorker = pathToFileURL(join7(root, "knowledge-worker.mjs"));
+      const sourceWorker = pathToFileURL(join6(root, "knowledge-worker.mjs"));
       if (existsSync(fileURLToPath(sourceWorker))) return new Worker(sourceWorker, options);
     }
     throw new Error("Knowledge worker resource is missing from the packaged extension");
@@ -17793,12 +16925,12 @@ function extensionWorkerMetadata() {
   const worker = new URL("knowledge-worker.mjs", import.meta.url);
   if (worker.protocol !== "file:" || !existsSync(fileURLToPath(worker))) return { version: "unknown" };
   const workerPath = fileURLToPath(worker);
-  const manifestPath = join7(resolve9(workerPath, ".."), ".knowledge-worker-manifest.json");
+  const manifestPath = join6(resolve8(workerPath, ".."), ".knowledge-worker-manifest.json");
   if (!existsSync(manifestPath)) return { version: "unknown", source: workerPath };
   try {
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     const integrity = typeof manifest.outputSha256 === "string" ? manifest.outputSha256 : "";
-    const actual = createHash9("sha256").update(readFileSync(workerPath)).digest("hex");
+    const actual = createHash7("sha256").update(readFileSync(workerPath)).digest("hex");
     if (!/^[a-f0-9]{64}$/u.test(integrity) || actual !== integrity)
       throw new Error("knowledge worker manifest hash mismatch");
     return {
@@ -17812,9 +16944,9 @@ function extensionWorkerMetadata() {
 }
 
 // packages/extensions/src/internal/obsidian-setup.ts
-import { readdir, realpath as realpath7, stat as stat3 } from "node:fs/promises";
+import { readdir, realpath as realpath6, stat as stat3 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
-import { basename as basename4, isAbsolute as isAbsolute8, join as join8, resolve as resolve10 } from "node:path";
+import { basename as basename4, isAbsolute as isAbsolute7, join as join7, resolve as resolve9 } from "node:path";
 var OBSIDIAN_SETUP_BINDING = Object.freeze({
   command: "obsidian-setup",
   skill: "research-vault",
@@ -17828,22 +16960,22 @@ function resolveSetupVault(value, _cwd) {
   if (typeof value !== "string" || !value.trim())
     throw new Error("Vault path is required");
   const text3 = value.trim();
-  const expanded = text3 === "~" ? homedir2() : /^~[/\\]/.test(text3) ? join8(homedir2(), text3.slice(2)) : text3;
-  if (isAbsolute8(expanded))
-    return resolve10(expanded);
+  const expanded = text3 === "~" ? homedir2() : /^~[/\\]/.test(text3) ? join7(homedir2(), text3.slice(2)) : text3;
+  if (isAbsolute7(expanded))
+    return resolve9(expanded);
   const natural = text3.match(/(?:在)?(?:我的)?文档(?:文件夹)?(?:下面|下|中)?(?:创建|新建)?(?:一个)?(?:叫|名为|名称为)\s*[“"']?([^”"']+?)[”"']?(?:的目录|文件夹)?\s*$/i);
   if (natural?.[1]?.trim())
-    return resolve10(join8(homedir2(), "Documents", natural[1].trim()));
+    return resolve9(join7(homedir2(), "Documents", natural[1].trim()));
   const english = text3.match(/(?:create|make)\s+(?:a\s+)?(?:folder|directory)\s+(?:named|called)\s+["']?([^"']+?)["']?\s*$/i);
   if (english?.[1]?.trim())
-    return resolve10(join8(homedir2(), "Documents", english[1].trim()));
+    return resolve9(join7(homedir2(), "Documents", english[1].trim()));
   throw new Error("Please provide an absolute Vault path (or ~/...), or say to create a folder under Documents");
 }
 async function inspectSetupDirectory(path, { maxEntries = 120, maxDepth = 2 } = {}) {
-  const requested = resolve10(path);
+  const requested = resolve9(path);
   let root;
   try {
-    root = await realpath7(requested);
+    root = await realpath6(requested);
     if (!(await stat3(root)).isDirectory())
       throw new Error(`Not a directory: ${requested}`);
   } catch (error) {
@@ -17874,7 +17006,7 @@ async function inspectSetupDirectory(path, { maxEntries = 120, maxDepth = 2 } = 
       entries.push({ path: relative12, type: child.isDirectory() ? "directory" : "file" });
       if (child.isDirectory()) {
         if (current.depth + 1 < maxDepth)
-          queue.push({ path: join8(current.path, child.name), prefix: relative12, depth: current.depth + 1 });
+          queue.push({ path: join7(current.path, child.name), prefix: relative12, depth: current.depth + 1 });
         else
           truncated = true;
       }
@@ -17901,7 +17033,7 @@ async function inspectObsidianSetup({ cwd, vault = null }) {
 init_runtime_host();
 
 // packages/knowledge/src/ui-service.ts
-import { dirname as dirname5, isAbsolute as isAbsolute10, join as join14, relative as relative9, resolve as resolve12 } from "node:path";
+import { dirname as dirname4, isAbsolute as isAbsolute9, join as join13, relative as relative8, resolve as resolve11 } from "node:path";
 init_runtime_host();
 init_runtime_host();
 init_runtime_host();
@@ -17930,6 +17062,27 @@ init_files();
 
 // packages/knowledge/src/ui-service.ts
 init_review_policy();
+
+// packages/knowledge/src/topic-probe.ts
+var STOP = new Set(
+  "what when where which with from that this have about into your their there these those does using used make more most some such than then them they will would could should also only over very just like".split(
+    " "
+  )
+);
+var tokens = (text3) => String(text3 || "").toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+function mentionedWikiTitle(query, titles) {
+  const q = String(query || "").toLocaleLowerCase();
+  if (q.trim().length < 3) return null;
+  const queryTokens = new Set(tokens(q).filter((t) => /[a-z0-9]/.test(t) && t.length >= 4 && !STOP.has(t)));
+  for (const raw of titles) {
+    const title = String(raw || "").toLocaleLowerCase().replace(/\.md$/, "").replace(/[-_]+/g, " ").trim();
+    if (!title) continue;
+    if (title.length >= 3 && q.includes(title)) return raw;
+    const lead = tokens(title).filter((t) => t.length >= 4 && !STOP.has(t));
+    if (lead.some((t) => queryTokens.has(t))) return raw;
+  }
+  return null;
+}
 
 // packages/knowledge/src/graph-retrieval.ts
 var GRAPH_RETRIEVAL_DEFAULTS = {
@@ -17995,8 +17148,8 @@ init_runtime_host();
 init_config();
 init_files();
 init_review_policy();
-import { createHash as createHash10, randomUUID as randomUUID7 } from "node:crypto";
-import { join as join12, relative as relative8, resolve as resolve11, sep as sep8 } from "node:path";
+import { createHash as createHash8, randomUUID as randomUUID5 } from "node:crypto";
+import { join as join11, relative as relative7, resolve as resolve10, sep as sep7 } from "node:path";
 
 // packages/knowledge/src/semantic-provider.ts
 import { URL as URL2 } from "node:url";
@@ -18219,9 +17372,9 @@ var semanticLimits = Object.freeze({ MAX_BATCH, MAX_CHARS, MAX_RESPONSE });
 
 // packages/knowledge/src/semantic-settings.ts
 init_config();
-import { randomUUID as randomUUID6 } from "node:crypto";
-import { lstat as lstat2, mkdir as mkdir5, readdir as readdir2, readFile as readFile8, rename as rename6, unlink, writeFile as writeFile6 } from "node:fs/promises";
-import { dirname as dirname4, join as join11 } from "node:path";
+import { randomUUID as randomUUID4 } from "node:crypto";
+import { lstat as lstat2, mkdir as mkdir4, readdir as readdir2, readFile as readFile7, rename as rename5, unlink, writeFile as writeFile5 } from "node:fs/promises";
+import { dirname as dirname3, join as join10 } from "node:path";
 var MAX_FILE_BYTES = 256 * 1024;
 var ENV_NAME2 = /^[A-Z_][A-Z0-9_]{0,127}$/;
 var SETTINGS_KEYS = /* @__PURE__ */ new Set([
@@ -18342,7 +17495,7 @@ function pathFor(vaultId) {
   if (!/^[a-f0-9]{24}$/.test(vaultId || "")) throw new Error("Invalid Vault binding");
   const directory = knowledgeDirectory();
   if (!directory) throw new Error("Application knowledge directory is not configured");
-  return join11(directory, vaultId, "semantic.json");
+  return join10(directory, vaultId, "semantic.json");
 }
 async function assertDirectory(path) {
   try {
@@ -18350,18 +17503,18 @@ async function assertDirectory(path) {
     if (!stat5.isDirectory() || stat5.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
-    await mkdir5(path, { recursive: true, mode: 448 });
+    await mkdir4(path, { recursive: true, mode: 448 });
     const stat5 = await lstat2(path);
     if (!stat5.isDirectory() || stat5.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
   }
   let ancestor = path;
-  for (let depth = 0; depth < 8 && ancestor !== dirname4(ancestor); depth++) {
+  for (let depth = 0; depth < 8 && ancestor !== dirname3(ancestor); depth++) {
     try {
       if ((await lstat2(ancestor)).isSymbolicLink()) throw new Error("Semantic settings ancestor is unsafe");
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
-    ancestor = dirname4(ancestor);
+    ancestor = dirname3(ancestor);
   }
 }
 async function assertFile(path) {
@@ -18407,10 +17560,10 @@ function defaultSettings(state3, path) {
   return { version: 1, revision: 0, ...validateSemanticConfig2({}), updatedAt };
 }
 async function readUnlocked(state3, path) {
-  await assertDirectory(dirname4(path));
+  await assertDirectory(dirname3(path));
   await assertFile(path);
   try {
-    const raw = await readFile8(path, { encoding: "utf8", flag: "r" });
+    const raw = await readFile7(path, { encoding: "utf8", flag: "r" });
     if (Buffer.byteLength(raw) > MAX_FILE_BYTES) throw new Error("Semantic settings file is too large");
     const value = JSON.parse(raw);
     return normalize(value, value.revision, value.updatedAt);
@@ -18431,16 +17584,16 @@ function createSemanticSettingsApi(state3 = createSemanticSettingsState()) {
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== current.revision)
         throw new Error("Semantic settings revision is stale");
       const value = normalize({ version: 1, ...input }, current.revision + 1);
-      const dir = dirname4(path);
+      const dir = dirname3(path);
       await assertDirectory(dir);
       for (const entry of await readdir2(dir))
-        if (/^semantic\.[a-f0-9-]+\.tmp$/.test(entry)) await unlink(join11(dir, entry)).catch(() => {
+        if (/^semantic\.[a-f0-9-]+\.tmp$/.test(entry)) await unlink(join10(dir, entry)).catch(() => {
         });
-      const temp = join11(dir, `semantic.${randomUUID6()}.tmp`);
+      const temp = join10(dir, `semantic.${randomUUID4()}.tmp`);
       try {
-        await writeFile6(temp, `${JSON.stringify(value, null, 2)}
+        await writeFile5(temp, `${JSON.stringify(value, null, 2)}
 `, { mode: 384, flag: "wx" });
-        await rename6(temp, path);
+        await rename5(temp, path);
       } finally {
         await unlink(temp).catch(() => {
         });
@@ -18505,7 +17658,7 @@ function providerConfig(settings2) {
   };
 }
 function fingerprintFor(settings2) {
-  return createHash10("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
+  return createHash8("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
 }
 function awaitSemanticDeadline(operation, controller) {
   let onAbort;
@@ -18548,7 +17701,7 @@ var KnowledgeService = class {
     const workerOptions = {
       workerData: {
         vault: binding.vault,
-        database: join12(directory, binding.vaultId, "index.sqlite"),
+        database: join11(directory, binding.vaultId, "index.sqlite"),
         workerVersion: this.workerVersion
       },
       execArgv: process.execArgv.filter(
@@ -18686,11 +17839,11 @@ var KnowledgeService = class {
           ...(related?.hits || []).filter((hit) => hit.kind === "wiki").map((hit) => hit.path)
         ])
       ];
-      const ticket = randomUUID7();
+      const ticket = randomUUID5();
       this.tickets.set(ticket, {
-        cwd: resolve11(cwd),
+        cwd: resolve10(cwd),
         project,
-        queryHash: createHash10("sha256").update(query).digest("hex"),
+        queryHash: createHash8("sha256").update(query).digest("hex"),
         query,
         navigation,
         linkedWiki: [...linkedWiki],
@@ -18721,7 +17874,7 @@ var KnowledgeService = class {
     await withKnowledgeBinding(this.binding, async () => {
     });
     const state3 = this.tickets.get(ticket);
-    if (!state3 || state3.cwd !== resolve11(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
+    if (!state3 || state3.cwd !== resolve10(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
       throw new Error("Read current navigation with research_prepare_knowledge first");
     for (const page of state3.navigation) {
       const latest = await this.request("read", {
@@ -18763,7 +17916,7 @@ var KnowledgeService = class {
         hash: page.hash,
         startLine: page.startLine,
         endLine: page.endLine,
-        excerptHash: createHash10("sha256").update(page.text).digest("hex")
+        excerptHash: createHash8("sha256").update(page.text).digest("hex")
       };
       state3.reads.delete(path);
       state3.reads.set(path, receipt);
@@ -18867,6 +18020,18 @@ var KnowledgeService = class {
    * 语义命中排前，词法补齐；1.5s 截止，语义失败只退回词法。只读，不需要会话 ticket。
    * @param {{ query: string, project?: string, limit?: number }} options
    */
+  /** Cheap lexical probe: the Wiki page whose title the question names, or null. */
+  async probeTopic({ query, project = "" }) {
+    const text3 = String(query || "").slice(0, 200);
+    if (!text3.trim()) return null;
+    return withKnowledgeBinding(this.binding, async () => {
+      const result = await this.request("search", { query: text3, wikiOnly: true, project, limit: 6 });
+      const hits = (result?.hits || []).filter((hit) => hit.kind === "wiki");
+      const titles = hits.map((hit) => hit.title || String(hit.path || "").split("/").pop());
+      const title = mentionedWikiTitle(text3, titles);
+      return title ? hits[titles.indexOf(title)]?.path || null : null;
+    });
+  }
   async relatedForMemory({ query, project = "", limit = 4 }) {
     const text3 = String(query || "").slice(0, 2e3);
     if (!text3.trim()) return [];
@@ -19196,7 +18361,7 @@ var KnowledgeService = class {
     await withKnowledgeBinding(this.binding, async () => {
     });
     const state3 = this.tickets.get(ticket);
-    if (!state3 || state3.cwd !== resolve11(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
+    if (!state3 || state3.cwd !== resolve10(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
       throw new Error("Read current navigation with research_prepare_knowledge first");
     const cap = Math.max(1, Math.min(12, Number(limit) || 12));
     const sources = [];
@@ -19213,7 +18378,7 @@ var KnowledgeService = class {
   /** A delivery receipt confirms a generated link, not that its text is evidence. Host-only API. */
   async deliveryReceipt(ticket, cwd, absolutePath) {
     const state3 = await this.check(ticket, cwd);
-    const path = relative8(this.binding.vault, resolve11(absolutePath)).split(sep8).join("/");
+    const path = relative7(this.binding.vault, resolve10(absolutePath)).split(sep7).join("/");
     validateNote(path);
     if (!canRead(path, state3.project) || !(path.startsWith("Library/Explainers/") || path.startsWith(`Projects/${state3.project}/Runs/`)))
       throw new Error("Not an allowed presentation/run delivery");
@@ -19407,7 +18572,7 @@ async function getKnowledgeService(binding = null) {
   binding ||= await readKnowledgeBinding();
   const directory = knowledgeDirectory();
   if (!binding || !directory) throw new Error("No application knowledge Vault is bound");
-  const key = join12(directory, binding.vaultId, "index.sqlite");
+  const key = join11(directory, binding.vaultId, "index.sqlite");
   const transitions = pool.transitions || /* @__PURE__ */ new Map();
   pool.transitions = transitions;
   const transition = transitions.get(key) || (async () => {
@@ -19474,7 +18639,7 @@ async function getKnowledgeService(binding = null) {
 async function notifyKnowledgeChange(path) {
   const binding = await readKnowledgeBinding();
   if (!binding || !knowledgeDirectory()) return { indexed: false, reason: "legacy-mode" };
-  const note = relative8(binding.vault, path).split(sep8).join("/");
+  const note = relative7(binding.vault, path).split(sep7).join("/");
   try {
     validateNote(note);
     const service = await getKnowledgeService(binding);
@@ -19513,9 +18678,9 @@ var runtimeState = runtimeSlot2("knowledge", "uiService", () => ({
   }
 }));
 function pathCwd(cwd) {
-  if (cwd !== null && cwd !== void 0 && (typeof cwd !== "string" || !isAbsolute10(cwd)))
+  if (cwd !== null && cwd !== void 0 && (typeof cwd !== "string" || !isAbsolute9(cwd)))
     throw new Error("Workspace must be an absolute path");
-  return cwd ? resolve12(cwd) : null;
+  return cwd ? resolve11(cwd) : null;
 }
 function consumeKnowledgeReviewPreview(cwd, token) {
   const entry = runtimeState.previews.get(token);
@@ -19527,6 +18692,34 @@ function consumeKnowledgeReviewPreview(cwd, token) {
 
 // packages/extensions/src/internal/obsidian-workbench.ts
 init_config();
+
+// packages/knowledge/src/ingest-frontmatter.ts
+var KNOWLEDGE_TYPES = [
+  "paper",
+  "method",
+  "software",
+  "dataset",
+  "concept",
+  "entity",
+  "idea",
+  "claim",
+  "evidence",
+  "decision",
+  "question",
+  "wiki"
+];
+var RUN_RESULT_TYPES = ["run", "artifact", "explainer"];
+var NOTE_TYPES = [...KNOWLEDGE_TYPES, ...RUN_RESULT_TYPES];
+var MAX_FRONTMATTER_CHARS = 64 * 1024;
+
+// packages/knowledge/src/note-title.ts
+function looksLikeFileName(title) {
+  const value = String(title || "").trim();
+  if (!value) return true;
+  if (/\.(?:pdf|html?|md|txt|docx?|xlsx?|csv|json|zip|tar|gz)$/i.test(value)) return true;
+  if (/^(?:PMC|PMID)?\d[\d.]*$/i.test(value)) return true;
+  return /^[a-z0-9]+(?:[-_][a-z0-9]+){2,}$/.test(value) && /\d{4,}|[a-f0-9]{12,}/.test(value);
+}
 
 // packages/extensions/src/internal/vault-profiles.ts
 var VAULT_PROFILES2 = {
@@ -19709,11 +18902,11 @@ async function configuredVault(cwd) {
   if (!obsidianVault)
     throw new Error("Obsidian vault must be configured first");
   if (!knowledgeDirectory())
-    await mkdir7(obsidianVault, { recursive: true });
+    await mkdir6(obsidianVault, { recursive: true });
   return canonical(obsidianVault);
 }
 async function vaultPath(vault, ...parts) {
-  const file = join15(vault, ...parts);
+  const file = join14(vault, ...parts);
   if (!contains(vault, await canonical(file)))
     throw new Error("Project path must stay inside the configured vault");
   return file;
@@ -19733,7 +18926,7 @@ async function updateVault(cwd, operation) {
 }
 async function readText(file) {
   try {
-    return await readFile10(file, "utf8");
+    return await readFile9(file, "utf8");
   } catch (error) {
     if (error.code === "ENOENT")
       return null;
@@ -19766,10 +18959,10 @@ ${original.slice(review)}`;
   }
   if (updated === original)
     return;
-  await mkdir7(dirname6(file), { recursive: true });
-  const temporary = `${file}.${randomUUID9()}.tmp`;
-  await writeFile8(temporary, updated, "utf8");
-  await rename8(temporary, file);
+  await mkdir6(dirname5(file), { recursive: true });
+  const temporary = `${file}.${randomUUID7()}.tmp`;
+  await writeFile7(temporary, updated, "utf8");
+  await rename7(temporary, file);
   if (knowledgeDirectory())
     await notifyKnowledgeChange(file);
 }
@@ -19785,11 +18978,11 @@ async function childEntries(directory) {
 async function noteLinks(vault, directory) {
   const links = [];
   for (const entry of await childEntries(directory)) {
-    const file = join15(directory, entry.name);
+    const file = join14(directory, entry.name);
     if (entry.isDirectory())
       links.push(...await noteLinks(vault, file));
     else if (entry.isFile() && entry.name.endsWith(".md")) {
-      const target = relative10(vault, file).replaceAll(sep9, "/").slice(0, -3);
+      const target = relative9(vault, file).replaceAll(sep8, "/").slice(0, -3);
       if (!/[[\]|#\r\n]/.test(target))
         links.push(`- [[${target}]]`);
     }
@@ -19848,7 +19041,68 @@ project: ${JSON.stringify(slug)}
   await writeManagedIndex(knowledgeIndex, "# Knowledge", [links, "[[Library/Index]]"].filter(Boolean).join("\n\n"));
   return { projectsIndex, legacyIndex, libraryIndex, knowledgeIndex, projectIndexes };
 }
-async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) {
+function normalizeSourceTopic(value) {
+  return String(value ?? "").replace(/[<>\r\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+}
+async function applySourceTopic(file, topic, autoTitles) {
+  const original = await readText(file);
+  if (original == null) return false;
+  const line = `topic: ${JSON.stringify(topic)}`;
+  let text3 = original;
+  if (text3.startsWith("---\n")) {
+    const end = text3.indexOf("\n---", 4);
+    if (end < 0) throw new Error(`Invalid frontmatter: ${file}`);
+    const frontmatter = text3.slice(4, end);
+    const next = /^topic:.*$/m.test(frontmatter) ? frontmatter.replace(/^topic:.*$/m, line) : `${frontmatter}
+${line}`;
+    text3 = `---
+${next}${text3.slice(end)}`;
+  } else
+    text3 = `---
+${line}
+---
+
+${text3}`;
+  text3 = text3.replace(/^#\s+(.+)$/m, (heading, value) => autoTitles.includes(value.trim()) || looksLikeFileName(value) ? `# ${topic}` : heading);
+  if (text3 === original) return false;
+  const temporary = `${file}.${randomUUID7()}.tmp`;
+  await writeFile7(temporary, text3, "utf8");
+  await rename7(temporary, file);
+  if (knowledgeDirectory())
+    await notifyKnowledgeChange(file);
+  return true;
+}
+async function setSourceTopic({ cwd = process.cwd(), notePath, topic }) {
+  const value = normalizeSourceTopic(topic);
+  if (value.length < 4) throw new Error("topic must describe the source in a short phrase");
+  const relativePath = String(notePath || "").replace(/\\/g, "/").replace(/^\/+/, "");
+  const match = /^Library\/(Papers|Software)\/([^/]+\.md)$/.exec(relativePath);
+  if (!match) throw new Error("note_path must be a Library/Papers or Library/Software note");
+  const [, category, file] = match;
+  return updateVault(cwd, async (vault) => {
+    const note = await vaultPath(vault, "Library", category, file);
+    const original = await readText(note);
+    if (original == null) throw new Error(`Source note not found: ${relativePath}`);
+    const heading = original.match(/^#\s+(.+)$/m)?.[1]?.trim() || "";
+    const updated = [relativePath];
+    const changed = await applySourceTopic(note, value, [heading]);
+    let projects = [];
+    try {
+      projects = await readdir3(join14(vault, "Projects"));
+    } catch {
+      projects = [];
+    }
+    for (const project of projects) {
+      try {
+        const mirror = await vaultPath(vault, "Projects", project, category, file);
+        if (await applySourceTopic(mirror, value, [heading])) updated.push(`Projects/${project}/${category}/${file}`);
+      } catch {
+      }
+    }
+    return { topic: value, note: relativePath, changed, updated };
+  });
+}
+async function publishSourceNote({ cwd = process.cwd(), runDir, entry, topic = "" }) {
   const config = await loadWorkspaceConfig(cwd);
   if (!config.obsidianVault)
     return { obsidian_note: null, knowledge_status: "not-configured" };
@@ -19858,12 +19112,14 @@ async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) {
     throw new Error("Only verified downloads can be indexed");
   if (!contains(await canonical(config.resultsRoot), await canonical(runDir)) || !contains(await canonical(runDir), await canonical(entry.path)))
     throw new Error("Source must remain inside its research run");
-  if (createHash11("sha256").update(await readFile10(entry.path)).digest("hex") !== entry.sha256)
+  if (createHash9("sha256").update(await readFile9(entry.path)).digest("hex") !== entry.sha256)
     throw new Error("Source hash changed before indexing");
-  const metadata = await readJson2(join15(runDir, "metadata.json"));
+  const metadata = await readJson2(join14(runDir, "metadata.json"));
   const project = validateProject(runProject(metadata.project, await resolveWorkspaceProject({ cwd })));
   const category = ["papers", "supplementary"].includes(entry.category) ? "Papers" : "Software";
   const title = String(entry.metadata?.title || basename5(entry.path)).replace(/[<>\r\n]/g, " ").trim().slice(0, 200);
+  const sourceTopic = normalizeSourceTopic(topic);
+  const heading = sourceTopic || title;
   const slug = (title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64) || entry.category) + "-" + entry.sha256.slice(0, 16);
   return updateVault(cwd, async (vault) => {
     const note = await vaultPath(vault, "Library", category, `${slug}.md`);
@@ -19902,16 +19158,25 @@ ${entry.manualCoverage ? `Manual coverage: ${entry.manualCoverage.status}. Comma
 
 ${chapters}` : ""}`;
     await writeManagedIndex(note, `---
-id: pi-${randomUUID9()}
+id: pi-${randomUUID7()}
 type: ${category === "Papers" ? "paper" : "software"}
 source_sha256: ${entry.sha256}
-source_idempotency_key: ${entry.idempotency_key || "unknown"}
+source_idempotency_key: ${entry.idempotency_key || "unknown"}${sourceTopic ? `
+topic: ${JSON.stringify(sourceTopic)}` : ""}
 ---
 
-# ${title}`, body);
-    await writeManagedIndex(projectNote, `# ${title}`, `[[Library/${category}/${slug}]]
+# ${heading}`, body);
+    await writeManagedIndex(projectNote, sourceTopic ? `---
+topic: ${JSON.stringify(sourceTopic)}
+---
+
+# ${heading}` : `# ${heading}`, `[[Library/${category}/${slug}]]
 
 [Run files](${pathToFileURL2(runDir).href})`);
+    if (sourceTopic) {
+      await applySourceTopic(note, sourceTopic, [title]);
+      await applySourceTopic(projectNote, sourceTopic, [title]);
+    }
     return {
       obsidian_note: note,
       project_note: projectNote,
@@ -19935,7 +19200,7 @@ async function publishExplainer({ cwd = process.cwd(), project, topicId, title, 
     throw new Error("Explainer title is required");
   if (typeof artifactPath !== "string" || !artifactPath.trim())
     throw new Error("Explainer result_file is required");
-  const root = await canonical(config.resultsRoot), artifact = await realpath8(resolve13(cwd, artifactPath));
+  const root = await canonical(config.resultsRoot), artifact = await realpath7(resolve12(cwd, artifactPath));
   if (!contains(root, artifact))
     throw new Error("Explainer file must stay inside the configured results root");
   const info = await stat4(artifact);
@@ -19944,14 +19209,14 @@ async function publishExplainer({ cwd = process.cwd(), project, topicId, title, 
   const ext = /\.md$/i.test(artifact) ? ".md" : /\.html?$/i.test(artifact) ? ".html" : null;
   if (!ext)
     throw new Error("Explainer must be HTML or Markdown");
-  const bytes = await readFile10(artifact), digest = createHash11("sha256").update(bytes).digest("hex");
+  const bytes = await readFile9(artifact), digest = createHash9("sha256").update(bytes).digest("hex");
   const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
   return updateVault(cwd, async (vault) => {
     const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest.slice(0, 12)}${ext}`;
     const attachment = await vaultPath(vault, ...attachmentRel.split("/"));
-    await mkdir7(dirname6(attachment), { recursive: true });
+    await mkdir6(dirname5(attachment), { recursive: true });
     try {
-      await writeFile8(attachment, bytes, { flag: "wx" });
+      await writeFile7(attachment, bytes, { flag: "wx" });
     } catch (error) {
       if (error.code !== "EEXIST")
         throw error;
@@ -19977,7 +19242,7 @@ ${sourceLines}` : "",
 ${[...oldVersions, versionLine].join("\n")}`
     ].filter(Boolean).join("\n\n");
     const heading = `---
-id: pi-${randomUUID9()}
+id: pi-${randomUUID7()}
 type: explainer
 topic_id: ${JSON.stringify(topicId)}
 project: ${JSON.stringify(project)}
@@ -20007,7 +19272,7 @@ updated: ${JSON.stringify((/* @__PURE__ */ new Date()).toISOString())}
 }
 async function readJson2(file) {
   try {
-    const data = JSON.parse((await readFile10(file, "utf8")).replace(/^\uFEFF/, ""));
+    const data = JSON.parse((await readFile9(file, "utf8")).replace(/^\uFEFF/, ""));
     if (!data || typeof data !== "object" || Array.isArray(data))
       throw new Error(`Invalid JSON object: ${file}`);
     return data;
@@ -20019,16 +19284,16 @@ async function readJson2(file) {
 }
 async function canonical(file) {
   try {
-    return await realpath8(file);
+    return await realpath7(file);
   } catch (error) {
-    if (error.code !== "ENOENT" || dirname6(file) === file)
+    if (error.code !== "ENOENT" || dirname5(file) === file)
       throw error;
-    return join15(await canonical(dirname6(file)), basename5(file));
+    return join14(await canonical(dirname5(file)), basename5(file));
   }
 }
 function contains(root, child) {
-  const rel = relative10(root, child);
-  return !rel || !isAbsolute11(rel) && rel !== ".." && !rel.startsWith(`..${sep9}`);
+  const rel = relative9(root, child);
+  return !rel || !isAbsolute10(rel) && rel !== ".." && !rel.startsWith(`..${sep8}`);
 }
 function researchSetupOptions2() {
   return {
@@ -20054,6 +19319,889 @@ function researchSetupOptions2() {
         description: "\u5B50\u667A\u80FD\u4F53\u53EF\u641C\u7D22/\u8BFB\u53D6 Obsidian\uFF0C\u4F46\u65E0\u6CD5\u5199\u5165\u3001\u79FB\u52A8\u6216\u5220\u9664\u7B14\u8BB0\u3002"
       }
     ]
+  };
+}
+
+// packages/extensions/src/internal/reply-focus.ts
+var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for factual research claims, not unrelated citations for ordinary chat. For a simple factual question that can be answered from existing local knowledge, take the light path: retrieve, answer, and auto-deposit a bounded note when appropriate; do not create a task_plan or ask for write authorization just to answer. For substantial tasks, do bounded read-only preparation and consolidate scope, assumptions, needed permissions and deliverables into one task_plan for one user authorization. After authorization, carry out routine steps and recoverable checks within that scope without repeatedly asking whether to continue. Respect prior decisions, especially declined installs. New risks or scope, missing credentials and genuinely unavailable user data still require a specific request; never infer consent. At completion, explain what changed, link actual outputs or show key figures, separate execution from validation, and give one next step only if needed. Keep internal counters and tool logs out of the main answer.";
+
+// packages/extensions/src/internal/research-host.ts
+import { randomUUID as randomUUID10 } from "node:crypto";
+import { readFile as readFile12, realpath as realpath9, rename as rename9, writeFile as writeFile10 } from "node:fs/promises";
+import { isAbsolute as isAbsolute12, join as join17, relative as relative11, resolve as resolve14, sep as sep10 } from "node:path";
+
+// packages/research/src/literature-operations.ts
+import { createHash as createHash10, randomUUID as randomUUID8 } from "node:crypto";
+function destinationRecovery(receipt = {}) {
+  const zotero = receipt.zotero?.status || "unavailable";
+  const obsidian = receipt.obsidian?.status || "unavailable";
+  return {
+    zotero: {
+      status: zotero,
+      action: zotero === "verified" ? "reuse-existing-item" : zotero === "identity-mismatch" ? "resolve-identity-conflict" : "read-back-before-any-import",
+      autoWrite: false
+    },
+    obsidian: {
+      status: obsidian,
+      action: obsidian === "verified" ? "preserve-existing-note" : obsidian === "missing" ? "deposit-missing-note-with-authorization" : obsidian === "identity-mismatch" ? "review-note-conflict-preserve-human-content" : "wait-and-recheck-vault",
+      autoWrite: false
+    },
+    completed: zotero === "verified" && obsidian === "verified",
+    scientificallyVerified: false
+  };
+}
+function literatureOperationId(vault, revision, doi) {
+  const normalized = normalizeDoi(doi);
+  if (!normalized) throw new Error("Valid DOI required");
+  return createHash10("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
+}
+function createLiteratureOperations(ports) {
+  const now = ports.now || (() => (/* @__PURE__ */ new Date()).toISOString());
+  const createId = ports.createId || randomUUID8;
+  return {
+    async reconcileLiteratureOperation({ cwd = process.cwd(), runDir, doi, zoteroKey, notePath }, { verify = ports.verify } = {}) {
+      const normalized = normalizeDoi(doi);
+      if (!normalized) throw new Error("Valid DOI required");
+      const { file, vault, revision } = await ports.resolveRunJournal(cwd, runDir);
+      if (!vault) throw new Error("No bound Vault");
+      const id = literatureOperationId(vault, revision, normalized);
+      return ports.exclusive(file, async () => {
+        const journal = await ports.readJournal(file);
+        const previous = journal.operations[id];
+        if (previous && (previous.zoteroKey !== zoteroKey || previous.notePath !== notePath))
+          throw new Error(
+            "Operation identity changed; resolve the existing DOI/key/path mapping before retry"
+          );
+        const receipt = await verify({ doi: normalized, zotero_key: zoteroKey, note_path: notePath, vault });
+        const destinations = destinationRecovery(receipt);
+        const checkedAt = now();
+        const operation = {
+          id,
+          doi: normalized,
+          zoteroKey,
+          notePath,
+          vault,
+          revision,
+          status: destinations.completed ? "both-identities-verified" : "partial-or-unavailable",
+          attempts: (previous?.attempts || 0) + 1,
+          createdAt: previous?.createdAt || checkedAt,
+          checkedAt,
+          destinations,
+          receipt,
+          history: [
+            ...previous?.history || [],
+            { at: checkedAt, zotero: receipt.zotero?.status, obsidian: receipt.obsidian?.status }
+          ].slice(-32)
+        };
+        journal.operations[id] = operation;
+        await ports.writeJournal(file, journal);
+        return {
+          operation_id: id,
+          log_path: file,
+          status: operation.status,
+          destinations,
+          receipt,
+          attempts: operation.attempts,
+          writesToLibraries: 0
+        };
+      });
+    },
+    /** Append an observed write receipt; the journal never authorizes or drives a retry. */
+    async recordZoteroWrite({
+      cwd = process.cwd(),
+      runDir,
+      receipt
+    }) {
+      const doi = normalizeDoi(receipt?.doi);
+      if (!doi) throw new Error("Valid DOI required");
+      const { file } = await ports.resolveRunJournal(cwd, runDir);
+      return ports.exclusive(file, async () => {
+        const journal = await ports.readJournal(file);
+        const entry = {
+          id: createId(),
+          doi,
+          status: String(receipt.status || "unknown"),
+          reason: receipt.reason || null,
+          channel: receipt.channel || null,
+          zoteroKey: receipt.zoteroKey || null,
+          library: receipt.library || null,
+          collection: receipt.collection || null,
+          attachment: receipt.attachment || null,
+          fulltextStatus: receipt.fulltextStatus || null,
+          readBack: receipt.readBack || null,
+          consent: receipt.consent || null,
+          writesToLibraries: receipt.writesToLibraries || 0,
+          at: receipt.write?.at || now()
+        };
+        journal.writes = [...Array.isArray(journal.writes) ? journal.writes : [], entry].slice(-64);
+        await ports.writeJournal(file, journal);
+        return {
+          write_id: entry.id,
+          log_path: file,
+          writes: journal.writes.length,
+          autoRetry: false
+        };
+      });
+    }
+  };
+}
+
+// packages/research/src/research-loop.ts
+import { createHash as createHash11, randomUUID as randomUUID9 } from "node:crypto";
+import { access as access4, mkdir as mkdir7, readFile as readFile10, realpath as realpath8, rename as rename8, writeFile as writeFile8 } from "node:fs/promises";
+import { dirname as dirname6, isAbsolute as isAbsolute11, join as join15, relative as relative10, resolve as resolve13, sep as sep9 } from "node:path";
+
+// packages/research/src/claim-bindings.ts
+var RELATIONSHIPS = ["direct", "indirect", "hypothesis", "unsupported"];
+function text2(value, label2, max = 4e3) {
+  if (typeof value !== "string" || !value.trim() || value.length > max) throw new Error(`Invalid ${label2}`);
+  return value.trim();
+}
+function validateClaimBindings(bindings, sources, reads) {
+  if (!Array.isArray(bindings) || bindings.length < 1 || bindings.length > 64)
+    throw new Error("Provide 1-64 structured claim_bindings");
+  const seen = /* @__PURE__ */ new Set();
+  return bindings.map((raw, index) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Invalid claim binding");
+    const binding = raw;
+    const claim = text2(binding.claim, "claim");
+    const limitations = text2(binding.limitations, "limitations");
+    if (seen.has(claim)) throw new Error("Duplicate claim binding");
+    seen.add(claim);
+    const relationship = binding.relationship;
+    if (!RELATIONSHIPS.includes(relationship))
+      throw new Error("Invalid support relationship");
+    if (!Array.isArray(binding.sources) || binding.sources.length > 12)
+      throw new Error("Invalid claim sources");
+    if (["direct", "indirect"].includes(String(relationship)) && binding.sources.length === 0)
+      throw new Error("Supported claims require observed source excerpts");
+    const refs = binding.sources.map((rawRef) => {
+      if (!rawRef || typeof rawRef !== "object" || Array.isArray(rawRef))
+        throw new Error("Invalid claim source");
+      const ref = rawRef;
+      const path = typeof ref.path === "string" ? ref.path : "";
+      const source = sources.find((candidate) => candidate.path === path);
+      const read = reads.get(path);
+      if (!source || !read || read.hash !== source.hash)
+        throw new Error("Claim source was not read and identity-verified in this scope");
+      const first = ref.start_line;
+      const last = ref.end_line;
+      if (!Number.isInteger(first) || !Number.isInteger(last) || first < read.startLine || last < first || last > read.endLine)
+        throw new Error("Claim source range is outside the observed read");
+      const quote = text2(ref.quote, "source quote", 6e3);
+      const excerpt = read.text.split(/\r?\n/).slice(first - read.startLine, last - read.startLine + 1).join("\n");
+      if (!excerpt.includes(quote)) throw new Error("Claim quote does not match the observed note range");
+      return {
+        path: source.path,
+        doi: source.doi,
+        zotero_key: source.zotero_key,
+        hash: source.hash,
+        start_line: first,
+        end_line: last,
+        quote,
+        ...ref.original_location ? { original_location: text2(ref.original_location, "historical original location", 600) } : {},
+        reading_basis: "current-scope-literature-note",
+        originalFulltextReadThisTurn: false
+      };
+    });
+    return {
+      id: `claim-${index + 1}`,
+      claim,
+      relationship,
+      limitations,
+      ...binding.organism ? { organism: text2(binding.organism, "organism", 600) } : {},
+      ...binding.method ? { method: text2(binding.method, "method", 1e3) } : {},
+      sources: refs,
+      supportAssessment: "model-asserted-unreviewed",
+      provenanceChecked: true,
+      scientificallyVerified: false
+    };
+  });
+}
+function claimBindingRefs(bindings) {
+  return bindings.map(
+    (binding) => `${binding.claim} [${binding.relationship}] -> ${binding.sources.map((source) => `${source.path}:${source.start_line}-${source.end_line}`).join(", ") || "no supporting source"}; limitation: ${binding.limitations}`
+  );
+}
+var CLAIM_BINDING_SCHEMA = {
+  type: "array",
+  minItems: 1,
+  maxItems: 64,
+  items: {
+    type: "object",
+    properties: {
+      claim: { type: "string" },
+      relationship: { type: "string", enum: [...RELATIONSHIPS] },
+      organism: { type: "string" },
+      method: { type: "string" },
+      limitations: { type: "string" },
+      sources: {
+        type: "array",
+        maxItems: 12,
+        items: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            start_line: { type: "integer", minimum: 1 },
+            end_line: { type: "integer", minimum: 1 },
+            quote: { type: "string" },
+            original_location: { type: "string" }
+          },
+          required: ["path", "start_line", "end_line", "quote"]
+        }
+      }
+    },
+    required: ["claim", "relationship", "limitations", "sources"]
+  }
+};
+
+// packages/research/src/research-loop.ts
+var RESEARCH_STAGES = Object.freeze([
+  "created",
+  "local_query_recorded",
+  "external_search_recorded",
+  "sources_inspected",
+  "sources_archived",
+  "sources_reused",
+  "claims_bound",
+  "answerable"
+]);
+var RESEARCH_DOCUMENT_KIND = "drone.research.run";
+function createResearchLoop(ports) {
+  const loadWorkspaceConfig3 = ports.workspace;
+  const verifyLiteratureReceipt2 = ports.verifyLiteratureReceipt;
+  const sourceStatus2 = ports.sourceStatus;
+  const runtimeState3 = {
+    receiptLedger: /* @__PURE__ */ new Map(),
+    receiptQueues: /* @__PURE__ */ new Map(),
+    dispose() {
+      this.receiptLedger.clear();
+      this.receiptQueues.clear();
+    }
+  };
+  const runKey = (cwd, runDir) => resolve13(cwd, runDir);
+  function ledger(cwd, runDir) {
+    const key = runKey(cwd, runDir);
+    if (!runtimeState3.receiptLedger.has(key)) {
+      if (runtimeState3.receiptLedger.size >= 128)
+        runtimeState3.receiptLedger.delete(runtimeState3.receiptLedger.keys().next().value);
+      runtimeState3.receiptLedger.set(key, { reads: /* @__PURE__ */ new Map(), verified: /* @__PURE__ */ new Map() });
+    }
+    return runtimeState3.receiptLedger.get(key);
+  }
+  async function flushResearchReceipts({ cwd = process.cwd(), runDir } = {}) {
+    await runtimeState3.receiptQueues.get(runKey(cwd, runDir));
+  }
+  function resetResearchReceipts({ cwd = process.cwd(), runDir } = {}) {
+    if (runDir) runtimeState3.receiptLedger.delete(runKey(cwd, runDir));
+  }
+  async function reusableSources(cwd, runDir) {
+    const config = await loadWorkspaceConfig3(cwd);
+    if (!config.obsidianVault) return [];
+    const root = await realpath8(config.obsidianVault);
+    const state3 = ledger(cwd, runDir), result = [];
+    for (const [path, proof] of state3.verified) {
+      const read = state3.reads.get(path);
+      if (!read || read.hash !== proof.obsidian?.hash || read.vault !== root || read.revision !== (config.knowledgeBindingRevision || 0) || proof.obsidian?.vault !== root)
+        continue;
+      const current = await verifyLiteratureReceipt2({
+        doi: proof.doi,
+        zotero_key: proof.zoteroKey,
+        note_path: path,
+        vault: root
+      });
+      if (current.status !== "both-verified" || current.obsidian.hash !== read.hash) continue;
+      result.push({
+        path,
+        hash: read.hash,
+        doi: current.doi,
+        zotero_key: current.zoteroKey,
+        startLine: read.startLine,
+        endLine: read.endLine,
+        basis: "current-turn-literature-note-read-and-identity-check",
+        fulltext_status: current.zotero.fulltextStatus,
+        originalFulltextReadThisTurn: false,
+        evidence_profile: {
+          identity: "both-verified",
+          acquisition: current.zotero.fulltextStatus,
+          reading: {
+            kind: "literature-note",
+            scope: "current-turn",
+            startLine: read.startLine,
+            endLine: read.endLine
+          },
+          claimSupport: "not-assessed"
+        }
+      });
+    }
+    return result;
+  }
+  async function validateReuse(cwd, runDir, gate) {
+    if (!gate.reuse_count) return;
+    const fresh = await reusableSources(cwd, runDir);
+    if (gate.reused_sources.length !== gate.reuse_count || gate.reused_sources.some(
+      (old) => !fresh.some(
+        (now) => now.path === old.path && now.hash === old.hash && now.doi === old.doi && now.zotero_key === old.zotero_key
+      )
+    ))
+      throw new Error(
+        "Reused source changed or current-turn receipt is missing; re-read and verify the existing note, do not re-import it"
+      );
+  }
+  async function validateStoredClaimBindings(cwd, runDir, gate) {
+    if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
+      throw new Error("Structured claim_bindings are required before answerable");
+    return validateClaimBindings(
+      gate.claim_bindings,
+      [...await reusableSources(cwd, runDir), ...await archivedSourceRecords(cwd, runDir)],
+      ledger(cwd, runDir).reads
+    );
+  }
+  function safeSlug(value, label2) {
+    const text3 = String(value ?? "").trim();
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text3)) throw new Error(`${label2} must be lowercase kebab-case`);
+    return text3;
+  }
+  function topicIdFromResultSlug(value) {
+    const slug = safeSlug(value || "research-question", "result_slug");
+    const stable = slug.replace(/-20\d{6}(?:\d{6})?$/, "").replace(/-run-\d+$/, "");
+    return stable || slug;
+  }
+  function within2(root, target) {
+    const rel = relative10(resolve13(root), resolve13(target));
+    return rel === "" || !isAbsolute11(rel) && rel !== ".." && !rel.startsWith(`..${sep9}`);
+  }
+  function fileHash(bytes) {
+    return createHash11("sha256").update(bytes).digest("hex");
+  }
+  async function archivedSourceRecords(cwd, runDir) {
+    const archive = await sourceStatus2({ cwd, run_dir: resolve13(cwd, runDir) });
+    const records = [];
+    for (const item of archive.manifest?.items || []) {
+      if (item.status !== "downloaded" || !item.path || !item.sha256) continue;
+      const absolute = resolve13(cwd, item.path);
+      if (!within2(join15(resolve13(cwd, runDir), "sources"), absolute)) continue;
+      try {
+        if (!within2(await realpath8(join15(resolve13(cwd, runDir), "sources")), await realpath8(absolute)))
+          continue;
+        if (fileHash(await readFile10(absolute)) !== item.sha256) continue;
+      } catch {
+        continue;
+      }
+      const aliases = /* @__PURE__ */ new Set([
+        String(item.path),
+        absolute,
+        relative10(cwd, absolute),
+        relative10(resolve13(cwd, runDir), absolute)
+      ]);
+      for (const path of aliases)
+        records.push({
+          path,
+          hash: String(item.sha256),
+          doi: item.metadata?.doi || item.doi,
+          zotero_key: item.metadata?.zotero_key || item.zotero_key
+        });
+    }
+    return records;
+  }
+  async function recordArchivedRead(cwd, runDir, path, args, details, content) {
+    const absolute = resolve13(cwd, path);
+    const sourcesRoot = join15(resolve13(cwd, runDir), "sources");
+    if (!within2(sourcesRoot, absolute)) return false;
+    if (!within2(await realpath8(sourcesRoot), await realpath8(absolute))) return false;
+    if (details.truncation?.firstLineExceedsLimit) return false;
+    const returned = details.truncation?.content ?? content?.find((part) => part.type === "text")?.text;
+    if (typeof returned !== "string" || !returned.trim()) return false;
+    const bytes = await readFile10(absolute);
+    const sourceText = bytes.toString("utf8");
+    if (sourceText.includes("\0") || sourceText.startsWith("%PDF-")) return false;
+    const startLine = Number.isInteger(args.offset) && args.offset > 0 ? args.offset : 1;
+    const selected = sourceText.split("\n").slice(startLine - 1, args.limit ? startLine - 1 + args.limit : void 0);
+    const visible = returned.split("\n");
+    const lines = [];
+    for (let index = 0; index < Math.min(selected.length, visible.length, 2e3); index++) {
+      const shown = visible[index] ?? "";
+      if (selected[index] !== shown || lines.join("\n").length + shown.length > 9e4) break;
+      lines.push(shown);
+    }
+    const text3 = lines.join("\n");
+    if (!text3.trim()) return false;
+    const read = { hash: fileHash(bytes), text: text3, startLine, endLine: startLine + lines.length - 1 };
+    const aliases = /* @__PURE__ */ new Set([
+      String(path),
+      absolute,
+      relative10(cwd, absolute),
+      relative10(resolve13(cwd, runDir), absolute)
+    ]);
+    for (const alias of aliases) ledger(cwd, runDir).reads.set(alias, read);
+    return true;
+  }
+  async function readJson3(path) {
+    const value = JSON.parse(await readFile10(path, "utf8"));
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw new Error(`Invalid JSON object: ${path}`);
+    if (path.endsWith("metadata.json") && !value.kind) {
+      return { ...value, kind: RESEARCH_DOCUMENT_KIND, version: 1 };
+    }
+    if (path.endsWith("metadata.json") && (value.kind !== RESEARCH_DOCUMENT_KIND || value.version !== 1))
+      throw new Error(`Unsupported research metadata document: ${path}`);
+    return value;
+  }
+  async function atomicJson2(path, value) {
+    await mkdir7(dirname6(path), { recursive: true });
+    const temp = `${path}.${randomUUID9()}.tmp`;
+    await writeFile8(temp, `${JSON.stringify(value, null, 2)}
+`, "utf8");
+    await rename8(temp, path);
+  }
+  function gateOf(metadata) {
+    const gate = metadata.evidence_gate && typeof metadata.evidence_gate === "object" ? metadata.evidence_gate : {};
+    return {
+      stage: RESEARCH_STAGES.includes(gate.stage) ? gate.stage : "created",
+      status: gate.status === "failed" ? "failed" : "ok",
+      answerable: gate.answerable === true,
+      events: Array.isArray(gate.events) ? gate.events : [],
+      claim_refs: Array.isArray(gate.claim_refs) ? gate.claim_refs : [],
+      claim_bindings: Array.isArray(gate.claim_bindings) ? gate.claim_bindings : [],
+      warnings: gate.claim_refs?.length && !gate.claim_bindings?.length ? ["legacy-unstructured-claims: support not assessed"] : [],
+      source_refs: Array.isArray(gate.source_refs) ? gate.source_refs : [],
+      archive_count: Number(gate.archive_count) || 0,
+      reuse_count: Number(gate.reuse_count) || 0,
+      reused_sources: Array.isArray(gate.reused_sources) ? gate.reused_sources : [],
+      scientificallyVerified: false
+    };
+  }
+  function researchNodes(gate) {
+    const current = RESEARCH_STAGES.indexOf(gate.stage);
+    return RESEARCH_STAGES.map((id, index) => ({
+      id,
+      state: gate.answerable || index < current ? "completed" : index === current ? "current" : "pending",
+      observed: (gate.events || []).some((event) => event.type === id && !event.skipped)
+    }));
+  }
+  function provenanceFor(gate, status2 = "pending") {
+    return {
+      status: status2,
+      source_refs: [...gate.source_refs],
+      claim_bindings: structuredClone(gate.claim_bindings),
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+  function advance(gate, stage, details = {}) {
+    const current = RESEARCH_STAGES.indexOf(gate.stage);
+    const target = RESEARCH_STAGES.indexOf(stage);
+    if (target < 0) throw new Error(`Unknown research stage: ${stage}`);
+    if (target < current)
+      return {
+        ...gate,
+        events: [...gate.events, { type: stage, at: (/* @__PURE__ */ new Date()).toISOString(), repeated: true, ...details }]
+      };
+    return {
+      ...gate,
+      stage,
+      events: [...gate.events, { type: stage, at: (/* @__PURE__ */ new Date()).toISOString(), ...details }]
+    };
+  }
+  async function resolveRun(cwd, runDir) {
+    const config = await loadWorkspaceConfig3(cwd);
+    if (!runDir) throw new Error("run_dir is required for this action");
+    const path = resolve13(cwd, runDir);
+    if (!within2(config.resultsRoot, path))
+      throw new Error("run_dir must stay inside the configured results root");
+    const rel = relative10(config.resultsRoot, path).split(sep9);
+    if (rel.length !== 2 || !rel[1]?.startsWith("run-"))
+      throw new Error("run_dir must be directly inside a result slug");
+    await access4(join15(path, "metadata.json"));
+    return { config, path, metadataPath: join15(path, "metadata.json") };
+  }
+  async function startResearchRun({
+    cwd = process.cwd(),
+    project,
+    resultSlug,
+    query,
+    requiresProvenance = false
+  } = {}) {
+    const config = await loadWorkspaceConfig3(cwd);
+    project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
+    resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
+    if (typeof query !== "string" || !query.trim()) throw new Error("query is required");
+    const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+    const runId = `run-${stamp}-${randomUUID9().slice(0, 8)}`;
+    const runDir = join15(config.resultsRoot, resultSlug, runId);
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const metadata = {
+      kind: RESEARCH_DOCUMENT_KIND,
+      version: 1,
+      run_id: runId,
+      project,
+      result_slug: resultSlug,
+      topic_id: topicIdFromResultSlug(resultSlug),
+      query: query.trim(),
+      status: "running",
+      revision: 0,
+      requires_provenance: requiresProvenance === true,
+      started_at: now,
+      evidence_gate: {
+        stage: "created",
+        status: "ok",
+        answerable: false,
+        events: [{ type: "created", at: now }],
+        claim_refs: [],
+        source_refs: [],
+        archive_count: 0
+      },
+      research_nodes: researchNodes({ stage: "created", answerable: false, events: [{ type: "created" }] }),
+      provenance: provenanceFor({ source_refs: [], claim_bindings: [] })
+    };
+    await mkdir7(runDir, { recursive: true });
+    await atomicJson2(join15(runDir, "metadata.json"), metadata);
+    return { run_dir: runDir, metadata };
+  }
+  async function updateResearchLoopUnlocked({
+    cwd = process.cwd(),
+    runDir,
+    action,
+    query,
+    sourceRefs = [],
+    claimRefs = [],
+    claimBindings = [],
+    outcome,
+    notes,
+    expectedRevision
+  } = {}) {
+    const { path, metadataPath } = await resolveRun(cwd, runDir);
+    const metadata = await readJson3(metadataPath);
+    const revision = Number.isInteger(metadata.revision) ? metadata.revision : 0;
+    if (expectedRevision != null && Number(expectedRevision) !== revision)
+      throw new Error(`research run changed; expected revision ${expectedRevision}, found ${revision}`);
+    let gate = gateOf(metadata);
+    const detail = {
+      ...query ? { query: String(query).trim() } : {},
+      ...outcome ? { outcome } : {},
+      ...notes ? { notes } : {}
+    };
+    const requireStage = (stage) => {
+      if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf(stage))
+        throw new Error(`research loop must reach ${stage} before ${action}`);
+    };
+    if (action === "status") return { run_dir: path, metadata, evidence_gate: gate, revision };
+    if (action === "record_local") {
+      if (!query?.trim()) throw new Error("query is required");
+      gate = advance(gate, "local_query_recorded", detail);
+    } else if (action === "record_external") {
+      requireStage("local_query_recorded");
+      if (!query?.trim() && !notes?.trim())
+        throw new Error("record the external query or why external search was skipped");
+      gate = advance(gate, "external_search_recorded", detail);
+    } else if (action === "inspect_sources") {
+      requireStage("external_search_recorded");
+      if (!Array.isArray(sourceRefs) || sourceRefs.length === 0)
+        throw new Error("source_refs must list inspected original sources");
+      gate = advance(
+        { ...gate, source_refs: [.../* @__PURE__ */ new Set([...gate.source_refs, ...sourceRefs.map(String)])] },
+        "sources_inspected",
+        { ...detail, source_refs: sourceRefs }
+      );
+    } else if (action === "verify_archive") {
+      requireStage("sources_inspected");
+      const archive = await sourceStatus2({ cwd, run_dir: path, verify: true });
+      if (archive.verification && archive.verification.ok !== true) {
+        const failed = archive.verification.items?.filter((item) => item.ok !== true) || [];
+        throw new Error(
+          `Archived source verification failed: ${failed.map((item) => item.reason || item.path).join(", ") || "unknown"}`
+        );
+      }
+      const downloaded = (archive.manifest?.items || []).filter((item) => item.status === "downloaded");
+      const reused = await reusableSources(cwd, runDir);
+      if (!downloaded.length && !reused.length)
+        throw new Error(
+          "No available source: read an existing Library/Papers note this turn and verify its DOI/key with research_verify_literature, or archive an authorized new source. Do not repeat imports to clear this gate."
+        );
+      gate = advance(
+        { ...gate, archive_count: downloaded.length, reuse_count: reused.length, reused_sources: reused },
+        downloaded.length ? "sources_archived" : "sources_reused",
+        {
+          archived: downloaded.map((item) => ({ id: item.id, sha256: item.sha256, path: item.path })),
+          reused_sources: reused,
+          scientificallyVerified: false
+        }
+      );
+    } else if (action === "bind_claims") {
+      if (gate.stage === "sources_inspected") {
+        const available = await updateResearchLoopUnlocked({ cwd, runDir, action: "verify_archive" });
+        gate = available.evidence_gate;
+      }
+      requireStage("sources_archived");
+      await validateReuse(cwd, runDir, gate);
+      if (claimBindings.length) {
+        const checked = validateClaimBindings(
+          claimBindings,
+          [...await reusableSources(cwd, runDir), ...await archivedSourceRecords(cwd, runDir)],
+          ledger(cwd, runDir).reads
+        );
+        gate = { ...gate, claim_bindings: checked, warnings: [] };
+        claimRefs = claimBindingRefs(checked);
+      } else if (gate.claim_bindings.length) {
+        const checked = await validateStoredClaimBindings(cwd, runDir, gate);
+        gate = { ...gate, claim_bindings: checked, claim_refs: claimBindingRefs(checked), warnings: [] };
+        claimRefs = claimBindingRefs(checked);
+      } else if (claimRefs.length) {
+        throw new Error(
+          "Structured claim_bindings are required; legacy claim_refs cannot make a run answerable"
+        );
+      }
+      if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
+        throw new Error("Structured claim_bindings must contain at least one validated claim");
+      gate = advance({ ...gate, claim_refs: [...new Set(claimRefs.map(String))] }, "claims_bound", {
+        claim_refs: claimRefs
+      });
+    } else if (action === "finalize") {
+      requireStage("claims_bound");
+      await validateReuse(cwd, runDir, gate);
+      const checked = await validateStoredClaimBindings(cwd, runDir, gate);
+      const refs = claimBindingRefs(checked);
+      if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
+        throw new Error("archive verification and structured claim bindings are required before answerable");
+      if (metadata.requires_provenance === true) {
+        const provenance = await readJson3(join15(path, "reproducibility-manifest.json"));
+        if (provenance?.version !== 1)
+          throw new Error("This run requires a reproducibility manifest before it can become answerable");
+      }
+      gate = advance(
+        { ...gate, claim_bindings: checked, claim_refs: refs, warnings: [], status: "ok", answerable: true },
+        "answerable",
+        detail
+      );
+    } else if (action === "complete") {
+      return completeResearchGate({ cwd, runDir, claimRefs, claimBindings });
+    } else {
+      throw new Error(`unknown research_loop action: ${action}`);
+    }
+    metadata.evidence_gate = gate;
+    metadata.research_nodes = researchNodes(gate);
+    metadata.provenance = provenanceFor(gate, gate.answerable ? "host-verified" : "pending");
+    if (gate.answerable) {
+      metadata.status = "completed";
+      metadata.finalized_at = metadata.finalized_at || (/* @__PURE__ */ new Date()).toISOString();
+    }
+    metadata.updated_at = (/* @__PURE__ */ new Date()).toISOString();
+    metadata.revision = revision + 1;
+    await atomicJson2(metadataPath, metadata);
+    return { run_dir: path, evidence_gate: gate, revision: metadata.revision };
+  }
+  async function updateResearchLoop(input = {}) {
+    const cwd = input.cwd || process.cwd();
+    const key = runKey(cwd, input.runDir);
+    const work = () => updateResearchLoopUnlocked(input);
+    if (input.action === "complete" || !ports.exclusive) return work();
+    return ports.exclusive(key, work);
+  }
+  function isWikiPath(path) {
+    return /(?:^|[\\/])Wiki[\\/]/i.test(String(path || ""));
+  }
+  async function ensureStage(cwd, runDir, stage, fill) {
+    const current = await updateResearchLoop({ cwd, runDir, action: "status" });
+    if (RESEARCH_STAGES.indexOf(current.evidence_gate.stage) >= RESEARCH_STAGES.indexOf(stage))
+      return current;
+    return fill();
+  }
+  async function completeResearchGate({
+    cwd = process.cwd(),
+    runDir,
+    claimRefs = [],
+    claimBindings = []
+  } = {}) {
+    let status2 = await updateResearchLoop({ cwd, runDir, action: "status" });
+    let gate = status2.evidence_gate;
+    await validateReuse(cwd, runDir, gate);
+    if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_inspected"))
+      throw new Error("research loop must inspect sources before complete");
+    if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_archived"))
+      status2 = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+    gate = status2.evidence_gate;
+    if (!claimBindings.length && !gate.claim_bindings.length)
+      throw new Error(
+        "Provide structured claim_bindings; legacy claim_refs cannot make a research run answerable"
+      );
+    if (claimBindings.length || RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("claims_bound"))
+      status2 = await updateResearchLoop({
+        cwd,
+        runDir,
+        action: "bind_claims",
+        claimRefs,
+        claimBindings
+      });
+    gate = status2.evidence_gate;
+    status2 = await updateResearchLoop({ cwd, runDir, action: "finalize" });
+    return status2;
+  }
+  function observeResearchReceipt(options = {}) {
+    if (!options.runDir) return Promise.resolve(null);
+    const key = runKey(options.cwd || process.cwd(), options.runDir);
+    const work = (runtimeState3.receiptQueues.get(key) || Promise.resolve()).catch(() => {
+    }).then(() => observeReceipt(options));
+    runtimeState3.receiptQueues.set(key, work);
+    void work.finally(() => {
+      if (runtimeState3.receiptQueues.get(key) === work) runtimeState3.receiptQueues.delete(key);
+    }).catch(() => {
+    });
+    return work;
+  }
+  async function observeReceipt({
+    cwd = process.cwd(),
+    runDir,
+    toolName,
+    args = {},
+    details = {},
+    content = [],
+    isError = false,
+    readBinding
+  } = {}) {
+    if (isError || !runDir || !toolName) return null;
+    try {
+      if (toolName === "research_reconcile_literature")
+        return observeReceipt({
+          cwd,
+          runDir,
+          toolName: "research_verify_literature",
+          args,
+          details: details.receipt || {},
+          isError
+        });
+      const query = String(args.query || details.query || "").trim();
+      if (toolName === "research_search_knowledge" && query && details.complete !== false)
+        return await updateResearchLoop({ cwd, runDir, action: "record_local", query });
+      if (["webfetch", "fetch_content", "web_search"].includes(toolName)) {
+        const url = String(args.url || details.url || query).trim();
+        if (!url) return null;
+        await ensureStage(
+          cwd,
+          runDir,
+          "local_query_recorded",
+          () => updateResearchLoop({ cwd, runDir, action: "record_local", query: url })
+        );
+        return await updateResearchLoop({
+          cwd,
+          runDir,
+          action: "record_external",
+          query: url,
+          notes: String(details.title || "")
+        });
+      }
+      if (toolName === "research_read_knowledge") {
+        const path = String(args.path || details.path || "");
+        if (!path || isWikiPath(path) || details.missing === true) return null;
+        await ensureStage(
+          cwd,
+          runDir,
+          "local_query_recorded",
+          () => updateResearchLoop({ cwd, runDir, action: "record_local", query: path })
+        );
+        await ensureStage(
+          cwd,
+          runDir,
+          "external_search_recorded",
+          () => updateResearchLoop({
+            cwd,
+            runDir,
+            action: "record_external",
+            notes: "Host: no extra web search before inspecting current sources."
+          })
+        );
+        if (/^Library\/Papers\/.+\.md$/.test(path) && /^[a-f0-9]{64}$/i.test(details.hash || "") && typeof details.text === "string" && details.text.trim() && Number.isInteger(details.startLine) && details.endLine >= details.startLine) {
+          const config = await loadWorkspaceConfig3(cwd);
+          if (config.obsidianVault)
+            ledger(cwd, runDir).reads.set(path, {
+              hash: details.hash,
+              text: details.text,
+              vault: readBinding ? readBinding.vault : await realpath8(config.obsidianVault),
+              revision: readBinding ? readBinding.revision : config.knowledgeBindingRevision || 0,
+              startLine: details.startLine,
+              endLine: details.endLine
+            });
+        }
+        const inspected = await updateResearchLoop({
+          cwd,
+          runDir,
+          action: "inspect_sources",
+          sourceRefs: [path]
+        });
+        if ((await reusableSources(cwd, runDir)).length)
+          return await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+        return inspected;
+      }
+      if (toolName === "read") {
+        const path = String(args.path || details.path || "");
+        if (!path || details.missing === true) return null;
+        const archived = await recordArchivedRead(cwd, runDir, path, args, details, content);
+        if (!archived) return null;
+        await ensureStage(
+          cwd,
+          runDir,
+          "local_query_recorded",
+          () => updateResearchLoop({ cwd, runDir, action: "record_local", query: path })
+        );
+        await ensureStage(
+          cwd,
+          runDir,
+          "external_search_recorded",
+          () => updateResearchLoop({
+            cwd,
+            runDir,
+            action: "record_external",
+            notes: "Host recorded a read of the archived run source."
+          })
+        );
+        return updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [path] });
+      }
+      if (toolName === "research_verify_literature" && details.status === "both-verified" && details.obsidian?.status === "verified" && details.zotero?.status === "verified") {
+        const path = details.obsidian.path;
+        if (!/^Library\/Papers\/.+\.md$/.test(path || "")) return null;
+        ledger(cwd, runDir).verified.set(path, structuredClone(details));
+        if ((await reusableSources(cwd, runDir)).length)
+          return await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+        return null;
+      }
+      if (toolName === "research_archive_source" && details.status === "downloaded") {
+        const ref = String(details.path || details.url || args.url || "");
+        if (!ref) return null;
+        await ensureStage(
+          cwd,
+          runDir,
+          "local_query_recorded",
+          () => updateResearchLoop({ cwd, runDir, action: "record_local", query: ref })
+        );
+        await ensureStage(
+          cwd,
+          runDir,
+          "external_search_recorded",
+          () => updateResearchLoop({
+            cwd,
+            runDir,
+            action: "record_external",
+            query: String(args.url || details.url || ref),
+            notes: "Host recorded the archived source URL as the external lookup."
+          })
+        );
+        await updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [ref] });
+        const archived = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+        return archived;
+      }
+      if (toolName === "research_deposit_knowledge" && details.type === "claim" && details.note) return null;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+  return {
+    startResearchRun,
+    updateResearchLoop,
+    completeResearchGate,
+    observeResearchReceipt,
+    flushResearchReceipts,
+    resetResearchReceipts,
+    topicIdFromResultSlug,
+    dispose: () => runtimeState3.dispose()
   };
 }
 
@@ -20445,6 +20593,12 @@ function sourceArchive(pi) {
         },
         max_candidates: { type: "integer", minimum: 1, maximum: 8, default: 6 },
         category: { type: "string", enum: SOURCE_CATEGORIES },
+        topic: {
+          type: "string",
+          minLength: 4,
+          maxLength: 120,
+          description: "Required. A short topic phrase naming what this source is about, in the user's language (e.g. 'DHX16 \u5728 pre-mRNA \u526A\u63A5\u4E2D\u7684\u4F5C\u7528', 'LoRA \u4F4E\u79E9\u9002\u914D'). It becomes the knowledge-graph node name; never pass a file name, DOI or accession."
+        },
         filename: { type: "string" },
         metadata: { type: "object" },
         local_file: {
@@ -20456,7 +20610,7 @@ function sourceArchive(pi) {
         max_bytes: { type: "integer", minimum: 1, maximum: 524288e3, default: DEFAULT_MAX_BYTES },
         timeout_ms: { type: "integer", minimum: 100, maximum: 6e5, default: DEFAULT_TIMEOUT_MS }
       },
-      required: ["run_dir", "category"]
+      required: ["run_dir", "category", "topic"]
     },
     async execute(_id, params, signal, _update, ctx) {
       return run(async () => {
@@ -20472,8 +20626,45 @@ ${url}`,
           );
           return choice === copy.continueLabel ? "continue" : "skip";
         } : void 0;
-        const ports = askCloudflare ? { ...archivePorts, askCloudflare } : archivePorts;
+        const withTopic = {
+          ...archivePorts,
+          publishSourceNote: (input) => archivePorts.publishSourceNote({ ...input, topic: params.topic })
+        };
+        const ports = askCloudflare ? { ...withTopic, askCloudflare } : withTopic;
         const result = await archiveSource({ ...params, cwd: ctx.cwd, signal }, ports);
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
+      });
+    }
+  });
+  registerTool(pi, {
+    name: "research_set_source_topic",
+    label: "Set source topic",
+    drone: {
+      capabilities: ["research"],
+      journal: true,
+      subagent: "exclude",
+      activity: { text: "\u6B63\u5728\u4E3A\u6765\u6E90\u8865\u5145\u4E3B\u9898\u2026", phase: "archive" },
+      flow: "source"
+    },
+    description: "Give an archived source note (Library/Papers or Library/Software) a short topic phrase so the knowledge graph and search show the subject instead of a file name. Read the note or its source first; only the frontmatter topic and an automatic (file-name) heading change, human edits are kept, and project mirrors are updated too.",
+    parameters: {
+      type: "object",
+      properties: {
+        note_path: {
+          type: "string",
+          description: "Vault-relative path, e.g. Library/Papers/pmc7022188-1-pdf-811427095c30c895.md"
+        },
+        topic: { type: "string", minLength: 4, maxLength: 120 }
+      },
+      required: ["note_path", "topic"]
+    },
+    async execute(_id, params, _signal, _update, ctx) {
+      return run(async () => {
+        const result = await setSourceTopic({
+          cwd: ctx.cwd,
+          notePath: params.note_path,
+          topic: params.topic
+        });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
       });
     }

@@ -245,6 +245,10 @@ export const knowledgeZh = {
 	graphHealthOrphan: "孤立笔记",
 	graphHealthUncited: "未被引用的 Wiki",
 	graphHealthWarning: "需要核对",
+	graphHealthUntitled: "缺少主题",
+	graphHealthUntitledHint: "节点名还是文件名（例如 PMC 编号或 .pdf），看不出讲什么。建议补一个主题。",
+	graphHealthUntitledPrompt:
+		"请阅读知识库笔记 {path} 及其来源，用一句简短的话概括它的主题（例如“DHX16 在 pre-mRNA 剪接中的作用”），然后调用 research_set_source_topic 把这个主题写进笔记；只改主题，不要改写正文。",
 	graphHealthEmpty: "当前视图里没有发现问题。",
 	graphHealthIntro: "参考 LLM Wiki 的 lint：找出写进库里却很难被复用的知识。",
 	graphHealthOrphanHint: "没有任何双链，检索和对话很难复用它。建议链接到相关 Wiki 页。",
@@ -776,6 +780,11 @@ const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
 	graphHealthOrphan: "Orphan notes",
 	graphHealthUncited: "Wiki pages nothing links to",
 	graphHealthWarning: "Needs checking",
+	graphHealthUntitled: "Missing topic",
+	graphHealthUntitledHint:
+		"The node is still named after a file (a PMC id or .pdf), so it says nothing about its content. Add a topic.",
+	graphHealthUntitledPrompt:
+		'Read the knowledge note {path} and its source, sum up its topic in a short phrase (e.g. "DHX16 in pre-mRNA splicing"), then call research_set_source_topic to write that topic into the note; change only the topic, not the body.',
 	graphHealthEmpty: "No issues in the current view.",
 	graphHealthIntro: "Like an LLM Wiki lint pass: knowledge that was written down but is hard to reuse.",
 	graphHealthOrphanHint:

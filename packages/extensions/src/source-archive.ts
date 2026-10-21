@@ -11,6 +11,7 @@ import {
 } from "@drone/research/source-archive";
 import { cloudflareAskCopy } from "@drone/research/source-archive-policy";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { setSourceTopic } from "./internal/obsidian-workbench";
 import { USER_QUESTION_FOCUS } from "./internal/reply-focus";
 import { archivePorts, reconcileLiteratureOperation } from "./internal/research-host";
 import { bindExtensionRuntime, runExtensionExclusive } from "./internal/runtime";
@@ -92,6 +93,13 @@ export default function sourceArchive(pi) {
 				},
 				max_candidates: { type: "integer", minimum: 1, maximum: 8, default: 6 },
 				category: { type: "string", enum: SOURCE_CATEGORIES },
+				topic: {
+					type: "string",
+					minLength: 4,
+					maxLength: 120,
+					description:
+						"Required. A short topic phrase naming what this source is about, in the user's language (e.g. 'DHX16 在 pre-mRNA 剪接中的作用', 'LoRA 低秩适配'). It becomes the knowledge-graph node name; never pass a file name, DOI or accession.",
+				},
 				filename: { type: "string" },
 				metadata: { type: "object" },
 				local_file: {
@@ -103,7 +111,7 @@ export default function sourceArchive(pi) {
 				max_bytes: { type: "integer", minimum: 1, maximum: 524288000, default: DEFAULT_MAX_BYTES },
 				timeout_ms: { type: "integer", minimum: 100, maximum: 600000, default: DEFAULT_TIMEOUT_MS },
 			},
-			required: ["run_dir", "category"],
+			required: ["run_dir", "category", "topic"],
 		},
 		async execute(_id, params, signal, _update, ctx) {
 			return run(async () => {
@@ -118,8 +126,47 @@ export default function sourceArchive(pi) {
 							return choice === copy.continueLabel ? "continue" : "skip";
 						}
 					: undefined;
-				const ports = askCloudflare ? { ...archivePorts, askCloudflare } : archivePorts;
+				// The topic is written into the Vault note (frontmatter + heading) and names the graph node.
+				const withTopic = {
+					...archivePorts,
+					publishSourceNote: (input) => archivePorts.publishSourceNote({ ...input, topic: params.topic }),
+				};
+				const ports = askCloudflare ? { ...withTopic, askCloudflare } : withTopic;
 				const result = await archiveTyped({ ...params, cwd: ctx.cwd, signal }, ports);
+				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
+			});
+		},
+	});
+	registerTool(pi, {
+		name: "research_set_source_topic",
+		label: "Set source topic",
+		drone: {
+			capabilities: ["research"],
+			journal: true,
+			subagent: "exclude",
+			activity: { text: "正在为来源补充主题…", phase: "archive" },
+			flow: "source",
+		},
+		description:
+			"Give an archived source note (Library/Papers or Library/Software) a short topic phrase so the knowledge graph and search show the subject instead of a file name. Read the note or its source first; only the frontmatter topic and an automatic (file-name) heading change, human edits are kept, and project mirrors are updated too.",
+		parameters: {
+			type: "object",
+			properties: {
+				note_path: {
+					type: "string",
+					description: "Vault-relative path, e.g. Library/Papers/pmc7022188-1-pdf-811427095c30c895.md",
+				},
+				topic: { type: "string", minLength: 4, maxLength: 120 },
+			},
+			required: ["note_path", "topic"],
+		},
+		async execute(_id, params, _signal, _update, ctx) {
+			return run(async () => {
+				const result = await setSourceTopic({
+					cwd: ctx.cwd,
+					notePath: params.note_path,
+					topic: params.topic,
+				});
 				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
 			});
 		},

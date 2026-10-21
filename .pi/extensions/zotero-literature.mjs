@@ -10067,6 +10067,7 @@ var AppContract = defineDomain("app", {
       result: NullableString
     },
     pickDirectory: { args: typebox_exports.Tuple([]), result: NullableString },
+    formalKnowledgeVault: { args: typebox_exports.Tuple([]), result: NullableString },
     getGitBranch: { args: typebox_exports.Tuple([typebox_exports.String()]), result: NullableString },
     listGitBranches: { args: typebox_exports.Tuple([typebox_exports.String()]), result: GitBranchesSchema },
     checkoutBranch: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()]), result: typebox_exports.String() }
@@ -10979,6 +10980,11 @@ var PackagesContract = defineDomain("packages", {
       // values used by the catalog store.
       args: SearchCatalogArgsSchema,
       result: typebox_exports.Unsafe(CatalogSearchResultSchema)
+    },
+    /** Latest published npm version per package name (null when unknown/offline). */
+    latestPackageVersions: {
+      args: typebox_exports.Tuple([typebox_exports.Array(typebox_exports.String({ minLength: 1 }), { maxItems: 50 })]),
+      result: typebox_exports.Record(typebox_exports.String(), typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]))
     },
     installPackage: {
       args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
