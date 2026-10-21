@@ -26,17 +26,17 @@ const HOST_FAMILY = [
 const packages = [
 	{
 		name: "@gyoungwe/pi-evidence",
-		spec: "https://registry.npmjs.org/@gyoungwe/pi-evidence/-/pi-evidence-0.1.0.tgz",
+		spec: "https://registry.npmjs.org/@gyoungwe/pi-evidence/-/pi-evidence-0.1.1.tgz",
 		tools: ["evidence_validate_manifest", "evidence_validate_capsule", "evidence_verify_replay"],
 	},
 	{
 		name: "@gyoungwe/pi-connectors",
-		spec: "https://registry.npmjs.org/@gyoungwe/pi-connectors/-/pi-connectors-0.1.0.tgz",
+		spec: "https://registry.npmjs.org/@gyoungwe/pi-connectors/-/pi-connectors-0.1.1.tgz",
 		tools: ["connector_list", "connector_get"],
 	},
 	{
 		name: "@gyoungwe/desktop-ui-pack",
-		spec: "https://registry.npmjs.org/@gyoungwe/desktop-ui-pack/-/desktop-ui-pack-0.1.0.tgz",
+		spec: "https://registry.npmjs.org/@gyoungwe/desktop-ui-pack/-/desktop-ui-pack-0.1.1.tgz",
 	},
 ];
 
