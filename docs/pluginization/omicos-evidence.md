@@ -21,10 +21,6 @@
 
 待补真实证据：绑定测试 Vault 后运行一次雷达，确认返回最近 7 天论文、入库记录出现在知识库，并在同日重复运行不重复推送；同时验证设置中关闭全部雷达连接器时的诊断结果。
 
-## PR2–PR6
-
-尚未开始，按 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 的顺序执行。
-
 ## PR2：引用跳转到 PDF 原文页码
 
 状态：代码实现完成；真实会话验收待执行。
@@ -55,3 +51,20 @@
 - `npx biome check`：HomeCards 与双语文案通过。
 
 待补真实证据：真实安装包新建对话显示三类卡片；无 Vault 的全新安装不显示空卡片。
+
+## PR4：批量精读 → 证据矩阵
+
+状态：技能与示例入口实现完成；真实会话验收待执行。
+
+- 新增 `.pi/skills/literature-matrix/SKILL.md`，支持 Zotero 集合、DOI 列表和项目 PDF 文件夹；每批上限 12 篇，按 DOI → arXiv id → 标题/路径去重。
+- 每篇论文由受限子代理调用 `research_read_source`，固定提取六个字段；只有当前读取回执中的 `[[page:N]]` 才能写入带页码结论，读不到原文统一标记“未读到原文”，禁止用摘要补全。
+- 父会话输出 UTF-8 Markdown + CSV，并仅在存在实际原文读取回执时调用 `research_deposit_knowledge`；写入失败保留本地交付物并报告原因。
+- `evidence-literature` 方向新增 `literature-matrix` 结构化入口元数据，未改变现有一方向一卡片的 UI 合同。
+
+已运行：
+
+- `npm run skills:check`：通过（nature 20/745、scientific 148/1806）。
+- `npx vitest run packages/shared/src/example-tasks.test.ts packages/desktop/src/renderer/src/components/tasks/example-tasks.test.ts packages/backend/test/skill-acceptance-sdk.test.mjs`：34 tests passed（含 integration mirror）。
+- `git diff --check`：通过。
+
+待补真实证据：真实会话处理 5 篇论文（含 1 篇无法获取全文），确认矩阵五行、未读标记和 CSV 可由表格软件打开，并保留知识库沉淀回执。
