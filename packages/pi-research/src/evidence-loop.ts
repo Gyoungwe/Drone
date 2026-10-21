@@ -25,6 +25,8 @@ type ReadReceipt = SourceRecord & {
 	readText: string;
 	startLine: number;
 	endLine: number;
+	pageStart?: number;
+	pageEnd?: number;
 	readAt: string;
 };
 
@@ -154,6 +156,16 @@ function publicSource(source: SourceRecord) {
 	};
 }
 
+export function pageRange(text: string): { start: number; end: number } | undefined {
+	const pages = [...text.matchAll(/\[\[page:(\d+)\]\]/gu)].map((match) => Number(match[1]));
+	if (!pages.length || pages.some((page) => !Number.isInteger(page) || page < 1)) return undefined;
+	return { start: Math.min(...pages), end: Math.max(...pages) };
+}
+
+export function citationUri(uri: string, pages: { start: number; end: number } | undefined): string {
+	return pages ? `${uri}#page=${pages.start}` : uri;
+}
+
 async function indexSources(
 	ctx: any,
 	sourceDir: unknown,
@@ -241,7 +253,7 @@ export function registerEvidenceLoop(pi: any): void {
 		name: "research_read_source",
 		label: "Research · read source",
 		description:
-			"Read a bounded source returned by research_search_sources and record its hash, excerpt and citation receipt for this session.",
+			"Read a bounded source returned by research_search_sources and record its hash, excerpt and citation receipt for this session. PDF-derived text may include [[page:N]] markers; only pages present in this receipt may be cited with #page=N.",
 		drone: { readOnly: true, recoverySafe: true, capabilities: ["research"] },
 		parameters: {
 			type: "object",
@@ -268,12 +280,14 @@ export function registerEvidenceLoop(pi: any): void {
 			const body = parseFrontmatter(current.text).body;
 			const readText = body.slice(0, maxChars);
 			const lines = readText.split(/\r?\n/).length;
+			const pages = pageRange(readText);
 			const previous = state.reads.get(current.id);
 			const receipt: ReadReceipt = {
 				...current,
 				readText,
 				startLine: 1,
 				endLine: lines,
+				...(pages ? { pageStart: pages.start, pageEnd: pages.end } : {}),
 				readAt: new Date().toISOString(),
 			};
 			state.reads.set(current.id, receipt);
@@ -281,7 +295,13 @@ export function registerEvidenceLoop(pi: any): void {
 				...publicSource(current),
 				content: readText,
 				status: previous?.hash === current.hash ? "already-read" : "read",
-				read_receipt: { source_id: current.id, hash: current.hash, start_line: 1, end_line: lines },
+				read_receipt: {
+					source_id: current.id,
+					hash: current.hash,
+					start_line: 1,
+					end_line: lines,
+					...(pages ? { page_start: pages.start, page_end: pages.end } : {}),
+				},
 			});
 		},
 	});
@@ -379,8 +399,13 @@ export function registerEvidenceLoop(pi: any): void {
 					.join("\n\n"),
 				citations: reads.map((read) => ({
 					...publicSource(read),
+					uri: citationUri(
+						read.uri,
+						read.pageStart ? { start: read.pageStart, end: read.pageEnd ?? read.pageStart } : undefined,
+					),
 					read_hash: read.hash,
 					lines: [read.startLine, read.endLine],
+					...(read.pageStart ? { pages: [read.pageStart, read.pageEnd ?? read.pageStart] } : {}),
 				})),
 				source_count: reads.length,
 				evidence_gate: gate.snapshot(),

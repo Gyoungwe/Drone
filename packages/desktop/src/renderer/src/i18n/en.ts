@@ -1235,6 +1235,7 @@ export const en: Messages = {
 			prevPage: "Previous",
 			nextPage: "Next",
 			pdfPage: "Page {page} of {pages}",
+			pdfPageOutOfRange: "The cited page is outside this PDF; showing page 1.",
 			seqSummary: "{kind} · {count} records in this excerpt (not whole-file statistics)",
 			seqFootnote:
 				"Up to 600 characters per sequence; colours are for reading only — no alignment, QC or biological judgement.",

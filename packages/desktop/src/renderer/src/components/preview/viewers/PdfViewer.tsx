@@ -40,7 +40,7 @@ function cancelRender(task: RenderTask | null): void {
 }
 
 /** Render local PDF bytes directly with PDF.js instead of a Chromium PDF iframe. */
-export function PdfViewer({ src }: PreviewRendererProps) {
+export function PdfViewer({ src, initialPage }: PreviewRendererProps) {
 	const t = useT();
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
@@ -48,6 +48,7 @@ export function PdfViewer({ src }: PreviewRendererProps) {
 	const [loading, setLoading] = useState(true);
 	const [rendering, setRendering] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [pageNotice, setPageNotice] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!src) {
@@ -60,6 +61,7 @@ export function PdfViewer({ src }: PreviewRendererProps) {
 		let loadingTask: ReturnType<typeof getDocument> | null = null;
 		setPdf(null);
 		setPage(1);
+		setPageNotice(null);
 		setLoading(true);
 		setError(null);
 		try {
@@ -72,6 +74,13 @@ export function PdfViewer({ src }: PreviewRendererProps) {
 						return;
 					}
 					setPdf(document);
+					const requested = initialPage ?? 1;
+					if (requested > document.numPages) {
+						setPage(1);
+						setPageNotice(t("resource.viewer.pdfPageOutOfRange"));
+					} else {
+						setPage(Math.max(1, requested));
+					}
 					setLoading(false);
 				})
 				.catch((reason: unknown) => {
@@ -88,7 +97,7 @@ export function PdfViewer({ src }: PreviewRendererProps) {
 			cancelled = true;
 			if (loadingTask) void loadingTask.destroy().catch(() => undefined);
 		};
-	}, [src]);
+	}, [src, initialPage, t]);
 
 	useEffect(() => {
 		if (!pdf || !canvasRef.current) return;
@@ -148,6 +157,11 @@ export function PdfViewer({ src }: PreviewRendererProps) {
 		);
 	return (
 		<div className="pdf-viewer" data-preview-kind="pdf">
+			{pageNotice && (
+				<p className="resource-notice" role="status">
+					{pageNotice}
+				</p>
+			)}
 			<div className="pdf-viewer-toolbar" role="toolbar" aria-label="PDF">
 				<button
 					type="button"

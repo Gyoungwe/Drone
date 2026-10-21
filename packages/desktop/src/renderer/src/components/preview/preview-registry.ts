@@ -5,6 +5,8 @@ import type { ComponentType } from "react";
 export interface PreviewRendererProps {
 	result: ResourcePreviewResult;
 	src: string | null;
+	/** Optional PDF page requested by a citation fragment. */
+	initialPage?: number;
 }
 export type PreviewRenderer = ComponentType<PreviewRendererProps>;
 
@@ -33,6 +35,13 @@ export function previewKindOf(result: ResourcePreviewResult): PreviewKind {
 /** 预览 / 源码双页签：只要拿到了文本就能看源码。 */
 export function hasSourceTab(result: ResourcePreviewResult): boolean {
 	return result.text !== undefined;
+}
+
+export function pdfPageFromFragment(fragment: string | undefined): number | undefined {
+	const match = fragment?.match(/^page=(\d+)$/i);
+	if (!match) return undefined;
+	const page = Number(match[1]);
+	return Number.isInteger(page) && page > 0 ? page : undefined;
 }
 
 /** 纯函数路由：决定 PreviewHost 用哪个视图，方便单测每种 kind。 */

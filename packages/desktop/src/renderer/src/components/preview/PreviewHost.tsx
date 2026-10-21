@@ -10,6 +10,7 @@ import "./viewers";
 export interface PreviewHostProps {
 	result: ResourcePreviewResult;
 	src: string | null;
+	initialPage?: number;
 	mode: "preview" | "source";
 	zoom: number;
 	imageError: boolean;
@@ -22,6 +23,7 @@ export interface PreviewHostProps {
 export function PreviewHost({
 	result,
 	src,
+	initialPage,
 	mode,
 	zoom,
 	imageError,
@@ -45,7 +47,7 @@ export function PreviewHost({
 		if (Renderer)
 			return (
 				<div className="preview-host" data-preview-kind={route.kind}>
-					<Renderer result={result} src={src} />
+					<Renderer result={result} src={src} initialPage={initialPage} />
 				</div>
 			);
 	}

@@ -1182,6 +1182,7 @@ export const zh = {
 			prevPage: "上一页",
 			nextPage: "下一页",
 			pdfPage: "第 {page} / {pages} 页",
+			pdfPageOutOfRange: "引用页码超出 PDF 范围，已回到第 1 页。",
 			seqSummary: "{kind} · 当前片段 {count} 条记录（不是全文件统计）",
 			seqFootnote: "每条最多显示 600 个序列字符；颜色用于阅读，不进行比对、质控或生物学判断。",
 			seqClipped: "仅展示前 20 条记录／每条 600 字符。",

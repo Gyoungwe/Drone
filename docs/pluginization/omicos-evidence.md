@@ -24,3 +24,19 @@
 ## PR2–PR6
 
 尚未开始，按 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 的顺序执行。
+
+## PR2：引用跳转到 PDF 原文页码
+
+状态：代码实现完成；真实会话验收待执行。
+
+- PDF worker 按页输出 `[[page:N]]` 边界，允许受控扩大读取页数，并刷新 checked-in compiled artifact 与 manifest。
+- `research_read_source` 从实际读取文本解析页码范围；来源回执和 citations 记录 `page_start/page_end/pages`，仅在读到页时生成 `#page=N`。
+- Markdown 资源链接保留 fragment；预览宿主把 `page=N` 传给 PDF viewer，越界回到第 1 页并显示双语提示。
+
+已运行：
+
+- `npx vitest run packages/pi-research/src/evidence-loop.test.ts packages/desktop/src/renderer/src/components/preview/preview-registry.test.ts packages/desktop/src/renderer/src/components/preview/viewers/viewers.test.tsx`：13 tests passed（含 integration mirror）。
+- `npm run typecheck`：通过。
+- `npx biome check`：相关文件通过。
+
+待补真实证据：真实会话读取包含第五页的 PDF，点击带页码引用确认预览直接落到目标页，并记录越界回退行为。

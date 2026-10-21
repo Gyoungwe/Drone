@@ -1,4 +1,4 @@
-import { knowledgeLinksForDisplay, parseKnowledgeHref } from "@drone/shared";
+import { knowledgeLinksForDisplay, parseKnowledgeHref, splitResourceLink } from "@drone/shared";
 import MarkdownRender, { type SmoothMarkdownStreamOptions } from "markstream-react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";
@@ -104,8 +104,9 @@ export function Markdown({ text, streaming }: { text: string; streaming?: boolea
 			if (href.startsWith("#")) return;
 			event.preventDefault();
 			event.stopPropagation();
+			const resourceTarget = splitResourceLink(href);
 			openResourcePreview({
-				href,
+				...resourceTarget,
 				label: target.textContent?.trim() || href,
 				cwd: cwd ?? undefined,
 			});

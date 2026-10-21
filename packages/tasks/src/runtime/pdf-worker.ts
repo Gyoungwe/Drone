@@ -27,13 +27,15 @@ try {
 	const doc = await loading.promise;
 	let text = "";
 	const totalPages = doc.numPages;
-	const pages = Math.min(totalPages, 3);
+	const requestedPages = Number.isInteger(workerData.maxPages) ? Math.max(1, Number(workerData.maxPages)) : 3;
+	const pages = Math.min(totalPages, requestedPages);
 	for (let page = 1; page <= pages; page++) {
 		const content = await (await doc.getPage(page)).getTextContent();
-		text += `${content.items
+		const pageText = content.items
 			.map((item: any) => item.str || "")
 			.join(" ")
-			.slice(0, 30000)}\n`;
+			.slice(0, 30000);
+		text += `[[page:${page}]]\n${pageText}\n`;
 	}
 	await (typeof doc.destroy === "function" ? doc.destroy() : loading.destroy());
 	parentPort?.postMessage({ text, pages, partial: totalPages > pages });

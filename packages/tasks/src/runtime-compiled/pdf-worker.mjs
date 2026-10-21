@@ -29,10 +29,13 @@ try {
   const doc = await loading.promise;
   let text = "";
   const totalPages = doc.numPages;
-  const pages = Math.min(totalPages, 3);
+  const requestedPages = Number.isInteger(workerData.maxPages) ? Math.max(1, Number(workerData.maxPages)) : 3;
+  const pages = Math.min(totalPages, requestedPages);
   for (let page = 1; page <= pages; page++) {
     const content = await (await doc.getPage(page)).getTextContent();
-    text += `${content.items.map((item) => item.str || "").join(" ").slice(0, 3e4)}
+    const pageText = content.items.map((item) => item.str || "").join(" ").slice(0, 3e4);
+    text += `[[page:${page}]]
+${pageText}
 `;
   }
   await (typeof doc.destroy === "function" ? doc.destroy() : loading.destroy());

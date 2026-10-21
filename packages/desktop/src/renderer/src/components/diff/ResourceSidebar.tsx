@@ -14,7 +14,7 @@ import type { ResourcePreviewTarget } from "../../stores/ui";
 import { useUiStore } from "../../stores/ui";
 import { CloseIcon } from "../icons";
 import { PreviewHost } from "../preview/PreviewHost";
-import { hasSourceTab } from "../preview/preview-registry";
+import { hasSourceTab, pdfPageFromFragment } from "../preview/preview-registry";
 import { contextMenuHandler } from "../ui/ContextMenu";
 import { buildFileMenu } from "../ui/file-menu";
 
@@ -92,6 +92,7 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 	const title = target.label || result?.name || target.href;
 	const src = result ? dataUrl(result) : null;
 	const format = resourceFormat(result?.name || "");
+	const initialPage = pdfPageFromFragment(target.fragment);
 
 	return (
 		<>
@@ -204,6 +205,7 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 					<PreviewHost
 						result={result}
 						src={src}
+						initialPage={initialPage}
 						mode={mode}
 						zoom={zoom}
 						imageError={imageError}
