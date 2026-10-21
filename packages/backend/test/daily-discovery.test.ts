@@ -247,6 +247,45 @@ describe("daily discovery outcome", () => {
 		await expect(service.run()).rejects.toThrow(/temporarily unavailable/);
 		expect((await service.getState()).lastRunAt).toBeNull();
 	});
+
+	it("keeps usable radar hits when another connector is retryable", async () => {
+		const { service, options } = await setup("[]", []);
+		options.context.mockResolvedValue({
+			bound: true,
+			fresh: [],
+			related: [],
+			topics: [{ id: "topic-1", title: "cell atlas" }],
+		});
+		Object.assign(options, {
+			radarSearch: vi.fn(async () => ({
+				query: "cell atlas",
+				hits: [
+					{
+						id: "arxiv:2401.12345",
+						title: "A New Cell Atlas",
+						locator: "https://arxiv.org/abs/2401.12345",
+						sourceType: "literature",
+						arxivId: "2401.12345",
+						publishedAt: new Date(10 * DAY - DAY).toISOString(),
+						sourceReceipt: {} as never,
+					},
+				],
+				failures: [
+					{
+						connectorId: "semantic-scholar",
+						message: "HTTP 429",
+						retryable: true,
+						at: new Date().toISOString(),
+					},
+				],
+				connectors: ["arxiv", "semantic-scholar"],
+				complete: false,
+			})),
+		});
+		const state = await service.run();
+		expect(state.radar).toHaveLength(1);
+		expect(state.lastOutcome).toMatchObject({ kind: "radar-ran", added: 1 });
+	});
 });
 
 describe("completionText", () => {

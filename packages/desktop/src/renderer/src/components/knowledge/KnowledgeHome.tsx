@@ -6,6 +6,7 @@ import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
+import { DailyIdeas } from "./DailyIdeas";
 import { useKnowledgeOverview } from "./hooks";
 import { type KnowledgeCategory, KnowledgeSearch } from "./KnowledgeSearch";
 import {
@@ -234,6 +235,7 @@ export function KnowledgeHome({
 					</section>
 
 					<aside className="space-y-6">
+						<DailyIdeas cwd={cwd} sessionId={sessionId} bindingRevision={revision} />
 						<section aria-label={t("homePendingTitle")}>
 							<h2 className="mb-2 text-xs font-medium text-ink-dim">
 								{t("homePendingTitle")} {reviews ? `· ${reviews.total}` : ""}

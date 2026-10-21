@@ -250,10 +250,11 @@ export class DailyDiscoveryService {
 			})),
 		);
 		const failures = responses.flatMap(({ response }) => response?.failures ?? []);
-		if (failures.some((failure) => failure.retryable)) {
+		const retryableFailure = failures.some((failure) => failure.retryable);
+		const usableResponses = responses.filter(({ response }) => (response?.hits.length ?? 0) > 0);
+		if (retryableFailure && usableResponses.length === 0) {
 			throw new Error("Literature radar connector is temporarily unavailable; retry later");
 		}
-		const usableResponses = responses.filter(({ response }) => response?.complete);
 		if (usableResponses.length === 0 && failures.length > 0)
 			return { kind: "radar-connectors-disabled", at: startedAt };
 		const byKey = new Map<string, DailyDiscoveryRadarPaper>();
