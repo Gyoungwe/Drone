@@ -10774,6 +10774,11 @@ function createTaskJournal({ persist = () => {
   };
 }
 function registerTaskRuntime2(pi, options = {}) {
+  const shared = requestSharedTaskRuntime(pi);
+  if (shared?.journal) {
+    shared.journal.configure?.(options);
+    return shared.journal;
+  }
   const registry3 = taskRuntimeRegistry(pi);
   if (registry3?.journal) {
     registry3.journal.configure?.(options);
@@ -10781,11 +10786,32 @@ function registerTaskRuntime2(pi, options = {}) {
   }
   const journal = process.env.DRONE_TASK_WORKBENCH !== "off" ? registerWorkbench(pi, options) : createLegacyTaskJournal(pi);
   if (registry3) registry3.journal = journal;
+  publishTaskRuntimeRegistry(pi, registry3);
   return journal;
 }
 var TASK_RUNTIME_REGISTRY = "__drone_task_runtime_v1";
 var PROCESS_TASK_RUNTIME_REGISTRY = "__drone_task_runtime_process_v1";
+var TASK_RUNTIME_REQUEST = "drone:task-runtime/request/v1";
+var TASK_RUNTIME_RESPONSE = "drone:task-runtime/v1";
 var localTaskRuntimeRegistry = /* @__PURE__ */ new WeakMap();
+function requestSharedTaskRuntime(pi) {
+  const events = pi?.events;
+  if (!events?.on || !events.emit) return null;
+  let shared = null;
+  const unsubscribe = events.on(TASK_RUNTIME_RESPONSE, (payload) => {
+    if (payload?.version === 1 && payload.registry?.journal) shared = payload.registry;
+  });
+  events.emit(TASK_RUNTIME_REQUEST, { version: 1 });
+  unsubscribe?.();
+  return shared;
+}
+function publishTaskRuntimeRegistry(pi, registry3) {
+  const events = pi?.events;
+  if (!events?.on || !events.emit) return;
+  events.on(TASK_RUNTIME_REQUEST, (payload) => {
+    if (payload?.version === 1) events.emit(TASK_RUNTIME_RESPONSE, { version: 1, registry: registry3 });
+  });
+}
 function taskRuntimeRegistry(pi) {
   if (!pi || typeof pi !== "object" && typeof pi !== "function") return null;
   const owner = pi.events && (typeof pi.events === "object" || typeof pi.events === "function") ? pi.events : pi;

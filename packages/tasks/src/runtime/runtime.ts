@@ -225,6 +225,11 @@ export function createTaskJournal({ persist = () => {}, now = () => new Date().t
 }
 
 export function registerTaskRuntime(pi, options = {}) {
+	const shared = requestSharedTaskRuntime(pi);
+	if (shared?.journal) {
+		shared.journal.configure?.(options);
+		return shared.journal;
+	}
 	// Several bundled extension graphs can load the task runtime into the same Pi
 	// host (for example pi-core and the knowledge extension). Keep one journal and
 	// one set of hooks per host; otherwise one instance can approve task_plan while
@@ -237,12 +242,36 @@ export function registerTaskRuntime(pi, options = {}) {
 	const journal =
 		process.env.DRONE_TASK_WORKBENCH !== "off" ? registerWorkbench(pi, options) : createLegacyTaskJournal(pi);
 	if (registry) registry.journal = journal;
+	publishTaskRuntimeRegistry(pi, registry);
 	return journal;
 }
 
 const TASK_RUNTIME_REGISTRY = "__drone_task_runtime_v1";
 const PROCESS_TASK_RUNTIME_REGISTRY = "__drone_task_runtime_process_v1";
+const TASK_RUNTIME_REQUEST = "drone:task-runtime/request/v1";
+const TASK_RUNTIME_RESPONSE = "drone:task-runtime/v1";
 const localTaskRuntimeRegistry = new WeakMap();
+
+function requestSharedTaskRuntime(pi) {
+	const events = pi?.events;
+	if (!events?.on || !events.emit) return null;
+	let shared = null;
+	const unsubscribe = events.on(TASK_RUNTIME_RESPONSE, (payload) => {
+		if (payload?.version === 1 && payload.registry?.journal) shared = payload.registry;
+	});
+	events.emit(TASK_RUNTIME_REQUEST, { version: 1 });
+	unsubscribe?.();
+	return shared;
+}
+
+function publishTaskRuntimeRegistry(pi, registry) {
+	const events = pi?.events;
+	if (!events?.on || !events.emit) return;
+	events.on(TASK_RUNTIME_REQUEST, (payload) => {
+		if (payload?.version === 1) events.emit(TASK_RUNTIME_RESPONSE, { version: 1, registry });
+	});
+}
+
 function taskRuntimeRegistry(pi) {
 	if (!pi || (typeof pi !== "object" && typeof pi !== "function")) return null;
 	// Extension loaders may expose a sealed Pi facade per bundle while sharing

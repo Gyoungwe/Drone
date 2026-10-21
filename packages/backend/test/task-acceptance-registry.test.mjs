@@ -70,12 +70,27 @@ describe("acceptance verifier registry (hook 2)", () => {
 	it("uses the shared event bus when extension facades are sealed per bundle", () => {
 		const tools = new Map();
 		const listeners = new Map();
-		const events = { on() {}, emit: async () => {} };
+		const subscriptions = new Map();
+		const makeEvents = () => ({
+			on(name, listener) {
+				const entries = subscriptions.get(name) || [];
+				entries.push(listener);
+				subscriptions.set(name, entries);
+				return () =>
+					subscriptions.set(
+						name,
+						entries.filter((entry) => entry !== listener),
+					);
+			},
+			emit(name, payload) {
+				for (const listener of subscriptions.get(name) || []) listener(payload);
+			},
+		});
 		const registerTool = (tool) => tools.set(tool.name, tool);
 		const registerCommand = () => {};
 		const on = (name) => listeners.set(name, (listeners.get(name) || 0) + 1);
-		const first = Object.freeze({ registerTool, registerCommand, on, events });
-		const second = Object.freeze({ registerTool, registerCommand, on, events });
+		const first = Object.freeze({ registerTool, registerCommand, on, events: makeEvents() });
+		const second = Object.freeze({ registerTool, registerCommand, on, events: makeEvents() });
 
 		const journal = registerTaskRuntime(first);
 		expect(registerTaskRuntime(second, { readKnowledgeBinding: async () => null })).toBe(journal);
