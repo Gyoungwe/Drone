@@ -43,3 +43,9 @@
 
 - 已通过：`npm run lint`（仅仓库已有大文件 warning）、三 workspace typecheck、`npm run check:arch`。
 - 最终回归：`npm test` 通过（backend 231 files / 1893 tests，desktop 157 files / 811 tests，其他 workspace 亦通过）；`npm run typecheck`、`npm run build`、`npm run check:extensions -- --strict`、`npm run check:arch` 和 `npm run lint` 通过（lint 仅保留仓库已有两个大文件 warning）；插件仓库 `npm run check` 通过。
+
+## file: 依赖门禁修复
+
+- 插件仓库提交 `6d60477` 将根私有 workspace 的 `@gyoungwe/plugin-api` 从 `file:vendor/...` 改为 `^1.1.0`；锁文件仍固定已校验的 vendor tarball，因此未发布 npm 包时 `npm ci` 仍可离线重建。
+- `npm ci --ignore-scripts --no-audit --no-fund && npm run check`（`drone-plugins`）通过。
+- `npm run check:plugin-api -- --migration --lifecycle`（Drone）通过：API projection、tarball 安装、插件 workspace 依赖/HEAD 检查、0.9.0 → 1.1.0 → 0.9.0 生命周期和卸载均 PASS。
