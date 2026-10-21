@@ -47,7 +47,9 @@ function installedUiPackageRoot(): string {
 	return join(agentDir, "npm", "node_modules");
 }
 
-export type InstalledUiDiscovery = { packageName: string; uiDir: string } | { packageName: string; error: string };
+export type InstalledUiDiscovery =
+	| { packageName: string; uiDir: string }
+	| { packageName: string; error: string };
 
 export async function discoverInstalledUiPackages(root: string): Promise<InstalledUiDiscovery[]> {
 	const discoveries: InstalledUiDiscovery[] = [];
