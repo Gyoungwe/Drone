@@ -31,6 +31,7 @@ Drone 交付提交：`5eff5179a714bbe3884673823533200b514bcdbf`
 | `npm test` | PASS；全工作区测试通过 |
 | `npm run check:desktop-artifact` | PASS；17 项检查、4 个静态视口 |
 | `node scripts/check-release-artifacts.mjs --dir packages/desktop/dist --platform mac --arch both --allow-unsigned` | PASS；arm64/x64 的 DMG 和 ZIP 均解包、挂载并完成 `app.asar`、Electron framework、`--version` 启动探针 |
+| 干净 checkout：`git clone` → `npm ci` → `npm run build` → `stage:pi-packages`/research skills → `electron-builder --mac --arm64 --dir` | PASS；从远程 `codex/pluginize-v2-p2` 重建 App，`check-knowledge-package` 通过，worker integrity 与锁定插件一致 |
 
 本次 macOS 产物 SHA-256：
 
