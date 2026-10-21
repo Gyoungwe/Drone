@@ -241,6 +241,7 @@ export function registerTaskRuntime(pi, options = {}) {
 }
 
 const TASK_RUNTIME_REGISTRY = "__drone_task_runtime_v1";
+const PROCESS_TASK_RUNTIME_REGISTRY = "__drone_task_runtime_process_v1";
 const localTaskRuntimeRegistry = new WeakMap();
 function taskRuntimeRegistry(pi) {
 	if (!pi || (typeof pi !== "object" && typeof pi !== "function")) return null;
@@ -262,7 +263,17 @@ function taskRuntimeRegistry(pi) {
 			writable: false,
 		});
 	} else {
-		localTaskRuntimeRegistry.set(owner, registry);
+		// The production loader can give each bundled entry a sealed facade and
+		// a distinct event object. The Pi process is still the single host, so
+		// keep one fallback registry there for those facades.
+		const shared = process[PROCESS_TASK_RUNTIME_REGISTRY];
+		if (shared?.version === 1) return shared;
+		Object.defineProperty(process, PROCESS_TASK_RUNTIME_REGISTRY, {
+			value: registry,
+			enumerable: false,
+			configurable: false,
+			writable: false,
+		});
 	}
 	return registry;
 }
