@@ -3,6 +3,7 @@
 日期：2026-10-21（Asia/Shanghai）
 Drone 分支：`codex/pluginize-v2-p2`
 `drone-plugins` 分支：`codex/pluginize-v2-p2`
+Drone 交付提交：`5eff5179a714bbe3884673823533200b514bcdbf`
 插件锁定头：`cdff35e23dd4f4d58e9684e2c4a632c81ccf34b7`
 插件包：`@gyoungwe/pi-knowledge@0.2.0`
 锁定 tarball SHA-256：`4b8275c9a52b5709623fbcc3109a0d9f5a5f11cf095044f5356375e8acfb723c`
