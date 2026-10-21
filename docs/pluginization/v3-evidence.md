@@ -42,4 +42,4 @@
 ## 回归
 
 - 已通过：`npm run lint`（仅仓库已有大文件 warning）、三 workspace typecheck、`npm run check:arch`。
-- 待最终分支收口时运行完整 `npm test`、`npm run build`、`npm run check:extensions -- --strict` 以及插件仓库 `npm run check`。
+- 最终回归：`npm test` 通过（backend 231 files / 1893 tests，desktop 157 files / 811 tests，其他 workspace 亦通过）；`npm run typecheck`、`npm run build`、`npm run check:extensions -- --strict`、`npm run check:arch` 和 `npm run lint` 通过（lint 仅保留仓库已有两个大文件 warning）；插件仓库 `npm run check` 通过。
