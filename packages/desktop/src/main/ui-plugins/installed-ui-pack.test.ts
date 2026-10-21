@@ -42,7 +42,7 @@ describe("installed desktop-ui-pack discovery", () => {
 			join(packageUi, "plugin.json"),
 			JSON.stringify({
 				name: "drone-research-ui",
-				version: "0.1.0",
+				version: "0.1.1",
 				droneUi: 1,
 				main: "src/index.tsx",
 				contributions: [
@@ -59,7 +59,7 @@ describe("installed desktop-ui-pack discovery", () => {
 		await manager.init();
 		expect(manager.info("drone-research-ui")).toMatchObject({
 			name: "drone-research-ui",
-			version: "0.1.0",
+			version: "0.1.1",
 			builtin: undefined,
 			built: false,
 			enabled: false,
@@ -111,7 +111,7 @@ describe("installed desktop-ui-pack discovery", () => {
 		await manager.init();
 		expect(manager.info("drone-research-ui")).toMatchObject({
 			name: "drone-research-ui",
-			version: "0.1.0",
+			version: "0.1.1",
 			built: false,
 			enabled: false,
 		});
