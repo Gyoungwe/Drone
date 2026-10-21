@@ -1,5 +1,5 @@
-import { compareVersions } from "@drone/shared";
 import { gzipSync } from "node:zlib";
+import { compareVersions } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { latestPackageVersions, registryPluginMetadata } from "./package-versions";
 
@@ -76,7 +76,7 @@ describe("registryPluginMetadata", () => {
 						}),
 						arrayBuffer: async () => new ArrayBuffer(0),
 					}
-					: {
+				: {
 						ok: true,
 						json: async () => ({}),
 						arrayBuffer: async () => archive,
@@ -107,7 +107,7 @@ describe("registryPluginMetadata", () => {
 						}),
 						arrayBuffer: async () => new ArrayBuffer(0),
 					}
-					: { ok: true, json: async () => ({}), arrayBuffer: async () => archive },
+				: { ok: true, json: async () => ({}), arrayBuffer: async () => archive },
 		);
 		expect(result["pi-generic"]).toMatchObject({
 			manifestDeclared: false,

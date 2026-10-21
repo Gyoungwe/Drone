@@ -31,7 +31,9 @@ type PackageManifest = {
 };
 
 function stringList(value: unknown): string[] {
-	return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.length > 0) : [];
+	return Array.isArray(value)
+		? value.filter((item): item is string => typeof item === "string" && item.length > 0)
+		: [];
 }
 
 function readTarEntries(bytes: Uint8Array): Map<string, string> {
@@ -70,9 +72,13 @@ function metadataFromArchive(
 	const entries = readTarEntries(gunzipSync(new Uint8Array(archive)));
 	const packageJson = readJson(entries, "package/package.json");
 	if (!packageJson || typeof packageJson.name !== "string") return null;
-	const manifest = readJson(entries, "package/plugin.manifest.json") ?? readJson(entries, "package/ui/plugin.json");
+	const manifest =
+		readJson(entries, "package/plugin.manifest.json") ?? readJson(entries, "package/ui/plugin.json");
 	const manifestDeclared = Boolean(manifest);
-	const packageKind: PiPluginPackageKind = entries.has("package/ui/plugin.json") && !entries.has("package/plugin.manifest.json") ? "desktop-ui" : "pi";
+	const packageKind: PiPluginPackageKind =
+		entries.has("package/ui/plugin.json") && !entries.has("package/plugin.manifest.json")
+			? "desktop-ui"
+			: "pi";
 	return {
 		name: packageJson.name,
 		version: typeof packageJson.version === "string" ? packageJson.version : undefined,

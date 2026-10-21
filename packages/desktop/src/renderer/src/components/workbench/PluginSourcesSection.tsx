@@ -4,8 +4,8 @@ import {
 	DRONE_PLUGIN_METADATA,
 	DRONE_PLUGIN_PACKAGE_NAMES,
 	type HostPluginPackage,
-	type RegistryPluginMetadata,
 	type PiPluginSourceEntry,
+	type RegistryPluginMetadata,
 } from "@drone/shared";
 import { useEffect, useMemo } from "react";
 import { useT } from "../../i18n";
@@ -145,10 +145,12 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 						v{entry.version ?? "?"} · {entry.capabilities.join(" · ") || "Pi package"}
 					</p>
 					<p className="mt-1 text-[11px] text-ink-faint">
-						{t("skillsConnections.declaredCapabilities")}: {" "}
-						{entry.capabilities.length ? entry.capabilities.join(", ") : t("skillsConnections.undeclaredCapabilities")}
+						{t("skillsConnections.declaredCapabilities")}:{" "}
+						{entry.capabilities.length
+							? entry.capabilities.join(", ")
+							: t("skillsConnections.undeclaredCapabilities")}
 						{" · "}
-						{t("skillsConnections.declaredHosts")}: {" "}
+						{t("skillsConnections.declaredHosts")}:{" "}
 						{entry.hosts.length ? entry.hosts.join(", ") : t("skillsConnections.undeclaredHosts")}
 					</p>
 					{!entry.manifestDeclared && (
@@ -268,16 +270,34 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 									disabled={installing}
 									onClick={() => {
 										const details = [
-											t("skillsConnections.declaredCapabilities") + ": " +
-												(entry.capabilities.length ? entry.capabilities.join(", ") : t("skillsConnections.undeclaredCapabilities")),
-											t("skillsConnections.declaredTools") + ": " +
-												(entry.tools.length ? entry.tools.join(", ") : t("skillsConnections.undeclaredTools")),
-											t("skillsConnections.declaredPermissions") + ": " +
-												(entry.permissions ? JSON.stringify(entry.permissions) : t("skillsConnections.undeclaredPermissions")),
-											t("skillsConnections.declaredHosts") + ": " +
-												(entry.hosts.length ? entry.hosts.join(", ") : t("skillsConnections.undeclaredHosts")),
+											t("skillsConnections.declaredCapabilities") +
+												": " +
+												(entry.capabilities.length
+													? entry.capabilities.join(", ")
+													: t("skillsConnections.undeclaredCapabilities")),
+											t("skillsConnections.declaredTools") +
+												": " +
+												(entry.tools.length
+													? entry.tools.join(", ")
+													: t("skillsConnections.undeclaredTools")),
+											t("skillsConnections.declaredPermissions") +
+												": " +
+												(entry.permissions
+													? JSON.stringify(entry.permissions)
+													: t("skillsConnections.undeclaredPermissions")),
+											t("skillsConnections.declaredHosts") +
+												": " +
+												(entry.hosts.length
+													? entry.hosts.join(", ")
+													: t("skillsConnections.undeclaredHosts")),
 										];
-										if (window.confirm([t("skillsConnections.installConfirm", { name: entry.packageName }), ...details].join("\n")))
+										if (
+											window.confirm(
+												[t("skillsConnections.installConfirm", { name: entry.packageName }), ...details].join(
+													"\n",
+												),
+											)
+										)
 											void install(entry.packageName);
 									}}
 								>
