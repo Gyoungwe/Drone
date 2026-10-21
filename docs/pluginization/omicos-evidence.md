@@ -87,9 +87,9 @@
 - `git diff --check`：通过。
 - README、索引和配置示例的链接与 JSON 结构已人工核对。
 
-真实会话证据（2026-10-22）：在临时项目的“技能与连接 → MCP”中接入 `https://Paper2Agent-alphagenome-mcp.hf.space/mcp`，刷新后真实 UI 显示 `paper2agent-remote` 已探测 22 个工具。随后在 DeepSeek 会话中请求调用 `create_genomic_interval`；会话确实生成了 MCP 工具调用步骤，但宿主返回“还没有获批的任务方案”，工具未实际执行，模型如实报告没有区间对象。因此接入和发现通过，真实工具调用仍为待补，不标 PASS。
+真实会话证据（2026-10-22）：在真实安装的 Drone（`/Applications/Drone.app`）中接入 `https://Paper2Agent-alphagenome-mcp.hf.space/mcp`，刷新后真实 UI 显示 `paper2agent-remote` 已探测 22 个工具。第一次会话按宿主要求调用 `task_plan`，人工批准后确实生成了 `mcp__paper2agent_remote.create_genomic_interval` 调用；宿主没有收到回执，把它记为 `started/unknown`，模型随后被幂等门禁阻止重放。第二次会话使用已发现的正确 schema（`chromosome`, `start`, `end`, `strand`, `name`, `out_prefix`），再次批准 `task_plan` 后仍没有回执，任务进入 `reconcile-before-retry`，最终真实 UI 报告“没有任何 MCP 回执”。因此服务器发现和审批流程通过，但 Drone 宿主内的工具执行/回执闭环仍未通过，PR5 不标 PASS。
 
-2026-10-22 外部连通性探测：按文档使用公开的 AlphaGenome Paper2Agent MCP 地址完成 initialize、tools/list 和 `create_genomic_interval` 调用，服务器返回结构化交付物与原论文链接。该探测证明公开服务器和 MCP 协议可用；Drone 内的真实会话已完成服务器发现，但工具调用仍被宿主审批门禁拦截，不能把 curl 结果冒充 Drone 调用 PASS。
+2026-10-22 外部连通性探测：按文档使用公开的 AlphaGenome Paper2Agent MCP 地址完成协议初始化和工具清单探测；公开端点可访问，但直接请求在未建立完整会话头时返回参数错误。该探测不能替代 Drone 真实会话证据。最终阻塞点是宿主运行时的 MCP 调用回执未返回，而不是把外部 curl 结果冒充成调用 PASS。
 
 ## PR6：PDF 解析质量评估
 
@@ -120,7 +120,7 @@
 
 - 本轮修复后：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run check:plugin-api -- --migration --lifecycle`、`npm run skills:check` 和 `npm run check:ui-skill-acceptance` 均通过。
 
-真实 Vault/正式安装包仍有一项待办：PR5 Paper2Agent 工具实际执行。PR2 页码引用点击、PR3 三类首页卡片和 PR4 五行矩阵沉淀已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
+真实 Vault/正式安装包仍有一项待办：PR5 Paper2Agent 工具实际执行并取得回执。当前证据已覆盖安装、发现、task_plan 批准、实际调用发起和未知结果保护，但没有可核对的 MCP 回执，不能标记 PASS。PR2 页码引用点击、PR3 三类首页卡片和 PR4 五行矩阵沉淀已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
 
 ## 2026-10-22 实机抽检补充
 
