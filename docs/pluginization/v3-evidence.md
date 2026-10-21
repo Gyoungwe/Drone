@@ -49,6 +49,12 @@
 - 已通过：`npm run lint`（仅仓库已有大文件 warning）、三 workspace typecheck、`npm run check:arch`。
 - 最终回归：`npm test` 通过（backend 231 files / 1894 tests，desktop 158 files / 818 tests，其他 workspace 亦通过）；`npm run typecheck`、`npm run build`、`npm run check:extensions -- --strict`、`npm run check:arch` 和 `npm run lint` 通过（lint 仅保留仓库已有两个大文件 warning）；插件仓库 `npm run check` 通过。
 
+## 未完成项
+
+- T3 的真实安装包三页面验收仍待 Claude 在 Mac 上执行；当前只有代码级挂载、卸载和默认恢复证据。
+- T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，完整迁移尚未完成。
+- 下一轮 OmicOS 六个 PR 尚未开始，执行顺序和验收边界见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md)。
+
 ## file: 依赖门禁修复
 
 - 插件仓库提交 `6d60477` 将根私有 workspace 的 `@gyoungwe/plugin-api` 从 `file:vendor/...` 改为 `^1.1.0`；锁文件仍固定已校验的 vendor tarball，因此未发布 npm 包时 `npm ci` 仍可离线重建。
