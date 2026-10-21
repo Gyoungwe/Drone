@@ -1,5 +1,7 @@
 # Drone 项目协作规则
 
+创建、修改或验收 Drone 插件时使用仓库技能 [`drone-plugin-dev`](.agents/skills/drone-plugin-dev/SKILL.md)；涉及两个仓库的维护与发布时同时使用 [`drone-maintenance`](.agents/skills/drone-maintenance/SKILL.md)。
+
 改动代码前先读 [`docs/INDEX.md`](docs/INDEX.md)，改动完成后检查索引是否仍然准确。架构升级规划见 [`docs/architecture-v2.md`](docs/architecture-v2.md) 和 [`docs/architecture-v2-tasks.md`](docs/architecture-v2-tasks.md)。私有发版流程见本机的 `.local/docs/release.md`。
 
 ## 硬约束

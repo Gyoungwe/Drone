@@ -5,7 +5,7 @@
 | Repository | Owns | Does not own |
 | --- | --- | --- |
 | `Drone` (`/Users/gaoyangwei/Documents/ChatGPT/Drone`) | Electron host, backend, shared contracts, domain packages, `plugin-api`, `pi-core`, `pi-research`, compatibility adapters, root checks, release evidence, and the plan | The canonical source for packages already migrated to `drone-plugins` |
-| `drone-plugins` (`../drone-plugins`, GitHub `Gyoungwe/drone-plugins`) | The migrated plugin workspace: currently `pi-knowledge`, `research-suite`, and `desktop-ui-pack`; package manifests, self-contained build/smoke, and plugin-specific release metadata | Electron/backend internals, source-relative imports into Drone, and host-only persistence or IPC |
+| `drone-plugins` (`../drone-plugins`, GitHub `Gyoungwe/drone-plugins`) | The migrated plugin workspace: currently `pi-knowledge`, `research-suite`, and `desktop-ui-pack`; package manifests, self-contained build/smoke, and plugin-specific release metadata. v2 is merged on `main`; v3 work continues on `codex/plugin-platform-v3`. | Electron/backend internals, source-relative imports into Drone, and host-only persistence or IPC |
 
 The ownership table is a current fact, not a prediction. Do not claim that `plugin-api`, `pi-core`, or `pi-research` has moved until its source, package check, host loading path, and release evidence all point to `drone-plugins`.
 
