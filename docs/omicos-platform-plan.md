@@ -12,9 +12,10 @@
 ### 2026-10-22 实机抽检记录
 
 - 当前构建包 `packages/desktop/dist/mac-arm64/Drone.app` 已在真实 `Dronevault`（`/Users/gaoyangwei/Documents/Dronevault`）启动，知识库页读到 `ObsidianResearchVault` 的 100 篇笔记和真实来源记录。
+- 重新打包后的当前构建包在“技能与连接 → 连接器”真实界面列出 `arXiv` 与 `Semantic Scholar`，两项均为默认开启；这确认源码 registry 已进入可启动的 app 目录包。标准 `npm run dist` 在本机 `cpu-features` 原生依赖重编译阶段因缺失 `buildcheck.gypi` 失败，随后用 `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --dir --config.npmRebuild=false` 生成了同一构建产物的未签名目录包。
 - 新建会话首页在该 Vault 没有活跃课题、今日新想法或 `radar.status=new` 条目时只显示原有卡片，未渲染空的“继续课题 / 今日发现 / 新文献”卡片；这是 T3 的负向路径证据，不能替代三张卡片的正向验收。
 - 真实会话连通性抽检使用已配置模型 `GPT-6.1 Sol`，结果为“模型请求失败：凭证无效”；此前 `Gemini 3.8 Flash` 也得到同样错误。当前无法在真实会话中运行雷达、学术回答或证据矩阵，相关条目继续保持待验收。
-- `/Applications/Drone.app` 的 `app.asar` 时间戳早于当前构建包；正式安装包正向验收必须在安装新构建包并恢复有效模型凭证后重跑。
+- `/Applications/Drone.app` 仍是早于当前构建的安装包；正式签名/安装包正向验收必须在安装当前构建包并恢复有效模型凭证后重跑。
 
 ## 共同约束
 

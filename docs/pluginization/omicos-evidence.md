@@ -120,5 +120,6 @@
 
 - 知识库页显示 `ObsidianResearchVault`、100 篇笔记和已有 arXiv/LoRA 来源记录，证明当前构建包能读取真实 Vault 状态。
 - 新建会话首页在当前 Vault 没有活跃课题、今日新想法和新文献雷达条目时，仅显示原有“研究 / 知识库 / 接力”卡片；上下文卡片没有以空状态出现，T3 的无数据路径通过。
+- 重新打包后的当前 `packages/desktop/dist/mac-arm64/Drone.app` 在真实连接器页列出并启用了 `arXiv`、`Semantic Scholar`。标准 `npm run dist` 因本机 `cpu-features` 缺失 `buildcheck.gypi` 在原生重编译阶段失败，使用 `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --dir --config.npmRebuild=false` 生成了可启动的未签名目录包，源码 registry 因而得到真实 app 证据。
 - 真实会话尝试先后使用 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”。因此本次没有把雷达运行、页码引用点击或五篇矩阵标成 PASS，也没有写入新的 Vault 结果。
-- `/Applications/Drone.app` 仍是较早构建；正向安装包验收应在安装当前构建并恢复有效模型凭证后执行。
+- `/Applications/Drone.app` 仍是较早构建；正向签名/安装包验收应在安装当前构建并恢复有效模型凭证后执行。
