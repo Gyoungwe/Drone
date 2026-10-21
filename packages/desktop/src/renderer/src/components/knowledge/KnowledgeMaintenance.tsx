@@ -26,6 +26,8 @@ export function KnowledgeMaintenance({
 	const [error, setError] = useState<string | null>(null),
 		[message, setMessage] = useState<string | null>(null),
 		[confirm, setConfirm] = useState(false);
+	const [automatic, setAutomatic] = useState({ enabled: false, maxItems: 5, dailyLimit: 20 });
+	const [runs, setRuns] = useState<Array<{ startedAt: string; processed: number; modelCalls: number }>>([]);
 	useEffect(() => {
 		setOffset(0);
 		setPage(null);
@@ -54,6 +56,20 @@ export function KnowledgeMaintenance({
 			live = false;
 		};
 	}, [cwd, revision, offset, nonce]);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: nonce reloads persisted maintenance settings after an action
+	useEffect(() => {
+		let live = true;
+		void Promise.all([getPi().getKnowledgeMaintenanceSettings(), getPi().getKnowledgeMaintenanceRuns()])
+			.then(([settings, history]) => {
+				if (!live) return;
+				setAutomatic(settings);
+				setRuns(history);
+			})
+			.catch((e) => live && setError(String(e?.message || e)));
+		return () => {
+			live = false;
+		};
+	}, [nonce]);
 	/**
 	 * A review task has no in-place fix: hand it to a new task with a prefilled request (not sent) so the
 	 * agent re-reads the sources and proposes changes into the Wiki review queue.
@@ -94,8 +110,79 @@ export function KnowledgeMaintenance({
 			setBusy(false);
 		}
 	}
+	async function saveAutomatic(next: typeof automatic) {
+		setAutomatic(next);
+		try {
+			await getPi().saveKnowledgeMaintenanceSettings(next);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : String(e));
+		}
+	}
+	async function runAutomatic() {
+		setBusy(true);
+		setError(null);
+		try {
+			const run = await getPi().runKnowledgeMaintenance({ cwd: cwd || "" });
+			setRuns((current) => [run, ...current]);
+			setMessage(t("automaticMaintenanceDone"));
+		} catch (e) {
+			setError(e instanceof Error ? e.message : String(e));
+		} finally {
+			setBusy(false);
+		}
+	}
 	return (
 		<div className="space-y-4" data-testid="knowledge-maintenance">
+			<section className="rounded-xl border border-border p-3" data-testid="automatic-knowledge-maintenance">
+				<div className="flex items-center justify-between gap-2">
+					<div>
+						<h4 className="text-xs font-semibold">{t("automaticMaintenance")}</h4>
+						<p className="mt-1 text-[11px] text-ink-dim">{t("automaticMaintenanceHint")}</p>
+					</div>
+					<Button size="sm" onClick={() => void saveAutomatic({ ...automatic, enabled: !automatic.enabled })}>
+						{automatic.enabled ? t("disable") : t("enable")}
+					</Button>
+				</div>
+				<div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+					<label>
+						{t("maintenanceItems")}{" "}
+						<input
+							className="ml-1 w-16 rounded border border-border bg-transparent px-1"
+							type="number"
+							min={1}
+							max={50}
+							value={automatic.maxItems}
+							onChange={(e) => setAutomatic({ ...automatic, maxItems: Number(e.target.value) || 1 })}
+							onBlur={() => void saveAutomatic(automatic)}
+						/>
+					</label>
+					<label>
+						{t("maintenanceDailyLimit")}{" "}
+						<input
+							className="ml-1 w-16 rounded border border-border bg-transparent px-1"
+							type="number"
+							min={1}
+							max={100}
+							value={automatic.dailyLimit}
+							onChange={(e) => setAutomatic({ ...automatic, dailyLimit: Number(e.target.value) || 1 })}
+							onBlur={() => void saveAutomatic(automatic)}
+						/>
+					</label>
+					<Button
+						size="sm"
+						variant="primary"
+						disabled={busy || !automatic.enabled}
+						onClick={() => void runAutomatic()}
+					>
+						{t("runAutomaticMaintenance")}
+					</Button>
+				</div>
+				{runs[0] && (
+					<p className="mt-2 text-[11px] text-ink-faint">
+						{t("lastAutomaticMaintenance")}: {runs[0].processed} · {runs[0].modelCalls}
+					</p>
+				)}
+			</section>
 			<p className="text-xs leading-relaxed text-ink-dim">{t("maintenanceHint")}</p>
 			<div className="flex flex-wrap gap-2">
 				<Button className="border border-border" disabled={busy} onClick={() => void run("reconcile")}>

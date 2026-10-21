@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { resolveWorkspaceProject } from "@drone/knowledge/host";
+import { resolveWorkspaceProject } from "@gyoungwe/pi-knowledge/host";
 import { claimBindingRefs, validateClaimBindings } from "./claim-bindings";
 
 export const RESEARCH_STAGES = Object.freeze([

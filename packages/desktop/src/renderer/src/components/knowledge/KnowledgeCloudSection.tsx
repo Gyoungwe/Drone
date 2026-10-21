@@ -228,7 +228,7 @@ export function KnowledgeCloudSection({
 						? t("cloudNotesWarning").replace("{count}", String(status.warnings.length))
 						: t("cloudNotesTitle")}
 				</summary>
-				<ul className="mt-2 space-y-1.5 leading-relaxed text-ink-dim">
+				<ul className="mt-2 space-y-2 leading-relaxed text-ink-dim">
 					<li>{t("cloudHint")}</li>
 					{status.message ? <li className="break-words">{status.message}</li> : null}
 					{status.warnings.map((warning) => (

@@ -2,14 +2,14 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { deriveTurnUsage, messagesToUIMessages } from "@drone/shared";
 import {
 	closeKnowledgeServices,
 	createTaskFeedback,
 	getKnowledgeService,
 	guardResearchToolResult,
 	registerAnswerPublication,
-} from "@drone/knowledge/host";
-import { deriveTurnUsage, messagesToUIMessages } from "@drone/shared";
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toSessionMessages } from "../src/session/messages";
 

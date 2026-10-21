@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkKnowledgeSnapshotReuse } from "@drone/knowledge/host";
 import { type ResearchConnector, ResearchConnectorRegistry } from "@drone/research";
+import { checkKnowledgeSnapshotReuse } from "@gyoungwe/pi-knowledge/host";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";
 import {

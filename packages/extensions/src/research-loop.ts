@@ -1,14 +1,10 @@
-import {
-	describeProject,
-	resolveWorkspaceProject,
-	sessionEntriesOf,
-} from "@drone/knowledge/project-identity";
 import { verifyLiteratureReceipt } from "@drone/research/literature-receipt";
 import { createResearchReceiptJournal } from "@drone/research/receipt-journal";
 import { createResearchLoop, type ResearchLoopPorts } from "@drone/research/research-loop";
 import { observeExecutionReceipt } from "@drone/research/run-provenance";
 import { sourceStatus as typedSourceStatus } from "@drone/research/source-archive";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { describeProject, resolveWorkspaceProject, sessionEntriesOf } from "@gyoungwe/pi-knowledge/host";
 import { bindExtensionRuntime, runExtensionExclusive } from "./internal/runtime";
 import { loadWorkspaceConfig } from "./workspace-config";
 

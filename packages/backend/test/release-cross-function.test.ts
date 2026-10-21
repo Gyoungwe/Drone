@@ -1,5 +1,5 @@
 import { decisionRecord, InquiryService, MemoryInquiryStorage } from "@drone/inquiry";
-import { evaluateMetacognitivePublication } from "@drone/knowledge/host";
+import { evaluateMetacognitivePublication } from "@gyoungwe/pi-knowledge/host";
 import { describe, expect, it } from "vitest";
 
 const HASH = "a".repeat(64);

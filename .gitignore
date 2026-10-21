@@ -47,3 +47,6 @@ scripts/ui-parity/out/
 
 # Bound external plugin repository; validate it through explicit plugin gates, not host lint.
 drone-plugins/
+vendor/plugins/
+.pi/extensions/knowledge-worker.mjs
+.pi/extensions/.knowledge-worker-manifest.json

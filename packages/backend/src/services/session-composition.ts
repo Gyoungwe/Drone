@@ -2,7 +2,7 @@ import type {
 	DeliverableReviewFinding,
 	DeliverableReviewSnapshot,
 	ReviewerProviderSelection,
-} from "@drone/knowledge/host";
+} from "@gyoungwe/pi-knowledge/host";
 import { createLogger } from "../log";
 import { McpService } from "../mcp/service";
 import { PackageAdmin } from "../packages/admin";

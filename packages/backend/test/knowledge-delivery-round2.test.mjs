@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
 import { registerWorkspaceConfig } from "@drone/extensions/workspace-config";
+import { assessManualPage, deliveryContract } from "@drone/research/source-delivery";
 import {
 	beginKnowledgeFlow,
 	closeKnowledgeServices,
@@ -10,8 +11,7 @@ import {
 	normalizeSourceLinks,
 	noteKnowledgeOperation,
 	noteKnowledgeSearch,
-} from "@drone/knowledge/host";
-import { assessManualPage, deliveryContract } from "@drone/research/source-delivery";
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
 

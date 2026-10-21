@@ -7,6 +7,8 @@ import type {
 	KnowledgeCloudSyncResult,
 	KnowledgeCloudWriteResult,
 	KnowledgeGraph,
+	KnowledgeMaintenanceRun,
+	KnowledgeMaintenanceSettings,
 	KnowledgeNote,
 	KnowledgeNoteLinks,
 	KnowledgeOverview,
@@ -286,6 +288,13 @@ export const KnowledgeContract = defineDomain("knowledge", {
 			args: OneObject<KnowledgeTopicArchiveRequest>(),
 			result: Type.Unknown(),
 		},
+		getMaintenanceSettings: { args: Type.Tuple([]), result: ResultObject<KnowledgeMaintenanceSettings>() },
+		saveMaintenanceSettings: {
+			args: OneObject<KnowledgeMaintenanceSettings>(),
+			result: ResultObject<KnowledgeMaintenanceSettings>(),
+		},
+		runMaintenance: { args: OneObject<{ cwd: string }>(), result: ResultObject<KnowledgeMaintenanceRun>() },
+		getMaintenanceRuns: { args: Type.Tuple([]), result: Type.Array(ResultObject<KnowledgeMaintenanceRun>()) },
 		getZoteroStatus: {
 			args: Type.Tuple([]),
 			result: ZoteroStatusSchema,
@@ -366,6 +375,10 @@ export type KnowledgeSchemaTypes = {
 	decideDailyIdea: Parameters<KnowledgeApi["decideDailyIdea"]>;
 	getTopics: Parameters<KnowledgeApi["getKnowledgeTopics"]>;
 	archiveTopic: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>;
+	getMaintenanceSettings: [];
+	saveMaintenanceSettings: Parameters<KnowledgeApi["saveKnowledgeMaintenanceSettings"]>;
+	runMaintenance: Parameters<KnowledgeApi["runKnowledgeMaintenance"]>;
+	getMaintenanceRuns: [];
 	getZoteroStatus: [];
 	getZoteroWebApi: [];
 	saveZoteroWebApi: [ZoteroWebApiSaveInput];

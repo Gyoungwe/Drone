@@ -80,7 +80,6 @@
 		},
 		{
 			"includes": [
-				"packages/knowledge/src/**/*.ts",
 				"packages/extensions/src/internal/**/*.ts",
 				"packages/extensions/src/institutional-access.ts",
 				"packages/extensions/src/knowledge-extension.ts"

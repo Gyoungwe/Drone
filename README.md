@@ -132,7 +132,9 @@ flowchart TB
 
 Loaded by Pi SDK via `ProjectResourceLoader` (two-phase trust).
 
-- `.pi/extensions/*.mjs`: self-contained generated entries from `packages/extensions/src/`; they register tools and call the typed `@drone/knowledge`, `@drone/tasks`, and `@drone/research` packages.
+- `.pi/extensions/*.mjs`: self-contained generated host entries from `packages/extensions/src/`; knowledge core and worker bytes come from the pinned `@gyoungwe/pi-knowledge` plugin.
+
+Knowledge plugin build order: run `npm run fetch:plugins`, then `npm run build`, then `npm run dist` for the macOS/Windows installer. During plugin development, set `DRONE_PLUGINS_DIR=/absolute/path/to/drone-plugins`; the fetch step uses that checkout and prints that lock/hash verification is bypassed.
 - `.pi/extensions/workbench-manifest.json`: generated extension/skill manifest used by Desktop and package smoke checks.
 - `packages/pi-core`, `packages/pi-knowledge`, `packages/pi-research`: package-owned runtime contracts; the old `.pi/lib` compatibility tree is no longer shipped.
 - `skills/`: `research-loop`, `wikiloop`, academic packs (Nature, Scientific, Academic Research Skills CC BY-NC), `zotero-literature`.

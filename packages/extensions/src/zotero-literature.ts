@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadWorkspaceConfig } from "@drone/extensions/workspace-config";
-import { cardLink, literatureCard } from "@drone/knowledge/flow-cards";
 import { createLiteratureOperations } from "@drone/research/literature-operations";
 import { normalizeDoi, verifyLiteratureReceipt } from "@drone/research/literature-receipt";
 import { createCompositeZoteroReconciler } from "@drone/research/zotero-reconcile-runtime";
@@ -28,6 +27,7 @@ import {
 import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
 import { bindRuntime, runRuntimeExclusive, runtimeSlot, withHostRuntime } from "@drone/tasks/runtime-bridge";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { cardLink, literatureCard } from "@gyoungwe/pi-knowledge/host";
 
 const contained = (root, target) => {
 	const rel = relative(root, target);

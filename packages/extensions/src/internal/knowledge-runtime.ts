@@ -8,7 +8,7 @@ import {
 	configureKnowledgeRuntime,
 	configureKnowledgeWorker,
 	type KnowledgeWorkerMetadata,
-} from "@drone/knowledge/runtime-host";
+} from "@gyoungwe/pi-knowledge/host";
 import { runRuntimeExclusive, runtimeSlot } from "@drone/tasks/runtime-bridge";
 import { flowCardBuilder, toolMeta } from "@drone/tasks/tool-manifest-runtime";
 

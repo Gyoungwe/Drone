@@ -7,7 +7,7 @@ import {
 	getKnowledgeService,
 	KnowledgeService,
 	readKnowledgeBinding,
-} from "@drone/knowledge/host";
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, vault, cwd, app;

@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { access, appendFile, cp, mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { resolveWorkspaceProject, runProject, sessionEntriesOf } from "@drone/knowledge/project-identity";
+import { resolveWorkspaceProject, runProject, sessionEntriesOf } from "@gyoungwe/pi-knowledge/host";
 import { loadWorkspaceConfig } from "./workspace-config";
 
 const ALLOWED_SKILLS = new Set(["research-workflow", "research-vault"]);

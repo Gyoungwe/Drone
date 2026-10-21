@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { cardLink, flowCard, literatureCard } from "@drone/knowledge/flow-cards";
+
 import { verifyLiteratureReceipt } from "@drone/research/literature-receipt";
 import { readMethodsFacts, recordRunProvenance, saveMethodsSection } from "@drone/research/run-provenance";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@drone/research/source-archive";
 import { cloudflareAskCopy } from "@drone/research/source-archive-policy";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { cardLink, flowCard, literatureCard } from "@gyoungwe/pi-knowledge/host";
 import { setSourceTopic } from "./internal/obsidian-workbench";
 import { USER_QUESTION_FOCUS } from "./internal/reply-focus";
 import { archivePorts, reconcileLiteratureOperation } from "./internal/research-host";

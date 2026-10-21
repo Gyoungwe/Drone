@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { open } from "node:fs/promises";
 import { resolve } from "node:path";
+import type { SessionEvent } from "@drone/shared";
 import {
 	BackgroundReviewer,
 	type BackgroundReviewerOptions,
@@ -9,8 +10,7 @@ import {
 	type ReviewerModelProvider,
 	type ReviewerProviderSelection,
 	type ReviewReadReceipt,
-} from "@drone/knowledge/host";
-import type { SessionEvent } from "@drone/shared";
+} from "@gyoungwe/pi-knowledge/host";
 import { globalToolManifest } from "../tools/manifest";
 import type { InquiryReadOnlySnapshot } from "./inquiry";
 

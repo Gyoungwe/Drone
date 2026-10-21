@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/host";
+import { closeKnowledgeServices, getKnowledgeService } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });

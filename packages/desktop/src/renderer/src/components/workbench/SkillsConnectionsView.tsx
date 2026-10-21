@@ -763,7 +763,7 @@ export function SkillsConnectionsView() {
 														{group.skills.map(({ skill, sources }) => {
 															const on = !disabledSkillNames.has(skill.name);
 															return (
-																<li key={skill.name} className="flex items-center gap-3 py-2.5 pl-10 pr-5">
+																<li key={skill.name} className="flex items-center gap-3 py-2 pl-10 pr-5">
 																	<span className="min-w-0 flex-1">
 																		<span className="block truncate text-[13px] text-ink">{skill.name}</span>
 																		{skill.description ? (
@@ -846,7 +846,7 @@ export function SkillsConnectionsView() {
 													</summary>
 													<ul className="divide-y divide-border border-t border-border bg-canvas">
 														{source.skills.map((skill) => (
-															<li key={skill.name} className="flex items-center gap-3 py-2.5 pl-10 pr-5">
+															<li key={skill.name} className="flex items-center gap-3 py-2 pl-10 pr-5">
 																<span className="min-w-0 flex-1">
 																	<span className="block truncate text-[13px] text-ink">{skill.name}</span>
 																	<span className="mt-0.5 block truncate text-[11px] text-ink-faint">
@@ -883,7 +883,7 @@ export function SkillsConnectionsView() {
 											</span>
 											<button
 												type="button"
-												className="rounded-full border border-border px-3 py-1.5 text-xs text-ink-2 hover:bg-hover disabled:opacity-50"
+												className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover disabled:opacity-50"
 												disabled={repositoryBusy === repository.id}
 												onClick={() => void checkSkillRepository(repository)}
 											>
@@ -894,7 +894,7 @@ export function SkillsConnectionsView() {
 											{repository.status === "update-available" ? (
 												<button
 													type="button"
-													className="rounded-full bg-ink px-3 py-1.5 text-xs text-canvas hover:opacity-90 disabled:opacity-50"
+													className="rounded-full bg-ink px-3 py-2 text-xs text-canvas hover:opacity-90 disabled:opacity-50"
 													disabled={repositoryBusy === repository.id}
 													onClick={() => void updateSkillRepository(repository)}
 												>
@@ -903,7 +903,7 @@ export function SkillsConnectionsView() {
 											) : null}
 											<button
 												type="button"
-												className="rounded-full border border-danger/30 px-3 py-1.5 text-xs text-danger hover:bg-danger/5 disabled:opacity-50"
+												className="rounded-full border border-danger/30 px-3 py-2 text-xs text-danger hover:bg-danger/5 disabled:opacity-50"
 												disabled={repositoryBusy === repository.id}
 												onClick={() => void removeSkillRepository(repository)}
 											>

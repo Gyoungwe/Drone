@@ -1,7 +1,6 @@
 import { stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
-import type { ExperienceStorePort } from "@drone/knowledge/host";
 import { createDefaultResearchWriteAdapters, ResearchWriteAdapterRegistry } from "@drone/research";
 import type {
 	AskRequest,
@@ -24,6 +23,7 @@ import type {
 	TrustAnswer,
 	TrustRequest,
 } from "@drone/shared";
+import type { ExperienceStorePort } from "@gyoungwe/pi-knowledge/host";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import {
@@ -70,6 +70,7 @@ import {
 	createInquiryComputeRerunCompletion,
 } from "./services/inquiry-compute";
 import type { InstitutionalServicePort } from "./services/institutional";
+import { KnowledgeMaintenanceService } from "./services/knowledge-maintenance";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import { LocalExecutionRecorder } from "./services/local-execution";
 import type { PackageServicePort } from "./services/packages";
@@ -220,6 +221,7 @@ export interface BackendServices {
 	computeAdapter: ComputeHostAdapter;
 	/** 每日发现：知识库更新后的新旧对照想法（默认开，每天一次） */
 	dailyDiscovery: DailyDiscoveryService;
+	knowledgeMaintenance: KnowledgeMaintenanceService;
 	dispose(): void;
 }
 
@@ -561,6 +563,44 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		},
 	});
 	if (options.dailyDiscovery !== false) dailyDiscovery.start();
+	const knowledgeMaintenance = new KnowledgeMaintenanceService({
+		path: join(getAgentDir(), "knowledge-maintenance.json"),
+		readOverview: (cwd) => sessions.knowledge.overview({ cwd }),
+		readNote: (cwd, path, revision) => sessions.knowledge.read({ cwd, path, revision }),
+		setTopic: async (cwd, path, topic, revision) => {
+			await sessions.knowledge.setMaintenanceTopic({ cwd, notePath: path, topic, revision });
+		},
+		proposeWiki: async (cwd, item, proposal, revision) => {
+			await sessions.knowledge.proposeMaintenanceWiki({
+				cwd,
+				sourcePath: item.path,
+				title: String(proposal.title || item.title || item.path),
+				markdown: String(proposal.markdown || ""),
+				rationale: String(proposal.rationale || "Automatic maintenance candidate"),
+				revision,
+			});
+		},
+		complete: async (prompt) => {
+			const runtime = await sessions.getModelRuntime();
+			const provider = (await sessions.settings.listProviders()).find(
+				(item) => item.configured && item.models.length > 0,
+			);
+			if (!provider) throw new Error("No configured model is available for knowledge maintenance");
+			const model =
+				runtime.getModel(provider.id, provider.models[0]?.id ?? "") ?? runtime.getModels(provider.id)[0];
+			if (!model) throw new Error("No configured model is available for knowledge maintenance");
+			const response = await runtime.completeSimple(
+				model,
+				{
+					systemPrompt: "Return strict JSON only.",
+					messages: [{ role: "user", content: prompt, timestamp: Date.now() }],
+				},
+				{ maxTokens: 800, maxRetries: 0 },
+			);
+			return completionText(response) ?? "";
+		},
+	});
+	if (options.dailyDiscovery !== false) knowledgeMaintenance.start(options.defaultCwd ?? process.cwd());
 	const diagnostics: DiagnosticsServicePort = {
 		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
 	};
@@ -673,8 +713,10 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			});
 		},
 		dailyDiscovery,
+		knowledgeMaintenance,
 		dispose: () => {
 			dailyDiscovery.dispose();
+			knowledgeMaintenance.dispose();
 			detachInquiryComputeEvents();
 			sessions.dispose();
 			void compute.dispose();

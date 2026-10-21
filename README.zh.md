@@ -132,7 +132,9 @@ flowchart TB
 
 由 Pi SDK 经 `ProjectResourceLoader` 两阶段信任加载。
 
-- `.pi/extensions/*.mjs`：由 `packages/extensions/src/` 生成的自包含入口，只负责注册工具和参数映射，并调用类型化的 `@drone/knowledge`、`@drone/tasks`、`@drone/research`。
+- `.pi/extensions/*.mjs`：由 `packages/extensions/src/` 生成的宿主入口；知识核心和 worker 字节来自锁定的 `@gyoungwe/pi-knowledge` 插件。
+
+知识插件构建顺序：先运行 `npm run fetch:plugins`，再运行 `npm run build`，最后运行 `npm run dist` 构建 macOS/Windows 安装包。开发插件时设置 `DRONE_PLUGINS_DIR=/absolute/path/to/drone-plugins`，抓取步骤会使用本地插件工作树并明确提示已跳过 lock/hash 校验。
 - `.pi/extensions/workbench-manifest.json`：Desktop 与包 smoke 检查共用的生成扩展/技能清单。
 - `packages/pi-core`、`packages/pi-knowledge`、`packages/pi-research`：运行时归属明确；旧 `.pi/lib` 兼容树已不再随仓库或安装包分发。
 - `skills/`：`research-loop`、`wikiloop`、学术技能包（Nature、Scientific、Academic Research Skills CC BY-NC）、`zotero-literature`。

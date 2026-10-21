@@ -1,0 +1,50 @@
+# P3 验收证据：宿主消费锁定的知识插件
+
+日期：2026-10-21（Asia/Shanghai）
+Drone 分支：`codex/pluginize-v2-p2`
+`drone-plugins` 分支：`codex/pluginize-v2-p2`
+插件锁定头：`be86c1af9a4bc425cdf1bc2c206bffa9d74958c4`
+插件包：`@gyoungwe/pi-knowledge@0.2.0`
+锁定 tarball SHA-256：`fdd54a8719ff8e13e137e08767ec457aa2b4f545d4fcada64d7758047868f2f4`
+
+## 已完成
+
+- Drone 新增 `plugins.lock.json` 和 `scripts/fetch-plugins.mjs`。默认流程浅克隆锁定提交、安装、构建、打包、校验 SHA-256 并复制到 `vendor/plugins/pi-knowledge`；`DRONE_PLUGINS_DIR` 用于本地插件联调并明确打印覆盖提示。
+- backend、research、extensions 和相关测试统一从 `@gyoungwe/pi-knowledge/host` 取知识 API；Drone 删除 `packages/knowledge`、知识 worker 源入口和旧的 `build-knowledge-runtime.mjs`。
+- electron-builder 将插件 `dist/index.mjs` 作为 `knowledge-plugin.mjs`，并将插件 worker 与 manifest 复制到 `research-workbench/extensions`。宿主 host adapter 保留为 Desktop 组合根的运行时适配，偏离原因记录在 [v2-plan.md](v2-plan.md)。
+- `.gitignore` 排除 `vendor/plugins` 和生成的 worker；构建、类型检查、测试和架构检查都会先确保插件资源存在。
+- README 中已记录 `fetch:plugins → build → dist` 顺序和 `DRONE_PLUGINS_DIR` 联调方式。
+
+## 定向检查
+
+| 命令 | 结果 |
+|---|---|
+| `DRONE_PLUGINS_DIR=../drone-plugins npm run check:knowledge-runtime` | PASS；worker manifest hash 与插件构建产物一致 |
+| `DRONE_PLUGINS_DIR=../drone-plugins node scripts/check-knowledge-package.mjs --resources packages/desktop/dist/mac-arm64/Drone.app/Contents/Resources/research-workbench` | PASS；46 个 core tools、17 个必需知识工具、worker lifecycle `staged → verified → enabled` |
+| `npm run check:extensions -- --strict` | PASS；12 个 source/output 映射，0 个 legacy artifact 漂移 |
+| `npm run check:arch` | PASS；0 个新增架构违规 |
+| `DRONE_PLUGINS_DIR=../drone-plugins npm run build` | PASS；pi-core、pi-research、Electron main/preload/renderer 构建完成 |
+| `npm run lint` | PASS；仅保留 2 个既有大文件大小 warning |
+| `npm run typecheck` | PASS |
+| `npm test` | PASS；全工作区测试通过 |
+| `npm run check:desktop-artifact` | PASS；17 项检查、4 个静态视口 |
+| `node scripts/check-release-artifacts.mjs --dir packages/desktop/dist --platform mac --arch both --allow-unsigned` | PASS；arm64/x64 的 DMG 和 ZIP 均解包、挂载并完成 `app.asar`、Electron framework、`--version` 启动探针 |
+
+本次 macOS 产物 SHA-256：
+
+| 产物 | SHA-256 |
+|---|---|
+| `drone-mac-arm64.dmg` | `e56a4d1e864e13f48aecef80d9c67a3f2df25321d8ac99d176e1dd24832d2060` |
+| `drone-mac-arm64.zip` | `03971a1b8828fc033e46d0d581f7e523cc74a93084f3f00256ead29df4b57929` |
+| `drone-mac-x64.dmg` | `bde259fbb92137e8685d2544a49698b379c4e34e469e81df8642e6fc519327d2` |
+| `drone-mac-x64.zip` | `02e0b9f4ef496028f9a4828d252ee13dd7457f7ed620000b10276a37f333ca1e` |
+
+打包后的 knowledge worker integrity：`eae35e78905022d937a890c55a0c61e2f8e373e08b49e9c4654eb5cb725e5216`。
+
+验收脚本明确报告 `status: PASS`；签名检查为 `NOT_RUN`，因为本地构建按仓库发布配置保持 unsigned。Electron 进程只用于有界 `--version` 探针，未宣称真机 GUI 会话验收。
+
+## 未完成/偏离
+
+- 锁定提交已推送到 `origin/codex/pluginize-v2-p2`，默认远程抓取流程已从 GitHub 克隆、构建、打包并校验上述 SHA-256。
+- 计划中的文件名保持要求通过 `knowledge-plugin.mjs` + 宿主 `knowledge-extension.mjs` 双入口实现；host adapter 仍有宿主 runtime ports，待后续 HostPort 迁移后可合并入口。
+- 真实知识库打开和 Claude 实机验收由正式验收者执行；本地证据覆盖打包资源、worker 完整性和静态 UI 合同。

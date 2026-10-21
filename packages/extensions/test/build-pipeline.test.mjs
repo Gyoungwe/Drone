@@ -22,7 +22,8 @@ test("extension build manifest verifies generated output and detects drift", asy
 	assert.equal(manifest.entries["subagent-research"].status, "generated");
 	const knowledgeBundle = await readFile(join(outputDir, "knowledge-extension.mjs"), "utf8");
 	assert.doesNotMatch(knowledgeBundle, /\.pi\/lib\/knowledge\/runtime\/worker\.mjs/);
-	assert.match(knowledgeBundle, /\.\.\/lib\/knowledge\/runtime\/worker\.mjs/);
+	assert.doesNotMatch(knowledgeBundle, /\.pi\/lib\/knowledge\/runtime\/worker\.mjs/);
+	assert.match(knowledgeBundle, /@gyoungwe\/pi-knowledge/);
 	const researchBundles = await Promise.all(
 		["source-archive", "research-loop", "zotero-literature"].map((name) =>
 			readFile(join(outputDir, `${name}.mjs`), "utf8"),

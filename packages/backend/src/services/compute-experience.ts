@@ -7,8 +7,8 @@ import type {
 	ExperienceRepair,
 	ExperienceStorePort,
 	TerminalJobExperienceInput,
-} from "@drone/knowledge/host";
-import { recordTerminalJobExperience } from "@drone/knowledge/host";
+} from "@gyoungwe/pi-knowledge/host";
+import { recordTerminalJobExperience } from "@gyoungwe/pi-knowledge/host";
 import type { ComputeEvent } from "./compute";
 
 export type { ComputeExperienceRecorder } from "./compute";

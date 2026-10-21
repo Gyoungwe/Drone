@@ -4,7 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, readdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
-import { knowledgeDirectory } from "@drone/knowledge/config";
+import { knowledgeDirectory } from "@gyoungwe/pi-knowledge/host";
 import { bindExtensionRuntime } from "./internal/runtime";
 import { initializeVaultLayout, MANAGED_END, MANAGED_START, refreshProjectIndexes } from "./internal/vault";
 import { loadWorkspaceConfig } from "./workspace-config";

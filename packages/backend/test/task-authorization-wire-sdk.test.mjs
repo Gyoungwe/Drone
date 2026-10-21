@@ -1,9 +1,9 @@
 import { mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { closeKnowledgeServices } from "@drone/knowledge/host";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 

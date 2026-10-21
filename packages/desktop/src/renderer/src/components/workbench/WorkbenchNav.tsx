@@ -135,7 +135,7 @@ function SidebarSessions() {
 				{/* The projects page is reached from its group header instead of a duplicate nav item. */}
 				<button
 					type="button"
-					className="rounded px-1.5 text-[11px] text-ink-faint hover:bg-hover hover:text-ink"
+					className="rounded px-2 text-[11px] text-ink-faint hover:bg-hover hover:text-ink"
 					onClick={() => {
 						closeKnowledge();
 						setView("projects");

@@ -1,17 +1,24 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { expect, it } from "vitest";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 
+afterEach(() => vi.unstubAllEnvs());
+
 it("global Obsidian setup has one visible owner in an unrelated project", async () => {
+	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
 	const cwd = await mkdtemp(join(tmpdir(), "drone-global-setup-"));
+	const agentDir = await mkdtemp(join(tmpdir(), "drone-global-agent-"));
+	const workbench = resolve(dirname(fileURLToPath(import.meta.url)), "../../../.pi");
+	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	const backend = new PiBackend({
 		projectTrust: false,
 		desktopIntegration: {
 			appendSystemPrompt: [],
-			additionalSkillPaths: [resolve(process.cwd(), "../../.pi/skills/research-vault/SKILL.md")],
-			additionalExtensionPaths: [resolve(process.cwd(), "../../.pi/extensions/obsidian-workbench.mjs")],
+			additionalSkillPaths: [join(workbench, "skills/research-vault/SKILL.md")],
+			additionalExtensionPaths: [join(workbench, "extensions/obsidian-workbench.mjs")],
 		},
 	});
 	try {
@@ -30,5 +37,6 @@ it("global Obsidian setup has one visible owner in an unrelated project", async 
 	} finally {
 		backend.dispose();
 		await rm(cwd, { recursive: true, force: true });
+		await rm(agentDir, { recursive: true, force: true });
 	}
 });

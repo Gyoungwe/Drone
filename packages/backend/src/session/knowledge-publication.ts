@@ -1,5 +1,5 @@
-import { publicationFallbackNotice } from "@drone/knowledge/host";
 import { type DroneRuntime, isUserAbortError, type SessionEvent, sanitizeProviderError } from "@drone/shared";
+import { publicationFallbackNotice } from "@gyoungwe/pi-knowledge/host";
 import type { RawMessage } from "./messages";
 
 /**

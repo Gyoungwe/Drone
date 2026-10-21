@@ -4,8 +4,8 @@ import { join } from "node:path";
 import sourceArchive, { startResearchRun } from "@drone/extensions/research-host";
 import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
 import zoteroLiterature from "@drone/extensions/zotero-literature";
-import { beginKnowledgeFlow, flowFor, noteKnowledgeOperation } from "@drone/knowledge/host";
 import { createTaskWorkbench, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
+import { beginKnowledgeFlow, flowFor, noteKnowledgeOperation } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { detectCapabilities, isReadOnlyLibraryTool, toolCapabilities } from "../src/capabilities/runtime";
 

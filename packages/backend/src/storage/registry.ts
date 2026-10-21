@@ -217,6 +217,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
+			id: "agent-knowledge-maintenance",
+			path: `${agentDir}/knowledge-maintenance.json`,
+			owner: "knowledge/maintenance",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
 			id: "agent-research-captures",
 			path: `${agentDir}/research/captures.json`,
 			owner: "research/resource-capture",

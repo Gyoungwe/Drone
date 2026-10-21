@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { knowledgeDirectory } from "@drone/knowledge/config";
+import { knowledgeDirectory } from "@gyoungwe/pi-knowledge/host";
 import { registerKnowledgeInterface } from "./knowledge-extension";
 
 export const OBSIDIAN_SUBAGENT_READ_TOOLS = [

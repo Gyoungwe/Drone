@@ -6,7 +6,7 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
 /** Deliberately desktop-only: approvals are not a model tool or unauthenticated route. */
 export function registerKnowledgeIpc(
 	backendOrServices: SessionServicePort | BackendServices,
-	services?: Pick<BackendServices, "knowledge" | "knowledgeSession" | "zotero"> &
+	services?: Pick<BackendServices, "knowledge" | "knowledgeSession" | "zotero" | "knowledgeMaintenance"> &
 		Partial<Pick<BackendServices, "dailyDiscovery">>,
 ): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
@@ -119,6 +119,18 @@ export function registerKnowledgeIpc(
 		decideDailyIdea: (input) => dailyDiscovery.decide(input.id, input.action),
 		getTopics: (input) => knowledge.topics(input),
 		archiveTopic: (input) => knowledge.archiveTopic(input),
+		getMaintenanceSettings: () =>
+			hostServices?.knowledgeMaintenance?.getSettings() ??
+			Promise.reject(new Error("Knowledge maintenance service unavailable")),
+		saveMaintenanceSettings: (input) =>
+			hostServices?.knowledgeMaintenance?.saveSettings(input) ??
+			Promise.reject(new Error("Knowledge maintenance service unavailable")),
+		runMaintenance: (input) =>
+			hostServices?.knowledgeMaintenance?.runNow(input.cwd) ??
+			Promise.reject(new Error("Knowledge maintenance service unavailable")),
+		getMaintenanceRuns: () =>
+			hostServices?.knowledgeMaintenance?.getRuns() ??
+			Promise.reject(new Error("Knowledge maintenance service unavailable")),
 		getZoteroStatus: () => zotero.getStatus(),
 		getZoteroWebApi: () => (zotero.getWebApi ? zotero.getWebApi() : unavailable()),
 		saveZoteroWebApi: (input) => (zotero.saveWebApi ? zotero.saveWebApi(input) : unavailable()),
@@ -167,6 +179,10 @@ export function registerKnowledgeIpc(
 				decideDailyIdea: IpcChannels.KnowledgeDailyIdeaDecide,
 				getTopics: IpcChannels.KnowledgeTopics,
 				archiveTopic: IpcChannels.KnowledgeTopicArchive,
+				getMaintenanceSettings: IpcChannels.KnowledgeMaintenanceSettings,
+				saveMaintenanceSettings: IpcChannels.KnowledgeMaintenanceSettingsSave,
+				runMaintenance: IpcChannels.KnowledgeMaintenanceRun,
+				getMaintenanceRuns: IpcChannels.KnowledgeMaintenanceRuns,
 				getZoteroStatus: IpcChannels.ZoteroStatus,
 				getZoteroWebApi: IpcChannels.ZoteroWebApiGet,
 				saveZoteroWebApi: IpcChannels.ZoteroWebApiSave,

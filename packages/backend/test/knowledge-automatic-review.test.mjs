@@ -12,7 +12,7 @@ import {
 	stageWikiProposal,
 	undoWikiUpdate,
 	wikiHistory,
-} from "@drone/knowledge/host";
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 let root, cwd, vault, service, prep;

@@ -36,9 +36,7 @@ export function PageHeader({
 				<div className="min-w-0">
 					<h1 className="text-xl font-semibold tracking-[-0.01em] text-ink">{title}</h1>
 					{description ? (
-						<p className="mt-1.5 max-w-2xl truncate text-[13px] leading-relaxed text-ink-dim">
-							{description}
-						</p>
+						<p className="mt-2 max-w-2xl truncate text-[13px] leading-relaxed text-ink-dim">{description}</p>
 					) : null}
 				</div>
 				{actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}

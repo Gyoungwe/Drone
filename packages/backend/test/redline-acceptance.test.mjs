@@ -1,5 +1,5 @@
-import { evaluateMetacognitivePublication, registerAnswerPublication } from "@drone/knowledge/host";
 import { AnalysisOrchestrator, assessAnalysisReadiness } from "@drone/shared";
+import { evaluateMetacognitivePublication, registerAnswerPublication } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /**

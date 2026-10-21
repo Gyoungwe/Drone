@@ -6,15 +6,18 @@ import { randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { knowledgeDirectory, projectIdentity, readKnowledgeBinding } from "@drone/knowledge/config";
-import { cardLink, flowCard } from "@drone/knowledge/flow-cards";
 import {
+	cardLink,
 	describeProject,
+	flowCard,
+	knowledgeDirectory,
 	normalizeProjectSlug,
+	projectIdentity,
+	readKnowledgeBinding,
 	resolveWorkspaceProject,
 	runProject,
 	sessionEntriesOf,
-} from "@drone/knowledge/project-identity";
+} from "@gyoungwe/pi-knowledge/host";
 import {
 	containedFile,
 	DEFAULT_VAULT_PROFILE,

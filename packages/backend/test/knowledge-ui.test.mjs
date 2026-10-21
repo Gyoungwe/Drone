@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
-import * as ui from "@drone/knowledge/host";
+import * as ui from "@gyoungwe/pi-knowledge/host";
 import {
 	beginKnowledgeFlow,
 	closeKnowledgeServices,
@@ -13,7 +13,7 @@ import {
 	stageWikiProposal,
 	subscribeKnowledgeUi,
 	updateKnowledgeFlow,
-} from "@drone/knowledge/host";
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, cwd, vault, service, prep, revision;
@@ -336,7 +336,7 @@ describe("bidirectional links and the knowledge network", () => {
 	it("links a newly deposited note to related existing notes", async () => {
 		await note("Library/Software/samtools.md", "# samtools\nSort and index BAM files.\n");
 		await service.request("reconcile");
-		const { findRelatedNotes } = await import("@drone/knowledge/host");
+		const { findRelatedNotes } = await import("@gyoungwe/pi-knowledge/host");
 		const related = await findRelatedNotes("samtools sort BAM");
 		expect(related).toContain("Library/Software/samtools.md");
 		const saved = await depositKnowledge({
@@ -344,7 +344,10 @@ describe("bidirectional links and the knowledge network", () => {
 			project: "project-a",
 			type: "method",
 			title: "Coordinate sorting with samtools",
-			markdown: (await import("@drone/knowledge/host")).appendRelatedLinks("Sort before indexing.", related),
+			markdown: (await import("@gyoungwe/pi-knowledge/host")).appendRelatedLinks(
+				"Sort before indexing.",
+				related,
+			),
 		});
 		expect(await readFile(saved.note, "utf8")).toContain("[[Library/Software/samtools]]");
 		await service.request("reconcile");

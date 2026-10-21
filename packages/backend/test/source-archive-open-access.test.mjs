@@ -688,7 +688,7 @@ describe("research_archive_source open-access acquisition", () => {
 			registerCommand: () => {},
 		});
 		const tool = tools.get("research_archive_source");
-		expect(tool.parameters.required).toEqual(["run_dir", "category"]);
+		expect(tool.parameters.required).toEqual(["run_dir", "category", "topic"]);
 		expect(Object.keys(tool.parameters.properties)).toEqual(
 			expect.arrayContaining(["doi", "pmcid", "pmid", "resolve_open_access", "max_candidates", "local_file"]),
 		);

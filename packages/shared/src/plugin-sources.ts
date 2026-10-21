@@ -45,7 +45,7 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 		capabilities: ["tasks", "authorization", "memory"],
 	},
 	"@gyoungwe/pi-knowledge": {
-		version: "0.1.1",
+		version: "0.2.0",
 		description: "Knowledge and Vault tools for native Pi hosts",
 		builtIn: true,
 		capabilities: ["knowledge", "vault"],

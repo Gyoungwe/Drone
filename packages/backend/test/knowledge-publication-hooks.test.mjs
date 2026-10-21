@@ -1,4 +1,8 @@
-import { createTaskFeedback, projectKnowledgeEvent, registerAnswerPublication } from "@drone/knowledge/host";
+import {
+	createTaskFeedback,
+	projectKnowledgeEvent,
+	registerAnswerPublication,
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 function harness(

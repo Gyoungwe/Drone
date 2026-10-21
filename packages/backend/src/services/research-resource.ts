@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve, sep } from "node:path";
-import { ingestKnowledgeSnapshot, resolveKnowledgeContext } from "@drone/knowledge/host";
 import {
 	type ResearchConnector,
 	type ResearchConnectorContext,
@@ -20,6 +19,7 @@ import {
 	type ResearchSearchRequest,
 	type ResearchSearchResponse,
 } from "@drone/shared";
+import { ingestKnowledgeSnapshot, resolveKnowledgeContext } from "@gyoungwe/pi-knowledge/host";
 import type { JsonStore } from "../json-store";
 
 interface CaptureLedger {

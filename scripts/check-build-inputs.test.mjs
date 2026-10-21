@@ -44,10 +44,7 @@ test("extension build check detects transitive dependency drift", async () => {
 	}
 });
 
-test("knowledge and tasks checks detect dependency drift", async () => {
-	await failsAfterDependencyEdit(join(root, "packages/knowledge/src/wiki-review.ts"), () =>
-		runNode("scripts/build-knowledge-runtime.mjs", ["--check"]),
-	);
+test("tasks checks detect dependency drift", async () => {
 	await failsAfterDependencyEdit(join(root, "packages/tasks/src/runtime/acceptance.ts"), () =>
 		runNode("packages/tasks/scripts/build-runtime.mjs", ["--check"]),
 	);

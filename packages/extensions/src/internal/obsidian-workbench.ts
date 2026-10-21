@@ -5,14 +5,18 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { initializeVault, loadWorkspaceConfig, saveWorkspaceConfig, } from "../workspace-config";
 import { configureKnowledgeExtensionRuntime } from "./knowledge-runtime";
 import { inspectObsidianSetup, inspectSetupDirectory, resolveSetupVault } from "./obsidian-setup";
-import { configureKnowledgeHost, configureKnowledgeSetup } from "@drone/knowledge/runtime-host";
-import { consumeKnowledgeReviewPreview } from "@drone/knowledge/ui-service";
-import { knowledgeDirectory, readKnowledgeBinding, saveKnowledgeBinding } from "@drone/knowledge/config";
-import { initializeProjectContext, initializeSharedNavigation } from "@drone/knowledge/layout";
-import { getKnowledgeService, notifyKnowledgeChange } from "@drone/knowledge/service";
-import { normalizeSourceLinks, onlineSourceLink } from "@drone/knowledge/source-links";
-import { looksLikeFileName } from "@drone/knowledge/note-title";
-import { resolveWorkspaceProject, runProject } from "@drone/knowledge/project-identity";
+import {
+	configureKnowledgeHost,
+	configureKnowledgeSetup,
+	consumeKnowledgeReviewPreviewEntry,
+	stageWikiProposal,
+} from "@gyoungwe/pi-knowledge/host";
+import { knowledgeDirectory, readKnowledgeBinding, saveKnowledgeBinding } from "@gyoungwe/pi-knowledge/host";
+import { initializeProjectContext, initializeSharedNavigation } from "@gyoungwe/pi-knowledge/host";
+import { getKnowledgeService, notifyKnowledgeChange } from "@gyoungwe/pi-knowledge/host";
+import { normalizeSourceLinks, onlineSourceLink } from "@gyoungwe/pi-knowledge/host";
+import { looksLikeFileName } from "@gyoungwe/pi-knowledge/host";
+import { resolveWorkspaceProject, runProject } from "@gyoungwe/pi-knowledge/host";
 import { runtimeSlot } from "@drone/tasks/runtime-bridge";
 import { LAYOUT, renderTemplate } from "./vault-layout";
 import { getVaultProfile, listVaultProfiles } from "./vault-profiles";
@@ -44,9 +48,9 @@ const runtimeState = runtimeSlot("knowledge", "obsidianWorkbench", () => ({
 configureKnowledgeExtensionRuntime();
 configureKnowledgeHost({
     loadWorkspaceConfig,
-    consumeKnowledgeReviewPreview,
+	consumeKnowledgeReviewPreview: consumeKnowledgeReviewPreviewEntry,
     publishExplainer,
-    specialistSettings: async () => (await import("@drone/knowledge/specialist-host")).specialistSettings(),
+    specialistSettings: async () => (await import("@gyoungwe/pi-knowledge/host")).specialistSettings(),
 });
 configureKnowledgeSetup({
     layout: LAYOUT,
@@ -306,6 +310,48 @@ export async function setSourceTopic({ cwd = process.cwd(), notePath, topic }: a
             }
         }
         return { topic: value, note: relativePath, changed, updated };
+    });
+}
+
+/** Host-only maintenance ports. They keep Vault writes behind the existing
+ * binding/revision and Wiki review contracts instead of giving the scheduler
+ * direct filesystem access. */
+export async function runKnowledgeMaintenanceTopic({ cwd = process.cwd(), notePath, topic, revision = null }: any) {
+    const binding = await readKnowledgeBinding({ fresh: true });
+    if (!binding) throw new Error("No application knowledge Vault is bound");
+    if (revision !== null && binding.revision !== revision)
+        throw new Error("Knowledge binding changed; refresh maintenance before writing");
+    return setSourceTopic({ cwd, notePath, topic });
+}
+
+export async function runKnowledgeMaintenanceWiki({
+    cwd = process.cwd(),
+    sourcePath,
+    title,
+    markdown,
+    rationale,
+    revision = null,
+}: any) {
+    const binding = await readKnowledgeBinding({ fresh: true });
+    if (!binding) throw new Error("No application knowledge Vault is bound");
+    if (revision !== null && binding.revision !== revision)
+        throw new Error("Knowledge binding changed; refresh maintenance before review");
+    const project = validateProject((await resolveWorkspaceProject({ cwd })).project);
+    const service = await getKnowledgeService(binding);
+    const prepared = await service.prepare({ cwd, project, query: title });
+    await service.read(prepared.ticket, cwd, { path: sourcePath, maxChars: 4000 });
+    const slug = String(title)
+        .toLocaleLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 120);
+    if (!slug) throw new Error("Wiki candidate title is empty");
+    return stageWikiProposal(service, prepared.ticket, cwd, {
+        path: `Wiki/${slug}.md`,
+        title,
+        markdown,
+        rationale,
+        source_paths: [sourcePath],
     });
 }
 export async function publishSourceNote({ cwd = process.cwd(), runDir, entry, topic = "" }: any) {

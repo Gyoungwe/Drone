@@ -2,6 +2,8 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { KNOWLEDGE_SPECIALISTS } from "@drone/shared";
+import { fauxToolCall as call, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import {
 	beginKnowledgeFlow,
 	closeKnowledgeServices,
@@ -17,9 +19,7 @@ import {
 	specialistSettings,
 	validateSpecialistHtml,
 	withSpecialistSlot,
-} from "@drone/knowledge/host";
-import { KNOWLEDGE_SPECIALISTS } from "@drone/shared";
-import { fauxToolCall as call, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runKnowledgeSpecialist } from "../src/knowledge/specialist-runner";
 import { discoverAgents } from "../src/tools/subagent/agents";

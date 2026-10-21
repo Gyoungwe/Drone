@@ -16,43 +16,50 @@ import {
 } from "@drone/extensions/internal/obsidian-workbench";
 import { USER_QUESTION_FOCUS } from "@drone/extensions/internal/reply-focus";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
-import { knowledgeDirectory, readKnowledgeBinding } from "@drone/knowledge/config";
-import { cardLink, flowCard } from "@drone/knowledge/flow-cards";
+import { registerAcceptanceVerifier } from "@drone/tasks/acceptance";
+import { registerTool } from "@drone/tasks/tool-manifest-runtime";
 import {
+	appendRelatedLinks,
+	cardLink,
 	describeProject,
+	findRelatedNotes,
+	flowCard,
 	isDailyWorkspace,
+	knowledgeDirectory,
 	normalizeProjectSlug,
+	readKnowledgeBinding,
 	resolveWorkspaceProject,
 	SESSION_PROJECT_ENTRY,
 	sessionEntriesOf,
-} from "@drone/knowledge/project-identity";
-import { appendRelatedLinks, findRelatedNotes } from "@drone/knowledge/related-notes";
-import { registerAcceptanceVerifier } from "@drone/tasks/acceptance";
-import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+} from "@gyoungwe/pi-knowledge/host";
 
 // These named exports are used by offline knowledge benchmarks and packaging
 // smoke tests. Keeping them on the generated entry exercises the same
-// @drone/knowledge runtime graph as the production extension.
+// @gyoungwe/pi-knowledge/host runtime graph as the production extension.
 export {
 	configureObsidian,
 	createObsidianProject,
 	depositKnowledge,
 	obsidianStatus,
 	researchSetupOptions,
+	runKnowledgeMaintenanceTopic,
+	runKnowledgeMaintenanceWiki,
 } from "@drone/extensions/internal/obsidian-workbench";
-export { readKnowledgeBinding } from "@drone/knowledge/config";
-export { embedTexts } from "@drone/knowledge/semantic-provider";
-export { closeKnowledgeServices, getKnowledgeService, KnowledgeService } from "@drone/knowledge/service";
 export {
 	beginKnowledgeFlow,
+	closeKnowledgeServices,
+	embedTexts,
+	getKnowledgeService,
+	KnowledgeService,
 	noteKnowledgeRead,
 	noteKnowledgeSearch,
 	noteKnowledgeSpecialist,
 	publicationKnowledgeFlow,
+	readKnowledgeBinding,
 	requestWikiReviewUi,
+	stageWikiProposal,
 	updateKnowledgeFlow,
-} from "@drone/knowledge/ui-state";
-export { stageWikiProposal } from "@drone/knowledge/wiki-review";
+} from "@gyoungwe/pi-knowledge/host";
 
 /** MCP 代理工具 research-obsidian_*（含子代理只读通道）的状态条 / 动作文案。 */
 const OBSIDIAN_FAMILY = {

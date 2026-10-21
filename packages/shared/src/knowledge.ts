@@ -641,6 +641,17 @@ export interface KnowledgeSearchResult {
 	complete: boolean;
 	warning: string | null;
 }
+export interface KnowledgeMaintenanceSettings {
+	enabled: boolean;
+	maxItems: number;
+	dailyLimit: number;
+}
+export interface KnowledgeMaintenanceRun {
+	startedAt: string;
+	processed: number;
+	modelCalls: number;
+	items: Array<{ id: string; kind: string; status: string; reason?: string }>;
+}
 export interface KnowledgeApi {
 	getKnowledgeCloudStatus(): Promise<KnowledgeCloudStatus>;
 	probeKnowledgeCloud(): Promise<KnowledgeCloudStatus>;
@@ -689,6 +700,12 @@ export interface KnowledgeApi {
 	cancelKnowledgeSemanticIndex(input: KnowledgeSemanticIndexCancelRequest): Promise<void>;
 	getKnowledgeTopics(input: KnowledgeTopicsRequest): Promise<KnowledgeTopicListResult>;
 	archiveKnowledgeTopic(input: KnowledgeTopicArchiveRequest): Promise<unknown>;
+	getKnowledgeMaintenanceSettings(): Promise<KnowledgeMaintenanceSettings>;
+	saveKnowledgeMaintenanceSettings(
+		input: KnowledgeMaintenanceSettings,
+	): Promise<KnowledgeMaintenanceSettings>;
+	runKnowledgeMaintenance(input: { cwd: string }): Promise<KnowledgeMaintenanceRun>;
+	getKnowledgeMaintenanceRuns(): Promise<KnowledgeMaintenanceRun[]>;
 	reviewKnowledgeWithModel(input: WikiModelReviewInput): Promise<WikiModelReviewResult>;
 	cancelKnowledgeModelReview(input: { sessionId: string; requestId: string }): Promise<void>;
 	setKnowledgeSpecialistSettings(input: {

@@ -2,12 +2,6 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import {
-	closeKnowledgeServices,
-	flowFor,
-	getKnowledgeService,
-	listWikiProposals,
-} from "@drone/knowledge/host";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { getCurrentSystemPrompt } from "@earendil-works/pi-ai/utils/transcript";
 import {
@@ -17,6 +11,12 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import {
+	closeKnowledgeServices,
+	flowFor,
+	getKnowledgeService,
+	listWikiProposals,
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, expect, it, vi } from "vitest";
 import { makeKnowledgeSpecialistBridge } from "../src/knowledge/specialist-bridge";
 

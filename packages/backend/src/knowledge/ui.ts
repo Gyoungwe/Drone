@@ -3,18 +3,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
-import * as knowledgeUiService from "@drone/knowledge/host";
-import * as knowledgeUiState from "@drone/knowledge/host";
-import * as knowledgeWikiModelReview from "@drone/knowledge/host";
+import { getResearchRun, listResearchRuns } from "@drone/research/research-run-ui";
+import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
+import * as knowledgeUiService from "@gyoungwe/pi-knowledge/host";
+import * as knowledgeUiState from "@gyoungwe/pi-knowledge/host";
+import * as knowledgeWikiModelReview from "@gyoungwe/pi-knowledge/host";
 import {
 	configureKnowledgeRuntime,
 	configureKnowledgeWorker,
 	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
 	type KnowledgeWorkerLifecycleEvent,
 	type KnowledgeWorkerMetadata,
-} from "@drone/knowledge/host";
-import { getResearchRun, listResearchRuns } from "@drone/research/research-run-ui";
-import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
+} from "@gyoungwe/pi-knowledge/host";
 import { KnowledgeWebDavService } from "./webdav";
 
 type Handler = (event: KnowledgeUiEvent) => void;
@@ -208,6 +208,20 @@ export interface KnowledgeUiServicePort {
 	read(
 		input: Parameters<KnowledgeApi["readKnowledgeNote"]>[0],
 	): ReturnType<KnowledgeApi["readKnowledgeNote"]>;
+	setMaintenanceTopic(input: {
+		cwd: string;
+		notePath: string;
+		topic: string;
+		revision: number;
+	}): Promise<unknown>;
+	proposeMaintenanceWiki(input: {
+		cwd: string;
+		sourcePath: string;
+		title: string;
+		markdown: string;
+		rationale: string;
+		revision: number;
+	}): Promise<unknown>;
 	maintain(
 		input: Parameters<KnowledgeApi["maintainKnowledge"]>[0],
 	): ReturnType<KnowledgeApi["maintainKnowledge"]>;
@@ -237,7 +251,7 @@ export interface KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
-	saveIdea(idea: import("@drone/knowledge/host").DailyIdea): Promise<{ path: string }>;
+	saveIdea(idea: import("@gyoungwe/pi-knowledge/host").DailyIdea): Promise<{ path: string }>;
 	/** 记忆注入用的相关知识条目（复用知识库索引与语义向量）。 */
 	relatedForMemory(
 		cwd: string,
@@ -245,7 +259,10 @@ export interface KnowledgeUiServicePort {
 		limit?: number,
 	): Promise<Array<{ path: string; title: string; text: string }>>;
 	/** 观察记忆沉淀为本项目知识库「记忆」笔记。 */
-	saveMemory(cwd: string, memory: import("@drone/knowledge/host").MemoryNoteInput): Promise<{ path: string }>;
+	saveMemory(
+		cwd: string,
+		memory: import("@gyoungwe/pi-knowledge/host").MemoryNoteInput,
+	): Promise<{ path: string }>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -384,6 +401,33 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	): ReturnType<KnowledgeApi["readKnowledgeNote"]> {
 		return this.call("knowledgeReadNote", input);
 	}
+	private async workbenchModule(): Promise<Record<string, (...args: any[]) => unknown>> {
+		return (await import(
+			/* @vite-ignore */ pathToFileURL(join(this.root(), "extensions", "obsidian-workbench.mjs")).href
+		)) as Record<string, (...args: any[]) => unknown>;
+	}
+	async setMaintenanceTopic(input: {
+		cwd: string;
+		notePath: string;
+		topic: string;
+		revision: number;
+	}): Promise<unknown> {
+		const fn = (await this.workbenchModule()).runKnowledgeMaintenanceTopic;
+		if (!fn) throw new Error("Knowledge maintenance topic port is unavailable");
+		return fn(input);
+	}
+	async proposeMaintenanceWiki(input: {
+		cwd: string;
+		sourcePath: string;
+		title: string;
+		markdown: string;
+		rationale: string;
+		revision: number;
+	}): Promise<unknown> {
+		const fn = (await this.workbenchModule()).runKnowledgeMaintenanceWiki;
+		if (!fn) throw new Error("Knowledge maintenance Wiki port is unavailable");
+		return fn(input);
+	}
 	maintain(
 		input: Parameters<KnowledgeApi["maintainKnowledge"]>[0],
 	): ReturnType<KnowledgeApi["maintainKnowledge"]> {
@@ -435,7 +479,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext> {
 		return this.call("dailyDiscoveryContext", { sinceMs });
 	}
-	saveIdea(idea: import("@drone/knowledge/host").DailyIdea): Promise<{ path: string }> {
+	saveIdea(idea: import("@gyoungwe/pi-knowledge/host").DailyIdea): Promise<{ path: string }> {
 		return this.call("saveDiscoveryIdea", { idea });
 	}
 	relatedForMemory(
@@ -447,7 +491,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	saveMemory(
 		cwd: string,
-		memory: import("@drone/knowledge/host").MemoryNoteInput,
+		memory: import("@gyoungwe/pi-knowledge/host").MemoryNoteInput,
 	): Promise<{ path: string }> {
 		return this.call("saveMemoryNote", { cwd, memory });
 	}

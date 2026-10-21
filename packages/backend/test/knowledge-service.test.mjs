@@ -1,7 +1,8 @@
 import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
 import {
 	configureObsidian,
 	depositKnowledge,
@@ -19,7 +20,7 @@ import {
 	readKnowledgeBinding,
 	runNavigationMaintenance,
 	saveKnowledgeBinding,
-} from "@drone/knowledge/host";
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveSubagentMcpAccess } from "../src/tools/subagent/runner";
 
@@ -549,7 +550,10 @@ describe("navigation delivery and bounded maintenance", () => {
 });
 
 it("FTS-first query plan does not enumerate all notes through the scope index", async () => {
-	const source = await readFile(new URL("../../knowledge/src/worker.ts", import.meta.url), "utf8");
+	const source = await readFile(
+		join(dirname(fileURLToPath(import.meta.url)), "../../../.pi/extensions/knowledge-worker.mjs"),
+		"utf8",
+	);
 	const schema = source.match(/db\.exec\(`([\s\S]*?)`\);/)[1];
 	const match = source.match(/const rows = db\s*\.prepare\(`([\s\S]*?)`\)\s*\.all\(expression/);
 	expect(match).not.toBeNull();

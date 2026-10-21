@@ -13,7 +13,7 @@ import {
 	previewWikiProposal,
 	stageWikiProposal,
 	subscribeKnowledgeUi,
-} from "@drone/knowledge/host";
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, cwd, vault, service, prep;

@@ -205,7 +205,7 @@ export function KnowledgeHome({
 													<span className="block truncate text-[13px] font-medium" title={item.path}>
 														{recentTitle(item)}
 													</span>
-													<span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-ink-dim">
+													<span className="mt-1 flex min-w-0 items-center gap-2 text-xs text-ink-dim">
 														<span
 															aria-hidden="true"
 															className="h-2 w-2 shrink-0 rounded-full"

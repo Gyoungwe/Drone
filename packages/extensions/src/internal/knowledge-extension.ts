@@ -4,25 +4,25 @@ import { publishExplainer } from "./obsidian-workbench";
 import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
 import { registerTaskRuntime } from "@drone/tasks/runtime";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
-import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "@drone/knowledge/config";
+import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "@gyoungwe/pi-knowledge/host";
 import {
 	continuesTopic,
 	currentProject,
 	explainerTopicId,
 	result,
 	sessionIdentity,
-} from "@drone/knowledge/extension-helpers";
-import { cardLink, flowCard } from "@drone/knowledge/flow-cards";
-import { runNavigationMaintenance } from "@drone/knowledge/maintenance";
-import { registerAnswerPublication } from "@drone/knowledge/publication";
-import { getKnowledgeService } from "@drone/knowledge/service";
-import { deliveryContract } from "@drone/knowledge/runtime-host";
-import { saveSpecialistExplainer } from "@drone/knowledge/specialist-delivery";
-import { createKnowledgeSpecialists } from "@drone/knowledge/specialists";
-import { createTaskFeedback, guardResearchToolResult } from "@drone/knowledge/task-feedback";
-import { createToolBudget } from "@drone/knowledge/tool-budget";
-import { autoTopicCandidate } from "@drone/knowledge/topic-candidate";
-import { createTopicMemory, topicRunHash } from "@drone/knowledge/topic-memory";
+} from "@gyoungwe/pi-knowledge/host";
+import { cardLink, flowCard } from "@gyoungwe/pi-knowledge/host";
+import { runNavigationMaintenance } from "@gyoungwe/pi-knowledge/host";
+import { registerAnswerPublication } from "@gyoungwe/pi-knowledge/host";
+import { getKnowledgeService } from "@gyoungwe/pi-knowledge/host";
+import { deliveryContract } from "@gyoungwe/pi-knowledge/host";
+import { saveSpecialistExplainer } from "@gyoungwe/pi-knowledge/host";
+import { createKnowledgeSpecialists } from "@gyoungwe/pi-knowledge/host";
+import { createTaskFeedback, guardResearchToolResult } from "@gyoungwe/pi-knowledge/host";
+import { createToolBudget } from "@gyoungwe/pi-knowledge/host";
+import { autoTopicCandidate } from "@gyoungwe/pi-knowledge/host";
+import { createTopicMemory, topicRunHash } from "@gyoungwe/pi-knowledge/host";
 import {
 	beginKnowledgeFlow,
 	invalidateKnowledgeUi,
@@ -32,7 +32,7 @@ import {
 	notifyKnowledgeUi,
 	requestWikiReviewUi,
 	updateKnowledgeFlow,
-} from "@drone/knowledge/ui-state";
+} from "@gyoungwe/pi-knowledge/host";
 import {
 	autoApplyWikiProposal,
 	decideWikiProposal,
@@ -40,7 +40,7 @@ import {
 	mergeWikiProposal,
 	previewWikiProposal,
 	stageWikiProposal,
-} from "@drone/knowledge/wiki-review";
+} from "@gyoungwe/pi-knowledge/host";
 
 /**
  * 知识闭环（每轮引导）：先查本地 → 本地不够才联网 → 把联网所得按类型沉淀为新笔记（直接入库）→ 回答并标注来源。

@@ -12,8 +12,8 @@ import {
 } from "@drone/extensions/research-host";
 import researchLoopExtension from "@drone/extensions/research-loop";
 import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
-import { currentProject } from "@drone/knowledge/host";
 import { verifyLiteratureReceipt } from "@drone/research/literature-receipt";
+import { currentProject } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
 

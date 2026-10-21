@@ -60,7 +60,15 @@ extraResources:
   # Never package local settings, sessions, downloaded papers, credentials or the user skill directory.
   - from: "../../.pi/extensions"
     to: "research-workbench/extensions"
-    filter: ["*.mjs", "workbench-manifest.json", ".knowledge-worker-manifest.json"]
+    filter: ["*.mjs", "workbench-manifest.json"]
+  # Knowledge worker and native plugin are fetched from the pinned external
+  # plugin package. The host adapter remains in the workbench bundle.
+  - from: "../../vendor/plugins/pi-knowledge/dist/index.mjs"
+    to: "research-workbench/extensions/knowledge-plugin.mjs"
+  - from: "../../vendor/plugins/pi-knowledge/lib/knowledge/runtime/worker.mjs"
+    to: "research-workbench/extensions/knowledge-worker.mjs"
+  - from: "../../vendor/plugins/pi-knowledge/lib/knowledge/runtime/.knowledge-worker-manifest.json"
+    to: "research-workbench/extensions/.knowledge-worker-manifest.json"
   - from: "../../.pi/skills/research-vault"
     to: "research-workbench/skills/research-vault"
   - from: "../../.pi/skills/research-workflow"

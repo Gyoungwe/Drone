@@ -167,6 +167,10 @@ export const IpcChannels = {
 	KnowledgeDailyIdeaDecide: "knowledge:dailyIdeaDecide",
 	KnowledgeTopics: "knowledge:topics",
 	KnowledgeTopicArchive: "knowledge:topicArchive",
+	KnowledgeMaintenanceSettings: "knowledge:maintenanceSettings",
+	KnowledgeMaintenanceSettingsSave: "knowledge:maintenanceSettingsSave",
+	KnowledgeMaintenanceRun: "knowledge:maintenanceRun",
+	KnowledgeMaintenanceRuns: "knowledge:maintenanceRuns",
 	/** 远程计算：主机、健康、作业、终端与引导（由 ComputeContract 投影） */
 	ComputeListHosts: "compute:listHosts",
 	ComputeListSshConfig: "compute:listSshConfig",

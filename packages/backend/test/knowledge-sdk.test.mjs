@@ -2,7 +2,6 @@ import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices } from "@drone/knowledge/host";
 import {
 	createAgentSession,
 	DefaultResourceLoader,
@@ -10,6 +9,7 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
 
 it("real SDK delivers global navigation before model invocation in an unrelated project", async () => {

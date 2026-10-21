@@ -2,7 +2,6 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices, getKnowledgeService, subscribeKnowledgeUi } from "@drone/knowledge/host";
 import {
 	buildChatRows,
 	deriveTurnUsage,
@@ -17,6 +16,11 @@ import {
 	fauxAssistantMessage as reply,
 } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import {
+	closeKnowledgeServices,
+	getKnowledgeService,
+	subscribeKnowledgeUi,
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/knowledge-publication";

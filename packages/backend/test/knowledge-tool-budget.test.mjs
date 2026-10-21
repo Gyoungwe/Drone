@@ -1,4 +1,4 @@
-import { createToolBudget } from "@drone/knowledge/host";
+import { createToolBudget } from "@gyoungwe/pi-knowledge/host";
 import { describe, expect, it } from "vitest";
 
 describe("knowledge tool-budget", () => {

@@ -68,8 +68,6 @@ function scanFile(file, text, findings) {
 	const isRenderer = /^packages\/desktop\/src\/renderer\//.test(rel);
 	const isTest = /(?:^|\/)(?:test|tests)\//.test(rel) || /\.(?:test|spec)\.[^.]+$/.test(rel);
 	const domain = rel.match(/^packages\/(knowledge|tasks|research)\//)?.[1];
-	const knowledge = rel.startsWith("packages/knowledge/");
-	const extension = rel.startsWith("packages/extensions/");
 	const inquiry = rel.startsWith("packages/inquiry/");
 	const compute = rel.startsWith("packages/compute/");
 
@@ -95,33 +93,6 @@ function scanFile(file, text, findings) {
 		for (const match of text.matchAll(forbidden)) {
 			const offset = match.index ?? 0;
 			addFinding(findings, "R2", file, lineNumber(text, offset), `domain import ${match[1]}`);
-		}
-	}
-
-	// P1: knowledge is a portable plugin domain. Its implementation may only
-	// consume the public plugin contract (plus Node/npm dependencies), and host
-	// consumers must use the single host entry while the source is migrated.
-	if (knowledge) {
-		const forbidden =
-			/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(@drone\/[^"']+|electron|@earendil-works\/pi-[^"']+)(?=["'])/g;
-		for (const match of text.matchAll(forbidden)) {
-			const offset = match.index ?? 0;
-			addFinding(findings, "R2", file, lineNumber(text, offset), `knowledge import ${match[1]}`);
-		}
-	}
-	if (!knowledge && !extension) {
-		const knowledgeImports =
-			/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(@drone\/knowledge(?:\/[^"']*)?)(?=["'])/g;
-		for (const match of text.matchAll(knowledgeImports)) {
-			if (match[1] === "@drone/knowledge/host") continue;
-			const offset = match.index ?? 0;
-			addFinding(
-				findings,
-				"R10",
-				file,
-				lineNumber(text, offset),
-				`knowledge host entry required: ${match[1]}`,
-			);
 		}
 	}
 

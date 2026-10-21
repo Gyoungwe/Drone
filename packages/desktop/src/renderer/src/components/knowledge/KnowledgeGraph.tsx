@@ -778,7 +778,7 @@ export function KnowledgeGraph({
 					<div className="knowledge-graph-canvas-tools absolute inset-3 z-10">
 						<button
 							type="button"
-							className="knowledge-graph-live-toggle absolute right-0 top-0 flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs"
+							className="knowledge-graph-live-toggle absolute right-0 top-0 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
 							aria-pressed={paused}
 							title={t("graphLiveToggle")}
 							data-testid="knowledge-graph-live-toggle"
@@ -1236,7 +1236,7 @@ export function KnowledgeGraph({
 								if (rows.length === 0) return null;
 								return (
 									<section key={`health-${kind}`} className="mt-3 border-t border-border pt-2">
-										<p className="flex items-center gap-1.5 text-xs font-semibold text-ink-dim">
+										<p className="flex items-center gap-2 text-xs font-semibold text-ink-dim">
 											<i
 												className="inline-block h-2 w-2 rounded-full"
 												style={{ backgroundColor: HEALTH_COLORS[kind] }}

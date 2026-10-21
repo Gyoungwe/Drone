@@ -3,7 +3,6 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { registerAnswerPublication } from "@drone/knowledge/host";
 import {
 	type HarnessWorkerAttempt,
 	PROTECTED_KNOWLEDGE_AGENTS,
@@ -11,6 +10,7 @@ import {
 	resolveHarnessModelFamily,
 } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
+import { registerAnswerPublication } from "@gyoungwe/pi-knowledge/host";
 import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";

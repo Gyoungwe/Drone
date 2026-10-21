@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createTopicMemory, topicRunHash } from "@drone/knowledge/host";
+import { createTopicMemory, topicRunHash } from "@gyoungwe/pi-knowledge/host";
 import { describe, expect, it } from "vitest";
 
 const binding = { vaultId: "0123456789abcdef01234567" };

@@ -13,11 +13,9 @@ test("knowledge production runtime uses the generated worker resource", async ()
 	);
 	assert.match(runtime, /knowledge-worker\.mjs/);
 	assert.doesNotMatch(runtime, /(?:\.\.?[\\/])+\.pi[\\/]lib[\\/]knowledge/);
-	assert.equal(
-		existsSync(resolve(root, ".pi/extensions/knowledge-worker.mjs")),
-		true,
-		"generated knowledge worker must be committed for CLI/desktop production loads",
-	);
+	const fetcher = await readFile(resolve(root, "scripts/fetch-plugins.mjs"), "utf8");
+	assert.match(fetcher, /knowledge-worker\.mjs/);
+	assert.match(fetcher, /vendor\/plugins/);
 	assert.equal(
 		existsSync(resolve(root, ".pi/lib/knowledge")),
 		false,

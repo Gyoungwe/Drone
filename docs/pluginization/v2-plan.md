@@ -160,3 +160,5 @@ P4 验收：上述测试全过；默认关闭；在临时 Vault（测试夹具�
 
 | 2026-10-21 | P1 | 工作分支使用 `codex/pluginize-v2-p1`，没有创建计划中的 `pluginize/v2` | 仓库维护技能要求改动默认使用 `codex/*` 分支；P1 只改宿主仓库，未在 `drone-plugins` 创建无改动分支 |
 | 2026-10-21 | P2 | 两仓库使用 `codex/pluginize-v2-p2`；源码/测试历史用等价的 path-preserving history rewrite 合并，插件入口先迁移 native Pi 的 knowledge extension/worker；依赖任务运行时和 Obsidian 的 Desktop orchestration adapter 仍留在 Drone，待 P3 的 HostPort 接线 | 维护技能要求使用 `codex/*` 分支；直接 subtree merge 后 `git log --follow` 不会穿过 prefix，改为保留原提交消息和文件变更的等价历史重写；P2 插件边界只允许 host-neutral/native Pi 入口，宿主专属适配不跨包引入 |
+| 2026-10-21 | P3 | 宿主的 `knowledge-extension.mjs` 仍由 Drone 的 host adapter 生成；插件包的原生入口另以 `knowledge-plugin.mjs` 复制进 App，worker 与 manifest 则直接来自插件包 | Desktop UI/IPC 仍依赖宿主组合根的 runtime ports；把 host adapter 误当成插件原生入口会重复加载宿主状态。插件包的 `dist/index.mjs` 已在打包资源中独立校验，worker/manifest 使用插件产物，后续可在 HostPort 完成后删除 adapter bundle |
+| 2026-10-21 | P4 | 自动维护的调度、IPC 和 Obsidian 写入端口已接入宿主；`setTopic` 与 `proposeWiki` 均经 binding/revision 校验后调用受控 Vault 适配器 | 插件纯函数和假模型测试覆盖预算、解析失败、主题更新与 Wiki 候选边界；未在本阶段读取真实 Vault、调用正式模型或写入真实 Vault，计划要求的 Claude 实机 N=2 验收仍待执行 |
