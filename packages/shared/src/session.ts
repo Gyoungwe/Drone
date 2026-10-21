@@ -386,6 +386,8 @@ export interface HostPluginPackage {
 	pluginApi?: number;
 	minHostVersion?: string;
 	hosts?: string[];
+	tools?: string[];
+	permissions?: unknown;
 }
 
 /** 资源加载诊断（collision 冲突/warning/error） */

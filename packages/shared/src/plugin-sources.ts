@@ -35,6 +35,8 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 			readonly builtIn?: boolean;
 			readonly packageKind?: PiPluginPackageKind;
 			readonly capabilities?: readonly string[];
+			readonly tools?: readonly string[];
+			readonly permissions?: unknown;
 		}
 	>
 > = {
@@ -43,12 +45,16 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 		description: "Portable task, authorization, status, delivery and memory tools for native Pi",
 		builtIn: true,
 		capabilities: ["tasks", "authorization", "memory"],
+		tools: ["task_plan", "task_update"],
+		permissions: { filesystem: "workspace", network: "none" },
 	},
 	"@gyoungwe/pi-knowledge": {
 		version: "0.2.0",
 		description: "Knowledge and Vault tools for native Pi hosts",
 		builtIn: true,
 		capabilities: ["knowledge", "vault"],
+		tools: ["knowledge_search", "knowledge_read", "knowledge_write"],
+		permissions: { filesystem: "vault", network: "none" },
 	},
 	"@gyoungwe/pi-research": {
 		version: "0.1.0",
@@ -56,32 +62,44 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 			"Evidence-gated research retrieval, reading, deposition and source-grounded answer tools for native Pi",
 		builtIn: true,
 		capabilities: ["research", "evidence"],
+		tools: ["research_loop_start", "research_claim_bindings", "research_reconcile"],
+		permissions: { filesystem: "workspace", network: "read" },
 	},
 	"@gyoungwe/pi-analysis": {
 		version: "0.1.0",
 		description: "Portable scientific analysis adapters and readiness gates for native Pi",
 		capabilities: ["analysis", "readiness"],
+		tools: ["analysis_list_adapters", "analysis_assess_readiness"],
+		permissions: { filesystem: "workspace", network: "none" },
 	},
 	"@gyoungwe/pi-evidence": {
 		version: "0.1.0",
 		description: "Portable evidence manifests, provenance, checkpoints and replay proofs for native Pi",
 		capabilities: ["evidence", "provenance", "replay"],
+		tools: ["evidence_manifest", "evidence_checkpoint", "evidence_replay"],
+		permissions: { filesystem: "workspace", network: "none" },
 	},
 	"@gyoungwe/pi-connectors": {
 		version: "0.1.0",
 		description: "Host-neutral, read-only connector declarations and provenance receipts for native Pi",
 		capabilities: ["connectors", "receipts"],
+		tools: ["connector_list", "connector_get"],
+		permissions: { filesystem: "workspace", network: "read" },
 	},
 	"@gyoungwe/desktop-ui-pack": {
 		version: "0.1.0",
 		description: "Optional Drone Desktop UI contributions loaded by the installed package boundary",
 		packageKind: "desktop-ui",
 		capabilities: ["ui"],
+		tools: [],
+		permissions: { filesystem: "none", network: "none" },
 	},
 	"@gyoungwe/research-suite": {
 		version: "0.1.5",
 		description: "Bundled Drone native Pi research suite",
 		capabilities: ["research", "knowledge", "analysis"],
+		tools: ["research_loop_start", "knowledge_search", "analysis_assess_readiness"],
+		permissions: { filesystem: "workspace", network: "read" },
 	},
 };
 
@@ -177,6 +195,7 @@ export interface DronePackageManifest {
 	readonly capabilities?: readonly string[];
 	readonly hosts?: readonly string[];
 	readonly permissions?: unknown;
+	readonly tools?: readonly string[];
 }
 
 /**
@@ -202,6 +221,7 @@ export interface PiPluginSourceEntry {
 	readonly minHostVersion?: string;
 	readonly hosts: readonly string[];
 	readonly permissions?: unknown;
+	readonly tools: readonly string[];
 }
 
 function strings(values: readonly unknown[] | undefined): string[] {
@@ -231,6 +251,7 @@ export function piMarketPluginSource(pkg: CatalogPackage): PiPluginSourceEntry |
 		piPrompts: [],
 		uiContribution: false,
 		hosts: ["native-pi", "drone-desktop"],
+		tools: [],
 	};
 }
 
@@ -279,6 +300,7 @@ export function dronePluginSource(
 		minHostVersion: manifest?.pi?.minHostVersion,
 		hosts: unique(strings(manifest?.hosts)),
 		permissions: manifest?.permissions,
+		tools: unique(strings(manifest?.tools)),
 	};
 }
 
@@ -302,6 +324,7 @@ export function mergePiPluginSources(entries: readonly PiPluginSourceEntry[]): P
 			piSkills: unique([...current.piSkills, ...entry.piSkills]),
 			piPrompts: unique([...current.piPrompts, ...entry.piPrompts]),
 			uiContribution: current.uiContribution || entry.uiContribution,
+			tools: unique([...current.tools, ...entry.tools]),
 			pluginApi: entry.pluginApi ?? current.pluginApi,
 			piApiVersion: entry.piApiVersion ?? current.piApiVersion,
 			minHostVersion: entry.minHostVersion ?? current.minHostVersion,

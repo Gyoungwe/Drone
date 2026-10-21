@@ -26,6 +26,8 @@ function packageEntry(packageName: string, host?: HostPluginPackage): PiPluginSo
 			metadata?.packageKind ??
 			(packageName === "@gyoungwe/desktop-ui-pack" ? "desktop-ui" : "pi"),
 		capabilities: host?.capabilities ?? metadata?.capabilities ?? [],
+		tools: host?.tools ?? metadata?.tools ?? [],
+		permissions: host?.permissions ?? metadata?.permissions,
 		piExtensions: [],
 		piSkills: [],
 		piPrompts: [],
@@ -132,6 +134,15 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 					<p className="mt-1 text-[11px] text-ink-faint">
 						v{entry.version ?? "?"} · {entry.capabilities.join(" · ") || "Pi package"}
 					</p>
+					<p className="mt-1 text-[11px] text-ink-faint">
+						{t("skillsConnections.declaredTools")}:{" "}
+						{entry.tools.length ? entry.tools.join(", ") : t("skillsConnections.undeclaredTools")}
+						{" · "}
+						{t("skillsConnections.declaredPermissions")}:{" "}
+						{entry.permissions
+							? JSON.stringify(entry.permissions)
+							: t("skillsConnections.undeclaredPermissions")}
+					</p>
 					{installError && (
 						<p className="mt-1 text-[11px] text-err">
 							{t("skillsConnections.operationFailed")}: {installError}
@@ -231,7 +242,10 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 									type="button"
 									className="rounded-full bg-ink px-2 py-1 text-[11px] text-canvas hover:opacity-90 disabled:opacity-60"
 									disabled={installing}
-									onClick={() => void install(entry.packageName)}
+									onClick={() => {
+										if (window.confirm(t("skillsConnections.installConfirm", { name: entry.packageName })))
+											void install(entry.packageName);
+									}}
 								>
 									{installing ? t("skillsConnections.installing") : t("skillsConnections.install")}
 								</button>
