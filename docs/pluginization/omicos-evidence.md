@@ -15,7 +15,7 @@
 
 已运行：
 
-- `npx vitest run packages/backend/test/daily-discovery.test.ts packages/research/test/connectors.test.ts`：46 tests passed（含 integration mirror）。
+- `npx vitest run packages/backend/test/daily-discovery.test.ts packages/research/test/connectors.test.ts`：48 tests passed（含 integration mirror）；覆盖 Vault 标题仅有、命中带 DOI 时的标题回退去重。
 - `npm run typecheck`：通过。
 - `npx biome check`：相关文件通过。
 
@@ -104,11 +104,11 @@
 
 ## 主线最终门禁
 
-截至 `main` 的 `5bd1c3a6`，两仓库联动的主线验证已完成：
+截至 `main` 的 `4924eda2`，两仓库联动的主线验证已完成：
 
 - `npm run lint`：通过（仅既有大文件大小警告）。
 - `npm run typecheck`：通过，包含锁定的知识插件抓取/构建。
-- `npm test`：通过；backend 231/231 文件、1896 tests，desktop 159/159、820 tests，其余 workspace 和脚本门禁均通过。
+- `npm test`：通过；backend 231/231 文件、1898 tests，desktop 159/159、820 tests，其余 workspace 和脚本门禁均通过。
 - `npm run build`：通过，生成 Desktop renderer 和 Pi 包产物。
 - `npm run check:arch`：通过（0 baseline findings，宿主独立性通过）。
 - `npm run check:plugin-api`：通过 migration/lifecycle（安装、升级、回滚、卸载 PASS）。
