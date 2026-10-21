@@ -59,7 +59,7 @@
 
 ## PR4：批量精读 → 证据矩阵
 
-状态：技能与示例入口实现完成；真实会话已核对五行矩阵和页码结论，知识库沉淀回执仍未通过。
+状态：技能与示例入口实现完成；真实会话五行矩阵核对和知识库沉淀回执通过。
 
 - 新增 `.pi/skills/literature-matrix/SKILL.md`，支持 Zotero 集合、DOI 列表和项目 PDF 文件夹；每批上限 12 篇，按 DOI → arXiv id → 标题/路径去重。
 - 每篇论文由受限子代理调用 `research_read_source`，固定提取六个字段；只有当前读取回执中的 `[[page:N]]` 才能写入带页码结论，读不到原文统一标记“未读到原文”，禁止用摘要补全。
@@ -72,7 +72,7 @@
 - `npx vitest run packages/shared/src/example-tasks.test.ts packages/desktop/src/renderer/src/components/tasks/example-tasks.test.ts packages/backend/test/skill-acceptance-sdk.test.mjs`：34 tests passed（含 integration mirror）。
 - `git diff --check`：通过。
 
-真实会话证据（2026-10-22）：先生成五篇 PDF 的逐页文本，再将 `literature-matrix.md` 与 `literature-matrix.csv` 更新为 5 行、8 列字段、每篇带 `[p.1]` 原文结论；DeepSeek 真实会话读取两个文件并确认结构、页码和非骨架内容，随后尝试调用 `research_deposit_knowledge`。沉淀阶段触发回答检查错误，未返回可核对的知识库回执，因此五篇矩阵内容已改善但“读取→沉淀”闭环仍为待补，不能标完整 PASS。
+真实会话证据（2026-10-22）：五篇 PDF 的逐页文本生成后，`literature-matrix.md` 与 `literature-matrix.csv` 更新为 5 行、8 列字段、每篇带 `[p.1]` 原文结论；DeepSeek 真实会话读取两个文件并确认结构、页码和非骨架内容。修正临时 Vault 的 `/tmp` 与 `/private/tmp` 绑定路径后，重新调用 `research_deposit_knowledge` 成功，回执写入 `/private/tmp/drone-omicos-deepseek-20261022/Projects/omicos-acceptance/Evidence/omicos.md`，`type=evidence`、`project=omicos-acceptance`、`unresolvedSources=[]`。回执明确 `scientificallyVerified:false`，表示这是证据整理沉淀而非科学核验；该限制符合技能门禁，不阻止本 PR 的“读取→矩阵→沉淀”验收通过。
 
 ## PR5：Paper2Agent 接入文档与 README 修正
 
@@ -120,7 +120,7 @@
 
 - 本轮修复后：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run check:plugin-api -- --migration --lifecycle`、`npm run skills:check` 和 `npm run check:ui-skill-acceptance` 均通过。
 
-真实 Vault/正式安装包仍有两项待办：PR4 五篇逐篇精读的知识库沉淀回执、PR5 Paper2Agent 工具实际执行。PR2 页码引用点击和 PR3 三类首页卡片已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
+真实 Vault/正式安装包仍有一项待办：PR5 Paper2Agent 工具实际执行。PR2 页码引用点击、PR3 三类首页卡片和 PR4 五行矩阵沉淀已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
 
 ## 2026-10-22 实机抽检补充
 
@@ -130,5 +130,5 @@
 - 新建会话首页在当前 Vault 没有活跃课题、今日新想法和新文献雷达条目时，仅显示原有“研究 / 知识库 / 接力”卡片；上下文卡片没有以空状态出现，T3 的无数据路径通过。
 - 重新打包后的当前 `packages/desktop/dist/mac-arm64/Drone.app` 在真实连接器页列出并启用了 `arXiv`、`Semantic Scholar`。标准 `npm run dist` 因本机 `cpu-features` 缺失 `buildcheck.gypi` 在原生重编译阶段失败，使用 `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --dir --config.npmRebuild=false` 生成了可启动的未签名目录包，源码 registry 因而得到真实 app 证据。
 - PDF 桥接修复后的最新目录包再次启动成功；真实连接器页仍显示 `arXiv`、`Semantic Scholar`，插件页显示 `@gyoungwe/pi-research` 内置且已启用。
-- 真实会话先后尝试 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”；随后使用 DeepSeek V4.1 Flash 成功完成简单回答、PDF 页码引用和文件预览。矩阵内容仍未达到逐篇精读标准，首页正向三卡片和 Paper2Agent 实际调用也未通过，因此仅将 PR2 标为 PASS，其余保留准确状态。
+- 真实会话先后尝试 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”；随后使用 DeepSeek V4.1 Flash 成功完成简单回答、PDF 页码引用、文件预览、三类首页卡片和矩阵沉淀。Paper2Agent 实际调用仍被宿主审批门禁拦截，PR1 正式 Vault 雷达仍保持部分通过状态。
 - `/Applications/Drone.app` 仍是较早构建；正向签名/安装包验收应在安装当前构建并恢复有效模型凭证后执行。
