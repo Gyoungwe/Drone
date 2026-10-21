@@ -22,10 +22,6 @@
 
 ## Demo
 
-![drone welcome page with the whale maid desk pet](docs/assets/img/drone_pet.png)
-
-![UI plugins settings — the whale maid desk pet ships built in](docs/assets/img/drone_ui_plugins.png)
-
 **Chat**
 
 ![Chat page demo](docs/assets/img/demo-chat.gif)
@@ -115,7 +111,7 @@ flowchart TB
 - `index.ts`: app lifecycle, initLogging, `pi-bg://` protocol for custom backgrounds, renderer crash handler (auto-reload, incident snapshot), `new PiBackend()`, `UiPluginManager`, `registerIpc`, updater, `createWindow`. First 3 lines must import `pi-package-dir`, `dev-agent-dir`, `fix-path`.
 - `institutional-access.ts`: re-exports backend window funcs (`openInstitutionalLoginWindow`), plus `testAccess` that tries ezproxy + institutional_session via `institutionalFetch`.
 - `ipc/`: per-domain handlers (sessions, settings, permissions, institutional, knowledge, etc.) — thin delegates to backend; `index.ts` composes them and forwards backend events to renderer.
-- `ui-plugins/`: esbuild builder (shims `window.DroneUI`), manager (scan, build, fs.watch hot-reload, seed builtin pets).
+  - `ui-plugins/`: esbuild builder (shims `window.DroneUI`), manager (scan, build and fs.watch hot-reload).
 - `window.ts`, `tabs.ts`, `ui-state.ts`, `updater.ts`, etc.
 
 **preload/**: `index.ts` — `contextBridge.exposeInMainWorld('pi', api)` where `api` = generated from domain contracts + event subscriptions. Must stay CJS (sandbox).
@@ -169,7 +165,7 @@ Drone embeds the official Pi SDK (`@earendil-works/pi-coding-agent`) in the Elec
 
 And for GUI lovers:
 
-- Highly customizable UI — swap tool-call cards, desk-pet overlays (whale-maid pets ship built in), extend settings panel via UI plugins
+- Highly customizable UI — swap tool-call cards and extend the settings panel via UI plugins
 - Visual permission gates — approve/deny from a dock, backed by per-tool rule engine
 - Draggable multi-session tabs, per-session drafts, follow-up queue with undo
 - Built-in subagents — scout + your own definitions, parallel fan-out, run cards inspectable read-only. “scout the repo” / “侦察一下代码库” starts Scout; composer shows “子代理 x1” / “Scout 已完成”
@@ -184,6 +180,10 @@ And for GUI lovers:
 - Agent encounters paywall → `research_archive_source` returns `institutional_auth_required` → agent calls `research_institutional_login` → opens persistent institutional window (`persist:drone-institutional`) → you log in via EZproxy / Shibboleth / CARSI / OpenAthens / WebVPN → system auto-detects EZproxy template like `https://ezproxy.xxx.edu/login?url=%s` from navigated URL and saves to `~/.pi/agent/institutional.json` → retry download via `net.fetch({ session })`, respecting per-task cap (default 20).
 - UI: Settings → Zotero → Institutional Access — shows login status, Cookie count, auto-saved template, one-click login (auto-saves), test access.
 - Compliant: uses only your own institutional cookies, never pirate mirrors. See [docs/institutional-access.md](docs/institutional-access.md).
+
+## Connectors and MCP
+
+Drone ships read-only research connectors and can load external MCP servers from Settings. See [docs/paper2agent.md](docs/paper2agent.md) for Paper2Agent MCP examples and the rule that tool output is a deliverable, not evidence.
 
 ## Example Tasks
 

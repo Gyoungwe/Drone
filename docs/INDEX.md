@@ -38,6 +38,7 @@ P4/P5 外部验收记录见 [pluginization/acceptance-1.md](pluginization/accept
 插件化前端交接、宿主/插件仓库边界和 UI 验收顺序见 [pluginization-ui-handoff.md](pluginization-ui-handoff.md)；设计稿源文件见 [Drone 插件化界面.html](design/plugin-ui/Drone%20插件化界面.html)，构建产物四视图视觉对照由 [`scripts/check-visual-design-comparison.mjs`](../scripts/check-visual-design-comparison.mjs) 生成 [视觉证据](releases/visual/drone-visual-comparison.json)；资源搜索连接器设计见 [resource-search-connectors.md](resource-search-connectors.md)；科研工作台 v3 规划见 [scientific-workbench-v3-plan.md](scientific-workbench-v3-plan.md)。
 
 “技能与连接”页 v2 的 Pi 官方市场、Drone 插件仓库、连接器、MCP、Skill 和手动 Skill 仓库更新设计见 [skills-connections-ui-v2-plan.md](skills-connections-ui-v2-plan.md)。
+Paper2Agent 生成的 MCP 服务器接入方式和证据边界见 [paper2agent.md](paper2agent.md)。
 
 主机页的 SSH 配置发现、主机选择器和科研计算卡片设计见 [host-picker-ui-plan.md](host-picker-ui-plan.md)；实现位于 `packages/desktop/src/main/ssh-config.ts`、`packages/shared/src/host-api/compute.ts` 和 `packages/desktop/src/renderer/src/components/panel/ComputePane.tsx`。
 

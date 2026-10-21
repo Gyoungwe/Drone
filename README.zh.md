@@ -22,10 +22,6 @@
 
 ## 演示
 
-![drone 欢迎页与鲸鱼娘桌宠](docs/assets/img/drone_pet.png)
-
-![设置 —— UI 插件管理，内置鲸鱼娘桌宠](docs/assets/img/drone_ui_plugins.png)
-
 **聊天页**
 
 ![聊天页演示](docs/assets/img/demo-chat.gif)
@@ -115,7 +111,7 @@ flowchart TB
 - `index.ts`：生命周期、日志、`pi-bg://` 协议、崩溃钩子（自动 reload、incident snapshot）、`new PiBackend()`、`UiPluginManager`、`registerIpc`、updater、建窗。首三行必须 import `pi-package-dir`、`dev-agent-dir`、`fix-path`。
 - `institutional-access.ts`：复用 backend 窗口函数，`testAccess` 经 ezproxy + institutional_session 尝试。
 - `ipc/`：按域拆分（sessions、settings、permissions、institutional、knowledge 等），薄委托 backend；`index.ts` 拼装并转发事件。
-- `ui-plugins/`：esbuild 构建器（`window.DroneUI` shim）、manager（扫描、构建、fs.watch 热重载、内置桌宠）。
+  - `ui-plugins/`：esbuild 构建器（`window.DroneUI` shim）、manager（扫描、构建和 fs.watch 热重载）。
 - `window.ts`、`tabs.ts`、`ui-state.ts`、`updater.ts` 等。
 
 **preload/**：`index.ts` — `contextBridge.exposeInMainWorld('pi', api)`，`api` 由 各域契约生成 + 事件订阅。必须保持 CJS。
@@ -169,7 +165,7 @@ Drone 把官方 Pi SDK 跑在 Electron 主进程里。**不是 fork，也不是�
 
 图形界面额外提供：
 
-- 高度自定义界面 — 替换工具卡、桌宠浮层（内置鲸鱼娘两只）、扩展设置面板
+- 高度自定义界面 — 替换工具卡、扩展设置面板
 - 可视化权限审批 — 底部审批坞逐个批准/拒绝
 - 多会话顶栏标签（可拖拽、可选左侧轨道）、逐会话草稿、可撤销跟进队列
 - 内置子代理 — scout + 自定义，点运行卡只读检视子会话。自然语言「侦察一下代码库」/ scout the repo 启动 Scout；状态显示「子代理 x1」/「Scout 已完成」
@@ -184,6 +180,10 @@ Drone 把官方 Pi SDK 跑在 Electron 主进程里。**不是 fork，也不是�
 - Agent 遇到付费墙 → `research_archive_source` 返回 `institutional_auth_required` → Agent 调 `research_institutional_login` 打开持久机构窗口（`persist:drone-institutional`）→ 你完成学校登录（EZproxy / Shibboleth / CARSI / OpenAthens / WebVPN）→ 系统自动从 URL 如 `.../login?url=https://www.nature.com/...` 识别模板 `.../login?url=%s` 并保存到 `~/.pi/agent/institutional.json` → 重试下载，经 `net.fetch({ session })` 自动下载，尊重每任务上限（默认 20）。
 - UI：设置 → 文献库 → 机构访问 — 显示登录态、Cookie 数、自动保存的模板，一键登录（自动保存）、测试访问。
 - 合规：仅用你自己的机构 Cookie，绝不走盗版。见 [docs/institutional-access.md](docs/institutional-access.md)。
+
+## 连接器与 MCP
+
+Drone 内置只读研究连接器，并支持在设置中接入外部 MCP 服务器。Paper2Agent 的 MCP 配置示例和“工具输出不等于证据”的边界见 [docs/paper2agent.md](docs/paper2agent.md)。
 
 ## 示例任务
 
