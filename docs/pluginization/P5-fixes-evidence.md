@@ -34,4 +34,4 @@ npm run check:extensions -- --strict
 
 插件仓库 `npm run check` 通过；`npm test -w @gyoungwe/pi-knowledge` 通过 40 个测试文件、331 条测试。正式 Vault 验收只记录元数据，不把 Vault 正文、凭据或本地状态纳入提交。
 
-npm 发布按当前计划保留为后续动作，未在本轮执行。
+npm 正式发布已完成：`@gyoungwe/plugin-api@1.1.0` 与 `@gyoungwe/pi-knowledge@0.2.0` 按依赖顺序发布；官方 registry 元数据、完整性、干净消费者安装/加载、Pi 兼容性和公开插件宿主验收见 [v1.1.0 npm 发布证据](../releases/v1.1.0-npm-packages.json)。
