@@ -42,7 +42,7 @@
 
 ## PR3：新会话首页上下文卡片
 
-状态：代码实现完成；真实安装包无数据路径通过，正向“今日发现/新文献”两卡片通过，继续课题卡片仍待执行。
+状态：代码实现完成；真实安装包无数据路径和正向三类卡片均通过。
 
 - 新会话首页在有数据时显示最多三个活跃课题、今日新想法和新文献雷达；没有 Vault 或对应数据时不渲染这些上下文卡片。
 - 课题按钮把“继续课题：<标题>”写入现有 composer draft 并聚焦输入框；今日发现和新文献按钮只读跳转到知识库。
@@ -55,11 +55,11 @@
 
 - 当前构建包真实临时 Vault 验收：知识库页已挂载“新想法 / 新文献”每日发现分区；新建会话在无新想法时仍不显示空上下文卡片。
 
-真实会话证据（2026-10-22）：在当前目录包和 DeepSeek 临时验收项目中写入一条 `status=new` 的今日发现和一条 `status=new` 的雷达条目，重新打开新会话首页后真实 UI 显示“今日发现：跨模态验证”和“新文献 / Real OmicOS literature signal”两张上下文卡片。项目主题记忆在本轮未被首页接口读出，因此“继续课题”卡片仍未通过；无 Vault 的全新安装不显示空卡片的负向路径已通过。
+真实会话证据（2026-10-22）：在当前目录包和 DeepSeek 临时验收项目中写入两条活跃主题、一条 `status=new` 的今日发现和一条 `status=new` 的雷达条目，重启并重新打开新会话首页后真实 UI 显示“活跃课题 / Cell atlas、Genome editing”“今日发现：跨模态验证”和“新文献 / Real OmicOS literature signal”三类上下文卡片。无 Vault 的全新安装不显示空卡片的负向路径也已通过。
 
 ## PR4：批量精读 → 证据矩阵
 
-状态：技能与示例入口实现完成；真实会话仅完成格式核对，精读交付未通过。
+状态：技能与示例入口实现完成；真实会话已核对五行矩阵和页码结论，知识库沉淀回执仍未通过。
 
 - 新增 `.pi/skills/literature-matrix/SKILL.md`，支持 Zotero 集合、DOI 列表和项目 PDF 文件夹；每批上限 12 篇，按 DOI → arXiv id → 标题/路径去重。
 - 每篇论文由受限子代理调用 `research_read_source`，固定提取六个字段；只有当前读取回执中的 `[[page:N]]` 才能写入带页码结论，读不到原文统一标记“未读到原文”，禁止用摘要补全。
@@ -72,7 +72,7 @@
 - `npx vitest run packages/shared/src/example-tasks.test.ts packages/desktop/src/renderer/src/components/tasks/example-tasks.test.ts packages/backend/test/skill-acceptance-sdk.test.mjs`：34 tests passed（含 integration mirror）。
 - `git diff --check`：通过。
 
-真实会话证据（2026-10-22）：DeepSeek 会话实际读取了 `literature-matrix.md` 与 `literature-matrix.csv`，确认两文件覆盖 5 行、六个字段、CSV 结构可读，并明确指出当前内容只是格式骨架：标题抽取错误、`[p.1]` 不是实质结论、缺少 `read/unread` 状态和知识库沉淀回执。因此本 PR 的技能入口和门禁通过，但真实五篇逐篇精读与沉淀仍为 FAIL/待补，不能把本轮骨架文件当作证据矩阵 PASS。
+真实会话证据（2026-10-22）：先生成五篇 PDF 的逐页文本，再将 `literature-matrix.md` 与 `literature-matrix.csv` 更新为 5 行、8 列字段、每篇带 `[p.1]` 原文结论；DeepSeek 真实会话读取两个文件并确认结构、页码和非骨架内容，随后尝试调用 `research_deposit_knowledge`。沉淀阶段触发回答检查错误，未返回可核对的知识库回执，因此五篇矩阵内容已改善但“读取→沉淀”闭环仍为待补，不能标完整 PASS。
 
 ## PR5：Paper2Agent 接入文档与 README 修正
 
@@ -120,7 +120,7 @@
 
 - 本轮修复后：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run check:plugin-api -- --migration --lifecycle`、`npm run skills:check` 和 `npm run check:ui-skill-acceptance` 均通过。
 
-真实 Vault/正式安装包仍有三项待办：PR3 正向三类首页卡片、PR4 五篇逐篇精读并沉淀、PR5 Paper2Agent 工具实际执行。PR2 页码引用点击已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
+真实 Vault/正式安装包仍有两项待办：PR4 五篇逐篇精读的知识库沉淀回执、PR5 Paper2Agent 工具实际执行。PR2 页码引用点击和 PR3 三类首页卡片已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
 
 ## 2026-10-22 实机抽检补充
 
