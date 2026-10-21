@@ -29,7 +29,7 @@ Paper2Agent 服务提供 HTTP MCP 地址时，在同一面板添加 URL：
 {
   "mcpServers": {
     "paper2agent-remote": {
-      "url": "https://your-paper2agent.example/mcp",
+      "url": "https://Paper2Agent-alphagenome-mcp.hf.space/mcp",
       "description": "Paper2Agent hosted MCP server",
       "enabled": true
     }
@@ -37,7 +37,7 @@ Paper2Agent 服务提供 HTTP MCP 地址时，在同一面板添加 URL：
 }
 ```
 
-把示例域名替换为服务方给出的 HTTPS 地址，并按服务方要求完成 OAuth 或其他认证。不要把 token、Cookie 或私有论文正文放进 `mcp.json`、项目仓库或交付文件。
+上面的 AlphaGenome 地址是 Paper2Agent 项目公开列出的示例；也可以替换为服务方给出的其他 HTTPS 地址，并按服务方要求完成 OAuth 或其他认证。不要把 token、Cookie 或私有论文正文放进 `mcp.json`、项目仓库或交付文件。
 
 ## 使用边界
 

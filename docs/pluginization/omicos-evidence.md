@@ -87,6 +87,8 @@
 
 待补真实证据：按文档在本机接入一个公开 Paper2Agent MCP 服务器，在会话中完成一次工具调用并保留截图；工具输出不得作为证据回执。
 
+2026-10-22 外部连通性探测：按文档使用公开的 AlphaGenome Paper2Agent MCP 地址完成 initialize、tools/list 和 `create_genomic_interval` 调用，服务器返回结构化交付物与原论文链接。该探测证明公开服务器和 MCP 协议可用，但没有把 curl 调用冒充 Drone 真实会话验收；仍需在 Drone 设置中接入并在真实会话中调用后再标 PASS。
+
 ## PR6：PDF 解析质量评估
 
 状态：评估脚本与本地结果完成；真实会话验收不适用，结论待用户决定是否进入下一轮集成。
