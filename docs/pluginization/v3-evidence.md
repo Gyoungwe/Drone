@@ -2,6 +2,8 @@
 
 分支：两个仓库的 `main`（v2 已合并；v3 实现与规范更新随本次提交合并）。以下命令均在干净工作树上重跑。
 
+最终远程头：Drone `main`=`c9fd4365`；drone-plugins `main`=`bc2bc771`。
+
 ## T1 清单检查器与 tools
 
 - 插件仓库提交：`0972aba feat(platform): T1 strengthen manifest checks`。
@@ -20,6 +22,7 @@
 - 新增 `knowledge.tab`、`home.section`、`skills.section`，同步 shared 区域目录、renderer 挂载、插件类型声明和 UI SPEC。
 - 知识库插件页签在核心页签之后追加；停用后回到默认内容；首页和技能页在无贡献时不渲染空壳。
 - 证据：`npm run test --workspace @drone/desktop -- --run src/renderer/src/plugins/PluginRegions.test.tsx`（4 tests），`npm run typecheck --workspace @drone/desktop`。
+- Claude 负责的真实安装包三页面验收尚未在本地执行；代码级挂载、卸载和默认恢复证据已通过。
 
 ## T4 宿主独立性
 
@@ -44,7 +47,7 @@
 ## 回归
 
 - 已通过：`npm run lint`（仅仓库已有大文件 warning）、三 workspace typecheck、`npm run check:arch`。
-- 最终回归：`npm test` 通过（backend 231 files / 1893 tests，desktop 157 files / 811 tests，其他 workspace 亦通过）；`npm run typecheck`、`npm run build`、`npm run check:extensions -- --strict`、`npm run check:arch` 和 `npm run lint` 通过（lint 仅保留仓库已有两个大文件 warning）；插件仓库 `npm run check` 通过。
+- 最终回归：`npm test` 通过（backend 231 files / 1894 tests，desktop 158 files / 818 tests，其他 workspace 亦通过）；`npm run typecheck`、`npm run build`、`npm run check:extensions -- --strict`、`npm run check:arch` 和 `npm run lint` 通过（lint 仅保留仓库已有两个大文件 warning）；插件仓库 `npm run check` 通过。
 
 ## file: 依赖门禁修复
 
