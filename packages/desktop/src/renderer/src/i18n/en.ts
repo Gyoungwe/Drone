@@ -1844,6 +1844,11 @@ export const en: Messages = {
 			example: "See a complete example first →",
 			loading: "Reading live data…",
 		},
+		context: {
+			topics: { title: "Active topics" },
+			ideas: { title: "Today's discoveries" },
+			radar: { title: "New literature" },
+		},
 		greeting: { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening" },
 		intro:
 			"From literature to conclusions — Drone searches, reads, analyzes and deposits into your knowledge base.",

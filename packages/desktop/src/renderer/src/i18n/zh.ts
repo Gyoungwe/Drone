@@ -1758,6 +1758,11 @@ export const zh = {
 			example: "先看一个完整示例 →",
 			loading: "正在读取真实数据…",
 		},
+		context: {
+			topics: { title: "活跃课题" },
+			ideas: { title: "今日发现" },
+			radar: { title: "新文献" },
+		},
 		greeting: { morning: "早上好", afternoon: "下午好", evening: "晚上好" },
 		intro: "从文献到结论，Drone 帮你检索、阅读、分析并沉淀到知识库。",
 		untitled: "未命名会话",

@@ -1,12 +1,15 @@
 import {
+	type DailyDiscoveryState,
 	exampleTaskForDirection,
 	groupRunningFirst,
 	type KnowledgeOverview,
+	type KnowledgeTopic,
 	type SessionMeta,
 } from "@drone/shared";
 import { useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { COMPOSER_FOCUS_EVENT, NEW_SESSION_DRAFT_KEY, useDraftStore } from "../../stores/drafts";
 import { useExampleTaskStore } from "../../stores/example-tasks";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { deriveProjects, useProjectsStore } from "../../stores/projects";
@@ -81,6 +84,22 @@ export function pickUnfinishedSession(
 	return sessions.find((session) => active.has(session.sessionId));
 }
 
+export function pickActiveTopics(topics: KnowledgeTopic[]): KnowledgeTopic[] {
+	return topics.filter((topic) => topic.status === "active").slice(0, 3);
+}
+
+export function pickNewDailyIdeas(
+	state: Pick<DailyDiscoveryState, "ideas"> | null,
+): DailyDiscoveryState["ideas"] {
+	return state?.ideas.filter((idea) => idea.status === "new") ?? [];
+}
+
+export function pickNewDailyRadar(
+	state: Pick<DailyDiscoveryState, "radar"> | null,
+): DailyDiscoveryState["radar"] {
+	return state?.radar.filter((paper) => paper.status === "new") ?? [];
+}
+
 /** UI-7：首页科研工作台摘要。所有摘要都来自现有 store/IPC，缺数据时保持未知。 */
 export function HomeCards() {
 	const t = useT();
@@ -93,6 +112,8 @@ export function HomeCards() {
 	const [status, setStatus] = useState<FirstRunStatus | null>(null);
 	const [overview, setOverview] = useState<KnowledgeOverview | null>(null);
 	const [overviewLoading, setOverviewLoading] = useState(false);
+	const [topics, setTopics] = useState<KnowledgeTopic[]>([]);
+	const [daily, setDaily] = useState<DailyDiscoveryState | null>(null);
 
 	useEffect(() => {
 		if (!projectsLoaded) void loadProjects();
@@ -108,13 +129,42 @@ export function HomeCards() {
 		};
 	}, [cwd]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: cwd changes the bound Vault even though the IPC call has no cwd argument
 	useEffect(() => {
 		let live = true;
+		setDaily(null);
+		setTopics([]);
+		void getPi()
+			.getDailyDiscovery()
+			.then((next) => {
+				if (live) setDaily(next);
+			})
+			.catch(() => {
+				if (live) setDaily(null);
+			});
+		return () => {
+			live = false;
+		};
+	}, [cwd]);
+
+	useEffect(() => {
+		let live = true;
+		setOverview(null);
 		setOverviewLoading(true);
 		void getPi()
 			.getKnowledgeOverview({ cwd })
 			.then((next) => {
-				if (live) setOverview(next);
+				if (!live) return;
+				setOverview(next);
+				if (!cwd || !next.binding) return;
+				void getPi()
+					.getKnowledgeTopics({ cwd, bindingRevision: next.binding.revision })
+					.then((result) => {
+						if (live) setTopics(pickActiveTopics(result.topics));
+					})
+					.catch(() => {
+						if (live) setTopics([]);
+					});
 			})
 			.catch(() => {
 				if (live) setOverview(null);
@@ -198,6 +248,16 @@ export function HomeCards() {
 					: t("home.cards.relay.none"),
 		},
 	] as const;
+	const boundDaily = overview?.binding ? daily : null;
+	const newIdeas = pickNewDailyIdeas(boundDaily);
+	const newRadar = pickNewDailyRadar(boundDaily);
+	const hasContextCards = topics.length > 0 || newIdeas.length > 0 || newRadar.length > 0;
+	const continueTopic = (title: string) => {
+		const key = useSessionsStore.getState().activeSessionId ?? NEW_SESSION_DRAFT_KEY;
+		useDraftStore.getState().updateDraft(key, (draft) => ({ ...draft, text: `继续课题：${title}` }));
+		window.dispatchEvent(new Event(COMPOSER_FOCUS_EVENT));
+	};
+	const openKnowledge = () => useKnowledgeStore.getState().open({ cwd, sessionId: null, tab: "overview" });
 
 	return (
 		<div className="w-full max-w-[900px] space-y-4" data-testid="home-cards">
@@ -248,6 +308,60 @@ export function HomeCards() {
 					</article>
 				))}
 			</div>
+			{hasContextCards && (
+				<div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3" data-testid="home-context-cards">
+					{topics.length > 0 && (
+						<article className="rounded-2xl border border-border bg-surface p-4 text-left">
+							<h3 className="text-sm font-medium">{t("home.context.topics.title")}</h3>
+							<ul className="mt-2 space-y-1 text-xs text-ink-dim">
+								{topics.map((topic) => (
+									<li key={topic.id}>
+										<button
+											type="button"
+											className="text-link hover:underline"
+											onClick={() => continueTopic(topic.title)}
+										>
+											{topic.title}
+										</button>
+									</li>
+								))}
+							</ul>
+						</article>
+					)}
+					{newIdeas.length > 0 && (
+						<article className="rounded-2xl border border-border bg-surface p-4 text-left">
+							<button
+								type="button"
+								className="text-sm font-medium text-link hover:underline"
+								onClick={openKnowledge}
+							>
+								{t("home.context.ideas.title")}
+							</button>
+							<ul className="mt-2 space-y-1 text-xs text-ink-dim">
+								{newIdeas.slice(0, 3).map((idea) => (
+									<li key={idea.id}>{idea.title}</li>
+								))}
+							</ul>
+						</article>
+					)}
+					{newRadar.length > 0 && (
+						<article className="rounded-2xl border border-border bg-surface p-4 text-left">
+							<button
+								type="button"
+								className="text-sm font-medium text-link hover:underline"
+								onClick={openKnowledge}
+							>
+								{t("home.context.radar.title")}
+							</button>
+							<ul className="mt-2 space-y-1 text-xs text-ink-dim">
+								{newRadar.slice(0, 3).map((paper) => (
+									<li key={paper.id}>{paper.title}</li>
+								))}
+							</ul>
+						</article>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }

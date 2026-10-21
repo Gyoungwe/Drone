@@ -40,3 +40,18 @@
 - `npx biome check`：相关文件通过。
 
 待补真实证据：真实会话读取包含第五页的 PDF，点击带页码引用确认预览直接落到目标页，并记录越界回退行为。
+
+## PR3：新会话首页上下文卡片
+
+状态：代码实现完成；真实安装包验收待执行。
+
+- 新会话首页在有数据时显示最多三个活跃课题、今日新想法和新文献雷达；没有 Vault 或对应数据时不渲染这些上下文卡片。
+- 课题按钮把“继续课题：<标题>”写入现有 composer draft 并聚焦输入框；今日发现和新文献按钮只读跳转到知识库。
+- 复用现有 `getKnowledgeOverview`、`getKnowledgeTopics` 和 `getDailyDiscovery`，未新增写入 API。
+
+已运行：
+
+- `npx vitest run packages/desktop/src/renderer/src/components/chat/home-cards.test.ts`：4 tests passed。
+- `npx biome check`：HomeCards 与双语文案通过。
+
+待补真实证据：真实安装包新建对话显示三类卡片；无 Vault 的全新安装不显示空卡片。
