@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
+import { PluginEntryHost, usePluginEntries } from "../../plugins/PluginRegions";
+import { UI_REGIONS } from "../../plugins/slots";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { type KnowledgeTab, useUiStore } from "../../stores/ui";
@@ -29,6 +31,12 @@ export function KnowledgeView() {
 	const requestedTab = useUiStore((s) => s.knowledgeTab);
 	const setRequestedTab = useUiStore((s) => s.setKnowledgeTab);
 	const [tab, setTab] = useState<KnowledgeTab>(requestedTab);
+	const pluginTabs = usePluginEntries(UI_REGIONS.KnowledgeTab);
+	const [pluginTab, setPluginTab] = useState<string | null>(null);
+	const selectedPlugin = pluginTabs.find((entry) => entry.id === pluginTab);
+	useEffect(() => {
+		if (pluginTab && !pluginTabs.some((entry) => entry.id === pluginTab)) setPluginTab(null);
+	}, [pluginTab, pluginTabs]);
 	useEffect(() => setTab(requestedTab), [requestedTab]);
 	const selectTab = (next: KnowledgeTab) => {
 		setTab(next);
@@ -111,11 +119,26 @@ export function KnowledgeView() {
 											)}
 										</button>
 									))}
+									{pluginTabs.map((entry) => (
+										<button
+											key={entry.id}
+											type="button"
+											role="tab"
+											aria-selected={pluginTab === entry.id}
+											className={`-mb-px border-b-2 px-3 py-2 text-[13px] ${pluginTab === entry.id ? "border-ink font-semibold text-ink" : "border-transparent text-ink-dim hover:text-ink"}`}
+											onClick={() => setPluginTab(entry.id)}
+											data-plugin={entry.pluginName}
+										>
+											{entry.title}
+										</button>
+									))}
 								</div>
 							}
 						/>
 					)}
-					{dialog.note && dialog.noteRevision ? (
+					{selectedPlugin ? (
+						<PluginEntryHost entry={selectedPlugin} />
+					) : dialog.note && dialog.noteRevision ? (
 						<KnowledgeNoteViewer
 							cwd={dialog.cwd}
 							path={dialog.note}

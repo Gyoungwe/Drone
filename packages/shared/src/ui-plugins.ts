@@ -32,6 +32,9 @@ export const KNOWN_UI_REGIONS: string[] = [
 	// 挂钩 4：右侧面板新增页签 / 左侧导航新增全屏视图（贡献 = 一个页签 / 一个视图，title 作标签）
 	"panel.tab",
 	"rail.view",
+	"knowledge.tab",
+	"home.section",
+	"skills.section",
 ];
 
 /** app.overlay 的九宫格锚点枚举（spec §16） */

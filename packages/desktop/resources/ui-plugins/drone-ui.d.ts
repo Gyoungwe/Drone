@@ -67,6 +67,20 @@ declare module "react-dom" {
 
 declare module "@gyoungwe/plugin-api" {
 	export const version: number;
+	export type UiRegion =
+		| "knowledge.tab"
+		| "home.section"
+		| "skills.section"
+		| "panel.tab"
+		| "rail.view"
+		| "app.background"
+		| "app.overlay"
+		| "chat.corner.top-left"
+		| "chat.corner.top-right"
+		| "chat.corner.bottom-left"
+		| "chat.corner.bottom-right"
+		| "chat.diff-sidebar"
+		| "settings.panel";
 
 	/** 槽位 props 契约（与 SPEC §2 表一致） */
 	export interface SlotProps {

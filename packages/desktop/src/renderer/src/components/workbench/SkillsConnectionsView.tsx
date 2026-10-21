@@ -16,6 +16,8 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { restartForResearchSkillsWithGuard } from "../../lib/restart-research-skills";
+import { PluginEntryHost, usePluginEntries } from "../../plugins/PluginRegions";
+import { UI_REGIONS } from "../../plugins/slots";
 import { useResearchSkillUpdateStore } from "../../stores/research-skill-update";
 import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
@@ -225,6 +227,7 @@ export function connectorCatalogEntries(
 
 export function SkillsConnectionsView() {
 	const t = useT();
+	const pluginSections = usePluginEntries(UI_REGIONS.SkillsSection);
 	const cwd = useSessionsStore((state) => state.cwd);
 	const activeSessionId = useSessionsStore((state) => state.activeSessionId);
 	const settingsSkills = useSettingsStore((state) => state.skills);
@@ -560,6 +563,11 @@ export function SkillsConnectionsView() {
 
 	return (
 		<PageShell testId="skills-connections-view">
+			{pluginSections.map((entry) => (
+				<section key={entry.id} className="mb-4" data-plugin={entry.pluginName}>
+					<PluginEntryHost entry={entry} />
+				</section>
+			))}
 			<PageHeader
 				title={t("skillsConnections.title")}
 				description={t("skillsConnections.description")}

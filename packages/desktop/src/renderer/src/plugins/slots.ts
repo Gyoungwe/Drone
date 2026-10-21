@@ -43,6 +43,12 @@ export const UI_REGIONS = {
 	PanelTab: "panel.tab",
 	/** 左侧导航新增全屏视图：每个贡献一个入口，title 作标签（挂钩 4） */
 	RailView: "rail.view",
+	/** 知识库页签：每个贡献一个顶层页签。 */
+	KnowledgeTab: "knowledge.tab",
+	/** 首页分区：空态首页中的附加卡片区域。 */
+	HomeSection: "home.section",
+	/** 技能页分区：Skills & Connections 页面中的附加区域。 */
+	SkillsSection: "skills.section",
 } as const;
 export type RegionName = (typeof UI_REGIONS)[keyof typeof UI_REGIONS];
 

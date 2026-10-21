@@ -236,6 +236,22 @@ describe("ui plugin registry", () => {
 		expect(useUiPluginRegistry.getState().contributions[UI_REGIONS.AppBackground]).toHaveLength(1);
 	});
 
+	it("v3 页面区域贡献可注册并在卸载后恢复为空", () => {
+		for (const region of [UI_REGIONS.KnowledgeTab, UI_REGIONS.HomeSection, UI_REGIONS.SkillsSection]) {
+			useUiPluginRegistry
+				.getState()
+				.applyPlugin(
+					manifest({}, "v3-plugin", [{ id: region.replaceAll(".", "-"), region, export: "Panel" }]),
+					{ Panel: noop },
+					[],
+				);
+			expect(useUiPluginRegistry.getState().contributions[region]).toHaveLength(1);
+		}
+		useUiPluginRegistry.getState().removePlugin("v3-plugin");
+		for (const region of [UI_REGIONS.KnowledgeTab, UI_REGIONS.HomeSection, UI_REGIONS.SkillsSection])
+			expect(useUiPluginRegistry.getState().contributions[region]).toBeUndefined();
+	});
+
 	it("贡献导出缺失/非组件 → 记入 missing 且不注册该条（其余贡献照常）", () => {
 		const res = useUiPluginRegistry.getState().applyPlugin(
 			manifest({}, "test-plugin", [
