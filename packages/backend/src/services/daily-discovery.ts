@@ -279,9 +279,13 @@ export class DailyDiscoveryService {
 			}
 		}
 		const before = new Set((existing.radar ?? []).map(radarKey));
-		const sorted = [...byKey.values()]
-			.sort((a, b) => radarScore(b) - radarScore(a) || b.discoveredAt - a.discoveredAt)
-			.slice(0, 50);
+		const ranked = [...byKey.values()].sort(
+			(a, b) => radarScore(b) - radarScore(a) || b.discoveredAt - a.discoveredAt,
+		);
+		const sorted = [
+			...ranked.filter((paper) => before.has(radarKey(paper))).slice(0, 40),
+			...ranked.filter((paper) => !before.has(radarKey(paper))).slice(0, 10),
+		];
 		const added = sorted.filter((paper) => !before.has(radarKey(paper)) && paper.status === "new").length;
 		await this.store.update((draft) => {
 			draft.radar = sorted;
