@@ -159,3 +159,4 @@ P4 验收：上述测试全过；默认关闭；在临时 Vault（测试夹具�
 ## 偏离记录
 
 | 2026-10-21 | P1 | 工作分支使用 `codex/pluginize-v2-p1`，没有创建计划中的 `pluginize/v2` | 仓库维护技能要求改动默认使用 `codex/*` 分支；P1 只改宿主仓库，未在 `drone-plugins` 创建无改动分支 |
+| 2026-10-21 | P2 | 两仓库使用 `codex/pluginize-v2-p2`；源码/测试历史用等价的 path-preserving history rewrite 合并，插件入口先迁移 native Pi 的 knowledge extension/worker；依赖任务运行时和 Obsidian 的 Desktop orchestration adapter 仍留在 Drone，待 P3 的 HostPort 接线 | 维护技能要求使用 `codex/*` 分支；直接 subtree merge 后 `git log --follow` 不会穿过 prefix，改为保留原提交消息和文件变更的等价历史重写；P2 插件边界只允许 host-neutral/native Pi 入口，宿主专属适配不跨包引入 |
