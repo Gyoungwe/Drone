@@ -4,14 +4,14 @@
 
 ## PR1：新文献雷达与连接器
 
-状态：代码实现完成；真实会话验收待执行。
+状态：代码实现完成；真实构建包雷达验收部分通过。
 
 - 新增 `arxiv` 与 `semantic-scholar` 只读连接器，加入默认 registry，资料页连接器开关自动可见且默认启用。
 - Semantic Scholar 支持无 key 公共接口、可选 host 配置 API key、推荐查询；HTTP 429 保留为 retryable 失败。
 - arXiv 使用 submittedDate 倒序 Atom 检索，保留作者、提交时间和 arXiv id。
 - 每日雷达读取活跃课题，限制每课题 2 条、总计 12 条查询；检索 OpenAlex、PubMed、Europe PMC、arXiv、Semantic Scholar，合并最近 7 天命中并按 DOI → arXiv id → 标题去重，最多持久化 50 条。
 - `DailyDiscoveryState.radar` 已接入 JsonStore、Knowledge IPC 和知识库主页“新文献”分区；打开、入库、忽略动作已接线，入库使用 `captureResearchResource` 生成项目内的来源元数据记录。
-- 单测覆盖连接器解析、429 retryable、每日雷达无新笔记运行、查询去重和临时失败不计当天运行。
+- 单测覆盖连接器解析、429 retryable、每日雷达无新笔记运行、查询去重、部分连接器成功和临时失败不计当天运行。
 
 已运行：
 
@@ -19,7 +19,7 @@
 - `npm run typecheck`：通过。
 - `npx biome check`：相关文件通过。
 
-待补真实证据：绑定测试 Vault 后运行一次雷达，确认返回最近 7 天论文、入库记录出现在知识库，并在同日重复运行不重复推送；同时验证设置中关闭全部雷达连接器时的诊断结果。
+真实构建包证据（2026-10-22）：在临时 Vault `/tmp/drone-omicos-live-20261022` 中绑定两个活跃课题，打开知识库页的“现在运行”，页面显示“新文献”分区和真实返回的 Europe PMC、arXiv 条目，通知显示发现 10 篇近期文献；再次运行后已有条目没有重复，新增结果仍按 DOI/arXiv id/标题合并。OpenAlex 与 Semantic Scholar 在该临时环境因公共端点 HTTP 429 暂停，arXiv、PubMed、Europe PMC 继续启用；因此连接器代码和 arXiv 真实命中通过，Semantic Scholar 真实 Drone 会话仍待有效 API key 或限流解除后补验。
 
 ## PR2：引用跳转到 PDF 原文页码
 
@@ -42,7 +42,7 @@
 
 ## PR3：新会话首页上下文卡片
 
-状态：代码实现完成；真实安装包验收待执行。
+状态：代码实现完成；真实安装包无数据路径通过，正向三卡片仍待执行。
 
 - 新会话首页在有数据时显示最多三个活跃课题、今日新想法和新文献雷达；没有 Vault 或对应数据时不渲染这些上下文卡片。
 - 课题按钮把“继续课题：<标题>”写入现有 composer draft 并聚焦输入框；今日发现和新文献按钮只读跳转到知识库。
@@ -53,7 +53,9 @@
 - `npx vitest run packages/desktop/src/renderer/src/components/chat/home-cards.test.ts`：4 tests passed。
 - `npx biome check`：HomeCards 与双语文案通过。
 
-待补真实证据：真实安装包新建对话显示三类卡片；无 Vault 的全新安装不显示空卡片。
+- 当前构建包真实临时 Vault 验收：知识库页已挂载“新想法 / 新文献”每日发现分区；新建会话在无新想法时仍不显示空上下文卡片。
+
+待补真实证据：有效模型产生至少一条今日发现后，真实安装包新建对话显示三类卡片；无 Vault 的全新安装不显示空卡片的负向路径已通过。
 
 ## PR4：批量精读 → 证据矩阵
 
@@ -106,7 +108,7 @@
 
 ## 主线最终门禁
 
-截至 `main` 的 `4924eda2`，两仓库联动的主线验证已完成：
+截至 `main` 的 `b559091e`，两仓库联动的主线验证已完成；本轮修复后的门禁结果如下：
 
 - `npm run lint`：通过（仅既有大文件大小警告）。
 - `npm run typecheck`：通过，包含锁定的知识插件抓取/构建。
@@ -116,7 +118,9 @@
 - `npm run check:plugin-api`：通过 migration/lifecycle（安装、升级、回滚、卸载 PASS）。
 - `npm run skills:check` 与 `npm run check:ui-skill-acceptance`：通过；UI-01、SKILL-01 PASS。
 
-真实 Vault/正式安装包证据仍按 handoff 保持待办：雷达实际运行与入库、带页码引用点击、首页三类卡片、5 篇证据矩阵和 Paper2Agent 公共服务器调用；这些不能由本地 fixture 或离线 loader 代替。
+- 本轮修复后：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run check:plugin-api -- --migration --lifecycle`、`npm run skills:check` 和 `npm run check:ui-skill-acceptance` 均通过。
+
+真实 Vault/正式安装包证据仍按 handoff 保持待办：带页码引用点击、首页三类卡片、5 篇证据矩阵和 Paper2Agent 公共服务器的 Drone 会话调用；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
 
 ## 2026-10-22 实机抽检补充
 

@@ -6,7 +6,7 @@
 
 - v3 T3 的真实安装包三页面验收尚未执行；代码级挂载、卸载和默认恢复测试已通过。
 - v3 T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，尚未完成完整迁移。
-- PR1–PR5 的代码/文档实现已完成，PR6 的评估脚本和结果已完成；PR1–PR4、PR5 的真实会话/安装包验收仍待执行，PR6 的集成结论留待下一轮决定。本计划不把 fixture 或 loader 单独加载当作真实验收。
+- PR1–PR5 的代码/文档实现已完成，PR6 的评估脚本和结果已完成；PR1 的真实构建包雷达已部分通过，PR3 的无数据路径已通过，PR2/PR4/PR5 仍需有效模型凭证完成真实会话验收，PR6 的集成结论留待下一轮决定。本计划不把 fixture 或 loader 单独加载当作真实验收。
 - PR2/PR4 的原始 PDF 输入桥接已补齐：`@gyoungwe/pi-research` 现在直接发现并解析项目目录中的 `.pdf`，生成带 `[[page:N]]` 的文本和页码回执；真实会话中的点击引用仍待有效模型凭证和测试 PDF 验收。
 
 ### 2026-10-22 实机抽检记录
@@ -16,6 +16,8 @@
 - PDF 桥接修复后的最新目录包再次启动成功；真实“技能与连接 → 连接器”页仍列出并启用 `arXiv`、`Semantic Scholar`，内置插件清单也显示 `@gyoungwe/pi-research` 已启用。
 - `4924eda2` 补上雷达与 Vault 来源的标题回退去重，并把 `SEMANTIC_SCHOLAR_API_KEY` / `SEMANTIC_SCHOLAR_API_BASE` 传入宿主连接器配置；合并后完整门禁（lint、typecheck、test、build、arch、plugin-api lifecycle、skills、UI/SKILL acceptance）全部通过。
 - 公开网络探测确认 arXiv 返回最近提交结果；Semantic Scholar 当前返回 HTTP 429，按连接器契约被识别为 retryable。公开 AlphaGenome Paper2Agent MCP 服务器完成协议初始化、工具清单和一次无凭据工具调用；这仍不是 Drone 真实会话 PASS 证据。
+- 临时 Vault `/tmp/drone-omicos-live-20261022` 的真实构建包会话绑定 `Cell atlas`、`Genome editing` 两个活跃课题，知识库页“现在运行”显示 Europe PMC 与 arXiv 新文献；第二次运行保留既有条目并按来源键去重。为绕开当前公共端点 429，OpenAlex/Semantic Scholar 仅在该临时验收环境停用，未改变默认配置。
+- `DailyIdeas` 已挂载到知识库总览页，真实 UI 显示“现在运行”和“新文献”分区；这补齐了此前组件存在但没有页面入口的集成缺口。
 - 新建会话首页在该 Vault 没有活跃课题、今日新想法或 `radar.status=new` 条目时只显示原有卡片，未渲染空的“继续课题 / 今日发现 / 新文献”卡片；这是 T3 的负向路径证据，不能替代三张卡片的正向验收。
 - 真实会话连通性抽检使用已配置模型 `GPT-6.1 Sol`，结果为“模型请求失败：凭证无效”；此前 `Gemini 3.8 Flash` 也得到同样错误。当前无法在真实会话中运行雷达、学术回答或证据矩阵，相关条目继续保持待验收。
 - `/Applications/Drone.app` 仍是早于当前构建的安装包；正式签名/安装包正向验收必须在安装当前构建包并恢复有效模型凭证后重跑。
