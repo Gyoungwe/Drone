@@ -86,6 +86,11 @@
 
 - `git diff --check`：通过。
 - README、索引和配置示例的链接与 JSON 结构已人工核对。
+- 宿主回执回归：`npm test` 中的 `mcp-adapter-bundle-sdk.test.ts` 和
+  `mcp-enabled-adapter-sdk.test.ts` 使用真实 `DefaultResourceLoader`、真实会话和内置
+  `pi-mcp-adapter`，通过本地 stdio fixture 发现工具并执行 `mcp` 代理，返回内容包含
+  `echo:hi`；这证明 Drone 本地 MCP 执行/回执链路可用，但不替代公开 Paper2Agent
+  端点的真实安装包验收。
 
 真实会话证据（2026-10-22）：在真实安装的 Drone（`/Applications/Drone.app`）中接入 `https://Paper2Agent-alphagenome-mcp.hf.space/mcp`，刷新后真实 UI 显示 `paper2agent-remote` 已探测 22 个工具。第一次会话按宿主要求调用 `task_plan`，人工批准后确实生成了 `mcp__paper2agent_remote.create_genomic_interval` 调用；宿主没有收到回执，把它记为 `started/unknown`，模型随后被幂等门禁阻止重放。第二次会话使用已发现的正确 schema（`chromosome`, `start`, `end`, `strand`, `name`, `out_prefix`），再次批准 `task_plan` 后仍没有回执，任务进入 `reconcile-before-retry`，最终真实 UI 报告“没有任何 MCP 回执”。因此服务器发现和审批流程通过，但 Drone 宿主内的工具执行/回执闭环仍未通过，PR5 不标 PASS。
 

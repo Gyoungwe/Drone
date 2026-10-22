@@ -16,6 +16,7 @@
 - PDF 桥接修复后的最新目录包再次启动成功；真实“技能与连接 → 连接器”页仍列出并启用 `arXiv`、`Semantic Scholar`，内置插件清单也显示 `@gyoungwe/pi-research` 已启用。
 - `4924eda2` 补上雷达与 Vault 来源的标题回退去重，并把 `SEMANTIC_SCHOLAR_API_KEY` / `SEMANTIC_SCHOLAR_API_BASE` 传入宿主连接器配置；合并后完整门禁（lint、typecheck、test、build、arch、plugin-api lifecycle、skills、UI/SKILL acceptance）全部通过。
 - 公开网络探测确认 arXiv 返回最近提交结果；Semantic Scholar 当前返回 HTTP 429，按连接器契约被识别为 retryable。公开 AlphaGenome Paper2Agent MCP 服务器完成协议初始化、工具清单和一次无凭据工具调用；这仍不是 Drone 真实会话 PASS 证据。
+- 本地 MCP 宿主回执链路已有真实 SDK 回归：`mcp-adapter-bundle-sdk.test.ts` 与 `mcp-enabled-adapter-sdk.test.ts` 用内置 `pi-mcp-adapter`、真实 `DefaultResourceLoader`/会话和 stdio fixture 成功执行代理工具并读到 `echo:hi`；因此 PR5 剩余缺口限定为公开 Paper2Agent 端点在正式安装包中的真实回执。
 - 临时 Vault `/tmp/drone-omicos-live-20261022` 的真实构建包会话绑定 `Cell atlas`、`Genome editing` 两个活跃课题，知识库页“现在运行”显示 Europe PMC 与 arXiv 新文献；第二次运行保留既有条目并按来源键去重。为绕开当前公共端点 429，OpenAlex/Semantic Scholar 仅在该临时验收环境停用，未改变默认配置。
 - `DailyIdeas` 已挂载到知识库总览页，真实 UI 显示“现在运行”和“新文献”分区；这补齐了此前组件存在但没有页面入口的集成缺口。
 - 新建会话首页在该 Vault 没有活跃课题、今日新想法或 `radar.status=new` 条目时只显示原有卡片，未渲染空的“继续课题 / 今日发现 / 新文献”卡片；这是 T3 的负向路径证据。DeepSeek 临时项目随后真实显示了“活跃课题”“今日发现”和“新文献”三张正向卡片。
