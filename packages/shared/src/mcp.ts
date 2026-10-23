@@ -53,6 +53,8 @@ export interface McpConfigSnapshot {
 	path: string;
 	cwd: string | null;
 	servers: McpConfigServer[];
+	/** Metadata-only diagnostics for external/project MCP entries. */
+	diagnostics?: import("./mcp-external").McpDiagnostic[];
 }
 
 export interface McpStatusEvent {

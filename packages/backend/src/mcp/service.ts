@@ -3,6 +3,7 @@ import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import {
+	diagnoseExternalMcpServer,
 	MCP_PRESETS,
 	type McpConfigServer,
 	type McpConfigSnapshot,
@@ -314,7 +315,13 @@ export class McpService implements McpServicePort {
 			scope: source.scope,
 			sourcePath: source.path,
 		}));
-		return { path: preferredPath, cwd: cwd ? resolve(cwd) : null, servers };
+		const diagnostics = servers.flatMap((server) => diagnoseExternalMcpServer(server));
+		return {
+			path: preferredPath,
+			cwd: cwd ? resolve(cwd) : null,
+			servers,
+			...(diagnostics.length ? { diagnostics } : {}),
+		};
 	}
 
 	/**

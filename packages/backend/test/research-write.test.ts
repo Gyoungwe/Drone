@@ -9,8 +9,52 @@ import {
 	type ResearchWriteLedger,
 	ResearchWriteService,
 } from "../src/services/research-write";
+import { createProtocolsBookmarkWriteAdapter } from "../src/services/reversible-write-adapters";
 
 describe("ResearchWriteService", () => {
+	it("keeps Protocols.io preview, approval and readback explicit", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-write-protocols-"));
+		const calls: string[] = [];
+		const adapter = createProtocolsBookmarkWriteAdapter({
+			write: async ({ targetRef }) => {
+				calls.push(targetRef);
+				return {
+					externalRef: `https://www.protocols.io/view/${targetRef}`,
+					readBack: true,
+					deleted: true,
+				};
+			},
+		});
+		const service = new ResearchWriteService({
+			adapters: new ResearchWriteAdapterRegistry([adapter]),
+			store: new JsonStore<ResearchWriteLedger>({
+				path: join(root, "writes.json"),
+				storageId: "test-research-writes-protocols",
+				defaultValue: createEmptyResearchWriteLedger,
+			}),
+		});
+		const plan = await service.prepare({
+			adapterId: "protocols-bookmark-write",
+			targetRef: "protocol-guid",
+			action: "prepare",
+			payload: { title: "A protocol" },
+		});
+		expect(plan.sideEffect).toBe("external-write");
+		expect(plan.requiresExplicitApproval).toBe(true);
+		expect(await service.execute({ planId: plan.id, approved: false })).toMatchObject({ status: "blocked" });
+		const secondPlan = await service.prepare({
+			adapterId: "protocols-bookmark-write",
+			targetRef: "protocol-guid-2",
+			action: "prepare",
+			payload: { title: "A protocol" },
+		});
+		expect(await service.execute({ planId: secondPlan.id, approved: true })).toMatchObject({
+			status: "executed",
+			readBack: "verified",
+		});
+		expect(calls).toEqual(["protocol-guid-2"]);
+	});
+
 	it("persists a prepare plan and blocks execution without explicit approval", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-research-write-"));
 		const service = new ResearchWriteService({

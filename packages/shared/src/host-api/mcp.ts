@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import type { McpConfigSnapshot, McpPreset, McpStatus } from "../mcp";
+import type { McpDiagnostic } from "../mcp-external";
 import { defineDomain } from "./define";
 
 const OptionalCwdArgs = Type.Union([
@@ -69,6 +70,21 @@ const ConfigSchema = Type.Object(
 		path: Type.String({ minLength: 1 }),
 		cwd: Type.Union([Type.String(), Type.Null()]),
 		servers: Type.Array(ConfigServerSchema),
+		diagnostics: Type.Optional(
+			Type.Array(
+				Type.Unsafe<McpDiagnostic>(
+					Type.Object(
+						{
+							server: Type.String({ minLength: 1 }),
+							severity: Type.Union([Type.Literal("warning"), Type.Literal("error")]),
+							code: Type.String({ minLength: 1 }),
+							message: Type.String({ minLength: 1 }),
+						},
+						{ additionalProperties: false },
+					),
+				),
+			),
+		),
 	},
 	{ additionalProperties: false },
 );
