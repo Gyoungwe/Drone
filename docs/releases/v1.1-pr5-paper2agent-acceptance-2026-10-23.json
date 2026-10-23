@@ -5,12 +5,12 @@
 	"sourceRepositories": {
 		"host": {
 			"repository": "Gyoungwe/Drone",
-			"branch": "codex/pr5-public-receipt",
-			"commit": "049501f9"
+			"branch": "main",
+			"commit": "43ab8fdc948e0ddd3e0a867517ecc096fb640e02"
 		},
 		"plugins": {
 			"repository": "Gyoungwe/drone-plugins",
-			"branch": "codex/pr5-public-receipt",
+			"branch": "main",
 			"commit": "b6bc98d"
 		}
 	},

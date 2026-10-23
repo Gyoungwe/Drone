@@ -2,7 +2,7 @@
 
 分支：两个仓库的 `main`（v2 已合并；v3 实现与规范更新随本次提交合并）。以下命令均在干净工作树上重跑。
 
-实现基线：Drone `c9fd4365`；drone-plugins `bc2bc771`。两个仓库的远程 `main` 还包含本证据文件的后续文档提交。
+当前合并基线：Drone `main=43ab8fdc`；drone-plugins `main=b6bc98d7`。发布证据和锁文件均指向这两个合并后的 head；后续文档提交不改变代码基线。
 
 ## T1 清单检查器与 tools
 
@@ -53,7 +53,7 @@
 
 - T3 的真实安装包三页面验收仍待 Claude 在 Mac 上执行；当前只有代码级挂载、卸载和默认恢复证据。
 - T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，完整迁移尚未完成。
-- 下一轮 OmicOS 六个 PR 尚未开始，执行顺序和验收边界见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md)。
+- OmicOS 六个 PR 已完成；PR1–PR6 的实现和真实验收证据见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 与 [`pluginization/omicos-evidence.md`](omicos-evidence.md)。当前未完成项统一收敛到 [`gap-closure-plan.md`](gap-closure-plan.md)。
 
 ## file: 依赖门禁修复
 

@@ -6,6 +6,10 @@
 
 ## 当前结论
 
+### C0 当前状态
+
+已完成插件仓库优先合并、宿主仓库同步后合并、锁文件更新和发布证据 head 更新。合并后的门禁结果见本文末尾的执行记录；C1–C4 仍待执行。
+
 ### 真实未完成项
 
 | 优先级 | 项目 | 当前状态 | 完成证据 |
@@ -92,4 +96,10 @@ npm run check:plugin-api -- --migration --lifecycle
 - 所有计划文档不再把已完成工作写成“未开始”或“未发布”。
 - PR6 的选择被记录为“保持现状”或新的后续计划。
 - 全量主机和插件门禁通过，工作树干净。
+
+## 执行记录
+
+| 日期 | 阶段 | 结果 |
+| --- | --- | --- |
+| 2026-10-23 | C0 | drone-plugins `main=b6bc98d`；Drone `main=43ab8fdc`（合并 `codex/pr5-public-receipt`）；`plugins.lock.json` 已改为锁定 `b6bc98d7d0ac99461ae3249fb0a47b713166d007`，pi-knowledge tarball SHA-256 保持 `dc46908138ea926b86991ecc5f17892e34c65b0b1156741d6063d80ab0303fca`；发布证据已改为两个 `main` head。 |
 
