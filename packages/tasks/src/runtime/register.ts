@@ -101,19 +101,38 @@ export function registerWorkbench(
 						),
 		};
 	};
-	const journal: any = createTaskWorkbench({
+	let journal: any = createTaskWorkbench({
 		requireAuthorization: true,
 		persist: (snapshot: any) => pi.appendEntry(WORKBENCH_ENTRY, snapshot),
 		onCheckpoint: () => send(),
 		// 里程碑验收器（zotero_item / wiki_review / …）由各自的扩展 registerAcceptanceVerifier 登记（挂钩 2）
 		inspect,
 	});
-	const askAuthorization = createTaskAuthorization(journal, () => bindingKey());
+	const SESSION_WORKBENCH = "__drone_task_workbench_v2";
+	const attachSessionJournal = (ctx: any) => {
+		const manager = ctx?.sessionManager;
+		if (!manager || (typeof manager !== "object" && typeof manager !== "function")) return;
+		const attached = manager[SESSION_WORKBENCH];
+		if (attached?.journal && attached.journal !== journal) {
+			journal = attached.journal;
+			askAuthorization = createTaskAuthorization(journal, () => bindingKey());
+			return;
+		}
+		if (!attached && Object.isExtensible(manager))
+			Object.defineProperty(manager, SESSION_WORKBENCH, {
+				value: { version: 2, journal },
+				enumerable: false,
+				configurable: false,
+				writable: false,
+			});
+	};
+	let askAuthorization = createTaskAuthorization(journal, () => bindingKey());
 	const evidence: any = createEvidenceRecovery({
 		authorize,
 		persist: (data: any) => pi.appendEntry("drone-task-evidence-v1", data),
 	});
 	const attach = (ctx: any, force = false) => {
+		attachSessionJournal(ctx);
 		context = ctx;
 		activeSessionId = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || undefined;
 		const scope = createHash("sha256")

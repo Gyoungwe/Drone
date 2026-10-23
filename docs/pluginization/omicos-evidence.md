@@ -76,7 +76,7 @@
 
 ## PR5：Paper2Agent 接入文档与 README 修正
 
-状态：文档实现完成；真实会话完成服务器发现，工具调用被宿主审批门禁拦截。
+状态：**PASS**。文档实现、公共包安装和真实安装包回执闭环均完成。
 
 - 新增 [`docs/paper2agent.md`](../paper2agent.md)，说明 Paper2Agent 生成 MCP 服务器，提供 Pi `mcp.json` 的本地 stdio 与远程 URL 示例，并明确工具输出是交付物/线索，不是原文证据。
 - `docs/INDEX.md`、README 中英文的连接器入口已链接该文档。
@@ -92,7 +92,11 @@
   `echo:hi`；这证明 Drone 本地 MCP 执行/回执链路可用，但不替代公开 Paper2Agent
   端点的真实安装包验收。
 
-真实会话证据（2026-10-22）：在真实安装的 Drone（`/Applications/Drone.app`）中接入 `https://Paper2Agent-alphagenome-mcp.hf.space/mcp`，刷新后真实 UI 显示 `paper2agent-remote` 已探测 22 个工具。第一次会话按宿主要求调用 `task_plan`，人工批准后确实生成了 `mcp__paper2agent_remote.create_genomic_interval` 调用；宿主没有收到回执，把它记为 `started/unknown`，模型随后被幂等门禁阻止重放。第二次会话使用已发现的正确 schema（`chromosome`, `start`, `end`, `strand`, `name`, `out_prefix`），再次批准 `task_plan` 后仍没有回执，任务进入 `reconcile-before-retry`，最终真实 UI 报告“没有任何 MCP 回执”。因此服务器发现和审批流程通过，但 Drone 宿主内的工具执行/回执闭环仍未通过，PR5 不标 PASS。
+真实会话证据（2026-10-22）：早期 `/Applications/Drone.app` 会话曾把工具调用记为 `started/unknown`，该历史失败证据保留用于说明问题边界，不作为通过依据。
+
+真实安装包回执证据（2026-10-23）：使用 `/tmp/DroneAcceptance.app` 的全新会话 `01a16783-a6a9-7298-97d9-998076b2e6ed`，先获批 `task_plan`，随后只调用一次 `paper2agent-remote_create_genomic_interval`。原始结构化结果为 `isError=false`，`details.server=paper2agent-remote`、`details.tool=create_genomic_interval`，消息为 `Genomic interval created: chr1:100000-100100`，并包含公开参考链接和服务端交付物。`chromosome`, `start`, `end`, `strand`, `name`, `out_prefix` 六项实际入参均与验收要求一致。调用发生在正式安装包中，未使用 fixture、loader 单独加载或 curl 结果。
+
+回归修复：任务运行时通过 `sessionManager` 的会话级桥接共享同一工作台账本，不再使用 process 全局账本；独立 event bus 与不同会话隔离测试已加入 `packages/backend/test/task-acceptance-registry.test.mjs`。相关构建、目标测试和 typecheck 通过，详见 `docs/pluginization/acceptance-1.md` 的第二轮补充。
 
 2026-10-22 外部连通性探测：按文档使用公开的 AlphaGenome Paper2Agent MCP 地址完成协议初始化和工具清单探测；公开端点可访问，但直接请求在未建立完整会话头时返回参数错误。该探测不能替代 Drone 真实会话证据。最终阻塞点是宿主运行时的 MCP 调用回执未返回，而不是把外部 curl 结果冒充成调用 PASS。
 
@@ -125,7 +129,7 @@
 
 - 本轮修复后：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run check:plugin-api -- --migration --lifecycle`、`npm run skills:check` 和 `npm run check:ui-skill-acceptance` 均通过。
 
-真实 Vault/正式安装包仍有一项待办：PR5 Paper2Agent 工具实际执行并取得回执。当前证据已覆盖安装、发现、task_plan 批准、实际调用发起和未知结果保护，但没有可核对的 MCP 回执，不能标记 PASS。PR2 页码引用点击、PR3 三类首页卡片和 PR4 五行矩阵沉淀已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
+PR5 的真实回执缺口已关闭。当前证据覆盖公共包安装、服务器发现、`task_plan` 批准、唯一原生工具调用、原始结构化回执和六项参数核对；PR2 页码引用点击、PR3 三类首页卡片和 PR4 五行矩阵沉淀已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
 
 ## 2026-10-22 实机抽检补充
 

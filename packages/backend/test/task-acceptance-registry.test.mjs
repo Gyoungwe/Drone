@@ -15,6 +15,7 @@ import {
 } from "@drone/tasks/acceptance";
 import { registerTaskRuntime } from "@drone/tasks/runtime";
 import { validateToolArguments } from "@earendil-works/pi-ai";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
 
 /** 只捕获 registerTool、其余 API 全部 no-op 的 pi 桩。 */
@@ -121,6 +122,8 @@ describe("acceptance verifier registry (hook 2)", () => {
 			const pi = Object.freeze({
 				registerTool: (tool) => tools.set(tool.name, tool),
 				registerCommand: () => {},
+				appendEntry: () => {},
+				sendMessage: () => {},
 				on: (name) => listeners.set(name, (listeners.get(name) || 0) + 1),
 				events: Object.freeze(events),
 			});
@@ -137,6 +140,64 @@ describe("acceptance verifier registry (hook 2)", () => {
 		expect(second.listeners.size).toBe(12);
 		expect(first.tools.size).toBe(5);
 		expect(second.tools.size).toBe(5);
+	});
+
+	it("shares one session journal across independent event buses without a process ledger", () => {
+		const makeHost = () => {
+			const tools = new Map();
+			const listeners = new Map();
+			const pi = Object.freeze({
+				registerTool: (tool) => tools.set(tool.name, tool),
+				registerCommand: () => {},
+				appendEntry: () => {},
+				sendMessage: () => {},
+				on: (name, listener) => {
+					const entries = listeners.get(name) || [];
+					entries.push(listener);
+					listeners.set(name, entries);
+				},
+				events: Object.freeze(createEventBus()),
+			});
+			return { pi, tools, listeners };
+		};
+		const first = makeHost();
+		const second = makeHost();
+		const manager = {
+			getSessionId: () => "independent-bus-session",
+			getBranch: () => [],
+		};
+		const ctx = { sessionManager: manager, sessionId: "independent-bus-session", cwd: tmpdir() };
+		const firstJournal = registerTaskRuntime(first.pi);
+		registerTaskRuntime(second.pi);
+		for (const host of [first, second])
+			for (const listener of host.listeners.get("session_start") || []) listener({}, ctx);
+
+		const milestones = firstJournal.plan({
+			goal: "一次受控 MCP 调用",
+			summary: "只调用已批准的工具",
+			milestones: [{ id: "call", title: "调用工具", acceptance: { kind: "human_review" } }],
+		});
+		const planned = firstJournal.view();
+		firstJournal.command({
+			action: "authorize-task",
+			taskId: planned.tasks[0].id,
+			revision: planned.revision,
+		});
+		expect(milestones).toHaveLength(1);
+		const results = (second.listeners.get("tool_call") || []).map((listener) =>
+			listener({ toolName: "mcp", toolCallId: "call-1", input: {} }),
+		);
+		expect(results.every((result) => result === undefined)).toBe(true);
+
+		const other = makeHost();
+		registerTaskRuntime(other.pi);
+		const otherManager = { getSessionId: () => "other-session", getBranch: () => [] };
+		const otherCtx = { sessionManager: otherManager, sessionId: "other-session", cwd: tmpdir() };
+		for (const listener of other.listeners.get("session_start") || []) listener({}, otherCtx);
+		const blocked = (other.listeners.get("tool_call") || []).map((listener) =>
+			listener({ toolName: "mcp", toolCallId: "call-2", input: {} }),
+		);
+		expect(blocked.some((result) => result?.block === true)).toBe(true);
 	});
 
 	it("rejects host-owned kinds, malformed kinds and reserved field names", () => {

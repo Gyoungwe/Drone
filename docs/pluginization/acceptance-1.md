@@ -85,3 +85,11 @@
 1. 按上面「必须修」逐条修改，每条在 `docs/pluginization/P5-fixes-evidence.md` 里写明：改了哪些文件、对应的测试名称、命令输出。
 2. 在**干净 checkout** 上按 `npm ci → fetch:plugins → lint → typecheck → test → build` 的顺序跑一遍，贴出结果。
 3. 更新 `plugins.lock.json` 到新的插件提交，推送两个仓库的分支，然后告诉用户「P5 完成，请 Claude 验收」。
+
+## 2026-10-23 PR5 第二轮真实回执补充
+
+PR5 的剩余真实验收已通过。验收使用重新构建的 arm64 安装包 `/tmp/DroneAcceptance.app`（`app.asar` SHA-256 `a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec`），在全新会话 `01a16783-a6a9-7298-97d9-998076b2e6ed` 中完成。会话先提交并获批 `task_plan`，随后只调用一次原生工具 `paper2agent-remote_create_genomic_interval`；没有调用 `mcp` gateway、连接器探测、状态查询、文件工具或其他工具。
+
+原始结构化 MCP 回执（仅摘录字段，不保存会话正文）为：`isError=false`、`details.server=paper2agent-remote`、`details.tool=create_genomic_interval`、`message=Genomic interval created: chr1:100000-100100`，并返回 AlphaGenome 公开参考链接及一个服务端交付物路径。六项入参核对全部通过：`chromosome=chr1`、`start=100000`、`end=100100`、`strand=+`、`name=drone-acceptance-20261023-08`、`out_prefix=null`。这条回执来自正式安装包中的真实宿主调用，不是 loader、fixture 或 curl 探测。
+
+本轮实现与门禁证据：`packages/tasks/src/runtime/register.ts` 以 `sessionManager` 上的会话级桥接共享同一工作台账本，同时保持不同会话隔离；未引入 process 全局账本。`packages/backend/test/task-acceptance-registry.test.mjs` 新增独立 event bus 回归，验证同一会话共享、不同会话隔离。`npm run build:runtime -w @drone/tasks`、`npm run build:tasks`、`npm run build:pi-core`、`node scripts/build-extensions.mjs --force`、目标 Vitest（14/14）、tasks/backend typecheck、desktop build 均通过；`npm run dist` 仍受本机 `cpu-features` 重编译缺失 `buildcheck.gypi` 影响，使用 `npx electron-builder --mac --config.npmRebuild=false` 生成该验收包。

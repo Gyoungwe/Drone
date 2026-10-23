@@ -6,7 +6,7 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-c
 
 /** Public command/report contract used by native Pi and the Desktop command palette. */
 export const DRONE_COMMAND_SCHEMA_VERSION = 1 as const;
-export const PI_CORE_PACKAGE_VERSION = "0.1.5" as const;
+export const PI_CORE_PACKAGE_VERSION = "0.1.8" as const;
 export const PI_HOST_RANGE = ">=1.1.0 <2.0.0" as const;
 
 const CORE_TOOLS = [

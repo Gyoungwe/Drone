@@ -73,6 +73,7 @@ v0.33.5 插件门禁收口见 [插件门禁证据](releases/v0.33.5-plugin-gates
 首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
 
 2026-10-21 正式 npm 发布与官方 registry 干净消费者、Pi loader、公开插件宿主验收见 [v1.1.0 npm 发布证据](releases/v1.1.0-npm-packages.json)。
+2026-10-23 PR5 Paper2Agent 公共包干净安装与正式 Drone 安装包原生 MCP 回执见 [PR5 真实回执证据](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 
 v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
