@@ -30,9 +30,6 @@ jobs:
       - name: Build plugin-api for the pi-core smoke
         run: npm run build --workspace @gyoungwe/plugin-api
 
-      - name: Build pi-core release artifacts
-        run: npm run build --workspace @gyoungwe/pi-core
-
       - name: Check pi-core package
         run: npm run check --workspace @gyoungwe/pi-core
 
