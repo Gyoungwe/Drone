@@ -6,7 +6,7 @@
 
 - v3 T3 的真实安装包三页面验收尚未执行；代码级挂载、卸载和默认恢复测试已通过。
 - v3 T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，尚未完成完整迁移。
-- PR1–PR5 的代码/文档实现已完成，PR6 的评估脚本和结果已完成；PR1 的真实构建包雷达已部分通过，PR2 的真实会话页码引用点击已通过，PR3 的无数据和三类正向卡片均通过，PR4 的五行带页码矩阵核对和知识库沉淀回执已通过。PR5 已在全新正式安装包会话中完成 `task_plan` 批准、唯一原生工具调用和成功结构化回执核对，标记 PASS。PR6 的集成结论留待下一轮决定。本计划不把 fixture 或 loader 单独加载当作真实验收。
+- PR1–PR5 的代码/文档实现已完成，PR6 的评估脚本和结果已完成；PR1 的真实安装包雷达、PR2 的真实会话页码引用点击、PR3 的无数据和三类正向卡片、PR4 的五行带页码矩阵核对和知识库沉淀回执均已通过。PR5 已在全新正式安装包会话中完成 `task_plan` 批准、唯一原生工具调用和成功结构化回执核对，标记 PASS。PR6 的集成结论留待下一轮决定。本计划不把 fixture 或 loader 单独加载当作真实验收。
 - PR2/PR4 的原始 PDF 输入桥接已补齐：`@gyoungwe/pi-research` 现在直接发现并解析项目目录中的 `.pdf`，生成带 `[[page:N]]` 的文本和页码回执；真实会话已证明文件引用能打开 PDF 并导航到第 5 页。
 
 ### 2026-10-22 实机抽检记录
@@ -15,12 +15,12 @@
 - 重新打包后的当前构建包在“技能与连接 → 连接器”真实界面列出 `arXiv` 与 `Semantic Scholar`，两项均为默认开启；这确认源码 registry 已进入可启动的 app 目录包。标准 `npm run dist` 在本机 `cpu-features` 原生依赖重编译阶段因缺失 `buildcheck.gypi` 失败，随后用 `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --dir --config.npmRebuild=false` 生成了同一构建产物的未签名目录包。
 - PDF 桥接修复后的最新目录包再次启动成功；真实“技能与连接 → 连接器”页仍列出并启用 `arXiv`、`Semantic Scholar`，内置插件清单也显示 `@gyoungwe/pi-research` 已启用。
 - `4924eda2` 补上雷达与 Vault 来源的标题回退去重，并把 `SEMANTIC_SCHOLAR_API_KEY` / `SEMANTIC_SCHOLAR_API_BASE` 传入宿主连接器配置；合并后完整门禁（lint、typecheck、test、build、arch、plugin-api lifecycle、skills、UI/SKILL acceptance）全部通过。
-- 公开网络探测确认 arXiv 返回最近提交结果；Semantic Scholar 当前返回 HTTP 429，按连接器契约被识别为 retryable。公开 AlphaGenome Paper2Agent MCP 服务器完成协议初始化、工具清单和一次无凭据工具调用；这仍不是 Drone 真实会话 PASS 证据。
+- 公开网络探测确认 arXiv 返回最近提交结果；Semantic Scholar 返回 HTTP 429，按连接器契约被识别为 retryable。公开 AlphaGenome Paper2Agent MCP 服务器完成协议初始化、工具清单和一次无凭据工具调用；这仍不是 Drone 真实会话 PASS 证据。
 - 本地 MCP 宿主回执链路已有真实 SDK 回归：`mcp-adapter-bundle-sdk.test.ts` 与 `mcp-enabled-adapter-sdk.test.ts` 用内置 `pi-mcp-adapter`、真实 `DefaultResourceLoader`/会话和 stdio fixture 成功执行代理工具并读到 `echo:hi`；因此 PR5 剩余缺口限定为公开 Paper2Agent 端点在正式安装包中的真实回执。
-- 临时 Vault `/tmp/drone-omicos-live-20261022` 的真实构建包会话绑定 `Cell atlas`、`Genome editing` 两个活跃课题，知识库页“现在运行”显示 Europe PMC 与 arXiv 新文献；第二次运行保留既有条目并按来源键去重。为绕开当前公共端点 429，OpenAlex/Semantic Scholar 仅在该临时验收环境停用，未改变默认配置。
+- 临时 Vault `/tmp/drone-omicos-live-20261022` 的真实构建包会话绑定 `Cell atlas`、`Genome editing` 两个活跃课题，知识库页“现在运行”显示 Europe PMC 与 arXiv 新文献；第二次运行保留既有条目并按来源键去重。为绕开当时公共端点 429，OpenAlex/Semantic Scholar 仅在该临时验收环境停用，未改变默认配置。2026-10-23 新安装包补验已在单课题下真实显示 PubMed、Europe PMC、arXiv，并完成入库和同日稳定键去重；PR1 因此标记 PASS。
 - `DailyIdeas` 已挂载到知识库总览页，真实 UI 显示“现在运行”和“新文献”分区；这补齐了此前组件存在但没有页面入口的集成缺口。
 - 新建会话首页在该 Vault 没有活跃课题、今日新想法或 `radar.status=new` 条目时只显示原有卡片，未渲染空的“继续课题 / 今日发现 / 新文献”卡片；这是 T3 的负向路径证据。DeepSeek 临时项目随后真实显示了“活跃课题”“今日发现”和“新文献”三张正向卡片。
-- 真实会话连通性抽检补充使用本机 DeepSeek V4.1 Flash，简单回答、PDF 页码引用、文件预览、三类首页卡片和矩阵沉淀均成功；Paper2Agent 实际工具调用仍被宿主审批门禁拦截，PR1 的正式 Vault 雷达结论仍保留部分通过状态。
+- 真实会话连通性抽检补充使用本机 DeepSeek V4.1 Flash，简单回答、PDF 页码引用、文件预览、三类首页卡片和矩阵沉淀均成功；Paper2Agent 实际工具调用仍被宿主审批门禁拦截（后续公共包真实回执已另行通过）。
 - `/Applications/Drone.app` 仍是早于当前构建的安装包；正式签名/安装包正向验收必须在安装当前构建包并恢复有效模型凭证后重跑。
 
 ## 共同约束
@@ -32,7 +32,7 @@
 
 ## PR 顺序
 
-### PR1：新文献雷达与 Semantic Scholar / arXiv 连接器（代码完成，真实验收部分通过）
+### PR1：新文献雷达与 Semantic Scholar / arXiv 连接器（代码完成，真实安装包验收通过）
 
 新增 `semantic-scholar` 和 `arxiv` 只读连接器，接入 `packages/research/src/connectors.ts` registry 和资料页逐项开关，默认开启；Semantic Scholar 支持无 key 工作、有 key 时从设置读取，429 必须作为 retryable 失败；本轮不做 bioRxiv/medRxiv。
 
@@ -40,7 +40,7 @@
 
 在 `DailyDiscoveryState` 增加最多 50 条的 `radar`，并在 `DailyIdeas.tsx` 增加“新文献”分组，复用 `captureResearchResource` 完成入库。`lastOutcome` 要区分无活跃课题、连接器全部关闭、没有新论文和找到 N 篇。
 
-验收证据：去重、7 天窗口、查询上限、开关、429 单测；真实会话返回最近 7 天论文，入库后出现在知识库，同日再次运行不重复推送。
+验收证据：去重、7 天窗口、查询上限、开关、429 单测；真实安装包会话返回近期论文，入库后生成来源元数据记录，同日再次运行的 20 条稳定键无重复且没有重复写入首条已入库论文。Semantic Scholar 在验收时的公共端点 429 作为 retryable 失败处理，不阻断其他连接器的真实雷达结果。
 
 ### PR2：引用跳转到 PDF 原文页码（代码完成，真实页码引用验收通过）
 

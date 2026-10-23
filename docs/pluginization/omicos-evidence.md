@@ -4,7 +4,7 @@
 
 ## PR1：新文献雷达与连接器
 
-状态：代码实现完成；真实构建包雷达验收部分通过。
+状态：代码实现完成；真实安装包雷达验收通过。
 
 - 新增 `arxiv` 与 `semantic-scholar` 只读连接器，加入默认 registry，资料页连接器开关自动可见且默认启用。
 - Semantic Scholar 支持无 key 公共接口、可选 host 配置 API key、推荐查询；HTTP 429 保留为 retryable 失败。
@@ -19,7 +19,9 @@
 - `npm run typecheck`：通过。
 - `npx biome check`：相关文件通过。
 
-真实构建包证据（2026-10-22）：在临时 Vault `/tmp/drone-omicos-live-20261022` 中绑定两个活跃课题，打开知识库页的“现在运行”，页面显示“新文献”分区和真实返回的 Europe PMC、arXiv 条目，通知显示发现 10 篇近期文献；再次运行后已有条目没有重复，新增结果仍按 DOI/arXiv id/标题合并。OpenAlex 与 Semantic Scholar 在该临时环境因公共端点 HTTP 429 暂停，arXiv、PubMed、Europe PMC 继续启用；因此连接器代码和 arXiv 真实命中通过，Semantic Scholar 真实 Drone 会话仍待有效 API key 或限流解除后补验。
+真实构建包证据（2026-10-22）：在临时 Vault `/tmp/drone-omicos-live-20261022` 中绑定两个活跃课题，打开知识库页的“现在运行”，页面显示“新文献”分区和真实返回的 Europe PMC、arXiv 条目，通知显示发现 10 篇近期文献；再次运行后已有条目没有重复，新增结果仍按 DOI/arXiv id/标题合并。OpenAlex 与 Semantic Scholar 在该临时环境因公共端点 HTTP 429 暂停，arXiv、PubMed、Europe PMC 继续启用；这一轮历史记录保留为当时的限流情况。
+
+真实安装包补验（2026-10-23）：使用 `/tmp/DroneAcceptance.app`（app.asar SHA-256 `a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec`）启动知识库页，注入一个临时活跃课题 `single cell atlas`，真实点击“现在运行”后 UI 显示 10 篇近期文献，来源包含 PubMed、Europe PMC 和 arXiv；首条为 PubMed 论文“Single-cell profiling defines cellular ecosystems and malignant cell state coupling across pan-cancer tumor microenvironments.”，点击“入库”后状态变为“已入库”，项目 `.drone/radar/` 产生一个来源元数据文件。当天再次运行得到另一批 10 条命中，但 20 条稳定键（DOI → arXiv id → 规范化标题）无重复，首条保持“已入库”且仍只有一个文件，证明同日重跑不会重复推送或重复写入。Semantic Scholar 公共端点在该次验收返回 retryable HTTP 429，未将其作为命中条件；连接器默认注册、开关和 429 处理仍由代码门禁与单测覆盖。验收结束后已删除临时课题、雷达文件和本机发现状态。
 
 ## PR2：引用跳转到 PDF 原文页码
 
@@ -139,5 +141,5 @@ PR5 的真实回执缺口已关闭。当前证据覆盖公共包安装、服务�
 - 新建会话首页在当前 Vault 没有活跃课题、今日新想法和新文献雷达条目时，仅显示原有“研究 / 知识库 / 接力”卡片；上下文卡片没有以空状态出现，T3 的无数据路径通过。
 - 重新打包后的当前 `packages/desktop/dist/mac-arm64/Drone.app` 在真实连接器页列出并启用了 `arXiv`、`Semantic Scholar`。标准 `npm run dist` 因本机 `cpu-features` 缺失 `buildcheck.gypi` 在原生重编译阶段失败，使用 `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --dir --config.npmRebuild=false` 生成了可启动的未签名目录包，源码 registry 因而得到真实 app 证据。
 - PDF 桥接修复后的最新目录包再次启动成功；真实连接器页仍显示 `arXiv`、`Semantic Scholar`，插件页显示 `@gyoungwe/pi-research` 内置且已启用。
-- 真实会话先后尝试 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”；随后使用 DeepSeek V4.1 Flash 成功完成简单回答、PDF 页码引用、文件预览、三类首页卡片和矩阵沉淀。Paper2Agent 实际调用仍被宿主审批门禁拦截，PR1 正式 Vault 雷达仍保持部分通过状态。
+- 真实会话先后尝试 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”；随后使用 DeepSeek V4.1 Flash 成功完成简单回答、PDF 页码引用、文件预览、三类首页卡片和矩阵沉淀。Paper2Agent 实际调用曾被宿主审批门禁拦截；PR5 公共包回执和 PR1 新安装包雷达补验已在后续证据中通过。
 - `/Applications/Drone.app` 仍是较早构建；正向签名/安装包验收应在安装当前构建并恢复有效模型凭证后执行。
