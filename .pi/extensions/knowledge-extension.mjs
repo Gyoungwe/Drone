@@ -7922,7 +7922,10 @@ function adoptRuntimeState(previous, runtime) {
       target = {};
       runtime[domain] = target;
     }
-    for (const key of Reflect.ownKeys(source)) if (!(key in target)) target[key] = source[key];
+    for (const key of Reflect.ownKeys(source)) {
+      if (domain === "tasks" && key === "workbench") continue;
+      if (!(key in target)) target[key] = source[key];
+    }
   }
 }
 function runtimeForHost(pi) {
@@ -10794,7 +10797,6 @@ function registerTaskRuntime2(pi, options = {}) {
   return journal;
 }
 var TASK_RUNTIME_REGISTRY = "__drone_task_runtime_v1";
-var PROCESS_TASK_RUNTIME_REGISTRY = "__drone_task_runtime_process_v1";
 var TASK_RUNTIME_REQUEST = "drone:task-runtime/request/v1";
 var TASK_RUNTIME_RESPONSE = "drone:task-runtime/v1";
 var localTaskRuntimeRegistry = /* @__PURE__ */ new WeakMap();
@@ -10832,14 +10834,7 @@ function taskRuntimeRegistry(pi) {
       writable: false
     });
   } else {
-    const shared = process[PROCESS_TASK_RUNTIME_REGISTRY];
-    if (shared?.version === 1) return shared;
-    Object.defineProperty(process, PROCESS_TASK_RUNTIME_REGISTRY, {
-      value: registry3,
-      enumerable: false,
-      configurable: false,
-      writable: false
-    });
+    localTaskRuntimeRegistry.set(owner, registry3);
   }
   return registry3;
 }

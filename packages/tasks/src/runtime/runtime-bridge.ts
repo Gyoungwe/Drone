@@ -233,7 +233,12 @@ function adoptRuntimeState(previous: RuntimeLike, runtime: RuntimeLike): void {
 			target = {};
 			runtime[domain] = target;
 		}
-		for (const key of Reflect.ownKeys(source)) if (!(key in target)) target[key] = source[key];
+		for (const key of Reflect.ownKeys(source)) {
+			// A task journal belongs to one Pi session. Declaration registries are
+			// copied above, but execution history must never cross host runtimes.
+			if (domain === "tasks" && key === "workbench") continue;
+			if (!(key in target)) target[key] = source[key];
+		}
 	}
 }
 

@@ -98,6 +98,47 @@ describe("acceptance verifier registry (hook 2)", () => {
 		expect(tools.size).toBe(5);
 	});
 
+	it("isolates sealed facades that have independent event buses", () => {
+		const makeHost = () => {
+			const tools = new Map();
+			const listeners = new Map();
+			const subscriptions = new Map();
+			const events = {
+				on(name, listener) {
+					const entries = subscriptions.get(name) || [];
+					entries.push(listener);
+					subscriptions.set(name, entries);
+					return () =>
+						subscriptions.set(
+							name,
+							entries.filter((entry) => entry !== listener),
+						);
+				},
+				emit(name, payload) {
+					for (const listener of subscriptions.get(name) || []) listener(payload);
+				},
+			};
+			const pi = Object.freeze({
+				registerTool: (tool) => tools.set(tool.name, tool),
+				registerCommand: () => {},
+				on: (name) => listeners.set(name, (listeners.get(name) || 0) + 1),
+				events: Object.freeze(events),
+			});
+			return { pi, tools, listeners };
+		};
+
+		const first = makeHost();
+		const second = makeHost();
+		const firstJournal = registerTaskRuntime(first.pi);
+		const secondJournal = registerTaskRuntime(second.pi);
+
+		expect(secondJournal).not.toBe(firstJournal);
+		expect(first.listeners.size).toBe(12);
+		expect(second.listeners.size).toBe(12);
+		expect(first.tools.size).toBe(5);
+		expect(second.tools.size).toBe(5);
+	});
+
 	it("rejects host-owned kinds, malformed kinds and reserved field names", () => {
 		expect(() => registerAcceptanceVerifier("file")).toThrow(/owned by the host/);
 		expect(() => registerAcceptanceVerifier("Bad-Kind")).toThrow(/must match/);

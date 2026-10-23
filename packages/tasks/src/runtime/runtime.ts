@@ -260,7 +260,6 @@ export function registerTaskRuntime(pi, options = {}) {
 }
 
 const TASK_RUNTIME_REGISTRY = "__drone_task_runtime_v1";
-const PROCESS_TASK_RUNTIME_REGISTRY = "__drone_task_runtime_process_v1";
 const TASK_RUNTIME_REQUEST = "drone:task-runtime/request/v1";
 const TASK_RUNTIME_RESPONSE = "drone:task-runtime/v1";
 const localTaskRuntimeRegistry = new WeakMap();
@@ -305,17 +304,10 @@ function taskRuntimeRegistry(pi) {
 			writable: false,
 		});
 	} else {
-		// The production loader can give each bundled entry a sealed facade and
-		// a distinct event object. The Pi process is still the single host, so
-		// keep one fallback registry there for those facades.
-		const shared = process[PROCESS_TASK_RUNTIME_REGISTRY];
-		if (shared?.version === 1) return shared;
-		Object.defineProperty(process, PROCESS_TASK_RUNTIME_REGISTRY, {
-			value: registry,
-			enumerable: false,
-			configurable: false,
-			writable: false,
-		});
+		// Sealed facades are isolated by their event-bus owner. Bundled graphs
+		// sharing a bus converge through request/reply above; independent buses
+		// must retain independent journals and hooks.
+		localTaskRuntimeRegistry.set(owner, registry);
 	}
 	return registry;
 }

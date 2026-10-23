@@ -206,7 +206,6 @@ function registerTaskRuntime(pi, options = {}) {
   return journal;
 }
 const TASK_RUNTIME_REGISTRY = "__drone_task_runtime_v1";
-const PROCESS_TASK_RUNTIME_REGISTRY = "__drone_task_runtime_process_v1";
 const TASK_RUNTIME_REQUEST = "drone:task-runtime/request/v1";
 const TASK_RUNTIME_RESPONSE = "drone:task-runtime/v1";
 const localTaskRuntimeRegistry = /* @__PURE__ */ new WeakMap();
@@ -244,14 +243,7 @@ function taskRuntimeRegistry(pi) {
       writable: false
     });
   } else {
-    const shared = process[PROCESS_TASK_RUNTIME_REGISTRY];
-    if (shared?.version === 1) return shared;
-    Object.defineProperty(process, PROCESS_TASK_RUNTIME_REGISTRY, {
-      value: registry,
-      enumerable: false,
-      configurable: false,
-      writable: false
-    });
+    localTaskRuntimeRegistry.set(owner, registry);
   }
   return registry;
 }

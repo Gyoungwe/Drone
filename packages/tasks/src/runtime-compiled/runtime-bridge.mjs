@@ -182,7 +182,10 @@ function adoptRuntimeState(previous, runtime) {
       target = {};
       runtime[domain] = target;
     }
-    for (const key of Reflect.ownKeys(source)) if (!(key in target)) target[key] = source[key];
+    for (const key of Reflect.ownKeys(source)) {
+      if (domain === "tasks" && key === "workbench") continue;
+      if (!(key in target)) target[key] = source[key];
+    }
   }
 }
 function runtimeForHost(pi) {
