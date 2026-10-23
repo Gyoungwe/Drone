@@ -21,7 +21,6 @@
 
 ### 仅文档或证据同步问题
 
-- `v3-evidence.md` 仍写“OmicOS 六个 PR 尚未开始”，应改为已完成并链接六个 PR 的证据。
 - v2 的 P1/P2/P4 证据保留了历史失败、未发布或 N=2 待执行描述，但没有明确标注已被后续验收取代。
 - `final-pluginization-plan.md`、`docs/INDEX.md` 和旧发布证据仍引用旧版本、旧 `main` 提交和“plugin-api 未发布”的历史状态。
 - `drone-plugins/main` 的 workspace 版本与 npm 当前版本不同，必须明确“源码 main 状态”和“已发布 registry 状态”，不能混写。
