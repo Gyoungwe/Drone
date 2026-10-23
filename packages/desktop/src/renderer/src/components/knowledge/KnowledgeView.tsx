@@ -32,6 +32,7 @@ export function KnowledgeView() {
 	const setRequestedTab = useUiStore((s) => s.setKnowledgeTab);
 	const [tab, setTab] = useState<KnowledgeTab>(requestedTab);
 	const pluginTabs = usePluginEntries(UI_REGIONS.KnowledgeTab);
+	const knowledgePage = usePluginEntries(UI_REGIONS.KnowledgePage)[0];
 	const [pluginTab, setPluginTab] = useState<string | null>(null);
 	const selectedPlugin = pluginTabs.find((entry) => entry.id === pluginTab);
 	useEffect(() => {
@@ -66,6 +67,17 @@ export function KnowledgeView() {
 	const binding = overview?.binding;
 
 	if (!dialog) return null;
+	if (knowledgePage) {
+		return (
+			<section className="knowledge-view" aria-label={t("title")} data-testid="knowledge-plugin-page">
+				<div className="knowledge-view-body">
+					<div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-1">
+						<PluginEntryHost entry={knowledgePage} />
+					</div>
+				</div>
+			</section>
+		);
+	}
 	const vault = binding?.vault?.replace(/[\\/]$/u, "") ?? "";
 	const vaultLabel = vault.slice(Math.max(vault.lastIndexOf("/"), vault.lastIndexOf("\\")) + 1) || vault;
 	const description = binding

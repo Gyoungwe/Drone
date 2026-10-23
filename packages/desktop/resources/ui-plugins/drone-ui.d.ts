@@ -69,6 +69,7 @@ declare module "@gyoungwe/plugin-api" {
 	export const version: number;
 	export type UiRegion =
 		| "knowledge.tab"
+		| "knowledge.page"
 		| "home.section"
 		| "skills.section"
 		| "panel.tab"

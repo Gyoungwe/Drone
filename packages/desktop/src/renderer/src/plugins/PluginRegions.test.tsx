@@ -35,7 +35,12 @@ beforeEach(() => {
 });
 
 describe("v3 plugin page regions", () => {
-	for (const region of [UI_REGIONS.KnowledgeTab, UI_REGIONS.HomeSection, UI_REGIONS.SkillsSection]) {
+	for (const region of [
+		UI_REGIONS.KnowledgeTab,
+		UI_REGIONS.KnowledgePage,
+		UI_REGIONS.HomeSection,
+		UI_REGIONS.SkillsSection,
+	]) {
 		it(`${region} mounts and unmounts a contribution`, () => {
 			useUiPluginRegistry.getState().applyPlugin(manifest(region), { Panel }, []);
 			const { result, unmount } = renderHook(() => usePluginEntries(region));
@@ -53,12 +58,18 @@ describe("v3 plugin page regions", () => {
 	}
 
 	it("disabled plugins leave every page region at its default empty state", () => {
-		for (const region of [UI_REGIONS.KnowledgeTab, UI_REGIONS.HomeSection, UI_REGIONS.SkillsSection])
+		for (const region of [
+			UI_REGIONS.KnowledgeTab,
+			UI_REGIONS.KnowledgePage,
+			UI_REGIONS.HomeSection,
+			UI_REGIONS.SkillsSection,
+		])
 			useUiPluginRegistry.getState().applyPlugin(manifest(region), { Panel }, []);
 
 		useUiPluginsStore.setState({ config: { enabled: false, plugins: {}, assignments: {} } });
 		const hooks = [
 			renderHook(() => usePluginEntries(UI_REGIONS.KnowledgeTab)),
+			renderHook(() => usePluginEntries(UI_REGIONS.KnowledgePage)),
 			renderHook(() => usePluginEntries(UI_REGIONS.HomeSection)),
 			renderHook(() => usePluginEntries(UI_REGIONS.SkillsSection)),
 		];

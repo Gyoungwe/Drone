@@ -30,12 +30,13 @@ A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收
 插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。插件仓库构建、分层热插拔、会话边界重载与回滚的下一阶段设计见 [plugin-hot-reload-plan.md](plugin-hot-reload-plan.md)。双仓库维护、架构红线和 npm 发版执行规约见 [drone-maintenance skill](../.agents/skills/drone-maintenance/SKILL.md)。
 插件化 v2 的 P1 迁移边界与 extensions 归属清单见 [pluginization/p1-inventory.md](pluginization/p1-inventory.md)；执行主计划见 [pluginization/v2-plan.md](pluginization/v2-plan.md)，本轮验收记录见 [pluginization/P1-evidence.md](pluginization/P1-evidence.md)。
 P2 知识源码与插件入口迁移、插件仓库全量门禁和 Git 历史验收见 [pluginization/P2-evidence.md](pluginization/P2-evidence.md)。
-插件平台 v3 的 T1–T7 执行计划见 [pluginization/v3-platform-plan.md](pluginization/v3-platform-plan.md)，插件清单和宿主合同见 `../drone-plugins/docs/PLUGIN-SPEC.md`，实现证据见 [pluginization/v3-evidence.md](pluginization/v3-evidence.md)。
+插件平台 v3 的 T1–T7 执行计划见 [pluginization/v3-platform-plan.md](pluginization/v3-platform-plan.md)，插件清单和宿主合同见 `../drone-plugins/docs/PLUGIN-SPEC.md`，实现证据见 [pluginization/v3-evidence.md](pluginization/v3-evidence.md)。下一阶段 P1 的第三方扩展、外部 MCP 与 Protocols.io 离线合同见 [pluginization/next-stage-p1-evidence.md](pluginization/next-stage-p1-evidence.md)。
 截至 2026-10-23，v3 合并基线为 Drone `main=a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c`、drone-plugins `main=127db2658f465337fe9ad936692302d8536c09ba`；公开包版本与真实安装/加载证据见 [`v1.1.0 npm 发布证据`](releases/v1.1.0-npm-packages.json)、[`pi-analysis 0.1.2 发布证据`](releases/v3.1-pi-analysis-0.1.2.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 
 插件化与 OmicOS 计划缺口清理顺序见 [pluginization/gap-closure-plan.md](pluginization/gap-closure-plan.md)。
 范围外与未来可选工作的下一阶段优先级、依赖和授权矩阵见 [next-stage-scope-plan.md](next-stage-scope-plan.md)。
 P0 权限执行切片、plugin-api v1 合同治理与当前进程沙箱边界见 [p0-security-api-evidence.md](pluginization/p0-security-api-evidence.md)。
+P1 第三方扩展、外部 MCP 与 Protocols.io 离线合同见 [next-stage-p1-evidence.md](pluginization/next-stage-p1-evidence.md)；研究运行时迁移边界见 [research-migration-status.md](research-migration-status.md)。
 OmicOS 文献雷达与阅读闭环的六个 PR 计划见 [omicos-platform-plan.md](omicos-platform-plan.md)，实现证据见 [pluginization/omicos-evidence.md](pluginization/omicos-evidence.md)，原始 handoff 见 [claude/drone-omicos-handoff.md](../claude/drone-omicos-handoff.md)。
 P3 宿主消费锁定的 `@gyoungwe/pi-knowledge`、本地 macOS DMG/ZIP 构建与资源验收见 [pluginization/P3-evidence.md](pluginization/P3-evidence.md)；P4 自动维护调度、IPC、UI 和插件测试见 [pluginization/P4-evidence.md](pluginization/P4-evidence.md)。
 P4/P5 外部验收记录见 [pluginization/acceptance-1.md](pluginization/acceptance-1.md)、[pluginization/acceptance-2.md](pluginization/acceptance-2.md) 与 [pluginization/acceptance-3.md](pluginization/acceptance-3.md)（`acceptance-3.md` 为最终复核）。

@@ -45,6 +45,8 @@ export const UI_REGIONS = {
 	RailView: "rail.view",
 	/** 知识库页签：每个贡献一个顶层页签。 */
 	KnowledgeTab: "knowledge.tab",
+	/** 知识库整页：最多取第一个启用贡献；没有贡献时使用宿主默认页。 */
+	KnowledgePage: "knowledge.page",
 	/** 首页分区：空态首页中的附加卡片区域。 */
 	HomeSection: "home.section",
 	/** 技能页分区：Skills & Connections 页面中的附加区域。 */

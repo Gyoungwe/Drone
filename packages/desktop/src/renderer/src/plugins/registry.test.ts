@@ -237,7 +237,12 @@ describe("ui plugin registry", () => {
 	});
 
 	it("v3 页面区域贡献可注册并在卸载后恢复为空", () => {
-		for (const region of [UI_REGIONS.KnowledgeTab, UI_REGIONS.HomeSection, UI_REGIONS.SkillsSection]) {
+		for (const region of [
+			UI_REGIONS.KnowledgeTab,
+			UI_REGIONS.KnowledgePage,
+			UI_REGIONS.HomeSection,
+			UI_REGIONS.SkillsSection,
+		]) {
 			useUiPluginRegistry
 				.getState()
 				.applyPlugin(
@@ -248,7 +253,12 @@ describe("ui plugin registry", () => {
 			expect(useUiPluginRegistry.getState().contributions[region]).toHaveLength(1);
 		}
 		useUiPluginRegistry.getState().removePlugin("v3-plugin");
-		for (const region of [UI_REGIONS.KnowledgeTab, UI_REGIONS.HomeSection, UI_REGIONS.SkillsSection])
+		for (const region of [
+			UI_REGIONS.KnowledgeTab,
+			UI_REGIONS.KnowledgePage,
+			UI_REGIONS.HomeSection,
+			UI_REGIONS.SkillsSection,
+		])
 			expect(useUiPluginRegistry.getState().contributions[region]).toBeUndefined();
 	});
 
