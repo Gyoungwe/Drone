@@ -1,0 +1,35 @@
+name: Publish pi-core
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-pi-core
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the exact release commit
+        uses: actions/checkout@v4
+
+      - name: Set up Node and npm trusted publishing
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check pi-core package
+        run: npm run check --workspace @gyoungwe/pi-core
+
+      - name: Publish pi-core through npm OIDC
+        run: npm publish --workspace @gyoungwe/pi-core --access public --provenance
