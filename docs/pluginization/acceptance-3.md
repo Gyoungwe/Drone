@@ -1,5 +1,7 @@
 # 插件化 v2 验收（第 3 轮）
 
+> **历史验收记录（最终复核）**：本轮 PASS 是 v2 分支上的最终复核；随后已通过 C0–C3 合入 Drone `main`、更新公开包/插件 head 和统一证据。当前状态以 `v3-evidence.md`、`gap-closure-plan.md` 和 `v1.1.0-npm-packages.json` 为准。
+
 验收方：Claude　日期：2026-10-21
 被验收提交（均已推送到远端分支 `codex/pluginize-v2-p2`，远端头与本地一致）：
 - Drone：`8e4faa82035dabd1861945e730cfd1c434135916`

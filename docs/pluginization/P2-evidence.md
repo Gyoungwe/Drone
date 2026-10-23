@@ -1,5 +1,7 @@
 # P2 验收证据：知识源码与插件入口迁移
 
+> **历史记录（2026-10-21）**：本文件保留 P2 迁移分支、源码历史和当时的离线安装方式。P2 已在后续 C0 合并验收中完成；当前仓库 head、插件 head、公开 npm 版本和发布证据以 [`v3-evidence.md`](v3-evidence.md)、[`v1.1.0 npm 发布证据`](../releases/v1.1.0-npm-packages.json) 与 [`gap-closure-plan.md`](gap-closure-plan.md) 为准。
+
 日期：2026-10-21（Asia/Shanghai）
 Drone 分支：`codex/pluginize-v2-p2`
 `drone-plugins` 分支：`codex/pluginize-v2-p2`
@@ -31,8 +33,8 @@ Drone 交付提交：`5eff5179a714bbe3884673823533200b514bcdbf`
 
 clean-install smoke 的最终摘要：六个插件安装成功，Pi loader 发现 `pi-analysis`、`pi-evidence`、`pi-connectors` 和 research suite；`pi-knowledge` 注册 2 个工具，未配置状态为 `unconfigured`。
 
-## 未完成/偏离
+## 当时未完成/偏离（已由后续发布取代）
 
 - `codex/pluginize-v2-p2` 已推送到 `Gyoungwe/drone-plugins`，远程头为上述插件实现头。
 - P1 清单中依赖 `@drone/tasks`、Obsidian workbench 和 Desktop runtime 的 `internal/knowledge-extension.ts` 没有伪装成可独立插件源码；这些宿主专属 orchestration 适配仍留在 Drone，P3 通过 HostPort 接线后再迁移。P2 交付的是 host-neutral native Pi extension/worker 边界和完整 knowledge core，未宣称 Desktop orchestration 已迁出。
-- `@gyoungwe/plugin-api@1.1.0` 尚未发布到 registry；当前以已校验的 `vendor/gyoungwe-plugin-api-1.1.0.tgz` 完成离线构建和安装门禁。
+- P2 当时尚未发布 `@gyoungwe/plugin-api@1.1.0`，因此使用已校验的 vendor tarball 完成离线构建和安装门禁；该状态已被后续正式 npm 发布取代。当前公开版本为 `@gyoungwe/plugin-api@1.1.0`，registry/干净消费者/生命周期证据见 [`v1.1.0-npm-packages.json`](../releases/v1.1.0-npm-packages.json) 和 [`v3-evidence.md`](v3-evidence.md)。

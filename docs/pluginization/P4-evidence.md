@@ -1,5 +1,7 @@
 # P4 验收证据：自动知识维护
 
+> **历史记录（2026-10-21）**：本文件保留 P4 修复分支和正式 Vault N=2 验收前的执行上下文。P4 后续已由 acceptance-2/3、C0/C1/C2 合并门禁取代；当前公开包、仓库 head 和最终状态以 [`v3-evidence.md`](v3-evidence.md)、[`acceptance-3.md`](acceptance-3.md) 与 [`gap-closure-plan.md`](gap-closure-plan.md) 为准。
+
 日期：2026-10-21（Asia/Shanghai）
 Drone 分支：`codex/pluginize-v2-p2`
 `drone-plugins` 分支：`codex/pluginize-v2-p2`
@@ -28,6 +30,6 @@ Drone 交付提交：见本轮 P5 证据（P4 修复后重新收口）
 | `npx vitest run packages/backend/src/services/knowledge-maintenance.test.ts` | PASS；4 个宿主调度/预算测试 |
 | `maintenance.integration.test.ts` | PASS；真实 worker 索引 20 篇临时 Vault 笔记，20 次模型调用和 topic 写回逐项核对，prompt 包含正文 |
 
-## 未完成/偏离
+## 当时未完成/偏离（已由后续验收取代）
 
-- 正式 Vault N=2 由 Claude 在第二轮验收中执行，结果见 `acceptance-2.md`；修复后的最终复核见 `acceptance-3.md`；自动化测试不调用真实模型。
+- 正式 Vault N=2 在当时尚待 Claude 第二轮验收；结果已记录于 `acceptance-2.md`，修复后的最终复核见 `acceptance-3.md`，并已纳入后续合并门禁。自动化测试仍不调用真实模型。
