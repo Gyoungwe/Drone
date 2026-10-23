@@ -1,5 +1,7 @@
 # P3 验收证据：宿主消费锁定的知识插件
 
+> **历史记录（2026-10-21）**：本文保留 P3 分支验收时的原始状态。后续 C0–C3 已完成主线合并、公开包发布和证据统一；下方“未完成/偏离”只描述当时的边界，当前状态以 [`v3-evidence.md`](v3-evidence.md)、[`gap-closure-plan.md`](gap-closure-plan.md) 和 [`docs/INDEX.md`](../INDEX.md) 为准。
+
 日期：2026-10-21（Asia/Shanghai）
 Drone 分支：`codex/pluginize-v2-p2`
 `drone-plugins` 分支：`codex/pluginize-v2-p2`
@@ -46,7 +48,7 @@ Drone 交付提交：`5eff5179a714bbe3884673823533200b514bcdbf`
 
 验收脚本明确报告 `status: PASS`；签名检查为 `NOT_RUN`，因为本地构建按仓库发布配置保持 unsigned。Electron 进程只用于有界 `--version` 探针，未宣称真机 GUI 会话验收。
 
-## 未完成/偏离
+## 当时未完成/偏离（已由后续主线验收取代）
 
 - 锁定提交已推送到 `origin/codex/pluginize-v2-p2`，默认远程抓取流程已从 GitHub 克隆、构建、打包并校验上述 SHA-256。
 - 计划中的文件名保持要求通过 `knowledge-plugin.mjs` + 宿主 `knowledge-extension.mjs` 双入口实现；host adapter 仍有宿主 runtime ports，待后续 HostPort 迁移后可合并入口。
