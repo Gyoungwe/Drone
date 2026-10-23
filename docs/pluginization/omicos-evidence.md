@@ -102,9 +102,9 @@
 
 2026-10-22 外部连通性探测：按文档使用公开的 AlphaGenome Paper2Agent MCP 地址完成协议初始化和工具清单探测；公开端点可访问，但直接请求在未建立完整会话头时返回参数错误。该探测不能替代 Drone 真实会话证据。最终阻塞点是宿主运行时的 MCP 调用回执未返回，而不是把外部 curl 结果冒充成调用 PASS。
 
-## PR6：PDF 解析质量评估
+## PR6：PDF 解析质量评估与集成取舍
 
-状态：评估脚本与本地结果完成；真实会话验收不适用，结论待用户决定是否进入下一轮集成。
+状态：评估脚本与本地结果完成；真实会话验收不适用。本轮决定保持 pdf.js 为默认解析器，暂不集成 MinerU/GROBID，PR6 关闭为“评估完成、可选后端未接入”。
 
 - `fixtures/pdf-hard/manifest.json` 登记 10 篇 arXiv 开放获取论文、来源 URL、许可证和分类，覆盖双栏、公式密集、跨页表格、扫描版派生样本各至少 2 篇；参考文本与扫描派生说明一并保存。
 - `scripts/eval-pdf-parsing.mjs` 可重跑当前 `pdf.js`，并在 `MINERU_BIN` 或 `GROBID_URL` 未配置时逐篇报告 `unavailable`；本轮没有安装或接入 MinerU/GROBID。
@@ -112,10 +112,10 @@
 
 已运行：
 
-- `node scripts/eval-pdf-parsing.mjs --out /tmp/drone-pdf-eval.json --conclusion /tmp/drone-pdf-eval.md`：10/10 篇由 pdf.js 完成解析；MinerU、GROBID 各 10/10 条明确为 unavailable。
+- `node scripts/eval-pdf-parsing.mjs --out /tmp/drone-pdf-eval.json --conclusion /tmp/drone-pdf-eval.md`：10/10 篇由 pdf.js 完成解析；MinerU、GROBID 各 10/10 条明确为 `unavailable`，没有产生可比较的质量指标。
 - `npx biome check scripts/eval-pdf-parsing.mjs`：通过。
 
-限制：参考文本是可重跑的 `pdftotext` 对照代理，不等同人工逐页真值；表格和公式指标是启发式，需人工抽样后再决定集成。此 PR 不改变安装包或默认解析流程。
+限制：参考文本是可重跑的 `pdftotext` 对照代理，不等同人工逐页真值；表格和公式指标是启发式，不能用来推断未运行后端的质量。此 PR 不改变安装包或默认解析流程。未来如需集成，必须另开 opt-in 后端任务，补齐人工参考文本、固定版本、适配器和资源预算。
 
 ## 主线最终门禁
 

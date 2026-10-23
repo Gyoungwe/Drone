@@ -11,9 +11,9 @@
 - v3 T3 的真实安装包三页面验收已完成，证据见 [`v1.1-t3-ui-acceptance-2026-10-23.json`](releases/v1.1-t3-ui-acceptance-2026-10-23.json)。
 - v3 T4 的 `@gyoungwe/pi-analysis` host adapter 已正式登记为 v3.1 `analysis host registry migration` 例外；当前不计入 v3 未完成项，删除条件见 [`gap-closure-plan.md`](pluginization/gap-closure-plan.md)。
 
-### 仍待决策
+### 当前保留项
 
-- PR1–PR5 的代码/文档实现已完成，PR6 的评估脚本和结果已完成；PR1 的真实安装包雷达、PR2 的真实会话页码引用点击、PR3 的无数据和三类正向卡片、PR4 的五行带页码矩阵核对和知识库沉淀回执均已通过。PR5 已在全新正式安装包会话中完成 `task_plan` 批准、唯一原生工具调用和成功结构化回执核对，标记 PASS。PR6 的集成结论留待下一轮决定。本计划不把 fixture 或 loader 单独加载当作真实验收。
+- PR1–PR5 的代码/文档实现已完成，PR6 的评估脚本、结果和集成取舍已完成；PR1 的真实安装包雷达、PR2 的真实会话页码引用点击、PR3 的无数据和三类正向卡片、PR4 的五行带页码矩阵核对和知识库沉淀回执均已通过。PR5 已在全新正式安装包会话中完成 `task_plan` 批准、唯一原生工具调用和成功结构化回执核对，标记 PASS。PR6 决定保持 pdf.js 为默认解析器，暂不集成 MinerU/GROBID；若未来需要，另开 opt-in 后端集成任务。本计划不把 fixture 或 loader 单独加载当作真实验收。
 - PR2/PR4 的原始 PDF 输入桥接已补齐：`@gyoungwe/pi-research` 现在直接发现并解析项目目录中的 `.pdf`，生成带 `[[page:N]]` 的文本和页码回执；真实会话已证明文件引用能打开 PDF 并导航到第 5 页。
 
 ### 2026-10-22 实机抽检记录
@@ -79,13 +79,13 @@
 
 验收证据：按文档接入一个公开 Paper2Agent 服务器，在真实安装包会话中完成一次 `task_plan` 批准并调用工具；原始结构化回执、六项参数核对和宿主诊断已记录在 `docs/pluginization/acceptance-1.md` 与 `docs/pluginization/omicos-evidence.md`。历史 `started/unknown` 记录保留为修复前证据。
 
-### PR6：PDF 解析质量评估（评估脚本和结果完成，结论待下一轮决定）
+### PR6：PDF 解析质量评估（保持 pdf.js，暂不集成可选后端）
 
 只做评估，不接入默认流程。准备 `fixtures/pdf-hard/` 的 10 篇开放获取论文，覆盖双栏、公式密集、跨页表格、扫描件各至少 2 篇并记录许可；新增 `scripts/eval-pdf-parsing.mjs`，比较 pdf.js、MinerU、GROBID 的正文字符召回、表格结构、公式可读性、参考文献抽取数和耗时。
 
-结果写入 `docs/evals/pdf-parsing-<日期>.json`，另附结论文档，讨论是否值得作为可选后端、本地还是 API、以及安装体积。本轮不得把 MinerU 或 GROBID 加入安装包或默认流程。
+结果写入 `docs/evals/pdf-parsing-<日期>.json`，另附结论文档，记录是否值得作为可选后端、本地还是 API、以及安装体积。本轮不得把 MinerU 或 GROBID 加入安装包或默认流程；本轮结论为保持 pdf.js，暂不创建集成代码。
 
-验收证据：脚本可重跑、评估 JSON 完整、结论文档交由用户决定下一轮是否集成。
+验收证据：脚本可重跑、评估 JSON 完整；pdf.js 10/10 可用，MinerU/GROBID 各 10/10 `unavailable`，因此不作未经测量的质量比较。集成决策已记录为保持 pdf.js，未来若有需求须另开 opt-in 后端计划。
 
 ## 明确不做
 
