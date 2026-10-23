@@ -2,7 +2,7 @@
 
 分支：两个仓库的 `main`（v2 已合并；v3 实现与规范更新随本次提交合并）。以下命令均在干净工作树上重跑。
 
-当前合并基线：Drone `main=4049057c456d1ee3fe252bf0d31c83280cad4ab9`；drone-plugins `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`。发布证据和锁文件均指向这两个合并后的 head；后续文档提交不改变代码基线。
+当前合并基线：Drone `main=a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c`；drone-plugins `main=127db2658f465337fe9ad936692302d8536c09ba`。发布证据和锁文件均指向这两个合并后的 head；后续文档提交不改变代码基线。
 
 ## T1 清单检查器与 tools
 
@@ -38,11 +38,11 @@
 
 ## v3.1 T4：analysis host registry/loader 迁移
 
-- 分支：Drone `codex/v31-analysis-host`；drone-plugins `codex/v31-analysis-host`。
+- 合并结果：Drone `main=a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c`；drone-plugins `main=127db2658f465337fe9ad936692302d8536c09ba`。
 - `@gyoungwe/plugin-api` 新增版本化 `AnalysisAdapterRegistryPort`、`AnalysisHostPort` 和 `AnalysisHostLoader` 合同。
 - `@gyoungwe/pi-analysis@0.1.2` 新增 `dist/host.mjs` 与 `@gyoungwe/pi-analysis/host` export；`analysisHostLoader` 创建并返回两个已登记 adapter 的 registry。
 - 宿主删除 `packages/backend/src/services/analysis-adapters/{index,registry,assembly,bulk-rnaseq}.ts`，`AnalysisTaskController`、`CapabilityDiscoveryService` 和 artifact 类型改为消费公开 host/API 合同；`plugins.lock.json` 锁定插件提交 `127db2658f465337fe9ad936692302d8536c09ba` 与 tarball SHA-256 `a405c478cfa1a140f57380e4fad4a31558285787ce46cd5fc2e6ebc19f62ecfb`。
-- 回归：插件 `npm run check` 通过；宿主 backend analysis/capability tests（11 tests）、`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch` 和 `npm run check:plugin-api -- --migration --lifecycle` 通过。完整双仓库门禁结果在推送前继续复跑。
+- 回归：插件 `npm run check` 通过；合并后的宿主 `lint`、`typecheck`、`npm test`、`build`、`check:arch` 和 `check:plugin-api -- --migration --lifecycle` 均通过。公开 `0.1.2` tarball、完整 Pi 1.1.0 宿主族 clean prefix 安装、extension loader 和 host loader 验收见 [`v3.1-pi-analysis-0.1.2.json`](../releases/v3.1-pi-analysis-0.1.2.json)。
 
 ## T5 安装前声明
 
@@ -66,7 +66,7 @@
 
 ## 后续任务（不计入 v3 未完成）
 
-- v3.1 的 `pi-analysis` host registry migration 已在 `codex/v31-analysis-host` 完成；合入主线后，v3 T4 的历史例外可从当前状态中移除。
+- v3.1 的 `pi-analysis` host registry migration 已合入两个仓库 `main` 并发布 `0.1.2`；v3 T4 的历史例外已从当前状态移除，后续只需按常规 npm/插件 CI 维护。
 - OmicOS 六个 PR 的实现、评估和取舍均已完成：PR1–PR5 有真实安装包/会话验收 PASS；PR6 的 pdf.js/MinerU/GROBID 评估显示 MinerU/GROBID 在本机不可用，无法形成质量对照，因此保持 pdf.js 为默认解析器，暂不集成可选后端。若未来需要，另开 opt-in 后端任务；实现和真实验收证据见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 与 [`pluginization/omicos-evidence.md`](omicos-evidence.md)。当前后续项统一收敛到 [`gap-closure-plan.md`](gap-closure-plan.md)。
 
 ## file: 依赖门禁修复

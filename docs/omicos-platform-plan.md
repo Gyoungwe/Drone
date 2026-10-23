@@ -9,7 +9,7 @@
 ### 已关闭的同步项
 
 - v3 T3 的真实安装包三页面验收已完成，证据见 [`v1.1-t3-ui-acceptance-2026-10-23.json`](releases/v1.1-t3-ui-acceptance-2026-10-23.json)。
-- v3 T4 的 `@gyoungwe/pi-analysis` host adapter 已正式登记为 v3.1 `analysis host registry migration` 例外；当前不计入 v3 未完成项，删除条件见 [`gap-closure-plan.md`](pluginization/gap-closure-plan.md)。
+- v3 T4 的 `@gyoungwe/pi-analysis` host adapter registry/loader 已由 v3.1 合入两个 `main` 并发布 `0.1.2`；当前不计入 v3 未完成项，公开安装与宿主验收见 [`v3-evidence.md`](pluginization/v3-evidence.md) 与 [`v3.1-pi-analysis-0.1.2.json`](releases/v3.1-pi-analysis-0.1.2.json)。
 
 ### 当前保留项
 

@@ -1,0 +1,73 @@
+{
+	"package": "@gyoungwe/pi-analysis",
+	"version": "0.1.2",
+	"sourceRepository": "Gyoungwe/drone-plugins",
+	"sourceBranch": "main",
+	"sourceCommit": "127db2658f465337fe9ad936692302d8536c09ba",
+	"publishedAt": "2026-10-23",
+	"manifest": {
+		"id": "drone-pi-analysis",
+		"version": "0.1.2",
+		"entrypoints": {
+			"extension": "./dist/index.mjs",
+			"host": "./dist/host.mjs"
+		},
+		"hosts": ["native-pi", "drone-desktop"],
+		"tools": ["analysis_list_adapters", "analysis_assess_readiness"],
+		"permissions": {
+			"filesystem": ["workspace-read"],
+			"network": [],
+			"subprocess": [],
+			"externalWrites": false
+		}
+	},
+	"localTarball": {
+		"filename": "gyoungwe-pi-analysis-0.1.2.tgz",
+		"size": 11766,
+		"unpackedSize": 61611,
+		"entryCount": 12,
+		"sha256": "a405c478cfa1a140f57380e4fad4a31558285787ce46cd5fc2e6ebc19f62ecfb",
+		"shasum": "c8d760b61473419e5f406320d50d048655cd9d9d",
+		"integrity": "sha512-5iXAZwmxmDADzo4SSSoQxSwidT3f1HWorahfyjQPuDfwFW9oWV1kFQyp6ZTD7sa080VNyskDH62hEM4yiMbAEQ==",
+		"hostBundle": "PASS",
+		"extensionBundle": "PASS",
+		"manifestEntryShape": "PASS"
+	},
+	"publicRegistry": {
+		"publish": "PASS",
+		"publishAttempt": "npm publish completed after local npm security-key/browser verification",
+		"registryLookup": {
+			"version": "0.1.2",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-analysis/-/pi-analysis-0.1.2.tgz",
+			"sha256": "a405c478cfa1a140f57380e4fad4a31558285787ce46cd5fc2e6ebc19f62ecfb",
+			"shasum": "c8d760b61473419e5f406320d50d048655cd9d9d",
+			"integrity": "sha512-5iXAZwmxmDADzo4SSSoQxSwidT3f1HWorahfyjQPuDfwFW9oWV1kFQyp6ZTD7sa080VNyskDH62hEM4yiMbAEQ=="
+		},
+		"publicTarball": "PASS",
+		"publicMatchesLocalSha256": "PASS",
+		"cleanPrefixInstall": "PASS"
+	},
+	"publicHostVerification": {
+		"piHostFamily": "@earendil-works/*@1.1.0",
+		"hostLoader": "PASS",
+		"hostContractVersion": 1,
+		"adapters": ["assembly", "bulk-rnaseq"],
+		"extensionLoaderDiscovery": "PASS",
+		"tools": ["analysis_list_adapters", "analysis_assess_readiness"],
+		"cleanPrefix": "PASS"
+	},
+	"hostClosure": {
+		"rootCommit": "a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c",
+		"backendDependency": "@gyoungwe/pi-analysis@0.1.2",
+		"pluginsLockCommit": "127db2658f465337fe9ad936692302d8536c09ba",
+		"pluginsLockTarballSha256": "a405c478cfa1a140f57380e4fad4a31558285787ce46cd5fc2e6ebc19f62ecfb",
+		"hostGates": "PASS",
+		"proofs": [
+			"npm run check:plugin-api -- --migration --lifecycle",
+			"npm run check:arch",
+			"npm test",
+			"npm run build"
+		]
+	},
+	"credentials": false
+}

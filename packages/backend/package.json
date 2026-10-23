@@ -23,7 +23,7 @@
 		"@drone/tasks": "*",
 		"@earendil-works/pi-ai": "1.1.0",
 		"@earendil-works/pi-coding-agent": "1.1.0",
-		"@gyoungwe/pi-analysis": "^0.1.1",
+		"@gyoungwe/pi-analysis": "0.1.2",
 		"@gyoungwe/plugin-api": "1.1.0",
 		"@gyoungwe/pi-core": "*",
 		"@xmldom/xmldom": "^0.8.13",

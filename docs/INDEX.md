@@ -31,7 +31,7 @@ A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收
 插件化 v2 的 P1 迁移边界与 extensions 归属清单见 [pluginization/p1-inventory.md](pluginization/p1-inventory.md)；执行主计划见 [pluginization/v2-plan.md](pluginization/v2-plan.md)，本轮验收记录见 [pluginization/P1-evidence.md](pluginization/P1-evidence.md)。
 P2 知识源码与插件入口迁移、插件仓库全量门禁和 Git 历史验收见 [pluginization/P2-evidence.md](pluginization/P2-evidence.md)。
 插件平台 v3 的 T1–T7 执行计划见 [pluginization/v3-platform-plan.md](pluginization/v3-platform-plan.md)，插件清单和宿主合同见 `../drone-plugins/docs/PLUGIN-SPEC.md`，实现证据见 [pluginization/v3-evidence.md](pluginization/v3-evidence.md)。
-截至 2026-10-23，v3 合并基线为 Drone `main=4049057c456d1ee3fe252bf0d31c83280cad4ab9`、drone-plugins `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`；公开包版本与真实安装/加载证据见 [`v1.1.0 npm 发布证据`](releases/v1.1.0-npm-packages.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
+截至 2026-10-23，v3 合并基线为 Drone `main=a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c`、drone-plugins `main=127db2658f465337fe9ad936692302d8536c09ba`；公开包版本与真实安装/加载证据见 [`v1.1.0 npm 发布证据`](releases/v1.1.0-npm-packages.json)、[`pi-analysis 0.1.2 发布证据`](releases/v3.1-pi-analysis-0.1.2.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 
 插件化与 OmicOS 计划缺口清理顺序见 [pluginization/gap-closure-plan.md](pluginization/gap-closure-plan.md)。
 OmicOS 文献雷达与阅读闭环的六个 PR 计划见 [omicos-platform-plan.md](omicos-platform-plan.md)，实现证据见 [pluginization/omicos-evidence.md](pluginization/omicos-evidence.md)，原始 handoff 见 [claude/drone-omicos-handoff.md](../claude/drone-omicos-handoff.md)。
@@ -76,13 +76,13 @@ v0.33.5 插件门禁收口见 [插件门禁证据](releases/v0.33.5-plugin-gates
 历史首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；历史 `pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。当前公开版本见本索引上方的 v1.1.0 记录；历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
 
 2026-10-21 正式 npm 发布与官方 registry 干净消费者、Pi loader、公开插件宿主验收见 [v1.1.0 npm 发布证据](releases/v1.1.0-npm-packages.json)。
-当前公开 registry 版本：`@gyoungwe/plugin-api@1.1.0`、`pi-core@0.1.8`、`pi-knowledge@0.2.0`、`pi-research@0.1.1`、`research-suite@0.1.8`、`pi-analysis@0.1.1`、`pi-evidence@0.1.1`、`pi-connectors@0.1.1`、`desktop-ui-pack@0.1.1`；历史版本证据保留在各 release JSON，不与当前源码 head 混写。
+当前公开 registry 版本：`@gyoungwe/plugin-api@1.1.0`、`pi-core@0.1.8`、`pi-knowledge@0.2.0`、`pi-research@0.1.1`、`research-suite@0.1.8`、`pi-analysis@0.1.2`、`pi-evidence@0.1.1`、`pi-connectors@0.1.1`、`desktop-ui-pack@0.1.1`；历史版本证据保留在各 release JSON，不与当前源码 head 混写。
 2026-10-23 PR5 Paper2Agent 公共包干净安装与正式 Drone 安装包原生 MCP 回执见 [PR5 真实回执证据](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 
 2026-10-23 PR1 文献雷达真实安装包运行、入库和同日稳定键去重见 [PR1 雷达验收证据](releases/v1.1-pr1-radar-acceptance-2026-10-23.json)。
 2026-10-23 v3 T3 合并后真实 macOS 安装包、npm tarball UI 插件三页面挂载与停用恢复见 [T3 UI 验收证据](releases/v1.1-t3-ui-acceptance-2026-10-23.json)。
 
-v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
+v1.1 `pi-analysis` 的 0.1.0 历史闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)；当前 0.1.2 的公开 registry tarball、安装后 Pi loader、host loader 和宿主验证见 [pi-analysis 0.1.2 发布证据](releases/v3.1-pi-analysis-0.1.2.json)。
 
 v1.1 外部插件仓库的 `pi-evidence`、`pi-connectors`、`desktop-ui-pack` registry tarball、Pi loader 和 Desktop 宿主生命周期验收见 [v1.1 外部插件包证据](releases/v1.1-external-plugin-packages.json)。
 
@@ -243,7 +243,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 
-`../drone-plugins` 的 `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007` 是已发布的 `@gyoungwe/pi-analysis@0.1.1` 源码权威位置；v3.1 分支 `codex/v31-analysis-host` 已产出 `0.1.2` 的 `host` entry，并由 `plugins.lock.json` 锁定提交和 tarball 哈希。Drone backend 只通过 `@gyoungwe/pi-analysis/host` 消费 registry/loader，三个本地 analysis adapter facade 已删除；合入主线并发布新包后更新公开 registry 证据。公开 `0.1.1` tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
+`../drone-plugins` 的 `main=127db2658f465337fe9ad936692302d8536c09ba` 是 `@gyoungwe/pi-analysis@0.1.2` 的源码权威位置。该版本提供 `host` entry 和版本化 registry/loader，Drone backend 以精确 `0.1.2` 依赖消费 `@gyoungwe/pi-analysis/host`，三个本地 analysis adapter facade 已删除；公开 tarball、全新 prefix 安装、完整 Pi 1.1.0 loader 发现和宿主 host loader 验收见 [pi-analysis 0.1.2 发布证据](releases/v3.1-pi-analysis-0.1.2.json)。
 
 ## `@gyoungwe/pi-evidence` — 原生 Pi 证据插件（V1.1-E 已完成公开宿主门禁）
 

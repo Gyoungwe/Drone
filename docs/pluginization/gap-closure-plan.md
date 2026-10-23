@@ -16,7 +16,7 @@
 | --- | --- | --- | --- |
 | P0 | 两个修复分支合入各自 `main` | 已完成：drone-plugins `main=b6bc98d7`；Drone `main=43ab8fdc`（后续仅有文档提交） | 两仓库 `main` 已推送；锁文件锁定 `b6bc98d7d0ac99461ae3249fb0a47b713166d007`，插件包版本与远程 head 一致；合并后的双仓库最终门禁通过 |
 | P1 | v3 T3 真实安装包三页面验收 | 已完成：合并后的 unsigned macOS arm64 安装包通过 npm tarball 安装的非 `@gyoungwe` UI 插件完成三页回读和停用恢复 | [`v3-evidence.md`](v3-evidence.md) 与 [`v1.1-t3-ui-acceptance-2026-10-23.json`](../releases/v1.1-t3-ui-acceptance-2026-10-23.json) |
-| P1 | v3 T4 `pi-analysis` host adapter 例外 | v3.1 已在 `codex/v31-analysis-host` 完成迁移：公开 host registry/loader、删除三个 facade 和组合 index；待合入主线 | v3.1 分支的双仓库门禁、`plugins.lock.json` 锁定提交和 host entry 证据见 [`v3-evidence.md`](v3-evidence.md) |
+| P1 | v3 T4 `pi-analysis` host adapter 例外 | 已完成：v3.1 host registry/loader 已合入两个 `main`，公开 `@gyoungwe/pi-analysis@0.1.2` 已发布并完成 clean install/loader/宿主验收 | [`v3-evidence.md`](v3-evidence.md) 与 [`v3.1-pi-analysis-0.1.2.json`](../releases/v3.1-pi-analysis-0.1.2.json) |
 | P2 | PR6 评估结论 | 已决策：保持 pdf.js 为默认解析器，暂不集成 MinerU/GROBID；两者各 10/10 `unavailable`，没有可比较质量指标 | PR6 已关闭；未来若有真实需求，另开 opt-in 后端集成计划，先补齐可用运行时、固定版本、人工参考文本和资源预算 |
 
 ### 仅文档或证据同步问题
@@ -93,7 +93,7 @@ npm run check:plugin-api -- --migration --lifecycle
 
 - 两个仓库的 `main` 包含当前修复，锁文件、公开包版本和证据一致。
 - T3 有真实安装包三页面验收证据。
-- T4 的 `pi-analysis` 例外已在 v3.1 分支完成删除条件；主线合并后关闭该条缺口。
+- T4 的 `pi-analysis` 例外已完成删除条件、主线合并和公开包验收，该条缺口关闭。
 - 所有计划文档不再把已完成工作写成“未开始”或“未发布”。
 - PR6 的选择被记录为“保持现状”或新的后续计划。
 - 全量主机和插件门禁通过，工作树干净。
@@ -108,5 +108,5 @@ npm run check:plugin-api -- --migration --lifecycle
 | 2026-10-23 | C3 | 统一 `v3-evidence.md`、`omicos-platform-plan.md`、v2 P1/P2/P4 与 acceptance 历史标记、`final-pluginization-plan.md`、`docs/INDEX.md` 的当前 head/版本/公开包状态；当前基线为 Drone `main=4049057c456d1ee3fe252bf0d31c83280cad4ab9`、drone-plugins `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`，公开包版本以 v1.1.0 registry 证据为准。 |
 | 2026-10-23 | C4 | 清理审计在 `codex/c4-final-cleanup-audit` 完成：`git diff --check`、插件化范围状态扫描、主机 lint/typecheck/test/build/check:arch、`check:extensions --strict`、`check:remaining-gates` 和 `check:plugin-api -- --migration --lifecycle` 全部通过；主机测试为 1903 passed、13 skipped，架构与宿主独立性均为 0 baseline finding；`drone-plugins` `npm run check` 全部通过（6 manifests、各包 typecheck/build/smoke/install/pack check）。审计只保留 PR6 后端选择、v3.1 T4 删除条件和明确的范围外 `NOT_RUN`/`BLOCKED`；历史日志均已加历史上下文。该提交随后合入 Drone `main` 并推送。 |
 | 2026-10-23 | PR6 决策 | 基于 `docs/evals/pdf-parsing-2026-10-22.json`：pdf.js 10/10 可用、正文字符召回均值 80.0%；MinerU/GROBID 各 10/10 `unavailable`，没有可比较质量指标。决定保持 pdf.js 默认解析，暂不把未测量的后端加入安装包或默认流程；未来若有需求，另开 opt-in 后端计划。 |
-| 2026-10-23 | v3.1 T4 | `plugin-api` 新增版本化 analysis registry/loader 合同；`pi-analysis@0.1.2` 提供 `host` entry；Drone 删除三个 facade 和组合 index，锁定插件提交 `127db2658f465337fe9ad936692302d8536c09ba`。插件 `npm run check`、宿主 analysis/capability 回归、`check:arch`、宿主独立性反例和 plugin-api lifecycle 均通过；两个分支已准备推送，待主线合并。 |
+| 2026-10-23 | v3.1 T4 | `plugin-api` 新增版本化 analysis registry/loader 合同；`pi-analysis@0.1.2` 提供 `host` entry；Drone 删除三个 facade 和组合 index，两个仓库已合入 `main`。插件 `npm run check`、宿主完整门禁、公开 registry tarball、完整 Pi 1.1.0 宿主族 clean install、extension/host loader 和插件工具发现均通过；发布证据见 [`v3.1-pi-analysis-0.1.2.json`](../releases/v3.1-pi-analysis-0.1.2.json)。 |
 

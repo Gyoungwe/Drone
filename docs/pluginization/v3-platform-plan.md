@@ -55,7 +55,7 @@
 
 **C2 历史例外（2026-10-23）**：当时 `@gyoungwe/plugin-api` 没有可发现、可版本化的 analysis host registry/loader，宿主暂时保留了三个 facade。
 
-**v3.1 已完成（2026-10-23，分支 `codex/v31-analysis-host`）**：`plugin-api` 新增版本化 `AnalysisAdapterRegistryPort`、`AnalysisHostPort` 和 `AnalysisHostLoader`；`@gyoungwe/pi-analysis@0.1.2` 新增 `host` entry，导出 `analysisHostLoader`；宿主改为消费 `@gyoungwe/pi-analysis/host`，删除 `packages/backend/src/services/analysis-adapters/` 下的三个 facade 和组合 index。`plugins.lock.json` 锁定该插件提交与 tarball SHA-256，`check-host-independence` 要求所有分析包引用必须走 `/host` entry。
+**v3.1 已完成（2026-10-23，已合入两个 `main`）**：`plugin-api` 新增版本化 `AnalysisAdapterRegistryPort`、`AnalysisHostPort` 和 `AnalysisHostLoader`；`@gyoungwe/pi-analysis@0.1.2` 新增 `host` entry，导出 `analysisHostLoader`；宿主改为消费 `@gyoungwe/pi-analysis/host`，删除 `packages/backend/src/services/analysis-adapters/` 下的三个 facade 和组合 index。Drone `main=a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c`、drone-plugins `main=127db2658f465337fe9ad936692302d8536c09ba`，`plugins.lock.json` 锁定插件提交与 tarball SHA-256，`check-host-independence` 要求所有分析包引用必须走 `/host` entry；公开 npm 验收见 [`v3.1-pi-analysis-0.1.2.json`](../releases/v3.1-pi-analysis-0.1.2.json)。
 
 - v3.1 删除条件已满足：`check:arch`、空可选插件运行检查，以及 analysis adapter/capability discovery 和 analysis plan→review→delivery 回归均通过。
 - 双仓库门禁和推送记录见本文件的 v3.1 证据及 [`gap-closure-plan.md`](gap-closure-plan.md) 执行记录。
