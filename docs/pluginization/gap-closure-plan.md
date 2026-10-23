@@ -16,7 +16,7 @@
 | --- | --- | --- | --- |
 | P0 | 两个修复分支合入各自 `main` | 已完成：drone-plugins `main=b6bc98d7`；Drone `main=43ab8fdc`（后续仅有文档提交） | 两仓库 `main` 已推送；锁文件锁定 `b6bc98d7d0ac99461ae3249fb0a47b713166d007`，插件包版本与远程 head 一致；合并后的双仓库最终门禁通过 |
 | P1 | v3 T3 真实安装包三页面验收 | 已完成：合并后的 unsigned macOS arm64 安装包通过 npm tarball 安装的非 `@gyoungwe` UI 插件完成三页回读和停用恢复 | [`v3-evidence.md`](v3-evidence.md) 与 [`v1.1-t3-ui-acceptance-2026-10-23.json`](../releases/v1.1-t3-ui-acceptance-2026-10-23.json) |
-| P1 | v3 T4 `pi-analysis` host adapter 例外 | C2 已正式接受为 v3.1 迁移例外；检查器只允许三个 backend facade 文件 | v3.1 提供 versioned analysis host registry/loader 后删除三个 facade 和直接依赖，并通过完整 analysis 回归与宿主门禁 |
+| P1 | v3 T4 `pi-analysis` host adapter 例外 | v3.1 已在 `codex/v31-analysis-host` 完成迁移：公开 host registry/loader、删除三个 facade 和组合 index；待合入主线 | v3.1 分支的双仓库门禁、`plugins.lock.json` 锁定提交和 host entry 证据见 [`v3-evidence.md`](v3-evidence.md) |
 | P2 | PR6 评估结论 | 已决策：保持 pdf.js 为默认解析器，暂不集成 MinerU/GROBID；两者各 10/10 `unavailable`，没有可比较质量指标 | PR6 已关闭；未来若有真实需求，另开 opt-in 后端集成计划，先补齐可用运行时、固定版本、人工参考文本和资源预算 |
 
 ### 仅文档或证据同步问题
@@ -55,13 +55,13 @@
 3. 停用插件并验证知识库回到默认页签，首页和技能页不留下空壳。
 4. 将结果写入 `docs/pluginization/v3-evidence.md`，同时补充 release evidence JSON；不提交截图中的用户数据、Vault 正文或会话正文。
 
-### C2：关闭或重新登记 v3 T4 例外
+### C2：关闭或重新登记 v3 T4 例外（历史记录）
 
 C2 检查确认 `@gyoungwe/pi-analysis` host adapter 仍被生产源码需要：
 
 - `AnalysisTaskController` 依赖 registry 完成 adapter resolve、readiness、review 和 delivery；`CapabilityDiscoveryService` 依赖同一 registry 做 capability version resolve。
-- 当前 `@gyoungwe/plugin-api` 没有 versioned analysis host registry/loader，不能把这条依赖迁移到公开 HostPort 而保持行为不变。
-- 因此正式登记为 v3.1 `analysis host registry migration`：例外范围仅为 `packages/backend/src/services/analysis-adapters/{registry,assembly,bulk-rnaseq}.ts`；检查器对其他文件的直接 import 失败；删除条件是 plugin-api 提供稳定 host registry/loader 且完整分析回归通过。
+- 当时 `@gyoungwe/plugin-api` 没有 versioned analysis host registry/loader，不能把这条依赖迁移到公开 HostPort 而保持行为不变。
+- 当时正式登记为 v3.1 `analysis host registry migration`；下方 v3.1 执行记录已证明删除条件满足。
 
 ### C3：统一计划与证据文档
 
@@ -84,7 +84,7 @@ npm run check:plugin-api -- --migration --lifecycle
 
 审计结果应只留下：
 
-- T3 已关闭；T4 仅保留已登记的 v3.1 `analysis host registry migration` 删除条件；
+- T3 已关闭；T4 的 v3.1 `analysis host registry migration` 已在分支完成，主线合并后关闭；
 - PR6 已决策为保持 pdf.js；未来可选后端只能通过单独的 opt-in 集成计划进入；
 - 计划外或暂缓项目的明确 `OUT_OF_SCOPE` / `NOT_RUN` / `BLOCKED` 标记；
 - 其他旧执行日志中的未完成措辞必须有“历史记录”上下文，不能被读作当前缺口。
@@ -93,7 +93,7 @@ npm run check:plugin-api -- --migration --lifecycle
 
 - 两个仓库的 `main` 包含当前修复，锁文件、公开包版本和证据一致。
 - T3 有真实安装包三页面验收证据。
-- T4 的 `pi-analysis` 例外已完成正式后续任务登记；v3 只保留 v3.1 的删除条件和证据。
+- T4 的 `pi-analysis` 例外已在 v3.1 分支完成删除条件；主线合并后关闭该条缺口。
 - 所有计划文档不再把已完成工作写成“未开始”或“未发布”。
 - PR6 的选择被记录为“保持现状”或新的后续计划。
 - 全量主机和插件门禁通过，工作树干净。
@@ -108,4 +108,5 @@ npm run check:plugin-api -- --migration --lifecycle
 | 2026-10-23 | C3 | 统一 `v3-evidence.md`、`omicos-platform-plan.md`、v2 P1/P2/P4 与 acceptance 历史标记、`final-pluginization-plan.md`、`docs/INDEX.md` 的当前 head/版本/公开包状态；当前基线为 Drone `main=4049057c456d1ee3fe252bf0d31c83280cad4ab9`、drone-plugins `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`，公开包版本以 v1.1.0 registry 证据为准。 |
 | 2026-10-23 | C4 | 清理审计在 `codex/c4-final-cleanup-audit` 完成：`git diff --check`、插件化范围状态扫描、主机 lint/typecheck/test/build/check:arch、`check:extensions --strict`、`check:remaining-gates` 和 `check:plugin-api -- --migration --lifecycle` 全部通过；主机测试为 1903 passed、13 skipped，架构与宿主独立性均为 0 baseline finding；`drone-plugins` `npm run check` 全部通过（6 manifests、各包 typecheck/build/smoke/install/pack check）。审计只保留 PR6 后端选择、v3.1 T4 删除条件和明确的范围外 `NOT_RUN`/`BLOCKED`；历史日志均已加历史上下文。该提交随后合入 Drone `main` 并推送。 |
 | 2026-10-23 | PR6 决策 | 基于 `docs/evals/pdf-parsing-2026-10-22.json`：pdf.js 10/10 可用、正文字符召回均值 80.0%；MinerU/GROBID 各 10/10 `unavailable`，没有可比较质量指标。决定保持 pdf.js 默认解析，暂不把未测量的后端加入安装包或默认流程；未来若有需求，另开 opt-in 后端计划。 |
+| 2026-10-23 | v3.1 T4 | `plugin-api` 新增版本化 analysis registry/loader 合同；`pi-analysis@0.1.2` 提供 `host` entry；Drone 删除三个 facade 和组合 index，锁定插件提交 `127db2658f465337fe9ad936692302d8536c09ba`。插件 `npm run check`、宿主 analysis/capability 回归、`check:arch`、宿主独立性反例和 plugin-api lifecycle 均通过；两个分支已准备推送，待主线合并。 |
 

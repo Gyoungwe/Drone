@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { lstat, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { ArtifactManifest } from "@drone/compute";
-import type { AnalysisArtifactEvidence } from "./analysis-adapters";
+import type { AnalysisArtifactEvidence } from "@gyoungwe/plugin-api";
 
 export interface VerifiedAnalysisArtifact extends AnalysisArtifactEvidence {
 	readonly bytes: number;

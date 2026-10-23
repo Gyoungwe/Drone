@@ -19,7 +19,7 @@
 - 持久化宿主门面见 `packages/backend/src/services/analysis-orchestration.ts`：通过 `JsonStore` 保存分析快照并在重启后恢复；计算提交仍必须经过既有 Compute 授权与 B7 preflight。
 - NGS 任务控制器适配见 `packages/backend/src/services/analysis-task-controller.ts`：按阶段自动激活 `capability_load` 能力，绑定已评估的 Compute 规格，并在提交和重启恢复后继续执行门禁。
 - NGS review→delivery 闭环也由该控制器负责：收集并读取已校验产物，调用会话模型生成审查报告，持久化限制说明，并仅在审查通过后完成交付。
-- 分析适配器位于 `packages/backend/src/services/analysis-adapters/`：通用编排器只消费版本化的 adapter contract、readiness 与确定性结果检查；契约快照、工具合同和宿主执行上下文会进入 provenance。当前提供 bulk RNA-seq/DESeq2 和 assembly 适配器，并持久化 adapter、workflow、method 版本及 artifact lineage/reproducibility 状态。
+- 分析适配器由 `@gyoungwe/pi-analysis/host` 提供版本化 registry/loader：通用编排器只消费公开的 adapter contract、readiness 与确定性结果检查；契约快照、工具合同和宿主执行上下文会进入 provenance。当前提供 bulk RNA-seq/DESeq2 和 assembly 适配器，并持久化 adapter、workflow、method 版本及 artifact lineage/reproducibility 状态。
 - 分析证据与不可变 checkpoint 位于 `packages/backend/src/services/analysis-evidence.ts`，通过 `shared/host-api/evidence.ts`、preload、main IPC 和 Artifacts 面板提供本地查看、分叉、导入/导出和重现回执；checkpoint 分支不会继承执行授权或 review。
 - checkpoint、分支工作区和可复现 evidence capsule 见 `packages/backend/src/services/analysis-evidence.ts`：冻结内容寻址字节，分支不继承执行审批，失败分支可在校验 checkpoint/context 后重试，replay 分开记录环境与输出匹配状态；capsule 支持 private/restricted/public 三档发布，导入会重新校验 manifest、字节哈希和 omission 清单，并拒绝凭据/私有状态路径与被省略的私有 blob。桌面端通过 `packages/shared/src/host-api/evidence.ts`、`packages/desktop/src/main/ipc/evidence.ts` 和产物面板 `packages/desktop/src/renderer/src/components/panel/EvidencePane.tsx` 提供冻结、分支、导入/导出、回放及复现结果查看。
 - Wisp/OpenScience 的官方源码快照、功能研究和迁移建议见 [open-science-wisp-adapter-research.md](open-science-wisp-adapter-research.md)。
@@ -49,7 +49,7 @@ Paper2Agent 生成的 MCP 服务器接入方式和证据边界见 [paper2agent.m
 
 2026-10-19 实机验收问题、截图编号与下一轮修复状态见 [real-device-acceptance-20261019](real-device-acceptance-20261019/README.md)。
 
-插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，只暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型，以及 host-neutral analysis contract。`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
+插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型、host-neutral analysis contract，以及版本化 `AnalysisHostPort` registry/loader 合同。`@gyoungwe/pi-analysis/host` 是宿主唯一的分析 adapter 入口；`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
 
 任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
 
@@ -243,7 +243,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 
-`../drone-plugins` 的 `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007` 是 `@gyoungwe/pi-analysis@0.1.1` 的源码权威位置。Drone backend 以精确版本依赖公共 npm 包，`packages/backend/src/services/analysis-adapters/` 保留已登记的兼容 facade；本地临时源码和构建脚本已删除。公开 registry tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
+`../drone-plugins` 的 `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007` 是已发布的 `@gyoungwe/pi-analysis@0.1.1` 源码权威位置；v3.1 分支 `codex/v31-analysis-host` 已产出 `0.1.2` 的 `host` entry，并由 `plugins.lock.json` 锁定提交和 tarball 哈希。Drone backend 只通过 `@gyoungwe/pi-analysis/host` 消费 registry/loader，三个本地 analysis adapter facade 已删除；合入主线并发布新包后更新公开 registry 证据。公开 `0.1.1` tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
 ## `@gyoungwe/pi-evidence` — 原生 Pi 证据插件（V1.1-E 已完成公开宿主门禁）
 

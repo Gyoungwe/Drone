@@ -1,5 +1,20 @@
 export type { DiscoveryExplorationPlan } from "@drone/shared";
 export {
+	analysisHostLoader,
+	createAnalysisAdapterRegistry,
+	createAnalysisHost,
+} from "@gyoungwe/pi-analysis/host";
+export type {
+	AnalysisAdapter,
+	AnalysisAdapterContract,
+	AnalysisAdapterPlan,
+	AnalysisAdapterRegistryPort,
+	AnalysisArtifactEvidence,
+	AnalysisResearchStage,
+	AnalysisSchemaField,
+	AnalysisSideEffect,
+} from "@gyoungwe/plugin-api";
+export {
 	type ComputeCredential,
 	type ComputeCredentialProvider,
 	createDefaultComputeExecutor,
@@ -137,22 +152,6 @@ export {
 	setReplyLanguage,
 } from "./reply-language";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
-export {
-	type AnalysisAdapter,
-	type AnalysisAdapterContract,
-	type AnalysisAdapterPlan,
-	AnalysisAdapterRegistry,
-	type AnalysisArtifactEvidence,
-	type AnalysisResearchStage,
-	type AnalysisSchemaField,
-	type AnalysisSideEffect,
-	AssemblyAdapter,
-	adapterSnapshotSha256,
-	assessBulkRnaseqReadiness,
-	BulkRnaseqAdapter,
-	createAnalysisAdapterRegistry,
-	validateAdapterContract,
-} from "./services/analysis-adapters";
 export {
 	AnalysisEvidenceService,
 	CAPSULE_LIMIT,

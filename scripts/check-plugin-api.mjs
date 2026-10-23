@@ -111,6 +111,12 @@ function checkHostPortContract() {
 	]) {
 		assert(new RegExp(`\\b${method}\\s*\\(`, "u").test(declarations), `DroneHostPort is missing ${method}()`);
 	}
+	for (const type of ["AnalysisAdapterRegistryPort", "AnalysisHostPort", "AnalysisHostLoader"]) {
+		assert(
+			new RegExp(`\\binterface ${type}\\s*\\{`, "u").test(declarations),
+			`analysis host contract is missing ${type}`,
+		);
+	}
 }
 
 function checkPackageOnly() {

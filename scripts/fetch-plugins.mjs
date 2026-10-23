@@ -20,6 +20,7 @@ if (lock.version !== 1 || !Array.isArray(lock.plugins) || lock.plugins.length ==
 
 const override = process.env.DRONE_PLUGINS_DIR ? resolve(process.env.DRONE_PLUGINS_DIR) : null;
 const workspace = await mkdtemp(join(tmpdir(), "drone-plugin-fetch-"));
+const checkouts = new Map();
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: "inherit" });
 
@@ -33,8 +34,12 @@ async function sourceCheckout(plugin) {
 		);
 		return source;
 	}
-	const checkout = join(workspace, "repo");
-	run("git", ["clone", "--filter=blob:none", "--no-checkout", plugin.repo, checkout], workspace);
+	let checkout = checkouts.get(plugin.repo);
+	if (!checkout) {
+		checkout = join(workspace, `repo-${checkouts.size}`);
+		run("git", ["clone", "--filter=blob:none", "--no-checkout", plugin.repo, checkout], workspace);
+		checkouts.set(plugin.repo, checkout);
+	}
 	run("git", ["fetch", "--depth=1", "origin", plugin.commit], checkout);
 	run("git", ["checkout", "--detach", plugin.commit], checkout);
 	return join(checkout, plugin.path);
@@ -73,13 +78,15 @@ try {
 		await rm(nodeTarget, { recursive: true, force: true });
 		await mkdir(dirname(nodeTarget), { recursive: true });
 		await cp(target, nodeTarget, { recursive: true, dereference: true });
-		const runtimeDir = join(root, ".pi/extensions");
-		await mkdir(runtimeDir, { recursive: true });
-		await cp(join(target, "lib/knowledge/runtime/worker.mjs"), join(runtimeDir, "knowledge-worker.mjs"));
-		await cp(
-			join(target, "lib/knowledge/runtime/.knowledge-worker-manifest.json"),
-			join(runtimeDir, ".knowledge-worker-manifest.json"),
-		);
+		if (plugin.name === "@gyoungwe/pi-knowledge") {
+			const runtimeDir = join(root, ".pi/extensions");
+			await mkdir(runtimeDir, { recursive: true });
+			await cp(join(target, "lib/knowledge/runtime/worker.mjs"), join(runtimeDir, "knowledge-worker.mjs"));
+			await cp(
+				join(target, "lib/knowledge/runtime/.knowledge-worker-manifest.json"),
+				join(runtimeDir, ".knowledge-worker-manifest.json"),
+			);
+		}
 		await writeFile(
 			join(target, ".drone-fetch.json"),
 			`${JSON.stringify({ commit: plugin.commit, sha256: digest }, null, "\t")}\n`,

@@ -10,12 +10,12 @@ import {
 	sampleSheetSchemaHash,
 } from "@drone/compute";
 import type { ComputeAnalysisPlan, ComputeSampleSheet } from "@drone/shared";
+import { AnalysisAdapterRegistry, AssemblyAdapter } from "@gyoungwe/pi-analysis/host";
+import type { AnalysisAdapter } from "@gyoungwe/plugin-api";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime } from "../src/capabilities/runtime";
 import { JsonStore } from "../src/json-store";
-import { AssemblyAdapter } from "../src/services/analysis-adapters";
-import { type AnalysisAdapter, AnalysisAdapterRegistry } from "../src/services/analysis-adapters/registry";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "../src/services/analysis-orchestration";
 import { AnalysisTaskController } from "../src/services/analysis-task-controller";
 import type { ComputePreflightJobSpec } from "../src/services/compute-preflight";

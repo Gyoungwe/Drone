@@ -8,6 +8,14 @@
 			"path": "packages/pi-knowledge",
 			"version": "0.2.0",
 			"tarballSha256": "dc46908138ea926b86991ecc5f17892e34c65b0b1156741d6063d80ab0303fca"
+		},
+		{
+			"name": "@gyoungwe/pi-analysis",
+			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
+			"commit": "127db2658f465337fe9ad936692302d8536c09ba",
+			"path": "packages/pi-analysis",
+			"version": "0.1.2",
+			"tarballSha256": "a405c478cfa1a140f57380e4fad4a31558285787ce46cd5fc2e6ebc19f62ecfb"
 		}
 	]
 }

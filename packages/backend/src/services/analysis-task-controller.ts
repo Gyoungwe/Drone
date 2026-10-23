@@ -12,13 +12,10 @@ import type {
 	AnalysisReviewCheck,
 } from "@drone/shared";
 import { capabilityLoadRequest } from "@drone/shared";
+import { analysisHostLoader } from "@gyoungwe/pi-analysis/host";
+import type { AnalysisAdapterRegistryPort } from "@gyoungwe/plugin-api";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { newRunAttemptId, nextCausalEnvelope, rootCausalEnvelope } from "../causality";
-import {
-	type AnalysisAdapterRegistry,
-	adapterSnapshotSha256,
-	createAnalysisAdapterRegistry,
-} from "./analysis-adapters";
 import { readAnalysisArtifacts, type VerifiedAnalysisArtifact } from "./analysis-artifacts";
 import type { AnalysisOrchestrationService } from "./analysis-orchestration";
 import { unavailableAnalysisReview } from "./analysis-review-decision";
@@ -33,7 +30,7 @@ export interface AnalysisTaskControllerOptions {
 	readonly capabilityRuntime: Pick<CapabilityRuntime, "activate">;
 	/** Model-backed result review supplied by the host composition root. */
 	readonly reviewer?: AnalysisResultReviewer;
-	readonly adapters?: AnalysisAdapterRegistry;
+	readonly adapters?: AnalysisAdapterRegistryPort;
 }
 
 export interface AnalysisComputeSubmission {
@@ -92,14 +89,14 @@ export class AnalysisTaskController {
 		Partial<Pick<ComputeServicePort, "collect">>;
 	private readonly capabilityRuntime: Pick<CapabilityRuntime, "activate">;
 	private readonly reviewer?: AnalysisResultReviewer;
-	private readonly adapters: AnalysisAdapterRegistry;
+	private readonly adapters: AnalysisAdapterRegistryPort;
 
 	constructor(options: AnalysisTaskControllerOptions) {
 		this.analysis = options.analysis;
 		this.compute = options.compute;
 		this.capabilityRuntime = options.capabilityRuntime;
 		this.reviewer = options.reviewer;
-		this.adapters = options.adapters ?? createAnalysisAdapterRegistry();
+		this.adapters = options.adapters ?? analysisHostLoader.load().registry;
 	}
 
 	async create(input: {
@@ -130,7 +127,7 @@ export class AnalysisTaskController {
 		assertComputePreflight(spec);
 		const adapter = this.adapters.resolve(context.assay, context.adapter);
 		const plan = adapter.buildPlan(context, spec, evidence);
-		const adapterHash = plan.adapterSnapshotSha256 || adapterSnapshotSha256(adapter);
+		const adapterHash = plan.adapterSnapshotSha256;
 		const toolContractSha256 = hashValue({
 			adapterSnapshotSha256: adapterHash,
 			workflow: spec.workflow,

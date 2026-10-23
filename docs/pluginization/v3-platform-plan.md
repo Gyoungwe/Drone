@@ -53,10 +53,12 @@
   2. **运行检查**：在临时目录里不放任何可选插件（Pi 托管安装根和 UI 插件目录都为空），创建 backend，确认知识、会话、技能列表的基础调用正常返回，UI 插件管理器返回空列表且不报错。
 - 验收：检查通过；临时加一个对可选插件的 import，检查失败并指出文件。
 
-**C2 例外登记（2026-10-23）**：T4 的 `@gyoungwe/pi-analysis` host adapter 不能在当前 v3 删除。`AnalysisTaskController` 的创建、就绪评估、执行回执审查和交付闭环，以及 `CapabilityDiscoveryService` 的版本解析，都需要同一份具体 adapter registry；当前 `@gyoungwe/plugin-api` 只提供通用 `DroneHostPort` 和 host-neutral analysis contract，没有可发现、可版本化的 analysis host registry/loader。删除这三个 facade 会让宿主无法完成这些门禁，因此本轮保留它们作为组合根适配。
+**C2 历史例外（2026-10-23）**：当时 `@gyoungwe/plugin-api` 没有可发现、可版本化的 analysis host registry/loader，宿主暂时保留了三个 facade。
 
-- 例外范围严格限制为 `packages/backend/src/services/analysis-adapters/{registry,assembly,bulk-rnaseq}.ts`；检查器对其他文件中的 `@gyoungwe/pi-analysis` import 直接失败。
-- 后续任务：v3.1 `analysis host registry migration`。删除条件是 plugin-api 提供稳定的 host registry/loader 合同，宿主编排只消费该 HostPort，三个 facade 和 backend 的直接包依赖均可移除，并通过完整 `check:arch`、空可选插件运行检查和 analysis plan→review→delivery 回归。
+**v3.1 已完成（2026-10-23，分支 `codex/v31-analysis-host`）**：`plugin-api` 新增版本化 `AnalysisAdapterRegistryPort`、`AnalysisHostPort` 和 `AnalysisHostLoader`；`@gyoungwe/pi-analysis@0.1.2` 新增 `host` entry，导出 `analysisHostLoader`；宿主改为消费 `@gyoungwe/pi-analysis/host`，删除 `packages/backend/src/services/analysis-adapters/` 下的三个 facade 和组合 index。`plugins.lock.json` 锁定该插件提交与 tarball SHA-256，`check-host-independence` 要求所有分析包引用必须走 `/host` entry。
+
+- v3.1 删除条件已满足：`check:arch`、空可选插件运行检查，以及 analysis adapter/capability discovery 和 analysis plan→review→delivery 回归均通过。
+- 双仓库门禁和推送记录见本文件的 v3.1 证据及 [`gap-closure-plan.md`](gap-closure-plan.md) 执行记录。
 
 ### T5 安装前展示权限与工具（Drone）
 - 「技能与连接」安装插件时，从包的 `plugin.manifest.json` 读取 `permissions`、`tools`、`capabilities`、`hosts`；安装确认和插件详情中展示出来。L0 包没有 manifest 时显示「未声明权限（通用 Pi 包）」。

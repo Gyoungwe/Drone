@@ -14,7 +14,7 @@ import {
 	transitionCapabilityRequest,
 	type ValidationEvidenceCapsule,
 } from "@drone/shared";
-import type { AnalysisAdapterRegistry } from "./analysis-adapters/registry";
+import type { AnalysisAdapterRegistryPort } from "@gyoungwe/plugin-api";
 
 export interface CapabilityRequestStore {
 	get(id: string): Promise<CapabilityRequest | undefined>;
@@ -59,7 +59,7 @@ export interface CapabilityDiscoverySnapshot {
 }
 
 export interface CapabilityDiscoveryServiceOptions {
-	readonly registry: AnalysisAdapterRegistry;
+	readonly registry: AnalysisAdapterRegistryPort;
 	readonly store?: CapabilityRequestStore;
 	readonly research?: CapabilityDiscoveryResearchPort;
 	readonly environment?: CapabilityEnvironmentPort;
@@ -87,7 +87,7 @@ const memoryStore = (): CapabilityRequestStore => {
  * injected read/observe ports; the service never executes a candidate.
  */
 export class CapabilityDiscoveryService {
-	private readonly registry: AnalysisAdapterRegistry;
+	private readonly registry: AnalysisAdapterRegistryPort;
 	private readonly store: CapabilityRequestStore;
 	private readonly research?: CapabilityDiscoveryResearchPort;
 	private readonly environment?: CapabilityEnvironmentPort;

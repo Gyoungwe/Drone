@@ -29,13 +29,20 @@
   - 停用后真实回读：三页分别不再包含 `T3 Knowledge`、`T3 Home`、`T3 Skills`，知识库保留默认四个页签，首页/技能页没有空壳。
   - 完整回执见 [`v1.1-t3-ui-acceptance-2026-10-23.json`](../releases/v1.1-t3-ui-acceptance-2026-10-23.json)。
 
-## T4 宿主独立性
+## T4 宿主独立性（v3 历史状态）
 
 - `scripts/check-host-independence.mjs` 已挂入 `npm run check:arch`，扫描生产源码中的可选插件 import，并验证空插件安装根。
-- 现有 `@gyoungwe/pi-analysis` host adapter 不能在 v3 删除：`AnalysisTaskController` 在创建、就绪、执行回执审查和交付阶段需要具体 registry，`CapabilityDiscoveryService` 还需要它做版本解析；当前公开 `DroneHostPort` 没有 versioned analysis registry/loader。删除会直接破坏宿主的分析门禁闭环。
-- C2 已把例外收窄到三个 facade：`packages/backend/src/services/analysis-adapters/registry.ts`、`assembly.ts`、`bulk-rnaseq.ts`。检查器新增了“例外文件之外的 `pi-analysis` import 必须失败”的反例测试。
-- 后续登记：v3.1 `analysis host registry migration`。删除条件是 plugin-api 提供稳定 host registry/loader，宿主改为只消费该 HostPort，并通过 `check:arch`、空可选插件运行检查和 analysis plan→review→delivery 回归；在此之前不把 T4 标记为 v3 未完成。
-- 证据命令：`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch` 通过。
+- v3 当时的 `@gyoungwe/pi-analysis` host adapter 不能删除：`AnalysisTaskController` 和 `CapabilityDiscoveryService` 需要具体 registry，而公开 `DroneHostPort` 尚无 versioned analysis registry/loader。
+- C2 当时将例外收窄到三个 facade，并为越界 import 增加反例测试；该状态已由下方 v3.1 迁移取代。
+- 历史证据命令：`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch` 通过。
+
+## v3.1 T4：analysis host registry/loader 迁移
+
+- 分支：Drone `codex/v31-analysis-host`；drone-plugins `codex/v31-analysis-host`。
+- `@gyoungwe/plugin-api` 新增版本化 `AnalysisAdapterRegistryPort`、`AnalysisHostPort` 和 `AnalysisHostLoader` 合同。
+- `@gyoungwe/pi-analysis@0.1.2` 新增 `dist/host.mjs` 与 `@gyoungwe/pi-analysis/host` export；`analysisHostLoader` 创建并返回两个已登记 adapter 的 registry。
+- 宿主删除 `packages/backend/src/services/analysis-adapters/{index,registry,assembly,bulk-rnaseq}.ts`，`AnalysisTaskController`、`CapabilityDiscoveryService` 和 artifact 类型改为消费公开 host/API 合同；`plugins.lock.json` 锁定插件提交 `127db2658f465337fe9ad936692302d8536c09ba` 与 tarball SHA-256 `a405c478cfa1a140f57380e4fad4a31558285787ce46cd5fc2e6ebc19f62ecfb`。
+- 回归：插件 `npm run check` 通过；宿主 backend analysis/capability tests（11 tests）、`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch` 和 `npm run check:plugin-api -- --migration --lifecycle` 通过。完整双仓库门禁结果在推送前继续复跑。
 
 ## T5 安装前声明
 
@@ -59,7 +66,7 @@
 
 ## 后续任务（不计入 v3 未完成）
 
-- v3 T4 的 `pi-analysis` host registry migration 已登记为 v3.1 后续任务，不再计入 v3 未完成项。
+- v3.1 的 `pi-analysis` host registry migration 已在 `codex/v31-analysis-host` 完成；合入主线后，v3 T4 的历史例外可从当前状态中移除。
 - OmicOS 六个 PR 的实现、评估和取舍均已完成：PR1–PR5 有真实安装包/会话验收 PASS；PR6 的 pdf.js/MinerU/GROBID 评估显示 MinerU/GROBID 在本机不可用，无法形成质量对照，因此保持 pdf.js 为默认解析器，暂不集成可选后端。若未来需要，另开 opt-in 后端任务；实现和真实验收证据见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 与 [`pluginization/omicos-evidence.md`](omicos-evidence.md)。当前后续项统一收敛到 [`gap-closure-plan.md`](gap-closure-plan.md)。
 
 ## file: 依赖门禁修复

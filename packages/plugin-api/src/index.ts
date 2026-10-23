@@ -375,6 +375,26 @@ export interface AnalysisAdapter {
 	readonly reviewInstructions: string;
 }
 
+/** Versioned registry surface exposed by an analysis plugin to its host. */
+export interface AnalysisAdapterRegistryPort {
+	resolve(assay: string, identity?: AnalysisIdentity): AnalysisAdapter;
+	list(): readonly AnalysisAdapter[];
+	find(identity: AnalysisIdentity): AnalysisAdapter | undefined;
+	findByAssay(assay: string): readonly AnalysisAdapter[];
+}
+
+/** Stable host entry contract for plugins that provide analysis adapters. */
+export interface AnalysisHostPort {
+	readonly contractVersion: 1;
+	readonly registry: AnalysisAdapterRegistryPort;
+}
+
+/** Loader contract keeps host composition independent of adapter implementations. */
+export interface AnalysisHostLoader {
+	readonly contractVersion: 1;
+	load(): AnalysisHostPort;
+}
+
 function stableContractJson(value: unknown): string {
 	if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
 	if (Array.isArray(value)) return `[${value.map(stableContractJson).join(",")}]`;

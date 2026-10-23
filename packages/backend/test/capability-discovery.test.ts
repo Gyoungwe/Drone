@@ -5,13 +5,13 @@ import {
 	createCapabilitySourceReceipt,
 	createCapabilityValidationGate,
 } from "@drone/shared";
-import { describe, expect, it } from "vitest";
 import {
 	AnalysisAdapterRegistry,
 	AssemblyAdapter,
-	CapabilityDiscoveryService,
 	createAnalysisAdapterRegistry,
-} from "../src";
+} from "@gyoungwe/pi-analysis/host";
+import { describe, expect, it } from "vitest";
+import { CapabilityDiscoveryService } from "../src";
 
 const now = "2026-10-12T00:00:00.000Z";
 const caseRef = { kind: "research-case", id: "case-1" };
