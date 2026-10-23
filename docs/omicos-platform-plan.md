@@ -6,8 +6,8 @@
 
 统一的缺口清理顺序见 [插件化与 OmicOS 计划缺口清理计划](pluginization/gap-closure-plan.md)。
 
-- v3 T3 的真实安装包三页面验收尚未执行；代码级挂载、卸载和默认恢复测试已通过。
-- v3 T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，尚未完成完整迁移。
+- v3 T3 的真实安装包三页面验收已完成，证据见 [`v1.1-t3-ui-acceptance-2026-10-23.json`](releases/v1.1-t3-ui-acceptance-2026-10-23.json)。
+- v3 T4 的 `@gyoungwe/pi-analysis` host adapter 已正式登记为 v3.1 `analysis host registry migration` 例外；当前不计入 v3 未完成项，删除条件见 [`gap-closure-plan.md`](pluginization/gap-closure-plan.md)。
 - PR1–PR5 的代码/文档实现已完成，PR6 的评估脚本和结果已完成；PR1 的真实安装包雷达、PR2 的真实会话页码引用点击、PR3 的无数据和三类正向卡片、PR4 的五行带页码矩阵核对和知识库沉淀回执均已通过。PR5 已在全新正式安装包会话中完成 `task_plan` 批准、唯一原生工具调用和成功结构化回执核对，标记 PASS。PR6 的集成结论留待下一轮决定。本计划不把 fixture 或 loader 单独加载当作真实验收。
 - PR2/PR4 的原始 PDF 输入桥接已补齐：`@gyoungwe/pi-research` 现在直接发现并解析项目目录中的 `.pdf`，生成带 `[[page:N]]` 的文本和页码回执；真实会话已证明文件引用能打开 PDF 并导航到第 5 页。
 

@@ -2,10 +2,25 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { findHostImportViolations } from "./check-host-independence.mjs";
 
-test("allows the existing pi-analysis host adapter exception", () => {
+test("allows pi-analysis only in the registered host adapter facades", () => {
 	assert.deepEqual(
-		findHostImportViolations("packages/backend/src/analysis-adapter.ts", 'import "@gyoungwe/pi-analysis";'),
+		findHostImportViolations(
+			"packages/backend/src/services/analysis-adapters/registry.ts",
+			'import "@gyoungwe/pi-analysis";',
+		),
 		[],
+	);
+});
+
+test("rejects pi-analysis imports outside the registered host adapter facades", () => {
+	assert.deepEqual(
+		findHostImportViolations(
+			"packages/desktop/src/main/optional-adapter.ts",
+			'import "@gyoungwe/pi-analysis";',
+		),
+		[
+			"packages/desktop/src/main/optional-adapter.ts: pi-analysis migration exception is limited to registered host adapter files",
+		],
 	);
 });
 

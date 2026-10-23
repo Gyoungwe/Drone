@@ -10,14 +10,20 @@ const allowed = new Set([
 	"@gyoungwe/pi-core",
 	"@gyoungwe/pi-knowledge",
 	"@gyoungwe/pi-research",
-	// Existing host adapters use pi-analysis directly; its migration is outside v3.
-	"@gyoungwe/pi-analysis",
 ]);
 const optional = new Set([
 	"@gyoungwe/pi-evidence",
 	"@gyoungwe/pi-connectors",
 	"@gyoungwe/desktop-ui-pack",
 	"@gyoungwe/research-suite",
+]);
+// Accepted v3 migration exception: the backend composition root still needs
+// the concrete analysis registry until plugin-api exposes a versioned host
+// registry/loader. Keep the exception file-scoped so new imports fail closed.
+const piAnalysisHostAdapterFiles = new Set([
+	"packages/backend/src/services/analysis-adapters/registry.ts",
+	"packages/backend/src/services/analysis-adapters/assembly.ts",
+	"packages/backend/src/services/analysis-adapters/bulk-rnaseq.ts",
 ]);
 
 /** Return optional plugin imports that would couple the host to a package. */
@@ -27,8 +33,14 @@ export function findHostImportViolations(file, source) {
 		/(?:from\s*|import\s*(?:\(\s*|\s+)|require\s*\(\s*)["'](@gyoungwe\/[^"']+)["']/gu,
 	)) {
 		const packageName = match[1].split("/").slice(0, 2).join("/");
-		if (optional.has(packageName) && !allowed.has(packageName))
-			violations.push(`${relative(root, file)}: optional plugin import ${packageName}`);
+		const relativeFile = relative(root, file).replaceAll("\\", "/");
+		if (packageName === "@gyoungwe/pi-analysis" && !piAnalysisHostAdapterFiles.has(relativeFile)) {
+			violations.push(
+				`${relativeFile}: pi-analysis migration exception is limited to registered host adapter files`,
+			);
+		} else if (optional.has(packageName) && !allowed.has(packageName)) {
+			violations.push(`${relativeFile}: optional plugin import ${packageName}`);
+		}
 	}
 	return violations;
 }
