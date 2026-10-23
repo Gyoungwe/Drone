@@ -14,7 +14,7 @@
 
 | 优先级 | 项目 | 当前状态 | 完成证据 |
 | --- | --- | --- | --- |
-| P0 | 两个修复分支合入各自 `main` | Drone `codex/pr5-public-receipt` 为 `449c4792`；drone-plugins 同名分支为 `b6bc98d`，两个 `main` 尚未包含这两个分支的最新提交 | 两仓库 `main` 包含修复提交；锁文件、插件包版本和远程 head 一致；双仓库最终门禁重跑通过 |
+| P0 | 两个修复分支合入各自 `main` | 已完成：drone-plugins `main=b6bc98d7`；Drone `main=43ab8fdc`（后续仅有文档提交） | 两仓库 `main` 已推送；锁文件锁定 `b6bc98d7d0ac99461ae3249fb0a47b713166d007`，插件包版本与远程 head 一致；合并后的双仓库最终门禁通过 |
 | P1 | v3 T3 真实安装包三页面验收 | 代码挂载、卸载和默认恢复测试已通过；真实安装包尚未完成 `knowledge.tab`、`home.section`、`skills.section` 三页验收 | 真实安装包安装第三方 UI 插件，三处均出现贡献；停用后恢复默认；保留应用版本、插件版本和截图/回读摘要 |
 | P1 | v3 T4 `pi-analysis` host adapter 例外 | 静态宿主独立性和无可选插件运行检查已通过；host adapter 仍在登记例外中 | 删除例外并通过 `check:arch`、空插件运行检查；或者由用户明确批准把它移出 v3 并登记为后续架构任务 |
 | P2 | PR6 评估结论 | pdf.js 结果已完成；MinerU/GROBID 仅记录为 unavailable；是否集成可选后端尚未决定 | 用户决定“保持 pdf.js”或创建后续集成计划；本轮不修改默认解析流程 |
@@ -101,5 +101,5 @@ npm run check:plugin-api -- --migration --lifecycle
 
 | 日期 | 阶段 | 结果 |
 | --- | --- | --- |
-| 2026-10-23 | C0 | drone-plugins `main=b6bc98d`；Drone `main=43ab8fdc`（合并 `codex/pr5-public-receipt`）；`plugins.lock.json` 已改为锁定 `b6bc98d7d0ac99461ae3249fb0a47b713166d007`，pi-knowledge tarball SHA-256 保持 `dc46908138ea926b86991ecc5f17892e34c65b0b1156741d6063d80ab0303fca`；发布证据已改为两个 `main` head。 |
+| 2026-10-23 | C0 | drone-plugins `main=b6bc98d`；Drone `main=43ab8fdc`（合并 `codex/pr5-public-receipt`，文档同步提交 `b33ad60a`）；`plugins.lock.json` 已改为锁定 `b6bc98d7d0ac99461ae3249fb0a47b713166d007`，pi-knowledge tarball SHA-256 保持 `dc46908138ea926b86991ecc5f17892e34c65b0b1156741d6063d80ab0303fca`；发布证据已改为两个 `main` head。插件仓库 `npm run check` 通过；宿主 `npm run lint`、`npm run typecheck`、`npm test`（159 文件/820 测试）、`npm run build`、`npm run check:arch` 和 `npm run check:plugin-api -- --migration --lifecycle` 均通过。 |
 
