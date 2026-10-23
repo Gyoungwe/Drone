@@ -32,7 +32,10 @@
 ## T4 宿主独立性
 
 - `scripts/check-host-independence.mjs` 已挂入 `npm run check:arch`，扫描生产源码中的可选插件 import，并验证空插件安装根。
-- 证据：`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch` 通过。现有 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外；其完整迁移不属于 v3 任务范围。
+- 现有 `@gyoungwe/pi-analysis` host adapter 不能在 v3 删除：`AnalysisTaskController` 在创建、就绪、执行回执审查和交付阶段需要具体 registry，`CapabilityDiscoveryService` 还需要它做版本解析；当前公开 `DroneHostPort` 没有 versioned analysis registry/loader。删除会直接破坏宿主的分析门禁闭环。
+- C2 已把例外收窄到三个 facade：`packages/backend/src/services/analysis-adapters/registry.ts`、`assembly.ts`、`bulk-rnaseq.ts`。检查器新增了“例外文件之外的 `pi-analysis` import 必须失败”的反例测试。
+- 后续登记：v3.1 `analysis host registry migration`。删除条件是 plugin-api 提供稳定 host registry/loader，宿主改为只消费该 HostPort，并通过 `check:arch`、空可选插件运行检查和 analysis plan→review→delivery 回归；在此之前不把 T4 标记为 v3 未完成。
+- 证据命令：`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch` 通过。
 
 ## T5 安装前声明
 
@@ -54,9 +57,9 @@
 - 已通过：`npm run lint`（仅仓库已有大文件 warning）、三 workspace typecheck、`npm run check:arch`。
 - 最终回归：`npm test` 通过（backend 231 files / 1894 tests，desktop 158 files / 818 tests，其他 workspace 亦通过）；`npm run typecheck`、`npm run build`、`npm run check:extensions -- --strict`、`npm run check:arch` 和 `npm run lint` 通过（lint 仅保留仓库已有两个大文件 warning）；插件仓库 `npm run check` 通过。
 
-## 未完成项
+## 后续任务（不计入 v3 未完成）
 
-- T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，完整迁移尚未完成。
+- v3 T4 的 `pi-analysis` host registry migration 已登记为 v3.1 后续任务，不再计入 v3 未完成项。
 - OmicOS 六个 PR 已完成；PR1–PR6 的实现和真实验收证据见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 与 [`pluginization/omicos-evidence.md`](omicos-evidence.md)。当前未完成项统一收敛到 [`gap-closure-plan.md`](gap-closure-plan.md)。
 
 ## file: 依赖门禁修复

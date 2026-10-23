@@ -16,7 +16,7 @@
 | --- | --- | --- | --- |
 | P0 | 两个修复分支合入各自 `main` | 已完成：drone-plugins `main=b6bc98d7`；Drone `main=43ab8fdc`（后续仅有文档提交） | 两仓库 `main` 已推送；锁文件锁定 `b6bc98d7d0ac99461ae3249fb0a47b713166d007`，插件包版本与远程 head 一致；合并后的双仓库最终门禁通过 |
 | P1 | v3 T3 真实安装包三页面验收 | 已完成：合并后的 unsigned macOS arm64 安装包通过 npm tarball 安装的非 `@gyoungwe` UI 插件完成三页回读和停用恢复 | [`v3-evidence.md`](v3-evidence.md) 与 [`v1.1-t3-ui-acceptance-2026-10-23.json`](../releases/v1.1-t3-ui-acceptance-2026-10-23.json) |
-| P1 | v3 T4 `pi-analysis` host adapter 例外 | 静态宿主独立性和无可选插件运行检查已通过；host adapter 仍在登记例外中 | 删除例外并通过 `check:arch`、空插件运行检查；或者由用户明确批准把它移出 v3 并登记为后续架构任务 |
+| P1 | v3 T4 `pi-analysis` host adapter 例外 | C2 已正式接受为 v3.1 迁移例外；检查器只允许三个 backend facade 文件 | v3.1 提供 versioned analysis host registry/loader 后删除三个 facade 和直接依赖，并通过完整 analysis 回归与宿主门禁 |
 | P2 | PR6 评估结论 | pdf.js 结果已完成；MinerU/GROBID 仅记录为 unavailable；是否集成可选后端尚未决定 | 用户决定“保持 pdf.js”或创建后续集成计划；本轮不修改默认解析流程 |
 
 ### 仅文档或证据同步问题
@@ -57,10 +57,11 @@
 
 ### C2：关闭或重新登记 v3 T4 例外
 
-先检查 `@gyoungwe/pi-analysis` host adapter 是否仍被生产源码需要：
+C2 检查确认 `@gyoungwe/pi-analysis` host adapter 仍被生产源码需要：
 
-- 若可删除：迁移到公开 HostPort，删除例外，补静态违规反例和空插件运行回归。
-- 若暂时不能删除：在 v3 计划中把它改为“已接受的迁移例外”，写明保留原因、影响范围、删除条件和下一版本，不再同时称为“v3 未完成”。
+- `AnalysisTaskController` 依赖 registry 完成 adapter resolve、readiness、review 和 delivery；`CapabilityDiscoveryService` 依赖同一 registry 做 capability version resolve。
+- 当前 `@gyoungwe/plugin-api` 没有 versioned analysis host registry/loader，不能把这条依赖迁移到公开 HostPort 而保持行为不变。
+- 因此正式登记为 v3.1 `analysis host registry migration`：例外范围仅为 `packages/backend/src/services/analysis-adapters/{registry,assembly,bulk-rnaseq}.ts`；检查器对其他文件的直接 import 失败；删除条件是 plugin-api 提供稳定 host registry/loader 且完整分析回归通过。
 
 ### C3：统一计划与证据文档
 
@@ -91,7 +92,7 @@ npm run check:plugin-api -- --migration --lifecycle
 
 - 两个仓库的 `main` 包含当前修复，锁文件、公开包版本和证据一致。
 - T3 有真实安装包三页面验收证据。
-- T4 要么删除 `pi-analysis` 例外，要么完成正式的后续任务登记。
+- T4 的 `pi-analysis` 例外已完成正式后续任务登记；v3 只保留 v3.1 的删除条件和证据。
 - 所有计划文档不再把已完成工作写成“未开始”或“未发布”。
 - PR6 的选择被记录为“保持现状”或新的后续计划。
 - 全量主机和插件门禁通过，工作树干净。
@@ -102,4 +103,5 @@ npm run check:plugin-api -- --migration --lifecycle
 | --- | --- | --- |
 | 2026-10-23 | C0 | drone-plugins `main=b6bc98d`；Drone `main=43ab8fdc`（合并 `codex/pr5-public-receipt`，文档同步提交 `b33ad60a`）；`plugins.lock.json` 已改为锁定 `b6bc98d7d0ac99461ae3249fb0a47b713166d007`，pi-knowledge tarball SHA-256 保持 `dc46908138ea926b86991ecc5f17892e34c65b0b1156741d6063d80ab0303fca`；发布证据已改为两个 `main` head。插件仓库 `npm run check` 通过；宿主 `npm run lint`、`npm run typecheck`、`npm test`（159 文件/820 测试）、`npm run build`、`npm run check:arch` 和 `npm run check:plugin-api -- --migration --lifecycle` 均通过。 |
 | 2026-10-23 | C1 | 合并后的 `0.33.4` unsigned macOS arm64 安装包 `app.asar` SHA-256=`a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec`；非 `@gyoungwe` `drone-t3-ui-fixture@0.0.1` 通过 npm tarball（SHA-256=`4071a41f0d3b7bf7b48aa9ead844f42c7a12374134db4957f63cfe47d3a1ff92`）安装到 `<agentDir>/npm/node_modules`。真实 UI 回读 PASS：`T3 Knowledge`、`T3 Home`、`T3 Skills`；停用后三者均消失，默认知识库页签保留且首页/技能页无空壳。详见 `v3-evidence.md` 与 release evidence JSON。 |
+| 2026-10-23 | C2 | `pi-analysis` host adapter 仍由宿主分析编排和 capability discovery 生产路径需要；未强行删除。`check-host-independence` 将例外收窄至三个 backend facade 文件，并新增越界 import 反例；`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch`、analysis adapter/capability discovery 回归通过。已登记 v3.1 `analysis host registry migration`，删除条件和影响范围见 `v3-platform-plan.md` 与 `v3-evidence.md`。 |
 
