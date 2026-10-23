@@ -27,10 +27,7 @@ function opaqueHash(value: string): string {
 }
 
 /** Stable, opaque key used to keep external MCP state isolated per user/project. */
-export function mcpIsolationKey(
-	server: Pick<McpConfigServer, "name" | "scope" | "sourcePath">,
-	cwd?: string,
-): string {
+export function mcpIsolationKey(server: Pick<McpConfigServer, "name" | "scope">, cwd?: string): string {
 	const scope =
 		server.scope === "project" ? (cwd ?? "").replace(/[\\/]+/gu, "/").replace(/\/$/u, "") || "/" : "user";
 	return `mcp-${opaqueHash(`${server.scope}:${server.name}:${scope}`)}`;
