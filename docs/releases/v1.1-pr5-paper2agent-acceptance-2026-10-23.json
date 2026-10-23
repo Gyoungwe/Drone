@@ -6,7 +6,7 @@
 		"host": {
 			"repository": "Gyoungwe/Drone",
 			"branch": "codex/pr5-public-receipt",
-			"commit": "1caecc1f"
+			"commit": "049501f9"
 		},
 		"plugins": {
 			"repository": "Gyoungwe/drone-plugins",
