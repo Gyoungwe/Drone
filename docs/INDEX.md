@@ -31,6 +31,7 @@ A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收
 插件化 v2 的 P1 迁移边界与 extensions 归属清单见 [pluginization/p1-inventory.md](pluginization/p1-inventory.md)；执行主计划见 [pluginization/v2-plan.md](pluginization/v2-plan.md)，本轮验收记录见 [pluginization/P1-evidence.md](pluginization/P1-evidence.md)。
 P2 知识源码与插件入口迁移、插件仓库全量门禁和 Git 历史验收见 [pluginization/P2-evidence.md](pluginization/P2-evidence.md)。
 插件平台 v3 的 T1–T7 执行计划见 [pluginization/v3-platform-plan.md](pluginization/v3-platform-plan.md)，插件清单和宿主合同见 `../drone-plugins/docs/PLUGIN-SPEC.md`，实现证据见 [pluginization/v3-evidence.md](pluginization/v3-evidence.md)。
+截至 2026-10-23，v3 合并基线为 Drone `main=4049057c456d1ee3fe252bf0d31c83280cad4ab9`、drone-plugins `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`；公开包版本与真实安装/加载证据见 [`v1.1.0 npm 发布证据`](releases/v1.1.0-npm-packages.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 
 插件化与 OmicOS 计划缺口清理顺序见 [pluginization/gap-closure-plan.md](pluginization/gap-closure-plan.md)。
 OmicOS 文献雷达与阅读闭环的六个 PR 计划见 [omicos-platform-plan.md](omicos-platform-plan.md)，实现证据见 [pluginization/omicos-evidence.md](pluginization/omicos-evidence.md)，原始 handoff 见 [claude/drone-omicos-handoff.md](../claude/drone-omicos-handoff.md)。
@@ -72,9 +73,10 @@ v0.33.3 发布候选的构建后/上传后安装包验收设计与本机 unsigne
 v0.33.4 技能仓库来源卡片、GitHub 限流回退更新检查、市场栏和 macOS 安装包验收见 [发布说明](releases/v0.33.4.md)、[资产验收证据](releases/v0.33.4-asset-validation.json) 与 [P4 UI 验收证据](releases/v0.33.4-p4-ui-acceptance.json)。
 v0.33.5 插件门禁收口见 [插件门禁证据](releases/v0.33.5-plugin-gates.json)：包含 Skill 仓库管理、worker 回滚、真实 registry `pi-core@0.1.5`/Pi 1.1.0、native MCP 和深色四视图对照；Pi CLI 版本更新替换、外部 MCP 与交互式 Electron GUI 仍按边界记录。
 
-首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
+历史首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；历史 `pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。当前公开版本见本索引上方的 v1.1.0 记录；历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
 
 2026-10-21 正式 npm 发布与官方 registry 干净消费者、Pi loader、公开插件宿主验收见 [v1.1.0 npm 发布证据](releases/v1.1.0-npm-packages.json)。
+当前公开 registry 版本：`@gyoungwe/plugin-api@1.1.0`、`pi-core@0.1.8`、`pi-knowledge@0.2.0`、`pi-research@0.1.1`、`research-suite@0.1.8`、`pi-analysis@0.1.1`、`pi-evidence@0.1.1`、`pi-connectors@0.1.1`、`desktop-ui-pack@0.1.1`；历史版本证据保留在各 release JSON，不与当前源码 head 混写。
 2026-10-23 PR5 Paper2Agent 公共包干净安装与正式 Drone 安装包原生 MCP 回执见 [PR5 真实回执证据](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 
 2026-10-23 PR1 文献雷达真实安装包运行、入库和同日稳定键去重见 [PR1 雷达验收证据](releases/v1.1-pr1-radar-acceptance-2026-10-23.json)。
@@ -231,7 +233,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，P2/P3/P4 工作头 `cdff35e23dd4f4d58e9684e2c4a632c81ccf34b7`），宿主通过 `plugins.lock.json` 消费 `@gyoungwe/pi-knowledge@0.2.0`。插件仓库负责从源码构建 manifest、host 声明、native extension、worker 和 maintenance；Drone 负责 HostPort、Desktop UI/IPC、锁定下载和打包资源验收。它不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。
+`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，当前 `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`），宿主通过 `plugins.lock.json` 消费 `@gyoungwe/pi-knowledge@0.2.0`。插件仓库负责从源码构建 manifest、host 声明、native extension、worker 和 maintenance；Drone 负责 HostPort、Desktop UI/IPC、锁定下载和打包资源验收。它不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 
@@ -241,15 +243,15 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 
-`../drone-plugins` 的 `main`（提交 `5cd915e`，包实现提交 `2168576`）是 `@gyoungwe/pi-analysis@0.1.0` 的源码权威位置。Drone backend 以精确版本依赖公共 npm 包，`packages/backend/src/services/analysis-adapters/` 保留兼容 facade；本地临时源码和构建脚本已删除。公开 registry tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
+`../drone-plugins` 的 `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007` 是 `@gyoungwe/pi-analysis@0.1.1` 的源码权威位置。Drone backend 以精确版本依赖公共 npm 包，`packages/backend/src/services/analysis-adapters/` 保留已登记的兼容 facade；本地临时源码和构建脚本已删除。公开 registry tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
 ## `@gyoungwe/pi-evidence` — 原生 Pi 证据插件（V1.1-E 已完成公开宿主门禁）
 
-源码权威位置是绑定的 `../drone-plugins/packages/pi-evidence/`。公开 `0.1.0` tarball 的 shasum/integrity、干净 prefix 安装、3 个只读工具注册和 Pi 1.1.0 loader 发现均通过；宿主验收由 `scripts/check-public-plugin-host.mjs` 执行。宿主 composition root 仍负责字节采集、持久化、分支工作区和 replay runner；真实文件写入和科研结论门禁不由该包承担。
+源码权威位置是绑定的 `../drone-plugins/packages/pi-evidence/`（当前 `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`）。公开 `0.1.1` tarball 的 shasum/integrity、干净 prefix 安装、只读工具注册和 Pi 1.1.0 loader 发现均通过；宿主验收由 `scripts/check-public-plugin-host.mjs` 执行。宿主 composition root 仍负责字节采集、持久化、分支工作区和 replay runner；真实文件写入和科研结论门禁不由该包承担。
 
 ## `@gyoungwe/pi-connectors` — 原生 Pi 连接器插件（V1.1-C 公开宿主门禁已完成）
 
-源码权威位置是绑定的 `../drone-plugins/packages/pi-connectors/`。公开 `0.1.0` tarball 的 shasum/integrity、六类只读 connector descriptor、2 个元数据工具、干净安装和 Pi 资源加载均通过。实际网络、凭据、写入、回读与删除仍由宿主组合根通过 `ConnectorExecutionPort` 实现；Protocols.io 继续保持只读，真实外部服务 I/O 不在本次门禁中宣称通过。
+源码权威位置是绑定的 `../drone-plugins/packages/pi-connectors/`（当前 `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`）。公开 `0.1.1` tarball 的 shasum/integrity、六类只读 connector descriptor、2 个元数据工具、干净安装和 Pi 资源加载均通过。实际网络、凭据、写入、回读与删除仍由宿主组合根通过 `ConnectorExecutionPort` 实现；Protocols.io 继续保持只读，真实外部服务 I/O 不在本次门禁中宣称通过。
 
 ## packages/pi-research — 原生 Pi 研究插件（PR-7）
 
@@ -257,7 +259,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## `@gyoungwe/research-suite` — 外部原生 Pi 聚合包（PR-7）
 
-源码权威位置是绑定的 `../drone-plugins/packages/research-suite/`；宿主仓库不再保留该包、workspace lock 条目或聚合包专属检查脚本。当前公开版本为 `@gyoungwe/research-suite@0.1.5`，捆绑 `plugin-api/pi-core/pi-knowledge/pi-research`；旧 `0.1.1` 已标记“与 pi-core 冲突，无法启动”。插件仓库负责 manifest、`bundleDependencies`、tarball、安装 smoke 和 Pi CLI 回归；宿主只通过已发布包的兼容矩阵和公开插件宿主检查验证加载结果。`/drone-doctor` 和 `/drone-example` 由 `pi-core@0.1.3` 提供，真实矩阵证据见 [v0.33.2 Pi CLI](releases/v0.33.2-pi-cli-regression.json)。
+源码权威位置是绑定的 `../drone-plugins/packages/research-suite/`（当前 `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`）；宿主仓库不再保留该包、workspace lock 条目或聚合包专属检查脚本。当前公开版本为 `@gyoungwe/research-suite@0.1.8`，捆绑 `plugin-api/pi-core/pi-knowledge/pi-research`；旧 `0.1.1` 已标记“与 pi-core 冲突，无法启动”。插件仓库负责 manifest、`bundleDependencies`、tarball、安装 smoke 和 Pi CLI 回归；宿主只通过已发布包的兼容矩阵和公开插件宿主检查验证加载结果。`/drone-doctor` 和 `/drone-example` 由 `pi-core@0.1.8` 提供，真实矩阵证据见 [v1.1.0 npm 发布证据](releases/v1.1.0-npm-packages.json) 与 [PR5 真实回执](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 
 ## packages/backend — pi SDK 适配层
 

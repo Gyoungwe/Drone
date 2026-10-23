@@ -1,5 +1,7 @@
 # 插件化 v2 验收（第 1 轮）
 
+> **历史验收记录**：本轮问题已由 acceptance-2/3 及 C0–C2 合并验收处理；这里保留当时的失败证据和修复线索，不代表当前 `main` 状态。
+
 验收方：Claude　日期：2026-10-21
 被验收提交：Drone `fbb7d7d2`、drone-plugins `cdff35e`（分支均为 `codex/pluginize-v2-p2`）
 

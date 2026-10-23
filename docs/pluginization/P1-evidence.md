@@ -1,5 +1,7 @@
 # P1 验收证据：宿主依赖面收口
 
+> **历史记录（2026-10-21）**：本文件保留 P1 分支当时的执行环境和基线失败，不代表当前发布状态。P1 后续已随 v2 合入 Drone `main`；当前合并 head、插件 head、公开包版本和最终门禁以 [`v3-evidence.md`](v3-evidence.md)、[`acceptance-3.md`](acceptance-3.md) 及 [`gap-closure-plan.md`](gap-closure-plan.md) 为准。
+
 日期：2026-10-21（Asia/Shanghai）
 Drone 分支：`codex/pluginize-v2-p1`
 Drone 基线：`87aa0afe`
@@ -36,10 +38,10 @@ P1 实现提交：`ded814fb`
 | `npm run lint` | PASS；仅有仓库既有 2 MiB 设计 HTML 文件大小 warning |
 | `npm run build` | PASS；Electron/Vite main、preload、renderer 构建完成 |
 
-## 未完成/阻塞
+## 当时未完成/阻塞（已由后续合并验收取代）
 
-- P1 只改宿主仓库，未推送分支；按维护规则，外部 push 需要单独授权。
-- 完整 `npm run test` 当前仍有 4 个基线失败：backend 的 channel-watch 恢复夹具为空、source archive schema 断言仍期待旧的 `required: [run_dir, category]`、Obsidian setup 全局 owner 夹具为空，以及 desktop spacing-grid 夹具存在既有半步值。它们与本阶段入口收口无关，未改计划外行为。
-- `npm run build` 已通过；P2 完成后仍需在干净 checkout 和插件仓库产物可用时重跑跨仓库构建验收。
+- P1 分支当时未推送；后续已通过 C0 合入 Drone `main` 并完成推送。
+- 当时完整 `npm run test` 的 4 个基线失败已被后续修复和最终验收取代；当前 `main` 的全量测试 `rc=0`，见 C0/C2 合并门禁记录。
+- 当时要求的干净 checkout / 插件产物重跑已在 P2、C0 和 C2 完成；当前锁文件指向插件 `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`。
 
 本阶段未触碰凭据、Vault、会话正文、`results/` 或 `drone-plugins` 工作树。

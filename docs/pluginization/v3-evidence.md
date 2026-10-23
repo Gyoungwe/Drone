@@ -2,7 +2,7 @@
 
 分支：两个仓库的 `main`（v2 已合并；v3 实现与规范更新随本次提交合并）。以下命令均在干净工作树上重跑。
 
-当前合并基线：Drone `main=43ab8fdc`；drone-plugins `main=b6bc98d7`。发布证据和锁文件均指向这两个合并后的 head；后续文档提交不改变代码基线。
+当前合并基线：Drone `main=4049057c456d1ee3fe252bf0d31c83280cad4ab9`；drone-plugins `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`。发布证据和锁文件均指向这两个合并后的 head；后续文档提交不改变代码基线。
 
 ## T1 清单检查器与 tools
 
@@ -60,7 +60,7 @@
 ## 后续任务（不计入 v3 未完成）
 
 - v3 T4 的 `pi-analysis` host registry migration 已登记为 v3.1 后续任务，不再计入 v3 未完成项。
-- OmicOS 六个 PR 已完成；PR1–PR6 的实现和真实验收证据见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 与 [`pluginization/omicos-evidence.md`](omicos-evidence.md)。当前未完成项统一收敛到 [`gap-closure-plan.md`](gap-closure-plan.md)。
+- OmicOS 六个 PR 的实现与评估均已完成：PR1–PR5 有真实安装包/会话验收 PASS，PR6 的 pdf.js/MinerU/GROBID 评估已完成，是否接入可选解析后端仍是用户决策项；实现和真实验收证据见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 与 [`pluginization/omicos-evidence.md`](omicos-evidence.md)。当前后续项统一收敛到 [`gap-closure-plan.md`](gap-closure-plan.md)。
 
 ## file: 依赖门禁修复
 
