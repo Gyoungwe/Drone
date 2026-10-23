@@ -248,6 +248,120 @@ export interface AuthorizationReceipt {
 	readonly reason?: string;
 }
 
+/** Permission scopes that a Drone manifest may declare for host-mediated work. */
+export type PluginFilesystemPermission = "workspace-read" | "workspace" | "configured-vault" | "vault-read";
+
+export interface PluginPermissionDeclaration {
+	readonly filesystem: readonly PluginFilesystemPermission[];
+	readonly network: readonly string[];
+	readonly subprocess: readonly string[];
+	readonly externalWrites: boolean;
+}
+
+export type PluginPermissionOperation =
+	| "filesystem-read"
+	| "filesystem-write"
+	| "network"
+	| "subprocess"
+	| "external-write";
+
+export interface PluginPermissionRequest {
+	readonly pluginId: string;
+	readonly operation: PluginPermissionOperation;
+	readonly action: string;
+	readonly reason?: string;
+	readonly scope?: string;
+}
+
+/** Redacted, host-owned audit record. It deliberately contains no payload or credential values. */
+export interface PluginPermissionAuditEvent {
+	readonly pluginId: string;
+	readonly operation: PluginPermissionOperation;
+	readonly action: string;
+	readonly granted: boolean;
+	readonly at: string;
+	readonly reason?: string;
+}
+
+export type PluginPermissionAuditSink = (event: PluginPermissionAuditEvent) => void;
+
+export interface PermissionedHostPortOptions {
+	readonly pluginId: string;
+	readonly permissions: PluginPermissionDeclaration;
+	readonly audit?: PluginPermissionAuditSink;
+}
+
+/**
+ * Enforce manifest permissions at the host boundary used by a plugin.
+ *
+ * Plugins must route side effects through `DroneHostPort`; this wrapper turns
+ * the declaration into an executable deny gate before asking the host/user for
+ * authorization. Undeclared operations fail closed and are audited. Direct
+ * filesystem/process access by plugin code remains outside this contract and
+ * requires a separate process sandbox (tracked in the next-stage plan).
+ */
+export function createPermissionedHostPort(
+	base: DroneHostPort,
+	options: PermissionedHostPortOptions,
+): DroneHostPort {
+	const audit = (
+		operation: PluginPermissionOperation,
+		input: AuthorizationRequest,
+		granted: boolean,
+		reason?: string,
+	) => {
+		options.audit?.({
+			pluginId: options.pluginId,
+			operation,
+			action: input.action,
+			granted,
+			at: new Date().toISOString(),
+			...(reason ? { reason } : {}),
+		});
+	};
+	const allows = (operation: PluginPermissionOperation): boolean => {
+		switch (operation) {
+			case "filesystem-read":
+				return options.permissions.filesystem.some((scope) =>
+					["workspace-read", "workspace", "configured-vault", "vault-read"].includes(scope),
+				);
+			case "filesystem-write":
+				return options.permissions.filesystem.includes("workspace");
+			case "network":
+				return options.permissions.network.length > 0;
+			case "subprocess":
+				return options.permissions.subprocess.length > 0;
+			case "external-write":
+				return options.permissions.externalWrites;
+		}
+	};
+	const classify = (action: string): PluginPermissionOperation | undefined => {
+		const normalized = action.trim().toLowerCase();
+		if (/^(?:delete|external[-_ ]?write|publish|remote[-_ ]?write|write\b)/u.test(normalized))
+			return "external-write";
+		if (/^(?:subprocess|exec|shell|command)\b/u.test(normalized)) return "subprocess";
+		if (/^(?:network|fetch|http|https)\b/u.test(normalized)) return "network";
+		if (/^(?:filesystem[-_ ]?write|file[-_ ]?write)\b/u.test(normalized)) return "filesystem-write";
+		if (/^(?:filesystem[-_ ]?read|file[-_ ]?read)\b/u.test(normalized)) return "filesystem-read";
+		return undefined;
+	};
+	return {
+		...base,
+		requestAuthorization: async (input) => {
+			const operation = classify(input.action);
+			if (!operation) return base.requestAuthorization(input);
+			if (!allows(operation)) {
+				const reason = `Plugin ${options.pluginId} did not declare permission for ${operation}`;
+				audit(operation, input, false, reason);
+				return { granted: false, decidedAt: new Date().toISOString(), reason };
+			}
+			const receipt = await base.requestAuthorization(input);
+			audit(operation, input, receipt.granted, receipt.reason);
+			return receipt;
+		},
+	};
+}
+
 /** Stable host seam shared by native Pi and Drone Desktop adapters. */
 export interface DroneHostPort {
 	readonly host: PluginHost;

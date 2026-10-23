@@ -4,6 +4,7 @@ import {
 	analysisAdapterSnapshotSha256,
 	compareHostVersions,
 	createAnalysisContext,
+	createPermissionedHostPort,
 	negotiateCapabilities,
 } from "../dist/index.js";
 
@@ -101,4 +102,59 @@ test("keeps analysis contracts deterministic and host-neutral", () => {
 			}),
 		/unsafe/,
 	);
+});
+
+test("permissioned host denies undeclared side effects and records a redacted audit event", async () => {
+	const audit = [];
+	const host = createPermissionedHostPort(
+		{
+			host: "native-pi",
+			capabilities: () => ({ capabilities: ["requestAuthorization"] }),
+			requestAuthorization: async () => ({ granted: true, decidedAt: "2026-10-24T00:00:00.000Z" }),
+		},
+		{
+			pluginId: "drone-fixture",
+			permissions: { filesystem: ["workspace-read"], network: [], subprocess: [], externalWrites: false },
+			audit: (event) => audit.push(event),
+		},
+	);
+	const receipt = await host.requestAuthorization({ action: "external-write", reason: "write a record" });
+	assert.equal(receipt.granted, false);
+	assert.match(receipt.reason, /did not declare permission/);
+	assert.equal(audit.length, 1);
+	assert.deepEqual(
+		{ ...audit[0], at: "fixed" },
+		{
+			pluginId: "drone-fixture",
+			operation: "external-write",
+			action: "external-write",
+			granted: false,
+			at: "fixed",
+			reason: "Plugin drone-fixture did not declare permission for external-write",
+		},
+	);
+});
+
+test("permissioned host delegates declared side effects and audits the host decision", async () => {
+	const audit = [];
+	const host = createPermissionedHostPort(
+		{
+			host: "drone-desktop",
+			capabilities: () => ({ capabilities: ["requestAuthorization"] }),
+			requestAuthorization: async () => ({
+				granted: true,
+				authorizationRef: "auth:fixture",
+				decidedAt: "2026-10-24T00:00:00.000Z",
+			}),
+		},
+		{
+			pluginId: "drone-fixture",
+			permissions: { filesystem: ["workspace"], network: [], subprocess: [], externalWrites: true },
+			audit: (event) => audit.push(event),
+		},
+	);
+	const receipt = await host.requestAuthorization({ action: "write", scope: "workspace" });
+	assert.equal(receipt.authorizationRef, "auth:fixture");
+	assert.equal(audit[0].operation, "external-write");
+	assert.equal(audit[0].granted, true);
 });
