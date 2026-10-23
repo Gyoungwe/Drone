@@ -15,14 +15,19 @@
 
 - `UiPluginManager` 从 `<agentDir>/npm/node_modules` 遍历 scoped/非 scoped 包，读取 `plugin.manifest.json.entrypoints.ui`，并要求 `hosts` 包含 `drone-desktop`。
 - 非 `@gyoungwe` 夹具可发现；损坏包和错误 UI manifest 进入诊断行，不阻断其他插件。
-- 证据：`npm run test --workspace @drone/desktop -- --run src/main/ui-plugins/installed-ui-pack.test.ts`。
+- 证据：`DRONE_PLUGINS_DIR=../drone-plugins npm exec vitest run packages/desktop/src/main/ui-plugins/installed-ui-pack.test.ts --config packages/desktop/vitest.config.ts`（4 tests；显式指定相邻插件仓库路径，避免旧默认路径歧义）。
 
 ## T3 页面区域
 
 - 新增 `knowledge.tab`、`home.section`、`skills.section`，同步 shared 区域目录、renderer 挂载、插件类型声明和 UI SPEC。
 - 知识库插件页签在核心页签之后追加；停用后回到默认内容；首页和技能页在无贡献时不渲染空壳。
 - 证据：`npm run test --workspace @drone/desktop -- --run src/renderer/src/plugins/PluginRegions.test.tsx`（4 tests），`npm run typecheck --workspace @drone/desktop`。
-- Claude 负责的真实安装包三页面验收尚未在本地执行；代码级挂载、卸载和默认恢复证据已通过。
+- 真实安装包验收（2026-10-23，Drone `0.33.4`，unsigned macOS arm64）已通过：
+  - 安装包：`packages/desktop/dist/mac-arm64/Drone.app`，`app.asar` SHA-256 `a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec`。
+  - 安装方式：本地 tarball `drone-t3-ui-fixture@0.0.1` 通过 `npm install --prefix /tmp/drone-t3-agent-tar2/npm --ignore-scripts --no-audit --no-fund /tmp/drone-t3-ui-fixture-0.0.1.tgz` 写入 `<agentDir>/npm/node_modules`；tarball SHA-256 `4071a41f0d3b7bf7b48aa9ead844f42c7a12374134db4957f63cfe47d3a1ff92`。
+  - 启用后真实页面回读：知识库显示页签 `T3 Knowledge`；新会话首页显示 `T3 Home`；技能与连接页显示 `T3 Skills`，插件行显示 `T3 Region Probe Desktop UI` 且开关为 on。
+  - 停用后真实回读：三页分别不再包含 `T3 Knowledge`、`T3 Home`、`T3 Skills`，知识库保留默认四个页签，首页/技能页没有空壳。
+  - 完整回执见 [`v1.1-t3-ui-acceptance-2026-10-23.json`](../releases/v1.1-t3-ui-acceptance-2026-10-23.json)。
 
 ## T4 宿主独立性
 
@@ -51,7 +56,6 @@
 
 ## 未完成项
 
-- T3 的真实安装包三页面验收仍待 Claude 在 Mac 上执行；当前只有代码级挂载、卸载和默认恢复证据。
 - T4 的 `@gyoungwe/pi-analysis` host adapter 仍是已登记迁移例外，完整迁移尚未完成。
 - OmicOS 六个 PR 已完成；PR1–PR6 的实现和真实验收证据见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 与 [`pluginization/omicos-evidence.md`](omicos-evidence.md)。当前未完成项统一收敛到 [`gap-closure-plan.md`](gap-closure-plan.md)。
 

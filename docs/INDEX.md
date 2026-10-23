@@ -78,6 +78,7 @@ v0.33.5 插件门禁收口见 [插件门禁证据](releases/v0.33.5-plugin-gates
 2026-10-23 PR5 Paper2Agent 公共包干净安装与正式 Drone 安装包原生 MCP 回执见 [PR5 真实回执证据](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 
 2026-10-23 PR1 文献雷达真实安装包运行、入库和同日稳定键去重见 [PR1 雷达验收证据](releases/v1.1-pr1-radar-acceptance-2026-10-23.json)。
+2026-10-23 v3 T3 合并后真实 macOS 安装包、npm tarball UI 插件三页面挂载与停用恢复见 [T3 UI 验收证据](releases/v1.1-t3-ui-acceptance-2026-10-23.json)。
 
 v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 

@@ -1,0 +1,60 @@
+{
+	"schema": 1,
+	"kind": "drone-v3-t3-ui-acceptance",
+	"mode": "real-installed-package",
+	"packageVersion": "0.33.4",
+	"packageArtifact": "packages/desktop/dist/mac-arm64/Drone.app",
+	"unsigned": true,
+	"appAsarSha256": "a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec",
+	"plugin": {
+		"packageName": "drone-t3-ui-fixture",
+		"version": "0.0.1",
+		"scope": "unscoped-third-party",
+		"installCommand": "npm install --prefix /tmp/drone-t3-agent-tar2/npm --ignore-scripts --no-audit --no-fund /tmp/drone-t3-ui-fixture-0.0.1.tgz",
+		"tarballSha256": "4071a41f0d3b7bf7b48aa9ead844f42c7a12374134db4957f63cfe47d3a1ff92",
+		"manifestSha256": "880a559eef2ceee49719d16d9ad22a0d64e2a7615efc45e11bdca8e4f7a9ac70",
+		"uiManifestSha256": "182989872c0c6569805379448ea6a506713f2072d3292a3b8c7f517c2c9eea93",
+		"installRoot": "/tmp/drone-t3-agent-tar2/npm/node_modules/drone-t3-ui-fixture",
+		"declaredEntrypoint": "./ui/plugin.json",
+		"declaredHost": "drone-desktop",
+		"declaredCapability": "ui",
+		"declaredPermissions": {
+			"filesystem": [],
+			"network": [],
+			"subprocess": [],
+			"externalWrites": false
+		}
+	},
+	"checks": [
+		{
+			"id": "knowledge-tab-enabled",
+			"status": "PASS",
+			"detail": "Knowledge view showed the plugin tab T3 Knowledge after the core tabs."
+		},
+		{
+			"id": "home-section-enabled",
+			"status": "PASS",
+			"detail": "New task home showed T3 Home and the text third-party installed package."
+		},
+		{
+			"id": "skills-section-enabled",
+			"status": "PASS",
+			"detail": "Skills & connections showed T3 Skills and the enabled T3 Region Probe Desktop UI row."
+		},
+		{
+			"id": "disabled-restores-default",
+			"status": "PASS",
+			"detail": "After disabling the plugin in the real package, T3 Knowledge, T3 Home and T3 Skills were absent; the knowledge view retained the default tabs and the other pages had no empty plugin shell."
+		},
+		{
+			"id": "build",
+			"status": "PASS",
+			"detail": "Unsigned macOS arm64 directory app built from merged main with electron-builder --mac dir --config.npmRebuild=false --config.mac.identity=null."
+		}
+	],
+	"status": "PASS",
+	"notes": [
+		"The first default electron-builder native dependency rebuild attempted cpu-features and failed because the local node-gyp input buildcheck.gypi was unavailable; the final directory artifact was rebuilt with npmRebuild=false and passed the real-package acceptance.",
+		"Acceptance used isolated /tmp agent and user-data roots; no Vault, credentials, session正文 or screenshots were committed."
+	]
+}
