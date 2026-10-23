@@ -1,0 +1,50 @@
+{
+	"schema": 1,
+	"kind": "pr1-literature-radar-real-acceptance",
+	"generatedAt": "2026-10-23T16:12:00+08:00",
+	"sourceRepositories": {
+		"host": {
+			"repository": "Gyoungwe/Drone",
+			"branch": "codex/pr5-public-receipt",
+			"commit": "38b0bebc"
+		},
+		"plugins": {
+			"repository": "Gyoungwe/drone-plugins",
+			"branch": "codex/pr5-public-receipt",
+			"commit": "b6bc98d"
+		}
+	},
+	"realInstalledPackageAcceptance": {
+		"status": "PASS",
+		"app": "/tmp/DroneAcceptance.app",
+		"appAsarSha256": "a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec",
+		"temporaryTopic": "single cell atlas",
+		"firstRun": {
+			"uiResultCount": 10,
+			"sourcesObserved": ["pubmed", "europe-pmc", "arxiv"],
+			"capturedTitle": "Single-cell profiling defines cellular ecosystems and malignant cell state coupling across pan-cancer tumor microenvironments.",
+			"captureStatus": "captured",
+			"captureLocator": "https://pubmed.ncbi.nlm.nih.gov/42907887/",
+			"metadataFilesWritten": 1
+		},
+		"sameDayRerun": {
+			"uiResultCount": 10,
+			"storedRadarCount": 20,
+			"uniqueStableKeys": 20,
+			"duplicateStableKeys": 0,
+			"capturedFilesAfterRerun": 1,
+			"capturedItemStillPresent": true
+		},
+		"cleanup": "Temporary topic memory, radar metadata and daily discovery state were removed/restored after acceptance."
+	},
+	"connectorEvidence": {
+		"arxiv": "Observed in the real installed-package radar result.",
+		"semanticScholar": "Registered/default-enabled and covered by retryable-429 tests; public endpoint returned HTTP 429 during this run and was not required for the usable radar result."
+	},
+	"gates": {
+		"dailyDiscoveryAndConnectorTests": "PASS",
+		"hostFullGates": "PASS (lint, typecheck, test, build, check:arch, plugin-api lifecycle)",
+		"gitDiffCheck": "PASS"
+	},
+	"notes": "The acceptance used a real packaged Drone app and real connector responses. No session body, Vault content, credential or generated result was committed."
+}

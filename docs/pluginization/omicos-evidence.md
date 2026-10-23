@@ -4,7 +4,7 @@
 
 ## PR1：新文献雷达与连接器
 
-状态：代码实现完成；真实构建包雷达验收部分通过。
+状态：代码实现完成；真实安装包雷达验收通过。
 
 - 新增 `arxiv` 与 `semantic-scholar` 只读连接器，加入默认 registry，资料页连接器开关自动可见且默认启用。
 - Semantic Scholar 支持无 key 公共接口、可选 host 配置 API key、推荐查询；HTTP 429 保留为 retryable 失败。
@@ -19,7 +19,9 @@
 - `npm run typecheck`：通过。
 - `npx biome check`：相关文件通过。
 
-真实构建包证据（2026-10-22）：在临时 Vault `/tmp/drone-omicos-live-20261022` 中绑定两个活跃课题，打开知识库页的“现在运行”，页面显示“新文献”分区和真实返回的 Europe PMC、arXiv 条目，通知显示发现 10 篇近期文献；再次运行后已有条目没有重复，新增结果仍按 DOI/arXiv id/标题合并。OpenAlex 与 Semantic Scholar 在该临时环境因公共端点 HTTP 429 暂停，arXiv、PubMed、Europe PMC 继续启用；因此连接器代码和 arXiv 真实命中通过，Semantic Scholar 真实 Drone 会话仍待有效 API key 或限流解除后补验。
+真实构建包证据（2026-10-22）：在临时 Vault `/tmp/drone-omicos-live-20261022` 中绑定两个活跃课题，打开知识库页的“现在运行”，页面显示“新文献”分区和真实返回的 Europe PMC、arXiv 条目，通知显示发现 10 篇近期文献；再次运行后已有条目没有重复，新增结果仍按 DOI/arXiv id/标题合并。OpenAlex 与 Semantic Scholar 在该临时环境因公共端点 HTTP 429 暂停，arXiv、PubMed、Europe PMC 继续启用；这一轮历史记录保留为当时的限流情况。
+
+真实安装包补验（2026-10-23）：使用 `/tmp/DroneAcceptance.app`（app.asar SHA-256 `a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec`）启动知识库页，注入一个临时活跃课题 `single cell atlas`，真实点击“现在运行”后 UI 显示 10 篇近期文献，来源包含 PubMed、Europe PMC 和 arXiv；首条为 PubMed 论文“Single-cell profiling defines cellular ecosystems and malignant cell state coupling across pan-cancer tumor microenvironments.”，点击“入库”后状态变为“已入库”，项目 `.drone/radar/` 产生一个来源元数据文件。当天再次运行得到另一批 10 条命中，但 20 条稳定键（DOI → arXiv id → 规范化标题）无重复，首条保持“已入库”且仍只有一个文件，证明同日重跑不会重复推送或重复写入。Semantic Scholar 公共端点在该次验收返回 retryable HTTP 429，未将其作为命中条件；连接器默认注册、开关和 429 处理仍由代码门禁与单测覆盖。验收结束后已删除临时课题、雷达文件和本机发现状态。
 
 ## PR2：引用跳转到 PDF 原文页码
 
@@ -76,7 +78,7 @@
 
 ## PR5：Paper2Agent 接入文档与 README 修正
 
-状态：文档实现完成；真实会话完成服务器发现，工具调用被宿主审批门禁拦截。
+状态：**PASS**。文档实现、公共包安装和真实安装包回执闭环均完成。
 
 - 新增 [`docs/paper2agent.md`](../paper2agent.md)，说明 Paper2Agent 生成 MCP 服务器，提供 Pi `mcp.json` 的本地 stdio 与远程 URL 示例，并明确工具输出是交付物/线索，不是原文证据。
 - `docs/INDEX.md`、README 中英文的连接器入口已链接该文档。
@@ -92,7 +94,11 @@
   `echo:hi`；这证明 Drone 本地 MCP 执行/回执链路可用，但不替代公开 Paper2Agent
   端点的真实安装包验收。
 
-真实会话证据（2026-10-22）：在真实安装的 Drone（`/Applications/Drone.app`）中接入 `https://Paper2Agent-alphagenome-mcp.hf.space/mcp`，刷新后真实 UI 显示 `paper2agent-remote` 已探测 22 个工具。第一次会话按宿主要求调用 `task_plan`，人工批准后确实生成了 `mcp__paper2agent_remote.create_genomic_interval` 调用；宿主没有收到回执，把它记为 `started/unknown`，模型随后被幂等门禁阻止重放。第二次会话使用已发现的正确 schema（`chromosome`, `start`, `end`, `strand`, `name`, `out_prefix`），再次批准 `task_plan` 后仍没有回执，任务进入 `reconcile-before-retry`，最终真实 UI 报告“没有任何 MCP 回执”。因此服务器发现和审批流程通过，但 Drone 宿主内的工具执行/回执闭环仍未通过，PR5 不标 PASS。
+真实会话证据（2026-10-22）：早期 `/Applications/Drone.app` 会话曾把工具调用记为 `started/unknown`，该历史失败证据保留用于说明问题边界，不作为通过依据。
+
+真实安装包回执证据（2026-10-23）：使用 `/tmp/DroneAcceptance.app` 的全新会话 `01a16783-a6a9-7298-97d9-998076b2e6ed`，先获批 `task_plan`，随后只调用一次 `paper2agent-remote_create_genomic_interval`。原始结构化结果为 `isError=false`，`details.server=paper2agent-remote`、`details.tool=create_genomic_interval`，消息为 `Genomic interval created: chr1:100000-100100`，并包含公开参考链接和服务端交付物。`chromosome`, `start`, `end`, `strand`, `name`, `out_prefix` 六项实际入参均与验收要求一致。调用发生在正式安装包中，未使用 fixture、loader 单独加载或 curl 结果。
+
+回归修复：任务运行时通过 `sessionManager` 的会话级桥接共享同一工作台账本，不再使用 process 全局账本；独立 event bus 与不同会话隔离测试已加入 `packages/backend/test/task-acceptance-registry.test.mjs`。相关构建、目标测试和 typecheck 通过，详见 `docs/pluginization/acceptance-1.md` 的第二轮补充。
 
 2026-10-22 外部连通性探测：按文档使用公开的 AlphaGenome Paper2Agent MCP 地址完成协议初始化和工具清单探测；公开端点可访问，但直接请求在未建立完整会话头时返回参数错误。该探测不能替代 Drone 真实会话证据。最终阻塞点是宿主运行时的 MCP 调用回执未返回，而不是把外部 curl 结果冒充成调用 PASS。
 
@@ -125,7 +131,7 @@
 
 - 本轮修复后：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run check:plugin-api -- --migration --lifecycle`、`npm run skills:check` 和 `npm run check:ui-skill-acceptance` 均通过。
 
-真实 Vault/正式安装包仍有一项待办：PR5 Paper2Agent 工具实际执行并取得回执。当前证据已覆盖安装、发现、task_plan 批准、实际调用发起和未知结果保护，但没有可核对的 MCP 回执，不能标记 PASS。PR2 页码引用点击、PR3 三类首页卡片和 PR4 五行矩阵沉淀已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
+PR5 的真实回执缺口已关闭。当前证据覆盖公共包安装、服务器发现、`task_plan` 批准、唯一原生工具调用、原始结构化回执和六项参数核对；PR2 页码引用点击、PR3 三类首页卡片和 PR4 五行矩阵沉淀已通过；临时 Vault 的真实雷达运行与去重证据已补充在 PR1 段落中。
 
 ## 2026-10-22 实机抽检补充
 
@@ -135,5 +141,5 @@
 - 新建会话首页在当前 Vault 没有活跃课题、今日新想法和新文献雷达条目时，仅显示原有“研究 / 知识库 / 接力”卡片；上下文卡片没有以空状态出现，T3 的无数据路径通过。
 - 重新打包后的当前 `packages/desktop/dist/mac-arm64/Drone.app` 在真实连接器页列出并启用了 `arXiv`、`Semantic Scholar`。标准 `npm run dist` 因本机 `cpu-features` 缺失 `buildcheck.gypi` 在原生重编译阶段失败，使用 `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --dir --config.npmRebuild=false` 生成了可启动的未签名目录包，源码 registry 因而得到真实 app 证据。
 - PDF 桥接修复后的最新目录包再次启动成功；真实连接器页仍显示 `arXiv`、`Semantic Scholar`，插件页显示 `@gyoungwe/pi-research` 内置且已启用。
-- 真实会话先后尝试 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”；随后使用 DeepSeek V4.1 Flash 成功完成简单回答、PDF 页码引用、文件预览、三类首页卡片和矩阵沉淀。Paper2Agent 实际调用仍被宿主审批门禁拦截，PR1 正式 Vault 雷达仍保持部分通过状态。
+- 真实会话先后尝试 `Gemini 3.8 Flash (Antigravity)` 和 `GPT-6.1 Sol`，均显示“模型请求失败：凭证无效”；随后使用 DeepSeek V4.1 Flash 成功完成简单回答、PDF 页码引用、文件预览、三类首页卡片和矩阵沉淀。Paper2Agent 实际调用曾被宿主审批门禁拦截；PR5 公共包回执和 PR1 新安装包雷达补验已在后续证据中通过。
 - `/Applications/Drone.app` 仍是较早构建；正向签名/安装包验收应在安装当前构建并恢复有效模型凭证后执行。

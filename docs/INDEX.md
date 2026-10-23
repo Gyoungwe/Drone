@@ -31,6 +31,8 @@ A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收
 插件化 v2 的 P1 迁移边界与 extensions 归属清单见 [pluginization/p1-inventory.md](pluginization/p1-inventory.md)；执行主计划见 [pluginization/v2-plan.md](pluginization/v2-plan.md)，本轮验收记录见 [pluginization/P1-evidence.md](pluginization/P1-evidence.md)。
 P2 知识源码与插件入口迁移、插件仓库全量门禁和 Git 历史验收见 [pluginization/P2-evidence.md](pluginization/P2-evidence.md)。
 插件平台 v3 的 T1–T7 执行计划见 [pluginization/v3-platform-plan.md](pluginization/v3-platform-plan.md)，插件清单和宿主合同见 `../drone-plugins/docs/PLUGIN-SPEC.md`，实现证据见 [pluginization/v3-evidence.md](pluginization/v3-evidence.md)。
+
+插件化与 OmicOS 计划缺口清理顺序见 [pluginization/gap-closure-plan.md](pluginization/gap-closure-plan.md)。
 OmicOS 文献雷达与阅读闭环的六个 PR 计划见 [omicos-platform-plan.md](omicos-platform-plan.md)，实现证据见 [pluginization/omicos-evidence.md](pluginization/omicos-evidence.md)，原始 handoff 见 [claude/drone-omicos-handoff.md](../claude/drone-omicos-handoff.md)。
 P3 宿主消费锁定的 `@gyoungwe/pi-knowledge`、本地 macOS DMG/ZIP 构建与资源验收见 [pluginization/P3-evidence.md](pluginization/P3-evidence.md)；P4 自动维护调度、IPC、UI 和插件测试见 [pluginization/P4-evidence.md](pluginization/P4-evidence.md)。
 P4/P5 外部验收记录见 [pluginization/acceptance-1.md](pluginization/acceptance-1.md)、[pluginization/acceptance-2.md](pluginization/acceptance-2.md) 与 [pluginization/acceptance-3.md](pluginization/acceptance-3.md)（`acceptance-3.md` 为最终复核）。
@@ -73,6 +75,9 @@ v0.33.5 插件门禁收口见 [插件门禁证据](releases/v0.33.5-plugin-gates
 首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
 
 2026-10-21 正式 npm 发布与官方 registry 干净消费者、Pi loader、公开插件宿主验收见 [v1.1.0 npm 发布证据](releases/v1.1.0-npm-packages.json)。
+2026-10-23 PR5 Paper2Agent 公共包干净安装与正式 Drone 安装包原生 MCP 回执见 [PR5 真实回执证据](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
+
+2026-10-23 PR1 文献雷达真实安装包运行、入库和同日稳定键去重见 [PR1 雷达验收证据](releases/v1.1-pr1-radar-acceptance-2026-10-23.json)。
 
 v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 

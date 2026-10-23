@@ -1,0 +1,75 @@
+{
+	"schema": 1,
+	"kind": "pr5-paper2agent-real-receipt",
+	"generatedAt": "2026-10-23T14:51:06+08:00",
+	"sourceRepositories": {
+		"host": {
+			"repository": "Gyoungwe/Drone",
+			"branch": "codex/pr5-public-receipt",
+			"commit": "049501f9"
+		},
+		"plugins": {
+			"repository": "Gyoungwe/drone-plugins",
+			"branch": "codex/pr5-public-receipt",
+			"commit": "b6bc98d"
+		}
+	},
+	"registry": "https://registry.npmjs.org",
+	"packages": [
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.1.8",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-core/-/pi-core-0.1.8.tgz",
+			"integrity": "sha512-k87lVTE6g5RhBZqTdrEzurj+1LYt1J6MKGM4xQbnzM8dB2MvRldKsYUpcMxdrTM4y+t/OVTMZWjjxZcdOsAH/g==",
+			"shasum": "4b88ba0d3618c666db94f6b6e15dd91264ccf59d"
+		},
+		{
+			"name": "@gyoungwe/research-suite",
+			"version": "0.1.8",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/research-suite/-/research-suite-0.1.8.tgz",
+			"integrity": "sha512-YOUe06OsJAWfMZqMrhRAPAcoRgQ1biCoAEHfegQqMSF80Fdv2olOsXw8i0koWs3FH/QFgN1xjJwBmabqbwV6ag==",
+			"shasum": "50aa222851f552f21b7ea835562fdf908c3ea7bd"
+		}
+	],
+	"cleanConsumerInstall": {
+		"status": "PASS",
+		"command": "npm install --ignore-scripts --registry=https://registry.npmjs.org @gyoungwe/research-suite@0.1.8",
+		"resolvedResearchSuite": "0.1.8",
+		"resolvedNestedPiCore": "0.1.8",
+		"sessionScopedBridgeMarker": "PASS"
+	},
+	"realInstalledPackageAcceptance": {
+		"status": "PASS",
+		"app": "/tmp/DroneAcceptance.app",
+		"appAsarSha256": "a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec",
+		"sessionId": "01a16783-a6a9-7298-97d9-998076b2e6ed",
+		"taskPlanAuthorized": true,
+		"toolCallCount": 1,
+		"tool": "paper2agent-remote_create_genomic_interval",
+		"server": "paper2agent-remote",
+		"receipt": {
+			"isError": false,
+			"message": "Genomic interval created: chr1:100000-100100",
+			"reference": "https://github.com/google-deepmind/alphagenome/tree/main/colabs/essential_commands.ipynb",
+			"artifactCount": 1
+		},
+		"arguments": {
+			"chromosome": "chr1",
+			"start": 100000,
+			"end": 100100,
+			"strand": "+",
+			"name": "drone-acceptance-20261023-08",
+			"out_prefix": null
+		},
+		"forbiddenAdditionalTools": []
+	},
+	"gates": {
+		"taskAcceptanceRegression": "PASS (14/14)",
+		"tasksTypecheck": "PASS",
+		"backendTypecheck": "PASS",
+		"desktopBuild": "PASS",
+		"pluginRepositoryCheck": "PASS",
+		"gitDiffCheck": "PASS"
+	},
+	"notes": "The receipt is from a real native MCP call in the packaged Drone app. Session bodies and private Vault state are intentionally not stored in the repository. Standard npm run dist remains blocked on the host's cpu-features/buildcheck.gypi rebuild; the acceptance app was produced with electron-builder --config.npmRebuild=false."
+}
