@@ -173,6 +173,8 @@
 
 > Older execution entries are archived in [architecture-v2-tasks-log-2026-10-19.md](archive/architecture-v2-tasks-log-2026-10-19.md) and [architecture-v2-tasks-log-2026-10-20.md](archive/architecture-v2-tasks-log-2026-10-20.md).
 
+> 执行日志中的“未完成”“尚待迁移”和兼容层描述是对应日期的历史快照，不代表当前任务状态；当前状态以本文上方的勾选项和最新的 2026-10-18 A5-1～A5-4 最终收口记录为准。
+
 | 2026-10-01 | 全量验收（A3/A5/A6/A7 增量后） | `npm test` 全部通过：backend 1,372 passed + 13 skipped、desktop 556、extensions 16、knowledge 40、research 31、shared 130、tasks 31；`npm run typecheck`、`.pi` checkJs、build、upgrade fixtures、plugin API、extensions strict、架构检查（141 baseline、0 fixed）均通过 | 仍保留 5 个 `.pi/extensions` legacy 适配入口；A5-1/2/3 的运行时 worker、source archive 与剩余扩展仍按兼容层策略逐步迁移 |
 | 2026-10-01 | A5-2 增量 | `@drone/tasks` 新增 `authorization-policy` 纯策略入口：动作枚举/待决动作判定、授权请求去重键、ask_user 标题与授权卡正文投影；包测试 37/37、包 typecheck 与 Biome 检查通过；`.pi/lib/tasks/ask-authorization.mjs` 保持 CLI/扩展兼容实现 | backend、desktop 与组合根未改；授权 journal、binding 校验和 UI 仍由宿主运行时负责，A5-2 总项保持未完成 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge/semantic-provider` 承载语义 provider 配置验证、请求边界、凭据注入与 bounded vector 响应校验；backend `knowledge-semantic` 10/10 改用包入口，knowledge typecheck/40 tests 通过 | `.pi/lib/knowledge/semantic-provider.mjs` 保留 CLI 自包含适配；service/worker 与 extension runtime 仍待整体迁移

@@ -88,7 +88,7 @@ npm run check:extensions -- --strict
    - 运行明细只显示 kind 和状态，不显示笔记标题；
    - 孤立 / 未被引用类候选的真实形态（目前是新建 `Wiki/<标题>.md` 链接页）还没有集成测试覆盖；
    - `source-changed` 需要的 `sourceText` 仍然没有任何代码提供，提示词会退回使用笔记正文。
-4. **计划第 8 节的后续项不变：** `@gyoungwe/plugin-api@1.1.0` 尚未发布到 npm（目前用锁定哈希的 vendor tarball）；方案 (b)（知识页做成 UI 插件）与 research 包的迁移不在本计划范围内。
+4. **计划第 8 节在本轮验收时的历史状态：** `@gyoungwe/plugin-api@1.1.0` 尚未发布到 npm（当时使用锁定哈希的 vendor tarball）；该状态已由后续正式发布和 C0–C3 证据取代。方案 (b)（知识页做成 UI 插件）与 research 包的迁移不在本计划范围内。
 
 ## 合并建议
 

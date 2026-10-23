@@ -8,7 +8,7 @@
 
 ### C0 当前状态
 
-已完成插件仓库优先合并、宿主仓库同步后合并、锁文件更新和发布证据 head 更新。合并后的门禁结果见本文末尾的执行记录；C1–C4 仍待执行。
+已完成插件仓库优先合并、宿主仓库同步后合并、锁文件更新和发布证据 head 更新；C1、C2、C3、C4 均已完成，审计后的门禁与合并结果见本文末尾执行记录。
 
 ### 真实未完成项
 
@@ -21,9 +21,9 @@
 
 ### 仅文档或证据同步问题
 
-- v2 的 P1/P2/P4 证据保留了历史失败、未发布或 N=2 待执行描述，但没有明确标注已被后续验收取代。
-- `final-pluginization-plan.md`、`docs/INDEX.md` 和旧发布证据仍引用旧版本、旧 `main` 提交和“plugin-api 未发布”的历史状态。
-- `drone-plugins/main` 的 workspace 版本与 npm 当前版本不同，必须明确“源码 main 状态”和“已发布 registry 状态”，不能混写。
+- v2 的 P1/P2/P4 与 acceptance 证据已明确标注历史失败、未发布或 N=2 待执行描述；旧执行日志保留原始快照，不再代表当前状态。
+- `final-pluginization-plan.md`、`docs/INDEX.md` 和发布证据已统一当前版本、两个 `main` 提交和公开包状态；仍保留的 `NOT_RUN`/`BLOCKED` 只对应范围外或环境门槛。
+- `drone-plugins/main` 的 workspace 版本与 npm registry 版本继续分开记录，证据明确区分“源码 main 状态”和“已发布 registry 状态”。
 
 ### 有意保留的范围外项目
 
@@ -68,7 +68,7 @@ C2 检查确认 `@gyoungwe/pi-analysis` host adapter 仍被生产源码需要：
 1. 更新 `v3-evidence.md` 的 OmicOS 状态、基线 commit 和当前两个仓库 head。
 2. 更新 v2 P1/P2/P4 证据中的历史状态，统一使用“历史记录 / 已被后续验收取代”的标记。
 3. 更新 `final-pluginization-plan.md` 和 `docs/INDEX.md` 中的 npm 版本、插件仓库 head、公开包状态。
-4. 在 `omicos-platform-plan.md` 的“当前未完成项”中只保留 T3、T4 和 PR6 决策，并链接本计划。
+4. 在 `omicos-platform-plan.md` 的“当前状态与未完成项”中只保留 T3、T4 和 PR6 决策，并链接本计划。
 5. 对所有状态为 PASS 的条目保留真实安装包或真实会话证据；fixture、loader 单独加载和公开 HTTP 探测不能升级为最终 PASS。
 
 ### C4：完成最终清理审计
@@ -84,9 +84,10 @@ npm run check:plugin-api -- --migration --lifecycle
 
 审计结果应只留下：
 
-- 已真实执行但尚未关闭的 T3 或 T4；
-- 用户明确选择的 PR6 后续决策；
-- 计划外或暂缓项目的明确 `OUT_OF_SCOPE` / `NOT_RUN` / `BLOCKED` 标记。
+- T3 已关闭；T4 仅保留已登记的 v3.1 `analysis host registry migration` 删除条件；
+- 用户明确选择前仍待决策的 PR6 后端集成结论；
+- 计划外或暂缓项目的明确 `OUT_OF_SCOPE` / `NOT_RUN` / `BLOCKED` 标记；
+- 其他旧执行日志中的未完成措辞必须有“历史记录”上下文，不能被读作当前缺口。
 
 ## 完成标准
 
@@ -105,4 +106,5 @@ npm run check:plugin-api -- --migration --lifecycle
 | 2026-10-23 | C1 | 合并后的 `0.33.4` unsigned macOS arm64 安装包 `app.asar` SHA-256=`a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec`；非 `@gyoungwe` `drone-t3-ui-fixture@0.0.1` 通过 npm tarball（SHA-256=`4071a41f0d3b7bf7b48aa9ead844f42c7a12374134db4957f63cfe47d3a1ff92`）安装到 `<agentDir>/npm/node_modules`。真实 UI 回读 PASS：`T3 Knowledge`、`T3 Home`、`T3 Skills`；停用后三者均消失，默认知识库页签保留且首页/技能页无空壳。详见 `v3-evidence.md` 与 release evidence JSON。 |
 | 2026-10-23 | C2 | `pi-analysis` host adapter 仍由宿主分析编排和 capability discovery 生产路径需要；未强行删除。`check-host-independence` 将例外收窄至三个 backend facade 文件，并新增越界 import 反例；`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch`、analysis adapter/capability discovery 回归通过。已登记 v3.1 `analysis host registry migration`，删除条件和影响范围见 `v3-platform-plan.md` 与 `v3-evidence.md`。 |
 | 2026-10-23 | C3 | 统一 `v3-evidence.md`、`omicos-platform-plan.md`、v2 P1/P2/P4 与 acceptance 历史标记、`final-pluginization-plan.md`、`docs/INDEX.md` 的当前 head/版本/公开包状态；当前基线为 Drone `main=4049057c456d1ee3fe252bf0d31c83280cad4ab9`、drone-plugins `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`，公开包版本以 v1.1.0 registry 证据为准。 |
+| 2026-10-23 | C4 | 清理审计在 `codex/c4-final-cleanup-audit` 完成：`git diff --check`、插件化范围状态扫描、主机 lint/typecheck/test/build/check:arch、`check:extensions --strict`、`check:remaining-gates` 和 `check:plugin-api -- --migration --lifecycle` 全部通过；主机测试为 1903 passed、13 skipped，架构与宿主独立性均为 0 baseline finding；`drone-plugins` `npm run check` 全部通过（6 manifests、各包 typecheck/build/smoke/install/pack check）。审计只保留 PR6 后端选择、v3.1 T4 删除条件和明确的范围外 `NOT_RUN`/`BLOCKED`；历史日志均已加历史上下文。该提交随后合入 Drone `main` 并推送。 |
 
