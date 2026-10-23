@@ -1,7 +1,7 @@
 // Isolated real-Electron component/IPC smoke. Never opens the user's Vault or model credentials.
 
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import tailwind from "@tailwindcss/vite";
@@ -13,6 +13,11 @@ import { build as viteBuild } from "vite";
 const repo = resolve("."),
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-ui-smoke-")));
 await mkdir(join(root, "electron-profile"));
+// External Node packages must resolve from the repository while the Electron
+// fixture stays isolated from the user's profile.  Keeping these packages
+// external also preserves native/conditional exports (notably child_process)
+// instead of asking esbuild to synthesize a browser-style dynamic require.
+await symlink(join(repo, "node_modules"), join(root, "node_modules"), "junction");
 console.log("Isolated fixture:", root);
 await writeFile(
 	join(root, "entry.tsx"),
@@ -59,7 +64,7 @@ await bundle({
 	bundle: true,
 	platform: "node",
 	format: "esm",
-	external: ["electron"],
+	external: ["electron", "@gyoungwe/*", "@earendil-works/*", "cross-spawn", "cpu-features"],
 	logLevel: "warning",
 });
 const env = { ...process.env, DRONE_UI_FIXTURE: root, DRONE_UI_REPO: repo };

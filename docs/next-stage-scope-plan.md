@@ -87,7 +87,7 @@ PR6 评估环境 + 许可/资源预算
 | --- | --- | --- |
 | 权限执行与沙箱 | **PARTIAL**：已加入 host-mediated 权限拒绝、授权委托和脱敏审计；进程级 Node 沙箱仍未实现 | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
 | plugin-api 发布治理 | **PASS（治理）**：维持公共 `@gyoungwe/plugin-api@1.1.0`，补充只增不删、干净消费者和回滚规则；本轮未发布新版本 | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
-| Electron GUI 验收 | **IN_PROGRESS**：静态资源、UI 插件生命周期、剩余门禁已通过；完整交互式脚本正在修复 fixture 阻塞 | 见后续 [`next-stage-gui-acceptance-2026-10-24.json`](releases/next-stage-gui-acceptance-2026-10-24.json) |
+| Electron GUI 验收 | **PARTIAL**：report、workflow-catalog、task-delivery 三个真实 Electron 脚本通过；knowledge 脚本已进入真实页面但 timeline fixture 仍抛 renderer 侧执行错误 | [`next-stage-gui-acceptance-2026-10-24.json`](releases/next-stage-gui-acceptance-2026-10-24.json) |
 | 官方第三方扩展 | **PARTIAL**：已加入 registry、完整性、manifest、host 和来源门禁；尚未安装真实第三方包 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | 外部用户 MCP | **PARTIAL**：已加入项目批准、transport/URL/origin 诊断和隔离 key；真实外部服务仍需用户环境 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | research / pi-research / Zotero 迁移 | **BLOCKED_BY_BOUNDARY**：当前源码仍依赖宿主 research-loop、Zotero 和 host ports，未强行删除 facade | [`research-migration-status.md`](research-migration-status.md) |

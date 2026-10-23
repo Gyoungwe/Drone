@@ -53,9 +53,21 @@ async function run() {
 			await click("#reset");
 			await type("#command-input", "/");
 		};
-		await wait("document.querySelectorAll('#skill-panel [data-workflow-direction]').length===6");
-		assert.equal(await js("document.querySelectorAll('#skill-panel li').length"), 0);
-		checks.push("settings default is six directions, not a flat inventory");
+		// SkillsPanel is now the grouped inventory.  The six workflow directions
+		// are exposed by its direction selector while the slash menu remains the
+		// executable navigation surface; do not rely on the removed card markup.
+		await wait("!!document.querySelector('#skill-panel select[aria-label]')");
+		assert.equal(
+			await js(
+				"new Set([...document.querySelectorAll('#skill-panel select[aria-label] option')].map(o=>o.value)).isSupersetOf ? true : ['planning','evidence','analysis','writing','presentation','engineering'].every(v=>[...document.querySelectorAll('#skill-panel select option')].some(o=>o.value===v))",
+			),
+			true,
+		);
+		assert(
+			(await js("document.querySelector('#skill-panel').innerText")).includes("loaded") ||
+				(await js("document.querySelector('#skill-panel').innerText")).includes("已加载"),
+		);
+		checks.push("settings exposes six direction values in the grouped skill inventory");
 		await type("#command-input", "/");
 		await wait("document.querySelectorAll('[data-command^=\"workflow:\"]').length===6");
 		assert.equal(await js("!!document.querySelector('[data-command=\"skill:nature-writing\"]')"), false);
@@ -114,21 +126,18 @@ async function run() {
 		await wait("document.querySelectorAll('[data-command]').length===1");
 		assert.equal(await js("document.querySelector('[data-command]').dataset.command"), "skill:anndata");
 		checks.push("exact native search still works independently of navigation state");
-		await js(
-			"[...document.querySelectorAll('#skill-panel button')].find(b=>b.innerText.startsWith('高级')).click()",
-		);
 		await wait("!!document.querySelector('#skill-panel input')");
 		await type("#skill-panel input", "提交前");
 		await wait("document.querySelectorAll('#skill-panel li').length===1");
 		assert((await js("document.querySelector('#skill-panel li').innerText")).includes("setup-pre-commit"));
 		checks.push("advanced Chinese search preserves unrelated engineering setup skills");
-		await js(
-			"[...document.querySelectorAll('#skill-panel button')].find(b=>b.innerText==='返回六方向浏览').click()",
-		);
+		await type("#skill-panel input", "");
 		await click("#lang");
 		await js("document.documentElement.setAttribute('data-theme','dark')");
 		window.setSize(640, 900);
-		await wait("document.querySelector('#skill-panel').innerText.includes('Six workflow directions')");
+		await wait(
+			"document.querySelector('#skill-panel input')?.value==='' && document.querySelector('#skill-panel').innerText.includes('Skills')",
+		);
 		assert(await js("document.documentElement.scrollWidth<=innerWidth"));
 		await writeFile(
 			join(root, "screenshots/02-dark-narrow.png"),

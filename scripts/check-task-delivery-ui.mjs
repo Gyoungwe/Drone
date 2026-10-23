@@ -1,7 +1,7 @@
 // Isolated real-Electron component/IPC smoke. Never opens the user's Vault or model credentials.
 
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import tailwind from "@tailwindcss/vite";
@@ -13,6 +13,11 @@ import { build as viteBuild } from "vite";
 const repo = resolve("."),
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-task-delivery-smoke-")));
 await mkdir(join(root, "electron-profile"));
+// Keep package resolution inside the isolated fixture.  The real host's
+// backend pulls ssh2 -> cpu-features, whose optional native binary is not part
+// of this UI-only acceptance surface; the bundle below aliases that boundary
+// to a deterministic fixture instead of loading a user/native module.
+await symlink(join(repo, "node_modules"), join(root, "node_modules"), "junction");
 console.log("Isolated fixture:", root);
 await writeFile(
 	join(root, "entry.tsx"),
@@ -60,6 +65,35 @@ await bundle({
 	platform: "node",
 	format: "esm",
 	plugins: [
+		{
+			name: "isolate-native-backend-dependencies",
+			setup(build) {
+				build.onResolve({ filter: /^@drone\/backend$/ }, () => ({
+					path: "fixture-backend",
+					namespace: "fixture-backend",
+				}));
+				build.onLoad({ filter: /.*/, namespace: "fixture-backend" }, () => ({
+					contents: `
+						export const setReplyLanguage=()=>{};
+						export const createLogger=()=>({debug(){},info(){},warn(){},error(){}});
+						export class JsonStore {
+							constructor(options){this.defaultValue=options.defaultValue;this.value=this.defaultValue();}
+							async read(){return structuredClone(this.value);}
+							async update(mutator){const next=structuredClone(this.value);await mutator(next);this.value=next;return structuredClone(next);}
+						}
+					`,
+					loader: "js",
+				}));
+				build.onResolve({ filter: /^cpu-features$/ }, () => ({
+					path: "fixture-cpu-features",
+					namespace: "fixture-native",
+				}));
+				build.onLoad({ filter: /.*/, namespace: "fixture-native" }, () => ({
+					contents: "module.exports=()=>({});",
+					loader: "js",
+				}));
+			},
+		},
 		{
 			name: "isolate-updater",
 			setup(build) {

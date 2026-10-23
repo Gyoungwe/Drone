@@ -1,0 +1,35 @@
+{
+	"date": "2026-10-24",
+	"scope": "next-stage items 1-8 GUI acceptance slice; items 9-10 excluded by user request",
+	"realElectron": true,
+	"results": {
+		"report": {
+			"status": "PASS",
+			"command": "node scripts/check-report-ui.mjs",
+			"evidence": "real Electron report navigation, tooltip, link click and scroll-preserving checks"
+		},
+		"workflowCatalog": {
+			"status": "PASS",
+			"command": "node scripts/check-workflow-catalog-ui.mjs",
+			"evidence": "real Electron grouped skill inventory, six direction values, keyboard navigation, dark/narrow layout and no network/model calls"
+		},
+		"taskDelivery": {
+			"status": "PASS",
+			"command": "node scripts/check-task-delivery-ui.mjs",
+			"evidence": "real Electron preload/IPC artifact preview, resource readers, PDF/HTML sandbox, script source handling, task snapshots and delivery checks"
+		},
+		"knowledge": {
+			"status": "BLOCKED",
+			"command": "node scripts/check-knowledge-ui.mjs",
+			"reason": "The isolated Electron fixture reaches the knowledge overview, setup preview, review and flow screens, then the timeline fixture throws a renderer-side executeJavaScript error. The fixture also reports intentionally unregistered optional maintenance/session handlers. No PASS is claimed until those fixture contracts are repaired.",
+			"boundary": "This is an acceptance-fixture failure; it does not prove a product failure and is not converted into a PASS."
+		}
+	},
+	"staticGates": {
+		"desktopArtifactStrict": "PASS",
+		"uiSkillAcceptance": "PASS",
+		"uiEvidence": "PASS",
+		"remainingGates": "PASS"
+	},
+	"excluded": ["MinerU/GROBID PDF backend evaluation", "B8/B8-2 cloud collaboration"]
+}

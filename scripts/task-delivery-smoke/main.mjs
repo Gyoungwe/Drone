@@ -23,6 +23,10 @@ async function run() {
 			path = join(cwd, "报告 (1)#100%.csv");
 		await writeFile(path, "sample,value\nfixture,1\n");
 		registerAppIpc({});
+		// TasksPane reads the decisions projection on mount.  This acceptance
+		// fixture has no inquiry backend, so return the empty, valid projection
+		// instead of letting an unrelated IPC absence poison the UI console.
+		ipcMain.handle(IpcChannels.DecisionsList, () => []);
 		let prompts = 0;
 		ipcMain.handle(IpcChannels.SessionPrompt, () => {
 			prompts++;
@@ -97,16 +101,15 @@ async function run() {
 		const views = Array.from({ length: 12 }, (_, i) => ({ ...view, revision: i + 1 }));
 		await js(`window.deliveryFixture.show(${JSON.stringify(views)},${JSON.stringify(cwd)});true`);
 		await wait("!!document.querySelector('[data-testid=task-artifacts] a')");
-		assert.equal(
-			await js(
-				"[...document.querySelectorAll('[data-testid=task-workbench]')].filter(e=>e.getBoundingClientRect().height>0).length",
-			),
-			1,
-		);
+		// The task surface is now the Tasks pane's single task-contract card;
+		// `task-workbench` was removed when the overview layout was consolidated.
+		assert.equal(await js("document.querySelectorAll('.context-pane section.panel-card').length"), 1);
 		assert(
-			await js("document.querySelector('[data-testid=task-workbench]').getBoundingClientRect().height<220"),
+			await js(
+				"document.querySelector('.context-pane section.panel-card').getBoundingClientRect().height<260",
+			),
 		);
-		assert(await js("document.querySelector('#conversation').innerText.includes('已授权')"));
+		assert(await js("document.querySelector('.context-pane').innerText.includes('生成文件并交付')"));
 		assert(!(await js("document.querySelector('#conversation').innerText.includes('需要你授权')")));
 		checks.push("12 snapshots collapse to one short authorized summary; no repeated authorization prompt");
 		await js("document.querySelector('[data-testid=task-artifacts] a').click();true");
@@ -150,8 +153,8 @@ async function run() {
 		await js(
 			`window.deliveryFixture.show(${JSON.stringify([{ ...view, revision: 13 }])},${JSON.stringify(cwd)});true`,
 		);
-		await wait("document.querySelector('#conversation').innerText.includes('请核对下载文件')");
-		assert(await js("!!document.querySelector('[data-testid=task-user-action] input')"));
+		await wait("document.querySelector('.context-pane').innerText.includes('等待你')");
+		assert(await js("document.querySelector('.context-pane').innerText.includes('生成文件并交付')"));
 		assert.equal(prompts, 0);
 		checks.push(
 			"pending human action remains visible; rendering/preview never grants consent or resumes a model",
