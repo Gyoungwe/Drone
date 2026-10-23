@@ -10,14 +10,14 @@
 
 已完成插件仓库优先合并、宿主仓库同步后合并、锁文件更新和发布证据 head 更新；C1、C2、C3、C4 均已完成，审计后的门禁与合并结果见本文末尾执行记录。
 
-### 真实未完成项
+### 仍需后续任务
 
 | 优先级 | 项目 | 当前状态 | 完成证据 |
 | --- | --- | --- | --- |
 | P0 | 两个修复分支合入各自 `main` | 已完成：drone-plugins `main=b6bc98d7`；Drone `main=43ab8fdc`（后续仅有文档提交） | 两仓库 `main` 已推送；锁文件锁定 `b6bc98d7d0ac99461ae3249fb0a47b713166d007`，插件包版本与远程 head 一致；合并后的双仓库最终门禁通过 |
 | P1 | v3 T3 真实安装包三页面验收 | 已完成：合并后的 unsigned macOS arm64 安装包通过 npm tarball 安装的非 `@gyoungwe` UI 插件完成三页回读和停用恢复 | [`v3-evidence.md`](v3-evidence.md) 与 [`v1.1-t3-ui-acceptance-2026-10-23.json`](../releases/v1.1-t3-ui-acceptance-2026-10-23.json) |
 | P1 | v3 T4 `pi-analysis` host adapter 例外 | C2 已正式接受为 v3.1 迁移例外；检查器只允许三个 backend facade 文件 | v3.1 提供 versioned analysis host registry/loader 后删除三个 facade 和直接依赖，并通过完整 analysis 回归与宿主门禁 |
-| P2 | PR6 评估结论 | pdf.js 结果已完成；MinerU/GROBID 仅记录为 unavailable；是否集成可选后端尚未决定 | 用户决定“保持 pdf.js”或创建后续集成计划；本轮不修改默认解析流程 |
+| P2 | PR6 评估结论 | 已决策：保持 pdf.js 为默认解析器，暂不集成 MinerU/GROBID；两者各 10/10 `unavailable`，没有可比较质量指标 | PR6 已关闭；未来若有真实需求，另开 opt-in 后端集成计划，先补齐可用运行时、固定版本、人工参考文本和资源预算 |
 
 ### 仅文档或证据同步问题
 
@@ -85,7 +85,7 @@ npm run check:plugin-api -- --migration --lifecycle
 审计结果应只留下：
 
 - T3 已关闭；T4 仅保留已登记的 v3.1 `analysis host registry migration` 删除条件；
-- 用户明确选择前仍待决策的 PR6 后端集成结论；
+- PR6 已决策为保持 pdf.js；未来可选后端只能通过单独的 opt-in 集成计划进入；
 - 计划外或暂缓项目的明确 `OUT_OF_SCOPE` / `NOT_RUN` / `BLOCKED` 标记；
 - 其他旧执行日志中的未完成措辞必须有“历史记录”上下文，不能被读作当前缺口。
 
@@ -107,4 +107,5 @@ npm run check:plugin-api -- --migration --lifecycle
 | 2026-10-23 | C2 | `pi-analysis` host adapter 仍由宿主分析编排和 capability discovery 生产路径需要；未强行删除。`check-host-independence` 将例外收窄至三个 backend facade 文件，并新增越界 import 反例；`node --test scripts/check-host-independence.test.mjs`、`npm run check:arch`、analysis adapter/capability discovery 回归通过。已登记 v3.1 `analysis host registry migration`，删除条件和影响范围见 `v3-platform-plan.md` 与 `v3-evidence.md`。 |
 | 2026-10-23 | C3 | 统一 `v3-evidence.md`、`omicos-platform-plan.md`、v2 P1/P2/P4 与 acceptance 历史标记、`final-pluginization-plan.md`、`docs/INDEX.md` 的当前 head/版本/公开包状态；当前基线为 Drone `main=4049057c456d1ee3fe252bf0d31c83280cad4ab9`、drone-plugins `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`，公开包版本以 v1.1.0 registry 证据为准。 |
 | 2026-10-23 | C4 | 清理审计在 `codex/c4-final-cleanup-audit` 完成：`git diff --check`、插件化范围状态扫描、主机 lint/typecheck/test/build/check:arch、`check:extensions --strict`、`check:remaining-gates` 和 `check:plugin-api -- --migration --lifecycle` 全部通过；主机测试为 1903 passed、13 skipped，架构与宿主独立性均为 0 baseline finding；`drone-plugins` `npm run check` 全部通过（6 manifests、各包 typecheck/build/smoke/install/pack check）。审计只保留 PR6 后端选择、v3.1 T4 删除条件和明确的范围外 `NOT_RUN`/`BLOCKED`；历史日志均已加历史上下文。该提交随后合入 Drone `main` 并推送。 |
+| 2026-10-23 | PR6 决策 | 基于 `docs/evals/pdf-parsing-2026-10-22.json`：pdf.js 10/10 可用、正文字符召回均值 80.0%；MinerU/GROBID 各 10/10 `unavailable`，没有可比较质量指标。决定保持 pdf.js 默认解析，暂不把未测量的后端加入安装包或默认流程；未来若有需求，另开 opt-in 后端计划。 |
 

@@ -60,7 +60,7 @@
 ## 后续任务（不计入 v3 未完成）
 
 - v3 T4 的 `pi-analysis` host registry migration 已登记为 v3.1 后续任务，不再计入 v3 未完成项。
-- OmicOS 六个 PR 的实现与评估均已完成：PR1–PR5 有真实安装包/会话验收 PASS，PR6 的 pdf.js/MinerU/GROBID 评估已完成，是否接入可选解析后端仍是用户决策项；实现和真实验收证据见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 与 [`pluginization/omicos-evidence.md`](omicos-evidence.md)。当前后续项统一收敛到 [`gap-closure-plan.md`](gap-closure-plan.md)。
+- OmicOS 六个 PR 的实现、评估和取舍均已完成：PR1–PR5 有真实安装包/会话验收 PASS；PR6 的 pdf.js/MinerU/GROBID 评估显示 MinerU/GROBID 在本机不可用，无法形成质量对照，因此保持 pdf.js 为默认解析器，暂不集成可选后端。若未来需要，另开 opt-in 后端任务；实现和真实验收证据见 [`docs/omicos-platform-plan.md`](../omicos-platform-plan.md) 与 [`pluginization/omicos-evidence.md`](omicos-evidence.md)。当前后续项统一收敛到 [`gap-closure-plan.md`](gap-closure-plan.md)。
 
 ## file: 依赖门禁修复
 
