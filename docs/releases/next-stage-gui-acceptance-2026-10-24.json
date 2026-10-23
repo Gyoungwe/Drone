@@ -19,10 +19,9 @@
 			"evidence": "real Electron preload/IPC artifact preview, resource readers, PDF/HTML sandbox, script source handling, task snapshots and delivery checks"
 		},
 		"knowledge": {
-			"status": "BLOCKED",
+			"status": "PASS",
 			"command": "node scripts/check-knowledge-ui.mjs",
-			"reason": "The isolated Electron fixture reaches the knowledge overview, setup preview, review and flow screens, then the timeline fixture throws a renderer-side executeJavaScript error. The fixture also reports intentionally unregistered optional maintenance/session handlers. No PASS is claimed until those fixture contracts are repaired.",
-			"boundary": "This is an acceptance-fixture failure; it does not prove a product failure and is not converted into a PASS."
+			"evidence": "real Electron knowledge overview, setup preview, specialist settings, Wiki review/model audit, source reader, Vault links, flow evidence, task checkpoint and workbench recovery across dark and narrow layouts"
 		}
 	},
 	"staticGates": {

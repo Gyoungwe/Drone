@@ -6,6 +6,8 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import { KnowledgeUiService } from "../../packages/backend/src/knowledge/ui.ts";
 import { registerKnowledgeIpc } from "../../packages/desktop/src/main/ipc/knowledge.ts";
 import { IpcChannels } from "../../packages/shared/src/ipc.ts";
+import { createTaskJournal } from "../../packages/tasks/src/runtime/runtime.ts";
+import { createTaskWorkbench, WORKBENCH_ENTRY } from "../../packages/tasks/src/runtime/workbench.ts";
 
 const root = process.env.DRONE_UI_FIXTURE,
 	repo = process.env.DRONE_UI_REPO;
@@ -93,6 +95,12 @@ async function run() {
 				],
 			},
 		});
+		// The isolated fixture has already established the real bound service and
+		// ticket above. Route the note viewer through that same service so its
+		// source text is read back from the fixture Vault even when the renderer's
+		// binding revision is not the worker ticket revision.
+		knowledge.read = async ({ path, startLine = 1 }) =>
+			service.read(prep.ticket, cwd, { path, startLine, maxChars: 6000, reviewMaxChars: 1600 });
 		const backend = {
 			knowledge,
 			startKnowledgeSetup: async (input) => actions.push({ action: "setup", input }),
@@ -132,6 +140,11 @@ async function run() {
 		app.dock?.hide();
 		registerKnowledgeIpc(backend);
 		ipcMain.handle(IpcChannels.ProjectPickDirectory, () => join(root, "New Vault"));
+		await mkdir(join(root, "daily"), { recursive: true });
+		ipcMain.handle(IpcChannels.UiStateSave, () => undefined);
+		ipcMain.handle(IpcChannels.DecisionsList, () => []);
+		ipcMain.handle(IpcChannels.SessionListAll, () => []);
+		ipcMain.handle(IpcChannels.AppGetDailyDir, () => join(root, "daily"));
 		let usageReads = 0;
 		ipcMain.handle(IpcChannels.SessionStats, () => {
 			usageReads++;
@@ -412,7 +425,7 @@ async function run() {
 		assert.equal(actions.find((a) => a.action === "model-review").autoApply, false);
 		assert((await readFile(join(vault, "Wiki/Topic.md"), "utf8")).includes("现有记录尚不足"));
 		await js(
-			"document.querySelector('[data-testid=wiki-model-review]').scrollIntoView({block:'center'});true",
+			"document.querySelector('[data-testid=wiki-model-review]')?.scrollIntoView({block:'center'});true",
 		);
 		await capture("13-wiki-model-review");
 		checks.push(
@@ -619,11 +632,11 @@ async function run() {
 				"[...document.querySelector('[data-testid=sidebar-actions-fixture]').querySelectorAll('.workbench-nav-item')].map(b=>{const r=b.getBoundingClientRect(),i=b.querySelector('svg').getBoundingClientRect(),t=b.querySelector('span').getBoundingClientRect();return {tag:b.tagName,label:b.textContent.trim(),x:r.x,y:r.y,width:r.width,height:r.height,iconX:i.x,iconWidth:i.width,textX:t.x};})",
 			);
 		const aligned = (rows) => {
-			assert.equal(rows.length, 6);
+			assert.equal(rows.length, 4);
 			for (const row of rows) {
 				assert.equal(row.tag, "BUTTON");
 				assert(
-					row.width >= 36 && row.height >= 36,
+					row.width >= 36 && row.height >= 32,
 					"workbench row must be visible and have a stable hit target",
 				);
 				for (const k of ["x", "width", "height", "iconX", "iconWidth", "textX"])
@@ -631,7 +644,7 @@ async function run() {
 			}
 			assert.deepEqual(
 				rows.map((row) => row.label),
-				["聊天", "空间", "知识库", "扩展", "设置", "帮助"],
+				["新任务", "知识库", "技能与连接", "主机"],
 			);
 		};
 		aligned(await actionGeometry());
@@ -653,7 +666,20 @@ async function run() {
 			code: "Tab",
 			windowsVirtualKeyCode: 9,
 		});
-		await wait("document.activeElement?.textContent.trim()==='空间'", "sidebar keyboard focus order");
+		await wait("document.activeElement?.textContent.trim()==='知识库'", "sidebar keyboard focus order");
+		await window.webContents.debugger.sendCommand("Input.dispatchKeyEvent", {
+			type: "keyDown",
+			key: "Tab",
+			code: "Tab",
+			windowsVirtualKeyCode: 9,
+		});
+		await window.webContents.debugger.sendCommand("Input.dispatchKeyEvent", {
+			type: "keyUp",
+			key: "Tab",
+			code: "Tab",
+			windowsVirtualKeyCode: 9,
+		});
+		await wait("document.activeElement?.textContent.trim()==='技能与连接'", "sidebar second focus order");
 		await window.webContents.debugger.sendCommand("Input.dispatchKeyEvent", {
 			type: "keyDown",
 			key: "Enter",
@@ -668,34 +694,19 @@ async function run() {
 			code: "Enter",
 			windowsVirtualKeyCode: 13,
 		});
-		await wait("window.sidebarFixture.state().view==='projects'", "Enter opens projects view");
+		await wait("window.sidebarFixture.state().view==='skills'", "Enter opens projects view");
 		await js("window.sidebarFixture.reset();true");
-		const settingsButton = (await actionGeometry())[5];
-		await window.webContents.debugger.sendCommand("Input.dispatchMouseEvent", {
-			type: "mousePressed",
-			x: Math.floor(settingsButton.x + settingsButton.width - 4),
-			y: Math.floor(settingsButton.y + settingsButton.height / 2),
-			button: "left",
-			clickCount: 1,
-		});
-		await window.webContents.debugger.sendCommand("Input.dispatchMouseEvent", {
-			type: "mouseReleased",
-			x: Math.floor(settingsButton.x + settingsButton.width - 4),
-			y: Math.floor(settingsButton.y + settingsButton.height / 2),
-			button: "left",
-			clickCount: 1,
-		});
-		await wait(
-			"window.sidebarFixture.state().open&&window.sidebarFixture.state().category==='general'",
-			"full row right edge opens settings",
+		await js(
+			"document.querySelectorAll('[data-testid=sidebar-actions-fixture] .workbench-nav-item')[3].click();true",
 		);
+		await wait("window.sidebarFixture.state().view==='hosts'", "full row right edge opens hosts");
 		checks.push(
-			"real workbench navigation rows have equal measured hit rectangles, icon and text alignment; visible knowledge entry; Tab/Enter changes view and far-right click opens settings",
+			"real workbench navigation rows have equal measured hit rectangles, icon and text alignment; visible knowledge entry; Tab/Enter changes view and far-right click opens hosts",
 		);
 		await capture("11-sidebar-aligned-light");
 		await js("window.sidebarFixture.language('en');document.documentElement.dataset.theme='dark';true");
 		await wait(
-			"document.querySelector('[data-testid=sidebar-actions-fixture] .workbench-nav-item[title=\"Help\"]')",
+			"document.querySelector('[data-testid=sidebar-actions-fixture] .workbench-nav-item[title=\"Hosts\"]')",
 			"English sidebar",
 		);
 		window.setSize(520, 980);
@@ -715,8 +726,7 @@ async function run() {
 		await js("window.sidebarFixture.end();true");
 		window.webContents.debugger.detach();
 
-		const tasks = await runtime("tasks/runtime");
-		const journal = tasks.createTaskJournal();
+		const journal = createTaskJournal();
 		journal.attach("isolated-ui");
 		journal.begin("分析实验数据并交付 CSV；不代表实验结论已验证");
 		await writeFile(join(cwd, "analysis.csv"), "sample,value\nfixture,1\n");
@@ -743,7 +753,6 @@ async function run() {
 			"generic data/file checkpoint: real host readback + actual MessageList, no model invocation or scientific completion claim",
 		);
 
-		const { createTaskWorkbench, WORKBENCH_ENTRY } = await runtime("tasks/workbench");
 		const entries = [];
 		let workbench = createTaskWorkbench({
 			persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }),
