@@ -13,7 +13,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const root = resolve(import.meta.dirname, "..");
 const packageArg = process.argv.slice(2).find((arg) => !arg.startsWith("--"));
-const packageDir = resolve(packageArg || join(root, "packages/pi-research"));
+const packageDir = resolve(packageArg || join(root, "vendor/plugins/pi-research"));
 const fixtureOnly = process.argv.includes("--fixture-only");
 
 async function command(name, args, options = {}) {

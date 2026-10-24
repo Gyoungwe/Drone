@@ -1,43 +1,30 @@
 # Research / pi-research / Zotero 迁移状态
 
-> 2026-10-24：下一阶段 P1 研究边界迁移切片。本文只记录本地结构和删除条件，不代表已完成公开包迁移或第三方写入验收。
+> 2026-10-24：用户已授权跨包迁移。本轮将研究核心移入外部插件；源码迁移不再以缺范围授权标记 BLOCKED。真实账户验收与源码门禁分别记录。
 
-## 当前切片
+## 当前所有权
 
-- `packages/research/src/**` 是研究领域的纯合同与状态机实现，继续作为 Drone workspace 的 canonical source。
-- `packages/pi-research/` 已提供公开 `@gyoungwe/pi-research@0.1.1` 的证据循环和 PDF 阅读入口；构建产物不含 Electron、backend 或相对路径穿越。
-- `packages/extensions/src/research-loop.ts`、`source-archive.ts`、`zotero-literature.ts` 仍是 Desktop/Pi host adapter。它们通过 `@drone/extensions` 的 workspace config、runtime scheduler、Vault ports、institutional access 和 Zotero 本机 API 工作。
-- `packages/pi-research/src/index.ts` 仍通过 `@drone/extensions/research-loop` 装配 run-level evidence lifecycle；`packages/extensions/src/internal/research-host-entry.ts` 是保留的兼容入口，不能在当前依赖状态下删除。
-- Zotero 本机/云端写入继续只经 host authorization + write/read-back/delete/read-back 证据链；本切片不进行真实第三方写入。
+- `drone-plugins/packages/pi-research@0.2.0` 拥有完整 evidence gate、research loop、claim binding、receipt journal、source archive、provenance、机构访问与 Zotero 领域算法。原生 Pi 与 Desktop 使用同一核心；Desktop 经公开 `/host` 注入 workspace、project、Vault 和调度端口。
+- Drone 已删除 `packages/pi-research/`、23 个原研究领域模块与 `research-host-entry.ts`。`scripts/build-pi-research.mjs` 验证 `plugins.lock.json` 对应产物，不再构建隐藏的宿主副本。
+- `@drone/research` 剩余 connector/shared/write contracts、capability discovery 和 run-summary 知识桥；Desktop 扩展保留宿主授权、Vault、进程和项目组合逻辑。不是所有名含 research 的宿主代码都已移走。
+- 原研究包 Git 历史经 subtree split 保留在插件 Git 祖先中，原提交与迁移路径见插件 `migration-sources.json`。
+- `0.2.0` 是本轮源码/tarball 版本，尚未发布 npm；已发布 `0.1.1` 的历史证据不能替代本轮验收。
 
-## 2026-10-24 无凭据迁移切片
+## 修复与验证口径
 
-`drone-plugins` 的 `codex/research-migration-closure` 分支新增了自包含
-`@gyoungwe/pi-research@0.1.1` 源码入口：证据搜索/阅读/沉淀、PDF 页码标记和
-`research_loop` 当前会话回执状态机均在插件包内；bundle 不含 Electron、backend、
-`@drone/*` 或跨仓库相对路径。插件包新增注册、阶段单调性、会话隔离、未完成回执拒绝、
-构建复现和 npm tarball 安装 smoke。该切片不读取凭据、不执行外部写入，也没有替换已发布
-registry 版本。
+旧插件切片的内存状态机允许空 `claim_bindings` 后 finalize；之前的 smoke PASS 不能证明研究证据完整性。本轮删除简化状态机，恢复完整持久化核心。真实 SDK 在 Pi `1.1.0` / `1.4.0` 上验证空引用拒绝、同 cwd 会话隔离、两源阅读、带引用答案与候选笔记写后回读。模型为离线 faux provider，工具 dispatch 与会话生命周期是真实 SDK。
 
-本地插件仓库门禁结果：`npm run check` PASS（7 manifests、workspace typecheck、
-`pi-research` 5 tests、完整 tarball/clean install smoke、research-suite manifest tools
-回归和 pack check）。这证明研究证据循环可以在插件仓库自包含构建；它不等于完整研究迁移
-已关闭。
+插件回归覆盖归档校验、伪 source refs 拒绝、claim、恢复、Zotero 身份/幂等算法，以及独立 event bus 使用相同 cwd/sessionId/toolCallId 时不串回执、关闭一个会话不清理另一会话待完成回执。固定 tarball 与双仓库最终门禁汇总见 [研究边界证据](releases/research-boundary-acceptance-2026-10-24.json)。
 
-## 删除与迁移条件
+## 仍未关闭的真实边界
 
-只有全部条件同时满足，才可以把研究扩展源码迁入 `drone-plugins/packages/pi-research` / `pi-connectors` 并删除宿主 facade：
+| 项目 | 状态与下一步 |
+| --- | --- |
+| Zotero 本机真实写入/清理 | 待用户确认临时条目范围及 Zotero 本机授权；未改现有文献，未写入生产库 |
+| Zotero 云端写入/身份冲突 | 缺隔离测试账户与授权凭据；模拟传输回归不替代真实 API 验收 |
+| 独立科研扩展 | `pi-web-access` 原生 Pi 安装、升级、停用恢复、回滚、卸载与实际 PubMed 检索通过；Drone GUI/进程沙箱完整兼容未通过验收 |
+| 外部 MCP | Exa 公开 HTTP MCP 启用、停用拒绝、恢复检索通过；不是用户自有认证服务 |
+| Protocols.io 写入 | 缺账户凭据和可核实的账户状态读回，保持未执行；官方接口与范围见 [外部验收](releases/scientific-external-acceptance-2026-10-24.md) |
+| 正式安装包 GUI | 本次源码迁移后的正式安装包 GUI 尚待重验；历史包截图不作为本轮 PASS |
 
-1. 插件仓库拥有自包含的 `pi-research` 源码入口；源码和构建图中不出现 `@drone/extensions`、`@drone/backend`、`@drone/desktop` 或 Drone workspace 相对路径。
-2. `@drone/research` 的公开合同已发布或以固定 tarball 锁定，且 Pi 1.1.0 与 latest 的 clean HOME CLI 回归均通过。
-3. run-level `research_loop` 的 current-session receipt ledger、source archive、claim binding、finalize/recovery 回归均由插件仓库自有测试覆盖。
-4. Zotero connector 的本机 API、云端 API、授权、写后回读、删除后回读和身份冲突均有真实隔离验收；没有凭据或 Vault 正文进入仓库。
-5. Desktop 只消费公开 host port / connector contract；删除 `packages/extensions/src/internal/research-host-entry.ts` 后，`npm run check:arch`、`check:pi-compat`、正式安装包宿主回执仍全部通过。
-
-## 当前结论
-
-**迁移仍未完成，状态为 `PARTIAL / BLOCKED_BY_BOUNDARY`。** 本轮已完成不需凭据的自包含
-`pi-research` 证据循环切片并通过插件仓库门禁；研究运行时的 source archive、run
-provenance、receipt journal、institutional access 和 Zotero 适配仍保留宿主入口。只有
-研究合同固定、Pi 1.1.0/latest 真实 clean HOME 回归、Zotero 隔离读写回读验收和宿主回退门禁
-全部通过后，才能删除 `packages/extensions/src/internal/research-host-entry.ts` 等兼容入口。
+完整研究迁移验收仍为 **PARTIAL**：源码迁移与实际会话门禁独立交付，剩余真实账户/安装包边界不能用 fixture 或旧证据关闭。

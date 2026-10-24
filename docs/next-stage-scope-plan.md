@@ -15,7 +15,7 @@
 | P0 | 完整交互式 Electron GUI 验收 | 用正式安装包完成关键页面、插件启停、连接器、MCP、引用和回滚的交互式截图/回执 | 当前构建门禁、测试 Vault、可复现的模型或离线验收数据 | **需要环境授权**：测试 Vault、模型凭据和截图范围；不需要代码范围授权 |
 | P1 | 官方第三方扩展接入 | 建立第三方扩展审核、签名/来源、安装、升级、停用和回滚流程，接入至少一个真实扩展 | P0 权限执行、公共 plugin-api、扩展来源和版本策略 | **需要**：第三方代码、来源和安装范围需明确批准 |
 | P1 | 外部用户 MCP | 支持外部用户配置和运行自己的 MCP 服务，并提供权限提示、诊断、隔离和失败回执 | P0 权限执行；MCP 生命周期和宿主回执链；测试服务与隐私边界 | **需要**：外部服务地址、工具调用范围和测试账户 |
-| P1 | research / pi-research / Zotero 迁移 | 将研究来源、PDF 输入和 Zotero 相关运行时继续收敛到插件边界，删除迁移期宿主耦合 | plugin-api 稳定、研究领域合同、真实 PDF/来源验收和回滚方案 | **需要范围授权**：这是跨包结构迁移，会改变扩展边界 |
+| P1 | research / pi-research / Zotero 迁移 | 将研究来源、PDF 输入和 Zotero 相关运行时继续收敛到插件边界，删除迁移期宿主耦合 | plugin-api 稳定、研究领域合同、真实 PDF/来源验收和回滚方案 | **范围已授权（2026-10-24）**：真实账户写入仍需具体资源授权与凭据 |
 | P2 | 整页知识 UI 插件化 | 评估并实现知识库整页由 UI 插件提供的方案，保留默认页面、无插件降级和数据隔离 | UI 插件挂载点 T3、稳定 host API、权限执行、无插件宿主基线 | **需要**：会改变默认 UI 归属和维护边界 |
 | P2 | Protocols.io 写入 | 在只读连接器之外增加项目、协议或结果写入，并提供预览、授权、回读和失败恢复 | 账户 OAuth、资源映射、写后回读证据、权限执行和审计日志 | **需要**：第三方账户写入授权；每种写操作单独确认 |
 | P2 | MinerU/GROBID 可选 PDF 后端 | 在真实运行时可用、许可和资源预算明确后，作为 opt-in 后端与 pdf.js 做可重复比较 | PR6 评估脚本；固定版本、人工参考文本、运行资源、许可审查 | **需要**：引入新运行时、下载体积和可能的外部服务 |
@@ -90,7 +90,7 @@ PR6 评估环境 + 许可/资源预算
 | Electron GUI 验收 | **PASS（正式包交互切片）**：`/Applications/Drone.app` v0.33.4 完成知识库、首页、技能/插件启停、MCP 发现/停用、真实模型驱动的 MCP 工具调用、来源行号阅读和回滚；第二次隔离运行的过程面板显示 1 次工具、2 次响应，并返回 `DRONE-GUI-MCP-20261024` | [`next-stage-gui-acceptance-2026-10-24.json`](releases/next-stage-gui-acceptance-2026-10-24.json) |
 | 官方第三方扩展 | **PASS（公开包切片）**：`@gyoungwe/pi-connectors@0.1.1` 临时 prefix 安装后经进程沙箱注册并调用，UI 包仍完成宿主生命周期 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | 外部用户 MCP | **PASS（独立 stdio 进程切片）**：真实外部 MCP 子进程完成 marker 调用与停用重载反证；用户自有 URL/凭据仍不读取 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
-| research / pi-research / Zotero 迁移 | **PARTIAL / BLOCKED_BY_BOUNDARY**：`drone-plugins` 已建立自包含 `pi-research` 证据循环和 `research_loop` 回执状态机并通过插件仓库门禁；source archive、provenance、Zotero 和 host ports 仍保留宿主适配，未删除 facade | [`research-migration-status.md`](research-migration-status.md) |
+| research / pi-research / Zotero 迁移 | **PARTIAL**：完整研究核心已迁入 `pi-research@0.2.0`，宿主重复源码与兼容 facade 已删除，真实 SDK 锁定/latest 回归通过；账户写入和迁移后正式安装包 GUI 仍未关闭 | [`research-migration-status.md`](research-migration-status.md) |
 | 整页知识 UI 插件化 | **PASS（切片）**：新增 `knowledge.page`，有贡献时接管主区，无贡献/停用时回退默认页 | UI SPEC、`PluginRegions.test.tsx`、`registry.test.ts` |
 | Protocols.io 只读验收 | **PASS（公开 GET）**：公开协议页无凭据 GET 通过；写入按红线保持 BLOCKED，未执行账户写入 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 

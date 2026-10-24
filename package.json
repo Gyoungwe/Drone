@@ -82,7 +82,8 @@
 		"@gyoungwe/pi-evidence": "0.1.0",
 		"@biomejs/biome": "^2.4.0",
 		"patch-package": "^8.0.1",
-		"@gyoungwe/pi-knowledge": "0.1.1"
+		"@gyoungwe/pi-knowledge": "0.1.1",
+		"@gyoungwe/pi-research": "0.1.1"
 	},
 	"allowScripts": {
 		"electron@43.3.0": true

@@ -1,5 +1,7 @@
 # Drone 最终插件化计划
 
+> **2026-10-24 研究边界更新**：完整 `pi-research@0.2.0` 核心已迁到插件仓库，宿主删除旧包、23 个重复领域模块和 research-host-entry facade，公开 `/host` 注入宿主端口。该版本与 `research-suite@0.1.9` 尚未发布 npm；旧发布快照保留历史含义。源码/真实 SDK 与未完成账户验收分别见 [迁移状态](research-migration-status.md) 和 [本轮证据](releases/research-boundary-acceptance-2026-10-24.json)。
+
 > **2026-10-17 评审决议（优先于下文任何冲突表述）**
 >
 > 1. **第一个插件是 `pi-knowledge`**：先让它在原生 Pi 里跑通知识闭环（本地优先检索 → 不足再联网 → 沉淀 → 带来源回答），同时推进主线（见 `drone-refocus-plan.md`）。analysis 和 evidence 在 v1 不单独成包。

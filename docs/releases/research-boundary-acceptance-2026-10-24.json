@@ -1,0 +1,85 @@
+{
+	"date": "2026-10-24",
+	"status": "PARTIAL",
+	"plugin": {
+		"commit": "ff1d65998716df4831540957857a945bed3626a7",
+		"package": "@gyoungwe/pi-research",
+		"version": "0.2.0",
+		"tarballSha256": "f9cd4727910351c8210ffaf4088c9a3585d89312307a09dfc7fb3b1f452adaab",
+		"suiteVersion": "0.1.9",
+		"npmPublished": false,
+		"historySplit": "a512d84807228fc7f872b30856e09af0ab657235"
+	},
+	"checks": {
+		"pluginWorkspace": "PASS",
+		"pluginUnitTests": 124,
+		"pinnedRemoteFetch": "PASS",
+		"hostCleanCheckout": "PENDING"
+	},
+	"hostSession": {
+		"status": "PASS",
+		"sdkVersion": "1.1.0",
+		"extensionSha256": "4ae4a3fbdf15dbc222659b8b012dc291421caed72b1d5f369848c8bba23dfd93",
+		"sessions": 2,
+		"dispatchCount": 7,
+		"hostWorkspaceProjectBinding": true,
+		"generatedHostAdapterLoaded": true,
+		"actualReadReceiptObserved": true,
+		"emptyClaimsBlocked": true,
+		"sameWorkspaceSessionIsolation": true,
+		"persistedGateReadBack": true,
+		"model": "SDK faux provider; real AgentSession and tool dispatch, offline deterministic model",
+		"isolation": "Fresh HOME/agent/workspace/knowledge configuration; environment allowlist; no production Vault or user credentials"
+	},
+	"sdkMatrix": {
+		"status": "PASS",
+		"packageVersion": "0.2.0",
+		"tarballSha256": "3c5b62a99a5d2d16516405daeac5de2428a6fe0494762e1beed6e3f1fc80706c",
+		"model": "Pi faux provider (deterministic offline model); real AgentSession and tool dispatch; no remote model inference",
+		"isolation": "Fresh HOME, npm config, agent directory and install prefix for each matrix cell; environment allowlist; no user credentials",
+		"matrix": [
+			{
+				"target": "locked",
+				"version": "1.1.0",
+				"status": "PASS",
+				"dispatchCount": 14,
+				"tools": 6,
+				"sessions": 2,
+				"sameWorkspace": true,
+				"sharedExtensionClosure": true,
+				"contextSessionManager": true,
+				"sourcedAnswer": true,
+				"candidateDepositionReadBack": true,
+				"emptyClaimsBlocked": true,
+				"crossSessionReadBlocked": true,
+				"crossSessionLedgerBlocked": true
+			},
+			{
+				"target": "latest",
+				"version": "1.4.0",
+				"status": "PASS",
+				"dispatchCount": 14,
+				"tools": 6,
+				"sessions": 2,
+				"sameWorkspace": true,
+				"sharedExtensionClosure": true,
+				"contextSessionManager": true,
+				"sourcedAnswer": true,
+				"candidateDepositionReadBack": true,
+				"emptyClaimsBlocked": true,
+				"crossSessionReadBlocked": true,
+				"crossSessionLedgerBlocked": true
+			}
+		],
+		"scope": "Earlier runtime-equivalent 0.2.0 tarball; final package check reran both SDK targets; final locked artifact checked separately."
+	},
+	"externalEvidence": "scientific-external-acceptance-2026-10-24.json",
+	"remaining": [
+		"Zotero local temporary write/delete authorization and native consent",
+		"Zotero cloud account round trip and real identity conflict",
+		"Drone GUI/process sandbox acceptance for pi-web-access",
+		"User-owned authenticated MCP account acceptance",
+		"Protocols.io authenticated write and account state read-back",
+		"Post-migration packaged Desktop GUI acceptance"
+	]
+}

@@ -193,7 +193,7 @@ packages/
 
 | Area | Files | Responsibility |
 |---|---|---|
-| Zotero literature | `.pi/extensions/zotero-literature.mjs` + `packages/research/src/zotero-*.ts` + `skills/zotero-literature` | Zotero owns PDFs/metadata; Vault `Library/Papers` notes are citable knowledge; CLI preferred, MCP optional/disabled（用户级 Pi `mcp.json` 用 `enabled: false` 关闭，`disabled` 会被 adapter 忽略，见 `docs/zotero-literature.md`「MCP config dialects」）。写入：`research_zotero_save` 只新建；`research_zotero_update` 经网页 API 更新已有条目。 |
+| Zotero literature | `.pi/extensions/zotero-literature.mjs` + `../drone-plugins/packages/pi-research/src/core/zotero-*.ts` + `skills/zotero-literature` | Zotero owns PDFs/metadata; Vault `Library/Papers` notes are citable knowledge; CLI preferred, MCP optional/disabled（用户级 Pi `mcp.json` 用 `enabled: false` 关闭，`disabled` 会被 adapter 忽略，见 `docs/zotero-literature.md`「MCP config dialects」）。写入：`research_zotero_save` 只新建；`research_zotero_update` 经网页 API 更新已有条目。 |
 | Topic lifecycle | `../drone-plugins/packages/pi-knowledge/src/core/topic-memory.ts` + `.pi/extensions/obsidian-workbench.mjs` | bounded Vault+project topic memory, continuation/resume, stale-source checks, proposal/artifact linkage; memory is navigation only |
 | Specialist orchestration | `../drone-plugins/packages/pi-knowledge/src/core/{specialists,specialist-host,orchestration-policy}.ts` + `backend/src/knowledge/specialist-runner.ts` | deterministic dispatch decisions, queue/concurrency/run/tool/token/reported-cost budgets, cancellation-safe isolated workers |
 | Human management | `knowledge/ui-service.mjs` + desktop knowledge IPC/preload + `SemanticManagement.tsx` / `TopicManagement.tsx` | opt-in semantic settings/index batches and project-scoped topic browsing/archive/resume |
@@ -259,9 +259,11 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 源码权威位置是绑定的 `../drone-plugins/packages/pi-connectors/`（当前 `main=dc6d52007bcf2fe35579b83e5a2bac2250768619`）。公开 `0.1.1` tarball 的 shasum/integrity、六类只读 connector descriptor、2 个元数据工具、干净安装和 Pi 资源加载均通过。实际网络、凭据、写入、回读与删除仍由宿主组合根通过 `ConnectorExecutionPort` 实现；Protocols.io 继续保持只读，真实外部服务 I/O 不在本次门禁中宣称通过。
 
-## packages/pi-research — 原生 Pi 研究插件（PR-7）
+## 外部 pi-research — 原生 Pi 与宿主研究核心
 
-`packages/pi-research/` 提供可独立安装的最小研究闭环：`research_search_sources` 在工作区内对受限 Markdown/text 来源做可追溯检索，`research_read_source` 记录 hash 与范围回执，`research_deposit_research_note` 写入带 URI/hash 引用的候选笔记，`research_answer_sources` 要求至少两篇当前回读来源后才返回 `answerable` 证据包；`research_status` 输出会话计数。`src/index.ts` 还组装现有 `research_loop` 生命周期入口。`scripts/build-pi-research.mjs` 生成自包含 dist，禁止 Electron/backend/Desktop/越界 import；`scripts/smoke-pi-research.mjs` 在全新临时工作区执行两来源检索→两次读取→沉淀→带来源回答，并验证 tarball 解包加载。网络、Zotero、机构访问写入仍由宿主连接器负责，当前包不伪造远端结果。
+`../drone-plugins/packages/pi-research/` 是研究证据、归档、回执、provenance 和 Zotero 领域算法的源码权威位置。宿主只消费 `@gyoungwe/pi-research/host`，`plugins.lock.json` 固定 commit、版本和 tarball hash；`scripts/build-pi-research.mjs` 验证 fetched 产物。原生入口提供来源检索/阅读/候选笔记/引用答案与完整 research_loop。宿主 workspace/Vault/授权与连接器桥留在 `packages/extensions`、`packages/backend` 及剩余 `packages/research` 合同中。
+
+本轮边界、未完成的账户/安装包验收见 [研究迁移状态](research-migration-status.md)；独立科研扩展与 Exa HTTP MCP 的真实回执见 [外部验收](releases/scientific-external-acceptance-2026-10-24.md)。
 
 ## `@gyoungwe/research-suite` — 外部原生 Pi 聚合包（PR-7）
 
@@ -438,7 +440,7 @@ src/
 | subagent 独立行 | 工具 `backend/src/tools/subagent/`；提取 shared `src/subagent.ts`（extractSubagentRuns，结构检测不依赖工具名）；互斥通知 `subagent_mutex` → reducer system 消息（dedup by extensionPath）；渲染 `chat/SubagentRunCard.tsx` |
 | 子智能体面板（右栏「子智能体」页签：可用 / 派发 / 本会话运行） | backend `tools/subagent/panel.ts`（`SubagentPanelService`）+ `pi-backend.ts`（`listSessionSubagents/dispatchSubagents/abortSubagentRun/listSubagentRuns`）；IPC `subagents:*`（`main/ipc/subagents.ts`）；事件 `subagent_run`（reducer 原地更新派发行 + `stores/subagents.ts`）；UI `panel/SubagentsPane.tsx` + `subagents-form.ts`、`chat/SubagentAvatar.tsx`（djb2 定色 + data-state 表情）、`chat/SubagentResultCard.tsx`、审批坞来源胶囊；输入框 `@` 选择器 `composer/at-subagents.ts` + `AtMenu.tsx` + `SubagentChip.tsx`（消息开头 `@name 任务` + Enter = 面板单任务派发；草稿 `drafts.subagent`）；文档 [subagents-panel.md](subagents-panel.md)；冒烟 `scripts/check-subagents-ui.mjs` |
 | 斜杠命令 | 面板 `composer/SlashMenu.tsx` + `slash-filter.ts` + `use-slash-menu.ts`；命令表 backend `slash-commands.ts`（draft 态走 listSlashCommandsForCwd）；**模板/skill/扩展命令 SDK 原生展开无需代码**；`/settings` 定位走 settings store `openWith()` |
-| Zotero 文献库 | 架构 `docs/zotero-literature.md`；实现 `.pi/extensions/zotero-literature.mjs` + `packages/research/src/zotero-*.ts` + `skills/zotero-literature`；UI 知识库总览「接入 Zotero」；MCP 默认关闭 |
+| Zotero 文献库 | 架构 `docs/zotero-literature.md`；实现 `.pi/extensions/zotero-literature.mjs` + `../drone-plugins/packages/pi-research/src/core/zotero-*.ts` + `skills/zotero-literature`；UI 知识库总览「接入 Zotero」；MCP 默认关闭 |
 | 上下文压缩 UI | compaction_start/end → shared reducer 生成 system 消息 + compacting 位（**压缩期间 Composer 禁发**，SDK 拒绝压缩中的 prompt）；渲染 `chat/SystemMessage.tsx`（分割线，done 可展开摘要）；手动 `/compact [focus]`（focus 拼入摘要 prompt）；**压缩后 UI 历史完整保留**（SDK 只裁 LLM 上下文，jsonl 完整，reducer 只追加分界线） |
 | 上下文蒸发 | backend `tools/context-evaporation/`（见 backend 表）；开关 = 设置 GeneralPanel 二态（默认蒸发，写 settings.json 单 key，2s 生效免重开）；调参 `scripts/replay-evaporation.mts`；观测 = log `context-evaporation` 行 + trace_custom |
 | 上下文用量圆环 | `composer/ContextRing.tsx` + `hooks/use-context-usage.ts`（事件驱动刷新，与插件 host API 共用）→ IPC getContextUsage → SDK `session.getContextUsage()`（percent null 或无消息不渲染；<60% 灰 / 60-85% 琥珀 / >85% 红） |

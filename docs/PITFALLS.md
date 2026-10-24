@@ -276,3 +276,7 @@ git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保
 ## 2026-10-20：Pi 包更新回执不等于版本替换
 
 `pi update npm:<name>` 可以返回成功，但在 Pi 1.1.0 的独立 HOME 中，managed package 目录仍可能保留旧 `package.json` 版本。市场验收必须同时读取安装目录版本；Drone `PackageService` 检测到版本未变时会用 unpinned source 重装，再把真实版本写入生命周期回执。若宿主领域源码改变，先运行 `npm run build:extensions -- --force`，再运行 `npm run check:extensions`，否则生成扩展的依赖时间戳会让检查失败。
+
+## 研究包迁移：空 claims 与会话回执
+
+自包含打包不等于保留证据语义。简化的内存 research_loop 曾允许空 claim_bindings 后 finalize；必须保留归档、读取回执与结构化 claim 的完整状态机。用真正的 SDK 会话验证空引用拒绝，并同时测共享扩展闭包、独立 event bus、相同 cwd/toolCallId 和单会话 shutdown。Pi SDK 的身份来自 sessionManager.getSessionId()；不得用 cwd 代替有效会话身份或把账本放到 process 全局。迁移后的源码位置检查应核对公开 /host 边界，而不是仍要求已删除的宿主实现路径。
