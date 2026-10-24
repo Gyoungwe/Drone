@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	classifyKnowledgeHit,
 	classifyKnowledgePath,
+	classifyRecentKnowledgeNote,
 	deriveKnowledgeCategoryCounts,
 } from "./knowledge-home-model";
 
@@ -49,4 +50,18 @@ describe("knowledge home category projections", () => {
 			),
 		).toEqual({ all: 4, paper: null, software: null, method: null, idea: null });
 	});
+});
+
+it("does not let filename keywords override a category folder or explicit type", () => {
+	expect(classifyKnowledgePath("Library/Methods/mapping-tools.md")).toBe("method");
+	expect(classifyKnowledgePath("Library/Software/paper-protocol.md")).toBe("software");
+	expect(classifyKnowledgeHit("method", "Library/Software/paper-tools.md")).toBe("method");
+	expect(classifyKnowledgeHit("concept", "Library/Methods/mapping-tools.md")).toBe("other");
+});
+
+it("uses the observed category for recent labels even when the path suggests another category", () => {
+	const path = "Library/Software/paper-tools.md";
+	const groups = { method: [{ path, title: "Mapping tools", kind: "note" as const, updatedAt: 1 }] };
+	expect(classifyRecentKnowledgeNote(path, groups)).toBe("method");
+	expect(classifyRecentKnowledgeNote("Library/Methods/mapping-tools.md", {})).toBe("other");
 });

@@ -308,3 +308,7 @@ git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保
 ## Zotero 临时条目验收：标题规范化与清理
 
 Zotero Connector 会规范化英文标题大小写（本轮 `NOT A PUBLICATION` 被保存为 `NOT a PUBLICATION`）。临时条目身份应由唯一标记、DOI、标签和忽略大小写的完整标题共同核对；不能因逐字标题断言失败而误报未写入。清理必须只针对已确认的测试条目，带版本前置条件删除，再核对 key 404 和标记搜索为空。SDK 会话使用 `session.dispose()`；Pi 1.1.0 的 `ModelRuntime` 无 `dispose()`，验收驱动器不能调用不存在的方法掩盖原始错误。
+
+### 分类关键词不能覆盖笔记的显式类型
+
+`Library/Methods/mapping-tools.md` 曾因完整路径先匹配 tool 被算作软件。插件 worker 计数与最近分组应共享显式 type → 分类目录 → 无类型文件名的优先级；前端最近标签直接消费已有分组，不能再次按路径猜测。真实 worker 的关闭/重开回归与正式包旧索引验收同时覆盖此问题。

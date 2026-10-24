@@ -17,7 +17,7 @@
 			"output": "knowledge-extension.mjs",
 			"status": "generated",
 			"sourceSha256": "ae2078b76ab6866bf7c0543bfbc9e3053dc2266d99bd659ea4ce47fea414dadb",
-			"inputsSha256": "67ed18e720e3fd8d138a395c6a8a846c70c7bf7cf6fc8dd2317a084b0bfc8ec0",
+			"inputsSha256": "1f2bb9b3c599f942ae36321ea0749680beda215fa2141a31254cd44449757269",
 			"outputSha256": "2075e2bbe089288fa1add728a131bc39b6fdbe58b3a97cecee941d3c1cca8ee7"
 		},
 		"obsidian-workbench": {
@@ -25,15 +25,15 @@
 			"output": "obsidian-workbench.mjs",
 			"status": "generated",
 			"sourceSha256": "9d002426142cf1c0cc3345462df95e9a5ed7e47d78a897cb3c43ee4a9d97d3a0",
-			"inputsSha256": "e3577f140ed0916d8a5518e6a94fd72239c35e335432de3cc004799a5f4a9b72",
-			"outputSha256": "eaaccf1c57a438c029ae4679473972fbad2d3060a8ed32b469fef77438adc8f0"
+			"inputsSha256": "5fcbad610a2cc66589d4c4bbbc69e6d84e616baae7263c7bcbf8d813a69ed1ed",
+			"outputSha256": "e4e11888b9762c063db87d41c9a08a81d5b01e150206ddd7ef2bd3df14cea8d8"
 		},
 		"research-loop": {
 			"source": "research-loop.ts",
 			"output": "research-loop.mjs",
 			"status": "generated",
 			"sourceSha256": "6cbb700d8f146c11912dfe0bc71ffad52abd73d3354e96ef3a85225f9f7e9b84",
-			"inputsSha256": "dc7959be0f9e56ad9a2273923d6953f742b3cba2ab020f5f4efa749b13285a1f",
+			"inputsSha256": "3583ecf5529566a3d8823ee8e3d317473c72b2cb8a366663a89673bed302bcc0",
 			"outputSha256": "4ae4a3fbdf15dbc222659b8b012dc291421caed72b1d5f369848c8bba23dfd93"
 		},
 		"research-policy": {
@@ -49,7 +49,7 @@
 			"output": "research-wikiloop.mjs",
 			"status": "generated",
 			"sourceSha256": "eca31fb426eaecd2dc5d6a278470805846ce5057117b618b139e30c6bc150da4",
-			"inputsSha256": "56ba350a672757b6b469ccbff969e43f936fbe809c18e55c13c93856271fbf38",
+			"inputsSha256": "34fdf9a7566cd5f1316f7e075f897d722366ed577c3880259b8df14f56355451",
 			"outputSha256": "60a4521fb2bf034b1fb6641bb463d007c758967ad860868df75fde692e56dde4"
 		},
 		"research-wikiskill": {
@@ -57,7 +57,7 @@
 			"output": "research-wikiskill.mjs",
 			"status": "generated",
 			"sourceSha256": "dfccf623d16b387ebf498766b68280c92bfe00247091151879e61661cbb81421",
-			"inputsSha256": "521f9acb17e5b9f25cde86c479aba33f2564e6e96fd0520ae29ea8eefc470234",
+			"inputsSha256": "e95bcac53424772060dbb41ab29385e632400047139efa8139bef463cca42c51",
 			"outputSha256": "bf023d022f3a4ee56ec3a5190d1eaacd98dfdff080cf49b8a202969ab0dd3899"
 		},
 		"source-archive": {
@@ -65,15 +65,15 @@
 			"output": "source-archive.mjs",
 			"status": "generated",
 			"sourceSha256": "8be5cfc599bc7f0c17a24f0c160921c35bbf9c42d7de80b3a5b037db85167ba9",
-			"inputsSha256": "6117550049f3b503ccf3e843f889d97558a2783ffb4cdb043ef5ca6a4b441867",
-			"outputSha256": "0a5a410bc2c1544a1d05ee1800f07cc7ab3dd1b6c303758fb2717e1bce3d45c5"
+			"inputsSha256": "502ebd379ba0cd17513e7e6cea64ae97b628b8fb170af15bdfc53e5b2c8d712b",
+			"outputSha256": "17835ec3a3aa2f7190e9ea0b0a32ec32d637ddb368549492b2f29bb28268fdbc"
 		},
 		"subagent-mcp-readonly": {
 			"source": "subagent-mcp-readonly.ts",
 			"output": "subagent-mcp-readonly.mjs",
 			"status": "generated",
 			"sourceSha256": "08b10aac2ab29c9cb314efe11434f43671903ab2e50c11d430f3aaa12d843728",
-			"inputsSha256": "9f6a079866614e71c526be653af9f5269b0fa7b2d87e924000df2d9cf4b0ad21",
+			"inputsSha256": "7ea85fc5dbdcb5071aa0b0ad3cd7f48cbff3d4ee260f0e6f64aab343a0844da8",
 			"outputSha256": "c9fddca3e68087a2330cad0d4d4039ccc5bd427219fbb5921861f9fd12c17a83"
 		},
 		"subagent-research": {
@@ -89,7 +89,7 @@
 			"output": "workspace-config.mjs",
 			"status": "generated",
 			"sourceSha256": "03a01879328098856fb155e4e3ab8c4e4ed233d30a0b7d60567322f069eb4584",
-			"inputsSha256": "a3c7bfe39cd0951624d76137429d8e2c41e8b00078c36a0bfbf3e482e0152dcc",
+			"inputsSha256": "573ecb7979a4706c96adde80199f6389766759a350d0c19d067eb12c58a65976",
 			"outputSha256": "e0d8c97484172c56f3bf2fa4d9aa6cb3db234ca22cb187952b4e376538c7daf5"
 		},
 		"zotero-literature": {
@@ -97,7 +97,7 @@
 			"output": "zotero-literature.mjs",
 			"status": "generated",
 			"sourceSha256": "db0c8294396c94396a3beedfc8ae76250dbe842e012859e830f030e5dfae1a6f",
-			"inputsSha256": "b697ba4ebe444262fa3f4fcb7f4437c3e15a24a9340fcf3ecb1100fd11e655e9",
+			"inputsSha256": "d7e89f1df9e3332a18b78eed776c12a22166b6997138977330d5d11c34fd3ba4",
 			"outputSha256": "6d77d30ca1daba058ca0ca1861de6380fd04090901efc731879a603a8fe31ec2"
 		}
 	},

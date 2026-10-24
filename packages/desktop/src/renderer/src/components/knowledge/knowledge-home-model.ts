@@ -1,19 +1,43 @@
-import type { KnowledgeGraph as GraphData } from "@drone/shared";
+import type { KnowledgeGraph as GraphData, KnowledgeOverview } from "@drone/shared";
 
 export type KnowledgeCategory = "all" | "paper" | "software" | "method" | "idea";
 export type KnowledgeLeafCategory = Exclude<KnowledgeCategory, "all"> | "other";
 
-export function classifyKnowledgePath(path: string): KnowledgeLeafCategory {
-	const normalized = path.toLowerCase();
-	if (/paper|literature|文献|论文/u.test(normalized)) return "paper";
-	if (/software|tool|软件/u.test(normalized)) return "software";
-	if (/method|protocol|方法/u.test(normalized)) return "method";
-	if (/idea|hypothes|想法|假设/u.test(normalized)) return "idea";
+function keywordCategory(value: string): KnowledgeLeafCategory {
+	if (/paper|literature|文献|论文/u.test(value)) return "paper";
+	if (/software|tool|软件/u.test(value)) return "software";
+	if (/method|protocol|方法/u.test(value)) return "method";
+	if (/idea|hypothes|想法|假设/u.test(value)) return "idea";
 	return "other";
 }
 
+export function classifyKnowledgePath(path: string): KnowledgeLeafCategory {
+	const segments = path.toLowerCase().split(/[\\/]/u);
+	const filename = segments[segments.length - 1];
+	for (const directory of segments.slice(0, -1).reverse()) {
+		if (
+			/^(papers?|literature|文献|论文|software|tools?|软件|methods?|protocols?|方法|ideas?|hypotheses|想法|假设)$/u.test(
+				directory,
+			)
+		)
+			return keywordCategory(directory);
+	}
+	return keywordCategory(filename);
+}
+
 export function classifyKnowledgeHit(kind: string, path: string): KnowledgeLeafCategory {
-	return classifyKnowledgePath(`${kind}/${path}`);
+	const type = kind.trim().toLowerCase();
+	return type && type !== "note" ? keywordCategory(type) : classifyKnowledgePath(path);
+}
+
+/** Overview groups cover at least the bounded recent list; consume the worker's classification. */
+export function classifyRecentKnowledgeNote(
+	path: string,
+	groups: KnowledgeOverview["recentByCategory"],
+): KnowledgeLeafCategory {
+	for (const category of ["paper", "software", "method", "idea"] as const)
+		if (groups?.[category]?.some((note) => note.path === path)) return category;
+	return "other";
 }
 
 export function deriveKnowledgeCategoryCounts(
@@ -31,7 +55,7 @@ export function deriveKnowledgeCategoryCounts(
 	};
 	if (!complete || !graph) return counts;
 	for (const node of graph.nodes) {
-		const kind = classifyKnowledgePath(`${node.contentType ?? node.type ?? ""}/${node.path}`);
+		const kind = classifyKnowledgeHit(node.contentType ?? node.type ?? "", node.path);
 		if (kind !== "other") counts[kind] = (counts[kind] ?? 0) + 1;
 	}
 	return counts;

@@ -10,7 +10,7 @@ import { DailyIdeas } from "./DailyIdeas";
 import { useKnowledgeOverview } from "./hooks";
 import { type KnowledgeCategory, KnowledgeSearch } from "./KnowledgeSearch";
 import {
-	classifyKnowledgePath,
+	classifyRecentKnowledgeNote,
 	deriveKnowledgeCategoryCounts,
 	type KnowledgeLeafCategory,
 } from "./knowledge-home-model";
@@ -116,12 +116,7 @@ export function KnowledgeHome({
 	const allRecent = (data?.recentNotes ?? []).slice(0, RECENT_LIMIT);
 	// The category tabs filter the deposit list too, not only search hits.
 	const recent =
-		category === "all"
-			? allRecent
-			: (
-					data?.recentByCategory?.[category] ??
-					(data?.recentNotes ?? []).filter((item) => classifyKnowledgePath(item.path) === category)
-				).slice(0, RECENT_LIMIT);
+		category === "all" ? allRecent : (data?.recentByCategory?.[category] ?? []).slice(0, RECENT_LIMIT);
 	const counts = useMemo(
 		() =>
 			data?.index?.categoryCounts
@@ -190,7 +185,7 @@ export function KnowledgeHome({
 						) : (
 							<ul className="divide-y divide-border rounded-2xl border border-border bg-surface">
 								{recent.map((item) => {
-									const kind = classifyKnowledgePath(item.path);
+									const kind = classifyRecentKnowledgeNote(item.path, data?.recentByCategory);
 									return (
 										<li key={item.path}>
 											<button
