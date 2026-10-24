@@ -8,6 +8,7 @@ import * as knowledgeUiService from "@gyoungwe/pi-knowledge/host";
 import * as knowledgeUiState from "@gyoungwe/pi-knowledge/host";
 import * as knowledgeWikiModelReview from "@gyoungwe/pi-knowledge/host";
 import {
+	configureKnowledgeHost,
 	configureKnowledgeRuntime,
 	configureKnowledgeWorker,
 	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
@@ -100,6 +101,9 @@ export function getKnowledgeWorkerLifecycle(): KnowledgeWorkerLifecycleSnapshot 
  * so review and graph IPC work in both development and packaged hosts.
  */
 export function configureBackendKnowledgeWorker(): void {
+	// The backend and each bundled Pi extension have separate plugin module
+	// instances. UI reads need their own host port, even after extension setup.
+	configureKnowledgeHost({ loadWorkspaceConfig: loadBackendWorkspaceConfig });
 	configureKnowledgeRuntime({ emitProcessEvent: (event, payload) => (process as any).emit(event, payload) });
 	configureKnowledgeWorker(
 		(_url, options) => {
@@ -115,6 +119,15 @@ export function configureBackendKnowledgeWorker(): void {
 		},
 		() => resolveBackendKnowledgeWorkerResource().metadata,
 	);
+}
+
+async function loadBackendWorkspaceConfig(cwd: string) {
+	const root =
+		process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
+	const mod = await import(
+		/* @vite-ignore */ pathToFileURL(join(root, "extensions", "workspace-config.mjs")).href
+	);
+	return mod.loadWorkspaceConfig(cwd);
 }
 
 export function resolveBackendKnowledgeWorkerPath(root = process.env.DRONE_RESEARCH_WORKBENCH_ROOT): string {
@@ -298,12 +311,6 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url))
 		);
 	}
-	private async workspaceConfig(cwd: string) {
-		const mod = await import(
-			/* @vite-ignore */ pathToFileURL(join(this.root(), "extensions", "workspace-config.mjs")).href
-		);
-		return mod.loadWorkspaceConfig(cwd);
-	}
 	async connect(): Promise<void> {
 		if (!process.env.DRONE_KNOWLEDGE_DIR || this.unsubscribe || this.disposed) return;
 		if (!this.loading)
@@ -363,14 +370,14 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["getResearchRuns"]>[0] = {},
 	): ReturnType<KnowledgeApi["getResearchRuns"]> {
 		const cwd = input?.cwd || process.cwd();
-		const config = await this.workspaceConfig(cwd);
+		const config = await loadBackendWorkspaceConfig(cwd);
 		return listResearchRuns({ ...input, resultsRoot: config.resultsRoot });
 	}
 	async researchRun(
 		input: Parameters<KnowledgeApi["getResearchRun"]>[0],
 	): ReturnType<KnowledgeApi["getResearchRun"]> {
 		const cwd = input?.cwd || process.cwd();
-		const config = await this.workspaceConfig(cwd);
+		const config = await loadBackendWorkspaceConfig(cwd);
 		return getResearchRun({ ...input, resultsRoot: config.resultsRoot, vaultRoot: config.obsidianVault });
 	}
 	setupPreview(

@@ -41,6 +41,8 @@
 
 同轮正式包重验还发现：`build:extensions` 默认保留现有输出，但曾把传递依赖的新摘要写进旧输出的 manifest，`check:extensions` 因而误判通过。生成器现在拒绝这种依赖漂移且不更新 manifest；必须 `npm run build:extensions -- --force` 重建。回归在 `scripts/check-build-inputs.test.mjs`，第二个含旧 bundle 的中间 DMG 已废弃，不能计入最终 PASS。
 
+知识阅读器还必须在 backend 自己的 `pi-knowledge` 模块实例安装 `loadWorkspaceConfig` 端口；只在动态扩展的 bundle 中配置不会影响 backend。带 `project` 的真实方法笔记曾在点击引用时触发 `Workspace config host is not configured`。`knowledge-host-ui-reading.test.mjs` 独立打包扩展、从宿主 UI 端读取实际笔记，避免源码测试共享模块后掩盖此问题。
+
 ## 2026-10-24：正式包沙箱的运行时与打包边界
 
 - Electron 43 的 Node 24 无网络权限控制。禁止把 bad-port fetch 错误当禁网成功；必须用父进程可达的 HTTP 端点检查 `ERR_ACCESS_DENIED` 和服务端零请求。正式包现使用独立、摘要校验的 Node 26.12.1。

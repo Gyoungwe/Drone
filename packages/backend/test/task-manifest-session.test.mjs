@@ -1,16 +1,21 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
+import { pathToFileURL } from "node:url";
 import { registerTaskRuntime } from "@drone/tasks/runtime";
 import { createStandaloneRuntime, withRuntime } from "@drone/tasks/runtime-bridge";
 import { isReadOnlyTool } from "@drone/tasks/tool-manifest-runtime";
 import { createEventBus } from "@earendil-works/pi-coding-agent";
+import { build } from "esbuild";
 import { afterEach, expect, it, vi } from "vitest";
 
 const runtimes = [];
+const directories = [];
 afterEach(async () => {
 	vi.unstubAllEnvs();
 	await Promise.all(runtimes.splice(0).map((runtime) => runtime.dispose()));
+	await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
 
 function host(id) {
@@ -44,6 +49,18 @@ function host(id) {
 
 it("repeats declared knowledge reads across turns without replaying effects or borrowing another session's manifest", async () => {
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(tmpdir(), "drone-task-manifest-test"));
+	const directory = await mkdtemp(join(tmpdir(), "drone-task-manifest-bundle-"));
+	directories.push(directory);
+	const bundle = join(directory, "knowledge.mjs");
+	await build({
+		entryPoints: [createRequire(import.meta.url).resolve("@drone/extensions/knowledge-extension")],
+		outfile: bundle,
+		bundle: true,
+		platform: "node",
+		format: "esm",
+		logLevel: "silent",
+	});
+	const { registerKnowledgeInterface } = await import(/* @vite-ignore */ pathToFileURL(bundle).href);
 	const first = host("knowledge-session");
 	const other = host("unrelated-session");
 	// Load the real independently bundled knowledge extension before the inline
