@@ -1,0 +1,374 @@
+{
+	"date": "2026-10-24T10:56:56.442Z",
+	"status": "PASS",
+	"scope": "credential-free real SDK sessions; no GUI or user-account acceptance claim",
+	"reproduce": "node scripts/check-scientific-external.mjs --out /tmp/scientific-external.json",
+	"isolation": {
+		"temporaryHome": true,
+		"temporaryProject": true,
+		"temporaryAgent": true,
+		"inheritedCredentials": false,
+		"installScripts": false,
+		"productionStateChanged": false,
+		"remoteMutations": 0
+	},
+	"thirdParty": {
+		"source": "https://github.com/nicobailon/pi-web-access",
+		"licenseSource": "https://github.com/nicobailon/pi-web-access/blob/main/LICENSE",
+		"metadata": [
+			{
+				"name": "pi-web-access",
+				"version": "0.43.0",
+				"license": "MIT",
+				"repository": {
+					"url": "git+https://github.com/nicobailon/pi-web-access.git",
+					"type": "git"
+				},
+				"dist": {
+					"shasum": "014d1737f5531e5363623d62463ab8aed3700571",
+					"tarball": "https://registry.npmjs.org/pi-web-access/-/pi-web-access-0.43.0.tgz",
+					"fileCount": 101,
+					"integrity": "sha512-O3cyBI3JnZuNM7tjUbpmq/X5uxZsbFyoqv+KKc4LDx1SDNV4BuVD/OaB/NTLZgfOQMgptNF0CnOP2nigQJ9bSQ==",
+					"signatures": [
+						{
+							"sig": "MEUCIEJVWfLi4BYL313o1isRIPjcgEwWeLLewB+oxuwZI4vbAiEAoxSRaVLZIenYi2FdljEaTDc9qH/jbnmYnBMafc0Vx6g=",
+							"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+						},
+						{
+							"sig": "MEYCIQDcySsiBq8mz8VDCpfmRvlg9QhQOGuWeT6s+4Sv98zBBAIhAOsNug6j6Vjz+g4vl5cCPJXKOV57wFXIr4yMfohb8AMk",
+							"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+						}
+					],
+					"unpackedSize": 10271443
+				}
+			},
+			{
+				"name": "pi-web-access",
+				"version": "0.44.0",
+				"license": "MIT",
+				"repository": {
+					"url": "git+https://github.com/nicobailon/pi-web-access.git",
+					"type": "git"
+				},
+				"dist": {
+					"shasum": "6cdb7aa75f8b41bbce55f1114f017403e0ed827e",
+					"tarball": "https://registry.npmjs.org/pi-web-access/-/pi-web-access-0.44.0.tgz",
+					"fileCount": 101,
+					"integrity": "sha512-8YK2Nb0P7ezRL0FS7P1cPYu7gDUOuhXWA3FOBev0bKsuPtG2QrDVm2GriKBgZI1Sq7SC8QRsfVFYYP8huUEo8w==",
+					"signatures": [
+						{
+							"sig": "MEUCIQCPlKU3AN1axVcbz/HboSxYhcnpH6A4lEb2gwuqEUhtHwIgR0pcFxEqrc7tuF+dgWJOJjdvrvTKCgIhFbDtSO4Oixc=",
+							"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+						},
+						{
+							"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U",
+							"sig": "MEUCIQCL+Lr1RV2nUlFQyRdpA9GUPw8Phz79vf4HJLGEXHBC1QIgLjgl95f7cewjW5c4PFvCiMIG/DqgBmpb5uww4M7M2P8="
+						}
+					],
+					"unpackedSize": 10290882
+				}
+			}
+		],
+		"lifecycle": [
+			{
+				"version": "0.43.0",
+				"integrity": "sha512-O3cyBI3JnZuNM7tjUbpmq/X5uxZsbFyoqv+KKc4LDx1SDNV4BuVD/OaB/NTLZgfOQMgptNF0CnOP2nigQJ9bSQ==",
+				"phase": "install",
+				"mode": "extension",
+				"sdk": "1.1.0",
+				"sessionStarted": true,
+				"modelInvoked": false,
+				"tools": [
+					"read",
+					"bash",
+					"powershell",
+					"edit",
+					"write",
+					"grep",
+					"find",
+					"ls",
+					"web_search",
+					"source_check",
+					"fetch_content",
+					"get_search_content"
+				],
+				"loaderErrors": [],
+				"publicSearch": {
+					"sourceUrls": [
+						"https://pubmed.ncbi.nlm.nih.gov/24906146/",
+						"https://pubmed.ncbi.nlm.nih.gov/36656942/"
+					],
+					"status": "PASS",
+					"query": "site:pubmed.ncbi.nlm.nih.gov CRISPR Cas9 genome editing",
+					"sha256": "28819a4ca7a60ff58a0ce0fce61bb8e5cf9acd0df4e35081bdf90045c039ef12",
+					"bytes": 1777
+				},
+				"invalidUrlError": {
+					"observed": true,
+					"sha256": "5de83561ab8d232ceb79667a154d1aecd49fd208b06e7c6e3a2b395688ae310b"
+				}
+			},
+			{
+				"version": "0.44.0",
+				"integrity": "sha512-8YK2Nb0P7ezRL0FS7P1cPYu7gDUOuhXWA3FOBev0bKsuPtG2QrDVm2GriKBgZI1Sq7SC8QRsfVFYYP8huUEo8w==",
+				"phase": "upgrade",
+				"mode": "extension",
+				"sdk": "1.1.0",
+				"sessionStarted": true,
+				"modelInvoked": false,
+				"tools": [
+					"read",
+					"bash",
+					"powershell",
+					"edit",
+					"write",
+					"grep",
+					"find",
+					"ls",
+					"web_search",
+					"source_check",
+					"fetch_content",
+					"get_search_content"
+				],
+				"loaderErrors": [],
+				"publicSearch": {
+					"sourceUrls": [
+						"https://pubmed.ncbi.nlm.nih.gov/24906146/",
+						"https://pubmed.ncbi.nlm.nih.gov/36656942/"
+					],
+					"status": "PASS",
+					"query": "site:pubmed.ncbi.nlm.nih.gov CRISPR Cas9 genome editing",
+					"sha256": "9cc4fdb6d98c9b79ae30941fe529c27143649ecad7656c5dff5fb9424deddbdb",
+					"bytes": 1777
+				},
+				"invalidUrlError": {
+					"observed": true,
+					"sha256": "5de83561ab8d232ceb79667a154d1aecd49fd208b06e7c6e3a2b395688ae310b"
+				}
+			},
+			{
+				"phase": "disabled",
+				"mode": "absent",
+				"sdk": "1.1.0",
+				"sessionStarted": true,
+				"modelInvoked": false,
+				"tools": ["read", "bash", "powershell", "edit", "write", "grep", "find", "ls"],
+				"loaderErrors": [],
+				"extensionAbsent": true
+			},
+			{
+				"version": "0.44.0",
+				"integrity": "sha512-8YK2Nb0P7ezRL0FS7P1cPYu7gDUOuhXWA3FOBev0bKsuPtG2QrDVm2GriKBgZI1Sq7SC8QRsfVFYYP8huUEo8w==",
+				"phase": "enabled",
+				"mode": "extension",
+				"sdk": "1.1.0",
+				"sessionStarted": true,
+				"modelInvoked": false,
+				"tools": [
+					"read",
+					"bash",
+					"powershell",
+					"edit",
+					"write",
+					"grep",
+					"find",
+					"ls",
+					"web_search",
+					"source_check",
+					"fetch_content",
+					"get_search_content"
+				],
+				"loaderErrors": [],
+				"publicSearch": {
+					"sourceUrls": [
+						"https://pubmed.ncbi.nlm.nih.gov/24906146/",
+						"https://pubmed.ncbi.nlm.nih.gov/36656942/"
+					],
+					"status": "PASS",
+					"query": "site:pubmed.ncbi.nlm.nih.gov CRISPR Cas9 genome editing",
+					"sha256": "175428c59ecce19e45bfd1047c22f2bd3d69ef333f62afdbc8159ff9bb032619",
+					"bytes": 1777
+				},
+				"invalidUrlError": {
+					"observed": true,
+					"sha256": "5de83561ab8d232ceb79667a154d1aecd49fd208b06e7c6e3a2b395688ae310b"
+				}
+			},
+			{
+				"version": "0.43.0",
+				"integrity": "sha512-O3cyBI3JnZuNM7tjUbpmq/X5uxZsbFyoqv+KKc4LDx1SDNV4BuVD/OaB/NTLZgfOQMgptNF0CnOP2nigQJ9bSQ==",
+				"phase": "rollback",
+				"mode": "extension",
+				"sdk": "1.1.0",
+				"sessionStarted": true,
+				"modelInvoked": false,
+				"nodeVersion": "v22.23.0",
+				"tools": [
+					"read",
+					"bash",
+					"powershell",
+					"edit",
+					"write",
+					"grep",
+					"find",
+					"ls",
+					"web_search",
+					"source_check",
+					"fetch_content",
+					"get_search_content"
+				],
+				"loaderErrors": [],
+				"licenseSha256": "871b3c6c64e030c0647ca33543716bdae9511ae2d6a85d6f4ce63783bab52c8f",
+				"publicSearch": {
+					"sourceUrls": [
+						"https://pubmed.ncbi.nlm.nih.gov/24906146/",
+						"https://pubmed.ncbi.nlm.nih.gov/36656942/"
+					],
+					"status": "PASS",
+					"query": "site:pubmed.ncbi.nlm.nih.gov CRISPR Cas9 genome editing",
+					"sha256": "1525c52b3f4a0d9ea69c671dfc8dafa44cacaabe90f54434f2b94652706dad96",
+					"bytes": 1777
+				},
+				"invalidUrlError": {
+					"observed": true,
+					"sha256": "5de83561ab8d232ceb79667a154d1aecd49fd208b06e7c6e3a2b395688ae310b"
+				}
+			},
+			{
+				"phase": "uninstall",
+				"mode": "absent",
+				"sdk": "1.1.0",
+				"sessionStarted": true,
+				"modelInvoked": false,
+				"nodeVersion": "v22.23.0",
+				"tools": ["read", "bash", "powershell", "edit", "write", "grep", "find", "ls"],
+				"loaderErrors": [],
+				"extensionAbsent": true
+			}
+		]
+	},
+	"mcp": {
+		"endpoint": "https://mcp.exa.ai/mcp?tools=web_search_exa",
+		"source": "https://exa.ai/docs/get-started/exa-mcp",
+		"auth": "none",
+		"adapter": "pi-mcp-adapter@5.1.0",
+		"calls": [
+			{
+				"phase": "enabled",
+				"mode": "mcp",
+				"sdk": "1.1.0",
+				"sessionStarted": true,
+				"modelInvoked": false,
+				"nodeVersion": "v22.23.0",
+				"tools": ["read", "bash", "powershell", "edit", "write", "grep", "find", "ls", "mcp"],
+				"loaderErrors": [],
+				"remoteSearch": {
+					"status": "PASS",
+					"query": "site:pubmed.ncbi.nlm.nih.gov CRISPR Cas9 genome editing",
+					"sha256": "f1f3b6ddf4739a03032f61199c10af642250af23bd4b64bab6dce33d03a3c27a",
+					"bytes": 6514
+				},
+				"diagnostics": [
+					{
+						"totalTools": 0,
+						"servers": []
+					},
+					{
+						"totalTools": 2,
+						"servers": [
+							{
+								"name": "exa",
+								"status": "cached",
+								"toolCount": 2
+							}
+						]
+					},
+					{
+						"totalTools": 2,
+						"servers": [
+							{
+								"name": "exa",
+								"status": "connected",
+								"toolCount": 2
+							}
+						]
+					}
+				]
+			},
+			{
+				"phase": "disabled",
+				"mode": "mcp",
+				"sdk": "1.1.0",
+				"sessionStarted": true,
+				"modelInvoked": false,
+				"nodeVersion": "v22.23.0",
+				"tools": ["read", "bash", "powershell", "edit", "write", "grep", "find", "ls", "mcp"],
+				"loaderErrors": [],
+				"disabledCallRefused": true,
+				"diagnostics": [
+					{
+						"totalTools": 0,
+						"servers": []
+					},
+					{
+						"totalTools": 0,
+						"servers": [
+							{
+								"name": "exa",
+								"status": "disabled",
+								"toolCount": 0
+							}
+						]
+					}
+				]
+			},
+			{
+				"phase": "restored",
+				"mode": "mcp",
+				"sdk": "1.1.0",
+				"sessionStarted": true,
+				"modelInvoked": false,
+				"nodeVersion": "v22.23.0",
+				"tools": ["read", "bash", "powershell", "edit", "write", "grep", "find", "ls", "mcp", "mcp__exa"],
+				"loaderErrors": [],
+				"remoteSearch": {
+					"status": "PASS",
+					"query": "site:pubmed.ncbi.nlm.nih.gov CRISPR Cas9 genome editing",
+					"sha256": "f1f3b6ddf4739a03032f61199c10af642250af23bd4b64bab6dce33d03a3c27a",
+					"bytes": 6514
+				},
+				"diagnostics": [
+					{
+						"totalTools": 0,
+						"servers": []
+					},
+					{
+						"totalTools": 2,
+						"servers": [
+							{
+								"name": "exa",
+								"status": "cached",
+								"toolCount": 2
+							}
+						]
+					},
+					{
+						"totalTools": 2,
+						"servers": [
+							{
+								"name": "exa",
+								"status": "connected",
+								"toolCount": 2
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"remaining": [
+		"Drone GUI permission/install/diagnostic presentation for this exact third-party package",
+		"Authenticated user-owned MCP service",
+		"Protocols.io OAuth write/readback/delete/readback"
+	]
+}
