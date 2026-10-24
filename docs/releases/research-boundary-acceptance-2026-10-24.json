@@ -102,7 +102,6 @@
 	},
 	"externalEvidence": "scientific-external-acceptance-2026-10-24.json",
 	"remaining": [
-		"Zotero local temporary write/delete authorization and native consent",
 		"Zotero cloud account round trip and real identity conflict",
 		"Shipped Electron 43 Node 24.18.1 lacks network permissions; default-network-denial historical test was false positive; production worker runtime must enforce network permissions before sandbox acceptance",
 		"Formal packaged scientific extension sandbox runtime, original TypeScript entry loading and GUI diagnostics",
@@ -161,5 +160,13 @@
 			"scope": "New packaged executable in Node mode using freshly built sandbox source"
 		},
 		"formalSandboxStatus": "BLOCKED"
+	},
+	"zoteroLocalRoundtrip": {
+		"status": "PASS",
+		"evidence": "zotero-local-roundtrip-2026-10-24.json",
+		"created": 1,
+		"deleted": 1,
+		"finalMarkerMatches": 0,
+		"recoveredCleanup": true
 	}
 }

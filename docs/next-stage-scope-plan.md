@@ -90,7 +90,7 @@ PR6 评估环境 + 许可/资源预算
 | Electron GUI 验收 | **PASS（正式包交互切片）**：`/Applications/Drone.app` v0.33.4 完成知识库、首页、技能/插件启停、MCP 发现/停用、真实模型驱动的 MCP 工具调用、来源行号阅读和回滚；第二次隔离运行的过程面板显示 1 次工具、2 次响应，并返回 `DRONE-GUI-MCP-20261024` | [`next-stage-gui-acceptance-2026-10-24.json`](releases/next-stage-gui-acceptance-2026-10-24.json) |
 | 官方第三方扩展 | **PASS（公开包切片）**：`@gyoungwe/pi-connectors@0.1.1` 临时 prefix 安装后经进程沙箱注册并调用，UI 包仍完成宿主生命周期 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | 外部用户 MCP | **PASS（独立 stdio 进程切片）**：真实外部 MCP 子进程完成 marker 调用与停用重载反证；用户自有 URL/凭据仍不读取 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
-| research / pi-research / Zotero 迁移 | **PARTIAL**：完整研究核心已迁入 `pi-research@0.2.0`，宿主重复源码与兼容 facade 已删除，真实 SDK 锁定/latest 回归通过；账户写入和迁移后正式安装包 GUI 仍未关闭 | [`research-migration-status.md`](research-migration-status.md) |
+| research / pi-research / Zotero 迁移 | **PARTIAL**：完整研究核心已迁入 `pi-research@0.2.0`，宿主重复源码与兼容 facade 已删除，真实 SDK 锁定/latest 回归通过；获授权的 Zotero 本机临时条目闭环已完成，云端账户写入和迁移后完整正式包研究 GUI 仍未关闭 | [`research-migration-status.md`](research-migration-status.md) |
 | 整页知识 UI 插件化 | **PASS（切片）**：新增 `knowledge.page`，有贡献时接管主区，无贡献/停用时回退默认页 | UI SPEC、`PluginRegions.test.tsx`、`registry.test.ts` |
 | Protocols.io 只读验收 | **PASS（公开 GET）**：公开协议页无凭据 GET 通过；写入按红线保持 BLOCKED，未执行账户写入 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 

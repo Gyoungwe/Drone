@@ -265,7 +265,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 `../drone-plugins/packages/pi-research/` 是研究证据、归档、回执、provenance 和 Zotero 领域算法的源码权威位置。宿主只消费 `@gyoungwe/pi-research/host`，`plugins.lock.json` 固定 commit、版本和 tarball hash；`scripts/build-pi-research.mjs` 验证 fetched 产物。原生入口提供来源检索/阅读/候选笔记/引用答案与完整 research_loop。宿主 workspace/Vault/授权与连接器桥留在 `packages/extensions`、`packages/backend` 及剩余 `packages/research` 合同中。
 
-本轮边界、未完成的账户/安装包验收见 [研究迁移状态](research-migration-status.md)；独立科研扩展与 Exa HTTP MCP 的真实回执见 [外部验收](releases/scientific-external-acceptance-2026-10-24.md)。
+本轮边界、未完成的账户/安装包验收见 [研究迁移状态](research-migration-status.md)；获授权的 Zotero 本机单条创建/回读/删除/回读见[闭环证据](releases/zotero-local-roundtrip-2026-10-24.json)；独立科研扩展与 Exa HTTP MCP 的真实回执见 [外部验收](releases/scientific-external-acceptance-2026-10-24.md)。
 
 ## `@gyoungwe/research-suite` — 外部原生 Pi 聚合包（PR-7）
 

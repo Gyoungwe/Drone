@@ -1,0 +1,40 @@
+{
+	"date": "2026-10-24T12:00:44.293Z",
+	"status": "PASS",
+	"scope": "One explicitly user-authorized temporary local Zotero item; packaged extension in a real SDK session; no live model or GUI claim",
+	"marker": "DRONE-TEMP-ACCEPTANCE-2e42f78d-6e7d-4fae-94ff-aac23fddce45",
+	"syntheticDoi": true,
+	"sourceCommit": "319a6e72",
+	"extensionSha256": "6d77d30ca1daba058ca0ca1861de6380fd04090901efc731879a603a8fe31ec2",
+	"authorization": "User explicitly allowed temporary create/read/delete/read round trip; exact-DOI grant supplied through host task-consent event for this session only",
+	"credentials": "Existing local credential store; server identity matched; no credential copied to evidence",
+	"created": 1,
+	"deleted": 1,
+	"existingItemsModified": 0,
+	"readBack": {
+		"status": 200,
+		"uniqueMarker": true,
+		"doiMatched": true,
+		"tagMatched": true,
+		"titleMatchedIgnoringZoteroCaseNormalization": true,
+		"noAttachments": true
+	},
+	"itemKeySha256": "9d45350964ece65f780616f7ae23b918b6c36adeefbdd755441b799a2cd8ed5f",
+	"driverIssue": "Initial exact title check rejected Zotero automatic title casing (A -> a); cleanup intentionally stopped on identity assertion. A nonexistent ModelRuntime.dispose call then masked that assertion. No second create was attempted; cleanup revalidated unique marker + DOI + tag and title ignoring case.",
+	"deleteStatus": 204,
+	"deletedItemGetStatus": 404,
+	"finalMarkerMatches": 0,
+	"cleanupVerified": true,
+	"completedAt": "2026-10-24T12:02:06.262Z",
+	"zoteroVersion": "10.0.6",
+	"sdkVersion": "1.1.0",
+	"model": "Deterministic faux provider; real AgentSession and packaged research_zotero_save tool",
+	"createDriver": "/tmp/drone-zotero-authorized-roundtrip.mjs",
+	"cleanupDriver": "/tmp/drone-zotero-finish-cleanup.mjs",
+	"limitations": [
+		"Initial all-in-one driver failed; recovered cleanup without a second create",
+		"No Zotero cloud account/identity-conflict acceptance",
+		"No full Desktop GUI research workflow acceptance"
+	],
+	"protocolReference": "https://www.zotero.org/support/dev/web_api/v3/write_requests#deleting_an_item"
+}

@@ -286,3 +286,7 @@ git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保
 ## 进程沙箱：连接失败不等于权限拒绝
 
 `fetch("http://127.0.0.1:9")` 的 bad-port 错误不能证明禁网。使用父进程已验证可达的 HTTP 服务，断言子进程 `ERR_ACCESS_DENIED` 且服务端没有新增请求。Node 22/24 permission model 没有网络控制；正式 Electron 内置 Node 24 时必须拒绝加载沙箱。支持网络权限的运行时使用 `--permission`；`--allow-net` 为全网布尔授权，不能把 hostname 参数当域名白名单。Electron worker 必须设置 `ELECTRON_RUN_AS_NODE=1`。
+
+## Zotero 临时条目验收：标题规范化与清理
+
+Zotero Connector 会规范化英文标题大小写（本轮 `NOT A PUBLICATION` 被保存为 `NOT a PUBLICATION`）。临时条目身份应由唯一标记、DOI、标签和忽略大小写的完整标题共同核对；不能因逐字标题断言失败而误报未写入。清理必须只针对已确认的测试条目，带版本前置条件删除，再核对 key 404 和标记搜索为空。SDK 会话使用 `session.dispose()`；Pi 1.1.0 的 `ModelRuntime` 无 `dispose()`，验收驱动器不能调用不存在的方法掩盖原始错误。
