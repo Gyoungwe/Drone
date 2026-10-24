@@ -108,12 +108,22 @@ for (const entry of entries) {
 			write: false,
 		});
 	}
+	const inputHash = await inputsHash(buildResult.metafile);
+	if (
+		!built &&
+		previous?.entries?.[stem]?.status === "generated" &&
+		previous.entries[stem].inputsSha256 !== inputHash
+	) {
+		throw new Error(
+			`${relative(root, output)} has stale dependencies; rerun with --force before updating its manifest`,
+		);
+	}
 	records[stem] = {
 		source: entry,
 		output: `${stem}.mjs`,
 		status: built || previous?.entries?.[stem]?.status === "generated" ? "generated" : "legacy-preserved",
 		sourceSha256: sourceHash,
-		inputsSha256: await inputsHash(buildResult.metafile),
+		inputsSha256: inputHash,
 		outputSha256: await readHash(output),
 	};
 }

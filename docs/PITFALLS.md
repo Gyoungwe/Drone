@@ -39,6 +39,8 @@
 
 `registerWorkbench` 现在注入通过 `withHostRuntime(pi, ...)` 查询的只读判定，每次调用解析当前绑定，兼容宿主稍后宣布 runtime 的加载顺序。`task-manifest-session.test.mjs` 使用真实独立构建的知识扩展，检查跨轮读取不受阻、另一独立 event bus 未声明同名工具时仍拦截重复效果；源码单测通过后仍须重新打包做 GUI 验收。
 
+同轮正式包重验还发现：`build:extensions` 默认保留现有输出，但曾把传递依赖的新摘要写进旧输出的 manifest，`check:extensions` 因而误判通过。生成器现在拒绝这种依赖漂移且不更新 manifest；必须 `npm run build:extensions -- --force` 重建。回归在 `scripts/check-build-inputs.test.mjs`，第二个含旧 bundle 的中间 DMG 已废弃，不能计入最终 PASS。
+
 ## 2026-10-24：正式包沙箱的运行时与打包边界
 
 - Electron 43 的 Node 24 无网络权限控制。禁止把 bad-port fetch 错误当禁网成功；必须用父进程可达的 HTTP 端点检查 `ERR_ACCESS_DENIED` 和服务端零请求。正式包现使用独立、摘要校验的 Node 26.12.1。
