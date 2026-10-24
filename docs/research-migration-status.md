@@ -28,6 +28,7 @@
 | 正式沙箱运行时 | **PASS（工具代理切片）**：正式包携带 Node 26.12.1，Electron Node 24 不执行第三方插件；加载前隔离、真实可达端点禁网、独立 PID 与退出回收通过。Node permission model 不等于恶意代码的 OS 级安全沙箱 |
 | 外部 MCP | Exa 公开 HTTP MCP 启用、停用拒绝、恢复检索通过；不是用户自有认证服务 |
 | Protocols.io 写入 | 缺账户凭据和可核实的账户状态读回，保持未执行；官方接口与范围见 [外部验收](releases/scientific-external-acceptance-2026-10-24.md) |
-| 正式安装包 GUI | 本次 macOS arm64 DMG 的真实应用启动、可见工作台、preload/IPC 和研究命令发现 PASS；第三方科研工具交互闭环已通过；完整研究领域工作流 GUI 仍待重验，本轮不替代该验收 |
+| 正式安装包 GUI | **PASS（本地两源研究闭环）**：迁移后正式 DMG 完成绑定/授权、本地检索、真实下载/逐行读取、空引用拒绝、绑定/草稿/总结、GUI 引用阅读、重启新会话接续和 stale/恢复。脚本模型不替代科学验证；见[本轮 GUI 证据](pluginization/research-workflow-gui-evidence.md) |
+| 知识概览分类 | **OPEN（RESEARCH-GUI-CATEGORY）**：标题含 tools 的方法笔记误归软件；需修正插件显式类型/目录优先级并重验，存储与阅读不受此问题影响 |
 
-完整研究迁移验收仍为 **PARTIAL**：源码迁移与实际会话门禁独立交付，剩余真实账户/安装包边界不能用 fixture 或旧证据关闭。
+完整研究迁移验收仍为 **PARTIAL**：源码迁移与实际会话门禁独立交付，本地安装包研究闭环已通过，但概览分类、云端账户、新研究包 npm 发布和其他平台边界不能用 fixture 或旧证据关闭。

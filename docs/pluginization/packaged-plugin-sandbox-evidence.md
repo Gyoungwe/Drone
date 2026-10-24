@@ -67,7 +67,7 @@ Pi 补丁对全新 registry SDK tarball 的 dry-run 应用通过；最终 DMG �
 - Node permission model 是防止意外越权的 seatbelt，**不保证隔离恶意代码**，不是 OS 沙箱。
 - 本轮代理仅支持工具。事件钩子、命令、provider、renderer、MCP 注册等不支持的 API 明确失败；依赖安装脚本的包不保证可用。文件访问包含扩展、依赖树和临时目录；网络授权为全网，不能伪称域名白名单。
 - 原生包 GUI 一键启停、其他 OS/架构实机、同包跨版本升级/回滚未由本轮覆盖；此前独立 `pi-web-access` 的原生 Pi 升级/回滚证据保留其原范围。
-- 完整迁移后研究工作流 GUI、用户自有认证 MCP、Zotero 云端和 Protocols.io 写入仍未关闭；新研究包 npm 发布待办不变。MinerU/GROBID 集成和 B8 仍暂缓。
+- 此沙箱验收当时未覆盖完整迁移后研究工作流 GUI；后续本地两源闭环已由[研究 GUI 证据](research-workflow-gui-evidence.md)覆盖，并单列概览分类缺口。用户自有认证 MCP、Zotero 云端、Protocols.io 写入和新研究包 npm 发布待办不变。MinerU/GROBID 集成和 B8 仍暂缓。
 - 旧 Node 22 bad-port 假阳性继续作废；旧 Electron Node 24 拒绝回执保留。并行资源准备导致的中间 ASAR 损坏产物已废弃，最终顺序构建安装验收才计 PASS。
 
 ## 2026-10-24 合入 main 后复验

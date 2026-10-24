@@ -1,0 +1,590 @@
+{
+	"schema": 1,
+	"recordedAt": "2026-10-24T15:57:51.638669+00:00",
+	"status": "PASS_SCOPED_LOCAL_RESEARCH_GUI",
+	"overallResearchMigrationStatus": "PARTIAL",
+	"source": {
+		"sourceCommit": "1d544db9fb6da9d153a024d3dd8c3a748792e167",
+		"files": {
+			".pi/extensions/obsidian-workbench.mjs": "eaaccf1c57a438c029ae4679473972fbad2d3060a8ed32b469fef77438adc8f0",
+			".pi/extensions/knowledge-extension.mjs": "2075e2bbe089288fa1add728a131bc39b6fdbe58b3a97cecee941d3c1cca8ee7",
+			".pi/extensions/source-archive.mjs": "0a5a410bc2c1544a1d05ee1800f07cc7ab3dd1b6c303758fb2717e1bce3d45c5",
+			".pi/extensions/subagent-mcp-readonly.mjs": "c9fddca3e68087a2330cad0d4d4039ccc5bd427219fbb5921861f9fd12c17a83",
+			"packages/pi-core/dist/index.mjs": "75b604ff7d01f22921840d64135df48fb349c3d2edc15a82ff0bd9cbbcae0d31",
+			"packages/desktop/out/main/index.js": "42a4bfdfd58e8f218d35aa2355a960e4d8797a08fa87fa583ca68f11d3b21e1b"
+		}
+	},
+	"pluginsCommit": "ff1d65998716df4831540957857a945bed3626a7",
+	"branch": "codex/research-workflow-gui",
+	"app": {
+		"version": "0.33.4",
+		"platform": "darwin-arm64",
+		"distribution": "local unsigned DMG; mounted, copied with ditto, unmounted, then launched",
+		"dmg": {
+			"path": "/tmp/drone-research-gui-accepted-artifact/drone-mac-arm64.dmg",
+			"sha256": "96adf863f9cd46238ee29cec3db2324c307c448f931b0e58d99a483a9e085496"
+		},
+		"installedApp": "/tmp/drone-research-accepted-installed/Drone.app",
+		"asar": {
+			"path": "/tmp/drone-research-accepted-installed/Drone.app/Contents/Resources/app.asar",
+			"sha256": "6a110152e82cde8415783245e3802eb48f02116883d699288193937cfc1ca2e2"
+		},
+		"firstPid": 94195,
+		"restartedPid": 95263
+	},
+	"method": {
+		"provider": "deterministic loopback scripted model; not live scientific reasoning",
+		"actualExecution": [
+			"installed Electron app",
+			"Pi SDK session/tool dispatch",
+			"public upstream HTTP downloads",
+			"filesystem and knowledge worker",
+			"preload/IPC and native GUI",
+			"app restart and new session"
+		],
+		"isolationRoot": "/tmp/drone-research-workflow-accepted",
+		"productionVaultUsed": false,
+		"humanScientificReviewCompleted": false,
+		"guiActions": "native CUA clicks, text entry and screenshot observations; no dev UI substitution"
+	},
+	"sessions": [
+		{
+			"id": "01a16e97-25f3-7606-a877-a20587c51313",
+			"startedAt": "2026-10-24T15:46:01.843Z",
+			"localFile": "/tmp/drone-research-workflow-accepted/agent/sessions/--private-tmp-drone-research-workflow-accepted-project--/2026-10-24T15-46-01-843Z_01a16e97-25f3-7606-a877-a20587c51313.jsonl",
+			"sha256": "3f05b28937708bb947e7b83da13420ecc424731098f2266ad8dc24ec02d29c35"
+		},
+		{
+			"id": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"startedAt": "2026-10-24T15:53:47.250Z",
+			"localFile": "/tmp/drone-research-workflow-accepted/agent/sessions/--private-tmp-drone-research-workflow-accepted-project--/2026-10-24T15-53-47-250Z_01a16e9e-3ff2-7330-9435-7548fc369ece.jsonl",
+			"sha256": "0173602b94c4f500ecc44b467435ba04a3e20f40af95f81027f603ff7db19767"
+		}
+	],
+	"receipts": [
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-1",
+			"toolName": "research_setup_options",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-2",
+			"toolName": "research_setup_obsidian",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-5",
+			"toolName": "task_plan",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-6",
+			"toolName": "research_loop",
+			"isError": false,
+			"action": "start"
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-7",
+			"toolName": "research_prepare_knowledge",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-8",
+			"toolName": "research_search_knowledge",
+			"isError": false,
+			"coverage": "ready",
+			"complete": true
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-9",
+			"toolName": "research_archive_source",
+			"isError": false,
+			"status": "downloaded"
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-10",
+			"toolName": "research_archive_source",
+			"isError": false,
+			"status": "downloaded"
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-11",
+			"toolName": "read",
+			"isError": false,
+			"requestedLineRange": {
+				"offset": 1,
+				"limit": 75
+			}
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-12",
+			"toolName": "read",
+			"isError": false,
+			"requestedLineRange": {
+				"offset": 1,
+				"limit": 75
+			}
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-13",
+			"toolName": "research_loop",
+			"isError": true,
+			"action": "finalize"
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-18",
+			"toolName": "research_prepare_knowledge",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-19",
+			"toolName": "research_search_knowledge",
+			"isError": false,
+			"coverage": "ready",
+			"complete": true
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-20",
+			"toolName": "research_loop",
+			"isError": false,
+			"action": "status"
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-21",
+			"toolName": "read",
+			"isError": false,
+			"requestedLineRange": {
+				"offset": 1,
+				"limit": 75
+			}
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-22",
+			"toolName": "read",
+			"isError": false,
+			"requestedLineRange": {
+				"offset": 1,
+				"limit": 75
+			}
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-23",
+			"toolName": "research_loop",
+			"isError": false,
+			"action": "bind_claims"
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-24",
+			"toolName": "research_loop",
+			"isError": false,
+			"action": "finalize"
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-25",
+			"toolName": "research_deposit_knowledge",
+			"isError": false,
+			"scientificallyVerified": false,
+			"type": "method"
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-30",
+			"toolName": "research_prepare_knowledge",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-31",
+			"toolName": "research_search_knowledge",
+			"isError": false,
+			"coverage": "ready",
+			"complete": true
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-32",
+			"toolName": "research_read_knowledge",
+			"isError": false,
+			"hash": "694b17dfcaa9716ebbc40fe5010895d5e68227e82ce73af3387aa5258fd099b8",
+			"startLine": 1,
+			"endLine": 32
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-33",
+			"toolName": "research_summarize_run",
+			"isError": false,
+			"summary_saved": true,
+			"partial": false
+		},
+		{
+			"sessionId": "01a16e97-25f3-7606-a877-a20587c51313",
+			"toolCallId": "research-1792856687116-34",
+			"toolName": "research_topics",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-1",
+			"toolName": "research_prepare_knowledge",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-2",
+			"toolName": "research_topics",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-3",
+			"toolName": "research_resume_topic",
+			"isError": false,
+			"status": "selected"
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-4",
+			"toolName": "research_search_knowledge",
+			"isError": false,
+			"coverage": "ready",
+			"complete": true
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-5",
+			"toolName": "research_read_knowledge",
+			"isError": false,
+			"hash": "694b17dfcaa9716ebbc40fe5010895d5e68227e82ce73af3387aa5258fd099b8",
+			"startLine": 1,
+			"endLine": 32
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-8",
+			"toolName": "task_plan",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-9",
+			"toolName": "research_prepare_knowledge",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-15",
+			"toolName": "research_prepare_knowledge",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-16",
+			"toolName": "research_resume_topic",
+			"isError": false,
+			"status": "stale"
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-21",
+			"toolName": "research_prepare_knowledge",
+			"isError": false
+		},
+		{
+			"sessionId": "01a16e9e-3ff2-7330-9435-7548fc369ece",
+			"toolCallId": "research-1792857204378-22",
+			"toolName": "research_read_knowledge",
+			"isError": false,
+			"hash": "694b17dfcaa9716ebbc40fe5010895d5e68227e82ce73af3387aa5258fd099b8",
+			"startLine": 1,
+			"endLine": 32
+		}
+	],
+	"sources": [
+		{
+			"url": "https://raw.githubusercontent.com/lh3/minimap2/v2.28/README.md",
+			"sha256": "dcbdb220af75f0809ae3974303c6999df77725d9bf0682c5b1209608ea255d2f",
+			"status": "downloaded",
+			"toolCallId": "research-1792856687116-9"
+		},
+		{
+			"url": "https://raw.githubusercontent.com/samtools/samtools/1.20/README",
+			"sha256": "79ff8aaf3297e8ef7d1e443ab6b3fd990ca58ef77fb726cd9a09b0f0a7c39460",
+			"status": "downloaded",
+			"toolCallId": "research-1792856687116-10"
+		}
+	],
+	"evidenceGate": {
+		"stage": "answerable",
+		"answerable": true,
+		"archiveCount": 2,
+		"claimBindings": [
+			{
+				"id": "claim-1",
+				"provenanceChecked": true,
+				"scientificallyVerified": false,
+				"supportAssessment": "model-asserted-unreviewed",
+				"sources": [
+					{
+						"hash": "dcbdb220af75f0809ae3974303c6999df77725d9bf0682c5b1209608ea255d2f",
+						"start_line": 55,
+						"end_line": 55,
+						"reading_basis": "current-scope-literature-note",
+						"originalFulltextReadThisTurn": false
+					}
+				]
+			},
+			{
+				"id": "claim-2",
+				"provenanceChecked": true,
+				"scientificallyVerified": false,
+				"supportAssessment": "model-asserted-unreviewed",
+				"sources": [
+					{
+						"hash": "79ff8aaf3297e8ef7d1e443ab6b3fd990ca58ef77fb726cd9a09b0f0a7c39460",
+						"start_line": 1,
+						"end_line": 1,
+						"reading_basis": "current-scope-literature-note",
+						"originalFulltextReadThisTurn": false
+					}
+				]
+			}
+		],
+		"scientificallyVerified": false,
+		"missingClaimsRejectedToolCallId": "research-1792856687116-13"
+	},
+	"knowledge": {
+		"noteRelativePath": "Library/Methods/mapping-tools-gui-acceptance.md",
+		"noteSha256": "694b17dfcaa9716ebbc40fe5010895d5e68227e82ce73af3387aa5258fd099b8",
+		"status": "draft",
+		"scientificallyVerified": false,
+		"humanReview": "empty; not marked complete",
+		"lineRange": [1, 32],
+		"sourceLinks": 2,
+		"guiBacklinks": 2,
+		"guiOutgoingLinks": 2,
+		"summarySaved": true,
+		"wikiCreated": true,
+		"topicId": "mapping-tools",
+		"homepageTopicVisible": true,
+		"restartNewSessionRereadSameHash": true
+	},
+	"staleCheck": {
+		"externalEdit": "test harness appended a marker to the isolated synthetic note; not a model edit or GUI editor",
+		"changedSha256": "e3fc62f9bd66473bbd02ac9a81797d3758972be0cec45c47d50edd9ac5a88aec",
+		"toolCallId": "research-1792857204378-16",
+		"status": "stale",
+		"reason": "changed",
+		"restoredSha256": "694b17dfcaa9716ebbc40fe5010895d5e68227e82ce73af3387aa5258fd099b8",
+		"restoredReadToolCallId": "research-1792857204378-22",
+		"topicAutomaticallyRevalidated": false,
+		"initialDriverMismatch": "STALE1 requested unexposed edit tool; no edit executed. STALE2 used external edit plus actual topic resume.",
+		"persistedTopicStoreSha256": "0d592e0f7487930c71a61bd373bf2bc1ecc5fafc5933896804651fcc230e541c"
+	},
+	"screenshots": [
+		{
+			"path": "/tmp/drone-research-workflow-accepted/home-topic.png",
+			"sha256": "a5107f351cbffc00581fc91e9e99a229fa0a72c3d23b67d9f0ddcaad60917ec6"
+		},
+		{
+			"path": "/tmp/drone-research-workflow-accepted/knowledge-overview.png",
+			"sha256": "0ec08d9477d23cf5da2736aed661214a7ece04dac91c1d9ec4761c6b9aca5d27"
+		},
+		{
+			"path": "/tmp/drone-research-workflow-accepted/note-reader.png",
+			"sha256": "b96ea6b55dd14074abaeb1e1ec88a9a71075d21a6b23edb164239a617689ac0f"
+		},
+		{
+			"path": "/tmp/drone-research-workflow-accepted/plan-consent.png",
+			"sha256": "ab256cbc9c6746351dcdc2e61a90679ddcb6c1fe794e4a12ff8b9289cfd74a45"
+		},
+		{
+			"path": "/tmp/drone-research-workflow-accepted/restarted-session.png",
+			"sha256": "59e267165ab467ff2d4f3754af59fb4c0944c6d838929c921b64dd49c5d32d61"
+		},
+		{
+			"path": "/tmp/drone-research-workflow-accepted/restored-note-reader.png",
+			"sha256": "70789979150397dd620ec74ecc2b5d232ce4b19284b352da7a040c1109dedaac"
+		},
+		{
+			"path": "/tmp/drone-research-workflow-accepted/stale-receipt.png",
+			"sha256": "22b0d7a7ccbf4e1ecc4d166e7b4c95f2929c192bc75812265be2633e09e4fa3b"
+		}
+	],
+	"gates": [
+		{
+			"name": "lint",
+			"command": "npm run lint",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 1.17,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/lint.log",
+			"sha256": "598accde706970439ccd12948957e135ebc33013bf83b66ef3fa385587572076"
+		},
+		{
+			"name": "typecheck",
+			"command": "npm run typecheck --ignore-scripts",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 40.92,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/typecheck.log",
+			"sha256": "067b4a3e4534dd12e8f0b67a7cdb7b202e0b646d90243334f40d13fd2345bc56"
+		},
+		{
+			"name": "test",
+			"command": "npm test --ignore-scripts",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 86.21,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/test.log",
+			"sha256": "ff43b9189e94921eadd8e9edbf24b0c0199d0d961abc8839a44b3013484ceb12"
+		},
+		{
+			"name": "build",
+			"command": "npm run build --ignore-scripts",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 37.22,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/build.log",
+			"sha256": "209fa546d8ec88ac9b4ed80a18dac5e3db6d79c0eb8bbadc62ef00a90978b9be"
+		},
+		{
+			"name": "arch",
+			"command": "npm run check:arch",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 1.0,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/arch.log",
+			"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+		},
+		{
+			"name": "plugin-api",
+			"command": "npm run check:plugin-api -- --migration --lifecycle",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 3.49,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/plugin-api.log",
+			"sha256": "dbc87d320ec7a6ac961844bd5df7ce68377ee86d1925be4dc723b1e90afd16dd"
+		},
+		{
+			"name": "extensions",
+			"command": "npm run check:extensions",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 0.47,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/extensions.log",
+			"sha256": "69b8f5b01acec128946af4936fa6ef0695e2e3430fded3828083dce314aa8ff1"
+		},
+		{
+			"name": "upgrade",
+			"command": "npm run test:upgrade",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 1.53,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/upgrade.log",
+			"sha256": "744577faf30f4e72f7d4b7f3518a1bd4027cdbde7b69cbaace160f5041481343"
+		},
+		{
+			"name": "plugins",
+			"command": "npm run check",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/drone-plugins",
+			"exitCode": 0,
+			"seconds": 107.48,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/plugins.log",
+			"sha256": "ccb0c74deb20f8f0205ffd5cb4a108aa23c9da5a4b634b006b26f665d62a4a1f"
+		}
+	],
+	"gateNotes": [
+		"Host typecheck/test/build use --ignore-scripts after explicit plugin preparation in the preceding full pass; all named commands executed.",
+		"Plugin npm run check reused at identical ff1d659 commit after backend-only UI fix.",
+		"Strict static artifact gate 17 PASS, 4 route contracts; distinct from native GUI evidence."
+	],
+	"staticArtifactGate": {
+		"path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-2026-10-24/artifact.json",
+		"sha256": "9522fa983850b3d1c69c5a3f8579628bae5606c04456b11cbde3d254b4c2afa3"
+	},
+	"discardedAttempts": [
+		{
+			"sourceCommit": "8a2b323c",
+			"failure": "repeated knowledge preparation incorrectly blocked as duplicate write"
+		},
+		{
+			"sourceCommit": "63ded0ef",
+			"dmgSha256": "73cb85181cd5f4c92a7760ccd091b44443a98838a3fbcde74e540b543063181f",
+			"failure": "old extension bundle retained while dependency manifest was refreshed"
+		},
+		{
+			"sourceCommit": "6e02fe32",
+			"dmgSha256": "6707540529e0475a09d92be3e50e7af0ccd5ad3afd05b0d885c39629d16095fd",
+			"failure": "GUI knowledge:readNote failed: Workspace config host is not configured"
+		}
+	],
+	"remaining": [
+		{
+			"id": "RESEARCH-GUI-CATEGORY",
+			"status": "OPEN",
+			"description": "Method note with tools in title classified as software in overview; storage type/path and reader remain correct. pi-knowledge worker.ts and recent-by-category.ts heuristics need explicit type/path precedence."
+		},
+		{
+			"id": "ZOTERO-CLOUD",
+			"status": "BLOCKED_CREDENTIALS"
+		},
+		{
+			"id": "USER-MCP",
+			"status": "NOT_RUN_AUTHENTICATED_USER_SERVICE"
+		},
+		{
+			"id": "PROTOCOLS-WRITE",
+			"status": "BLOCKED_CREDENTIALS_AND_VERIFIED_SCOPE"
+		},
+		{
+			"id": "RESEARCH-NPM",
+			"status": "NOT_PUBLISHED",
+			"packages": ["@gyoungwe/pi-research@0.2.0", "@gyoungwe/research-suite@0.1.9"]
+		},
+		{
+			"id": "OTHER_PLATFORMS_AND_LIVE_SCIENCE",
+			"status": "NOT_COVERED"
+		},
+		{
+			"id": "MINERU_GROBID_AND_B8",
+			"status": "DEFERRED_UNCHANGED"
+		}
+	],
+	"driverArtifacts": [
+		{
+			"path": "/tmp/launch-research-accepted.mjs",
+			"sha256": "6b1cf6508e4de5076759dc45b11d5a7562e3d592c15c453c056b6d10003cd206"
+		},
+		{
+			"path": "/tmp/drone-research-workflow-accepted/plans.json",
+			"sha256": "588fae2f93c78d11d32efd0171eee63cccc9bc5e2feeb79086cff68b990054ad"
+		}
+	],
+	"cleanup": {
+		"appExitCode": 0,
+		"providerStopped": true,
+		"syntheticNoteRestored": true,
+		"productionDataChanged": false,
+		"localEvidenceRetained": true
+	}
+}
