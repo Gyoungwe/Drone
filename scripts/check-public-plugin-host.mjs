@@ -52,6 +52,7 @@ function run(command, args, options = {}) {
 
 const temp = mkdtempSync(join(tmpdir(), "drone-public-plugin-host-"));
 const prefix = join(temp, "prefix");
+const lifecyclePrefix = join(temp, "lifecycle-prefix");
 try {
 	const specs = [...HOST_FAMILY, ...packages.map((item) => item.spec)];
 	run("npm", [
@@ -105,6 +106,55 @@ try {
 		},
 	);
 	loaded.push({ package: "@gyoungwe/pi-connectors", processSandbox: true });
+
+	// Exercise the real registry artifact lifecycle in a separate clean prefix.
+	// This is intentionally read-only with respect to the registry: npm only
+	// downloads published tarballs and all state is discarded with `temp`.
+	run("npm", [
+		"install",
+		"--prefix",
+		lifecyclePrefix,
+		"--registry",
+		"https://registry.npmjs.org",
+		"--ignore-scripts",
+		"--save-exact",
+		"--omit=peer",
+		"--no-audit",
+		"--no-fund",
+		"@gyoungwe/pi-connectors@0.1.0",
+	]);
+	const lifecyclePackagePath = join(lifecyclePrefix, "node_modules/@gyoungwe/pi-connectors/package.json");
+	const lifecycleV1 = JSON.parse(readFileSync(lifecyclePackagePath, "utf8"));
+	assert.equal(lifecycleV1.version, "0.1.0");
+	run("npm", [
+		"install",
+		"--prefix",
+		lifecyclePrefix,
+		"--registry",
+		"https://registry.npmjs.org",
+		"--ignore-scripts",
+		"--save-exact",
+		"--omit=peer",
+		"--no-audit",
+		"--no-fund",
+		"@gyoungwe/pi-connectors@0.1.1",
+	]);
+	const lifecycleV2 = JSON.parse(readFileSync(lifecyclePackagePath, "utf8"));
+	assert.equal(lifecycleV2.version, "0.1.1");
+	run("npm", [
+		"uninstall",
+		"--prefix",
+		lifecyclePrefix,
+		"--ignore-scripts",
+		"--no-audit",
+		"--no-fund",
+		"@gyoungwe/pi-connectors",
+	]);
+	assert(!existsSync(lifecyclePackagePath), "registry package remained after uninstall");
+	loaded.push({
+		package: "@gyoungwe/pi-connectors",
+		registryLifecycle: ["0.1.0", "0.1.1", "uninstall"],
+	});
 	const env = { ...process.env, DRONE_PUBLIC_UI_PACKAGE_DIR: uiDir };
 	run(
 		join(ROOT, "node_modules/.bin/vitest"),
@@ -113,7 +163,22 @@ try {
 	);
 	loaded.push({ package: "@gyoungwe/desktop-ui-pack", uiLifecycle: true });
 
-	console.log(JSON.stringify({ status: "PASS", registryPackages: loaded, cleanPrefix: true }, null, 2));
+	console.log(
+		JSON.stringify(
+			{
+				status: "PASS",
+				registryPackages: loaded,
+				cleanPrefix: true,
+				thirdPartyBoundary: {
+					status: "BLOCKED",
+					reason:
+						"The registry artifact is a Drone-maintained public package; a separately owned third-party source still requires an explicitly approved package and licence scope.",
+				},
+			},
+			null,
+			2,
+		),
+	);
 } finally {
 	rmSync(temp, { recursive: true, force: true });
 }

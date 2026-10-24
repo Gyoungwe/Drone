@@ -24,4 +24,50 @@ describe("McpService external diagnostics", () => {
 		expect(JSON.stringify(config.diagnostics)).not.toContain("fixture-secret");
 		expect(JSON.stringify(config.diagnostics)).not.toContain(cwd);
 	});
+
+	it("returns safe diagnostics for a user HTTP server without probing the endpoint", async () => {
+		const agentDir = await mkdtemp(join(tmpdir(), "drone-mcp-external-user-agent-"));
+		const homeDir = await mkdtemp(join(tmpdir(), "drone-mcp-external-user-home-"));
+		await writeFile(
+			join(agentDir, "mcp.json"),
+			JSON.stringify({
+				mcpServers: {
+					remote_user: {
+						url: "https://mcp.example.test/sse",
+						env: { TOKEN: "user-secret" },
+					},
+				},
+			}),
+		);
+		const config = await new McpService({ agentDir, homeDir }).getConfig();
+		expect(config.servers).toMatchObject([
+			{
+				name: "remote_user",
+				transport: "http",
+				url: "https://mcp.example.test/sse",
+				scope: "user",
+				disabled: false,
+			},
+		]);
+		expect(config.diagnostics).toBeUndefined();
+		expect(JSON.stringify(config)).not.toContain("user-secret");
+	});
+
+	it("reports malformed external HTTP configuration without contacting the server", async () => {
+		const agentDir = await mkdtemp(join(tmpdir(), "drone-mcp-external-invalid-agent-"));
+		const homeDir = await mkdtemp(join(tmpdir(), "drone-mcp-external-invalid-home-"));
+		await writeFile(
+			join(agentDir, "mcp.json"),
+			JSON.stringify({
+				mcpServers: {
+					invalid_remote: { url: "file:///private/secret", env: { TOKEN: "secret" } },
+				},
+			}),
+		);
+		const config = await new McpService({ agentDir, homeDir }).getConfig();
+		expect(config.diagnostics).toMatchObject([
+			{ server: "invalid_remote", code: "invalid-url", severity: "error" },
+		]);
+		expect(JSON.stringify(config.diagnostics)).not.toContain("secret");
+	});
 });

@@ -54,4 +54,14 @@ npm run check:protocols-readonly
 
 三项均在 2026-10-24 通过；公开包脚本最后输出 `cleanPrefix: true`，MCP 回执包含唯一 marker，Protocols.io 回执明确 `credentials: "none"` 和 `mutations: 0`。
 
+## 2026-10-24 第 3–4 项收口复验
+
+本次补充复验只使用公开 registry 和本地临时目录，不读取用户凭据、不连接用户自有 MCP 服务，也不执行外部写入。
+
+- `npm run check:public-plugin-host`：**PASS**。从 npm registry 的干净 prefix 安装 `@gyoungwe/pi-evidence@0.1.1`、`@gyoungwe/pi-connectors@0.1.1` 和 `@gyoungwe/desktop-ui-pack@0.1.1`；Pi loader 发现并核对工具清单，进程沙箱完成 `connector_list` 调用，Desktop UI 生命周期通过。
+- 同一脚本的公开包生命周期：**PASS**。在另一个干净 prefix 中完成 `@gyoungwe/pi-connectors@0.1.0 → 0.1.1 → uninstall`，卸载后包目录不存在；回执为 `cleanPrefix: true`。
+- `npx vitest run packages/backend/test/mcp-external-policy.test.ts packages/shared/src/mcp-external.test.ts packages/backend/test/mcp-connector-gates.test.ts --reporter dot`：**PASS**，3 个测试文件、8 个测试通过。覆盖本地独立 stdio MCP 的真实 marker 调用与停用重载、用户级 HTTP MCP 的无凭据元数据诊断、非法 URL fail-closed 和隔离键；测试不会探测远端 URL，且回执不包含环境变量中的 token。
+
+边界状态保持明确：`@gyoungwe/*` 是 Drone 维护的公开包，不构成独立第三方扩展来源。未提供独立第三方包名、来源、许可和版本范围前，**真实第三方扩展验收为 BLOCKED**。同样，未提供用户自有 MCP 的 URL、账户和凭据范围前，**外部用户 MCP 的网络连接验收为 BLOCKED**；本地 stdio 和配置诊断切片不升级为真实账户 PASS。
+
 本轮宿主门禁也已通过：`DRONE_PLUGINS_DIR=/Users/gaoyangwei/Documents/ChatGPT/drone-plugins npm run typecheck`、`npm test` 和 `npm run build` 均返回 0；随后 `npm run check:arch`、`npm run check:plugin-api -- --migration --lifecycle`、`npm run check:desktop-artifact -- --strict`、`npm run check:pi-core` 与 `npm run check:pi-research` 均 PASS。构建与全量测试使用本地插件源覆盖，只用于复现，不改变 `plugins.lock.json`。

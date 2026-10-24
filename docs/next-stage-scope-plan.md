@@ -96,6 +96,15 @@ PR6 评估环境 + 许可/资源预算
 
 本轮当前可合并的代码切片不代表十项全部关闭；研究迁移、Protocols.io 写入和需要用户凭据的范围仍保留明确的 `PARTIAL` / `BLOCKED` 状态。
 
+## 2026-10-24 第 3–4 项收口复验
+
+公开包和本地 MCP 的可复现门禁已补齐，但真实外部边界没有被模拟为完成：
+
+| 工作包 | 收口复验 | 仍然的边界 |
+| --- | --- | --- |
+| 官方第三方扩展 | **PASS（Drone 维护公开包切片）**：`check:public-plugin-host` 从 registry 干净安装 `pi-evidence`、`pi-connectors`、`desktop-ui-pack`，通过 Pi loader、进程沙箱和 UI 生命周期；`pi-connectors` 另完成 `0.1.0 → 0.1.1 → uninstall` | 这些是 `@gyoungwe/*` 官方包，不是独立第三方来源；未指定第三方包、来源、许可和版本范围前，真实第三方扩展仍 **BLOCKED** |
+| 外部用户 MCP | **PASS（本地/诊断切片）**：独立 stdio marker 调用、停用重载、用户级 HTTP 配置元数据诊断、非法 URL fail-closed 和隔离键测试共 8 项通过 | 未读取用户 MCP URL、账户或凭据，也未连接外部账户；真实用户 MCP 网络验收仍 **BLOCKED** |
+
 ## 2026-10-24 PR2–PR6 合并后复验
 
 PR2–PR6 已经随 OmicOS 实现合入；本次以合并结果 `main=94a9a947` 为基线重新执行针对性验收：

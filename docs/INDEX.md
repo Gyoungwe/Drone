@@ -138,13 +138,13 @@ packages/
 | `scripts/eval-mainline.mjs` / `fixtures/mainline-questions.json` | 固定 20 题×两轮的本地回答率评估；使用离线 faux provider，统计本地命中、联网次数、引用可解析率和耗时，写入 `docs/evals/mainline-<日期>.json` |
 | `packages/backend/test/mem-gate.test.mjs` | `MEM-01` 隔离跨实例 topic memory：`DRONE-MEM-001`、来源回读、stale/changed |
 | `packages/backend/test/mcp-connector-gates.test.ts` | `MCP-01` 本地 stdio marker 的启用/真实调用/关闭重载，以及 `CONN-01` 只读唯一词 source receipt 与关闭重试 |
-| `scripts/check-public-plugin-host.mjs` | 临时 npm prefix 安装公开第三方包，并通过 Pi loader、进程沙箱代理和 Desktop UI 宿主验收 |
+| `scripts/check-public-plugin-host.mjs` | 临时 npm prefix 安装公开 registry 包，并通过 Pi loader、进程沙箱代理和 Desktop UI 宿主验收；独立第三方包需另行授权 |
 | `scripts/check-protocols-readonly.mjs` | 对公开 Protocols.io 协议页执行无凭据 GET；不执行写入 |
 | `packages/backend/test/skill-acceptance-sdk.test.mjs` | `SKILL-01` 真实 Pi SDK + offline faux provider 的 `/skill:research-workflow` invocation、visible skill、provider call 和 `disable-model-invocation` 自动选择反证；显式 slash 的 manual-only 语义 |
 | `packages/backend/test/redline-acceptance.test.mjs` / `npm run check:redline` | REDLINE-01 隔离验收：通过 publication/orchestration/metacognitive 门禁注入缺来源、stale source、数字/方法漂移、重复数不足、断线和权限拒绝；断言阻断原因、差异路径与 sealed audit proof |
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
 | `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含已安装的 pi-analysis、pi-evidence、pi-connectors） |
-| `scripts/check-public-plugin-host.mjs` | 从 npm registry 安装三个公开插件包到干净 prefix，验证 Pi loader、工具清单和 Desktop UI 生命周期；不调用模型或真实连接器 I/O |
+| `scripts/check-public-plugin-host.mjs` | 从 npm registry 安装三个公开插件包到干净 prefix，验证 Pi loader、工具清单、公开包生命周期和 Desktop UI 生命周期；不调用模型或真实连接器 I/O |
 | `scripts/check-market-plugin-lifecycle.mjs` | 离线真实 npm pack/install/update/uninstall 市场 fixture，输出生命周期回执；公开 Pi/Drone registry 包仅在授权的真实宿主运行中验收 |
 | `scripts/smoke-channel-watch.mts` | channel-watch 机制冒烟 V1–V6 |
 | `scripts/replay-trace.mts` | 事件 trace 离线重放（`--last` 自动找最新；排查 UI 状态问题首选） |
