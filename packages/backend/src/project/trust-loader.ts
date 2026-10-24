@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { createLogger } from "../log";
 import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
+import { createProcessSandboxedExtension, type PluginSandboxPolicy } from "../plugin-sandbox";
 import { replyLanguagePrompt } from "../reply-language";
 import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
 import { DefaultResourceLoader, getAgentDir, SettingsManager } from "../session-engine/sdk";
@@ -50,11 +51,16 @@ export function preferBundledMcpRuntime(bundledPath: string) {
 
 export function desktopLoaderOptions(integration: DesktopIntegration | undefined, cwd?: string) {
 	if (!integration) return {};
-	const { mcpRuntimePath, ...rest } = integration;
+	const { mcpRuntimePath, sandboxedExtensions, ...rest } = integration;
 	// The UI language can change between sessions; read it on every (re)load.
 	// P12: project memory index (.pi/memory/MEMORY.md) only — bodies are read on demand.
 	const options = {
 		...rest,
+		...(sandboxedExtensions?.length
+			? {
+					extensionFactories: sandboxedExtensions.map((policy) => createProcessSandboxedExtension(policy)),
+				}
+			: {}),
 		appendSystemPrompt: [
 			...rest.appendSystemPrompt,
 			...replyLanguagePrompt(),
@@ -108,6 +114,8 @@ export class ProjectResourceLoader {
 				appendSystemPrompt: string[];
 				additionalSkillPaths: string[];
 				additionalExtensionPaths?: string[];
+				/** Optional third-party extensions loaded through the process sandbox proxy. */
+				sandboxedExtensions?: PluginSandboxPolicy[];
 				additionalPromptTemplatePaths?: string[];
 				academicPiRoot?: string;
 				mcpRuntimePath?: string;

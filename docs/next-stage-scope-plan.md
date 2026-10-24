@@ -76,22 +76,22 @@ PR6 评估环境 + 许可/资源预算
 - 当前计划内未完成项：**0**。
 - `@gyoungwe/plugin-api@1.1.0` 已公开发布；对应工作包是后续版本的发布治理，不是当前发布缺口。
 - 上述十项均为 `OUT_OF_SCOPE` / `DEFERRED` / `OPTIONAL`，不应在没有授权时偷偷进入主线。
-- 若开始下一阶段，推荐先从 **P0 权限执行与沙箱** 做设计审查；它是第三方扩展、外部 MCP、Protocols.io 写入和云端协作的共同前置条件。
+- 本轮已完成 **P0 权限执行与沙箱** 的进程代理切片，并完成第三方扩展、外部 MCP 与 Protocols.io 公开只读验收；后续仍需单独授权的写入、凭据和范围迁移不自动开启。
 - 本计划不包含任何凭据、Vault 正文、会话正文或真实外部写入记录。
 
 ## 2026-10-24 执行切片状态
 
-本轮按用户授权启动第 1–8 项，明确跳过第 9 项 MinerU/GROBID 和第 10 项 B8/B8-2 云端协作。以下状态只反映本地代码、离线合同和可复现测试，不把真实第三方账户验收混入 PASS：
+本轮按用户授权启动第 1–8 项，明确跳过第 9 项 MinerU/GROBID 和第 10 项 B8/B8-2 云端协作。以下状态包含公开包、独立本地进程和公开只读页面的可复现验收；不把真实第三方账户写入混入 PASS：
 
 | 工作包 | 本轮结果 | 证据或剩余边界 |
 | --- | --- | --- |
-| 权限执行与沙箱 | **PARTIAL**：已加入 host-mediated 权限拒绝、授权委托和脱敏审计；进程级 Node 沙箱仍未实现 | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
+| 权限执行与沙箱 | **PASS（进程代理切片）**：host-mediated 权限拒绝、授权委托、脱敏审计和 Node 22 子进程代理已实现；不支持的 Pi 扩展 API 会 fail closed | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
 | plugin-api 发布治理 | **PASS（治理）**：维持公共 `@gyoungwe/plugin-api@1.1.0`，补充只增不删、干净消费者和回滚规则；本轮未发布新版本 | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
 | Electron GUI 验收 | **PASS（本地切片）**：report、workflow-catalog、task-delivery、knowledge 四个真实 Electron 脚本通过，覆盖页面导航、知识库设置/Wiki 审核、来源阅读、任务交付、暗色和窄屏布局 | [`next-stage-gui-acceptance-2026-10-24.json`](releases/next-stage-gui-acceptance-2026-10-24.json) |
-| 官方第三方扩展 | **PARTIAL**：已加入 registry、完整性、manifest、host 和来源门禁；尚未安装真实第三方包 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
-| 外部用户 MCP | **PARTIAL**：已加入项目批准、transport/URL/origin 诊断和隔离 key；真实外部服务仍需用户环境 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
+| 官方第三方扩展 | **PASS（公开包切片）**：`@gyoungwe/pi-connectors@0.1.1` 临时 prefix 安装后经进程沙箱注册并调用，UI 包仍完成宿主生命周期 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
+| 外部用户 MCP | **PASS（独立 stdio 进程切片）**：真实外部 MCP 子进程完成 marker 调用与停用重载反证；用户自有 URL/凭据仍不读取 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | research / pi-research / Zotero 迁移 | **BLOCKED_BY_BOUNDARY**：当前源码仍依赖宿主 research-loop、Zotero 和 host ports，未强行删除 facade | [`research-migration-status.md`](research-migration-status.md) |
 | 整页知识 UI 插件化 | **PASS（切片）**：新增 `knowledge.page`，有贡献时接管主区，无贡献/停用时回退默认页 | UI SPEC、`PluginRegions.test.tsx`、`registry.test.ts` |
-| Protocols.io 写入 | **PARTIAL**：完成预览→一次性授权→写后回读/删除回读的离线合同；真实账户写入未执行 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
+| Protocols.io 只读验收 | **PASS（公开 GET）**：公开协议页无凭据 GET 通过；写入按红线保持 BLOCKED，未执行账户写入 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 
-本轮当前可合并的代码切片不代表十项全部关闭；需要用户凭据、第三方来源或进程隔离方案的条目仍保留明确的 `PARTIAL` / `BLOCKED` 状态。
+本轮当前可合并的代码切片不代表十项全部关闭；研究迁移、Protocols.io 写入和需要用户凭据的范围仍保留明确的 `PARTIAL` / `BLOCKED` 状态。

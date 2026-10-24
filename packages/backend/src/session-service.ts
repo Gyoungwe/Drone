@@ -17,6 +17,7 @@ import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/spec
 import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
 import type { McpService } from "./mcp/service";
+import type { PluginSandboxPolicy } from "./plugin-sandbox";
 import type { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import type { ApprovalDecision, ApprovalService } from "./services/approvals";
@@ -106,6 +107,8 @@ export interface SessionServiceOptions {
 		appendSystemPrompt: string[];
 		additionalSkillPaths: string[];
 		additionalExtensionPaths?: string[];
+		/** Optional third-party extensions loaded through the process sandbox proxy. */
+		sandboxedExtensions?: PluginSandboxPolicy[];
 		additionalPromptTemplatePaths?: string[];
 		academicPiRoot?: string;
 		/** Entry file of the bundled MCP runtime (pi-mcp-adapter/index.ts); loaded as an extension. */

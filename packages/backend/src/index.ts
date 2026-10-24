@@ -123,6 +123,14 @@ export {
 export { PermissionGate, type PermissionRequestMeta, type PermissionResponder } from "./permissions/gate";
 export { PiBackend, type PiBackendOptions } from "./pi-backend";
 export {
+	createProcessSandboxedExtension,
+	type PluginSandboxPolicy,
+	type PluginSandboxReady,
+	PluginSandboxSession,
+	type PluginSandboxToolDeclaration,
+	sandboxEntrypointUrl,
+} from "./plugin-sandbox";
+export {
 	buildTrustOptions,
 	type ResolveTrustOptions,
 	resolveProjectTrust,

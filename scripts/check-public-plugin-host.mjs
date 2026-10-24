@@ -95,6 +95,16 @@ try {
 
 	const uiDir = join(prefix, "node_modules/@gyoungwe/desktop-ui-pack");
 	assert(existsSync(join(uiDir, "ui/plugin.json")), "desktop UI manifest missing from installed package");
+	const connectorDir = join(prefix, "node_modules/@gyoungwe/pi-connectors");
+	run(
+		join(ROOT, "node_modules/.bin/vitest"),
+		["run", "packages/backend/test/plugin-sandbox-public.test.ts"],
+		{
+			env: { ...process.env, DRONE_PUBLIC_PLUGIN_PACKAGE_DIR: connectorDir },
+			stdio: "inherit",
+		},
+	);
+	loaded.push({ package: "@gyoungwe/pi-connectors", processSandbox: true });
 	const env = { ...process.env, DRONE_PUBLIC_UI_PACKAGE_DIR: uiDir };
 	run(
 		join(ROOT, "node_modules/.bin/vitest"),

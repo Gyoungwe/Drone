@@ -22,8 +22,9 @@ network, subprocess and `externalWrites` declarations as a deny gate before
 calling the host authorization UI, and emits redacted `PluginPermissionAuditEvent`
 records for denied and decided operations. This is the executable permission
 contract for host-mediated side effects; it does not claim to sandbox direct
-Node.js access from an untrusted plugin. A separate process sandbox remains a
-future host capability and must not be implied by a manifest declaration.
+Node.js access from an untrusted plugin. Hosts may additionally load optional
+extensions through Drone's process sandbox proxy; that runtime boundary is a
+host capability and must not be implied by a manifest declaration.
 
 The public package is currently `1.1.0`. API v1 is additive-only: publish a new
 minor or patch only when the contract changes, verify the packed tarball in a
