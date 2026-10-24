@@ -35,6 +35,12 @@ jobs:
       - run: npm run typecheck
       - run: npm run check:arch
       - run: npm run test:arch
+      - name: Checkout bound plugin workspace
+        uses: actions/checkout@v6
+        with:
+          repository: Gyoungwe/drone-plugins
+          ref: main
+          path: drone-plugins
       - run: npm run check:plugin-api
         env:
           DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
