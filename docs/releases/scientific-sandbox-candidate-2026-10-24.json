@@ -1,0 +1,98 @@
+{
+	"date": "2026-10-24T11:19:03.167Z",
+	"status": "BLOCKED",
+	"scope": "Independent scientific extension candidate reviewed; current Drone sandbox launch fails before extension execution",
+	"package": {
+		"name": "@vaayne/pi-web-tools",
+		"version": "0.1.1",
+		"license": "MIT",
+		"repository": {
+			"type": "git",
+			"url": "git+https://github.com/vaayne/agent-kit.git",
+			"directory": "extensions/web-tools"
+		},
+		"dist": {
+			"integrity": "sha512-k/IsCh7HwtHtUbNu+7dalNvGaaTiUxSTTSIdaHOAod2v3azzzfN9EDfe8lr5YaUgkSz6/ylPdMJkdzFH/+7miw==",
+			"shasum": "81fb14ec02f89d02b1912d9236f900e8e143dd74",
+			"tarball": "https://registry.npmjs.org/@vaayne/pi-web-tools/-/pi-web-tools-0.1.1.tgz",
+			"fileCount": 6,
+			"unpackedSize": 16244,
+			"attestations": {
+				"url": "https://registry.npmjs.org/-/npm/v1/attestations/@vaayne%2fpi-web-tools@0.1.1",
+				"provenance": {
+					"predicateType": "https://slsa.dev/provenance/v1"
+				}
+			},
+			"signatures": [
+				{
+					"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U",
+					"sig": "MEUCIAqR/zz8Udz7gLu8LKGBSpYnOSm70DsZW1H1naeUQ5KPAiEA7/ZHwNJadOaBtyr8qQ20zhiVoOUJMK/WYP2S4e8EJok="
+				}
+			]
+		},
+		"pi": {
+			"extensions": ["./index.ts"]
+		},
+		"peerDependencies": {
+			"@mariozechner/pi-coding-agent": "*",
+			"@sinclair/typebox": "^0.34.48",
+			"typescript": "^5.9.3"
+		}
+	},
+	"scientificUse": "Retrieve public PubMed paper metadata with web-fetch JSON format",
+	"sourceAudit": {
+		"registrationApis": ["registerTool"],
+		"toolNames": ["web-fetch", "web-search"],
+		"externalCredentials": "EXA_API_KEY optional, not supplied",
+		"license": "MIT",
+		"repository": "https://github.com/vaayne/agent-kit",
+		"packagePath": "extensions/web-tools",
+		"licenseSha256": "1a33df812fa4fb15e32c5b385d54b891eede2df39d1d176e9ced77479d3f4df5",
+		"indexSha256": "4bf2df4ad758f8edb1f44380513b0d7123e0ab67bb9880c741a0a4f65daaf682"
+	},
+	"artifacts": {
+		"registryTarballSha256": "f39e0f36273442291296c22dc8b2b1f3a3722d09b300a969ca1982eecff969fb",
+		"transpiledExtensionSha256": "cad1926a6fa72204b84a09facb842d4947ee33127dd4d24371b6c7ad2f102bb4",
+		"transpiledHostSandboxSha256": "5fc85694985f37f053db4bd85e8002b7bba717cbca0e28b3e69592372c997f01",
+		"transpilation": "esbuild --bundle --platform=node --format=esm --packages=external; original package sources unchanged",
+		"reason": "Package ships TypeScript and .js specifiers that resolve to .ts sources; raw Node import is not the Pi transpiling loader"
+	},
+	"runtime": {
+		"version": "v26.12.1",
+		"source": "https://nodejs.org/dist/v26.12.1/node-v26.12.1-darwin-arm64.tar.gz",
+		"sha256": "1901d539912c02afa10d1cc126943a8855a7eedebe830119463470db5e6c59e8",
+		"checksumSource": "https://nodejs.org/dist/v26.12.1/SHASUMS256.txt",
+		"allowNetPresent": true,
+		"experimentalPermissionAliasPresent": false
+	},
+	"attempt": {
+		"hostSourceCommit": "50fc4d81",
+		"api": "PluginSandboxSession.start",
+		"network": ["eutils.ncbi.nlm.nih.gov:443"],
+		"plannedTool": "web-fetch",
+		"plannedUrl": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=24906146&retmode=json",
+		"started": false,
+		"toolCalled": false,
+		"childExitCode": 9,
+		"error": "bad option: --experimental-permission"
+	},
+	"security": {
+		"credentialsUsed": false,
+		"globalRuntimeChanged": false,
+		"coreSandboxChanged": false,
+		"permissionsRelaxed": false,
+		"remoteMutations": 0
+	},
+	"remaining": [
+		"Current Drone sandbox runtime capability and fail-closed verification",
+		"Secure network policy enforcement (Node --allow-net is a boolean permission, not a domain allowlist)",
+		"TypeScript loading mechanism compatible with genuine package install",
+		"Real tool call and lifecycle in the formal Drone installation"
+	],
+	"sources": [
+		"https://github.com/vaayne/agent-kit",
+		"https://registry.npmjs.org/@vaayne%2fpi-web-tools/0.1.1",
+		"https://nodejs.org/api/cli.html#--allow-net",
+		"https://nodejs.org/api/permissions.html"
+	]
+}
