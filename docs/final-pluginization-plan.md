@@ -1,6 +1,6 @@
 # Drone 最终插件化计划
 
-> **2026-10-24 正式沙箱更新**：macOS arm64 安装包携带 Node 26.12.1；独立科研工具扩展原始 TS 安装、GUI 加载、联网拒绝/真实读取、停用恢复与退出回收已通过。详见[正式沙箱证据](pluginization/packaged-plugin-sandbox-evidence.md)。此更新只关闭该工具代理切片，研究全流程 GUI、账户验收和新研究包 npm 发布状态不变。
+> **2026-10-24 正式沙箱更新**：macOS arm64 安装包携带 Node 26.12.1；独立科研工具扩展原始 TS 安装、GUI 加载、联网拒绝/真实读取、停用恢复与退出回收已通过。详见[正式沙箱证据](pluginization/packaged-plugin-sandbox-evidence.md)。该分支已快进合入 `main=84244eb6`，合并后完整门禁通过（见证据 `mainIntegration`）。此更新只关闭该工具代理切片，研究全流程 GUI、账户验收和新研究包 npm 发布状态不变。
 
 > **2026-10-24 研究边界更新**：两仓库分支已快进合入 `main`（宿主源码基线 `c14f3154`、插件 `ff1d659`）；合并不关闭剩余真实运行时和账户验收。完整 `pi-research@0.2.0` 核心已迁到插件仓库，宿主删除旧包、23 个重复领域模块和 research-host-entry facade，公开 `/host` 注入宿主端口。该版本与 `research-suite@0.1.9` 尚未发布 npm；旧发布快照保留历史含义。源码/真实 SDK 与未完成账户验收分别见 [迁移状态](research-migration-status.md) 和 [本轮证据](releases/research-boundary-acceptance-2026-10-24.json)。
 

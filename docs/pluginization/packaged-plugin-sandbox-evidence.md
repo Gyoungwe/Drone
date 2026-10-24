@@ -25,7 +25,7 @@ esbuild 从物理 `app.asar.unpacked` 启动；macOS 临时目录统一 realpath
 从最终 DMG 挂载并复制安装至 `/tmp/drone-sandbox-accepted/Drone.app`，随后卸载挂载卷。
 DMG：`/tmp/drone-sandbox-delivery/drone-mac-arm64.dmg`，SHA256：
 `7e2d3cd8e9cdfb20361926e11fafed452b78e53e0ab90b7af828ae8395c6ace0`。
-这是本地未签名、未公证构建；未上传 release、发 npm 或合入 main。
+这是本地未签名、未公证构建；产物验收阶段未上传 release、发 npm 或合入 main；后续合并见下方。
 
 独立扩展为 [vaayne/agent-kit](https://github.com/vaayne/agent-kit) 的
 `@vaayne/pi-web-tools@0.1.1`（MIT）。锁定 registry tarball/integrity，使用未修改的原始 `index.ts`。
@@ -69,3 +69,17 @@ Pi 补丁对全新 registry SDK tarball 的 dry-run 应用通过；最终 DMG �
 - 原生包 GUI 一键启停、其他 OS/架构实机、同包跨版本升级/回滚未由本轮覆盖；此前独立 `pi-web-access` 的原生 Pi 升级/回滚证据保留其原范围。
 - 完整迁移后研究工作流 GUI、用户自有认证 MCP、Zotero 云端和 Protocols.io 写入仍未关闭；新研究包 npm 发布待办不变。MinerU/GROBID 集成和 B8 仍暂缓。
 - 旧 Node 22 bad-port 假阳性继续作废；旧 Electron Node 24 拒绝回执保留。并行资源准备导致的中间 ASAR 损坏产物已废弃，最终顺序构建安装验收才计 PASS。
+
+## 2026-10-24 合入 main 后复验
+
+`codex/packaged-plugin-sandbox` 从 `53b10195` 快进合入 Drone `main=84244eb6`，
+包含源码 `d807be8a` 和原始验收文档 `84244eb6`；插件 `main=ff1d659` 保持不变。
+合并后重新 fetch 两个远端，在干净工作区且不设 `DRONE_PLUGINS_DIR` 的情况下依次完成：
+
+- `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`：PASS。
+- `check:plugin-api -- --migration --lifecycle`、`check:extensions`、`test:upgrade`：PASS。
+- 已暂存 worker 摘要检查、Node 26 两个沙箱测试文件、插件仓库 `npm run check`：PASS。
+
+完整命令、时间和日志摘要位于验收 JSON 的 `mainIntegration`。
+本次 fast-forward 未改变已验收源码；保留原 DMG/GUI 真实回执，本轮未重新打包或重做 GUI，
+不能把本次源码门禁写成新增实机验收。上方全部未完成项与暂缓项原样保留。

@@ -266,7 +266,7 @@
 		"Only macOS arm64 final DMG was exercised; other targets NOT_RUN.",
 		"Tool-only Pi API proxy: event hooks, commands, providers, renderers and MCP registration fail closed.",
 		"Third-party package absent from marketplace index; CLI install and native Pi package filters used, not GUI install/enable toggle.",
-		"Unsigned local build; no npm publish, tag, release upload or main merge.",
+		"Unsigned local build; no npm publish, tag or release upload. Main integration is recorded separately below.",
 		"Full migrated research-workflow GUI, user-owned authenticated MCP, Zotero cloud writes and Protocols.io writes remain open.",
 		"New pi-research/research-suite npm publication remains pending; MinerU/GROBID integration and B8 remain deferred."
 	],
@@ -275,5 +275,139 @@
 		"Electron Node24 cannot enforce network; now uses separate bundled worker.",
 		"An intermediate ASAR produced during concurrent resource fetch and packaging was discarded; delivery build and gates were sequential.",
 		"Early GUI prompts without external capability activation did not expose web-fetch; final external-plugin prompt activated it normally."
-	]
+	],
+	"mainIntegration": {
+		"date": "2026-10-24",
+		"mode": "fast-forward",
+		"branch": "codex/packaged-plugin-sandbox",
+		"previousMain": "53b1019545f8912d4a104a999159829d6935af55",
+		"mergedHead": "84244eb6986619f25f871f5ef14d316e5bc3121a",
+		"sourceCommit": "d807be8a071b4ac1d870793d372f5e3c660d34bd",
+		"pluginMain": "ff1d65998716df4831540957857a945bed3626a7",
+		"worktreeCleanBeforeGates": true,
+		"localPluginOverride": false,
+		"gates": [
+			{
+				"gate": "runtime",
+				"command": ["node", "scripts/stage-plugin-runtime.mjs", "--check"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"startedAt": "2026-10-24T14:41:18.383637+00:00",
+				"completedAt": "2026-10-24T14:41:18.520380+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/runtime.log",
+				"logSha256": "1759a36dd8bcc69a4feda0d1fbb6abd9be4643dbb94b2bc25adcb4f88b6cf970"
+			},
+			{
+				"gate": "lint",
+				"command": ["npm", "run", "lint"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"startedAt": "2026-10-24T14:41:18.520942+00:00",
+				"completedAt": "2026-10-24T14:41:19.689236+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/lint.log",
+				"logSha256": "eac626562e48d9daa822051f350bf61302d6e6e5b4c356959237540d8c4897c5"
+			},
+			{
+				"gate": "typecheck",
+				"command": ["npm", "run", "typecheck"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"startedAt": "2026-10-24T14:41:19.689586+00:00",
+				"completedAt": "2026-10-24T14:42:39.825246+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/typecheck.log",
+				"logSha256": "8c7acf6b990b817fe0d1cfd041b06d53280ea6e53d79f4422bc2e525e5c1a7b2"
+			},
+			{
+				"gate": "test",
+				"command": ["npm", "test"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"startedAt": "2026-10-24T14:42:39.825807+00:00",
+				"completedAt": "2026-10-24T14:44:46.641258+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/test.log",
+				"logSha256": "028ed0deed545b221f2dcaf1d91e4ac7c986dac2c146937450f220eda3f600ab"
+			},
+			{
+				"gate": "build",
+				"command": ["npm", "run", "build"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"startedAt": "2026-10-24T14:44:46.641739+00:00",
+				"completedAt": "2026-10-24T14:46:03.436322+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/build.log",
+				"logSha256": "26198ff57962c5b17d6b1cae3a344b1adae2b1897e394a659b7a922d56251fbb"
+			},
+			{
+				"gate": "architecture",
+				"command": ["npm", "run", "check:arch"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"startedAt": "2026-10-24T14:46:03.437079+00:00",
+				"completedAt": "2026-10-24T14:46:04.515913+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/architecture.log",
+				"logSha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"gate": "plugin-api",
+				"command": ["npm", "run", "check:plugin-api", "--", "--migration", "--lifecycle"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"startedAt": "2026-10-24T14:46:04.516344+00:00",
+				"completedAt": "2026-10-24T14:46:08.100388+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/plugin-api.log",
+				"logSha256": "dbc87d320ec7a6ac961844bd5df7ce68377ee86d1925be4dc723b1e90afd16dd"
+			},
+			{
+				"gate": "extensions",
+				"command": ["npm", "run", "check:extensions"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"startedAt": "2026-10-24T14:46:08.100814+00:00",
+				"completedAt": "2026-10-24T14:46:08.572860+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/extensions.log",
+				"logSha256": "69b8f5b01acec128946af4936fa6ef0695e2e3430fded3828083dce314aa8ff1"
+			},
+			{
+				"gate": "upgrade",
+				"command": ["npm", "run", "test:upgrade"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"startedAt": "2026-10-24T14:46:08.573264+00:00",
+				"completedAt": "2026-10-24T14:46:10.207631+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/upgrade.log",
+				"logSha256": "daf4f33421b1369e78ba4384aaeff5aa20c58815c00ab4fa500518494ee8542b"
+			},
+			{
+				"gate": "sandbox-node26",
+				"command": [
+					"/Users/gaoyangwei/Documents/ChatGPT/Drone/packages/desktop/plugin-runtime/darwin-arm64/node",
+					"/Users/gaoyangwei/Documents/ChatGPT/Drone/node_modules/vitest/vitest.mjs",
+					"run",
+					"test/plugin-sandbox.test.ts",
+					"test/plugin-sandbox-loader.test.ts"
+				],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone/packages/backend",
+				"startedAt": "2026-10-24T14:46:10.208063+00:00",
+				"completedAt": "2026-10-24T14:46:12.185967+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/sandbox-node26.log",
+				"logSha256": "17ffe8ba8acc8fc0c00c4ba8eb66546be2ab3723dd9ef4f922d4b6bf523acd52"
+			},
+			{
+				"gate": "plugins",
+				"command": ["npm", "run", "check"],
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/drone-plugins",
+				"startedAt": "2026-10-24T14:46:12.186432+00:00",
+				"completedAt": "2026-10-24T14:47:58.740201+00:00",
+				"exitCode": 0,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/sandbox-main-2026-10-24/plugins.log",
+				"logSha256": "2f2255d30ee4efa66b11c393a866cf51c33cbacc94c710d604c69c48cf7e865f"
+			}
+		],
+		"status": "PASS",
+		"artifactRebuilt": false,
+		"guiRepeated": false,
+		"artifactEvidence": "Existing final DMG and real GUI evidence retained: fast-forward merge introduces no source changes. This run repeats merged-source gates; no new package or GUI claim.",
+		"remainingStatusesPreserved": true
+	}
 }
