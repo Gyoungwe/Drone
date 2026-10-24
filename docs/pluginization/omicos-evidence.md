@@ -117,6 +117,18 @@
 
 限制：参考文本是可重跑的 `pdftotext` 对照代理，不等同人工逐页真值；表格和公式指标是启发式，不能用来推断未运行后端的质量。此 PR 不改变安装包或默认解析流程。未来如需集成，必须另开 opt-in 后端任务，补齐人工参考文本、固定版本、适配器和资源预算。
 
+## 2026-10-24 合并后主线复验（PR2–PR6）
+
+上述五项已经随 OmicOS PR 合入 `main`。在 `main=94a9a947` 上重新运行针对性门禁，结果如下：
+
+- PR2：`npx vitest run packages/pi-research/src/evidence-loop.test.ts packages/desktop/src/renderer/src/components/preview/preview-registry.test.ts packages/desktop/src/renderer/src/components/preview/viewers/viewers.test.tsx`，4 个测试文件、13 个测试通过。
+- PR3：`npx vitest run packages/desktop/src/renderer/src/components/chat/home-cards.test.ts`，4 个测试通过。
+- PR4：`npm run skills:check`，nature 20/745、scientific 148/1806，通过。
+- PR5：`npx vitest run packages/backend/test/mcp-adapter-bundle-sdk.test.ts packages/backend/test/mcp-enabled-adapter-sdk.test.ts`，4 个测试文件、8 个测试通过，包含真实 stdio MCP 发现、调用和停用重载回归。
+- PR6：`node scripts/eval-pdf-parsing.mjs --out /tmp/drone-pdf-eval-20261024.json --conclusion /tmp/drone-pdf-eval-20261024.md`，10/10 篇由 pdf.js 解析；MinerU、GROBID 各 10/10 标记为 `unavailable`，未改变默认流程。
+
+本次只更新合并后复验记录，没有新增代码、没有接入 MinerU/GROBID，也没有把外部 MCP 或模型凭据写入仓库。
+
 ## 主线最终门禁
 
 截至代码验收基线 `c5959275`（之后 Drone `main` 只追加 C4/PR6 文档提交，插件仓库代码未变），两仓库联动的主线验证已完成；本轮修复后的门禁结果如下：

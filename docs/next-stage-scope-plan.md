@@ -96,6 +96,20 @@ PR6 评估环境 + 许可/资源预算
 
 本轮当前可合并的代码切片不代表十项全部关闭；研究迁移、Protocols.io 写入和需要用户凭据的范围仍保留明确的 `PARTIAL` / `BLOCKED` 状态。
 
+## 2026-10-24 PR2–PR6 合并后复验
+
+PR2–PR6 已经随 OmicOS 实现合入；本次以合并结果 `main=94a9a947` 为基线重新执行针对性验收：
+
+| 项目 | 合并后复验 | 结果与边界 |
+| --- | --- | --- |
+| PR2 PDF 页码引用 | PDF evidence-loop、预览注册表和 PDF viewer 测试 | **PASS**：4 个测试文件、13 个测试通过；页码 fragment、预览跳页和越界回退保持有效 |
+| PR3 首页上下文 | `home-cards.test.ts` | **PASS**：4 个测试通过；继续课题、今日发现、新文献及无数据隐藏逻辑保持有效 |
+| PR4 证据矩阵技能 | `npm run skills:check` | **PASS**：nature 20/745、scientific 148/1806；`literature-matrix` 已登记 |
+| PR5 Paper2Agent | MCP adapter bundle/enabled SDK 测试 | **PASS**：4 个测试文件、8 个测试通过，包含 stdio 发现、调用和停用重载；公开 Paper2Agent 仍按交付物边界处理 |
+| PR6 PDF 解析评估 | 重新运行 `scripts/eval-pdf-parsing.mjs` | **PASS（评估完成）**：pdf.js 10/10；MinerU/GROBID 各 10/10 `unavailable`，不进入默认安装或流程 |
+
+这些复验没有改变当前计划状态：计划内缺口仍为 0；PR6 的可选后端集成仍需单独授权和新的人工参考文本、固定版本及资源预算。
+
 ## 2026-10-24 第 1 项执行记录
 
 正式安装包 `/Applications/Drone.app`（v0.33.4，`app.asar` SHA-256 `2ac6cd7cdec5a36882e26bdd6346a726acb75f5d8f8623b45a4bc4830f48f5f2`）在隔离 HOME、agent、knowledge 和 userData 下完成交互式 GUI 收口验收。
