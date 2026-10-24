@@ -6,7 +6,7 @@
 
 2026-10-25，研究 GUI 修复分支已快进合入 Drone `main=fe41db7e`，合并后完整门禁通过；插件仍为 `ff1d659`。见[GUI 合并证据](releases/research-workflow-gui-acceptance-2026-10-24.json)的 `mainIntegration`。该历史合并不改变当时的 OPEN / PARTIAL 与未发布状态。
 
-2026-10-25，后续 `codex/knowledge-category-fix` 已修复并完成正式包分类验收；宿主源码 `e38312a9`、插件源码 `831e399`，双仓库门禁通过，尚未合入 main。详见[分类证据](pluginization/knowledge-category-fix-evidence.md)。`pi-knowledge@0.2.1`、`research-suite@0.1.10` 与研究包 `0.2.0` 仍未发布 npm。
+2026-10-25，后续 `codex/knowledge-category-fix` 已修复并完成正式包分类验收；宿主源码 `e38312a9`、插件源码 `831e399`，双仓库门禁通过，已快进合入 main（Drone `a853230e` / drone-plugins `c43f7b4`），合并后双仓库完整门禁通过；机器回执见分类证据 `mainIntegration`。详见[分类证据](pluginization/knowledge-category-fix-evidence.md)。`pi-knowledge@0.2.1`、`research-suite@0.1.10` 与研究包 `0.2.0` 仍未发布 npm。
 
 ## 当前所有权
 

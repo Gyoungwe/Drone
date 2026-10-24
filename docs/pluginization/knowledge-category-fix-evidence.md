@@ -8,7 +8,7 @@
 
 插件新增内部 `note-category.ts`，计数与最近分组共用：显式类型优先；无类型时采用最近的已知分类目录；最后才使用文件名。无法映射的显式类型保留 other。宿主最近标签直接消费 worker 分组，搜索/图投影遵守类型与目录优先级。没有改写笔记、复核状态或索引格式，也没有新增 IPC 合同。
 
-插件源码 `831e3995c1a1dd35a8e77632978c06457e5c9f8c`，宿主源码 `e38312a9de65a14a8cc5bd6b2c7186685ef3943f`。宿主锁定远端 commit 与 tarball SHA-256，并在无 `DRONE_PLUGINS_DIR` 的条件下完成 npm ci、fetch 和扩展重建。`pi-knowledge@0.2.1`、`research-suite@0.1.10` 是未发布候选；研究包仍为未发布的 `pi-research@0.2.0`。没有修改 main 或发布 npm。
+插件源码 `831e3995c1a1dd35a8e77632978c06457e5c9f8c`，宿主源码 `e38312a9de65a14a8cc5bd6b2c7186685ef3943f`。宿主锁定远端 commit 与 tarball SHA-256，并在无 `DRONE_PLUGINS_DIR` 的条件下完成 npm ci、fetch 和扩展重建。`pi-knowledge@0.2.1`、`research-suite@0.1.10` 是未发布候选；研究包仍为未发布的 `pi-research@0.2.0`。修复分支阶段未修改 main；后续 main 合并见下节，npm 仍未发布。
 
 ## 回归与门禁
 
@@ -40,3 +40,13 @@
 真实 GUI 使用从 DMG 安装的 macOS arm64 应用，以及上轮已经存在的隔离测试库；本机生产 Vault、账户凭据和科学结论不在本轮验收范围。原始截图、会话和 Vault 正文仅留本机，仓库只保存哈希和状态。
 
 Zotero 云端写入/身份冲突、用户自有认证 MCP、Protocols.io 写入仍未完成；上述候选包尚未发布 npm；其他平台、在线模型质量和科学复核没有关闭。MinerU/GROBID 与 B8 保持暂缓。
+
+## 2026-10-25 main 合并后的最终门禁
+
+两分支已快进合入各自 main：Drone `e65c719f → a853230e`，drone-plugins `ff1d659 → c43f7b4`。合并后从干净工作区运行 npm ci，并在无 `DRONE_PLUGINS_DIR` 的条件下重新验证。宿主使用独立 worktree，原工作区其他任务未提交的文档与索引入口保持原样。
+
+宿主 lint、typecheck、test、build、check:arch、plugin-api migration/lifecycle、严格扩展检查和 test:upgrade 全部通过；插件完整 npm run check、知识包测试和 smoke 全部通过。typecheck/test/build 包含原准备钩子和锁定远端插件获取，没有 ignore-scripts。命令、提交和日志哈希见机器回执 `mainIntegration`。
+
+首次 npm test 因独立 worktree 缺少测试约定的同级 drone-plugins 路径而失败；补齐指向实际 main 仓库的同级路径后完整重跑通过。另准备经哈希校验的 Node 26.12.1，使两项沙箱测试不再因运行时缺失而跳过。失败日志保留在 mainIntegration.failedAttempts；没有修改源码或降低门禁。测试期间 pi-core 生成清单的变化已通过原构建器重建恢复。
+
+本次合并未改变已验收的运行时源码，因此没有重做 DMG 或 GUI；上一节正式安装包证据保持原范围。研究迁移仍 PARTIAL，账户验收、候选包 npm 发布、其他平台和科学复核均未关闭；MinerU/GROBID、B8 继续暂缓。

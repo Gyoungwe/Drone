@@ -10,7 +10,7 @@
 		"plugins": "831e3995c1a1dd35a8e77632978c06457e5c9f8c",
 		"hostMainBase": "e65c719f6e7bd127027aa880bc9b92475552f385",
 		"pluginsMainBase": "ff1d65998716df4831540957857a945bed3626a7",
-		"mainMerged": false
+		"mainMerged": true
 	},
 	"packages": {
 		"pi-knowledge": "0.2.1",
@@ -327,5 +327,199 @@
 		"Other OS/architectures, online model quality and scientific review: not accepted",
 		"MinerU/GROBID and B8: deferred unchanged"
 	],
-	"privacy": "No credentials, Vault bodies, session bodies or screenshot bytes committed; raw evidence stays local."
+	"privacy": "No credentials, Vault bodies, session bodies or screenshot bytes committed; raw evidence stays local.",
+	"mainIntegration": {
+		"date": "2026-10-25",
+		"status": "PASS",
+		"strategy": "fast-forward",
+		"host": {
+			"from": "e65c719f6e7bd127027aa880bc9b92475552f385",
+			"merged": "a853230eb01fb49ba89854b1360c849c5df949da",
+			"workspace": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone"
+		},
+		"plugins": {
+			"from": "ff1d65998716df4831540957857a945bed3626a7",
+			"merged": "c43f7b43f62d0326f5264e1176b17144997ddab6",
+			"workspace": "/Users/gaoyangwei/Documents/ChatGPT/drone-plugins"
+		},
+		"cleanAtGateStart": true,
+		"DRONE_PLUGINS_DIR": false,
+		"hostGates": [
+			{
+				"name": "ci",
+				"command": "npm ci",
+				"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone",
+				"head": "a853230eb01fb49ba89854b1360c849c5df949da",
+				"exitCode": 0,
+				"seconds": 17.06,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-ci.log",
+				"sha256": "8780c03f3af432b1a33fc1ee9b19ff37980ce315f19da8b55bdceb9715d754e8"
+			},
+			{
+				"name": "lint",
+				"command": "npm run lint",
+				"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone",
+				"head": "a853230eb01fb49ba89854b1360c849c5df949da",
+				"exitCode": 0,
+				"seconds": 2.1,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-lint.log",
+				"sha256": "a4813d27a76221fac115dad2b132b67ad1cd40809a2c18a8cece899fb88629a4"
+			},
+			{
+				"name": "typecheck",
+				"command": "npm run typecheck",
+				"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone",
+				"head": "a853230eb01fb49ba89854b1360c849c5df949da",
+				"exitCode": 0,
+				"seconds": 76.14,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-typecheck.log",
+				"sha256": "0272bf1b15e9adb90f4f590d7de6065868f7d85c1a45a38bff4a04976f561562"
+			},
+			{
+				"name": "test",
+				"command": "npm test",
+				"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone",
+				"head": "a853230eb01fb49ba89854b1360c849c5df949da",
+				"exitCode": 0,
+				"seconds": 121.85,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-test.log",
+				"sha256": "cf56cbb2673c9adfb547bc495508618099eea09dcc68164b8f7fe0dbdd2b94cd"
+			},
+			{
+				"name": "build",
+				"command": "npm run build",
+				"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone",
+				"head": "a853230eb01fb49ba89854b1360c849c5df949da",
+				"exitCode": 0,
+				"seconds": 74.04,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-build.log",
+				"sha256": "bc8c54c732a2ba883c3d3295ba10e7d36bdf642e1690d1fea53ea2ce5ae6a860"
+			},
+			{
+				"name": "arch",
+				"command": "npm run check:arch",
+				"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone",
+				"head": "a853230eb01fb49ba89854b1360c849c5df949da",
+				"exitCode": 0,
+				"seconds": 0.93,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-arch.log",
+				"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"name": "plugin-api",
+				"command": "npm run check:plugin-api -- --migration --lifecycle",
+				"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone",
+				"head": "a853230eb01fb49ba89854b1360c849c5df949da",
+				"exitCode": 0,
+				"seconds": 3.53,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-plugin-api.log",
+				"sha256": "221fd5a25186905cd9bc71cf4b8921cde9f13b28aee98a60e3c2951e5b46e315"
+			},
+			{
+				"name": "extensions",
+				"command": "npm run check:extensions -- --strict",
+				"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone",
+				"head": "a853230eb01fb49ba89854b1360c849c5df949da",
+				"exitCode": 0,
+				"seconds": 0.52,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-extensions.log",
+				"sha256": "f0d9fe7b2af4cd620b3c3080d898f61bf1ce9230abdb99c01b75d894a0d56286"
+			},
+			{
+				"name": "upgrade",
+				"command": "npm run test:upgrade",
+				"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-category-main/Drone",
+				"head": "a853230eb01fb49ba89854b1360c849c5df949da",
+				"exitCode": 0,
+				"seconds": 1.67,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-upgrade.log",
+				"sha256": "0f6ccfacbc47f6ca33085e0db86297c54ae89979f65d1e90bcba4a44da9bd5d6"
+			}
+		],
+		"pluginGates": [
+			{
+				"name": "ci",
+				"command": "npm ci",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/drone-plugins",
+				"head": "c43f7b43f62d0326f5264e1176b17144997ddab6",
+				"exitCode": 0,
+				"seconds": 8.87,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/plugin-ci.log",
+				"sha256": "be1767cda22b4595bb756aa718a473ea87dacd3fc9e3540d020004e772ed1d99"
+			},
+			{
+				"name": "check",
+				"command": "npm run check",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/drone-plugins",
+				"head": "c43f7b43f62d0326f5264e1176b17144997ddab6",
+				"exitCode": 0,
+				"seconds": 103.59,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/plugin-check.log",
+				"sha256": "e8968bb5b996d331fa4f606d327fcb9fe34063b2ef33c69fc2b8a7fb89bfbbaf"
+			},
+			{
+				"name": "knowledge-test",
+				"command": "npm run test -w @gyoungwe/pi-knowledge",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/drone-plugins",
+				"head": "c43f7b43f62d0326f5264e1176b17144997ddab6",
+				"exitCode": 0,
+				"seconds": 2.94,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/plugin-knowledge-test.log",
+				"sha256": "6f93e39b78c9733661e1bac3ac3eb8fa0b338615c3a42cb1f7a785f0ddbe384e"
+			},
+			{
+				"name": "knowledge-smoke",
+				"command": "npm run smoke -w @gyoungwe/pi-knowledge",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/drone-plugins",
+				"head": "c43f7b43f62d0326f5264e1176b17144997ddab6",
+				"exitCode": 0,
+				"seconds": 0.66,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/plugin-knowledge-smoke.log",
+				"sha256": "9d65a2da6bdfd492ea3f663d1a5c36868b04a956e8791d1aa52f96f388113057"
+			}
+		],
+		"guiRerun": false,
+		"guiEvidenceReuse": "Fast-forward merge preserves the exact accepted runtime source; only evidence/docs follow e38312a9 (host) and 831e399 (plugins). Original installed DMG GUI evidence remains scoped to macOS arm64.",
+		"remainingUnchanged": true,
+		"npmPublished": false,
+		"failedAttempts": [
+			{
+				"command": "npm test",
+				"exitCode": 1,
+				"reason": "Fresh worktree lacked the sibling drone-plugins path expected by installed-ui-pack.test.ts; supplied the standard sibling link to the actual main repository and reran the full command. No source change.",
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/host-test-first.log",
+				"sha256": "13d14429856987a30aef8c0fc29e92557371a929da91f1febafe6ede860e688d"
+			}
+		],
+		"testSummary": {
+			"backend": {
+				"filesPassed": 236,
+				"filesSkipped": 3,
+				"passed": 1917,
+				"skipped": 17
+			},
+			"renderer": {
+				"filesPassed": 161,
+				"passed": 826
+			},
+			"knowledge": {
+				"filesPassed": 41,
+				"passed": 341
+			},
+			"researchSdkMatrix": ["1.1.0", "1.4.0"]
+		},
+		"environmentPreparation": {
+			"siblingPluginPath": "../drone-plugins -> /Users/gaoyangwei/Documents/ChatGPT/drone-plugins",
+			"bundledRuntime": "Pinned Node 26.12.1 staged with scripts/stage-plugin-runtime.mjs; enables two sandbox tests initially skipped in the new checkout.",
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-main-2026-10-25/runtime-stage.log",
+			"sha256": "dcae92de5438a8cda25efbe2430f74880a61ffad1489a49c82820024a1e7b891",
+			"runtimeReceipt": {
+				"version": "26.12.1",
+				"target": "darwin-arm64",
+				"archiveSha256": "1901d539912c02afa10d1cc126943a8855a7eedebe830119463470db5e6c59e8",
+				"binarySha256": "06eb3f5762c2b6890e99d03f931bf01d9b20fd341dec1a8c1ef5c1809e66102b"
+			}
+		},
+		"acceptedWorkerBytesMatch": true
+	}
 }
