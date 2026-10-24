@@ -142,6 +142,21 @@ try {
 	const lifecycleV2 = JSON.parse(readFileSync(lifecyclePackagePath, "utf8"));
 	assert.equal(lifecycleV2.version, "0.1.1");
 	run("npm", [
+		"install",
+		"--prefix",
+		lifecyclePrefix,
+		"--registry",
+		"https://registry.npmjs.org",
+		"--ignore-scripts",
+		"--save-exact",
+		"--omit=peer",
+		"--no-audit",
+		"--no-fund",
+		"@gyoungwe/pi-connectors@0.1.0",
+	]);
+	const lifecycleRollback = JSON.parse(readFileSync(lifecyclePackagePath, "utf8"));
+	assert.equal(lifecycleRollback.version, "0.1.0");
+	run("npm", [
 		"uninstall",
 		"--prefix",
 		lifecyclePrefix,
@@ -153,7 +168,7 @@ try {
 	assert(!existsSync(lifecyclePackagePath), "registry package remained after uninstall");
 	loaded.push({
 		package: "@gyoungwe/pi-connectors",
-		registryLifecycle: ["0.1.0", "0.1.1", "uninstall"],
+		registryLifecycle: ["0.1.0", "0.1.1", "rollback:0.1.0", "uninstall"],
 	});
 	const env = { ...process.env, DRONE_PUBLIC_UI_PACKAGE_DIR: uiDir };
 	run(

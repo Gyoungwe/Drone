@@ -10,6 +10,20 @@
 - `packages/pi-research/src/index.ts` 仍通过 `@drone/extensions/research-loop` 装配 run-level evidence lifecycle；`packages/extensions/src/internal/research-host-entry.ts` 是保留的兼容入口，不能在当前依赖状态下删除。
 - Zotero 本机/云端写入继续只经 host authorization + write/read-back/delete/read-back 证据链；本切片不进行真实第三方写入。
 
+## 2026-10-24 无凭据迁移切片
+
+`drone-plugins` 的 `codex/research-migration-closure` 分支新增了自包含
+`@gyoungwe/pi-research@0.1.1` 源码入口：证据搜索/阅读/沉淀、PDF 页码标记和
+`research_loop` 当前会话回执状态机均在插件包内；bundle 不含 Electron、backend、
+`@drone/*` 或跨仓库相对路径。插件包新增注册、阶段单调性、会话隔离、未完成回执拒绝、
+构建复现和 npm tarball 安装 smoke。该切片不读取凭据、不执行外部写入，也没有替换已发布
+registry 版本。
+
+本地插件仓库门禁结果：`npm run check` PASS（7 manifests、workspace typecheck、
+`pi-research` 5 tests、完整 tarball/clean install smoke、research-suite manifest tools
+回归和 pack check）。这证明研究证据循环可以在插件仓库自包含构建；它不等于完整研究迁移
+已关闭。
+
 ## 删除与迁移条件
 
 只有全部条件同时满足，才可以把研究扩展源码迁入 `drone-plugins/packages/pi-research` / `pi-connectors` 并删除宿主 facade：
@@ -22,4 +36,8 @@
 
 ## 当前结论
 
-**迁移未完成，状态为 `BLOCKED_BY_BOUNDARY`，不是 PASS。** 当前可交付的是整页知识 UI 插件挂载（见 UI SPEC 的 `knowledge.page`）；研究和 Zotero 运行时仍保留宿主适配，等待上述五项依赖完成后再做源码搬迁。下一轮应先在 `drone-plugins` 建立自包含 `pi-research` 包并通过 clean install，再逐个迁移 Zotero/source archive，最后删除兼容入口。
+**迁移仍未完成，状态为 `PARTIAL / BLOCKED_BY_BOUNDARY`。** 本轮已完成不需凭据的自包含
+`pi-research` 证据循环切片并通过插件仓库门禁；研究运行时的 source archive、run
+provenance、receipt journal、institutional access 和 Zotero 适配仍保留宿主入口。只有
+研究合同固定、Pi 1.1.0/latest 真实 clean HOME 回归、Zotero 隔离读写回读验收和宿主回退门禁
+全部通过后，才能删除 `packages/extensions/src/internal/research-host-entry.ts` 等兼容入口。

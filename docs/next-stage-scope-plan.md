@@ -90,7 +90,7 @@ PR6 评估环境 + 许可/资源预算
 | Electron GUI 验收 | **PASS（正式包交互切片）**：`/Applications/Drone.app` v0.33.4 完成知识库、首页、技能/插件启停、MCP 发现/停用、真实模型驱动的 MCP 工具调用、来源行号阅读和回滚；第二次隔离运行的过程面板显示 1 次工具、2 次响应，并返回 `DRONE-GUI-MCP-20261024` | [`next-stage-gui-acceptance-2026-10-24.json`](releases/next-stage-gui-acceptance-2026-10-24.json) |
 | 官方第三方扩展 | **PASS（公开包切片）**：`@gyoungwe/pi-connectors@0.1.1` 临时 prefix 安装后经进程沙箱注册并调用，UI 包仍完成宿主生命周期 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | 外部用户 MCP | **PASS（独立 stdio 进程切片）**：真实外部 MCP 子进程完成 marker 调用与停用重载反证；用户自有 URL/凭据仍不读取 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
-| research / pi-research / Zotero 迁移 | **BLOCKED_BY_BOUNDARY**：当前源码仍依赖宿主 research-loop、Zotero 和 host ports，未强行删除 facade | [`research-migration-status.md`](research-migration-status.md) |
+| research / pi-research / Zotero 迁移 | **PARTIAL / BLOCKED_BY_BOUNDARY**：`drone-plugins` 已建立自包含 `pi-research` 证据循环和 `research_loop` 回执状态机并通过插件仓库门禁；source archive、provenance、Zotero 和 host ports 仍保留宿主适配，未删除 facade | [`research-migration-status.md`](research-migration-status.md) |
 | 整页知识 UI 插件化 | **PASS（切片）**：新增 `knowledge.page`，有贡献时接管主区，无贡献/停用时回退默认页 | UI SPEC、`PluginRegions.test.tsx`、`registry.test.ts` |
 | Protocols.io 只读验收 | **PASS（公开 GET）**：公开协议页无凭据 GET 通过；写入按红线保持 BLOCKED，未执行账户写入 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 
@@ -102,7 +102,7 @@ PR6 评估环境 + 许可/资源预算
 
 | 工作包 | 收口复验 | 仍然的边界 |
 | --- | --- | --- |
-| 官方第三方扩展 | **PASS（Drone 维护公开包切片）**：`check:public-plugin-host` 从 registry 干净安装 `pi-evidence`、`pi-connectors`、`desktop-ui-pack`，通过 Pi loader、进程沙箱和 UI 生命周期；`pi-connectors` 另完成 `0.1.0 → 0.1.1 → uninstall` | 这些是 `@gyoungwe/*` 官方包，不是独立第三方来源；未指定第三方包、来源、许可和版本范围前，真实第三方扩展仍 **BLOCKED** |
+| 官方第三方扩展 | **PASS（Drone 维护公开包切片）**：`check:public-plugin-host` 从 registry 干净安装 `pi-evidence`、`pi-connectors`、`desktop-ui-pack`，通过 Pi loader、进程沙箱和 UI 生命周期；`pi-connectors` 另完成 `0.1.0 → 0.1.1 → rollback:0.1.0 → uninstall` | 这些是 `@gyoungwe/*` 官方包，不是独立第三方来源；未指定第三方包、来源、许可和版本范围前，真实第三方扩展仍 **BLOCKED** |
 | 外部用户 MCP | **PASS（本地/诊断切片）**：独立 stdio marker 调用、停用重载、用户级 HTTP 配置元数据诊断、非法 URL fail-closed 和隔离键测试共 8 项通过 | 未读取用户 MCP URL、账户或凭据，也未连接外部账户；真实用户 MCP 网络验收仍 **BLOCKED** |
 
 ## 2026-10-24 PR2–PR6 合并后复验
