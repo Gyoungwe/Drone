@@ -1,100 +1,97 @@
 {
-  "date": "2026-10-24",
-  "scope": "next-stage items 1-8 GUI acceptance slice; items 9-10 excluded by user request",
-  "realElectron": true,
-  "results": {
-    "report": {
-      "status": "PASS",
-      "command": "node scripts/check-report-ui.mjs",
-      "evidence": "real Electron report navigation, tooltip, link click and scroll-preserving checks"
-    },
-    "workflowCatalog": {
-      "status": "PASS",
-      "command": "node scripts/check-workflow-catalog-ui.mjs",
-      "evidence": "real Electron grouped skill inventory, six direction values, keyboard navigation, dark/narrow layout and no network/model calls"
-    },
-    "taskDelivery": {
-      "status": "PASS",
-      "command": "node scripts/check-task-delivery-ui.mjs",
-      "evidence": "real Electron preload/IPC artifact preview, resource readers, PDF/HTML sandbox, script source handling, task snapshots and delivery checks"
-    },
-    "knowledge": {
-      "status": "PASS",
-      "command": "formal Electron GUI via CUA",
-      "evidence": "Knowledge binding refreshed successfully; overview shows vault with 2 notes and 1 literature item, network tab renders 1 note/0 links, settings shows the isolated Vault and completed local index, and the source reader opens Library/Papers/acceptance-note.md with line range L1–7."
-    },
-    "home": {
-      "status": "PASS",
-      "command": "formal Electron GUI via CUA",
-      "evidence": "New-task home renders with project path, composer, knowledge card (2 notes), research entry point and continuation card; after optional plugin and MCP rollback it still renders normally."
-    },
-    "skills": {
-      "status": "PASS",
-      "command": "formal Electron GUI via CUA",
-      "evidence": "Skills & Connections page renders plugin, market, connector, MCP and skill categories; installed package row displays desktop-ui-pack@0.1.1 and its declared ui/drone-desktop/filesystem/network/subprocess/externalWrites values."
-    },
-    "uiPluginLifecycle": {
-      "status": "PASS",
-      "command": "formal Electron GUI via CUA",
-      "evidence": "Installed @gyoungwe/desktop-ui-pack@0.1.1 through the package row, observed enabled toggle and Research status Desktop UI contribution, then disabled it; both row and contribution returned to off without affecting the host home page."
-    },
-    "mcp": {
-      "status": "PASS",
-      "command": "formal Electron GUI via CUA",
-      "evidence": "MCP page discovered acceptance-echo from isolated agent/mcp.json, showed 1 detected tool and the server details panel with config path; disabling it removed the server and the page reported no MCP configured."
-    },
-    "mcpToolCall": {
-      "status": "PASS",
-      "command": "formal Electron GUI via CUA",
-      "evidence": "A second isolated formal-package run configured the local streaming model provider and acceptance-echo MCP server; a real GUI session issued one echo_marker call, the process panel showed 1 tool and 2 responses, and the assistant displayed MCP marker received: DRONE-GUI-MCP-20261024."
-    },
-    "citation": {
-      "status": "PASS",
-      "command": "formal Electron GUI via CUA",
-      "evidence": "Knowledge overview opened the seeded literature item; the reader displayed the source path Library/Papers/acceptance-note.md, content marker DRONE-GUI-CITATION-20261024 and line range L1–7."
-    },
-    "rollback": {
-      "status": "PASS",
-      "command": "formal Electron GUI via CUA",
-      "evidence": "Disabled desktop-ui-pack and acceptance-echo through their UI switches; host returned to the new-task home with the knowledge card and no crash. Final isolated state leaves both optional integrations disabled."
-    }
-  },
-  "staticGates": {
-    "desktopArtifactStrict": "PASS",
-    "uiSkillAcceptance": "PASS",
-    "uiEvidence": "PASS",
-    "remainingGates": "PASS",
-    "formalPackageGui": "PASS",
-    "mcpCall": "PASS"
-  },
-  "excluded": [
-    "MinerU/GROBID PDF backend evaluation",
-    "B8/B8-2 cloud collaboration"
-  ],
-  "formalPackage": {
-    "status": "PASS",
-    "app": "/Applications/Drone.app",
-    "version": "0.33.4",
-    "appAsarSha256": "2ac6cd7cdec5a36882e26bdd6346a726acb75f5d8f8623b45a4bc4830f48f5f2",
-    "isolatedRun": {
-      "userData": "/tmp/drone-gui-acceptance-20261024-3/user-data",
-      "agentDir": "/tmp/drone-gui-acceptance-20261024-3/agent",
-      "knowledgeDir": "/tmp/drone-gui-acceptance-20261024-3/vault",
-      "project": "/Users/gaoyangwei/Downloads/Drone-gui-acceptance-20261024"
-    },
-    "evidence": "Launched the installed Electron binary with isolated HOME, PI_CODING_AGENT_DIR, DRONE_KNOWLEDGE_DIR and --user-data-dir; no production Vault or session state was used.",
-    "verificationRuns": {
-      "mcpToolCall": {
-        "userData": "/tmp/drone-gui-acceptance-20261024-4/user-data",
-        "agentDir": "/tmp/drone-gui-acceptance-20261024-4/agent",
-        "project": "/Users/gaoyangwei/Downloads/Drone-gui-acceptance-20261024",
-        "model": "acceptance-local/drone-local",
-        "marker": "DRONE-GUI-MCP-20261024"
-      }
-    }
-  },
-  "notes": [
-    "Only temporary isolated directories were used; no credentials, production Vault, session正文 or results were copied into the repository.",
-    "The MCP acceptance includes both cached discovery/lifecycle and a model-backed GUI tool-call receipt from the second isolated run; the process panel showed one tool and the expected marker."
-  ]
+	"date": "2026-10-24",
+	"scope": "next-stage items 1-8 GUI acceptance slice; items 9-10 excluded by user request",
+	"realElectron": true,
+	"results": {
+		"report": {
+			"status": "PASS",
+			"command": "node scripts/check-report-ui.mjs",
+			"evidence": "real Electron report navigation, tooltip, link click and scroll-preserving checks"
+		},
+		"workflowCatalog": {
+			"status": "PASS",
+			"command": "node scripts/check-workflow-catalog-ui.mjs",
+			"evidence": "real Electron grouped skill inventory, six direction values, keyboard navigation, dark/narrow layout and no network/model calls"
+		},
+		"taskDelivery": {
+			"status": "PASS",
+			"command": "node scripts/check-task-delivery-ui.mjs",
+			"evidence": "real Electron preload/IPC artifact preview, resource readers, PDF/HTML sandbox, script source handling, task snapshots and delivery checks"
+		},
+		"knowledge": {
+			"status": "PASS",
+			"command": "formal Electron GUI via CUA",
+			"evidence": "Knowledge binding refreshed successfully; overview shows vault with 2 notes and 1 literature item, network tab renders 1 note/0 links, settings shows the isolated Vault and completed local index, and the source reader opens Library/Papers/acceptance-note.md with line range L1–7."
+		},
+		"home": {
+			"status": "PASS",
+			"command": "formal Electron GUI via CUA",
+			"evidence": "New-task home renders with project path, composer, knowledge card (2 notes), research entry point and continuation card; after optional plugin and MCP rollback it still renders normally."
+		},
+		"skills": {
+			"status": "PASS",
+			"command": "formal Electron GUI via CUA",
+			"evidence": "Skills & Connections page renders plugin, market, connector, MCP and skill categories; installed package row displays desktop-ui-pack@0.1.1 and its declared ui/drone-desktop/filesystem/network/subprocess/externalWrites values."
+		},
+		"uiPluginLifecycle": {
+			"status": "PASS",
+			"command": "formal Electron GUI via CUA",
+			"evidence": "Installed @gyoungwe/desktop-ui-pack@0.1.1 through the package row, observed enabled toggle and Research status Desktop UI contribution, then disabled it; both row and contribution returned to off without affecting the host home page."
+		},
+		"mcp": {
+			"status": "PASS",
+			"command": "formal Electron GUI via CUA",
+			"evidence": "MCP page discovered acceptance-echo from isolated agent/mcp.json, showed 1 detected tool and the server details panel with config path; disabling it removed the server and the page reported no MCP configured."
+		},
+		"mcpToolCall": {
+			"status": "PASS",
+			"command": "formal Electron GUI via CUA",
+			"evidence": "A second isolated formal-package run configured the local streaming model provider and acceptance-echo MCP server; a real GUI session issued one echo_marker call, the process panel showed 1 tool and 2 responses, and the assistant displayed MCP marker received: DRONE-GUI-MCP-20261024."
+		},
+		"citation": {
+			"status": "PASS",
+			"command": "formal Electron GUI via CUA",
+			"evidence": "Knowledge overview opened the seeded literature item; the reader displayed the source path Library/Papers/acceptance-note.md, content marker DRONE-GUI-CITATION-20261024 and line range L1–7."
+		},
+		"rollback": {
+			"status": "PASS",
+			"command": "formal Electron GUI via CUA",
+			"evidence": "Disabled desktop-ui-pack and acceptance-echo through their UI switches; host returned to the new-task home with the knowledge card and no crash. Final isolated state leaves both optional integrations disabled."
+		}
+	},
+	"staticGates": {
+		"desktopArtifactStrict": "PASS",
+		"uiSkillAcceptance": "PASS",
+		"uiEvidence": "PASS",
+		"remainingGates": "PASS",
+		"formalPackageGui": "PASS",
+		"mcpCall": "PASS"
+	},
+	"excluded": ["MinerU/GROBID PDF backend evaluation", "B8/B8-2 cloud collaboration"],
+	"formalPackage": {
+		"status": "PASS",
+		"app": "/Applications/Drone.app",
+		"version": "0.33.4",
+		"appAsarSha256": "2ac6cd7cdec5a36882e26bdd6346a726acb75f5d8f8623b45a4bc4830f48f5f2",
+		"isolatedRun": {
+			"userData": "/tmp/drone-gui-acceptance-20261024-3/user-data",
+			"agentDir": "/tmp/drone-gui-acceptance-20261024-3/agent",
+			"knowledgeDir": "/tmp/drone-gui-acceptance-20261024-3/vault",
+			"project": "/Users/gaoyangwei/Downloads/Drone-gui-acceptance-20261024"
+		},
+		"evidence": "Launched the installed Electron binary with isolated HOME, PI_CODING_AGENT_DIR, DRONE_KNOWLEDGE_DIR and --user-data-dir; no production Vault or session state was used.",
+		"verificationRuns": {
+			"mcpToolCall": {
+				"userData": "/tmp/drone-gui-acceptance-20261024-4/user-data",
+				"agentDir": "/tmp/drone-gui-acceptance-20261024-4/agent",
+				"project": "/Users/gaoyangwei/Downloads/Drone-gui-acceptance-20261024",
+				"model": "acceptance-local/drone-local",
+				"marker": "DRONE-GUI-MCP-20261024"
+			}
+		}
+	},
+	"notes": [
+		"Only temporary isolated directories were used; no credentials, production Vault, session正文 or results were copied into the repository.",
+		"The MCP acceptance includes both cached discovery/lifecycle and a model-backed GUI tool-call receipt from the second isolated run; the process panel showed one tool and the expected marker."
+	]
 }
