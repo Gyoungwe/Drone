@@ -586,5 +586,124 @@
 		"syntheticNoteRestored": true,
 		"productionDataChanged": false,
 		"localEvidenceRetained": true
+	},
+	"mainIntegration": {
+		"date": "2026-10-25",
+		"timezone": "Asia/Shanghai",
+		"status": "PASS",
+		"method": "fast-forward",
+		"previousMain": "8a2b323cecf7016732521f35afdbc0ed55b3409b",
+		"mergedBranch": "codex/research-workflow-gui",
+		"mergedCommit": "fe41db7edf044c01d2cdd389de748561a141f213",
+		"pluginsMain": "ff1d65998716df4831540957857a945bed3626a7",
+		"cleanTrackedWorktreesBeforeAndAfterGates": true,
+		"localPluginOverride": false,
+		"checks": [
+			{
+				"name": "lint",
+				"command": "npm run lint",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 0,
+				"seconds": 1.65,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/lint.log",
+				"sha256": "40847534fa5dbc8e4735cf1ab2f4bc5a62a8a7bb706c057d0a326a5b7f3209bd"
+			},
+			{
+				"name": "typecheck",
+				"command": "npm run typecheck",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 0,
+				"seconds": 76.41,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/typecheck.log",
+				"sha256": "d6dbc1706920e154680f544a9e86c90b39dc2c3f79281e9d37cc74497fe4d0bd"
+			},
+			{
+				"name": "test",
+				"command": "npm test",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 0,
+				"seconds": 123.08,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/test.log",
+				"sha256": "066e1bee47d96e62a176b5825a920960a4fdd01b0933bfa94b969fc9973968a8"
+			},
+			{
+				"name": "build",
+				"command": "npm run build",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 0,
+				"seconds": 75.38,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/build.log",
+				"sha256": "f10e26e8272d6e35edde30a69c3ce5047e66a917746e03fe477556848a1844a7"
+			},
+			{
+				"name": "arch",
+				"command": "npm run check:arch",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 0,
+				"seconds": 1.06,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/arch.log",
+				"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"name": "plugin-api",
+				"command": "npm run check:plugin-api -- --migration --lifecycle",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 0,
+				"seconds": 3.56,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/plugin-api.log",
+				"sha256": "dbc87d320ec7a6ac961844bd5df7ce68377ee86d1925be4dc723b1e90afd16dd"
+			},
+			{
+				"name": "extensions",
+				"command": "npm run check:extensions",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 0,
+				"seconds": 0.46,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/extensions.log",
+				"sha256": "69b8f5b01acec128946af4936fa6ef0695e2e3430fded3828083dce314aa8ff1"
+			},
+			{
+				"name": "upgrade",
+				"command": "npm run test:upgrade",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 0,
+				"seconds": 1.53,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/upgrade.log",
+				"sha256": "0b756900e25513ce79a56e5517f610f2a04400e3f0248bbc5113d9b6cfe17664"
+			},
+			{
+				"name": "plugins",
+				"command": "npm run check",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/drone-plugins",
+				"exitCode": 0,
+				"seconds": 180.83,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/plugins.log",
+				"sha256": "9e8d7e4a2234c5e7b4342a9010aff8999350f4a2ed42ae315cad7014e8311e99"
+			}
+		],
+		"failedAttempts": [
+			{
+				"name": "typecheck",
+				"command": "npm run typecheck",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 1,
+				"seconds": 39.39,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/typecheck-attempt-1.log",
+				"sha256": "a556e923a96d1cd7aef07cbb1c485e75757a535b8646a557ea1edf0408d56209"
+			},
+			{
+				"name": "build",
+				"command": "npm run build",
+				"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+				"exitCode": 1,
+				"seconds": 12.58,
+				"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/research-gui-main-2026-10-25/build-attempt-1.log",
+				"sha256": "96e28076d4d529dcbc20a4da196106838850633b480d44f142e41954c975530a"
+			}
+		],
+		"failureExplanation": "Initial typecheck and build prehooks each stopped at GitHub LibreSSL SSL_ERROR_SYSCALL; retries retained commit/hash checks.",
+		"guiEvidence": "Retained original DMG and real GUI receipts; fast-forward introduces no source changes. No new DMG build or GUI acceptance claimed.",
+		"remainingStatusesUnchanged": true,
+		"npmPublished": false
 	}
 }

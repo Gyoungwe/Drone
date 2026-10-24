@@ -55,8 +55,16 @@
 
 - **RESEARCH-GUI-CATEGORY（OPEN）**：方法笔记标题含 “tools” 时，概览把它归入软件，方法计数为 0；真实存储类型/路径和阅读器正确。插件 `packages/pi-knowledge/src/core/worker.ts` 与 `recent-by-category.ts` 的标题启发式优先于显式类型。后续应优先采用显式 type/目录，并补分类回归及正式包重验。本轮不改插件版本来掩盖此问题。
 - Zotero 云端写入/身份冲突、用户自有认证 MCP、Protocols.io 写入，仍缺账户环境或可核实的具体范围；过去的本机/公开只读 PASS 保持原范围。
-- `pi-research@0.2.0` 与 `research-suite@0.1.9` 尚未发布 npm；本轮不发布 npm、不合入 main。
+- `pi-research@0.2.0` 与 `research-suite@0.1.9` 尚未发布 npm；原 GUI 验收阶段不发布 npm；本次 main 合并也未发布 npm。
 - 其他系统/架构、在线模型质量、PDF 解析与科学结果复核不由本轮关闭。MinerU/GROBID 和 B8 继续暂缓。
 - 脚本模型在任务自动接续中会重复总结并触发“本轮没有检索”提示；本轮只以实际回执判断已执行步骤，不将其作为在线模型体验已验收的证据。
 
 截图、原始会话和 Vault 内容仅留在本机；仓库仅保存元数据、状态及哈希。
+
+## 2026-10-25 main 合并门禁
+
+`codex/research-workflow-gui` 已从 `8a2b323c` 快进合入 `main=fe41db7e`。插件仓库仍为 `ff1d659`，没有版本或源码变化。
+合并后在干净工作区、无 `DRONE_PLUGINS_DIR` 覆盖的条件下，完整运行 lint、typecheck、test、build、check:arch、migration/lifecycle、check:extensions、test:upgrade 和插件仓库 `npm run check`，全部通过。typecheck/test/build 本次包含原有准备钩子，从锁定远端提交构建并验证插件 tarball。
+
+typecheck 与 build 的首次尝试各在准备钩子的 GitHub TLS 拉取阶段失败，尚未进入对应主命令；重试原命令成功，两份失败日志保留在机器证据 `mainIntegration.failedAttempts`。测试中生成清单曾短暂变化，完整构建后恢复至 Git 基线，pi-core 字节哈希也与原 GUI 验收一致。
+本次未重做 DMG/GUI；快进合并不改变原验收源码，原安装包证据继续有效。上述未完成项保持原状态，研究迁移整体仍为 PARTIAL。

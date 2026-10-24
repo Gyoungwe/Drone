@@ -1,6 +1,6 @@
 # Drone 最终插件化计划
 
-> **2026-10-24 研究 GUI 更新**：迁移后正式 macOS arm64 DMG 已完成本地两源研究闭环：来源归档/读取、证据门禁、草稿/总结、引用阅读、重启新会话接续、过期检测及字节恢复。修复会话只读分类、旧 bundle 清单背书与 backend 阅读端口三个阻塞。源码 `1d544db9`，见[研究 GUI 证据](pluginization/research-workflow-gui-evidence.md)。仅本地工作流范围 PASS；概览分类 RESEARCH-GUI-CATEGORY、真实云端账户、新研究包 npm 发布等仍未完成。本轮分支未合入 main。
+> **2026-10-24 研究 GUI 更新**：迁移后正式 macOS arm64 DMG 已完成本地两源研究闭环：来源归档/读取、证据门禁、草稿/总结、引用阅读、重启新会话接续、过期检测及字节恢复。修复会话只读分类、旧 bundle 清单背书与 backend 阅读端口三个阻塞。源码 `1d544db9`，见[研究 GUI 证据](pluginization/research-workflow-gui-evidence.md)。仅本地工作流范围 PASS；概览分类 RESEARCH-GUI-CATEGORY、真实云端账户、新研究包 npm 发布等仍未完成。2026-10-25 已快进合入 `main=fe41db7e`，合并后完整宿主及插件门禁通过，见同一证据的 `mainIntegration`；未完成项不变。
 
 > **2026-10-24 正式沙箱更新**：macOS arm64 安装包携带 Node 26.12.1；独立科研工具扩展原始 TS 安装、GUI 加载、联网拒绝/真实读取、停用恢复与退出回收已通过。详见[正式沙箱证据](pluginization/packaged-plugin-sandbox-evidence.md)。该分支已快进合入 `main=84244eb6`，合并后完整门禁通过（见证据 `mainIntegration`）。此历史更新只关闭工具代理切片；研究 GUI 后续进展见上方新记录，账户验收和新研究包 npm 发布仍未完成。
 
