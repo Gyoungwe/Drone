@@ -87,7 +87,7 @@ PR6 评估环境 + 许可/资源预算
 | --- | --- | --- |
 | 权限执行与沙箱 | **PASS（进程代理切片）**：host-mediated 权限拒绝、授权委托、脱敏审计和 Node 22 子进程代理已实现；不支持的 Pi 扩展 API 会 fail closed | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
 | plugin-api 发布治理 | **PASS（治理）**：维持公共 `@gyoungwe/plugin-api@1.1.0`，补充只增不删、干净消费者和回滚规则；本轮未发布新版本 | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
-| Electron GUI 验收 | **PASS（本地切片）**：report、workflow-catalog、task-delivery、knowledge 四个真实 Electron 脚本通过，覆盖页面导航、知识库设置/Wiki 审核、来源阅读、任务交付、暗色和窄屏布局 | [`next-stage-gui-acceptance-2026-10-24.json`](releases/next-stage-gui-acceptance-2026-10-24.json) |
+| Electron GUI 验收 | **PASS（正式包交互切片）**：`/Applications/Drone.app` v0.33.4 完成知识库、首页、技能/插件启停、MCP 发现/停用、来源行号阅读和回滚；MCP 真正工具调用因隔离运行没有模型提供方，单独记为 **BLOCKED**，不把缓存探测当调用回执 | [`next-stage-gui-acceptance-2026-10-24.json`](releases/next-stage-gui-acceptance-2026-10-24.json) |
 | 官方第三方扩展 | **PASS（公开包切片）**：`@gyoungwe/pi-connectors@0.1.1` 临时 prefix 安装后经进程沙箱注册并调用，UI 包仍完成宿主生命周期 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | 外部用户 MCP | **PASS（独立 stdio 进程切片）**：真实外部 MCP 子进程完成 marker 调用与停用重载反证；用户自有 URL/凭据仍不读取 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | research / pi-research / Zotero 迁移 | **BLOCKED_BY_BOUNDARY**：当前源码仍依赖宿主 research-loop、Zotero 和 host ports，未强行删除 facade | [`research-migration-status.md`](research-migration-status.md) |
@@ -95,6 +95,16 @@ PR6 评估环境 + 许可/资源预算
 | Protocols.io 只读验收 | **PASS（公开 GET）**：公开协议页无凭据 GET 通过；写入按红线保持 BLOCKED，未执行账户写入 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 
 本轮当前可合并的代码切片不代表十项全部关闭；研究迁移、Protocols.io 写入和需要用户凭据的范围仍保留明确的 `PARTIAL` / `BLOCKED` 状态。
+
+## 2026-10-24 第 1 项执行记录
+
+正式安装包 `/Applications/Drone.app`（v0.33.4，`app.asar` SHA-256 `2ac6cd7cdec5a36882e26bdd6346a726acb75f5d8f8623b45a4bc4830f48f5f2`）在隔离 HOME、agent、knowledge 和 userData 下完成交互式 GUI 收口验收。
+
+- 知识库：绑定隔离 Vault 后总览显示 2 篇笔记，网络图和设置页可用；来源阅读器打开 `Library/Papers/acceptance-note.md` 并显示 `L1–7` 行号。
+- 首页：新任务页显示项目、编辑器、研究入口、知识库卡片和继续任务卡；停用插件/MCP 后仍能回到首页。
+- 技能页：通过正式 UI 安装确认安装 `@gyoungwe/desktop-ui-pack@0.1.1`，安装确认展示 `ui` 能力、`drone-desktop` 宿主和空文件/网络/子进程权限；启用后贡献出现，停用后贡献回到 off。
+- MCP：隔离 `acceptance-echo` 被发现并列出 1 个工具；详情显示配置路径；停用后 UI 显示无 MCP 配置。UI 探测结果为 `未连接: cached`，由于隔离包没有模型提供方，无法从 GUI 真实会话发起工具调用，故工具调用证据保持 **BLOCKED**。
+- 回滚：插件和 MCP 均从 UI 停用，宿主没有崩溃，最终回到默认首页；临时目录和正式包路径已写入 [GUI 验收证据](releases/next-stage-gui-acceptance-2026-10-24.json)。
 
 ## 2026-10-24 第 0 项执行记录
 
