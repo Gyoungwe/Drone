@@ -212,15 +212,15 @@ packages/
 
 `@drone/tasks` 的 canonical runtime 位于 `src/runtime/*.ts`，并由 `scripts/build-runtime.mjs` 生成并提交 `src/runtime-compiled/*.mjs`；其中 workbench、register、acceptance、授权、方案提案卡、PDF worker、tool manifest 与 runtime bridge 通过 host ports 接入。`npm run build:tasks` 只检查旧目录残留，运行时由 package-owned artifacts 提供。
 
-## packages/research — 研究来源领域包（迁移中）
+## packages/research — 宿主研究合同与知识桥
 
-`@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`run-summary.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`zotero-library.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。宿主端口直接使用这些类型合同，`.pi/extensions` 只做注册与参数映射；`research-run-ui.ts` 投影公开的运行元数据、实际事件路线、来源完整性、结构化主张、证据缺口和复现状态，桌面端嵌入现有 KnowledgePanel，不新增顶层页面。
+`@drone/research` 保留 `connectors.ts`、`write-connectors.ts`、`capability-discovery.ts` 的 shared/宿主端口合同，以及 `run-summary.ts` 的知识沉淀组合桥。证据状态机、归档、回执、provenance、Zotero 与 research-run-ui 已由外部 `@gyoungwe/pi-research/host` 提供；宿主不再维护这些领域模块的副本。
 
 知识项目身份：`@gyoungwe/pi-knowledge/host` 导出的 project identity 是唯一解析器（日常空间会话选择 `/project` → 工作区 `knowledgeProjectId` → 目录派生 `<目录名>-<sha10>`，无 `research-workbench` 回落）；`research_loop`、`research_deposit_knowledge`、`research_summarize_run`、来源 / 讲解归档、知识检索范围与 WikiSkill 共用。规则与旧笔记迁移见 [knowledge-project-identity.md](knowledge-project-identity.md)。
 
 ## packages/compute — 远程计算与工作流领域包（B1–B3 / B5c / B7）
 
-`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/types.ts` 定义 B1 runner-facing `WorkflowSpec`、B3 `ComputeWorkflowSpec` 与 B5c 的先验/注册/失败检索端口；`src/workflow.ts` 提供模块目录、类型/环检查、稳定哈希和提交前注册门禁；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/repair.ts` 提供仅修改声明式 spec 的有界（最多三次）自主修复循环与“我替你决定的”决策记录；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供固定 nf-core/rnaseq 3.18.0 revision、官方 test profile 与已解析容器 digest 记录；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@drone/research/run-provenance` 的远程执行声明并拒绝未解析 digest；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由宿主适配层接入。部署资源 `packages/backend/resources/compute-runner/runner.py` 实现同一 stdin JSON 协议的 POSIX/Windows runner。
+`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/types.ts` 定义 B1 runner-facing `WorkflowSpec`、B3 `ComputeWorkflowSpec` 与 B5c 的先验/注册/失败检索端口；`src/workflow.ts` 提供模块目录、类型/环检查、稳定哈希和提交前注册门禁；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/repair.ts` 提供仅修改声明式 spec 的有界（最多三次）自主修复循环与“我替你决定的”决策记录；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供固定 nf-core/rnaseq 3.18.0 revision、官方 test profile 与已解析容器 digest 记录；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@gyoungwe/pi-research/host` 的远程执行声明并拒绝未解析 digest；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由宿主适配层接入。部署资源 `packages/backend/resources/compute-runner/runner.py` 实现同一 stdin JSON 协议的 POSIX/Windows runner。
 
 B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和确定性 RO-Crate 实现在 `src/dataset.ts`；宿主把设计合同放入任务授权并以合同哈希绑定。远端 transport、桌面投影和本地/ Docker/Slurm fixture 的运行说明见 [compute.md](compute.md)。
 
@@ -235,7 +235,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## packages/extensions — Pi 扩展适配层（迁移中）
 
-`src/*.ts` 是可打包的扩展入口：当前 generated entries 包括 `institutional-access`、`knowledge-extension`、`research-loop`、`research-wikiloop`、`research-wikiskill`、`subagent-research`、`workspace-config`；`scripts/build-extensions.mjs` 将它们生成到 `.pi/extensions/`。manifest 顶层 `legacyOutputs` 明确保留 4 个跨 bundle 兼容入口：`obsidian-workbench.mjs`、`source-archive.mjs`、`subagent-mcp-readonly.mjs`、`zotero-literature.mjs`；`check:extensions --strict` 校验 generated entries 的源/产物哈希，并将这些声明的遗留产物排除在漂移失败之外。
+`src/*.ts` 是可打包的扩展入口：当前 generated entries 包括 `institutional-access`、`knowledge-extension`、`research-loop`、`research-wikiloop`、`research-wikiskill`、`subagent-research`、`workspace-config`；`scripts/build-extensions.mjs` 将它们生成到 `.pi/extensions/`。上述扩展均由源码重新生成；`check:extensions --strict` 校验 12 个生成入口及传递依赖的源/产物哈希，不把研究兼容产物排除在漂移检查之外。
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 

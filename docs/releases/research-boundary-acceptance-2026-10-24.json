@@ -14,7 +14,26 @@
 		"pluginWorkspace": "PASS",
 		"pluginUnitTests": 124,
 		"pinnedRemoteFetch": "PASS",
-		"hostCleanCheckout": "PENDING"
+		"hostCleanCheckout": "PASS",
+		"pluginCleanRemoteClone": "PASS",
+		"hostSourceCommit": "8bbc4311",
+		"hostCommands": [
+			"npm ci",
+			"npm run fetch:plugins",
+			"npm run lint",
+			"npm run typecheck",
+			"npm test",
+			"npm run build",
+			"npm run check:arch"
+		],
+		"fetchOverrideUsed": false,
+		"uiTestFixture": "DRONE_PUBLIC_UI_PACKAGE_DIR points to independent clean remote plugin clone; no local-source fetch override",
+		"pluginApiMigrationLifecycle": "PASS",
+		"piCompatibilityLockedLatest": "PASS",
+		"upgradeFixtures": "PASS",
+		"pinnedResearchArtifact": "PASS",
+		"hostTarballSmoke": "PASS",
+		"generatedExtensionMappings": "PASS"
 	},
 	"hostSession": {
 		"status": "PASS",
@@ -34,7 +53,7 @@
 	"sdkMatrix": {
 		"status": "PASS",
 		"packageVersion": "0.2.0",
-		"tarballSha256": "3c5b62a99a5d2d16516405daeac5de2428a6fe0494762e1beed6e3f1fc80706c",
+		"tarballSha256": "f9cd4727910351c8210ffaf4088c9a3585d89312307a09dfc7fb3b1f452adaab",
 		"model": "Pi faux provider (deterministic offline model); real AgentSession and tool dispatch; no remote model inference",
 		"isolation": "Fresh HOME, npm config, agent directory and install prefix for each matrix cell; environment allowlist; no user credentials",
 		"matrix": [
@@ -70,8 +89,7 @@
 				"crossSessionReadBlocked": true,
 				"crossSessionLedgerBlocked": true
 			}
-		],
-		"scope": "Earlier runtime-equivalent 0.2.0 tarball; final package check reran both SDK targets; final locked artifact checked separately."
+		]
 	},
 	"externalEvidence": "scientific-external-acceptance-2026-10-24.json",
 	"remaining": [
@@ -80,6 +98,37 @@
 		"Drone GUI/process sandbox acceptance for pi-web-access",
 		"User-owned authenticated MCP account acceptance",
 		"Protocols.io authenticated write and account state read-back",
-		"Post-migration packaged Desktop GUI acceptance"
-	]
+		"Complete post-migration research workflow through packaged Desktop GUI (fresh launch and visible workbench smoke PASS)"
+	],
+	"packagedDesktop": {
+		"schema": 1,
+		"passed": true,
+		"bundle": "drone-mac-arm64.dmg / Drone.app",
+		"checks": [
+			"actual packaged workbench visible after splash and CJS preload mounted",
+			"fresh application knowledge enabled but unbound; no inherited Vault",
+			"new semantic/topic IPC surface shipped in actual preload",
+			"packaged first-party research/Obsidian commands available in an unrelated empty project",
+			"fresh auth/model stores are empty; no inherited model credentials"
+		],
+		"liveModel": false,
+		"startedAt": "2026-10-24T11:12:14.267Z",
+		"commands": [
+			"skill:research-vault",
+			"skill:research-workflow",
+			"skill:research-show-me",
+			"skill:researchwrite",
+			"skill:market-research-reports",
+			"skill:research-grants",
+			"skill:research-lookup",
+			"obsidian-review",
+			"obsidian-setup",
+			"research-workspace",
+			"research-subagents"
+		],
+		"screenshot": "visual/research-boundary-fresh-install.png",
+		"completedAt": "2026-10-24T11:12:21.419Z",
+		"dmgSha256": "fa6ab3dd7c9cc8738189e9b02a710cf8bcab1fed654c299bc7d1409c6ff992bb",
+		"scope": "Actual packaged app launch, visible workbench, preload/IPC and command discovery; no live model or complete research GUI workflow."
+	}
 }

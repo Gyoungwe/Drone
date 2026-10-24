@@ -14,7 +14,7 @@
 
 旧插件切片的内存状态机允许空 `claim_bindings` 后 finalize；之前的 smoke PASS 不能证明研究证据完整性。本轮删除简化状态机，恢复完整持久化核心。真实 SDK 在 Pi `1.1.0` / `1.4.0` 上验证空引用拒绝、同 cwd 会话隔离、两源阅读、带引用答案与候选笔记写后回读。模型为离线 faux provider，工具 dispatch 与会话生命周期是真实 SDK。
 
-插件回归覆盖归档校验、伪 source refs 拒绝、claim、恢复、Zotero 身份/幂等算法，以及独立 event bus 使用相同 cwd/sessionId/toolCallId 时不串回执、关闭一个会话不清理另一会话待完成回执。固定 tarball 与双仓库最终门禁汇总见 [研究边界证据](releases/research-boundary-acceptance-2026-10-24.json)。
+插件回归覆盖归档校验、伪 source refs 拒绝、claim、恢复、Zotero 身份/幂等算法，以及独立 event bus 使用相同 cwd/sessionId/toolCallId 时不串回执、关闭一个会话不清理另一会话待完成回执。双仓库干净目录完整门禁均 PASS（宿主 lint/typecheck/test/build/check:arch，插件 npm run check），固定远端 commit 的 tarball 哈希一致；宿主另通过 migration/lifecycle、锁定/latest 兼容、升级 fixture 与真实会话回执。汇总见 [研究边界证据](releases/research-boundary-acceptance-2026-10-24.json)。
 
 ## 仍未关闭的真实边界
 
@@ -25,6 +25,6 @@
 | 独立科研扩展 | `pi-web-access` 原生 Pi 安装、升级、停用恢复、回滚、卸载与实际 PubMed 检索通过；Drone GUI/进程沙箱完整兼容未通过验收 |
 | 外部 MCP | Exa 公开 HTTP MCP 启用、停用拒绝、恢复检索通过；不是用户自有认证服务 |
 | Protocols.io 写入 | 缺账户凭据和可核实的账户状态读回，保持未执行；官方接口与范围见 [外部验收](releases/scientific-external-acceptance-2026-10-24.md) |
-| 正式安装包 GUI | 本次源码迁移后的正式安装包 GUI 尚待重验；历史包截图不作为本轮 PASS |
+| 正式安装包 GUI | 本次 macOS arm64 DMG 的真实应用启动、可见工作台、preload/IPC 和研究命令发现 PASS；完整研究流程 GUI 仍待重验，启动 smoke 不替代交互闭环 |
 
 完整研究迁移验收仍为 **PARTIAL**：源码迁移与实际会话门禁独立交付，剩余真实账户/安装包边界不能用 fixture 或旧证据关闭。

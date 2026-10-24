@@ -102,8 +102,8 @@ PR6 评估环境 + 许可/资源预算
 
 | 工作包 | 收口复验 | 仍然的边界 |
 | --- | --- | --- |
-| 官方第三方扩展 | **PASS（Drone 维护公开包切片）**：`check:public-plugin-host` 从 registry 干净安装 `pi-evidence`、`pi-connectors`、`desktop-ui-pack`，通过 Pi loader、进程沙箱和 UI 生命周期；`pi-connectors` 另完成 `0.1.0 → 0.1.1 → rollback:0.1.0 → uninstall` | 这些是 `@gyoungwe/*` 官方包，不是独立第三方来源；未指定第三方包、来源、许可和版本范围前，真实第三方扩展仍 **BLOCKED** |
-| 外部用户 MCP | **PASS（本地/诊断切片）**：独立 stdio marker 调用、停用重载、用户级 HTTP 配置元数据诊断、非法 URL fail-closed 和隔离键测试共 8 项通过 | 未读取用户 MCP URL、账户或凭据，也未连接外部账户；真实用户 MCP 网络验收仍 **BLOCKED** |
+| 官方第三方扩展 | **PASS（Drone 维护公开包切片）**：`check:public-plugin-host` 从 registry 干净安装 `pi-evidence`、`pi-connectors`、`desktop-ui-pack`，通过 Pi loader、进程沙箱和 UI 生命周期；`pi-connectors` 另完成 `0.1.0 → 0.1.1 → rollback:0.1.0 → uninstall` | 新增独立 MIT 扩展 `pi-web-access` 0.43.0→0.44.0→回滚/卸载真实 Pi SDK 科研检索 PASS；Drone GUI/进程沙箱兼容仍待验收，见 [外部证据](releases/scientific-external-acceptance-2026-10-24.md) |
+| 外部用户 MCP | **PASS（本地/诊断切片）**：独立 stdio marker 调用、停用重载、用户级 HTTP 配置元数据诊断、非法 URL fail-closed 和隔离键测试共 8 项通过 | 新增公开 Exa HTTP MCP 启用/停用拒绝/恢复真实检索 PASS；自有认证服务验收仍缺账户与凭据，未把公共端点等同于用户账户 |
 
 ## 2026-10-24 PR2–PR6 合并后复验
 

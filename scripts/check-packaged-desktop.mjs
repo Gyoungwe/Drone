@@ -115,12 +115,14 @@ try {
 	};
 	let ready = false;
 	for (let i = 0; i < 100; i++) {
-		ready = await evaluate("Boolean(window.pi && document.querySelector('#root')?.childElementCount)");
+		ready = await evaluate(
+			"Boolean(window.pi && !document.getElementById('splash') && document.querySelector('[data-testid=workbench-nav]')?.getBoundingClientRect().width > 0)",
+		);
 		if (ready) break;
 		await delay(100);
 	}
-	assert(ready, "Fresh UI failed to mount");
-	report.checks.push("actual packaged renderer and CJS preload mounted");
+	assert(ready, "Fresh workbench failed to become visible after splash");
+	report.checks.push("actual packaged workbench visible after splash and CJS preload mounted");
 	const overview = await evaluate(`window.pi.getKnowledgeOverview({cwd:${JSON.stringify(cwd)}})`);
 	assert.equal(overview.enabled, true);
 	assert.equal(overview.bound, false);
