@@ -2,9 +2,13 @@
 
 日期：2026-10-24
 
-> **本轮复核更正**：旧 Node 22 网络拒绝测试连接 `127.0.0.1:9`，得到的是 fetch 的 bad-port 错误，不能证明权限拒绝。可达端点已复现旧沙箱仍可联网。Node 的网络权限控制从 v25 才提供，且 `--allow-net` 是全网布尔授权，不能把 hostname 参数当成域名白名单。正式 Electron 43 内置 Node 24.18.1，因此此前“Node 22 网络隔离 PASS”作废；当前正式包的完整第三方进程沙箱验收保持 BLOCKED。见 [Node 官方 CLI](https://nodejs.org/api/cli.html#--allow-net) 与本轮 [研究边界证据](../releases/research-boundary-acceptance-2026-10-24.json)。
+> **本轮复核更正**：旧 Node 22 网络拒绝测试连接 `127.0.0.1:9`，得到的是 fetch 的 bad-port 错误，不能证明权限拒绝。可达端点已复现旧沙箱仍可联网。Node 的网络权限控制从 v25 才提供，且 `--allow-net` 是全网布尔授权，不能把 hostname 参数当成域名白名单。正式 Electron 43 内置 Node 24.18.1，因此此前“Node 22 网络隔离 PASS”作废；该历史正式包的第三方进程沙箱验收判为 BLOCKED；后续修复状态见下方。见 [Node 官方 CLI](https://nodejs.org/api/cli.html#--allow-net) 与本轮 [研究边界证据](../releases/research-boundary-acceptance-2026-10-24.json)。
 
-## 本轮修复验证
+## 正式包后续修复（2026-10-24）
+
+最终 DMG 携带 Node 26.12.1，原始 `@vaayne/pi-web-tools@0.1.1` 经包内 CLI 干净安装、导入前工具代理、真实 GUI 加载/联网拒绝/公开 Europe PMC 读取/停用重启恢复均 PASS。旧历史失败不改写；详细步骤、能力边界和产物摘要见[正式沙箱证据](packaged-plugin-sandbox-evidence.md)。Node 26 定向回归 11/11 PASS，宿主完整门禁及插件 `npm run check` PASS。
+
+## 前一轮修复验证（历史）
 
 - 加载插件前检查运行时网络权限能力；不具备能力直接拒绝。使用 `--permission`，空列表禁网，仅明确 `["*"]` 授予全网，拒绝不能兑现的域名范围。
 - Node 22：5 项安全拒绝测试通过，3 项依赖支持运行时的正例跳过；Node 26.12.1：8/8 通过，以父进程可达的 HTTP 端点验证 `ERR_ACCESS_DENIED` 与服务端零新增请求。
@@ -29,7 +33,7 @@
 | `npm run build --workspace @gyoungwe/plugin-api` | PASS |
 | `node --test packages/plugin-api/test/index.test.mjs` | PASS（7/7） |
 | npm publish / registry 登录 | NOT_RUN（本轮明确禁止） |
-| 进程级插件沙箱 | PARTIAL：历史进程/文件回执保留，网络隔离旧 PASS 作废；不具备网络限制能力的运行时必须拒绝启动 |
+| 进程级插件沙箱 | PASS（macOS arm64 正式包工具代理）：独立 Node 26.12.1 完成真实 GUI 闭环；历史 Node 22 网络 PASS 作废，不支持网络限制的运行时仍拒绝启动 |
 
 ## 2026-10-24 插件仓库权限声明门禁合入
 
@@ -55,4 +59,4 @@ typecheck、各插件 build/check/test/smoke、干净安装、UI smoke 和 pack 
 
 ## 约束与后续
 
-`createPermissionedHostPort` 仍只约束通过 `DroneHostPort` 发起的宿主操作。可选扩展通过 `createProcessSandboxedExtension` 进入子进程代理；当前代理支持工具注册/调用，宿主在 `session_shutdown` 时回收子进程，命令、快捷键、渲染器、provider、MCP 注册等不支持的 Pi 扩展 API 会 fail closed。Node permission model 是运行时边界，仍不替代操作系统级容器/seatbelt；正式宿主应在启动时记录平台能力和沙箱策略。API 合同没有升级版本号，因为本次新增仅为宿主实现，不改变 `pluginApi: 1`。
+`createPermissionedHostPort` 仍只约束通过 `DroneHostPort` 发起的宿主操作。正式包自动发现的第三方扩展通过 `sandboxExtensionFactory` 的 import 前钩子进入子进程代理；显式策略入口为 `createProcessSandboxedExtension`；当前代理支持工具注册/调用，宿主在 `session_shutdown` 时回收子进程，命令、快捷键、渲染器、provider、MCP 注册等不支持的 Pi 扩展 API 会 fail closed。Node permission model 是防止意外越权的 seatbelt，不提供针对恶意代码的安全保证，也不替代操作系统级隔离；宿主记录 worker PID、bundled runtime 和显式网络策略。API 合同没有升级版本号，因为本次新增仅为宿主实现，不改变 `pluginApi: 1`。

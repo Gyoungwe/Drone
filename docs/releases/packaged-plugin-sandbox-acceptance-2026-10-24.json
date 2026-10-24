@@ -1,0 +1,279 @@
+{
+	"schema": 1,
+	"date": "2026-10-24",
+	"status": "PASS_SCOPED",
+	"scope": "macOS arm64 installed tool-only third-party extension sandbox and GUI lifecycle",
+	"host": {
+		"branch": "codex/packaged-plugin-sandbox",
+		"base": "53b1019545f8912d4a104a999159829d6935af55",
+		"sourceCommit": "d807be8a071b4ac1d870793d372f5e3c660d34bd",
+		"appVersion": "0.33.4",
+		"electron": "43.3.0",
+		"embeddedNode": "24.18.1"
+	},
+	"plugins": {
+		"commit": "ff1d65998716df4831540957857a945bed3626a7",
+		"changed": false
+	},
+	"runtime": {
+		"version": "26.12.1",
+		"upstream": "https://nodejs.org/dist/v26.12.1/SHASUMS256.txt",
+		"archiveSha256": "1901d539912c02afa10d1cc126943a8855a7eedebe830119463470db5e6c59e8",
+		"binary": {
+			"path": "/tmp/drone-sandbox-accepted/Drone.app/Contents/Resources/plugin-runtime/node",
+			"sha256": "06eb3f5762c2b6890e99d03f931bf01d9b20fd341dec1a8c1ef5c1809e66102b"
+		},
+		"policy": "discovery: no network; invocation: explicit all-network session approval; package/dependency reads, isolated temp writes, no inherited credentials or child processes",
+		"securityBoundary": "Node permission model is a seatbelt against accidental access, not an OS sandbox guarantee against malicious code"
+	},
+	"artifacts": {
+		"dmg": {
+			"path": "/tmp/drone-sandbox-delivery/drone-mac-arm64.dmg",
+			"sha256": "7e2d3cd8e9cdfb20361926e11fafed452b78e53e0ab90b7af828ae8395c6ace0"
+		},
+		"installedAsar": {
+			"path": "/tmp/drone-sandbox-accepted/Drone.app/Contents/Resources/app.asar",
+			"sha256": "4dc74bda6d45bd8e0f12772a5133d4dbafcb0053004194c74f397ded5e406304"
+		},
+		"installedApp": "/tmp/drone-sandbox-accepted/Drone.app",
+		"installation": "mount final DMG, ditto app to isolated acceptance destination, detach image",
+		"signed": false,
+		"notarized": false
+	},
+	"thirdParty": {
+		"name": "@vaayne/pi-web-tools",
+		"version": "0.1.1",
+		"license": "MIT",
+		"repository": {
+			"type": "git",
+			"url": "https://github.com/vaayne/agent-kit.git",
+			"directory": "extensions/web-tools"
+		},
+		"resolved": "https://registry.npmjs.org/@vaayne/pi-web-tools/-/pi-web-tools-0.1.1.tgz",
+		"integrity": "sha512-k/IsCh7HwtHtUbNu+7dalNvGaaTiUxSTTSIdaHOAod2v3azzzfN9EDfe8lr5YaUgkSz6/ylPdMJkdzFH/+7miw==",
+		"originalEntrypoint": {
+			"path": "/tmp/drone-packaged-sandbox-final/clean-agent/npm/node_modules/@vaayne/pi-web-tools/index.ts",
+			"sha256": "4bf2df4ad758f8edb1f44380513b0d7123e0ab67bb9880c741a0a4f65daaf682"
+		},
+		"installed": true,
+		"installMethod": "Pi CLI shipped in final installed app, fixed npm version, fresh isolated HOME and PI_CODING_AGENT_DIR, lifecycle scripts disabled",
+		"marketIndexed": false,
+		"guiLoadedTools": ["web-fetch", "web-search"],
+		"disableMethod": "native Pi package filter extensions:[] then app restart; installed package remains present",
+		"restoreMethod": "restore package source string then app restart; GUI reload and a fresh consent verified"
+	},
+	"realAcceptance": {
+		"model": "local scripted OpenAI-compatible driver; no paid/live model claim",
+		"dispatch": "actual packaged Pi session and sandbox worker, public external HTTP response",
+		"publicSource": {
+			"url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:24906146%20AND%20SRC:MED&format=json",
+			"pmid": "24906146",
+			"title": "Development and applications of CRISPR-Cas9 for genome engineering."
+		},
+		"receipts": [
+			{
+				"timestamp": "2026-10-24T13:15:01.046Z",
+				"toolCallId": "call-scientific-1",
+				"isError": true,
+				"permissionDenied": true,
+				"publicTitleVerified": false,
+				"contentSha256": "73abf71f4d48e11499ac770b834aa88c90d95a385ef9c6ffacb1c3c6aa8fdc05"
+			},
+			{
+				"timestamp": "2026-10-24T13:15:25.210Z",
+				"toolCallId": "call-scientific-4",
+				"isError": false,
+				"permissionDenied": false,
+				"publicTitleVerified": true,
+				"contentSha256": "8c858217c56e53c477c8847319b6a4a91eb09081740a9c478391686a49a3e31e"
+			},
+			{
+				"timestamp": "2026-10-24T13:23:50.932Z",
+				"toolCallId": "call-scientific-1792848086841-6",
+				"isError": false,
+				"permissionDenied": false,
+				"publicTitleVerified": true,
+				"contentSha256": "fbcd9f6bf3ff1f101cd04e284f73871cab1cff7ed95361f8343617f8e7726865"
+			}
+		],
+		"firstAllowedWorker": {
+			"pid": 32329,
+			"parent": 32077,
+			"exitedAfterDisable": true
+		},
+		"restoredWorker": {
+			"pid": 33185,
+			"parent": 32923,
+			"freshNetworkConsent": true,
+			"exitedAfterShutdown": true
+		},
+		"disabledGui": "installed row retained; candidate absent from loaded list and tools absent from session",
+		"finalCleanup": "acceptance app stopped; worker exited; isolated package left disabled; production profile, Vault and credentials untouched",
+		"screenshots": [
+			{
+				"path": "/tmp/drone-packaged-sandbox-final/loaded.png",
+				"sha256": "fdfb1f6e874d709ac94b17cc66adc9998dafda958d81e2959df1526b9a402831"
+			},
+			{
+				"path": "/tmp/drone-packaged-sandbox-final/network-consent.png",
+				"sha256": "ba02bcf1f0ed33a72b35262dfedd45cbb6207ee0282db9a820e51e44063aeb7e"
+			},
+			{
+				"path": "/tmp/drone-packaged-sandbox-final/disabled.png",
+				"sha256": "bc31d84e29cb7d91661096ecf5fc19a1851d5fdbb7e85483e19b2ea98a4fac5b"
+			},
+			{
+				"path": "/tmp/drone-packaged-sandbox-final/restored-loaded.png",
+				"sha256": "9981f39f6bf100e955f3ce565eb5f08a95e9e42bf1b2e409aa19428927cde0ff"
+			},
+			{
+				"path": "/tmp/drone-packaged-sandbox-final/restored-consent.png",
+				"sha256": "7167c7f0dccdbf9f0a9e1dfbe4aaa8c215ca5ddd2e3e5e1e9d5ebbf7ff38e1ba"
+			},
+			{
+				"path": "/tmp/drone-packaged-sandbox-final/restored.png",
+				"sha256": "02ae2b81e64216e8cd8f956d06e382743f3c0220b4c48943e0dd8a777e268fe9"
+			}
+		]
+	},
+	"gates": {
+		"lint": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-lint-delivery.log",
+				"sha256": "d4cab2d66b37fb80add1162933a750bccc705db7a137e147ea396201d0863c38"
+			}
+		},
+		"typecheck": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-types-delivery.log",
+				"sha256": "067b4a3e4534dd12e8f0b67a7cdb7b202e0b646d90243334f40d13fd2345bc56"
+			}
+		},
+		"test": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-tests-delivery.log",
+				"sha256": "7a4696b5ecceb8f1d140e8f3a84eab1b2b530639fe18ef4e5bfc1c55ff2017ec"
+			}
+		},
+		"build": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-build-delivery.log",
+				"sha256": "2d0fa31d54c76181e4e9ac7ee9578a874658aa67c14200dc61102f8810d50f98"
+			}
+		},
+		"architecture": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-arch-delivery.log",
+				"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			}
+		},
+		"package": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-package-delivery.log",
+				"sha256": "beb4238b6da8428afc55f108182585da711c77a1921ea5bed9fb5e95db4bf52d"
+			}
+		},
+		"sandboxNode26": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-node26-final.log",
+				"sha256": "f88ce08b3728be6a353e8ede11a5ed7c9e98fe607f0b2a0bcf443da8e00e0391"
+			}
+		},
+		"sandboxNode22": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-targeted-final.log",
+				"sha256": "e5f38aa347b4b4acdcc9aa1c44c8658330f222f004c17377ed4baccb1f903158"
+			}
+		},
+		"marketRegression": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-market-test.log",
+				"sha256": "57523a6cc78b0da5369f35422b33bb8ff0552c10de9b21f562e2560514e25bcb"
+			}
+		},
+		"pluginApiMigrationLifecycle": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-plugin-api.log",
+				"sha256": "24608bd1e47a6a6e2728315eb208611f0ef31c71f4e26b2bff7b0cb45f0c3a33"
+			}
+		},
+		"extensions": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-extensions.log",
+				"sha256": "69b8f5b01acec128946af4936fa6ef0695e2e3430fded3828083dce314aa8ff1"
+			}
+		},
+		"pluginsCheck": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-plugins-check.log",
+				"sha256": "8636f62ace68de4748ebfdb74b1cddf00c3396a2490d7c71bb1ef200eee63e2e"
+			}
+		},
+		"cleanSdkPatch": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-clean-patch.log",
+				"sha256": "74e2cb9efdd65634dddb52a18d6eb1543b304aeb65b8e58064d509e69bc65809"
+			}
+		},
+		"installedSmoke": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-installed-smoke.log",
+				"sha256": "8019edcd11914b957f15bc78a8556722c8dc6edae55b80b4a9765bd4345f5144"
+			}
+		},
+		"finalCleanCliInstall": {
+			"status": "PASS",
+			"log": {
+				"path": "/tmp/sandbox-delivery-clean-install.log",
+				"sha256": "40d44d05a09dc36989d76493be1977333a349f9d3c98bc141512c0cc72261642"
+			}
+		}
+	},
+	"counts": {
+		"sandboxNode26": {
+			"passed": 11,
+			"skipped": 0
+		},
+		"sandboxNode22": {
+			"passed": 8,
+			"skipped": 3
+		},
+		"backend": {
+			"testFilesPassed": 234,
+			"testFilesSkipped": 3,
+			"testsPassed": 1915,
+			"testsSkipped": 17
+		},
+		"desktop": {
+			"testFilesPassed": 161
+		}
+	},
+	"limitations": [
+		"Only macOS arm64 final DMG was exercised; other targets NOT_RUN.",
+		"Tool-only Pi API proxy: event hooks, commands, providers, renderers and MCP registration fail closed.",
+		"Third-party package absent from marketplace index; CLI install and native Pi package filters used, not GUI install/enable toggle.",
+		"Unsigned local build; no npm publish, tag, release upload or main merge.",
+		"Full migrated research-workflow GUI, user-owned authenticated MCP, Zotero cloud writes and Protocols.io writes remain open.",
+		"New pi-research/research-suite npm publication remains pending; MinerU/GROBID integration and B8 remain deferred."
+	],
+	"historicalFailures": [
+		"Node22 bad-port test invalid; historical network PASS remains retracted.",
+		"Electron Node24 cannot enforce network; now uses separate bundled worker.",
+		"An intermediate ASAR produced during concurrent resource fetch and packaging was discarded; delivery build and gates were sequential.",
+		"Early GUI prompts without external capability activation did not expose web-fetch; final external-plugin prompt activated it normally."
+	]
+}

@@ -24,10 +24,10 @@
 | --- | --- |
 | Zotero 本机真实写入/清理 | **PASS（经恢复清理）**：用户明确授权后，真实 Pi 会话调用安装包保存工具创建 1 条临时条目；唯一标记/DOI/标签回读一致，删除 204，按 key 查询 404、标记查询 0。Zotero 标题大小写规范化导致首轮脚本失败，修正核对后清理同一条目，未二次创建、未改已有文献。见[真实回执](releases/zotero-local-roundtrip-2026-10-24.json) |
 | Zotero 云端写入/身份冲突 | 缺隔离测试账户与授权凭据；模拟传输回归不替代真实 API 验收 |
-| 独立科研扩展 | `pi-web-access` 原生 Pi 安装、升级、停用恢复、回滚、卸载与实际 PubMed 检索通过；另选 `@vaayne/pi-web-tools@0.1.1`，Node 26 真实沙箱禁网/Europe PMC 读取/恢复通过；原始 TS 安装入口、正式包及 GUI 仍未关闭，见[回执](releases/scientific-sandbox-acceptance-2026-10-24.json) |
-| 正式沙箱运行时 | 已修复旧 Node 22 网络测试假阳性；无网络权限能力时拒绝启动。Node 26 的 8 项真实进程回归通过，正式 Electron Node 24 仍待升级运行时后验收 |
+| 独立科研扩展 | **PASS（macOS arm64 工具扩展）**：`@vaayne/pi-web-tools@0.1.1` 原始 TS 包经最终安装包 Pi CLI 干净安装，GUI 显示 2 工具；联网拒绝、真实 Europe PMC 读取、包过滤停用/重启恢复与重新授权通过。安装/启停操作口径和边界见[正式沙箱证据](pluginization/packaged-plugin-sandbox-evidence.md)。此前 `pi-web-access` 的原生 Pi 升级/回滚证据保持历史含义 |
+| 正式沙箱运行时 | **PASS（工具代理切片）**：正式包携带 Node 26.12.1，Electron Node 24 不执行第三方插件；加载前隔离、真实可达端点禁网、独立 PID 与退出回收通过。Node permission model 不等于恶意代码的 OS 级安全沙箱 |
 | 外部 MCP | Exa 公开 HTTP MCP 启用、停用拒绝、恢复检索通过；不是用户自有认证服务 |
 | Protocols.io 写入 | 缺账户凭据和可核实的账户状态读回，保持未执行；官方接口与范围见 [外部验收](releases/scientific-external-acceptance-2026-10-24.md) |
-| 正式安装包 GUI | 本次 macOS arm64 DMG 的真实应用启动、可见工作台、preload/IPC 和研究命令发现 PASS；完整研究流程 GUI 仍待重验，启动 smoke 不替代交互闭环 |
+| 正式安装包 GUI | 本次 macOS arm64 DMG 的真实应用启动、可见工作台、preload/IPC 和研究命令发现 PASS；第三方科研工具交互闭环已通过；完整研究领域工作流 GUI 仍待重验，本轮不替代该验收 |
 
 完整研究迁移验收仍为 **PARTIAL**：源码迁移与实际会话门禁独立交付，剩余真实账户/安装包边界不能用 fixture 或旧证据关闭。

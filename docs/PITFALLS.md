@@ -33,6 +33,14 @@
 | Google Antigravity 登录后返回 400 `INVALID_ARGUMENT` 或 403 `UNSUPPORTED_CLIENT` | 二 · Cloud Code Assist ClientMetadata 枚举 |
 | 生信任务 trace 显示 `skills: []`，模型退回临时脚本 | 二 · 研究 skill 路由与开发态资源同步 |
 
+## 2026-10-24：正式包沙箱的运行时与打包边界
+
+- Electron 43 的 Node 24 无网络权限控制。禁止把 bad-port fetch 错误当禁网成功；必须用父进程可达的 HTTP 端点检查 `ERR_ACCESS_DENIED` 和服务端零请求。正式包现使用独立、摘要校验的 Node 26.12.1。
+- Pi 1.1.0 的 `extensionsOverride` 发生在源码执行之后，不能用于沙箱拦截。补丁必须在两个 trust pass 的 import 前运行，错误返回诊断，不得回退宿主执行。
+- esbuild 会启动本地二进制；从 `app.asar` 加载会出现 `ENOTDIR`。通过物理 `app.asar.unpacked` 解析 esbuild，第三方依赖保留安装位置以支持 jsdom 的资源读取。临时目录用 realpath，避免 macOS `/var` 与 `/private/var` 权限路径不一致。
+- 打包前必须固定输入。不要把会触发 `fetch:plugins` 的 typecheck/test prehook 与 electron-builder 并行；本轮中间产物曾出现 ASAR 内文件内容错位，已废弃。依次完成资源准备、检查、构建、打包，再从最终 DMG 安装复验。
+- 市场首次挂载若先切换 catalog type 就 return，会跳过 installed packages 刷新；首次进入的已安装列表必须独立刷新，已有回归测试。
+
 ## 一、事故复盘（含可复用诊断手法）
 
 ## 六、Compute B3：本地 seam 不等于真实集群
