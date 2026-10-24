@@ -1,0 +1,98 @@
+{
+	"date": "2026-10-24T11:25:02.838Z",
+	"status": "PASS",
+	"scope": "Real published TypeScript extension transpiled unchanged, Drone process sandbox, explicitly authorized unrestricted network, Node 26 runtime only",
+	"reproduce": "node scripts/check-scientific-sandbox.mjs --out /tmp/scientific-sandbox.json (requires Node with --allow-net)",
+	"nodeVersion": "v26.12.1",
+	"hostSourceCommit": "9ae486d2082bec7e26921b470d3329f8009fde8a",
+	"package": {
+		"name": "@vaayne/pi-web-tools",
+		"version": "0.1.1",
+		"license": "MIT",
+		"repository": {
+			"type": "git",
+			"url": "git+https://github.com/vaayne/agent-kit.git",
+			"directory": "extensions/web-tools"
+		},
+		"dist": {
+			"integrity": "sha512-k/IsCh7HwtHtUbNu+7dalNvGaaTiUxSTTSIdaHOAod2v3azzzfN9EDfe8lr5YaUgkSz6/ylPdMJkdzFH/+7miw==",
+			"shasum": "81fb14ec02f89d02b1912d9236f900e8e143dd74",
+			"tarball": "https://registry.npmjs.org/@vaayne/pi-web-tools/-/pi-web-tools-0.1.1.tgz",
+			"fileCount": 6,
+			"unpackedSize": 16244,
+			"attestations": {
+				"url": "https://registry.npmjs.org/-/npm/v1/attestations/@vaayne%2fpi-web-tools@0.1.1",
+				"provenance": {
+					"predicateType": "https://slsa.dev/provenance/v1"
+				}
+			},
+			"signatures": [
+				{
+					"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U",
+					"sig": "MEUCIAqR/zz8Udz7gLu8LKGBSpYnOSm70DsZW1H1naeUQ5KPAiEA7/ZHwNJadOaBtyr8qQ20zhiVoOUJMK/WYP2S4e8EJok="
+				}
+			]
+		}
+	},
+	"source": "https://github.com/vaayne/agent-kit",
+	"licenseSha256": "1a33df812fa4fb15e32c5b385d54b891eede2df39d1d176e9ced77479d3f4df5",
+	"sourceSha256": "4bf2df4ad758f8edb1f44380513b0d7123e0ab67bb9880c741a0a4f65daaf682",
+	"transpiledSha256": "ea524b7b74f2b138fd5a087baa6b7166bc41e50f77d18e284c4a13b41930f56b",
+	"hostSandboxSha256": "7335ee73d7008b1335aeed2e542a99fda8c6ffc8582746ba7e556a9b0900b429",
+	"transpilation": {
+		"compiler": "esbuild",
+		"version": "0.25.12",
+		"sourceModified": false
+	},
+	"publicEndpoint": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:24906146%20AND%20SRC:MED&format=json",
+	"tools": ["web-fetch", "web-search"],
+	"testedTool": "web-fetch",
+	"networkPolicy": "[] denies; ['*'] explicitly allows all network; no domain restriction claimed",
+	"receipts": [
+		{
+			"phase": "denied",
+			"status": "PASS",
+			"separateProcess": true,
+			"network": [],
+			"toolError": true,
+			"diagnostic": "fetch failed"
+		},
+		{
+			"phase": "enabled",
+			"status": "PASS",
+			"separateProcess": true,
+			"network": ["*"],
+			"uid": "24906146",
+			"title": "Development and applications of CRISPR-Cas9 for genome engineering.",
+			"responseSha256": "ca5cf6c9f7909047e3e12ca3e68da1c2ef1cf6c96b8b80d545160b267a68d9dd"
+		},
+		{
+			"phase": "restored",
+			"status": "PASS",
+			"separateProcess": true,
+			"network": ["*"],
+			"uid": "24906146",
+			"title": "Development and applications of CRISPR-Cas9 for genome engineering.",
+			"responseSha256": "ca5cf6c9f7909047e3e12ca3e68da1c2ef1cf6c96b8b80d545160b267a68d9dd"
+		}
+	],
+	"isolation": {
+		"temporaryHome": true,
+		"temporaryProject": true,
+		"temporaryInstall": true,
+		"inheritedCredentials": false,
+		"installScripts": false,
+		"productionStateChanged": false,
+		"remoteMutations": 0
+	},
+	"formalPackage": {
+		"status": "BLOCKED",
+		"reason": "Current Electron Node 24 runtime does not support network permissions; this is a Node 26 sandbox acceptance, not a formal packaged-host PASS"
+	},
+	"remaining": [
+		"Formal packaged runtime with supported permission model",
+		"Native TypeScript npm entry loading in sandbox",
+		"GUI installation and diagnostics",
+		"web-search provider contract and live results"
+	]
+}
