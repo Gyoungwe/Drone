@@ -4,7 +4,7 @@ import {
 	detectAndSaveTemplateFromUrl,
 	loadInstitutionalConfig,
 	saveInstitutionalConfig,
-} from "@drone/research/institutional-access";
+} from "@gyoungwe/pi-research/host";
 export { buildProxiedUrl, detectAndSaveTemplateFromUrl, loadInstitutionalConfig, saveInstitutionalConfig };
 
 const require = createRequire(import.meta.url);
@@ -38,7 +38,7 @@ function session(): any | null {
 	}
 }
 
-/** Host ports used by research source archive; Electron never enters @drone/research. */
+/** Host ports used by research source archive; Electron never enters the research plugin. */
 export function isElectronAvailable(): boolean {
 	return Boolean(electron());
 }

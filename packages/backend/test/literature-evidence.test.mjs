@@ -1,8 +1,14 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { exactDoiItems, normalizeDoi, verifyLiteratureReceipt } from "@drone/research/literature-receipt";
-import { deliveryContract, hasPaperCitation, requiresPaperEvidence } from "@drone/research/source-delivery";
+import {
+	deliveryContract,
+	exactDoiItems,
+	hasPaperCitation,
+	normalizeDoi,
+	requiresPaperEvidence,
+	verifyLiteratureReceipt,
+} from "@gyoungwe/pi-research/host";
 import { expect, it } from "vitest";
 
 it("activates for Chinese comparative-genomics planning without download words", () => {

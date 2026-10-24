@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startResearchRun } from "@drone/extensions/research-host";
-import { observeExecutionReceipt, recordRunProvenance } from "@drone/research/run-provenance";
+import { observeExecutionReceipt, recordRunProvenance } from "@gyoungwe/pi-research/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 let cwd, runDir;

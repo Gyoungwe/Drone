@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startResearchRun } from "@drone/extensions/research-host";
 import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
-import { createLiteratureOperations, destinationRecovery } from "@drone/research/literature-operations";
+import { createLiteratureOperations, destinationRecovery } from "@gyoungwe/pi-research/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 let cwd, runDir;

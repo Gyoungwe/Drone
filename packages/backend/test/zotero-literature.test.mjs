@@ -7,6 +7,8 @@ import zoteroLiterature, {
 	identifyZoteroReceipt,
 	registerZoteroAcceptance,
 } from "@drone/extensions/zotero-literature";
+import { resetAcceptanceVerifiers } from "@drone/tasks/acceptance";
+import { closeKnowledgeServices, normalizeSourceLinks } from "@gyoungwe/pi-knowledge/host";
 import {
 	bootstrapZotero,
 	inspectZotero,
@@ -16,9 +18,7 @@ import {
 	setupZoteroAgentMessage,
 	uvBootstrapCommand,
 	zoteroMcpSpec,
-} from "@drone/research/zotero-setup-runtime";
-import { resetAcceptanceVerifiers } from "@drone/tasks/acceptance";
-import { closeKnowledgeServices, normalizeSourceLinks } from "@gyoungwe/pi-knowledge/host";
+} from "@gyoungwe/pi-research/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parse } from "yaml";
 import { detectCapabilities, toolCapabilities } from "../src/capabilities/runtime";

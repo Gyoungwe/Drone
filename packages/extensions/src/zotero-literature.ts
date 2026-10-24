@@ -3,31 +3,30 @@ import { randomUUID } from "node:crypto";
 import { readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadWorkspaceConfig } from "@drone/extensions/workspace-config";
-import { createLiteratureOperations } from "@drone/research/literature-operations";
-import { normalizeDoi, verifyLiteratureReceipt } from "@drone/research/literature-receipt";
-import { createCompositeZoteroReconciler } from "@drone/research/zotero-reconcile-runtime";
-import {
-	bootstrapZotero,
-	inspectZotero,
-	registerZoteroMcp,
-	setupZoteroAgentMessage,
-	ZOTERO_SETUP_BINDING,
-} from "@drone/research/zotero-setup-runtime";
-import {
-	describeZoteroSavePlan,
-	describeZoteroUpdatePlan,
-	executeZoteroSave,
-	executeZoteroUpdate,
-	prepareZoteroSave,
-	prepareZoteroUpdate,
-	receiptWithoutUpdate,
-	receiptWithoutWrite,
-	ZOTERO_ITEM_TYPES,
-} from "@drone/research/zotero-write-runtime";
 import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
 import { bindRuntime, runRuntimeExclusive, runtimeSlot, withHostRuntime } from "@drone/tasks/runtime-bridge";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
 import { cardLink, literatureCard } from "@gyoungwe/pi-knowledge/host";
+import {
+	bootstrapZotero,
+	createCompositeZoteroReconciler,
+	createLiteratureOperations,
+	describeZoteroSavePlan,
+	describeZoteroUpdatePlan,
+	executeZoteroSave,
+	executeZoteroUpdate,
+	inspectZotero,
+	normalizeDoi,
+	prepareZoteroSave,
+	prepareZoteroUpdate,
+	receiptWithoutUpdate,
+	receiptWithoutWrite,
+	registerZoteroMcp,
+	setupZoteroAgentMessage,
+	verifyLiteratureReceipt,
+	ZOTERO_ITEM_TYPES,
+	ZOTERO_SETUP_BINDING,
+} from "@gyoungwe/pi-research/host";
 
 const contained = (root, target) => {
 	const rel = relative(root, target);

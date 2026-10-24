@@ -1,10 +1,12 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { findZoteroItemsByIdentity } from "@drone/research/zotero-identity";
-import { lookupZoteroByDoi } from "@drone/research/zotero-reconcile";
-import { createZoteroReconciler } from "@drone/research/zotero-reconcile-runtime";
 import { createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
+import {
+	createZoteroReconciler,
+	findZoteroItemsByIdentity,
+	lookupZoteroByDoi,
+} from "@gyoungwe/pi-research/host";
 import { expect, it, vi } from "vitest";
 
 vi.setConfig({ testTimeout: 30000 });

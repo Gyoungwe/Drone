@@ -3,7 +3,6 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { zoteroMcpSpec } from "@drone/research/zotero-setup";
 import {
 	createAgentSession,
 	DefaultResourceLoader,
@@ -11,6 +10,7 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import { zoteroMcpSpec } from "@gyoungwe/pi-research/host";
 import { describe, expect, it, vi } from "vitest";
 import { McpService } from "../src/mcp/service";
 import { preferBundledMcpRuntime } from "../src/project/trust-loader";

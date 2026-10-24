@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import sourceArchive, { startResearchRun } from "@drone/extensions/research-host";
+import { startResearchRun } from "@drone/extensions/research-host";
+import sourceArchive from "@drone/extensions/source-archive";
 import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
 import zoteroLiterature from "@drone/extensions/zotero-literature";
 import { createTaskWorkbench, WORKBENCH_ENTRY } from "@drone/tasks/workbench";

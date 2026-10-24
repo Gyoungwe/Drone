@@ -93,7 +93,7 @@ export function createRemoteJobProvenance(input: RemoteProvenanceInput): RemoteJ
 	};
 }
 
-/** Adapter payload for @drone/research/run-provenance without introducing a domain dependency. */
+/** Adapter payload for the research plugin provenance port without introducing a domain dependency. */
 export function runProvenanceDeclarations(provenance: RemoteJobProvenance): Record<string, unknown> {
 	return {
 		compute: {

@@ -1,8 +1,8 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
-import sourceArchive from "@drone/extensions/research-host";
 import researchLoop from "@drone/extensions/research-loop";
+import sourceArchive from "@drone/extensions/source-archive";
 import zoteroLiterature from "@drone/extensions/zotero-literature";
 import { bindToolManifestEvents } from "../src/tools/manifest";
 

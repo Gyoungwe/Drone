@@ -7,8 +7,7 @@ import type {
 	ResearchSearchRequest,
 	ResearchSearchResponse,
 } from "@drone/shared";
-import { buildProxiedUrl } from "./institutional-proxy";
-import { normalizeDoi } from "./literature-receipt";
+import { buildProxiedUrl, normalizeDoi } from "@gyoungwe/pi-research/host";
 
 export interface ResearchZoteroConnectorConfig {
 	readonly apiBase?: string;

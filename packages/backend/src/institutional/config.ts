@@ -1,10 +1,10 @@
 import { join } from "node:path";
-import { inferEzproxyTemplateFromUrl } from "@drone/research/institutional-proxy";
 import {
 	emptyInstitutionalConfig,
 	type InstitutionalConfig,
 	type InstitutionalSaveInput,
 } from "@drone/shared";
+import { inferEzproxyTemplateFromUrl } from "@gyoungwe/pi-research/host";
 import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
 import { getAgentDir } from "../session-engine/sdk";
@@ -150,7 +150,7 @@ export async function touchInstitutionalLogin(url?: string): Promise<Institution
 	return next;
 }
 
-export { buildProxiedUrl, inferEzproxyTemplateFromUrl } from "@drone/research/institutional-proxy";
+export { buildProxiedUrl, inferEzproxyTemplateFromUrl } from "@gyoungwe/pi-research/host";
 
 export async function detectAndSaveTemplateFromUrl(
 	navigatedUrl: string,

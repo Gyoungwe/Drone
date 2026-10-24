@@ -1,4 +1,4 @@
-import { validateClaimBindings } from "@drone/research/claim-bindings";
+import { validateClaimBindings } from "@gyoungwe/pi-research/host";
 import { expect, it } from "vitest";
 
 const path = "Library/Papers/example.md",

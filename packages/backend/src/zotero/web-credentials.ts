@@ -1,6 +1,6 @@
 import { join } from "node:path";
-import { zoteroLibraryEnvValue, zoteroLibraryPath } from "@drone/research/zotero-library";
 import type { ZoteroWebApiSaveInput, ZoteroWebApiStatus } from "@drone/shared";
+import { zoteroLibraryEnvValue, zoteroLibraryPath } from "@gyoungwe/pi-research/host";
 import { JsonStore } from "../json-store";
 import { getAgentDir } from "../session-engine/sdk";
 

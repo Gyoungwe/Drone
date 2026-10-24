@@ -13,16 +13,16 @@
 		"typescript": "^5.9.0"
 	},
 	"dependencies": {
-		"@drone/research": "*",
 		"@drone/tasks": "*",
 		"@drone/shared": "*",
-		"@gyoungwe/pi-knowledge": "*"
+		"@gyoungwe/pi-knowledge": "*",
+		"@gyoungwe/pi-research": "*"
 	},
 	"exports": {
 		"./knowledge-extension": "./src/knowledge-extension.ts",
 		"./workspace-config": "./src/workspace-config.ts",
 		"./research-loop": "./src/research-loop.ts",
-		"./research-host": "./src/internal/research-host-entry.ts",
+		"./research-host": "./src/internal/research-host.ts",
 		"./internal/obsidian-workbench": "./src/internal/obsidian-workbench.ts",
 		"./internal/obsidian-setup": "./src/internal/obsidian-setup.ts",
 		"./research-wikiloop": "./src/research-wikiloop.ts",

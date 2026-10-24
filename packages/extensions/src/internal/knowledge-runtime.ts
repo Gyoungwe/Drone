@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { join, resolve } from "node:path";
-import { deliveryContract as researchDeliveryContract } from "@drone/research/source-delivery";
+import { deliveryContract as researchDeliveryContract } from "@gyoungwe/pi-research/host";
 import {
 	configureKnowledgeRuntime,
 	configureKnowledgeWorker,

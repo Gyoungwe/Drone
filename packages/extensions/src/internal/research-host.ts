@@ -1,7 +1,7 @@
 /**
  * Testable host adapter for the research domain.
  *
- * The research package owns the loop, archive and receipt-journal semantics;
+ * The research plugin owns the loop, archive and receipt-journal semantics;
  * this module supplies the workspace and host ports that used to be provided
  * by the generated Pi compatibility files. Keeping the adapter in the
  * extensions package lets integration tests exercise the same public graph as
@@ -11,26 +11,27 @@
 import { randomUUID } from "node:crypto";
 import { readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { verifyLiteratureReceipt } from "@drone/research/literature-receipt";
+import { verifyLiteratureReceipt } from "@gyoungwe/pi-research/host";
 import {
 	createLiteratureOperations,
 	type LiteratureOperationJournal,
 	type LiteratureOperationPorts,
-} from "@drone/research/literature-operations";
+} from "@gyoungwe/pi-research/host";
 import {
 	createResearchReceiptJournal as createTypedJournal,
 	type ResearchJournalPorts,
-} from "@drone/research/receipt-journal";
-import { createResearchLoop, type ResearchLoopPorts } from "@drone/research/research-loop";
-import { observeExecutionReceipt } from "@drone/research/run-provenance";
+} from "@gyoungwe/pi-research/host";
+import { createResearchLoop, type ResearchLoopPorts } from "@gyoungwe/pi-research/host";
+import { observeExecutionReceipt } from "@gyoungwe/pi-research/host";
 import {
 	archiveSource as archiveTyped,
 	type SourceArchivePorts,
 	type SourceArchiveWorkspace,
 	sourceStatus as sourceStatusTyped,
-} from "@drone/research/source-archive";
-import type { LiteratureReceiptOptions } from "@drone/research/literature-receipt";
-import type { ResearchLoopWorkspace } from "@drone/research/research-loop";
+} from "@gyoungwe/pi-research/host";
+import type { LiteratureReceiptOptions } from "@gyoungwe/pi-research/host";
+import type { ResearchLoopWorkspace } from "@gyoungwe/pi-research/host";
+import { resolveWorkspaceProject } from "@gyoungwe/pi-knowledge/host";
 import { toolMeta } from "@drone/tasks/tool-manifest-runtime";
 import { publishSourceNote } from "./obsidian-workbench";
 import { loadWorkspaceConfig } from "../workspace-config";
@@ -115,6 +116,7 @@ export const reconcileLiteratureOperation = operations.reconcileLiteratureOperat
 export const recordZoteroWrite = operations.recordZoteroWrite;
 
 const loopPorts: ResearchLoopPorts = {
+	resolveProject: async (cwd) => (await resolveWorkspaceProject({ cwd })).project,
 	workspace,
 	verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input as unknown as LiteratureReceiptOptions),
 	exclusive,

@@ -1,4 +1,4 @@
-import { cloudflareAskCopy, looksLikeCloudflare } from "@drone/research/source-archive-policy";
+import { cloudflareAskCopy, looksLikeCloudflare } from "@gyoungwe/pi-research/host";
 import type { ExtensionContext, InlineExtension } from "./sdk";
 
 const BROWSER_TOOL = /playwright|browser/i;

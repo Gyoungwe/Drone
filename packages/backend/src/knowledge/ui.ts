@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
-import { getResearchRun, listResearchRuns } from "@drone/research/research-run-ui";
 import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
 import * as knowledgeUiService from "@gyoungwe/pi-knowledge/host";
 import * as knowledgeUiState from "@gyoungwe/pi-knowledge/host";
@@ -15,6 +14,7 @@ import {
 	type KnowledgeWorkerLifecycleEvent,
 	type KnowledgeWorkerMetadata,
 } from "@gyoungwe/pi-knowledge/host";
+import { getResearchRun, listResearchRuns } from "@gyoungwe/pi-research/host";
 import { KnowledgeWebDavService } from "./webdav";
 
 type Handler = (event: KnowledgeUiEvent) => void;
