@@ -2,6 +2,8 @@
 
 > 2026-10-24：用户已授权跨包迁移。本轮将研究核心移入外部插件；源码迁移不再以缺范围授权标记 BLOCKED。真实账户验收与源码门禁分别记录。
 
+两仓库 `codex/research-boundary-acceptance` 已快进合入各自 `main`：宿主源码基线 `c14f3154`，插件 `ff1d659`。合并与门禁证据见[本轮汇总](releases/research-boundary-acceptance-2026-10-24.json)的 `mainIntegration`；合并不改变下方未完成项或 npm 未发布状态。
+
 ## 当前所有权
 
 - `drone-plugins/packages/pi-research@0.2.0` 拥有完整 evidence gate、research loop、claim binding、receipt journal、source archive、provenance、机构访问与 Zotero 领域算法。原生 Pi 与 Desktop 使用同一核心；Desktop 经公开 `/host` 注入 workspace、project、Vault 和调度端口。

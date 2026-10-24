@@ -1,6 +1,6 @@
 # Drone 最终插件化计划
 
-> **2026-10-24 研究边界更新**：完整 `pi-research@0.2.0` 核心已迁到插件仓库，宿主删除旧包、23 个重复领域模块和 research-host-entry facade，公开 `/host` 注入宿主端口。该版本与 `research-suite@0.1.9` 尚未发布 npm；旧发布快照保留历史含义。源码/真实 SDK 与未完成账户验收分别见 [迁移状态](research-migration-status.md) 和 [本轮证据](releases/research-boundary-acceptance-2026-10-24.json)。
+> **2026-10-24 研究边界更新**：两仓库分支已快进合入 `main`（宿主源码基线 `c14f3154`、插件 `ff1d659`）；合并不关闭剩余真实运行时和账户验收。完整 `pi-research@0.2.0` 核心已迁到插件仓库，宿主删除旧包、23 个重复领域模块和 research-host-entry facade，公开 `/host` 注入宿主端口。该版本与 `research-suite@0.1.9` 尚未发布 npm；旧发布快照保留历史含义。源码/真实 SDK 与未完成账户验收分别见 [迁移状态](research-migration-status.md) 和 [本轮证据](releases/research-boundary-acceptance-2026-10-24.json)。
 
 > **2026-10-17 评审决议（优先于下文任何冲突表述）**
 >

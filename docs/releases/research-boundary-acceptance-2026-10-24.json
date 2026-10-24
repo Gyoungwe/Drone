@@ -168,5 +168,51 @@
 		"deleted": 1,
 		"finalMarkerMatches": 0,
 		"recoveredCleanup": true
+	},
+	"mainIntegration": {
+		"date": "2026-10-24",
+		"status": "PASS",
+		"mergeMode": "fast-forward; no conflict or history rewrite",
+		"hostMergedCommit": "c14f31548e3ba36f81c763517383169e08224e36",
+		"pluginMergedCommit": "ff1d65998716df4831540957857a945bed3626a7",
+		"pluginMainRemoteVerified": true,
+		"remainingStatusesPreserved": true,
+		"npmPublished": false,
+		"cleanHostCheckout": true,
+		"cleanPluginClone": true,
+		"fetchLocalOverrideUsed": false,
+		"hostCommands": [
+			"npm ci",
+			"npm run lint",
+			"npm run typecheck",
+			"npm test",
+			"npm run build",
+			"npm run check:arch",
+			"npm run check:plugin-api (migration + lifecycle)"
+		],
+		"pluginCommands": ["npm ci --ignore-scripts", "npm run check"],
+		"additionalGates": {
+			"researchHostRealSessions": "PASS (2 sessions, 7 tool dispatches)",
+			"sdkLockedLatest": "PASS (1.1.0 / 1.4.0)",
+			"upgradeFixtures": "PASS",
+			"researchTarballSmoke": "PASS (2 sources, 2 receipts)",
+			"extensionMappings": "PASS (12)",
+			"nativePi": "PASS",
+			"node26Sandbox": "PASS (8/8); does not close formal Electron runtime blocker"
+		},
+		"checksDoNotCloseRemainingAcceptance": true,
+		"notes": [
+			"Backend 1911 passed / 17 skipped; Desktop 823 passed",
+			"UI fixture path points to independent clean plugin clone; pinned plugin fetch uses remote commit",
+			"Existing oversized generated file causes one Biome warning, no lint errors",
+			"No new npm publication, account write, or installed application replacement in this merge run"
+		],
+		"logSha256": {
+			"pluginCheck": "001aaba9f915509014c1c21a09f7a204303020b3a291e2aa85b7208aee2b20df",
+			"hostTests": "85435bfde9b8f08ce4d802875060fc6de6a1b5b627225dc1d68407bc237f45fa",
+			"hostBuild": "2c59e08fdaf2f7096dd9ab2c14321a2b10ba0a42ccf9bc25f8379461b0d742e5",
+			"hostArch": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54",
+			"pluginApi": "24608bd1e47a6a6e2728315eb208611f0ef31c71f4e26b2bff7b0cb45f0c3a33"
+		}
 	}
 }
