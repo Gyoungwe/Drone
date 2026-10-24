@@ -95,3 +95,16 @@ PR6 评估环境 + 许可/资源预算
 | Protocols.io 只读验收 | **PASS（公开 GET）**：公开协议页无凭据 GET 通过；写入按红线保持 BLOCKED，未执行账户写入 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 
 本轮当前可合并的代码切片不代表十项全部关闭；研究迁移、Protocols.io 写入和需要用户凭据的范围仍保留明确的 `PARTIAL` / `BLOCKED` 状态。
+
+## 2026-10-24 第 0 项执行记录
+
+`drone-plugins` 的 `codex/next-stage-implementation` 已快进合入并推送到 `main=046f8cbb5d0b3e9d7534e0dd7252b1c91d61ad2a`。
+该分支补齐了权限声明一致性检查：`externalWrites` 与
+`permissions.readWrite.write` 互相矛盾时清单门禁失败，并增加两个反例测试；同时在
+`docs/PLUGIN-SPEC.md` 登记声明门禁与进程沙箱的边界。
+
+- 插件仓库 `npm run check`：PASS（6 manifests、14 manifest tests、workspace typecheck、各包 build/check/test/smoke、clean install、UI smoke、pack check）。
+- 宿主 `npm run check:plugin-api -- --migration --lifecycle`：PASS（使用插件仓库 head `046f8cbb`，安装/升级/回滚/卸载全通过）。
+- 宿主 `npm run check:public-plugin-host`：PASS（loader、进程沙箱、UI 生命周期，`cleanPrefix=true`）。
+- 宿主 `npm run check:arch`：PASS（0 baseline finding，宿主独立性通过）。
+- 公开包版本、`plugins.lock.json` 和 npm registry 未改变；本项不产生新的发布缺口。

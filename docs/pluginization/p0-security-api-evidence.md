@@ -22,6 +22,28 @@
 | npm publish / registry 登录 | NOT_RUN（本轮明确禁止） |
 | 进程级插件沙箱 | PASS（Node 22 子进程代理）；正式第三方包验收见 `next-stage-p1-evidence.md` |
 
+## 2026-10-24 插件仓库权限声明门禁合入
+
+`drone-plugins` 的 `codex/next-stage-implementation` 已快进合入并推送到
+`main=046f8cbb5d0b3e9d7534e0dd7252b1c91d61ad2a`。本次包含：
+
+- manifest 检查器拒绝 `externalWrites` 与 `readWrite.write` 互相矛盾的声明；
+- 两个反例回归测试；
+- `PLUGIN-SPEC.md` 补充声明门禁与进程沙箱边界。
+
+插件仓库完整门禁 `npm run check` 通过：6 个 manifest、14 个清单测试、workspace
+typecheck、各插件 build/check/test/smoke、干净安装、UI smoke 和 pack check 均通过。
+
+以该插件 `main` 作为 `DRONE_PLUGINS_DIR` 运行的宿主门禁也通过：
+
+- `npm run check:plugin-api -- --migration --lifecycle`：PASS；插件仓库 head 为
+  `046f8cbb`，生命周期为 `0.9.0 → 1.1.0 → 0.9.0 → uninstall`；
+- `npm run check:public-plugin-host`：PASS；公开包 loader、进程沙箱和 UI 生命周期均通过，
+  `cleanPrefix=true`；
+- `npm run check:arch`：PASS，0 baseline finding，宿主独立性通过。
+
+本次没有改变公开包版本、`plugins.lock.json` 或执行 npm publish。
+
 ## 约束与后续
 
 `createPermissionedHostPort` 仍只约束通过 `DroneHostPort` 发起的宿主操作。可选扩展通过 `createProcessSandboxedExtension` 进入子进程代理；当前代理支持工具注册/调用，宿主在 `session_shutdown` 时回收子进程，命令、快捷键、渲染器、provider、MCP 注册等不支持的 Pi 扩展 API 会 fail closed。Node permission model 是运行时边界，仍不替代操作系统级容器/seatbelt；正式宿主应在启动时记录平台能力和沙箱策略。API 合同没有升级版本号，因为本次新增仅为宿主实现，不改变 `pluginApi: 1`。

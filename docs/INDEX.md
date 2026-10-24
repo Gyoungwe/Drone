@@ -32,6 +32,7 @@ A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收
 P2 知识源码与插件入口迁移、插件仓库全量门禁和 Git 历史验收见 [pluginization/P2-evidence.md](pluginization/P2-evidence.md)。
 插件平台 v3 的 T1–T7 执行计划见 [pluginization/v3-platform-plan.md](pluginization/v3-platform-plan.md)，插件清单和宿主合同见 `../drone-plugins/docs/PLUGIN-SPEC.md`，实现证据见 [pluginization/v3-evidence.md](pluginization/v3-evidence.md)。下一阶段 P1 的第三方扩展、外部 MCP 与 Protocols.io 真实只读验收见 [pluginization/next-stage-p1-evidence.md](pluginization/next-stage-p1-evidence.md)。
 截至 2026-10-23，v3 合并基线为 Drone `main=a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c`、drone-plugins `main=127db2658f465337fe9ad936692302d8536c09ba`；公开包版本与真实安装/加载证据见 [`v1.1.0 npm 发布证据`](releases/v1.1.0-npm-packages.json)、[`pi-analysis 0.1.2 发布证据`](releases/v3.1-pi-analysis-0.1.2.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
+2026-10-24 的插件仓库权限声明门禁已合入并推送到 `drone-plugins/main=046f8cbb5d0b3e9d7534e0dd7252b1c91d61ad2a`；该提交只增强 manifest 检查与规范，不改变公开包版本或 `plugins.lock.json`，门禁和宿主绑定证据见 [P0 权限执行证据](pluginization/p0-security-api-evidence.md)。
 
 插件化与 OmicOS 计划缺口清理顺序见 [pluginization/gap-closure-plan.md](pluginization/gap-closure-plan.md)。
 范围外与未来可选工作的下一阶段优先级、依赖和授权矩阵见 [next-stage-scope-plan.md](next-stage-scope-plan.md)。
