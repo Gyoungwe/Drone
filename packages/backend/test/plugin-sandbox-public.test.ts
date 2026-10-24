@@ -3,10 +3,13 @@ import { join } from "node:path";
 import { expect, it } from "vitest";
 import { PluginSandboxSession } from "../src/plugin-sandbox";
 
+const supportsNetworkPermissions = process.allowedNodeEnvironmentFlags.has("--allow-net");
 const packageRoot = process.env.DRONE_PUBLIC_PLUGIN_PACKAGE_DIR;
 
 it.skipIf(!packageRoot)(
-	"loads and invokes a published third-party extension through the process sandbox",
+	supportsNetworkPermissions
+		? "loads and invokes a published extension through the process sandbox"
+		: "refuses a published extension when the runtime cannot enforce network isolation",
 	async () => {
 		if (!packageRoot) throw new Error("DRONE_PUBLIC_PLUGIN_PACKAGE_DIR is required");
 		const packageJson = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")) as {
@@ -24,6 +27,10 @@ it.skipIf(!packageRoot)(
 			timeoutMs: 15_000,
 		});
 		try {
+			if (!supportsNetworkPermissions) {
+				await expect(session.start()).rejects.toThrow("has no network permission enforcement (--allow-net)");
+				return;
+			}
 			const ready = await session.start();
 			expect(ready.pid).not.toBe(process.pid);
 			expect(ready.tools.map((tool) => tool.name)).toEqual(["connector_list", "connector_get"]);

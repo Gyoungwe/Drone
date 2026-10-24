@@ -23,6 +23,9 @@ export interface PluginSandboxPolicy {
 		readonly read?: readonly string[];
 		readonly write?: readonly string[];
 	};
+	/** Empty denies all network; exactly ["*"] explicitly grants all network.
+	 * Node cannot enforce hostname-scoped permissions, so other lists are rejected.
+	 */
 	readonly network?: readonly string[];
 	readonly allowChildProcess?: boolean;
 	readonly environment?: readonly string[];
@@ -219,6 +222,9 @@ function allowedEnvironment(policy: PluginSandboxPolicy, sandboxDir: string): No
 	for (const key of policy.environment ?? []) {
 		if (process.env[key] !== undefined) environment[key] = process.env[key];
 	}
+	// process.execPath is the application executable in Electron. Without this
+	// host-controlled variable it starts another app, not a Node protocol worker.
+	if (process.versions.electron) environment.ELECTRON_RUN_AS_NODE = "1";
 	return environment;
 }
 
@@ -258,15 +264,28 @@ export class PluginSandboxSession {
 	}
 
 	private async launch(): Promise<PluginSandboxReady> {
+		const network = this.policy.network ?? [];
+		if (network.length > 0 && (network.length !== 1 || network[0] !== "*")) {
+			throw new Error(
+				"Plugin sandbox cannot enforce hostname-scoped network permissions; only an explicit ['*'] grants all network access",
+			);
+		}
+		// Node before v25 leaves network unrestricted under its permission model.
+		// Refuse before loading plugin code instead of silently weakening isolation.
+		if (!process.allowedNodeEnvironmentFlags.has("--allow-net")) {
+			throw new Error(
+				`Plugin sandbox is unavailable: Node ${process.versions.node} has no network permission enforcement (--allow-net)`,
+			);
+		}
 		const entrypoint = canonicalPath(this.policy.entrypoint);
 		const sandboxDir = await mkdtemp(join(tmpdir(), `drone-plugin-${safeId(this.policy.pluginId)}-`));
 		this.sandboxDir = sandboxDir;
-		const args = ["--experimental-permission"];
+		const args = ["--permission"];
 		const read = packageReadRoots(this.policy);
 		args.push(...permissionFlags("allow-fs-read", read));
 		const write = uniquePaths([sandboxDir, ...(this.policy.filesystem?.write ?? [])]);
 		args.push(...permissionFlags("allow-fs-write", write));
-		args.push(...permissionFlags("allow-net", this.policy.network ?? []));
+		if (network.length === 1) args.push("--allow-net");
 		if (this.policy.allowChildProcess) args.push("--allow-child-process");
 		args.push("--input-type=module", "--eval", WORKER_SOURCE, entrypoint);
 		const child = spawn(process.execPath, args, {
