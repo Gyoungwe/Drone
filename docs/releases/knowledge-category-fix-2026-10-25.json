@@ -1,0 +1,331 @@
+{
+	"schema": 1,
+	"date": "2026-10-25",
+	"issue": "RESEARCH-GUI-CATEGORY",
+	"status": "PASS",
+	"scope": "Installed macOS arm64 GUI classification repair; research migration remains PARTIAL",
+	"branch": "codex/knowledge-category-fix",
+	"source": {
+		"host": "e38312a9de65a14a8cc5bd6b2c7186685ef3943f",
+		"plugins": "831e3995c1a1dd35a8e77632978c06457e5c9f8c",
+		"hostMainBase": "e65c719f6e7bd127027aa880bc9b92475552f385",
+		"pluginsMainBase": "ff1d65998716df4831540957857a945bed3626a7",
+		"mainMerged": false
+	},
+	"packages": {
+		"pi-knowledge": "0.2.1",
+		"research-suite": "0.1.10",
+		"pi-research": "0.2.0",
+		"npmStatus": "NOT_PUBLISHED",
+		"knowledgeTarballSha256": "c40c15923108067842d2295fe836959ad25870ef3a7ab89361f6e778528ab6b1"
+	},
+	"rule": [
+		"Explicit frontmatter type; unknown explicit types remain other",
+		"Nearest recognized category directory for untyped notes",
+		"Filename keyword fallback"
+	],
+	"regression": {
+		"pluginTargetedBefore": {
+			"tests": 11,
+			"failures": 8
+		},
+		"pluginTargetedAfter": {
+			"tests": 11,
+			"failures": 0
+		},
+		"hostTargetedAfter": {
+			"tests": 4,
+			"failures": 0
+		},
+		"workerReopen": true,
+		"hostRecentLabelUsesWorkerGroups": true,
+		"logs": [
+			{
+				"path": "/tmp/knowledge-category-red.log",
+				"sha256": "2e70b70ce49e01f1a3958c55c3dfe4617fd98800258e091e6b4054b05d4d82c1"
+			},
+			{
+				"path": "/tmp/knowledge-category-green.log",
+				"sha256": "dcc9b0ee199d061cae20babcd0e8d07a24a7989fbff930b3fa0e363c55b6e194"
+			},
+			{
+				"path": "/tmp/knowledge-category-host-red.log",
+				"sha256": "108ff75b92ef950e771144f60b0c5fb2cfc836196b0708b63560fe44e59a85eb"
+			},
+			{
+				"path": "/tmp/knowledge-category-host-green.log",
+				"sha256": "180e7009e0110f62e4c988028c07087e3bcfb889015cda556ec5266fda88d8ff"
+			},
+			{
+				"path": "/tmp/knowledge-category-final-build.log",
+				"sha256": "d39e7114bffcdc907ec35e464963c253c78e6aa5a6925793031b9f264f9f18ca"
+			}
+		]
+	},
+	"preparation": {
+		"cleanNpmCi": {
+			"path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/npm-ci.log",
+			"sha256": "b49d7c204b25e2f361437758107fe7846b9732502230c509f458c237d994f679"
+		},
+		"remoteFetch": {
+			"path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/fetch.log",
+			"sha256": "9d597d0de277d2da6d8792da0ec1a54a47a40ae81c088db45a4b2b560691e475"
+		},
+		"extensionRebuild": {
+			"path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/extensions-build.log",
+			"sha256": "5e5fb521f8c1f46edfa10b51a98ce529fd2271e9ddb7043c3287d75ccf678671"
+		},
+		"DRONE_PLUGINS_DIR": false
+	},
+	"installed": {
+		"dmg": {
+			"path": "/tmp/drone-knowledge-category-artifact/drone-mac-arm64.dmg",
+			"sha256": "39835dad55a2cfb6f797ada60b3940b7a14e2bdf0f6279874d1724e9137180d0"
+		},
+		"app": "/tmp/drone-knowledge-category-installed/Drone.app",
+		"asarSha256": "77c6c8bedf25eb3eb3ac8ac0e55cb5b7d7891ada70ed8f8ab43368d23d1e595d",
+		"workerSha256": "cd5f0d322a88d8d62b82d43643c684d604ed0fc159c68dd2e2503cf2fdfd8eaf",
+		"pinnedWorkerMatches": true,
+		"installedFromMountedDmg": true,
+		"volumeDetached": true,
+		"version": "0.33.4",
+		"platform": "darwin-arm64",
+		"electron": "43.3.0",
+		"signed": false,
+		"notarized": false,
+		"buildLog": {
+			"path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/package.log",
+			"sha256": "e282d38fcafb602b7abd42fe880112c23593c713d6862dcaa90c30adf3ff025c"
+		}
+	},
+	"gui": {
+		"method": "Native CUA clicks and screenshots in DMG-installed app; no dev server or browser automation substitution",
+		"isolatedState": "/tmp/drone-research-workflow-accepted",
+		"productionVaultUsed": false,
+		"accountCredentialsUsed": false,
+		"modelPromptsSentThisRun": 0,
+		"before": {
+			"app": "/tmp/drone-research-accepted-installed/Drone.app",
+			"dmgSha256": "96adf863f9cd46238ee29cec3db2324c307c448f931b0e58d99a483a9e085496",
+			"pid": 23713,
+			"total": 16,
+			"method": 0,
+			"software": 7,
+			"methodNoteLabel": "software"
+		},
+		"after": {
+			"pid": 53891,
+			"total": 16,
+			"method": 1,
+			"software": 4,
+			"methodNoteLabel": "method",
+			"methodTabContainsOriginalNote": true,
+			"softwareTabContainsOriginalNote": false,
+			"softwareTabRows": 4,
+			"readerLines": [1, 32],
+			"readerHashPrefix": "694b17dfcaa9"
+		},
+		"restart": {
+			"pid": 55841,
+			"sameAppAndState": true,
+			"method": 1,
+			"software": 4,
+			"methodTabContainsOriginalNote": true,
+			"exitCode": 0
+		},
+		"vaultComparison": {
+			"markdownFiles": 23,
+			"unchanged": true,
+			"changedPaths": [],
+			"methodSha256": "694b17dfcaa9716ebbc40fe5010895d5e68227e82ce73af3387aa5258fd099b8"
+		},
+		"noteRewriteRequired": false,
+		"humanReviewChanged": false,
+		"scientificValidation": false
+	},
+	"screenshots": [
+		{
+			"name": "after-overview",
+			"path": "/tmp/drone-knowledge-category-gui/after-overview.png",
+			"sha256": "53d71113e03bd2df71add215f749dcb60038b458049922b781348063e4f78c78"
+		},
+		{
+			"name": "before",
+			"path": "/tmp/drone-knowledge-category-gui/before.png",
+			"sha256": "eb24edb877198bf1eec2f8f990dd1a373a58dd1d63adfd7a224f8bcd9c8dab88"
+		},
+		{
+			"name": "method-tab",
+			"path": "/tmp/drone-knowledge-category-gui/method-tab.png",
+			"sha256": "19a916586c1f25a8a16df4d6857537ca07b1460d804ec9b924ba114566e858c6"
+		},
+		{
+			"name": "note-reader",
+			"path": "/tmp/drone-knowledge-category-gui/note-reader.png",
+			"sha256": "72ba9872fe162a511057d77bfdfee1094bba0a81dd11641a79cdb2799bf6b6e4"
+		},
+		{
+			"name": "restarted",
+			"path": "/tmp/drone-knowledge-category-gui/restarted.png",
+			"sha256": "09597085b26541672c1025da2afba3a2f525e336aaa46cc5e5cba1b3082f652d"
+		},
+		{
+			"name": "software-tab",
+			"path": "/tmp/drone-knowledge-category-gui/software-tab.png",
+			"sha256": "dd9985253bc1a107136ad48bf55ef45819887e115d521860082f12f2369b1985"
+		}
+	],
+	"hostGates": [
+		{
+			"name": "lint",
+			"command": "npm run lint",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 1.11,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/lint.log",
+			"sha256": "9a573b5acca8d95d97ab3d886feb317efab5c32f83c13e1a669cff210d6d5f7e"
+		},
+		{
+			"name": "typecheck",
+			"command": "npm run typecheck",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 81.16,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/typecheck.log",
+			"sha256": "cb35a5a7aa78abc1dd9c6581235b4cfc978a4c5fa7d49773f2171657afc2d13e"
+		},
+		{
+			"name": "test",
+			"command": "npm test",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 124.41,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/test.log",
+			"sha256": "1b15d06d2186eac51b5f2c8c74b30dd446cf1501167e29c861d9f4fe1a6f868f"
+		},
+		{
+			"name": "build",
+			"command": "npm run build",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 80.3,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/build.log",
+			"sha256": "902cfd33b25b7ffdacf9593172f016113361363c070fcd09a39d42195bf6920d"
+		},
+		{
+			"name": "arch",
+			"command": "npm run check:arch",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 1.03,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/arch.log",
+			"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+		},
+		{
+			"name": "plugin-api",
+			"command": "npm run check:plugin-api -- --migration --lifecycle",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 3.44,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/plugin-api.log",
+			"sha256": "dbacc170d0c964bbcb0f7ee6f419d569a2e9e34140fae68598221796a0a767e5"
+		},
+		{
+			"name": "extensions",
+			"command": "npm run check:extensions -- --strict",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 0.48,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/extensions.log",
+			"sha256": "f0d9fe7b2af4cd620b3c3080d898f61bf1ce9230abdb99c01b75d894a0d56286"
+		},
+		{
+			"name": "upgrade",
+			"command": "npm run test:upgrade",
+			"cwd": "/Users/gaoyangwei/Documents/ChatGPT/Drone",
+			"exitCode": 0,
+			"seconds": 1.58,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/upgrade.log",
+			"sha256": "2d9839a70a4ba3fef761e4755e1d63e0dfd1156e70c5059baba6713fa266fc21"
+		}
+	],
+	"pluginGates": [
+		{
+			"name": "plugin-build",
+			"command": "npm run --workspace @gyoungwe/pi-knowledge build",
+			"exitCode": 0,
+			"seconds": 1.53,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/plugin-build.log",
+			"sha256": "6f3f1c583a2b667e5258ed3ca4660d1831bdb59490724bbd5c20e59134ab3215"
+		},
+		{
+			"name": "plugin-tests",
+			"command": "npm run --workspace @gyoungwe/pi-knowledge test",
+			"exitCode": 0,
+			"seconds": 2.3,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/plugin-tests.log",
+			"sha256": "4cbb2112440f5c4674712ed127b4e7d880a9bbc9c11b52726ff662499133054c"
+		},
+		{
+			"name": "plugin-smoke",
+			"command": "npm run --workspace @gyoungwe/pi-knowledge smoke",
+			"exitCode": 0,
+			"seconds": 0.68,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/plugin-smoke.log",
+			"sha256": "9d65a2da6bdfd492ea3f663d1a5c36868b04a956e8791d1aa52f96f388113057"
+		},
+		{
+			"name": "plugins",
+			"command": "npm run check",
+			"exitCode": 0,
+			"seconds": 105.39,
+			"log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/plugins.log",
+			"sha256": "399690c4d1cb4017c6abd69bb8c863e0a03d1671de4a3693e5aa677c8eca16e8"
+		}
+	],
+	"testSummary": {
+		"backend": {
+			"filesPassed": 236,
+			"filesSkipped": 3,
+			"passed": 1917,
+			"skipped": 17
+		},
+		"renderer": {
+			"filesPassed": 161,
+			"passed": 826
+		},
+		"knowledge": {
+			"filesPassed": 41,
+			"passed": 341
+		},
+		"researchSdkMatrix": ["1.1.0", "1.4.0"]
+	},
+	"failedAttempts": [
+		{
+			"name": "initial host typecheck",
+			"exitCode": 2,
+			"reason": "Unchecked array indexing yielded string | undefined; fixed filename extraction with string slicing in e38312a9; full typecheck subsequently passed",
+			"log": {
+				"path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/first-typecheck.log",
+				"sha256": "db48ab9314ce6d416b72aa5e1241f8618dd93a8229c6d3b5f0fdef53d00e8d0a"
+			}
+		}
+	],
+	"staticArtifact": {
+		"report": {
+			"path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-category-2026-10-25/artifact.json",
+			"sha256": "8490eecd91cb4292c1e7446b4e71304231cbdd19bfe969efde55b922117c2483"
+		},
+		"passed": 17,
+		"realGui": false
+	},
+	"remaining": [
+		"Zotero cloud writes and identity conflicts: account environment unavailable",
+		"User-owned authenticated MCP: not accepted",
+		"Protocols.io write: not executed; account state and scoped read-back unavailable",
+		"pi-knowledge 0.2.1, pi-research 0.2.0 and research-suite 0.1.10 npm publication: not performed",
+		"Other OS/architectures, online model quality and scientific review: not accepted",
+		"MinerU/GROBID and B8: deferred unchanged"
+	],
+	"privacy": "No credentials, Vault bodies, session bodies or screenshot bytes committed; raw evidence stays local."
+}

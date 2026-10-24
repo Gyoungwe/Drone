@@ -4,7 +4,9 @@
 
 两仓库 `codex/research-boundary-acceptance` 已快进合入各自 `main`：宿主源码基线 `c14f3154`，插件 `ff1d659`。合并与门禁证据见[本轮汇总](releases/research-boundary-acceptance-2026-10-24.json)的 `mainIntegration`；合并不改变下方未完成项或 npm 未发布状态。
 
-2026-10-25，研究 GUI 修复分支已快进合入 Drone `main=fe41db7e`，合并后完整门禁通过；插件仍为 `ff1d659`。见[GUI 合并证据](releases/research-workflow-gui-acceptance-2026-10-24.json)的 `mainIntegration`。下方 OPEN / PARTIAL 与未发布状态保持不变。
+2026-10-25，研究 GUI 修复分支已快进合入 Drone `main=fe41db7e`，合并后完整门禁通过；插件仍为 `ff1d659`。见[GUI 合并证据](releases/research-workflow-gui-acceptance-2026-10-24.json)的 `mainIntegration`。该历史合并不改变当时的 OPEN / PARTIAL 与未发布状态。
+
+2026-10-25，后续 `codex/knowledge-category-fix` 已修复并完成正式包分类验收；宿主源码 `e38312a9`、插件源码 `831e399`，双仓库门禁通过，尚未合入 main。详见[分类证据](pluginization/knowledge-category-fix-evidence.md)。`pi-knowledge@0.2.1`、`research-suite@0.1.10` 与研究包 `0.2.0` 仍未发布 npm。
 
 ## 当前所有权
 
@@ -31,6 +33,6 @@
 | 外部 MCP | Exa 公开 HTTP MCP 启用、停用拒绝、恢复检索通过；不是用户自有认证服务 |
 | Protocols.io 写入 | 缺账户凭据和可核实的账户状态读回，保持未执行；官方接口与范围见 [外部验收](releases/scientific-external-acceptance-2026-10-24.md) |
 | 正式安装包 GUI | **PASS（本地两源研究闭环）**：迁移后正式 DMG 完成绑定/授权、本地检索、真实下载/逐行读取、空引用拒绝、绑定/草稿/总结、GUI 引用阅读、重启新会话接续和 stale/恢复。脚本模型不替代科学验证；见[本轮 GUI 证据](pluginization/research-workflow-gui-evidence.md) |
-| 知识概览分类 | **OPEN（RESEARCH-GUI-CATEGORY）**：标题含 tools 的方法笔记误归软件；需修正插件显式类型/目录优先级并重验，存储与阅读不受此问题影响 |
+| 知识概览分类 | **PASS（RESEARCH-GUI-CATEGORY，macOS arm64）**：显式类型/目录优先于文件名；同一既有隔离库由方法 0 变为方法 1，软件页排除该笔记，阅读器与重启通过，23 个 Markdown 哈希不变。见[分类证据](pluginization/knowledge-category-fix-evidence.md) |
 
-完整研究迁移验收仍为 **PARTIAL**：源码迁移与实际会话门禁独立交付，本地安装包研究闭环已通过，但概览分类、云端账户、新研究包 npm 发布和其他平台边界不能用 fixture 或旧证据关闭。
+完整研究迁移验收仍为 **PARTIAL**：源码迁移与实际会话门禁独立交付，本地安装包研究闭环已通过，但云端账户、新候选包 npm 发布和其他平台边界不能用 fixture 或旧证据关闭。

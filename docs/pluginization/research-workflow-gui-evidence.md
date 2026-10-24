@@ -53,9 +53,9 @@
 
 ## 明确保留的未完成项
 
-- **RESEARCH-GUI-CATEGORY（OPEN）**：方法笔记标题含 “tools” 时，概览把它归入软件，方法计数为 0；真实存储类型/路径和阅读器正确。插件 `packages/pi-knowledge/src/core/worker.ts` 与 `recent-by-category.ts` 的标题启发式优先于显式类型。后续应优先采用显式 type/目录，并补分类回归及正式包重验。本轮不改插件版本来掩盖此问题。
+- **RESEARCH-GUI-CATEGORY（当时 OPEN；2026-10-25 后续已关闭）**：旧包中方法笔记文件名含 tools 时误归软件，方法计数为 0，存储与阅读器正确。原始失败快照保留；显式 type/目录优先级修复、回归及新正式包重验见[分类修复证据](knowledge-category-fix-evidence.md)。旧表述“标题启发式”更正为文件名/路径启发式。
 - Zotero 云端写入/身份冲突、用户自有认证 MCP、Protocols.io 写入，仍缺账户环境或可核实的具体范围；过去的本机/公开只读 PASS 保持原范围。
-- `pi-research@0.2.0` 与 `research-suite@0.1.9` 尚未发布 npm；原 GUI 验收阶段不发布 npm；本次 main 合并也未发布 npm。
+- 当时的 `pi-research@0.2.0` 与 `research-suite@0.1.9` 未发布 npm；后续 suite 候选已更新为 0.1.10（仍未发布）；原 GUI 验收阶段不发布 npm；本次 main 合并也未发布 npm。
 - 其他系统/架构、在线模型质量、PDF 解析与科学结果复核不由本轮关闭。MinerU/GROBID 和 B8 继续暂缓。
 - 脚本模型在任务自动接续中会重复总结并触发“本轮没有检索”提示；本轮只以实际回执判断已执行步骤，不将其作为在线模型体验已验收的证据。
 
