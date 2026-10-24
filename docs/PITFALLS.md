@@ -33,6 +33,12 @@
 | Google Antigravity 登录后返回 400 `INVALID_ARGUMENT` 或 403 `UNSUPPORTED_CLIENT` | 二 · Cloud Code Assist ClientMetadata 枚举 |
 | 生信任务 trace 显示 `skills: []`，模型退回临时脚本 | 二 · 研究 skill 路由与开发态资源同步 |
 
+## 2026-10-24：任务门禁必须使用所属会话的工具清单
+
+正式包中 `research_prepare_knowledge` 的 `drone.readOnly` 已进入宿主 runtime，但 SDK 的 `tool_call` 钩子在注册作用域外运行。任务门禁读取了默认 runtime，首轮把只读调用记为副作用，下一轮同参数调用被 `idempotency-check` 拒绝。不要通过清空账本、硬编码工具名或进程级清单来绕过。
+
+`registerWorkbench` 现在注入通过 `withHostRuntime(pi, ...)` 查询的只读判定，每次调用解析当前绑定，兼容宿主稍后宣布 runtime 的加载顺序。`task-manifest-session.test.mjs` 使用真实独立构建的知识扩展，检查跨轮读取不受阻、另一独立 event bus 未声明同名工具时仍拦截重复效果；源码单测通过后仍须重新打包做 GUI 验收。
+
 ## 2026-10-24：正式包沙箱的运行时与打包边界
 
 - Electron 43 的 Node 24 无网络权限控制。禁止把 bad-port fetch 错误当禁网成功；必须用父进程可达的 HTTP 端点检查 `ERR_ACCESS_DENIED` 和服务端零请求。正式包现使用独立、摘要校验的 Node 26.12.1。

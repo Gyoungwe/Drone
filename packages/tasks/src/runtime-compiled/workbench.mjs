@@ -43,7 +43,6 @@ const controls = /* @__PURE__ */ new Set([
   "task_reconcile",
   "task_evidence_restore"
 ]);
-const readOnly = (name) => isReadOnlyTool(name);
 const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
 const sameArtifactPath = (cwd, declared, observed, observedAbsolute = null) => {
   const normalize = (path) => {
@@ -154,7 +153,9 @@ function createTaskWorkbench({
   verifiers = null,
   onCheckpoint = () => {
   },
-  requireAuthorization = false
+  requireAuthorization = false,
+  // The host supplies its session-bound manifest; standalone callers use the active runtime.
+  readOnly = isReadOnlyTool
 } = {}) {
   const verifierFor = (kind) => {
     if (verifiers && Object.hasOwn(verifiers, kind))

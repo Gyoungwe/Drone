@@ -52,8 +52,6 @@ const controls = new Set([
 	"task_reconcile",
 	"task_evidence_restore",
 ]);
-// 只读判定来自工具清单（挂钩 1）：核心只读原语 + 扩展声明的 drone.readOnly / 只读工具家族。
-const readOnly = (name) => isReadOnlyTool(name);
 const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
 const sameArtifactPath = (cwd, declared, observed, observedAbsolute = null) => {
 	const normalize = (path) => {
@@ -207,6 +205,8 @@ export function createTaskWorkbench({
 	verifiers = null,
 	onCheckpoint = () => {},
 	requireAuthorization = false,
+	// The host supplies its session-bound manifest; standalone callers use the active runtime.
+	readOnly = isReadOnlyTool,
 }: any = {}) {
 	const verifierFor = (kind) => {
 		if (verifiers && Object.hasOwn(verifiers, kind))

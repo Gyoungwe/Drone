@@ -17,7 +17,7 @@
 			"output": "knowledge-extension.mjs",
 			"status": "generated",
 			"sourceSha256": "ae2078b76ab6866bf7c0543bfbc9e3053dc2266d99bd659ea4ce47fea414dadb",
-			"inputsSha256": "9a093e3cdc356f87bffa6e3f538de145e44a97df3a2240e192c5afaf720daeae",
+			"inputsSha256": "67ed18e720e3fd8d138a395c6a8a846c70c7bf7cf6fc8dd2317a084b0bfc8ec0",
 			"outputSha256": "8d5f0683568bb4dd9fe1db2ffe2afbf3cd640c2e29ce688111ad11c35227267d"
 		},
 		"obsidian-workbench": {
@@ -25,7 +25,7 @@
 			"output": "obsidian-workbench.mjs",
 			"status": "generated",
 			"sourceSha256": "9d002426142cf1c0cc3345462df95e9a5ed7e47d78a897cb3c43ee4a9d97d3a0",
-			"inputsSha256": "167d982bdde674f7c7ff17a34cfe8439dcf26f98c77772c7433e58325f08e35a",
+			"inputsSha256": "e3577f140ed0916d8a5518e6a94fd72239c35e335432de3cc004799a5f4a9b72",
 			"outputSha256": "cd9cafb53c84c99c03e67c812a042ee12d26da9e9a20ca3921bb5ded7986cbf8"
 		},
 		"research-loop": {
@@ -65,7 +65,7 @@
 			"output": "source-archive.mjs",
 			"status": "generated",
 			"sourceSha256": "8be5cfc599bc7f0c17a24f0c160921c35bbf9c42d7de80b3a5b037db85167ba9",
-			"inputsSha256": "1fd2e2f363aeca51ce9539b93605a394f0075ea35478357694779b36ab10cbff",
+			"inputsSha256": "6117550049f3b503ccf3e843f889d97558a2783ffb4cdb043ef5ca6a4b441867",
 			"outputSha256": "11308b6b8afe788a2fab2915b10af0c8ca69e0bdc998b95c4941d8cc7767790f"
 		},
 		"subagent-mcp-readonly": {
@@ -73,7 +73,7 @@
 			"output": "subagent-mcp-readonly.mjs",
 			"status": "generated",
 			"sourceSha256": "08b10aac2ab29c9cb314efe11434f43671903ab2e50c11d430f3aaa12d843728",
-			"inputsSha256": "8b36709418459d89978be02b4917d2ebb6795b4c046d30ffa3cab432afe6c6f9",
+			"inputsSha256": "9f6a079866614e71c526be653af9f5269b0fa7b2d87e924000df2d9cf4b0ad21",
 			"outputSha256": "281e10c673f136458470c0a57cb261406a5c1a6be89a326e44c6058e0e4840b8"
 		},
 		"subagent-research": {

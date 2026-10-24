@@ -15,7 +15,9 @@ import {
 } from "./failure-feedback";
 import { hostLanguage } from "./host-language";
 import { createTaskProgression } from "./progress-action";
+import { withHostRuntime } from "./runtime-bridge";
 import { singleFlightCommand } from "./single-flight";
+import { isReadOnlyTool } from "./tool-manifest";
 import { restoreTaskToolOrder } from "./tool-protocol";
 import { shouldAskToContinue } from "./turn-end-prompt";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench";
@@ -103,6 +105,9 @@ export function registerWorkbench(
 	};
 	let journal: any = createTaskWorkbench({
 		requireAuthorization: true,
+		// SDK hooks run outside the extension's registration context. Resolve the
+		// manifest against this host on every call, including after a late binding.
+		readOnly: (name) => withHostRuntime(pi, () => isReadOnlyTool(name)),
 		persist: (snapshot: any) => pi.appendEntry(WORKBENCH_ENTRY, snapshot),
 		onCheckpoint: () => send(),
 		// 里程碑验收器（zotero_item / wiki_review / …）由各自的扩展 registerAcceptanceVerifier 登记（挂钩 2）
