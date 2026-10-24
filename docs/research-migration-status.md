@@ -22,7 +22,8 @@
 | --- | --- |
 | Zotero 本机真实写入/清理 | 待用户确认临时条目范围及 Zotero 本机授权；未改现有文献，未写入生产库 |
 | Zotero 云端写入/身份冲突 | 缺隔离测试账户与授权凭据；模拟传输回归不替代真实 API 验收 |
-| 独立科研扩展 | `pi-web-access` 原生 Pi 安装、升级、停用恢复、回滚、卸载与实际 PubMed 检索通过；Drone GUI/进程沙箱完整兼容未通过验收 |
+| 独立科研扩展 | `pi-web-access` 原生 Pi 安装、升级、停用恢复、回滚、卸载与实际 PubMed 检索通过；另选 `@vaayne/pi-web-tools@0.1.1`，Node 26 真实沙箱禁网/Europe PMC 读取/恢复通过；原始 TS 安装入口、正式包及 GUI 仍未关闭，见[回执](releases/scientific-sandbox-acceptance-2026-10-24.json) |
+| 正式沙箱运行时 | 已修复旧 Node 22 网络测试假阳性；无网络权限能力时拒绝启动。Node 26 的 8 项真实进程回归通过，正式 Electron Node 24 仍待升级运行时后验收 |
 | 外部 MCP | Exa 公开 HTTP MCP 启用、停用拒绝、恢复检索通过；不是用户自有认证服务 |
 | Protocols.io 写入 | 缺账户凭据和可核实的账户状态读回，保持未执行；官方接口与范围见 [外部验收](releases/scientific-external-acceptance-2026-10-24.md) |
 | 正式安装包 GUI | 本次 macOS arm64 DMG 的真实应用启动、可见工作台、preload/IPC 和研究命令发现 PASS；完整研究流程 GUI 仍待重验，启动 smoke 不替代交互闭环 |

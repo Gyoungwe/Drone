@@ -16,7 +16,7 @@
 		"pinnedRemoteFetch": "PASS",
 		"hostCleanCheckout": "PASS",
 		"pluginCleanRemoteClone": "PASS",
-		"hostSourceCommit": "8bbc4311",
+		"hostSourceCommit": "05b7bf15",
 		"hostCommands": [
 			"npm ci",
 			"npm run fetch:plugins",
@@ -33,7 +33,16 @@
 		"upgradeFixtures": "PASS",
 		"pinnedResearchArtifact": "PASS",
 		"hostTarballSmoke": "PASS",
-		"generatedExtensionMappings": "PASS"
+		"generatedExtensionMappings": "PASS",
+		"postSandboxFixFullGates": "PASS: lint, typecheck, test, build, check:arch in independent clean checkout; git status clean afterward",
+		"hostBackendTests": {
+			"passed": 1911,
+			"skipped": 17
+		},
+		"hostDesktopTests": {
+			"passed": 823
+		},
+		"lintWarnings": "Existing oversized generated file skipped by Biome; no lint errors"
 	},
 	"hostSession": {
 		"status": "PASS",
@@ -95,7 +104,8 @@
 	"remaining": [
 		"Zotero local temporary write/delete authorization and native consent",
 		"Zotero cloud account round trip and real identity conflict",
-		"Drone GUI/process sandbox acceptance for pi-web-access",
+		"Shipped Electron 43 Node 24.18.1 lacks network permissions; default-network-denial historical test was false positive; production worker runtime must enforce network permissions before sandbox acceptance",
+		"Formal packaged scientific extension sandbox runtime, original TypeScript entry loading and GUI diagnostics",
 		"User-owned authenticated MCP account acceptance",
 		"Protocols.io authenticated write and account state read-back",
 		"Complete post-migration research workflow through packaged Desktop GUI (fresh launch and visible workbench smoke PASS)"
@@ -112,7 +122,7 @@
 			"fresh auth/model stores are empty; no inherited model credentials"
 		],
 		"liveModel": false,
-		"startedAt": "2026-10-24T11:12:14.267Z",
+		"startedAt": "2026-10-24T11:29:19.739Z",
 		"commands": [
 			"skill:research-vault",
 			"skill:research-workflow",
@@ -127,8 +137,29 @@
 			"research-subagents"
 		],
 		"screenshot": "visual/research-boundary-fresh-install.png",
-		"completedAt": "2026-10-24T11:12:21.419Z",
-		"dmgSha256": "fa6ab3dd7c9cc8738189e9b02a710cf8bcab1fed654c299bc7d1409c6ff992bb",
-		"scope": "Actual packaged app launch, visible workbench, preload/IPC and command discovery; no live model or complete research GUI workflow."
+		"completedAt": "2026-10-24T11:29:32.244Z",
+		"dmgSha256": "62e9f937eb85bc607bb8a05702fa0a9ade6a99dd0d51eb745ba071fc457d0baf",
+		"scope": "Actual packaged app launch, visible workbench, preload/IPC and command discovery; no live model or complete research GUI workflow.",
+		"sourceCommit": "05b7bf15",
+		"signing": "unsigned local acceptance build"
+	},
+	"scientificSandboxEvidence": "scientific-sandbox-acceptance-2026-10-24.json",
+	"sandboxCorrection": {
+		"sourceCommit": "7814bd2d398fe95e234571b39a4f840145daf1a2",
+		"historicalNode22NetworkPass": "INVALIDATED: port 9 produced a bad-port failure, not permission denial",
+		"node26": {
+			"version": "26.12.1",
+			"testsPassed": 8,
+			"testsSkipped": 0,
+			"reachableEndpointDenied": true,
+			"explicitAllNetworkGranted": true
+		},
+		"unsupportedRuntime": {
+			"electron": "43.3.0",
+			"node": "24.18.1",
+			"refusesBeforePluginLoad": true,
+			"scope": "New packaged executable in Node mode using freshly built sandbox source"
+		},
+		"formalSandboxStatus": "BLOCKED"
 	}
 }

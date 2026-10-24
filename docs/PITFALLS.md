@@ -282,3 +282,7 @@ git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保
 自包含打包不等于保留证据语义。简化的内存 research_loop 曾允许空 claim_bindings 后 finalize；必须保留归档、读取回执与结构化 claim 的完整状态机。用真正的 SDK 会话验证空引用拒绝，并同时测共享扩展闭包、独立 event bus、相同 cwd/toolCallId 和单会话 shutdown。Pi SDK 的身份来自 sessionManager.getSessionId()；不得用 cwd 代替有效会话身份或把账本放到 process 全局。迁移后的源码位置检查应核对公开 /host 边界，而不是仍要求已删除的宿主实现路径。
 
 安装包启动验收不能只用 `#root.childElementCount`：开屏 DOM 也会令它为真。等待 `#splash` 消失且 workbench-nav 可见后再截图，才能证明用户实际看到工作台；IPC 可用与完整研究交互验收仍需分别记录。
+
+## 进程沙箱：连接失败不等于权限拒绝
+
+`fetch("http://127.0.0.1:9")` 的 bad-port 错误不能证明禁网。使用父进程已验证可达的 HTTP 服务，断言子进程 `ERR_ACCESS_DENIED` 且服务端没有新增请求。Node 22/24 permission model 没有网络控制；正式 Electron 内置 Node 24 时必须拒绝加载沙箱。支持网络权限的运行时使用 `--permission`；`--allow-net` 为全网布尔授权，不能把 hostname 参数当域名白名单。Electron worker 必须设置 `ELECTRON_RUN_AS_NODE=1`。

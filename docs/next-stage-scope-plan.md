@@ -76,7 +76,7 @@ PR6 评估环境 + 许可/资源预算
 - 当前计划内未完成项：**0**。
 - `@gyoungwe/plugin-api@1.1.0` 已公开发布；对应工作包是后续版本的发布治理，不是当前发布缺口。
 - 上述十项均为 `OUT_OF_SCOPE` / `DEFERRED` / `OPTIONAL`，不应在没有授权时偷偷进入主线。
-- 本轮已完成 **P0 权限执行与沙箱** 的进程代理切片，并完成第三方扩展、外部 MCP 与 Protocols.io 公开只读验收；后续仍需单独授权的写入、凭据和范围迁移不自动开启。
+- 本轮已完成 **P0 权限执行与沙箱** 的进程代理切片，并完成第三方扩展、外部 MCP 与 Protocols.io 公开只读验收；旧 Node 22 网络隔离结论在本轮复核中作废，当前正式 runtime 沙箱保持 BLOCKED；后续外部写入仍需要具体范围和凭据。
 - 本计划不包含任何凭据、Vault 正文、会话正文或真实外部写入记录。
 
 ## 2026-10-24 执行切片状态
@@ -85,7 +85,7 @@ PR6 评估环境 + 许可/资源预算
 
 | 工作包 | 本轮结果 | 证据或剩余边界 |
 | --- | --- | --- |
-| 权限执行与沙箱 | **PASS（进程代理切片）**：host-mediated 权限拒绝、授权委托、脱敏审计和 Node 22 子进程代理已实现；不支持的 Pi 扩展 API 会 fail closed | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
+| 权限执行与沙箱 | **PARTIAL / 更正**：host-mediated 权限和进程代理已实现，但旧 Node 22 网络拒绝测试是假阳性。正式 Electron 的 Node 24.18.1 无网络限制能力，必须拒绝启动沙箱；需支持网络限制的正式 worker runtime 后重新验收 | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
 | plugin-api 发布治理 | **PASS（治理）**：维持公共 `@gyoungwe/plugin-api@1.1.0`，补充只增不删、干净消费者和回滚规则；本轮未发布新版本 | [`p0-security-api-evidence.md`](pluginization/p0-security-api-evidence.md) |
 | Electron GUI 验收 | **PASS（正式包交互切片）**：`/Applications/Drone.app` v0.33.4 完成知识库、首页、技能/插件启停、MCP 发现/停用、真实模型驱动的 MCP 工具调用、来源行号阅读和回滚；第二次隔离运行的过程面板显示 1 次工具、2 次响应，并返回 `DRONE-GUI-MCP-20261024` | [`next-stage-gui-acceptance-2026-10-24.json`](releases/next-stage-gui-acceptance-2026-10-24.json) |
 | 官方第三方扩展 | **PASS（公开包切片）**：`@gyoungwe/pi-connectors@0.1.1` 临时 prefix 安装后经进程沙箱注册并调用，UI 包仍完成宿主生命周期 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
@@ -94,7 +94,7 @@ PR6 评估环境 + 许可/资源预算
 | 整页知识 UI 插件化 | **PASS（切片）**：新增 `knowledge.page`，有贡献时接管主区，无贡献/停用时回退默认页 | UI SPEC、`PluginRegions.test.tsx`、`registry.test.ts` |
 | Protocols.io 只读验收 | **PASS（公开 GET）**：公开协议页无凭据 GET 通过；写入按红线保持 BLOCKED，未执行账户写入 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 
-本轮当前可合并的代码切片不代表十项全部关闭；研究迁移、Protocols.io 写入和需要用户凭据的范围仍保留明确的 `PARTIAL` / `BLOCKED` 状态。
+本轮当前可合并的代码切片不代表十项全部关闭；正式沙箱运行时、研究迁移、Protocols.io 写入和需要用户凭据的范围仍保留明确的 `PARTIAL` / `BLOCKED` 状态。
 
 ## 2026-10-24 第 3–4 项收口复验
 
@@ -102,7 +102,7 @@ PR6 评估环境 + 许可/资源预算
 
 | 工作包 | 收口复验 | 仍然的边界 |
 | --- | --- | --- |
-| 官方第三方扩展 | **PASS（Drone 维护公开包切片）**：`check:public-plugin-host` 从 registry 干净安装 `pi-evidence`、`pi-connectors`、`desktop-ui-pack`，通过 Pi loader、进程沙箱和 UI 生命周期；`pi-connectors` 另完成 `0.1.0 → 0.1.1 → rollback:0.1.0 → uninstall` | 新增独立 MIT 扩展 `pi-web-access` 0.43.0→0.44.0→回滚/卸载真实 Pi SDK 科研检索 PASS；Drone GUI/进程沙箱兼容仍待验收，见 [外部证据](releases/scientific-external-acceptance-2026-10-24.md) |
+| 官方第三方扩展 | **PASS（Drone 维护公开包切片）**：`check:public-plugin-host` 从 registry 干净安装 `pi-evidence`、`pi-connectors`、`desktop-ui-pack`，通过 Pi loader、进程沙箱和 UI 生命周期；`pi-connectors` 另完成 `0.1.0 → 0.1.1 → rollback:0.1.0 → uninstall` | 新增独立 MIT 扩展 `pi-web-access` 0.43.0→0.44.0→回滚/卸载真实 Pi SDK 科研检索 PASS；另选 `@vaayne/pi-web-tools@0.1.1` 完成 Node 26 真实进程禁网/科研读取/恢复；正式 Electron Node 24 与原始 TS 安装仍阻塞，见 [沙箱回执](releases/scientific-sandbox-acceptance-2026-10-24.json)及 [外部证据](releases/scientific-external-acceptance-2026-10-24.md) |
 | 外部用户 MCP | **PASS（本地/诊断切片）**：独立 stdio marker 调用、停用重载、用户级 HTTP 配置元数据诊断、非法 URL fail-closed 和隔离键测试共 8 项通过 | 新增公开 Exa HTTP MCP 启用/停用拒绝/恢复真实检索 PASS；自有认证服务验收仍缺账户与凭据，未把公共端点等同于用户账户 |
 
 ## 2026-10-24 PR2–PR6 合并后复验

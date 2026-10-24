@@ -1,10 +1,10 @@
 {
-	"date": "2026-10-24T11:25:02.838Z",
+	"date": "2026-10-24T11:27:41.680Z",
 	"status": "PASS",
 	"scope": "Real published TypeScript extension transpiled unchanged, Drone process sandbox, explicitly authorized unrestricted network, Node 26 runtime only",
 	"reproduce": "node scripts/check-scientific-sandbox.mjs --out /tmp/scientific-sandbox.json (requires Node with --allow-net)",
 	"nodeVersion": "v26.12.1",
-	"hostSourceCommit": "9ae486d2082bec7e26921b470d3329f8009fde8a",
+	"hostSourceCommit": "05b7bf1570385d2b7d09935aa38228601c987d77",
 	"package": {
 		"name": "@vaayne/pi-web-tools",
 		"version": "0.1.1",
@@ -37,7 +37,7 @@
 	"source": "https://github.com/vaayne/agent-kit",
 	"licenseSha256": "1a33df812fa4fb15e32c5b385d54b891eede2df39d1d176e9ced77479d3f4df5",
 	"sourceSha256": "4bf2df4ad758f8edb1f44380513b0d7123e0ab67bb9880c741a0a4f65daaf682",
-	"transpiledSha256": "ea524b7b74f2b138fd5a087baa6b7166bc41e50f77d18e284c4a13b41930f56b",
+	"transpiledSha256": "c41fc917219ecdc414f6fb5a2b9b0cfc6e739027596e0fd9233d377981ca1bce",
 	"hostSandboxSha256": "7335ee73d7008b1335aeed2e542a99fda8c6ffc8582746ba7e556a9b0900b429",
 	"transpilation": {
 		"compiler": "esbuild",

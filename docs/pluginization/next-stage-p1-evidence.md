@@ -1,5 +1,7 @@
 # 下一阶段 P1：第三方扩展、外部 MCP 与 Protocols.io
 
+> 2026-10-24 后续复核：下文保留历史运行记录，不代表当前正式沙箱已通过。旧 Node 22 网络隔离测试是假阳性，修复后当前 Electron Node 24 必须拒绝启动沙箱，见 [P0 更正](p0-security-api-evidence.md)。用户已授权自行选择科研扩展，`pi-web-access` 原生真实会话和 `@vaayne/pi-web-tools` Node 26 沙箱已取得[新证据](../research-migration-status.md)；正式包与账户级边界仍未关闭。
+
 本轮完成真实公开 npm 包、真实本地外部 MCP 进程和 Protocols.io 公开只读 GET；不使用第三方凭据、不执行 Protocols.io 写入，也不把离线 fixture 当作真实验收。
 
 ## 官方第三方扩展接入
