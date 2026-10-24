@@ -67,17 +67,6 @@ export function KnowledgeView() {
 	const binding = overview?.binding;
 
 	if (!dialog) return null;
-	if (knowledgePage) {
-		return (
-			<section className="knowledge-view" aria-label={t("title")} data-testid="knowledge-plugin-page">
-				<div className="knowledge-view-body">
-					<div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-1">
-						<PluginEntryHost entry={knowledgePage} />
-					</div>
-				</div>
-			</section>
-		);
-	}
 	const vault = binding?.vault?.replace(/[\\/]$/u, "") ?? "";
 	const vaultLabel = vault.slice(Math.max(vault.lastIndexOf("/"), vault.lastIndexOf("\\")) + 1) || vault;
 	const description = binding
@@ -85,7 +74,7 @@ export function KnowledgeView() {
 				overview?.project ? ` · ${t("homeProjectContext")}: ${overview.project}` : ""
 			}`
 		: t("homeBindingHint");
-	return (
+	const builtinPage = (
 		<section className="knowledge-view" aria-label={t("title")}>
 			<div className="knowledge-view-body">
 				<div className="mx-auto w-full max-w-5xl">
@@ -179,4 +168,16 @@ export function KnowledgeView() {
 			</div>
 		</section>
 	);
+	if (knowledgePage) {
+		return (
+			<section className="knowledge-view" aria-label={t("title")} data-testid="knowledge-plugin-page">
+				<div className="knowledge-view-body">
+					<div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-1">
+						<PluginEntryHost entry={knowledgePage} fallback={builtinPage} />
+					</div>
+				</div>
+			</section>
+		);
+	}
+	return builtinPage;
 }

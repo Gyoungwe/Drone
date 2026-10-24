@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { useMemo } from "react";
 import { useUiPluginsStore } from "../stores/ui-plugins";
 import { PluginBoundary } from "./PluginBoundary";
@@ -33,12 +33,12 @@ const EMPTY_ENTRIES: PluginEntry[] = [];
 export const isPluginEntryId = (value: string | null | undefined): boolean => !!value?.startsWith("plugin:");
 
 /** 渲染一个贡献条目（外包错误边界；崩溃 → null，与 RegionHost 同语义） */
-export function PluginEntryHost({ entry }: { entry: PluginEntry }) {
+export function PluginEntryHost({ entry, fallback }: { entry: PluginEntry; fallback?: ReactNode }) {
 	const nonce = useUiPluginRegistry((s) => s.loadNonces[entry.pluginName] ?? 0);
 	const Comp = entry.contribution.component as ComponentType<Record<string, never>>;
 	return (
 		<div key={`${entry.id}:${nonce}`} data-plugin={entry.pluginName} className="min-h-0 min-w-0 flex-1">
-			<PluginBoundary pluginName={entry.pluginName} label={entry.id}>
+			<PluginBoundary pluginName={entry.pluginName} label={entry.id} fallback={fallback}>
 				<Comp />
 			</PluginBoundary>
 		</div>

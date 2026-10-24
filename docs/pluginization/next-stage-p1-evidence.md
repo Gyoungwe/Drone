@@ -65,3 +65,32 @@ npm run check:protocols-readonly
 边界状态保持明确：`@gyoungwe/*` 是 Drone 维护的公开包，不构成独立第三方扩展来源。未提供独立第三方包名、来源、许可和版本范围前，**真实第三方扩展验收为 BLOCKED**。同样，未提供用户自有 MCP 的 URL、账户和凭据范围前，**外部用户 MCP 的网络连接验收为 BLOCKED**；本地 stdio 和配置诊断切片不升级为真实账户 PASS。
 
 本轮宿主门禁也已通过：`DRONE_PLUGINS_DIR=/Users/gaoyangwei/Documents/ChatGPT/drone-plugins npm run typecheck`、`npm test` 和 `npm run build` 均返回 0；随后 `npm run check:arch`、`npm run check:plugin-api -- --migration --lifecycle`、`npm run check:desktop-artifact -- --strict`、`npm run check:pi-core` 与 `npm run check:pi-research` 均 PASS。构建与全量测试使用本地插件源覆盖，只用于复现，不改变 `plugins.lock.json`。
+
+## 2026-10-24 Protocols.io 与整页知识 UI 收口审计
+
+本次审计没有使用 OAuth、Protocols.io 账户或用户 Vault，也没有执行任何外部写入。
+
+### Protocols.io
+
+- `createProtocolsBookmarkWritePortFromEnv` 在只有 API token、没有宿主注入的 bookmark-state probe 时仍返回 `undefined`；环境变量不会把写入端口自动打开。
+- `ResearchWritePanel` 只允许生成本地写入计划；当 `protocols-bookmark-write.writeEnabled=false` 时，执行按钮保持禁用，不会调用 `executeWrite`。
+- 现有 host port 仍要求 `GET → POST → GET → DELETE → GET`，每次执行要求一次性明确批准，并对目标身份、读回和删除结果做 fail-closed 校验。真正启用仍需要 OAuth/账户授权和可证明 bookmark 状态的 host probe。
+- 新增 UI 回归：`packages/desktop/src/renderer/src/components/research/ResearchWritePanel.test.tsx`，覆盖无授权端口时可预览但不可执行。
+- 只读验收仍为 PASS：`npm run check:protocols-readonly`，`credentials: "none"`，`mutations: 0`。写入状态保持 **BLOCKED**。
+
+### 整页 knowledge UI 插件化
+
+- `knowledge.page` 仍由第一个启用贡献接管；无贡献或插件停用时回到内置知识库页。
+- `PluginEntryHost` 现在接受可选 `fallback`，整页贡献渲染抛错时也回退内置知识页，避免页面空白；其他区域继续保留原有无默认贡献语义。
+- 新增 `PluginRegions.test.tsx` 回归，覆盖 `knowledge.page` 贡献崩溃后的默认页回退；原有四区域挂载/卸载和总开关关闭测试继续通过。
+- 该项仍是 **PARTIAL**：宿主挂载点、停用回退和故障回退已具备，完整产品页面所有权迁移和真实第三方知识工作台仍需单独产品范围授权与正式包人工验收。
+
+离线验证：
+
+```sh
+npx vitest run packages/desktop/src/renderer/src/plugins/PluginRegions.test.tsx \
+  packages/desktop/src/renderer/src/components/research/ResearchWritePanel.test.tsx \
+  --config packages/desktop/vitest.config.ts
+```
+
+结果：2 个测试文件、7 个测试通过；未访问外部账户、凭据或 Vault。

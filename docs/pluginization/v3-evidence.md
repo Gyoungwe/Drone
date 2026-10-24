@@ -22,6 +22,7 @@
 - 新增 `knowledge.tab`、`home.section`、`skills.section`，同步 shared 区域目录、renderer 挂载、插件类型声明和 UI SPEC。
 - 知识库插件页签在核心页签之后追加；停用后回到默认内容；首页和技能页在无贡献时不渲染空壳。
 - 证据：`npm run test --workspace @drone/desktop -- --run src/renderer/src/plugins/PluginRegions.test.tsx`（4 tests），`npm run typecheck --workspace @drone/desktop`。
+- 收口补强：`knowledge.page` 贡献现在可传入内置知识页作为错误边界 fallback；插件渲染异常时不再留下空白整页。`PluginRegions.test.tsx` 增加崩溃回退回归（当前该文件 6 tests），与停用/总开关回退一起覆盖。
 - 真实安装包验收（2026-10-23，Drone `0.33.4`，unsigned macOS arm64）已通过：
   - 安装包：`packages/desktop/dist/mac-arm64/Drone.app`，`app.asar` SHA-256 `a19aacaef58dccdd8a70e8eb29034bf0d1ae0254b5f73af42105a710aa2ae5ec`。
   - 安装方式：本地 tarball `drone-t3-ui-fixture@0.0.1` 通过 `npm install --prefix /tmp/drone-t3-agent-tar2/npm --ignore-scripts --no-audit --no-fund /tmp/drone-t3-ui-fixture-0.0.1.tgz` 写入 `<agentDir>/npm/node_modules`；tarball SHA-256 `4071a41f0d3b7bf7b48aa9ead844f42c7a12374134db4957f63cfe47d3a1ff92`。

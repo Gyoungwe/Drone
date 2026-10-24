@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 import type { UiPluginContribution, UiPluginManifest } from "@drone/shared";
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { act, render, renderHook, screen } from "@testing-library/react";
+import React from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useUiPluginsStore } from "../stores/ui-plugins";
-import { usePluginEntries } from "./PluginRegions";
+import { PluginEntryHost, usePluginEntries } from "./PluginRegions";
 import { useUiPluginRegistry } from "./registry";
 import { UI_REGIONS } from "./slots";
+
+vi.stubGlobal("React", React);
 
 const Panel = () => null;
 
@@ -75,5 +78,29 @@ describe("v3 plugin page regions", () => {
 		];
 		for (const hook of hooks) expect(hook.result.current).toEqual([]);
 		for (const hook of hooks) hook.unmount();
+	});
+
+	it("renders the host fallback when a full-page contribution crashes", () => {
+		const Broken = () => {
+			throw new Error("fixture plugin crash");
+		};
+		useUiPluginRegistry.getState().applyPlugin(manifest(UI_REGIONS.KnowledgePage), { Panel: Broken }, []);
+		const entries = renderHook(() => usePluginEntries(UI_REGIONS.KnowledgePage));
+		const entry = entries.result.current[0];
+		if (!entry) throw new Error("knowledge page fixture did not register");
+		const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		render(
+			React.createElement(PluginEntryHost, {
+				entry,
+				fallback: React.createElement(
+					"div",
+					{ "data-testid": "knowledge-default-fallback" },
+					"default knowledge page",
+				),
+			}),
+		);
+		expect(screen.getByTestId("knowledge-default-fallback").textContent).toBe("default knowledge page");
+		error.mockRestore();
+		entries.unmount();
 	});
 });
