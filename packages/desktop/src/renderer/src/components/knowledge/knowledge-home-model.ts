@@ -12,8 +12,9 @@ function keywordCategory(value: string): KnowledgeLeafCategory {
 }
 
 export function classifyKnowledgePath(path: string): KnowledgeLeafCategory {
-	const segments = path.toLowerCase().split(/[\\/]/u);
-	const filename = segments[segments.length - 1];
+	const normalized = path.toLowerCase().replaceAll("\\", "/");
+	const segments = normalized.split("/");
+	const filename = normalized.slice(normalized.lastIndexOf("/") + 1);
 	for (const directory of segments.slice(0, -1).reverse()) {
 		if (
 			/^(papers?|literature|文献|论文|software|tools?|软件|methods?|protocols?|方法|ideas?|hypotheses|想法|假设)$/u.test(
