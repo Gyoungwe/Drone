@@ -1,0 +1,130 @@
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js
+index e733dc0..c6593e5 100644
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js
+@@ -1488,14 +1488,15 @@ export class DefaultPackageManager {
+                 return [
+                     "install",
+                     "--prod",
++                    "--ignore-scripts",
+                     "--config.auto-install-peers=false",
+                     "--config.strict-peer-dependencies=false",
+                     "--config.strict-dep-builds=false",
+                 ];
+             case "npm":
+-                return ["install", "--omit=dev", "--legacy-peer-deps"];
++                return ["install", "--ignore-scripts", "--omit=dev", "--legacy-peer-deps"];
+             default:
+-                return ["install"];
++                return ["install", "--ignore-scripts"];
+         }
+     }
+     runNpmCommandSync(args) {
+@@ -1509,7 +1510,7 @@ export class DefaultPackageManager {
+         // equivalent bun/pnpm settings) so package managers do not install or solve host-provided
+         // @earendil-works/pi-* peers. Stale auto-installed pi peers can otherwise block updates.
+         if (packageManagerName === "bun") {
+-            return ["install", ...specs, "--cwd", installRoot, "--omit=peer"];
++            return ["install", "--ignore-scripts", ...specs, "--cwd", installRoot, "--omit=peer"];
+         }
+         if (packageManagerName === "pnpm") {
+             return [
+@@ -1517,12 +1518,13 @@ export class DefaultPackageManager {
+                 ...specs,
+                 "--prefix",
+                 installRoot,
++                "--ignore-scripts",
+                 "--config.auto-install-peers=false",
+                 "--config.strict-peer-dependencies=false",
+                 "--config.strict-dep-builds=false",
+             ];
+         }
+-        return ["install", ...specs, "--prefix", installRoot, "--legacy-peer-deps"];
++        return ["install", "--ignore-scripts", ...specs, "--prefix", installRoot, "--legacy-peer-deps"];
+     }
+     async installNpm(source, scope, temporary) {
+         const installRoot = this.getNpmInstallRoot(scope, temporary);
+@@ -1536,10 +1538,10 @@ export class DefaultPackageManager {
+         }
+         const packageManagerName = this.getPackageManagerName();
+         if (packageManagerName === "bun") {
+-            await this.runNpmCommand(["uninstall", source.name, "--cwd", installRoot]);
++            await this.runNpmCommand(["uninstall", "--ignore-scripts", source.name, "--cwd", installRoot]);
+             return;
+         }
+-        const args = ["uninstall", source.name, "--prefix", installRoot];
++        const args = ["uninstall", "--ignore-scripts", source.name, "--prefix", installRoot];
+         if (packageManagerName !== "pnpm") {
+             args.push("--legacy-peer-deps");
+         }
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts
+index c3ee0dc..fd808c5 100644
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts
+@@ -86,6 +86,8 @@ export interface DefaultResourceLoaderOptions {
+     noContextFiles?: boolean;
+     systemPrompt?: string;
+     appendSystemPrompt?: string[];
++    /** Drone Pi 1.1.0 patch: intercept file execution before both trust-loading passes. */
++    extensionFactoryForPath?: (path: string) => Promise<ExtensionFactory | undefined>;
+     extensionsOverride?: (base: LoadExtensionsResult) => LoadExtensionsResult;
+     skillsOverride?: (base: {
+         skills: Skill[];
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js
+index 35ba09c..0ed5a68 100644
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js
+@@ -210,6 +210,7 @@ export class DefaultResourceLoader {
+     noContextFiles;
+     systemPromptSource;
+     appendSystemPromptSource;
++    extensionFactoryForPath;
+     extensionsOverride;
+     skillsOverride;
+     promptsOverride;
+@@ -263,6 +264,7 @@ export class DefaultResourceLoader {
+         this.noContextFiles = options.noContextFiles ?? false;
+         this.systemPromptSource = options.systemPrompt;
+         this.appendSystemPromptSource = options.appendSystemPrompt;
++        this.extensionFactoryForPath = options.extensionFactoryForPath;
+         this.extensionsOverride = options.extensionsOverride;
+         this.skillsOverride = options.skillsOverride;
+         this.promptsOverride = options.promptsOverride;
+@@ -504,7 +506,7 @@ export class DefaultResourceLoader {
+             resource.metadata,
+         ]));
+         const packageWarnings = collectExtensionPackageWarnings(extensionPaths, metadataByPath);
+-        const extensionsResult = await loadExtensionsCached(extensionPaths, this.cwd, this.eventBus);
++        const extensionsResult = await this.loadExtensionPaths(extensionPaths);
+         mergeExtensionWarnings(extensionsResult, packageWarnings);
+         if (!options.includeInlineFactories) {
+             return extensionsResult;
+@@ -523,7 +525,27 @@ export class DefaultResourceLoader {
+     /** Load extension paths: files from disk and `builtin:<name>` paths from the built-in extensions. */
+     async loadExtensionPaths(paths, runtime) {
+         const isBuiltinPath = (path) => path.startsWith(BUILTIN_PATH_PREFIX);
+-        const result = await loadExtensionsCached(paths.filter((path) => !isBuiltinPath(path)), this.cwd, this.eventBus, runtime);
++        const nativePaths = [];
++        const proxies = [];
++        const errors = [];
++        for (const path of paths.filter((path) => !isBuiltinPath(path))) {
++            try {
++                const factory = await this.extensionFactoryForPath?.(path);
++                if (factory) proxies.push({ path, factory });
++                else nativePaths.push(path);
++            } catch (error) {
++                errors.push({ path, error: error instanceof Error ? error.message : String(error) });
++            }
++        }
++        const result = await loadExtensionsCached(nativePaths, this.cwd, this.eventBus, runtime);
++        result.errors.push(...errors);
++        for (const {path, factory} of proxies) {
++            try {
++                result.extensions.push(await loadExtensionFromFactory(factory, this.cwd, this.eventBus, result.runtime, path));
++            } catch (error) {
++                result.errors.push({ path, error: error instanceof Error ? error.message : String(error) });
++            }
++        }
+         for (const path of paths.filter(isBuiltinPath)) {
+             const builtin = this.builtinExtensions.get(path.slice(BUILTIN_PATH_PREFIX.length));
+             if (!builtin) {

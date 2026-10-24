@@ -2,6 +2,10 @@ import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
+	pluginSandbox: {
+		title: "Plugin process",
+		networkPermission: "This extension needs network permission for this session.",
+	},
 	workflows: {
 		title: "Six workflow directions",
 		hint: "Choose the task and current stage. One primary workflow per stage; specialists load on demand. Browsing does not enable tools or run tasks.",

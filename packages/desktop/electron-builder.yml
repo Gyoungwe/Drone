@@ -80,6 +80,9 @@ extraResources:
   - from: "../../.pi/skills/bio-environment"
     to: "research-workbench/skills/bio-environment"
 mac:
+  extraResources:
+    - from: "plugin-runtime/darwin-${arch}"
+      to: "plugin-runtime"
   category: public.app-category.developer-tools
   # Releases intentionally remain unsigned. Signing and notarization are optional
   # enhancements and are not required by the release workflow.
@@ -93,6 +96,9 @@ mac:
   # 产物名与 productName 解耦：保持 drone-mac-* 兼容 README 下载表（productName 带空格仅作显示名）
   artifactName: drone-mac-${arch}.${ext}
 win:
+  extraResources:
+    - from: "plugin-runtime/win32-${arch}"
+      to: "plugin-runtime"
   # Unsigned Windows artifacts are intentional; SmartScreen may prompt on install.
   signAndEditExecutable: false
   target:
@@ -105,6 +111,9 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
 linux:
+  extraResources:
+    - from: "plugin-runtime/linux-${arch}"
+      to: "plugin-runtime"
   category: Development
   # workspace 包名是 @drone/desktop；AppImage/deb 需要安全的可执行文件名
   executableName: drone

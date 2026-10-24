@@ -1,6 +1,8 @@
-import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
-import { realpathSync } from "node:fs";
+import { type ChildProcessWithoutNullStreams, execFileSync, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync, realpathSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface, type Interface } from "node:readline";
@@ -30,6 +32,9 @@ export interface PluginSandboxPolicy {
 	readonly allowChildProcess?: boolean;
 	readonly environment?: readonly string[];
 	readonly timeoutMs?: number;
+	/** Host-owned, archive-verified runtime shipped outside app.asar. */
+	readonly runtimeDirectory?: string;
+	readonly bundleEntrypoint?: boolean;
 }
 
 export interface PluginSandboxToolDeclaration {
@@ -86,8 +91,8 @@ const protocol = (message) => process.stdout.write(JSON.stringify(message) + "\n
 const unsupported = (name) => () => { throw new Error("Process-sandbox extension API is not supported: " + name); };
 const pi = {
   registerTool(tool) { tools.set(tool.name, tool); },
-  on() { return () => {}; },
-  events: { on() { return () => {}; }, emit() {} },
+  on: unsupported("on"),
+  events: { on: unsupported("events.on"), emit: unsupported("events.emit") },
   registerCommand: unsupported("registerCommand"),
   registerShortcut: unsupported("registerShortcut"),
   registerFlag: unsupported("registerFlag"),
@@ -197,8 +202,7 @@ function permissionFlags(name: string, paths: readonly string[]): string[] {
 function packageReadRoots(policy: PluginSandboxPolicy): string[] {
 	const entry = canonicalPath(policy.entrypoint);
 	const packageRoot = canonicalPath(policy.packageRoot);
-	const cwd = canonicalPath(policy.cwd);
-	const roots = uniquePaths([packageRoot, cwd, dirname(entry), ...(policy.filesystem?.read ?? [])]);
+	const roots = uniquePaths([packageRoot, dirname(entry), ...(policy.filesystem?.read ?? [])]);
 	// Dependencies are normally hoisted to the first node_modules ancestor. Keep
 	// this explicit instead of inheriting NODE_PATH or the host's whole filesystem.
 	let current = packageRoot;
@@ -272,23 +276,77 @@ export class PluginSandboxSession {
 		}
 		// Node before v25 leaves network unrestricted under its permission model.
 		// Refuse before loading plugin code instead of silently weakening isolation.
-		if (!process.allowedNodeEnvironmentFlags.has("--allow-net")) {
+		let executable = process.execPath;
+		if (this.policy.runtimeDirectory) {
+			const directory = this.policy.runtimeDirectory;
+			executable = join(directory, process.platform === "win32" ? "node.exe" : "node");
+			const receipt = JSON.parse(readFileSync(join(directory, "runtime.json"), "utf8"));
+			const digest = createHash("sha256").update(readFileSync(executable)).digest("hex");
+			if (digest !== receipt.binarySha256) throw new Error("Plugin runtime checksum mismatch");
+			const supported = execFileSync(
+				executable,
+				["--permission", "-p", "process.allowedNodeEnvironmentFlags.has('--allow-net')"],
+				{ env: {}, encoding: "utf8" },
+			).trim();
+			if (supported !== "true") throw new Error("Plugin runtime has no network permission enforcement");
+		} else if (!process.allowedNodeEnvironmentFlags.has("--allow-net")) {
 			throw new Error(
 				`Plugin sandbox is unavailable: Node ${process.versions.node} has no network permission enforcement (--allow-net)`,
 			);
 		}
-		const entrypoint = canonicalPath(this.policy.entrypoint);
-		const sandboxDir = await mkdtemp(join(tmpdir(), `drone-plugin-${safeId(this.policy.pluginId)}-`));
+		let entrypoint = canonicalPath(this.policy.entrypoint);
+		const sandboxDir = canonicalPath(
+			await mkdtemp(join(tmpdir(), `drone-plugin-${safeId(this.policy.pluginId)}-`)),
+		);
 		this.sandboxDir = sandboxDir;
 		const args = ["--permission"];
-		const read = packageReadRoots(this.policy);
+		if (this.policy.bundleEntrypoint) {
+			// esbuild spawns a native executable; resolve from the physical unpacked tree in Electron.
+			const esbuildUrl = pathToFileURL(createRequire(import.meta.url).resolve("esbuild")).href.replace(
+				"/app.asar/",
+				"/app.asar.unpacked/",
+			);
+			const { build } = (await import(esbuildUrl)) as typeof import("esbuild");
+			const output = join(sandboxDir, "extension.mjs");
+			const thisRuntime = this.policy.runtimeDirectory;
+			await build({
+				entryPoints: [entrypoint],
+				outfile: output,
+				bundle: true,
+				platform: "node",
+				format: "esm",
+				logLevel: "silent",
+				plugins: [
+					{
+						name: "installed-dependencies",
+						setup(build) {
+							build.onResolve({ filter: /^[^./]/ }, async (args) => {
+								if (args.pluginData === "resolved" || args.path.startsWith("node:")) return;
+								// Match the Pi 1.1.0 schema peer aliases for tool-only extensions.
+								if (thisRuntime && (args.path === "typebox" || args.path === "@sinclair/typebox"))
+									return { path: join(thisRuntime, "schema/build/index.mjs") };
+								const dependency = await build.resolve(args.path, {
+									resolveDir: args.resolveDir,
+									kind: args.kind,
+									pluginData: "resolved",
+								});
+								if (dependency.errors.length) return { errors: dependency.errors };
+								return { path: dependency.path, external: true };
+							});
+						},
+					},
+				],
+			});
+			entrypoint = output;
+		}
+		const read = [...packageReadRoots(this.policy), sandboxDir];
 		args.push(...permissionFlags("allow-fs-read", read));
 		const write = uniquePaths([sandboxDir, ...(this.policy.filesystem?.write ?? [])]);
 		args.push(...permissionFlags("allow-fs-write", write));
 		if (network.length === 1) args.push("--allow-net");
 		if (this.policy.allowChildProcess) args.push("--allow-child-process");
 		args.push("--input-type=module", "--eval", WORKER_SOURCE, entrypoint);
-		const child = spawn(process.execPath, args, {
+		const child = spawn(executable, args, {
 			cwd: canonicalPath(this.policy.cwd),
 			env: allowedEnvironment(this.policy, sandboxDir),
 			stdio: ["pipe", "pipe", "pipe"],

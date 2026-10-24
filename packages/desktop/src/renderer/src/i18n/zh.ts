@@ -1,5 +1,6 @@
 /** 中文语言包（作为 key 的结构定义，en.ts 与之同形） */
 export const zh = {
+	pluginSandbox: { title: "插件独立进程", networkPermission: "此扩展需要本次会话的联网授权。" },
 	workflows: {
 		title: "六方向工作流",
 		hint: "先选任务方向与当前阶段；每阶段一个主流程，专业技能按需加载。浏览不会启用工具或执行任务。",

@@ -109,6 +109,7 @@ export interface SessionServiceOptions {
 		additionalExtensionPaths?: string[];
 		/** Optional third-party extensions loaded through the process sandbox proxy. */
 		sandboxedExtensions?: PluginSandboxPolicy[];
+		pluginRuntimeDirectory?: string;
 		additionalPromptTemplatePaths?: string[];
 		academicPiRoot?: string;
 		/** Entry file of the bundled MCP runtime (pi-mcp-adapter/index.ts); loaded as an extension. */

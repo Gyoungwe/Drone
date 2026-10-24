@@ -13,6 +13,7 @@ import { useCatalogStore } from "../../stores/catalog";
 import { useSettingsStore } from "../../stores/settings";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
 import { BrowseSection } from "../settings/extensions/BrowseSection";
+import { LoadedSection } from "../settings/extensions/LoadedSection";
 import { Switch } from "../ui/Switch";
 
 function packageEntry(
@@ -452,6 +453,15 @@ export function PluginSourcesSection() {
 					))}
 				</ul>
 			</section>
+			<details className="rounded-2xl border border-border bg-surface px-4 py-4">
+				<summary className="cursor-pointer text-sm font-medium text-ink">
+					{t("settings.extensions.tab.loaded")}
+				</summary>
+				<p className="mt-2 text-xs text-ink-dim">
+					{t("pluginSandbox.title")} · {t("pluginSandbox.networkPermission")}
+				</p>
+				<LoadedSection />
+			</details>
 			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
 				<div className="flex flex-wrap items-baseline justify-between gap-2">
 					<div>

@@ -44,11 +44,11 @@ export function BrowseSection({
 	// from leaking into the plugin list.
 	useEffect(() => {
 		const s = useCatalogStore.getState();
+		if (s.configuredPackages === null) void s.refreshConfiguredPackages();
 		if (extensionsOnly && s.catalogType !== "extension") {
 			s.setCatalogType("extension");
 			return;
 		}
-		if (s.configuredPackages === null) void s.refreshConfiguredPackages();
 		if (s.catalogPage === 0 && !s.catalogLoading) void s.searchCatalog(false);
 	}, [extensionsOnly]);
 

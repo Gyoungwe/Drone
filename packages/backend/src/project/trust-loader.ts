@@ -3,6 +3,7 @@ import { createLogger } from "../log";
 import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
 import { createProcessSandboxedExtension, type PluginSandboxPolicy } from "../plugin-sandbox";
 import { replyLanguagePrompt } from "../reply-language";
+import { sandboxExtensionFactory } from "../session-engine/sandbox-loader";
 import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
 import { DefaultResourceLoader, getAgentDir, SettingsManager } from "../session-engine/sdk";
 import { memoryIndexPrompt } from "./memory";
@@ -51,11 +52,20 @@ export function preferBundledMcpRuntime(bundledPath: string) {
 
 export function desktopLoaderOptions(integration: DesktopIntegration | undefined, cwd?: string) {
 	if (!integration) return {};
-	const { mcpRuntimePath, sandboxedExtensions, ...rest } = integration;
+	const { mcpRuntimePath, sandboxedExtensions, pluginRuntimeDirectory, ...rest } = integration;
 	// The UI language can change between sessions; read it on every (re)load.
 	// P12: project memory index (.pi/memory/MEMORY.md) only — bodies are read on demand.
 	const options = {
 		...rest,
+		...(pluginRuntimeDirectory && cwd
+			? {
+					extensionFactoryForPath: sandboxExtensionFactory(
+						pluginRuntimeDirectory,
+						[...(rest.additionalExtensionPaths ?? []), ...(mcpRuntimePath ? [mcpRuntimePath] : [])],
+						cwd,
+					),
+				}
+			: {}),
 		...(sandboxedExtensions?.length
 			? {
 					extensionFactories: sandboxedExtensions.map((policy) => createProcessSandboxedExtension(policy)),
@@ -116,6 +126,7 @@ export class ProjectResourceLoader {
 				additionalExtensionPaths?: string[];
 				/** Optional third-party extensions loaded through the process sandbox proxy. */
 				sandboxedExtensions?: PluginSandboxPolicy[];
+				pluginRuntimeDirectory?: string;
 				additionalPromptTemplatePaths?: string[];
 				academicPiRoot?: string;
 				mcpRuntimePath?: string;
