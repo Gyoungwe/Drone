@@ -10,7 +10,7 @@
 | 4 | 公开知识 UI 合同与宿主挂载 | 数据端口、声明、shim、knowledge.surface 同步；故障/停用可恢复 | PASS（候选源码与回归） |
 | 5 | 双仓库与候选 tarball 检查 | 类型、测试、构建、架构、生命周期、干净安装 | PASS |
 | 6 | 正式 macOS 安装包 GUI | 页面、设置、阅读、图谱、审阅、切换、停用恢复实际交互 | PASS：最终 DMG；真实合成候选应用回读 |
-| 7 | 更新证据与推送实现分支 | 机器回执、计划、INDEX 一致；未完成项保留 | 文档与提交完成；分支远端以交付回读为准 |
+| 7 | 更新证据与推送实现分支 | 机器回执、计划、INDEX 一致；未完成项保留 | PASS：两实现分支已推送，远端 SHA 回读一致；尚未合入 main |
 
 发布边界：新候选 pi-core / research-suite / plugin-api / desktop-ui-pack 需要另行按精确版本取得 npm 发布授权。Zotero 云端、认证 MCP、Protocols.io 写入、其他平台与在线科学质量仍未完成；MinerU/GROBID、B8 暂缓。
 
