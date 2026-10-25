@@ -1,6 +1,6 @@
 {
 	"name": "@gyoungwe/pi-core",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"description": "Portable task, authorization, status, delivery and memory tools for native Pi",
 	"keywords": [
 		"pi-package"
@@ -44,7 +44,7 @@
 		"build": "node ../../scripts/build-pi-core.mjs",
 		"build:check": "node ../../scripts/build-pi-core.mjs --check",
 		"typecheck": "tsc --noEmit",
-		"test": "npm run build && node --test test/registration.test.mjs",
+		"test": "npm run build && node --test test/*.test.mjs",
 		"check": "npm run typecheck && npm run build:check && node ../../scripts/smoke-pi-core.mjs && npm test"
 	},
 	"peerDependencies": {

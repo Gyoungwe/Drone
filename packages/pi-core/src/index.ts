@@ -2,6 +2,7 @@ import type { AskQuestion, AskRequest, AskResponse } from "@drone/shared";
 import { registerTaskRuntime } from "@drone/tasks/runtime";
 import type { DroneHostPort, HostCapabilities } from "@gyoungwe/plugin-api";
 import { registerDroneCommands } from "./drone-commands";
+import { registerNativeTaskReadback } from "./native-task-readback";
 import { type AskUserToolDeps, makeAskUserTool } from "./tools/ask-user";
 import { makeDeliverFilesTool } from "./tools/deliver-files";
 import { makeMemorySaveTool } from "./tools/memory-save";
@@ -13,6 +14,8 @@ export type PiCoreHostPort = Pick<DroneHostPort, "host" | "capabilities" | "requ
 
 export interface PiCoreContext {
 	readonly cwd?: string;
+	readonly hasUI?: boolean;
+	readonly sessionManager?: { getSessionId(): string };
 	readonly signal?: AbortSignal;
 	readonly ui?: {
 		select?: (
@@ -123,7 +126,9 @@ export function registerPiCore(pi: any, options: PiCoreRegistrationOptions = {})
 		activeContext = undefined;
 	});
 
-	registerTaskRuntime(pi);
+	const journal = registerTaskRuntime(pi);
+	if (options.host?.host !== "drone-desktop" && process.env.DRONE_TASK_WORKBENCH !== "off")
+		registerNativeTaskReadback(pi, journal, () => activeContext);
 	registerDroneCommands(pi, {
 		hostKind: options.host?.host === "drone-desktop" ? "drone-desktop" : "native-pi",
 	});
