@@ -26,4 +26,6 @@ macOS arm64 使用本地 unsigned/adhoc DMG，实际挂载、安装、脱离镜�
 
 ## 仍未完成
 
+以下为 2026-10-25 历史发布状态；2026-10-26 API 已公开，其他变化见 [当前证据](../releases/remaining-closure-2026-10-26.md)。
+
 候选 `plugin-api@1.2.0`、`pi-core@0.1.9`、`research-suite@0.1.11`、`desktop-ui-pack@0.2.0` 尚未发布 npm，需另行按精确版本发布并验证公开包。公开 suite 0.1.10 仍不含原生回读修复。Zotero 云端、用户自有认证 MCP、Protocols.io 写入、其他平台实机、在线科学质量及 PDF Canvas 警告调查保持原状态。MinerU/GROBID 和 B8/B8-2 继续暂缓。

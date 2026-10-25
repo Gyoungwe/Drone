@@ -1,0 +1,425 @@
+{
+	"date": "2026-10-26",
+	"status": "PARTIAL",
+	"goal": "Seven remaining closure categories; MinerU/GROBID and B8/B8-2 remain deferred",
+	"publicPackages": [
+		{
+			"name": "@gyoungwe/plugin-api",
+			"version": "1.2.0",
+			"dist": {
+				"shasum": "36f4057328e04c94ce0283e1398945530f831e90",
+				"tarball": "https://registry.npmjs.org/@gyoungwe/plugin-api/-/plugin-api-1.2.0.tgz",
+				"fileCount": 18,
+				"integrity": "sha512-DbpIPudaftSXfr+tfx6F7gtVTqaUIFDZXlVMDHdmLY11vhekQz8r/YbwfEX9rh4URgt06W22arysyiITZoGu6A==",
+				"signatures": [
+					{
+						"sig": "MEYCIQDbyWhngOJpmBVpwr2BfjTAaia4nHj0niX590XWnMxC4wIhAPaeLuQqarkxCJhoFFxbtrj9/DR6rTaiH0dLXU9+ied2",
+						"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+					}
+				],
+				"unpackedSize": 226374
+			},
+			"sha256": "056322c91ff96fb05bc0b9d1721d834450e6146f3969b819fc1d6267c33ad960",
+			"matchesCandidate": true,
+			"cleanInstallAndEsmUiImport": "PASS",
+			"runtimeNegotiation": "PASS"
+		}
+	],
+	"unpublishedPackages": [
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.1.9",
+			"status": "STAGED_AUTH_PENDING",
+			"stageId": "d7db712c-8636-417d-a9d3-654d53d29302"
+		},
+		{
+			"name": "@gyoungwe/desktop-ui-pack",
+			"version": "0.2.0",
+			"status": "STAGED_NOT_APPROVED",
+			"stageId": "0c30e49b-d365-42ec-af53-4ed94dbe88c5"
+		},
+		{
+			"name": "@gyoungwe/research-suite",
+			"version": "0.1.11",
+			"status": "STAGED_NOT_APPROVED",
+			"sha256": "767c37940aa32741fe133dfc57b0a75d3597521b11fd5d32904ff3d563ef794e",
+			"stageId": "bab97837-b274-4c5a-af54-a0334c396989"
+		}
+	],
+	"candidateSessions": {
+		"suiteSha256": "767c37940aa32741fe133dfc57b0a75d3597521b11fd5d32904ff3d563ef794e",
+		"status": "PASS",
+		"scope": "Actual AgentSession with deterministic offline provider; no online scientific quality claim",
+		"matrix": [
+			{
+				"sdkVersion": "1.1.0",
+				"checks": [
+					{
+						"name": "install",
+						"exitCode": 0,
+						"logSha256": "585ab5b69e4c8ce3c642be2f35dac44f4e979f804ec2b35cd2e698a6f11abbfb"
+					},
+					{
+						"name": "session",
+						"exitCode": 0,
+						"logSha256": "ecf68acfc4380a6370ee7543b01b64817f364d3cff47c07eed2f4e2faa7ba1a6"
+					}
+				],
+				"receipt": {
+					"status": "PASS",
+					"loadedPackages": 3,
+					"realAgentSession": true,
+					"dispatchCount": 13,
+					"approvalPrompts": 1,
+					"approvalTransport": "SDK native UI select adapter, scripted selection for user-authorized local acceptance",
+					"preApprovalBlocked": true,
+					"postApprovalKnowledgeDispatched": true,
+					"twoSourcesRead": true,
+					"sourcedAnswer": true,
+					"candidateDepositionReadBack": true,
+					"scientificallyVerified": false,
+					"taskReconciled": true,
+					"taskState": "completed",
+					"deliveryFileReadBack": true,
+					"singleAgentTurn": true
+				}
+			},
+			{
+				"sdkVersion": "1.4.0",
+				"checks": [
+					{
+						"name": "install",
+						"exitCode": 0,
+						"logSha256": "6dc314891fd39e5939055b5c029949a850cb11d26b170a0efd15cab925dcee70"
+					},
+					{
+						"name": "session",
+						"exitCode": 0,
+						"logSha256": "ecf68acfc4380a6370ee7543b01b64817f364d3cff47c07eed2f4e2faa7ba1a6"
+					}
+				],
+				"receipt": {
+					"status": "PASS",
+					"loadedPackages": 3,
+					"realAgentSession": true,
+					"dispatchCount": 13,
+					"approvalPrompts": 1,
+					"approvalTransport": "SDK native UI select adapter, scripted selection for user-authorized local acceptance",
+					"preApprovalBlocked": true,
+					"postApprovalKnowledgeDispatched": true,
+					"twoSourcesRead": true,
+					"sourcedAnswer": true,
+					"candidateDepositionReadBack": true,
+					"scientificallyVerified": false,
+					"taskReconciled": true,
+					"taskState": "completed",
+					"deliveryFileReadBack": true,
+					"singleAgentTurn": true
+				}
+			}
+		]
+	},
+	"onlineSessions": [
+		{
+			"id": "methods",
+			"provider": "deepseek",
+			"model": "deepseek-flash",
+			"realAgentSession": true,
+			"onlineInference": true,
+			"tools": 9,
+			"approvals": 1,
+			"outputTokens": 3258,
+			"twoSourcesRead": true,
+			"deliveryReadBack": true,
+			"scientificReview": "See onlineReview; bounded PASS_WITH_LIMITS, format limit FAIL",
+			"scope": "N=2 public-paper evaluation, not general scientific certification"
+		},
+		{
+			"id": "unsupported",
+			"provider": "deepseek",
+			"model": "deepseek-flash",
+			"realAgentSession": true,
+			"onlineInference": true,
+			"tools": 10,
+			"approvals": 1,
+			"outputTokens": 4444,
+			"twoSourcesRead": true,
+			"deliveryReadBack": true,
+			"scientificReview": "See onlineReview; bounded PASS_WITH_LIMITS, format limit FAIL",
+			"scope": "N=2 public-paper evaluation, not general scientific certification"
+		}
+	],
+	"onlineReview": {
+		"reviewer": "Codex source-based manual review and independent delivery hash checks",
+		"sources": ["https://arxiv.org/abs/1706.03762", "https://arxiv.org/abs/1810.04805"],
+		"cases": [
+			{
+				"case": "methods",
+				"taskState": "completed",
+				"deliverySha256": "4f0c053206f2213b636f9b472157b411ce3cee7e075f1e103d7e42908a715cf1",
+				"deliveryBytes": 3946,
+				"whitespaceWordCount": 503,
+				"sourceAttribution": "PASS within read page ranges",
+				"unsupportedClinicalClaim": "not requested",
+				"boundedScientificReview": "PASS_WITH_LIMITS",
+				"formatLimit450Words": "FAIL",
+				"limitations": [
+					"N=2 only; two NLP papers; no broad scientific or clinical quality certification",
+					"Report exceeds requested 450-word limit; report retained unchanged",
+					"Source SHA256 values identify normalized read text, not original PDF bytes"
+				]
+			},
+			{
+				"case": "unsupported",
+				"taskState": "completed",
+				"deliverySha256": "f57fd24801874d64cc4ab5241733b4490f1b8c95006d7b68b7560cce34167fd8",
+				"deliveryBytes": 4084,
+				"whitespaceWordCount": 502,
+				"sourceAttribution": "PASS within read page ranges",
+				"unsupportedClinicalClaim": "REJECTED",
+				"boundedScientificReview": "PASS_WITH_LIMITS",
+				"formatLimit450Words": "FAIL",
+				"limitations": [
+					"N=2 only; two NLP papers; no broad scientific or clinical quality certification",
+					"Report exceeds requested 450-word limit; report retained unchanged",
+					"Source SHA256 values identify normalized read text, not original PDF bytes"
+				]
+			}
+		]
+	},
+	"externalTargets": {
+		"boundedTemporaryWritesAuthorized": true,
+		"zoteroCloud": "BLOCKED_MISSING_TARGET_AND_CREDENTIALS",
+		"authenticatedUserMcp": "BLOCKED_MISSING_TARGET",
+		"protocolsIoWrite": "BLOCKED_MISSING_RESOURCE_AND_CREDENTIALS",
+		"otherPlatformDesktop": "NOT_RUN_NO_ACCESSIBLE_DESKTOP",
+		"existingWindowsZoteroMcp": "NOT_RUN_WINDOWS_COMMAND_ON_MAC"
+	},
+	"pdfRuntime": {
+		"candidate": "research-suite 0.1.11",
+		"status": "PASS_NATIVE_RENDER_AND_TOOL_READ",
+		"platform": "macOS arm64; Node 22.23.0",
+		"markedPixels": 1082,
+		"guiStatus": "PASS_INSTALLED_DMG",
+		"initialGuiFinding": "Resource target set from knowledge note but context reader only mounted on chat route",
+		"logs": {
+			"plugin-ci": "d20973ab94c1d67a5ea7ff82223fdd8b27bdf5c7d8c224784cc53d6152f5f3d4",
+			"plugin-check": "0c31452ea8d6542fb1a8d636c60085164731beb9e58cf007ff6260906abc3319",
+			"pdf-final": "299f66c83b3fd884ab960aad42b04f128bbfb125125e6d87e9528864d9c4d6f1",
+			"pdf-gui-before-fix.ax.txt": "a81559970fb026ce2613eda3d2d99a3cd3da019e4e43188453e83280d85fdea5"
+		},
+		"secondGuiFinding": "Fixed CSS height distorted PDF when max-width constrained the canvas; use height auto"
+	},
+	"privateBodiesCommitted": false,
+	"stagedDownloads": [
+		{
+			"name": "desktop-ui-pack",
+			"stageId": "0c30e49b-d365-42ec-af53-4ed94dbe88c5",
+			"stageDownloadMatchesCandidate": true,
+			"sha256": "c9f468edb8eef41ca6cb7aae613eedd7040ba6be774e16295170e6dd241ddf2a"
+		},
+		{
+			"name": "research-suite",
+			"stageId": "bab97837-b274-4c5a-af54-a0334c396989",
+			"stageDownloadMatchesCandidate": true,
+			"sha256": "767c37940aa32741fe133dfc57b0a75d3597521b11fd5d32904ff3d563ef794e"
+		}
+	],
+	"hostGates": {
+		"checks": [
+			{
+				"name": "lint",
+				"command": "npm run lint",
+				"exitCode": 0,
+				"seconds": 1.4,
+				"sha256": "1a38226f2f85efae29c2741ec7a1f74244c7a5b5a45522a2f627c59452f429b9"
+			},
+			{
+				"name": "typecheck",
+				"command": "npm run typecheck",
+				"exitCode": 0,
+				"seconds": 92.4,
+				"sha256": "54f65f167df2415138c534bdbd6a0c7968210b1133a8564a167fa3828ea60ae4"
+			},
+			{
+				"name": "test",
+				"command": "npm test",
+				"exitCode": 0,
+				"seconds": 131.72,
+				"sha256": "dc2c60f0aa97308b782ccb3eaf8d69a2a8e13a28d42b95426a1549f6b2862968"
+			},
+			{
+				"name": "build",
+				"command": "npm run build",
+				"exitCode": 0,
+				"seconds": 81.48,
+				"sha256": "610e79c45073d97446b47b6f11cc6e6107c8f888908f0062b14fb3b778611878"
+			},
+			{
+				"name": "arch",
+				"command": "npm run check:arch",
+				"exitCode": 0,
+				"seconds": 0.86,
+				"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"name": "plugin-api",
+				"command": "npm run check:plugin-api",
+				"exitCode": 0,
+				"seconds": 13.61,
+				"sha256": "4d13ac5a2dded29a43cd512b03eb25433e8907f2df3bc54fac71442141824fe8"
+			},
+			{
+				"name": "upgrade",
+				"command": "npm run test:upgrade",
+				"exitCode": 0,
+				"seconds": 1.53,
+				"sha256": "de0def03647185cccfd44d046da96e105ad4877161c4c320429474180cf8cb12"
+			},
+			{
+				"name": "native-pi",
+				"command": "npm run check:native-pi",
+				"exitCode": 0,
+				"seconds": 0.18,
+				"sha256": "f6a2df472131118416c34e372825febc92ae1d9b5aca14e461c528d9bf68ea54"
+			},
+			{
+				"name": "public-host",
+				"command": "npm run check:public-plugin-host",
+				"exitCode": 0,
+				"seconds": 33.37,
+				"sha256": "a6ee6e84057309650efe088ae72181b507f78e220edbe9b43c44f9fc099d345c"
+			}
+		],
+		"scope": "Before final one-line Canvas aspect-ratio correction; final main gates recorded separately"
+	},
+	"pluginIntegration": {
+		"sourceCommit": "b5addb1",
+		"main": "aea1a48",
+		"pushed": true,
+		"fullCheckExitCode": 0,
+		"fullCheckLogSha256": "48db665150fe5093857f2d6d06c46556c8458e82e77e9bf0898e1f4905f727f3"
+	},
+	"pdfGui": {
+		"status": "PASS",
+		"scope": "Installed macOS arm64 DMG; public PDF and synthetic note; isolated profile/Vault",
+		"artifact": {
+			"dmgSha256": "a0907e2fba88266150ab8ba147366cad44bd100f33d6fb5171c9024c156b94be",
+			"asarSha256": "cf2bc17976258f2415697ac2a6c341c78aa7130055c868ffb8c4a028725f9bc8",
+			"installedFromMountedDmg": true,
+			"platform": "darwin-arm64",
+			"signed": false,
+			"sourceCommit": "d87aaf48"
+		},
+		"checks": {
+			"citationPage3": true,
+			"canvasAspectRatioVisuallyVerified": true,
+			"nextPage4": true,
+			"closePreservesNote": true,
+			"reopenOutOfRangeReturnsPage1WithNotice": true,
+			"backPreservesNote": true
+		},
+		"existingMarkdownUnchanged": 22,
+		"newSyntheticNotes": 1,
+		"evidenceSha256": {
+			"pdf-page3.png": "a7a5d1bbcf5508e83db905a121b0d5365ed036bee8b96450e817e5fdb63fd143",
+			"pdf-page3.ax.txt": "161ba175efb0af4f3c52650939bb2bcd0b3558f02bf9cedb5d196f519a246b33",
+			"pdf-page4.png": "49cb5654c46b81e4e441f04f49744374b728e06a0531a94a0c69de143263b2ea",
+			"pdf-page4.ax.txt": "50dd7c6216cb91f30e927f56f6c054af140861c195c0ba2d5623e051fa6b0778",
+			"pdf-closed.ax.txt": "5fea849701057dedc861175dfd3b22df7eb39f5c971e233399669cc93abd202a",
+			"pdf-out-of-range.png": "a9e5646378a9fc43593a58b84e41ae7eb9a344c4865e7b784491b252443aab9a",
+			"pdf-out-of-range.ax.txt": "5fea849701057dedc861175dfd3b22df7eb39f5c971e233399669cc93abd202a",
+			"pdf-returned.ax.txt": "5fea849701057dedc861175dfd3b22df7eb39f5c971e233399669cc93abd202a",
+			"final-gui-app.log": "0a45f73ae4fdb10df4c808d572e77ea3cd28a6cdea1b76823e15f6dc11089002",
+			"dmg-final-aspect.log": "0fb0082698825e02a133ffa3bdc836ccb2b34f3741c99aa28bcf017fbebf3c71"
+		}
+	},
+	"unpublishedRegistryReadback": [
+		{
+			"name": "pi-core",
+			"version": "0.1.9",
+			"registryHttpStatus": 404
+		},
+		{
+			"name": "research-suite",
+			"version": "0.1.11",
+			"registryHttpStatus": 404
+		},
+		{
+			"name": "desktop-ui-pack",
+			"version": "0.2.0",
+			"registryHttpStatus": 404
+		}
+	],
+	"hostMainIntegration": {
+		"sourceHead": "d87aaf480ea6484b2f70804342cf6f60d6ae3838",
+		"branch": "main",
+		"checks": [
+			{
+				"name": "lint",
+				"command": "npm run lint",
+				"exitCode": 0,
+				"seconds": 0.98,
+				"sha256": "b447189ac0270a83000344c6e54c0deaa7116aac1f7d4d19f11eca9c9ad08578"
+			},
+			{
+				"name": "typecheck",
+				"command": "npm run typecheck",
+				"exitCode": 0,
+				"seconds": 89.76,
+				"sha256": "beb31fbef68a60c355789a0cffba0a8ecfa600bb8850536d6d8d08cc36df2f5d"
+			},
+			{
+				"name": "test",
+				"command": "npm test",
+				"exitCode": 0,
+				"seconds": 135.77,
+				"sha256": "fa3a842ee0754e08e3bd6b69c3dd53f0f6d84f734147756840b36dceb2cb224f"
+			},
+			{
+				"name": "build",
+				"command": "npm run build",
+				"exitCode": 0,
+				"seconds": 81.5,
+				"sha256": "80416220ba1843feb20224a61eca6d107136d0f3c0c71c9e6faca1f462cd7438"
+			},
+			{
+				"name": "arch",
+				"command": "npm run check:arch",
+				"exitCode": 0,
+				"seconds": 0.99,
+				"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"name": "plugin-api",
+				"command": "npm run check:plugin-api",
+				"exitCode": 0,
+				"seconds": 12.76,
+				"sha256": "fe2a12ac74bcdfa88642a334dfcfe4c47addf1abe8dabef632dfd0834e6bfef1"
+			},
+			{
+				"name": "upgrade",
+				"command": "npm run test:upgrade",
+				"exitCode": 0,
+				"seconds": 1.53,
+				"sha256": "fd77908fc71fa0da36b0548378e0bb8c14dce4ffc2b6a78de08e6a974ee35444"
+			},
+			{
+				"name": "native-pi",
+				"command": "npm run check:native-pi",
+				"exitCode": 0,
+				"seconds": 0.18,
+				"sha256": "f6a2df472131118416c34e372825febc92ae1d9b5aca14e461c528d9bf68ea54"
+			},
+			{
+				"name": "public-host",
+				"command": "npm run check:public-plugin-host",
+				"exitCode": 0,
+				"seconds": 29.2,
+				"sha256": "f04e34d4a94b6a7e4d70ac5887a4b61442974226bdad2f095c2862a95a592c26"
+			}
+		],
+		"status": "PASS",
+		"remainingStateUnchanged": true
+	}
+}

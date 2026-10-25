@@ -335,3 +335,11 @@ Zotero Connector 会规范化英文标题大小写（本轮 `NOT A PUBLICATION` 
 ### 外置 UI 样式不能只加选择器前缀
 
 知识 UI 外迁后的正式安装包暴露了两类 CSS 污染：`@theme` 中同名自引用变量会遮蔽宿主继承的颜色；`@property --tw-*` 注册与 cascade layer 属于全局，给普通选择器加前缀无法隔离。插件需只引用宿主语义 token，并给生成的 Tailwind 属性与 layer 使用专属名称。回归应比较启用前、启用后、移除后的宿主 computed style，同时覆盖浅色/深色；只有组件 DOM 渲染通过不能证明样式隔离。插件侧复现与检查位于 `desktop-ui-pack/scripts/check-styles.mjs`。
+
+## 2026-10-26：非聊天页面资源链接与聚合包 PDF 原生依赖
+
+知识笔记复用 Markdown，点击链接会更新 resourcePreview；只在聊天分支挂载 ContextPanel 时，知识页面没有读者可显示。App 现在为非聊天视图挂载 PageResourcePreview，复用 ResourceSidebar；回归检查关闭、返回及聊天不重复展示。
+
+聚合研究包只遍历 dependencies 时会漏掉 pdfjs 的 optionalDependencies，工作区提升的 Canvas 依赖掩盖干净安装问题。suite 顶层声明可选 Canvas，由消费者安装平台原生二进制；test:pdf 必须只安装 suite 和 SDK，并捕获 stdout/stderr、真实读取和渲染。源码加载或文本提取成功不能推导 GUI 已通过。
+
+PDF Canvas 设置 max-width 时不可同时固定 CSS height；否则窄侧栏只压缩宽度。保留像素 width/height，CSS height 用 auto，让浏览器按固有比例缩放。
