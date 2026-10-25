@@ -10,7 +10,8 @@
 	"mainIntegration": {
 		"status": "PASS",
 		"host": "a2f5e66266329d49ea3ecd81e6ca81d4cea9b26b",
-		"plugins": "12140b8a33ff87edc8dd0728726b28dc03c363f0"
+		"plugins": "12140b8a33ff87edc8dd0728726b28dc03c363f0",
+		"scope": "Historical npm release-evidence integration before the knowledge-page implementation; see implementationMainIntegration for this implementation."
 	},
 	"historyMigration": {
 		"status": "PASS",
@@ -278,6 +279,181 @@
 		},
 		"verification": "git ls-remote matches local HEAD; both worktrees clean",
 		"implementationMergedToMain": false,
-		"note": "This delivery note is a later documentation-only commit; validatedSource identifies the code tested."
+		"note": "This delivery note is a later documentation-only commit; validatedSource identifies the code tested. Historical branch-delivery snapshot; superseded by implementationMainIntegration."
+	},
+	"implementationMainIntegration": {
+		"status": "PASS",
+		"verifiedAt": "2026-10-25T16:05:25.354494+00:00",
+		"scope": "Both knowledge-page-closure branches fast-forwarded to main, including candidate lock-integrity correction; no npm publication.",
+		"validatedHeads": {
+			"host": "f743b41ee64d2a8499332db59d70358ebcd802f4",
+			"plugins": "118a01313f7c4bdc9607f4bbff6dae880e75a640"
+		},
+		"remoteIntegration": {
+			"status": "PASS",
+			"remoteMainSnapshot": {
+				"host": "f743b41ee64d2a8499332db59d70358ebcd802f4",
+				"plugins": "118a01313f7c4bdc9607f4bbff6dae880e75a640"
+			},
+			"cleanCheckouts": true,
+			"noPluginDirectoryOverride": true,
+			"command": "npm run check:plugin-api -- --migration --lifecycle",
+			"exitCode": 0,
+			"seconds": 13.04,
+			"logSha256": "863f38a1b18fb6313e0405796e80c397cfea95629c5485e135814e5c95d0c4b0"
+		},
+		"evidenceCommitScope": "This receipt is committed after the verified remote snapshot; only documentation changes follow the tested source.",
+		"hostGates": {
+			"sourceHead": "f743b41ee64d2a8499332db59d70358ebcd802f4",
+			"branch": "main",
+			"isolatedHome": true,
+			"usesPluginDirectoryOverride": false,
+			"checks": [
+				{
+					"name": "ci",
+					"command": "npm ci",
+					"exitCode": 0,
+					"seconds": 70.45,
+					"sha256": "1ac8daa15f5d0551b571def0b21a9615a7856438a7b4a8e37f6fb5d4b19e0004"
+				},
+				{
+					"name": "lint",
+					"command": "npm run lint",
+					"exitCode": 0,
+					"seconds": 1.99,
+					"sha256": "728df817523dd19e0598a627b6a3ce65665b6fd52db58f0715577a8493491a50"
+				},
+				{
+					"name": "typecheck",
+					"command": "npm run typecheck",
+					"exitCode": 0,
+					"seconds": 89.71,
+					"sha256": "91bd4b295361877ee85391e7bf6d0e01ea53a72a27d810adb2aa7e52eef96a59"
+				},
+				{
+					"name": "test",
+					"command": "npm test",
+					"exitCode": 0,
+					"seconds": 216.65,
+					"sha256": "f42ced57f4fb9115ca384ec3f105d4a8f9f7923d723b1f940787bbd6f8c2d86e"
+				},
+				{
+					"name": "build",
+					"command": "npm run build",
+					"exitCode": 0,
+					"seconds": 87.73,
+					"sha256": "c7001884cd4b5fea6423108e2f12dd011ff863b739460070c7d587ae9cd8a08e"
+				},
+				{
+					"name": "arch",
+					"command": "npm run check:arch",
+					"exitCode": 0,
+					"seconds": 0.89,
+					"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+				},
+				{
+					"name": "plugin-api",
+					"command": "npm run check:plugin-api -- --migration --lifecycle",
+					"exitCode": 0,
+					"seconds": 12.82,
+					"sha256": "863f38a1b18fb6313e0405796e80c397cfea95629c5485e135814e5c95d0c4b0"
+				},
+				{
+					"name": "extensions",
+					"command": "npm run check:extensions -- --strict",
+					"exitCode": 0,
+					"seconds": 0.5,
+					"sha256": "f0d9fe7b2af4cd620b3c3080d898f61bf1ce9230abdb99c01b75d894a0d56286"
+				},
+				{
+					"name": "upgrade",
+					"command": "npm run test:upgrade",
+					"exitCode": 0,
+					"seconds": 1.63,
+					"sha256": "3a331beeb6418f77219e4050650eafb6fedc8cf3d2f5bf90d0c8b0ba405e052a"
+				},
+				{
+					"name": "pi-compat",
+					"command": "npm run check:pi-compat -- --targets locked,latest",
+					"exitCode": 0,
+					"seconds": 75.99,
+					"sha256": "d3def19c2a07a0995d6da33451642a67078982c9c2e7ec99c071b58932aa9205"
+				},
+				{
+					"name": "public-host",
+					"command": "npm run check:public-plugin-host",
+					"exitCode": 0,
+					"seconds": 34.25,
+					"sha256": "1e9f15475080a016cf62a2d37ea55100a492b8e89e36a395f3e5e140d96c88b8"
+				},
+				{
+					"name": "ui-evidence",
+					"command": "npm run check:ui-evidence",
+					"exitCode": 0,
+					"seconds": 0.16,
+					"sha256": "2a1ea84cccb8281290a779f23f198848b486715814c1984ba5e7e9254bbc9ef9"
+				}
+			]
+		},
+		"pluginGates": {
+			"sourceHead": "118a01313f7c4bdc9607f4bbff6dae880e75a640",
+			"branch": "main",
+			"isolatedHome": true,
+			"usesPluginDirectoryOverride": false,
+			"checks": [
+				{
+					"name": "ci",
+					"command": "npm ci",
+					"exitCode": 0,
+					"seconds": 3.66,
+					"sha256": "fb7e02405de516c994f04cf2a68eca5b696d7f63cd6a837f958268d992a571f6"
+				},
+				{
+					"name": "check",
+					"command": "npm run check",
+					"exitCode": 0,
+					"seconds": 159.98,
+					"sha256": "1a21e2854b03589490dbadef6d0f6f64c9f74395ef5949b36ef9b907f1eb538d"
+				},
+				{
+					"name": "styles",
+					"command": "node packages/desktop-ui-pack/scripts/check-styles.mjs",
+					"exitCode": 0,
+					"sha256": "8b5946882b708e4a0a9fcc52aead15bfdf307488399b17bcd21a5ffab1faad84",
+					"environment": "Desktop environment with per-test temporary --user-data-dir; no browser account/profile reused"
+				}
+			],
+			"stylesRetryReason": "Two runs with a stripped environment and alternate HOME crashed during Chromium teardown (exit 2). Same script and browser passed with desktop environment and its own fresh temporary browser profile; no assertion or browser exit-code bypass.",
+			"stylesAttempts": [
+				{
+					"name": "styles",
+					"command": "node packages/desktop-ui-pack/scripts/check-styles.mjs",
+					"exitCode": 1,
+					"seconds": 11.45,
+					"sha256": "2c9a4272e85e2f0e4eae45c8be2cb3aa101d01c371894a6ef7a5e75452cd0068"
+				},
+				{
+					"name": "styles",
+					"command": "node packages/desktop-ui-pack/scripts/check-styles.mjs",
+					"exitCode": 1,
+					"seconds": 11.45,
+					"sha256": "2c9a4272e85e2f0e4eae45c8be2cb3aa101d01c371894a6ef7a5e75452cd0068"
+				}
+			],
+			"isolatedHomeScope": "npm ci and npm run check; standalone Chrome uses desktop HOME and an isolated temporary browser profile"
+		},
+		"lockIntegrityCorrection": {
+			"commit": "118a01313f7c4bdc9607f4bbff6dae880e75a640",
+			"reason": "A fresh npm cache rejected stale plugin-api integrity in package-lock.json. Updated the checksum to the already committed and SHA-256-verified candidate; package bytes are unchanged.",
+			"initialFailure": "npm ci EINTEGRITY",
+			"initialLogSha256": "e9a658a1626851564cf21757f166bfa7360d1f66f93caeb61e31a94f3abfb547"
+		},
+		"formalGuiEvidence": {
+			"mode": "Inherited from prior final-artifact run, not rerun during merge",
+			"dmgSha256": "a6498216ee13032bb8fe5f29b19f8d11d02d5bb4fd262f66dcaf6e830e29b8bb",
+			"productSourceUnchanged": true
+		},
+		"npmPublication": "NOT_RUN",
+		"remainingStateUnchanged": true
 	}
 }

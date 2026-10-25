@@ -33,6 +33,10 @@
 | Google Antigravity 登录后返回 400 `INVALID_ARGUMENT` 或 403 `UNSUPPORTED_CLIENT` | 二 · Cloud Code Assist ClientMetadata 枚举 |
 | 生信任务 trace 显示 `skills: []`，模型退回临时脚本 | 二 · 研究 skill 路由与开发态资源同步 |
 
+## 2026-10-25：npm 缓存可能掩盖本地候选包锁完整性错误
+
+相同版本的候选 tarball 重建后，`package-lock.json` 的 integrity 可能仍指向旧字节。已有 npm 缓存时 `npm ci` 曾通过，但空缓存直接报 `EINTEGRITY`；不能据此删除校验或更换已验收包。先核对受版本控制的 tarball 与证据 SHA-256，再将锁文件 integrity 与该文件的 SHA-512 对齐，使用隔离 HOME/npm 缓存重新安装并跑完整门禁。知识整页合并时仅修正插件仓库 API 1.2.0 锁校验值，候选包字节未变；此前缓存安装结论由本次空缓存检查替代。
+
 ## 2026-10-25：npm 发布成功退出仍可能尚未公开
 
 `npm publish` 返回 0 不等于公共版本可安装。本轮 research 发布后 `npm view` / 官方 tarball 均返回 404，随后上传报 `E409 Cannot publish over previously staged version`；因此不能仅凭 404 判断“没有写入 registry”，也不要通过升级版本号绕过。先确认公共元数据、tarball 和 `npm stage list`；本轮也观察到被拒绝重复上传的研究版本未出现在可批准列表，不能把空列表作为重传依据。该研究版本随后出现在公开 registry，最终下载哈希与原候选一致。
