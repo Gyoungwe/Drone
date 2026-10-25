@@ -115,7 +115,7 @@ export function PdfViewer({ src, initialPage }: PreviewRendererProps) {
 				canvas.width = Math.floor(viewport.width * outputScale);
 				canvas.height = Math.floor(viewport.height * outputScale);
 				canvas.style.width = `${viewport.width}px`;
-				canvas.style.height = `${viewport.height}px`;
+				canvas.style.height = "auto";
 				const context = canvas.getContext("2d");
 				if (!context) throw new Error("Canvas 2D context is unavailable");
 				renderTask = pdfPage.render({

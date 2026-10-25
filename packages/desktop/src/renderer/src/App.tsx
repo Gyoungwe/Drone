@@ -5,6 +5,7 @@ import { EmptyState } from "./components/chat/EmptyState";
 import { InlineAskCard } from "./components/chat/InlineAskCard";
 import { MessageList } from "./components/chat/MessageList";
 import { ComposerStatusBar } from "./components/composer/ComposerStatusBar";
+import { PageResourcePreview } from "./components/diff/PageResourcePreview";
 import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
 import { KnowledgeView } from "./components/knowledge/KnowledgeView";
 import { ComputePane } from "./components/panel/ComputePane";
@@ -209,6 +210,7 @@ export default function App() {
 							<ContextPanel />
 						</>
 					)}
+					<PageResourcePreview />
 				</div>
 			</div>
 			{/* 悬浮贡献层：内容列之后、设置弹窗之前（z-20 < z-40，插件层永在弹窗之下） */}
