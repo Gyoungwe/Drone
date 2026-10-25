@@ -1,6 +1,6 @@
 # 下一阶段 P1：第三方扩展、外部 MCP 与 Protocols.io
 
-> 2026-10-24 后续复核：下文保留历史运行记录，不代表当前正式沙箱已通过。旧 Node 22 网络隔离测试是假阳性，修复后当前 Electron Node 24 必须拒绝启动沙箱，见 [P0 更正](p0-security-api-evidence.md)。用户已授权自行选择科研扩展，`pi-web-access` 原生真实会话和 `@vaayne/pi-web-tools` Node 26 沙箱已取得[新证据](../research-migration-status.md)；正式包与账户级边界仍未关闭。
+> 当前范围（2026-10-25）：正式 Node 26.12.1 沙箱与独立科研扩展 macOS arm64 工具代理已通过，见[正式包证据](packaged-plugin-sandbox-evidence.md)。下文早期 Node 22 / Electron Node 24 失败和第三方来源缺失均为历史记录；用户自有认证 MCP、Protocols.io 写入、完整知识页面迁移仍未完成。
 
 本轮完成真实公开 npm 包、真实本地外部 MCP 进程和 Protocols.io 公开只读 GET；不使用第三方凭据、不执行 Protocols.io 写入，也不把离线 fixture 当作真实验收。
 
@@ -85,7 +85,7 @@ npm run check:protocols-readonly
 - `knowledge.page` 仍由第一个启用贡献接管；无贡献或插件停用时回到内置知识库页。
 - `PluginEntryHost` 现在接受可选 `fallback`，整页贡献渲染抛错时也回退内置知识页，避免页面空白；其他区域继续保留原有无默认贡献语义。
 - 新增 `PluginRegions.test.tsx` 回归，覆盖 `knowledge.page` 贡献崩溃后的默认页回退；原有四区域挂载/卸载和总开关关闭测试继续通过。
-- 该项仍是 **PARTIAL**：宿主挂载点、停用回退和故障回退已具备，完整产品页面所有权迁移和真实第三方知识工作台仍需单独产品范围授权与正式包人工验收。
+- 该项仍是 **PARTIAL**：宿主挂载点、停用回退和故障回退已具备，完整产品页面所有权迁移与正式包验收仍未完成；2026-10-25 用户已授权继续该迁移，不再标为缺实现范围授权。
 
 离线验证：
 

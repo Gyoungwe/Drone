@@ -1,6 +1,6 @@
 # 下一阶段范围与可选工作计划
 
-本计划承接 v3/v3.1、OmicOS PR1–PR6 和 C0–C4。当前计划内缺口为 0；下面的十项是此前明确标记为范围外、暂缓或未来可选的工作。它们不改变当前已通过的门禁，也不自动进入实现。
+本计划承接 v3/v3.1、OmicOS PR1–PR6 和 C0–C4。v3/v3.1、OmicOS 和 C0–C4 的原定收口范围已完成；这不代表后续十项工作全部完成。用户随后授权推进第 1–8 项，第 9–10 项继续暂缓。当前状态以本文后续验收记录和下方剩余清单为准。
 
 ## 授权口径
 
@@ -73,11 +73,20 @@ PR6 评估环境 + 许可/资源预算
 
 ## 当前状态与下一步
 
-- 当前计划内未完成项：**0**。
+- 旧阶段收口不再计为缺口；下一阶段仍有未完成工作，不能用历史“0”覆盖 PARTIAL / BLOCKED。
 - `@gyoungwe/plugin-api@1.1.0` 已公开发布；对应工作包是后续版本的发布治理，不是当前发布缺口。
-- 上述十项均为 `OUT_OF_SCOPE` / `DEFERRED` / `OPTIONAL`，不应在没有授权时偷偷进入主线。
+- 第 1–8 项已获范围授权；2026-10-25 用户确认继续合并发布证据、补 suite 完整研究流程和知识整页迁移。外部账户写入仍需具体目标、凭据与操作范围；第 9–10 项维持 DEFERRED。
 - 本轮已完成 **P0 权限执行与沙箱** 的进程代理切片，并完成第三方扩展、外部 MCP 与 Protocols.io 公开只读验收；旧 Node 22 网络隔离结论在本轮复核中作废，正式包工具代理沙箱已以 Node 26.12.1 完成 macOS arm64 实机闭环；后续外部写入仍需要具体范围和凭据。
 - 本计划不包含任何凭据、Vault 正文、会话正文或真实外部写入记录。
+
+## 2026-10-25 剩余工作与执行顺序
+
+1. 合并两仓库 `codex/knowledge-research-npm-release`，完成合并后双仓库门禁；三个 npm 版本已公开，不重复发布。
+2. 补公开 `research-suite@0.1.10` 中获批研究任务的完整真实会话：全部扩展同时加载，先验证未批准阻断，再批准本地合成任务并完成两源阅读、回答与笔记回读；不绕过 core 授权。
+3. 完成知识整页 UI 的插件所有权迁移，保留无插件/停用/故障默认页，补正式安装包验收。
+4. Zotero 云端写入/身份冲突、用户自有认证 MCP、Protocols.io 写入仍缺账户、目标和可核实的操作边界；本机与公开只读 PASS 不替代这些验收。
+5. 其他平台实机、在线模型质量/科学复核仍未完成；本次 npm 验收未覆盖 Canvas 警告相关 PDF 渲染，作为待调查验收项，不预判产品故障。
+6. MinerU/GROBID、B8/B8-2 保持暂缓，不为其新增实现。
 
 ## 2026-10-24 执行切片状态
 
@@ -91,7 +100,7 @@ PR6 评估环境 + 许可/资源预算
 | 官方第三方扩展 | **PASS（独立第三方工具扩展）**：`@vaayne/pi-web-tools@0.1.1` 已用最终 DMG 中的 CLI 干净安装，经真实 GUI 加载、拒绝/允许联网、科研读取、停用与恢复；见[正式沙箱证据](pluginization/packaged-plugin-sandbox-evidence.md) | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | 外部用户 MCP | **PASS（独立 stdio 进程切片）**：真实外部 MCP 子进程完成 marker 调用与停用重载反证；用户自有 URL/凭据仍不读取 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 | research / pi-research / Zotero 迁移 | **PARTIAL**：完整研究核心已迁入 `pi-research@0.2.0`，宿主重复源码与兼容 facade 已删除，真实 SDK 锁定/latest 回归通过；获授权的 Zotero 本机临时条目闭环已完成，迁移后正式包本地两源研究 GUI 闭环已通过（含重启接续与 stale/恢复）；概览分类 RESEARCH-GUI-CATEGORY 已在后续分类修复分支完成正式包验收；新候选包 npm 发布已完成，见[发布证据](releases/knowledge-research-npm-2026-10-25.md)；云端账户仍未关闭。双仓库核心迁移已合入 main，GUI 修复已于 2026-10-25 快进合入 main=fe41db7e，合并后完整门禁通过；分类修复源码为宿主 e38312a9 / 插件 831e399，已快进合入各自 main（宿主 a853230e / 插件 c43f7b4），合并后双仓库门禁通过；状态继续保持 PARTIAL | [`research-migration-status.md`](research-migration-status.md) |
-| 整页知识 UI 插件化 | **PASS（切片）**：新增 `knowledge.page`，有贡献时接管主区，无贡献/停用时回退默认页 | UI SPEC、`PluginRegions.test.tsx`、`registry.test.ts` |
+| 整页知识 UI 插件化 | **PARTIAL**：`knowledge.page` 挂载、停用和故障回退切片 PASS；完整页面所有权迁移与正式安装包验收待完成，2026-10-25 已获继续实施授权 | UI SPEC、`PluginRegions.test.tsx`、[详细证据](pluginization/next-stage-p1-evidence.md) |
 | Protocols.io 只读验收 | **PASS（公开 GET）**：公开协议页无凭据 GET 通过；写入按红线保持 BLOCKED，未执行账户写入 | [`next-stage-p1-evidence.md`](pluginization/next-stage-p1-evidence.md) |
 
 本轮当前可合并的代码切片不代表十项全部关闭；完整研究迁移、Protocols.io 写入和需要用户凭据的范围仍保留明确的 `PARTIAL` / `BLOCKED` 状态。
