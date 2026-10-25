@@ -421,5 +421,282 @@
 		],
 		"status": "PASS",
 		"remainingStateUnchanged": true
-	}
+	},
+	"onlineFollowup": {
+		"status": "BOUNDED_REVIEW_COMPLETED_AFTER_FEEDBACK",
+		"cases": 2,
+		"realSessions": 7,
+		"runs": [
+			{
+				"run": "initial",
+				"sessions": [
+					{
+						"id": "methods",
+						"provider": "deepseek",
+						"model": "deepseek-flash",
+						"realAgentSession": true,
+						"onlineInference": true,
+						"tools": 9,
+						"approvals": 1,
+						"outputTokens": 3258,
+						"twoSourcesRead": true,
+						"deliveryReadBack": true,
+						"scientificReview": "Format FAIL (503/502 words); bounded source review recorded separately",
+						"scope": "N=2 public-paper evaluation, not general scientific certification"
+					},
+					{
+						"id": "unsupported",
+						"provider": "deepseek",
+						"model": "deepseek-flash",
+						"realAgentSession": true,
+						"onlineInference": true,
+						"tools": 10,
+						"approvals": 1,
+						"outputTokens": 4444,
+						"twoSourcesRead": true,
+						"deliveryReadBack": true,
+						"scientificReview": "Format FAIL (503/502 words); bounded source review recorded separately",
+						"scope": "N=2 public-paper evaluation, not general scientific certification"
+					}
+				],
+				"logSha256": "25f0310e609661c79d49141c22b72acd46d42ea20ba47ded17f32ef29fc07358"
+			},
+			{
+				"run": "revision",
+				"sessions": [
+					{
+						"wordCount": 321,
+						"formatLimit450Words": "PASS",
+						"id": "methods",
+						"provider": "deepseek",
+						"model": "deepseek-flash",
+						"realAgentSession": true,
+						"onlineInference": true,
+						"tools": 9,
+						"approvals": 1,
+						"outputTokens": 2914,
+						"twoSourcesRead": true,
+						"deliveryReadBack": true,
+						"scientificReview": "Format PASS; review found overbroad absence claims, ambiguous source hashes/network wording and metric characterization",
+						"scope": "Follow-up run of the same two cases; two additional real sessions; initial failures retained"
+					},
+					{
+						"wordCount": 267,
+						"formatLimit450Words": "PASS",
+						"id": "unsupported",
+						"provider": "deepseek",
+						"model": "deepseek-flash",
+						"realAgentSession": true,
+						"onlineInference": true,
+						"tools": 9,
+						"approvals": 1,
+						"outputTokens": 2477,
+						"twoSourcesRead": true,
+						"deliveryReadBack": true,
+						"scientificReview": "Format PASS; review found overbroad absence claims, ambiguous source hashes/network wording and metric characterization",
+						"scope": "Follow-up run of the same two cases; two additional real sessions; initial failures retained"
+					}
+				],
+				"logSha256": "0f81682a011b26158e7ef017e17f7b7ea07a193af38d287e3b61131cabecd8fa"
+			},
+			{
+				"run": "corrected",
+				"sessions": [
+					{
+						"wordCount": 285,
+						"formatLimit450Words": "PASS",
+						"id": "methods",
+						"provider": "deepseek",
+						"model": "deepseek-flash",
+						"realAgentSession": true,
+						"onlineInference": true,
+						"tools": 9,
+						"approvals": 1,
+						"outputTokens": 2523,
+						"twoSourcesRead": true,
+						"deliveryReadBack": true,
+						"scientificReview": "Unsupported case bounded PASS; methods still overgeneralized GLUE task types",
+						"scope": "Third run of the same two cases; total six real sessions across three runs; all earlier failures retained"
+					},
+					{
+						"wordCount": 152,
+						"formatLimit450Words": "PASS",
+						"id": "unsupported",
+						"provider": "deepseek",
+						"model": "deepseek-flash",
+						"realAgentSession": true,
+						"onlineInference": true,
+						"tools": 9,
+						"approvals": 1,
+						"outputTokens": 2168,
+						"twoSourcesRead": true,
+						"deliveryReadBack": true,
+						"scientificReview": "Unsupported case bounded PASS; methods still overgeneralized GLUE task types",
+						"scope": "Third run of the same two cases; total six real sessions across three runs; all earlier failures retained"
+					}
+				],
+				"logSha256": "3ccc95a5315e9b3f958f42608de2d0e00e267937fc1648d599674772ac2de040"
+			},
+			{
+				"run": "methods-final",
+				"sessions": [
+					{
+						"wordCount": 297,
+						"formatLimit450Words": "PASS",
+						"id": "methods",
+						"provider": "deepseek",
+						"model": "deepseek-flash",
+						"realAgentSession": true,
+						"onlineInference": true,
+						"tools": 9,
+						"approvals": 1,
+						"outputTokens": 2678,
+						"twoSourcesRead": true,
+						"deliveryReadBack": true,
+						"scientificReview": "Methods bounded PASS after explicit reviewer feedback; no general autonomous-quality claim",
+						"scope": "Targeted editorial correction of methods case after review; seventh real session overall; earlier results retained"
+					}
+				],
+				"logSha256": "a1da62f7998649bf79662adf6ec985039c5ea7d079281c18e4991ea6061b0a6a"
+			}
+		],
+		"independentReadback": [
+			{
+				"run": "online",
+				"case": "methods",
+				"taskState": "completed",
+				"reportSha256": "4f0c053206f2213b636f9b472157b411ce3cee7e075f1e103d7e42908a715cf1",
+				"wordCount": 503,
+				"noteSha256": "c1bd702aeb9e32fceb3d11d649b4bff3c850cc45f489952b5844b273d83278c6",
+				"noteContainsReportExactly": false,
+				"bothDepositedSourcesRead": true,
+				"privateSessionSha256": "776881263ba98aab1ac1606422449d2b2ede8a2c12407c122da6a5c028bcf3f6"
+			},
+			{
+				"run": "online",
+				"case": "unsupported",
+				"taskState": "completed",
+				"reportSha256": "f57fd24801874d64cc4ab5241733b4490f1b8c95006d7b68b7560cce34167fd8",
+				"wordCount": 502,
+				"noteSha256": "258c790b774e8b97d6eb83aa172a75416ad828d194b7fe5725b7211121a93034",
+				"noteContainsReportExactly": false,
+				"bothDepositedSourcesRead": true,
+				"privateSessionSha256": "cc1e3328a9c402cd57b002b57e35e1217bea669549a0b5962582a0866a67be6b"
+			},
+			{
+				"run": "online-revision",
+				"case": "methods",
+				"taskState": "completed",
+				"reportSha256": "e4d61cd44f4fbf8014b297cbe994d8bb9bbd4fcd8462fd2bede7b1980a729d2d",
+				"wordCount": 321,
+				"noteSha256": "9584dd48d9d39903fba7ae3f7390ab9c052964fd72defd5d74d9d461b13f8fc0",
+				"noteContainsReportExactly": true,
+				"bothDepositedSourcesRead": true,
+				"privateSessionSha256": "e9f0b55542fc5a58dc46553a047a75c69984a6065f3d2b07bf8d820a367a1206"
+			},
+			{
+				"run": "online-revision",
+				"case": "unsupported",
+				"taskState": "completed",
+				"reportSha256": "41886d61abaa6c52948d1c0abb8f51a71e7d149909de10b85e3b4ac964696535",
+				"wordCount": 267,
+				"noteSha256": "7739cf5869bea721cbd2c5be71dfaf5f47764339e627729225ea475fc4e82598",
+				"noteContainsReportExactly": true,
+				"bothDepositedSourcesRead": true,
+				"privateSessionSha256": "d0ab8b9e84171ad5a12c6b72f3dc9570b1da0fa34d3b2b13c8e7e1fd4edce414"
+			},
+			{
+				"run": "online-corrected",
+				"case": "methods",
+				"taskState": "completed",
+				"reportSha256": "154e32f8a5312af98bab4cc0503b7bcc488776ea05e07a18bb2664018a8042dc",
+				"wordCount": 285,
+				"noteSha256": "0d97099289d19e0f8946a951d1477580a9c6d584c4f5d4e05ceeedafe2aaa038",
+				"noteContainsReportExactly": true,
+				"bothDepositedSourcesRead": true,
+				"privateSessionSha256": "0e1a8e168a2843608fb32de3bbec12fa01ca5c9c625ac4b4e8ffd160df07eeb0"
+			},
+			{
+				"run": "online-corrected",
+				"case": "unsupported",
+				"taskState": "completed",
+				"reportSha256": "832a19c6ec8b23a7073174f9ec26a178fbc561e5a976f22ee6d1a2eb81903db1",
+				"wordCount": 152,
+				"noteSha256": "c2d3993ae83c5fbb55f90084a249181fc444da097cf70b6459b1ce72c70f6b64",
+				"noteContainsReportExactly": false,
+				"bothDepositedSourcesRead": true,
+				"privateSessionSha256": "a614eba0f1c36999dee7fe0f8d78ec9e8b4e2874217a646e6f170aca0e8ded53"
+			},
+			{
+				"run": "online-methods-final",
+				"case": "methods",
+				"taskState": "completed",
+				"reportSha256": "045b9f7c70aadf990469c44a05c84475236d5ec17588fa6411b67ce570147444",
+				"wordCount": 297,
+				"noteSha256": "196a1bd1a4bebc73d4ca0747ceb73af7d49b5a68d73f682e58005f3bb3ed7411",
+				"noteContainsReportExactly": true,
+				"bothDepositedSourcesRead": true,
+				"privateSessionSha256": "1302c9cc573179166cdbfdfbe37c137897087dffe4de60ce25392e75a5ee0c6c"
+			}
+		],
+		"acceptedReports": [
+			{
+				"case": "methods",
+				"run": "online-methods-final",
+				"words": 297,
+				"sourceReview": "PASS_WITH_LIMITED_PAGE_COVERAGE",
+				"reviewerFeedbackRequired": true
+			},
+			{
+				"case": "unsupported",
+				"run": "online-corrected",
+				"words": 152,
+				"sourceReview": "PASS_WITH_LIMITED_PAGE_COVERAGE",
+				"reviewerFeedbackRequired": true
+			}
+		],
+		"limits": [
+			"Not a first-pass or general autonomous scientific-quality PASS; all failed attempts retained",
+			"Two public NLP papers only; no full-paper or clinical validation",
+			"Candidate note and delivered report are not byte-identical in every run; source/claim meaning manually compared",
+			"No third-party account or other-platform acceptance is implied"
+		]
+	},
+	"latestStageReadback": [
+		{
+			"id": "bab97837-b274-4c5a-af54-a0334c396989",
+			"packageName": "@gyoungwe/research-suite",
+			"version": "0.1.11",
+			"status": "staged"
+		},
+		{
+			"id": "0c30e49b-d365-42ec-af53-4ed94dbe88c5",
+			"packageName": "@gyoungwe/desktop-ui-pack",
+			"version": "0.2.0",
+			"status": "staged"
+		},
+		{
+			"id": "d7db712c-8636-417d-a9d3-654d53d29302",
+			"packageName": "@gyoungwe/pi-core",
+			"version": "0.1.9",
+			"status": "staged"
+		}
+	],
+	"latestUnpublishedRegistryReadback": [
+		{
+			"name": "pi-core",
+			"version": "0.1.9",
+			"registryHttpStatus": 404
+		},
+		{
+			"name": "research-suite",
+			"version": "0.1.11",
+			"registryHttpStatus": 404
+		},
+		{
+			"name": "desktop-ui-pack",
+			"version": "0.2.0",
+			"registryHttpStatus": 404
+		}
+	]
 }
