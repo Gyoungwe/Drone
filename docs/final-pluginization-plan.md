@@ -1,5 +1,7 @@
 # Drone 最终插件化计划
 
+> **2026-10-25 知识整页与原生回执候选更新**：用户选择完整 UI 归插件、停用保留轻量默认页；实现与验收跟踪见[收口计划](superpowers/plans/2026-10-25-knowledge-page-closure.md)。core 0.1.9 / suite 0.1.11 候选已通过真实双 SDK 的完整任务回读；API 1.2.0 / UI 0.2.0 为本地候选。这四个版本均未发布 npm，历史公开包结论不因此改变。
+
 > **2026-10-25 npm 发布更新**：`pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10` 已公开，tarball 完整性与候选包一致。基于两仓库 main 的独立发布工作区；验证范围与回执见 [本次发布记录](releases/knowledge-research-npm-2026-10-25.md)。研究迁移总体保持 PARTIAL，其他未完成项不变。
 
 > **2026-10-25 分类修复更新**：RESEARCH-GUI-CATEGORY 已在 `codex/knowledge-category-fix` 完成回归与正式 macOS arm64 DMG GUI 验收：同库方法 0→1、软件 7→4，方法/软件页、原文阅读与重启通过，23 个 Markdown 文件哈希不变。双仓库门禁通过；宿主源码 `e38312a9`、插件源码 `831e399`，已快进合入 main（Drone `a853230e` / drone-plugins `c43f7b4`），合并后双仓库完整门禁通过；机器回执见分类证据 `mainIntegration`。分类修复时这三个版本尚未发布；当前发布结果见顶部记录；研究迁移仍 PARTIAL，账户与暂缓项不变。见[分类修复证据](pluginization/knowledge-category-fix-evidence.md)。

@@ -1,0 +1,273 @@
+{
+	"schemaVersion": 1,
+	"date": "2026-10-25",
+	"status": "PASS_LOCAL_CANDIDATE",
+	"scope": "Approved option 1: plugin owns complete knowledge UI; local candidates, no npm release",
+	"branches": {
+		"host": "codex/knowledge-page-closure",
+		"plugins": "codex/knowledge-page-closure"
+	},
+	"mainIntegration": {
+		"status": "PASS",
+		"host": "a2f5e66266329d49ea3ecd81e6ca81d4cea9b26b",
+		"plugins": "12140b8a33ff87edc8dd0728726b28dc03c363f0"
+	},
+	"historyMigration": {
+		"status": "PASS",
+		"structureCommit": "3d6d33b",
+		"sourceHistory": "f1c4fd1a59e9fbf245412f90147cb3730e91d5a3",
+		"files": 46,
+		"squashed": false
+	},
+	"nativeSuite": {
+		"status": "PASS",
+		"scope": "Local candidate suite with real AgentSession; not published",
+		"piCore": "0.1.9",
+		"researchSuite": "0.1.11",
+		"coreSha256": "4ebf4bf82c2166f07a5312a1b2f6795ff88880bb79698c1f27cce4e26a6358fe",
+		"suiteSha256": "b4bd11dd7c0f440c494bef4144e7d0bdd47a0348ff9bdb2a54a9c0c09f517932",
+		"sessions": [
+			{
+				"status": "PASS",
+				"loadedPackages": 3,
+				"realAgentSession": true,
+				"dispatchCount": 13,
+				"approvalPrompts": 1,
+				"approvalTransport": "SDK native UI select adapter, scripted selection for user-authorized local acceptance",
+				"preApprovalBlocked": true,
+				"postApprovalKnowledgeDispatched": true,
+				"twoSourcesRead": true,
+				"sourcedAnswer": true,
+				"candidateDepositionReadBack": true,
+				"scientificallyVerified": false,
+				"taskReconciled": true,
+				"taskState": "completed",
+				"deliveryFileReadBack": true,
+				"singleAgentTurn": true,
+				"sdkVersion": "1.1.0"
+			},
+			{
+				"status": "PASS",
+				"loadedPackages": 3,
+				"realAgentSession": true,
+				"dispatchCount": 13,
+				"approvalPrompts": 1,
+				"approvalTransport": "SDK native UI select adapter, scripted selection for user-authorized local acceptance",
+				"preApprovalBlocked": true,
+				"postApprovalKnowledgeDispatched": true,
+				"twoSourcesRead": true,
+				"sourcedAnswer": true,
+				"candidateDepositionReadBack": true,
+				"scientificallyVerified": false,
+				"taskReconciled": true,
+				"taskState": "completed",
+				"deliveryFileReadBack": true,
+				"singleAgentTurn": true,
+				"sdkVersion": "1.4.0"
+			}
+		]
+	},
+	"hostGates": [
+		{
+			"name": "ci",
+			"command": "npm ci",
+			"exitCode": 0,
+			"seconds": 20.26,
+			"sha256": "6354839f305383184301abfeb2f85f5dbe249f0341b1cfbbbcff3c2a249fda5b"
+		},
+		{
+			"name": "lint",
+			"command": "npm run lint",
+			"exitCode": 0,
+			"seconds": 2.31,
+			"sha256": "65a3c0eb4eeb0baba2f21ce4d3af77829b5b6c86fcecc6ec8a4bbe6cbb6a311e"
+		},
+		{
+			"name": "typecheck",
+			"command": "npm run typecheck",
+			"exitCode": 0,
+			"seconds": 85.33,
+			"sha256": "0818427b2a7c836e0398093eb0e53048c0eaf837a28227004474ab1990d3baf5"
+		},
+		{
+			"name": "test",
+			"command": "npm test",
+			"exitCode": 0,
+			"seconds": 132.51,
+			"sha256": "0c8219267aa0e021f54b36fd464c196a2cf502dace2f137bcc5130e7999f5dc1"
+		},
+		{
+			"name": "build",
+			"command": "npm run build",
+			"exitCode": 0,
+			"seconds": 124.28,
+			"sha256": "f50e193c08d434f1606e7a563f32f45c65ebd7a21d06c723c4a6a37beb85b3c7"
+		},
+		{
+			"name": "arch",
+			"command": "npm run check:arch",
+			"exitCode": 0,
+			"seconds": 1.01,
+			"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+		},
+		{
+			"name": "plugin-api",
+			"command": "npm run check:plugin-api -- --migration --lifecycle",
+			"exitCode": 0,
+			"seconds": 12.83,
+			"sha256": "096287e1e12d5a4f7174c7633ea9e8bf2d129f3c39f25c71c5e59866ee2c85c0"
+		},
+		{
+			"name": "extensions",
+			"command": "npm run check:extensions -- --strict",
+			"exitCode": 0,
+			"seconds": 0.53,
+			"sha256": "f0d9fe7b2af4cd620b3c3080d898f61bf1ce9230abdb99c01b75d894a0d56286"
+		},
+		{
+			"name": "upgrade",
+			"command": "npm run test:upgrade",
+			"exitCode": 0,
+			"seconds": 1.61,
+			"sha256": "ae64745cf419aa2d84dbad4d10ae14eeca7b1a22d54ccd6220ad9469b2ae28ad"
+		},
+		{
+			"name": "pi-compat",
+			"command": "npm run check:pi-compat -- --targets locked,latest",
+			"exitCode": 0,
+			"seconds": 99.35,
+			"sha256": "d3def19c2a07a0995d6da33451642a67078982c9c2e7ec99c071b58932aa9205"
+		},
+		{
+			"name": "public-host",
+			"command": "npm run check:public-plugin-host",
+			"exitCode": 0,
+			"seconds": 11.17,
+			"sha256": "cdf519cc1737fed65e394eec731e01a1319cae300c36983e7d55e31fec582679"
+		},
+		{
+			"name": "ui-evidence",
+			"command": "npm run check:ui-evidence",
+			"exitCode": 0,
+			"seconds": 0.17,
+			"sha256": "2a1ea84cccb8281290a779f23f198848b486715814c1984ba5e7e9254bbc9ef9"
+		}
+	],
+	"packagedGui": {
+		"status": "PASS",
+		"formalGuiAcceptance": true,
+		"realInstalledDmg": true,
+		"artifact": {
+			"dmgSha256": "a6498216ee13032bb8fe5f29b19f8d11d02d5bb4fd262f66dcaf6e830e29b8bb",
+			"asarSha256": "b2d83c3f18b57aa5d6f38f0b394459357ee04aec6e05d69429cd13a785efcd28",
+			"platform": "macOS arm64",
+			"signature": "local unsigned/adhoc",
+			"installation": "mounted readonly and ditto copied; mount detached",
+			"finalArtifact": true
+		},
+		"uiPackageSha256": "c9f468edb8eef41ca6cb7aae613eedd7040ba6be774e16295170e6dd241ddf2a",
+		"checks": [
+			"plugin discovery and enable",
+			"overview and software category",
+			"search two matching notes",
+			"note readback with lines/hash",
+			"network graph: 6 nodes and 2 links",
+			"review queue and source/diff preview",
+			"synthetic candidate checkbox and apply, readback applied",
+			"applied candidate cannot reapply",
+			"settings including maintenance and binding",
+			"project context switch",
+			"disable fallback and Finder opening exact synthetic vault",
+			"restart retains disabled state",
+			"reenable restores full UI"
+		],
+		"dataSafety": {
+			"originalMarkdownFiles": 20,
+			"allOriginalHashesUnchanged": true,
+			"syntheticFilesAdded": [
+				"Library/Papers/knowledge-page-closure-synthetic-review.md",
+				"Wiki/Knowledge-page-closure-synthetic-review.md"
+			]
+		},
+		"screenshots": {
+			"overview-final.png": "050e89388c8dbd58dc8181dcce4af9ac55e613fe58f92818713900d193ea9e0b",
+			"review-final.png": "6628e15f5552e36375c1a72fd4fda12a594d11d9b7798687da6b1f35de39f185",
+			"review-applied-final.png": "a30d671e2a022c2a3f33323f50a671e3c17d078600e223f176a99545ba67c5c1",
+			"review-candidate-final.png": "dc44784c796e1be43703d6888d320754d515435ad05b913fdd5d638a54a03731",
+			"settings-final.png": "a40620bd174bb6a116a26d024b1542def03ba202e505fbc2349e505782a77588",
+			"graph-final.png": "4b6baa63715439c32cc337395176a2ba3b4f3c5f87d62eded8f1549e633a47e1",
+			"note-final.png": "aad5a54122ddddb74e612d07872597f954936d0d981341c4b62dacea7184f577",
+			"disabled-final.png": "248c759585598103b0c2bcde57f130066fa0d885f2f1e69fe3cdeaf981b58cc8"
+		},
+		"limits": [
+			"No real account writes",
+			"No online model or scientific-quality claim",
+			"No other-platform real-device claim",
+			"Crash isolation and third-party tab routing covered by regression tests rather than injected formal-GUI faults"
+		]
+	},
+	"npmPublication": {
+		"status": "NOT_RUN",
+		"versions": [
+			"@gyoungwe/plugin-api@1.2.0",
+			"@gyoungwe/pi-core@0.1.9",
+			"@gyoungwe/research-suite@0.1.11",
+			"@gyoungwe/desktop-ui-pack@0.2.0"
+		],
+		"authorization": "Separate exact-version authorization required"
+	},
+	"remaining": [
+		"Zotero cloud account writes and identity conflicts",
+		"User-owned authenticated MCP",
+		"Protocols.io authorized write/readback",
+		"Other-platform real devices",
+		"Online model/scientific quality",
+		"PDF Canvas warning investigation"
+	],
+	"deferred": ["MinerU/GROBID", "B8/B8-2"],
+	"validatedSource": {
+		"host": "14de2bf240dbeeadafc7e253395c2b4a7b1a0fa4",
+		"plugins": "b517834c6ad39f337b20277a059a4cbe779d9650"
+	},
+	"finalCandidateGates": [
+		{
+			"name": "final-plugin-api",
+			"command": "npm run check:plugin-api -- --migration --lifecycle",
+			"exitCode": 0,
+			"seconds": 14.67,
+			"sha256": "096287e1e12d5a4f7174c7633ea9e8bf2d129f3c39f25c71c5e59866ee2c85c0"
+		},
+		{
+			"name": "final-plugin-ui",
+			"command": "DRONE_UI_ACCEPTANCE_PACKAGE_DIR=<bound-plugin-repo>/packages/desktop-ui-pack node scripts/check-knowledge-ui.mjs",
+			"exitCode": 0,
+			"seconds": 33.1,
+			"sha256": "c0e6c751c855e64c678f1332f715cf4f37e69e006c894290bc8d3eb817ea3edf"
+		},
+		{
+			"name": "artifact",
+			"command": "node scripts/check-local-desktop-artifact.mjs --strict --out <private-evidence>/artifact-check.json",
+			"exitCode": 0,
+			"seconds": 0.39,
+			"sha256": "1ac1179eda29b114f405e64dfc1bfe1d0f068d34151e04a3bb80f032eba29672"
+		}
+	],
+	"pluginGates": {
+		"status": "PASS",
+		"command": "npm ci && npm run check",
+		"logSha256": "f36b175c28b392714879784452dacf0d3127a09be68716075812443f5a4de2b2",
+		"productUiTests": 51,
+		"styleIsolation": {
+			"status": "PASS",
+			"themes": ["light", "dark"],
+			"hostStyleCrossCheck": true,
+			"logSha256": "5dbee0cfe7e80fa28d90cd292041e7a63440866f353cbb8c0ef50222a78b6c61"
+		}
+	},
+	"apiCandidate": {
+		"version": "1.2.0",
+		"sha256": "056322c91ff96fb05bc0b9d1721d834450e6146f3969b819fc1d6267c33ad960",
+		"runtimeDependencies": 0,
+		"explicitKnowledgeMethods": 56
+	}
+}

@@ -318,3 +318,16 @@ Zotero Connector 会规范化英文标题大小写（本轮 `NOT A PUBLICATION` 
 ### 分类关键词不能覆盖笔记的显式类型
 
 `Library/Methods/mapping-tools.md` 曾因完整路径先匹配 tool 被算作软件。插件 worker 计数与最近分组应共享显式 type → 分类目录 → 无类型文件名的优先级；前端最近标签直接消费已有分组，不能再次按路径猜测。真实 worker 的关闭/重开回归与正式包旧索引验收同时覆盖此问题。
+
+
+## 原生 Pi 任务产物回读不能依赖 Desktop 权限监听器
+
+症状：已批准 task_plan、研究候选笔记也成功保存，但 task_reconcile 返回 file-unavailable，任务保持 partial。公开 pi-core 0.1.8 只有 Desktop 注册 drone:task-read-check 监听器，原生 Pi 没有接管者。
+
+修复：core 0.1.9 候选增加所属会话的读取适配，每次核对当前 task.readRoots、session、cwd 和根目录真实路径；不跨会话缓存授权，Desktop 公告权限运行时时让原引擎接管。候选 SDK 回归同时覆盖拒绝、无 UI、撤权、独立 event bus 和读到一半切换上下文。
+
+边界：`.pi/research-notes` 是内部候选资料，按现有私有路径规则不能作为普通交付文件的验收目标。完整工作流需通过实际 write 工具交付普通工作区文件，再由宿主读回；不能为了完成状态放宽私有路径规则。loader 成功或 reconcile 返回非错误并不意味着里程碑 completed。
+
+### 外置 UI 样式不能只加选择器前缀
+
+知识 UI 外迁后的正式安装包暴露了两类 CSS 污染：`@theme` 中同名自引用变量会遮蔽宿主继承的颜色；`@property --tw-*` 注册与 cascade layer 属于全局，给普通选择器加前缀无法隔离。插件需只引用宿主语义 token，并给生成的 Tailwind 属性与 layer 使用专属名称。回归应比较启用前、启用后、移除后的宿主 computed style，同时覆盖浅色/深色；只有组件 DOM 渲染通过不能证明样式隔离。插件侧复现与检查位于 `desktop-ui-pack/scripts/check-styles.mjs`。
