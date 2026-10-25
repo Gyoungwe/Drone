@@ -871,5 +871,150 @@
 		"Real SDK AgentSession dispatch with offline faux provider and synthetic sources; no online scientific-quality claim.",
 		"No new GUI or DMG build this release; prior classification-repair installed GUI evidence retains its original scope.",
 		"Other pending/deferred boundaries remain unchanged; no main merge in this evidence update."
-	]
+	],
+	"mainIntegration": {
+		"recordedAt": "2026-10-25T14:33:45.202416+00:00",
+		"status": "PASS",
+		"mergeMode": "fast-forward",
+		"validatedHeads": {
+			"Drone": "e5ec4f01",
+			"drone-plugins": "325ac35453eb1b9546da7223b05330eebf042e60"
+		},
+		"cleanInstall": true,
+		"localSourceOverride": false,
+		"hostGates": [
+			{
+				"name": "ci",
+				"command": "npm ci",
+				"exitCode": 0,
+				"seconds": 71.64,
+				"log": "ci.log",
+				"sha256": "a4bc8b636139cb03483c9576a6ecb627a99e9b107867897c64e6bf05da39c00b"
+			},
+			{
+				"name": "lint",
+				"command": "npm run lint",
+				"exitCode": 0,
+				"seconds": 2.31,
+				"log": "lint.log",
+				"sha256": "037fc30f91c537d889082ce57ce1edc5f96823dab3cdf2e68e8cfdd6a8922484"
+			},
+			{
+				"name": "typecheck",
+				"command": "npm run typecheck",
+				"exitCode": 0,
+				"seconds": 84.44,
+				"log": "typecheck.log",
+				"sha256": "1188942b8eddb8939162e72512fc6f66d84f37c470fa32d5e9cce2196e5c442d"
+			},
+			{
+				"name": "test",
+				"command": "npm test",
+				"exitCode": 0,
+				"seconds": 186.77,
+				"log": "test.log",
+				"sha256": "bbed715bf12e4045a7336bd7bb0593f23349ffb5797eb40513a6d4aebed9c136"
+			},
+			{
+				"name": "build",
+				"command": "npm run build",
+				"exitCode": 0,
+				"seconds": 85.77,
+				"log": "build.log",
+				"sha256": "5db158b0fa0803c60ffcfd59b2a0e93023acf15faaaeb10c8d23a1abcebdd1df"
+			},
+			{
+				"name": "arch",
+				"command": "npm run check:arch",
+				"exitCode": 0,
+				"seconds": 0.88,
+				"log": "arch.log",
+				"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"name": "plugin-api",
+				"command": "npm run check:plugin-api -- --migration --lifecycle",
+				"exitCode": 0,
+				"seconds": 3.54,
+				"log": "plugin-api.log",
+				"sha256": "cdd2a40b065955fba502c9c1659c124246aaa32372d1096b9ef196aab17ed707"
+			},
+			{
+				"name": "extensions",
+				"command": "npm run check:extensions -- --strict",
+				"exitCode": 0,
+				"seconds": 0.48,
+				"log": "extensions.log",
+				"sha256": "f0d9fe7b2af4cd620b3c3080d898f61bf1ce9230abdb99c01b75d894a0d56286"
+			},
+			{
+				"name": "upgrade",
+				"command": "npm run test:upgrade",
+				"exitCode": 0,
+				"seconds": 1.63,
+				"log": "upgrade.log",
+				"sha256": "1cdb8b8c769d1263879fb84ae361914947aed224837127ebaba7cc121693f8f7"
+			},
+			{
+				"name": "pi-compat",
+				"command": "npm run check:pi-compat -- --targets locked,latest",
+				"exitCode": 0,
+				"seconds": 79.23,
+				"log": "pi-compat.log",
+				"sha256": "d3def19c2a07a0995d6da33451642a67078982c9c2e7ec99c071b58932aa9205"
+			},
+			{
+				"name": "public-host",
+				"command": "npm run check:public-plugin-host",
+				"exitCode": 0,
+				"seconds": 30.67,
+				"log": "public-host.log",
+				"sha256": "551ea84a53a7a3122e6cfb4b44779588aed5fc5738212afaaa6851e83011f644"
+			}
+		],
+		"pluginGates": [
+			{
+				"command": "npm ci",
+				"exitCode": 0,
+				"log": "ci.log",
+				"sha256": "567f8cadc7dabd1c268aa99c4bba984f2c34409b009ce8737b7539fa24dc9482"
+			},
+			{
+				"command": "npm run check",
+				"exitCode": 0,
+				"log": "check.log",
+				"sha256": "bbf3709b2b8dc32a57ecc5e1cc19cc8de7887e163af426c0b2df347eabd3fc4d"
+			},
+			{
+				"command": "npm test -w @gyoungwe/pi-knowledge",
+				"exitCode": 0,
+				"log": "knowledge-test.log",
+				"sha256": "86f9f6340d29be9059379b87e0465761a91560717b3a56c39059205f4bc4a845"
+			},
+			{
+				"command": "npm run smoke -w @gyoungwe/pi-knowledge",
+				"exitCode": 0,
+				"log": "knowledge-smoke.log",
+				"sha256": "9d65a2da6bdfd492ea3f663d1a5c36868b04a956e8791d1aa52f96f388113057"
+			}
+		],
+		"failedAttempt": {
+			"gate": "typecheck preparation",
+			"reason": "GitHub HTTP/2 framing error while fetching locked commit; reran typecheck and subsequent gates using command-local GIT_CONFIG http.version=HTTP/1.1. No global git config or source change.",
+			"log": "typecheck-first-http2.log",
+			"sha256": "2ac224695eb83a1792d157d0ba815d38eb5ca336c50bb5476e8c16e63eeaea46"
+		},
+		"generatedManifest": "Restored only the known pi-core build-manifest regeneration after checks; no runtime source or published bytes changed.",
+		"evidenceCommitScope": "Subsequent commit updates documentation only; lint and diff validation rerun."
+	},
+	"followUpFullSuiteAcceptance": {
+		"status": "PARTIAL",
+		"versions": ["1.1.0", "1.4.0"],
+		"approvedTask": true,
+		"sourcedAnswer": true,
+		"candidateNoteReadBack": true,
+		"taskCompleted": false,
+		"reason": "Native core lacks task-read permission adapter; task_reconcile reports file-unavailable. Candidate notes under .pi are also intentionally excluded from public file deliverables. Follow-up will verify an explicit non-private deliverable without weakening this policy.",
+		"originalReleaseScopeUnchanged": true
+	}
 }

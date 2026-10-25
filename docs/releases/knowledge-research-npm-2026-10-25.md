@@ -1,6 +1,6 @@
 # Knowledge / research npm 发布记录 — 2026-10-25
 
-**状态：PUBLISHED_VERIFIED。** 用户授权的三个精确版本已公开发布，公开 tarball 完整性、干净安装、真实会话、Pi CLI 与宿主验证通过。两仓库仍在 `codex/knowledge-research-npm-release` 证据分支；本轮不合并 main。
+**状态：PUBLISHED_VERIFIED。** 用户授权的三个精确版本已公开发布，公开 tarball 完整性、干净安装、真实会话、Pi CLI 与宿主验证通过。两仓库发布证据已快进合入本地 main，合并后完整门禁 PASS；验证基线与记录见下方 mainIntegration。
 
 发布源码取自 Drone main `9d5bce4fb15ee532771d6152d793f2455a86d0e6`、drone-plugins main `df4ba329821284b46d26e6f5bf86018cd806aa54`。原工作区 `codex/scientific-agent-upgrade` 的未合并工作未纳入发布。
 
@@ -37,3 +37,9 @@ suite 使用隔离 npm 12.2.1 创建 stage，待 validating 结束、下载核�
 本轮没有重新构建 DMG 或重跑 GUI；分类修复的正式安装包证据保留原范围，发布不改变其字节或结论。研究迁移总体仍为 **PARTIAL**：Zotero 云端写入/身份冲突、用户自有认证 MCP、Protocols.io 写入、其他平台、在线模型质量与科学复核保持未完成；MinerU/GROBID、B8 继续暂缓。
 
 机器回执：[knowledge-research-npm-2026-10-25.json](knowledge-research-npm-2026-10-25.json)。原始日志、合成 Vault/会话内容、tarball 与验证脚本只保存在本机私有验收目录；提交文件仅含脱敏元数据与哈希。
+
+## 2026-10-25 main 合并与后续验收
+
+发布证据快进合入两仓库 main，验证基线为 Drone `e5ec4f01` / drone-plugins `325ac35`。两仓库干净 npm ci 后完整门禁通过，宿主另含 migration/lifecycle、严格扩展、升级、Pi 锁定/latest 与公开插件宿主检查；无本地插件源码覆盖。宿主首轮拉取锁定 GitHub commit 遇到 HTTP/2 错误，命令级切换 HTTP/1.1 后重跑通过；失败哈希保留。后续提交仅追加文档证据，不改变运行时代码或包版本。
+
+获批 suite 全流程的后续探针发现：全部三个扩展加载、任务批准、两源阅读、回答和候选笔记回读通过，但任务文件验收未完成，保持 **PARTIAL**。原生 core 缺少 task-read 权限适配；另 `.pi/research-notes` 属于内部路径，不能直接充当公开文件交付物。后续需修复原生权限适配并验证明确的非私有交付文件，不放宽私有路径规则。此前发布记录仅声称独立研究会话与 suite 任务拒绝回执通过，其范围不变。
