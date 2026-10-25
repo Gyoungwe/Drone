@@ -1,7 +1,7 @@
 import type { KnowledgeFlowCardLink } from "@drone/shared";
 import { getPi } from "../../api";
+import { reportKnowledgeError } from "../../lib/knowledge-error";
 import { useUiStore } from "../../stores/ui";
-import { reportKnowledgeError } from "../knowledge/hooks";
 
 /** 回执卡 / 里程碑证据里的动作链接色调 */
 export const CARD_TONE_CLASS = {

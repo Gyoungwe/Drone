@@ -217,7 +217,10 @@ export const useTranscriptStore = create<TranscriptStore>((set, get) => ({
 }));
 
 /** 读取某会话的 transcript（不存在时返回共享空态，引用稳定避免重渲染循环） */
-export function selectTranscript(state: TranscriptStore, sessionId: string | null): SessionEntry {
+export function selectTranscript(
+	state: Pick<TranscriptStore, "bySession">,
+	sessionId: string | null,
+): SessionEntry {
 	if (!sessionId) return EMPTY_ENTRY;
 	return state.bySession[sessionId] ?? EMPTY_ENTRY;
 }

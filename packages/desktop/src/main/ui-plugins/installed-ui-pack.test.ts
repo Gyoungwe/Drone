@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86,7 +86,7 @@ describe("installed desktop-ui-pack discovery", () => {
 		expect(manager.info("drone-research-ui")).toBeNull();
 	});
 
-	it("loads the real desktop-ui-pack tarball from the Pi managed install root", async () => {
+	it("loads the built UI package distribution from the Pi managed install root", async () => {
 		root = await mkdtemp(join(tmpdir(), "drone-ui-pack-tarball-"));
 		electronState.userData = join(root, "user-data");
 		Object.defineProperty(process, "resourcesPath", {
@@ -104,12 +104,7 @@ describe("installed desktop-ui-pack discovery", () => {
 			"ui",
 		);
 		const packageUi = join(root, "agent", "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "ui");
-		await mkdir(join(packageUi, "src"), { recursive: true });
-		await writeFile(join(packageUi, "plugin.json"), await readFile(join(packageUiSource, "plugin.json")));
-		await writeFile(
-			join(packageUi, "src", "index.ts"),
-			await readFile(join(packageUiSource, "src", "index.ts")),
-		);
+		await cp(packageUiSource, packageUi, { recursive: true });
 		const manifest = JSON.parse(await readFile(join(packageUi, "plugin.json"), "utf8"));
 		expect(manifest.name).toBe("drone-research-ui");
 
@@ -117,7 +112,7 @@ describe("installed desktop-ui-pack discovery", () => {
 		await manager.init();
 		expect(manager.info("drone-research-ui")).toMatchObject({
 			name: "drone-research-ui",
-			version: "0.1.1",
+			version: manifest.version,
 			built: false,
 			enabled: false,
 		});
@@ -128,7 +123,11 @@ describe("installed desktop-ui-pack discovery", () => {
 		const code = await manager.readCode("drone-research-ui");
 		expect("manifest" in code).toBe(true);
 		if (!("manifest" in code)) throw new Error(code.error);
-		expect(code.manifest.main).toBe("src/index.ts");
+		expect(code.manifest.main).toBe(manifest.main);
+		expect(code.manifest.contributions).toEqual(manifest.contributions);
+		for (const contribution of manifest.contributions) {
+			expect(code.code).toContain(contribution.export);
+		}
 	});
 
 	it("discovers a UI entrypoint from any installed package scope", async () => {

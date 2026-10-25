@@ -2,13 +2,13 @@ import { collectDeliveries, type InquiryArtifactProvenance, type InquiryArtifact
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { mergeKnowledgeArtifacts } from "../../lib/knowledge-artifacts";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { DeliveryCards } from "../chat/DeliveryCards";
 import { TaskArtifactLinks, taskArtifactLinks } from "../chat/TaskArtifactLinks";
 import { ObsidianIcon } from "../icons";
-import { mergeKnowledgeArtifacts } from "../knowledge/artifacts";
 import { KnowledgeFlowCard } from "../knowledge/KnowledgeFlowCard";
 import { EvidencePane } from "./EvidencePane";
 import { FlowCards } from "./FlowCards";

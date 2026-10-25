@@ -6,7 +6,10 @@ const files = new Map(
 			["settings", "packages/desktop/src/renderer/src/components/settings/SettingsDialog.tsx"],
 			["subagents", "packages/desktop/src/renderer/src/components/panel/SubagentsPane.tsx"],
 			["subagents-test", "packages/desktop/src/renderer/src/components/panel/subagents-pane.test.tsx"],
-			["graph-test", "packages/desktop/src/renderer/src/components/knowledge/knowledge-graph.test.ts"],
+			[
+				"knowledge-mount-test",
+				"packages/desktop/src/renderer/src/components/knowledge/KnowledgeView.test.tsx",
+			],
 			["desktop-css", "packages/desktop/src/renderer/src/styles/globals.css"],
 		].map(async ([key, path]) => [key, await readFile(path, "utf8")]),
 	),
@@ -36,7 +39,11 @@ requireMarkers("subagents-test", [
 	"toHaveLength(100)",
 	"panel.subagents.runsPage:1,100,1000",
 ]);
-requireMarkers("graph-test", ["1000, 2000, 5000, 10000", "keeps a large fallback graph bounded"]);
+requireMarkers("knowledge-mount-test", [
+	"keeps only binding and navigation",
+	"falls back after render failure",
+	"previous workspace binding",
+]);
 requireMarkers("desktop-css", [
 	"@media (max-width: 720px)",
 	"@media (max-width: 480px)",
@@ -44,5 +51,5 @@ requireMarkers("desktop-css", [
 ]);
 
 console.log(
-	"UI evidence contracts passed: settings, bounded lists/graph, responsive and reduced-motion markers",
+	"UI evidence contracts passed: settings, bounded lists and plugin lifecycle, responsive and reduced-motion markers",
 );

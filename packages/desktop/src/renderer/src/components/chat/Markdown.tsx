@@ -1,8 +1,8 @@
 import { knowledgeLinksForDisplay, parseKnowledgeHref, splitResourceLink } from "@drone/shared";
 import MarkdownRender, { type SmoothMarkdownStreamOptions } from "markstream-react";
 import { getPi } from "../../api";
+import { reportKnowledgeError } from "../../lib/knowledge-error";
 import { useKnowledgeStore } from "../../stores/knowledge";
-import { reportKnowledgeError } from "../knowledge/hooks";
 import "markstream-react/index.css";
 import { type MouseEvent, useCallback, useMemo, useRef } from "react";
 import { useSessionsStore } from "../../stores/sessions";

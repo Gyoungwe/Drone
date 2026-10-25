@@ -177,7 +177,8 @@ Slot 是「替换」，Region/Contribution 是「新增」：插件可以在宿�
 | `panel.tab` | 右侧上下文面板页签栏 | 每贡献一个页签（标签 = `title`，id `plugin:<name>:<cid>`），选中时贡献组件占满面板体 | 领域面板（如文献库、实验记录） |
 | `rail.view` | 左侧导航栏 | 每贡献一个入口（标签 = `title`，拼图图标），选中时贡献组件占满主区（与研究工作台 / 知识库同级全屏视图） | 插件自带的全屏工作台 |
 | `knowledge.tab` | 知识库页签栏 | 追加在总览 / 网络图 / 审阅 / 设置之后；选中时贡献组件占满内容区 | 知识领域页签 |
-| `knowledge.page` | 知识库主区 | 由第一个启用贡献完整接管知识库主区；没有可用贡献时回退内置知识库页 | 整页知识工作台 |
+| `knowledge.surface` | 设置、技能页及侧栏中的知识嵌入区 | 首个启用贡献接收 `KnowledgeSurfaceProps`（`kind=settings/note/flow/zotero/institution`）；停用或失败回退轻量入口，flow 隐藏 | 知识组件复用 |
+| `knowledge.page` | 知识库主区 | 由第一个启用贡献完整接管知识库主区；没有可用贡献或渲染失败时回退宿主轻量页（绑定状态、打开文件夹、插件管理） | 整页知识工作台 |
 | `home.section` | 新任务首页卡片区 | 在内置首页卡片之后追加分区 | 首页摘要或引导 |
 | `skills.section` | 技能与连接页 | 在内置能力内容前追加分区 | 插件配置或状态 |
 
@@ -251,3 +252,9 @@ export function activate() {
 - `activate` 抛错或缺导出 → 该插件记为加载失败（等同槽位导出缺失），不炸宿主；清理函数抛错只告警；
 - 与组件插件同一条启用/信任/热重载路径，面板中「无槽位/无贡献」即无头插件；
 - 实现要点：全局安静检测 + `new Audio(dataUrl)` 播放，开关即插件启用开关（禁用 = 卸载副作用）。Drone 已不再随包内置这类插件。
+
+## 12. 知识界面公开端口（plugin-api 1.2）
+
+`window.DroneUI.knowledge` 仅公开 `@gyoungwe/plugin-api/ui` 的 `KnowledgeUiPort` 方法，宿主通过既有 preload/IPC 执行，保留授权和路径边界。插件不得访问 `window.pi`。`KnowledgeUiBindings` 定义组件、hooks、stores 与辅助函数的类型投影；声明、shim 与挂载对象由 host-api.manifest.json 同步生成。
+
+整页与嵌入区的产品界面由插件拥有；宿主只维护数据事件桥、上下文和轻量回退。全局审核/通知用既有 `app.overlay`，停用时卸载，重新启用读取当前 store。插件必须提供自己的 CSS 与知识文案，不能依赖宿主保留产品样式。

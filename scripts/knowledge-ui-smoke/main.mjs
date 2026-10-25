@@ -159,7 +159,8 @@ async function run() {
 				scope: "sdk-session",
 			};
 		});
-		ipcMain.handle("knowledge-fixture:info", () => ({ cwd, accept: accept.id, reject: reject.id }));
+		const uiPlugin = JSON.parse(await readFile(join(root, "ui-plugin.json"), "utf8"));
+		ipcMain.handle("knowledge-fixture:info", () => ({ cwd, accept: accept.id, reject: reject.id, uiPlugin }));
 		window = new BrowserWindow({
 			width: 1200,
 			height: 960,
@@ -842,6 +843,9 @@ async function run() {
 			JSON.stringify(
 				{
 					passed: true,
+					scope: "isolated-plugin-product-ui-smoke",
+					formalGuiAcceptance: false,
+					uiPlugin: { name: uiPlugin.name, version: uiPlugin.version, main: uiPlugin.main },
 					writeApprovalClicked: false,
 					checks,
 					consoleErrors: errors,

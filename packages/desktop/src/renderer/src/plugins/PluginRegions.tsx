@@ -33,13 +33,21 @@ const EMPTY_ENTRIES: PluginEntry[] = [];
 export const isPluginEntryId = (value: string | null | undefined): boolean => !!value?.startsWith("plugin:");
 
 /** 渲染一个贡献条目（外包错误边界；崩溃 → null，与 RegionHost 同语义） */
-export function PluginEntryHost({ entry, fallback }: { entry: PluginEntry; fallback?: ReactNode }) {
+export function PluginEntryHost({
+	entry,
+	fallback,
+	props = {},
+}: {
+	entry: PluginEntry;
+	fallback?: ReactNode;
+	props?: Record<string, unknown>;
+}) {
 	const nonce = useUiPluginRegistry((s) => s.loadNonces[entry.pluginName] ?? 0);
-	const Comp = entry.contribution.component as ComponentType<Record<string, never>>;
+	const Comp = entry.contribution.component as ComponentType<Record<string, unknown>>;
 	return (
 		<div key={`${entry.id}:${nonce}`} data-plugin={entry.pluginName} className="min-h-0 min-w-0 flex-1">
 			<PluginBoundary pluginName={entry.pluginName} label={entry.id} fallback={fallback}>
-				<Comp />
+				<Comp {...props} />
 			</PluginBoundary>
 		</div>
 	);

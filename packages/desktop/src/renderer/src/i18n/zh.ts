@@ -1,5 +1,13 @@
 /** 中文语言包（作为 key 的结构定义，en.ts 与之同形） */
 export const zh = {
+	knowledgeFallback: {
+		title: "知识库",
+		hint: "启用知识界面插件后可使用浏览、搜索、图谱、审阅与设置。",
+		loading: "正在读取绑定状态…",
+		unbound: "尚未绑定知识库",
+		openFolder: "打开知识库文件夹",
+		managePlugins: "管理界面插件",
+	},
 	pluginSandbox: { title: "插件独立进程", networkPermission: "此扩展需要本次会话的联网授权。" },
 	workflows: {
 		title: "六方向工作流",

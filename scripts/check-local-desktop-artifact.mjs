@@ -156,10 +156,10 @@ async function run() {
 			width: 1440,
 			height: 900,
 			sources: [
-				"packages/desktop/src/renderer/src/components/knowledge/KnowledgeHome.tsx",
+				"packages/desktop/src/renderer/src/components/knowledge/KnowledgeView.tsx",
 				"packages/desktop/src/renderer/src/components/knowledge/KnowledgePanel.tsx",
 			],
-			markers: ["knowledge-panel", "knowledge"],
+			markers: ["knowledge-page-host", "knowledge.surface"],
 		},
 		{
 			id: "skills-connections",

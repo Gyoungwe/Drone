@@ -1,6 +1,7 @@
 import { deriveTurnChanges } from "@drone/shared";
 import { useEffect, useMemo, useRef } from "react";
 import { useT } from "../../i18n";
+import { mergeKnowledgeArtifacts } from "../../lib/knowledge-artifacts";
 import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "../../plugins/PluginRegions";
 import { UI_REGIONS } from "../../plugins/slots";
 import { selectHosts, selectJobs, useComputeStore } from "../../stores/compute";
@@ -10,7 +11,6 @@ import { summarizeRuns, useSubagentsStore } from "../../stores/subagents";
 import { EMPTY_TODOS, selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { type CorePanelTab, type PanelTab, useUiStore, visiblePanelTabs } from "../../stores/ui";
 import { PanelRightIcon } from "../icons";
-import { mergeKnowledgeArtifacts } from "../knowledge/artifacts";
 import { useSessionStatus } from "../session/session-status";
 import { ArtifactsPane } from "./ArtifactsPane";
 import { ChangesPane } from "./ChangesPane";

@@ -41,6 +41,7 @@ describe("v3 plugin page regions", () => {
 	for (const region of [
 		UI_REGIONS.KnowledgeTab,
 		UI_REGIONS.KnowledgePage,
+		UI_REGIONS.KnowledgeSurface,
 		UI_REGIONS.HomeSection,
 		UI_REGIONS.SkillsSection,
 	]) {
@@ -64,6 +65,7 @@ describe("v3 plugin page regions", () => {
 		for (const region of [
 			UI_REGIONS.KnowledgeTab,
 			UI_REGIONS.KnowledgePage,
+			UI_REGIONS.KnowledgeSurface,
 			UI_REGIONS.HomeSection,
 			UI_REGIONS.SkillsSection,
 		])
@@ -73,6 +75,7 @@ describe("v3 plugin page regions", () => {
 		const hooks = [
 			renderHook(() => usePluginEntries(UI_REGIONS.KnowledgeTab)),
 			renderHook(() => usePluginEntries(UI_REGIONS.KnowledgePage)),
+			renderHook(() => usePluginEntries(UI_REGIONS.KnowledgeSurface)),
 			renderHook(() => usePluginEntries(UI_REGIONS.HomeSection)),
 			renderHook(() => usePluginEntries(UI_REGIONS.SkillsSection)),
 		];

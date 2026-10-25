@@ -1,3 +1,4 @@
+import "../../packages/desktop/src/renderer/src/plugins/host-api";
 import { createRoot } from "react-dom/client";
 import { ProgressNote } from "../../packages/desktop/src/renderer/src/components/chat/ProgressNote";
 import { RunInspector } from "../../packages/desktop/src/renderer/src/components/chat/RunInspector";
@@ -11,15 +12,24 @@ import { KnowledgeUiRoot } from "../../packages/desktop/src/renderer/src/compone
 import { KnowledgeView } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgeView";
 import { TasksPane } from "../../packages/desktop/src/renderer/src/components/panel/TasksPane";
 import { SkillsPanel } from "../../packages/desktop/src/renderer/src/components/settings/SkillsPanel";
+import { RegionHost } from "../../packages/desktop/src/renderer/src/plugins/RegionHost";
+import { useUiPluginRegistry } from "../../packages/desktop/src/renderer/src/plugins/registry";
+import { UI_REGIONS } from "../../packages/desktop/src/renderer/src/plugins/slots";
 import { useSessionsStore } from "../../packages/desktop/src/renderer/src/stores/sessions";
 import { useSettingsStore } from "../../packages/desktop/src/renderer/src/stores/settings";
 import { useTranscriptStore } from "../../packages/desktop/src/renderer/src/stores/transcript";
 import { useUiStore } from "../../packages/desktop/src/renderer/src/stores/ui";
+import { useUiPluginsStore } from "../../packages/desktop/src/renderer/src/stores/ui-plugins";
 import { reportedUsage, sumReportedUsage } from "../../packages/shared/src/usage-display";
 import { SidebarActionsFixture } from "./sidebar";
 import { StageTimelineFixture } from "./timeline";
 
 const info = await (window as any).knowledgeTest.info();
+const candidateUrl = new URL("./candidate-ui/index.js", window.location.href).href;
+const candidate = await import(/* @vite-ignore */ candidateUrl);
+const applied = useUiPluginRegistry.getState().applyPlugin(info.uiPlugin, candidate, []);
+if (!applied.ok) throw new Error(`Candidate UI registration failed: ${applied.missing.join(", ")}`);
+useUiPluginsStore.setState({ config: { enabled: true, plugins: {}, assignments: {} } });
 useSessionsStore.setState({
 	cwd: info.cwd,
 	activeSessionId: "fixture",
@@ -243,5 +253,6 @@ createRoot(rootEl).render(
 		</div>
 		<SidebarActionsFixture />
 		<KnowledgeUiRoot />
+		<RegionHost region={UI_REGIONS.AppOverlay} />
 	</div>,
 );

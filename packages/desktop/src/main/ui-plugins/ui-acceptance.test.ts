@@ -37,6 +37,7 @@ function installHostShim(): void {
 			helpers: {},
 			hooks: { useT: () => () => "", useLanguage: () => "en" },
 			stores: { useSessionsStore: STORE, useTranscriptStore: STORE },
+			knowledge: {},
 			i18n: { registerMessages: () => () => {} },
 		},
 	};

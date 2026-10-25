@@ -33,9 +33,9 @@ export const KNOWN_UI_REGIONS: string[] = [
 	"panel.tab",
 	"rail.view",
 	"knowledge.tab",
-	// Complete knowledge workspace replacement. The built-in page remains the
-	// fallback when no enabled plugin contributes this region.
+	// Complete knowledge workspace replacement; missing plugins leave a lightweight host page.
 	"knowledge.page",
+	"knowledge.surface",
 	"home.section",
 	"skills.section",
 ];

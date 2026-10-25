@@ -70,6 +70,7 @@ declare module "@gyoungwe/plugin-api" {
 	export type UiRegion =
 		| "knowledge.tab"
 		| "knowledge.page"
+		| "knowledge.surface"
 		| "home.section"
 		| "skills.section"
 		| "panel.tab"
@@ -221,6 +222,14 @@ declare module "@gyoungwe/plugin-api" {
 		Tooltip: (props: PluginTooltipProps) => unknown;
 		Markdown: (props: PluginMarkdownProps) => unknown;
 		ImagePreview: (props: PluginImagePreviewProps) => unknown;
+		StatePanel: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["StatePanel"];
+		Switch: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["Switch"];
+		ActionSurface: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["ActionSurface"];
+		PageHeader: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["PageHeader"];
+		ChevronDownIcon: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["ChevronDownIcon"];
+		ObsidianIcon: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["ObsidianIcon"];
+		RoadmapLane: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["RoadmapLane"];
+		PluginEntryHost: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["PluginEntryHost"];
 	};
 
 	// </drone:generated namespace="components">
@@ -232,6 +241,17 @@ declare module "@gyoungwe/plugin-api" {
 		displayToolName: (name: string) => string;
 		openResourceExternal: (target: string, cwd?: string) => Promise<void>;
 		openExternal: (url: string) => Promise<void>;
+		isDraftSessionId: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["isDraftSessionId"];
+		selectTranscript: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["selectTranscript"];
+		pushToast: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["pushToast"];
+		relativeTime: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["relativeTime"];
+		taskArtifactLinks: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["taskArtifactLinks"];
+		roadmapStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["roadmapStatus"];
+		legacyEvidenceNotice: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["legacyEvidenceNotice"];
+		COMPOSER_FOCUS_EVENT: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["COMPOSER_FOCUS_EVENT"];
+		PROTECTED_KNOWLEDGE_AGENTS: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["PROTECTED_KNOWLEDGE_AGENTS"];
+		SUBAGENT_THINKING_LEVELS: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["SUBAGENT_THINKING_LEVELS"];
+		UI_REGIONS: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["UI_REGIONS"];
 	};
 	// </drone:generated namespace="helpers">
 	/** 上下文使用量（事件驱动刷新；sessionId 为 null/draft 时返回 null）——token 仪表盘用 */
@@ -241,6 +261,8 @@ declare module "@gyoungwe/plugin-api" {
 		useT: () => (key: string, params?: Record<string, string | number>) => string;
 		useContextUsage: (sessionId: string | null) => ContextUsageInfo | null;
 		useLanguage: () => "zh" | "en";
+		useAgentActive: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["useAgentActive"];
+		usePluginEntries: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["usePluginEntries"];
 	};
 	// </drone:generated namespace="hooks">
 	/** 应用级 UI 偏好（ui-state.json 持久化）：centerOrbEnabled 等 */
@@ -254,9 +276,70 @@ declare module "@gyoungwe/plugin-api" {
 		useSettingsStore: unknown;
 		useUiPreferencesStore: unknown;
 		useKnowledgeStore: unknown;
+		useDraftStore: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["stores"]["useDraftStore"];
 	};
 	// </drone:generated namespace="stores">
 	/** 插件自带文案：注册后 useT()(key) 在核心字典找不到时回落到这里；返回注销函数（无头插件在 activate 里注册、清理函数里注销） */
+	// <drone:generated namespace="knowledge">
+	export const knowledge: {
+		archiveKnowledgeTopic: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["archiveKnowledgeTopic"];
+		authorizeZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["authorizeZoteroLocalWrite"];
+		cancelKnowledgeModelReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["cancelKnowledgeModelReview"];
+		cancelKnowledgeSemanticIndex: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["cancelKnowledgeSemanticIndex"];
+		clearInstitutionalSession: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearInstitutionalSession"];
+		clearZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearZoteroLocalWrite"];
+		clearZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearZoteroWebApi"];
+		decideDailyIdea: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideDailyIdea"];
+		decideDailyRadarPaper: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideDailyRadarPaper"];
+		decideKnowledgeReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideKnowledgeReview"];
+		formalKnowledgeVault: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["formalKnowledgeVault"];
+		getDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getDailyDiscovery"];
+		getInstitutionalStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getInstitutionalStatus"];
+		getKnowledgeCloudStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeCloudStatus"];
+		getKnowledgeGraph: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeGraph"];
+		getKnowledgeJobs: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeJobs"];
+		getKnowledgeMaintenanceRuns: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeMaintenanceRuns"];
+		getKnowledgeMaintenanceSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeMaintenanceSettings"];
+		getKnowledgeNoteLinks: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeNoteLinks"];
+		getKnowledgeOverview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeOverview"];
+		getKnowledgeReviews: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeReviews"];
+		getKnowledgeSemanticStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeSemanticStatus"];
+		getKnowledgeTopics: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeTopics"];
+		getResearchRun: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getResearchRun"];
+		getResearchRuns: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getResearchRuns"];
+		getZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroLocalWrite"];
+		getZoteroStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroStatus"];
+		getZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroWebApi"];
+		indexKnowledgeSemantic: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["indexKnowledgeSemantic"];
+		initializeKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["initializeKnowledgeCloud"];
+		maintainKnowledge: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["maintainKnowledge"];
+		onKnowledgeEvent: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["onKnowledgeEvent"];
+		openExternal: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openExternal"];
+		openInstitutionalLogin: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openInstitutionalLogin"];
+		openKnowledgeTarget: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openKnowledgeTarget"];
+		pickDirectory: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["pickDirectory"];
+		previewKnowledgeReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["previewKnowledgeReview"];
+		previewKnowledgeSetup: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["previewKnowledgeSetup"];
+		probeKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["probeKnowledgeCloud"];
+		prompt: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["prompt"];
+		readKnowledgeCloudNote: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["readKnowledgeCloudNote"];
+		readKnowledgeNote: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["readKnowledgeNote"];
+		resumeKnowledgeCheck: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["resumeKnowledgeCheck"];
+		reviewKnowledgeWithModel: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["reviewKnowledgeWithModel"];
+		runKnowledgeMaintenance: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["runKnowledgeMaintenance"];
+		saveKnowledgeMaintenanceSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveKnowledgeMaintenanceSettings"];
+		saveKnowledgeSemanticSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveKnowledgeSemanticSettings"];
+		saveZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveZoteroWebApi"];
+		searchKnowledge: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["searchKnowledge"];
+		setKnowledgeCloudPassword: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["setKnowledgeCloudPassword"];
+		setKnowledgeSpecialistSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["setKnowledgeSpecialistSettings"];
+		startKnowledgeSetup: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["startKnowledgeSetup"];
+		syncKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["syncKnowledgeCloud"];
+		testInstitutionalAccess: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testInstitutionalAccess"];
+		testKnowledgeSemanticProvider: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testKnowledgeSemanticProvider"];
+		updateDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["updateDailyDiscovery"];
+	};
+	// </drone:generated namespace="knowledge">
 	// <drone:generated namespace="i18n">
 	export const i18n: {
 		registerMessages: (
@@ -271,13 +354,34 @@ declare module "@gyoungwe/plugin-api" {
 	export const Tooltip: (props: PluginTooltipProps) => unknown;
 	export const Markdown: (props: PluginMarkdownProps) => unknown;
 	export const ImagePreview: (props: PluginImagePreviewProps) => unknown;
+	export const StatePanel: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["StatePanel"];
+	export const Switch: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["Switch"];
+	export const ActionSurface: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["ActionSurface"];
+	export const PageHeader: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["PageHeader"];
+	export const ChevronDownIcon: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["ChevronDownIcon"];
+	export const ObsidianIcon: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["ObsidianIcon"];
+	export const RoadmapLane: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["RoadmapLane"];
+	export const PluginEntryHost: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["components"]["PluginEntryHost"];
 	export const summarizeArgs: (args: string) => string;
 	export const displayToolName: (name: string) => string;
 	export const openResourceExternal: (target: string, cwd?: string) => Promise<void>;
 	export const openExternal: (url: string) => Promise<void>;
+	export const isDraftSessionId: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["isDraftSessionId"];
+	export const selectTranscript: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["selectTranscript"];
+	export const pushToast: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["pushToast"];
+	export const relativeTime: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["relativeTime"];
+	export const taskArtifactLinks: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["taskArtifactLinks"];
+	export const roadmapStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["roadmapStatus"];
+	export const legacyEvidenceNotice: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["legacyEvidenceNotice"];
+	export const COMPOSER_FOCUS_EVENT: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["COMPOSER_FOCUS_EVENT"];
+	export const PROTECTED_KNOWLEDGE_AGENTS: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["PROTECTED_KNOWLEDGE_AGENTS"];
+	export const SUBAGENT_THINKING_LEVELS: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["SUBAGENT_THINKING_LEVELS"];
+	export const UI_REGIONS: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["helpers"]["UI_REGIONS"];
 	export const useT: () => (key: string, params?: Record<string, string | number>) => string;
 	export const useContextUsage: (sessionId: string | null) => ContextUsageInfo | null;
 	export const useLanguage: () => "zh" | "en";
+	export const useAgentActive: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["useAgentActive"];
+	export const usePluginEntries: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["usePluginEntries"];
 	export const useTranscriptStore: unknown;
 	export const useSessionsStore: unknown;
 	export const useUiStore: unknown;
@@ -285,10 +389,66 @@ declare module "@gyoungwe/plugin-api" {
 	export const useSettingsStore: unknown;
 	export const useUiPreferencesStore: unknown;
 	export const useKnowledgeStore: unknown;
+	export const useDraftStore: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["stores"]["useDraftStore"];
 	export const registerMessages: (
 		namespace: string,
 		messages: { zh?: Record<string, unknown>; en?: Record<string, unknown> },
 	) => () => void;
+	export const archiveKnowledgeTopic: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["archiveKnowledgeTopic"];
+	export const authorizeZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["authorizeZoteroLocalWrite"];
+	export const cancelKnowledgeModelReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["cancelKnowledgeModelReview"];
+	export const cancelKnowledgeSemanticIndex: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["cancelKnowledgeSemanticIndex"];
+	export const clearInstitutionalSession: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearInstitutionalSession"];
+	export const clearZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearZoteroLocalWrite"];
+	export const clearZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearZoteroWebApi"];
+	export const decideDailyIdea: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideDailyIdea"];
+	export const decideDailyRadarPaper: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideDailyRadarPaper"];
+	export const decideKnowledgeReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideKnowledgeReview"];
+	export const formalKnowledgeVault: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["formalKnowledgeVault"];
+	export const getDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getDailyDiscovery"];
+	export const getInstitutionalStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getInstitutionalStatus"];
+	export const getKnowledgeCloudStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeCloudStatus"];
+	export const getKnowledgeGraph: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeGraph"];
+	export const getKnowledgeJobs: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeJobs"];
+	export const getKnowledgeMaintenanceRuns: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeMaintenanceRuns"];
+	export const getKnowledgeMaintenanceSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeMaintenanceSettings"];
+	export const getKnowledgeNoteLinks: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeNoteLinks"];
+	export const getKnowledgeOverview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeOverview"];
+	export const getKnowledgeReviews: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeReviews"];
+	export const getKnowledgeSemanticStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeSemanticStatus"];
+	export const getKnowledgeTopics: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeTopics"];
+	export const getResearchRun: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getResearchRun"];
+	export const getResearchRuns: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getResearchRuns"];
+	export const getZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroLocalWrite"];
+	export const getZoteroStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroStatus"];
+	export const getZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroWebApi"];
+	export const indexKnowledgeSemantic: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["indexKnowledgeSemantic"];
+	export const initializeKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["initializeKnowledgeCloud"];
+	export const maintainKnowledge: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["maintainKnowledge"];
+	export const onKnowledgeEvent: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["onKnowledgeEvent"];
+	export const openInstitutionalLogin: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openInstitutionalLogin"];
+	export const openKnowledgeTarget: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openKnowledgeTarget"];
+	export const pickDirectory: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["pickDirectory"];
+	export const previewKnowledgeReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["previewKnowledgeReview"];
+	export const previewKnowledgeSetup: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["previewKnowledgeSetup"];
+	export const probeKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["probeKnowledgeCloud"];
+	export const prompt: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["prompt"];
+	export const readKnowledgeCloudNote: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["readKnowledgeCloudNote"];
+	export const readKnowledgeNote: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["readKnowledgeNote"];
+	export const resumeKnowledgeCheck: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["resumeKnowledgeCheck"];
+	export const reviewKnowledgeWithModel: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["reviewKnowledgeWithModel"];
+	export const runKnowledgeMaintenance: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["runKnowledgeMaintenance"];
+	export const saveKnowledgeMaintenanceSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveKnowledgeMaintenanceSettings"];
+	export const saveKnowledgeSemanticSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveKnowledgeSemanticSettings"];
+	export const saveZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveZoteroWebApi"];
+	export const searchKnowledge: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["searchKnowledge"];
+	export const setKnowledgeCloudPassword: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["setKnowledgeCloudPassword"];
+	export const setKnowledgeSpecialistSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["setKnowledgeSpecialistSettings"];
+	export const startKnowledgeSetup: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["startKnowledgeSetup"];
+	export const syncKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["syncKnowledgeCloud"];
+	export const testInstitutionalAccess: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testInstitutionalAccess"];
+	export const testKnowledgeSemanticProvider: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testKnowledgeSemanticProvider"];
+	export const updateDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["updateDailyDiscovery"];
 	// </drone:generated namespace="topLevel">
 	declare const api: unknown;
 	export default api;

@@ -31,6 +31,54 @@
 				"hostValue": "ImagePreviewOverlay",
 				"envType": "typeof ImagePreviewOverlay",
 				"pluginType": "(props: PluginImagePreviewProps) => unknown"
+			},
+			{
+				"name": "StatePanel",
+				"hostValue": "StatePanel",
+				"envType": "typeof StatePanel",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"components\"][\"StatePanel\"]"
+			},
+			{
+				"name": "Switch",
+				"hostValue": "Switch",
+				"envType": "typeof Switch",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"components\"][\"Switch\"]"
+			},
+			{
+				"name": "ActionSurface",
+				"hostValue": "ActionSurface",
+				"envType": "typeof ActionSurface",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"components\"][\"ActionSurface\"]"
+			},
+			{
+				"name": "PageHeader",
+				"hostValue": "PageHeader",
+				"envType": "typeof PageHeader",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"components\"][\"PageHeader\"]"
+			},
+			{
+				"name": "ChevronDownIcon",
+				"hostValue": "ChevronDownIcon",
+				"envType": "typeof ChevronDownIcon",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"components\"][\"ChevronDownIcon\"]"
+			},
+			{
+				"name": "ObsidianIcon",
+				"hostValue": "ObsidianIcon",
+				"envType": "typeof ObsidianIcon",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"components\"][\"ObsidianIcon\"]"
+			},
+			{
+				"name": "RoadmapLane",
+				"hostValue": "RoadmapLane",
+				"envType": "typeof RoadmapLane",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"components\"][\"RoadmapLane\"]"
+			},
+			{
+				"name": "PluginEntryHost",
+				"hostValue": "PluginEntryHost",
+				"envType": "typeof PluginEntryHost",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"components\"][\"PluginEntryHost\"]"
 			}
 		],
 		"helpers": [
@@ -57,6 +105,72 @@
 				"hostValue": "(url: string) => getPi().openExternal(url)",
 				"envType": "(url: string) => Promise<void>",
 				"pluginType": "(url: string) => Promise<void>"
+			},
+			{
+				"name": "isDraftSessionId",
+				"hostValue": "isDraftSessionId",
+				"envType": "typeof isDraftSessionId",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"isDraftSessionId\"]"
+			},
+			{
+				"name": "selectTranscript",
+				"hostValue": "selectTranscript",
+				"envType": "typeof selectTranscript",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"selectTranscript\"]"
+			},
+			{
+				"name": "pushToast",
+				"hostValue": "pushToast",
+				"envType": "typeof pushToast",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"pushToast\"]"
+			},
+			{
+				"name": "relativeTime",
+				"hostValue": "relativeTime",
+				"envType": "typeof relativeTime",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"relativeTime\"]"
+			},
+			{
+				"name": "taskArtifactLinks",
+				"hostValue": "taskArtifactLinks",
+				"envType": "typeof taskArtifactLinks",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"taskArtifactLinks\"]"
+			},
+			{
+				"name": "roadmapStatus",
+				"hostValue": "roadmapStatus",
+				"envType": "typeof roadmapStatus",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"roadmapStatus\"]"
+			},
+			{
+				"name": "legacyEvidenceNotice",
+				"hostValue": "legacyEvidenceNotice",
+				"envType": "typeof legacyEvidenceNotice",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"legacyEvidenceNotice\"]"
+			},
+			{
+				"name": "COMPOSER_FOCUS_EVENT",
+				"hostValue": "COMPOSER_FOCUS_EVENT",
+				"envType": "typeof COMPOSER_FOCUS_EVENT",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"COMPOSER_FOCUS_EVENT\"]"
+			},
+			{
+				"name": "PROTECTED_KNOWLEDGE_AGENTS",
+				"hostValue": "PROTECTED_KNOWLEDGE_AGENTS",
+				"envType": "typeof PROTECTED_KNOWLEDGE_AGENTS",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"PROTECTED_KNOWLEDGE_AGENTS\"]"
+			},
+			{
+				"name": "SUBAGENT_THINKING_LEVELS",
+				"hostValue": "SUBAGENT_THINKING_LEVELS",
+				"envType": "typeof SUBAGENT_THINKING_LEVELS",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"SUBAGENT_THINKING_LEVELS\"]"
+			},
+			{
+				"name": "UI_REGIONS",
+				"hostValue": "UI_REGIONS",
+				"envType": "typeof UI_REGIONS",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"helpers\"][\"UI_REGIONS\"]"
 			}
 		],
 		"hooks": [
@@ -77,6 +191,18 @@
 				"hostValue": "useLanguage",
 				"envType": "typeof useLanguage",
 				"pluginType": "() => \"zh\" | \"en\""
+			},
+			{
+				"name": "useAgentActive",
+				"hostValue": "useAgentActive",
+				"envType": "typeof useAgentActive",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"hooks\"][\"useAgentActive\"]"
+			},
+			{
+				"name": "usePluginEntries",
+				"hostValue": "usePluginEntries",
+				"envType": "typeof usePluginEntries",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"hooks\"][\"usePluginEntries\"]"
 			}
 		],
 		"stores": [
@@ -121,6 +247,12 @@
 				"hostValue": "useKnowledgeStore",
 				"envType": "typeof useKnowledgeStore",
 				"pluginType": "unknown"
+			},
+			{
+				"name": "useDraftStore",
+				"hostValue": "useDraftStore",
+				"envType": "typeof useDraftStore",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"stores\"][\"useDraftStore\"]"
 			}
 		],
 		"i18n": [
@@ -129,6 +261,344 @@
 				"hostValue": "registerPluginMessages",
 				"envType": "typeof registerPluginMessages",
 				"pluginType": "(\nnamespace: string,\nmessages: { zh?: Record<string, unknown>; en?: Record<string, unknown> },\n) => () => void"
+			}
+		],
+		"knowledge": [
+			{
+				"name": "archiveKnowledgeTopic",
+				"hostValue": "knowledgeUiPort.archiveKnowledgeTopic",
+				"envType": "KnowledgeUiPort[\"archiveKnowledgeTopic\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"archiveKnowledgeTopic\"]"
+			},
+			{
+				"name": "authorizeZoteroLocalWrite",
+				"hostValue": "knowledgeUiPort.authorizeZoteroLocalWrite",
+				"envType": "KnowledgeUiPort[\"authorizeZoteroLocalWrite\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"authorizeZoteroLocalWrite\"]"
+			},
+			{
+				"name": "cancelKnowledgeModelReview",
+				"hostValue": "knowledgeUiPort.cancelKnowledgeModelReview",
+				"envType": "KnowledgeUiPort[\"cancelKnowledgeModelReview\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"cancelKnowledgeModelReview\"]"
+			},
+			{
+				"name": "cancelKnowledgeSemanticIndex",
+				"hostValue": "knowledgeUiPort.cancelKnowledgeSemanticIndex",
+				"envType": "KnowledgeUiPort[\"cancelKnowledgeSemanticIndex\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"cancelKnowledgeSemanticIndex\"]"
+			},
+			{
+				"name": "clearInstitutionalSession",
+				"hostValue": "knowledgeUiPort.clearInstitutionalSession",
+				"envType": "KnowledgeUiPort[\"clearInstitutionalSession\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"clearInstitutionalSession\"]"
+			},
+			{
+				"name": "clearZoteroLocalWrite",
+				"hostValue": "knowledgeUiPort.clearZoteroLocalWrite",
+				"envType": "KnowledgeUiPort[\"clearZoteroLocalWrite\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"clearZoteroLocalWrite\"]"
+			},
+			{
+				"name": "clearZoteroWebApi",
+				"hostValue": "knowledgeUiPort.clearZoteroWebApi",
+				"envType": "KnowledgeUiPort[\"clearZoteroWebApi\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"clearZoteroWebApi\"]"
+			},
+			{
+				"name": "decideDailyIdea",
+				"hostValue": "knowledgeUiPort.decideDailyIdea",
+				"envType": "KnowledgeUiPort[\"decideDailyIdea\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"decideDailyIdea\"]"
+			},
+			{
+				"name": "decideDailyRadarPaper",
+				"hostValue": "knowledgeUiPort.decideDailyRadarPaper",
+				"envType": "KnowledgeUiPort[\"decideDailyRadarPaper\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"decideDailyRadarPaper\"]"
+			},
+			{
+				"name": "decideKnowledgeReview",
+				"hostValue": "knowledgeUiPort.decideKnowledgeReview",
+				"envType": "KnowledgeUiPort[\"decideKnowledgeReview\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"decideKnowledgeReview\"]"
+			},
+			{
+				"name": "formalKnowledgeVault",
+				"hostValue": "knowledgeUiPort.formalKnowledgeVault",
+				"envType": "KnowledgeUiPort[\"formalKnowledgeVault\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"formalKnowledgeVault\"]"
+			},
+			{
+				"name": "getDailyDiscovery",
+				"hostValue": "knowledgeUiPort.getDailyDiscovery",
+				"envType": "KnowledgeUiPort[\"getDailyDiscovery\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getDailyDiscovery\"]"
+			},
+			{
+				"name": "getInstitutionalStatus",
+				"hostValue": "knowledgeUiPort.getInstitutionalStatus",
+				"envType": "KnowledgeUiPort[\"getInstitutionalStatus\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getInstitutionalStatus\"]"
+			},
+			{
+				"name": "getKnowledgeCloudStatus",
+				"hostValue": "knowledgeUiPort.getKnowledgeCloudStatus",
+				"envType": "KnowledgeUiPort[\"getKnowledgeCloudStatus\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeCloudStatus\"]"
+			},
+			{
+				"name": "getKnowledgeGraph",
+				"hostValue": "knowledgeUiPort.getKnowledgeGraph",
+				"envType": "KnowledgeUiPort[\"getKnowledgeGraph\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeGraph\"]"
+			},
+			{
+				"name": "getKnowledgeJobs",
+				"hostValue": "knowledgeUiPort.getKnowledgeJobs",
+				"envType": "KnowledgeUiPort[\"getKnowledgeJobs\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeJobs\"]"
+			},
+			{
+				"name": "getKnowledgeMaintenanceRuns",
+				"hostValue": "knowledgeUiPort.getKnowledgeMaintenanceRuns",
+				"envType": "KnowledgeUiPort[\"getKnowledgeMaintenanceRuns\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeMaintenanceRuns\"]"
+			},
+			{
+				"name": "getKnowledgeMaintenanceSettings",
+				"hostValue": "knowledgeUiPort.getKnowledgeMaintenanceSettings",
+				"envType": "KnowledgeUiPort[\"getKnowledgeMaintenanceSettings\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeMaintenanceSettings\"]"
+			},
+			{
+				"name": "getKnowledgeNoteLinks",
+				"hostValue": "knowledgeUiPort.getKnowledgeNoteLinks",
+				"envType": "KnowledgeUiPort[\"getKnowledgeNoteLinks\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeNoteLinks\"]"
+			},
+			{
+				"name": "getKnowledgeOverview",
+				"hostValue": "knowledgeUiPort.getKnowledgeOverview",
+				"envType": "KnowledgeUiPort[\"getKnowledgeOverview\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeOverview\"]"
+			},
+			{
+				"name": "getKnowledgeReviews",
+				"hostValue": "knowledgeUiPort.getKnowledgeReviews",
+				"envType": "KnowledgeUiPort[\"getKnowledgeReviews\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeReviews\"]"
+			},
+			{
+				"name": "getKnowledgeSemanticStatus",
+				"hostValue": "knowledgeUiPort.getKnowledgeSemanticStatus",
+				"envType": "KnowledgeUiPort[\"getKnowledgeSemanticStatus\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeSemanticStatus\"]"
+			},
+			{
+				"name": "getKnowledgeTopics",
+				"hostValue": "knowledgeUiPort.getKnowledgeTopics",
+				"envType": "KnowledgeUiPort[\"getKnowledgeTopics\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getKnowledgeTopics\"]"
+			},
+			{
+				"name": "getResearchRun",
+				"hostValue": "knowledgeUiPort.getResearchRun",
+				"envType": "KnowledgeUiPort[\"getResearchRun\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getResearchRun\"]"
+			},
+			{
+				"name": "getResearchRuns",
+				"hostValue": "knowledgeUiPort.getResearchRuns",
+				"envType": "KnowledgeUiPort[\"getResearchRuns\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getResearchRuns\"]"
+			},
+			{
+				"name": "getZoteroLocalWrite",
+				"hostValue": "knowledgeUiPort.getZoteroLocalWrite",
+				"envType": "KnowledgeUiPort[\"getZoteroLocalWrite\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getZoteroLocalWrite\"]"
+			},
+			{
+				"name": "getZoteroStatus",
+				"hostValue": "knowledgeUiPort.getZoteroStatus",
+				"envType": "KnowledgeUiPort[\"getZoteroStatus\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getZoteroStatus\"]"
+			},
+			{
+				"name": "getZoteroWebApi",
+				"hostValue": "knowledgeUiPort.getZoteroWebApi",
+				"envType": "KnowledgeUiPort[\"getZoteroWebApi\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"getZoteroWebApi\"]"
+			},
+			{
+				"name": "indexKnowledgeSemantic",
+				"hostValue": "knowledgeUiPort.indexKnowledgeSemantic",
+				"envType": "KnowledgeUiPort[\"indexKnowledgeSemantic\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"indexKnowledgeSemantic\"]"
+			},
+			{
+				"name": "initializeKnowledgeCloud",
+				"hostValue": "knowledgeUiPort.initializeKnowledgeCloud",
+				"envType": "KnowledgeUiPort[\"initializeKnowledgeCloud\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"initializeKnowledgeCloud\"]"
+			},
+			{
+				"name": "maintainKnowledge",
+				"hostValue": "knowledgeUiPort.maintainKnowledge",
+				"envType": "KnowledgeUiPort[\"maintainKnowledge\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"maintainKnowledge\"]"
+			},
+			{
+				"name": "onKnowledgeEvent",
+				"hostValue": "knowledgeUiPort.onKnowledgeEvent",
+				"envType": "KnowledgeUiPort[\"onKnowledgeEvent\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"onKnowledgeEvent\"]"
+			},
+			{
+				"name": "openExternal",
+				"hostValue": "knowledgeUiPort.openExternal",
+				"envType": "KnowledgeUiPort[\"openExternal\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"openExternal\"]"
+			},
+			{
+				"name": "openInstitutionalLogin",
+				"hostValue": "knowledgeUiPort.openInstitutionalLogin",
+				"envType": "KnowledgeUiPort[\"openInstitutionalLogin\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"openInstitutionalLogin\"]"
+			},
+			{
+				"name": "openKnowledgeTarget",
+				"hostValue": "knowledgeUiPort.openKnowledgeTarget",
+				"envType": "KnowledgeUiPort[\"openKnowledgeTarget\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"openKnowledgeTarget\"]"
+			},
+			{
+				"name": "pickDirectory",
+				"hostValue": "knowledgeUiPort.pickDirectory",
+				"envType": "KnowledgeUiPort[\"pickDirectory\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"pickDirectory\"]"
+			},
+			{
+				"name": "previewKnowledgeReview",
+				"hostValue": "knowledgeUiPort.previewKnowledgeReview",
+				"envType": "KnowledgeUiPort[\"previewKnowledgeReview\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"previewKnowledgeReview\"]"
+			},
+			{
+				"name": "previewKnowledgeSetup",
+				"hostValue": "knowledgeUiPort.previewKnowledgeSetup",
+				"envType": "KnowledgeUiPort[\"previewKnowledgeSetup\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"previewKnowledgeSetup\"]"
+			},
+			{
+				"name": "probeKnowledgeCloud",
+				"hostValue": "knowledgeUiPort.probeKnowledgeCloud",
+				"envType": "KnowledgeUiPort[\"probeKnowledgeCloud\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"probeKnowledgeCloud\"]"
+			},
+			{
+				"name": "prompt",
+				"hostValue": "knowledgeUiPort.prompt",
+				"envType": "KnowledgeUiPort[\"prompt\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"prompt\"]"
+			},
+			{
+				"name": "readKnowledgeCloudNote",
+				"hostValue": "knowledgeUiPort.readKnowledgeCloudNote",
+				"envType": "KnowledgeUiPort[\"readKnowledgeCloudNote\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"readKnowledgeCloudNote\"]"
+			},
+			{
+				"name": "readKnowledgeNote",
+				"hostValue": "knowledgeUiPort.readKnowledgeNote",
+				"envType": "KnowledgeUiPort[\"readKnowledgeNote\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"readKnowledgeNote\"]"
+			},
+			{
+				"name": "resumeKnowledgeCheck",
+				"hostValue": "knowledgeUiPort.resumeKnowledgeCheck",
+				"envType": "KnowledgeUiPort[\"resumeKnowledgeCheck\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"resumeKnowledgeCheck\"]"
+			},
+			{
+				"name": "reviewKnowledgeWithModel",
+				"hostValue": "knowledgeUiPort.reviewKnowledgeWithModel",
+				"envType": "KnowledgeUiPort[\"reviewKnowledgeWithModel\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"reviewKnowledgeWithModel\"]"
+			},
+			{
+				"name": "runKnowledgeMaintenance",
+				"hostValue": "knowledgeUiPort.runKnowledgeMaintenance",
+				"envType": "KnowledgeUiPort[\"runKnowledgeMaintenance\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"runKnowledgeMaintenance\"]"
+			},
+			{
+				"name": "saveKnowledgeMaintenanceSettings",
+				"hostValue": "knowledgeUiPort.saveKnowledgeMaintenanceSettings",
+				"envType": "KnowledgeUiPort[\"saveKnowledgeMaintenanceSettings\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"saveKnowledgeMaintenanceSettings\"]"
+			},
+			{
+				"name": "saveKnowledgeSemanticSettings",
+				"hostValue": "knowledgeUiPort.saveKnowledgeSemanticSettings",
+				"envType": "KnowledgeUiPort[\"saveKnowledgeSemanticSettings\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"saveKnowledgeSemanticSettings\"]"
+			},
+			{
+				"name": "saveZoteroWebApi",
+				"hostValue": "knowledgeUiPort.saveZoteroWebApi",
+				"envType": "KnowledgeUiPort[\"saveZoteroWebApi\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"saveZoteroWebApi\"]"
+			},
+			{
+				"name": "searchKnowledge",
+				"hostValue": "knowledgeUiPort.searchKnowledge",
+				"envType": "KnowledgeUiPort[\"searchKnowledge\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"searchKnowledge\"]"
+			},
+			{
+				"name": "setKnowledgeCloudPassword",
+				"hostValue": "knowledgeUiPort.setKnowledgeCloudPassword",
+				"envType": "KnowledgeUiPort[\"setKnowledgeCloudPassword\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"setKnowledgeCloudPassword\"]"
+			},
+			{
+				"name": "setKnowledgeSpecialistSettings",
+				"hostValue": "knowledgeUiPort.setKnowledgeSpecialistSettings",
+				"envType": "KnowledgeUiPort[\"setKnowledgeSpecialistSettings\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"setKnowledgeSpecialistSettings\"]"
+			},
+			{
+				"name": "startKnowledgeSetup",
+				"hostValue": "knowledgeUiPort.startKnowledgeSetup",
+				"envType": "KnowledgeUiPort[\"startKnowledgeSetup\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"startKnowledgeSetup\"]"
+			},
+			{
+				"name": "syncKnowledgeCloud",
+				"hostValue": "knowledgeUiPort.syncKnowledgeCloud",
+				"envType": "KnowledgeUiPort[\"syncKnowledgeCloud\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"syncKnowledgeCloud\"]"
+			},
+			{
+				"name": "testInstitutionalAccess",
+				"hostValue": "knowledgeUiPort.testInstitutionalAccess",
+				"envType": "KnowledgeUiPort[\"testInstitutionalAccess\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"testInstitutionalAccess\"]"
+			},
+			{
+				"name": "testKnowledgeSemanticProvider",
+				"hostValue": "knowledgeUiPort.testKnowledgeSemanticProvider",
+				"envType": "KnowledgeUiPort[\"testKnowledgeSemanticProvider\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"testKnowledgeSemanticProvider\"]"
+			},
+			{
+				"name": "updateDailyDiscovery",
+				"hostValue": "knowledgeUiPort.updateDailyDiscovery",
+				"envType": "KnowledgeUiPort[\"updateDailyDiscovery\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"updateDailyDiscovery\"]"
 			}
 		]
 	}

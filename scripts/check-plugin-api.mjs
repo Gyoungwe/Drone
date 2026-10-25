@@ -57,8 +57,8 @@ function checkPackageManifest() {
 	const manifest = packageJson();
 	assert(manifest.name === "@gyoungwe/plugin-api", `unexpected package name: ${manifest.name}`);
 	assert(
-		manifest.version === "1.1.0",
-		`public API package must stay at 1.1.0 during v1: ${manifest.version}`,
+		manifest.version === "1.2.0",
+		`public API package must match the 1.2.0 additive UI contract: ${manifest.version}`,
 	);
 	assert(!manifest.private, "public plugin-api package must not be private");
 	assert(manifest.types === "./dist/index.d.ts", "types must point at dist/index.d.ts");
@@ -231,8 +231,8 @@ function checkLocalLifecycle() {
 			env,
 		});
 		assert(
-			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === "1.1.0",
-			"current tarball did not upgrade to 1.1.0",
+			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === packageJson().version,
+			"current tarball did not upgrade to the declared version",
 		);
 		runContractProbe(fixtureDir);
 
@@ -261,7 +261,7 @@ function checkLocalLifecycle() {
 				status: "PASS",
 				mode: "local-pack-lifecycle",
 				install: "0.9.0",
-				upgrade: "1.1.0",
+				upgrade: packageJson().version,
 				rollback: "0.9.0",
 				uninstall: "removed",
 			}),

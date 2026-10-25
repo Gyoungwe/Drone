@@ -26,6 +26,21 @@ Node.js access from an untrusted plugin. Hosts may additionally load optional
 extensions through Drone's process sandbox proxy; that runtime boundary is a
 host capability and must not be implied by a manifest declaration.
 
-The public package is currently `1.1.0`. API v1 is additive-only: publish a new
+The candidate package is `1.2.0`; the current public release remains `1.1.0`. API v1 is additive-only: publish a new
 minor or patch only when the contract changes, verify the packed tarball in a
 clean consumer before release, and never overwrite an existing version.
+
+## Desktop knowledge UI contract
+
+`@gyoungwe/plugin-api/ui` exports the type-only `KnowledgeUiPort`,
+`KnowledgeUiBindings`, `DroneUiRuntime`, and `KnowledgeSurfaceProps` contracts.
+A UI plugin accesses services through `window.DroneUI.knowledge`; the host retains
+authorization, Vault boundaries, and persistence. The port is an explicit list of
+56 required methods, not the complete preload API. React bindings require React 19
+types only when importing this UI subpath; the package has no runtime dependency.
+
+`src/ui-wire.ts` is generated from the shared wire contracts and existing public
+knowledge types. The allowlist in `scripts/knowledge-ui-contract.json` fixes the
+public scope. In the source checkout, run
+`node scripts/generate-knowledge-ui-contract.mjs` after changing a wire type.
+Package build and typecheck reject a stale generated contract.

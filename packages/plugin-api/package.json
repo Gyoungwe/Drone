@@ -1,6 +1,6 @@
 {
 	"name": "@gyoungwe/plugin-api",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"description": "Stable host contracts for Drone capability plugins",
 	"license": "MIT",
 	"publishConfig": {
@@ -24,6 +24,11 @@
 			"types": "./dist/knowledge.d.ts",
 			"import": "./dist/knowledge.js",
 			"default": "./dist/knowledge.js"
+		},
+		"./ui": {
+			"types": "./dist/ui.d.ts",
+			"import": "./dist/ui.js",
+			"default": "./dist/ui.js"
 		}
 	},
 	"files": [
@@ -32,9 +37,17 @@
 		"package.json"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.build.json",
-		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"build": "node ../../scripts/generate-knowledge-ui-contract.mjs --check && tsc -p tsconfig.build.json",
+		"typecheck": "node ../../scripts/generate-knowledge-ui-contract.mjs --check && tsc -p tsconfig.json --noEmit",
 		"check": "npm run typecheck && npm run build && node ../../scripts/check-plugin-api.mjs --package-only",
-		"test": "npm run check && node --test test/index.test.mjs"
+		"test": "npm run check && node --test test/*.test.mjs"
+	},
+	"peerDependencies": {
+		"@types/react": ">=19"
+	},
+	"peerDependenciesMeta": {
+		"@types/react": {
+			"optional": true
+		}
 	}
 }

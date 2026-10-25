@@ -2,6 +2,14 @@ import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
+	knowledgeFallback: {
+		title: "Knowledge",
+		hint: "Enable the knowledge UI plugin to browse, search, explore the graph, review and configure your library.",
+		loading: "Loading binding status…",
+		unbound: "No knowledge vault is bound",
+		openFolder: "Open vault folder",
+		managePlugins: "Manage UI plugins",
+	},
 	pluginSandbox: {
 		title: "Plugin process",
 		networkPermission: "This extension needs network permission for this session.",

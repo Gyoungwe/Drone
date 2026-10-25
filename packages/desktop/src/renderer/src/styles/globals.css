@@ -173,22 +173,6 @@
 	   keep the graph, cloud sync and evidence surfaces readable without making
 	   the rest of the workbench inherit their blue accents. */
 	/* U1：知识库回到通用中性灰；只保留星云图用的 accent/main/directory */
-	--knowledge-canvas: var(--color-canvas);
-	--knowledge-surface: var(--color-surface);
-	--knowledge-surface-muted: var(--color-hover);
-	--knowledge-border: var(--color-border);
-	--knowledge-border-strong: var(--color-border-strong);
-	--knowledge-ink: var(--color-ink);
-	--knowledge-ink-muted: var(--color-ink-dim);
-	--knowledge-ink-faint: var(--color-ink-faint);
-	--knowledge-accent: #2e6f8e;
-	--knowledge-accent-soft: #e8f2f5;
-	--knowledge-grid: #e6edf3;
-	--knowledge-edge: #9bafbe;
-	--knowledge-main: #b88a3a;
-	--knowledge-directory: #9b7ac6;
-	--knowledge-shadow: 0 10px 28px rgba(35, 58, 78, 0.08);
-	--knowledge-shadow-soft: 0 3px 12px rgba(35, 58, 78, 0.07);
 	/* P15：ClawGo token —— 悬停 / 选中底、功能区三色（墨 / 纸 / 强调）、动效、滚动渐隐 */
 	--highlight: #ebebeb;
 	--route-ink: oklch(37% 0.09 250);
@@ -268,22 +252,6 @@
 	--scrollbar-thumb: color-mix(in oklab, var(--color-ink) 22%, transparent);
 	--scrollbar-thumb-hover: color-mix(in oklab, var(--color-ink) 32%, transparent);
 	/* U1：知识库回到通用中性灰；只保留星云图用的 accent/main/directory */
-	--knowledge-canvas: var(--color-canvas);
-	--knowledge-surface: var(--color-surface);
-	--knowledge-surface-muted: var(--color-hover);
-	--knowledge-border: var(--color-border);
-	--knowledge-border-strong: var(--color-border-strong);
-	--knowledge-ink: var(--color-ink);
-	--knowledge-ink-muted: var(--color-ink-dim);
-	--knowledge-ink-faint: var(--color-ink-faint);
-	--knowledge-accent: #7eb5c8;
-	--knowledge-accent-soft: #263940;
-	--knowledge-grid: #39434d;
-	--knowledge-edge: #6f8190;
-	--knowledge-main: #d4ad68;
-	--knowledge-directory: #b899de;
-	--knowledge-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
-	--knowledge-shadow-soft: 0 3px 12px rgba(0, 0, 0, 0.22);
 	--highlight: color-mix(in oklab, var(--color-ink) 10%, transparent);
 	--route-ink: oklch(85% 0.06 250);
 	--route-paper: oklch(27% 0.03 250);
@@ -3531,21 +3499,6 @@ code {
 }
 
 /* ---------- 知识库：页头去分隔线、状态卡去阴影，与工作台同一套层级 ---------- */
-.knowledge-view-head {
-	border-bottom-color: transparent;
-	background: transparent;
-	padding: var(--space-4) var(--space-6) var(--space-2);
-}
-.knowledge-view-body {
-	/* Same frame as PageShell (px-8 pt-8 pb-12) so first-level pages line up. */
-	padding: 2rem 2rem 3rem;
-	background: var(--knowledge-canvas);
-}
-.knowledge-home > section:first-child {
-	box-shadow: none;
-	border-color: var(--knowledge-border);
-	background: var(--knowledge-surface);
-}
 
 /* ---------- 文件预览侧栏：工具条去框，内容区更安静 ---------- */
 .resource-reader-toolbar {
@@ -3843,109 +3796,10 @@ code {
 }
 
 /* G5：知识库内部子卡去卡中卡 —— 外层卡保留描边，内层改为浅底无框，阴影只留一层 */
-.knowledge-view {
-	--knowledge-shadow: 0 1px 2px rgba(35, 58, 78, 0.04);
-	--knowledge-shadow-soft: none;
-}
-.knowledge-home :is(section, article) :is(section, article, div).rounded-xl.border,
-.knowledge-home :is(section, article) :is(section, article, div).rounded-lg.border {
-	border-color: transparent;
-	background: var(--knowledge-surface-muted);
-	box-shadow: none;
-}
 
 /* Knowledge network refresh: keep the graph a calm, paper-like research
    surface. The older shell rules remain for compatibility, but the graph
    itself now follows the same light hierarchy as the rest of the page. */
-.knowledge-network-header {
-	display: flex;
-	align-items: flex-end;
-	justify-content: space-between;
-	gap: var(--space-4);
-	padding: var(--space-1) var(--space-1) var(--space-2);
-}
-.knowledge-network-eyebrow {
-	margin: 0 0 3px;
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
-	color: var(--knowledge-accent);
-}
-.knowledge-network-title {
-	margin: 0;
-	font-size: 16px;
-	font-weight: 600;
-	letter-spacing: -0.015em;
-	color: var(--knowledge-ink);
-}
-.knowledge-network-hint {
-	max-width: 620px;
-	margin: 4px 0 0;
-	font-size: 11px;
-	line-height: 1.55;
-	color: var(--knowledge-ink-muted);
-}
-.knowledge-network-stats {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: flex-end;
-	gap: var(--space-2);
-	font-size: 11px;
-	color: var(--knowledge-ink-muted);
-}
-.knowledge-network-header .knowledge-network-stats span {
-	border: 1px solid var(--knowledge-border);
-	border-radius: 999px;
-	background: var(--knowledge-surface-muted);
-	padding: 4px 9px;
-	white-space: nowrap;
-}
-.knowledge-network-stats strong {
-	font-variant-numeric: tabular-nums;
-	color: var(--knowledge-ink);
-}
-.knowledge-observatory-canvas {
-	background:
-		radial-gradient(
-			circle at 18% 16%,
-			color-mix(in srgb, var(--knowledge-accent) 7%, transparent),
-			transparent 32%
-		),
-		linear-gradient(180deg, var(--knowledge-surface), var(--knowledge-canvas));
-}
-.knowledge-graph-controls,
-.knowledge-graph-observatory-label,
-.knowledge-graph-legend {
-	background: color-mix(in srgb, var(--knowledge-surface) 96%, transparent);
-}
-.knowledge-graph-zoom-button,
-.knowledge-graph-fit-button {
-	color: var(--knowledge-ink-muted);
-}
-.knowledge-graph-zoom-button:hover,
-.knowledge-graph-fit-button:hover {
-	background: var(--knowledge-accent-soft);
-	color: var(--knowledge-accent);
-}
-.knowledge-graph-category-filter {
-	color: var(--knowledge-ink-muted);
-}
-.knowledge-graph-category-filter:hover,
-.knowledge-graph-category-filter.is-active {
-	border-color: color-mix(in srgb, var(--knowledge-accent) 38%, var(--knowledge-border));
-	background: var(--knowledge-accent-soft);
-	color: var(--knowledge-accent);
-}
-@media (max-width: 760px) {
-	.knowledge-network-header {
-		align-items: flex-start;
-		flex-direction: column;
-	}
-	.knowledge-network-stats {
-		justify-content: flex-start;
-	}
-}
 
 /* U4：轮末页脚只常驻计时与错误；变更 / token / 步骤明细悬停或键盘聚焦时显示 */
 .turn-footer > .turn-footer-stat,
