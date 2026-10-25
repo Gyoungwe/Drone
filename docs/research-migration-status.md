@@ -1,5 +1,7 @@
 # Research / pi-research / Zotero 迁移状态
 
+> **2026-10-25 npm 发布准备**：已按用户授权准备 `pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10`，基于两仓库 main 的独立工作区验证。当前 npm 认证返回 E401，发布为 **BLOCKED_AUTH**；公开包下载、发布后干净安装与宿主验收保持 **NOT_RUN**。本地候选包验收不能替代公开发布，其他未完成项不变。见 [本次发布记录](releases/knowledge-research-npm-2026-10-25.md)。
+
 > 2026-10-24：用户已授权跨包迁移。本轮将研究核心移入外部插件；源码迁移不再以缺范围授权标记 BLOCKED。真实账户验收与源码门禁分别记录。
 
 两仓库 `codex/research-boundary-acceptance` 已快进合入各自 `main`：宿主源码基线 `c14f3154`，插件 `ff1d659`。合并与门禁证据见[本轮汇总](releases/research-boundary-acceptance-2026-10-24.json)的 `mainIntegration`；合并不改变下方未完成项或 npm 未发布状态。

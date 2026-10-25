@@ -1,5 +1,7 @@
 # Drone 最终插件化计划
 
+> **2026-10-25 npm 发布准备**：已按用户授权准备 `pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10`，基于两仓库 main 的独立工作区验证。当前 npm 认证返回 E401，发布为 **BLOCKED_AUTH**；公开包下载、发布后干净安装与宿主验收保持 **NOT_RUN**。本地候选包验收不能替代公开发布，其他未完成项不变。见 [本次发布记录](releases/knowledge-research-npm-2026-10-25.md)。
+
 > **2026-10-25 分类修复更新**：RESEARCH-GUI-CATEGORY 已在 `codex/knowledge-category-fix` 完成回归与正式 macOS arm64 DMG GUI 验收：同库方法 0→1、软件 7→4，方法/软件页、原文阅读与重启通过，23 个 Markdown 文件哈希不变。双仓库门禁通过；宿主源码 `e38312a9`、插件源码 `831e399`，已快进合入 main（Drone `a853230e` / drone-plugins `c43f7b4`），合并后双仓库完整门禁通过；机器回执见分类证据 `mainIntegration`。`pi-knowledge@0.2.1`、`research-suite@0.1.10` 和 `pi-research@0.2.0` 尚未发布 npm；研究迁移仍 PARTIAL，账户与暂缓项不变。见[分类修复证据](pluginization/knowledge-category-fix-evidence.md)。
 
 > **2026-10-24 研究 GUI 更新**：迁移后正式 macOS arm64 DMG 已完成本地两源研究闭环：来源归档/读取、证据门禁、草稿/总结、引用阅读、重启新会话接续、过期检测及字节恢复。修复会话只读分类、旧 bundle 清单背书与 backend 阅读端口三个阻塞。源码 `1d544db9`，见[研究 GUI 证据](pluginization/research-workflow-gui-evidence.md)。仅本地工作流范围 PASS；当时发现的概览分类 RESEARCH-GUI-CATEGORY 后续状态见上方记录，真实云端账户、新包 npm 发布等仍未完成。2026-10-25 已快进合入 `main=fe41db7e`，合并后完整宿主及插件门禁通过，见同一证据的 `mainIntegration`；未完成项不变。

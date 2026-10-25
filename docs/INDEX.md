@@ -41,6 +41,8 @@ P0 权限执行切片、plugin-api v1 合同治理与当前进程沙箱实现见
 迁移后正式安装包本地两源研究闭环、重启新会话接续、来源过期/恢复与当时发现的分类问题见 [研究 GUI 证据](pluginization/research-workflow-gui-evidence.md) 和 [机器回执](releases/research-workflow-gui-acceptance-2026-10-24.json)；2026-10-25 已快进合入 `main=fe41db7e`，合并后完整门禁见 `mainIntegration`；分类后续状态见下方修复证据。
 
 方法笔记误归软件的修复、分类优先级回归与正式安装包验收见 [分类修复证据](pluginization/knowledge-category-fix-evidence.md)；两分支已快进合入 main（宿主 a853230e / 插件 c43f7b4），合并后双仓库最终门禁见机器回执 `mainIntegration`，其余未完成项不变。
+
+2026-10-25 知识/研究插件 npm 发布准备与认证阻塞见 [发布记录](releases/knowledge-research-npm-2026-10-25.md) 和 [机器回执](releases/knowledge-research-npm-2026-10-25.json)。本地检查不修改下方公开版本快照。
 知识库分类由插件 `src/core/note-category.ts` 统一决定；worker 计数与最近分组共享规则。宿主最近标签读取分组结果，路径推断只用于已有搜索/图投影；回归见插件 `category.integration.test.ts` 和宿主 `KnowledgeHome.test.ts`。
 跨 bundle 的知识阅读器回归见 `packages/backend/test/knowledge-host-ui-reading.test.mjs`，backend 显式配置工作区读取端口。任务门禁的会话工具清单隔离回归见 `packages/backend/test/task-manifest-session.test.mjs`；SDK 回调的只读判定由 `packages/tasks/src/runtime/register.ts` 绑定所属宿主，避免跨轮只读操作误触重复写入门禁。
 P1 第三方扩展、外部 MCP 与 Protocols.io 真实只读验收见 [next-stage-p1-evidence.md](pluginization/next-stage-p1-evidence.md)；研究运行时迁移边界见 [research-migration-status.md](research-migration-status.md)。 GUI 真实 Electron 验收回执见 [next-stage-gui-acceptance-2026-10-24.json](releases/next-stage-gui-acceptance-2026-10-24.json)。
