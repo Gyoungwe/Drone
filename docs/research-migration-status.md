@@ -1,14 +1,14 @@
 # Research / pi-research / Zotero 迁移状态
 
-> **2026-10-25 npm 发布准备**：已按用户授权准备 `pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10`，基于两仓库 main 的独立工作区验证。当前 npm 认证返回 E401，发布为 **BLOCKED_AUTH**；公开包下载、发布后干净安装与宿主验收保持 **NOT_RUN**。本地候选包验收不能替代公开发布，其他未完成项不变。见 [本次发布记录](releases/knowledge-research-npm-2026-10-25.md)。
+> **2026-10-25 npm 发布更新**：`pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10` 已公开，tarball 完整性与候选包一致。基于两仓库 main 的独立发布工作区；验证范围与回执见 [本次发布记录](releases/knowledge-research-npm-2026-10-25.md)。研究迁移总体保持 PARTIAL，其他未完成项不变。
 
 > 2026-10-24：用户已授权跨包迁移。本轮将研究核心移入外部插件；源码迁移不再以缺范围授权标记 BLOCKED。真实账户验收与源码门禁分别记录。
 
-两仓库 `codex/research-boundary-acceptance` 已快进合入各自 `main`：宿主源码基线 `c14f3154`，插件 `ff1d659`。合并与门禁证据见[本轮汇总](releases/research-boundary-acceptance-2026-10-24.json)的 `mainIntegration`；合并不改变下方未完成项或 npm 未发布状态。
+两仓库 `codex/research-boundary-acceptance` 已快进合入各自 `main`：宿主源码基线 `c14f3154`，插件 `ff1d659`。合并与门禁证据见[本轮汇总](releases/research-boundary-acceptance-2026-10-24.json)的 `mainIntegration`；该历史合并不改变当时未完成项或 npm 未发布状态；当前发布结果见顶部记录。
 
 2026-10-25，研究 GUI 修复分支已快进合入 Drone `main=fe41db7e`，合并后完整门禁通过；插件仍为 `ff1d659`。见[GUI 合并证据](releases/research-workflow-gui-acceptance-2026-10-24.json)的 `mainIntegration`。该历史合并不改变当时的 OPEN / PARTIAL 与未发布状态。
 
-2026-10-25，后续 `codex/knowledge-category-fix` 已修复并完成正式包分类验收；宿主源码 `e38312a9`、插件源码 `831e399`，双仓库门禁通过，已快进合入 main（Drone `a853230e` / drone-plugins `c43f7b4`），合并后双仓库完整门禁通过；机器回执见分类证据 `mainIntegration`。详见[分类证据](pluginization/knowledge-category-fix-evidence.md)。`pi-knowledge@0.2.1`、`research-suite@0.1.10` 与研究包 `0.2.0` 仍未发布 npm。
+2026-10-25，后续 `codex/knowledge-category-fix` 已修复并完成正式包分类验收；宿主源码 `e38312a9`、插件源码 `831e399`，双仓库门禁通过，已快进合入 main（Drone `a853230e` / drone-plugins `c43f7b4`），合并后双仓库完整门禁通过；机器回执见分类证据 `mainIntegration`。详见[分类证据](pluginization/knowledge-category-fix-evidence.md)。分类修复时三个版本尚未发布；当前发布结果见顶部记录。
 
 ## 当前所有权
 
@@ -16,7 +16,7 @@
 - Drone 已删除 `packages/pi-research/`、23 个原研究领域模块与 `research-host-entry.ts`。`scripts/build-pi-research.mjs` 验证 `plugins.lock.json` 对应产物，不再构建隐藏的宿主副本。
 - `@drone/research` 剩余 connector/shared/write contracts、capability discovery 和 run-summary 知识桥；Desktop 扩展保留宿主授权、Vault、进程和项目组合逻辑。不是所有名含 research 的宿主代码都已移走。
 - 原研究包 Git 历史经 subtree split 保留在插件 Git 祖先中，原提交与迁移路径见插件 `migration-sources.json`。
-- `0.2.0` 是本轮源码/tarball 版本，尚未发布 npm；已发布 `0.1.1` 的历史证据不能替代本轮验收。
+- `0.2.0` 已公开 npm，并与宿主锁定 tarball 字节一致；发布后验收见顶部记录，`0.1.1` 证据仅保留历史含义。
 
 ## 修复与验证口径
 
@@ -37,4 +37,4 @@
 | 正式安装包 GUI | **PASS（本地两源研究闭环）**：迁移后正式 DMG 完成绑定/授权、本地检索、真实下载/逐行读取、空引用拒绝、绑定/草稿/总结、GUI 引用阅读、重启新会话接续和 stale/恢复。脚本模型不替代科学验证；见[本轮 GUI 证据](pluginization/research-workflow-gui-evidence.md) |
 | 知识概览分类 | **PASS（RESEARCH-GUI-CATEGORY，macOS arm64）**：显式类型/目录优先于文件名；同一既有隔离库由方法 0 变为方法 1，软件页排除该笔记，阅读器与重启通过，23 个 Markdown 哈希不变。见[分类证据](pluginization/knowledge-category-fix-evidence.md) |
 
-完整研究迁移验收仍为 **PARTIAL**：源码迁移与实际会话门禁独立交付，本地安装包研究闭环已通过，但云端账户、新候选包 npm 发布和其他平台边界不能用 fixture 或旧证据关闭。
+完整研究迁移验收仍为 **PARTIAL**：源码迁移与实际会话门禁独立交付，本地安装包研究闭环已通过，npm 发布已完成，但云端账户和其他平台边界不能用 fixture 或旧证据关闭。

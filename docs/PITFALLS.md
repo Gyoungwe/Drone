@@ -33,6 +33,12 @@
 | Google Antigravity 登录后返回 400 `INVALID_ARGUMENT` 或 403 `UNSUPPORTED_CLIENT` | 二 · Cloud Code Assist ClientMetadata 枚举 |
 | 生信任务 trace 显示 `skills: []`，模型退回临时脚本 | 二 · 研究 skill 路由与开发态资源同步 |
 
+## 2026-10-25：npm 发布成功退出仍可能尚未公开
+
+`npm publish` 返回 0 不等于公共版本可安装。本轮 research 发布后 `npm view` / 官方 tarball 均返回 404，随后上传报 `E409 Cannot publish over previously staged version`；因此不能仅凭 404 判断“没有写入 registry”，也不要通过升级版本号绕过。先确认公共元数据、tarball 和 `npm stage list`；本轮也观察到被拒绝重复上传的研究版本未出现在可批准列表，不能把空列表作为重传依据。该研究版本随后出现在公开 registry，最终下载哈希与原候选一致。
+
+明确使用 staged publishing 时，`npm stage publish <tarball>` 返回 stage ID；`validating` 是 npm 正在处理，必须等到可批准状态，再核对阶段包哈希并完成 `npm stage approve <stage-id>` 的 2FA。公开下载、完整性、干净安装和宿主验收完成后才能关闭发布项。该命令需要 npm CLI 11.15.0+ / Node 22.14.0+；本轮使用隔离安装的 npm 12.2.1，没有修改全局 npm。认证回调链接、token 和 OTP 不得进入日志或证据。见 [npm 官方 staged publishing 文档](https://docs.npmjs.com/staged-publishing/)。
+
 ## 2026-10-24：任务门禁必须使用所属会话的工具清单
 
 正式包中 `research_prepare_knowledge` 的 `drone.readOnly` 已进入宿主 runtime，但 SDK 的 `tool_call` 钩子在注册作用域外运行。任务门禁读取了默认 runtime，首轮把只读调用记为副作用，下一轮同参数调用被 `idempotency-check` 拒绝。不要通过清空账本、硬编码工具名或进程级清单来绕过。

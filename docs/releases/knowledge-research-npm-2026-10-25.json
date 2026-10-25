@@ -1,370 +1,875 @@
 {
-  "date": "2026-10-25",
-  "recordedAt": "2026-10-25T09:53:47.316564+00:00",
-  "status": "BLOCKED_AUTH",
-  "branch": "codex/knowledge-research-npm-release",
-  "authorization": "User explicitly authorized these three npm versions and evidence push; authentication is missing, not publication permission.",
-  "source": {
-    "Drone": "9d5bce4fb15ee532771d6152d793f2455a86d0e6",
-    "drone-plugins": "df4ba329821284b46d26e6f5bf86018cd806aa54",
-    "base": "main",
-    "isolatedWorktrees": true,
-    "unmergedScientificAgentUpgradeIncluded": false
-  },
-  "authentication": {
-    "status": "BLOCKED_AUTH",
-    "exitCode": 1,
-    "code": "E401"
-  },
-  "publishAttempts": 0,
-  "registryPreflight": {
-    "registry": "https://registry.npmjs.org",
-    "targetVersions": "All three exact versions returned E404 before staging. This is not publication evidence."
-  },
-  "stagedPackages": [
-    {
-      "name": "@gyoungwe/pi-knowledge",
-      "version": "0.2.1",
-      "tarball": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/tarballs/gyoungwe-pi-knowledge-0.2.1.tgz",
-      "sha256": "c40c15923108067842d2295fe836959ad25870ef3a7ab89361f6e778528ab6b1",
-      "integrity": "sha512-d4VRP3AgoUiL8DZC4uB+vMSPaLuz9d7H6HoqKO3ujQ7qZIGTtpswpGMeSNo+6O+YTga1STr2KphfPXVbZIThNw==",
-      "shasum": "c6d625f55dfcb69e63a886dc926363abdc4228ad",
-      "fileCount": 132,
-      "symlinks": 0,
-      "manifestVersionMatches": true,
-      "bundleShapeVerified": true,
-      "publication": "NOT_PUBLISHED"
-    },
-    {
-      "name": "@gyoungwe/pi-research",
-      "version": "0.2.0",
-      "tarball": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/tarballs/gyoungwe-pi-research-0.2.0.tgz",
-      "sha256": "f9cd4727910351c8210ffaf4088c9a3585d89312307a09dfc7fb3b1f452adaab",
-      "integrity": "sha512-QXUAxB94rWdOHiyFtNlwGVuIDmVNUO3JCvOqvp7KGHoynuqZ335sM00W6+EI0UOKUCyfZ9W99BrLYVirzzM1qg==",
-      "shasum": "14169bd5ed827fca4daf1ba6d85a9d29690de79a",
-      "fileCount": 37,
-      "symlinks": 0,
-      "manifestVersionMatches": true,
-      "bundleShapeVerified": true,
-      "publication": "NOT_PUBLISHED"
-    },
-    {
-      "name": "@gyoungwe/research-suite",
-      "version": "0.1.10",
-      "tarball": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/tarballs/gyoungwe-research-suite-0.1.10.tgz",
-      "sha256": "06eef5a4e92896a067e808af1241d2d91d7426672c4f23c201e035d7e0c666c9",
-      "integrity": "sha512-vshmVn4ioRAvLADe4nxMkiJPl4VlwmSpUluDo8nwFyDxPZuQfl7q1bj3qU1z0aCd8Jw6pY+hGyMMrD1dGhKnQQ==",
-      "shasum": "6516ba30620e1c417350f8eafc444b0f610cc433",
-      "fileCount": 742,
-      "symlinks": 0,
-      "manifestVersionMatches": true,
-      "bundleShapeVerified": true,
-      "publication": "NOT_PUBLISHED"
-    }
-  ],
-  "hostLock": {
-    "changed": false,
-    "knowledgeTarballMatchesLock": true,
-    "researchTarballMatchesLock": true
-  },
-  "prePublicationChecks": {
-    "host": [
-      {
-        "name": "lint",
-        "command": "npm run lint",
-        "exitCode": 0,
-        "seconds": 2.42,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/lint.log",
-        "sha256": "0f4fb9fa14844cad71af808914b42ccb072c4e2a17b568c54e416f59577548c5"
-      },
-      {
-        "name": "typecheck",
-        "command": "npm run typecheck",
-        "exitCode": 0,
-        "seconds": 87.2,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/typecheck.log",
-        "sha256": "5490cf04ebf794e3c967ca185e958bd41f1729fb3a3134d5cbfdde9c3eff7f0c"
-      },
-      {
-        "name": "test",
-        "command": "npm test",
-        "exitCode": 0,
-        "seconds": 131.42,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/test.log",
-        "sha256": "f6955294b09c255f73d3ecb90036cdd743ab94a8dcc2a5997e87e78183e15e94"
-      },
-      {
-        "name": "build",
-        "command": "npm run build",
-        "exitCode": 0,
-        "seconds": 77.36,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/build.log",
-        "sha256": "3c8df203df8294f2e0ba15a8869f1bd3fada5abe5a830ca8e02a74df9eca92ce"
-      },
-      {
-        "name": "arch",
-        "command": "npm run check:arch",
-        "exitCode": 0,
-        "seconds": 1.19,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/arch.log",
-        "sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
-      },
-      {
-        "name": "plugin-api",
-        "command": "npm run check:plugin-api -- --migration --lifecycle",
-        "exitCode": 0,
-        "seconds": 3.42,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/plugin-api.log",
-        "sha256": "0ec9b7203fd1ddbb19bfbbd6bf1b345ebc57ffdb6192a9b59d405474352c7658"
-      },
-      {
-        "name": "extensions",
-        "command": "npm run check:extensions -- --strict",
-        "exitCode": 0,
-        "seconds": 0.46,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/extensions.log",
-        "sha256": "f0d9fe7b2af4cd620b3c3080d898f61bf1ce9230abdb99c01b75d894a0d56286"
-      },
-      {
-        "name": "upgrade",
-        "command": "npm run test:upgrade",
-        "exitCode": 0,
-        "seconds": 1.47,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/upgrade.log",
-        "sha256": "91a0ac41a70d177f0b737a49710f9a1b09b53352690517ca8e068dea65fb5c60"
-      },
-      {
-        "name": "pi-compat",
-        "command": "npm run check:pi-compat -- --targets locked,latest",
-        "exitCode": 0,
-        "seconds": 68.41,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/pi-compat.log",
-        "sha256": "d3def19c2a07a0995d6da33451642a67078982c9c2e7ec99c071b58932aa9205"
-      },
-      {
-        "name": "public-host",
-        "command": "npm run check:public-plugin-host",
-        "exitCode": 0,
-        "seconds": 32.07,
-        "log": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/public-host.log",
-        "sha256": "4d941d6b9432bab2c2d0f3b4e83574aaf9737bb037450087ff409b363dfd91fe"
-      }
-    ],
-    "plugin": [
-      {
-        "command": "npm ci",
-        "exitCode": 0,
-        "path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/drone-npm-release-plugin-ci.log",
-        "sha256": "4ab0b55ed042b789548bb4b7f571479d91f9f3076e2926233f72e17e3b59e1eb"
-      },
-      {
-        "command": "npm run check",
-        "exitCode": 0,
-        "path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/drone-npm-release-plugin-check.log",
-        "sha256": "ce771b183e6844f233fb206788ec2e0f7dde6e04df986ccfee9b7a52c7dc8368"
-      },
-      {
-        "command": "npm test -w @gyoungwe/pi-knowledge",
-        "exitCode": 0,
-        "testFiles": 41,
-        "tests": 341,
-        "path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/knowledge-tests.log",
-        "sha256": "7cfd3032caba36664dc6d15881d56e72b8ad7628a513b3f27029012baf6a56f8"
-      },
-      {
-        "command": "npm run smoke -w @gyoungwe/pi-knowledge",
-        "exitCode": 0,
-        "path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/knowledge-smoke.log",
-        "sha256": "9d65a2da6bdfd492ea3f663d1a5c36868b04a956e8791d1aa52f96f388113057"
-      }
-    ],
-    "stagedCleanConsumers": {
-      "status": "PASS",
-      "source": "staged",
-      "publicReleaseVerified": false,
-      "model": "offline Pi faux provider; real AgentSession tool dispatch; synthetic sources only",
-      "matrix": [
-        {
-          "target": "locked",
-          "sdkVersion": "1.1.0",
-          "shape": "standalone",
-          "cleanInstall": true,
-          "symlinks": false,
-          "knowledgeWorker": {
-            "status": "PASS",
-            "hostEntry": true,
-            "realWorker": true,
-            "reopen": true,
-            "methods": 2,
-            "software": 1
-          },
-          "agentSession": {
-            "knowledgeStatusDispatched": true,
-            "loadedExtensionCount": 3,
-            "status": "PASS",
-            "dispatchCount": 15,
-            "tools": 6,
-            "sessions": 2,
-            "sameWorkspace": true,
-            "sharedExtensionClosure": true,
-            "contextSessionManager": true,
-            "sourcedAnswer": true,
-            "candidateDepositionReadBack": true,
-            "emptyClaimsBlocked": true,
-            "crossSessionReadBlocked": true,
-            "crossSessionLedgerBlocked": true
-          }
-        },
-        {
-          "target": "latest",
-          "sdkVersion": "1.4.0",
-          "shape": "standalone",
-          "cleanInstall": true,
-          "symlinks": false,
-          "knowledgeWorker": {
-            "status": "PASS",
-            "hostEntry": true,
-            "realWorker": true,
-            "reopen": true,
-            "methods": 2,
-            "software": 1
-          },
-          "agentSession": {
-            "knowledgeStatusDispatched": true,
-            "loadedExtensionCount": 3,
-            "status": "PASS",
-            "dispatchCount": 15,
-            "tools": 6,
-            "sessions": 2,
-            "sameWorkspace": true,
-            "sharedExtensionClosure": true,
-            "contextSessionManager": true,
-            "sourcedAnswer": true,
-            "candidateDepositionReadBack": true,
-            "emptyClaimsBlocked": true,
-            "crossSessionReadBlocked": true,
-            "crossSessionLedgerBlocked": true
-          }
-        },
-        {
-          "target": "locked",
-          "sdkVersion": "1.1.0",
-          "shape": "suite",
-          "cleanInstall": true,
-          "symlinks": false,
-          "knowledgeWorker": {
-            "status": "PASS",
-            "hostEntry": true,
-            "realWorker": true,
-            "reopen": true,
-            "methods": 2,
-            "software": 1
-          },
-          "agentSession": {
-            "knowledgeStatusDispatched": true,
-            "loadedExtensionCount": 3,
-            "status": "PASS",
-            "dispatchCount": 15,
-            "tools": 6,
-            "sessions": 2,
-            "sameWorkspace": true,
-            "sharedExtensionClosure": true,
-            "contextSessionManager": true,
-            "sourcedAnswer": true,
-            "candidateDepositionReadBack": true,
-            "emptyClaimsBlocked": true,
-            "crossSessionReadBlocked": true,
-            "crossSessionLedgerBlocked": true
-          },
-          "suiteTaskGuard": {
-            "status": "PASS",
-            "allSuiteExtensionsLoaded": true,
-            "unapprovedTaskBlocked": true,
-            "taskStatusDispatched": true
-          }
-        },
-        {
-          "target": "latest",
-          "sdkVersion": "1.4.0",
-          "shape": "suite",
-          "cleanInstall": true,
-          "symlinks": false,
-          "knowledgeWorker": {
-            "status": "PASS",
-            "hostEntry": true,
-            "realWorker": true,
-            "reopen": true,
-            "methods": 2,
-            "software": 1
-          },
-          "agentSession": {
-            "knowledgeStatusDispatched": true,
-            "loadedExtensionCount": 3,
-            "status": "PASS",
-            "dispatchCount": 15,
-            "tools": 6,
-            "sessions": 2,
-            "sameWorkspace": true,
-            "sharedExtensionClosure": true,
-            "contextSessionManager": true,
-            "sourcedAnswer": true,
-            "candidateDepositionReadBack": true,
-            "emptyClaimsBlocked": true,
-            "crossSessionReadBlocked": true,
-            "crossSessionLedgerBlocked": true
-          },
-          "suiteTaskGuard": {
-            "status": "PASS",
-            "allSuiteExtensionsLoaded": true,
-            "unapprovedTaskBlocked": true,
-            "taskStatusDispatched": true
-          }
-        }
-      ],
-      "scope": "Staged tarballs only. Research and knowledge session probes load these two extensions; the full suite separately proves task_status dispatch and denial before task approval. No approved full-suite research workflow is claimed."
-    }
-  },
-  "publicHostGateScope": "Existing public pi-evidence@0.1.1, pi-connectors@0.1.1 and desktop-ui-pack@0.1.1 only. It does not establish public acceptance for the three unpublished targets.",
-  "failedAttempts": [
-    {
-      "check": "host npm test",
-      "cause": "Isolated HOME under /tmp caused the permission test to apply temporary-directory exemption. Moved only the test HOME outside /tmp and reran full npm test successfully; no source changes.",
-      "path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/test-first-attempt.log",
-      "sha256": "ac98aeaa4d19c01e4e0759f0ae6e54431d6508abc62b44e7aa9ad087ae981201"
-    },
-    {
-      "check": "staged full-suite probe",
-      "cause": "Probe incorrectly expected knowledge_status to execute without task approval. Actual core returned the intended task-plan denial. Final full-suite probe asserts denial plus task_status success; research execution is tested separately with packaged knowledge/research entrypoints.",
-      "path": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/evidence/staged-suite-locked-session.log",
-      "sha256": "a37e4b7a245e641065920b44c1de024ede71c400c65e6c50424c68d0b00af678"
-    }
-  ],
-  "postPublication": {
-    "registryTarballAndIntegrity": "NOT_RUN",
-    "publicCleanInstall": "NOT_RUN",
-    "publicAgentSessions": "NOT_RUN",
-    "publicPiCli": "NOT_RUN",
-    "postPublishHostValidation": "NOT_RUN"
-  },
-  "resume": {
-    "authentication": "Complete npm login locally using the browser/security key. Do not send secrets to chat.",
-    "publishOrder": [
-      "@gyoungwe/pi-knowledge@0.2.1",
-      "@gyoungwe/pi-research@0.2.0",
-      "@gyoungwe/research-suite@0.1.10"
-    ],
-    "rules": "Recheck registry before each immutable publish; publish staged tarballs; download and compare integrity/shasum/SHA-256 immediately, then run clean public consumers, Pi CLI and host verification.",
-    "privatePreparedVerifier": "/Users/gaoyangwei/Documents/ChatGPT/Drone/.local/acceptance/knowledge-research-npm-2026-10-25/verifier/verify.py",
-    "publicVerifierExecuted": false
-  },
-  "unchangedRemaining": [
-    "Zotero cloud write and identity-conflict acceptance",
-    "User-owned authenticated MCP acceptance",
-    "Protocols.io write acceptance",
-    "Other platforms",
-    "Online model quality and scientific review",
-    "MinerU/GROBID deferred",
-    "B8 cloud collaboration deferred"
-  ],
-  "privateLogPolicy": "Only metadata and hashes are committed. Raw logs, synthetic Vault/session data, tarballs and local verification scripts remain outside Git."
+	"date": "2026-10-25",
+	"recordedAt": "2026-10-25T14:10:01.714922+00:00",
+	"status": "PUBLISHED_VERIFIED",
+	"branch": "codex/knowledge-research-npm-release",
+	"authorization": "User explicitly authorized these exact three npm versions and evidence push; completed official local browser/security-key authentication.",
+	"source": {
+		"Drone": "9d5bce4fb15ee532771d6152d793f2455a86d0e6",
+		"drone-plugins": "df4ba329821284b46d26e6f5bf86018cd806aa54",
+		"base": "main",
+		"isolatedWorktrees": true,
+		"unmergedScientificAgentUpgradeIncluded": false
+	},
+	"authentication": {
+		"status": "PASS",
+		"account": "gyoungwe",
+		"tfaMode": "auth-and-writes",
+		"credentialsRecorded": false
+	},
+	"registryPreflight": {
+		"registry": "https://registry.npmjs.org",
+		"targetVersions": "All three exact versions returned E404 before staging. This is not publication evidence."
+	},
+	"stagedPackages": [
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.2.1",
+			"sha256": "c40c15923108067842d2295fe836959ad25870ef3a7ab89361f6e778528ab6b1",
+			"integrity": "sha512-d4VRP3AgoUiL8DZC4uB+vMSPaLuz9d7H6HoqKO3ujQ7qZIGTtpswpGMeSNo+6O+YTga1STr2KphfPXVbZIThNw==",
+			"shasum": "c6d625f55dfcb69e63a886dc926363abdc4228ad",
+			"fileCount": 132,
+			"symlinks": 0,
+			"manifestVersionMatches": true,
+			"bundleShapeVerified": true,
+			"publication": "PUBLIC_VERIFIED"
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"version": "0.2.0",
+			"sha256": "f9cd4727910351c8210ffaf4088c9a3585d89312307a09dfc7fb3b1f452adaab",
+			"integrity": "sha512-QXUAxB94rWdOHiyFtNlwGVuIDmVNUO3JCvOqvp7KGHoynuqZ335sM00W6+EI0UOKUCyfZ9W99BrLYVirzzM1qg==",
+			"shasum": "14169bd5ed827fca4daf1ba6d85a9d29690de79a",
+			"fileCount": 37,
+			"symlinks": 0,
+			"manifestVersionMatches": true,
+			"bundleShapeVerified": true,
+			"publication": "PUBLIC_VERIFIED"
+		},
+		{
+			"name": "@gyoungwe/research-suite",
+			"version": "0.1.10",
+			"sha256": "06eef5a4e92896a067e808af1241d2d91d7426672c4f23c201e035d7e0c666c9",
+			"integrity": "sha512-vshmVn4ioRAvLADe4nxMkiJPl4VlwmSpUluDo8nwFyDxPZuQfl7q1bj3qU1z0aCd8Jw6pY+hGyMMrD1dGhKnQQ==",
+			"shasum": "6516ba30620e1c417350f8eafc444b0f610cc433",
+			"fileCount": 742,
+			"symlinks": 0,
+			"manifestVersionMatches": true,
+			"bundleShapeVerified": true,
+			"publication": "PUBLIC_VERIFIED"
+		}
+	],
+	"hostLock": {
+		"changed": false,
+		"knowledgeTarballMatchesLock": true,
+		"researchTarballMatchesLock": true
+	},
+	"prePublicationChecks": {
+		"host": [
+			{
+				"name": "lint",
+				"command": "npm run lint",
+				"exitCode": 0,
+				"seconds": 2.42,
+				"log": "lint.log",
+				"sha256": "0f4fb9fa14844cad71af808914b42ccb072c4e2a17b568c54e416f59577548c5"
+			},
+			{
+				"name": "typecheck",
+				"command": "npm run typecheck",
+				"exitCode": 0,
+				"seconds": 87.2,
+				"log": "typecheck.log",
+				"sha256": "5490cf04ebf794e3c967ca185e958bd41f1729fb3a3134d5cbfdde9c3eff7f0c"
+			},
+			{
+				"name": "test",
+				"command": "npm test",
+				"exitCode": 0,
+				"seconds": 131.42,
+				"log": "test.log",
+				"sha256": "f6955294b09c255f73d3ecb90036cdd743ab94a8dcc2a5997e87e78183e15e94"
+			},
+			{
+				"name": "build",
+				"command": "npm run build",
+				"exitCode": 0,
+				"seconds": 77.36,
+				"log": "build.log",
+				"sha256": "3c8df203df8294f2e0ba15a8869f1bd3fada5abe5a830ca8e02a74df9eca92ce"
+			},
+			{
+				"name": "arch",
+				"command": "npm run check:arch",
+				"exitCode": 0,
+				"seconds": 1.19,
+				"log": "arch.log",
+				"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"name": "plugin-api",
+				"command": "npm run check:plugin-api -- --migration --lifecycle",
+				"exitCode": 0,
+				"seconds": 3.42,
+				"log": "plugin-api.log",
+				"sha256": "0ec9b7203fd1ddbb19bfbbd6bf1b345ebc57ffdb6192a9b59d405474352c7658"
+			},
+			{
+				"name": "extensions",
+				"command": "npm run check:extensions -- --strict",
+				"exitCode": 0,
+				"seconds": 0.46,
+				"log": "extensions.log",
+				"sha256": "f0d9fe7b2af4cd620b3c3080d898f61bf1ce9230abdb99c01b75d894a0d56286"
+			},
+			{
+				"name": "upgrade",
+				"command": "npm run test:upgrade",
+				"exitCode": 0,
+				"seconds": 1.47,
+				"log": "upgrade.log",
+				"sha256": "91a0ac41a70d177f0b737a49710f9a1b09b53352690517ca8e068dea65fb5c60"
+			},
+			{
+				"name": "pi-compat",
+				"command": "npm run check:pi-compat -- --targets locked,latest",
+				"exitCode": 0,
+				"seconds": 68.41,
+				"log": "pi-compat.log",
+				"sha256": "d3def19c2a07a0995d6da33451642a67078982c9c2e7ec99c071b58932aa9205"
+			},
+			{
+				"name": "public-host",
+				"command": "npm run check:public-plugin-host",
+				"exitCode": 0,
+				"seconds": 32.07,
+				"log": "public-host.log",
+				"sha256": "4d941d6b9432bab2c2d0f3b4e83574aaf9737bb037450087ff409b363dfd91fe"
+			}
+		],
+		"plugin": [
+			{
+				"command": "npm ci",
+				"exitCode": 0,
+				"path": "drone-npm-release-plugin-ci.log",
+				"sha256": "4ab0b55ed042b789548bb4b7f571479d91f9f3076e2926233f72e17e3b59e1eb"
+			},
+			{
+				"command": "npm run check",
+				"exitCode": 0,
+				"path": "drone-npm-release-plugin-check.log",
+				"sha256": "ce771b183e6844f233fb206788ec2e0f7dde6e04df986ccfee9b7a52c7dc8368"
+			},
+			{
+				"command": "npm test -w @gyoungwe/pi-knowledge",
+				"exitCode": 0,
+				"testFiles": 41,
+				"tests": 341,
+				"path": "knowledge-tests.log",
+				"sha256": "7cfd3032caba36664dc6d15881d56e72b8ad7628a513b3f27029012baf6a56f8"
+			},
+			{
+				"command": "npm run smoke -w @gyoungwe/pi-knowledge",
+				"exitCode": 0,
+				"path": "knowledge-smoke.log",
+				"sha256": "9d65a2da6bdfd492ea3f663d1a5c36868b04a956e8791d1aa52f96f388113057"
+			}
+		],
+		"stagedCleanConsumers": {
+			"status": "PASS",
+			"source": "staged",
+			"publicReleaseVerified": false,
+			"model": "offline Pi faux provider; real AgentSession tool dispatch; synthetic sources only",
+			"matrix": [
+				{
+					"target": "locked",
+					"sdkVersion": "1.1.0",
+					"shape": "standalone",
+					"cleanInstall": true,
+					"symlinks": false,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"agentSession": {
+						"knowledgeStatusDispatched": true,
+						"loadedExtensionCount": 3,
+						"status": "PASS",
+						"dispatchCount": 15,
+						"tools": 6,
+						"sessions": 2,
+						"sameWorkspace": true,
+						"sharedExtensionClosure": true,
+						"contextSessionManager": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"emptyClaimsBlocked": true,
+						"crossSessionReadBlocked": true,
+						"crossSessionLedgerBlocked": true
+					}
+				},
+				{
+					"target": "latest",
+					"sdkVersion": "1.4.0",
+					"shape": "standalone",
+					"cleanInstall": true,
+					"symlinks": false,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"agentSession": {
+						"knowledgeStatusDispatched": true,
+						"loadedExtensionCount": 3,
+						"status": "PASS",
+						"dispatchCount": 15,
+						"tools": 6,
+						"sessions": 2,
+						"sameWorkspace": true,
+						"sharedExtensionClosure": true,
+						"contextSessionManager": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"emptyClaimsBlocked": true,
+						"crossSessionReadBlocked": true,
+						"crossSessionLedgerBlocked": true
+					}
+				},
+				{
+					"target": "locked",
+					"sdkVersion": "1.1.0",
+					"shape": "suite",
+					"cleanInstall": true,
+					"symlinks": false,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"agentSession": {
+						"knowledgeStatusDispatched": true,
+						"loadedExtensionCount": 3,
+						"status": "PASS",
+						"dispatchCount": 15,
+						"tools": 6,
+						"sessions": 2,
+						"sameWorkspace": true,
+						"sharedExtensionClosure": true,
+						"contextSessionManager": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"emptyClaimsBlocked": true,
+						"crossSessionReadBlocked": true,
+						"crossSessionLedgerBlocked": true
+					},
+					"suiteTaskGuard": {
+						"status": "PASS",
+						"allSuiteExtensionsLoaded": true,
+						"unapprovedTaskBlocked": true,
+						"taskStatusDispatched": true
+					}
+				},
+				{
+					"target": "latest",
+					"sdkVersion": "1.4.0",
+					"shape": "suite",
+					"cleanInstall": true,
+					"symlinks": false,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"agentSession": {
+						"knowledgeStatusDispatched": true,
+						"loadedExtensionCount": 3,
+						"status": "PASS",
+						"dispatchCount": 15,
+						"tools": 6,
+						"sessions": 2,
+						"sameWorkspace": true,
+						"sharedExtensionClosure": true,
+						"contextSessionManager": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"emptyClaimsBlocked": true,
+						"crossSessionReadBlocked": true,
+						"crossSessionLedgerBlocked": true
+					},
+					"suiteTaskGuard": {
+						"status": "PASS",
+						"allSuiteExtensionsLoaded": true,
+						"unapprovedTaskBlocked": true,
+						"taskStatusDispatched": true
+					}
+				}
+			],
+			"scope": "Staged tarballs only. Research and knowledge session probes load these two extensions; the full suite separately proves task_status dispatch and denial before task approval. No approved full-suite research workflow is claimed."
+		}
+	},
+	"publicHostGateScope": "check:public-plugin-host covers existing evidence/connectors/UI packages. Separate public-host-consumer verification below directly installs these published knowledge/research tarballs into Drone for 49 integration tests.",
+	"failedAttempts": [
+		{
+			"check": "host npm test",
+			"cause": "Isolated HOME under /tmp caused the permission test to apply temporary-directory exemption. Moved only the test HOME outside /tmp and reran full npm test successfully; no source changes.",
+			"path": "test-first-attempt.log",
+			"sha256": "ac98aeaa4d19c01e4e0759f0ae6e54431d6508abc62b44e7aa9ad087ae981201"
+		},
+		{
+			"check": "staged full-suite probe",
+			"cause": "Probe incorrectly expected knowledge_status to execute without task approval. Actual core returned the intended task-plan denial. Final full-suite probe asserts denial plus task_status success; research execution is tested separately with packaged knowledge/research entrypoints.",
+			"path": "staged-suite-locked-session.log",
+			"sha256": "a37e4b7a245e641065920b44c1de024ede71c400c65e6c50424c68d0b00af678"
+		},
+		{
+			"check": "post-auth host lint",
+			"cause": "Existing preflight JSON used spaces; Biome required tabs. Formatted evidence JSON, then reran full host sequence successfully. No runtime changes.",
+			"file": "post-host/lint-format-first-attempt.log",
+			"sha256": "414083c237b2153a53a7105ca81d28f91e7bc755e8a00b220b96cd78d3a9b664"
+		}
+	],
+	"postPublication": {
+		"registryTarballAndIntegrity": "PASS",
+		"publicCleanInstall": "PASS",
+		"publicAgentSessions": "PASS",
+		"publicPiCli": "PASS",
+		"postPublishHostValidation": "PASS",
+		"publicConsumers": {
+			"status": "PASS",
+			"source": "public",
+			"publicReleaseVerified": true,
+			"model": "offline Pi faux provider; real AgentSession tool dispatch; synthetic sources only",
+			"matrix": [
+				{
+					"target": "locked",
+					"sdkVersion": "1.1.0",
+					"shape": "standalone",
+					"cleanInstall": true,
+					"symlinks": false,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"agentSession": {
+						"knowledgeStatusDispatched": true,
+						"loadedExtensionCount": 3,
+						"status": "PASS",
+						"dispatchCount": 15,
+						"tools": 6,
+						"sessions": 2,
+						"sameWorkspace": true,
+						"sharedExtensionClosure": true,
+						"contextSessionManager": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"emptyClaimsBlocked": true,
+						"crossSessionReadBlocked": true,
+						"crossSessionLedgerBlocked": true
+					},
+					"suiteTaskGuard": null
+				},
+				{
+					"target": "latest",
+					"sdkVersion": "1.4.0",
+					"shape": "standalone",
+					"cleanInstall": true,
+					"symlinks": false,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"agentSession": {
+						"knowledgeStatusDispatched": true,
+						"loadedExtensionCount": 3,
+						"status": "PASS",
+						"dispatchCount": 15,
+						"tools": 6,
+						"sessions": 2,
+						"sameWorkspace": true,
+						"sharedExtensionClosure": true,
+						"contextSessionManager": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"emptyClaimsBlocked": true,
+						"crossSessionReadBlocked": true,
+						"crossSessionLedgerBlocked": true
+					},
+					"suiteTaskGuard": null
+				},
+				{
+					"target": "locked",
+					"sdkVersion": "1.1.0",
+					"shape": "suite",
+					"cleanInstall": true,
+					"symlinks": false,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"agentSession": {
+						"knowledgeStatusDispatched": true,
+						"loadedExtensionCount": 3,
+						"status": "PASS",
+						"dispatchCount": 15,
+						"tools": 6,
+						"sessions": 2,
+						"sameWorkspace": true,
+						"sharedExtensionClosure": true,
+						"contextSessionManager": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"emptyClaimsBlocked": true,
+						"crossSessionReadBlocked": true,
+						"crossSessionLedgerBlocked": true
+					},
+					"suiteTaskGuard": {
+						"status": "PASS",
+						"allSuiteExtensionsLoaded": true,
+						"unapprovedTaskBlocked": true,
+						"taskStatusDispatched": true
+					}
+				},
+				{
+					"target": "latest",
+					"sdkVersion": "1.4.0",
+					"shape": "suite",
+					"cleanInstall": true,
+					"symlinks": false,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"agentSession": {
+						"knowledgeStatusDispatched": true,
+						"loadedExtensionCount": 3,
+						"status": "PASS",
+						"dispatchCount": 15,
+						"tools": 6,
+						"sessions": 2,
+						"sameWorkspace": true,
+						"sharedExtensionClosure": true,
+						"contextSessionManager": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"emptyClaimsBlocked": true,
+						"crossSessionReadBlocked": true,
+						"crossSessionLedgerBlocked": true
+					},
+					"suiteTaskGuard": {
+						"status": "PASS",
+						"allSuiteExtensionsLoaded": true,
+						"unapprovedTaskBlocked": true,
+						"taskStatusDispatched": true
+					}
+				}
+			],
+			"scope": "Four fresh prefixes install downloaded official registry tarballs, not local candidates. Knowledge/research real sessions load their entrypoints separately; full suite additionally tests its task guard and task_status. Does not claim approved full-suite research task execution."
+		},
+		"knowledgeByName": {
+			"status": "PASS",
+			"package": "@gyoungwe/pi-knowledge@0.2.1",
+			"matrix": [
+				{
+					"sdkVersion": "1.1.0",
+					"publicInstallByName": true,
+					"integrityMatches": true,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"session": {
+						"status": "PASS",
+						"realAgentSession": true,
+						"toolsDispatched": 2,
+						"unconfiguredReported": true
+					}
+				},
+				{
+					"sdkVersion": "1.4.0",
+					"publicInstallByName": true,
+					"integrityMatches": true,
+					"knowledgeWorker": {
+						"status": "PASS",
+						"hostEntry": true,
+						"realWorker": true,
+						"reopen": true,
+						"methods": 2,
+						"software": 1
+					},
+					"session": {
+						"status": "PASS",
+						"realAgentSession": true,
+						"toolsDispatched": 2,
+						"unconfiguredReported": true
+					}
+				}
+			]
+		},
+		"piCli": {
+			"status": "PASS",
+			"piVersions": ["1.1.0", "latest"],
+			"positiveSource": "@gyoungwe/research-suite@0.1.10",
+			"legacySource": "@gyoungwe/research-suite@0.1.1",
+			"results": [
+				{
+					"label": "positive",
+					"status": "PASS",
+					"installSource": "npm:@gyoungwe/research-suite@0.1.10",
+					"pi": [
+						{
+							"requested": "1.1.0",
+							"resolved": "1.1.0",
+							"exitCode": 0,
+							"conflicts": false,
+							"timedOut": false,
+							"commands": [
+								{
+									"command": ["pi", "-p", "--no-session", "/task-status"],
+									"exitCode": 0,
+									"conflicts": false,
+									"timedOut": false
+								},
+								{
+									"command": ["pi", "-p", "--no-session", "/drone-doctor"],
+									"exitCode": 0,
+									"conflicts": false,
+									"timedOut": false
+								},
+								{
+									"command": ["pi", "-p", "--no-session", "/drone-example"],
+									"exitCode": 0,
+									"conflicts": false,
+									"timedOut": false
+								}
+							]
+						},
+						{
+							"requested": "latest",
+							"resolved": "1.4.0",
+							"exitCode": 0,
+							"conflicts": false,
+							"timedOut": false,
+							"commands": [
+								{
+									"command": ["pi", "-p", "--no-session", "/task-status"],
+									"exitCode": 0,
+									"conflicts": false,
+									"timedOut": false
+								},
+								{
+									"command": ["pi", "-p", "--no-session", "/drone-doctor"],
+									"exitCode": 0,
+									"conflicts": false,
+									"timedOut": false
+								},
+								{
+									"command": ["pi", "-p", "--no-session", "/drone-example"],
+									"exitCode": 0,
+									"conflicts": false,
+									"timedOut": false
+								}
+							]
+						}
+					]
+				},
+				{
+					"label": "legacy",
+					"status": "EXPECTED_FAILURE",
+					"installSource": "npm:@gyoungwe/research-suite@0.1.1",
+					"pi": [
+						{
+							"requested": "1.1.0",
+							"resolved": "1.1.0",
+							"exitCode": 1,
+							"conflicts": true,
+							"timedOut": false,
+							"commands": [
+								{
+									"command": ["pi", "-p", "--no-session", "/task-status"],
+									"exitCode": 1,
+									"conflicts": true,
+									"timedOut": false
+								}
+							]
+						},
+						{
+							"requested": "latest",
+							"resolved": "1.4.0",
+							"exitCode": 1,
+							"conflicts": true,
+							"timedOut": false,
+							"commands": [
+								{
+									"command": ["pi", "-p", "--no-session", "/task-status"],
+									"exitCode": 1,
+									"conflicts": true,
+									"timedOut": false
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		"hostPublishedConsumers": {
+			"status": "PASS",
+			"exitCode": 0,
+			"command": [
+				"vitest",
+				"run",
+				"test/knowledge-host-ui-reading.test.mjs",
+				"test/research-loop.test.mjs",
+				"test/knowledge-delivery-round2.test.mjs",
+				"test/research-resource.test.ts"
+			],
+			"packageSource": "Official registry tarballs, extracted into host node_modules; no workspace/source override",
+			"packages": [
+				{
+					"name": "@gyoungwe/pi-knowledge",
+					"version": "0.2.1",
+					"sha256": "c40c15923108067842d2295fe836959ad25870ef3a7ab89361f6e778528ab6b1"
+				},
+				{
+					"name": "@gyoungwe/pi-research",
+					"version": "0.2.0",
+					"sha256": "f9cd4727910351c8210ffaf4088c9a3585d89312307a09dfc7fb3b1f452adaab"
+				}
+			],
+			"log": "public-host-consumer.log",
+			"logSha256": "7cabbebbdd6b2a29c5e98dc8995727db5af2a7bea1f10319c0be33e956162235",
+			"testFiles": 4,
+			"tests": 49
+		},
+		"hostFullGates": [
+			{
+				"name": "lint",
+				"command": "npm run lint",
+				"exitCode": 0,
+				"seconds": 1.0,
+				"log": "lint.log",
+				"sha256": "c67ebd26c19e797c15cb86846b727bb3d4bfc1211cb505916bf107a9fedd7e04"
+			},
+			{
+				"name": "typecheck",
+				"command": "npm run typecheck",
+				"exitCode": 0,
+				"seconds": 85.82,
+				"log": "typecheck.log",
+				"sha256": "47a8797ad31e79c4d9a7cff3cd73b7c6009f92ec5c3947dfc0ae1433845cd476"
+			},
+			{
+				"name": "test",
+				"command": "npm test",
+				"exitCode": 0,
+				"seconds": 122.09,
+				"log": "test.log",
+				"sha256": "eb450f9bd619f9d6d6e324cc3e026975d07db7374f08e799f2100db41535d6d5"
+			},
+			{
+				"name": "build",
+				"command": "npm run build",
+				"exitCode": 0,
+				"seconds": 79.99,
+				"log": "build.log",
+				"sha256": "4f2676c41bed3139a634628029c2eb7fd02deebf0a28956e5af6e42b854f54a8"
+			},
+			{
+				"name": "arch",
+				"command": "npm run check:arch",
+				"exitCode": 0,
+				"seconds": 0.92,
+				"log": "arch.log",
+				"sha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"name": "plugin-api",
+				"command": "npm run check:plugin-api -- --migration --lifecycle",
+				"exitCode": 0,
+				"seconds": 3.61,
+				"log": "plugin-api.log",
+				"sha256": "6b5aa78f0c5d1cbe098a0eab3e948c0ecc9c01d4ddbe6cc8f8c27853eae3f885"
+			},
+			{
+				"name": "extensions",
+				"command": "npm run check:extensions -- --strict",
+				"exitCode": 0,
+				"seconds": 0.49,
+				"log": "extensions.log",
+				"sha256": "f0d9fe7b2af4cd620b3c3080d898f61bf1ce9230abdb99c01b75d894a0d56286"
+			},
+			{
+				"name": "upgrade",
+				"command": "npm run test:upgrade",
+				"exitCode": 0,
+				"seconds": 1.63,
+				"log": "upgrade.log",
+				"sha256": "93708db84a18b164217d6018f5629e1c6d5f5ab448460ff3026d99e6d84f47d7"
+			},
+			{
+				"name": "pi-compat",
+				"command": "npm run check:pi-compat -- --targets locked,latest",
+				"exitCode": 0,
+				"seconds": 75.13,
+				"log": "pi-compat.log",
+				"sha256": "d3def19c2a07a0995d6da33451642a67078982c9c2e7ec99c071b58932aa9205"
+			},
+			{
+				"name": "public-host",
+				"command": "npm run check:public-plugin-host",
+				"exitCode": 0,
+				"seconds": 27.78,
+				"log": "public-host.log",
+				"sha256": "7208fbc380ae19bf534b0a29486632e23e486e9a66240c28e543246204ea74b6"
+			}
+		],
+		"hostFullGateTiming": "Started after knowledge publication while research/suite publication was pending; passed against the same locked tarball bytes. The direct published-tarball host test ran after all three public downloads were verified.",
+		"logs": [
+			{
+				"file": "public-consumer.json",
+				"sha256": "481f347b1fe1fa8535691a3219317656da20bc2fb33b2c5a4f14f31f9a7d05b7"
+			},
+			{
+				"file": "public-pi-cli.json",
+				"sha256": "8faee97ddc530c0c277557822fe138f2f76a152835c4a73bc663f0ea3196cd4a"
+			},
+			{
+				"file": "public-pi-cli.log",
+				"sha256": "8faee97ddc530c0c277557822fe138f2f76a152835c4a73bc663f0ea3196cd4a"
+			},
+			{
+				"file": "public-host-consumer.log",
+				"sha256": "7cabbebbdd6b2a29c5e98dc8995727db5af2a7bea1f10319c0be33e956162235"
+			}
+		],
+		"pluginFinalGate": {
+			"command": "npm run check",
+			"exitCode": 0,
+			"log": "post-plugin-check.log",
+			"sha256": "072f07f0dd8caacc528841d8954a675612e27ecc0a527c8ad3b0d56e39db857b"
+		}
+	},
+	"unchangedRemaining": [
+		"Zotero cloud write and identity-conflict acceptance",
+		"User-owned authenticated MCP acceptance",
+		"Protocols.io write acceptance",
+		"Other platforms",
+		"Online model quality and scientific review",
+		"MinerU/GROBID deferred",
+		"B8 cloud collaboration deferred"
+	],
+	"privateLogPolicy": "Only sanitized metadata, booleans/counts and hashes are committed. Raw logs, credentials, synthetic Vault/session bodies and local state remain outside Git.",
+	"publication": [
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.2.1",
+			"registry": {
+				"version": "0.2.1",
+				"dist": {
+					"shasum": "c6d625f55dfcb69e63a886dc926363abdc4228ad",
+					"fileCount": 132,
+					"integrity": "sha512-d4VRP3AgoUiL8DZC4uB+vMSPaLuz9d7H6HoqKO3ujQ7qZIGTtpswpGMeSNo+6O+YTga1STr2KphfPXVbZIThNw==",
+					"unpackedSize": 1185228,
+					"tarball": "https://registry.npmjs.org/@gyoungwe/pi-knowledge/-/pi-knowledge-0.2.1.tgz"
+				}
+			},
+			"downloadSha256": "c40c15923108067842d2295fe836959ad25870ef3a7ab89361f6e778528ab6b1",
+			"matchesStaged": true,
+			"publishedAt": "2026-10-25T13:39:32.318Z",
+			"latest": "0.2.1"
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"version": "0.2.0",
+			"registry": {
+				"version": "0.2.0",
+				"dist": {
+					"shasum": "14169bd5ed827fca4daf1ba6d85a9d29690de79a",
+					"fileCount": 37,
+					"integrity": "sha512-QXUAxB94rWdOHiyFtNlwGVuIDmVNUO3JCvOqvp7KGHoynuqZ335sM00W6+EI0UOKUCyfZ9W99BrLYVirzzM1qg==",
+					"unpackedSize": 3792656,
+					"tarball": "https://registry.npmjs.org/@gyoungwe/pi-research/-/pi-research-0.2.0.tgz"
+				}
+			},
+			"downloadSha256": "f9cd4727910351c8210ffaf4088c9a3585d89312307a09dfc7fb3b1f452adaab",
+			"matchesStaged": true,
+			"publishedAt": "2026-10-25T13:58:28.655Z",
+			"latest": "0.2.0"
+		},
+		{
+			"name": "@gyoungwe/research-suite",
+			"version": "0.1.10",
+			"registry": {
+				"version": "0.1.10",
+				"dist": {
+					"shasum": "6516ba30620e1c417350f8eafc444b0f610cc433",
+					"fileCount": 742,
+					"integrity": "sha512-vshmVn4ioRAvLADe4nxMkiJPl4VlwmSpUluDo8nwFyDxPZuQfl7q1bj3qU1z0aCd8Jw6pY+hGyMMrD1dGhKnQQ==",
+					"unpackedSize": 40630510,
+					"tarball": "https://registry.npmjs.org/@gyoungwe/research-suite/-/research-suite-0.1.10.tgz"
+				}
+			},
+			"downloadSha256": "06eef5a4e92896a067e808af1241d2d91d7426672c4f23c201e035d7e0c666c9",
+			"matchesStaged": true,
+			"publishedAt": "2026-10-25T14:00:35.779Z",
+			"latest": "0.1.10"
+		}
+	],
+	"publicationWorkflow": {
+		"initialAuthentication": "E401 resolved by official npm login",
+		"research": "Initial successful CLI exit preceded public visibility; repeat upload attempts returned failure including E409 previously staged. Empty stage lists did not prove absence. Version later became public; downloaded bytes match the original candidate. No version bump or deletion.",
+		"suite": "npm 12.2.1 stage publish; waited for staged status, downloaded and matched SHA-256, completed browser/security-key stage approval; public registry and tarball verified.",
+		"suiteStageId": "73fdd98b-12cd-4f90-9b77-8182c7bf84b8",
+		"suiteApproval": {
+			"stageId": "73fdd98b-12cd-4f90-9b77-8182c7bf84b8",
+			"exitCode": 0,
+			"successLineObserved": true,
+			"safeErrorSummary": []
+		},
+		"localCli": "Isolated npm 12.2.1; system npm unchanged",
+		"attemptLog": {
+			"file": "publish-attempts.json",
+			"sha256": "7ba97ab244eae4b0a4ab14668f2799cbcfa73bf8368140a6cf381644ad746b0e"
+		}
+	},
+	"observations": [
+		"Native Pi CLI emits optional @napi-rs/canvas / DOMMatrix / Path2D warnings; PDF rendering was not exercised.",
+		"drone-doctor reports unknown host version when native Pi does not expose it; core tools and commands are present, drone-example reports needs-data.",
+		"Real SDK AgentSession dispatch with offline faux provider and synthetic sources; no online scientific-quality claim.",
+		"No new GUI or DMG build this release; prior classification-repair installed GUI evidence retains its original scope.",
+		"Other pending/deferred boundaries remain unchanged; no main merge in this evidence update."
+	]
 }

@@ -1,14 +1,14 @@
 # Drone 最终插件化计划
 
-> **2026-10-25 npm 发布准备**：已按用户授权准备 `pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10`，基于两仓库 main 的独立工作区验证。当前 npm 认证返回 E401，发布为 **BLOCKED_AUTH**；公开包下载、发布后干净安装与宿主验收保持 **NOT_RUN**。本地候选包验收不能替代公开发布，其他未完成项不变。见 [本次发布记录](releases/knowledge-research-npm-2026-10-25.md)。
+> **2026-10-25 npm 发布更新**：`pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10` 已公开，tarball 完整性与候选包一致。基于两仓库 main 的独立发布工作区；验证范围与回执见 [本次发布记录](releases/knowledge-research-npm-2026-10-25.md)。研究迁移总体保持 PARTIAL，其他未完成项不变。
 
-> **2026-10-25 分类修复更新**：RESEARCH-GUI-CATEGORY 已在 `codex/knowledge-category-fix` 完成回归与正式 macOS arm64 DMG GUI 验收：同库方法 0→1、软件 7→4，方法/软件页、原文阅读与重启通过，23 个 Markdown 文件哈希不变。双仓库门禁通过；宿主源码 `e38312a9`、插件源码 `831e399`，已快进合入 main（Drone `a853230e` / drone-plugins `c43f7b4`），合并后双仓库完整门禁通过；机器回执见分类证据 `mainIntegration`。`pi-knowledge@0.2.1`、`research-suite@0.1.10` 和 `pi-research@0.2.0` 尚未发布 npm；研究迁移仍 PARTIAL，账户与暂缓项不变。见[分类修复证据](pluginization/knowledge-category-fix-evidence.md)。
+> **2026-10-25 分类修复更新**：RESEARCH-GUI-CATEGORY 已在 `codex/knowledge-category-fix` 完成回归与正式 macOS arm64 DMG GUI 验收：同库方法 0→1、软件 7→4，方法/软件页、原文阅读与重启通过，23 个 Markdown 文件哈希不变。双仓库门禁通过；宿主源码 `e38312a9`、插件源码 `831e399`，已快进合入 main（Drone `a853230e` / drone-plugins `c43f7b4`），合并后双仓库完整门禁通过；机器回执见分类证据 `mainIntegration`。分类修复时这三个版本尚未发布；当前发布结果见顶部记录；研究迁移仍 PARTIAL，账户与暂缓项不变。见[分类修复证据](pluginization/knowledge-category-fix-evidence.md)。
 
-> **2026-10-24 研究 GUI 更新**：迁移后正式 macOS arm64 DMG 已完成本地两源研究闭环：来源归档/读取、证据门禁、草稿/总结、引用阅读、重启新会话接续、过期检测及字节恢复。修复会话只读分类、旧 bundle 清单背书与 backend 阅读端口三个阻塞。源码 `1d544db9`，见[研究 GUI 证据](pluginization/research-workflow-gui-evidence.md)。仅本地工作流范围 PASS；当时发现的概览分类 RESEARCH-GUI-CATEGORY 后续状态见上方记录，真实云端账户、新包 npm 发布等仍未完成。2026-10-25 已快进合入 `main=fe41db7e`，合并后完整宿主及插件门禁通过，见同一证据的 `mainIntegration`；未完成项不变。
+> **2026-10-24 研究 GUI 更新**：迁移后正式 macOS arm64 DMG 已完成本地两源研究闭环：来源归档/读取、证据门禁、草稿/总结、引用阅读、重启新会话接续、过期检测及字节恢复。修复会话只读分类、旧 bundle 清单背书与 backend 阅读端口三个阻塞。源码 `1d544db9`，见[研究 GUI 证据](pluginization/research-workflow-gui-evidence.md)。仅本地工作流范围 PASS；当时发现的概览分类 RESEARCH-GUI-CATEGORY 后续状态见上方记录，该 GUI 验收时真实云端账户、新包 npm 发布等仍未完成；npm 后续结果见顶部记录。2026-10-25 已快进合入 `main=fe41db7e`，合并后完整宿主及插件门禁通过，见同一证据的 `mainIntegration`；未完成项不变。
 
-> **2026-10-24 正式沙箱更新**：macOS arm64 安装包携带 Node 26.12.1；独立科研工具扩展原始 TS 安装、GUI 加载、联网拒绝/真实读取、停用恢复与退出回收已通过。详见[正式沙箱证据](pluginization/packaged-plugin-sandbox-evidence.md)。该分支已快进合入 `main=84244eb6`，合并后完整门禁通过（见证据 `mainIntegration`）。此历史更新只关闭工具代理切片；研究 GUI 后续进展见上方新记录，账户验收和新研究包 npm 发布仍未完成。
+> **2026-10-24 正式沙箱更新**：macOS arm64 安装包携带 Node 26.12.1；独立科研工具扩展原始 TS 安装、GUI 加载、联网拒绝/真实读取、停用恢复与退出回收已通过。详见[正式沙箱证据](pluginization/packaged-plugin-sandbox-evidence.md)。该分支已快进合入 `main=84244eb6`，合并后完整门禁通过（见证据 `mainIntegration`）。此历史更新只关闭工具代理切片；研究 GUI 后续进展见上方新记录，账户验收未完成；新研究包 npm 发布的后续结果见顶部记录。
 
-> **2026-10-24 研究边界更新**：两仓库分支已快进合入 `main`（宿主源码基线 `c14f3154`、插件 `ff1d659`）；合并不关闭剩余真实运行时和账户验收。完整 `pi-research@0.2.0` 核心已迁到插件仓库，宿主删除旧包、23 个重复领域模块和 research-host-entry facade，公开 `/host` 注入宿主端口。该版本与 `research-suite@0.1.9` 尚未发布 npm；旧发布快照保留历史含义。源码/真实 SDK 与未完成账户验收分别见 [迁移状态](research-migration-status.md) 和 [本轮证据](releases/research-boundary-acceptance-2026-10-24.json)。
+> **2026-10-24 研究边界更新**：两仓库分支已快进合入 `main`（宿主源码基线 `c14f3154`、插件 `ff1d659`）；合并不关闭剩余真实运行时和账户验收。完整 `pi-research@0.2.0` 核心已迁到插件仓库，宿主删除旧包、23 个重复领域模块和 research-host-entry facade，公开 `/host` 注入宿主端口。该历史合并时两个候选版本尚未发布；后续发布为 research 0.2.0 / suite 0.1.10；旧发布快照保留历史含义。源码/真实 SDK 与未完成账户验收分别见 [迁移状态](research-migration-status.md) 和 [本轮证据](releases/research-boundary-acceptance-2026-10-24.json)。
 
 > **2026-10-17 评审决议（优先于下文任何冲突表述）**
 >
@@ -20,7 +20,7 @@
 > 6. **数据位置不变**：原生 Pi 的运行数据沿用现有 `.pi/` 下的位置和 Vault，不新增 `.drone/` 目录，也不改变已落盘文件的格式。
 > 7. **npm scope 已确定**：公开包统一使用 `@gyoungwe/`。首批发布顺序为 `plugin-api` → `pi-core` / `pi-knowledge` / `pi-research` → `research-suite`；发布动作只受 npm 登录状态阻塞。
 
-> **当前发布快照（2026-10-23）**：Drone `main=a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c`，`drone-plugins` `main=127db2658f465337fe9ad936692302d8536c09ba`。公开 registry 当前版本为 `plugin-api@1.1.0`、`pi-core@0.1.8`、`pi-knowledge@0.2.0`、`pi-research@0.1.1`、`research-suite@0.1.8`、`pi-analysis@0.1.2`、`pi-evidence@0.1.1`、`pi-connectors@0.1.1` 和 `desktop-ui-pack@0.1.1`；对应真实安装、加载、宿主和生命周期证据见 [`v1.1.0 npm 发布证据`](releases/v1.1.0-npm-packages.json)、[`pi-analysis 0.1.2 发布证据`](releases/v3.1-pi-analysis-0.1.2.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
+> **历史发布快照（2026-10-23）**：Drone `main=a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c`，`drone-plugins` `main=127db2658f465337fe9ad936692302d8536c09ba`。当时公开 registry 版本为 `plugin-api@1.1.0`、`pi-core@0.1.8`、`pi-knowledge@0.2.0`、`pi-research@0.1.1`、`research-suite@0.1.8`、`pi-analysis@0.1.2`、`pi-evidence@0.1.1`、`pi-connectors@0.1.1` 和 `desktop-ui-pack@0.1.1`；对应真实安装、加载、宿主和生命周期证据见 [`v1.1.0 npm 发布证据`](releases/v1.1.0-npm-packages.json)、[`pi-analysis 0.1.2 发布证据`](releases/v3.1-pi-analysis-0.1.2.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 >
 > 历史 PR 执行清单见 §9.1；当前剩余 v1.1 的目标、顺序和完成判定见 §9.2。
 
@@ -31,7 +31,7 @@ Drone 的最终交付形态是：**原生 Pi 作为运行时，Drone 能力通�
 用户安装一个聚合包即可体验核心能力：
 
 ```sh
-pi install npm:@gyoungwe/research-suite@0.1.8
+pi install npm:@gyoungwe/research-suite@0.1.10
 pi
 ```
 
@@ -493,12 +493,12 @@ Claude Code adapter 必须通过同一套：
 | MCP / 研究连接器 | **隔离真实调用已通过；WebDAV/Zotero 写入闭环已验收** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 启动本地 stdio fixture，启用后真实 tool call 返回 `DRONE-MCP-001`，关闭并重载后无工具/无 marker；同一测试通过 read-only `CapabilityResearchPorts` 对唯一词 `DRONE-CONN-01-UNIQUE` 回读稳定 source ID/URL/调用记录，关闭后跳过传输、重新启用可重试；WebDAV 与 Zotero 均有真实临时对象回执；Protocols.io 保持只读 | 复跑 `check:remaining-gates` 并在根门禁中保留该证据；Protocols.io 不进行写入 |
 | 外部写入回读删除 | **WebDAV/Zotero 已通过；Protocols.io 只读** | WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；凭据仅在进程环境使用 | 保持 Protocols.io 只读；后续若启用写入，必须另行授权并保留同等回读证据 |
 | 结果红线、evidence、provenance | **REDLINE-01 隔离验收通过** | `npm run check:redline`：4/4 fixture suites；publication / metacognitive / orchestration 门禁均返回 blocked 或 pause，sealed proof 含原因、差异路径和审计 ID | 构建产物已包含结果红线资源；交互式桌面截图仍是可选观察，不改变领域门禁结论 |
-| Pi 运行基线 | **suite 与 onboarding commands 真实 CLI 回归通过；旧版冲突负例保留** | 当前 `drone-plugins` `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`；`research-suite@0.1.8`、`pi-core@0.1.8` 的公开 tarball、独立 HOME 安装、Pi 1.1.0/latest 和宿主回执均通过；旧 `research-suite@0.1.1` 冲突负例仍保留为 EXPECTED_FAILURE。证据见 [`v1.1.0 npm 发布证据`](releases/v1.1.0-npm-packages.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json) | CI 每次 push/PR 重跑锁定/latest；旧冲突负例继续保留 |
+| Pi 运行基线 | **suite 与 onboarding commands 真实 CLI 回归通过；旧版冲突负例保留** | 2026-10-23 `drone-plugins` `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007`；`research-suite@0.1.8`、`pi-core@0.1.8` 的公开 tarball、独立 HOME 安装、Pi 1.1.0/latest 和宿主回执均通过；旧 `research-suite@0.1.1` 冲突负例仍保留为 EXPECTED_FAILURE。证据见 [`v1.1.0 npm 发布证据`](releases/v1.1.0-npm-packages.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json) | CI 每次 push/PR 重跑锁定/latest；旧冲突负例继续保留 |
 | `DroneHostPort` 与通用插件能力协商 | **v1.1 插件迁移与宿主加载已通过** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、`compatible/degraded/incompatible` 测试、迁移闸门和所有 v1.1 包的 clean prefix/loader/宿主检查均已通过 | A5-1～A5-4 已完成兼容层收敛，继续保持已发布包边界 |
 | `@gyoungwe/pi-analysis` | **V1.1-A 与 v3.1 host loader、公开 registry 门槛已关闭** | `drone-plugins` `main=127db2658f465337fe9ad936692302d8536c09ba` 的公开 `0.1.2` tarball、integrity/shasum、完整 Pi 1.1.0 clean prefix 安装、extension/host loader 和宿主验证均通过；Drone `main=a6a6ade0ad3f86224c2a580d19a6d5b1d4230a6c` 以精确 `0.1.2` 依赖并锁定 `plugins.lock.json` | 继续由 `drone-plugins` CI 维护，宿主不再保留 adapter facade；证据见 [`v3.1-pi-analysis-0.1.2.json`](releases/v3.1-pi-analysis-0.1.2.json) |
 | `@gyoungwe/pi-evidence` | **V1.1-E 公开 registry 与宿主门槛已关闭** | `drone-plugins` `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007` 提供自包含 artifact/provenance/replay 包；`@gyoungwe/pi-evidence@0.1.1` 的 registry tarball、integrity 与公开元数据一致；全新 prefix 安装、只读工具调用、Pi 1.1.0 loader 和宿主 clean prefix 均 PASS | 持续在 `drone-plugins` 维护；真实文件写入、replay runner 和科研结论门禁仍由宿主组合根负责 |
 | `@gyoungwe/pi-connectors` | **V1.1-C 公开 registry 与宿主门槛已关闭** | `drone-plugins` `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007` 提供六类只读 connector descriptor、权限声明、回执链和 2 个元数据工具；`@gyoungwe/pi-connectors@0.1.1` registry tarball、integrity 与公开元数据一致；全新 prefix 安装、Pi loader、descriptor 和宿主 clean prefix 均 PASS | 真实网络/凭据/写入/回读/删除仍按连接器逐项授权；Protocols.io 保持只读 |
-| `@gyoungwe/pi-*` 公共包与 `@gyoungwe/research-suite` | **task ownership、onboarding commands 及 suite 兼容门槛已关闭** | 当前公开版本为 `pi-knowledge@0.2.0`、`pi-core@0.1.8`、`pi-research@0.1.1`、`research-suite@0.1.8`；suite 捆绑 plugin-api/pi-core/pi-knowledge/pi-research，公开 tarball、shasum/integrity、干净安装和真实 Pi 会话均通过；旧 `research-suite@0.1.1` 仍标记“与 pi-core 冲突，无法启动”，证据见 [`v1.1.0-npm-packages.json`](releases/v1.1.0-npm-packages.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json) | 由 `drone-plugins` CI 在 Pi `1.1.0`/latest 上持续回归 |
+| `@gyoungwe/pi-*` 公共包与 `@gyoungwe/research-suite` | **task ownership、onboarding commands 及 suite 兼容门槛已关闭** | 2026-10-23 已验收版本为 `pi-knowledge@0.2.0`、`pi-core@0.1.8`、`pi-research@0.1.1`、`research-suite@0.1.8`；suite 捆绑 plugin-api/pi-core/pi-knowledge/pi-research，公开 tarball、shasum/integrity、干净安装和真实 Pi 会话均通过；旧 `research-suite@0.1.1` 仍标记“与 pi-core 冲突，无法启动”，证据见 [`v1.1.0-npm-packages.json`](releases/v1.1.0-npm-packages.json) 与 [`PR5 真实回执证据`](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json) | 由 `drone-plugins` CI 在 Pi `1.1.0`/latest 上持续回归 |
 | 宿主仓库 / 插件仓库边界 | **pi-knowledge、pi-analysis、pi-evidence、pi-connectors 外部迁移和公开发布闸门已关闭** | [本地 ../drone-plugins](../../drone-plugins) `main=127db2658f465337fe9ad936692302d8536c09ba`；外部包自包含、无宿主 fallback，干净克隆 `npm ci → npm run build → npm run check`、公开 tarball、Pi CLI 和宿主 clean prefix 通过；宿主临时 evidence/connectors/research-suite 源码已删除，根锁文件固定 registry 包 | Desktop/Pi 仅从已安装 npm 包加载；后续只在 `drone-plugins` 维护这些插件 |
 | Desktop UI Pack 独立分发 | **V1.1-UI 公开 registry 与宿主安装生命周期已关闭** | `drone-plugins` `main=b6bc98d7d0ac99461ae3249fb0a47b713166d007` 的 `@gyoungwe/desktop-ui-pack@0.1.1` registry tarball、integrity 与公开元数据一致；宿主从公开 tarball 安装后由 `UiPluginManager` 发现、启用、读取并完成测试；构建产物验收仍为 16/16 | 公开包继续独立发布；交互式 Electron 截图仍不作为本门槛 |
 | 菜单信息架构收敛 | **UI-1～UI-7 已实现；四视口构建与视觉对照通过** | `scripts/check-visual-design-comparison.mjs` 用 Chrome headless 渲染 built renderer，四个视图均无错误、导航态正确、viewport 合同通过；截图和 SHA-256 见 [`releases/visual/drone-visual-comparison.json`](releases/visual/drone-visual-comparison.json)。hosts 没有独立设计板，按共享 shell 板对照并在证据中明确 | 交互式 Electron 仍受当前 shell 的 macOS NSApplication 启动限制；本次视觉门槛使用构建产物，不把环境限制写成失败 |

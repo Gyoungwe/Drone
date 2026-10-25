@@ -2,6 +2,8 @@
 
 2026-10-25，双仓库分支 `codex/knowledge-category-fix`。**RESEARCH-GUI-CATEGORY 已关闭（PASS）**，本轮只处理该分类缺口，研究迁移总体保持 PARTIAL。机器回执见 [knowledge-category-fix-2026-10-25.json](../releases/knowledge-category-fix-2026-10-25.json)。
 
+> 后续发布：三个候选版本已于 2026-10-25 发布，公开 tarball 哈希与原候选一致。发布后消费者验证单独记录在[发布证据](../releases/knowledge-research-npm-2026-10-25.md)；本文中的“未发布”描述保留分类修复时点含义，不代表当前 registry 状态。
+
 ## 原因与实现
 
 旧 worker 与 recent 分组将 frontmatter type 和完整路径拼接，再优先匹配 paper/software；`Library/Methods/mapping-tools.md` 的 `tools` 因此盖过 `type: method`。此前证据称“标题启发式”，更准确的是文件名/路径关键词；笔记标题字段没有参与这一规则。renderer 最近笔记标签又独立猜测路径，造成第二处不一致。
