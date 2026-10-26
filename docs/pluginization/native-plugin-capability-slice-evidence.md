@@ -69,6 +69,9 @@
 - P4/P6 `2755c85c` 将 project memory promote 改为 host-owned `ProjectMemoryWriter`，backend 不再经 pi-core facade 读取该写入器；promote 3 项、host independence 5 项测试和 Biome 通过，剩余 pi-core facades 仍有消费者。
 - P7 `d39159d3` 将真实 arm64 包回执的 lifecycle 字段显式标为 `NOT_RUN`，列出 install/disable/restore/upgrade/rollback/destroy-failure 的未执行原因；空插件宿主及 generic session 仍 PASS，但不再让该回执暗示完整生命周期验收。
 - P2/P6 `3f9ef839` 将 subagent answer publication registrar 改为 `DroneRuntime.knowledge.registerAnswerPublication` 注入，runner 删除对 `@gyoungwe/pi-knowledge/host` 的 runtime import；保留 evidence-only 子会话与 `begin(false)` 语义。backend typecheck、Biome、create-backend/subagent-panel 29 项测试通过，native runtime-import 计数降至 12。
+- P2/P6 `0d0fbd7e` 将 ExperienceStore、terminal experience 与 deliverable reviewer 的纯类型合同发布到 `@gyoungwe/plugin-api/knowledge`；backend 不再从 pi-knowledge host 做这些 type imports。plugin-api contract 13 项、backend typecheck 与 targeted reviewer/experience 5 项测试通过。
+- P2 `8619c135` 将 knowledge semantic settings/index 的 5 个 UI 操作改为 `KnowledgeHostPort.semantic` 注入；无 knowledge 插件时显式返回 unavailable，不伪造成功；host routing/no-plugin regressions、Biome 与 create-backend unit tests 通过。
+- P7 `7daf6a13` 在实际 arm64 `Drone.app` 隔离 profile 中真实安装 `@gyoungwe/pi-evidence@0.1.1`，回执为 `staged → verified → enabled`；随后真实移除并回读为 `disabled → drained → disabled`，包目录与配置均消失。零插件/generic session 仍通过；restore/reload、upgrade、rollback、destroy-failure 和同 tarball GUI 仍 `NOT_RUN`。
 
 - 宿主 `55699c2f` 扩展通用发现：除 `plugin.manifest.json` 外，发现器也接受标准 Pi `package.json` 中可选的 `drone` 声明；普通 Pi 包可在不增加 Drone 专用清单的情况下声明 Desktop host entry。路径仍限制在包根内，5 项发现回归通过。
 - 宿主 `649b465e` 增加可选 `ResearchHostOperations.detail` 合同；提供完整详情适配器的研究插件可直接返回 run detail，未提供时继续使用 metadata-only fallback。backend typecheck、Biome 与 11 项 create-backend 回归通过；完整 Zotero/连接器页面、写入和正式 GUI 仍未完成。
