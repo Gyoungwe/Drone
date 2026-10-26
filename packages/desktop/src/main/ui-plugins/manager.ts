@@ -54,6 +54,7 @@ export interface InstalledUiRuntimeSource {
 	entrypoint: string;
 	nativeEntrypoint?: string;
 	requestsStateWrite?: boolean;
+	requestsFileWrite?: boolean;
 	resources?: Readonly<Record<string, string>>;
 }
 
@@ -160,6 +161,11 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 					manifest.permissions.filesystem.includes("application-state-write")
 				)
 					runtime.requestsStateWrite = true;
+				if (
+					Array.isArray(manifest.permissions?.filesystem) &&
+					manifest.permissions.filesystem.includes("workspace-write")
+				)
+					runtime.requestsFileWrite = true;
 				if (manifest.entrypoints.extension !== undefined) {
 					runtime.nativeEntrypoint = await installedRuntimeFile(
 						packageRoot,

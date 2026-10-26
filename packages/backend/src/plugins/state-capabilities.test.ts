@@ -390,6 +390,28 @@ describe("explicit state directory initialization", () => {
 });
 
 describe("checked state JSON removal", () => {
+	it("serializes case aliases within one activation before the JSON commit", async (context) => {
+		const initial = await ports.writeJson({ ...input, value: { value: 0 }, expectedVersion: null }, call);
+		try {
+			await fs.stat(join(state, "CONFIG.json"));
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+			context.skip();
+			return;
+		}
+		const results = await Promise.allSettled([
+			ports.writeJson({ ...input, value: { value: 1 }, expectedVersion: initial.version }, call),
+			ports.writeJson(
+				{ ...input, path: "CONFIG.json", value: { value: 2 }, expectedVersion: initial.version },
+				call,
+			),
+		]);
+		expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+		expect(results.filter((result) => result.status === "rejected")).toEqual([
+			expect.objectContaining({ reason: expect.objectContaining({ code: "ESTATECONFLICT" }) }),
+		]);
+	});
+
 	it("removes the read version and verifies absence without treating repeat removal as success", async () => {
 		const written = await ports.writeJson(
 			{ ...input, value: { candidate: "pending" }, expectedVersion: null },

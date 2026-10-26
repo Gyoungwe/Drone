@@ -89,6 +89,20 @@ describe("installed UI runtime provenance", () => {
 		expect(manager.runtimeSource("results-ui")?.requestsStateWrite).toBeUndefined();
 	});
 
+	it("requests data writes only for workspace-write and clears the request on rescan", async () => {
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await writeManifest("./runtime.js", {}, ["workspace-read", "application-state-write"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsFileWrite).toBeUndefined();
+		await writeManifest("./runtime.js", {}, ["workspace-write"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsFileWrite).toBe(true);
+		expect(manager.runtimeSource("results-ui")?.requestsStateWrite).toBeUndefined();
+		await writeManifest("./runtime.js", {}, ["workspace-read"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsFileWrite).toBeUndefined();
+	});
+
 	it("discovers native and resource files from the same package without executing them", async () => {
 		await writeFile(join(packageRoot, "native.js"), 'throw new Error("must not import native");');
 		await writeFile(join(packageRoot, "resource.js"), 'throw new Error("must not import resource");');

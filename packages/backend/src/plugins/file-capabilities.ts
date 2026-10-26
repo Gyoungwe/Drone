@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Stats } from "node:fs";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, readdir, realpath } from "node:fs/promises";
+import { link, lstat, mkdir, open, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import type {
 	PluginRuntimeScope,
@@ -20,6 +20,8 @@ export interface PluginRootGrant {
 	readonly path: string;
 	readonly kind: "state" | "files";
 	/** A separate host-approved JSON write grant. Read-only selections omit this entirely. */
+	/** Selected independently from read-only data access; never inferred from stored paths. */
+	readonly fileWrite?: true;
 	readonly stateWrite?: { readonly registry: StorageRegistry; readonly storageId: string };
 	readonly scope:
 		| { readonly kind: "application" }
@@ -79,6 +81,7 @@ function kind(stat: Pick<Stats, "isFile" | "isDirectory" | "isSymbolicLink">): F
 
 /** File/state ports for one authorized activation. No OS path or caller identity is accepted from the plugin. */
 export class PluginFileCapabilities {
+	private mutationTail: Promise<void> = Promise.resolve();
 	private constructor(
 		private readonly roots: ReadonlyMap<string, Root>,
 		private readonly cacheRoot: { path: string; identity: Stats },
@@ -252,6 +255,106 @@ export class PluginFileCapabilities {
 		return result;
 	}
 
+	private mutate<T>(call: PluginFileCall, execute: () => Promise<T>): Promise<T> {
+		// One activation queue also covers case-insensitive names and overlapping granted roots.
+		const pending = this.mutationTail.then(() => {
+			call.signal.throwIfAborted();
+			return execute();
+		});
+		// Errors stay on the caller's promise; the settled tail lets later approved work proceed.
+		this.mutationTail = pending.then(
+			() => {},
+			() => {},
+		);
+		return pending;
+	}
+
+	private mutateFile<T>(
+		input: PluginFileInput,
+		call: PluginFileCall,
+		execute: (root: Root) => Promise<T>,
+	): Promise<T> {
+		return this.mutate(call, () => {
+			const root = this.grant(input, call, "files");
+			if (call.bootstrap || !root.fileWrite) throw new Error("Plugin data write access was not granted");
+			if (!input.path) throw new Error("Data mutation requires a child path");
+			return execute(root);
+		});
+	}
+
+	private async currentText(root: Root, input: PluginFileInput) {
+		try {
+			return await this.snapshot(root, input);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+			await this.checkRoot(root);
+			return null;
+		}
+	}
+
+	async writeText(
+		input: PluginFileInput & { text: string; expectedHash: string | null },
+		call: PluginFileCall,
+	) {
+		if (/\.json[cl]?$/i.test(input.path))
+			throw new Error("JSON persistence requires a JSON state capability");
+		if (Buffer.byteLength(input.text) > MAX_TEXT_BYTES)
+			throw new Error("Plugin text write exceeds the 1 MiB limit");
+		return this.mutateFile(input, call, async (root) => {
+			const parentRelative = dirname(input.path) === "." ? "" : dirname(input.path);
+			const parent = await this.path(root, parentRelative);
+			const identity = await lstat(parent);
+			const target = join(root.path, input.path);
+			const check = async () => {
+				const currentParent = await lstat(await this.path(root, parentRelative));
+				if (currentParent.dev !== identity.dev || currentParent.ino !== identity.ino)
+					throw new Error("Plugin data parent changed during write");
+				const current = await this.currentText(root, input);
+				if ((current?.sha256 ?? null) !== input.expectedHash)
+					throw new Error("Plugin file version conflict; reread before writing");
+				call.signal.throwIfAborted();
+			};
+			await check();
+			const mode = input.expectedHash === null ? 0o600 : (await lstat(target)).mode & 0o777;
+			const temporary = join(parent, `.${basename(target)}.${randomUUID()}.tmp`);
+			try {
+				await writeFile(temporary, input.text, { flag: "wx", mode });
+				await check();
+				if (input.expectedHash === null) await link(temporary, target);
+				else await rename(temporary, target);
+			} catch (error) {
+				const [cleanup] = await Promise.allSettled([rm(temporary, { force: true })]);
+				if (cleanup.status === "rejected")
+					throw new AggregateError([error, cleanup.reason], "Text write and temporary cleanup failed");
+				throw error;
+			}
+			await rm(temporary, { force: true });
+			const result = await this.snapshot(root, input);
+			if (result.sha256 !== createHash("sha256").update(input.text).digest("hex"))
+				throw new Error("Plugin data changed after atomic write");
+			call.signal.throwIfAborted();
+			return result;
+		});
+	}
+
+	async removeText(input: PluginFileInput & { expectedHash: string }, call: PluginFileCall) {
+		if (/\.json[cl]?$/i.test(input.path)) throw new Error("JSON removal requires a JSON state capability");
+		return this.mutateFile(input, call, async (root) => {
+			const current = await this.snapshot(root, input);
+			if (current.sha256 !== input.expectedHash)
+				throw new Error("Plugin file version conflict; reread before removing");
+			call.signal.throwIfAborted();
+			await rm(join(root.path, input.path));
+			if (await this.currentText(root, input)) throw new Error("Plugin data reappeared after removal");
+			call.signal.throwIfAborted();
+			return { removed: true };
+		});
+	}
+
+	async ensureFileDirectory(input: PluginFileInput, call: PluginFileCall): Promise<{ created: boolean }> {
+		return this.mutateFile(input, call, (root) => this.ensureDirectory(root, input, call));
+	}
+
 	async readJson(input: PluginFileInput, call: PluginFileCall): Promise<PluginStateReadResult> {
 		const root = this.grant(input, call, "state");
 		// Missing state is allowed; a revoked/replaced root is never missing configuration.
@@ -278,7 +381,14 @@ export class PluginFileCapabilities {
 		}
 	}
 
-	async writeJson(input: PluginStateWriteInput, call: PluginFileCall): Promise<PluginStateReadResult> {
+	writeJson(input: PluginStateWriteInput, call: PluginFileCall): Promise<PluginStateReadResult> {
+		return this.mutate(call, () => this.writeJsonNow(input, call));
+	}
+
+	private async writeJsonNow(
+		input: PluginStateWriteInput,
+		call: PluginFileCall,
+	): Promise<PluginStateReadResult> {
 		const root = this.grant(input, call, "state");
 		if (call.bootstrap || !root.stateWrite) throw new Error("Plugin state JSON write access was not granted");
 		if (!input.path.endsWith(".json")) throw new Error("State writes require a .json file");
@@ -316,7 +426,14 @@ export class PluginFileCapabilities {
 		});
 	}
 
-	async removeJson(input: PluginStateRemoveInput, call: PluginFileCall): Promise<PluginStateReadResult> {
+	removeJson(input: PluginStateRemoveInput, call: PluginFileCall): Promise<PluginStateReadResult> {
+		return this.mutate(call, () => this.removeJsonNow(input, call));
+	}
+
+	private async removeJsonNow(
+		input: PluginStateRemoveInput,
+		call: PluginFileCall,
+	): Promise<PluginStateReadResult> {
 		const root = this.grant(input, call, "state");
 		if (call.bootstrap || !root.stateWrite) throw new Error("Plugin state JSON write access was not granted");
 		if (!input.path.endsWith(".json")) throw new Error("State removal requires a .json file");
@@ -339,11 +456,26 @@ export class PluginFileCapabilities {
 	}
 
 	/** Create one state directory after explicit write approval; reads never initialize state. */
-	async ensureStateDirectory(input: PluginFileInput, call: PluginFileCall): Promise<{ created: boolean }> {
+	ensureStateDirectory(input: PluginFileInput, call: PluginFileCall): Promise<{ created: boolean }> {
+		return this.mutate(call, () => this.ensureStateDirectoryNow(input, call));
+	}
+
+	private async ensureStateDirectoryNow(
+		input: PluginFileInput,
+		call: PluginFileCall,
+	): Promise<{ created: boolean }> {
 		const root = this.grant(input, call, "state");
 		if (call.bootstrap || !root.stateWrite)
 			throw new Error("Plugin state directory write access was not granted");
 		if (!input.path) throw new Error("State directory creation requires a child path");
+		return this.ensureDirectory(root, input, call);
+	}
+
+	private async ensureDirectory(
+		root: Root,
+		input: PluginFileInput,
+		call: PluginFileCall,
+	): Promise<{ created: boolean }> {
 		const parentRelative = dirname(input.path) === "." ? "" : dirname(input.path);
 		const parent = await this.path(root, parentRelative);
 		const parentIdentity = await lstat(parent);
@@ -358,9 +490,9 @@ export class PluginFileCapabilities {
 		}
 		const currentParent = await lstat(await this.path(root, parentRelative));
 		if (currentParent.dev !== parentIdentity.dev || currentParent.ino !== parentIdentity.ino)
-			throw new Error("Plugin state parent changed during directory creation");
+			throw new Error("Plugin parent changed during directory creation");
 		const target = await lstat(await this.path(root, input.path));
-		if (!target.isDirectory()) throw new Error("Plugin state entry is not a directory");
+		if (!target.isDirectory()) throw new Error("Plugin entry is not a directory");
 		call.signal.throwIfAborted();
 		return { created };
 	}
@@ -496,6 +628,48 @@ export function fileCapabilityHandlers(
 			effect: "read",
 			bootstrap: true,
 			execute: (input, call) => ports.readJson(input as PluginFileInput, call),
+		},
+		"files.writeText": {
+			inputSchema: Type.Object(
+				{
+					root: Type.String({ minLength: 1 }),
+					path: Type.String({ minLength: 1 }),
+					text: Type.String(),
+					expectedHash: stateVersion,
+				},
+				{ additionalProperties: false },
+			),
+			resultSchema: Type.Object({
+				text: Type.String(),
+				sha256: Type.String(),
+				bytes: Type.Number(),
+				version: fileVersion,
+			}),
+			effect: "write",
+			execute: (input, call) =>
+				ports.writeText(input as PluginFileInput & { text: string; expectedHash: string | null }, call),
+		},
+		"files.remove": {
+			inputSchema: Type.Object(
+				{
+					root: Type.String({ minLength: 1 }),
+					path: Type.String({ minLength: 1 }),
+					expectedHash: Type.String({ pattern: "^[a-f0-9]{64}$" }),
+				},
+				{ additionalProperties: false },
+			),
+			resultSchema: Type.Object({ removed: Type.Literal(true) }),
+			effect: "write",
+			execute: (input, call) => ports.removeText(input as PluginFileInput & { expectedHash: string }, call),
+		},
+		"files.ensureDirectory": {
+			inputSchema: Type.Object(
+				{ root: Type.String({ minLength: 1 }), path: Type.String({ minLength: 1 }) },
+				{ additionalProperties: false },
+			),
+			resultSchema: Type.Object({ created: Type.Boolean() }),
+			effect: "write",
+			execute: (input, call) => ports.ensureFileDirectory(input as PluginFileInput, call),
 		},
 		"files.readText": {
 			inputSchema: input,
