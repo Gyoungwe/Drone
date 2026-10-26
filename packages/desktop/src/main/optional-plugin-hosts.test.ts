@@ -34,6 +34,31 @@ describe("discoverPluginHostLoader", () => {
 		expect(result?.loader.load()).toEqual({ registry: {} });
 	});
 
+	it("discovers the knowledge read host through its declared capability", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-plugin-knowledge-discovery-"));
+		const packageRoot = join(root, "knowledge-provider");
+		await mkdir(join(packageRoot, "dist"), { recursive: true });
+		await writeFile(join(packageRoot, "package.json"), JSON.stringify({ name: "knowledge-provider", version: "0.3.0" }));
+		await writeFile(
+			join(packageRoot, "plugin.manifest.json"),
+			JSON.stringify({
+				capabilities: ["knowledge"],
+				hosts: ["drone-desktop"],
+				entrypoints: { host: "./dist/host.mjs" },
+			}),
+		);
+		await writeFile(
+			join(packageRoot, "dist", "host.mjs"),
+			"export const knowledgeHostLoader = { contractVersion: 1, load: () => ({ contractVersion: 1 }) };",
+		);
+		const result = await discoverPluginHostLoader<{ contractVersion: 1; load: () => unknown }>({
+			packageRoots: [root],
+			capability: "knowledge",
+		});
+		expect(result?.discovery.capability).toBe("knowledge");
+		expect(result?.loader.load()).toEqual({ contractVersion: 1 });
+	});
+
 	it("ignores undeclared or malformed packages and returns no loader", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-plugin-host-empty-"));
 		await mkdir(join(root, "plain"), { recursive: true });
