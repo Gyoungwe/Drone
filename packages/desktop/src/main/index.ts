@@ -310,6 +310,21 @@ app.whenReady().then(async () => {
 		capability: "analysis",
 	});
 	if (analysisHost) log.info("Optional analysis host discovered", analysisHost.discovery);
+	const evidenceHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").EvidenceHostLoader>({
+		packageRoots: [
+			join(
+				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
+				"npm",
+				"node_modules",
+			),
+			app.isPackaged
+				? join(process.resourcesPath, "pi-packages", "node_modules")
+				: join(__dirname, "../../pi-packages/node_modules"),
+			join(app.getAppPath(), "node_modules"),
+		],
+		capability: "evidence",
+	});
+	if (evidenceHost) log.info("Optional evidence host discovered", evidenceHost.discovery);
 	const knowledgeHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").KnowledgeHostLoader>({
 		packageRoots: [
 			join(
