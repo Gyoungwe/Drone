@@ -519,3 +519,5 @@ P2 原生/桌面共同 owner 最小接入：`backend/src/plugins/coordinator.ts`
 `backend/src/plugins/file-capabilities.ts` 读取已批准根的稳定文件快照与配置，区分文件删除、根撤销和 JSON 损坏；独立 `application-state-write` 授权允许通过 JsonStore 执行受限 JSON CAS 写入，具体合同与并发边界见[状态能力](pluginization/native-plugin-state-capabilities.md)；`resource-capabilities.ts` 复用实际隔离进程、排空在途请求并管理资源，`resource-reservations.ts` 在完整 owner 关闭后释放跨进程写者租约。`desktop/src/main/ui-plugins/runtime-host.ts` 在每次资源激活时明确选择只读数据目录及只读或独立授权的 JSON 状态目录，构造每插件私有缓存与能力 provider；其单元测试不代替正式 GUI 授权验收。UI 合同 v2 仅接受已验证的 installed desktopRuntime，旧 v1 合同保留；候选知识页目前只有总览/搜索/刷新，其余领域迁移未完成。
 
 知识候选 tarball 的独立实际 SDK 验收见 [packed knowledge runtime acceptance](pluginization/packed-knowledge-runtime-acceptance.md)：`backend/test/packed-knowledge-runtime-sdk.test.mjs` 使用真实 coordinator、只读会话条目和合成 Vault，验证 native/UI 同 owner、逐操作拒绝和双进程退出；默认门禁不设置 tarball 时明确跳过。[正式阅读 GUI 回执](pluginization/native-plugin-knowledge-reading-gui-evidence.md)保留任务守卫、恢复及退出的实际失败，不能与 SDK 通过互相替代。[原生事件适配](pluginization/native-plugin-event-adapter.md)说明逐 handler 的真实 SDK 串联与尚未支持的 publication proof 边界。
+
+P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已通过真实临时目录、撤销、冲突、符号链接和同启用实例并发回归；正式安装包尚未消费该新写端口。
