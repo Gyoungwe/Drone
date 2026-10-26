@@ -24,6 +24,8 @@ export interface PluginCapabilityHandler {
 	readonly effect: "read" | "write";
 	/** Only pre-approved application state reads may run while constructing an owner. */
 	readonly bootstrap?: true;
+	/** Host-owned formatter, called only after capability input schema validation. */
+	approvalDetail?(input: unknown): string;
 	execute(input: unknown, context: PluginCapabilityContext): Promise<unknown>;
 }
 export interface PluginRuntimeCapabilitiesOptions {
@@ -35,7 +37,12 @@ export interface PluginRuntimeCapabilitiesOptions {
 interface Authority {
 	readonly context: PluginCapabilityContext;
 	readonly effect: "read" | "write";
-	readonly authorize: (name: string, input: unknown, effect: "read" | "write") => Promise<boolean>;
+	readonly authorize: (
+		name: string,
+		input: unknown,
+		effect: "read" | "write",
+		detail?: string,
+	) => Promise<boolean>;
 	readonly check: () => void;
 	readonly pending: Set<Promise<unknown>>;
 	closed: boolean;
@@ -115,7 +122,7 @@ export class PluginCapabilityBroker {
 		if (authority.context.bootstrap) {
 			if (!handler.bootstrap || handler.effect !== "read")
 				throw new Error(`Plugin capability is unavailable during bootstrap: ${name}`);
-		} else if (!(await authority.authorize(name, input, handler.effect))) {
+		} else if (!(await authority.authorize(name, input, handler.effect, handler.approvalDetail?.(input)))) {
 			throw new Error(`Plugin capability denied: ${name}`);
 		}
 		check();

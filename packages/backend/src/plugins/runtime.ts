@@ -45,6 +45,8 @@ export interface PluginRuntimeInvocation extends PluginRuntimeActivation {
 	readonly operation: string;
 	readonly effect: PluginRuntimeOperation["effect"];
 	readonly input: unknown;
+	/** Produced by a host capability handler, never taken from plugin operation input. */
+	readonly approvalDetail?: string;
 }
 
 export interface PluginRuntimePolicy {
@@ -442,11 +444,11 @@ export class PluginRuntimeRegistry {
 			},
 			operation.effect,
 			checkCaller,
-			(name, input, effect) =>
+			(name, input, effect, approvalDetail) =>
 				authorize(
 					() =>
 						this.policy.authorizeInvocation(
-							{ ...request, operation: `capability:${name}`, input, effect },
+							{ ...request, operation: `capability:${name}`, input, effect, approvalDetail },
 							signal,
 						),
 					signal,

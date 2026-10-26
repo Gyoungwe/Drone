@@ -16,6 +16,7 @@ export interface PluginRuntimeSource {
 	readonly entrypoint: string;
 	readonly nativeEntrypoint?: string;
 	readonly requestsStateWrite?: boolean;
+	readonly requestsFileWrite?: boolean;
 	readonly resources?: Readonly<Record<string, string>>;
 }
 export interface PluginRuntimeOwner {
@@ -42,7 +43,12 @@ export interface PluginRuntimeBridgeOptions {
 		source: PluginRuntimeSource,
 		owner: PluginRuntimeOwner,
 	): PluginRuntimeCapabilitiesOptions | PluginRuntimeCapabilitiesProvider;
-	approve(owner: PluginRuntimeOwner, source: PluginRuntimeSource, operation?: string): Promise<boolean>;
+	approve(
+		owner: PluginRuntimeOwner,
+		source: PluginRuntimeSource,
+		operation?: string,
+		detail?: string,
+	): Promise<boolean>;
 	getSessionContext(sessionId: string): PluginSessionCallerContext | undefined;
 }
 interface Selection {
@@ -77,6 +83,7 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.entrypoint === b.entrypoint &&
 		a.nativeEntrypoint === b.nativeEntrypoint &&
 		a.requestsStateWrite === b.requestsStateWrite &&
+		a.requestsFileWrite === b.requestsFileWrite &&
 		JSON.stringify(a.resources) === JSON.stringify(b.resources)
 	);
 }
@@ -197,6 +204,7 @@ export class PluginRuntimeBridge {
 							selected.owner.approvalOwner ?? selected.owner,
 							source,
 							request.operation,
+							request.approvalDetail,
 						)) && permitted()
 					);
 				},

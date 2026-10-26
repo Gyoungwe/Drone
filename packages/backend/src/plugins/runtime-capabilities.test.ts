@@ -21,10 +21,58 @@ const handler = (execute: PluginCapabilityHandler["execute"]): PluginCapabilityH
 });
 const policy = () => ({
 	authorizeActivation: vi.fn(async () => true),
-	authorizeInvocation: vi.fn(async () => true),
+	authorizeInvocation: vi.fn<import("./runtime").PluginRuntimePolicy["authorizeInvocation"]>(
+		async () => true,
+	),
 });
 
 describe("plugin capability authority", () => {
+	it("formats approval details only for schema-valid capability input and never trusts operation details", async () => {
+		const authorization = policy();
+		const execute = vi.fn(async () => "saved");
+		const approvalDetail = vi.fn(() => "Host-selected configuration file");
+		const registry = new PluginRuntimeRegistry(authorization, "app", {
+			resources: [],
+			handlers: {
+				save: {
+					inputSchema: Type.Object({ value: Type.String(), approvalDetail: Type.String() }),
+					resultSchema: Type.String(),
+					effect: "write",
+					approvalDetail,
+					execute,
+				},
+			},
+		});
+		registry.register("plugin", async () => ({
+			operations: {
+				save: {
+					inputSchema: Type.Unknown(),
+					resultSchema: Type.String(),
+					effect: "write",
+					execute: (input, context) => context.capabilities.call("save", input),
+				},
+			},
+			dispose: async () => {},
+		}));
+		const client = await registry.activate("plugin", () => caller);
+		await expect(client.invoke("save", { value: 42, approvalDetail: "Forged" })).rejects.toThrow(
+			"Invalid plugin capability input",
+		);
+		expect(approvalDetail).not.toHaveBeenCalled();
+		expect(execute).not.toHaveBeenCalled();
+		const forged = { value: "new", approvalDetail: "Forged" };
+		expect(await client.invoke("save", forged)).toBe("saved");
+		const requests = authorization.authorizeInvocation.mock.calls.map(([request]) => request);
+		expect(requests.at(-2)).toMatchObject({ operation: "save", input: forged });
+		expect(requests.at(-2)).not.toHaveProperty("approvalDetail");
+		expect(requests.at(-1)).toMatchObject({
+			operation: "capability:save",
+			approvalDetail: "Host-selected configuration file",
+		});
+		expect(approvalDetail).toHaveBeenCalledWith(forged);
+		await registry.deactivate("plugin");
+	});
+
 	it("reports an unawaited accepted capability failure after awaiting its cleanup", async () => {
 		let finish!: () => void;
 		const registry = new PluginRuntimeRegistry(policy(), "app", {

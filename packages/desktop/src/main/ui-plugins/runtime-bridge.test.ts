@@ -46,6 +46,60 @@ function setup() {
 }
 
 describe("DesktopRuntimeBridge", () => {
+	it("presents only host capability details and preserves write rejection", async () => {
+		const execute = vi.fn(async () => "saved");
+		const approve = vi.fn<import("./runtime-bridge").DesktopRuntimeBridgeOptions["approve"]>(
+			async (_owner, _source, operation) => operation !== "capability:save",
+		);
+		const bridge = new DesktopRuntimeBridge({
+			source: () => source,
+			enabled: () => true,
+			getSessionContext: () => undefined,
+			approve,
+			capabilities: () => ({
+				resources: [],
+				handlers: {
+					save: {
+						inputSchema: { type: "object" },
+						resultSchema: { type: "string" },
+						effect: "write",
+						approvalDetail: () => "Host-approved root / policy.json",
+						execute,
+					},
+				},
+			}),
+			factory: () => async () => ({
+				operations: {
+					save: {
+						inputSchema: { type: "object" },
+						resultSchema: { type: "string" },
+						effect: "write",
+						execute: (input, context) => context.capabilities.call("save", input),
+					},
+				},
+				dispose: async () => {},
+			}),
+		});
+		const token = (await bridge.bind("ui", owner))!;
+		const input = { approvalDetail: "Forged approval text" };
+		await expect(bridge.invoke(owner, token, "save", input, selection(bridge, owner))).rejects.toThrow(
+			"Plugin capability denied: save",
+		);
+		expect(approve).toHaveBeenNthCalledWith(2, owner, source, "save", undefined);
+		expect(approve).toHaveBeenNthCalledWith(
+			3,
+			owner,
+			source,
+			"capability:save",
+			"Host-approved root / policy.json",
+		);
+		expect(execute).not.toHaveBeenCalled();
+		approve.mockResolvedValue(true);
+		expect(await bridge.invoke(owner, token, "save", input, selection(bridge, owner))).toBe("saved");
+		expect(execute).toHaveBeenCalledOnce();
+		await bridge.close();
+	});
+
 	it("sends invalidations only to live bindings with their current selection lease", async () => {
 		const { bridge, factory } = setup();
 		const listener = vi.fn();
@@ -320,18 +374,21 @@ describe("DesktopRuntimeBridge", () => {
 		expect(await bridge.bind("local", owner)).toBeUndefined();
 	});
 
-	it("revokes old bindings when the manifest changes state write authority", async () => {
-		const { bridge, options, dispose, factory } = setup();
-		const token = (await bridge.bind("ui", owner))!;
-		options.source.mockReturnValue({ ...source, requestsStateWrite: true });
-		await expect(bridge.invoke(owner, token, "read", "data", selection(bridge, owner))).rejects.toThrow(
-			"no longer enabled",
-		);
-		expect(dispose).toHaveBeenCalledOnce();
-		await bridge.bind("ui", owner);
-		expect(factory).toHaveBeenCalledTimes(2);
-		await bridge.close();
-	});
+	it.each(["requestsStateWrite", "requestsFileWrite"] as const)(
+		"revokes old bindings when the manifest changes %s authority",
+		async (permission) => {
+			const { bridge, options, dispose, factory } = setup();
+			const token = (await bridge.bind("ui", owner))!;
+			options.source.mockReturnValue({ ...source, [permission]: true });
+			await expect(bridge.invoke(owner, token, "read", "data", selection(bridge, owner))).rejects.toThrow(
+				"no longer enabled",
+			);
+			expect(dispose).toHaveBeenCalledOnce();
+			await bridge.bind("ui", owner);
+			expect(factory).toHaveBeenCalledTimes(2);
+			await bridge.close();
+		},
+	);
 
 	it("keeps windows independent and cancels superseded parallel loads", async () => {
 		const { bridge, factory } = setup();
