@@ -242,13 +242,13 @@ describe.skipIf(!hasRuntime)("installed runtime through main contracts and prelo
 		expect(() => process.kill(first.pid, 0)).toThrow();
 	});
 
-	it("denies import until activation approval and never turns the failure into success", async () => {
+	it("revokes an installed binding before an in-place package replacement can execute", async () => {
 		await writeFile(join(packageRoot, "runtime.mjs"), 'throw new Error("import-executed-sentinel");');
-		approve.mockResolvedValueOnce(false);
 		const { ui } = clients(owner);
-		await expect(ui.readCode("runtime-receipt-ui")).rejects.toThrow("activation denied");
-		// The same source visibly executes only after a subsequent explicit approval.
-		await expect(ui.readCode("runtime-receipt-ui")).rejects.toThrow("import-executed-sentinel");
+		expect(await ui.readCode("runtime-receipt-ui")).toEqual({
+			error: "UI plugin is not enabled and trusted",
+		});
+		expect(approve).not.toHaveBeenCalled();
 	});
 
 	it("preload rejects the real main validation envelope before runtime invocation", async () => {

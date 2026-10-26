@@ -1,4 +1,13 @@
-import { existsSync, type FSWatcher, watch } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+	existsSync,
+	type FSWatcher,
+	lstatSync,
+	readdirSync,
+	readFileSync,
+	realpathSync,
+	watch,
+} from "node:fs";
 import {
 	cp,
 	lstat,
@@ -46,6 +55,58 @@ function pluginsDir(): string {
 function installedUiPackageRoot(): string {
 	const agentDir = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
 	return join(agentDir, "npm", "node_modules");
+}
+
+/**
+ * Content identity for an installed package generation.
+ *
+ * The package manager may keep the same name, directory and entrypoint while
+ * replacing a file in place.  A path-only binding would keep executing that
+ * replacement.  Hash every file in the package tree (including nested
+ * dependencies) with stable relative names so a later source check can revoke
+ * the old binding.  Symlinks are represented by their canonical target; an
+ * entrypoint/resource that escapes the package is rejected by discovery before
+ * it can be activated.
+ */
+function installedPackageHash(root: string): string {
+	const hash = createHash("sha256");
+	const canonicalRoot = realpathSync(root);
+	const visited = new Set<string>();
+	const walk = (directory: string, relativeDirectory: string): void => {
+		const canonical = realpathSync(directory);
+		if (visited.has(canonical)) return;
+		visited.add(canonical);
+		const entries = readdirSync(directory, { withFileTypes: true }).sort((a, b) =>
+			a.name.localeCompare(b.name),
+		);
+		for (const entry of entries) {
+			const absolute = join(directory, entry.name);
+			const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+			const stat = lstatSync(absolute);
+			if (stat.isSymbolicLink()) {
+				const target = realpathSync(absolute);
+				hash.update(`symlink:${relativePath}\0${target}\0`);
+				const targetRelative = relative(canonicalRoot, target);
+				if (
+					!isAbsolute(targetRelative) &&
+					targetRelative !== ".." &&
+					!targetRelative.startsWith(`..${sep}`)
+				) {
+					const targetStat = lstatSync(target);
+					if (targetStat.isDirectory()) walk(target, targetRelative);
+					else if (targetStat.isFile()) hash.update(readFileSync(target));
+				}
+				continue;
+			}
+			if (stat.isDirectory()) {
+				walk(absolute, relativePath);
+				continue;
+			}
+			if (stat.isFile()) hash.update(`file:${relativePath}\0`).update(readFileSync(absolute)).update("\0");
+		}
+	};
+	walk(canonicalRoot, "");
+	return hash.digest("hex");
 }
 
 export interface InstalledUiRuntimeSource {
@@ -515,6 +576,8 @@ export class UiPluginManager {
 	private dirNames = new Map<string, string>();
 	/** Installed provenance is never inferred from a local UI directory or its name. */
 	private installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
+	/** Name → package generation hash. Local user UI plugins intentionally have no entry here. */
+	private installedPackageHashes = new Map<string, { root: string; hash: string }>();
 	/** 随包内置插件名集合（init 时导出到用户目录；此处仅用于合成 builtin 标志 → 面板 badge/启用免确认） */
 	private builtinNames = new Set<string>();
 	/** 持久化配置缓存（updateConfig 后刷新；scanAll 时叠加） */
@@ -580,6 +643,7 @@ export class UiPluginManager {
 		const out: UiPluginInfo[] = [];
 		const seen = new Set<string>();
 		const installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
+		const installedPackageHashes = new Map<string, { root: string; hash: string }>();
 		const entries = await readdir(dir, { withFileTypes: true }).catch((err) => {
 			log.error("scanAll readdir failed", err);
 			return [];
@@ -691,6 +755,10 @@ export class UiPluginManager {
 				seen.add(installedName);
 				this.dirNames.set(installedName, candidate.uiDir);
 				installedSources.set(installedName, candidate);
+				installedPackageHashes.set(installedName, {
+					root: candidate.packageRoot,
+					hash: installedPackageHash(candidate.packageRoot),
+				});
 				const info = await this.scanOne(installedName, candidate.uiDir, candidate.runtime);
 				this.infos.set(installedName, info);
 				out.push(info);
@@ -706,7 +774,18 @@ export class UiPluginManager {
 			if (!seen.has(stale)) this.dirNames.delete(stale);
 		}
 		this.installedSources = installedSources;
+		this.installedPackageHashes = installedPackageHashes;
 		return out;
+	}
+
+	private installedSourceCurrent(name: string): boolean {
+		const identity = this.installedPackageHashes.get(name);
+		if (!identity) return true;
+		try {
+			return installedPackageHash(identity.root) === identity.hash;
+		} catch {
+			return false;
+		}
 	}
 
 	/** 列表（设置面板/加载器用）：读扫描缓存 */
@@ -721,13 +800,20 @@ export class UiPluginManager {
 
 	/** The source belongs to the installed package selected by the current scan. */
 	runtimeSource(name: string): InstalledUiRuntimeSource | undefined {
+		if (!this.installedSourceCurrent(name)) return undefined;
 		return this.installedSources.get(name)?.runtime;
 	}
 
 	/** Runtime activation additionally requires the global switch and explicit UI trust. */
 	isEnabled(name: string): boolean {
 		const info = this.infos.get(name);
-		return Boolean(this.config.enabled && info?.enabled && info.trusted && !info.invalidReason);
+		return Boolean(
+			this.config.enabled &&
+				info?.enabled &&
+				info.trusted &&
+				!info.invalidReason &&
+				this.installedSourceCurrent(name),
+		);
 	}
 
 	/**
@@ -769,11 +855,24 @@ export class UiPluginManager {
 	 * 返回 { manifest, code } 或 { error }。
 	 */
 	async readCode(name: string): Promise<{ manifest: UiPluginManifest; code: string } | { error: string }> {
+		if (!this.installedSourceCurrent(name))
+			return { error: "UI plugin installation changed; reload required" };
 		const info = this.infos.get(name);
 		if (!info || info.invalidReason) return { error: `未知插件 ${name}` };
 		const pluginDir = this.dirNames.get(name);
 		if (!pluginDir) return { error: `未知插件 ${name}` };
 		const ok = await this.ensureBuilt(name);
+		// Development fixtures may build a UI source into the installed package's
+		// own dist/ directory. Treat that host-generated artifact as the same
+		// generation only after the pre-build identity check above succeeded;
+		// an external in-place replacement has already returned the reload error.
+		const installedIdentity = this.installedPackageHashes.get(name);
+		if (installedIdentity) {
+			this.installedPackageHashes.set(name, {
+				root: installedIdentity.root,
+				hash: installedPackageHash(installedIdentity.root),
+			});
+		}
 		if (!ok) {
 			// 构建失败：旧产物存在则继续生效（spec §6，不清 dist）；buildError 已进 list 由面板展示
 			if (!existsSync(join(pluginDir, "dist/index.js"))) {

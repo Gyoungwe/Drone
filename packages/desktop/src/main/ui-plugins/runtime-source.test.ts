@@ -76,6 +76,22 @@ describe("installed UI runtime provenance", () => {
 		expect(manager.isEnabled("results-ui")).toBe(false);
 	});
 
+	it("invalidates a binding when the installed package or nested dependency changes in place", async () => {
+		const dependency = join(packageRoot, "node_modules", "nested-dependency");
+		await mkdir(dependency, { recursive: true });
+		await writeFile(join(dependency, "package.json"), JSON.stringify({ name: "nested-dependency" }));
+		await writeFile(join(dependency, "index.js"), "export const value = 'first';\n");
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")).toBeDefined();
+
+		await writeFile(join(dependency, "index.js"), "export const value = 'replacement';\n");
+		expect(manager.runtimeSource("results-ui")).toBeUndefined();
+		expect(await manager.readCode("results-ui")).toEqual({
+			error: "UI plugin installation changed; reload required",
+		});
+	});
+
 	it("requests state writes only for the explicit filesystem token and clears it on rescan", async () => {
 		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
 		await writeManifest("./runtime.js", {}, ["application-state"]);
