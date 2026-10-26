@@ -2,7 +2,7 @@ import type {
 	DeliverableReviewFinding,
 	DeliverableReviewSnapshot,
 	ReviewerProviderSelection,
-} from "@gyoungwe/pi-knowledge/host";
+} from "@gyoungwe/plugin-api/knowledge";
 import { describe, expect, it, vi } from "vitest";
 import { createKnowledgeBackgroundReviewer } from "../knowledge/ui";
 import { DeliverableReviewerService, isDeliverableWriter } from "./deliverable-reviewer";

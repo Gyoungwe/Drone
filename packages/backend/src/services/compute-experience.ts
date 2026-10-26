@@ -7,7 +7,7 @@ import type {
 	ExperienceRepair,
 	ExperienceStorePort,
 	TerminalJobExperienceInput,
-} from "@gyoungwe/pi-knowledge/host";
+} from "@gyoungwe/plugin-api/knowledge";
 import type { ComputeEvent } from "./compute";
 
 export type { ComputeExperienceRecorder } from "./compute";

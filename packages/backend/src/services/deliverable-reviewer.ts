@@ -9,7 +9,7 @@ import type {
 	ReviewerModelProvider,
 	ReviewerProviderSelection,
 	ReviewReadReceipt,
-} from "@gyoungwe/pi-knowledge/host";
+} from "@gyoungwe/plugin-api/knowledge";
 import { globalToolManifest } from "../tools/manifest";
 import type { InquiryReadOnlySnapshot } from "./inquiry";
 

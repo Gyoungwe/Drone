@@ -762,3 +762,5 @@ export interface WikiReviewItem {
 	expired: boolean;
 	bindingChanged: boolean;
 }
+
+export * from "./knowledge-contracts.js";

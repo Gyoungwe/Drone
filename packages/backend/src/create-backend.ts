@@ -23,8 +23,8 @@ import type {
 	TrustAnswer,
 	TrustRequest,
 } from "@drone/shared";
-import type { ExperienceStorePort } from "@gyoungwe/pi-knowledge/host";
 import type { AnalysisHostLoader, KnowledgeHostLoader } from "@gyoungwe/plugin-api";
+import type { ExperienceStorePort } from "@gyoungwe/plugin-api/knowledge";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import {

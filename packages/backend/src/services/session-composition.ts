@@ -2,7 +2,7 @@ import type {
 	DeliverableReviewFinding,
 	DeliverableReviewSnapshot,
 	ReviewerProviderSelection,
-} from "@gyoungwe/pi-knowledge/host";
+} from "@gyoungwe/plugin-api/knowledge";
 import { createKnowledgeBackgroundReviewer, createKnowledgePublicationOperation } from "../knowledge/ui";
 import { createLogger } from "../log";
 import { McpService } from "../mcp/service";

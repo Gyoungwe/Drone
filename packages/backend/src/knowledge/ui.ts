@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import type { KnowledgeApi, KnowledgeUiEvent, ResearchKnowledgeOperations } from "@drone/shared";
-import type { ExperienceStorePort, TerminalJobExperienceInput } from "@gyoungwe/pi-knowledge/host";
 import * as knowledgeHost from "@gyoungwe/pi-knowledge/host";
 import {
 	configureKnowledgeHost,
@@ -14,6 +13,7 @@ import {
 	type KnowledgeWorkerLifecycleEvent,
 	type KnowledgeWorkerMetadata,
 } from "@gyoungwe/pi-knowledge/host";
+import type { ExperienceStorePort, TerminalJobExperienceInput } from "@gyoungwe/plugin-api/knowledge";
 import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoader } from "../research-host";
 import type { DailyDiscoveryOperations } from "../services/daily-discovery";
 import type { BackgroundReviewerFactory, BackgroundReviewerPort } from "../services/deliverable-reviewer";
