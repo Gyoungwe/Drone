@@ -294,8 +294,15 @@ app.whenReady().then(async () => {
 		},
 	);
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
+	let analysisHostLoader: import("@gyoungwe/plugin-api").AnalysisHostLoader | undefined;
+	try {
+		analysisHostLoader = (await import("@gyoungwe/pi-analysis/host")).analysisHostLoader;
+	} catch (error) {
+		log.warn("Analysis plugin host unavailable; analysis workflows will remain disabled", error);
+	}
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
+		...(analysisHostLoader ? { analysisHostLoader } : {}),
 		computeAuthorizeRemoteOperation: authorizeComputeOperation,
 		computeSshConfig: () => readSshConfigHosts(),
 		// Use one ledger per canonical workspace. The old single ledger remains

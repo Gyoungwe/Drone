@@ -24,6 +24,7 @@ import type {
 	TrustRequest,
 } from "@drone/shared";
 import type { ExperienceStorePort } from "@gyoungwe/pi-knowledge/host";
+import type { AnalysisHostLoader } from "@gyoungwe/plugin-api";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import {
@@ -291,6 +292,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	analysisReplayRunner?: EvidenceReplayRunner;
 	/** Optional installed Pi plugin composition for read-only analysis/evidence preparation. */
 	analysisEvidenceHost?: AnalysisEvidencePluginHost;
+	/** Optional installed analysis plugin host; absent means analysis workflows are unavailable. */
+	analysisHostLoader?: AnalysisHostLoader;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
@@ -813,6 +816,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				analysis,
 				compute,
 				reviewer,
+				...(options.analysisHostLoader ? { analysisHost: options.analysisHostLoader } : {}),
 				capabilityRuntime: {
 					activate: (capabilities, task) => {
 						if (sessions.checkSessionWritable(sessionId) !== "ok")

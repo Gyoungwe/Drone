@@ -129,6 +129,7 @@ async function setup(healthy: boolean) {
 		analysis,
 		compute,
 		capabilityRuntime: new CapabilityRuntime(new SkillVisibility()),
+		adapters: new AnalysisAdapterRegistry([new AssemblyAdapter()]),
 		reviewer: async () => ({
 			approved: true,
 			detail: "model-approved",

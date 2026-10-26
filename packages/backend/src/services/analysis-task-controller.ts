@@ -12,8 +12,7 @@ import type {
 	AnalysisReviewCheck,
 } from "@drone/shared";
 import { capabilityLoadRequest } from "@drone/shared";
-import { analysisHostLoader } from "@gyoungwe/pi-analysis/host";
-import type { AnalysisAdapterRegistryPort } from "@gyoungwe/plugin-api";
+import type { AnalysisAdapterRegistryPort, AnalysisHostLoader } from "@gyoungwe/plugin-api";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { newRunAttemptId, nextCausalEnvelope, rootCausalEnvelope } from "../causality";
 import { readAnalysisArtifacts, type VerifiedAnalysisArtifact } from "./analysis-artifacts";
@@ -31,6 +30,8 @@ export interface AnalysisTaskControllerOptions {
 	/** Model-backed result review supplied by the host composition root. */
 	readonly reviewer?: AnalysisResultReviewer;
 	readonly adapters?: AnalysisAdapterRegistryPort;
+	/** Optional installed analysis plugin host; absent means analysis is unavailable. */
+	readonly analysisHost?: AnalysisHostLoader;
 }
 
 export interface AnalysisComputeSubmission {
@@ -62,6 +63,15 @@ export interface AnalysisReviewDecision {
 }
 
 export type AnalysisResultReviewer = (request: AnalysisReviewRequest) => Promise<AnalysisReviewDecision>;
+
+const unavailableAdapters: AnalysisAdapterRegistryPort = {
+	resolve(assay: string): never {
+		throw new Error(`Analysis plugin host is unavailable for assay: ${assay}`);
+	},
+	list: () => [],
+	find: () => undefined,
+	findByAssay: () => [],
+};
 
 /** A blocked analysis never reaches ComputeService or an executor. */
 export class AnalysisTaskGateError extends Error {
@@ -96,7 +106,7 @@ export class AnalysisTaskController {
 		this.compute = options.compute;
 		this.capabilityRuntime = options.capabilityRuntime;
 		this.reviewer = options.reviewer;
-		this.adapters = options.adapters ?? analysisHostLoader.load().registry;
+		this.adapters = options.adapters ?? options.analysisHost?.load().registry ?? unavailableAdapters;
 	}
 
 	async create(input: {
