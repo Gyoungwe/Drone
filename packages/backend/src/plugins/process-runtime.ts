@@ -19,6 +19,7 @@ import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
 import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
 import { canonicalProjectId } from "../project-id";
+import { NATIVE_EVENTS, type NativeEventName } from "./native-events";
 import { PROCESS_RUNTIME_WORKER } from "./process-runtime-worker";
 
 export interface ProcessPluginRuntimeOptions {
@@ -77,7 +78,13 @@ const nativeDeclarationsSchema = Type.Object({
 		}),
 	),
 	effects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
-	events: Type.Array(Type.Union([Type.Literal("session_start"), Type.Literal("session_shutdown")])),
+	eventEffects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
+	events: Type.Array(
+		Type.Object({
+			name: Type.Union(NATIVE_EVENTS.map((name) => Type.Literal(name))),
+			index: Type.Integer({ minimum: 0 }),
+		}),
+	),
 });
 
 function staysInPackage(root: string, path: string): boolean {
@@ -383,6 +390,7 @@ class RuntimeProcess {
 			ctx: ExtensionContext,
 			signal?: AbortSignal,
 			toolCallId?: string,
+			hookIndex?: number,
 		) => {
 			const combined = AbortSignal.any([this.context.signal, lifecycle.signal, ...(signal ? [signal] : [])]);
 			combined.throwIfAborted();
@@ -394,6 +402,7 @@ class RuntimeProcess {
 					name,
 					input,
 					toolCallId,
+					hookIndex,
 					context: { cwd: ctx.cwd, sessionId: ctx.sessionManager.getSessionId() },
 				},
 				combined,
@@ -421,6 +430,7 @@ class RuntimeProcess {
 		this.nativeDisposers.add(dispose);
 		return {
 			toolEffects: declarations.effects,
+			eventEffects: declarations.eventEffects,
 			extension: (pi) => {
 				for (const tool of declarations.tools)
 					pi.registerTool({
@@ -429,15 +439,28 @@ class RuntimeProcess {
 						execute: (id, input, signal, _update, ctx) =>
 							invoke("tool", tool.name, input, ctx, signal, id) as ReturnType<ToolDefinition["execute"]>,
 					});
-				if (declarations.events.includes("session_start"))
-					pi.on("session_start", (event, ctx) => invoke("event", "session_start", event, ctx).then(() => {}));
+				const on = pi.on.bind(pi) as (
+					name: NativeEventName,
+					handler: (event: unknown, ctx: ExtensionContext) => Promise<unknown>,
+				) => void;
+				// Register each callback independently so the real SDK chains hook results.
+				for (const hook of declarations.events) {
+					if (hook.name !== "session_shutdown")
+						on(hook.name, (event, ctx) =>
+							invoke("event", hook.name, event, ctx, undefined, undefined, hook.index),
+						);
+				}
 				pi.on("session_shutdown", async (event, ctx) => {
 					if (stopping) return stopping;
-					const results = await Promise.allSettled([
-						declarations.events.includes("session_shutdown")
-							? invoke("event", "session_shutdown", event, ctx)
-							: Promise.resolve(),
-					]);
+					const results: PromiseSettledResult<unknown>[] = [];
+					for (const hook of declarations.events) {
+						if (hook.name === "session_shutdown")
+							results.push(
+								...(await Promise.allSettled([
+									invoke("event", hook.name, event, ctx, undefined, undefined, hook.index),
+								])),
+							);
+					}
 					const [closed] = await Promise.allSettled([dispose()]);
 					const failures = [...results, closed].filter((result) => result.status === "rejected");
 					if (failures.length)

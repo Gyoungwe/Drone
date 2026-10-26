@@ -12,6 +12,7 @@ import type {
 	PluginRuntimeScope,
 } from "@gyoungwe/plugin-api/runtime";
 import { Check } from "typebox/value";
+import { NATIVE_EVENTS } from "./native-events";
 import {
 	PluginCapabilityBroker,
 	type PluginRuntimeCapabilitiesOptions,
@@ -260,11 +261,11 @@ export class PluginRuntimeRegistry {
 				const on = pi.on.bind(pi) as (
 					name: string,
 					handler: (event: unknown, context: ExtensionContext) => Promise<unknown>,
-				) => void;
+				) => () => void;
 				adapted.on = ((name: string, handler: (event: unknown, context: ExtensionContext) => unknown) => {
-					if (name !== "session_start" && name !== "session_shutdown")
+					if (!(NATIVE_EVENTS as readonly string[]).includes(name))
 						throw new Error(`Unsupported native Pi event: ${name}`);
-					on(name, async (event, context) => {
+					return on(name, async (event, context) => {
 						// Shutdown releases the attachment with no new caller authority or capability grant.
 						if (name === "session_shutdown") return handler(event, context);
 						return this.call(
@@ -276,7 +277,7 @@ export class PluginRuntimeRegistry {
 							{
 								inputSchema: {},
 								resultSchema: {},
-								effect: "read",
+								effect: native.eventEffects?.[name] ?? (name === "session_start" ? "read" : "write"),
 								execute: async () => handler(event, context),
 							},
 						);

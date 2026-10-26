@@ -5,6 +5,8 @@ export interface PluginNativeSession {
 	readonly extension: ExtensionFactory;
 	/** Unknown tools require write approval. A read declaration cannot obtain a write capability. */
 	readonly toolEffects?: Readonly<Record<string, "read" | "write">>;
+	/** Session start is read-only; other hooks default to write unless declared here. */
+	readonly eventEffects?: Readonly<Record<string, "read" | "write">>;
 	/** Projection executes where the plugin's live proof objects were created; JSON is not a proof. */
 	readonly projection?: {
 		event(event: unknown): unknown | Promise<unknown>;

@@ -1,3 +1,5 @@
+import { NATIVE_EVENTS } from "./native-events";
+
 /** Executed only in the permission-restricted child, never imported as plugin code by the host. */
 export const PROCESS_RUNTIME_WORKER = String.raw`
 import { createInterface } from "node:readline";
@@ -9,6 +11,7 @@ const messageError = (error) => error instanceof Error ? error.message : String(
 const lifecycle = new AbortController();
 const calls = new Map();
 const nativeSessions = new Map();
+const supportedEvents = new Set(${JSON.stringify(NATIVE_EVENTS)});
 const currentCall = new AsyncLocalStorage();
 const capabilityCalls = new Map();
 let capabilitySequence = 0;
@@ -66,16 +69,16 @@ input.on("line", async (line) => {
     if (message.type === "native_attach") {
       const adapter = await runtime.createNativeSession();
       if (adapter.projection) { await adapter.dispose(); throw new Error("Native publication projection is not yet supported by this adapter"); }
-      const tools = new Map(), hooks = new Map();
+      const tools = new Map(), hooks = [];
       const unsupported = (name) => { throw new Error("Unsupported native Pi API: " + name); };
       const pi = new Proxy({
         registerTool(tool) { if(tool.renderCall||tool.renderResult) unsupported("tool rendering"); if(tools.has(tool.name)) throw new Error("Duplicate native tool"); tools.set(tool.name,tool); },
-        on(name,handler) { if(name!=="session_start"&&name!=="session_shutdown") unsupported("on("+name+")"); const list=hooks.get(name)||[];list.push(handler);hooks.set(name,list); }
+        on(name,handler) { if(!supportedEvents.has(name)) unsupported("on("+name+")"); const hook={name,handler,active:true};hooks.push(hook);return ()=>{hook.active=false;}; }
       }, {get(target,name){if(name in target)return target[name];return unsupported(String(name));}});
       try { await adapter.extension(pi); }
       catch(error) { await adapter.dispose(); throw error; }
       nativeSessions.set(message.attachment, {adapter,tools,hooks,pending:new Map(),closed:false});
-      send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(({name,label,description,parameters,drone})=>({name,label,description,parameters,...(drone===undefined?{}:{drone})})),effects:adapter.toolEffects||{},events:[...hooks.keys()]}});
+      send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(({name,label,description,parameters,drone})=>({name,label,description,parameters,...(drone===undefined?{}:{drone})})),effects:adapter.toolEffects||{},eventEffects:adapter.eventEffects||{},events:hooks.map(({name},index)=>({name,index}))}});
       return;
     }
     if (message.type === "native_detach") {
@@ -99,8 +102,14 @@ input.on("line", async (line) => {
       const pending=currentCall.run(message.id,async()=>{
         signal.throwIfAborted();
         if(message.kind==="tool") return session.tools.get(message.name).execute(message.toolCallId,message.input,signal,undefined,ctx);
-        let result;
-        for(const handler of session.hooks.get(message.name)||[]) result=await handler(message.input,ctx);
+        const hook=session.hooks[message.hookIndex];
+        if(!hook||hook.name!==message.name)throw new Error("Unknown native event handler");
+        if(!hook.active)return null;
+        const result=await hook.handler(message.input,ctx);
+        // Official context handlers may mutate their message list instead of returning it.
+        if(message.name==="context")return {messages:result?.messages??message.input.messages};
+        // Preserve final-message mutation before the SDK persists its replacement.
+        if(message.name==="message_end")return {message:result?.message??message.input.message};
         return result ?? null;
       });
       session.pending.set(message.id,pending);

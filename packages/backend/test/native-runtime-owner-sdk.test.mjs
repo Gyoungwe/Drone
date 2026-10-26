@@ -40,9 +40,16 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
  let tools=0,sessions=0;
  const read=async()=>({pid:process.pid,tools,sessions,scope:await capabilities.call("scope",null)});
  return {operations:{overview:{inputSchema:{type:"null"},resultSchema:{type:"object"},effect:"read",execute:read}},
- createNativeSession(){sessions++;let closed=false;return {toolEffects:{owner_read:"read"},extension(pi){
- pi.registerTool({name:"owner_read",label:"Owner read",description:"Read shared owner",drone:{readOnly:true,capabilities:["files"]},parameters:{type:"object",properties:{}},async execute(){tools++;return {content:[{type:"text",text:JSON.stringify(await read())}]};}});
+ createNativeSession(){sessions++;let closed=false,contexts=0;const scopes=[];return {toolEffects:{owner_read:"read"},eventEffects:{context:"read",tool_result:"read",message_end:"read"},extension(pi){
+ pi.registerTool({name:"owner_read",label:"Owner read",description:"Read shared owner",drone:{readOnly:true,capabilities:["files"]},parameters:{type:"object",properties:{}},async execute(){tools++;return {content:[{type:"text",text:JSON.stringify({...await read(),contexts,scopes})}]};}});
  pi.on("session_start",async()=>{await capabilities.call("scope",null);});
+ const remove=pi.on("context",()=>{throw new Error("Unsubscribed context callback ran");});remove();
+ pi.on("context",async(event,ctx)=>{contexts++;scopes.push((await capabilities.call("scope",null)).sessionId);event.messages.push({role:"user",content:[{type:"text",text:"first managed context"}],timestamp:1});});
+ pi.on("context",event=>{if(event.messages.at(-1)?.content[0]?.text!=="first managed context")throw new Error("SDK context chaining lost");return {messages:event.messages.slice(0,-1)};});
+ pi.on("tool_result",event=>event.toolName==="owner_read"?{details:{stage:1}}:undefined);
+ pi.on("tool_result",event=>{if(event.toolName!=="owner_read")return;if(event.details?.stage!==1)throw new Error("SDK result chaining lost");return {details:{stage:2}};});
+ pi.on("message_end",event=>{if(event.message.role==="assistant"&&event.message.stopReason==="stop"&&!event.message.content.some(block=>block.type==="toolCall"))event.message.content=[{type:"text",text:"first managed answer"}];});
+ pi.on("message_end",event=>{if(event.message.role!=="assistant"||event.message.stopReason!=="stop"||event.message.content.some(block=>block.type==="toolCall"))return;if(event.message.content[0]?.text!=="first managed answer")throw new Error("SDK message chaining lost");return {message:{...event.message,content:[{type:"text",text:"second managed answer"}]}};});
  },async dispose(){if(!closed){closed=true;sessions--;}}};},async dispose(){if(sessions)throw new Error("native sessions still attached");}};
 };`,
 		);
@@ -142,6 +149,7 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 					(message) => message.role === "toolResult" && message.toolName === "owner_read",
 				);
 				expect(result?.isError, JSON.stringify(result)).toBe(false);
+				expect(result.details).toEqual({ stage: 2 });
 				const receipt = JSON.parse(result.content[0].text);
 				pid ??= receipt.pid;
 				expect(receipt).toMatchObject({
@@ -149,7 +157,12 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 					tools: i + 1,
 					sessions: i + 1,
 					scope: { kind: "session", sessionId: session.sessionId },
+					contexts: 1,
+					scopes: [session.sessionId],
 				});
+				expect(session.messages.filter((message) => message.role === "assistant").at(-1).content).toEqual([
+					{ type: "text", text: "second managed answer" },
+				]);
 			}
 			if (shutdownOrder === "approval-window-closed") {
 				const prior = window;
