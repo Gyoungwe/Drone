@@ -152,3 +152,4 @@ export * from "./v2-closure";
 export * from "./volume-preview";
 export * from "./workflow-catalog";
 export * from "./zotero";
+export * from "./zotero-setup";
