@@ -80,6 +80,17 @@ const UiPluginsConfigSchema = Type.Object(
 			),
 		),
 		assignments: Type.Record(Type.String(), Type.String()),
+		installations: Type.Optional(
+			Type.Record(
+				Type.String(),
+				Type.Object(
+					{ root: Type.String({ minLength: 1 }), hash: Type.String({ minLength: 1 }) },
+					{
+						additionalProperties: false,
+					},
+				),
+			),
+		),
 	},
 	{ additionalProperties: false },
 );

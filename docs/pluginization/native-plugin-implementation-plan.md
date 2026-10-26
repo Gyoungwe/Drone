@@ -58,5 +58,7 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 - 2026-10-26：P3 host runtime `699b02f`、P4 host-owned workbench `638d699`/官方 loader smoke `bd358df`、P5 analysis/evidence 合同 `0ad8ae5` 已提交；对应 typecheck、注册测试、clean install/loader smoke 和 8 包 manifest 检查通过。P3/P4/P5 仍只完成 host contract 切片，未标记完整领域迁移或真实桌面工作流 PASS。
 - 2026-10-26：宿主补充零可选 UI 插件启动/发现回归：在空的 Pi 托管 `node_modules` 下创建 `UiPluginManager` 并执行 `init()`，确认扫描列表、未知插件信息、runtime source 和启用状态均保持空/禁用且不抛错。测试为 `packages/desktop/src/main/ui-plugins/installed-ui-pack.test.ts` 的 `keeps the host usable when the managed package root is empty`；该切片只覆盖宿主 UI 发现，不代表 P7 正式安装包零插件验收。
 
+- 2026-10-26：宿主 P6 代次切片覆盖已安装包完整树（含嵌套依赖）的内容哈希持久化；同路径入口或嵌套依赖就地替换会立即撤销旧 source/binding，扫描后清除 enabled/trusted，重启仍要求新代次重新确认。`runtime-source.test.ts` manager 回归覆盖两类替换、重启和再次确认；未覆盖旧进程销毁失败时的升级/回滚门禁与正式安装包证据。
+
 - 2026-10-26：宿主新增 `analysis-evidence-host` 通用组合：仅消费已声明的 analysis/evidence 工具，要求 evidence plan 声明 `execution=host-required`，再由 validator 校验宿主 manifest；`analysisEvidence.prepareEvidence` 返回稳定只读回执。当前锁定的公开 `pi-analysis@0.1.2` 尚未声明该工具，因此默认明确返回 `unavailable`。
 - 2026-10-26：插件 `3829623` 新增 `pi-research` 的 package-local `ResearchHostPort`、loader 和注册入口；`status/listRuns` 与 Desktop runtime 共用同一只读 adapter，129 项测试、typecheck、build:check、smoke 通过。宿主本轮 `npm test`（252/4 文件、2026/18 测试）、`npm run build`、`npm run typecheck`、`npm run check:arch` 全部通过；插件仓库的完整 `npm run check` 已通过 build、manifest、pi-knowledge、pi-research locked SDK 等阶段，但 latest SDK 安装因 npm 网络无输出中止，故不记完整插件 check PASS。当前仍没有正式安装包零插件/升级回滚和真实桌面 research workflow 证据。

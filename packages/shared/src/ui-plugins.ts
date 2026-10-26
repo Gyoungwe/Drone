@@ -128,6 +128,8 @@ export interface UiPluginsConfig {
 	>;
 	/** 槽位 → 指派的插件名（多插件争同一槽位时用户在设置面板选；单插件覆盖时自动指派） */
 	assignments: Record<string, string>;
+	/** Installed package content identities acknowledged by the user. */
+	installations?: Record<string, { root: string; hash: string }>;
 }
 
 /** main → renderer 事件载荷 */

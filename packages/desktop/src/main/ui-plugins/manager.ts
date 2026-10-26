@@ -578,6 +578,8 @@ export class UiPluginManager {
 	private installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
 	/** Name → package generation hash. Local user UI plugins intentionally have no entry here. */
 	private installedPackageHashes = new Map<string, { root: string; hash: string }>();
+	/** Installed package generations observed as changed during this scan; trust must be renewed. */
+	private readonly reconfirmInstallations = new Set<string>();
 	/** 随包内置插件名集合（init 时导出到用户目录；此处仅用于合成 builtin 标志 → 面板 badge/启用免确认） */
 	private builtinNames = new Set<string>();
 	/** 持久化配置缓存（updateConfig 后刷新；scanAll 时叠加） */
@@ -609,6 +611,7 @@ export class UiPluginManager {
 		name: string,
 		srcDir: string,
 		runtime?: InstalledUiRuntimeSource,
+		forceReconfirmation = false,
 	): Promise<UiPluginInfo> {
 		const manifest = await readManifest(srcDir);
 		const invalidReason = validateManifest(name, manifest ?? {}, runtime);
@@ -622,8 +625,8 @@ export class UiPluginManager {
 			slots: manifest?.slots ?? {},
 			contributions: filterContributions(manifest?.contributions),
 			headless: manifest?.headless === true ? true : undefined,
-			enabled: this.config.plugins[name]?.enabled ?? false,
-			trusted: this.config.plugins[name]?.trusted ?? false,
+			enabled: forceReconfirmation ? false : (this.config.plugins[name]?.enabled ?? false),
+			trusted: forceReconfirmation ? false : (this.config.plugins[name]?.trusted ?? false),
 			invalidReason: invalidReason ?? undefined,
 			buildError: prev?.buildError,
 			built: existsSync(join(srcDir, "dist/index.js")),
@@ -634,6 +637,7 @@ export class UiPluginManager {
 	/** 扫描 userData/ui-plugins/ 每个子目录：校验 manifest 并合成 UiPluginInfo（叠加 config/产物状态） */
 	async scanAll(): Promise<UiPluginInfo[]> {
 		this.config = await loadUiPluginsConfig();
+		this.reconfirmInstallations.clear();
 		// 随包内置名单（每次扫描现取，目录静态几乎零开销）
 		const builtinEntries = await readdir(builtinPluginsDir(), { withFileTypes: true }).catch(() => []);
 		this.builtinNames = new Set(
@@ -644,6 +648,8 @@ export class UiPluginManager {
 		const seen = new Set<string>();
 		const installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
 		const installedPackageHashes = new Map<string, { root: string; hash: string }>();
+		const persistedInstallations = this.config.installations ?? {};
+		const nextInstallations: NonNullable<UiPluginsConfig["installations"]> = { ...persistedInstallations };
 		const entries = await readdir(dir, { withFileTypes: true }).catch((err) => {
 			log.error("scanAll readdir failed", err);
 			return [];
@@ -755,11 +761,23 @@ export class UiPluginManager {
 				seen.add(installedName);
 				this.dirNames.set(installedName, candidate.uiDir);
 				installedSources.set(installedName, candidate);
-				installedPackageHashes.set(installedName, {
+				const identity = {
 					root: candidate.packageRoot,
 					hash: installedPackageHash(candidate.packageRoot),
-				});
-				const info = await this.scanOne(installedName, candidate.uiDir, candidate.runtime);
+				};
+				const previous =
+					this.installedPackageHashes.get(installedName) ?? persistedInstallations[candidate.packageName];
+				if (previous && (previous.root !== identity.root || previous.hash !== identity.hash)) {
+					this.reconfirmInstallations.add(installedName);
+				}
+				nextInstallations[candidate.packageName] = identity;
+				installedPackageHashes.set(installedName, identity);
+				const info = await this.scanOne(
+					installedName,
+					candidate.uiDir,
+					candidate.runtime,
+					this.reconfirmInstallations.has(installedName),
+				);
 				this.infos.set(installedName, info);
 				out.push(info);
 			} catch (err) {
@@ -775,6 +793,17 @@ export class UiPluginManager {
 		}
 		this.installedSources = installedSources;
 		this.installedPackageHashes = installedPackageHashes;
+		if (this.reconfirmInstallations.size > 0) {
+			const plugins = { ...this.config.plugins };
+			for (const name of this.reconfirmInstallations) {
+				plugins[name] = { enabled: false, trusted: false };
+			}
+			await saveUiPluginsConfig({ plugins, installations: nextInstallations });
+			this.config = await loadUiPluginsConfig();
+		} else if (Object.keys(nextInstallations).length > 0) {
+			await saveUiPluginsConfig({ installations: nextInstallations });
+			this.config = await loadUiPluginsConfig();
+		}
 		return out;
 	}
 
