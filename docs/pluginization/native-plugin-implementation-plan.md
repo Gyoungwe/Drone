@@ -6,11 +6,11 @@
 | --- | --- | --- | --- |
 | P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复的领域耦合扫描 | 清单和静态检查已实现；110 项初始耦合；锁定 1.1.0/latest 1.4.0 真实会话基础 UI 对照通过，全 API 兼容尚未完成 | 无 |
 | P1 | 通用 runtime 生命周期、包来源绑定、权限、隔离进程、UI 调用和撤销 | 应用 owner/真实会话/selection lease 回归及正式 DMG application→A→application→B→A、停用/拒绝/恢复/退出切片通过；领域桥接继续由 P2 完成 | P0 |
-| P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | 同 owner 的阅读、图谱、分类及最小审核策略设置已通过候选包/真实 SDK；正式阅读 GUI 历史失败保留；后继正式包的工具、设置、停用恢复与退出复验通过；完整 hooks、服务/写操作和宿主删除仍未完成 | P1 |
-| P3 | research、来源连接器、引用/Zotero 等领域 API/页面迁移 | 待开始 | P2 |
-| P4 | tasks、编排、领域记忆及 UI 迁移 | 待开始 | P2 |
+| P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | 同 owner 的阅读、图谱、分类、最小审核策略和 native hook 生命周期切片已通过候选包/真实 SDK；正式阅读 GUI 历史失败保留；后继正式包的工具、设置、停用恢复与退出复验通过；完整服务写操作和宿主删除仍未完成 | P1 |
+| P3 | research、来源连接器、引用/Zotero 等领域 API/页面迁移 | **部分完成**：`pi-connectors` 已新增 arXiv 与 Semantic Scholar 只读声明、网络/凭据/副作用边界并通过包检查；完整 research/Zotero host adapter、页面和写入迁移仍未完成 | P2 |
+| P4 | tasks、编排、领域记忆及 UI 迁移 | **部分完成**：新增 `@gyoungwe/pi-workbench@0.1.0`，提供 registration-scoped 任务/记忆工具并纳入 `research-suite`；持久化 host adapter、桌面 UI 与旧宿主装配仍未完成 | P2 |
 | P5 | analysis/evidence 迁移；跨插件依赖通过显式合同管理 | 待开始 | P3/P4 |
-| P6 | 科研发行为可卸载预设；构建/锁文件去除领域必需依赖；删除旧路径 | 待开始 | P2–P5 |
+| P6 | 科研发行为可卸载预设；构建/锁文件去除领域必需依赖；删除旧路径 | **部分完成**：UI 已安装包内容寻址，入口或嵌套依赖就地替换会撤销旧绑定并要求 reload；跨包 hoisted 依赖闭包、持久化安装代次和旧路径删除仍未完成 | P2–P5 |
 | P7 | 双仓库最终门禁、同 tarball 原生 Pi 真实会话、正式安装包零插件及升级/停用/回滚 | 待开始 | P6 |
 
 ## 工作分配
@@ -54,3 +54,4 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 - 2026-10-26：阅读候选 `12f1caf` 与设置候选 `905cd2d` 分别通过插件全检查及真实 SDK；显式 state-write grant、原子版本写、回读、损坏拒绝和撤销已验证。正式 DMG `4550f1a9` 的阅读/范围/停用通过，但实际模型工具被旧任务守卫阻断、恢复目录提交不可用、退出后空窗仍存活，见[原始回执](native-plugin-knowledge-reading-gui-evidence.md)。守卫修复 `a031fc96` 已通过真实跨会话测试；关闭竞态修复与新 DMG 验收继续进行。
 
 - 2026-10-26：`ad3cd189` 正式 DMG 与设置候选完成[限定范围 GUI 复验](native-plugin-knowledge-state-gui-evidence.md)：真实两个工具均非错误，写入拒绝/保存回读、停用零子进程、重新启用保留设置及一次正常退出通过。完整 P2 服务/hooks/审核与旧代码删除仍在实施，资源关闭新合同不混入该安装包证据。
+- 2026-10-26：P2 native hook 切片 `25eacb4` 为 `appendEntry`、`sendUserMessage`、`events` 和 `sessionManager` 绑定会话 owner/票据并在 dispose 撤销，6/6 生命周期测试通过。P3 连接器切片 `1f7778a`、P4 workbench 切片 `7163aee`、P6 安装代次切片 `6fc5cf11` 已提交；插件仓库在 API 1.3 候选环境下完成知识包、各独立包、干净安装、UI smoke 与 PDF Canvas 检查，`research-suite` manifest 工具一致性测试修复并由 `5e81503` 刷新生成物。完整 SDK locked/latest 干净安装和正式 GUI 候选替换仍未完成；API 1.3 尚未发布。
