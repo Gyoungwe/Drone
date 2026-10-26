@@ -71,16 +71,32 @@ const REDUCED_MOTION =
  * codeBlockLightTheme/codeBlockDarkTheme：不传时 stream-monaco 回退到 themes[0]（默认 vitesse-dark），
  * 浅色模式下代码块也会是深色。
  */
-export function Markdown({ text, streaming }: { text: string; streaming?: boolean }) {
+export function Markdown({
+	text,
+	streaming,
+	onLink,
+}: {
+	text: string;
+	streaming?: boolean;
+	/** A contribution owns navigation when supplied; no host knowledge or resource routing runs. */
+	onLink?: (href: string) => void;
+}) {
 	const isDark = useThemeStore((s) => s.resolved === "dark");
 	const cwd = useSessionsStore((s) => s.cwd);
 	const openResourcePreview = useUiStore((s) => s.openResourcePreview);
-	const displayText = useMemo(() => knowledgeLinksForDisplay(text), [text]);
+	const displayText = useMemo(() => (onLink ? text : knowledgeLinksForDisplay(text)), [text, onLink]);
 	const handleClick = useCallback(
 		(event: MouseEvent<HTMLDivElement>) => {
 			const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
 			if (!(target instanceof HTMLAnchorElement)) return;
 			const href = target.getAttribute("href");
+			if (href === null) return;
+			if (onLink) {
+				event.preventDefault();
+				event.stopPropagation();
+				onLink(href);
+				return;
+			}
 			if (!href) return;
 			const notePath = parseKnowledgeHref(href);
 			if (notePath) {
@@ -111,7 +127,7 @@ export function Markdown({ text, streaming }: { text: string; streaming?: boolea
 				cwd: cwd ?? undefined,
 			});
 		},
-		[cwd, openResourcePreview],
+		[cwd, onLink, openResourcePreview],
 	);
 	// 挂载初值锁定：流式中挂载 → 本次生命周期始终启用平滑（含固化后追平）；历史消息挂载 → 永不启用
 	const smoothableRef = useRef<boolean>(Boolean(streaming) && !REDUCED_MOTION);

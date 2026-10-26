@@ -285,3 +285,7 @@ export function activate() {
 `window.DroneUI.knowledge` 仅公开 `@gyoungwe/plugin-api/ui` 的 `KnowledgeUiPort` 方法，宿主通过既有 preload/IPC 执行，保留授权和路径边界。插件不得访问 `window.pi`。`KnowledgeUiBindings` 定义组件、hooks、stores 与辅助函数的类型投影；声明、shim 与挂载对象由 host-api.manifest.json 同步生成。
 
 整页与嵌入区的产品界面由插件拥有；宿主只维护数据事件桥、上下文和轻量回退。全局审核/通知用既有 `app.overlay`，停用时卸载，重新启用读取当前 store。插件必须提供自己的 CSS 与知识文案，不能依赖宿主保留产品样式。
+
+### Markdown navigation ownership
+
+`Markdown` accepts optional `onLink(href: string): void`. When provided, the host renders the supplied Markdown without knowledge-link rewriting and forwards anchor clicks to the contribution after preventing default navigation. Host knowledge lookup/store and resource-preview routing do not run. The contribution must use its own runtime and approved opening capabilities; receiving a URL is not permission to open local files or launch an external application. Omitting `onLink` retains the published UI v1 behavior until its consumers migrate.

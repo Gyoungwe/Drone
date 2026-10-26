@@ -207,7 +207,7 @@ export interface KnowledgeUiBindings {
 			actions?: ReactNode;
 			tabs?: ReactNode;
 		}>;
-		Markdown: ComponentType<{ text: string; streaming?: boolean }>;
+		Markdown: ComponentType<{ text: string; streaming?: boolean; onLink?: (href: string) => void }>;
 		ChevronDownIcon: ComponentType<{ size?: number; className?: string }>;
 		ObsidianIcon: ComponentType<{ size?: number; className?: string }>;
 		RoadmapLane: ComponentType<{ nodes: KnowledgeRoadmapNode[]; testId?: string; ariaLabel?: string }>;

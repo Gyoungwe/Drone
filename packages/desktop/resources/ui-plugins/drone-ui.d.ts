@@ -209,6 +209,8 @@ declare module "@gyoungwe/plugin-api" {
 	export interface PluginMarkdownProps {
 		text: string;
 		streaming?: boolean;
+		/** Own all link clicks and render without legacy knowledge-link rewriting. */
+		onLink?: (href: string) => void;
 	}
 	export interface PluginImagePreviewProps {
 		image: { data: string; mimeType: string };
