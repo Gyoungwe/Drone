@@ -191,7 +191,11 @@ describe("installed desktop-ui-pack discovery", () => {
 
 		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
 		await manager.init();
-		expect(manager.info("ui-fixture")).toMatchObject({ enabled: false, invalidReason: undefined });
+		expect(manager.info("ui-fixture")).toMatchObject({
+			packageName: "@example/ui-fixture",
+			enabled: false,
+			invalidReason: undefined,
+		});
 		expect(manager.list().find((item) => item.name === "package-example-broken-ui")?.invalidReason).toContain(
 			"entrypoints.ui does not contain",
 		);

@@ -613,12 +613,14 @@ export class UiPluginManager {
 		srcDir: string,
 		runtime?: InstalledUiRuntimeSource,
 		forceReconfirmation = false,
+		packageName?: string,
 	): Promise<UiPluginInfo> {
 		const manifest = await readManifest(srcDir);
 		const invalidReason = validateManifest(name, manifest ?? {}, runtime);
 		const prev = this.infos.get(name);
 		return {
 			name,
+			...(packageName ? { packageName } : {}),
 			displayName: typeof manifest?.displayName === "string" ? manifest.displayName : undefined,
 			description: typeof manifest?.description === "string" ? manifest.description : undefined,
 			version: typeof manifest?.version === "string" ? manifest.version : undefined,
@@ -778,6 +780,7 @@ export class UiPluginManager {
 					candidate.uiDir,
 					candidate.runtime,
 					this.reconfirmInstallations.has(installedName),
+					candidate.packageName,
 				);
 				this.infos.set(installedName, info);
 				out.push(info);

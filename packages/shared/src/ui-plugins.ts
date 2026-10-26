@@ -91,6 +91,8 @@ export interface UiPluginManifest {
 /** 扫描合成的插件运行时信息（设置面板展示 + 加载筛选） */
 export interface UiPluginInfo {
 	name: string;
+	/** The standard package that owns an installed UI contribution, when package-provided. */
+	packageName?: string;
 	displayName?: string;
 	description?: string;
 	version?: string;

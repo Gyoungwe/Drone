@@ -49,6 +49,7 @@ const UiPluginManifestSchema = Type.Object(
 const UiPluginInfoSchema = Type.Object(
 	{
 		name: Type.String({ minLength: 1 }),
+		packageName: Type.Optional(Type.String({ minLength: 1 })),
 		displayName: Type.Optional(Type.String()),
 		description: Type.Optional(Type.String()),
 		version: Type.Optional(Type.String()),
