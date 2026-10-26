@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createBackend } from "./create-backend";
+import { KnowledgeUiService } from "./knowledge/ui";
 import { createDroneRuntime } from "./runtime";
 import type { DailyDiscoveryService } from "./services/daily-discovery";
 import type { KnowledgeMaintenanceService } from "./services/knowledge-maintenance";
@@ -134,6 +135,22 @@ describe("createBackend", () => {
 		expect(maintenanceFactoryCalled).toBe(true);
 		expect(dailyStarted).toBe(true);
 		expect(maintenanceStarted).toBe(true);
+		services.dispose();
+	});
+
+	it("accepts a knowledge provider without constructing the host adapter", () => {
+		const knowledge = new KnowledgeUiService();
+		let provided = false;
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			knowledgeFactory: () => {
+				provided = true;
+				return knowledge;
+			},
+		});
+		expect(provided).toBe(true);
+		expect(services.knowledge).toBe(knowledge);
 		services.dispose();
 	});
 

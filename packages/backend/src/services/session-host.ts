@@ -12,7 +12,7 @@ import type {
 	WikiModelReviewResult,
 } from "@drone/shared";
 import type { CapabilityRuntime } from "../capabilities/runtime";
-import type { KnowledgeUiService } from "../knowledge/ui";
+import type { KnowledgeUiServicePort } from "../knowledge/ui";
 import type { McpService } from "../mcp/service";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import type { AskGate } from "../session/ask-gate";
@@ -61,7 +61,7 @@ export interface LiveSubagentControl {
 export interface SessionHost {
 	readonly options: SessionServiceOptions;
 	runtime: DroneRuntime;
-	readonly knowledge: KnowledgeUiService;
+	readonly knowledge: KnowledgeUiServicePort;
 	knowledgeSession: KnowledgeSessionService;
 	readonly registry: SessionRegistry;
 	readonly askHandlers: Set<(req: AskRequest) => void>;

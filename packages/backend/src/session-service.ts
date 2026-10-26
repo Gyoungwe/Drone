@@ -14,7 +14,7 @@ import type { Model } from "@earendil-works/pi-ai";
 import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { CapabilityRuntime } from "./capabilities/runtime";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
-import { KnowledgeUiService } from "./knowledge/ui";
+import { KnowledgeUiService, type KnowledgeUiServicePort } from "./knowledge/ui";
 import { createLogger } from "./log";
 import type { McpService } from "./mcp/service";
 import type { PluginSandboxPolicy } from "./plugin-sandbox";
@@ -91,6 +91,8 @@ export interface SessionServiceOptions {
 	userDataDir?: string;
 	/** Host-owned runtime container; omitted only for direct compatibility construction. */
 	runtime?: DroneRuntime;
+	/** Optional knowledge domain provider; the default remains the host compatibility adapter. */
+	knowledgeFactory?: () => KnowledgeUiServicePort;
 	/** Optional project research-state root registered for the inquiry adapter. */
 	inquiryDir?: string;
 	/** Host-wide root for per-project inquiry ledgers. */
@@ -137,7 +139,7 @@ type DecisionHandler = (event: unknown) => void;
  */
 export class SessionService extends SessionServiceApi {
 	readonly runtime!: DroneRuntime;
-	readonly knowledge = new KnowledgeUiService();
+	readonly knowledge: KnowledgeUiServicePort;
 	/** Session-bound knowledge actions exposed through BackendServices. */
 	readonly knowledgeSession!: KnowledgeSessionService;
 	readonly registry = new SessionRegistry();
@@ -250,6 +252,7 @@ export class SessionService extends SessionServiceApi {
 
 	constructor(readonly options: SessionServiceOptions = {}) {
 		super();
+		this.knowledge = options.knowledgeFactory?.() ?? new KnowledgeUiService();
 		this.bindHost(this);
 		initializeSessionComposition(this, options);
 	}
