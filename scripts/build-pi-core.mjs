@@ -22,6 +22,7 @@ async function checkOutput() {
 	if (!existsSync(outputPath) || !existsSync(hostOutputPath))
 		throw new Error("pi-core dist/index.mjs and dist/host.mjs are required");
 	const output = await readFile(outputPath, "utf8");
+	const hostOutput = await readFile(hostOutputPath, "utf8");
 	for (const pattern of [
 		/(?:from|import\s*\(|require\s*\()["']electron["']/u,
 		/(?:from|import\s*\(|require\s*\()["']@drone\/(?:backend|desktop)["']/u,
@@ -40,6 +41,16 @@ async function checkOutput() {
 		"drone-example",
 	])
 		if (!output.includes(JSON.stringify(name))) throw new Error(`pi-core bundle is missing ${name}`);
+	for (const name of [
+		"makeStatusTool",
+		"makeTodoTool",
+		"normalizeTodos",
+		"formatTodoList",
+		"makeMemorySaveTool",
+		"deliverFilesParams",
+		"makeDeliverFilesTool",
+	])
+		if (!hostOutput.includes(name)) throw new Error(`pi-core host bundle is missing ${name}`);
 }
 
 if (!check) {

@@ -1,2 +1,2 @@
-/** Compatibility facade: the portable implementation lives in @gyoungwe/pi-core. */
-export * from "@gyoungwe/pi-core/tools/status";
+/** Compatibility facade: the portable implementation lives in @gyoungwe/pi-core/host. */
+export * from "@gyoungwe/pi-core/host";
