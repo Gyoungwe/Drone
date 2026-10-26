@@ -83,6 +83,7 @@ export * from "./institutional";
 export * from "./ipc";
 export * from "./knowledge";
 export * from "./knowledge-links";
+export * from "./knowledge-publication";
 export * from "./knowledge-specialists";
 export * from "./knowledge-upgrade";
 export { literatureRecoverySummary } from "./literature-recovery";

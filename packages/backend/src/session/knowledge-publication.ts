@@ -1,5 +1,10 @@
-import { type DroneRuntime, isUserAbortError, type SessionEvent, sanitizeProviderError } from "@drone/shared";
-import { publicationFallbackNotice } from "@gyoungwe/pi-knowledge/host";
+import {
+	type DroneRuntime,
+	isUserAbortError,
+	KNOWLEDGE_PUBLICATION_FALLBACK_NOTICE,
+	type SessionEvent,
+	sanitizeProviderError,
+} from "@drone/shared";
 import type { RawMessage } from "./messages";
 
 /**
@@ -19,7 +24,7 @@ function bridge(runtime?: DroneRuntime): PublicationBridge | undefined {
 	return runtime?.knowledge.publication as PublicationBridge | undefined;
 }
 
-const notice = `【知识库检查未通过】${publicationFallbackNotice}`;
+const notice = `【知识库检查未通过】${KNOWLEDGE_PUBLICATION_FALLBACK_NOTICE}`;
 
 /** 兜底封条：隐藏未审草稿，同时区分服务商错误、中断与发布检查故障。 */
 function sealed(message: RawMessage): RawMessage {
