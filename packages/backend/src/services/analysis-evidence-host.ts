@@ -4,6 +4,7 @@ import type { AnalysisContext } from "@drone/shared";
 
 export const ANALYSIS_PREPARE_EVIDENCE_TOOL = "analysis_prepare_evidence" as const;
 export const EVIDENCE_VALIDATE_MANIFEST_TOOL = "evidence_validate_manifest" as const;
+export const EVIDENCE_VERIFY_REPLAY_TOOL = "evidence_verify_replay" as const;
 
 export interface ReadOnlyPluginTool {
 	execute(input: unknown): Promise<unknown> | unknown;
@@ -23,11 +24,26 @@ export interface AnalysisEvidencePluginHost {
 	readonly tools: Readonly<
 		Partial<
 			Record<
-				typeof ANALYSIS_PREPARE_EVIDENCE_TOOL | typeof EVIDENCE_VALIDATE_MANIFEST_TOOL,
+				| typeof ANALYSIS_PREPARE_EVIDENCE_TOOL
+				| typeof EVIDENCE_VALIDATE_MANIFEST_TOOL
+				| typeof EVIDENCE_VERIFY_REPLAY_TOOL,
 				ReadOnlyPluginTool
 			>
 		>
 	>;
+}
+
+export interface AnalysisEvidenceReplayVerification {
+	readonly status: "reproduced" | "failed";
+	readonly detail: string;
+	readonly outputChecks: readonly { path: string; matched: boolean }[];
+	readonly environmentMatched: boolean;
+}
+
+export interface AnalysisEvidenceReplayVerificationInput {
+	readonly checkpoint: unknown;
+	readonly environmentFingerprint?: string;
+	readonly outputs: readonly { path: string; bytes: number; sha256: string }[];
 }
 
 export interface AnalysisEvidencePreparationInput {
@@ -189,4 +205,55 @@ export async function prepareAnalysisEvidence(
 		validation,
 		manifestSha256: digest(input.manifest),
 	});
+}
+
+/**
+ * Delegate replay metadata verification to the installed evidence plugin when
+ * it declares the read-only verifier. The host still reads output bytes and
+ * owns the durable receipt; the plugin only decides whether metadata matches.
+ */
+export async function verifyAnalysisEvidenceReplay(
+	host: AnalysisEvidencePluginHost | undefined,
+	input: AnalysisEvidenceReplayVerificationInput,
+): Promise<AnalysisEvidenceReplayVerification | undefined> {
+	if (!host || !declared(host.manifest, EVIDENCE_VERIFY_REPLAY_TOOL)) return undefined;
+	const verifier = host.tools[EVIDENCE_VERIFY_REPLAY_TOOL];
+	if (!verifier) throw new Error("Declared evidence replay verifier is not loaded");
+	let value: unknown;
+	try {
+		value = details(
+			await verifier.execute({
+				checkpoint: input.checkpoint,
+				...(input.environmentFingerprint !== undefined
+					? { environmentFingerprint: input.environmentFingerprint }
+					: {}),
+				outputs: input.outputs,
+			}),
+		);
+	} catch (error) {
+		throw new Error(`Evidence replay verification failed: ${String(error).slice(0, 300)}`);
+	}
+	if (!value || typeof value !== "object" || Array.isArray(value))
+		throw new Error("Evidence replay verifier returned a non-object result");
+	const result = value as Record<string, unknown>;
+	if (result.status !== "reproduced" && result.status !== "failed")
+		throw new Error("Evidence replay verifier returned an invalid status");
+	if (typeof result.detail !== "string" || typeof result.environmentMatched !== "boolean")
+		throw new Error("Evidence replay verifier returned invalid metadata");
+	if (!Array.isArray(result.outputChecks))
+		throw new Error("Evidence replay verifier returned invalid output checks");
+	const outputChecks = result.outputChecks.map((check) => {
+		if (!check || typeof check !== "object" || Array.isArray(check))
+			throw new Error("Evidence replay verifier returned an invalid output check");
+		const item = check as Record<string, unknown>;
+		if (typeof item.path !== "string" || typeof item.matched !== "boolean")
+			throw new Error("Evidence replay verifier returned an invalid output check");
+		return { path: item.path, matched: item.matched };
+	});
+	return {
+		status: result.status,
+		detail: result.detail,
+		outputChecks,
+		environmentMatched: result.environmentMatched,
+	};
 }

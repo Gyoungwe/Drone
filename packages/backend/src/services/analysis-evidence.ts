@@ -19,6 +19,7 @@ import {
 	type AnalysisEvidencePluginHost,
 	type AnalysisEvidenceReceipt,
 	prepareAnalysisEvidence,
+	verifyAnalysisEvidenceReplay,
 } from "./analysis-evidence-host";
 import type { AnalysisOrchestrationService } from "./analysis-orchestration";
 
@@ -569,6 +570,7 @@ export class AnalysisEvidenceService {
 		const checks: { path: string; matched: boolean }[] = [];
 		let environmentMatched = false,
 			detail = "Exact output bytes and environment matched";
+		let verificationStatus: EvidenceReplayReceipt["status"] | undefined;
 		try {
 			await this.materialize(
 				capsule,
@@ -577,19 +579,34 @@ export class AnalysisEvidenceService {
 			);
 			const result = await runner.run({ checkpoint: structuredClone(checkpoint), inputDir, outputDir });
 			environmentMatched = result.environmentFingerprint === checkpoint.environmentFingerprint;
+			const outputRecords: { path: string; bytes: number; sha256: string }[] = [];
 			for (const file of outputs) {
 				let matched = false;
 				try {
 					const data = await readWithin(outputDir, file.artifact.path);
-					matched = data.length === file.artifact.bytes && digest(data) === file.artifact.sha256;
+					const sha256 = digest(data);
+					outputRecords.push({ path: file.artifact.path, bytes: data.length, sha256 });
+					matched = data.length === file.artifact.bytes && sha256 === file.artifact.sha256;
 				} catch {
 					/* Missing or unsafe outputs fail verification. */
 				}
 				checks.push({ path: file.artifact.path, matched });
 			}
-			if (!environmentMatched || checks.some((c) => !c.matched))
+			const pluginVerification = await verifyAnalysisEvidenceReplay(this.options.evidenceHost, {
+				checkpoint,
+				environmentFingerprint: result.environmentFingerprint,
+				outputs: outputRecords,
+			});
+			if (pluginVerification) {
+				verificationStatus = pluginVerification.status;
+				environmentMatched = pluginVerification.environmentMatched;
+				checks.splice(0, checks.length, ...pluginVerification.outputChecks);
+				detail = pluginVerification.detail;
+			} else if (!environmentMatched || checks.some((c) => !c.matched)) {
 				detail = "Output or environment differs from frozen evidence";
+			}
 		} catch (error) {
+			verificationStatus = "failed";
 			detail = `Replay failed: ${String(error).slice(0, 500)}`;
 		} finally {
 			await rm(workspace, { recursive: true, force: true });
@@ -603,9 +620,10 @@ export class AnalysisEvidenceService {
 			id: randomUUID(),
 			checkpointId: id,
 			status:
-				environmentMatched && checks.length === outputs.length && checks.every((c) => c.matched)
+				verificationStatus ??
+				(environmentMatched && checks.length === outputs.length && checks.every((c) => c.matched)
 					? "reproduced"
-					: "failed",
+					: "failed"),
 			detail,
 			outputChecks: checks,
 			environmentMatched,

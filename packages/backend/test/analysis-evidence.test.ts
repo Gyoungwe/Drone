@@ -2,15 +2,19 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { JsonStore } from "../src/json-store";
 import { AnalysisEvidenceService, checkpointId, type FrozenFile } from "../src/services/analysis-evidence";
+import {
+	type AnalysisEvidencePluginHost,
+	EVIDENCE_VERIFY_REPLAY_TOOL,
+} from "../src/services/analysis-evidence-host";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "../src/services/analysis-orchestration";
 import { StorageRegistry } from "../src/storage/registry";
 
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
-async function setup() {
+async function setup(evidenceHost?: AnalysisEvidencePluginHost) {
 	const root = await mkdtemp(join(tmpdir(), "drone-evidence-"));
 	const runs = new AnalysisOrchestrationService({
 		store: new JsonStore({
@@ -28,7 +32,12 @@ async function setup() {
 	});
 	await runs.recordDesign("run-1");
 	const storage = new StorageRegistry();
-	const evidence = new AnalysisEvidenceService({ root: join(root, "evidence"), analysis: runs, storage });
+	const evidence = new AnalysisEvidenceService({
+		root: join(root, "evidence"),
+		analysis: runs,
+		storage,
+		...(evidenceHost ? { evidenceHost } : {}),
+	});
 	const source = join(root, "source");
 	await mkdir(source);
 	const files = [
@@ -143,6 +152,85 @@ describe("analysis evidence checkpoints", () => {
 			expect(receipt.lineage?.runAttemptId).toMatch(/^run:/);
 			expect(receipt.lineage?.causationId).toBeUndefined();
 			expect(await evidence.replayReceipts(checkpoint.id)).toHaveLength(1);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("delegates replay verification to the declared evidence plugin and persists its receipt", async () => {
+		const verifier = vi.fn(() => ({
+			details: {
+				status: "reproduced",
+				detail: "Plugin verified replay metadata",
+				environmentMatched: true,
+				outputChecks: [{ path: "result.txt", matched: true }],
+			},
+		}));
+		const evidenceHost: AnalysisEvidencePluginHost = {
+			manifest: { tools: [EVIDENCE_VERIFY_REPLAY_TOOL] },
+			tools: { [EVIDENCE_VERIFY_REPLAY_TOOL]: { execute: verifier } },
+		};
+		const { root, evidence, source, frozen } = await setup(evidenceHost);
+		try {
+			const checkpoint = await evidence.freeze({
+				analysisId: "run-1",
+				sourceRoot: source,
+				files: frozen,
+				environmentFingerprint: "env-1",
+			});
+			const receipt = await evidence.replay(checkpoint.id, {
+				run: async ({ outputDir }) => {
+					await mkdir(outputDir, { recursive: true });
+					await writeFile(join(outputDir, "result.txt"), "done");
+					return { environmentFingerprint: "env-1" };
+				},
+			});
+			expect(receipt).toMatchObject({
+				status: "reproduced",
+				detail: "Plugin verified replay metadata",
+				outputChecks: [{ path: "result.txt", matched: true }],
+			});
+			expect(verifier).toHaveBeenCalledWith(
+				expect.objectContaining({
+					checkpoint,
+					environmentFingerprint: "env-1",
+					outputs: [{ path: "result.txt", bytes: 4, sha256: sha256("done") }],
+				}),
+			);
+			expect(await evidence.replayReceipts(checkpoint.id)).toEqual([receipt]);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("fails closed when a declared replay verifier errors after execution", async () => {
+		const evidenceHost: AnalysisEvidencePluginHost = {
+			manifest: { tools: [EVIDENCE_VERIFY_REPLAY_TOOL] },
+			tools: {
+				[EVIDENCE_VERIFY_REPLAY_TOOL]: {
+					execute: vi.fn(() => {
+						throw new Error("verifier unavailable");
+					}),
+				},
+			},
+		};
+		const { root, evidence, source, frozen } = await setup(evidenceHost);
+		try {
+			const checkpoint = await evidence.freeze({
+				analysisId: "run-1",
+				sourceRoot: source,
+				files: frozen,
+				environmentFingerprint: "env-1",
+			});
+			const receipt = await evidence.replay(checkpoint.id, {
+				run: async ({ outputDir }) => {
+					await mkdir(outputDir, { recursive: true });
+					await writeFile(join(outputDir, "result.txt"), "done");
+					return { environmentFingerprint: "env-1" };
+				},
+			});
+			expect(receipt.status).toBe("failed");
+			expect(receipt.detail).toContain("verifier unavailable");
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
