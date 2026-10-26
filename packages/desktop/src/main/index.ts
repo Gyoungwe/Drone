@@ -310,9 +310,41 @@ app.whenReady().then(async () => {
 		capability: "analysis",
 	});
 	if (analysisHost) log.info("Optional analysis host discovered", analysisHost.discovery);
+	const knowledgeHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").KnowledgeHostLoader>({
+		packageRoots: [
+			join(
+				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
+				"npm",
+				"node_modules",
+			),
+			app.isPackaged
+				? join(process.resourcesPath, "pi-packages", "node_modules")
+				: join(__dirname, "../../pi-packages/node_modules"),
+			join(app.getAppPath(), "node_modules"),
+		],
+		capability: "knowledge",
+	});
+	if (knowledgeHost) log.info("Optional knowledge host discovered", knowledgeHost.discovery);
+	const researchHost = await discoverPluginHostLoader<import("@drone/backend").ResearchHostLoader>({
+		packageRoots: [
+			join(
+				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
+				"npm",
+				"node_modules",
+			),
+			app.isPackaged
+				? join(process.resourcesPath, "pi-packages", "node_modules")
+				: join(__dirname, "../../pi-packages/node_modules"),
+			join(app.getAppPath(), "node_modules"),
+		],
+		capability: "research",
+	});
+	if (researchHost) log.info("Optional research host discovered", researchHost.discovery);
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
 		...(analysisHost ? { analysisHostLoader: analysisHost.loader } : {}),
+		...(knowledgeHost ? { knowledgeHostLoader: knowledgeHost.loader } : {}),
+		...(researchHost ? { researchHostLoader: researchHost.loader } : {}),
 		computeAuthorizeRemoteOperation: authorizeComputeOperation,
 		computeSshConfig: () => readSshConfigHosts(),
 		// Use one ledger per canonical workspace. The old single ledger remains

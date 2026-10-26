@@ -189,6 +189,18 @@ export {
 	replyLanguagePrompt,
 	setReplyLanguage,
 } from "./reply-language";
+export {
+	createResearchHostPort,
+	type ResearchFileEntry,
+	type ResearchHostAdapter,
+	type ResearchHostLoader,
+	type ResearchHostOperations,
+	type ResearchHostPort,
+	type ResearchRunListInput,
+	type ResearchRunListResult,
+	type ResearchRunStatusInput,
+	type ResearchRunSummary,
+} from "./research-host";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export {
 	AnalysisEvidenceService,

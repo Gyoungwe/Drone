@@ -33,8 +33,22 @@ import {
 	type DiscoveryServicePort,
 } from "./discovery/service";
 import { JsonStore } from "./json-store";
-import type { KnowledgeUiServicePort } from "./knowledge/ui";
+import { createKnowledgeReadProvider, KnowledgeUiService, type KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
+import type { ResearchHostLoader } from "./research-host";
+
+interface KnowledgeHostLoader {
+	readonly contractVersion: 1;
+	load(): {
+		readonly contractVersion: 1;
+		overview(input: unknown): Promise<unknown>;
+		search(input: unknown): Promise<unknown>;
+		read(input: unknown): Promise<unknown>;
+		noteLinks(input: unknown): Promise<unknown>;
+		graph(input: unknown): Promise<unknown>;
+	};
+}
+
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
 import { DomainCapabilityRegistry, type DomainCapabilityRegistryPort } from "./plugins/domain-capabilities";
@@ -294,6 +308,10 @@ export interface BackendOptions extends SessionServiceOptions {
 	analysisEvidenceHost?: AnalysisEvidencePluginHost;
 	/** Optional installed analysis plugin host; absent means analysis workflows are unavailable. */
 	analysisHostLoader?: AnalysisHostLoader;
+	/** Optional installed knowledge plugin host; absent uses the compatibility provider. */
+	knowledgeHostLoader?: KnowledgeHostLoader;
+	/** Optional installed research plugin host; absent means research run reads are unavailable. */
+	researchHostLoader?: ResearchHostLoader;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
@@ -311,8 +329,20 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	let listComputeHosts: (() => Promise<ComputeHost[]>) | null = null;
 	const memory = new MemoryStore(join(getAgentDir(), "memory", "memory.db"));
 	runtime.registerDisposable?.({ dispose: () => memory.close() });
+	const knowledgeFactory =
+		options.knowledgeFactory ??
+		(options.knowledgeHostLoader || options.researchHostLoader
+			? () =>
+					new KnowledgeUiService(
+						options.knowledgeHostLoader
+							? createKnowledgeReadProvider(options.knowledgeHostLoader.load())
+							: undefined,
+						options.researchHostLoader ? { researchHostLoader: options.researchHostLoader } : {},
+					)
+			: undefined);
 	const sessions = new SessionService({
 		...options,
+		...(knowledgeFactory ? { knowledgeFactory } : {}),
 		memory,
 		runtime,
 		permissions,

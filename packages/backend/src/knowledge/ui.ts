@@ -15,10 +15,19 @@ import {
 	type KnowledgeWorkerLifecycleEvent,
 	type KnowledgeWorkerMetadata,
 } from "@gyoungwe/pi-knowledge/host";
-import { getResearchRun, listResearchRuns } from "@gyoungwe/pi-research/host";
+import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoader } from "../research-host";
 import { KnowledgeWebDavService } from "./webdav";
 
 type Handler = (event: KnowledgeUiEvent) => void;
+
+interface KnowledgeHostPort {
+	readonly contractVersion: 1;
+	overview(input: unknown): Promise<unknown>;
+	search(input: unknown): Promise<unknown>;
+	read(input: unknown): Promise<unknown>;
+	noteLinks(input: unknown): Promise<unknown>;
+	graph(input: unknown): Promise<unknown>;
+}
 
 /**
  * Read-only knowledge vertical supplied by the installable provider.
@@ -42,12 +51,19 @@ export interface KnowledgeReadProvider {
 }
 
 /** Default provider delegates the read vertical to the packaged knowledge host entry. */
-export function createKnowledgeReadProvider(): KnowledgeReadProvider {
-	const overview = knowledgeUiService.knowledgeOverview as unknown as KnowledgeReadProvider["overview"];
-	const search = knowledgeUiService.searchKnowledge as unknown as KnowledgeReadProvider["search"];
-	const read = knowledgeUiService.knowledgeReadNote as unknown as KnowledgeReadProvider["read"];
-	const noteLinks = knowledgeUiService.knowledgeNoteLinks as unknown as KnowledgeReadProvider["noteLinks"];
-	const graph = knowledgeUiService.knowledgeGraph as unknown as KnowledgeReadProvider["graph"];
+export function createKnowledgeReadProvider(host?: KnowledgeHostPort): KnowledgeReadProvider {
+	const source = host ?? {
+		overview: knowledgeUiService.knowledgeOverview,
+		search: knowledgeUiService.searchKnowledge,
+		read: knowledgeUiService.knowledgeReadNote,
+		noteLinks: knowledgeUiService.knowledgeNoteLinks,
+		graph: knowledgeUiService.knowledgeGraph,
+	};
+	const overview = source.overview as unknown as KnowledgeReadProvider["overview"];
+	const search = source.search as unknown as KnowledgeReadProvider["search"];
+	const read = source.read as unknown as KnowledgeReadProvider["read"];
+	const noteLinks = source.noteLinks as unknown as KnowledgeReadProvider["noteLinks"];
+	const graph = source.graph as unknown as KnowledgeReadProvider["graph"];
 	return {
 		overview,
 		search,
@@ -344,8 +360,13 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private loading: Promise<void> | null = null;
 	private readonly cloud = new KnowledgeWebDavService();
 	private readonly readProvider: KnowledgeReadProvider;
-	constructor(readProvider: KnowledgeReadProvider = createKnowledgeReadProvider()) {
+	private readonly researchHost?: ResearchHostAdapter;
+	constructor(
+		readProvider: KnowledgeReadProvider = createKnowledgeReadProvider(),
+		options: { researchHostLoader?: ResearchHostLoader } = {},
+	) {
 		this.readProvider = readProvider;
+		this.researchHost = options.researchHostLoader?.load(createResearchHostPort());
 	}
 	private root() {
 		return (
@@ -410,16 +431,39 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	async researchRuns(
 		input: Parameters<KnowledgeApi["getResearchRuns"]>[0] = {},
 	): ReturnType<KnowledgeApi["getResearchRuns"]> {
-		const cwd = input?.cwd || process.cwd();
-		const config = await loadBackendWorkspaceConfig(cwd);
-		return listResearchRuns({ ...input, resultsRoot: config.resultsRoot });
+		if (!this.researchHost) throw new Error("Research plugin is not installed");
+		return this.researchHost.operations
+			.listRuns({
+				workspace: input?.cwd || process.cwd(),
+				project: input?.project,
+				limit: input?.limit,
+			})
+			.then((result) => ({
+				items: result.items.map((item) => ({ ...item, scientificallyVerified: false as const })),
+				total: result.total,
+			}));
 	}
 	async researchRun(
 		input: Parameters<KnowledgeApi["getResearchRun"]>[0],
 	): ReturnType<KnowledgeApi["getResearchRun"]> {
-		const cwd = input?.cwd || process.cwd();
-		const config = await loadBackendWorkspaceConfig(cwd);
-		return getResearchRun({ ...input, resultsRoot: config.resultsRoot, vaultRoot: config.obsidianVault });
+		if (!this.researchHost) throw new Error("Research plugin is not installed");
+		const result = await this.researchHost.operations.status({
+			workspace: input?.cwd || process.cwd(),
+			runDir: input?.runDir,
+		});
+		if (!("item" in result)) throw new Error("Research plugin did not return a run detail");
+		return {
+			...result.item,
+			scientificallyVerified: false,
+			route: [],
+			sources: [],
+			claims: [],
+			warnings: [
+				"The installed research plugin exposes run metadata only; detailed evidence is unavailable.",
+			],
+			coverage: null,
+			archive: { count: 0, reused: 0, verified: false },
+		} as Awaited<ReturnType<KnowledgeApi["getResearchRun"]>>;
 	}
 	setupPreview(
 		input: Parameters<KnowledgeApi["previewKnowledgeSetup"]>[0],

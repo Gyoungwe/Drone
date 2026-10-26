@@ -524,6 +524,25 @@ export interface AnalysisHostLoader {
 	load(): AnalysisHostPort;
 }
 
+/** Read-only knowledge surface exposed by an installed knowledge plugin. */
+export interface KnowledgeReadHostPort {
+	readonly contractVersion: 1;
+	overview(input: unknown): Promise<unknown>;
+	search(input: unknown): Promise<unknown>;
+	read(input: unknown): Promise<unknown>;
+	noteLinks(input: unknown): Promise<unknown>;
+	graph(input: unknown): Promise<unknown>;
+}
+
+/** Stable host entry contract for the knowledge capability. */
+export interface KnowledgeHostPort extends KnowledgeReadHostPort {}
+
+/** Loader contract keeps the host independent of the knowledge implementation. */
+export interface KnowledgeHostLoader {
+	readonly contractVersion: 1;
+	load(): KnowledgeHostPort;
+}
+
 function stableContractJson(value: unknown): string {
 	if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
 	if (Array.isArray(value)) return `[${value.map(stableContractJson).join(",")}]`;
