@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { build } from "esbuild";
 import { expect, it, vi } from "vitest";
-import { KnowledgeUiService } from "../src/knowledge/ui";
+import { configureBackendKnowledgeWorker, KnowledgeUiService } from "../src/knowledge/ui";
 
 it("reads a project-owned note through the backend after setup in an independently bundled extension", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-host-note-")));
@@ -30,6 +30,7 @@ it("reads a project-owned note through the backend after setup in an independent
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "knowledge"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	try {
+		configureBackendKnowledgeWorker();
 		await mkdir(cwd);
 		const setup = await configureObsidian({ cwd, vault, project: "reading-test" });
 		const saved = await depositKnowledge({

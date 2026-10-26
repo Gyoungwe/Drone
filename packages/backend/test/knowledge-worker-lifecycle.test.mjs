@@ -2,8 +2,14 @@ import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { Worker } from "node:worker_threads";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import { closeKnowledgeServices, getKnowledgeService } from "@gyoungwe/pi-knowledge/host";
+import {
+	closeKnowledgeServices,
+	configureKnowledgeWorker,
+	getKnowledgeService,
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	configureBackendKnowledgeWorker,
@@ -42,9 +48,24 @@ beforeEach(async () => {
 	vi.stubEnv("DRONE_RESEARCH_WORKBENCH_ROOT", packagedRoot);
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	await configureObsidian({ cwd: project, vault, project: "worker-lifecycle" });
+	await closeKnowledgeServices();
 	// The backend host is the composition root for packaged Desktop resources;
 	// explicitly re-install it after the extension source module has loaded.
 	configureBackendKnowledgeWorker();
+	// Vitest loads the bundled extension and the direct host entry as separate
+	// module graphs. Configure the direct host entry with the same verified
+	// resource so this regression observes the production worker contract.
+	configureKnowledgeWorker(
+		(_url, options) =>
+			new Worker(pathToFileURL(resolveBackendKnowledgeWorkerResource().path), {
+				...options,
+				workerData: {
+					...(options?.workerData ?? {}),
+					workerResource: resolveBackendKnowledgeWorkerResource().metadata,
+				},
+			}),
+		() => resolveBackendKnowledgeWorkerResource().metadata,
+	);
 	binding = await (await import("@gyoungwe/pi-knowledge/host")).readKnowledgeBinding();
 });
 
