@@ -26,6 +26,7 @@ import { HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest } from "./html-preview-
 import { registerIpc, sendToRenderer } from "./ipc";
 import { migrateLegacyUserDir } from "./legacy-migration";
 import { buildMenuTemplate, DESKTOP_COMMAND_CHANNEL } from "./menu";
+import { discoverPluginHostLoader } from "./optional-plugin-hosts";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
 import type { DesktopRuntimeBridge } from "./ui-plugins/runtime-bridge";
 import { createDesktopRuntime, createNativeRuntimeIntegration } from "./ui-plugins/runtime-host";
@@ -294,15 +295,24 @@ app.whenReady().then(async () => {
 		},
 	);
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
-	let analysisHostLoader: import("@gyoungwe/plugin-api").AnalysisHostLoader | undefined;
-	try {
-		analysisHostLoader = (await import("@gyoungwe/pi-analysis/host")).analysisHostLoader;
-	} catch (error) {
-		log.warn("Analysis plugin host unavailable; analysis workflows will remain disabled", error);
-	}
+	const analysisHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").AnalysisHostLoader>({
+		packageRoots: [
+			join(
+				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
+				"npm",
+				"node_modules",
+			),
+			app.isPackaged
+				? join(process.resourcesPath, "pi-packages", "node_modules")
+				: join(__dirname, "../../pi-packages/node_modules"),
+			join(app.getAppPath(), "node_modules"),
+		],
+		capability: "analysis",
+	});
+	if (analysisHost) log.info("Optional analysis host discovered", analysisHost.discovery);
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
-		...(analysisHostLoader ? { analysisHostLoader } : {}),
+		...(analysisHost ? { analysisHostLoader: analysisHost.loader } : {}),
 		computeAuthorizeRemoteOperation: authorizeComputeOperation,
 		computeSshConfig: () => readSshConfigHosts(),
 		// Use one ledger per canonical workspace. The old single ledger remains

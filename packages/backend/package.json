@@ -23,7 +23,6 @@
 		"@drone/tasks": "*",
 		"@earendil-works/pi-ai": "1.1.0",
 		"@earendil-works/pi-coding-agent": "1.1.0",
-		"@gyoungwe/pi-analysis": "0.1.2",
 		"@gyoungwe/pi-core": "*",
 		"@gyoungwe/pi-knowledge": "*",
 		"@gyoungwe/pi-research": "*",
@@ -34,6 +33,7 @@
 		"typebox": "1.3.7"
 	},
 	"devDependencies": {
+		"@gyoungwe/pi-analysis": "0.1.2",
 		"@types/ssh2": "^1.15.6",
 		"typescript": "^5.9.0",
 		"vitest": "^3.2.0"
