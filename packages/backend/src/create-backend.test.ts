@@ -166,6 +166,26 @@ describe("createBackend", () => {
 		services.dispose();
 	});
 
+	it("routes research connector lookup through the host-owned registry factory", async () => {
+		let factoryCalled = false;
+		const registry = {
+			list: () => [],
+			recommend: async () => ({ hits: [], failures: [] }),
+			search: async () => ({ hits: [], failures: [] }),
+		};
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			researchConnectorRegistry: () => {
+				factoryCalled = true;
+				return registry;
+			},
+		});
+		expect(factoryCalled).toBe(true);
+		expect(await services.research.listConnectors()).toEqual([]);
+		services.dispose();
+	});
+
 	it("accepts a knowledge provider without constructing the host adapter", () => {
 		const knowledge = new KnowledgeUiService();
 		let provided = false;
