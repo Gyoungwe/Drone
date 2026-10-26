@@ -16,10 +16,10 @@ import {
 	type ResearchCaptureResult,
 	type ResearchConnectorDescriptor,
 	type ResearchConnectorFailure,
+	type ResearchKnowledgeOperations,
 	type ResearchSearchRequest,
 	type ResearchSearchResponse,
 } from "@drone/shared";
-import { ingestKnowledgeSnapshot, resolveKnowledgeContext } from "@gyoungwe/pi-knowledge/host";
 import type { JsonStore } from "../json-store";
 
 interface CaptureLedger {
@@ -38,6 +38,8 @@ export interface ResearchResourceServiceOptions {
 	readonly connectorSettings?: JsonStore<ResearchConnectorSettings>;
 	/** Host-owned ports/configuration used by optional connectors; never persisted. */
 	readonly connectorContext?: ResearchConnectorContext;
+	/** Knowledge host operations used to create a versioned capture snapshot. */
+	readonly knowledgeOperations: ResearchKnowledgeOperations;
 }
 
 const TEXT_EXTENSIONS = new Set([
@@ -212,9 +214,9 @@ export class ResearchResourceService {
 				...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
 			},
 		};
-		const snapshot = ingestKnowledgeSnapshot({
+		const snapshot = this.options.knowledgeOperations.ingestSnapshot({
 			id: `knowledge-${key.slice(0, 24)}`,
-			context: resolveKnowledgeContext({ workspaceRoot: file.root }),
+			context: this.options.knowledgeOperations.resolveContext({ workspaceRoot: file.root }),
 			sources: [sourceReceipt],
 			approval: "pending",
 			reuseLevel: "navigation-only",

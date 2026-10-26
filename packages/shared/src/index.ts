@@ -106,6 +106,7 @@ export * from "./public-timeline";
 export * from "./research-access";
 export * from "./research-capture";
 export * from "./research-connectors";
+export * from "./research-resource";
 export * from "./research-skill-update";
 export * from "./research-skills";
 export * from "./research-status";

@@ -5,6 +5,7 @@ import { type ResearchConnector, ResearchConnectorRegistry } from "@drone/resear
 import { checkKnowledgeSnapshotReuse } from "@gyoungwe/pi-knowledge/host";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";
+import { createKnowledgeResearchResourceOperations } from "../src/knowledge/ui";
 import {
 	type CaptureLedger,
 	emptyCaptureLedger,
@@ -14,6 +15,7 @@ import {
 async function service(): Promise<ResearchResourceService> {
 	const state = await mkdtemp(join(tmpdir(), "drone-research-state-"));
 	return new ResearchResourceService({
+		knowledgeOperations: createKnowledgeResearchResourceOperations(),
 		store: new JsonStore<CaptureLedger>({
 			path: join(state, "captures.json"),
 			storageId: "test-research-captures",
@@ -184,6 +186,7 @@ describe("ResearchResourceService", () => {
 			defaultValue: () => ({ version: 1 as const, disabled: [] }),
 		});
 		const first = new ResearchResourceService({
+			knowledgeOperations: createKnowledgeResearchResourceOperations(),
 			store: new JsonStore({
 				path: join(state, "captures-a.json"),
 				storageId: "test-research-captures-a",
@@ -196,6 +199,7 @@ describe("ResearchResourceService", () => {
 		expect(await first.setConnectorEnabled("fixture", false)).toMatchObject({ enabled: false });
 
 		const second = new ResearchResourceService({
+			knowledgeOperations: createKnowledgeResearchResourceOperations(),
 			store: new JsonStore({
 				path: join(state, "captures-b.json"),
 				storageId: "test-research-captures-b",

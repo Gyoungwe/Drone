@@ -39,6 +39,7 @@ import {
 	createKnowledgeExperienceOperation,
 	createKnowledgeMaintenanceOperations,
 	createKnowledgeReadProvider,
+	createKnowledgeResearchResourceOperations,
 	type KnowledgeHostPort,
 	KnowledgeUiService,
 	type KnowledgeUiServicePort,
@@ -370,6 +371,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		}),
 	});
 	const research = new ResearchResourceService({
+		knowledgeOperations: createKnowledgeResearchResourceOperations(knowledgeHost),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "captures.json"),
 			storageId: "agent-research-captures",
