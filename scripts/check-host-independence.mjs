@@ -18,7 +18,12 @@ const optional = new Set([
 	"@gyoungwe/desktop-ui-pack",
 	"@gyoungwe/research-suite",
 ]);
-const hostOnly = new Set(["@gyoungwe/pi-core", "@gyoungwe/pi-knowledge", "@gyoungwe/pi-research", "@gyoungwe/pi-analysis"]);
+const hostOnly = new Set([
+	"@gyoungwe/pi-core",
+	"@gyoungwe/pi-knowledge",
+	"@gyoungwe/pi-research",
+	"@gyoungwe/pi-analysis",
+]);
 // pi-core is the remaining native task/tool compatibility seam. Keep the
 // exception narrow and explicit while P4 moves those facades into the plugin.
 // New host code must use a package host entry (or the generic capability
