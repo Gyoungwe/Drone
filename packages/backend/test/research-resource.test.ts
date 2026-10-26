@@ -15,6 +15,7 @@ import {
 async function service(): Promise<ResearchResourceService> {
 	const state = await mkdtemp(join(tmpdir(), "drone-research-state-"));
 	return new ResearchResourceService({
+		connectors: new ResearchConnectorRegistry(),
 		knowledgeOperations: createKnowledgeResearchResourceOperations(),
 		store: new JsonStore<CaptureLedger>({
 			path: join(state, "captures.json"),

@@ -1,11 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve, sep } from "node:path";
-import {
-	type ResearchConnector,
-	type ResearchConnectorContext,
-	ResearchConnectorRegistry,
-} from "@drone/research";
+import type { ResearchConnector, ResearchConnectorContext } from "@drone/research";
 import {
 	contractContentHash,
 	createKnowledgeSnapshot,
@@ -16,6 +12,7 @@ import {
 	type ResearchCaptureResult,
 	type ResearchConnectorDescriptor,
 	type ResearchConnectorFailure,
+	type ResearchConnectorHit,
 	type ResearchKnowledgeOperations,
 	type ResearchSearchRequest,
 	type ResearchSearchResponse,
@@ -34,12 +31,25 @@ export interface ResearchConnectorSettings {
 
 export interface ResearchResourceServiceOptions {
 	readonly store: JsonStore<CaptureLedger>;
-	readonly connectors?: ResearchConnectorRegistry;
+	/** Connector registry is supplied by the host composition root or an installed connector package. */
+	readonly connectors: ResearchConnectorRegistryPort;
 	readonly connectorSettings?: JsonStore<ResearchConnectorSettings>;
 	/** Host-owned ports/configuration used by optional connectors; never persisted. */
 	readonly connectorContext?: ResearchConnectorContext;
 	/** Knowledge host operations used to create a versioned capture snapshot. */
 	readonly knowledgeOperations: ResearchKnowledgeOperations;
+}
+
+/** Host-neutral registry surface; connector implementations stay outside backend. */
+export interface ResearchConnectorRegistryPort {
+	list(): readonly ResearchConnector[];
+	recommend(
+		seed: string,
+		connectorId: string,
+		context?: ResearchConnectorContext,
+		limit?: number,
+	): Promise<{ hits: readonly ResearchConnectorHit[]; failures: readonly ResearchConnectorFailure[] }>;
+	search(input: ResearchSearchRequest, context?: ResearchConnectorContext): Promise<ResearchSearchResponse>;
 }
 
 const TEXT_EXTENSIONS = new Set([
@@ -168,11 +178,11 @@ function withApproval(snapshot: KnowledgeSnapshot, approval: "approved" | "revok
 
 /** Host-side seam for safe project capture and provenance-aware connector search. */
 export class ResearchResourceService {
-	private readonly connectors: ResearchConnectorRegistry;
+	private readonly connectors: ResearchConnectorRegistryPort;
 	private readonly disabledConnectors = new Set<string>();
 
 	constructor(private readonly options: ResearchResourceServiceOptions) {
-		this.connectors = options.connectors ?? new ResearchConnectorRegistry();
+		this.connectors = options.connectors;
 	}
 
 	/** Named seam used by host adapters; capture remains the short internal alias. */
