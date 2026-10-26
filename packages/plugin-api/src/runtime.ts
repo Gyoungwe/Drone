@@ -32,9 +32,18 @@ export interface PluginRuntimeResource {
 	readonly access?: "read" | "read-write";
 }
 
+/** Stops this activation's resource children, with no new file/model/caller authority.
+ * Resolves after accepted resource work settles and real child processes exit.
+ * Writer reservations stay held until the domain owner has also finished disposal. */
+export interface PluginResourcesLifecycle {
+	dispose(): Promise<void>;
+}
+
 export interface PluginRuntimeFactoryContext {
 	readonly applicationId: string;
 	readonly signal: AbortSignal;
+	/** Present only when this activation owns a resource provider. Owner shutdown only. */
+	readonly resourcesLifecycle?: PluginResourcesLifecycle;
 	readonly resources: readonly PluginRuntimeResource[];
 	readonly capabilities: PluginRuntimeCapabilities;
 	/** Invalidate derived UI reads without transmitting domain data. Host assigns the revision. */

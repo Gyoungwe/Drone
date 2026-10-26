@@ -4,7 +4,9 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { fileCapabilityHandlers, PluginFileCapabilities } from "./file-capabilities";
+import { createProcessPluginRuntime } from "./process-runtime";
 import { PluginResourceManager } from "./resource-capabilities";
+import { PluginRuntimeRegistry } from "./runtime";
 import type { PluginCapabilityContext } from "./runtime-capabilities";
 
 const runtimeDirectory = resolve(
@@ -64,7 +66,7 @@ function caller(workspaceId = "workspace-a"): PluginCapabilityContext {
 	};
 	return call;
 }
-function manager(): PluginResourceManager {
+function manager(signal = new AbortController().signal): PluginResourceManager {
 	const value = new PluginResourceManager({
 		pluginId: "example",
 		applicationId: "application",
@@ -72,7 +74,7 @@ function manager(): PluginResourceManager {
 		entries: { index: join(source, "resource.mjs"), other: join(source, "resource.mjs") },
 		runtimeDirectory,
 		files,
-		signal: new AbortController().signal,
+		signal,
 		events: { changed() {} },
 		leaseDirectory: join(root, "leases"),
 	});
@@ -238,5 +240,154 @@ describe.skipIf(!available)("actual isolated resource process", () => {
 		const result = (await running) as { pid: number };
 		await closing;
 		expect(exited(result.pid)).toBe(true);
+	});
+	it("drains a real owner and SQLite child before releasing the final activation lease", async () => {
+		const entrypoint = join(source, "owner.mjs");
+		await writeFile(
+			entrypoint,
+			`export default async ({capabilities,resourcesLifecycle})=>({
+ operations:{open:{inputSchema:{type:"null"},resultSchema:{type:"object"},effect:"read",async execute(){
+  const resource=await capabilities.call('resource.create',${JSON.stringify(input())});
+  const result=await capabilities.call('resource.invoke',{...resource,operation:'read',input:null});
+  return {ownerPid:process.pid,childPid:result.pid};
+ }}},async dispose(){await resourcesLifecycle.dispose();}
+});`,
+		);
+		const other = manager();
+		let childPid = 0,
+			confirmedWhileReserved = false,
+			finalReleased = false;
+		const registry = new PluginRuntimeRegistry(
+			{ authorizeActivation: async () => true, authorizeInvocation: async () => true },
+			"application",
+			({ signal }) => {
+				const resources = manager(signal);
+				return {
+					resources: [{ handle: "state", kind: "state" }],
+					handlers: { ...fileCapabilityHandlers(files), ...resources.handlers() },
+					resourcesLifecycle: {
+						dispose: async () => {
+							await resources.disposeResources();
+							expect(exited(childPid)).toBe(true);
+							await expect(other.create(input(), context)).rejects.toThrow("already reserved");
+							confirmedWhileReserved = true;
+						},
+					},
+					dispose: async () => {
+						await resources.dispose();
+						finalReleased = true;
+					},
+				};
+			},
+		);
+		registry.register(
+			"example",
+			createProcessPluginRuntime({ pluginId: "example", packageRoot: source, entrypoint, runtimeDirectory }),
+		);
+		const caller = { identity: {}, scope: context.scope, signal: context.signal };
+		const client = await registry.activate("example", () => caller);
+		const result = (await client.invoke("open", null)) as { ownerPid: number; childPid: number };
+		childPid = result.childPid;
+		expect(exited(result.ownerPid)).toBe(false);
+		expect(exited(childPid)).toBe(false);
+		await registry.deactivate("example");
+		expect(confirmedWhileReserved).toBe(true);
+		expect(finalReleased).toBe(true);
+		expect(exited(result.ownerPid)).toBe(true);
+		expect(await other.create(input(), context)).toHaveProperty("handle");
+	});
+
+	it("closes all activation resources without releasing the domain reservation", async () => {
+		const owner = manager(),
+			other = manager();
+		const handle = await owner.create(input(), context);
+		const result = (await owner.invoke({ ...handle, operation: "read", input: null }, context)) as {
+			pid: number;
+		};
+		await owner.disposeResources();
+		expect(exited(result.pid)).toBe(true);
+		await expect(owner.create(input(), context)).rejects.toThrow("stopping");
+		await expect(other.create(input(), context)).rejects.toThrow("already reserved");
+		await owner.dispose();
+		expect(await other.create(input(), context)).toHaveProperty("handle");
+	});
+
+	it("lets a fresh caller retry the actual close receipt after the first caller is canceled", async () => {
+		const owner = manager();
+		const handle = await owner.create(input(), context);
+		const { pid } = (await owner.invoke({ ...handle, operation: "read", input: null }, context)) as {
+			pid: number;
+		};
+		const canceled = new AbortController();
+		const closing = owner.close(handle, { ...context, signal: canceled.signal });
+		canceled.abort(new Error("selection changed"));
+		await expect(closing).rejects.toThrow("selection changed");
+		expect(exited(pid)).toBe(true);
+		expect(await owner.close(handle, context)).toBeNull();
+		await expect(owner.close({ handle: "not-owned" }, context)).rejects.toThrow("not granted");
+		await expect(manager().close(handle, context)).rejects.toThrow("not granted");
+		const next = await owner.create(input(), context);
+		expect(next.handle).not.toBe(handle.handle);
+	});
+
+	it("reclaims an actual resource whose late canceled creation did not return a handle", async () => {
+		const owner = manager(),
+			other = manager();
+		const canceled = new AbortController();
+		const late = {
+			...context,
+			signal: canceled.signal,
+			capabilities: {
+				call: async (name: string, value: unknown) => {
+					const result = await context.capabilities.call(name, value);
+					canceled.abort(new Error("caller left after resource initialization"));
+					return result;
+				},
+			},
+		};
+		await expect(owner.create(input(), late)).rejects.toThrow("caller left");
+		const [directory] = await readdir(cache);
+		const pid = Number(await readFile(join(cache, directory!, "pid.txt"), "utf8"));
+		expect(exited(pid)).toBe(false);
+		await owner.disposeResources();
+		expect(exited(pid)).toBe(true);
+		await expect(other.create(input(), context)).rejects.toThrow("already reserved");
+		await owner.dispose();
+		expect(await other.create(input(), context)).toHaveProperty("handle");
+	});
+
+	it("waits for pending startup before activation cleanup reports the real child exit", async () => {
+		const owner = manager();
+		let entered!: () => void, release!: () => void;
+		const started = new Promise<void>((resolve) => {
+			entered = resolve;
+		});
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const initializing = owner.create(input(), {
+			...context,
+			capabilities: {
+				call: async (name, value) => {
+					entered();
+					await held;
+					return context.capabilities.call(name, value);
+				},
+			},
+		});
+		const rejected = expect(initializing).rejects.toThrow("stopping");
+		await started;
+		let settled = false;
+		const closing = owner.disposeResources().then(() => {
+			settled = true;
+		});
+		await Promise.resolve();
+		expect(settled).toBe(false);
+		release();
+		await rejected;
+		await closing;
+		const [directory] = await readdir(cache);
+		const pid = Number(await readFile(join(cache, directory!, "pid.txt"), "utf8"));
+		expect(exited(pid)).toBe(true);
 	});
 });

@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type {
+	PluginResourcesLifecycle,
 	PluginRuntimeCapabilities,
 	PluginRuntimeResource,
 	PluginRuntimeSchema,
@@ -28,6 +29,7 @@ export interface PluginCapabilityHandler {
 export interface PluginRuntimeCapabilitiesOptions {
 	readonly handlers: Readonly<Record<string, PluginCapabilityHandler>>;
 	readonly resources: readonly PluginRuntimeResource[];
+	readonly resourcesLifecycle?: PluginResourcesLifecycle;
 	dispose?(): Promise<void>;
 }
 interface Authority {

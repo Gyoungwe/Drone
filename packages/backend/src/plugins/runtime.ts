@@ -165,6 +165,7 @@ export class PluginRuntimeRegistry {
 						applicationId,
 						signal: abort.signal,
 						resources: ports.resources,
+						...(ports.resourcesLifecycle ? { resourcesLifecycle: ports.resourcesLifecycle } : {}),
 						capabilities: capabilities.port,
 						events,
 					}),

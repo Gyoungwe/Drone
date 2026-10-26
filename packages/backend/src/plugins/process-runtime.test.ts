@@ -55,6 +55,57 @@ it("denies activation without starting or resolving plugin code", async () => {
 });
 
 describe.skipIf(!hasRuntime)("packaged process desktop runtime", () => {
+	it("delivers the owned resource cleanup receipt without a live invocation after cancellation", async () => {
+		const options = await fixture(`export default async ({signal,resourcesLifecycle})=>({
+ operations:{probe:{inputSchema:{type:"null"},resultSchema:{type:"number"},effect:"read",execute:async()=>process.pid}},
+ async dispose(){if(!signal.aborted)throw new Error('expected deactivation');await resourcesLifecycle.dispose();}
+});`);
+		let finish!: () => void;
+		const held = new Promise<void>((resolve) => {
+			finish = resolve;
+		});
+		const resourceStop = vi.fn(() => held);
+		const releaseLeases = vi.fn(async () => {});
+		const registry = new PluginRuntimeRegistry(allow, "lifecycle-test", {
+			resources: [],
+			handlers: {},
+			resourcesLifecycle: { dispose: resourceStop },
+			dispose: releaseLeases,
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		const pid = (await client.invoke("probe", null)) as number;
+		const closed = registry.deactivate("example");
+		await vi.waitFor(() => expect(resourceStop).toHaveBeenCalledOnce());
+		expect(releaseLeases).not.toHaveBeenCalled();
+		expect(() => process.kill(pid, 0)).not.toThrow();
+		finish();
+		await closed;
+		expect(releaseLeases).toHaveBeenCalledOnce();
+		expect(() => process.kill(pid, 0)).toThrow();
+	});
+
+	it("reports resource cleanup failure while still exiting the owner and releasing final host ports", async () => {
+		const options = await fixture(
+			`export default async ({resourcesLifecycle})=>({operations:{},async dispose(){await resourcesLifecycle.dispose();}});`,
+		);
+		const releaseLeases = vi.fn(async () => {});
+		const registry = new PluginRuntimeRegistry(allow, "lifecycle-failure", {
+			resources: [],
+			handlers: {},
+			resourcesLifecycle: {
+				dispose: async () => {
+					throw new Error("resource exit failed");
+				},
+			},
+			dispose: releaseLeases,
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		await registry.activate("example", caller(scope));
+		await expect(registry.deactivate("example")).rejects.toThrow("resource exit failed");
+		expect(releaseLeases).toHaveBeenCalledOnce();
+	});
+
 	it("resource mode writes only host-selected derived storage and preserves capability error codes", async () => {
 		const options = await fixture(`import fs from 'node:fs';import{join}from'node:path';
 export default async ({storageDirectory,parameters,capabilities}) => ({

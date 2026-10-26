@@ -92,6 +92,7 @@ export class PluginResourceManager {
 	private readonly reservations: PluginResourceReservations;
 	private stopped = false;
 	private closing: Promise<void> | undefined;
+	private resourcesStopping: Promise<void> | undefined;
 	constructor(private readonly options: PluginResourceManagerOptions) {
 		this.reservations = new PluginResourceReservations(options.leaseDirectory);
 	}
@@ -160,6 +161,7 @@ export class PluginResourceManager {
 			await entry.ready;
 		} catch (error) {
 			this.forget(entry);
+			this.handles.delete(entry.handle);
 			throw error;
 		}
 		this.check(context);
@@ -203,7 +205,7 @@ export class PluginResourceManager {
 
 	private forget(entry: ResourceEntry): void {
 		if (this.entries.get(entry.key) === entry) this.entries.delete(entry.key);
-		this.handles.delete(entry.handle);
+		// Keep accepted close receipts until activation disposal so a canceled caller can retry.
 		for (const key of entry.exclusiveKeys)
 			if (this.activeKeys.get(key) === entry.handle) this.activeKeys.delete(key);
 	}
@@ -223,16 +225,33 @@ export class PluginResourceManager {
 		return entry.closing;
 	}
 
+	/** Stop all children, including creations whose caller never received a handle. Keep writer reservations. */
+	disposeResources(): Promise<void> {
+		if (this.resourcesStopping) return this.resourcesStopping;
+		this.stopped = true;
+		this.resourcesStopping = (async () => {
+			const results = await Promise.allSettled(
+				[...this.handles.values()].map((entry) => this.closeEntry(entry)),
+			);
+			const failures = results.filter((result) => result.status === "rejected");
+			if (failures.length)
+				throw new AggregateError(
+					failures.map((result) => result.reason),
+					"Plugin resource processes could not be disposed",
+				);
+		})();
+		return this.resourcesStopping;
+	}
+
+	/** The host calls this only after the domain owner has drained and disposed. */
 	dispose(): Promise<void> {
 		if (this.closing) return this.closing;
-		this.stopped = true;
 		this.closing = (async () => {
-			const results = await Promise.allSettled(
-				[...this.entries.values()].map((entry) => this.closeEntry(entry)),
-			);
+			const results = await Promise.allSettled([this.disposeResources()]);
 			results.push(
 				...(await Promise.allSettled([Promise.resolve().then(() => this.reservations.dispose())])),
 			);
+			this.handles.clear();
 			const failures = results.filter((result) => result.status === "rejected");
 			if (failures.length)
 				throw new AggregateError(

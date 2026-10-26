@@ -41,6 +41,10 @@ const declarationSchema = Type.Record(
 	}),
 );
 const messageSchema = Type.Union([
+	Type.Object(
+		{ type: Type.Literal("dispose_resources"), id: Type.String({ minLength: 1 }) },
+		{ additionalProperties: false },
+	),
 	Type.Object({ type: Type.Literal("ready"), operations: declarationSchema, native: Type.Boolean() }),
 	Type.Object({
 		type: Type.Literal("result"),
@@ -259,6 +263,10 @@ class RuntimeProcess {
 			);
 			return;
 		}
+		if (message.type === "dispose_resources") {
+			void this.disposeResources(message.id);
+			return;
+		}
 		if (message.type === "capability") {
 			void this.capability(message);
 			return;
@@ -284,6 +292,22 @@ class RuntimeProcess {
 		pending.cleanup();
 		if (message.ok) pending.resolve(message.value);
 		else pending.reject(new Error(message.error));
+	}
+
+	private async disposeResources(id: string): Promise<void> {
+		try {
+			if (!this.context.resourcesLifecycle) throw new Error("Plugin resource lifecycle was not granted");
+			await this.context.resourcesLifecycle.dispose();
+			this.send({ type: "capability_result", id, ok: true, value: null });
+		} catch (error) {
+			// This is a cleanup receipt, not a fresh capability invocation after caller revocation.
+			this.send({
+				type: "capability_result",
+				id,
+				ok: false,
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
 	}
 
 	private async capability(message: Extract<Message, { type: "capability" }>): Promise<void> {
@@ -322,6 +346,7 @@ class RuntimeProcess {
 			type: "start",
 			applicationId: this.context.applicationId,
 			resources: this.context.resources,
+			resourcesLifecycle: this.context.resourcesLifecycle !== undefined,
 			resource: this.resource,
 		});
 		try {

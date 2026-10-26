@@ -26,6 +26,16 @@ const capabilities = {
     });
   }
 };
+let resourcesStopping;
+const resourcesLifecycle = {
+  dispose() {
+    return resourcesStopping ??= new Promise((resolve, reject) => {
+      const id = String(++capabilitySequence);
+      capabilityCalls.set(id, {resolve, reject});
+      send({type:"dispose_resources", id});
+    });
+  }
+};
 const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
 let runtime;
 console.log = (...args) => process.stderr.write(args.map(String).join(" ") + "\n");
@@ -57,7 +67,7 @@ input.on("line", async (line) => {
           execute:({operation,input})=>resource.invoke(operation,input)
         }},dispose:()=>resource.dispose()};
       } else {
-        runtime = await currentCall.run("bootstrap", () => module.default({ applicationId: message.applicationId, signal: lifecycle.signal, resources: message.resources, capabilities, events }));
+        runtime = await currentCall.run("bootstrap", () => module.default({ applicationId: message.applicationId, signal: lifecycle.signal, resources: message.resources, ...(message.resourcesLifecycle ? {resourcesLifecycle} : {}), capabilities, events }));
       }
       const operations = Object.fromEntries(Object.entries(runtime.operations).map(([name, operation]) => [name, {
         inputSchema: operation.inputSchema, resultSchema: operation.resultSchema, effect: operation.effect,

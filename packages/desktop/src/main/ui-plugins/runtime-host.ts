@@ -132,6 +132,7 @@ export function createDesktopResourceCapabilities(
 				access: stateWrite ? ("read-write" as const) : ("read" as const),
 			})),
 			handlers: { ...fileCapabilityHandlers(ports), ...resources.handlers() },
+			resourcesLifecycle: { dispose: () => resources.disposeResources() },
 			dispose: () => resources.dispose(),
 		};
 	};
