@@ -4,21 +4,26 @@ import type {
 	KnowledgeCloudSyncPreview,
 	KnowledgeCloudSyncResult,
 } from "@drone/shared";
-import {
-	containedVaultFile,
-	createVaultFileOnly,
-	readKnowledgeBinding,
-	readNoteFile,
-	replaceVaultFile,
-	VaultFileConflictError,
-} from "@gyoungwe/pi-knowledge/host";
 import type { KnowledgeWebDavService } from "./webdav";
 import { cloudError, cloudNotePath, KnowledgeWebDavError } from "./webdav-transport";
+
+/** Host-owned Vault operations used by the WebDAV sync boundary. */
+export interface KnowledgeWebDavVault {
+	readBinding(options?: {
+		fresh?: boolean;
+	}): Promise<{ vaultId: string; revision: number; vault: string } | null>;
+	readNote(vault: string, path: string): Promise<{ hash: string; text: string }>;
+	containedFile(vault: string, path: string): Promise<string>;
+	createFileOnly(path: string, content: string): Promise<boolean>;
+	replaceFile(path: string, content: string, options: { expectedHash?: string }): Promise<void>;
+	isConflict(error: unknown): boolean;
+}
 
 /** 首期仅传输明确列出的笔记。已有不同内容保持双端原样，不维护隐式基线或重试队列。 */
 export async function syncCloudNotes(
 	cloud: Pick<KnowledgeWebDavService, "read" | "write">,
 	input: Parameters<KnowledgeApi["syncKnowledgeCloud"]>[0],
+	vault: KnowledgeWebDavVault,
 ): Promise<KnowledgeCloudSyncResult> {
 	if (
 		!Array.isArray(input.paths) ||
@@ -37,11 +42,11 @@ export async function syncCloudNotes(
 			throw new KnowledgeWebDavError("protocol", "同步预览与所选笔记不一致");
 		previews.set(path, { ...preview, path });
 	}
-	const binding = await readKnowledgeBinding({ fresh: true });
+	const binding = await vault.readBinding({ fresh: true });
 	if (!binding || binding.revision !== input.bindingRevision)
 		throw new KnowledgeWebDavError("conflict", "本地知识库绑定已变化，请刷新后重新选择笔记");
 	const checkBinding = async () => {
-		const current = await readKnowledgeBinding({ fresh: true });
+		const current = await vault.readBinding({ fresh: true });
 		if (current?.vaultId !== binding.vaultId || current?.revision !== binding.revision)
 			throw new KnowledgeWebDavError("conflict", "本地知识库绑定已变化，已停止该笔记同步");
 	};
@@ -53,9 +58,9 @@ export async function syncCloudNotes(
 		let remoteVersion: string | null = null;
 		try {
 			await checkBinding();
-			let local: Awaited<ReturnType<typeof readNoteFile>> | null = null;
+			let local: Awaited<ReturnType<KnowledgeWebDavVault["readNote"]>> | null = null;
 			try {
-				local = await readNoteFile(binding.vault, path);
+				local = await vault.readNote(binding.vault, path);
 			} catch (error) {
 				if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
 			}
@@ -83,7 +88,7 @@ export async function syncCloudNotes(
 						status = "conflict";
 						message = "云端未返回强 ETag，无法安全覆盖；请重新读取后人工处理";
 					} else {
-						if ((await readNoteFile(binding.vault, path)).hash !== local.hash)
+						if ((await vault.readNote(binding.vault, path)).hash !== local.hash)
 							throw new KnowledgeWebDavError("conflict", "本地笔记在冲突处理期间发生变化，请重新预览");
 						await checkBinding();
 						const result = await cloud.write({ path, text: local.text, expectedVersion: remote.version });
@@ -98,14 +103,14 @@ export async function syncCloudNotes(
 							"conflict",
 							"云端未返回强 ETag，无法安全覆盖本地；请重新读取后人工处理",
 						);
-					if ((await readNoteFile(binding.vault, path)).hash !== local.hash)
+					if ((await vault.readNote(binding.vault, path)).hash !== local.hash)
 						throw new KnowledgeWebDavError("conflict", "本地笔记在冲突处理期间发生变化，请重新预览");
-					const target = await containedVaultFile(binding.vault, path);
+					const target = await vault.containedFile(binding.vault, path);
 					await checkBinding();
 					try {
-						await replaceVaultFile(target, remote.text, { expectedHash: preview.localHash ?? local.hash });
+						await vault.replaceFile(target, remote.text, { expectedHash: preview.localHash ?? local.hash });
 					} catch (error) {
-						if (error instanceof VaultFileConflictError)
+						if (vault.isConflict(error))
 							throw new KnowledgeWebDavError("conflict", "本地笔记在写入前发生变化，未覆盖新编辑");
 						throw error;
 					}
@@ -118,7 +123,7 @@ export async function syncCloudNotes(
 				}
 			} else if (input.mode === "push" && local) {
 				// 读取云端可能耗时；提交前核对本地仍是同一份正文。
-				if ((await readNoteFile(binding.vault, path)).hash !== local.hash)
+				if ((await vault.readNote(binding.vault, path)).hash !== local.hash)
 					throw new KnowledgeWebDavError("conflict", "本地笔记在同步期间发生变化，请重新同步");
 				await checkBinding();
 				const result = await cloud.write({ path, text: local.text });
@@ -129,9 +134,9 @@ export async function syncCloudNotes(
 			} else if (input.mode === "pull" && remote) {
 				if (!remote.version || !preview.remoteVersion)
 					throw new KnowledgeWebDavError("conflict", "云端未返回强 ETag，无法安全取回；请重新读取后人工处理");
-				const target = await containedVaultFile(binding.vault, path);
+				const target = await vault.containedFile(binding.vault, path);
 				await checkBinding();
-				const created = await createVaultFileOnly(target, remote.text);
+				const created = await vault.createFileOnly(target, remote.text);
 				status = created ? "pulled" : "conflict";
 				localHash = created ? remote.hash : null;
 				message = created ? "已保存所读云端版本；本地索引尚待更新" : "本地笔记在同步期间出现，未覆盖";

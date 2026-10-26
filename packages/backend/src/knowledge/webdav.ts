@@ -10,7 +10,7 @@ import {
 	validateWebDavPassword,
 	type WebDavCredentialStore,
 } from "./webdav-credentials";
-import { syncCloudNotes } from "./webdav-sync";
+import { type KnowledgeWebDavVault, syncCloudNotes } from "./webdav-sync";
 import {
 	cloudError,
 	cloudNotePath,
@@ -36,6 +36,8 @@ export interface KnowledgeWebDavOptions {
 	fetch?: typeof fetch;
 	now?: () => Date;
 	timeoutMs?: number;
+	/** Host-owned Vault boundary used by explicit cloud sync. */
+	vault?: KnowledgeWebDavVault;
 }
 
 /** 显式单次云端操作；本地 Vault、索引和知识回执继续保留原有语义。 */
@@ -48,6 +50,7 @@ export class KnowledgeWebDavService {
 	private savedPassword: string | null = null;
 	private savedLoaded: Promise<void> | null = null;
 	private readonly now: () => Date;
+	private readonly vault: KnowledgeWebDavVault | undefined;
 	private lastStatus: KnowledgeCloudStatus;
 
 	constructor(options: KnowledgeWebDavOptions = {}) {
@@ -66,6 +69,7 @@ export class KnowledgeWebDavService {
 			timeoutMs: options.timeoutMs,
 		});
 		this.now = options.now ?? (() => new Date());
+		this.vault = options.vault;
 		this.lastStatus = this.makeStatus("unchecked", null);
 	}
 
@@ -270,6 +274,7 @@ export class KnowledgeWebDavService {
 	}
 
 	sync(input: Parameters<typeof syncCloudNotes>[1]): ReturnType<typeof syncCloudNotes> {
-		return syncCloudNotes(this, input);
+		if (!this.vault) throw new KnowledgeWebDavError("not_configured", "知识库 Vault host port 不可用");
+		return syncCloudNotes(this, input, this.vault);
 	}
 }

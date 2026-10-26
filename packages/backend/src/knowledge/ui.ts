@@ -18,8 +18,10 @@ import {
 } from "@gyoungwe/pi-knowledge/host";
 import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoader } from "../research-host";
 import type { DailyDiscoveryOperations } from "../services/daily-discovery";
+import type { BackgroundReviewerFactory, BackgroundReviewerPort } from "../services/deliverable-reviewer";
 import type { KnowledgeMaintenanceOperations } from "../services/knowledge-maintenance";
 import { KnowledgeWebDavService } from "./webdav";
+import type { KnowledgeWebDavVault } from "./webdav-sync";
 
 type Handler = (event: KnowledgeUiEvent) => void;
 
@@ -46,6 +48,8 @@ export interface KnowledgeHostPort {
 		store: ExperienceStorePort,
 		input: TerminalJobExperienceInput,
 	) => Promise<unknown>;
+	/** Optional Vault boundary used by explicit WebDAV sync. */
+	vault?: KnowledgeWebDavVault;
 }
 
 /**
@@ -133,6 +137,25 @@ export function createKnowledgeResearchResourceOperations(
 export function createKnowledgeExperienceOperation(host?: KnowledgeHostPort) {
 	return host?.recordTerminalJobExperience ?? knowledgeUiService.recordTerminalJobExperience;
 }
+
+/** Keep WebDAV's local read/write operations behind the discovered knowledge host seam. */
+export function createKnowledgeVaultOperations(
+	host?: Pick<KnowledgeHostPort, "vault">,
+): KnowledgeWebDavVault {
+	if (host?.vault) return host.vault;
+	return {
+		readBinding: knowledgeUiService.readKnowledgeBinding,
+		readNote: knowledgeUiService.readNoteFile,
+		containedFile: knowledgeUiService.containedVaultFile,
+		createFileOnly: knowledgeUiService.createVaultFileOnly,
+		replaceFile: knowledgeUiService.replaceVaultFile,
+		isConflict: (error) => error instanceof knowledgeUiService.VaultFileConflictError,
+	};
+}
+
+/** Construct the domain reviewer only at the compatibility/plugin composition root. */
+export const createKnowledgeBackgroundReviewer: BackgroundReviewerFactory = (options) =>
+	new knowledgeUiService.BackgroundReviewer(options) as unknown as BackgroundReviewerPort;
 
 export interface KnowledgeWorkerLifecycleSnapshot {
 	readonly currentVersion: string | null;
@@ -419,17 +442,21 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private unsubscribe: (() => void) | null = null;
 	private disposed = false;
 	private loading: Promise<void> | null = null;
-	private readonly cloud = new KnowledgeWebDavService();
+	private readonly cloud: KnowledgeWebDavService;
 	private readonly readProvider: KnowledgeReadProvider;
 	private readonly writeProvider?: KnowledgeWriteProvider;
 	private readonly researchHost?: ResearchHostAdapter;
 	constructor(
 		readProvider: KnowledgeReadProvider = createKnowledgeReadProvider(),
-		options: { researchHostLoader?: ResearchHostLoader; knowledgeHost?: KnowledgeWriteProvider } = {},
+		options: {
+			researchHostLoader?: ResearchHostLoader;
+			knowledgeHost?: KnowledgeWriteProvider & Pick<KnowledgeHostPort, "vault">;
+		} = {},
 	) {
 		this.readProvider = readProvider;
 		this.writeProvider = options.knowledgeHost;
 		this.researchHost = options.researchHostLoader?.load(createResearchHostPort());
+		this.cloud = new KnowledgeWebDavService({ vault: createKnowledgeVaultOperations(options.knowledgeHost) });
 	}
 	private root() {
 		return (
