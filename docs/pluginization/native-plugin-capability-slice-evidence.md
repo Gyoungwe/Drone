@@ -32,6 +32,7 @@
 - `7a674fd3`/`9e32809d` 的后续 host slice：knowledge provider 注入、versioned `/host` 入口限制和空插件独立性检查均通过；`npm run typecheck -w @drone/backend`、create-backend 8 tests、独立性/边界 6 tests、Biome 通过。
 - `11804540` 的 analysis slice：`AnalysisTaskController` 仅消费显式 `AnalysisHostLoader`/registry；无 loader 时 fail-closed，Desktop 缺包继续启动并记录告警。Biome、backend/desktop typecheck、analysis adapter/controller 12 tests 通过；manifest 依赖清理和正式包分析 workflow 仍未完成。
 - `66cc4394` 的 generic host discovery slice：按任意已安装包的 `plugin.manifest.json` capability、`drone-desktop` host 和包内 `entrypoints.host` 动态加载 host loader；Desktop 源码不再直接写 pi-analysis 包名，backend 将 pi-analysis 移出运行时依赖。空根、未声明能力和路径穿越 3 tests、backend/desktop typecheck、host independence 与 Biome 通过。knowledge/research/core 仍是运行时依赖，故不宣称零插件构建完成。
+- 本轮独立性门禁收紧：`check-host-independence.mjs` 将 `@gyoungwe/pi-core` 纳入 versioned host-entry 规则，仅登记 backend 的 5 个历史兼容 facade（project memory、todo、status、memory-save、deliver-files）；新宿主源码直接导入 pi-core 会失败。`node --test scripts/check-host-independence.test.mjs`（5 tests）与完整扫描均通过。该登记是 P4 迁移边界，不代表 pi-core 已从宿主运行时依赖移除。
 
 插件 worktree：
 

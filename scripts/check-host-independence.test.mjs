@@ -47,3 +47,22 @@ test("rejects an optional plugin import and identifies its package", () => {
 		],
 	);
 });
+
+test("allows only the registered pi-core compatibility facades", () => {
+	assert.deepEqual(
+		findHostImportViolations(
+			"packages/backend/src/tools/todo.ts",
+			'export * from "@gyoungwe/pi-core/tools/todo";',
+		),
+		[],
+	);
+	assert.deepEqual(
+		findHostImportViolations(
+			"packages/backend/src/services/new-task-service.ts",
+			'import "@gyoungwe/pi-core/tools/todo";',
+		),
+		[
+			"packages/backend/src/services/new-task-service.ts: @gyoungwe/pi-core imports must use the versioned host entry",
+		],
+	);
+});
