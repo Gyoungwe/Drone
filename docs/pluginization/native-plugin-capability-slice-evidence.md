@@ -45,6 +45,9 @@
 
 - 宿主 P2 worker 边界切片：移除 `knowledge/ui.ts` 的模块加载期 worker 配置；`createBackend` 仅在未发现 `KnowledgeHostLoader` 时启用 legacy `.pi/extensions/knowledge-worker.mjs`。已安装 knowledge 插件的通用宿主因此不再要求宿主 workbench worker 资源，缺失 worker 根的插件路径回归通过（13 项 focused tests）。worker 本体、写入服务和完整 UI 所有权仍未迁出，P2 继续保持部分完成。
 
+- 宿主 `55699c2f` 扩展通用发现：除 `plugin.manifest.json` 外，发现器也接受标准 Pi `package.json` 中可选的 `drone` 声明；普通 Pi 包可在不增加 Drone 专用清单的情况下声明 Desktop host entry。路径仍限制在包根内，5 项发现回归通过。
+- 宿主 `649b465e` 增加可选 `ResearchHostOperations.detail` 合同；提供完整详情适配器的研究插件可直接返回 run detail，未提供时继续使用 metadata-only fallback。backend typecheck、Biome 与 11 项 create-backend 回归通过；完整 Zotero/连接器页面、写入和正式 GUI 仍未完成。
+
 ## 未关闭项
 
 本轮仍未证明：P2–P5 宿主领域装配删除；无领域插件的正式 DMG 启动与升级/停用/回滚；同一候选 tarball 的正式安装包 GUI；真实 Zotero/用户 MCP/Protocols.io 写入及其他平台验收。`check:native-plugin-boundary` 仍按计划输出 `INCOMPLETE`，不得改写为 PASS。
