@@ -18,6 +18,18 @@ Result: **PASS**. The script launched the actual packaged Electron binary with a
 
 Receipt root: `/private/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-fresh-package-lmcY6Y`.
 
+The smoke now also creates and closes one generic Pi session through the packaged preload with the same empty optional-plugin profile. The latest arm64 receipt is:
+
+```text
+node scripts/check-packaged-desktop.mjs packages/desktop/dist/mac-arm64/Drone.app
+PASS
+root: /private/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-fresh-package-EICc4Z
+genericSession: 01a1797f-cbfa-71b0-8e47-90c617a96539
+checks: workbench/preload, empty optional UI root, unbound knowledge, semantic/topic IPC, research commands, generic session create/close, empty auth/model stores
+```
+
+This strengthens the zero-plugin host receipt to include a no-model generic session lifecycle. It still does not prove an actual model response, plugin install/disable/reload, package upgrade/rollback, or failed process destruction.
+
 This proves the packaged host starts with an empty optional UI profile. It does not prove a signed release, a live model call, a package upgrade/rollback, or process-destruction failure handling; those remain separate acceptance items.
 
 The public-package boundary was also rechecked on 2026-10-27 with:

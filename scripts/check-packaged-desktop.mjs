@@ -154,6 +154,11 @@ try {
 	report.checks.push(
 		"packaged first-party research/Obsidian commands available in an unrelated empty project",
 	);
+	const session = await evaluate(`window.pi.createSession({cwd:${JSON.stringify(cwd)}})`);
+	assert(typeof session?.sessionId === "string" && session.sessionId.length > 0);
+	await evaluate(`window.pi.closeSession(${JSON.stringify(session.sessionId)})`);
+	report.genericSession = { sessionId: session.sessionId, cwd };
+	report.checks.push("packaged host can create and close a generic Pi session with no optional plugin");
 	for (const name of ["auth.json", "models.json"]) {
 		const data = await readFile(join(agent, name), "utf8").catch((error) => {
 			if (error.code === "ENOENT") return "{}";
