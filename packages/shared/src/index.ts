@@ -62,6 +62,7 @@ export * from "./contracts";
 export * from "./deliver";
 export * from "./desktop-command";
 export * from "./desktop-prefs";
+export * from "./diagnostic-text";
 export * from "./diagnostics";
 export * from "./discovery";
 export * from "./doc-outline";

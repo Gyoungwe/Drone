@@ -47,6 +47,7 @@
 
 - 宿主 `55699c2f` 扩展通用发现：除 `plugin.manifest.json` 外，发现器也接受标准 Pi `package.json` 中可选的 `drone` 声明；普通 Pi 包可在不增加 Drone 专用清单的情况下声明 Desktop host entry。路径仍限制在包根内，5 项发现回归通过。
 - 宿主 `649b465e` 增加可选 `ResearchHostOperations.detail` 合同；提供完整详情适配器的研究插件可直接返回 run detail，未提供时继续使用 metadata-only fallback。backend typecheck、Biome 与 11 项 create-backend 回归通过；完整 Zotero/连接器页面、写入和正式 GUI 仍未完成。
+- P4 依赖收窄切片：`diagnosticText` 从 `@drone/tasks` 迁入 `@drone/shared`，tasks 保留同名 re-export 以保持既有调用方 API；backend diagnostics 改为只依赖 shared。shared/tasks/backend typecheck 与 8 项 diagnostics/failure-feedback 回归通过。任务状态机、workbench 运行时和宿主对 tasks 的其余装配仍未迁移。
 - 本轮全量 `npm test` 复跑未通过：backend 252 文件中 2 个既有 knowledge fixture 失败（`knowledge-host-ui-reading` 报 `Workspace config host is not configured`，`knowledge-worker-lifecycle` 收到 `workerVersion: unknown`），其余 backend 2040 项、desktop 165 文件/903 项及其他 workspace 通过；新增发现器/研究详情聚焦测试 18 项通过。该回执不替代此前基线全量通过记录，也不把当前全量门禁记为 PASS。
 
 ## 未关闭项
