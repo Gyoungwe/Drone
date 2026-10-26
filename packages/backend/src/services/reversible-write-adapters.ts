@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import type { ResearchWriteAdapter, ResearchWriteExecutionContext } from "@drone/research";
 import type {
+	ResearchWriteAdapterPort,
+	ResearchWriteExecutionContext,
 	ResearchWritePayload,
 	ResearchWritePlan,
 	ResearchWriteReceipt,
@@ -433,7 +434,7 @@ interface PortAdapterOptions {
 	readonly validateTarget: (targetRef: string) => void;
 }
 
-export interface ReversibleResearchWriteAdapter extends ResearchWriteAdapter {
+export interface ReversibleResearchWriteAdapter extends ResearchWriteAdapterPort {
 	readonly supportsDelete: true;
 }
 

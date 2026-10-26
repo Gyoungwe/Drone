@@ -4,15 +4,6 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import type { KnowledgeApi, KnowledgeUiEvent, ResearchKnowledgeOperations } from "@drone/shared";
-import * as knowledgeHost from "@gyoungwe/pi-knowledge/host";
-import {
-	configureKnowledgeHost,
-	configureKnowledgeRuntime,
-	configureKnowledgeWorker,
-	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
-	type KnowledgeWorkerLifecycleEvent,
-	type KnowledgeWorkerMetadata,
-} from "@gyoungwe/pi-knowledge/host";
 import type {
 	DailyIdea,
 	ExperienceStorePort,
@@ -23,6 +14,15 @@ import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoad
 import type { DailyDiscoveryOperations } from "../services/daily-discovery";
 import type { BackgroundReviewerFactory, BackgroundReviewerPort } from "../services/deliverable-reviewer";
 import type { KnowledgeMaintenanceOperations } from "../services/knowledge-maintenance";
+import {
+	configureKnowledgeHost,
+	configureKnowledgeRuntime,
+	configureKnowledgeWorker,
+	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
+	type KnowledgeWorkerLifecycleEvent,
+	type KnowledgeWorkerMetadata,
+	knowledgeHost,
+} from "./compat";
 import { KnowledgeWebDavService } from "./webdav";
 import type { KnowledgeWebDavVault } from "./webdav-sync";
 
