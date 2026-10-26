@@ -59,6 +59,9 @@
 - P2/P6 `cc10cec3` 将 WebDAV 知识传输的大小限制和 Vault 相对路径校验迁入 shared host contract；`webdav.ts`/`webdav-transport.ts` 不再直接 runtime import `@gyoungwe/pi-knowledge/host`。Biome、shared/backend typecheck、shared 6 项路径合同测试和 backend WebDAV 17 项测试通过；native boundary runtime-import 继续下降，完整 knowledge worker/写入/UI 所有权仍未完成。
 - P3 `d0df0d95` 将 EZproxy URL/Cloudflare challenge 纯策略 helper 迁入 `@drone/shared` 的 `research-access` 合同；`institutional/config.ts` 与 `session-engine/cloudflare-ask.ts` 不再直接 runtime import `@gyoungwe/pi-research/host`。shared/backend typecheck、policy 4 项和 institutional 5 项测试通过；Zotero 状态、机构连接器完整迁移与写入仍未完成。
 - P2/P6 `cc10cec3` 将 WebDAV 知识路径合同（`KNOWLEDGE_MAX_NOTE_BYTES`、`validateKnowledgeNotePath`）迁入 shared；backend webdav/webdav-transport 不再直接 runtime import `@gyoungwe/pi-knowledge/host`。shared/backend typecheck、Biome、knowledge-path 6 项及 webdav/sync 17 项测试通过；worker、完整写入和 UI 所有权仍未迁出。
+- P2/P6 `88f4fc5e` 将 specialist registrar 改为可选 `KnowledgeHostPort` 注入，backend `specialist-bridge.ts` 删除对 `@gyoungwe/pi-knowledge/host` 的 runtime import；Biome 通过，SDK 测试改为显式注册。跨模块事件合同仍保留，完整 specialist/worker 迁移未完成。
+- P2/P6 `b7cd8b52` 将 compute experience 的终态记录改为注入式 knowledge operation，同时承载 research-resource host contract/factory 的宿主接线；`compute-experience`/`create-backend` 14 项测试、backend typecheck 与 Biome 通过。
+- P3/P6 `19046ea0` 将 research capture 的 `ingestKnowledgeSnapshot/resolveKnowledgeContext` 改为 `ResearchKnowledgeOperations` 注入，backend service 删除对 `@gyoungwe/pi-knowledge/host` 的 runtime import；shared/backend typecheck、research-resource 8 项测试通过。无插件兼容回退保留，完整研究页面/写入仍未完成。
 
 - 宿主 `55699c2f` 扩展通用发现：除 `plugin.manifest.json` 外，发现器也接受标准 Pi `package.json` 中可选的 `drone` 声明；普通 Pi 包可在不增加 Drone 专用清单的情况下声明 Desktop host entry。路径仍限制在包根内，5 项发现回归通过。
 - 宿主 `649b465e` 增加可选 `ResearchHostOperations.detail` 合同；提供完整详情适配器的研究插件可直接返回 run detail，未提供时继续使用 metadata-only fallback。backend typecheck、Biome 与 11 项 create-backend 回归通过；完整 Zotero/连接器页面、写入和正式 GUI 仍未完成。
