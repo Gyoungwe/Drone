@@ -7,11 +7,11 @@
 | P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复的领域耦合扫描 | 清单和静态检查已实现；110 项初始耦合；锁定 1.1.0/latest 1.4.0 真实会话基础 UI 对照通过，全 API 兼容尚未完成 | 无 |
 | P1 | 通用 runtime 生命周期、包来源绑定、权限、隔离进程、UI 调用和撤销 | 应用 owner/真实会话/selection lease 回归及正式 DMG application→A→application→B→A、停用/拒绝/恢复/退出切片通过；领域桥接继续由 P2 完成 | P0 |
 | P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | 同 owner 的阅读、图谱、分类、最小审核策略和 native hook 生命周期切片已通过候选包/真实 SDK；正式阅读 GUI 历史失败保留；后继正式包的工具、设置、停用恢复与退出复验通过；完整服务写操作和宿主删除仍未完成 | P1 |
-| P3 | research、来源连接器、引用/Zotero 等领域 API/页面迁移 | **部分完成**：`pi-connectors` 已新增 arXiv 与 Semantic Scholar 只读声明；`pi-research` 已增加只读 Desktop runtime 的 status/listRuns host 合同和路径隔离回归；完整 Zotero host adapter、页面和写入迁移仍未完成 | P2 |
+| P3 | research、来源连接器、引用/Zotero 等领域 API/页面迁移 | **部分完成**：`pi-connectors` 已新增 arXiv 与 Semantic Scholar 只读声明；`pi-research` 已增加 package-local `ResearchHostPort`/loader/registry，将 status/listRuns 与 Desktop runtime 统一到只读 host adapter（`3829623`）；完整 Zotero host adapter、页面和写入迁移仍未完成 | P2 |
 | P4 | tasks、编排、领域记忆及 UI 迁移 | **部分完成**：`@gyoungwe/pi-workbench@0.1.0` 提供 registration-scoped 工具、host-owned state.read/write、版本 CAS、取消/停用和官方 loader smoke；桌面 UI 与旧宿主装配仍未完成 | P2 |
 | P5 | analysis/evidence 迁移；跨插件依赖通过显式合同管理 | **部分完成**：宿主已接入 manifest 声明的 `analysis_prepare_evidence` 与 `evidence_validate_manifest` 只读合同，缺失时返回 `unavailable`，成功回执带稳定内容哈希；持久化证据和真实会话仍未完成 | P3/P4 |
 | P6 | 科研发行为可卸载预设；构建/锁文件去除领域必需依赖；删除旧路径 | **部分完成**：UI 已安装包内容寻址，入口或嵌套依赖就地替换会撤销旧绑定并要求 reload；跨包 hoisted 依赖闭包、持久化安装代次和旧路径删除仍未完成 | P2–P5 |
-| P7 | 双仓库最终门禁、同 tarball 原生 Pi 真实会话、正式安装包零插件及升级/停用/回滚 | 待开始 | P6 |
+| P7 | 双仓库最终门禁、同 tarball 原生 Pi 真实会话、正式安装包零插件及升级/停用/回滚 | **部分开始**：宿主空 managed package root 的 `UiPluginManager.init()` 回归已通过；完整双仓库最终门禁、同 tarball 全矩阵、正式安装包零插件及升级/停用/回滚仍未完成 | P6 |
 
 ## 工作分配
 
@@ -59,3 +59,4 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 - 2026-10-26：宿主补充零可选 UI 插件启动/发现回归：在空的 Pi 托管 `node_modules` 下创建 `UiPluginManager` 并执行 `init()`，确认扫描列表、未知插件信息、runtime source 和启用状态均保持空/禁用且不抛错。测试为 `packages/desktop/src/main/ui-plugins/installed-ui-pack.test.ts` 的 `keeps the host usable when the managed package root is empty`；该切片只覆盖宿主 UI 发现，不代表 P7 正式安装包零插件验收。
 
 - 2026-10-26：宿主新增 `analysis-evidence-host` 通用组合：仅消费已声明的 analysis/evidence 工具，要求 evidence plan 声明 `execution=host-required`，再由 validator 校验宿主 manifest；`analysisEvidence.prepareEvidence` 返回稳定只读回执。当前锁定的公开 `pi-analysis@0.1.2` 尚未声明该工具，因此默认明确返回 `unavailable`。
+- 2026-10-26：插件 `3829623` 新增 `pi-research` 的 package-local `ResearchHostPort`、loader 和注册入口；`status/listRuns` 与 Desktop runtime 共用同一只读 adapter，129 项测试、typecheck、build:check、smoke 通过。宿主本轮 `npm test`（252/4 文件、2026/18 测试）、`npm run build`、`npm run typecheck`、`npm run check:arch` 全部通过；插件仓库的完整 `npm run check` 已通过 build、manifest、pi-knowledge、pi-research locked SDK 等阶段，但 latest SDK 安装因 npm 网络无输出中止，故不记完整插件 check PASS。当前仍没有正式安装包零插件/升级回滚和真实桌面 research workflow 证据。
