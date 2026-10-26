@@ -48,9 +48,9 @@
 - 宿主 `55699c2f` 扩展通用发现：除 `plugin.manifest.json` 外，发现器也接受标准 Pi `package.json` 中可选的 `drone` 声明；普通 Pi 包可在不增加 Drone 专用清单的情况下声明 Desktop host entry。路径仍限制在包根内，5 项发现回归通过。
 - 宿主 `649b465e` 增加可选 `ResearchHostOperations.detail` 合同；提供完整详情适配器的研究插件可直接返回 run detail，未提供时继续使用 metadata-only fallback。backend typecheck、Biome 与 11 项 create-backend 回归通过；完整 Zotero/连接器页面、写入和正式 GUI 仍未完成。
 - P4 依赖收窄切片：`diagnosticText` 从 `@drone/tasks` 迁入 `@drone/shared`，tasks 保留同名 re-export 以保持既有调用方 API；backend diagnostics 改为只依赖 shared。shared/tasks/backend typecheck 与 8 项 diagnostics/failure-feedback 回归通过。任务状态机、workbench 运行时和宿主对 tasks 的其余装配仍未迁移。
-- 本轮全量 `npm test` 复跑未通过：backend 252 文件中 2 个既有 knowledge fixture 失败（`knowledge-host-ui-reading` 报 `Workspace config host is not configured`，`knowledge-worker-lifecycle` 收到 `workerVersion: unknown`），其余 backend 2040 项、desktop 165 文件/903 项及其他 workspace 通过；新增发现器/研究详情聚焦测试 18 项通过。该回执不替代此前基线全量通过记录，也不把当前全量门禁记为 PASS。
+- 首次全量 `npm test` 复跑暴露两个 knowledge fixture 问题：独立 UI 测试未显式配置 host seam，worker 测试的独立模块图未注入已校验 metadata。`aa1d63d6` 修正测试夹具后，干净 `npm ci` 下全量 `npm test` 通过：backend 252 文件、desktop 165 文件/903 项及其他 workspace、脚本检查全部通过。
 - 插件 P5/P6 `4467782` 为 `pi-analysis` 与 `pi-evidence` clean-install smoke 增加声明一致性校验：安装后的 capabilities、host entry、`manifest.tools` 必须与真实 Pi loader 注册工具一致；analysis 3 工具、evidence 4 只读工具均通过。正式 GUI、零插件安装包和完整领域迁移仍未完成。
-- 宿主 `bcbc4e07` 将根 devDependency 对齐到 `plugins.lock.json` 与公开版本（`pi-knowledge@0.2.1`、`pi-research@0.2.0`），`npm ci` 后 `npm ls` 无版本漂移；两项 knowledge fixture 仍失败，原因已从旧版本漂移收窄为测试进程中的 host 配置/worker metadata 模块隔离，未改生产代码伪造通过。
+- 宿主 `bcbc4e07` 将根 devDependency 对齐到 `plugins.lock.json` 与公开版本（`pi-knowledge@0.2.1`、`pi-research@0.2.0`）；干净 `npm ci` 后 `npm ls` 无版本漂移，随后 `aa1d63d6` 的夹具修复使全量测试恢复通过。
 
 ## 未关闭项
 
