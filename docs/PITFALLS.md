@@ -362,3 +362,9 @@ UI 授权等待、配置落盘和进程清理都是异步阶段。停用/关闭�
 P2 的打包知识 runtime 在实际 SDK 直接调度时通过，但正式 DMG 聊天的模型工具清单缺少两项知识工具。独立进程 native 注册只传 name/label/description/parameters，丢失了插件声明的 `drone` 元数据；生产 `CapabilityRuntime` 将未分类工具视为 external，知识能力激活时不会曝光它们。通用进程协议必须保留可选 JSON 元数据，让现有 `ToolManifest` 边界解析分类，不能靠硬编码工具名或关闭 lazy capabilities 修复。
 
 artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读会话：断言知识分类工具实际进入 active tools，并令控制工具即使自报 `drone.readOnly=true`、仍因未知/write toolEffects 被 broker 拒绝。分类是曝光信息，不是文件或副作用授权。真实安装包仍必须在重建后复验。
+# 受管工具可见不等于任务守卫允许执行
+
+原生工具的 `drone` 分类元数据进入模型清单后，旧 task guard 仍只查领域 runtime 的工具登记表，可能把实际只读工具误判为需要 task_plan。守卫应读取当前真实 SDK 会话的官方 `ToolInfo.annotations.readOnlyHint`；受管 native 由 toolEffects 投影此值，unknown/write 明确覆盖为 false，不能被同名旧元数据或另一个会话污染。此提示只用于任务编排，实际能力授权仍经过 broker。回归需加载真实任务守卫并检查 toolResult.isError，不能只数工具卡或模型请求。
+
+应用开始异步退出后，macOS `activate` 仍可能到达；如果再次创建窗口，会恢复已清理后端上的会话并出现空白/失效页面。退出、失败和已完成状态都必须禁止新建窗口，失败保留错误并允许明确重试退出。日志中的 `backend disposed` 仅指 session service，不能代替整个 Desktop cleanup、will-quit 和实际进程退出证据。
+
