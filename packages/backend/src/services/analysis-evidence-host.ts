@@ -1,37 +1,21 @@
 import { createHash } from "node:crypto";
 import { stableJson } from "@drone/compute";
 import type { AnalysisContext } from "@drone/shared";
+import type { EvidenceHostManifest, EvidenceHostPort, EvidenceHostTool } from "@gyoungwe/plugin-api";
 
 export const ANALYSIS_PREPARE_EVIDENCE_TOOL = "analysis_prepare_evidence" as const;
 export const EVIDENCE_VALIDATE_MANIFEST_TOOL = "evidence_validate_manifest" as const;
 export const EVIDENCE_VERIFY_REPLAY_TOOL = "evidence_verify_replay" as const;
 
-export interface ReadOnlyPluginTool {
-	execute(input: unknown): Promise<unknown> | unknown;
-}
-
-export interface AnalysisEvidencePluginManifest {
-	readonly tools: readonly string[];
-}
+export type ReadOnlyPluginTool = EvidenceHostTool;
+export type AnalysisEvidencePluginManifest = EvidenceHostManifest;
 
 /**
  * Host-facing slice of the plugin composition. The host receives tools from
  * the installed Pi package loader; it never imports the analysis/evidence
  * implementation or lets a plugin choose a host path.
  */
-export interface AnalysisEvidencePluginHost {
-	readonly manifest: AnalysisEvidencePluginManifest;
-	readonly tools: Readonly<
-		Partial<
-			Record<
-				| typeof ANALYSIS_PREPARE_EVIDENCE_TOOL
-				| typeof EVIDENCE_VALIDATE_MANIFEST_TOOL
-				| typeof EVIDENCE_VERIFY_REPLAY_TOOL,
-				ReadOnlyPluginTool
-			>
-		>
-	>;
-}
+export type AnalysisEvidencePluginHost = EvidenceHostPort;
 
 export interface AnalysisEvidenceReplayVerification {
 	readonly status: "reproduced" | "failed";

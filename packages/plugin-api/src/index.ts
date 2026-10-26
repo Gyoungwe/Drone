@@ -543,6 +543,34 @@ export interface KnowledgeHostLoader {
 	load(): KnowledgeHostPort;
 }
 
+/** Read-only tool surface exposed by an installed evidence plugin. */
+export interface EvidenceHostTool {
+	execute(input: unknown): Promise<unknown> | unknown;
+}
+
+export type EvidenceHostToolName =
+	| "analysis_prepare_evidence"
+	| "evidence_validate_manifest"
+	| "evidence_verify_replay";
+
+export interface EvidenceHostManifest {
+	readonly tools: readonly string[];
+}
+
+/** Stable host entry contract for the optional evidence capability. */
+export interface EvidenceHostPort {
+	/** Optional for compatibility with pre-loader host fixtures; loaders return version 1. */
+	readonly contractVersion?: 1;
+	readonly manifest: EvidenceHostManifest;
+	readonly tools: Readonly<Partial<Record<EvidenceHostToolName, EvidenceHostTool>>>;
+}
+
+/** Loader contract keeps the host independent of evidence implementation details. */
+export interface EvidenceHostLoader {
+	readonly contractVersion: 1;
+	load(): EvidenceHostPort;
+}
+
 function stableContractJson(value: unknown): string {
 	if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
 	if (Array.isArray(value)) return `[${value.map(stableContractJson).join(",")}]`;
