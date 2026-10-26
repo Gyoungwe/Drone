@@ -13,6 +13,9 @@
 | P6 | 科研发行为可卸载预设；构建/锁文件去除领域必需依赖；删除旧路径 | **部分完成**：UI 已安装包内容寻址并持久化 packageName→{root,hash} 安装代次；入口或嵌套依赖就地替换会清除旧授权并要求重新确认（`0cf92ed0`）；`1cb765c8` 补齐失败卸载/更新回执不误报和不 reload；`ad00d14c` 将 research write service 的 registry 依赖改为 shared host contract，`c2b4c95f`/`6043b667` 将 research write/connector registry 改为宿主注入并把默认实现隔离到 compatibility composition，`67543fbf` 删除 research-resource 对 research 包的 runtime import，`ae3434dd` 将 tasks 降为 devDependency，`0e84aec3` 将 knowledge UI 与 reversible research adapter 的领域实现依赖集中到显式 compatibility composition/host-neutral shared contract；`check:host-domain-deps` 已接入 `check:arch`，冻结当前迁移依赖并阻止新的可选领域包 runtime 依赖；compat 默认实现、旧进程销毁失败升级/回滚、跨包 hoisted 依赖闭包和旧路径删除仍未完成 | P2–P5 |
 | P7 | 双仓库最终门禁、同 tarball 原生 Pi 真实会话、正式安装包零插件及升级/停用/回滚 | **部分开始**：宿主空 managed package root 的 `UiPluginManager.init()` 回归已通过；`369f7c58`/`d39159d3` 以实际 arm64 Drone.app 加强空 UI root、空 Pi managed npm root、通用 session create/close、未绑定知识和空 auth/model 的可审计回执；`7daf6a13` 真实安装/移除 `pi-evidence@0.1.1` 并回读包目录与配置，restore/reload、升级、回滚、销毁失败和同 tarball GUI 仍未完成 | P6 |
 
+## 本轮新增迁移记录
+- `880ebc08` 将 `ResearchConnector`、执行上下文、连接器配置与项目存储端口发布到 `@drone/shared`；`@drone/research` 仅保留兼容 re-export，backend `research-resource.ts` 删除对研究包的类型依赖。shared/research/backend typecheck、research 25 项测试及 Biome 通过；P3/P6 仍保持部分完成。
+
 ## 工作分配
 
 - 主代理：集成分支、共享合同/IPC、来源绑定与授权、端到端与最终门禁、计划与证据。
