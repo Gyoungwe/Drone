@@ -22,6 +22,7 @@ import { afterEach, describe, expect, it } from "vitest";
 function stubPi(tools = new Map()) {
 	const base = {
 		registerTool: (tool) => tools.set(tool.name, tool),
+		getAllTools: () => [...tools.values()],
 		getCommands: () => [],
 		events: { on() {}, emit: async () => {} },
 	};
@@ -54,6 +55,7 @@ describe("acceptance verifier registry (hook 2)", () => {
 		const listeners = new Map();
 		const pi = {
 			registerTool: (tool) => tools.set(tool.name, tool),
+			getAllTools: () => [...tools.values()],
 			registerCommand: () => {},
 			on: (name, _listener) => listeners.set(name, (listeners.get(name) || 0) + 1),
 			events: { on() {}, emit: async () => {} },
@@ -90,8 +92,20 @@ describe("acceptance verifier registry (hook 2)", () => {
 		const registerTool = (tool) => tools.set(tool.name, tool);
 		const registerCommand = () => {};
 		const on = (name) => listeners.set(name, (listeners.get(name) || 0) + 1);
-		const first = Object.freeze({ registerTool, registerCommand, on, events: makeEvents() });
-		const second = Object.freeze({ registerTool, registerCommand, on, events: makeEvents() });
+		const first = Object.freeze({
+			registerTool,
+			getAllTools: () => [...tools.values()],
+			registerCommand,
+			on,
+			events: makeEvents(),
+		});
+		const second = Object.freeze({
+			registerTool,
+			getAllTools: () => [...tools.values()],
+			registerCommand,
+			on,
+			events: makeEvents(),
+		});
 
 		const journal = registerTaskRuntime(first);
 		expect(registerTaskRuntime(second, { readKnowledgeBinding: async () => null })).toBe(journal);
@@ -121,6 +135,7 @@ describe("acceptance verifier registry (hook 2)", () => {
 			};
 			const pi = Object.freeze({
 				registerTool: (tool) => tools.set(tool.name, tool),
+				getAllTools: () => [...tools.values()],
 				registerCommand: () => {},
 				appendEntry: () => {},
 				sendMessage: () => {},
@@ -148,6 +163,7 @@ describe("acceptance verifier registry (hook 2)", () => {
 			const listeners = new Map();
 			const pi = Object.freeze({
 				registerTool: (tool) => tools.set(tool.name, tool),
+				getAllTools: () => [...tools.values()],
 				registerCommand: () => {},
 				appendEntry: () => {},
 				sendMessage: () => {},

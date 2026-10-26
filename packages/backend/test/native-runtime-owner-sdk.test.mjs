@@ -1,6 +1,8 @@
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { registerTaskRuntime } from "@drone/tasks/runtime";
+import { createStandaloneRuntime } from "@drone/tasks/runtime-bridge";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
 	createAgentSession,
@@ -90,6 +92,16 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 					noPromptTemplates: true,
 					additionalExtensionPaths: [nativeEntrypoint],
 					extensionFactoryForPath: bootstrap.factoryForPath,
+					extensionFactories: [
+						(pi) => {
+							const runtime = createStandaloneRuntime();
+							pi.events.on("drone:runtime/request/v1", () =>
+								pi.events.emit("drone:runtime/v1", { version: 1, runtime }),
+							);
+							registerTaskRuntime(pi);
+							pi.on("session_shutdown", () => runtime.dispose());
+						},
+					],
 				});
 				await resourceLoader.reload({ resolveProjectTrust: async () => true });
 				expect(resourceLoader.getExtensions().errors).toEqual([]);

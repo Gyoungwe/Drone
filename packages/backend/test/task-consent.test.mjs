@@ -172,6 +172,7 @@ async function registered({ withPlan = true } = {}) {
 			commands[name] = value;
 		},
 		registerTool: vi.fn(),
+		getAllTools: () => [],
 		appendEntry: (customType, data) => entries.push({ customType, data }),
 		sendMessage: vi.fn(),
 		sendUserMessage: vi.fn(),
@@ -386,6 +387,7 @@ it("readback can verify a user-approved data directory outside the session cwd, 
 			handlers[name] = cb;
 		},
 		registerTool: vi.fn(),
+		getAllTools: () => [],
 		registerCommand: vi.fn(),
 		sendMessage: vi.fn(),
 		appendEntry: (customType, value) => entries.push({ customType, data: value }),

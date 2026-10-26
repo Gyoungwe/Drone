@@ -246,6 +246,9 @@ export class PluginRuntimeRegistry {
 				adapted.registerTool = ((tool: ToolDefinition) =>
 					pi.registerTool({
 						...tool,
+						// The official SDK exposes this per-session declaration to task planning.
+						// Capability authorization still uses the operation/port effects below.
+						annotations: { ...tool.annotations, readOnlyHint: native.toolEffects?.[tool.name] === "read" },
 						execute: (id, input, signal, update, context) =>
 							this.call(activation, () => resolveCaller(context), `native:tool:${tool.name}`, input, signal, {
 								inputSchema: tool.parameters,

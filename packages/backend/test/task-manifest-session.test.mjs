@@ -26,6 +26,7 @@ function host(id) {
 	const pi = {
 		events,
 		registerTool() {},
+		getAllTools: () => [],
 		registerCommand() {},
 		getCommands: () => [],
 		appendEntry() {},
