@@ -32,6 +32,11 @@
 | 设置页提示「已保存」但实际没保存（参数超出 schema 限制） | 四 · 宿主契约参数校验失败曾是 resolve 错误信封（已在 preload 统一转 reject） |
 | Google Antigravity 登录后返回 400 `INVALID_ARGUMENT` 或 403 `UNSUPPORTED_CLIENT` | 二 · Cloud Code Assist ClientMetadata 枚举 |
 | 生信任务 trace 显示 `skills: []`，模型退回临时脚本 | 二 · 研究 skill 路由与开发态资源同步 |
+| 未选项目时知识 PDF 预览报 `Invalid arguments for host method file:preview` | 2026-10-26 · 可选 IPC 参数与显式 undefined |
+
+## 2026-10-26：可选 IPC 参数与显式 undefined
+
+`previewFile(target, cwd?)` 的调用方会将不存在的 cwd 显式传为 undefined，Electron 保留这个参数位置。若 schema 只有 `[string]` 和 `[string, string]` 两个元组，`[target, undefined]` 会在读取文件之前被拒绝。按公开 PiApi 的可选签名修正 filePreview/resourceOpenExternal 的对应 schema；不要要求用户先选项目，也不要全局删除 undefined（其他接口可能需要保留其参数位置）。`preload/file-preview-contract.test.ts` 穿过真实合同绑定与文件读取，覆盖空项目绝对路径和 confinement 边界；打包后还须用没有选过项目的 profile 点击 PDF 引用。
 
 ## 2026-10-25：npm 缓存可能掩盖本地候选包锁完整性错误
 

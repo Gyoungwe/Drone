@@ -128,8 +128,12 @@ export const AppContract = defineDomain("app", {
 		filePreview: {
 			args: Type.Union([
 				Type.Tuple([Type.String()]),
-				Type.Tuple([Type.String(), Type.String()]),
-				Type.Tuple([Type.String(), Type.String(), Type.Boolean()]),
+				Type.Tuple([Type.String(), Type.Union([Type.String(), Type.Undefined()])]),
+				Type.Tuple([
+					Type.String(),
+					Type.Union([Type.String(), Type.Undefined()]),
+					Type.Union([Type.Boolean(), Type.Undefined()]),
+				]),
 			]),
 			result: ResourcePreviewResultSchema,
 		},
@@ -156,8 +160,12 @@ export const AppContract = defineDomain("app", {
 		resourceOpenExternal: {
 			args: Type.Union([
 				Type.Tuple([Type.String()]),
-				Type.Tuple([Type.String(), Type.String()]),
-				Type.Tuple([Type.String(), Type.String(), Type.Boolean()]),
+				Type.Tuple([Type.String(), Type.Union([Type.String(), Type.Undefined()])]),
+				Type.Tuple([
+					Type.String(),
+					Type.Union([Type.String(), Type.Undefined()]),
+					Type.Union([Type.Boolean(), Type.Undefined()]),
+				]),
 			]),
 			result: Type.Void(),
 		},

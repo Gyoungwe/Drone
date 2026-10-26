@@ -4,6 +4,15 @@ import { AppContract } from "./app";
 import { channelOf } from "./define";
 
 describe("AppContract", () => {
+	it("accepts omitted resource context while retaining argument types", () => {
+		for (const method of [AppContract.methods.filePreview, AppContract.methods.resourceOpenExternal]) {
+			expect(Check(method.args, ["/papers/source.pdf", undefined])).toBe(true);
+			expect(Check(method.args, ["/papers/source.pdf", undefined, undefined])).toBe(true);
+			expect(Check(method.args, ["/papers/source.pdf", "/papers", true])).toBe(true);
+			expect(Check(method.args, ["/papers/source.pdf", 123])).toBe(false);
+		}
+	});
+
 	it("keeps stable app channels and validates metadata", () => {
 		expect(channelOf(AppContract, "getInfo")).toBe("app:getInfo");
 		expect(channelOf(AppContract, "getDiagnostics")).toBe("app:getDiagnostics");

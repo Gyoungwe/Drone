@@ -7,3 +7,5 @@
 验收覆盖知识页带页码目标、关闭/重新打开/返回、聊天不重复展示，以及重新构建的真实 macOS 安装包 PDF 第 3 页、翻页和越界页码提示。源码/组件检查不能替代最终安装包 GUI 验收。
 
 正式包截图又发现窄栏 PDF 失真：CSS max-width 压缩宽度，PdfViewer 的固定 inline height 未随之缩放。高度改为 auto，保留 Canvas 像素尺寸和 viewport 宽度，以固有比例缩放；最终真实包截图验证。
+
+发布后空项目验收补充：Markdown 在没有当前项目时传入 `cwd: undefined`，ResourceSidebar 将它作为第二个实参传给预览和外部打开接口。PiApi 已将 cwd/confineToCwd 声明为可选，但 AppContract 的元组只允许省略参数，不接受显式 undefined。修正这两个现有方法的可选参数 schema，使既有绝对路径预览在空项目下可用；不全局裁剪 IPC 参数，不改变路径解析、文件大小限制或项目 confinement。回归穿过真实 preload 客户端、主进程合同校验和文件读取，覆盖绝对路径、file URL、项目相对路径、越界拒绝及缺少 confinement 根目录的拒绝。最终仍以重新打包后的空项目 GUI 第 3 页回执为准。
