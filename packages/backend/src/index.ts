@@ -363,3 +363,6 @@ export {
 	type WebFetchDetails,
 	type WebFetchOptions,
 } from "./tools/webfetch";
+
+export { PluginRuntimeBridge } from "./plugins/coordinator";
+export type { PluginRuntimeBridgeOptions, PluginRuntimeOwner, PluginRuntimeSource } from "./plugins/coordinator";

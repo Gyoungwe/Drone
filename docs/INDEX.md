@@ -505,7 +505,7 @@ src/
 
 `@gyoungwe/pi-knowledge/host` 承载语义 provider 配置验证、bounded request/response 与向量安全校验；宿主只负责凭据、同意和调度。
 
-原生 Pi 插件架构新增执行计划见 [P0–P7](pluginization/native-plugin-implementation-plan.md)，依赖与原生兼容覆盖清单见 [inventory](pluginization/native-plugin-inventory.md)。`scripts/check-native-plugin-boundary.mjs` 是新增最终边界门禁，当前未清零。运行时生命周期在 `packages/backend/src/plugins/`，UI 绑定/context 在 `packages/desktop/src/renderer/src/plugins/runtime.ts`，主进程来源绑定在 `packages/desktop/src/main/ui-plugins/runtime-bridge.ts`。
+原生 Pi 插件架构新增执行计划见 [P0–P7](pluginization/native-plugin-implementation-plan.md)，依赖与原生兼容覆盖清单见 [inventory](pluginization/native-plugin-inventory.md)。`scripts/check-native-plugin-boundary.mjs` 是新增最终边界门禁，当前未清零。运行时生命周期在 `packages/backend/src/plugins/`，UI 绑定/context 在 `packages/desktop/src/renderer/src/plugins/runtime.ts`，应用级 owner 协调在 `packages/backend/src/plugins/coordinator.ts`，主进程窗口门面在 `packages/desktop/src/main/ui-plugins/runtime-bridge.ts`。
 
 `backend/src/plugins/session-caller.ts` 从真实 SessionRegistry entry 提供规范工作区、会话代次及撤销信号；`desktop/src/renderer/src/plugins/caller.ts` 同步活动会话并携带主进程签发的 selection lease，防止旧界面请求在切换会话后被解释为新调用。无会话时显式使用 application scope；应用级后台可以被多个窗口共享。该通用机制尚不代表知识 UI 与原生工具已共用领域实例。
 
