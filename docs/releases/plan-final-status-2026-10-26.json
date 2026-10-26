@@ -1,0 +1,85 @@
+{
+	"date": "2026-10-26",
+	"overallStatus": "PARTIAL",
+	"userDecision": "Retain four external acceptance categories as unfinished; no further acceptance execution in this documentation task",
+	"baseline": {
+		"Drone": "16318a4173914353598bbadd8805a612c84d7b55",
+		"drone-plugins": "d2f76a0894ba7de685ba90117f1db63ebd8176f5"
+	},
+	"registry": "https://registry.npmjs.org",
+	"verificationScope": "Fresh public latest metadata read; installation evidence remains in linked release receipts",
+	"packages": [
+		{
+			"name": "@gyoungwe/plugin-api",
+			"version": "1.2.0",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/plugin-api/-/plugin-api-1.2.0.tgz",
+			"integrity": "sha512-DbpIPudaftSXfr+tfx6F7gtVTqaUIFDZXlVMDHdmLY11vhekQz8r/YbwfEX9rh4URgt06W22arysyiITZoGu6A==",
+			"shasum": "36f4057328e04c94ce0283e1398945530f831e90"
+		},
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.1.9",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-core/-/pi-core-0.1.9.tgz",
+			"integrity": "sha512-HLDDUetgCB3mtWOIf4G7a3aSQeasEyKnXFmBdIUnKSbpGW0cqGmLFZWfH6Szd4q8/0USH1d0HVirh+Y7vKh+4w==",
+			"shasum": "f4949333cc9875ac225b9c040704884e372a5fc9"
+		},
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.2.1",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-knowledge/-/pi-knowledge-0.2.1.tgz",
+			"integrity": "sha512-d4VRP3AgoUiL8DZC4uB+vMSPaLuz9d7H6HoqKO3ujQ7qZIGTtpswpGMeSNo+6O+YTga1STr2KphfPXVbZIThNw==",
+			"shasum": "c6d625f55dfcb69e63a886dc926363abdc4228ad"
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"version": "0.2.0",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-research/-/pi-research-0.2.0.tgz",
+			"integrity": "sha512-QXUAxB94rWdOHiyFtNlwGVuIDmVNUO3JCvOqvp7KGHoynuqZ335sM00W6+EI0UOKUCyfZ9W99BrLYVirzzM1qg==",
+			"shasum": "14169bd5ed827fca4daf1ba6d85a9d29690de79a"
+		},
+		{
+			"name": "@gyoungwe/research-suite",
+			"version": "0.1.11",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/research-suite/-/research-suite-0.1.11.tgz",
+			"integrity": "sha512-ItAik3uP2YNSb41H+pImlPCgTkmnk1dvu4nWnVJ3VAj6/roLnZecZ5up7+jLdiBFWtkFYds5Gh2udvxdawIhGQ==",
+			"shasum": "98e51a2ea0ec16c9214776d9c1ebe78729307a52"
+		},
+		{
+			"name": "@gyoungwe/pi-analysis",
+			"version": "0.1.2",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-analysis/-/pi-analysis-0.1.2.tgz",
+			"integrity": "sha512-5iXAZwmxmDADzo4SSSoQxSwidT3f1HWorahfyjQPuDfwFW9oWV1kFQyp6ZTD7sa080VNyskDH62hEM4yiMbAEQ==",
+			"shasum": "c8d760b61473419e5f406320d50d048655cd9d9d"
+		},
+		{
+			"name": "@gyoungwe/pi-evidence",
+			"version": "0.1.1",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-evidence/-/pi-evidence-0.1.1.tgz",
+			"integrity": "sha512-qYsLkhpz6o7Fh9773TNBYFYFTKqnvAO9khAkZPs7jRXrMKUTO6CWCBpo0Vc7qTC/owN5hoTR9X+uF5zqFBpMow==",
+			"shasum": "a0cec6d35a4def4e5242a63be64a5769547540de"
+		},
+		{
+			"name": "@gyoungwe/pi-connectors",
+			"version": "0.1.1",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-connectors/-/pi-connectors-0.1.1.tgz",
+			"integrity": "sha512-Q5sX7cJTLhmUdn6FxCpGZyPCrUgEIimqxbPkDRymUY7k+7RKT2NM3cgPmYI24Rdh9jDUEnv+oXSfue9xBLyStg==",
+			"shasum": "075d1b7308b19ecc47d2ed85437cf63e7f21fb79"
+		},
+		{
+			"name": "@gyoungwe/desktop-ui-pack",
+			"version": "0.2.0",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/desktop-ui-pack/-/desktop-ui-pack-0.2.0.tgz",
+			"integrity": "sha512-D0pQFn5hs2hcsY5QZNCQ464zA9YwBKI7L2stpB/XOoPP7YdwhD+/8XSaRwxNVbC55S93Ferh0XCFKqUuzz2g/A==",
+			"shasum": "f178ff9f787294f21b15aff13705e7bb086d3f7e"
+		}
+	],
+	"unfinished": [
+		"zotero-cloud-write-and-identity-conflict",
+		"authenticated-user-mcp",
+		"protocols-io-bookmark-roundtrip",
+		"other-platform-desktop"
+	],
+	"protocolsAdditionalPrerequisite": "Real account bookmark-state probe integration and post-create presence verification; env-only factory remains unavailable",
+	"deferredOutsideCurrentGoal": ["MinerU/GROBID", "B8/B8-2"],
+	"privateCredentialsIncluded": false
+}

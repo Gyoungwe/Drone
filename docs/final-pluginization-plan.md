@@ -1,8 +1,8 @@
 # Drone 最终插件化计划
 
-> **2026-10-26 继续收口**：API 1.2.0 已公开验证，另外三个候选尚待发布；在线 N=2 来源复核与 PDF 修复状态、外部账户/设备缺口见 [当前证据](releases/remaining-closure-2026-10-26.md)。此前候选验收快照不代表全部目标完成。
+> **2026-10-26 当前最终状态**：四个目标包均已公开并完成发布后验证，PDF 修复已通过新安装包验收。用户决定将 Zotero 云端、认证 MCP、Protocols.io 写入和其他平台桌面四项保留未完成；整体保持 PARTIAL，详见[最终状态、公开版本与恢复配置](plan-final-status-2026-10-26.md)。下方候选/旧发布记录均为历史快照。
 
-> **2026-10-25 知识整页与原生回执候选更新**：用户选择完整 UI 归插件、停用保留轻量默认页；实现与验收跟踪见[收口计划](superpowers/plans/2026-10-25-knowledge-page-closure.md)。core 0.1.9 / suite 0.1.11 候选已通过真实双 SDK 的完整任务回读；API 1.2.0 / UI 0.2.0 为本地候选。两实现分支已合入各自 main，修正插件候选锁完整性后合并门禁全部通过。这四个版本均未发布 npm，历史公开包结论不因此改变。
+> **历史快照：2026-10-25 知识整页与原生回执候选更新**：用户选择完整 UI 归插件、停用保留轻量默认页；实现与验收跟踪见[收口计划](superpowers/plans/2026-10-25-knowledge-page-closure.md)。core 0.1.9 / suite 0.1.11 候选已通过真实双 SDK 的完整任务回读；API 1.2.0 / UI 0.2.0 为本地候选。两实现分支已合入各自 main，修正插件候选锁完整性后合并门禁全部通过。这四个版本均未发布 npm，历史公开包结论不因此改变。
 
 > **2026-10-25 npm 发布更新**：`pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10` 已公开，tarball 完整性与候选包一致。基于两仓库 main 的独立发布工作区；验证范围与回执见 [本次发布记录](releases/knowledge-research-npm-2026-10-25.md)。研究迁移总体保持 PARTIAL，其他未完成项不变。
 
@@ -35,7 +35,7 @@ Drone 的最终交付形态是：**原生 Pi 作为运行时，Drone 能力通�
 用户安装一个聚合包即可体验核心能力：
 
 ```sh
-pi install npm:@gyoungwe/research-suite@0.1.10
+pi install npm:@gyoungwe/research-suite@0.1.11
 pi
 ```
 
