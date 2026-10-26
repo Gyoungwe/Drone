@@ -45,7 +45,7 @@ P0 权限执行切片、plugin-api v1 合同治理与当前进程沙箱实现见
 2026-10-25 知识/研究插件 npm 正式发布与发布后验收见 [发布记录](releases/knowledge-research-npm-2026-10-25.md) 和 [机器回执](releases/knowledge-research-npm-2026-10-25.json)。三个目标包已公开，下方版本快照同步更新。
 2026-10-26 的公开包、在线两场景研究复核（累计七次真实会话）和 PDF 修复进展见 [剩余验收](releases/remaining-closure-2026-10-26.md)；未完成的账户与其他平台验收保留状态。非聊天页面资源预览由 `renderer/src/components/diff/PageResourcePreview.tsx` 挂载，复用现有资源读者；研究聚合包原生 PDF Canvas 安装检查归插件 `research-suite test:pdf`。
 知识整页所有权迁移（方案 1）候选已合入双仓库 main，合并后门禁与此前正式 macOS 安装包验收均通过，见 [验收证据](pluginization/knowledge-page-closure-evidence.md)；实施见 [实施计划](superpowers/plans/2026-10-25-knowledge-page-closure.md) 与 [已确认设计](superpowers/specs/2026-10-25-knowledge-page-closure-design.md)。宿主 `components/knowledge/` 只保留挂载、绑定状态回退及事件桥；完整界面、组件回归、文案与样式移入插件仓库的 UI 包，保留 Git 历史。公开 `KnowledgeUiPort` / `KnowledgeUiBindings` / `KnowledgeSurfaceProps` 位于 `packages/plugin-api/src/ui.ts`；`ui-wire.ts` 由 `scripts/generate-knowledge-ui-contract.mjs` 按 `packages/plugin-api/scripts/knowledge-ui-contract.json` 的有限清单生成并校验。宿主适配在 `renderer/src/plugins/knowledge-api.ts`，嵌入区为 `knowledge.surface`；无插件及停用恢复回归见 `KnowledgeView.test.tsx`。
-原生 Pi 的任务文件回读适配见 `packages/pi-core/src/native-task-readback.ts` 与 `test/native-task-readback.test.mjs`；它复用所属会话当前批准的产物范围，Desktop 仍使用现有权限引擎。候选 core 0.1.9 / suite 0.1.11 的实际双 SDK 会话通过；公开 suite 0.1.10 尚未包含修复。
+原生 Pi 的任务文件回读适配见 `packages/pi-core/src/native-task-readback.ts` 与 `test/native-task-readback.test.mjs`；它复用所属会话当前批准的产物范围，Desktop 仍使用现有权限引擎。公开 core 0.1.9 与候选 suite 0.1.11 的实际双 SDK 会话通过；公开 suite 0.1.10 尚未包含修复。
 
 知识库分类由插件 `src/core/note-category.ts` 统一决定；worker 计数与最近分组共享规则。插件知识 UI 的最近标签读取分组结果，路径推断只用于已有搜索/图投影；回归见 `../drone-plugins/packages/pi-knowledge/test/category.integration.test.ts` 和 `../drone-plugins/packages/desktop-ui-pack/ui/knowledge/KnowledgeHome.test.ts`。
 跨 bundle 的知识阅读器回归见 `packages/backend/test/knowledge-host-ui-reading.test.mjs`，backend 显式配置工作区读取端口。任务门禁的会话工具清单隔离回归见 `packages/backend/test/task-manifest-session.test.mjs`；SDK 回调的只读判定由 `packages/tasks/src/runtime/register.ts` 绑定所属宿主，避免跨轮只读操作误触重复写入门禁。
@@ -92,7 +92,7 @@ v0.33.5 插件门禁收口见 [插件门禁证据](releases/v0.33.5-plugin-gates
 历史首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；历史 `pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。当前公开版本见下方 registry 快照与本次知识/研究发布记录；历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
 
 2026-10-21 正式 npm 发布与官方 registry 干净消费者、Pi loader、公开插件宿主验收见 [v1.1.0 npm 发布证据](releases/v1.1.0-npm-packages.json)。
-当前公开 registry 版本：`@gyoungwe/plugin-api@1.2.0`、`pi-core@0.1.8`、`pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10`、`pi-analysis@0.1.2`、`pi-evidence@0.1.1`、`pi-connectors@0.1.1`、`desktop-ui-pack@0.1.1`；历史版本证据保留在各 release JSON，不与当前源码 head 混写。
+当前公开 registry 版本：`@gyoungwe/plugin-api@1.2.0`、`pi-core@0.1.9`、`pi-knowledge@0.2.1`、`pi-research@0.2.0`、`research-suite@0.1.10`、`pi-analysis@0.1.2`、`pi-evidence@0.1.1`、`pi-connectors@0.1.1`、`desktop-ui-pack@0.1.1`；历史版本证据保留在各 release JSON，不与当前源码 head 混写。
 2026-10-23 PR5 Paper2Agent 公共包干净安装与正式 Drone 安装包原生 MCP 回执见 [PR5 真实回执证据](releases/v1.1-pr5-paper2agent-acceptance-2026-10-23.json)。
 
 2026-10-23 PR1 文献雷达真实安装包运行、入库和同日稳定键去重见 [PR1 雷达验收证据](releases/v1.1-pr1-radar-acceptance-2026-10-23.json)。

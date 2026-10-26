@@ -4,7 +4,7 @@
 
 | 范围 | 当前结果 |
 | --- | --- |
-| npm | plugin-api 1.2.0 已公开下载、哈希校验、干净安装、ESM/ui 导入与能力协商通过；core 0.1.9 / UI 0.2.0 已 staged，suite 0.1.11 修正候选也已 staged，UI/suite staged 下载与候选字节一致；其余公开安装/宿主验证待发布 |
+| npm | plugin-api 1.2.0 已公开下载、哈希校验、干净安装、ESM/ui 导入与能力协商通过；core 0.1.9 已公开，下载与候选一致、干净安装及两版 SDK 实际任务交付回读通过；UI 0.2.0 与 suite 0.1.11 修正候选仍 staged，公开验证待发布 |
 | Zotero 云端 | 缺测试库及安全配置凭据；已允许仅 1 条唯一标记临时条目，回读后删除并确认不存在；不改现有条目 |
 | 用户认证 MCP | 缺实际服务地址及工具范围；本机配置仍指向 Windows 本地 Zotero 程序，不作为 Mac 可用服务 |
 | Protocols.io | 缺测试资源与安全配置凭据；已允许仅 1 个临时书签的写入、回读、删除和复查 |
@@ -42,4 +42,10 @@ MinerU/GROBID 与 B8/B8-2 按用户要求继续暂缓。
 
 七次会话均有真实任务批准、双来源读取、候选沉淀和 completed 交付回执；独立读取报告后，其字节长度及 SHA256 与任务回执一致。候选笔记也已独立回读并核对两源身份；临床案例笔记与报告的来源前缀/标题不同，语义经人工复核一致，不宣称两者字节相同。私有会话及报告正文不入库，元数据和哈希位于 JSON onlineFollowup。
 
-跟进时 core 0.1.9、suite 0.1.11、UI 0.2.0 仍为原 stage ID，公开 registry 均为 404；不得重复上传或改版本。Zotero 云端、认证 MCP、Protocols.io 和其他平台设备仍缺实际配置，已有写入授权不重复申请。
+上述在线复核时 core 0.1.9、suite 0.1.11、UI 0.2.0 仍为原 stage ID，公开 registry 均为 404；不得重复上传或改版本。Zotero 云端、认证 MCP、Protocols.io 和其他平台设备仍缺实际配置，已有写入授权不重复申请。
+
+## npm 发布跟进与目标自查
+
+npm CLI 返回 E401 后，用户完成官方重新登录，并沿用原 stage 成功批准 pi-core 0.1.9。公开包 SHA256 `4ebf4bf82c2166f07a5312a1b2f6795ff88880bb79698c1f27cce4e26a6358fe`，字节、integrity 与 shasum 均匹配。按公开包名分别干净安装到 Pi 1.1.0 / 1.4.0，真实 AgentSession 各完成一次批准、四次工具调用、文件交付与 task_reconcile completed，并独立回读文件。使用确定性离线模型，不扩大在线科学验收结论。suite 原 stage 的发布认证已发起，但认证回调 GET 返回 E404，进程退出；公开版本复查仍为 404，待重新认证。UI 原 stage 保留，两者仍未公开。
+
+用户已授权自行选择测试目标。本轮检查了 Drone 使用的 agent/zotero-web.json（不存在）、Zotero 环境配置以及实际 PROTOCOLS_IO_API_TOKEN / PROTOCOLS_IO_API_KEY（均未设置）。登记的两台远程桌面均离线；本机存在 Parallels，但 CLI 无法连接其服务，未获得可用 Windows 桌面。这只说明所检查配置不可用，不代表用户没有这些账户；未执行云端临时写入，未完成状态继续保留。

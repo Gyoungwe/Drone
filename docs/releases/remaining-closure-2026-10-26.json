@@ -23,15 +23,85 @@
 			"matchesCandidate": true,
 			"cleanInstallAndEsmUiImport": "PASS",
 			"runtimeNegotiation": "PASS"
-		}
-	],
-	"unpublishedPackages": [
+		},
 		{
 			"name": "@gyoungwe/pi-core",
 			"version": "0.1.9",
-			"status": "STAGED_AUTH_PENDING",
-			"stageId": "d7db712c-8636-417d-a9d3-654d53d29302"
-		},
+			"dist": {
+				"shasum": "f4949333cc9875ac225b9c040704884e372a5fc9",
+				"tarball": "https://registry.npmjs.org/@gyoungwe/pi-core/-/pi-core-0.1.9.tgz",
+				"fileCount": 4,
+				"integrity": "sha512-HLDDUetgCB3mtWOIf4G7a3aSQeasEyKnXFmBdIUnKSbpGW0cqGmLFZWfH6Szd4q8/0USH1d0HVirh+Y7vKh+4w==",
+				"signatures": [
+					{
+						"sig": "MEUCIQD26rIqKHu4cd7UNdNBdbB3Zh68YISgv7uXDrWqn+k8CQIgKqn2bQgYwHRdsslk17TvmfOCOlK3JkSNmI/Nybxx3bk=",
+						"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+					}
+				],
+				"unpackedSize": 776803
+			},
+			"sha256": "4ebf4bf82c2166f07a5312a1b2f6795ff88880bb79698c1f27cce4e26a6358fe",
+			"matchesCandidate": true,
+			"actualSdkSessions": {
+				"coreSha256": "4ebf4bf82c2166f07a5312a1b2f6795ff88880bb79698c1f27cce4e26a6358fe",
+				"status": "PASS",
+				"scope": "Actual AgentSession with deterministic offline provider; no online scientific quality claim",
+				"matrix": [
+					{
+						"sdkVersion": "1.1.0",
+						"checks": [
+							{
+								"name": "install",
+								"exitCode": 0,
+								"logSha256": "acbc16d1a118371c368a5e4224c76b4288fabcaacc0f9bcdfb5f7c6636339f34"
+							},
+							{
+								"name": "session",
+								"exitCode": 0,
+								"logSha256": "3f04ab9fc62671d0cfcebb3570fe90820f563798a23e6018f50697de4336d22e"
+							}
+						],
+						"receipt": {
+							"status": "PASS",
+							"version": "0.1.9",
+							"realAgentSession": true,
+							"offlineProvider": true,
+							"approvalPrompts": 1,
+							"dispatchCount": 4,
+							"taskState": "completed",
+							"deliveryFileReadBack": true
+						}
+					},
+					{
+						"sdkVersion": "1.4.0",
+						"checks": [
+							{
+								"name": "install",
+								"exitCode": 0,
+								"logSha256": "1ebc3d9565ea5707be6d2a37af785bb400530de4c2fafd92e8a53a18848006eb"
+							},
+							{
+								"name": "session",
+								"exitCode": 0,
+								"logSha256": "3f04ab9fc62671d0cfcebb3570fe90820f563798a23e6018f50697de4336d22e"
+							}
+						],
+						"receipt": {
+							"status": "PASS",
+							"version": "0.1.9",
+							"realAgentSession": true,
+							"offlineProvider": true,
+							"approvalPrompts": 1,
+							"dispatchCount": 4,
+							"taskState": "completed",
+							"deliveryFileReadBack": true
+						}
+					}
+				]
+			}
+		}
+	],
+	"unpublishedPackages": [
 		{
 			"name": "@gyoungwe/desktop-ui-pack",
 			"version": "0.2.0",
@@ -41,7 +111,7 @@
 		{
 			"name": "@gyoungwe/research-suite",
 			"version": "0.1.11",
-			"status": "STAGED_NOT_APPROVED",
+			"status": "STAGED_AUTH_RETRY_REQUIRED",
 			"sha256": "767c37940aa32741fe133dfc57b0a75d3597521b11fd5d32904ff3d563ef794e",
 			"stageId": "bab97837-b274-4c5a-af54-a0334c396989"
 		}
@@ -662,7 +732,7 @@
 			"No third-party account or other-platform acceptance is implied"
 		]
 	},
-	"latestStageReadback": [
+	"previousStageReadback": [
 		{
 			"id": "bab97837-b274-4c5a-af54-a0334c396989",
 			"packageName": "@gyoungwe/research-suite",
@@ -682,7 +752,7 @@
 			"status": "staged"
 		}
 	],
-	"latestUnpublishedRegistryReadback": [
+	"previousUnpublishedRegistryReadback": [
 		{
 			"name": "pi-core",
 			"version": "0.1.9",
@@ -698,5 +768,43 @@
 			"version": "0.2.0",
 			"registryHttpStatus": 404
 		}
-	]
+	],
+	"latestStageReadback": [
+		{
+			"id": "bab97837-b274-4c5a-af54-a0334c396989",
+			"packageName": "@gyoungwe/research-suite",
+			"version": "0.1.11",
+			"status": "staged"
+		},
+		{
+			"id": "0c30e49b-d365-42ec-af53-4ed94dbe88c5",
+			"packageName": "@gyoungwe/desktop-ui-pack",
+			"version": "0.2.0",
+			"status": "staged"
+		}
+	],
+	"externalTargetFollowup": {
+		"userDelegatedTargetSelection": true,
+		"zoteroAgentStoredCredentialsPresent": false,
+		"zoteroRelevantEnvironmentConfigured": false,
+		"protocolsActualApiTokenEnvironmentConfigured": false,
+		"remoteDesktopDevices": {
+			"registered": 2,
+			"online": 0
+		},
+		"parallels": {
+			"installed": true,
+			"listAttempt": "FAILED_SERVICE_UNAVAILABLE"
+		},
+		"scope": "Checked Drone agent configuration, documented environment variables, registered Desktop Commander devices and local Parallels CLI; not a claim that no account exists anywhere on this computer.",
+		"externalWritesPerformed": false
+	},
+	"npmAuthenticationFollowup": {
+		"initialCoreApproval": "E401",
+		"login": "SUCCESS",
+		"coreApproval": "PUBLISHED",
+		"suiteApproval": "FAILED_E404_AUTH_CALLBACK",
+		"suitePublicVersionReadback": 404,
+		"reuploadAttempted": false
+	}
 }
