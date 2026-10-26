@@ -107,6 +107,7 @@
 - 2026-10-27：`880ebc08` 后宿主五项门禁再次全部通过，日志见 `/tmp/drone-host-final-gates-12.log`；插件依赖重新拉取、全量测试与 build 均成功，`check:arch` 保持 architecture 0 baseline finding、host independence PASS、domain dependency `PARTIAL`。边界门禁为 `INCOMPLETE`（runtime-import 11、type-import 13），研究兼容组合及 P2–P7 完整迁移仍未完成。
 - 2026-10-27：`042c44ff` 后宿主五项门禁再次全部通过，日志见 `/tmp/drone-host-final-gates-13.log`；pi-core host 工具 bundle、backend 工具门面和完整宿主 build 均通过，生成的 build manifest 保持提交态。`check:arch` 仍为 architecture/host independence PASS、domain dependency `PARTIAL`；native boundary 仍 `INCOMPLETE`（runtime-import 11、type-import 13）。
 - 2026-10-27：`7980b0e8` 后宿主五项门禁再次全部通过，日志见 `/tmp/drone-host-final-gates-14.log`；shared worker lifecycle contract、插件依赖拉取、全量测试和 build 均通过，生成的 pi-core build manifest 已恢复提交态。`check:arch` 保持 architecture/host independence PASS、domain dependency `PARTIAL`；native boundary 仍 `INCOMPLETE`（runtime-import 11、type-import 12）。
+- 2026-10-27：P5 evidence host slice：宿主 `76a13d1e` 发布 `EvidenceHostLoader`/`EvidenceHostPort` 及只读工具合同，`93920be4` 按 manifest 的 `evidence` capability 发现任意已安装包并将 loader 注入 `analysisEvidenceHost`；插件 `0ea4454` 为 `pi-evidence@0.1.1` 增加 `/host`、host manifest entrypoint、双入口构建和 clean host 回归（6/6）。插件包 check、build:check、smoke 通过；宿主本轮 `npm run lint`、`typecheck`、`npm test`（backend 254/2052 passed/18 skipped，desktop 165/903 passed）、`build`、`check:arch` 均通过，lint 仍仅有既有设计稿体积 warning。正式锁文件仍 pin plugin-api 1.2.0，因 1.3.0 host 合同尚未发布，fresh clean install 暂不计 PASS。
 
 ## 未关闭项
 
