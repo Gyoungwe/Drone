@@ -20,6 +20,43 @@ import { KnowledgeWebDavService } from "./webdav";
 
 type Handler = (event: KnowledgeUiEvent) => void;
 
+/**
+ * Read-only knowledge vertical supplied by the installable provider.
+ * The desktop service owns lifecycle and host wiring; the provider owns
+ * overview/search/note/graph behavior and can be replaced by a plugin runtime.
+ */
+export interface KnowledgeReadProvider {
+	overview(
+		input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeOverview"]>;
+	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]>;
+	read(
+		input: Parameters<KnowledgeApi["readKnowledgeNote"]>[0],
+	): ReturnType<KnowledgeApi["readKnowledgeNote"]>;
+	noteLinks(
+		input: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeNoteLinks"]>;
+	graph(
+		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
+}
+
+/** Default provider delegates the read vertical to the packaged knowledge host entry. */
+export function createKnowledgeReadProvider(): KnowledgeReadProvider {
+	const overview = knowledgeUiService.knowledgeOverview as unknown as KnowledgeReadProvider["overview"];
+	const search = knowledgeUiService.searchKnowledge as unknown as KnowledgeReadProvider["search"];
+	const read = knowledgeUiService.knowledgeReadNote as unknown as KnowledgeReadProvider["read"];
+	const noteLinks = knowledgeUiService.knowledgeNoteLinks as unknown as KnowledgeReadProvider["noteLinks"];
+	const graph = knowledgeUiService.knowledgeGraph as unknown as KnowledgeReadProvider["graph"];
+	return {
+		overview,
+		search,
+		read,
+		noteLinks,
+		graph,
+	};
+}
+
 export interface KnowledgeWorkerLifecycleSnapshot {
 	readonly currentVersion: string | null;
 	readonly nextSessionVersion: string | null;
@@ -306,6 +343,10 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private disposed = false;
 	private loading: Promise<void> | null = null;
 	private readonly cloud = new KnowledgeWebDavService();
+	private readonly readProvider: KnowledgeReadProvider;
+	constructor(readProvider: KnowledgeReadProvider = createKnowledgeReadProvider()) {
+		this.readProvider = readProvider;
+	}
 	private root() {
 		return (
 			process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url))
@@ -364,7 +405,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	overview(
 		input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeOverview"]> {
-		return this.call("knowledgeOverview", input);
+		return this.readProvider.overview(input);
 	}
 	async researchRuns(
 		input: Parameters<KnowledgeApi["getResearchRuns"]>[0] = {},
@@ -406,7 +447,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	read(
 		input: Parameters<KnowledgeApi["readKnowledgeNote"]>[0],
 	): ReturnType<KnowledgeApi["readKnowledgeNote"]> {
-		return this.call("knowledgeReadNote", input);
+		return this.readProvider.read(input);
 	}
 	private async workbenchModule(): Promise<Record<string, (...args: any[]) => unknown>> {
 		return (await import(
@@ -471,17 +512,17 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		return this.call("cancelKnowledgeSemanticIndex", input);
 	}
 	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]> {
-		return this.call("searchKnowledge", input);
+		return this.readProvider.search(input);
 	}
 	noteLinks(
 		input: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeNoteLinks"]> {
-		return this.call("knowledgeNoteLinks", input);
+		return this.readProvider.noteLinks(input);
 	}
 	graph(
 		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]> {
-		return this.call("knowledgeGraph", input);
+		return this.readProvider.graph(input);
 	}
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext> {
 		return this.call("dailyDiscoveryContext", { sinceMs });
