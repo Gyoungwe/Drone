@@ -62,6 +62,34 @@ describe("discoverPluginHostLoader", () => {
 		expect(result?.loader.load()).toEqual({ contractVersion: 1 });
 	});
 
+	it("discovers a Drone host declaration embedded in an otherwise standard Pi package", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-pi-package-discovery-"));
+		const packageRoot = join(root, "@example", "pi-research");
+		await mkdir(join(packageRoot, "dist"), { recursive: true });
+		await writeFile(
+			join(packageRoot, "package.json"),
+			JSON.stringify({
+				name: "@example/pi-research",
+				pi: { extensions: ["./dist/index.mjs"] },
+				drone: {
+					capabilities: ["research"],
+					hosts: ["drone-desktop"],
+					entrypoints: { host: "./dist/host.mjs" },
+				},
+			}),
+		);
+		await writeFile(
+			join(packageRoot, "dist", "host.mjs"),
+			"export const researchHostLoader = { load: () => ({ contractVersion: 1 }) };",
+		);
+		const result = await discoverPluginHostLoader<{ load: () => unknown }>({
+			packageRoots: [root],
+			capability: "research",
+		});
+		expect(result?.discovery.packageName).toBe("@example/pi-research");
+		expect(result?.loader.load()).toEqual({ contractVersion: 1 });
+	});
+
 	it("ignores undeclared or malformed packages and returns no loader", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-plugin-host-empty-"));
 		await mkdir(join(root, "plain"), { recursive: true });

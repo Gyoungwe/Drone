@@ -16,6 +16,11 @@ interface PluginManifest {
 	entrypoints?: { host?: unknown };
 }
 
+interface PackageJson {
+	name?: unknown;
+	drone?: PluginManifest;
+}
+
 /** Discover a host adapter from installed package declarations, without naming a package. */
 export async function discoverPluginHostLoader<T>(options: {
 	packageRoots: readonly string[];
@@ -26,8 +31,9 @@ export async function discoverPluginHostLoader<T>(options: {
 	for (const root of options.packageRoots) {
 		for (const packageRoot of await packageDirectories(root)) {
 			const manifest = await readManifest(join(packageRoot, "plugin.manifest.json"));
-			if (!manifest || !declaresCapability(manifest, options.capability)) continue;
-			const declaredEntrypoint = manifest.entrypoints?.host;
+			const declaration = manifest ?? (await readPackageJson(join(packageRoot, "package.json")))?.drone;
+			if (!declaration || !declaresCapability(declaration, options.capability)) continue;
+			const declaredEntrypoint = declaration.entrypoints?.host;
 			if (typeof declaredEntrypoint !== "string" || declaredEntrypoint.length === 0) continue;
 			const entrypoint = resolve(packageRoot, declaredEntrypoint);
 			const entryRelative = relative(resolve(packageRoot), entrypoint);
@@ -75,6 +81,16 @@ async function readManifest(path: string): Promise<PluginManifest | undefined> {
 	}
 }
 
+async function readPackageJson(path: string): Promise<PackageJson | undefined> {
+	const text = await readFile(path, "utf8").catch(() => undefined);
+	if (!text) return undefined;
+	try {
+		return JSON.parse(text) as PackageJson;
+	} catch {
+		return undefined;
+	}
+}
+
 function declaresCapability(manifest: PluginManifest, capability: string): boolean {
 	return (
 		Array.isArray(manifest.hosts) &&
@@ -85,14 +101,7 @@ function declaresCapability(manifest: PluginManifest, capability: string): boole
 }
 
 async function packageName(root: string): Promise<string> {
-	const text = await readFile(join(root, "package.json"), "utf8").catch(() => undefined);
-	if (text) {
-		try {
-			const name = (JSON.parse(text) as { name?: unknown }).name;
-			if (typeof name === "string" && name.length > 0) return name;
-		} catch {
-			// Discovery can still identify an installed package by its directory.
-		}
-	}
+	const name = (await readPackageJson(join(root, "package.json")))?.name;
+	if (typeof name === "string" && name.length > 0) return name;
 	return basename(root);
 }
