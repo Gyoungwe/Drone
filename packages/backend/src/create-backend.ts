@@ -36,6 +36,7 @@ import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
+import { DomainCapabilityRegistry, type DomainCapabilityRegistryPort } from "./plugins/domain-capabilities";
 import type { PluginSessionCallerContext } from "./plugins/session-caller";
 import { walkProjectFiles } from "./project/files";
 import { canonicalProjectId } from "./project-id";
@@ -165,6 +166,8 @@ export interface MemoryServicePort {
 }
 
 export interface BackendServices {
+	/** Read-only domain availability view; providers can move to optional plugins without new IPC. */
+	domainCapabilities: DomainCapabilityRegistryPort;
 	/** Per-host runtime container; extension bridges must not use process globals. */
 	runtime: DroneRuntime;
 	/** Host-facing diagnostics boundary; keeps desktop IPC independent of PiBackend. */
@@ -281,6 +284,11 @@ export interface BackendOptions extends SessionServiceOptions {
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
+	const domainCapabilities = new DomainCapabilityRegistry();
+	// Transitional host providers are explicit so callers can distinguish an
+	// installed plugin from an unavailable optional domain during migration.
+	for (const id of ["knowledge", "research", "tasks", "analysis"])
+		domainCapabilities.register({ id, status: "available", provider: "host-compat" });
 	const permissions = new PermissionSettingsService();
 	// Zotero Web API credentials saved in settings → process.env, so the research Zotero write channel sees them.
 	void applyStoredZoteroWebCredentials();
@@ -678,6 +686,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
 	};
 	return {
+		domainCapabilities,
 		runtime,
 		diagnostics,
 		sessions,

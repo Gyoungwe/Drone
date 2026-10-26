@@ -577,6 +577,8 @@ export class UiPluginManager {
 	private dirNames = new Map<string, string>();
 	/** Installed provenance is never inferred from a local UI directory or its name. */
 	private installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
+	/** Discovery diagnostics are host-owned metadata; an empty managed root is a valid empty list. */
+	private installedDiagnostics: Array<{ packageName: string; error: string }> = [];
 	/** Name → package generation hash. Local user UI plugins intentionally have no entry here. */
 	private installedPackageHashes = new Map<string, { root: string; hash: string }>();
 	/** Installed package generations observed as changed during this scan; trust must be renewed. */
@@ -690,6 +692,9 @@ export class UiPluginManager {
 		const installed = this.legacyInstalledPackageDir
 			? []
 			: await discoverInstalledUiPackages(this.installedPackageRoot);
+		this.installedDiagnostics = installed.filter(
+			(candidate): candidate is { packageName: string; error: string } => "error" in candidate,
+		);
 		if (this.legacyInstalledPackageDir) {
 			installed.push({
 				packageName: "legacy-ui-fixture",
@@ -824,6 +829,11 @@ export class UiPluginManager {
 	/** 列表（设置面板/加载器用）：读扫描缓存 */
 	list(): UiPluginInfo[] {
 		return Array.from(this.infos.values());
+	}
+
+	/** Metadata-only diagnostics from the managed package scan. */
+	diagnostics(): readonly { packageName: string; error: string }[] {
+		return this.installedDiagnostics.map((diagnostic) => ({ ...diagnostic }));
 	}
 
 	/** 按名取单个插件信息（无效名/未知插件返回 null） */

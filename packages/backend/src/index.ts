@@ -139,6 +139,13 @@ export type {
 } from "./plugins/coordinator";
 export { PluginRuntimeBridge } from "./plugins/coordinator";
 export {
+	type DomainCapability,
+	type DomainCapabilityRegistration,
+	DomainCapabilityRegistry,
+	type DomainCapabilityRegistryPort,
+	type DomainCapabilityStatus,
+} from "./plugins/domain-capabilities";
+export {
 	fileCapabilityHandlers,
 	PluginFileCapabilities,
 	type PluginRootGrant,

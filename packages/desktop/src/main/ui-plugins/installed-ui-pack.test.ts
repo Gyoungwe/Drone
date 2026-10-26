@@ -46,6 +46,7 @@ describe("installed desktop-ui-pack discovery", () => {
 		expect(manager.info("optional-plugin")).toBeNull();
 		expect(manager.runtimeSource("optional-plugin")).toBeUndefined();
 		expect(manager.isEnabled("optional-plugin")).toBe(false);
+		expect(manager.diagnostics()).toEqual([]);
 	});
 
 	it("loads the installed package through the normal UI plugin lifecycle", async () => {
