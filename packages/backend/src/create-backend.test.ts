@@ -47,6 +47,17 @@ describe("createBackend", () => {
 		services.dispose();
 	});
 
+	it("reports analysis as unavailable until an analysis plugin is discovered", () => {
+		const services = createBackend({ projectTrust: false, permissionGates: false });
+		expect(services.domainCapabilities.get("analysis")).toEqual({
+			id: "analysis",
+			status: "unavailable",
+			provider: "none",
+			reason: "Install an analysis plugin to enable analysis workflows",
+		});
+		services.dispose();
+	});
+
 	it("keeps an injected compute adapter on the backend boundary", () => {
 		const compute = {
 			listHosts: async () => [],

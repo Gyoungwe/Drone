@@ -323,8 +323,18 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const domainCapabilities = new DomainCapabilityRegistry();
 	// Transitional host providers are explicit so callers can distinguish an
 	// installed plugin from an unavailable optional domain during migration.
-	for (const id of ["knowledge", "research", "tasks", "analysis"])
+	for (const id of ["knowledge", "research", "tasks"])
 		domainCapabilities.register({ id, status: "available", provider: "host-compat" });
+	domainCapabilities.register(
+		options.analysisHostLoader
+			? { id: "analysis", status: "available", provider: "plugin:analysis" }
+			: {
+					id: "analysis",
+					status: "unavailable",
+					provider: "none",
+					reason: "Install an analysis plugin to enable analysis workflows",
+				},
+	);
 	const permissions = new PermissionSettingsService();
 	// Zotero Web API credentials saved in settings → process.env, so the research Zotero write channel sees them.
 	void applyStoredZoteroWebCredentials();
