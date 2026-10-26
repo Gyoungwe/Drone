@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复的领域耦合扫描 | 清单和静态检查已实现；110 项初始耦合；锁定 1.1.0/latest 1.4.0 真实会话基础 UI 对照通过，全 API 兼容尚未完成 | 无 |
 | P1 | 通用 runtime 生命周期、包来源绑定、权限、隔离进程、UI 调用和撤销 | 应用 owner/真实会话/selection lease 回归及正式 DMG application→A→application→B→A、停用/拒绝/恢复/退出切片通过；领域桥接继续由 P2 完成 | P0 |
-| P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | **部分完成**：同 owner 的阅读、图谱、分类、最小审核策略、native hook 生命周期和 semantic settings CAS UI 切片已通过候选包/真实 SDK；正式阅读 GUI 历史失败保留；完整服务写操作、候选审核应用和宿主删除仍未完成 | P1 |
+| P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | **部分完成**：同 owner 的阅读、图谱、分类、审核策略、候选拒绝与 Vault apply 合同、native hook 生命周期、semantic settings CAS UI 和 review UI 操作已通过插件包测试/真实 SDK；正式安装包的 Vault apply/rollback GUI、完整服务写操作和宿主删除仍未完成 | P1 |
 | P3 | research、来源连接器、引用/Zotero 等领域 API/页面迁移 | **部分完成**：`pi-connectors` 已新增 arXiv 与 Semantic Scholar 只读声明；`pi-research` 已增加 package-local `ResearchHostPort`/loader/registry，将 status/listRuns 与 Desktop runtime 统一到只读 host adapter（`3829623`）；完整 Zotero host adapter、页面和写入迁移仍未完成 | P2 |
 | P4 | tasks、编排、领域记忆及 UI 迁移 | **部分完成**：`@gyoungwe/pi-workbench@0.1.0` 提供 registration-scoped 工具、host-owned state.read/write、版本 CAS、取消/停用和官方 loader smoke；新增可卸载 `panel.tab` WorkbenchPanel UI contribution（`54124d4`），但宿主工作流与旧装配仍未完成 | P2 |
 | P5 | analysis/evidence 迁移；跨插件依赖通过显式合同管理 | **部分完成**：宿主已接入 manifest 声明的 `analysis_prepare_evidence` 与 `evidence_validate_manifest` 只读合同，缺失时返回 `unavailable`，成功回执带稳定内容哈希；持久化证据和真实会话仍未完成 | P3/P4 |
@@ -70,3 +70,4 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 - 2026-10-27：宿主 `6cb3bb26` 新增独立 `configured-vault-write` 权限声明，沿用现有文件 capability 的审批、路径隔离和 CAS；安装 UI runtime 只有该声明才请求可写文件根。插件 `7f810bc` 增加 `applyReview`：在 binding/proposal/source/目标哈希全部复核后，通过 `files.writeText` 写 Vault、写后回读，再用 `state.writeJson`/`state.removeJson` 记录 reviewed 终态；不提供自动或未授权写入。focused plugin/host tests 通过；NativeKnowledgeReviews UI 尚未接入 apply 按钮，正式 Vault GUI apply/rollback 仍未验收。
 - 2026-10-27：P5 宿主组合根新增可选 `analysisEvidenceHost` 注入，`AnalysisEvidenceService.prepareEvidence` 现在可由已安装插件 loader 提供声明的只读工具；无注入仍明确返回 `unavailable`。`create-backend` 回执集成回归通过（5/5），backend typecheck 通过。持久化 checkpoint/replay 仍由宿主 `JsonStore` 持有，真实插件声明工具的正式安装包 workflow 尚未运行。
 - 2026-10-27：插件 `98364c4` 将 `configured-vault-write` 纳入插件清单词汇和回归，`check:manifests`（8 包）与 workspace `pack:check` 通过；知识包 apply 合同因此可被安装门禁识别。正式 GUI apply/rollback、插件版本升级回滚和第三方真实来源仍保持未验收。
+- 2026-10-27：插件 `c64c033` 将 `applyReview`/`rejectReview` 接入 `NativeKnowledgeReviews`：按钮只在预览完成后出现，应用按钮受 `canApply` 与宿主权限约束，调用携带候选哈希并在成功后刷新列表；宿主错误保留在预览中。`@gyoungwe/pi-knowledge@0.3.0` 通过 82 文件/486 测试、typecheck、build:check、smoke（API 1.3.0 候选 tarball）及 manifest/pack 检查。该 UI 仍未计为正式安装包 Vault GUI apply/rollback PASS，需后续用包含 0.3.0 的正式包完成真实回执。
