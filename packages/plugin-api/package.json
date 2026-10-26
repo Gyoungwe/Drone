@@ -1,6 +1,6 @@
 {
 	"name": "@gyoungwe/plugin-api",
-	"version": "1.2.0",
+	"version": "1.3.0",
 	"description": "Stable host contracts for Drone capability plugins",
 	"license": "MIT",
 	"publishConfig": {
@@ -29,6 +29,11 @@
 			"types": "./dist/ui.d.ts",
 			"import": "./dist/ui.js",
 			"default": "./dist/ui.js"
+		},
+		"./runtime": {
+			"types": "./dist/runtime.d.ts",
+			"import": "./dist/runtime.js",
+			"default": "./dist/runtime.js"
 		}
 	},
 	"files": [

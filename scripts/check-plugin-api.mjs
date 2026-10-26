@@ -57,8 +57,12 @@ function checkPackageManifest() {
 	const manifest = packageJson();
 	assert(manifest.name === "@gyoungwe/plugin-api", `unexpected package name: ${manifest.name}`);
 	assert(
-		manifest.version === "1.2.0",
-		`public API package must match the 1.2.0 additive UI contract: ${manifest.version}`,
+		manifest.version === "1.3.0",
+		`public API package must match the 1.3.0 additive runtime contract: ${manifest.version}`,
+	);
+	assert(
+		manifest.exports?.["./runtime"]?.types === "./dist/runtime.d.ts",
+		"runtime types subpath must be published",
 	);
 	assert(!manifest.private, "public plugin-api package must not be private");
 	assert(manifest.types === "./dist/index.d.ts", "types must point at dist/index.d.ts");
@@ -82,6 +86,8 @@ function checkPackageSource() {
 function checkDist() {
 	const dist = join(PACKAGE_DIR, "dist");
 	assert(existsSync(join(dist, "index.d.ts")), "build output is missing dist/index.d.ts");
+	assert(existsSync(join(dist, "runtime.d.ts")), "build output is missing dist/runtime.d.ts");
+	assert(existsSync(join(dist, "runtime.js")), "build output is missing dist/runtime.js");
 	assert(existsSync(join(dist, "index.js")), "build output is missing dist/index.js");
 	for (const name of readdirSync(dist)) {
 		const path = join(dist, name);
@@ -150,6 +156,7 @@ function writeContractProbe(fixture) {
 		join(fixture, "contract-probe.mjs"),
 		`import assert from "node:assert/strict";
 import { PLUGIN_API_VERSION, RESULT_CONTRACT, negotiateCapabilities } from "@gyoungwe/plugin-api";
+await import("@gyoungwe/plugin-api/runtime");
 assert.equal(PLUGIN_API_VERSION, 1);
 assert.equal(RESULT_CONTRACT, "drone-result/v3");
 const result = negotiateCapabilities(

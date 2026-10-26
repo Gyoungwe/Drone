@@ -263,6 +263,7 @@ declare module "@gyoungwe/plugin-api" {
 		useLanguage: () => "zh" | "en";
 		useAgentActive: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["useAgentActive"];
 		usePluginEntries: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["usePluginEntries"];
+		usePluginRuntime: () => import("@gyoungwe/plugin-api/ui").PluginUiRuntimeClient;
 	};
 	// </drone:generated namespace="hooks">
 	/** 应用级 UI 偏好（ui-state.json 持久化）：centerOrbEnabled 等 */
@@ -382,6 +383,7 @@ declare module "@gyoungwe/plugin-api" {
 	export const useLanguage: () => "zh" | "en";
 	export const useAgentActive: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["useAgentActive"];
 	export const usePluginEntries: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["usePluginEntries"];
+	export const usePluginRuntime: () => import("@gyoungwe/plugin-api/ui").PluginUiRuntimeClient;
 	export const useTranscriptStore: unknown;
 	export const useSessionsStore: unknown;
 	export const useUiStore: unknown;

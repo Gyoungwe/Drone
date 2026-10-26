@@ -67,7 +67,13 @@ describe("MCP host wiring", () => {
 			["b", "/projects/b"],
 		] as const)
 			internal.registry.add({
-				session: { sessionId: id, isStreaming: false, isCompacting: false, dispose: () => {} },
+				session: {
+					sessionId: id,
+					isStreaming: false,
+					isCompacting: false,
+					abort: async () => {},
+					dispose: () => {},
+				},
 				unsubscribe: () => {},
 				cwd,
 			} as never);

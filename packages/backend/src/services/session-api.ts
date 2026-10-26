@@ -310,19 +310,19 @@ export class SessionServiceApi extends SessionSettingsApi {
 		this.host.projectTrust.respond(requestId, answer);
 	}
 
-	dispose(): void {
+	async dispose(): Promise<void> {
 		this.host.modelWait.dispose();
 		for (const sessionId of this.host.registry.list().map((entry) => entry.session.sessionId))
 			this.host.knowledgeSession.disposeSession(sessionId);
+		await this.host.registry.disposeAll((session) => this.host.sessionEngine.dispose(session));
 		this.host.knowledge.dispose();
-		this.host.registry.disposeAll();
 		this.host.getEventService().clear();
 		this.host.approvals.dispose();
 		this.host.sessionPermissions.dispose();
 		this.host.trustHandlers.clear();
 		this.host.projectTrust.dispose();
 		this.host.traces.disposeAll();
-		void this.host.runtime.dispose();
+		await this.host.runtime.dispose();
 		log.info("backend disposed");
 	}
 }

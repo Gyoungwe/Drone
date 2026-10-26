@@ -348,3 +348,11 @@ Zotero Connector 会规范化英文标题大小写（本轮 `NOT A PUBLICATION` 
 聚合研究包只遍历 dependencies 时会漏掉 pdfjs 的 optionalDependencies，工作区提升的 Canvas 依赖掩盖干净安装问题。suite 顶层声明可选 Canvas，由消费者安装平台原生二进制；test:pdf 必须只安装 suite 和 SDK，并捕获 stdout/stderr、真实读取和渲染。源码加载或文本提取成功不能推导 GUI 已通过。
 
 PDF Canvas 设置 max-width 时不可同时固定 CSS height；否则窄侧栏只压缩宽度。保留像素 width/height，CSS height 用 auto，让浏览器按固有比例缩放。
+
+## 2026-10-26：插件关闭回执与 Node 读权限
+
+锁定 Pi 1.1.0 的 `AgentSession.dispose()` 不发送 `session_shutdown`。宿主必须经 SessionEngine 先等待扩展关闭事件，再 abort/dispose；会话关闭和整个应用退出都要等待这一链路。测试不能以 dispose 被调用代替 worker 已退出，须核对真实 PID。并发关闭需共用同一次销毁，不能重复投递关闭事件。
+
+Node permission 的目录读取授权会跟随包内数据符号链接。只校验入口 realpath 不够：新的 desktopRuntime 在启动前检查整个包的链接目标，拒绝包外链接。该检查仍依赖启动期间安装目录不被其他宿主流程改写；完整包不可变快照/安装代次属于 P6，不能将预扫描描述为解决任意并发文件替换。
+
+UI 授权等待、配置落盘和进程清理都是异步阶段。停用/关闭先撤销调用资格，安装/配置变更维持转换屏障；替换实例要等待旧清理回执，不能因旧 token 已删就越过在途清理。失败仍向上报错并刷新真实存留配置；一个插件拒绝加载不能阻断其他插件。

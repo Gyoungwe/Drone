@@ -1,5 +1,10 @@
 /** 中文语言包（作为 key 的结构定义，en.ts 与之同形） */
 export const zh = {
+	pluginRuntime: {
+		title: "插件后台权限",
+		detail:
+			"后台在独立进程中运行，只能读取自身包文件；不能联网、写文件、创建子进程或读取宿主凭据。停用或关闭窗口会撤销访问。",
+	},
 	knowledgeFallback: {
 		title: "知识库",
 		hint: "启用知识界面插件后可使用浏览、搜索、图谱、审阅与设置。",

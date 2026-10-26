@@ -26,7 +26,7 @@ Node.js access from an untrusted plugin. Hosts may additionally load optional
 extensions through Drone's process sandbox proxy; that runtime boundary is a
 host capability and must not be implied by a manifest declaration.
 
-The candidate package is `1.2.0`; the current public release remains `1.1.0`. API v1 is additive-only: publish a new
+The local candidate package is `1.3.0`; the current public release remains `1.2.0`. API v1 is additive-only: publish a new
 minor or patch only when the contract changes, verify the packed tarball in a
 clean consumer before release, and never overwrite an existing version.
 
@@ -44,3 +44,11 @@ knowledge types. The allowlist in `scripts/knowledge-ui-contract.json` fixes the
 public scope. In the source checkout, run
 `node scripts/generate-knowledge-ui-contract.mjs` after changing a wire type.
 Package build and typecheck reject a stale generated contract.
+
+## Optional desktop runtime (1.3.0 candidate)
+
+`@gyoungwe/plugin-api/runtime` provides type-only factory, scope, operation and lifecycle contracts. A combined native Pi package may declare `entrypoints.desktopRuntime` in its optional Drone manifest. Drone activates that entry only after explicit approval, in a separate restricted process. The default export returns operations (JSON schemas, read/write effect, execute) and an awaited dispose hook. Inputs/results must be JSON serializable; use null for a void result.
+
+UI modules use `usePluginRuntime()` from the host-provided `@drone/ui` shim. The client is bound by the main process to an installed package, window and activation. It accepts an operation and input, never a package ID or workspace assertion. Revoke invalidates old closures; replacement waits for real disposal. Shared-renderer UI modules remain trusted code, so binding tokens are not an isolation boundary against another UI module.
+
+The first integration has window-scoped runtime instances and read-only access to self-contained package bytes. It does not yet provide Vault/storage/network capabilities, domain service migration or full official Pi ExtensionAPI support. Those are separate plan items; the existing 1.2 knowledge UI contract remains available during its documented migration.

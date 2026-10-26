@@ -18,7 +18,7 @@ describe("SessionEngine lifecycle boundary", () => {
 		} as unknown as AgentSession;
 		const engine = new SessionEngine();
 
-		engine.dispose(session);
+		await engine.dispose(session);
 		await engine.abort(session);
 		await engine.prompt(session, "hello");
 		expect(engine.clearQueue(session)).toEqual({ steering: ["s"], followUp: ["f"] });
@@ -31,7 +31,7 @@ describe("SessionEngine lifecycle boundary", () => {
 		expect(engine.exportJsonl(session)).toBe("{}\n");
 
 		expect(session.dispose).toHaveBeenCalledOnce();
-		expect(session.abort).toHaveBeenCalledOnce();
+		expect(session.abort).toHaveBeenCalledTimes(2);
 		expect(session.prompt).toHaveBeenCalledWith("hello", undefined);
 		expect(session.setModel).toHaveBeenCalledOnce();
 		expect(session.setThinkingLevel).toHaveBeenCalledWith("off");
@@ -41,4 +41,35 @@ describe("SessionEngine lifecycle boundary", () => {
 		expect(session.exportToHtml).toHaveBeenCalledOnce();
 		expect(session.exportToJsonl).toHaveBeenCalledOnce();
 	});
+});
+
+it("waits for extension shutdown before abort/dispose and coalesces concurrent closes", async () => {
+	let release!: () => void;
+	const gate = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const events: string[] = [];
+	const session = {
+		extensionRunner: {
+			emit: vi.fn(async (event) => {
+				expect(event).toEqual({ type: "session_shutdown", reason: "quit" });
+				events.push("shutdown");
+				await gate;
+			}),
+		},
+		abort: vi.fn(async () => {
+			events.push("abort");
+		}),
+		dispose: vi.fn(() => {
+			events.push("dispose");
+		}),
+	} as unknown as AgentSession;
+	const engine = new SessionEngine();
+	const a = engine.dispose(session);
+	const b = engine.dispose(session);
+	await Promise.resolve();
+	expect(events).toEqual(["shutdown"]);
+	release();
+	await Promise.all([a, b]);
+	expect(events).toEqual(["shutdown", "abort", "dispose"]);
 });

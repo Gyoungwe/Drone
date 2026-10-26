@@ -23,6 +23,16 @@ import type {
 
 export type * from "./ui-wire.js";
 
+/** Bound to the installed package by the desktop main process; callers cannot select another package. */
+export interface PluginUiRuntimeClient {
+	invoke(operation: string, input: unknown): Promise<unknown>;
+}
+
+/** Headless UI modules receive the same bound client as their React contributions. */
+export interface PluginUiActivationContext {
+	runtime: PluginUiRuntimeClient | undefined;
+}
+
 export type KnowledgeTab = "overview" | "network" | "reviews" | "settings";
 export type KnowledgeSurfaceProps =
 	| {

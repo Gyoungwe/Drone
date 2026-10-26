@@ -28,8 +28,8 @@ function harness() {
 	};
 }
 beforeEach(() => vi.useFakeTimers());
-afterEach(() => {
-	for (const backend of backends.splice(0)) backend.dispose();
+afterEach(async () => {
+	for (const backend of backends.splice(0)) await backend.dispose();
 	vi.useRealTimers();
 	vi.unstubAllEnvs();
 });
@@ -50,7 +50,7 @@ describe("model response silence at the backend delivery boundary", () => {
 	it("does not claim stopped before abort resolves", async () => {
 		const h = harness();
 		let finish!: () => void;
-		h.abort.mockImplementation(
+		h.abort.mockImplementationOnce(
 			() =>
 				new Promise<void>((resolve) => {
 					finish = resolve;
@@ -66,7 +66,7 @@ describe("model response silence at the backend delivery boundary", () => {
 	});
 	it("reports a sanitized stop failure instead of claiming termination", async () => {
 		const h = harness();
-		h.abort.mockRejectedValue(new Error("abort failed token=private-value"));
+		h.abort.mockRejectedValueOnce(new Error("abort failed token=private-value"));
 		h.emit({ type: "turn_start" });
 		await vi.advanceTimersByTimeAsync(300_000);
 		expect(h.received.at(-1)).toMatchObject({
@@ -106,8 +106,9 @@ describe("model response silence at the backend delivery boundary", () => {
 		const h = harness();
 		h.emit({ type: "turn_start" });
 		await h.backend.closeSession("s1");
+		expect(h.abort).toHaveBeenCalledOnce();
 		await vi.advanceTimersByTimeAsync(600_000);
-		expect(h.abort).not.toHaveBeenCalled();
+		expect(h.abort).toHaveBeenCalledOnce();
 	});
 	it("excludes tool approval time and starts a new deadline for the next model turn", async () => {
 		const h = harness();
@@ -133,9 +134,10 @@ describe("model response silence at the backend delivery boundary", () => {
 	it("disposing the backend releases all response deadlines", async () => {
 		const h = harness();
 		h.emit({ type: "turn_start" });
-		h.backend.dispose();
+		await h.backend.dispose();
+		expect(h.abort).toHaveBeenCalledOnce();
 		await vi.advanceTimersByTimeAsync(600_000);
-		expect(h.abort).not.toHaveBeenCalled();
+		expect(h.abort).toHaveBeenCalledOnce();
 		expect(h.received.some((e) => e.type === "model_wait")).toBe(false);
 	});
 });

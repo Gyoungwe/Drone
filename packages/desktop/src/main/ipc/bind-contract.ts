@@ -1,6 +1,6 @@
 import type { ArgsOf, DomainContract, HostApiMethod, ResultOf, UiError } from "@drone/shared";
 import { channelOf } from "@drone/shared";
-import { ipcMain } from "electron";
+import { type IpcMainInvokeEvent, ipcMain } from "electron";
 import { Check } from "typebox/value";
 
 /** Structured errors returned by contract adapters before an implementation runs. */
@@ -50,7 +50,9 @@ function validationError(code: HostApiValidationError["code"], method: string): 
  */
 export function bindContract<TContract extends DomainContract>(
 	contract: TContract,
-	implementation: ContractImplementation<TContract>,
+	implementation:
+		| ContractImplementation<TContract>
+		| ((event: IpcMainInvokeEvent) => ContractImplementation<TContract>),
 	options: BindContractOptions = {},
 ): () => void {
 	const ipc = options.ipc ?? ipcMain;
@@ -62,14 +64,15 @@ export function bindContract<TContract extends DomainContract>(
 		HostApiMethod,
 	][]) {
 		const channel = options.channelForMethod?.(contract, methodName) ?? channelOf(contract, methodName);
-		const implementationMethod = implementation[methodName];
-		if (typeof implementationMethod !== "function") {
+		if (typeof implementation !== "function" && typeof implementation[methodName] !== "function") {
 			throw new Error(`Missing implementation for host method ${channel}`);
 		}
 		ipc.handle(channel, async (_event, ...args: unknown[]) => {
 			await options.beforeInvoke?.(_event, contract, methodName);
 			if (!Check(method.args, args)) return validationError("invalid_arguments", channel);
-			const result = await Reflect.apply(implementationMethod, implementation, args);
+			// Resolve per invocation; concurrent windows never share mutable caller context.
+			const target = typeof implementation === "function" ? implementation(_event) : implementation;
+			const result = await Reflect.apply(target[methodName], target, args);
 			if (validateResult && !Check(method.result, result)) return validationError("invalid_result", channel);
 			return result;
 		});

@@ -133,6 +133,25 @@ export const i18n: {
 
 `react` 的完整导出（`Children`/`Component`/`memo`/`useEffect` 等全部 hooks）也可用，见 `drone-ui.d.ts`。
 
+### 插件自己的后台操作
+
+带有已批准 Desktop runtime 的安装包可在槽位或贡献组件内调用 `usePluginRuntime()`（也可用 `hooks.usePluginRuntime`）：
+
+```tsx
+import { usePluginRuntime } from "@gyoungwe/plugin-api";
+
+export function ResultsPanel() {
+	const runtime = usePluginRuntime();
+	return <button onClick={() => runtime.invoke("results.refresh", {})}>Refresh</button>;
+}
+```
+
+客户端只接受操作名和输入。包身份由主进程根据安装来源绑定，UI 不能传入包名来选择别的插件。主进程在每次调用时检查绑定所属窗口、激活状态与操作声明；停用或替换后旧绑定失效。结果为 `unknown`，由插件按自己的操作协议解析。
+
+无 Desktop runtime 的 UI 包仍可使用既有 UI API，但调用此 hook 会明确抛出不可用错误。每个贡献都拥有独立上下文，嵌套渲染不会继承另一插件的客户端。无头模块接收 `activate({ runtime })`，其中 `runtime` 在没有绑定时为 `undefined`；既有不接参数的 `activate()` 无需修改。
+
+这些 UI 模块仍与宿主共享 React 和 renderer，是经过信任确认的代码。绑定提供来源识别和生命周期撤销，**不构成恶意 UI 代码之间的安全隔离**。
+
 ## 5. 样式纪律（强制）
 
 - **一律语义 token**：`bg-canvas` / `bg-surface` / `bg-hover` / `text-ink` / `text-ink-2` / `text-ink-dim` / `text-ink-faint` / `border-border` / `shadow-soft` / `shadow-pop` / `text-accent` 等（宿主 Tailwind 已全局注册）。**禁写死 zinc/white/black 等裸色值**——深浅主题都要检查一遍，插件必须两态可读；

@@ -2,6 +2,11 @@ import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
+	pluginRuntime: {
+		title: "Plugin runtime permission",
+		detail:
+			"The runtime runs in a separate process with read access to its own package only. Network, file writes, child processes and host credentials are unavailable. Disabling the plugin or closing the window revokes access.",
+	},
 	knowledgeFallback: {
 		title: "Knowledge",
 		hint: "Enable the knowledge UI plugin to browse, search, explore the graph, review and configure your library.",

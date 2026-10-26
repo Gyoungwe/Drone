@@ -1,6 +1,8 @@
 import type { UiPluginAnchor, UiPluginManifest } from "@drone/shared";
+import type { PluginUiRuntimeClient } from "@gyoungwe/plugin-api/ui";
 import type { ComponentType } from "react";
 import { create } from "zustand";
+import { bindPluginRuntime } from "./runtime";
 import type { SlotName } from "./slots";
 
 /** 连续崩溃自动禁用阈值（reportCrash 达到该次数返回 true） */
@@ -67,13 +69,14 @@ interface UiPluginRegistryState {
 	 * 注册一个插件的全部槽位 override（按 manifest.slots + config.assignments 过滤后的
 	 * assignedSlots）与全部区域贡献（manifest.contributions，一区域 N 个堆叠）。
 	 * exportName 在 module 里不存在或不是组件 → 记入 missing 且不注册该项。
-	 * 无头插件（manifest.headless）：调用 module.activate()，返回的清理函数存入 cleanups
+	 * 无头插件（manifest.headless）：调用 module.activate({ runtime })，返回的清理函数存入 cleanups
 	 * （removePlugin 时调用）；activate 缺失/抛错 → 记入 missing，与槽位缺失同等对待。
 	 */
 	applyPlugin(
 		manifest: UiPluginManifest,
 		module: Record<string, unknown>,
 		assignedSlots: SlotName[],
+		runtime?: PluginUiRuntimeClient,
 	): { ok: boolean; missing: string[] };
 	/** 移除一个插件的全部 override 与贡献（禁用/卸载/热重载前调用），崩溃计数一并清零 */
 	removePlugin(pluginName: string): void;
@@ -87,7 +90,7 @@ export const useUiPluginRegistry = create<UiPluginRegistryState>((set, get) => (
 	crashCounts: {},
 	cleanups: {},
 	loadNonces: {},
-	applyPlugin: (manifest, module, assignedSlots) => {
+	applyPlugin: (manifest, module, assignedSlots, runtime) => {
 		const missing: string[] = [];
 		// 无头插件：先调旧清理（防御未 remove 的重复 apply），再 activate；异常不炸宿主
 		const prevCleanup = get().cleanups[manifest.name];
@@ -105,7 +108,7 @@ export const useUiPluginRegistry = create<UiPluginRegistryState>((set, get) => (
 				missing.push("headless → activate");
 			} else {
 				try {
-					const ret = activate();
+					const ret = activate({ runtime });
 					if (typeof ret === "function") cleanup = ret;
 				} catch (err) {
 					console.error(`[ui-plugins] ${manifest.name} activate 抛错`, err);
@@ -126,7 +129,7 @@ export const useUiPluginRegistry = create<UiPluginRegistryState>((set, get) => (
 			overrides[slot] = {
 				pluginName: manifest.name,
 				exportName,
-				component: exported as ComponentType<never>,
+				component: bindPluginRuntime(exported as ComponentType<object>, runtime) as ComponentType<never>,
 			};
 		}
 		// 区域贡献：一区域 N 个堆叠，追加到该区域列表尾部（新数组整体换入，稳定引用纪律）
@@ -144,7 +147,7 @@ export const useUiPluginRegistry = create<UiPluginRegistryState>((set, get) => (
 					pluginName: manifest.name,
 					id: c.id,
 					exportName: c.export,
-					component: exported as ComponentType<Record<string, never>>,
+					component: bindPluginRuntime(exported as ComponentType<Record<string, never>>, runtime),
 					anchor: c.anchor,
 					title: c.title,
 				},

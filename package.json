@@ -23,7 +23,7 @@
 		"pretest": "npm run fetch:plugins",
 		"fetch:plugins": "node scripts/fetch-plugins.mjs",
 		"typecheck": "npm run typecheck --workspaces && npm run check:pi",
-		"test": "npm run build:pi-core && npm run build:pi-research && npm run test --workspaces --if-present && node --test scripts/check-build-inputs.test.mjs scripts/academic-eval/score.test.mjs scripts/check-native-pi.test.mjs scripts/b3-pipeline/rnaseq-smoke.test.mjs scripts/check-task-runtime-build.test.mjs",
+		"test": "npm run build:pi-core && npm run build:pi-research && npm run test --workspaces --if-present && node --test scripts/check-build-inputs.test.mjs scripts/academic-eval/score.test.mjs scripts/check-native-pi.test.mjs scripts/b3-pipeline/rnaseq-smoke.test.mjs scripts/check-task-runtime-build.test.mjs scripts/check-native-plugin-boundary.test.mjs",
 		"test:unit": "npm run test:unit -w @drone/backend",
 		"test:sdk": "npm run test:sdk -w @drone/backend",
 		"check:redline": "npm run test -w @drone/backend -- test/redline-acceptance.test.mjs",
@@ -72,7 +72,8 @@
 		"check:ui-evidence": "node scripts/check-ui-evidence.mjs",
 		"check:research-browser": "node scripts/check-research-browser-acceptance.mjs",
 		"eval:mainline": "node scripts/eval-mainline.mjs",
-		"test:mainline": "node --test scripts/eval-mainline.test.mjs"
+		"test:mainline": "node --test scripts/eval-mainline.test.mjs",
+		"check:native-plugin-boundary": "node scripts/check-native-plugin-boundary.mjs"
 	},
 	"engines": {
 		"node": ">=22.19"

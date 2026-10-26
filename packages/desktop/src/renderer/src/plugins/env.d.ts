@@ -32,6 +32,7 @@ import type { selectTranscript, useTranscriptStore } from "../stores/transcript"
 import type { useUiStore } from "../stores/ui";
 import type { useUiPreferencesStore } from "../stores/ui-preferences";
 import type { PluginEntryHost, usePluginEntries } from "./PluginRegions";
+import type { usePluginRuntime } from "./runtime";
 import type { UI_REGIONS } from "./slots";
 
 /** window.DroneUI 的类型（插件与宿主自身代码共用；与 host-api.ts 的挂载内容一一对应） */
@@ -84,6 +85,7 @@ export interface DroneUiApi {
 		useLanguage: typeof useLanguage;
 		useAgentActive: typeof useAgentActive;
 		usePluginEntries: typeof usePluginEntries;
+		usePluginRuntime: typeof usePluginRuntime;
 	};
 	// </drone:generated namespace="hooks">
 	// <drone:generated namespace="stores">

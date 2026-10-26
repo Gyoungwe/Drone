@@ -20,6 +20,7 @@ import { createAntigravityProvider } from "./antigravity/provider";
  * the host migrate to BackendServices without exposing the Pi SDK to callers.
  */
 export class SessionEngine {
+	private readonly disposals = new WeakMap<AgentSession, Promise<void>>();
 	private modelRuntime: ModelRuntime | undefined;
 	private modelPromise: Promise<ModelRuntime> | undefined;
 
@@ -36,8 +37,18 @@ export class SessionEngine {
 	}
 
 	/** Session lifecycle operations stay behind the SDK boundary. */
-	dispose(session: AgentSession): void {
-		session.dispose();
+	dispose(session: AgentSession): Promise<void> {
+		const pending = this.disposals.get(session);
+		if (pending) return pending;
+		// Pi 1.1.0 dispose() does not emit shutdown. Notify extensions before
+		// aborting the tool loop so pending extension UI can release its waiters.
+		const disposal = Promise.resolve().then(async () => {
+			await session.extensionRunner?.emit({ type: "session_shutdown", reason: "quit" });
+			await session.abort();
+			session.dispose();
+		});
+		this.disposals.set(session, disposal);
+		return disposal;
 	}
 
 	abort(session: AgentSession): Promise<void> {

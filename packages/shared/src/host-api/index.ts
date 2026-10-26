@@ -11,6 +11,7 @@ export * from "./mcp";
 export * from "./memory";
 export * from "./packages";
 export * from "./permissions";
+export * from "./plugin-runtime";
 export * from "./research";
 export * from "./sessions";
 export * from "./settings";

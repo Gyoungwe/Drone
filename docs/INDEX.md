@@ -5,7 +5,7 @@
 > 本文件只做**导航**：职责一句话 + 指到源码；实现细节以代码为准，坑记 PITFALLS，不在此堆积。
 
 当前计划最终状态、九个 npm 公开版本及四项未完成验收的恢复配置，统一见[阶段状态汇总](plan-final-status-2026-10-26.md)。
-下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构草案](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已记录目标边界，详细设计待评审，尚未实施。
+下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构设计](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已批准并开始实施；[P0–P7 执行计划](pluginization/native-plugin-implementation-plan.md)记录阶段状态，[SDK 运行时证据](pluginization/native-plugin-runtime-evidence.md)区分真实会话、执行适配与自动发现。
 
 ## 硬约束（改代码前必知）
 
@@ -503,3 +503,5 @@ src/
 `@gyoungwe/pi-knowledge/host` 承载语义 provider 配置验证、bounded request/response 与向量安全校验；宿主只负责凭据、同意和调度。
 
 原生 Pi 插件架构新增执行计划见 [P0–P7](pluginization/native-plugin-implementation-plan.md)，依赖与原生兼容覆盖清单见 [inventory](pluginization/native-plugin-inventory.md)。`scripts/check-native-plugin-boundary.mjs` 是新增最终边界门禁，当前未清零。运行时生命周期在 `packages/backend/src/plugins/`，UI 绑定/context 在 `packages/desktop/src/renderer/src/plugins/runtime.ts`，主进程来源绑定在 `packages/desktop/src/main/ui-plugins/runtime-bridge.ts`。
+
+原生插件 P1 机制：`backend/src/plugins/{runtime,process-runtime}.ts` 管理独立实例/进程；`plugin-runtime-executable.ts` 校验随包 Node；`plugin-sandbox-ui.ts` 约束官方 Pi 基础对话请求；`session-engine/engine.ts` 等待扩展 shutdown 再销毁会话；`shared/src/host-api/plugin-runtime.ts`、preload 和 `main/ipc/plugin-runtime.ts` 传递主进程绑定的通用调用。新知识 UI 同包及基础状态/写者迁移设计与证据在插件仓库 `docs/knowledge-ui-co-package-2026-10-26.md`、`docs/native-knowledge-runtime-plan.md`。

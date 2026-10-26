@@ -203,6 +203,12 @@
 				"hostValue": "usePluginEntries",
 				"envType": "typeof usePluginEntries",
 				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiBindings[\"hooks\"][\"usePluginEntries\"]"
+			},
+			{
+				"name": "usePluginRuntime",
+				"hostValue": "usePluginRuntime",
+				"envType": "typeof usePluginRuntime",
+				"pluginType": "() => import(\"@gyoungwe/plugin-api/ui\").PluginUiRuntimeClient"
 			}
 		],
 		"stores": [

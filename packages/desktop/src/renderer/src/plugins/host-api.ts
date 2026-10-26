@@ -35,6 +35,7 @@ import type { DroneUiApi } from "./env";
 import { PLUGIN_HOST_API_MANIFEST } from "./host-api.manifest";
 import { knowledgeUiPort } from "./knowledge-api";
 import { PluginEntryHost, usePluginEntries } from "./PluginRegions";
+import { usePluginRuntime } from "./runtime";
 import { UI_REGIONS } from "./slots";
 
 /**
@@ -93,6 +94,7 @@ window.DroneUI = {
 		useLanguage: useLanguage,
 		useAgentActive: useAgentActive,
 		usePluginEntries: usePluginEntries,
+		usePluginRuntime: usePluginRuntime,
 	},
 	// </drone:generated namespace="hooks">
 	// <drone:generated namespace="stores">

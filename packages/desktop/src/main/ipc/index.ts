@@ -1,9 +1,10 @@
-import type { BackendServices } from "@drone/backend";
+import { type BackendServices, createLogger } from "@drone/backend";
 import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@drone/shared";
 import { IpcChannels } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import { onResearchSkillUpdateState } from "../research-skill-updater";
 import type { UiPluginManager } from "../ui-plugins/manager";
+import type { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
 import { registerComputeIpc } from "./compute";
@@ -17,6 +18,7 @@ import { registerMcpIpc } from "./mcp";
 import { registerMemoryIpc } from "./memory";
 import { registerPackagesIpc } from "./packages";
 import { registerPermissionSettingsIpc } from "./permissions";
+import { registerPluginRuntimeIpc } from "./plugin-runtime";
 import { registerResearchIpc } from "./research";
 import { registerSessionsIpc } from "./sessions";
 import { registerSettingsIpc } from "./settings";
@@ -38,6 +40,7 @@ export function sendToRenderer(channel: string, payload: unknown): void {
 export function registerIpc(
 	backendServices: BackendServices,
 	uiPluginsManager: UiPluginManager,
+	runtime: DesktopRuntimeBridge,
 	getIncidentSnapshot?: () => unknown,
 ): void {
 	// The desktop host binds contracts from the composition root directly. The
@@ -53,16 +56,37 @@ export function registerIpc(
 	registerDiscoveryIpc(backendServices);
 	registerEvidenceIpc(backendServices.analysisEvidence);
 	registerDecisionsIpc(backendServices);
-	registerPackagesIpc(backendServices, undefined, () => uiPluginsManager.scanAll().then(() => undefined));
+	registerPackagesIpc(backendServices, undefined, undefined, async (action) => {
+		try {
+			return await runtime.withTransition(async () => {
+				try {
+					return await action();
+				} finally {
+					await uiPluginsManager.scanAll();
+				}
+			});
+		} finally {
+			// Notify only after the mutation barrier is released, including a failed update.
+			sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "config" });
+		}
+	});
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);
 	registerInquiryIpc(backendServices, sendToRenderer);
-	registerUiPluginsIpc(uiPluginsManager);
+	registerUiPluginsIpc(uiPluginsManager, runtime);
+	registerPluginRuntimeIpc(runtime);
 	registerMemoryIpc(backendServices);
 	registerResearchIpc(backendServices);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
 	uiPluginsManager.startWatcher((name) => {
-		sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "changed", name });
+		void runtime
+			.revoke(name)
+			.then(() => {
+				sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "changed", name });
+			})
+			.catch((error) =>
+				createLogger("plugin-runtime").error("Plugin reload stopped: runtime disposal failed", error),
+			);
 	});
 
 	backendServices.sessions.onEvent((sessionId, event) => {

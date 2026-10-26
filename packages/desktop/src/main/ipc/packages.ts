@@ -8,6 +8,7 @@ export function registerPackagesIpc(
 	backendOrServices: BackendServices | SessionServicePort,
 	services?: Pick<BackendServices, "packages">,
 	onPackagesChanged?: () => Promise<void> | void,
+	withMutation: <T>(action: () => Promise<T>) => Promise<T> = (action) => action(),
 ): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
 	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
@@ -41,21 +42,24 @@ export function registerPackagesIpc(
 			const [query, type, page] = args;
 			return packages.searchPackages(query, type, page);
 		},
-		installPackage: async (name) => {
-			const receipt = await packages.installPackage(name);
-			if (receipt.status === "succeeded") await onPackagesChanged?.();
-			return receipt;
-		},
-		updatePackage: async (name) => {
-			const receipt = await packages.updatePackage(name);
-			if (receipt.status === "succeeded") await onPackagesChanged?.();
-			return receipt;
-		},
-		removePackage: async (source, scope) => {
-			const receipt = await packages.removePackage(source, scope);
-			if (receipt.status === "succeeded") await onPackagesChanged?.();
-			return receipt;
-		},
+		installPackage: (name) =>
+			withMutation(async () => {
+				const receipt = await packages.installPackage(name);
+				if (receipt.status === "succeeded") await onPackagesChanged?.();
+				return receipt;
+			}),
+		updatePackage: (name) =>
+			withMutation(async () => {
+				const receipt = await packages.updatePackage(name);
+				if (receipt.status === "succeeded") await onPackagesChanged?.();
+				return receipt;
+			}),
+		removePackage: (source, scope) =>
+			withMutation(async () => {
+				const receipt = await packages.removePackage(source, scope);
+				if (receipt.status === "succeeded") await onPackagesChanged?.();
+				return receipt;
+			}),
 		listConfiguredPackages: () => packages.listConfiguredPackages(),
 		latestPackageVersions: (names) => latestPackageVersions(names),
 		pluginPackageMetadata: (names) => registryPluginMetadata(names),

@@ -13,6 +13,7 @@ import {
 	PackagesContract,
 	PermissionsContract,
 	type PiApi,
+	PluginRuntimeContract,
 	ResearchContract,
 	SessionsContract,
 	SettingsContract,
@@ -282,6 +283,10 @@ const mcpClient = exposeContract(McpContract, {
 			method,
 		),
 });
+const pluginRuntimeClient = exposeContract(PluginRuntimeContract, {
+	ipc: ipcRenderer,
+	channelForMethod: () => IpcChannels.PluginRuntimeInvoke,
+});
 const uiPluginsClient = exposeContract(UiPluginsContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
@@ -484,6 +489,7 @@ const invokeApi = {
 	uiPluginsSetEnabled: invoke(uiPluginsClient, "setEnabled"),
 	uiPluginsList: invoke(uiPluginsClient, "list"),
 	uiPluginsReadCode: invoke(uiPluginsClient, "readCode"),
+	pluginRuntimeInvoke: invoke(pluginRuntimeClient, "invoke"),
 	uiPluginsSetPluginEnabled: invoke(uiPluginsClient, "setPluginEnabled"),
 	uiPluginsAssignSlot: invoke(uiPluginsClient, "assignSlot"),
 	uiPluginsRebuild: invoke(uiPluginsClient, "rebuild"),

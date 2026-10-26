@@ -114,6 +114,7 @@ export const UiPluginsContract = defineDomain("uiPlugins", {
 					{
 						manifest: Type.Unsafe<UiPluginManifest>(UiPluginManifestSchema),
 						code: Type.String(),
+						runtimeBinding: Type.Optional(Type.String({ minLength: 1 })),
 					},
 					{ additionalProperties: false },
 				),

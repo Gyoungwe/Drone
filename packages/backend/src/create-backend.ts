@@ -222,7 +222,7 @@ export interface BackendServices {
 	/** 每日发现：知识库更新后的新旧对照想法（默认开，每天一次） */
 	dailyDiscovery: DailyDiscoveryService;
 	knowledgeMaintenance: KnowledgeMaintenanceService;
-	dispose(): void;
+	dispose(): Promise<void>;
 }
 
 export interface BackendOptions extends SessionServiceOptions {
@@ -779,17 +779,17 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		},
 		dailyDiscovery,
 		knowledgeMaintenance,
-		dispose: () => {
+		dispose: async () => {
 			dailyDiscovery.dispose();
 			knowledgeMaintenance.dispose();
 			process.off("drone:knowledge-deposited/v1", onKnowledgeDeposited);
 			detachInquiryComputeEvents();
-			sessions.dispose();
-			void compute.dispose();
-			void computeAdapter.dispose?.();
+			await sessions.dispose();
+			await compute.dispose();
+			await computeAdapter.dispose?.();
 			inquiry.dispose();
 			discovery.dispose();
-			void runtime.dispose();
+			await runtime.dispose();
 		},
 	};
 }

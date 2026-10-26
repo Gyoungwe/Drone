@@ -130,6 +130,9 @@ export {
 	type PluginSandboxToolDeclaration,
 	sandboxEntrypointUrl,
 } from "./plugin-sandbox";
+export { createProcessPluginRuntime } from "./plugins/process-runtime";
+export type { PluginRuntimePolicy } from "./plugins/runtime";
+export { PluginRuntimeRegistry } from "./plugins/runtime";
 export {
 	buildTrustOptions,
 	type ResolveTrustOptions,

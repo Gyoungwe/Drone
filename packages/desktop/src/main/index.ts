@@ -26,6 +26,8 @@ import { registerIpc, sendToRenderer } from "./ipc";
 import { migrateLegacyUserDir } from "./legacy-migration";
 import { buildMenuTemplate, DESKTOP_COMMAND_CHANNEL } from "./menu";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
+import type { DesktopRuntimeBridge } from "./ui-plugins/runtime-bridge";
+import { createDesktopRuntime } from "./ui-plugins/runtime-host";
 import { loadUiState } from "./ui-state";
 import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
 import { applyChromeTheme, createWindow, resolveTheme } from "./window";
@@ -36,6 +38,9 @@ const log = createLogger("main");
 app.setName("Drone");
 let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
+let pluginRuntime: DesktopRuntimeBridge | undefined;
+let runtimeStopped = false;
+let runtimeStopping = false;
 let latestIncidentSnapshot: ReturnType<typeof buildIncidentSnapshot> | undefined;
 
 /** renderer 加载自定义背景图的协议（pi-bg://background/<文件名>，只读 userData/backgrounds/） */
@@ -342,7 +347,13 @@ app.whenReady().then(async () => {
 	consoleFlush.unref();
 	uiPluginsManager = new UiPluginManager();
 	await uiPluginsManager.init();
-	registerIpc(backendServices, uiPluginsManager, () => latestIncidentSnapshot);
+	pluginRuntime = createDesktopRuntime(
+		uiPluginsManager,
+		app.isPackaged
+			? join(process.resourcesPath, "plugin-runtime")
+			: join(__dirname, `../../plugin-runtime/${process.platform}-${process.arch}`),
+	);
+	registerIpc(backendServices, uiPluginsManager, pluginRuntime, () => latestIncidentSnapshot);
 	await initUpdater();
 	scheduleAutoUpdateCheck();
 	const uiState = await loadUiState();
@@ -360,7 +371,37 @@ app.on("window-all-closed", () => {
 	if (process.platform !== "darwin") app.quit();
 });
 
-app.on("before-quit", () => {
-	backendServices?.dispose();
-	uiPluginsManager?.disposeWatcher();
+app.on("web-contents-created", (_event, contents) => {
+	const ownerId = contents.id;
+	contents.once("destroyed", () => {
+		void pluginRuntime
+			?.revoke(undefined, ownerId)
+			.catch((error) => log.error("Plugin runtime window cleanup failed", error));
+	});
+});
+
+app.on("before-quit", (event) => {
+	if (!runtimeStopped) {
+		event.preventDefault();
+		if (runtimeStopping) return;
+		runtimeStopping = true;
+		void (async () => {
+			await pluginRuntime?.close();
+			await backendServices?.dispose();
+			uiPluginsManager?.disposeWatcher();
+		})()
+			.then(() => {
+				runtimeStopped = true;
+				app.quit();
+			})
+			.catch((error) => {
+				runtimeStopping = false;
+				log.error("Plugin runtime shutdown failed", error);
+				dialog.showErrorBox(
+					"Plugin runtime shutdown failed",
+					error instanceof Error ? error.message : String(error),
+				);
+			});
+		return;
+	}
 });

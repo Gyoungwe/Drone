@@ -63,14 +63,19 @@ export class SessionRegistry {
 		};
 	}
 
-	disposeAll(): void {
-		// 与 closeSession 对称：逐个 unsubscribe + session.dispose()（closeSession 已 dispose 的不在
-		// registry，无双重释放路径）；清空 Map
-		for (const [sessionId, entry] of [...this.sessions.entries()]) {
-			entry.unsubscribe();
-			entry.session.dispose();
-			this.sessions.delete(sessionId);
-		}
+	async disposeAll(dispose: (session: AgentSession) => Promise<void>): Promise<void> {
+		const results = await Promise.allSettled(
+			[...this.sessions].map(async ([sessionId, entry]) => {
+				await dispose(entry.session);
+				this.delete(sessionId);
+			}),
+		);
+		const failures = results.filter((result) => result.status === "rejected");
+		if (failures.length)
+			throw new AggregateError(
+				failures.map((result) => result.reason),
+				"Session shutdown failed",
+			);
 	}
 }
 

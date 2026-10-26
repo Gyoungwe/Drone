@@ -12,7 +12,7 @@ import {
 	writeFile,
 } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createLogger } from "@drone/backend";
 import {
 	KNOWN_UI_REGIONS,
@@ -47,8 +47,14 @@ function installedUiPackageRoot(): string {
 	return join(agentDir, "npm", "node_modules");
 }
 
+export interface InstalledUiRuntimeSource {
+	pluginId: string;
+	packageRoot: string;
+	entrypoint: string;
+}
+
 export type InstalledUiDiscovery =
-	| { packageName: string; uiDir: string }
+	| { packageName: string; packageRoot: string; uiDir: string; runtime?: InstalledUiRuntimeSource }
 	| { packageName: string; error: string };
 
 export async function discoverInstalledUiPackages(root: string): Promise<InstalledUiDiscovery[]> {
@@ -71,7 +77,13 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 			.catch(() => null);
 		const packageName = typeof packageJson?.name === "string" ? packageJson.name : basename(packageDir);
 		const manifest = await readFile(manifestPath, "utf8")
-			.then((value) => JSON.parse(value) as { entrypoints?: { ui?: unknown }; hosts?: unknown })
+			.then(
+				(value) =>
+					JSON.parse(value) as {
+						entrypoints?: { ui?: unknown; desktopRuntime?: unknown };
+						hosts?: unknown;
+					},
+			)
 			.catch(() => null);
 		if (!manifest && existsSync(manifestPath)) {
 			discoveries.push({ packageName, error: "plugin.manifest.json is not valid JSON" });
@@ -83,8 +95,8 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 			continue;
 		}
 		if (typeof manifest.entrypoints?.ui !== "string") continue;
-		const packageRoot = resolve(packageDir);
-		const uiManifest = resolve(packageDir, manifest.entrypoints.ui);
+		const packageRoot = await realpath(packageDir);
+		const uiManifest = resolve(packageRoot, manifest.entrypoints.ui);
 		const outside = relative(packageRoot, uiManifest);
 		if (isAbsolute(outside) || outside.startsWith("..")) {
 			discoveries.push({ packageName, error: "entrypoints.ui escapes the installed package" });
@@ -98,7 +110,45 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 			});
 			continue;
 		}
-		discoveries.push({ packageName, uiDir });
+		const canonicalUiDir = await realpath(uiDir);
+		const canonicalUiRelative = relative(packageRoot, canonicalUiDir);
+		if (
+			isAbsolute(canonicalUiRelative) ||
+			canonicalUiRelative === ".." ||
+			canonicalUiRelative.startsWith(`..${sep}`)
+		) {
+			discoveries.push({ packageName, error: "entrypoints.ui resolves outside the installed package" });
+			continue;
+		}
+		let runtime: InstalledUiRuntimeSource | undefined;
+		const declaredRuntime = manifest.entrypoints.desktopRuntime;
+		if (declaredRuntime !== undefined) {
+			try {
+				if (typeof declaredRuntime !== "string" || declaredRuntime.length === 0) {
+					throw new Error("entrypoints.desktopRuntime must be a nonempty string");
+				}
+				if (typeof packageJson?.name !== "string" || packageJson.name.length === 0) {
+					throw new Error("desktopRuntime requires a package.json name");
+				}
+				const entrypoint = await realpath(resolve(packageRoot, declaredRuntime));
+				const runtimeRelative = relative(packageRoot, entrypoint);
+				if (
+					isAbsolute(runtimeRelative) ||
+					runtimeRelative === ".." ||
+					runtimeRelative.startsWith(`..${sep}`)
+				) {
+					throw new Error("entrypoints.desktopRuntime escapes the installed package");
+				}
+				if (!(await stat(entrypoint)).isFile()) {
+					throw new Error("entrypoints.desktopRuntime must point to a file");
+				}
+				runtime = { pluginId: packageName, packageRoot, entrypoint };
+			} catch (error) {
+				discoveries.push({ packageName, error: `Invalid desktopRuntime: ${String(error)}` });
+				continue;
+			}
+		}
+		discoveries.push({ packageName, packageRoot, uiDir: canonicalUiDir, runtime });
 	}
 	return discoveries;
 }
@@ -375,6 +425,8 @@ export class UiPluginManager {
 	private infos = new Map<string, UiPluginInfo>();
 	/** name → 插件目录绝对路径（白名单：readCode/openDir 只接受扫描到的合法名） */
 	private dirNames = new Map<string, string>();
+	/** Installed provenance is never inferred from a local UI directory or its name. */
+	private installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
 	/** 随包内置插件名集合（init 时导出到用户目录；此处仅用于合成 builtin 标志 → 面板 badge/启用免确认） */
 	private builtinNames = new Set<string>();
 	/** 持久化配置缓存（updateConfig 后刷新；scanAll 时叠加） */
@@ -435,6 +487,7 @@ export class UiPluginManager {
 		const dir = pluginsDir();
 		const out: UiPluginInfo[] = [];
 		const seen = new Set<string>();
+		const installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
 		const entries = await readdir(dir, { withFileTypes: true }).catch((err) => {
 			log.error("scanAll readdir failed", err);
 			return [];
@@ -473,7 +526,11 @@ export class UiPluginManager {
 			? []
 			: await discoverInstalledUiPackages(this.installedPackageRoot);
 		if (this.legacyInstalledPackageDir) {
-			installed.push({ packageName: "legacy-ui-fixture", uiDir: this.legacyInstalledPackageDir });
+			installed.push({
+				packageName: "legacy-ui-fixture",
+				packageRoot: this.legacyInstalledPackageDir,
+				uiDir: this.legacyInstalledPackageDir,
+			});
 		}
 		for (const candidate of installed) {
 			if ("error" in candidate) {
@@ -516,6 +573,7 @@ export class UiPluginManager {
 			try {
 				seen.add(installedName);
 				this.dirNames.set(installedName, candidate.uiDir);
+				installedSources.set(installedName, candidate);
 				const info = await this.scanOne(installedName, candidate.uiDir);
 				this.infos.set(installedName, info);
 				out.push(info);
@@ -530,6 +588,7 @@ export class UiPluginManager {
 		for (const stale of [...this.dirNames.keys()]) {
 			if (!seen.has(stale)) this.dirNames.delete(stale);
 		}
+		this.installedSources = installedSources;
 		return out;
 	}
 
@@ -541,6 +600,17 @@ export class UiPluginManager {
 	/** 按名取单个插件信息（无效名/未知插件返回 null） */
 	info(name: string): UiPluginInfo | null {
 		return this.infos.get(name) ?? null;
+	}
+
+	/** The source belongs to the installed package selected by the current scan. */
+	runtimeSource(name: string): InstalledUiRuntimeSource | undefined {
+		return this.installedSources.get(name)?.runtime;
+	}
+
+	/** Runtime activation additionally requires the global switch and explicit UI trust. */
+	isEnabled(name: string): boolean {
+		const info = this.infos.get(name);
+		return Boolean(this.config.enabled && info?.enabled && info.trusted && !info.invalidReason);
 	}
 
 	/**
