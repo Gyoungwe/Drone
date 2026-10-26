@@ -47,11 +47,16 @@
 
 - 宿主 P2 写入合同切片：`KnowledgeHostPort` 现在可声明 `reviews`、`preview`、`decide` 三个可选审核操作；`KnowledgeUiService` 在插件提供这些操作时路由到插件，否则保留兼容实现。该 seam 不自行授予写权限，插件仍需通过自己的 host runtime 完成 revision/授权/写后回读。`create-backend.test.ts` 新增注入路由回归；Biome、backend typecheck 与 12 项 create-backend 测试通过。Vault 写入服务、完整 worker 和 UI 所有权仍未迁出，P2 继续保持部分完成。
 
+- 宿主 `c48f0023` 将上述 P2 审核操作接入 `createBackend` 的已发现 `KnowledgeHostPort`，插件路径的 `preview/decide` 现在真实走 host seam；无插件路径继续使用兼容实现。12 项 `create-backend` 回归、backend typecheck 和 Biome 通过。权限、CAS、写后回读仍由插件 host runtime 负责，P2 不标记完成。
+- 宿主 `1cb765c8` 补强 P6/P7 失败回执：卸载无变化和 registry 不可用的更新均保持 `failed`/`not-installed`，不写入 `disabled` 或新版本，也不触发 reload；backend lifecycle 8/8、Biome 通过。正式 DMG 的零插件、升级/回滚和销毁失败回执仍未完成。
+
 - 宿主 `55699c2f` 扩展通用发现：除 `plugin.manifest.json` 外，发现器也接受标准 Pi `package.json` 中可选的 `drone` 声明；普通 Pi 包可在不增加 Drone 专用清单的情况下声明 Desktop host entry。路径仍限制在包根内，5 项发现回归通过。
 - 宿主 `649b465e` 增加可选 `ResearchHostOperations.detail` 合同；提供完整详情适配器的研究插件可直接返回 run detail，未提供时继续使用 metadata-only fallback。backend typecheck、Biome 与 11 项 create-backend 回归通过；完整 Zotero/连接器页面、写入和正式 GUI 仍未完成。
 - P4 依赖收窄切片：`diagnosticText` 从 `@drone/tasks` 迁入 `@drone/shared`，tasks 保留同名 re-export 以保持既有调用方 API；backend diagnostics 改为只依赖 shared。shared/tasks/backend typecheck 与 8 项 diagnostics/failure-feedback 回归通过。任务状态机、workbench 运行时和宿主对 tasks 的其余装配仍未迁移。
 - 首次全量 `npm test` 复跑暴露两个 knowledge fixture 问题：独立 UI 测试未显式配置 host seam，worker 测试的独立模块图未注入已校验 metadata。`aa1d63d6` 修正测试夹具后，干净 `npm ci` 下全量 `npm test` 通过：backend 252 文件、desktop 165 文件/903 项及其他 workspace、脚本检查全部通过。
 - 插件 P5/P6 `4467782` 为 `pi-analysis` 与 `pi-evidence` clean-install smoke 增加声明一致性校验：安装后的 capabilities、host entry、`manifest.tools` 必须与真实 Pi loader 注册工具一致；analysis 3 工具、evidence 4 只读工具均通过。正式 GUI、零插件安装包和完整领域迁移仍未完成。
+- 插件 `a69a2b8` 为 `pi-research@0.3.0` 增加只读 `detail` host operation（summary/route/timeline/sources/claims/warnings/archive），同步 dist、manifest、desktop runtime、smoke 与测试；pi-research typecheck、build:check、26 files/136 tests、locked Pi 1.1.0/latest 1.4.0 SDK smoke 通过。Zotero 写入、完整页面和正式 GUI 仍未完成。
+- `DRONE_PLUGIN_API_TARBALL=/tmp/gyoungwe-plugin-api-1.3.0.tgz npm run check`（插件分支 `a69a2b8` 后）最终退出码 `0`：8 manifests、知识 487 tests、研究 136 tests、analysis/evidence/connectors/workbench/UI checks、research-suite PDF/clean-prefix smoke、locked/latest SDK matrix 与 pack checks 全部通过；research-suite clean-prefix receipt 为 4 extensions/22 tools、tarball SHA-256 `8928930e79fa19b6bc2eadbdaad8376ff72638ec214c27d2b15b94e393b065ee`，候选 Plugin API 1.3.0 SHA-256 `0916b3c5822548189ee1b3d7c28554cb459714a469074aef779021ae8191a027`。正式 GUI 仍 `NOT_RUN`，候选 API 未发布。
 - 宿主 `bcbc4e07` 将根 devDependency 对齐到 `plugins.lock.json` 与公开版本（`pi-knowledge@0.2.1`、`pi-research@0.2.0`）；干净 `npm ci` 后 `npm ls` 无版本漂移，随后 `aa1d63d6` 的夹具修复使全量测试恢复通过。
 - P6/P7 lifecycle guard：`packages/backend/test/packages-lifecycle.test.ts` 新增卸载无变化与更新失败回归。包管理器返回未安装或 registry 不可用时，回执保持 `failed`、不写入 `disabled`/新版本、不触发会话 reload；该切片验证了失败状态的可观察性，但不替代正式 DMG 的零插件、升级/回滚或销毁失败验收。
 
