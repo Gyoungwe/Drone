@@ -5,12 +5,13 @@ import { inspectHostDependencies } from "./check-host-domain-dependencies.mjs";
 test("accepts the explicitly tracked migration dependencies", () => {
 	const result = inspectHostDependencies({
 		dependencies: {
-			"@drone/tasks": "*",
 			"@gyoungwe/pi-knowledge": "*",
 		},
+		devDependencies: { "@drone/tasks": "*" },
 	});
 	assert.equal(result.ok, true);
 	assert.deepEqual(result.optionalPluginRuntimeDependencies, []);
+	assert.deepEqual(result.runtimeDomainDependencies, ["@gyoungwe/pi-knowledge"]);
 	assert.deepEqual(result.unexpectedRuntimeDomainDependencies, []);
 });
 
