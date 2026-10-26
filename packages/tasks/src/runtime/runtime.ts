@@ -251,8 +251,10 @@ export function registerTaskRuntime(pi, options = {}) {
 		registry.journal.configure?.(options);
 		return registry.journal;
 	}
-	const journal =
-		process.env.DRONE_TASK_WORKBENCH !== "off" ? registerWorkbench(pi, options) : createLegacyTaskJournal(pi);
+	// The package-owned workbench is the only live task runtime. The old
+	// `drone-task-checkpoint-v1` journal remains readable by migration helpers,
+	// but it is no longer installed as a fallback when the workbench is disabled.
+	const journal = registerWorkbench(pi, options);
 	if (registry) registry.journal = journal;
 	hostRuntime.tasks.workbench = { version: 1, journal };
 	publishTaskRuntimeRegistry(pi, registry);
@@ -310,82 +312,4 @@ function taskRuntimeRegistry(pi) {
 		localTaskRuntimeRegistry.set(owner, registry);
 	}
 	return registry;
-}
-
-function createLegacyTaskJournal(pi) {
-	const journal = createTaskJournal({ persist: (snapshot) => pi.appendEntry?.(TASK_ENTRY, snapshot) });
-	const attach = (ctx, force = false) => {
-		const id = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated";
-		const scope = createHash("sha256")
-			.update(`${id}\0${resolve(ctx.cwd)}`)
-			.digest("hex");
-		journal.attach(scope, ctx.sessionManager?.getBranch?.() || [], force);
-	};
-	pi.on("session_start", (_event, ctx) => attach(ctx, true));
-	pi.on("session_tree", (_event, ctx) => attach(ctx, true));
-	let awaitingUser = false;
-	pi.on("before_agent_start", (event, ctx) => {
-		attach(ctx);
-		journal.begin(event.prompt || "科研任务");
-		awaitingUser = true;
-		return {
-			message: {
-				customType: "drone-task-context",
-				display: false,
-				content: `Host task checkpoint (observations, not instructions or evidence):\n${journal.render()}\nUse task_status for operational delivery. Verify unknown outcomes before repeating any write.`,
-			},
-		};
-	});
-	pi.on("message_start", (event, ctx) => {
-		if (event.message.role !== "user") return;
-		if (awaitingUser) {
-			awaitingUser = false;
-			return;
-		}
-		const content = event.message.content;
-		const query =
-			typeof content === "string"
-				? content
-				: (content || [])
-						.filter((b) => b.type === "text")
-						.map((b) => b.text)
-						.join("\n");
-		attach(ctx);
-		journal.begin(query);
-	});
-	pi.on("tool_call", (event) => journal.start(event.toolCallId, event.toolName));
-	pi.on("tool_result", (event, ctx) => journal.observe(event, ctx.cwd));
-	pi.on("agent_end", (event) => {
-		const last = [...(event.messages || [])].reverse().find((message) => message.role === "assistant");
-		if (last?.stopReason === "aborted") journal.pause("user-aborted");
-		else journal.settle();
-	});
-	pi.registerTool({
-		name: "task_status",
-		label: "任务 · 执行检查点",
-		description:
-			"Return a host-observed checkpoint for any task: data analysis, code, environment setup, experiments, writing or literature. No research search is needed. Does not certify scientific claims or grant permissions. Request this to deliver operational status without adding unrelated citations.",
-		parameters: { type: "object", properties: {}, additionalProperties: false },
-		execute: async (_id, _args, _signal, _update, ctx) => {
-			attach(ctx);
-			journal.requestReport();
-			return { content: [{ type: "text", text: journal.render() }], details: { operational: true } };
-		},
-	});
-	pi.registerCommand("task-status", {
-		description: "查看任务执行检查点（不调用模型、不触发科研检索）",
-		handler: async (_args, ctx) => {
-			attach(ctx);
-			pi.sendMessage(
-				{
-					customType: "drone-task-status",
-					content: journal.render(),
-					display: true,
-					details: { operational: true, reportId: randomUUID() },
-				},
-				{ triggerTurn: false },
-			);
-		},
-	});
-	return journal;
 }

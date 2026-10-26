@@ -138,6 +138,7 @@ export {
 	type RemainingVerifier,
 	remainingExplanation,
 } from "./remaining";
+export { createWorkbenchPluginPort, type WorkbenchPluginClient } from "./runtime/workbench-plugin";
 export {
 	singleFlightCommand,
 	type TaskCommandContext,
