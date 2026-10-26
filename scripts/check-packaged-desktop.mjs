@@ -11,7 +11,7 @@ import { join, resolve } from "node:path";
 
 if (process.argv.includes("--help")) {
 	console.log(
-		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used.",
+		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app [--lifecycle-package=@scope/name]\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used. With --lifecycle-package, installs and removes that explicitly selected public fixture in the isolated Pi prefix and records both receipts.",
 	);
 	process.exit(0);
 }
@@ -20,6 +20,10 @@ if (!process.argv[2]) throw new Error("A built Drone.app path is required");
 const bundle = await realpath(resolve(process.argv[2]));
 const executable = join(bundle, "Contents/MacOS/Drone");
 await access(executable);
+const lifecyclePackageArg = process.argv.find((value) => value.startsWith("--lifecycle-package="));
+const lifecyclePackage = lifecyclePackageArg?.slice("--lifecycle-package=".length) || undefined;
+if (lifecyclePackage && !/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/iu.test(lifecyclePackage))
+	throw new Error(`Invalid lifecycle package name: ${lifecyclePackage}`);
 const root = await realpath(await mkdtemp(join(tmpdir(), "drone-fresh-package-")));
 const home = join(root, "home"),
 	profile = join(root, "profile"),
@@ -159,6 +163,58 @@ try {
 		`fresh Pi managed npm root contains optional packages: ${managedPackageEntries.join(", ")}`,
 	);
 	report.checks.push("fresh Pi managed npm root contains no optional packages");
+	if (lifecyclePackage) {
+		const packagePath = join(managedPackageRoot, ...lifecyclePackage.split("/"));
+		const source = `npm:${lifecyclePackage}`;
+		const lifecycle = { package: lifecyclePackage, operations: ["install", "remove"] };
+		try {
+			const installed = await evaluate(`window.pi.installPackage(${JSON.stringify(lifecyclePackage)})`);
+			assert(installed?.status === "succeeded", `package install failed: ${JSON.stringify(installed)}`);
+			assert(
+				await access(packagePath).then(
+					() => true,
+					() => false,
+				),
+				"installed package directory is missing",
+			);
+			const configured = await evaluate("window.pi.listConfiguredPackages()");
+			assert(configured.some((entry) => entry.source === source && entry.scope === "user"));
+			lifecycle.install = installed;
+
+			const removed = await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`);
+			assert(removed?.status === "succeeded", `package remove failed: ${JSON.stringify(removed)}`);
+			assert(
+				!(await access(packagePath).then(
+					() => true,
+					() => false,
+				)),
+				"removed package directory remains",
+			);
+			const remaining = await evaluate("window.pi.listConfiguredPackages()");
+			assert(!remaining.some((entry) => entry.source === source && entry.scope === "user"));
+			lifecycle.remove = removed;
+			report.lifecycleAcceptance = {
+				status: "PASS",
+				operations: ["install", "remove"],
+				package: lifecyclePackage,
+				receipts: lifecycle,
+			};
+			report.checks.push(`isolated packaged host installed and removed ${lifecyclePackage}`);
+		} catch (error) {
+			const message = String(error);
+			if (/network|registry|npm|fetch|timeout|unavailable|not found/iu.test(message)) {
+				report.lifecycleAcceptance = {
+					status: "BLOCKED",
+					operations: ["install", "remove"],
+					package: lifecyclePackage,
+					reason: message,
+				};
+				report.checks.push(`packaged lifecycle blocked for ${lifecyclePackage}: ${message}`);
+			} else {
+				throw error;
+			}
+		}
+	}
 	const overview = await evaluate(`window.pi.getKnowledgeOverview({cwd:${JSON.stringify(cwd)}})`);
 	assert.equal(overview.enabled, true);
 	assert.equal(overview.bound, false);

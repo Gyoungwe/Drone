@@ -52,3 +52,17 @@ node scripts/check-public-plugin-host.mjs
 ```
 
 That receipt passed clean-prefix installation, Pi loader discovery for `@gyoungwe/pi-evidence` and `@gyoungwe/pi-connectors`, the connector process-sandbox test, and registry lifecycle `0.1.0 → 0.1.1 → rollback:0.1.0 → uninstall`; the installed UI package smoke passed as well. The separately owned third-party source boundary remains blocked because no package/licence scope was approved. This registry lifecycle is package-level evidence and is not a substitute for a packaged-app upgrade/rollback or process-destruction-failure receipt.
+
+## 2026-10-27 packaged lifecycle slice
+
+The arm64 production bundle was rerun with an explicitly selected public fixture in the same isolated profile:
+
+```sh
+node scripts/check-packaged-desktop.mjs \
+  packages/desktop/dist/mac-arm64/Drone.app \
+  --lifecycle-package=@gyoungwe/pi-evidence
+```
+
+Result: **PASS for install/remove only**. The actual packaged Electron process installed `@gyoungwe/pi-evidence@0.1.1` into the temporary Pi managed prefix, and the preload returned a successful install receipt with `staged → verified → enabled`; the configured `npm:@gyoungwe/pi-evidence` entry and package directory were read back. The same process then removed it and returned `disabled → drained → disabled`; the managed package directory and configured entry were absent on read-back. Receipt root: `/private/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-fresh-package-Iw53Mq`.
+
+The script now accepts `--lifecycle-package=@scope/name` for this bounded, network-backed fixture and records the receipt in `validation.json`. This closes a real packaged install/remove (disable) slice without touching the user's profile or credentials. It does **not** close restore/reload, upgrade, rollback, or destroy-failure acceptance; those remain `NOT_RUN` and the zero-plugin smoke remains distinct from this lifecycle run.
