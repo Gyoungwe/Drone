@@ -103,6 +103,7 @@
 - 2026-10-27：`0fadba87` 后的宿主完整门禁收口于 `/tmp/drone-host-final-gates-10.log`：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch` 全部退出码 0；pi-core host entry 的 12 项测试与 backend project-memory 2 项回归通过。插件仓库在候选 API tarball `DRONE_PLUGIN_API_TARBALL=/tmp/gyoungwe-plugin-api-1.3.0.tgz` 下完整 `npm run check` 退出码 0，研究包 26 文件/136 项测试、clean install/SDK matrix/pack checks 通过。`check:native-plugin-boundary` 仍为 `INCOMPLETE`（runtime-import 11）；P2–P7、正式 GUI 与四项外部验收保持未完成。
 - 2026-10-27：`0e84aec3`/`4b419af0` 后再次完成宿主五项门禁，日志见 `/tmp/drone-host-final-gates-11.log`，全部退出码 0；backend typecheck 已覆盖 connector registry 的完整 shared response 合同。`check:arch` 仍为 architecture 0 baseline finding、host independence PASS、domain dependency `PARTIAL`。边界门禁继续为 `INCOMPLETE`（runtime-import 11），compat composition、完整领域删除和正式安装包验收仍未关闭。
 - 2026-10-27：`880ebc08` 后宿主五项门禁再次全部通过，日志见 `/tmp/drone-host-final-gates-12.log`；插件依赖重新拉取、全量测试与 build 均成功，`check:arch` 保持 architecture 0 baseline finding、host independence PASS、domain dependency `PARTIAL`。边界门禁为 `INCOMPLETE`（runtime-import 11、type-import 13），研究兼容组合及 P2–P7 完整迁移仍未完成。
+- 2026-10-27：`042c44ff` 后宿主五项门禁再次全部通过，日志见 `/tmp/drone-host-final-gates-13.log`；pi-core host 工具 bundle、backend 工具门面和完整宿主 build 均通过，生成的 build manifest 保持提交态。`check:arch` 仍为 architecture/host independence PASS、domain dependency `PARTIAL`；native boundary 仍 `INCOMPLETE`（runtime-import 11、type-import 13）。
 
 ## 未关闭项
 
