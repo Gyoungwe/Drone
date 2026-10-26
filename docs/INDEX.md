@@ -76,6 +76,8 @@ Paper2Agent 生成的 MCP 服务器接入方式和证据边界见 [paper2agent.m
 
 插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型、host-neutral analysis contract，以及版本化 `AnalysisHostPort` registry/loader 合同。`@gyoungwe/pi-analysis/host` 是宿主唯一的分析 adapter 入口；`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
 
+通用领域可用性只读投影位于 `packages/backend/src/plugins/domain-capabilities.ts`，由组合根登记当前 provider；它是迁移诊断边界，不承载领域实现或替代插件生命周期。
+
 任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
 
 研究技能包的锁定来源、许可记录、缓存与离线恢复：见 [research-skill-packs.md](research-skill-packs.md)。
