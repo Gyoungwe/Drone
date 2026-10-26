@@ -31,6 +31,7 @@
 - `485221d5` 的 runtime slice：Biome、`npm run typecheck -w @drone/shared`、`npm run typecheck -w @drone/backend` 及 `npm test -w @drone/backend -- src/create-backend.test.ts src/runtime.test.ts` 均 PASS（12 tests）。runtime event bus 按 backend 实例隔离；legacy `process.emit` 仅作兼容桥并按 cwd 过滤，双 backend 回归通过，dispose 清理 bus 与进程监听。
 - `7a674fd3`/`9e32809d` 的后续 host slice：knowledge provider 注入、versioned `/host` 入口限制和空插件独立性检查均通过；`npm run typecheck -w @drone/backend`、create-backend 8 tests、独立性/边界 6 tests、Biome 通过。
 - `11804540` 的 analysis slice：`AnalysisTaskController` 仅消费显式 `AnalysisHostLoader`/registry；无 loader 时 fail-closed，Desktop 缺包继续启动并记录告警。Biome、backend/desktop typecheck、analysis adapter/controller 12 tests 通过；manifest 依赖清理和正式包分析 workflow 仍未完成。
+- `66cc4394` 的 generic host discovery slice：按任意已安装包的 `plugin.manifest.json` capability、`drone-desktop` host 和包内 `entrypoints.host` 动态加载 host loader；Desktop 源码不再直接写 pi-analysis 包名，backend 将 pi-analysis 移出运行时依赖。空根、未声明能力和路径穿越 3 tests、backend/desktop typecheck、host independence 与 Biome 通过。knowledge/research/core 仍是运行时依赖，故不宣称零插件构建完成。
 
 插件 worktree：
 
