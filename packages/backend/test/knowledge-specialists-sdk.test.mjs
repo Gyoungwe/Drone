@@ -16,6 +16,7 @@ import {
 	flowFor,
 	getKnowledgeService,
 	listWikiProposals,
+	registerKnowledgeSpecialistHost,
 } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, expect, it, vi } from "vitest";
 import { makeKnowledgeSpecialistBridge } from "../src/knowledge/specialist-bridge";
@@ -112,6 +113,7 @@ it("real SDK dispatches four isolated roles by stage; parent still reads evidenc
 			makeKnowledgeSpecialistBridge({
 				getRuntime: async () => runtime,
 				getModelPreference: async () => undefined,
+				registerKnowledgeSpecialistHost,
 			}),
 		],
 	});
