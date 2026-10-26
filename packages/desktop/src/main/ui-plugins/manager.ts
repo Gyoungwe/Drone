@@ -26,6 +26,7 @@ import {
 import { app } from "electron";
 import { buildPlugin } from "./build";
 import { defaultUiPluginsConfig, loadUiPluginsConfig, saveUiPluginsConfig } from "./config";
+import { installedPackageGraph } from "./installed-package-graph";
 
 const log = createLogger("ui-plugins");
 
@@ -58,24 +59,20 @@ export type InstalledUiDiscovery =
 	| { packageName: string; error: string };
 
 export async function discoverInstalledUiPackages(root: string): Promise<InstalledUiDiscovery[]> {
-	const discoveries: InstalledUiDiscovery[] = [];
-	const packageDirs: string[] = [];
-	const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
-	for (const entry of entries) {
-		if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-		const path = join(root, entry.name);
-		if (entry.name.startsWith("@")) {
-			const scoped = await readdir(path, { withFileTypes: true }).catch(() => []);
-			for (const child of scoped) if (child.isDirectory()) packageDirs.push(join(path, child.name));
-		} else packageDirs.push(path);
-	}
+	const graph = await installedPackageGraph(root);
+	const discoveries: InstalledUiDiscovery[] = [...graph.diagnostics];
+	const packageDirs = graph.packages.map((item) => item.directory);
+	const directRoots = new Set(graph.packages.filter((item) => item.direct).map((item) => item.directory));
+	const versions = new Map<string, string | undefined>();
+
 	for (const packageDir of packageDirs) {
 		const packageJsonPath = join(packageDir, "package.json");
 		const manifestPath = join(packageDir, "plugin.manifest.json");
 		const packageJson = await readFile(packageJsonPath, "utf8")
-			.then((value) => JSON.parse(value) as { name?: string })
+			.then((value) => JSON.parse(value) as { name?: string; version?: string })
 			.catch(() => null);
 		const packageName = typeof packageJson?.name === "string" ? packageJson.name : basename(packageDir);
+		versions.set(packageDir, typeof packageJson?.version === "string" ? packageJson.version : undefined);
 		const manifest = await readFile(manifestPath, "utf8")
 			.then(
 				(value) =>
@@ -150,7 +147,43 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 		}
 		discoveries.push({ packageName, packageRoot, uiDir: canonicalUiDir, runtime });
 	}
-	return discoveries;
+	type Source = Extract<InstalledUiDiscovery, { uiDir: string }>;
+	const grouped = new Map<string, [Source, ...Source[]]>();
+	const output: InstalledUiDiscovery[] = discoveries.filter((item) => "error" in item);
+	for (const item of discoveries) {
+		if ("error" in item) continue;
+		const group = grouped.get(item.packageName);
+		if (group) group.push(item);
+		else grouped.set(item.packageName, [item]);
+	}
+	for (const [packageName, sources] of grouped) {
+		if (sources.length === 1) {
+			output.push(sources[0]);
+			continue;
+		}
+		const direct = sources.find((source) => directRoots.has(source.packageRoot));
+		const version = versions.get(sources[0].packageRoot);
+		if (
+			direct &&
+			version !== undefined &&
+			sources.every((source) => versions.get(source.packageRoot) === version)
+		) {
+			output.push(direct);
+			output.push({
+				packageName,
+				error: `Direct installation selected; shadowed UI sources: ${sources
+					.filter((source) => source !== direct)
+					.map((source) => source.packageRoot)
+					.join(", ")}. Equal versions do not verify equal contents.`,
+			});
+		} else {
+			output.push({
+				packageName,
+				error: `Conflicting installed UI sources: ${sources.map((source) => `${source.packageRoot} (${versions.get(source.packageRoot) ?? "version undeclared"})`).join(", ")}`,
+			});
+		}
+	}
+	return output;
 }
 
 function packageDiagnosticName(packageName: string): string {
@@ -532,7 +565,32 @@ export class UiPluginManager {
 				uiDir: this.legacyInstalledPackageDir,
 			});
 		}
-		for (const candidate of installed) {
+		const candidates = await Promise.all(
+			installed.map(async (candidate) =>
+				"error" in candidate ? candidate : { ...candidate, uiManifest: await readManifest(candidate.uiDir) },
+			),
+		);
+		const uiOwners = new Map<string, string[]>();
+		for (const candidate of candidates) {
+			if ("error" in candidate) continue;
+			const name = candidate.uiManifest?.name;
+			if (typeof name !== "string") continue;
+			const owners = uiOwners.get(name);
+			if (owners) owners.push(candidate.packageName);
+			else uiOwners.set(name, [candidate.packageName]);
+		}
+		const resolvedCandidates = candidates.map((candidate) => {
+			if ("error" in candidate) return candidate;
+			const name = candidate.uiManifest?.name;
+			const owners = typeof name === "string" ? uiOwners.get(name) : undefined;
+			return owners && owners.length > 1
+				? {
+						packageName: candidate.packageName,
+						error: `UI name ${name} is claimed by multiple installed packages: ${owners.join(", ")}`,
+					}
+				: candidate;
+		});
+		for (const candidate of resolvedCandidates) {
 			if ("error" in candidate) {
 				const name = packageDiagnosticName(candidate.packageName);
 				if (seen.has(name)) continue;
@@ -550,7 +608,7 @@ export class UiPluginManager {
 				out.push(info);
 				continue;
 			}
-			const installedManifest = await readManifest(candidate.uiDir);
+			const installedManifest = candidate.uiManifest;
 			const installedName = installedManifest?.name;
 			if (typeof installedName !== "string" || !NAME_RE.test(installedName) || seen.has(installedName))
 				continue;

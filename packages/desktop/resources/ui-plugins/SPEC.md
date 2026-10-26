@@ -152,6 +152,12 @@ export function ResultsPanel() {
 
 这些 UI 模块仍与宿主共享 React 和 renderer，是经过信任确认的代码。绑定提供来源识别和生命周期撤销，**不构成恶意 UI 代码之间的安全隔离**。
 
+### 聚合 Pi 包中的 UI 发现
+
+宿主保留已安装顶层 UI 包的发现。对于聚合包，managed npm prefix 的 `package.json.dependencies` 与 `optionalDependencies`（含 `npm --save-optional`）确定被选中的安装根；宿主只沿该包 `dependencies` / `optionalDependencies` 中声明、且在 `pi.extensions` / `skills` / `prompts` / `themes` 中通过 `node_modules/<包名>/...` 明确引用的资源边发现子包 UI。路径按 npm 就近依赖解析（包括提升到父级的依赖），真实路径必须仍位于该 managed 安装目录。普通库依赖、peer/dev 依赖和未引用子树不会被递归扫描。
+
+相同真实目录只登记一次。不同目录的同名包，即使版本相同也不假定内容相同：只有明确选中的直接安装来源可以优先，其他来源在诊断中标记为 shadowed；不同版本或没有明确直接来源的冲突不会加载任意一方的 UI。两个不同 npm 包声明同一 UI 名称时也会诊断冲突并阻止加载。子包始终使用自身 npm 包身份、UI 清单和 runtime 入口，独立取得启用/信任；聚合根不传递运行授权。取消根选择或移除聚合包后，只由它提供的嵌套 UI 从扫描结果消失。这里的“发现”不等于原生 Pi 扩展执行或安全隔离已经验收。
+
 ## 5. 样式纪律（强制）
 
 - **一律语义 token**：`bg-canvas` / `bg-surface` / `bg-hover` / `text-ink` / `text-ink-2` / `text-ink-dim` / `text-ink-faint` / `border-border` / `shadow-soft` / `shadow-pop` / `text-accent` 等（宿主 Tailwind 已全局注册）。**禁写死 zinc/white/black 等裸色值**——深浅主题都要检查一遍，插件必须两态可读；
