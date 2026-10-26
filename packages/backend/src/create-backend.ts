@@ -40,10 +40,7 @@ import type { PluginSessionCallerContext } from "./plugins/session-caller";
 import { walkProjectFiles } from "./project/files";
 import { canonicalProjectId } from "./project-id";
 import { createDroneRuntime } from "./runtime";
-import {
-	AnalysisEvidenceService,
-	type EvidenceReplayRunner,
-} from "./services/analysis-evidence";
+import { AnalysisEvidenceService, type EvidenceReplayRunner } from "./services/analysis-evidence";
 import type { AnalysisEvidencePluginHost } from "./services/analysis-evidence-host";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "./services/analysis-orchestration";
 import { parseAnalysisReviewDecision } from "./services/analysis-review-decision";

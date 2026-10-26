@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import { createBackend } from "./create-backend";
 import { createDroneRuntime } from "./runtime";
 
@@ -120,13 +120,22 @@ describe("createBackend", () => {
 			},
 		});
 		try {
-			await services.analysis.create({ id: "analysis-host-test", question: "q", assay: "a", mode: "exploratory" });
+			await services.analysis.create({
+				id: "analysis-host-test",
+				question: "q",
+				assay: "a",
+				mode: "exploratory",
+			});
 			await expect(
 				services.analysisEvidence.prepareEvidence({
 					analysisId: "analysis-host-test",
 					manifest: { entries: [] },
 				}),
-			).resolves.toMatchObject({ status: "ready", plan: { execution: "host-required" }, validation: { valid: true } });
+			).resolves.toMatchObject({
+				status: "ready",
+				plan: { execution: "host-required" },
+				validation: { valid: true },
+			});
 		} finally {
 			await services.dispose();
 			await rm(root, { recursive: true, force: true });

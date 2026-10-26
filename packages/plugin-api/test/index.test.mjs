@@ -190,10 +190,24 @@ test("configured-vault-write declares host-mediated Vault file writes", async ()
 		},
 		{
 			pluginId: "vault-fixture",
-			permissions: { filesystem: ["configured-vault-write"], network: [], subprocess: [], externalWrites: false },
+			permissions: {
+				filesystem: ["configured-vault-write"],
+				network: [],
+				subprocess: [],
+				externalWrites: false,
+			},
 		},
 	);
-	assert.equal((await host.requestAuthorization({ action: "filesystem-write", scope: "configured-vault" })).granted, true);
-	assert.equal((await host.requestAuthorization({ action: "filesystem-read", scope: "configured-vault" })).granted, true);
-	assert.equal((await host.requestAuthorization({ action: "external-write", scope: "configured-vault" })).granted, false);
+	assert.equal(
+		(await host.requestAuthorization({ action: "filesystem-write", scope: "configured-vault" })).granted,
+		true,
+	);
+	assert.equal(
+		(await host.requestAuthorization({ action: "filesystem-read", scope: "configured-vault" })).granted,
+		true,
+	);
+	assert.equal(
+		(await host.requestAuthorization({ action: "external-write", scope: "configured-vault" })).granted,
+		false,
+	);
 });

@@ -330,10 +330,18 @@ export function createPermissionedHostPort(
 		switch (operation) {
 			case "filesystem-read":
 				return options.permissions.filesystem.some((scope) =>
-					["workspace-read", "workspace", "configured-vault", "configured-vault-write", "vault-read"].includes(scope),
+					[
+						"workspace-read",
+						"workspace",
+						"configured-vault",
+						"configured-vault-write",
+						"vault-read",
+					].includes(scope),
 				);
 			case "filesystem-write":
-				return options.permissions.filesystem.some((scope) => ["workspace", "configured-vault-write"].includes(scope));
+				return options.permissions.filesystem.some((scope) =>
+					["workspace", "configured-vault-write"].includes(scope),
+				);
 			case "network":
 				return options.permissions.network.length > 0;
 			case "subprocess":

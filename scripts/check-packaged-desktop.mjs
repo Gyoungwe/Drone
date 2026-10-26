@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { closeSync, openSync } from "node:fs";
-import { access, mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -125,11 +125,17 @@ try {
 	report.checks.push("actual packaged workbench visible after splash and CJS preload mounted");
 	const managedUiRoot = join(profile, "ui-plugins");
 	const builtInUiFiles = new Set([".builtin-seed.json", "SPEC.md", "drone-ui.d.ts", "_examples"]);
-	const optionalUiEntries = (await readdir(managedUiRoot).catch((error) => {
-		if (error.code === "ENOENT") return [];
-		throw error;
-	})).filter((entry) => !builtInUiFiles.has(entry));
-	assert.deepEqual(optionalUiEntries, [], `fresh profile contains optional UI plugins: ${optionalUiEntries.join(", ")}`);
+	const optionalUiEntries = (
+		await readdir(managedUiRoot).catch((error) => {
+			if (error.code === "ENOENT") return [];
+			throw error;
+		})
+	).filter((entry) => !builtInUiFiles.has(entry));
+	assert.deepEqual(
+		optionalUiEntries,
+		[],
+		`fresh profile contains optional UI plugins: ${optionalUiEntries.join(", ")}`,
+	);
 	report.checks.push("fresh packaged profile contains no optional UI plugins (only host seed files)");
 	const overview = await evaluate(`window.pi.getKnowledgeOverview({cwd:${JSON.stringify(cwd)}})`);
 	assert.equal(overview.enabled, true);
