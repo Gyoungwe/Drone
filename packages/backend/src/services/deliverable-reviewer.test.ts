@@ -4,6 +4,7 @@ import type {
 	ReviewerProviderSelection,
 } from "@gyoungwe/pi-knowledge/host";
 import { describe, expect, it, vi } from "vitest";
+import { createKnowledgeBackgroundReviewer } from "../knowledge/ui";
 import { DeliverableReviewerService, isDeliverableWriter } from "./deliverable-reviewer";
 
 const waitForReview = () => new Promise((resolve) => setTimeout(resolve, 30));
@@ -24,7 +25,11 @@ describe("DeliverableReviewerService", () => {
 	it("cancels a deferred review when its session is replaced", async () => {
 		const getCwd = vi.fn(() => undefined);
 		const onResult = vi.fn();
-		const service = new DeliverableReviewerService({ getCwd, onResult });
+		const service = new DeliverableReviewerService({
+			reviewerFactory: createKnowledgeBackgroundReviewer,
+			getCwd,
+			onResult,
+		});
 		service.schedule({ sessionId: "old", snapshot: { body: "old" }, trigger: "publication-projection" });
 		service.clearSession("old");
 		await waitForReview();
@@ -35,6 +40,7 @@ describe("DeliverableReviewerService", () => {
 	it("只对白名单写入工具触发，归档/下载类工具不触发", () => {
 		const scheduled: unknown[] = [];
 		const service = new DeliverableReviewerService({
+			reviewerFactory: createKnowledgeBackgroundReviewer,
 			getCwd: () => undefined,
 			onSchedule: (request) => scheduled.push(request),
 			onResult: () => {},
@@ -60,6 +66,7 @@ describe("DeliverableReviewerService", () => {
 			): DeliverableReviewFinding[] => [],
 		);
 		const enabled = new DeliverableReviewerService({
+			reviewerFactory: createKnowledgeBackgroundReviewer,
 			getCwd: () => undefined,
 			getProviders: () => [{ provider: "reviewer", model: "review-model" }],
 			getMainProvider: () => "main",
@@ -86,6 +93,7 @@ describe("DeliverableReviewerService", () => {
 			): DeliverableReviewFinding[] => [],
 		);
 		const disabled = new DeliverableReviewerService({
+			reviewerFactory: createKnowledgeBackgroundReviewer,
 			getCwd: () => undefined,
 			getProviders: () => [{ provider: "reviewer", model: "review-model" }],
 			getMainProvider: () => "main",

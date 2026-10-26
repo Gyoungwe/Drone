@@ -2,14 +2,13 @@ import { createHash } from "node:crypto";
 import { open } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { SessionEvent } from "@drone/shared";
-import {
-	BackgroundReviewer,
-	type BackgroundReviewerOptions,
-	type BackgroundReviewRequest,
-	type DeliverableReviewSnapshot,
-	type ReviewerModelProvider,
-	type ReviewerProviderSelection,
-	type ReviewReadReceipt,
+import type {
+	BackgroundReviewerOptions,
+	BackgroundReviewRequest,
+	DeliverableReviewSnapshot,
+	ReviewerModelProvider,
+	ReviewerProviderSelection,
+	ReviewReadReceipt,
 } from "@gyoungwe/pi-knowledge/host";
 import { globalToolManifest } from "../tools/manifest";
 import type { InquiryReadOnlySnapshot } from "./inquiry";
@@ -18,7 +17,18 @@ const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_TEXT_BYTES = 256 * 1024;
 const TEXT_FILE = /\.(?:md|txt|csv|json|html?|tex|ya?ml)$/i;
 
+export interface BackgroundReviewerPort {
+	schedule(request: BackgroundReviewRequest): void;
+	getCached(sessionId: string, snapshot: DeliverableReviewSnapshot): unknown;
+	getFindings(sessionId: string): readonly unknown[];
+	clearSession(sessionId: string): void;
+	dispose(): void;
+}
+
+export type BackgroundReviewerFactory = (options: BackgroundReviewerOptions) => BackgroundReviewerPort;
+
 interface ReviewerHostOptions {
+	reviewerFactory: BackgroundReviewerFactory;
 	getCwd(sessionId: string): string | undefined;
 	getLedger?(): Promise<InquiryReadOnlySnapshot | undefined>;
 	getProviders?: () => readonly ReviewerModelProvider[] | Promise<readonly ReviewerModelProvider[]>;
@@ -48,14 +58,14 @@ export function isDeliverableWriter(toolName: string): boolean {
 
 /** Read-only host adapter. Observed reads never grant evidence-gate authority. */
 export class DeliverableReviewerService {
-	private readonly reviewer: BackgroundReviewer;
+	private readonly reviewer: BackgroundReviewerPort;
 	private readonly calls = new Map<string, Map<string, Record<string, unknown>>>();
 	private readonly receipts = new Map<string, Map<string, ReviewReadReceipt>>();
 	private disposed = false;
 	private readonly generations = new Map<string, number>();
 
 	constructor(private readonly options: ReviewerHostOptions) {
-		this.reviewer = new BackgroundReviewer({
+		this.reviewer = options.reviewerFactory({
 			onResult: options.onResult,
 			getProviders: options.getProviders,
 			useModel: options.useModel,

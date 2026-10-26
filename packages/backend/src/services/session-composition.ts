@@ -3,6 +3,7 @@ import type {
 	DeliverableReviewSnapshot,
 	ReviewerProviderSelection,
 } from "@gyoungwe/pi-knowledge/host";
+import { createKnowledgeBackgroundReviewer } from "../knowledge/ui";
 import { createLogger } from "../log";
 import { McpService } from "../mcp/service";
 import { PackageAdmin } from "../packages/admin";
@@ -172,6 +173,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		}),
 	);
 	const reviewer = new DeliverableReviewerService({
+		reviewerFactory: createKnowledgeBackgroundReviewer,
 		getCwd: (sessionId) => service.registry.get(sessionId)?.cwd,
 		getProviders: async () =>
 			(await service.settings.listProviders())
