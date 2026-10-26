@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve, sep } from "node:path";
-import type { ResearchConnector, ResearchConnectorContext } from "@drone/research";
 import {
 	contractContentHash,
 	createKnowledgeSnapshot,
@@ -10,6 +9,8 @@ import {
 	type ResearchCaptureRecord,
 	type ResearchCaptureRequest,
 	type ResearchCaptureResult,
+	type ResearchConnector,
+	type ResearchConnectorContext,
 	type ResearchConnectorDescriptor,
 	type ResearchConnectorFailure,
 	type ResearchConnectorHit,
