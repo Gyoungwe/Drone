@@ -22,6 +22,19 @@ test("rejects pi-analysis imports that bypass the host entry", () => {
 	);
 });
 
+test("rejects knowledge and research imports that bypass their host entries", () => {
+	assert.deepEqual(
+		findHostImportViolations(
+			"packages/backend/src/legacy-adapter.ts",
+			'import "@gyoungwe/pi-knowledge";\nimport("@gyoungwe/pi-research");',
+		),
+		[
+			"packages/backend/src/legacy-adapter.ts: @gyoungwe/pi-knowledge imports must use the versioned host entry",
+			"packages/backend/src/legacy-adapter.ts: @gyoungwe/pi-research imports must use the versioned host entry",
+		],
+	);
+});
+
 test("rejects an optional plugin import and identifies its package", () => {
 	assert.deepEqual(
 		findHostImportViolations(

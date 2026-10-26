@@ -18,6 +18,7 @@ const optional = new Set([
 	"@gyoungwe/desktop-ui-pack",
 	"@gyoungwe/research-suite",
 ]);
+const hostOnly = new Set(["@gyoungwe/pi-knowledge", "@gyoungwe/pi-research", "@gyoungwe/pi-analysis"]);
 /** Return optional plugin imports that would couple the host to a package. */
 export function findHostImportViolations(file, source) {
 	const violations = [];
@@ -27,8 +28,9 @@ export function findHostImportViolations(file, source) {
 		const specifier = match[1];
 		const packageName = specifier.split("/").slice(0, 2).join("/");
 		const relativeFile = relative(root, file).replaceAll("\\", "/");
-		if (packageName === "@gyoungwe/pi-analysis" && specifier !== "@gyoungwe/pi-analysis/host") {
-			violations.push(`${relativeFile}: pi-analysis imports must use the versioned host entry`);
+		if (hostOnly.has(packageName) && specifier !== `${packageName}/host`) {
+			const label = packageName === "@gyoungwe/pi-analysis" ? "pi-analysis" : packageName;
+			violations.push(`${relativeFile}: ${label} imports must use the versioned host entry`);
 		} else if (optional.has(packageName) && !allowed.has(packageName)) {
 			violations.push(`${relativeFile}: optional plugin import ${packageName}`);
 		}
