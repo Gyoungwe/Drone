@@ -101,7 +101,5 @@
 			"outputSha256": "6d77d30ca1daba058ca0ca1861de6380fd04090901efc731879a603a8fe31ec2"
 		}
 	},
-	"legacyOutputs": [
-		"knowledge-worker.mjs"
-	]
+	"legacyOutputs": ["knowledge-worker.mjs"]
 }
