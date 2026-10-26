@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
-import type { KnowledgeCloudNote, KnowledgeCloudStatus, KnowledgeCloudWriteResult } from "@drone/shared";
-import { MAX_NOTE_BYTES } from "@gyoungwe/pi-knowledge/host";
+import {
+	KNOWLEDGE_MAX_NOTE_BYTES,
+	type KnowledgeCloudNote,
+	type KnowledgeCloudStatus,
+	type KnowledgeCloudWriteResult,
+} from "@drone/shared";
 import {
 	createWebDavCredentialStore,
 	validateWebDavPassword,
@@ -218,7 +222,7 @@ export class KnowledgeWebDavService {
 	}): Promise<KnowledgeCloudWriteResult> {
 		await this.loadSaved();
 		const path = this.notePath(input.path);
-		if (Buffer.byteLength(input.text, "utf8") > MAX_NOTE_BYTES)
+		if (Buffer.byteLength(input.text, "utf8") > KNOWLEDGE_MAX_NOTE_BYTES)
 			throw new KnowledgeWebDavError("protocol", "云端笔记超过 1 MiB 限制");
 		if (input.expectedVersion !== undefined && !strongEtag(input.expectedVersion))
 			throw new KnowledgeWebDavError("protocol", "更新笔记需要读取时获得的强 ETag；不支持通配符或修改时间");
