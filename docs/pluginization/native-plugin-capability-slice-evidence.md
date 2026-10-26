@@ -99,6 +99,7 @@
 - 宿主 `bcbc4e07` 将根 devDependency 对齐到 `plugins.lock.json` 与公开版本（`pi-knowledge@0.2.1`、`pi-research@0.2.0`）；干净 `npm ci` 后 `npm ls` 无版本漂移，随后 `aa1d63d6` 的夹具修复使全量测试恢复通过。
 - P6/P7 lifecycle guard：`packages/backend/test/packages-lifecycle.test.ts` 新增卸载无变化与更新失败回归。包管理器返回未安装或 registry 不可用时，回执保持 `failed`、不写入 `disabled`/新版本、不触发会话 reload；该切片验证了失败状态的可观察性，但不替代正式 DMG 的零插件、升级/回滚或销毁失败验收。
 - 2026-10-27：`0fadba87` 后的宿主完整门禁收口于 `/tmp/drone-host-final-gates-10.log`：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch` 全部退出码 0；pi-core host entry 的 12 项测试与 backend project-memory 2 项回归通过。插件仓库在候选 API tarball `DRONE_PLUGIN_API_TARBALL=/tmp/gyoungwe-plugin-api-1.3.0.tgz` 下完整 `npm run check` 退出码 0，研究包 26 文件/136 项测试、clean install/SDK matrix/pack checks 通过。`check:native-plugin-boundary` 仍为 `INCOMPLETE`（runtime-import 11）；P2–P7、正式 GUI 与四项外部验收保持未完成。
+- 2026-10-27：`0e84aec3`/`4b419af0` 后再次完成宿主五项门禁，日志见 `/tmp/drone-host-final-gates-11.log`，全部退出码 0；backend typecheck 已覆盖 connector registry 的完整 shared response 合同。`check:arch` 仍为 architecture 0 baseline finding、host independence PASS、domain dependency `PARTIAL`。边界门禁继续为 `INCOMPLETE`（runtime-import 11），compat composition、完整领域删除和正式安装包验收仍未关闭。
 
 ## 未关闭项
 
