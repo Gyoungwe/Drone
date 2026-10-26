@@ -40,12 +40,30 @@ export class SessionEngine {
 	dispose(session: AgentSession): Promise<void> {
 		const pending = this.disposals.get(session);
 		if (pending) return pending;
-		// Pi 1.1.0 dispose() does not emit shutdown. Notify extensions before
-		// aborting the tool loop so pending extension UI can release its waiters.
+		// Pi 1.1.0 dispose() does not emit shutdown. Start notification before
+		// cancellation, but await both together: hooks may wait for aborted tools,
+		// and tools may wait for UI/resources released by their shutdown hook.
 		const disposal = Promise.resolve().then(async () => {
-			await session.extensionRunner?.emit({ type: "session_shutdown", reason: "quit" });
-			await session.abort();
-			session.dispose();
+			const hookFailures: Error[] = [];
+			// The official runner reports handler failures through onError and resolves emit().
+			const unsubscribe = session.extensionRunner?.onError((error) => {
+				if (error.event === "session_shutdown")
+					hookFailures.push(new Error(`Extension shutdown failed: ${error.error}`));
+			});
+			const results = await Promise.allSettled([
+				Promise.resolve().then(() =>
+					session.extensionRunner?.emit({ type: "session_shutdown", reason: "quit" }),
+				),
+				Promise.resolve().then(() => session.abort()),
+			]);
+			unsubscribe?.();
+			results.push(...(await Promise.allSettled([Promise.resolve().then(() => session.dispose())])));
+			const failures = results.filter((result) => result.status === "rejected");
+			if (failures.length || hookFailures.length)
+				throw new AggregateError(
+					[...hookFailures, ...failures.map((result) => result.reason)],
+					"Session shutdown failed",
+				);
 		});
 		this.disposals.set(session, disposal);
 		return disposal;

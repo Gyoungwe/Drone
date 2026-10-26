@@ -351,7 +351,7 @@ PDF Canvas 设置 max-width 时不可同时固定 CSS height；否则窄侧栏�
 
 ## 2026-10-26：插件关闭回执与 Node 读权限
 
-锁定 Pi 1.1.0 的 `AgentSession.dispose()` 不发送 `session_shutdown`。宿主必须经 SessionEngine 先等待扩展关闭事件，再 abort/dispose；会话关闭和整个应用退出都要等待这一链路。测试不能以 dispose 被调用代替 worker 已退出，须核对真实 PID。并发关闭需共用同一次销毁，不能重复投递关闭事件。
+锁定 Pi 1.1.0 的 `AgentSession.dispose()` 不发送 `session_shutdown`。SessionEngine 必须先启动扩展关闭通知，同时启动 SDK abort，等待两者结束后才 dispose：关闭 hook 可能等待工具收到 AbortSignal，工具也可能等待关闭 hook 释放 UI 请求，串行等待任一方都会互等。即使某一步失败，也要完成其他清理并聚合错误；官方 ExtensionRunner 会把 hook 异常转为 onError，需在关闭期间订阅 session_shutdown 错误，不能仅检查 emit() 是否拒绝。会话关闭和应用退出都要等待整条链路；并发关闭共用同一次销毁。`packages/backend/test/session-shutdown-sdk.test.mjs` 用真实 SDK 工具回归两种依赖方向；worker 回收还须核对真实 PID，不能以 dispose 被调用替代退出回执。
 
 Node permission 的目录读取授权会跟随包内数据符号链接。只校验入口 realpath 不够：新的 desktopRuntime 在启动前检查整个包的链接目标，拒绝包外链接。该检查仍依赖启动期间安装目录不被其他宿主流程改写；完整包不可变快照/安装代次属于 P6，不能将预扫描描述为解决任意并发文件替换。
 

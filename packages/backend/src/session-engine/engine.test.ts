@@ -43,7 +43,7 @@ describe("SessionEngine lifecycle boundary", () => {
 	});
 });
 
-it("waits for extension shutdown before abort/dispose and coalesces concurrent closes", async () => {
+it("starts shutdown and abort together, waits before dispose and coalesces concurrent closes", async () => {
 	let release!: () => void;
 	const gate = new Promise<void>((resolve) => {
 		release = resolve;
@@ -51,6 +51,7 @@ it("waits for extension shutdown before abort/dispose and coalesces concurrent c
 	const events: string[] = [];
 	const session = {
 		extensionRunner: {
+			onError: vi.fn(() => () => {}),
 			emit: vi.fn(async (event) => {
 				expect(event).toEqual({ type: "session_shutdown", reason: "quit" });
 				events.push("shutdown");
@@ -67,9 +68,39 @@ it("waits for extension shutdown before abort/dispose and coalesces concurrent c
 	const engine = new SessionEngine();
 	const a = engine.dispose(session);
 	const b = engine.dispose(session);
-	await Promise.resolve();
-	expect(events).toEqual(["shutdown"]);
+	expect(a).toBe(b);
+	await vi.waitFor(() => expect(events).toEqual(["shutdown", "abort"]));
 	release();
 	await Promise.all([a, b]);
 	expect(events).toEqual(["shutdown", "abort", "dispose"]);
+});
+
+it("finishes every cleanup step and reports shutdown, abort and disposal failures together", async () => {
+	const shutdownFailure = new Error("hook failed");
+	const abortFailure = new Error("abort failed");
+	const disposeFailure = new Error("dispose failed");
+	const dispose = vi.fn(() => {
+		throw disposeFailure;
+	});
+	const session = {
+		extensionRunner: {
+			onError: vi.fn(() => () => {}),
+			emit: () => {
+				throw shutdownFailure;
+			},
+		},
+		abort: vi.fn(async () => {
+			throw abortFailure;
+		}),
+		dispose,
+	} as unknown as AgentSession;
+	const engine = new SessionEngine();
+	await expect(engine.dispose(session)).rejects.toMatchObject({
+		message: "Session shutdown failed",
+		errors: [shutdownFailure, abortFailure, disposeFailure],
+	});
+	expect(session.abort).toHaveBeenCalledOnce();
+	expect(dispose).toHaveBeenCalledOnce();
+	await expect(engine.dispose(session)).rejects.toThrow("Session shutdown failed");
+	expect(dispose).toHaveBeenCalledOnce();
 });

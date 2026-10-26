@@ -509,4 +509,4 @@ src/
 
 `backend/src/plugins/session-caller.ts` 从真实 SessionRegistry entry 提供规范工作区、会话代次及撤销信号；`desktop/src/renderer/src/plugins/caller.ts` 同步活动会话并携带主进程签发的 selection lease，防止旧界面请求在切换会话后被解释为新调用。无会话时显式使用 application scope；应用级后台可以被多个窗口共享。该通用机制尚不代表知识 UI 与原生工具已共用领域实例。
 
-原生插件 P1 机制：`backend/src/plugins/{runtime,process-runtime}.ts` 管理独立实例/进程；`plugin-runtime-executable.ts` 校验随包 Node；`plugin-sandbox-ui.ts` 约束官方 Pi 基础对话请求；`session-engine/engine.ts` 等待扩展 shutdown 再销毁会话；`shared/src/host-api/plugin-runtime.ts`、preload 和 `main/ipc/plugin-runtime.ts` 传递主进程绑定的通用调用。新知识 UI 同包及基础状态/写者迁移设计与证据在插件仓库 `docs/knowledge-ui-co-package-2026-10-26.md`、`docs/native-knowledge-runtime-plan.md`。
+原生插件 P1 机制：`backend/src/plugins/{runtime,process-runtime}.ts` 管理独立实例/进程；`plugin-runtime-executable.ts` 校验随包 Node；`plugin-sandbox-ui.ts` 约束官方 Pi 基础对话请求；`session-engine/engine.ts` 同时启动扩展 shutdown 与 SDK abort，等待两者后销毁会话；`backend/test/session-shutdown-sdk.test.mjs` 回归真实 SDK 工具与关闭 hook 的双向等待；`shared/src/host-api/plugin-runtime.ts`、preload 和 `main/ipc/plugin-runtime.ts` 传递主进程绑定的通用调用。新知识 UI 同包及基础状态/写者迁移设计与证据在插件仓库 `docs/knowledge-ui-co-package-2026-10-26.md`、`docs/native-knowledge-runtime-plan.md`。
