@@ -70,6 +70,9 @@
 - P7 `d39159d3` 将真实 arm64 包回执的 lifecycle 字段显式标为 `NOT_RUN`，列出 install/disable/restore/upgrade/rollback/destroy-failure 的未执行原因；空插件宿主及 generic session 仍 PASS，但不再让该回执暗示完整生命周期验收。
 - P2/P6 `3f9ef839` 将 subagent answer publication registrar 改为 `DroneRuntime.knowledge.registerAnswerPublication` 注入，runner 删除对 `@gyoungwe/pi-knowledge/host` 的 runtime import；保留 evidence-only 子会话与 `begin(false)` 语义。backend typecheck、Biome、create-backend/subagent-panel 29 项测试通过，native runtime-import 计数降至 12。
 - P2/P6 `0d0fbd7e` 将 ExperienceStore、terminal experience 与 deliverable reviewer 的纯类型合同发布到 `@gyoungwe/plugin-api/knowledge`；backend 不再从 pi-knowledge host 做这些 type imports。plugin-api contract 13 项、backend typecheck 与 targeted reviewer/experience 5 项测试通过。
+- P2 `837d1594` 将每日发现 `DailyIdea` 与记忆沉淀 `MemoryNoteInput` 发布到 `@gyoungwe/plugin-api/knowledge`，backend knowledge UI 不再为这两个 payload 做 pi-knowledge host 类型导入；plugin-api 独立合同编译/13 项测试、backend typecheck 与 Biome 通过。
+- P3/P6 `ad00d14c` 将研究写入 adapter 的执行上下文、adapter 和 registry 合同发布到 `@drone/shared`；`ResearchWriteService` 仅接收宿主注入 registry，删除 `@drone/research` runtime import，研究包保留兼容 re-export。shared/research/backend typecheck、5 项 research-write 回归与 Biome 通过；真实外部写入仍未验收。
+- P4/P6 `ae3434dd` 将 backend 对 `@drone/tasks` 的依赖降为 devDependency，门禁回归确认开发依赖不计入宿主运行时领域依赖；backend typecheck 与 `check:arch` 通过，任务状态机和 workbench 运行时仍未迁移。
 - P2 `8619c135` 将 knowledge semantic settings/index 的 5 个 UI 操作改为 `KnowledgeHostPort.semantic` 注入；无 knowledge 插件时显式返回 unavailable，不伪造成功；host routing/no-plugin regressions、Biome 与 create-backend unit tests 通过。
 - P7 `7daf6a13` 在实际 arm64 `Drone.app` 隔离 profile 中真实安装 `@gyoungwe/pi-evidence@0.1.1`，回执为 `staged → verified → enabled`；随后真实移除并回读为 `disabled → drained → disabled`，包目录与配置均消失。零插件/generic session 仍通过；restore/reload、upgrade、rollback、destroy-failure 和同 tarball GUI 仍 `NOT_RUN`。
 
