@@ -139,6 +139,33 @@ describe("createBackend", () => {
 		services.dispose();
 	});
 
+	it("routes research write adapters through the host-owned registry factory", () => {
+		let factoryCalled = false;
+		const registry = {
+			descriptors: () => [
+				{
+					id: "test-write",
+					label: "Test write",
+					enabled: true,
+					writeEnabled: false,
+					requiresExplicitApproval: true as const,
+				},
+			],
+			get: () => undefined,
+		};
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			researchWriteAdapterRegistry: () => {
+				factoryCalled = true;
+				return registry;
+			},
+		});
+		expect(factoryCalled).toBe(true);
+		expect(services.researchWrites.listAdapters()).toEqual(registry.descriptors());
+		services.dispose();
+	});
+
 	it("accepts a knowledge provider without constructing the host adapter", () => {
 		const knowledge = new KnowledgeUiService();
 		let provided = false;

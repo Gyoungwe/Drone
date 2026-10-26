@@ -1,7 +1,6 @@
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
-import { createDefaultResearchWriteAdapters, ResearchWriteAdapterRegistry } from "@drone/research";
 import type {
 	AskRequest,
 	AskResponse,
@@ -17,6 +16,7 @@ import type {
 	PermissionMode,
 	PermissionRequest,
 	PermissionResolved,
+	ResearchWriteAdapterRegistryPort,
 	SessionEvent,
 	SessionMessage,
 	SessionsApi,
@@ -106,12 +106,7 @@ import {
 	ResearchResourceService,
 } from "./services/research-resource";
 import { createEmptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
-import {
-	createProtocolsBookmarkWriteAdapter,
-	createProtocolsBookmarkWritePortFromEnv,
-	createWebdavWriteAdapter,
-	createWebdavWritePortFromEnv,
-} from "./services/reversible-write-adapters";
+import { createDefaultResearchWriteRegistry } from "./services/research-write-compat";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
@@ -311,6 +306,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	knowledgeHostLoader?: KnowledgeHostLoader;
 	/** Optional installed research plugin host; absent means research run reads are unavailable. */
 	researchHostLoader?: ResearchHostLoader;
+	/** Optional host-owned research write adapter registry. */
+	researchWriteAdapterRegistry?: () => ResearchWriteAdapterRegistryPort;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
@@ -362,11 +359,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				})),
 	});
 	const researchWrites = new ResearchWriteService({
-		adapters: new ResearchWriteAdapterRegistry([
-			...createDefaultResearchWriteAdapters(),
-			createWebdavWriteAdapter(createWebdavWritePortFromEnv()),
-			createProtocolsBookmarkWriteAdapter(createProtocolsBookmarkWritePortFromEnv()),
-		]),
+		adapters: options.researchWriteAdapterRegistry?.() ?? createDefaultResearchWriteRegistry(),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "writes.json"),
 			storageId: "agent-research-writes",
