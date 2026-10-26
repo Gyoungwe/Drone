@@ -12,10 +12,18 @@ test("knowledge host contracts are standalone and structurally usable by a provi
 	const source = `
 import type {
   BackgroundReviewRequest,
+  DailyIdea,
   DeliverableReviewFinding,
   ExperienceStorePort,
+  MemoryNoteInput,
   TerminalJobExperienceInput,
 } from "@gyoungwe/plugin-api/knowledge";
+const idea: DailyIdea = {
+  title: "idea", idea: "try", basis: ["Library/a.md"], test: "run", whyOverlooked: "new",
+};
+const memory: MemoryNoteInput = {
+  id: 1, kind: "observation", title: "memory", body: "body", createdAt: 1,
+};
 const input: TerminalJobExperienceInput = {
   jobId: "job-1", summary: "ok", outcome: "success", observationId: "obs-1",
   provenance: { observationId: "obs-1" },
@@ -41,7 +49,7 @@ const finding: DeliverableReviewFinding = {
   suggestion: "check",
   handled: false,
 };
-void input; void store; void request; void finding;
+void input; void store; void request; void finding; void idea; void memory;
 `;
 	const options = {
 		target: ts.ScriptTarget.ES2022,

@@ -13,7 +13,12 @@ import {
 	type KnowledgeWorkerLifecycleEvent,
 	type KnowledgeWorkerMetadata,
 } from "@gyoungwe/pi-knowledge/host";
-import type { ExperienceStorePort, TerminalJobExperienceInput } from "@gyoungwe/plugin-api/knowledge";
+import type {
+	DailyIdea,
+	ExperienceStorePort,
+	MemoryNoteInput,
+	TerminalJobExperienceInput,
+} from "@gyoungwe/plugin-api/knowledge";
 import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoader } from "../research-host";
 import type { DailyDiscoveryOperations } from "../services/daily-discovery";
 import type { BackgroundReviewerFactory, BackgroundReviewerPort } from "../services/deliverable-reviewer";
@@ -443,7 +448,7 @@ export interface KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
-	saveIdea(idea: import("@gyoungwe/pi-knowledge/host").DailyIdea): Promise<{ path: string }>;
+	saveIdea(idea: DailyIdea): Promise<{ path: string }>;
 	/** 记忆注入用的相关知识条目（复用知识库索引与语义向量）。 */
 	relatedForMemory(
 		cwd: string,
@@ -451,10 +456,7 @@ export interface KnowledgeUiServicePort {
 		limit?: number,
 	): Promise<Array<{ path: string; title: string; text: string }>>;
 	/** 观察记忆沉淀为本项目知识库「记忆」笔记。 */
-	saveMemory(
-		cwd: string,
-		memory: import("@gyoungwe/pi-knowledge/host").MemoryNoteInput,
-	): Promise<{ path: string }>;
+	saveMemory(cwd: string, memory: MemoryNoteInput): Promise<{ path: string }>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -752,7 +754,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext> {
 		return this.call("dailyDiscoveryContext", { sinceMs });
 	}
-	saveIdea(idea: import("@gyoungwe/pi-knowledge/host").DailyIdea): Promise<{ path: string }> {
+	saveIdea(idea: DailyIdea): Promise<{ path: string }> {
 		return this.call("saveDiscoveryIdea", { idea });
 	}
 	relatedForMemory(
@@ -762,10 +764,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	): Promise<Array<{ path: string; title: string; text: string }>> {
 		return this.call("memoryRelatedKnowledge", { cwd, query, limit });
 	}
-	saveMemory(
-		cwd: string,
-		memory: import("@gyoungwe/pi-knowledge/host").MemoryNoteInput,
-	): Promise<{ path: string }> {
+	saveMemory(cwd: string, memory: MemoryNoteInput): Promise<{ path: string }> {
 		return this.call("saveMemoryNote", { cwd, memory });
 	}
 	topics(

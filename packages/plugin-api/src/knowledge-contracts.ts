@@ -9,6 +9,25 @@
 export type ExperienceStatus = "observed" | "verified";
 export type ExperienceOutcome = "success" | "failure" | "blocked" | "unknown";
 
+/** Host-neutral payloads transported by daily discovery and memory-note seams. */
+export interface DailyIdea {
+	title: string;
+	idea: string;
+	basis: readonly string[];
+	test: string;
+	whyOverlooked: string;
+}
+
+export interface MemoryNoteInput {
+	id: number;
+	kind: string;
+	title: string;
+	body: string;
+	sessionId?: string;
+	createdAt: number;
+	files?: readonly string[];
+}
+
 export interface ExperienceArtifact {
 	path?: string;
 	sha256: string;
