@@ -3,12 +3,27 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type PluginCapabilityContext, type PluginRuntimeSource, StorageRegistry } from "@drone/backend";
+import {
+	type PluginCapabilityContext,
+	type PluginRuntimeSource,
+	StorageRegistry,
+	setReplyLanguage,
+} from "@drone/backend";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("electron", () => ({ app: {}, BrowserWindow: {}, dialog: {}, webContents: {} }));
+const desktop = vi.hoisted(() => ({
+	showMessageBox: vi.fn(),
+	contents: { isDestroyed: vi.fn(() => false) },
+	window: {},
+}));
+vi.mock("electron", () => ({
+	app: {},
+	BrowserWindow: { fromWebContents: () => desktop.window },
+	dialog: { showMessageBox: desktop.showMessageBox },
+	webContents: { fromId: () => desktop.contents },
+}));
 
-import { createDesktopResourceCapabilities } from "./runtime-host";
+import { approveDesktopRuntime, createDesktopResourceCapabilities } from "./runtime-host";
 
 let root: string;
 let profile: string;
@@ -36,6 +51,9 @@ const context = (signal: AbortSignal): PluginCapabilityContext => ({
 });
 
 beforeEach(async () => {
+	setReplyLanguage("en");
+	desktop.showMessageBox.mockReset();
+	desktop.contents.isDestroyed.mockReturnValue(false);
 	root = await mkdtemp(join(tmpdir(), "drone-runtime-access-"));
 	profile = join(root, "profile");
 	state = join(root, "selected-state");
@@ -49,6 +67,7 @@ beforeEach(async () => {
 	};
 });
 afterEach(async () => {
+	setReplyLanguage("en");
 	await rm(root, { recursive: true, force: true });
 });
 
@@ -66,14 +85,18 @@ describe("desktop activation directory grants", () => {
 		expect(await readdir(profile)).toEqual([]);
 	});
 
-	for (const canceled of ["state", "state-write", "files"] as const) {
+	for (const canceled of ["state", "state-write", "files", "files-write"] as const) {
 		it(`rejects a canceled ${canceled} selection without initializing resources`, async () => {
-			const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files") =>
+			const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files" | "files-write") =>
 				kind === canceled ? [] : [state],
 			);
 			await expect(
 				createDesktopResourceCapabilities(
-					{ ...source, requestsStateWrite: canceled === "state-write" },
+					{
+						...source,
+						requestsStateWrite: canceled === "state-write",
+						requestsFileWrite: canceled === "files-write",
+					},
 					root,
 					{
 						profileDirectory: profile,
@@ -114,7 +137,7 @@ describe("desktop activation directory grants", () => {
 		await writeFile(join(data, "note.md"), "selected data");
 		const alias = join(root, "data-alias");
 		await symlink(data, alias);
-		const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files") =>
+		const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files" | "files-write") =>
 			kind === "state" ? [state] : [alias, data],
 		);
 		const provider = createDesktopResourceCapabilities(source, root, {
@@ -163,7 +186,7 @@ describe("desktop activation directory grants", () => {
 
 	it("requires the explicit write picker and registers the selected private state before writing", async () => {
 		const storage = new StorageRegistry();
-		const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files") => [
+		const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files" | "files-write") => [
 			kind === "state-write" ? state : data,
 		]);
 		const current = activation();
@@ -203,6 +226,57 @@ describe("desktop activation directory grants", () => {
 		await ports.dispose?.();
 	});
 
+	it("grants text writes only for the separately selected files-write directory", async () => {
+		const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files" | "files-write") => [
+			kind === "files-write" ? data : state,
+		]);
+		const current = activation();
+		const ports = await createDesktopResourceCapabilities({ ...source, requestsFileWrite: true }, root, {
+			profileDirectory: profile,
+			storage: new StorageRegistry(),
+			selectDirectories,
+		})(current);
+		expect(selectDirectories.mock.calls.map(([kind]) => kind)).toEqual(["state", "files-write"]);
+		const stateRoot = ports.resources.find((entry) => entry.kind === "state")!;
+		const fileRoot = ports.resources.find((entry) => entry.kind === "files")!;
+		expect(stateRoot.access).toBe("read");
+		expect(fileRoot.access).toBe("read-write");
+		const input = { root: fileRoot.handle, path: "proposal.md", text: "# Proposed note", expectedHash: null };
+		const detail = ports.handlers["files.writeText"]!.approvalDetail!(input);
+		expect(detail).toContain(`Authorized directory: ${JSON.stringify(await realpath(data))}`);
+		expect(detail).toContain('Root-relative path: "proposal.md"');
+		expect(detail).toContain("expectedHash: null");
+		expect(detail).toContain(input.text);
+		expect(detail).toContain("target must be absent");
+		const written = await ports.handlers["files.writeText"]!.execute(input, context(current.signal));
+		expect(written).toMatchObject({
+			text: input.text,
+			sha256: createHash("sha256").update(input.text).digest("hex"),
+		});
+		const remove = ports.handlers["files.remove"]!.approvalDetail!({
+			root: fileRoot.handle,
+			path: input.path,
+			expectedHash: createHash("sha256").update(input.text).digest("hex"),
+		});
+		expect(remove).toContain("Remove file");
+		expect(remove).toContain(`expectedHash: "${createHash("sha256").update(input.text).digest("hex")}"`);
+		expect(
+			ports.handlers["files.ensureDirectory"]!.approvalDetail!({ root: fileRoot.handle, path: "nested" }),
+		).toContain("Create directory");
+		expect(() =>
+			ports.handlers["state.writeJson"]!.approvalDetail!({
+				root: stateRoot.handle,
+				path: "policy.json",
+				expectedVersion: null,
+				value: {},
+			}),
+		).toThrow("not granted");
+		expect(() =>
+			ports.handlers["files.writeText"]!.approvalDetail!({ ...input, root: stateRoot.handle }),
+		).toThrow("not granted");
+		await ports.dispose?.();
+	});
+
 	it("rejects a private-cache symlink before creating anything in the outside directory", async () => {
 		const outside = join(root, "outside");
 		await mkdir(outside);
@@ -215,5 +289,111 @@ describe("desktop activation directory grants", () => {
 			})(activation()),
 		).rejects.toThrow("inside the host profile");
 		expect(await readdir(outside)).toEqual([]);
+	});
+});
+
+describe("desktop write approval details", () => {
+	async function writablePorts() {
+		return createDesktopResourceCapabilities({ ...source, requestsStateWrite: true }, root, {
+			profileDirectory: profile,
+			storage: new StorageRegistry(),
+			selectDirectories: async (kind) => [kind === "state-write" ? state : data],
+		})(activation());
+	}
+
+	it("shows the selected canonical root, relative target, CAS version and complete JSON before approval", async () => {
+		const ports = await writablePorts();
+		const handle = ports.resources.find((entry) => entry.kind === "state")!.handle;
+		const input = {
+			root: handle,
+			path: "policy.json",
+			expectedVersion: "a".repeat(64),
+			value: { mode: "strict", claimedDirectory: "/unselected/path" },
+		};
+		const detail = ports.handlers["state.writeJson"]!.approvalDetail!(input);
+		expect(detail).toContain(`Authorized directory: ${JSON.stringify(await realpath(state))}`);
+		expect(detail).toContain('Root-relative path: "policy.json"');
+		expect(detail).toContain(`expectedVersion: "${"a".repeat(64)}"`);
+		expect(detail).toContain(JSON.stringify(input.value, null, 2));
+		expect(detail).toContain("complete proposed content");
+		expect(detail).not.toContain('Authorized directory: "/unselected/path"');
+		desktop.showMessageBox.mockResolvedValue({ response: 0 });
+		expect(
+			await approveDesktopRuntime(
+				{ id: 1, isDestroyed: () => false },
+				source,
+				"capability:state.writeJson",
+				detail,
+			),
+		).toBe(false);
+		expect(desktop.showMessageBox).toHaveBeenCalledWith(
+			desktop.window,
+			expect.objectContaining({ detail, defaultId: 0, cancelId: 0 }),
+		);
+		expect(await readdir(state)).toEqual([]);
+		await ports.dispose?.();
+	});
+
+	it("bounds large content honestly and does not grant a root from another activation", async () => {
+		const ports = await writablePorts();
+		const other = await writablePorts();
+		const handle = ports.resources.find((entry) => entry.kind === "state")!.handle;
+		const input = {
+			root: handle,
+			path: "large.json",
+			expectedVersion: null,
+			value: { text: `${"x".repeat(5000)}HIDDEN-END` },
+		};
+		const detail = ports.handlers["state.writeJson"]!.approvalDetail!(input);
+		expect(detail).toContain("first 4000");
+		expect(detail).toContain("full content is not displayed");
+		expect(detail).toContain("Deny if this is insufficient");
+		expect(detail).not.toContain("HIDDEN-END");
+		expect(detail).not.toContain("complete proposed content");
+		expect(detail).toContain("target must be absent");
+		expect(() => other.handlers["state.writeJson"]!.approvalDetail!(input)).toThrow("not granted");
+		await ports.dispose?.();
+		await other.dispose?.();
+	});
+
+	it("distinguishes deletion from directory creation without pretending their contents were displayed", async () => {
+		const ports = await writablePorts();
+		const handle = ports.resources.find((entry) => entry.kind === "state")!.handle;
+		const remove = ports.handlers["state.removeJson"]!.approvalDetail!({
+			root: handle,
+			path: "pending.json",
+			expectedVersion: "b".repeat(64),
+		});
+		expect(remove).toContain("Remove file");
+		expect(remove).toContain(`expectedVersion: "${"b".repeat(64)}"`);
+		expect(remove).toContain("does not display the file's contents");
+		const directory = ports.handlers["state.ensureDirectory"]!.approvalDetail!({
+			root: handle,
+			path: "nested/state",
+		});
+		expect(directory).toContain("Create directory (preserve existing directory)");
+		expect(directory).toContain('Root-relative path: "nested/state"');
+		expect(directory).not.toContain("expectedVersion");
+		setReplyLanguage("zh");
+		expect(
+			ports.handlers["state.writeJson"]!.approvalDetail!({
+				root: handle,
+				path: "policy.json",
+				expectedVersion: null,
+				value: {},
+			}),
+		).toContain("以上为拟写入内容全文");
+		await ports.dispose?.();
+	});
+
+	it("requires an explicit Allow and still rejects a window closed during the dialog", async () => {
+		desktop.showMessageBox.mockResolvedValue({ response: 1 });
+		const owner = { id: 1, isDestroyed: () => false };
+		expect(await approveDesktopRuntime(owner, source, "write", "Host-resolved target")).toBe(true);
+		desktop.showMessageBox.mockImplementation(async () => {
+			desktop.contents.isDestroyed.mockReturnValue(true);
+			return { response: 1 };
+		});
+		expect(await approveDesktopRuntime(owner, source, "write", "Host-resolved target")).toBe(false);
 	});
 });
