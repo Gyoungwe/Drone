@@ -1,5 +1,5 @@
 import { mkdir, stat, writeFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { extname, join, resolve } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
 import { createDefaultResearchWriteAdapters, ResearchWriteAdapterRegistry } from "@drone/research";
 import type {
@@ -65,7 +65,11 @@ import {
 	type ComputeExperienceRecorder,
 	createComputeExperienceRecorder,
 } from "./services/compute-experience";
-import { completionText, DailyDiscoveryService } from "./services/daily-discovery";
+import {
+	completionText,
+	type DailyDiscoveryOptions,
+	DailyDiscoveryService,
+} from "./services/daily-discovery";
 import { type InquiryDecisionEvent, InquiryService, type InquiryServicePort } from "./services/inquiry";
 import {
 	computeInquiryMetadata,
@@ -73,7 +77,10 @@ import {
 	createInquiryComputeRerunCompletion,
 } from "./services/inquiry-compute";
 import type { InstitutionalServicePort } from "./services/institutional";
-import { KnowledgeMaintenanceService } from "./services/knowledge-maintenance";
+import {
+	type KnowledgeMaintenanceOptions,
+	KnowledgeMaintenanceService,
+} from "./services/knowledge-maintenance";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import { LocalExecutionRecorder } from "./services/local-execution";
 import type { PackageServicePort } from "./services/packages";
@@ -236,6 +243,10 @@ export interface BackendServices {
 export interface BackendOptions extends SessionServiceOptions {
 	/** false 时不启动每日发现的定时检查（测试或无知识库宿主）；服务本身仍可手动运行 */
 	dailyDiscovery?: boolean;
+	/** Optional domain provider seam; the default keeps the current host implementation. */
+	dailyDiscoveryFactory?: (options: DailyDiscoveryOptions) => DailyDiscoveryService;
+	/** Optional domain provider seam; the default keeps the current host implementation. */
+	knowledgeMaintenanceFactory?: (options: KnowledgeMaintenanceOptions) => KnowledgeMaintenanceService;
 	/** Inject the renderer-facing host adapter without coupling the composition root to SSH details. */
 	compute?: ComputeHostAdapter;
 	/** Optional runner used by tests or a host-specific transport integration. */
@@ -551,7 +562,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	}
 	void computeAdapter.init?.();
 	void discovery.init();
-	const dailyDiscovery = new DailyDiscoveryService({
+	const dailyDiscoveryOptions: DailyDiscoveryOptions = {
 		path: join(getAgentDir(), "daily-discovery.json"),
 		context: async (sinceMs) => {
 			const base = await sessions.knowledge.dailyContext(sinceMs);
@@ -624,9 +635,12 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			);
 			return completionText(response);
 		},
-	});
+	};
+	const dailyDiscovery = options.dailyDiscoveryFactory
+		? options.dailyDiscoveryFactory(dailyDiscoveryOptions)
+		: new DailyDiscoveryService(dailyDiscoveryOptions);
 	if (options.dailyDiscovery !== false) dailyDiscovery.start();
-	const knowledgeMaintenance = new KnowledgeMaintenanceService({
+	const knowledgeMaintenanceOptions: KnowledgeMaintenanceOptions = {
 		path: join(getAgentDir(), "knowledge-maintenance.json"),
 		readOverview: (cwd) => sessions.knowledge.overview({ cwd }),
 		readGraph: (_cwd, revision) =>
@@ -674,13 +688,29 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			);
 			return completionText(response) ?? "";
 		},
-	});
+	};
+	const knowledgeMaintenance = options.knowledgeMaintenanceFactory
+		? options.knowledgeMaintenanceFactory(knowledgeMaintenanceOptions)
+		: new KnowledgeMaintenanceService(knowledgeMaintenanceOptions);
 	const onKnowledgeDeposited = (payload: unknown) => {
 		if (!payload || typeof payload !== "object" || typeof (payload as { cwd?: unknown }).cwd !== "string")
 			return;
 		knowledgeMaintenance.notifyContentChanged((payload as { cwd: string }).cwd);
 	};
-	process.on("drone:knowledge-deposited/v1", onKnowledgeDeposited);
+	const detachKnowledgeDeposited = runtime.events.on("drone:knowledge-deposited/v1", onKnowledgeDeposited);
+	// Legacy packaged extensions still announce Vault writes through process.emit.
+	// Keep this bridge deliberately thin: business handling lives on the runtime
+	// event bus, and the process listener is removed with this backend instance.
+	const defaultCwd = resolve(options.defaultCwd ?? process.cwd());
+	const forwardLegacyKnowledgeDeposited = (payload: unknown) => {
+		if (!payload || typeof payload !== "object" || typeof (payload as { cwd?: unknown }).cwd !== "string")
+			return;
+		const cwd = resolve((payload as { cwd: string }).cwd);
+		const boundToBackend =
+			cwd === defaultCwd || sessions.registry.list().some((entry) => resolve(entry.cwd) === cwd);
+		if (boundToBackend) runtime.events.emit("drone:knowledge-deposited/v1", payload);
+	};
+	process.on("drone:knowledge-deposited/v1", forwardLegacyKnowledgeDeposited);
 	if (options.dailyDiscovery !== false) knowledgeMaintenance.start(options.defaultCwd ?? process.cwd());
 	const diagnostics: DiagnosticsServicePort = {
 		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
@@ -799,7 +829,8 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		dispose: async () => {
 			dailyDiscovery.dispose();
 			knowledgeMaintenance.dispose();
-			process.off("drone:knowledge-deposited/v1", onKnowledgeDeposited);
+			detachKnowledgeDeposited();
+			process.off("drone:knowledge-deposited/v1", forwardLegacyKnowledgeDeposited);
 			detachInquiryComputeEvents();
 			await sessions.dispose();
 			await compute.dispose();

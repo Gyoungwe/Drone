@@ -80,6 +80,13 @@ export interface RuntimeDisposable {
 	close?(): Promise<void> | void;
 }
 
+/** Instance-scoped event transport for host/plugin lifecycle notifications. */
+export interface RuntimeEventBus {
+	on<T = unknown>(event: string, handler: (payload: T) => void): () => void;
+	emit<T = unknown>(event: string, payload: T): void;
+	clear(): void;
+}
+
 /** Stable labels retained for migration callers; mutable state is runtime-owned. */
 export const DRONE_KNOWLEDGE_PUBLICATION_KEY = "drone.knowledge.publication.v1";
 export const DRONE_TOOL_MANIFEST_KEY = "drone.tool-manifest.v1";
@@ -96,6 +103,7 @@ export interface DroneRuntime {
 	knowledge: KnowledgeRuntime;
 	tasks: TaskRuntime;
 	compute?: ComputeRuntime;
+	events: RuntimeEventBus;
 	tools: ToolManifestRegistry;
 	scheduler: KeyedLocks;
 	log: Logger;

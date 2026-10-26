@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createBackend } from "./create-backend";
 import { createDroneRuntime } from "./runtime";
+import type { DailyDiscoveryService } from "./services/daily-discovery";
+import type { KnowledgeMaintenanceService } from "./services/knowledge-maintenance";
 
 describe("createBackend", () => {
 	it("assembles domain service groups outside the session port", () => {
@@ -99,6 +101,81 @@ describe("createBackend", () => {
 		const services = createBackend({ runtime, projectTrust: false, permissionGates: false });
 		expect(services.runtime).toBe(runtime);
 		services.dispose();
+	});
+
+	it("supports provider factories without changing default activation", () => {
+		let dailyFactoryCalled = false;
+		let maintenanceFactoryCalled = false;
+		let dailyStarted = false;
+		let maintenanceStarted = false;
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			dailyDiscoveryFactory: (options) => {
+				dailyFactoryCalled = options.path.endsWith("daily-discovery.json");
+				return {
+					start: () => {
+						dailyStarted = true;
+					},
+					dispose: () => {},
+				} as unknown as DailyDiscoveryService;
+			},
+			knowledgeMaintenanceFactory: (options) => {
+				maintenanceFactoryCalled = options.path.endsWith("knowledge-maintenance.json");
+				return {
+					start: () => {
+						maintenanceStarted = true;
+					},
+					dispose: () => {},
+				} as unknown as KnowledgeMaintenanceService;
+			},
+		});
+		expect(dailyFactoryCalled).toBe(true);
+		expect(maintenanceFactoryCalled).toBe(true);
+		expect(dailyStarted).toBe(true);
+		expect(maintenanceStarted).toBe(true);
+		services.dispose();
+	});
+
+	it("routes legacy knowledge events only to the matching backend", async () => {
+		const firstEvents: string[] = [];
+		const secondEvents: string[] = [];
+		const first = createBackend({
+			defaultCwd: "/tmp/drone-runtime-first",
+			dailyDiscovery: false,
+			projectTrust: false,
+			permissionGates: false,
+			knowledgeMaintenanceFactory: () =>
+				({
+					notifyContentChanged: (cwd: string) => firstEvents.push(cwd),
+					start: () => {},
+					dispose: () => {},
+				}) as unknown as KnowledgeMaintenanceService,
+		});
+		const second = createBackend({
+			defaultCwd: "/tmp/drone-runtime-second",
+			dailyDiscovery: false,
+			projectTrust: false,
+			permissionGates: false,
+			knowledgeMaintenanceFactory: () =>
+				({
+					notifyContentChanged: (cwd: string) => secondEvents.push(cwd),
+					start: () => {},
+					dispose: () => {},
+				}) as unknown as KnowledgeMaintenanceService,
+		});
+		const emit = (cwd: string) =>
+			(process as unknown as { emit(event: string, payload: unknown): boolean }).emit(
+				"drone:knowledge-deposited/v1",
+				{ cwd },
+			);
+
+		emit("/tmp/drone-runtime-first");
+		emit("/tmp/drone-runtime-second");
+		expect(firstEvents).toEqual(["/tmp/drone-runtime-first"]);
+		expect(secondEvents).toEqual(["/tmp/drone-runtime-second"]);
+		await first.dispose();
+		await second.dispose();
 	});
 
 	it("composes a declared analysis/evidence host into the durable service", async () => {
