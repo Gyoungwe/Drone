@@ -29,6 +29,18 @@ genericSession: 01a1797f-cbfa-71b0-8e47-90c617a96539
 checks: workbench/preload, empty optional UI root and Pi managed npm root, unbound knowledge, semantic/topic IPC, research commands, generic session create/close, empty auth/model stores
 ```
 
+The repeatable receipt now includes an explicit lifecycle section:
+
+```json
+{
+  "status": "NOT_RUN",
+  "operations": ["install", "disable", "restore", "upgrade", "rollback", "destroy-failure"],
+  "reason": "A packaged lifecycle run needs an explicitly selected package source and authorized upgrade/rollback fixture; this zero-plugin smoke does not mutate package state."
+}
+```
+
+This prevents the zero-plugin PASS from being interpreted as an install/disable/upgrade/rollback result.
+
 This strengthens the zero-plugin host receipt to include a no-model generic session lifecycle. It still does not prove an actual model response, plugin install/disable/reload, package upgrade/rollback, or failed process destruction.
 
 This proves the packaged host starts with an empty optional UI profile. It does not prove a signed release, a live model call, a package upgrade/rollback, or process-destruction failure handling; those remain separate acceptance items.

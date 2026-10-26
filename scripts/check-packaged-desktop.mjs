@@ -61,6 +61,15 @@ const report = {
 	root,
 	checks: [],
 	liveModel: false,
+	// This smoke intentionally starts with no optional package source.  Keep the
+	// lifecycle acceptance state explicit so a zero-plugin PASS cannot be read as
+	// proof of install/disable/upgrade/rollback behavior.
+	lifecycleAcceptance: {
+		status: "NOT_RUN",
+		operations: ["install", "disable", "restore", "upgrade", "rollback", "destroy-failure"],
+		reason:
+			"A packaged lifecycle run needs an explicitly selected package source and authorized upgrade/rollback fixture; this zero-plugin smoke does not mutate package state.",
+	},
 	startedAt: new Date().toISOString(),
 };
 let socket;
