@@ -35,6 +35,7 @@ import {
 import { JsonStore } from "./json-store";
 import {
 	configureBackendKnowledgeWorker,
+	createKnowledgeMaintenanceOperations,
 	createKnowledgeReadProvider,
 	type KnowledgeHostPort,
 	KnowledgeUiService,
@@ -326,20 +327,15 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	let listComputeHosts: (() => Promise<ComputeHost[]>) | null = null;
 	const memory = new MemoryStore(join(getAgentDir(), "memory", "memory.db"));
 	runtime.registerDisposable?.({ dispose: () => memory.close() });
+	const knowledgeHost = options.knowledgeHostLoader?.load() as KnowledgeHostPort | undefined;
 	const knowledgeFactory =
 		options.knowledgeFactory ??
 		(options.knowledgeHostLoader || options.researchHostLoader
 			? () =>
-					(() => {
-						const knowledgeHost = options.knowledgeHostLoader?.load() as KnowledgeHostPort | undefined;
-						return new KnowledgeUiService(
-							knowledgeHost ? createKnowledgeReadProvider(knowledgeHost) : undefined,
-							{
-								...(knowledgeHost ? { knowledgeHost } : {}),
-								...(options.researchHostLoader ? { researchHostLoader: options.researchHostLoader } : {}),
-							},
-						);
-					})()
+					new KnowledgeUiService(knowledgeHost ? createKnowledgeReadProvider(knowledgeHost) : undefined, {
+						...(knowledgeHost ? { knowledgeHost } : {}),
+						...(options.researchHostLoader ? { researchHostLoader: options.researchHostLoader } : {}),
+					})
 			: undefined);
 	const sessions = new SessionService({
 		...options,
@@ -676,6 +672,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	if (options.dailyDiscovery !== false) dailyDiscovery.start();
 	const knowledgeMaintenanceOptions: KnowledgeMaintenanceOptions = {
 		path: join(getAgentDir(), "knowledge-maintenance.json"),
+		maintenance: createKnowledgeMaintenanceOperations(knowledgeHost),
 		readOverview: (cwd) => sessions.knowledge.overview({ cwd }),
 		readGraph: (_cwd, revision) =>
 			sessions.knowledge.graph({ revision, limit: 5000, view: "all", mergeMirrors: false }),

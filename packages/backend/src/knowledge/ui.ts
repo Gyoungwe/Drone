@@ -16,6 +16,7 @@ import {
 	type KnowledgeWorkerMetadata,
 } from "@gyoungwe/pi-knowledge/host";
 import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoader } from "../research-host";
+import type { KnowledgeMaintenanceOperations } from "../services/knowledge-maintenance";
 import { KnowledgeWebDavService } from "./webdav";
 
 type Handler = (event: KnowledgeUiEvent) => void;
@@ -31,6 +32,9 @@ export interface KnowledgeHostPort {
 	reviews?(input: unknown): Promise<unknown>;
 	preview?(input: unknown): Promise<unknown>;
 	decide?(input: unknown): Promise<unknown>;
+	/** Optional maintenance implementation supplied by the installed package. */
+	planMaintenance?: KnowledgeMaintenanceOperations["planMaintenance"];
+	runMaintenance?: KnowledgeMaintenanceOperations["runMaintenance"];
 }
 
 /**
@@ -76,6 +80,17 @@ export function createKnowledgeReadProvider(host?: KnowledgeHostPort): Knowledge
 		read,
 		noteLinks,
 		graph,
+	};
+}
+
+/** Keep maintenance domain code behind the same discovered host seam as reads/writes. */
+export function createKnowledgeMaintenanceOperations(
+	host?: KnowledgeHostPort,
+): KnowledgeMaintenanceOperations {
+	const source = host ?? ({} as KnowledgeHostPort);
+	return {
+		planMaintenance: source.planMaintenance ?? knowledgeUiService.planMaintenance,
+		runMaintenance: source.runMaintenance ?? knowledgeUiService.runMaintenance,
 	};
 }
 

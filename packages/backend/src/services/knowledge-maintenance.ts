@@ -1,5 +1,4 @@
 import type { KnowledgeMaintenanceRun, KnowledgeMaintenanceSettings } from "@drone/shared";
-import { type MaintenanceItem, planMaintenance, runMaintenance } from "@gyoungwe/pi-knowledge/host";
 import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
 
@@ -7,6 +6,50 @@ const log = createLogger("knowledge-maintenance");
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const CONTENT_DEBOUNCE_MS = 10 * 60 * 1000;
+
+export interface KnowledgeMaintenanceItem {
+	readonly id: string;
+	readonly kind: "missing-topic" | "source-changed" | "orphan" | "unlinked";
+	readonly path: string;
+	readonly title?: string;
+	readonly detail?: string;
+}
+
+export interface KnowledgeMaintenanceRunPorts {
+	readonly readNote: (path: string) => Promise<{
+		title?: string;
+		markdown: string;
+		sourceMarkdown?: string;
+		exists?: boolean;
+	}>;
+	readonly complete: (prompt: string, model?: string | null) => Promise<string>;
+	readonly model?: string | null;
+	readonly setTopic: (path: string, topic: string) => Promise<void>;
+	readonly proposeWiki: (item: KnowledgeMaintenanceItem, proposal: Record<string, unknown>) => Promise<void>;
+	readonly validateWikiLinks?: (proposal: Record<string, unknown>) => Promise<void>;
+	readonly budget?: { readonly modelCalls: number };
+	readonly signal?: AbortSignal;
+}
+
+export interface KnowledgeMaintenanceRunResult {
+	readonly startedAt: string;
+	readonly processed: number;
+	readonly modelCalls: number;
+	readonly items: readonly { id: string; kind: string; status: string; reason?: string }[];
+}
+
+/** Domain implementation supplied by the installed knowledge package. */
+export interface KnowledgeMaintenanceOperations {
+	planMaintenance(
+		status: unknown,
+		graph: unknown,
+		settings: KnowledgeMaintenanceSettings,
+	): KnowledgeMaintenanceItem[];
+	runMaintenance(
+		items: readonly KnowledgeMaintenanceItem[],
+		ports: KnowledgeMaintenanceRunPorts,
+	): Promise<KnowledgeMaintenanceRunResult>;
+}
 
 interface StoredState {
 	version: 1;
@@ -22,6 +65,7 @@ const defaults = (): StoredState => ({
 
 export interface KnowledgeMaintenanceOptions {
 	path: string;
+	maintenance: KnowledgeMaintenanceOperations;
 	readOverview: (cwd: string) => Promise<any>;
 	readGraph?: (cwd: string, revision: number) => Promise<any>;
 	readNote: (cwd: string, path: string, revision: number) => Promise<any>;
@@ -29,7 +73,7 @@ export interface KnowledgeMaintenanceOptions {
 	setTopic?: (cwd: string, path: string, topic: string, revision: number) => Promise<void>;
 	proposeWiki?: (
 		cwd: string,
-		item: MaintenanceItem,
+		item: KnowledgeMaintenanceItem,
 		proposal: Record<string, unknown>,
 		revision: number,
 	) => Promise<void>;
@@ -112,13 +156,13 @@ export class KnowledgeMaintenanceService {
 		const overview = await this.options.readOverview(cwd);
 		const revision = Number(overview?.binding?.revision || overview?.index?.revision || 1);
 		const graph = this.options.readGraph ? await this.options.readGraph(cwd, revision) : overview?.graph;
-		const items = planMaintenance(null, graph, settings);
+		const items = this.options.maintenance.planMaintenance(null, graph, settings);
 		const today = new Date().toISOString().slice(0, 10);
 		const usedToday = state.runs
 			.filter((run) => run.startedAt.slice(0, 10) === today)
 			.reduce((total, run) => total + run.modelCalls, 0);
 		const remainingBudget = Math.max(0, settings.dailyLimit - usedToday);
-		const result = await runMaintenance(items, {
+		const result = await this.options.maintenance.runMaintenance(items, {
 			readNote: async (path) => {
 				const note = await this.options.readNote(cwd, path, revision);
 				return {
