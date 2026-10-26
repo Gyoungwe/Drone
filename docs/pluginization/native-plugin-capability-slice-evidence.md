@@ -74,6 +74,7 @@
 - P3/P6 `ad00d14c` 将研究写入 adapter 的执行上下文、adapter 和 registry 合同发布到 `@drone/shared`；`ResearchWriteService` 仅接收宿主注入 registry，删除 `@drone/research` runtime import，研究包保留兼容 re-export。shared/research/backend typecheck、5 项 research-write 回归与 Biome 通过；真实外部写入仍未验收。
 - P3/P6 `c2b4c95f`/`6043b667` 将 research write 与 connector registry 从 `create-backend` 改为可注入的 host-neutral seam；默认 Desktop 组合移入显式 compatibility composition，宿主组合根不再直接 runtime import `@drone/research`。`52ced198` 补充 connector registry 注入回归；create-backend 注入测试、backend typecheck 与 Biome 通过；compat 文件仍保留默认实现，待安装 connector loader 接管后删除。
 - P3/P6 `67543fbf` 将 `ResearchResourceService` 改为只依赖注入的 connector registry，删除其 `@drone/research` runtime import；connector search/recommend 行为由组合根或已安装 connector 提供，研究资源回归与 Biome 通过。
+- P4/P6 `0fadba87` 发布版本化 `@gyoungwe/pi-core/host` host entry，`project/memory.ts` 不再直达 pi-core 根 memory 实现；pi-core build/check、12 项 pi-core 测试、backend project-memory 2 项回归、host-independence 与 `npm pack --dry-run` 均通过，包内包含 `dist/host.mjs`。该切片只收敛历史兼容门面的入口，不代表 pi-core 运行时依赖、任务状态机或正式安装包迁移完成；native boundary 仍保持 `INCOMPLETE`（runtime-import 11）。
 - P4/P6 `ae3434dd` 将 backend 对 `@drone/tasks` 的依赖降为 devDependency，门禁回归确认开发依赖不计入宿主运行时领域依赖；backend typecheck 与 `check:arch` 通过，任务状态机和 workbench 运行时仍未迁移。
 - P2 `8619c135` 将 knowledge semantic settings/index 的 5 个 UI 操作改为 `KnowledgeHostPort.semantic` 注入；无 knowledge 插件时显式返回 unavailable，不伪造成功；host routing/no-plugin regressions、Biome 与 create-backend unit tests 通过。
 - P7 `7daf6a13` 在实际 arm64 `Drone.app` 隔离 profile 中真实安装 `@gyoungwe/pi-evidence@0.1.1`，回执为 `staged → verified → enabled`；随后真实移除并回读为 `disabled → drained → disabled`，包目录与配置均消失。零插件/generic session 仍通过；restore/reload、upgrade、rollback、destroy-failure 和同 tarball GUI 仍 `NOT_RUN`。
@@ -96,6 +97,7 @@
 - 最新宿主五门禁（`837d1594`、`ad00d14c`、`ae3434dd`、`67543fbf`、`c2b4c95f`、`6043b667` 后）复跑全部通过：`npm run lint`、`npm run typecheck`、`npm test`（254 个 backend 文件/2049 项通过、18 项跳过；desktop 165 个文件/903 项通过）、`npm run build`、`npm run check:arch` 均退出码 0；最新 `check:native-plugin-boundary` 仍为 `INCOMPLETE`，domain-runtime-import 11、domain-type-import 14，compat 组合仍是保留的迁移依赖，生成的 `packages/pi-core/build-manifest.json` 已恢复到提交值。
 - 宿主 `bcbc4e07` 将根 devDependency 对齐到 `plugins.lock.json` 与公开版本（`pi-knowledge@0.2.1`、`pi-research@0.2.0`）；干净 `npm ci` 后 `npm ls` 无版本漂移，随后 `aa1d63d6` 的夹具修复使全量测试恢复通过。
 - P6/P7 lifecycle guard：`packages/backend/test/packages-lifecycle.test.ts` 新增卸载无变化与更新失败回归。包管理器返回未安装或 registry 不可用时，回执保持 `failed`、不写入 `disabled`/新版本、不触发会话 reload；该切片验证了失败状态的可观察性，但不替代正式 DMG 的零插件、升级/回滚或销毁失败验收。
+- 2026-10-27：`0fadba87` 后的宿主完整门禁收口于 `/tmp/drone-host-final-gates-10.log`：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch` 全部退出码 0；pi-core host entry 的 12 项测试与 backend project-memory 2 项回归通过。插件仓库在候选 API tarball `DRONE_PLUGIN_API_TARBALL=/tmp/gyoungwe-plugin-api-1.3.0.tgz` 下完整 `npm run check` 退出码 0，研究包 26 文件/136 项测试、clean install/SDK matrix/pack checks 通过。`check:native-plugin-boundary` 仍为 `INCOMPLETE`（runtime-import 11）；P2–P7、正式 GUI 与四项外部验收保持未完成。
 
 ## 未关闭项
 
