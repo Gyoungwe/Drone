@@ -99,23 +99,47 @@
 					}
 				]
 			}
-		}
-	],
-	"unpublishedPackages": [
-		{
-			"name": "@gyoungwe/desktop-ui-pack",
-			"version": "0.2.0",
-			"status": "STAGED_NOT_APPROVED",
-			"stageId": "0c30e49b-d365-42ec-af53-4ed94dbe88c5"
 		},
 		{
 			"name": "@gyoungwe/research-suite",
 			"version": "0.1.11",
-			"status": "STAGED_AUTH_RETRY_REQUIRED",
+			"dist": {
+				"shasum": "98e51a2ea0ec16c9214776d9c1ebe78729307a52",
+				"tarball": "https://registry.npmjs.org/@gyoungwe/research-suite/-/research-suite-0.1.11.tgz",
+				"fileCount": 750,
+				"integrity": "sha512-ItAik3uP2YNSb41H+pImlPCgTkmnk1dvu4nWnVJ3VAj6/roLnZecZ5up7+jLdiBFWtkFYds5Gh2udvxdawIhGQ==",
+				"signatures": [
+					{
+						"sig": "MEUCIQCD2dQ3zJhne/EM4awH2Kq8khh1VZAtQNnjavvLFxXqKQIgap+PNhAV0GoGe5ypAFjr67hgbWBuvZB0aqyE1gmR9ag=",
+						"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+					}
+				],
+				"unpackedSize": 40769037
+			},
 			"sha256": "767c37940aa32741fe133dfc57b0a75d3597521b11fd5d32904ff3d563ef794e",
-			"stageId": "bab97837-b274-4c5a-af54-a0334c396989"
+			"matchesCandidate": true
+		},
+		{
+			"name": "@gyoungwe/desktop-ui-pack",
+			"version": "0.2.0",
+			"dist": {
+				"shasum": "f178ff9f787294f21b15aff13705e7bb086d3f7e",
+				"tarball": "https://registry.npmjs.org/@gyoungwe/desktop-ui-pack/-/desktop-ui-pack-0.2.0.tgz",
+				"fileCount": 61,
+				"integrity": "sha512-D0pQFn5hs2hcsY5QZNCQ464zA9YwBKI7L2stpB/XOoPP7YdwhD+/8XSaRwxNVbC55S93Ferh0XCFKqUuzz2g/A==",
+				"signatures": [
+					{
+						"sig": "MEYCIQChUUbq71GmFnPVTLkmy8sNgoyGzLDleZVQzCCw8P66TQIhAJ76iQET4JzkIRui/OQGIxohXoBlhLbsWgBTzj0cnyjZ",
+						"keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+					}
+				],
+				"unpackedSize": 904641
+			},
+			"sha256": "c9f468edb8eef41ca6cb7aae613eedd7040ba6be774e16295170e6dd241ddf2a",
+			"matchesCandidate": true
 		}
 	],
+	"unpublishedPackages": [],
 	"candidateSessions": {
 		"suiteSha256": "767c37940aa32741fe133dfc57b0a75d3597521b11fd5d32904ff3d563ef794e",
 		"status": "PASS",
@@ -769,20 +793,7 @@
 			"registryHttpStatus": 404
 		}
 	],
-	"latestStageReadback": [
-		{
-			"id": "bab97837-b274-4c5a-af54-a0334c396989",
-			"packageName": "@gyoungwe/research-suite",
-			"version": "0.1.11",
-			"status": "staged"
-		},
-		{
-			"id": "0c30e49b-d365-42ec-af53-4ed94dbe88c5",
-			"packageName": "@gyoungwe/desktop-ui-pack",
-			"version": "0.2.0",
-			"status": "staged"
-		}
-	],
+	"latestStageReadback": [],
 	"externalTargetFollowup": {
 		"userDelegatedTargetSelection": true,
 		"zoteroAgentStoredCredentialsPresent": false,
@@ -806,5 +817,252 @@
 		"suiteApproval": "FAILED_E404_AUTH_CALLBACK",
 		"suitePublicVersionReadback": 404,
 		"reuploadAttempted": false
+	},
+	"previousUnpublishedPackages": [
+		{
+			"name": "@gyoungwe/desktop-ui-pack",
+			"version": "0.2.0",
+			"status": "STAGED_NOT_APPROVED",
+			"stageId": "0c30e49b-d365-42ec-af53-4ed94dbe88c5"
+		},
+		{
+			"name": "@gyoungwe/research-suite",
+			"version": "0.1.11",
+			"status": "STAGED_AUTH_RETRY_REQUIRED",
+			"sha256": "767c37940aa32741fe133dfc57b0a75d3597521b11fd5d32904ff3d563ef794e",
+			"stageId": "bab97837-b274-4c5a-af54-a0334c396989"
+		}
+	],
+	"stageReadbackBeforeCompletion": [
+		{
+			"id": "bab97837-b274-4c5a-af54-a0334c396989",
+			"packageName": "@gyoungwe/research-suite",
+			"version": "0.1.11",
+			"status": "staged"
+		},
+		{
+			"id": "0c30e49b-d365-42ec-af53-4ed94dbe88c5",
+			"packageName": "@gyoungwe/desktop-ui-pack",
+			"version": "0.2.0",
+			"status": "staged"
+		}
+	],
+	"npmPublicationCompletion": {
+		"status": "PASS",
+		"allFourPublicTarballsMatchCandidates": true,
+		"suiteSessions": {
+			"suiteSha256": "767c37940aa32741fe133dfc57b0a75d3597521b11fd5d32904ff3d563ef794e",
+			"status": "PASS",
+			"scope": "Actual AgentSession with deterministic offline provider; no online scientific quality claim",
+			"matrix": [
+				{
+					"sdkVersion": "1.1.0",
+					"checks": [
+						{
+							"name": "install",
+							"exitCode": 0,
+							"logSha256": "585ab5b69e4c8ce3c642be2f35dac44f4e979f804ec2b35cd2e698a6f11abbfb"
+						},
+						{
+							"name": "session",
+							"exitCode": 0,
+							"logSha256": "ecf68acfc4380a6370ee7543b01b64817f364d3cff47c07eed2f4e2faa7ba1a6"
+						}
+					],
+					"receipt": {
+						"status": "PASS",
+						"loadedPackages": 3,
+						"realAgentSession": true,
+						"dispatchCount": 13,
+						"approvalPrompts": 1,
+						"approvalTransport": "SDK native UI select adapter, scripted selection for user-authorized local acceptance",
+						"preApprovalBlocked": true,
+						"postApprovalKnowledgeDispatched": true,
+						"twoSourcesRead": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"scientificallyVerified": false,
+						"taskReconciled": true,
+						"taskState": "completed",
+						"deliveryFileReadBack": true,
+						"singleAgentTurn": true
+					}
+				},
+				{
+					"sdkVersion": "1.4.0",
+					"checks": [
+						{
+							"name": "install",
+							"exitCode": 0,
+							"logSha256": "6dc314891fd39e5939055b5c029949a850cb11d26b170a0efd15cab925dcee70"
+						},
+						{
+							"name": "session",
+							"exitCode": 0,
+							"logSha256": "ecf68acfc4380a6370ee7543b01b64817f364d3cff47c07eed2f4e2faa7ba1a6"
+						}
+					],
+					"receipt": {
+						"status": "PASS",
+						"loadedPackages": 3,
+						"realAgentSession": true,
+						"dispatchCount": 13,
+						"approvalPrompts": 1,
+						"approvalTransport": "SDK native UI select adapter, scripted selection for user-authorized local acceptance",
+						"preApprovalBlocked": true,
+						"postApprovalKnowledgeDispatched": true,
+						"twoSourcesRead": true,
+						"sourcedAnswer": true,
+						"candidateDepositionReadBack": true,
+						"scientificallyVerified": false,
+						"taskReconciled": true,
+						"taskState": "completed",
+						"deliveryFileReadBack": true,
+						"singleAgentTurn": true
+					}
+				}
+			]
+		},
+		"suitePdfRuntime": {
+			"status": "PASS",
+			"receipt": {
+				"status": "PASS",
+				"scope": "installed suite PDF text/page receipt and native Canvas rendering",
+				"page": 1,
+				"markedPixels": 1082
+			},
+			"exitCode": 0,
+			"logSha256": "5658b321edcfa7d041c37788b0c29447fab932cff6b762a00632a238adbdc0e0"
+		},
+		"uiCleanInstallHostLifecycle": {
+			"status": "PASS",
+			"version": "0.2.0",
+			"checks": [
+				{
+					"name": "install",
+					"exitCode": 0,
+					"logSha256": "6b14e96f0992d7fbcd7a7b35f11d6a4c872af1458d014efd36cf6ab921e70b81"
+				},
+				{
+					"name": "host-ui",
+					"exitCode": 0,
+					"logSha256": "67df496a8cfad138d7979447899f7f79e4de7db83d850673977820e63af953af"
+				}
+			],
+			"contributions": [
+				{
+					"id": "research-status",
+					"region": "panel.tab",
+					"export": "ResearchStatusPanel",
+					"title": "Research"
+				},
+				{
+					"id": "knowledge-page",
+					"region": "knowledge.page",
+					"export": "KnowledgePage",
+					"title": "Knowledge"
+				},
+				{
+					"id": "knowledge-surfaces",
+					"region": "knowledge.surface",
+					"export": "KnowledgeSurface",
+					"title": "Knowledge surfaces"
+				},
+				{
+					"id": "knowledge-review-overlay",
+					"region": "app.overlay",
+					"export": "KnowledgeOverlay",
+					"title": "Knowledge review"
+				}
+			],
+			"scope": "Public clean installation and real host UI manager lifecycle test; formal installed-app verification recorded separately"
+		},
+		"hostSessionAdapterRegression": {
+			"status": "PASS",
+			"sdkVersion": "1.1.0",
+			"extensionSha256": "4ae4a3fbdf15dbc222659b8b012dc291421caed72b1d5f369848c8bba23dfd93",
+			"sessions": 2,
+			"dispatchCount": 7,
+			"hostWorkspaceProjectBinding": true,
+			"generatedHostAdapterLoaded": true,
+			"actualReadReceiptObserved": true,
+			"emptyClaimsBlocked": true,
+			"sameWorkspaceSessionIsolation": true,
+			"persistedGateReadBack": true,
+			"model": "SDK faux provider; real AgentSession and tool dispatch, offline deterministic model",
+			"isolation": "Fresh HOME/agent/workspace/knowledge configuration; environment allowlist; no production Vault or user credentials"
+		},
+		"formalInstalledApp": {
+			"status": "PASS_WITH_RECORDED_PRECONDITION",
+			"platform": "darwin-arm64",
+			"installedFromMountedDmg": true,
+			"dmgSha256": "a0907e2fba88266150ab8ba147366cad44bd100f33d6fb5171c9024c156b94be",
+			"asarSha256": "cf2bc17976258f2415697ac2a6c341c78aa7130055c868ffb8c4a028725f9bc8",
+			"publicUiVersion": "0.2.0",
+			"publicUiInstalledFilesMatchTarball": 61,
+			"knowledgePageLoaded": true,
+			"pdfCitationPage": "3/15",
+			"pdfAspectRatioVisuallyChecked": true,
+			"disabledFallbackPreservedVaultBinding": true,
+			"reenabledKnowledgePage": true,
+			"enabledStateReadBack": true,
+			"applicationExited": true,
+			"screenshots": [
+				{
+					"file": "public-ui-disabled.png",
+					"sha256": "bc91e809d4f5893ce1417a51b156f3e324129bf31098d1055b1efdac1448af55"
+				},
+				{
+					"file": "public-ui-knowledge.png",
+					"sha256": "5658440e1a39bc9aaca31f15d1266d13cc473efd2435cb4928406bd7e32cb2ee"
+				},
+				{
+					"file": "public-ui-pdf-page3.png",
+					"sha256": "8204e82fe8415cb126ecc1517b13de00ac35904b70dc1fee022eaecd77a95ae2"
+				},
+				{
+					"file": "public-ui-restored.png",
+					"sha256": "8cdaee25ad47d20368208317255bd1a90bc4ae3231dd5919e36329d7af07d127"
+				}
+			],
+			"accessibility": [
+				{
+					"file": "public-ui-disabled.ax.txt",
+					"sha256": "1f9711f8cce038ce5fcbe7469180b93693d17d7a0b7558d8f0c8afdfa14a9f5a"
+				},
+				{
+					"file": "public-ui-enabled.ax.txt",
+					"sha256": "464180a8a4175a6a046f6ed1e449bd65cff41a950a15852173d03cf33c56bc50"
+				},
+				{
+					"file": "public-ui-knowledge.ax.txt",
+					"sha256": "c973a9012244ac2ef9a7bab440c40511ffabef395ecb131ffbadb31877ade00a"
+				},
+				{
+					"file": "public-ui-no-project.ax.txt",
+					"sha256": "60bb813752226ebe1fce4796e355c2c9d02c7c962d0feb1885ba579904a7763e"
+				},
+				{
+					"file": "public-ui-pdf-page3.ax.txt",
+					"sha256": "e951e04e27da3b23384ba177e364dcd0d741c9ba35f60ffff791448c6e780e51"
+				},
+				{
+					"file": "public-ui-restored.ax.txt",
+					"sha256": "1d76e5061c37c9554a32028a3027e44293ae99ad7f19088d9e401ebbdcb736ea"
+				}
+			],
+			"limitations": [
+				"Fresh profile without a selected project returned Invalid arguments for host method file:preview; selecting the synthetic project restored PDF page 3. Empty-project error remains a follow-up, not marked fixed.",
+				"Enable confirmation expires after 3 seconds; early attempts did not enable the plugin, final in-window confirmation and readback succeeded.",
+				"Isolated synthetic Vault and public PDF; no online model or account writes in this GUI run."
+			]
+		},
+		"scope": "Publication and bounded post-publication verification complete. Not completion of cloud accounts, authenticated user MCP or other-platform desktop acceptance."
+	},
+	"remainingProductObservation": {
+		"id": "PDF_WITHOUT_SELECTED_PROJECT",
+		"status": "OPEN",
+		"observed": "Knowledge PDF link without a selected project reports Invalid arguments for host method file:preview. Selecting the synthetic project permits page 3/15 preview.",
+		"fixIncluded": false
 	}
 }

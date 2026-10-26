@@ -4,7 +4,7 @@
 
 | 范围 | 当前结果 |
 | --- | --- |
-| npm | plugin-api 1.2.0 已公开下载、哈希校验、干净安装、ESM/ui 导入与能力协商通过；core 0.1.9 已公开，下载与候选一致、干净安装及两版 SDK 实际任务交付回读通过；UI 0.2.0 与 suite 0.1.11 修正候选仍 staged，公开验证待发布 |
+| npm | **PASS**：API 1.2.0、core 0.1.9、suite 0.1.11、UI 0.2.0 全部公开，tarball 与候选一致；core/suite 两版 SDK 干净安装与实际会话通过，UI 公开安装、宿主生命周期及正式 macOS 应用加载/停用恢复通过（PDF 需要已选择项目） |
 | Zotero 云端 | 缺测试库及安全配置凭据；已允许仅 1 条唯一标记临时条目，回读后删除并确认不存在；不改现有条目 |
 | 用户认证 MCP | 缺实际服务地址及工具范围；本机配置仍指向 Windows 本地 Zotero 程序，不作为 Mac 可用服务 |
 | Protocols.io | 缺测试资源与安全配置凭据；已允许仅 1 个临时书签的写入、回读、删除和复查 |
@@ -44,8 +44,27 @@ MinerU/GROBID 与 B8/B8-2 按用户要求继续暂缓。
 
 上述在线复核时 core 0.1.9、suite 0.1.11、UI 0.2.0 仍为原 stage ID，公开 registry 均为 404；不得重复上传或改版本。Zotero 云端、认证 MCP、Protocols.io 和其他平台设备仍缺实际配置，已有写入授权不重复申请。
 
-## npm 发布跟进与目标自查
+## npm 发布跟进与目标自查（发布完成前记录）
 
 npm CLI 返回 E401 后，用户完成官方重新登录，并沿用原 stage 成功批准 pi-core 0.1.9。公开包 SHA256 `4ebf4bf82c2166f07a5312a1b2f6795ff88880bb79698c1f27cce4e26a6358fe`，字节、integrity 与 shasum 均匹配。按公开包名分别干净安装到 Pi 1.1.0 / 1.4.0，真实 AgentSession 各完成一次批准、四次工具调用、文件交付与 task_reconcile completed，并独立回读文件。使用确定性离线模型，不扩大在线科学验收结论。suite 原 stage 的发布认证已发起，但认证回调 GET 返回 E404，进程退出；公开版本复查仍为 404，待重新认证。UI 原 stage 保留，两者仍未公开。
 
 用户已授权自行选择测试目标。本轮检查了 Drone 使用的 agent/zotero-web.json（不存在）、Zotero 环境配置以及实际 PROTOCOLS_IO_API_TOKEN / PROTOCOLS_IO_API_KEY（均未设置）。登记的两台远程桌面均离线；本机存在 Parallels，但 CLI 无法连接其服务，未获得可用 Windows 桌面。这只说明所检查配置不可用，不代表用户没有这些账户；未执行云端临时写入，未完成状态继续保留。
+
+## npm 最终发布与公开消费者验证
+
+四个目标包均已公开，本轮沿用原 stage 完成批准，没有重复上传或更换版本。最终 stage list 为空。此前 E401/认证回调 E404 和候选结果保留为历史；当前状态以本节及 JSON npmPublicationCompletion 为准。
+
+| 包 | 版本 | 公开 tarball SHA256 |
+| --- | --- | --- |
+| @gyoungwe/plugin-api | 1.2.0 | `056322c91ff96fb05bc0b9d1721d834450e6146f3969b819fc1d6267c33ad960` |
+| @gyoungwe/pi-core | 0.1.9 | `4ebf4bf82c2166f07a5312a1b2f6795ff88880bb79698c1f27cce4e26a6358fe` |
+| @gyoungwe/research-suite | 0.1.11 | `767c37940aa32741fe133dfc57b0a75d3597521b11fd5d32904ff3d563ef794e` |
+| @gyoungwe/desktop-ui-pack | 0.2.0 | `c9f468edb8eef41ca6cb7aae613eedd7040ba6be774e16295170e6dd241ddf2a` |
+
+suite 按公开包名安装到两个全新消费者（Pi 1.1.0 / 1.4.0），每个真实 AgentSession 都完成 13 次工具调用、批准前阻断、一次批准、双来源读取、带来源回答、候选笔记写后回读及 task_reconcile completed。模型为 SDK 确定性离线 provider；不新增科学质量结论。公开 suite 的 PDF 工具读取与原生 Canvas 渲染复验通过（1082 个可见像素），stdout/stderr 无原缺失警告。
+
+UI 按公开包名全新安装，宿主 UiPluginManager 生命周期测试通过。正式 DMG 安装应用加载这份公开安装目录，其 61 个包文件逐一与公开 tarball 一致。知识页、合成笔记、PDF 第 3/15 页、停用后保留 Vault 绑定及打开文件夹/插件管理入口、重新启用恢复页面均有截图和 AX 回执；配置最终回读为 enabled，应用已退出。恢复确认按钮的时限为 3 秒，前两次没有完成确认，最终在时限内确认成功，未将失败尝试记作 PASS。宿主研究适配器另以两个真实会话回归，7 次调用验证读取回执与会话隔离。
+
+**保留的新观察**：新 profile 未选择项目时，知识 PDF 链接显示 `Invalid arguments for host method file:preview`；选择合成项目后正常定位第 3 页。无项目时的提示/预览行为尚未修复，登记为 `PDF_WITHOUT_SELECTED_PROJECT`，不得以本轮有项目 GUI 通过覆盖。市场首次显示旧目录快照，刷新后回读到 UI 0.2.0 与权限声明；未将初始缓存标签用于版本判定。
+
+本轮仅更新发布证据与计划，不改变产品源码；沿用此前双仓库完整门禁的代码基线，增加上述公开安装、真实会话、PDF、宿主 UI/适配器和实际安装包检查，文档 lint 与 diff 检查另行通过。Zotero 云端、用户认证 MCP、Protocols.io 临时书签和其他平台桌面仍缺可用配置/设备，继续未完成；MinerU/GROBID 与 B8/B8-2 继续暂缓。
