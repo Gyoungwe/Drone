@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { createBackend } from "./create-backend";
 import { createDroneRuntime } from "./runtime";
 
@@ -96,5 +99,37 @@ describe("createBackend", () => {
 		const services = createBackend({ runtime, projectTrust: false, permissionGates: false });
 		expect(services.runtime).toBe(runtime);
 		services.dispose();
+	});
+
+	it("composes a declared analysis/evidence host into the durable service", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-analysis-host-"));
+		const services = createBackend({
+			analysisAgentDir: root,
+			projectTrust: false,
+			permissionGates: false,
+			analysisEvidenceHost: {
+				manifest: { tools: ["analysis_prepare_evidence", "evidence_validate_manifest"] },
+				tools: {
+					analysis_prepare_evidence: {
+						execute: () => ({ execution: "host-required", planVersion: 1 }),
+					},
+					evidence_validate_manifest: {
+						execute: () => ({ valid: true }),
+					},
+				},
+			},
+		});
+		try {
+			await services.analysis.create({ id: "analysis-host-test", question: "q", assay: "a", mode: "exploratory" });
+			await expect(
+				services.analysisEvidence.prepareEvidence({
+					analysisId: "analysis-host-test",
+					manifest: { entries: [] },
+				}),
+			).resolves.toMatchObject({ status: "ready", plan: { execution: "host-required" }, validation: { valid: true } });
+		} finally {
+			await services.dispose();
+			await rm(root, { recursive: true, force: true });
+		}
 	});
 });

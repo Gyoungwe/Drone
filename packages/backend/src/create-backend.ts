@@ -40,7 +40,11 @@ import type { PluginSessionCallerContext } from "./plugins/session-caller";
 import { walkProjectFiles } from "./project/files";
 import { canonicalProjectId } from "./project-id";
 import { createDroneRuntime } from "./runtime";
-import { AnalysisEvidenceService, type EvidenceReplayRunner } from "./services/analysis-evidence";
+import {
+	AnalysisEvidenceService,
+	type EvidenceReplayRunner,
+} from "./services/analysis-evidence";
+import type { AnalysisEvidencePluginHost } from "./services/analysis-evidence-host";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "./services/analysis-orchestration";
 import { parseAnalysisReviewDecision } from "./services/analysis-review-decision";
 import {
@@ -274,6 +278,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	analysisAgentDir?: string;
 	/** Host-authorized clean-room runner used by the evidence replay IPC. */
 	analysisReplayRunner?: EvidenceReplayRunner;
+	/** Optional installed Pi plugin composition for read-only analysis/evidence preparation. */
+	analysisEvidenceHost?: AnalysisEvidencePluginHost;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
@@ -445,6 +451,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		analysis,
 		storage: sessions.getStorageRegistry(),
 		...(options.analysisReplayRunner ? { replayRunner: options.analysisReplayRunner } : {}),
+		...(options.analysisEvidenceHost ? { evidenceHost: options.analysisEvidenceHost } : {}),
 	});
 	const experienceRecorder =
 		options.computeExperienceRecorder ??
