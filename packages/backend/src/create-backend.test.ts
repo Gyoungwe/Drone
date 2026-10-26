@@ -171,7 +171,13 @@ describe("createBackend", () => {
 		const registry = {
 			list: () => [],
 			recommend: async () => ({ hits: [], failures: [] }),
-			search: async () => ({ hits: [], failures: [] }),
+			search: async (input: { query: string }) => ({
+				query: input.query,
+				hits: [],
+				failures: [],
+				connectors: [],
+				complete: true,
+			}),
 		};
 		const services = createBackend({
 			projectTrust: false,
