@@ -100,6 +100,8 @@ import { LocalExecutionRecorder } from "./services/local-execution";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
+import { createDefaultResearchConnectorRegistry } from "./services/research-connector-compat";
+import type { ResearchConnectorRegistryPort } from "./services/research-resource";
 import {
 	emptyCaptureLedger,
 	emptyResearchConnectorSettings,
@@ -308,6 +310,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	researchHostLoader?: ResearchHostLoader;
 	/** Optional host-owned research write adapter registry. */
 	researchWriteAdapterRegistry?: () => ResearchWriteAdapterRegistryPort;
+	/** Optional host-owned research connector registry. */
+	researchConnectorRegistry?: () => ResearchConnectorRegistryPort;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
@@ -367,6 +371,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		}),
 	});
 	const research = new ResearchResourceService({
+		connectors: options.researchConnectorRegistry?.() ?? createDefaultResearchConnectorRegistry(),
 		knowledgeOperations: createKnowledgeResearchResourceOperations(knowledgeHost),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "captures.json"),
