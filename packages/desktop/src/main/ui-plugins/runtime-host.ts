@@ -171,8 +171,8 @@ export function createDesktopRuntime(
 						message:
 							kind === "state-write"
 								? hostText(
-										`${source.pluginId} 申请通过宿主读取并修改所选目录已有子目录内的状态 JSON。仅授权本次启用，具体写操作仍需批准。不会授权笔记或任意文件写入。取消将终止启用。`,
-										`${source.pluginId} requests access to read and modify state JSON in this directory and existing subdirectories for this activation. Each write still requires approval. Notes and arbitrary file writes are not granted. Cancel to stop activation.`,
+										`${source.pluginId} 申请通过宿主读取、修改所选目录内的状态 JSON 并创建状态子目录。仅授权本次启用，每次文件写入和目录创建仍需批准。不会授权笔记或任意文件写入。取消将终止启用。`,
+										`${source.pluginId} requests access to read and modify state JSON and create state subdirectories under this directory for this activation. Each file write and directory creation still requires approval. Notes and arbitrary file writes are not granted. Cancel to stop activation.`,
 									)
 								: kind === "state"
 									? hostText(

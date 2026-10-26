@@ -273,3 +273,118 @@ describe("explicit state JSON write grants", () => {
 		).resolves.toMatchObject({ kind: "value", value: { mode: "strict" } });
 	});
 });
+
+describe("explicit state directory initialization", () => {
+	it("creates one directory, reads it back and then permits an atomic JSON create", async () => {
+		const directory = { root: "state", path: "vault-a" };
+		expect(await ports.readJson({ root: "state", path: "vault-a/settings.json" }, call)).toEqual({
+			kind: "missing",
+			version: null,
+		});
+		expect(await fs.readdir(state)).toEqual([]);
+		expect(await ports.ensureStateDirectory(directory, call)).toEqual({ created: true });
+		expect((await fs.stat(join(state, "vault-a"))).mode & 0o777).toBe(0o700);
+		expect(await ports.ensureStateDirectory(directory, call)).toEqual({ created: false });
+		await expect(
+			ports.writeJson(
+				{ root: "state", path: "vault-a/settings.json", value: { enabled: true }, expectedVersion: null },
+				call,
+			),
+		).resolves.toMatchObject({ kind: "value", value: { enabled: true } });
+	});
+	it("requires live write authority through the broker and does not initialize missing ancestors", async () => {
+		const broker = new PluginCapabilityBroker({ handlers: fileCapabilityHandlers(ports), resources: [] });
+		const context = { pluginId: "test", applicationId: "app", callerIdentity: {}, ...call };
+		const request = () => broker.port.call("state.ensureDirectory", { root: "state", path: "vault-a" });
+		await expect(
+			broker.run(
+				context,
+				"read",
+				() => {},
+				async () => true,
+				request,
+			),
+		).rejects.toThrow("Read-only");
+		await expect(
+			broker.run(
+				context,
+				"write",
+				() => {},
+				async () => false,
+				request,
+			),
+		).rejects.toThrow("denied");
+		await expect(
+			broker.run(
+				{ ...context, bootstrap: true },
+				"write",
+				() => {},
+				async () => true,
+				request,
+			),
+		).rejects.toThrow("bootstrap");
+		expect(await fs.readdir(state)).toEqual([]);
+		await expect(
+			ports.ensureStateDirectory({ root: "state", path: "missing/child" }, call),
+		).rejects.toMatchObject({ code: "ENOENT" });
+		await expect(
+			broker.run(
+				context,
+				"write",
+				() => {},
+				async () => true,
+				request,
+			),
+		).resolves.toEqual({ created: true });
+	});
+	it("does not create a directory when its caller is revoked during approval", async () => {
+		const controller = new AbortController();
+		const broker = new PluginCapabilityBroker({ handlers: fileCapabilityHandlers(ports), resources: [] });
+		const context = {
+			pluginId: "test",
+			applicationId: "app",
+			callerIdentity: {},
+			...call,
+			signal: controller.signal,
+		};
+		await expect(
+			broker.run(
+				context,
+				"write",
+				() => {},
+				async () => {
+					controller.abort(new Error("session closed"));
+					return true;
+				},
+				() => broker.port.call("state.ensureDirectory", { root: "state", path: "late" }),
+			),
+		).rejects.toThrow("session closed");
+		expect(await fs.readdir(state)).toEqual([]);
+	});
+	it("rejects ungranted state writes, escaped paths and symlink or file collisions without changing them", async () => {
+		const readonly = await PluginFileCapabilities.create(
+			[{ handle: "state", path: state, kind: "state", scope: { kind: "application" } }],
+			cache,
+		);
+		await expect(readonly.ensureStateDirectory({ root: "state", path: "new" }, call)).rejects.toThrow(
+			"not granted",
+		);
+		await expect(ports.ensureStateDirectory({ root: "state", path: "../outside" }, call)).rejects.toThrow(
+			"root-relative",
+		);
+		await fs.mkdir(join(root, "outside"));
+		await fs.symlink(join(root, "outside"), join(state, "alias"));
+		await fs.writeFile(join(state, "existing"), "keep");
+		await expect(ports.ensureStateDirectory({ root: "state", path: "alias" }, call)).rejects.toThrow(
+			"symlinks",
+		);
+		await expect(ports.ensureStateDirectory({ root: "state", path: "alias/new" }, call)).rejects.toThrow(
+			"symlinks",
+		);
+		await expect(ports.ensureStateDirectory({ root: "state", path: "existing" }, call)).rejects.toThrow(
+			"not a directory",
+		);
+		expect(await fs.readFile(join(state, "existing"), "utf8")).toBe("keep");
+		expect(await fs.readdir(join(root, "outside"))).toEqual([]);
+	});
+});

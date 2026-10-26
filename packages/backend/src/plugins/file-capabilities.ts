@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Stats } from "node:fs";
 import { constants } from "node:fs";
 import { lstat, mkdir, open, readdir, realpath } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import type {
 	PluginRuntimeScope,
 	PluginStateReadResult,
@@ -315,6 +315,33 @@ export class PluginFileCapabilities {
 		});
 	}
 
+	/** Create one state directory after explicit write approval; reads never initialize state. */
+	async ensureStateDirectory(input: PluginFileInput, call: PluginFileCall): Promise<{ created: boolean }> {
+		const root = this.grant(input, call, "state");
+		if (call.bootstrap || !root.stateWrite)
+			throw new Error("Plugin state directory write access was not granted");
+		if (!input.path) throw new Error("State directory creation requires a child path");
+		const parentRelative = dirname(input.path) === "." ? "" : dirname(input.path);
+		const parent = await this.path(root, parentRelative);
+		const parentIdentity = await lstat(parent);
+		call.signal.throwIfAborted();
+		let created = true;
+		try {
+			await mkdir(join(parent, basename(input.path)), { mode: 0o700 });
+		} catch (error) {
+			// An existing entry is accepted only after the confined directory readback below.
+			if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+			created = false;
+		}
+		const currentParent = await lstat(await this.path(root, parentRelative));
+		if (currentParent.dev !== parentIdentity.dev || currentParent.ino !== parentIdentity.ino)
+			throw new Error("Plugin state parent changed during directory creation");
+		const target = await lstat(await this.path(root, input.path));
+		if (!target.isDirectory()) throw new Error("Plugin state entry is not a directory");
+		call.signal.throwIfAborted();
+		return { created };
+	}
+
 	async listState(input: PluginFileInput, call: PluginFileCall) {
 		return this.listRoot(this.grant(input, call, "state"), input, call);
 	}
@@ -393,6 +420,15 @@ export function fileCapabilityHandlers(
 			effect: "read",
 			bootstrap: true,
 			execute: (input, call) => ports.listState(input as PluginFileInput, call),
+		},
+		"state.ensureDirectory": {
+			inputSchema: Type.Object(
+				{ root: Type.String({ minLength: 1 }), path: Type.String({ minLength: 1 }) },
+				{ additionalProperties: false },
+			),
+			resultSchema: Type.Object({ created: Type.Boolean() }),
+			effect: "write",
+			execute: (input, call) => ports.ensureStateDirectory(input as PluginFileInput, call),
 		},
 		"state.writeJson": {
 			inputSchema: Type.Object(

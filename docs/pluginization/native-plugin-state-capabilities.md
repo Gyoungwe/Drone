@@ -25,3 +25,9 @@
 宿主真实文件系统回归涵盖创建/原字节版本/0600权限、目录列表、两个 capability 实例并发 CAS、既有普通 JsonStore 队列冲突、rename 失败保留、损坏拒绝、路径越界/符号链接/未登记根、取消与 workspace 隔离，以及真实 broker schema/read-write/审批。production manager/picker/source tests 验证新 token、独立读写选择、取消、旧只读 grant 不升级与清单变更撤销；既有 JsonStore 测试同步运行。103 项相关测试通过，backend 与 desktop node TypeScript 通过。
 
 真实候选 tarball 的 preferences 写后回读、旧版本冲突、损坏严格诊断、撤销及重载回执由 [packed knowledge acceptance](packed-knowledge-runtime-acceptance.md) 登记。它与上述单元回归区分，不把模拟 picker 当成正式 GUI 认证。
+
+## Explicit directory initialization
+
+`state.ensureDirectory({ root, path })` creates one directory directly under an existing approved state parent, then checks the confined directory and returns `{ created: boolean }`. It uses the separately granted `application-state-write` root and a write-effect operation, with fresh capability approval. It is unavailable during bootstrap, to read-only calls, or without a state write grant. JSON reads never create directories; `state.writeJson` still requires its parent to exist.
+
+The directory selector now explicitly describes JSON changes and state subdirectory creation in both languages. Traversal, symlink targets/parents, file collisions and missing ancestors fail. Creation uses mode 0700, verifies the parent identity and reads the resulting directory back. Cancellation during authorization prevents creation. As with existing state JSON operations, this is not a claim of race-free protection against an external process that shares the OS user and swaps parents between filesystem syscalls. Tests use actual temporary directories plus the real capability broker; this new operation was added after the `ad3cd189` GUI artifact and has not yet been accepted in a new installed app.
