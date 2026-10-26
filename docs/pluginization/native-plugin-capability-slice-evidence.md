@@ -105,6 +105,7 @@
 - 2026-10-27：`0e84aec3`/`4b419af0` 后再次完成宿主五项门禁，日志见 `/tmp/drone-host-final-gates-11.log`，全部退出码 0；backend typecheck 已覆盖 connector registry 的完整 shared response 合同。`check:arch` 仍为 architecture 0 baseline finding、host independence PASS、domain dependency `PARTIAL`。边界门禁继续为 `INCOMPLETE`（runtime-import 11），compat composition、完整领域删除和正式安装包验收仍未关闭。
 - 2026-10-27：`880ebc08` 后宿主五项门禁再次全部通过，日志见 `/tmp/drone-host-final-gates-12.log`；插件依赖重新拉取、全量测试与 build 均成功，`check:arch` 保持 architecture 0 baseline finding、host independence PASS、domain dependency `PARTIAL`。边界门禁为 `INCOMPLETE`（runtime-import 11、type-import 13），研究兼容组合及 P2–P7 完整迁移仍未完成。
 - 2026-10-27：`042c44ff` 后宿主五项门禁再次全部通过，日志见 `/tmp/drone-host-final-gates-13.log`；pi-core host 工具 bundle、backend 工具门面和完整宿主 build 均通过，生成的 build manifest 保持提交态。`check:arch` 仍为 architecture/host independence PASS、domain dependency `PARTIAL`；native boundary 仍 `INCOMPLETE`（runtime-import 11、type-import 13）。
+- 2026-10-27：`7980b0e8` 后宿主五项门禁再次全部通过，日志见 `/tmp/drone-host-final-gates-14.log`；shared worker lifecycle contract、插件依赖拉取、全量测试和 build 均通过，生成的 pi-core build manifest 已恢复提交态。`check:arch` 保持 architecture/host independence PASS、domain dependency `PARTIAL`；native boundary 仍 `INCOMPLETE`（runtime-import 11、type-import 12）。
 
 ## 未关闭项
 
