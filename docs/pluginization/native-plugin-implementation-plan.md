@@ -16,6 +16,7 @@
 ## 本轮新增迁移记录
 - `880ebc08` 将 `ResearchConnector`、执行上下文、连接器配置与项目存储端口发布到 `@drone/shared`；`@drone/research` 仅保留兼容 re-export，backend `research-resource.ts` 删除对研究包的类型依赖。shared/research/backend typecheck、research 25 项测试及 Biome 通过；P3/P6 仍保持部分完成。
 - `042c44ff` 将 pi-core 的 status/todo/memory-save/deliver-files 兼容门面统一到版本化 `@gyoungwe/pi-core/host` 入口；host bundle 检查和 runtime 回归通过，backend 工具仍是短期兼容 facade，P4/P6 未因此完成。
+- `7980b0e8` 将 knowledge worker 的 metadata、生命周期事件和稳定事件名发布到 `@drone/shared`；backend 只消费 shared 合同，pi-knowledge 兼容组合仍仅负责 runtime 配置，P2/P6 仍未完成。
 
 ## 工作分配
 
