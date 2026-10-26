@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复的领域耦合扫描 | 清单和静态检查已实现；110 项初始耦合；锁定 1.1.0/latest 1.4.0 真实会话基础 UI 对照通过，全 API 兼容尚未完成 | 无 |
 | P1 | 通用 runtime 生命周期、包来源绑定、权限、隔离进程、UI 调用和撤销 | 应用 owner/真实会话/selection lease 回归及正式 DMG application→A→application→B→A、停用/拒绝/恢复/退出切片通过；领域桥接继续由 P2 完成 | P0 |
-| P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | 知识 UI 同包、固定配置目录和 worker 替换单写者修复已提交；服务实例化实施中，宿主删除尚未完成 | P1 |
+| P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | 知识 UI 同包、固定配置目录和 worker 替换单写者修复已提交；原生 owner/双会话隔离及打包 CLI 关闭重启已验证；Desktop 同 owner、能力 broker 和宿主删除尚未完成 | P1 |
 | P3 | research、来源连接器、引用/Zotero 等领域 API/页面迁移 | 待开始 | P2 |
 | P4 | tasks、编排、领域记忆及 UI 迁移 | 待开始 | P2 |
 | P5 | analysis/evidence 迁移；跨插件依赖通过显式合同管理 | 待开始 | P3/P4 |
@@ -46,3 +46,5 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 - 2026-10-26：宿主 `370038de` 与插件 `a275f7d` 建立第一轮检查基线；实际 DMG 的窗口作用域后台/UI 切片通过，见[安装包证据](native-plugin-p1-packaged-evidence.md)。不是 P2 或零领域插件完成。三个子代理继续实例化、应用 owner/真实会话上下文及聚合包声明依赖的 UI 发现。
 - 2026-10-26：应用 owner、真实 session identity 与 selection lease 已接入生产 IPC，独立复核修复授权窗口关闭、切换会话旧输入和等待停用时迟到加载三个竞态。宿主完整 lint/typecheck/test/build/check:arch 通过（`/tmp/drone-app-owner-*.log`）；聚合包声明依赖 UI 发现已提交 `891309b9`。API 1.3.0 仍为候选；application-state 仅声明专用状态/租约目录，不自动授予任意文件权限，新知识 state broker 尚未接入。
 - 2026-10-26：宿主 `561a370c` 正式 DMG 使用本地离线模型运行两个真实会话，确认后台实例复用、正确逐会话作用域及停用/恢复/退出，见[新证据](native-plugin-app-owner-packaged-evidence.md)。插件 `32cd3a3` 的实例/lease/关闭失败基础门禁通过；`793c890` 与 `c8b75c5` 分别提交 topic/delivery 实例化及 topic 元数据修复；完整 native owner 接入仍在实施，后续统一重建检查。
+
+- 2026-10-26：插件 `3808e84` 完成原生 owner 注入与每会话票据、取消和发布证明隔离，全仓 check 通过（knowledge 64 文件/426 测试）；同 tarball 默认 CLI 真实 SDK 配置态两次运行及租约释放/重启通过。宿主 `0f1740d7` 修复关闭 hook 与取消互等、捕获 SDK 错误通道，完整五门禁及[新安装包活跃请求退出](native-plugin-shutdown-packaged-evidence.md)通过。下一切片为 native/UI 共用 owner 的知识总览/搜索与必要能力 broker。
