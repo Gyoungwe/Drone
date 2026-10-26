@@ -60,6 +60,8 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 
 - 2026-10-26：宿主 P6 代次切片覆盖已安装包完整树（含嵌套依赖）的内容哈希持久化；同路径入口或嵌套依赖就地替换会立即撤销旧 source/binding，扫描后清除 enabled/trusted，重启仍要求新代次重新确认。`runtime-source.test.ts` manager 回归覆盖两类替换、重启和再次确认；未覆盖旧进程销毁失败时的升级/回滚门禁与正式安装包证据。
 
+- 2026-10-26：P6/P7 门禁复核未新增实现：`runtime-bridge.test.ts` 已覆盖旧后台销毁失败时阻止重新绑定及 `withTransition` 替换（23 项通过）；`packages-lifecycle.test.ts` 已覆盖安装、更新、回滚前的版本 pin 重新安装及卸载回执（6 项通过）；`check-public-plugin-host.mjs` 的真实 registry prefix 已覆盖 `0.1.0 → 0.1.1 → rollback:0.1.0 → uninstall`。正式 DMG 的零插件启动、跨版本升级/回滚和销毁失败仍没有真实安装包回执，不能标记 PASS。
+
 - 2026-10-26：宿主新增 `analysis-evidence-host` 通用组合：仅消费已声明的 analysis/evidence 工具，要求 evidence plan 声明 `execution=host-required`，再由 validator 校验宿主 manifest；`analysisEvidence.prepareEvidence` 返回稳定只读回执。当前锁定的公开 `pi-analysis@0.1.2` 尚未声明该工具，因此默认明确返回 `unavailable`。
 - 2026-10-26：插件 `3829623` 新增 `pi-research` 的 package-local `ResearchHostPort`、loader 和注册入口；`status/listRuns` 与 Desktop runtime 共用同一只读 adapter，129 项测试、typecheck、build:check、smoke 通过。宿主本轮 `npm test`（252/4 文件、2026/18 测试）、`npm run build`、`npm run typecheck`、`npm run check:arch` 全部通过；插件仓库的完整 `npm run check` 已通过 build、manifest、pi-knowledge、pi-research locked SDK 等阶段，但 latest SDK 安装因 npm 网络无输出中止，故不记完整插件 check PASS。当前仍没有正式安装包零插件/升级回滚和真实桌面 research workflow 证据。
 - 2026-10-26：插件 `08ab7f7` 将 semantic settings 暴露为 NativeKnowledgePreferences 的可写 UI：读取 host-owned state、携带 bindingRevision/expectedSettingsRevision 做 CAS 并回读，81 文件/481 测试、typecheck、build:check、manifest check 和候选 API smoke 通过；正式 GUI 尚未重跑。插件 `54124d4` 新增 `pi-workbench` 的标准 `panel.tab` UI contribution，workbench native/UI/loader smoke 和 8 包 manifest check 通过；宿主工作流记忆仍由宿主持有，UI 对未接线状态显示空态。
