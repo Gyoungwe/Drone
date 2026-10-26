@@ -108,7 +108,7 @@ input.on("line", async (line) => {
       const controller=new AbortController();calls.set(message.id,controller);
       const signal=AbortSignal.any([lifecycle.signal,controller.signal]);
       const unsupported=(name)=>{throw new Error("Unsupported native Pi context: "+name);};
-      const ctx=new Proxy({cwd:message.context.cwd,hasUI:false,sessionManager:new Proxy({getSessionId:()=>message.context.sessionId},{get(target,name){if(name in target)return target[name];return unsupported("sessionManager."+String(name));}})},{get(target,name){if(name in target)return target[name];return unsupported(String(name));}});
+      const ctx=new Proxy({cwd:message.context.cwd,hasUI:false,signal,sessionManager:new Proxy({getSessionId:()=>message.context.sessionId},{get(target,name){if(name in target)return target[name];return unsupported("sessionManager."+String(name));}})},{get(target,name){if(name in target)return target[name];return unsupported(String(name));}});
       const pending=currentCall.run(message.id,async()=>{
         signal.throwIfAborted();
         if(message.kind==="tool") return session.tools.get(message.name).execute(message.toolCallId,message.input,signal,undefined,ctx);

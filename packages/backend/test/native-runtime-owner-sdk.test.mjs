@@ -37,14 +37,24 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 		await writeFile(
 			entrypoint,
 			`export default async ({capabilities})=>{
- let tools=0,sessions=0;
- const read=async()=>({pid:process.pid,tools,sessions,scope:await capabilities.call("scope",null)});
+ let tools=0,sessions=0;const signals=[];
+ const read=async()=>({pid:process.pid,tools,sessions,signals,scope:await capabilities.call("scope",null)});
  return {operations:{overview:{inputSchema:{type:"null"},resultSchema:{type:"object"},effect:"read",execute:read}},
  createNativeSession(){sessions++;let closed=false,contexts=0;const scopes=[];return {toolEffects:{owner_read:"read"},eventEffects:{context:"read",tool_result:"read",message_end:"read"},extension(pi){
  pi.registerTool({name:"owner_read",label:"Owner read",description:"Read shared owner",drone:{readOnly:true,capabilities:["files"]},parameters:{type:"object",properties:{}},async execute(){tools++;return {content:[{type:"text",text:JSON.stringify({...await read(),contexts,scopes})}]};}});
  pi.on("session_start",async()=>{await capabilities.call("scope",null);});
  const remove=pi.on("context",()=>{throw new Error("Unsubscribed context callback ran");});remove();
- pi.on("context",async(event,ctx)=>{contexts++;scopes.push((await capabilities.call("scope",null)).sessionId);event.messages.push({role:"user",content:[{type:"text",text:"first managed context"}],timestamp:1});});
+ pi.on("context",async(event,ctx)=>{ctx.signal.throwIfAborted();
+ const last=event.messages.filter(message=>message.role==='user').at(-1);
+ const text=JSON.stringify(last?.content);
+ if(text.includes('hold managed hook')){
+  const sessionId=ctx.sessionManager.getSessionId();await capabilities.call('entered',null);
+  await new Promise(resolve=>ctx.signal.addEventListener('abort',resolve,{once:true}));
+  let lateDenied=false;try{await capabilities.call('scope',null);}catch{lateDenied=true;}
+  signals.push({sessionId,aborted:ctx.signal.aborted,lateDenied});
+  return;
+ }
+ contexts++;scopes.push((await capabilities.call("scope",null)).sessionId);event.messages.push({role:"user",content:[{type:"text",text:"first managed context"}],timestamp:1});});
  pi.on("context",event=>{if(event.messages.at(-1)?.content[0]?.text!=="first managed context")throw new Error("SDK context chaining lost");return {messages:event.messages.slice(0,-1)};});
  pi.on("tool_result",event=>event.toolName==="owner_read"?{details:{stage:1}}:undefined);
  pi.on("tool_result",event=>{if(event.toolName!=="owner_read")return;if(event.details?.stage!==1)throw new Error("SDK result chaining lost");return {details:{stage:2}};});
@@ -55,6 +65,7 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 		);
 		const source = { pluginId: "fixture", packageRoot: pkg, entrypoint, nativeEntrypoint };
 		const registry = new SessionRegistry();
+		const enteredHooks = [];
 		let originalDestroyed = false;
 		let window = { id: 1, isDestroyed: () => originalDestroyed };
 		const bridge = new PluginRuntimeBridge({
@@ -66,6 +77,15 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 			capabilities: () => () => ({
 				resources: [],
 				handlers: {
+					entered: {
+						inputSchema: { type: "null" },
+						resultSchema: { type: "null" },
+						effect: "read",
+						execute: async (_input, context) => {
+							enteredHooks.push(context.scope.sessionId);
+							return null;
+						},
+					},
 					scope: {
 						inputSchema: { type: "null" },
 						resultSchema: { type: "object" },
@@ -184,15 +204,48 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 				expect(JSON.parse(latest.content[0].text)).toMatchObject({ pid, tools: 3 });
 			}
 
+			let closingPrompt;
+			if (shutdownOrder === "native-first") {
+				providers[0].setResponses([fauxAssistantMessage("must be canceled before inference")]);
+				const canceledPrompt = Promise.allSettled([sessions[0].prompt("hold managed hook cancel")]);
+				await vi.waitFor(() => expect(enteredHooks).toEqual([sessions[0].sessionId]));
+				await sessions[0].abort();
+				await canceledPrompt;
+				expect(await bridge.invoke(window, binding, "overview", null, application)).toMatchObject({
+					signals: [{ sessionId: sessions[0].sessionId, aborted: true, lateDenied: true }],
+				});
+				providers[1].setResponses([
+					fauxAssistantMessage(fauxToolCall("owner_read", {})),
+					fauxAssistantMessage("second session remains live"),
+				]);
+				await sessions[1].prompt("Read after the other session was canceled.");
+				await sessions[1].waitForIdle();
+				const sibling = sessions[1].messages
+					.filter((message) => message.role === "toolResult" && message.toolName === "owner_read")
+					.at(-1);
+				expect(sibling.isError, JSON.stringify(sibling)).toBe(false);
+				closingPrompt = Promise.allSettled([sessions[0].prompt("hold managed hook close")]);
+				await vi.waitFor(() => expect(enteredHooks).toEqual([sessions[0].sessionId, sessions[0].sessionId]));
+			}
+
 			expect(await bridge.invoke(window, binding, "overview", null, application)).toMatchObject({
 				pid,
-				tools: shutdownOrder === "approval-window-closed" ? 3 : 2,
+				tools: shutdownOrder === "host-first" ? 2 : 3,
 				sessions: 2,
 				scope: { kind: "application" },
 			});
 			const first = sessions.shift();
 			registry.revoke(first.sessionId);
 			await new SessionEngine().dispose(first);
+			if (closingPrompt) {
+				await closingPrompt;
+				expect(await bridge.invoke(window, binding, "overview", null, application)).toMatchObject({
+					signals: [
+						{ sessionId: first.sessionId, aborted: true, lateDenied: true },
+						{ sessionId: first.sessionId, aborted: true, lateDenied: true },
+					],
+				});
+			}
 			registry.delete(first.sessionId);
 			expect(await bridge.invoke(window, binding, "overview", null, application)).toMatchObject({
 				pid,

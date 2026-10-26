@@ -8,4 +8,6 @@
 
 真实 SDK 1.1.0 回归覆盖两个同时存活会话共用独立后台、各自 context 身份、同事件两次注册的顺序转换、取消注册、多 `tool_result` 结果串联、最终 `message_end` 转换，以及 native-first / host-first / 原批准窗口关闭后的关闭顺序。回归同时加载真正任务守卫，模型实际调用工具。相关 26 项测试通过；额外事件名仅属于所列运输支持，不把它们逐项宣称为已完成业务验收。
 
+受管 native context 当前提供官方 `cwd`、`hasUI:false`、`signal` 与 `sessionManager.getSessionId()`。`signal` 是当前调用在子进程中的实际 AbortSignal；非 shutdown hooks 的真实 SDK run signal 贯穿 registry 与进程调用，并与会话 attachment / activation 撤销组合，不通过 JSON 伪造 signal。用户中止只影响当前会话，关闭会话会中止其等待中的 hook，迟到 capability 调用拒绝；`session_shutdown` 仍独立清理，不继承已中止 run 的 signal。新增真实 SDK 回归覆盖 context hook 等待用户中止、同 owner 第二会话仍可调用工具、关闭第一会话释放等待与迟到能力拒绝。
+
 跨进程 live publication proof 仍明确拒绝；序列化的 JSON 不具备 WeakSet 身份。命令、通用 UI 交互、provider、自定义终端组件及完整 sessionManager 上下文仍未接通。尚未宣称 full knowledge hooks 可运行，也没有回退到宿主内直接加载该受管插件。

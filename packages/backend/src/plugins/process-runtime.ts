@@ -472,7 +472,7 @@ class RuntimeProcess {
 				for (const hook of declarations.events) {
 					if (hook.name !== "session_shutdown")
 						on(hook.name, (event, ctx) =>
-							invoke("event", hook.name, event, ctx, undefined, undefined, hook.index),
+							invoke("event", hook.name, event, ctx, ctx.signal, undefined, hook.index),
 						);
 				}
 				pi.on("session_shutdown", async (event, ctx) => {

@@ -274,7 +274,7 @@ export class PluginRuntimeRegistry {
 							() => resolveCaller(context),
 							`native:event:${name}`,
 							event,
-							undefined,
+							context.signal,
 							{
 								inputSchema: {},
 								resultSchema: {},
