@@ -19,3 +19,11 @@ Result: **PASS**. The script launched the actual packaged Electron binary with a
 Receipt root: `/private/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-fresh-package-lmcY6Y`.
 
 This proves the packaged host starts with an empty optional UI profile. It does not prove a signed release, a live model call, a package upgrade/rollback, or process-destruction failure handling; those remain separate acceptance items.
+
+The public-package boundary was also rechecked on 2026-10-27 with:
+
+```sh
+node scripts/check-public-plugin-host.mjs
+```
+
+That receipt passed clean-prefix installation, Pi loader discovery for `@gyoungwe/pi-evidence` and `@gyoungwe/pi-connectors`, the connector process-sandbox test, and registry lifecycle `0.1.0 → 0.1.1 → rollback:0.1.0 → uninstall`; the installed UI package smoke passed as well. The separately owned third-party source boundary remains blocked because no package/licence scope was approved. This registry lifecycle is package-level evidence and is not a substitute for a packaged-app upgrade/rollback or process-destruction-failure receipt.
