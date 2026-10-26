@@ -3,7 +3,7 @@ import type {
 	DeliverableReviewSnapshot,
 	ReviewerProviderSelection,
 } from "@gyoungwe/pi-knowledge/host";
-import { createKnowledgeBackgroundReviewer } from "../knowledge/ui";
+import { createKnowledgeBackgroundReviewer, createKnowledgePublicationOperation } from "../knowledge/ui";
 import { createLogger } from "../log";
 import { McpService } from "../mcp/service";
 import { PackageAdmin } from "../packages/admin";
@@ -119,6 +119,7 @@ async function runModelReview(
 /** Composition-root initialization kept outside the compatibility façade. */
 export function initializeSessionComposition(service: SessionHost, options: SessionServiceOptions): void {
 	service.runtime = options.runtime ?? createDroneRuntime();
+	service.runtime.knowledge.registerAnswerPublication ??= createKnowledgePublicationOperation();
 	service.lifecycle = new SessionLifecycleService(
 		service.registry,
 		service.sessionEngine,

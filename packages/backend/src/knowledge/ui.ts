@@ -55,7 +55,14 @@ export interface KnowledgeHostPort {
 	};
 	/** Optional foreground Wiki review operation supplied by an installed knowledge host. */
 	reviewWikiWithModel?: (input: unknown, options: unknown) => Promise<unknown>;
+	/** Optional publication registration supplied by an installed knowledge host. */
+	registerAnswerPublication?: KnowledgePublicationRegistrar;
 }
+
+export type KnowledgePublicationRegistrar = (
+	pi: unknown,
+	options: { getCurrent: () => unknown; evidenceOnly: boolean },
+) => { begin(required: boolean): unknown };
 
 /**
  * Read-only knowledge vertical supplied by the installable provider.
@@ -141,6 +148,11 @@ export function createKnowledgeResearchResourceOperations(
 /** Keep compute experience persistence behind the discovered knowledge host seam. */
 export function createKnowledgeExperienceOperation(host?: KnowledgeHostPort) {
 	return host?.recordTerminalJobExperience ?? knowledgeHost.recordTerminalJobExperience;
+}
+
+/** Keep child-session publication registration behind the discovered host seam. */
+export function createKnowledgePublicationOperation(host?: KnowledgeHostPort): KnowledgePublicationRegistrar {
+	return host?.registerAnswerPublication ?? knowledgeHost.registerAnswerPublication;
 }
 
 /** Keep WebDAV's local read/write operations behind the discovered knowledge host seam. */

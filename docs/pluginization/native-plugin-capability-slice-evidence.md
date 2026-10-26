@@ -68,6 +68,7 @@
 - P2 `207c3a0c` 将 Knowledge UI 的事件订阅/通知与 Wiki 模型审阅改为可选 `KnowledgeHostPort.uiState/reviewWikiWithModel` 注入，保留无插件兼容回退并合并重复 host import；create-backend 13/13、backend typecheck 与 Biome 通过，native runtime-import 计数降至 13。
 - P4/P6 `2755c85c` 将 project memory promote 改为 host-owned `ProjectMemoryWriter`，backend 不再经 pi-core facade 读取该写入器；promote 3 项、host independence 5 项测试和 Biome 通过，剩余 pi-core facades 仍有消费者。
 - P7 `d39159d3` 将真实 arm64 包回执的 lifecycle 字段显式标为 `NOT_RUN`，列出 install/disable/restore/upgrade/rollback/destroy-failure 的未执行原因；空插件宿主及 generic session 仍 PASS，但不再让该回执暗示完整生命周期验收。
+- P2/P6 `97a6b361` 将 subagent answer publication registrar 改为 `DroneRuntime.knowledge.registerAnswerPublication` 注入，runner 删除对 `@gyoungwe/pi-knowledge/host` 的 runtime import；保留 evidence-only 子会话与 `begin(false)` 语义。backend typecheck、Biome、create-backend/subagent-panel 29 项测试通过，native runtime-import 计数降至 12。
 
 - 宿主 `55699c2f` 扩展通用发现：除 `plugin.manifest.json` 外，发现器也接受标准 Pi `package.json` 中可选的 `drone` 声明；普通 Pi 包可在不增加 Drone 专用清单的情况下声明 Desktop host entry。路径仍限制在包根内，5 项发现回归通过。
 - 宿主 `649b465e` 增加可选 `ResearchHostOperations.detail` 合同；提供完整详情适配器的研究插件可直接返回 run detail，未提供时继续使用 metadata-only fallback。backend typecheck、Biome 与 11 项 create-backend 回归通过；完整 Zotero/连接器页面、写入和正式 GUI 仍未完成。

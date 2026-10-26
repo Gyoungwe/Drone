@@ -38,6 +38,7 @@ import {
 	createKnowledgeDailyDiscoveryOperations,
 	createKnowledgeExperienceOperation,
 	createKnowledgeMaintenanceOperations,
+	createKnowledgePublicationOperation,
 	createKnowledgeReadProvider,
 	createKnowledgeResearchResourceOperations,
 	type KnowledgeHostPort,
@@ -332,6 +333,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const memory = new MemoryStore(join(getAgentDir(), "memory", "memory.db"));
 	runtime.registerDisposable?.({ dispose: () => memory.close() });
 	const knowledgeHost = options.knowledgeHostLoader?.load() as KnowledgeHostPort | undefined;
+	runtime.knowledge.registerAnswerPublication ??= createKnowledgePublicationOperation(knowledgeHost);
 	const knowledgeFactory =
 		options.knowledgeFactory ??
 		(options.knowledgeHostLoader || options.researchHostLoader

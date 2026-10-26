@@ -159,6 +159,7 @@ export function buildSessionCustomTools(
 	if (deps.subagentPreferBuiltin !== false) {
 		tools.push(
 			makeSubagentTool({
+				registerAnswerPublication: deps.runtime.knowledge.registerAnswerPublication,
 				getModelRuntime: deps.getModelRuntime,
 				getSubagentModel: deps.getSubagentModel,
 				gate,

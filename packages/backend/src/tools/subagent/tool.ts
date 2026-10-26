@@ -1,4 +1,4 @@
-import { normalizeSubagentLaunchInputs } from "@drone/shared";
+import { type DroneRuntime, normalizeSubagentLaunchInputs } from "@drone/shared";
 import type {
 	AgentSessionEvent,
 	AgentToolResult,
@@ -64,6 +64,7 @@ export const subagentParams = Type.Object({
 });
 
 export interface MakeSubagentToolDeps {
+	registerAnswerPublication?: DroneRuntime["knowledge"]["registerAnswerPublication"];
 	getModelRuntime: () => Promise<ModelRuntime>;
 	getSubagentModel: (agentName: string) => Promise<string | undefined>;
 	gate: PermissionGate;

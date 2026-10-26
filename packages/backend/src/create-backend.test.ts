@@ -335,6 +335,28 @@ describe("createBackend", () => {
 		}
 	});
 
+	it("injects child publication registration through the installed knowledge host", () => {
+		const registerAnswerPublication = () => ({ begin: () => undefined });
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			knowledgeHostLoader: {
+				contractVersion: 1,
+				load: () => ({
+					contractVersion: 1,
+					overview: async () => ({}),
+					search: async () => ({}),
+					read: async () => ({}),
+					noteLinks: async () => ({}),
+					graph: async () => ({}),
+					registerAnswerPublication,
+				}),
+			},
+		});
+		expect(services.runtime.knowledge.registerAnswerPublication).toBe(registerAnswerPublication);
+		services.dispose();
+	});
+
 	it("routes legacy knowledge events only to the matching backend", async () => {
 		const firstEvents: string[] = [];
 		const secondEvents: string[] = [];

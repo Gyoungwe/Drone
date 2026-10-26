@@ -4,13 +4,13 @@ import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+	type DroneRuntime,
 	type HarnessWorkerAttempt,
 	PROTECTED_KNOWLEDGE_AGENTS,
 	renderHarnessPromptLayer,
 	resolveHarnessModelFamily,
 } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
-import { registerAnswerPublication } from "@gyoungwe/pi-knowledge/host";
 import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
@@ -93,6 +93,8 @@ export interface RunSubagentInput {
 }
 
 export interface RunSubagentDeps {
+	/** Host-owned runtime operation used to keep child answers fail-closed. */
+	registerAnswerPublication?: DroneRuntime["knowledge"]["registerAnswerPublication"];
 	getModelRuntime: () => Promise<ModelRuntime>;
 	/** 设置页的 per-agent 覆盖；无配置时返回 undefined 并继续走 frontmatter / 父模型。 */
 	getSubagentModel: (agentName: string) => Promise<string | undefined>;
@@ -440,8 +442,10 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		childExtensionFactories.push(readonlyMcp.makeSubagentReadonlyMcp(input.cwd) as never);
 	} else if (process.env.DRONE_KNOWLEDGE_DIR) {
 		// Children without Vault permission return labeled material, not a checked parent answer.
-		childExtensionFactories.push(((pi: unknown) =>
-			registerAnswerPublication(pi, { getCurrent: () => null, evidenceOnly: true }).begin(false)) as never);
+		const registerPublication = deps.registerAnswerPublication;
+		if (registerPublication)
+			childExtensionFactories.push(((pi: unknown) =>
+				registerPublication(pi, { getCurrent: () => null, evidenceOnly: true }).begin(false)) as never);
 	}
 	const resourceLoader = new DefaultResourceLoader({
 		cwd: input.cwd,

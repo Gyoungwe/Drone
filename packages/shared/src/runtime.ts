@@ -11,6 +11,11 @@ export interface Logger {
 	error?(message: string, context?: unknown): void;
 }
 export interface KnowledgeRuntime {
+	/** Host-owned publication registration operation used by child sessions. */
+	registerAnswerPublication?: (
+		pi: unknown,
+		options: { getCurrent: () => unknown; evidenceOnly: boolean },
+	) => { begin(required: boolean): unknown };
 	publication?: KnowledgePublicationBridge;
 	reviewer?: {
 		observe?(sessionId: string, event: unknown): void;

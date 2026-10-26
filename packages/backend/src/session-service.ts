@@ -178,6 +178,8 @@ export class SessionService extends SessionServiceApi {
 	readonly traces = new SessionTraces();
 	readonly subagentPanel = new SubagentPanelService({
 		runner: {
+			registerAnswerPublication: (...args) =>
+				this.runtime?.knowledge.registerAnswerPublication?.(...args) ?? { begin: () => undefined },
 			getModelRuntime: () => this.getModelRuntime(),
 			getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
 			traces: this.traces,
