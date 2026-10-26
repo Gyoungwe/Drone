@@ -414,6 +414,7 @@ export const IpcChannels = {
 	/** UI 插件：读构建产物代码 */
 	UiPluginsReadCode: "uiPlugins:readCode",
 	PluginRuntimeInvoke: "pluginRuntime:invoke",
+	PluginRuntimeSelectSession: "pluginRuntime:selectSession",
 	/** UI 插件：启用/停用单个插件（启用=信任） */
 	UiPluginsSetPluginEnabled: "uiPlugins:setPluginEnabled",
 	/** UI 插件：槽位指派（pluginName=null 取消指派） */
@@ -696,7 +697,13 @@ export interface PiApi
 		name: string,
 	): Promise<{ manifest: UiPluginManifest; code: string; runtimeBinding?: string } | { error: string }>;
 	/** Opaque main-issued binding; caller cannot select plugin identity or scope. */
-	pluginRuntimeInvoke(binding: string, operation: string, input: unknown): Promise<unknown>;
+	pluginRuntimeSelectSession(sessionId: string | null): Promise<string>;
+	pluginRuntimeInvoke(
+		binding: string,
+		operation: string,
+		input: unknown,
+		selectionToken: string,
+	): Promise<unknown>;
 	/** 启用/停用单个插件（启用=信任，同步落盘） */
 	uiPluginsSetPluginEnabled(name: string, enabled: boolean): Promise<void>;
 	/** 槽位指派（pluginName=null 取消指派） */

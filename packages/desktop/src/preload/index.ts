@@ -285,7 +285,8 @@ const mcpClient = exposeContract(McpContract, {
 });
 const pluginRuntimeClient = exposeContract(PluginRuntimeContract, {
 	ipc: ipcRenderer,
-	channelForMethod: () => IpcChannels.PluginRuntimeInvoke,
+	channelForMethod: (_contract, method) =>
+		method === "selectSession" ? IpcChannels.PluginRuntimeSelectSession : IpcChannels.PluginRuntimeInvoke,
 });
 const uiPluginsClient = exposeContract(UiPluginsContract, {
 	ipc: ipcRenderer,
@@ -490,6 +491,7 @@ const invokeApi = {
 	uiPluginsList: invoke(uiPluginsClient, "list"),
 	uiPluginsReadCode: invoke(uiPluginsClient, "readCode"),
 	pluginRuntimeInvoke: invoke(pluginRuntimeClient, "invoke"),
+	pluginRuntimeSelectSession: invoke(pluginRuntimeClient, "selectSession"),
 	uiPluginsSetPluginEnabled: invoke(uiPluginsClient, "setPluginEnabled"),
 	uiPluginsAssignSlot: invoke(uiPluginsClient, "assignSlot"),
 	uiPluginsRebuild: invoke(uiPluginsClient, "rebuild"),

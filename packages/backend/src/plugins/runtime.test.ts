@@ -2,6 +2,7 @@ import type {
 	PluginRuntimeFactory,
 	PluginRuntimeInstance,
 	PluginRuntimeOperation,
+	PluginRuntimeScope,
 } from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
 import { describe, expect, it, vi } from "vitest";
@@ -24,7 +25,9 @@ function policy(): PluginRuntimePolicy {
 	};
 }
 
-function runtime(execute = vi.fn(async (input: unknown) => input)): PluginRuntimeInstance {
+function runtime(
+	execute: PluginRuntimeOperation["execute"] = vi.fn(async (input: unknown) => input),
+): PluginRuntimeInstance {
 	return {
 		operations: {
 			read: {
@@ -44,7 +47,12 @@ function runtime(execute = vi.fn(async (input: unknown) => input)): PluginRuntim
 	};
 }
 
-const scope = { workspaceId: "workspace-a", sessionId: "session-a" };
+function caller(scope: PluginRuntimeScope) {
+	const value = { identity: {}, scope, signal: new AbortController().signal };
+	return () => value;
+}
+
+const scope = { kind: "session" as const, workspaceId: "workspace-a", sessionId: "session-a" };
 
 describe("PluginRuntimeRegistry", () => {
 	it("authorizes activation before executing plugin code", async () => {
@@ -53,10 +61,10 @@ describe("PluginRuntimeRegistry", () => {
 		const registry = new PluginRuntimeRegistry(access);
 		const factory = vi.fn(async () => runtime());
 		registry.register("example", factory);
-		await expect(registry.activate("example", scope)).rejects.toThrow("activation denied");
+		await expect(registry.activate("example", caller(scope))).rejects.toThrow("activation denied");
 		expect(factory).not.toHaveBeenCalled();
 		vi.mocked(access.authorizeActivation).mockResolvedValue(true);
-		const client = await registry.activate("example", scope);
+		const client = await registry.activate("example", caller(scope));
 		expect(await client.invoke("read", "allowed")).toBe("allowed");
 	});
 
@@ -71,16 +79,16 @@ describe("PluginRuntimeRegistry", () => {
 		const registry = new PluginRuntimeRegistry(access);
 		const factory = vi.fn(async () => runtime());
 		registry.register("example", factory);
-		const activation = registry.activate("example", scope);
+		const activation = registry.activate("example", caller(scope));
 		const rejected = expect(activation).rejects.toThrow("deactivated");
 		await asked.promise;
-		const stopping = registry.deactivate("example", scope);
+		const stopping = registry.deactivate("example");
 		await stopping;
 		approval.resolve(true);
 		await rejected;
 		expect(factory).not.toHaveBeenCalled();
 		vi.mocked(access.authorizeActivation).mockResolvedValue(true);
-		await registry.activate("example", scope);
+		await registry.activate("example", caller(scope));
 		expect(factory).toHaveBeenCalledTimes(1);
 	});
 
@@ -90,14 +98,20 @@ describe("PluginRuntimeRegistry", () => {
 		const access = policy();
 		const registry = new PluginRuntimeRegistry(access);
 		registry.register("example", factory);
-		const first = registry.activate("example", scope);
-		const second = registry.activate("example", scope);
+		const first = registry.activate("example", caller(scope));
+		const second = registry.activate("example", caller(scope));
 		ready.resolve(runtime());
 		const [client] = await Promise.all([first, second]);
 		expect(factory).toHaveBeenCalledTimes(1);
 		expect(await client.invoke("read", "pretend-session-b")).toBe("pretend-session-b");
 		expect(access.authorizeInvocation).toHaveBeenCalledWith(
-			{ pluginId: "example", scope, operation: "read", effect: "read", input: "pretend-session-b" },
+			expect.objectContaining({
+				pluginId: "example",
+				scope,
+				operation: "read",
+				effect: "read",
+				input: "pretend-session-b",
+			}),
 			expect.any(AbortSignal),
 		);
 	});
@@ -108,7 +122,7 @@ describe("PluginRuntimeRegistry", () => {
 		const execute = vi.fn(async () => "value");
 		const registry = new PluginRuntimeRegistry(access);
 		registry.register("example", async () => runtime(execute));
-		const client = await registry.activate("example", scope);
+		const client = await registry.activate("example", caller(scope));
 		await expect(client.invoke("read", 5)).rejects.toThrow("Invalid plugin operation input");
 		await expect(client.invoke("write", "change")).rejects.toThrow("operation denied");
 		await expect(client.invoke("toString", "anything")).rejects.toThrow("not registered");
@@ -119,40 +133,43 @@ describe("PluginRuntimeRegistry", () => {
 	it("rejects a plugin result that violates its declared schema", async () => {
 		const registry = new PluginRuntimeRegistry(policy());
 		registry.register("example", async () => runtime(vi.fn(async () => 7)));
-		const client = await registry.activate("example", scope);
+		const client = await registry.activate("example", caller(scope));
 		await expect(client.invoke("read", "query")).rejects.toThrow("Invalid plugin operation result");
 	});
 
-	it("keeps different workspaces, sessions and host registries isolated", async () => {
-		const seen: string[] = [];
-		const factory: PluginRuntimeFactory = async ({ scope: own }) => {
-			seen.push(`${own.workspaceId}/${own.sessionId}`);
-			return runtime(vi.fn(async () => `${own.workspaceId}/${own.sessionId}`));
-		};
+	it("shares one application owner across caller scopes while independent applications stay isolated", async () => {
+		const factory = vi.fn<PluginRuntimeFactory>(async () =>
+			runtime(
+				vi.fn(async (_input, { scope: own }) =>
+					own.kind === "session" ? `${own.workspaceId}/${own.sessionId}` : "application",
+				),
+			),
+		);
 		const first = new PluginRuntimeRegistry(policy());
 		const second = new PluginRuntimeRegistry(policy());
 		first.register("example", factory);
 		second.register("example", factory);
-		const a = await first.activate("example", scope);
-		const b = await first.activate("example", { ...scope, sessionId: "session-b" });
-		const c = await first.activate("example", { ...scope, workspaceId: "workspace-b" });
-		const otherHost = await second.activate("example", scope);
-		await first.deactivate("example", scope);
-		await expect(a.invoke("read", "")).rejects.toThrow("not active");
+		const a = await first.activate("example", caller(scope));
+		const b = await first.activate("example", caller({ ...scope, sessionId: "session-b" }));
+		const c = await first.activate("example", caller({ ...scope, workspaceId: "workspace-b" }));
+		const otherHost = await second.activate("example", caller(scope));
+		expect(await a.invoke("read", "")).toBe("workspace-a/session-a");
 		expect(await b.invoke("read", "")).toBe("workspace-a/session-b");
 		expect(await c.invoke("read", "")).toBe("workspace-b/session-a");
+		expect(factory).toHaveBeenCalledTimes(2);
+		await first.deactivate("example");
+		await expect(b.invoke("read", "")).rejects.toThrow("not active");
 		expect(await otherHost.invoke("read", "")).toBe("workspace-a/session-a");
-		expect(seen).toHaveLength(4);
 	});
 
 	it("revokes the old client when re-enabled", async () => {
 		const registry = new PluginRuntimeRegistry(policy());
 		const factory = vi.fn(async () => runtime());
 		registry.register("example", factory);
-		const old = await registry.activate("example", scope);
-		const bound = registry.bind("example", scope);
-		await registry.deactivate("example", scope);
-		const fresh = await registry.activate("example", scope);
+		const old = await registry.activate("example", caller(scope));
+		const bound = registry.bind("example", caller(scope));
+		await registry.deactivate("example");
+		const fresh = await registry.activate("example", caller(scope));
 		await expect(old.invoke("read", "old")).rejects.toThrow("not active");
 		await expect(bound.invoke("read", "bound")).rejects.toThrow("not active");
 		expect(await fresh.invoke("read", "fresh")).toBe("fresh");
@@ -171,11 +188,11 @@ describe("PluginRuntimeRegistry", () => {
 		const instance = runtime(execute);
 		const registry = new PluginRuntimeRegistry(access);
 		registry.register("example", async () => instance);
-		const client = await registry.activate("example", scope);
+		const client = await registry.activate("example", caller(scope));
 		const invocation = client.invoke("write", "change");
 		const rejected = expect(invocation).rejects.toThrow("deactivated");
 		await asked.promise;
-		const stopping = registry.deactivate("example", scope);
+		const stopping = registry.deactivate("example");
 		await expect(client.invoke("read", "new")).rejects.toThrow("not active");
 		await stopping;
 		approval.resolve(true);
@@ -211,12 +228,12 @@ describe("PluginRuntimeRegistry", () => {
 				order.push("dispose");
 			},
 		}));
-		const client = await registry.activate("example", scope);
+		const client = await registry.activate("example", caller(scope));
 		const invocation = client.invoke("write", "change");
 		const rejected = expect(invocation).rejects.toThrow("deactivated");
 		await started.promise;
-		const stopping = registry.deactivate("example", scope);
-		expect(registry.deactivate("example", scope)).toBe(stopping);
+		const stopping = registry.deactivate("example");
+		expect(registry.deactivate("example")).toBe(stopping);
 		await aborted.promise;
 		expect(order).toEqual([]);
 		cleanup.resolve();
@@ -234,10 +251,10 @@ describe("PluginRuntimeRegistry", () => {
 			entered.resolve();
 			return created.promise;
 		});
-		const activating = registry.activate("example", scope);
+		const activating = registry.activate("example", caller(scope));
 		const rejected = expect(activating).rejects.toThrow("deactivated");
 		await entered.promise;
-		const stopping = registry.deactivate("example", scope);
+		const stopping = registry.deactivate("example");
 		expect(instance.dispose).not.toHaveBeenCalled();
 		created.resolve(instance);
 		await rejected;
@@ -253,10 +270,10 @@ describe("PluginRuntimeRegistry", () => {
 			entered.resolve();
 			return created.promise;
 		});
-		const activating = registry.activate("example", scope);
+		const activating = registry.activate("example", caller(scope));
 		const failedActivation = expect(activating).rejects.toThrow("failed startup cleanup");
 		await entered.promise;
-		const stopping = registry.deactivate("example", scope);
+		const stopping = registry.deactivate("example");
 		const failedStop = expect(stopping).rejects.toThrow("failed startup cleanup");
 		created.reject(new Error("failed startup cleanup"));
 		await Promise.all([failedActivation, failedStop]);
@@ -269,15 +286,15 @@ describe("PluginRuntimeRegistry", () => {
 			.mockRejectedValueOnce(new Error("resource unavailable"))
 			.mockResolvedValue(runtime());
 		registry.register("example", factory);
-		await expect(registry.activate("example", scope)).rejects.toThrow("resource unavailable");
-		const client = await registry.activate("example", scope);
+		await expect(registry.activate("example", caller(scope))).rejects.toThrow("resource unavailable");
+		const client = await registry.activate("example", caller(scope));
 		expect(await client.invoke("read", "recovered")).toBe("recovered");
 	});
 
 	it("cancels one caller without stopping other calls in the same runtime", async () => {
 		const registry = new PluginRuntimeRegistry(policy());
 		registry.register("example", async () => runtime());
-		const client = await registry.activate("example", scope);
+		const client = await registry.activate("example", caller(scope));
 		const canceled = new AbortController();
 		canceled.abort(new Error("user canceled"));
 		await expect(client.invoke("read", "canceled", canceled.signal)).rejects.toThrow("user canceled");

@@ -36,6 +36,7 @@ import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
+import type { PluginSessionCallerContext } from "./plugins/session-caller";
 import { walkProjectFiles } from "./project/files";
 import { canonicalProjectId } from "./project-id";
 import { createDroneRuntime } from "./runtime";
@@ -126,6 +127,7 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	 */
 	replySubagentSupervisor(sessionId: string, requestId: string, message: string): void | Promise<void>;
 	init(): Promise<void>;
+	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined;
 	getEventRates(): Map<string, { window60s: number[]; lastEventAt: number }>;
 	onEvent(handler: (sessionId: string, event: SessionEvent) => void): () => void;
 	onAskRequest(handler: (request: AskRequest) => void): () => void;

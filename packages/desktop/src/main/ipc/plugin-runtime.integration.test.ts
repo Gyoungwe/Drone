@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { createProcessPluginRuntime } from "@drone/backend";
+import { createProcessPluginRuntime, type PluginSessionCallerContext } from "@drone/backend";
 import { PluginRuntimeContract, UiPluginsContract } from "@drone/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -43,8 +43,8 @@ const hasRuntime = existsSync(join(runtimeDirectory, "runtime.json"));
 const owner: DesktopRuntimeOwner = { id: 401, isDestroyed: () => false };
 const otherOwner: DesktopRuntimeOwner = { id: 402, isDestroyed: () => false };
 const runtimeSource = `
-export default async ({scope}) => ({ operations: {
- receipt: {inputSchema:{type:"null"},resultSchema:{type:"object"},effect:"read",execute:async()=>({pid:process.pid,scope,loaded:true})}
+export default async ({applicationId}) => ({ operations: {
+ receipt: {inputSchema:{type:"null"},resultSchema:{type:"object"},effect:"read",execute:async(_input,{scope})=>({pid:process.pid,scope,applicationId,loaded:true})}
 },dispose:async()=>{} });`;
 
 function clients(sender: DesktopRuntimeOwner) {
@@ -64,6 +64,7 @@ let root: string;
 let packageRoot: string;
 let manager: UiPluginManager;
 let bridge: DesktopRuntimeBridge;
+const sessions = new Map<string, PluginSessionCallerContext>();
 let approve: ReturnType<typeof vi.fn<() => Promise<boolean>>>;
 let launch: ReturnType<
 	typeof vi.fn<(source: DesktopRuntimeSource) => ReturnType<typeof createProcessPluginRuntime>>
@@ -129,6 +130,7 @@ describe.skipIf(!hasRuntime)("installed runtime through main contracts and prelo
 			enabled: (name) => manager.isEnabled(name),
 			factory: launch,
 			approve,
+			getSessionContext: (id) => sessions.get(id),
 		});
 		registerUiPluginsIpc(manager, bridge);
 		registerPluginRuntimeIpc(bridge);
@@ -140,6 +142,7 @@ describe.skipIf(!hasRuntime)("installed runtime through main contracts and prelo
 	afterEach(async () => {
 		await bridge.revoke();
 		transport.handlers.clear();
+		sessions.clear();
 		await rm(root, { recursive: true, force: true });
 	});
 
@@ -148,23 +151,35 @@ describe.skipIf(!hasRuntime)("installed runtime through main contracts and prelo
 		const loaded = await ui.readCode("runtime-receipt-ui");
 		if ("error" in loaded || !loaded.runtimeBinding) throw new Error("Expected installed runtime binding");
 		expect(loaded.code).toContain("usePluginRuntime");
-		const receipt = (await runtime.invoke(loaded.runtimeBinding, "receipt", null)) as {
+		const receipt = (await runtime.invoke(
+			loaded.runtimeBinding,
+			"receipt",
+			null,
+			await runtime.selectSession(null),
+		)) as {
 			pid: number;
-			scope: { workspaceId: string };
+			scope: { kind: "application" };
 			loaded: boolean;
 		};
 		expect(receipt).toMatchObject({
 			pid: expect.any(Number),
 			loaded: true,
-			scope: { workspaceId: "desktop-window:401" },
+			scope: { kind: "application" },
 		});
 		expect(receipt.pid).not.toBe(process.pid);
-		await expect(clients(otherOwner).runtime.invoke(loaded.runtimeBinding, "receipt", null)).rejects.toThrow(
-			"invalid for this window",
-		);
+		await expect(
+			clients(otherOwner).runtime.invoke(
+				loaded.runtimeBinding,
+				"receipt",
+				null,
+				await clients(otherOwner).runtime.selectSession(null),
+			),
+		).rejects.toThrow("invalid for this window");
 		await ui.setPluginEnabled("runtime-receipt-ui", false);
 		expect(() => process.kill(receipt.pid, 0)).toThrow();
-		await expect(runtime.invoke(loaded.runtimeBinding, "receipt", null)).rejects.toThrow("invalid");
+		await expect(
+			runtime.invoke(loaded.runtimeBinding, "receipt", null, await runtime.selectSession(null)),
+		).rejects.toThrow("invalid");
 		expect(await ui.readCode("runtime-receipt-ui")).toEqual({
 			error: "UI plugin is not enabled and trusted",
 		});
@@ -172,9 +187,59 @@ describe.skipIf(!hasRuntime)("installed runtime through main contracts and prelo
 		const reloaded = await ui.readCode("runtime-receipt-ui");
 		if ("error" in reloaded || !reloaded.runtimeBinding) throw new Error("Expected restored binding");
 		expect(reloaded.runtimeBinding).not.toBe(loaded.runtimeBinding);
-		await expect(runtime.invoke(reloaded.runtimeBinding, "receipt", null)).resolves.toMatchObject({
+		await expect(
+			runtime.invoke(reloaded.runtimeBinding, "receipt", null, await runtime.selectSession(null)),
+		).resolves.toMatchObject({
 			loaded: true,
 		});
+	});
+
+	it("preload selection resolves trusted per-call session scopes inside one shared worker", async () => {
+		const makeSession = (id: string, workspaceId: string): PluginSessionCallerContext => ({
+			identity: {},
+			scope: { kind: "session", sessionId: id, workspaceId },
+			signal: new AbortController().signal,
+			projectTrusted: true,
+			readOnly: false,
+		});
+		sessions.set("first", makeSession("first", "/trusted/first"));
+		sessions.set("second", makeSession("second", "/trusted/second"));
+		const a = clients(owner),
+			b = clients(otherOwner);
+		const loadedA = await a.ui.readCode("runtime-receipt-ui"),
+			loadedB = await b.ui.readCode("runtime-receipt-ui");
+		if ("error" in loadedA || !loadedA.runtimeBinding || "error" in loadedB || !loadedB.runtimeBinding)
+			throw new Error("Expected runtime bindings");
+		let firstSelection = await a.runtime.selectSession("first");
+		const secondSelection = await b.runtime.selectSession("second");
+		const first = (await a.runtime.invoke(loadedA.runtimeBinding, "receipt", null, firstSelection)) as {
+			pid: number;
+			applicationId: string;
+			scope: unknown;
+		};
+		const second = (await b.runtime.invoke(
+			loadedB.runtimeBinding,
+			"receipt",
+			null,
+			secondSelection,
+		)) as typeof first;
+		expect(first.scope).toEqual(sessions.get("first")!.scope);
+		expect(second.scope).toEqual(sessions.get("second")!.scope);
+		expect(second.pid).toBe(first.pid);
+		expect(second.applicationId).toBe(first.applicationId);
+		expect(launch).toHaveBeenCalledOnce();
+		await expect(a.runtime.selectSession("forged-session")).rejects.toThrow("not open");
+		firstSelection = await a.runtime.selectSession(null);
+		expect(await a.runtime.invoke(loadedA.runtimeBinding, "receipt", null, firstSelection)).toMatchObject({
+			pid: first.pid,
+			scope: { kind: "application" },
+		});
+		await bridge.revoke(undefined, owner.id);
+		expect(await b.runtime.invoke(loadedB.runtimeBinding, "receipt", null, secondSelection)).toMatchObject({
+			pid: first.pid,
+		});
+		await bridge.close();
+		expect(() => process.kill(first.pid, 0)).toThrow();
 	});
 
 	it("denies import until activation approval and never turns the failure into success", async () => {
@@ -199,7 +264,12 @@ describe.skipIf(!hasRuntime)("installed runtime through main contracts and prelo
 		const { ui, runtime } = clients(owner);
 		const loaded = await ui.readCode("runtime-receipt-ui");
 		if ("error" in loaded || !loaded.runtimeBinding) throw new Error("Expected runtime binding");
-		const receipt = (await runtime.invoke(loaded.runtimeBinding, "receipt", null)) as { pid: number };
+		const receipt = (await runtime.invoke(
+			loaded.runtimeBinding,
+			"receipt",
+			null,
+			await runtime.selectSession(null),
+		)) as { pid: number };
 		let entered!: () => void;
 		const persisting = new Promise<void>((resolve) => {
 			entered = resolve;

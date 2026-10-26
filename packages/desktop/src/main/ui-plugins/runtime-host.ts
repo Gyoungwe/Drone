@@ -1,4 +1,4 @@
-import { createProcessPluginRuntime, hostText } from "@drone/backend";
+import { createProcessPluginRuntime, hostText, type SessionServicePort } from "@drone/backend";
 import { BrowserWindow, dialog, webContents } from "electron";
 import type { UiPluginManager } from "./manager";
 import { DesktopRuntimeBridge } from "./runtime-bridge";
@@ -7,9 +7,11 @@ import { DesktopRuntimeBridge } from "./runtime-bridge";
 export function createDesktopRuntime(
 	manager: UiPluginManager,
 	runtimeDirectory: string,
+	sessions: Pick<SessionServicePort, "getPluginCallerContext">,
 ): DesktopRuntimeBridge {
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
+		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
 		enabled: (name) => manager.isEnabled(name),
 		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
 		approve: async (owner, source, operation) => {

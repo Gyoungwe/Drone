@@ -158,3 +158,25 @@ test("permissioned host delegates declared side effects and audits the host deci
 	assert.equal(audit[0].operation, "external-write");
 	assert.equal(audit[0].granted, true);
 });
+
+test("application state declaration does not authorize generic file access", async () => {
+	let approvals = 0;
+	const host = createPermissionedHostPort(
+		{
+			host: "drone-desktop",
+			capabilities: () => ({ capabilities: ["requestAuthorization"] }),
+			requestAuthorization: async () => {
+				approvals++;
+				return { granted: true, decidedAt: "2026-10-26T00:00:00.000Z" };
+			},
+		},
+		{
+			pluginId: "state-fixture",
+			permissions: { filesystem: ["application-state"], network: [], subprocess: [], externalWrites: false },
+		},
+	);
+	for (const action of ["filesystem-read", "filesystem-write"]) {
+		assert.equal((await host.requestAuthorization({ action, scope: "workspace" })).granted, false);
+	}
+	assert.equal(approvals, 0);
+});

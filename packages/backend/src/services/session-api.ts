@@ -17,6 +17,7 @@ import type {
 	WikiModelReviewResult,
 } from "@drone/shared";
 import { createLogger } from "../log";
+import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
 import { walkProjectFiles } from "../project/files";
 import { TraceRecorder } from "../session/trace";
 import type {
@@ -63,7 +64,12 @@ export class SessionServiceApi extends SessionSettingsApi {
 		return this.host.lifecycle.listAll();
 	}
 
+	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined {
+		return getPluginSessionCaller(this.host.registry, sessionId);
+	}
+
 	async closeSession(sessionId: string): Promise<void> {
+		this.host.registry.revoke(sessionId);
 		this.host.modelWait.cleanup(sessionId);
 		this.host.knowledgeSession.disposeSession(sessionId);
 		await this.host.lifecycle.close(sessionId, {

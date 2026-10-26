@@ -13,8 +13,12 @@ export interface RegisteredSession {
 /** 维护 sessionId → AgentSession 实例 */
 export class SessionRegistry {
 	private readonly sessions = new Map<string, RegisteredSession>();
+	private readonly lifetimes = new WeakMap<RegisteredSession, AbortController>();
 
 	add(entry: RegisteredSession): void {
+		const previous = this.sessions.get(entry.session.sessionId);
+		if (previous && previous !== entry) this.revoke(entry.session.sessionId);
+		if (!this.lifetimes.has(entry)) this.lifetimes.set(entry, new AbortController());
 		this.sessions.set(entry.session.sessionId, entry);
 	}
 
@@ -26,9 +30,26 @@ export class SessionRegistry {
 		return this.sessions.has(sessionId);
 	}
 
+	/** Revoke capabilities before asynchronous SDK shutdown or replacement starts. */
+	revoke(sessionId: string): void {
+		const entry = this.sessions.get(sessionId);
+		if (entry) this.lifetime(entry).abort(new Error("Session caller revoked"));
+	}
+
+	private lifetime(entry: RegisteredSession): AbortController {
+		const lifetime = this.lifetimes.get(entry);
+		if (!lifetime) throw new Error("Session identity is not registered");
+		return lifetime;
+	}
+
+	signalFor(entry: RegisteredSession): AbortSignal {
+		return this.lifetime(entry).signal;
+	}
+
 	delete(sessionId: string): void {
 		const entry = this.sessions.get(sessionId);
 		if (!entry) return;
+		this.revoke(sessionId);
 		entry.unsubscribe();
 		this.sessions.delete(sessionId);
 	}
@@ -66,6 +87,7 @@ export class SessionRegistry {
 	async disposeAll(dispose: (session: AgentSession) => Promise<void>): Promise<void> {
 		const results = await Promise.allSettled(
 			[...this.sessions].map(async ([sessionId, entry]) => {
+				this.revoke(sessionId);
 				await dispose(entry.session);
 				this.delete(sessionId);
 			}),

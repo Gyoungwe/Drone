@@ -249,7 +249,13 @@ export interface AuthorizationReceipt {
 }
 
 /** Permission scopes that a Drone manifest may declare for host-mediated work. */
-export type PluginFilesystemPermission = "workspace-read" | "workspace" | "configured-vault" | "vault-read";
+export type PluginFilesystemPermission =
+	| "workspace-read"
+	| "workspace"
+	| "configured-vault"
+	| "vault-read"
+	/** Declares explicit state/lease roots; requires a scoped storage broker, not arbitrary file access. */
+	| "application-state";
 
 export interface PluginPermissionDeclaration {
 	readonly filesystem: readonly PluginFilesystemPermission[];

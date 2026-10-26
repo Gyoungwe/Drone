@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type {
 	PluginRuntimeClient,
 	PluginRuntimeFactory,
@@ -9,10 +10,21 @@ import { Check } from "typebox/value";
 
 export interface PluginRuntimeActivation {
 	readonly pluginId: string;
-	readonly scope: PluginRuntimeScope;
+	readonly applicationId: string;
 }
 
+/** Host-only lease; identity is an object owned by the resolved caller generation, never JSON input. */
+export interface PluginRuntimeCaller {
+	readonly identity: object;
+	readonly scope: PluginRuntimeScope;
+	readonly signal: AbortSignal;
+}
+
+export type PluginRuntimeCallerResolver = () => PluginRuntimeCaller | undefined;
+
 export interface PluginRuntimeInvocation extends PluginRuntimeActivation {
+	readonly scope: PluginRuntimeScope;
+	readonly callerIdentity: object;
 	readonly operation: string;
 	readonly effect: PluginRuntimeOperation["effect"];
 	readonly input: unknown;
@@ -33,10 +45,6 @@ interface Activation extends PluginRuntimeActivation {
 	readonly pending: Set<Promise<unknown>>;
 	ready: Promise<PluginRuntimeInstance>;
 	stopping?: Promise<void>;
-}
-
-function key(pluginId: string, scope: PluginRuntimeScope): string {
-	return JSON.stringify([pluginId, scope.workspaceId, scope.sessionId]);
 }
 
 /** UI approval can outlive its caller; cancellation revokes authority without waiting for the dialog. */
@@ -63,7 +71,10 @@ export class PluginRuntimeRegistry {
 	private readonly factories = new Map<string, PluginRuntimeFactory>();
 	private readonly activations = new Map<string, Activation>();
 
-	constructor(private readonly policy: PluginRuntimePolicy) {}
+	constructor(
+		private readonly policy: PluginRuntimePolicy,
+		readonly applicationId = randomUUID(),
+	) {}
 
 	/** The factory must defer its dynamic import until called after activation authorization. */
 	register(pluginId: string, factory: PluginRuntimeFactory): void {
@@ -71,36 +82,36 @@ export class PluginRuntimeRegistry {
 		this.factories.set(pluginId, factory);
 	}
 
-	async activate(pluginId: string, scope: PluginRuntimeScope): Promise<PluginRuntimeClient> {
-		const activationKey = key(pluginId, scope);
+	async activate(pluginId: string, resolveCaller: PluginRuntimeCallerResolver): Promise<PluginRuntimeClient> {
+		const activationKey = pluginId;
 		const existing = this.activations.get(activationKey);
 		if (existing) {
 			if (existing.state === "stopping") throw new Error(`Plugin runtime is stopping: ${pluginId}`);
 			await existing.ready;
 			existing.abort.signal.throwIfAborted();
-			return this.client(existing);
+			return this.client(existing, resolveCaller);
 		}
 		const factory = this.factories.get(pluginId);
 		if (!factory) throw new Error(`Plugin runtime is not registered: ${pluginId}`);
-		const context = Object.freeze({ ...scope });
+		const applicationId = this.applicationId;
 		const abort = new AbortController();
 		// Start in a microtask so the activation is indexed before factory callbacks can re-enter.
 		const ready = Promise.resolve().then(async () => {
 			abort.signal.throwIfAborted();
 			if (
 				!(await authorize(
-					() => this.policy.authorizeActivation({ pluginId, scope: context }, abort.signal),
+					() => this.policy.authorizeActivation({ pluginId, applicationId }, abort.signal),
 					abort.signal,
 				))
 			) {
 				throw new ActivationDeniedError(`Plugin runtime activation denied: ${pluginId}`);
 			}
 			abort.signal.throwIfAborted();
-			return factory({ scope: context, signal: abort.signal });
+			return factory({ applicationId, signal: abort.signal });
 		});
 		const activation: Activation = {
 			pluginId,
-			scope: context,
+			applicationId,
 			state: "activating",
 			abort,
 			pending: new Set(),
@@ -111,7 +122,7 @@ export class PluginRuntimeRegistry {
 			await ready;
 			abort.signal.throwIfAborted();
 			activation.state = "active";
-			return this.client(activation);
+			return this.client(activation, resolveCaller);
 		} catch (error) {
 			// Failed activation is retryable. A concurrent deactivate still owns disposal.
 			if (activation.state !== "stopping") this.activations.delete(activationKey);
@@ -119,16 +130,16 @@ export class PluginRuntimeRegistry {
 		}
 	}
 
-	bind(pluginId: string, scope: PluginRuntimeScope): PluginRuntimeClient {
-		const activation = this.activations.get(key(pluginId, scope));
+	bind(pluginId: string, resolveCaller: PluginRuntimeCallerResolver): PluginRuntimeClient {
+		const activation = this.activations.get(pluginId);
 		if (activation?.state !== "active") {
 			throw new Error(`Plugin runtime is not active: ${pluginId}`);
 		}
-		return this.client(activation);
+		return this.client(activation, resolveCaller);
 	}
 
-	deactivate(pluginId: string, scope: PluginRuntimeScope): Promise<void> {
-		const activationKey = key(pluginId, scope);
+	deactivate(pluginId: string): Promise<void> {
+		const activationKey = pluginId;
 		const activation = this.activations.get(activationKey);
 		if (!activation) return Promise.resolve();
 		if (activation.stopping) return activation.stopping;
@@ -153,16 +164,32 @@ export class PluginRuntimeRegistry {
 		this.activations.delete(activationKey);
 	}
 
-	private client(activation: Activation): PluginRuntimeClient {
+	private client(activation: Activation, resolveCaller: PluginRuntimeCallerResolver): PluginRuntimeClient {
 		return {
 			invoke: async (name, input, callerSignal) => {
 				if (activation.state !== "active") {
 					throw new Error(`Plugin runtime is not active: ${activation.pluginId}`);
 				}
-				const signal = callerSignal
-					? AbortSignal.any([activation.abort.signal, callerSignal])
-					: activation.abort.signal;
-				const pending = this.invoke(activation, name, input, signal);
+				const caller = resolveCaller();
+				if (!caller) throw new Error("Plugin caller is no longer available");
+				const scope = Object.freeze({ ...caller.scope });
+				const signal = AbortSignal.any([
+					activation.abort.signal,
+					caller.signal,
+					...(callerSignal ? [callerSignal] : []),
+				]);
+				const checkCaller = () => {
+					signal.throwIfAborted();
+					const current = resolveCaller();
+					if (
+						!current ||
+						current.identity !== caller.identity ||
+						JSON.stringify(current.scope) !== JSON.stringify(scope)
+					) {
+						throw new Error("Plugin caller scope changed during invocation");
+					}
+				};
+				const pending = this.invoke(activation, name, input, signal, caller.identity, scope, checkCaller);
 				activation.pending.add(pending);
 				try {
 					return await pending;
@@ -178,6 +205,9 @@ export class PluginRuntimeRegistry {
 		name: string,
 		input: unknown,
 		signal: AbortSignal,
+		callerIdentity: object,
+		scope: PluginRuntimeScope,
+		checkCaller: () => void,
 	): Promise<unknown> {
 		signal.throwIfAborted();
 		const runtime = await activation.ready;
@@ -186,7 +216,9 @@ export class PluginRuntimeRegistry {
 		if (!Check(operation.inputSchema, input)) throw new Error(`Invalid plugin operation input: ${name}`);
 		const request: PluginRuntimeInvocation = {
 			pluginId: activation.pluginId,
-			scope: activation.scope,
+			applicationId: activation.applicationId,
+			scope,
+			callerIdentity,
 			operation: name,
 			effect: operation.effect,
 			input,
@@ -194,9 +226,9 @@ export class PluginRuntimeRegistry {
 		if (!(await authorize(() => this.policy.authorizeInvocation(request, signal), signal))) {
 			throw new Error(`Plugin operation denied: ${name}`);
 		}
-		signal.throwIfAborted();
-		const result = await operation.execute(input, { scope: activation.scope, signal });
-		signal.throwIfAborted();
+		checkCaller();
+		const result = await operation.execute(input, { scope, signal });
+		checkCaller();
 		if (!Check(operation.resultSchema, result)) throw new Error(`Invalid plugin operation result: ${name}`);
 		return result;
 	}

@@ -9,7 +9,6 @@ const lifecycle = new AbortController();
 const calls = new Map();
 const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
 let runtime;
-let scope;
 console.log = (...args) => process.stderr.write(args.map(String).join(" ") + "\n");
 console.info = console.log;
 console.warn = console.log;
@@ -21,9 +20,8 @@ input.on("line", async (line) => {
   try {
     if (message.type === "start") {
       lifecycle.signal.throwIfAborted();
-      scope = Object.freeze(message.scope);
       const module = await import(pathToFileURL(process.argv[1]).href);
-      runtime = await module.default({ scope, signal: lifecycle.signal });
+      runtime = await module.default({ applicationId: message.applicationId, signal: lifecycle.signal });
       const operations = Object.fromEntries(Object.entries(runtime.operations).map(([name, operation]) => [name, {
         inputSchema: operation.inputSchema, resultSchema: operation.resultSchema, effect: operation.effect,
       }]));
@@ -43,7 +41,7 @@ input.on("line", async (line) => {
     try {
       const signal = AbortSignal.any([lifecycle.signal, controller.signal]);
       signal.throwIfAborted();
-      const value = await runtime.operations[message.operation].execute(message.input, { scope, signal });
+      const value = await runtime.operations[message.operation].execute(message.input, { scope: Object.freeze(message.scope), signal });
       send({ type: "result", id: message.id, ok: true, value });
     } finally {
       calls.delete(message.id);

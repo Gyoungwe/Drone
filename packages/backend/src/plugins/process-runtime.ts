@@ -5,6 +5,7 @@ import { createInterface } from "node:readline";
 import type {
 	PluginRuntimeContext,
 	PluginRuntimeFactory,
+	PluginRuntimeFactoryContext,
 	PluginRuntimeInstance,
 } from "@gyoungwe/plugin-api/runtime";
 import { type Static, Type } from "typebox";
@@ -118,7 +119,7 @@ class RuntimeProcess {
 	constructor(
 		private readonly pluginId: string,
 		private readonly child: ChildProcessWithoutNullStreams,
-		private readonly context: PluginRuntimeContext,
+		private readonly context: PluginRuntimeFactoryContext,
 	) {
 		this.ready = new Promise((resolve, reject) => {
 			this.resolveReady = resolve;
@@ -222,7 +223,7 @@ class RuntimeProcess {
 			() => this.fail(new Error(`Plugin runtime ${this.pluginId} startup timed out after 15000ms`)),
 			15000,
 		);
-		this.send({ type: "start", scope: this.context.scope });
+		this.send({ type: "start", applicationId: this.context.applicationId });
 		try {
 			const declarations = await this.ready;
 			return {
@@ -231,8 +232,8 @@ class RuntimeProcess {
 						name,
 						{
 							...declaration,
-							execute: (input: unknown, { signal }: PluginRuntimeContext) =>
-								this.request("invoke", { operation: name, input }, signal),
+							execute: (input: unknown, { signal, scope }: PluginRuntimeContext) =>
+								this.request("invoke", { operation: name, input, scope }, signal),
 						},
 					]),
 				),

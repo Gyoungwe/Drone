@@ -3,6 +3,7 @@ import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import type { PluginRuntimeScope } from "@gyoungwe/plugin-api/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createProcessPluginRuntime } from "./process-runtime";
 import { PluginRuntimeRegistry } from "./runtime";
@@ -14,7 +15,12 @@ const runtimeDirectory = resolve(
 );
 const hasRuntime = existsSync(join(runtimeDirectory, "runtime.json"));
 const roots: string[] = [];
-const scope = { workspaceId: "workspace", sessionId: "session" };
+function caller(scope: PluginRuntimeScope) {
+	const value = { identity: {}, scope, signal: new AbortController().signal };
+	return () => value;
+}
+
+const scope = { kind: "session" as const, workspaceId: "workspace", sessionId: "session" };
 const allow = { authorizeActivation: async () => true, authorizeInvocation: async () => true };
 
 async function fixture(source: string) {
@@ -40,10 +46,45 @@ it("denies activation without starting or resolving plugin code", async () => {
 			entrypoint: "/missing/runtime.mjs",
 		}),
 	);
-	await expect(registry.activate("example", scope)).rejects.toThrow("activation denied");
+	await expect(registry.activate("example", caller(scope))).rejects.toThrow("activation denied");
 });
 
 describe.skipIf(!hasRuntime)("packaged process desktop runtime", () => {
+	it("keeps one worker owner across caller scopes and cancels only the revoked caller", async () => {
+		const options = await fixture(`let pending=false,count=0;
+export default async ({applicationId})=>({operations:{
+ receipt:{inputSchema:{type:"null"},resultSchema:{type:"object"},effect:"read",execute:async(_input,{scope})=>({applicationId,scope,pid:process.pid,count:++count,pending})},
+ wait:{inputSchema:{type:"null"},resultSchema:{type:"null"},effect:"read",execute:async(_input,{signal})=>{pending=true;await new Promise(resolve=>signal.addEventListener("abort",resolve,{once:true}));pending=false;return null;}}
+},dispose:async()=>{if(pending)throw new Error("pending caller cleanup");}});`);
+		const registry = new PluginRuntimeRegistry(allow);
+		registry.register("example", createProcessPluginRuntime(options));
+		const abort = new AbortController();
+		const a = await registry.activate("example", () => ({ identity: abort, scope, signal: abort.signal }));
+		const other = { kind: "session" as const, workspaceId: "other", sessionId: "other-session" };
+		const b = await registry.activate("example", caller(other));
+		try {
+			const first = (await a.invoke("receipt", null)) as {
+				pid: number;
+				applicationId: string;
+				count: number;
+			};
+			expect(await b.invoke("receipt", null)).toMatchObject({
+				pid: first.pid,
+				applicationId: first.applicationId,
+				count: 2,
+				scope: other,
+			});
+			const call = a.invoke("wait", null);
+			const rejected = expect(call).rejects.toThrow();
+			await vi.waitFor(async () => expect(await b.invoke("receipt", null)).toMatchObject({ pending: true }));
+			abort.abort(new Error("caller revoked"));
+			await rejected;
+			expect(await b.invoke("receipt", null)).toMatchObject({ pid: first.pid, pending: false, scope: other });
+		} finally {
+			await registry.deactivate("example");
+		}
+	});
+
 	it("runs in a distinct process with only package reads and no ambient credentials", async () => {
 		vi.stubEnv("DRONE_RUNTIME_TEST_SECRET", "synthetic-test-value");
 		let hits = 0;
@@ -62,9 +103,9 @@ describe.skipIf(!hasRuntime)("packaged process desktop runtime", () => {
 import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 const probe = async action => { try { await action(); return "allowed"; } catch (error) { return error.cause?.code ?? error.code; } };
-export default async ({scope}) => ({
+export default async () => ({
  operations: { probe: { inputSchema: {type:"null"}, resultSchema: {type:"object"}, effect:"read",
- execute: async () => ({ pid:process.pid, scope, env:Object.keys(process.env),
+ execute: async (_input,{scope}) => ({ pid:process.pid, scope, env:Object.keys(process.env),
  packageRead:readFileSync(new URL("./data.txt", import.meta.url), "utf8"),
  outside:await probe(() => readFileSync(${JSON.stringify(secret)}, "utf8")),
  write:await probe(() => writeFileSync(new URL("./mutation.txt", import.meta.url), "forbidden")),
@@ -75,7 +116,7 @@ export default async ({scope}) => ({
 		const registry = new PluginRuntimeRegistry(allow);
 		registry.register("example", createProcessPluginRuntime(options));
 		try {
-			const client = await registry.activate("example", scope);
+			const client = await registry.activate("example", caller(scope));
 			const result = await client.invoke("probe", null);
 			expect(result).toEqual({
 				pid: expect.any(Number),
@@ -93,7 +134,7 @@ export default async ({scope}) => ({
 			);
 			expect(hits).toBe(0);
 		} finally {
-			await registry.deactivate("example", scope);
+			await registry.deactivate("example");
 			await new Promise<void>((done) => server.close(() => done()));
 		}
 	});
@@ -108,15 +149,15 @@ export default async () => ({ operations: { wait: {
 		const asked = vi.fn(async () => true);
 		const registry = new PluginRuntimeRegistry({ ...allow, authorizeInvocation: asked });
 		registry.register("example", createProcessPluginRuntime(options));
-		const client = await registry.activate("example", scope);
+		const client = await registry.activate("example", caller(scope));
 		const invocation = client.invoke("wait", null);
 		const rejected = expect(invocation).rejects.toThrow();
 		await vi.waitFor(async () => expect(await client.invoke("status", null)).toBe(true));
-		await registry.deactivate("example", scope);
+		await registry.deactivate("example");
 		await rejected;
-		await registry.activate("example", scope);
+		await registry.activate("example", caller(scope));
 		await expect(client.invoke("wait", null)).rejects.toThrow("not active");
-		await registry.deactivate("example", scope);
+		await registry.deactivate("example");
 	});
 
 	it("fails shutdown explicitly and closes a worker that ignores cancellation", async () => {
@@ -126,13 +167,13 @@ export default async () => ({ operations: { wait: {
 		const called = vi.fn(async () => true);
 		const registry = new PluginRuntimeRegistry({ ...allow, authorizeInvocation: called });
 		registry.register("example", createProcessPluginRuntime(options));
-		const client = await registry.activate("example", scope);
+		const client = await registry.activate("example", caller(scope));
 		const invocation = client.invoke("hang", null);
 		const rejected = expect(invocation).rejects.toThrow("did not settle shutdown");
 		await vi.waitFor(async () => expect(await client.invoke("status", null)).toBe(true));
-		await expect(registry.deactivate("example", scope)).rejects.toThrow("did not settle shutdown");
+		await expect(registry.deactivate("example")).rejects.toThrow("did not settle shutdown");
 		await rejected;
-		await expect(registry.activate("example", scope)).rejects.toThrow("stopping");
+		await expect(registry.activate("example", caller(scope))).rejects.toThrow("stopping");
 	});
 
 	it("rejects malformed declarations and factory failures at the child boundary", async () => {
@@ -143,7 +184,7 @@ export default async () => ({ operations: { wait: {
 			const options = await fixture(source);
 			const registry = new PluginRuntimeRegistry(allow);
 			registry.register("example", createProcessPluginRuntime(options));
-			await expect(registry.activate("example", scope)).rejects.toThrow(
+			await expect(registry.activate("example", caller(scope))).rejects.toThrow(
 				/invalid protocol|factory import failed/,
 			);
 		}
@@ -155,7 +196,9 @@ export default async () => ({ operations: { wait: {
 		await symlink(outside.entrypoint, join(options.packageRoot, "data.txt"));
 		const registry = new PluginRuntimeRegistry(allow);
 		registry.register("example", createProcessPluginRuntime(options));
-		await expect(registry.activate("example", scope)).rejects.toThrow("symlink escapes its read grant");
+		await expect(registry.activate("example", caller(scope))).rejects.toThrow(
+			"symlink escapes its read grant",
+		);
 	});
 
 	it("rejects entrypoint symlinks that escape the package before launching", async () => {
@@ -165,6 +208,6 @@ export default async () => ({ operations: { wait: {
 		await symlink(outside.entrypoint, entrypoint);
 		const registry = new PluginRuntimeRegistry(allow);
 		registry.register("example", createProcessPluginRuntime({ ...options, entrypoint }));
-		await expect(registry.activate("example", scope)).rejects.toThrow("escapes its package");
+		await expect(registry.activate("example", caller(scope))).rejects.toThrow("escapes its package");
 	});
 });

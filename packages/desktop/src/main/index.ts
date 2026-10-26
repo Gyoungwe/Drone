@@ -352,6 +352,7 @@ app.whenReady().then(async () => {
 		app.isPackaged
 			? join(process.resourcesPath, "plugin-runtime")
 			: join(__dirname, `../../plugin-runtime/${process.platform}-${process.arch}`),
+		backendServices.sessions,
 	);
 	registerIpc(backendServices, uiPluginsManager, pluginRuntime, () => latestIncidentSnapshot);
 	await initUpdater();

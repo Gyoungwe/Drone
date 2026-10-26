@@ -6,6 +6,7 @@ import {
 } from "@drone/shared";
 import { getPi } from "../api";
 import { useUiPluginsStore } from "../stores/ui-plugins";
+import { invokePluginRuntime } from "./caller";
 import { useUiPluginRegistry } from "./registry";
 import { createPluginRuntimeClient } from "./runtime";
 import type { SlotName } from "./slots";
@@ -45,9 +46,7 @@ async function loadPluginCode(
 	runtimeBinding?: string,
 ): Promise<void> {
 	const runtime = runtimeBinding
-		? createPluginRuntimeClient((operation, input) =>
-				getPi().pluginRuntimeInvoke(runtimeBinding, operation, input),
-			)
+		? createPluginRuntimeClient((operation, input) => invokePluginRuntime(runtimeBinding, operation, input))
 		: undefined;
 	const blob = new Blob([code], { type: "text/javascript" });
 	const url = URL.createObjectURL(blob);

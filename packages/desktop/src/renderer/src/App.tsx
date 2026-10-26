@@ -31,6 +31,7 @@ import { useT } from "./i18n";
 import { notifyCompletion } from "./lib/completion-notify";
 import { initDailyDir } from "./lib/daily";
 import { onTurnSettled } from "./lib/turn-settled";
+import { syncPluginCaller } from "./plugins/caller";
 import { initUiPlugins } from "./plugins/loader";
 import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "./plugins/PluginRegions";
 import { RegionHost } from "./plugins/RegionHost";
@@ -54,6 +55,11 @@ import { initUpdateStore } from "./stores/update";
 
 export default function App() {
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
+	useEffect(() => {
+		void syncPluginCaller(activeSessionId).catch((error) =>
+			console.error("Plugin caller selection failed", error),
+		);
+	}, [activeSessionId]);
 	const view = useUiStore((s) => s.view);
 	// 插件全屏视图（rail.view，挂钩 4）：插件被禁用/卸载后若仍处于该视图，回到聊天
 	const pluginViews = usePluginEntries(UI_REGIONS.RailView);

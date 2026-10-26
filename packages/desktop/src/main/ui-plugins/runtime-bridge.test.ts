@@ -1,3 +1,4 @@
+import { PluginRuntimeRegistry, type PluginSessionCallerContext } from "@drone/backend";
 import type { PluginRuntimeFactory } from "@gyoungwe/plugin-api/runtime";
 import { describe, expect, it, vi } from "vitest";
 import { DesktopRuntimeBridge, type DesktopRuntimeSource } from "./runtime-bridge";
@@ -14,6 +15,11 @@ const operation = {
 	effect: "read" as const,
 	execute: vi.fn(async (input: unknown) => input),
 };
+const selections = new WeakMap<DesktopRuntimeBridge, Map<object, string>>();
+function selection(bridge: DesktopRuntimeBridge, owner: { id: number; isDestroyed(): boolean }): string {
+	const token = selections.get(bridge)?.get(owner);
+	return token ?? bridge.selectSession(owner, null);
+}
 function setup() {
 	const dispose = vi.fn(async () => {});
 	const factory = vi.fn<PluginRuntimeFactory>(async () => ({
@@ -25,22 +31,228 @@ function setup() {
 		enabled: vi.fn(() => true),
 		factory: () => factory,
 		approve: vi.fn(async () => true),
+		getSessionContext: vi.fn<(sessionId: string) => PluginSessionCallerContext | undefined>(() => undefined),
 	};
-	return { bridge: new DesktopRuntimeBridge(options), options, factory, dispose };
+	const bridge = new DesktopRuntimeBridge(options);
+	const tokens = new Map<object, string>();
+	selections.set(bridge, tokens);
+	const select = bridge.selectSession.bind(bridge);
+	vi.spyOn(bridge, "selectSession").mockImplementation((owner, id) => {
+		const token = select(owner, id);
+		tokens.set(owner, token);
+		return token;
+	});
+	return { bridge, options, factory, dispose };
 }
 
 describe("DesktopRuntimeBridge", () => {
+	it("does not revive a revoked sibling bind after awaiting the former owner's disposal", async () => {
+		const { bridge, factory, dispose } = setup();
+		let finish!: () => void;
+		dispose.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					finish = resolve;
+				}),
+		);
+		await bridge.bind("ui", owner);
+		const stopping = bridge.revoke(undefined, owner.id);
+		await vi.waitFor(() => expect(finish).toBeDefined());
+		const sibling = { ...owner, id: 2 };
+		const loading = bridge.bind("ui", sibling);
+		const rejected = expect(loading).rejects.toThrow("superseded");
+		// Allow this bind to reach the shared owner's outstanding disposal barrier.
+		await Promise.resolve();
+		await Promise.resolve();
+		await Promise.resolve();
+		await bridge.revoke(undefined, sibling.id);
+		const latest = bridge.bind("ui", sibling);
+		finish();
+		await stopping;
+		await rejected;
+		const token = (await latest)!;
+		expect(factory).toHaveBeenCalledTimes(2);
+		expect(await bridge.invoke(sibling, token, "read", "latest", selection(bridge, sibling))).toBe("latest");
+		await bridge.close();
+	});
+
+	it("cancels an unfinished activation when its approving window leaves, then lets a sibling reapprove", async () => {
+		const { bridge, options, factory } = setup();
+		let approve!: (allowed: boolean) => void;
+		options.approve.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					approve = resolve;
+				}),
+		);
+		const activating = vi.spyOn(PluginRuntimeRegistry.prototype, "activate");
+		const first = bridge.bind("ui", owner);
+		const firstRejected = expect(first).rejects.toThrow();
+		await vi.waitFor(() => expect(approve).toBeDefined());
+		const sibling = { ...owner, id: 2 };
+		const second = bridge.bind("ui", sibling);
+		const secondRejected = expect(second).rejects.toThrow();
+		await vi.waitFor(() => expect(activating).toHaveBeenCalledTimes(2));
+		activating.mockRestore();
+		await bridge.revoke(undefined, owner.id);
+		await Promise.all([firstRejected, secondRejected]);
+		expect(factory).not.toHaveBeenCalled();
+		approve(true);
+		const token = (await bridge.bind("ui", sibling))!;
+		expect(await bridge.invoke(sibling, token, "read", "after new consent", selection(bridge, sibling))).toBe(
+			"after new consent",
+		);
+		expect(factory).toHaveBeenCalledOnce();
+		await bridge.close();
+	});
+	it("rejects stale selection leases even after A to B to A and a switch before dispatch microtask", async () => {
+		const { bridge, options } = setup();
+		const a = sessionContext("a"),
+			b = sessionContext("b");
+		options.getSessionContext.mockImplementation((id) => (id === "a" ? a : b));
+		const token = (await bridge.bind("ui", owner))!;
+		const first = bridge.selectSession(owner, "a");
+		bridge.selectSession(owner, "b");
+		const again = bridge.selectSession(owner, "a");
+		expect(again).not.toBe(first);
+		await expect(bridge.invoke(owner, token, "read", "old", first)).rejects.toThrow("selection lease");
+		const before = operation.execute.mock.calls.length;
+		const dispatch = bridge.invoke(owner, token, "read", "racing", again);
+		bridge.selectSession(owner, "b");
+		await expect(dispatch).rejects.toThrow("no longer available");
+		expect(operation.execute.mock.calls.length).toBe(before);
+		await bridge.close();
+	});
+
+	function sessionContext(sessionId: string, workspaceId = "/workspace"): PluginSessionCallerContext {
+		return {
+			identity: {},
+			scope: { kind: "session", sessionId, workspaceId },
+			signal: new AbortController().signal,
+			projectTrusted: true,
+			readOnly: false,
+		};
+	}
+	it("shares an application owner but resolves explicit application and real session scopes per call", async () => {
+		const { bridge, options, factory, dispose } = setup();
+		const contexts = new Map([
+			["a", sessionContext("a", "/first")],
+			["b", sessionContext("b", "/second")],
+		]);
+		options.getSessionContext.mockImplementation((id) => contexts.get(id));
+		const calls: unknown[] = [];
+		factory.mockImplementation(async () => ({
+			operations: {
+				read: {
+					...operation,
+					execute: async (_input, ctx) => {
+						calls.push(ctx.scope);
+						return "ok";
+					},
+				},
+			},
+			dispose,
+		}));
+		const second = { ...owner, id: 2 };
+		const a = (await bridge.bind("ui", owner))!;
+		const b = (await bridge.bind("ui", second))!;
+		await bridge.invoke(owner, a, "read", "", selection(bridge, owner));
+		bridge.selectSession(owner, "a");
+		bridge.selectSession(second, "b");
+		await bridge.invoke(owner, a, "read", "", selection(bridge, owner));
+		await bridge.invoke(second, b, "read", "", selection(bridge, second));
+		expect(calls).toEqual([{ kind: "application" }, contexts.get("a")!.scope, contexts.get("b")!.scope]);
+		expect(factory).toHaveBeenCalledOnce();
+		expect(factory.mock.calls[0]![0]).not.toHaveProperty("scope");
+		await bridge.revoke(undefined, owner.id);
+		expect(dispose).not.toHaveBeenCalled();
+		await bridge.invoke(second, b, "read", "", selection(bridge, second));
+		await bridge.close();
+		expect(dispose).toHaveBeenCalledOnce();
+	});
+	it("rejects closed or reused session identities until the renderer explicitly selects the new entry", async () => {
+		const { bridge, options } = setup();
+		let current: PluginSessionCallerContext | undefined = sessionContext("same-id");
+		options.getSessionContext.mockImplementation(() => current);
+		const token = (await bridge.bind("ui", owner))!;
+		bridge.selectSession(owner, "same-id");
+		current = sessionContext("same-id");
+		await expect(bridge.invoke(owner, token, "read", "", selection(bridge, owner))).rejects.toThrow(
+			"no longer available",
+		);
+		bridge.selectSession(owner, "same-id");
+		expect(await bridge.invoke(owner, token, "read", "new entry", selection(bridge, owner))).toBe(
+			"new entry",
+		);
+		current = undefined;
+		expect(() => bridge.selectSession(owner, "missing")).toThrow("not open");
+		await expect(bridge.invoke(owner, token, "read", "", selection(bridge, owner))).rejects.toThrow(
+			"no longer available",
+		);
+		await bridge.close();
+	});
+	it("cancels a pending write approval on session switch without stopping the application owner", async () => {
+		const { bridge, options, factory, dispose } = setup();
+		const a = sessionContext("a"),
+			b = sessionContext("b");
+		options.getSessionContext.mockImplementation((id) => (id === "a" ? a : b));
+		const token = (await bridge.bind("ui", owner))!;
+		bridge.selectSession(owner, "a");
+		let resolve!: (allowed: boolean) => void;
+		options.approve.mockImplementationOnce(
+			() =>
+				new Promise((done) => {
+					resolve = done;
+				}),
+		);
+		const write = bridge.invoke(owner, token, "write", "late", selection(bridge, owner));
+		const rejected = expect(write).rejects.toThrow("selection changed");
+		await vi.waitFor(() => expect(resolve).toBeDefined());
+		const before = operation.execute.mock.calls.length;
+		bridge.selectSession(owner, "b");
+		await rejected;
+		resolve(true);
+		await Promise.resolve();
+		expect(operation.execute.mock.calls.length).toBe(before);
+		expect(await bridge.invoke(owner, token, "read", "current", selection(bridge, owner))).toBe("current");
+		expect(factory).toHaveBeenCalledOnce();
+		expect(dispose).not.toHaveBeenCalled();
+		await bridge.close();
+	});
+	it("rechecks trust and read-only status after approval and never dispatches denied writes", async () => {
+		const { bridge, options } = setup();
+		let current = sessionContext("a");
+		options.getSessionContext.mockImplementation(() => current);
+		const token = (await bridge.bind("ui", owner))!;
+		bridge.selectSession(owner, "a");
+		options.approve.mockImplementationOnce(async () => {
+			current = { ...current, readOnly: true };
+			return true;
+		});
+		await expect(bridge.invoke(owner, token, "write", "denied", selection(bridge, owner))).rejects.toThrow(
+			"operation denied",
+		);
+		expect(await bridge.invoke(owner, token, "read", "allowed", selection(bridge, owner))).toBe("allowed");
+		current = { ...current, projectTrusted: false };
+		await expect(bridge.invoke(owner, token, "read", "denied", selection(bridge, owner))).rejects.toThrow(
+			"operation denied",
+		);
+		await bridge.close();
+	});
+
 	it("binds to the issuing window and revokes old generations on reload", async () => {
 		const { bridge, dispose } = setup();
 		const token = (await bridge.bind("ui", owner))!;
-		expect(await bridge.invoke(owner, token, "read", "data")).toBe("data");
-		await expect(bridge.invoke({ ...owner, id: 2 }, token, "read", "data")).rejects.toThrow(
-			"invalid for this window",
-		);
+		expect(await bridge.invoke(owner, token, "read", "data", selection(bridge, owner))).toBe("data");
+		await expect(
+			bridge.invoke({ ...owner, id: 2 }, token, "read", "data", selection(bridge, { ...owner, id: 2 })),
+		).rejects.toThrow("invalid for this window");
 		const replacement = (await bridge.bind("ui", owner))!;
 		expect(replacement).not.toBe(token);
 		expect(dispose).toHaveBeenCalledTimes(1);
-		await expect(bridge.invoke(owner, token, "read", "data")).rejects.toThrow("invalid");
+		await expect(bridge.invoke(owner, token, "read", "data", selection(bridge, owner))).rejects.toThrow(
+			"invalid",
+		);
 		await bridge.revoke();
 	});
 
@@ -51,7 +263,9 @@ describe("DesktopRuntimeBridge", () => {
 		expect(factory).not.toHaveBeenCalled();
 		const token = (await bridge.bind("ui", owner))!;
 		options.approve.mockResolvedValueOnce(false);
-		await expect(bridge.invoke(owner, token, "write", "data")).rejects.toThrow("operation denied");
+		await expect(bridge.invoke(owner, token, "write", "data", selection(bridge, owner))).rejects.toThrow(
+			"operation denied",
+		);
 		await bridge.revoke();
 	});
 
@@ -80,7 +294,9 @@ describe("DesktopRuntimeBridge", () => {
 		const { bridge, options, dispose } = setup();
 		const token = (await bridge.bind("ui", owner))!;
 		options.source.mockReturnValue(undefined);
-		await expect(bridge.invoke(owner, token, "read", "data")).rejects.toThrow("no longer enabled");
+		await expect(bridge.invoke(owner, token, "read", "data", selection(bridge, owner))).rejects.toThrow(
+			"no longer enabled",
+		);
 		expect(dispose).toHaveBeenCalledTimes(1);
 		expect(await bridge.bind("local", owner)).toBeUndefined();
 	});
@@ -93,10 +309,12 @@ describe("DesktopRuntimeBridge", () => {
 		const token = (await second)!;
 		const other = { ...owner, id: 2 };
 		const otherToken = (await bridge.bind("ui", other))!;
-		expect(factory).toHaveBeenCalledTimes(2);
+		expect(factory).toHaveBeenCalledTimes(1);
 		await bridge.revoke(undefined, owner.id);
-		await expect(bridge.invoke(owner, token, "read", "x")).rejects.toThrow("invalid");
-		expect(await bridge.invoke(other, otherToken, "read", "x")).toBe("x");
+		await expect(bridge.invoke(owner, token, "read", "x", selection(bridge, owner))).rejects.toThrow(
+			"invalid",
+		);
+		expect(await bridge.invoke(other, otherToken, "read", "x", selection(bridge, other))).toBe("x");
 		await bridge.revoke();
 	});
 	it("holds parallel replacement binds behind the original teardown", async () => {
@@ -120,7 +338,9 @@ describe("DesktopRuntimeBridge", () => {
 		await firstRejected;
 		const token = (await second)!;
 		expect(factory).toHaveBeenCalledTimes(2);
-		expect(await bridge.invoke(owner, token, "read", "after teardown")).toBe("after teardown");
+		expect(await bridge.invoke(owner, token, "read", "after teardown", selection(bridge, owner))).toBe(
+			"after teardown",
+		);
 		await bridge.revoke();
 	});
 
@@ -139,7 +359,9 @@ describe("DesktopRuntimeBridge", () => {
 		const replace = vi.fn(async () => "updated");
 		const mutation = bridge.withTransition(replace);
 		await expect(bridge.bind("ui", owner)).rejects.toThrow("unavailable");
-		await expect(bridge.invoke(owner, token, "read", "x")).rejects.toThrow("invalid");
+		await expect(bridge.invoke(owner, token, "read", "x", selection(bridge, owner))).rejects.toThrow(
+			"invalid",
+		);
 		expect(replace).not.toHaveBeenCalled();
 		expect(factory).toHaveBeenCalledOnce();
 		finish();
@@ -164,8 +386,10 @@ describe("DesktopRuntimeBridge", () => {
 	it("rejects another owner object even when its numeric window id matches", async () => {
 		const { bridge } = setup();
 		const token = (await bridge.bind("ui", owner))!;
-		await expect(bridge.invoke({ ...owner }, token, "read", "x")).rejects.toThrow("invalid for this window");
-		expect(await bridge.invoke(owner, token, "read", "x")).toBe("x");
+		await expect(
+			bridge.invoke({ ...owner }, token, "read", "x", selection(bridge, { ...owner })),
+		).rejects.toThrow("invalid for this window");
+		expect(await bridge.invoke(owner, token, "read", "x", selection(bridge, owner))).toBe("x");
 		await bridge.revoke();
 	});
 	it("blocks binding during configuration persistence and permanently after close", async () => {
