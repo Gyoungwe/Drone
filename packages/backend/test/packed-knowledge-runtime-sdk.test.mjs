@@ -1,6 +1,6 @@
 /** Opt-in artifact acceptance; see docs/pluginization/packed-knowledge-runtime-acceptance.md. */
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -661,6 +661,174 @@ it.skipIf(!tarball)(
 			);
 			expect(refreshed.hits[0].path).toBe("Library/Methods/willow.md");
 			expect(await packageChildren(packageRoot)).toEqual(processes);
+			stage = "review-proposal-fixtures";
+			const beforeWiki =
+				"# Orchid Wiki\nHuman-owned header.\n<!-- pi-agent:managed:start -->\nOld summary\n<!-- pi-agent:managed:end -->\nHuman-owned footer.\n";
+			const afterWiki = beforeWiki.replace("Old summary", "New summary");
+			const sourceText = await readFile(join(vault, sharedNote), "utf8");
+			const sourceReceipt = {
+				path: sharedNote,
+				hash: sha256(sourceText),
+				startLine: 1,
+				endLine: 2,
+				excerptHash: sha256(sourceText.split("\n").slice(0, 2).join("\n")),
+				paperDois: [],
+			};
+			const proposals = ["alpha", "beta"].map((project) => ({
+				id: randomUUID(),
+				vaultId: overview.binding.vaultId,
+				bindingRevision: overview.binding.revision,
+				project,
+				path: `Projects/${project}/Wiki/Orchid.md`,
+				title: `${project} Orchid`,
+				rationale: "Synthetic review fixture",
+				createdAt: Date.now(),
+				before: beforeWiki,
+				beforeHash: sha256(beforeWiki),
+				after: afterWiki,
+				afterHash: sha256(afterWiki),
+				status: "pending",
+				sources: [sourceReceipt],
+			}));
+			// Build hashes with the installed package's public API, never copied domain algorithms.
+			const proposalFile = join(prefix, "proposal-fixtures.json");
+			await writeFile(proposalFile, JSON.stringify(proposals));
+			const { stdout: finalizedJson } = await run(
+				process.execPath,
+				[
+					"--input-type=module",
+					"-e",
+					'import {readFile} from "node:fs/promises";import {immutableWikiProposalHash} from "@gyoungwe/pi-knowledge/host";const proposals=JSON.parse(await readFile(process.argv[1],"utf8"));process.stdout.write(JSON.stringify(proposals.map(p=>({...p,proposalHash:immutableWikiProposalHash(p)}))));',
+					proposalFile,
+				],
+				{
+					cwd: prefix,
+					env: {
+						PATH: process.env.PATH,
+						TMPDIR: root,
+						DRONE_KNOWLEDGE_DIR: state,
+						PI_CODING_AGENT_DIR: agentDir,
+					},
+				},
+			);
+			const [alphaProposal, betaProposal] = JSON.parse(finalizedJson);
+			const pendingDirectory = join(state, overview.binding.vaultId, "wiki-review/pending");
+			await mkdir(pendingDirectory, { recursive: true });
+			for (const proposal of [alphaProposal, betaProposal]) {
+				await mkdir(dirname(join(vault, proposal.path)), { recursive: true });
+				await writeFile(join(vault, proposal.path), beforeWiki);
+				await writeFile(join(pendingDirectory, `${proposal.id}.json`), JSON.stringify(proposal));
+			}
+			const proposalBytes = await readFile(join(pendingDirectory, `${alphaProposal.id}.json`), "utf8");
+			stage = "review-application-isolation";
+			const reviewApplication = bridge.selectSession(window, null);
+			expect(
+				await bridge.invoke(
+					window,
+					binding,
+					"reviews",
+					{ revision: overview.binding.revision },
+					reviewApplication,
+				),
+			).toMatchObject({ project: null, total: 0, items: [] });
+			stage = "review-readonly-session-preview";
+			const reviewSelection = bridge.selectSession(window, session.sessionId);
+			const reviewList = await bridge.invoke(
+				window,
+				binding,
+				"reviews",
+				{ revision: overview.binding.revision, limit: 1 },
+				reviewSelection,
+			);
+			expect(reviewList).toMatchObject({ project: "alpha", total: 1, nextOffset: null, problems: [] });
+			expect(reviewList.items.map((value) => ({ id: value.id, proposalHash: value.proposalHash }))).toEqual([
+				{ id: alphaProposal.id, proposalHash: alphaProposal.proposalHash },
+			]);
+			const reviewInput = {
+				revision: overview.binding.revision,
+				id: alphaProposal.id,
+				expectedProposalHash: alphaProposal.proposalHash,
+			};
+			const preview = await bridge.invoke(window, binding, "previewReview", reviewInput, reviewSelection);
+			expect(preview).toMatchObject({
+				before: "Old summary",
+				after: "New summary",
+				protectedText: "# Orchid Wiki\nHuman-owned header.\n（此处为智能体托管区）\nHuman-owned footer.\n",
+				project: "alpha",
+				canApply: true,
+				targetChanged: false,
+				scientificallyVerified: false,
+				sources: [{ ...sourceReceipt, currentHash: sourceReceipt.hash, changed: false, error: null }],
+			});
+			await expect(
+				bridge.invoke(
+					window,
+					binding,
+					"previewReview",
+					{ ...reviewInput, id: betaProposal.id, expectedProposalHash: betaProposal.proposalHash },
+					reviewSelection,
+				),
+			).rejects.toThrow("different project");
+			await expect(
+				bridge.invoke(
+					window,
+					binding,
+					"previewReview",
+					{ ...reviewInput, expectedProposalHash: "0".repeat(64) },
+					reviewSelection,
+				),
+			).rejects.toThrow("changed");
+			await expect(
+				bridge.invoke(
+					window,
+					binding,
+					"reviews",
+					{ revision: overview.binding.revision, project: "beta" },
+					reviewSelection,
+				),
+			).rejects.toThrow("Invalid plugin operation input");
+			expect(await readFile(join(vault, alphaProposal.path), "utf8")).toBe(beforeWiki);
+			expect(await readFile(join(pendingDirectory, `${alphaProposal.id}.json`), "utf8")).toBe(proposalBytes);
+			stage = "review-source-and-target-change";
+			await writeFile(join(vault, sharedNote), `${sourceText}Changed source after review list.\n`);
+			const changedSource = await bridge.invoke(
+				window,
+				binding,
+				"previewReview",
+				reviewInput,
+				reviewSelection,
+			);
+			expect(changedSource).toMatchObject({
+				canApply: false,
+				sources: [{ changed: true, currentHash: sha256(`${sourceText}Changed source after review list.\n`) }],
+			});
+			await writeFile(join(vault, sharedNote), sourceText);
+			await writeFile(join(vault, alphaProposal.path), `${beforeWiki}Edited human footer.\n`);
+			expect(
+				await bridge.invoke(window, binding, "previewReview", reviewInput, reviewSelection),
+			).toMatchObject({ targetChanged: true, canApply: false });
+			await writeFile(join(vault, alphaProposal.path), beforeWiki);
+			await writeFile(
+				join(pendingDirectory, `${alphaProposal.id}.json`),
+				JSON.stringify({ ...alphaProposal, after: `${afterWiki}tampered` }),
+			);
+			await expect(
+				bridge.invoke(window, binding, "previewReview", reviewInput, reviewSelection),
+			).rejects.toThrow("changed");
+			await writeFile(join(pendingDirectory, `${alphaProposal.id}.json`), proposalBytes);
+			const reviewScopes = {
+				application: 0,
+				alpha: 1,
+				betaHidden: true,
+				readOnlySession: true,
+				proposalHash: alphaProposal.proposalHash,
+				beforeAfterProtectedExact: true,
+				sourceLineHashes: true,
+				sourceChangeDetected: true,
+				targetChangeDetected: true,
+				staleAndTamperedProposalRejected: true,
+				noReviewWrites: true,
+			};
 			stage = "sdk-version-evidence";
 			// Resolve the installed ESM package in Node; Vitest's transformed import.meta omits resolve.
 			const { stdout: sdkPackageUrl } = await run(
@@ -692,6 +860,7 @@ it.skipIf(!tarball)(
 				readingOperations: ["readNote", "links", "graph", "jobs", "recentByCategory"],
 				readingScopes,
 				statePolicy: stateReceipt,
+				reviews: reviewScopes,
 				readingInputSchemas: true,
 				pagedReadHashAndLines: true,
 				changedHashRejected: true,

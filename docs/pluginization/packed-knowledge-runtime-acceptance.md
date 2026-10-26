@@ -72,3 +72,10 @@ npx vitest run packages/backend/test/packed-knowledge-runtime-sdk.test.mjs
 回执为 `.local/acceptance/native-runtime-state-2026-10-26/coordinator.json`，SHA256 `d5e9f8fb49aa41b5dfe1591c43cd42d05d7423161fb7c8d4cd9eb5b6edaadb82`；同目录 `coordinator.log` SHA256 `31326dfa27cd127a7203e7b78fd3f0f1caa77062aedfa507dd265f2e15369b88`。宿主实际文件系统与 production picker/source 的 103 项聚焦测试见 `focused.log`，SHA256 `179516b402662aa00591ee3272f2e6ae67fec8c526c9cd5ecfad357758ff9b09`。状态能力的授权、原子写与并发范围见 [state capabilities](native-plugin-state-capabilities.md)。本测试使用明确的测试授权器，不能代替正式 GUI 目录选择与审批验收。
 
 本轮两个非最终运行保留：`initial-test-assertion.log` 是旧验收断言未计入新增 `capability:state.writeJson` 审批而失败；`during-protocol-edit.log` 是并行修改 native events 协议期间两端瞬时不一致导致声明拒绝。协议冻结后上述完整验收通过，未为测试加入旧协议 fallback，也未修改候选 tarball。它们与上一轮尚未定位的 cleanup 观察是不同事件。
+
+
+## 2026-10-26 审核列表与预览回执
+
+候选 tarball SHA256 `fb8a0c39138096b14cdbea1da8f56dbb5e7f7eb2b81758da2eb3e10b6fe2bc1d` 的实际安装、coordinator、Pi 1.1.0 只读 SDK 会话验收退出 0。新增 `reviews` 与 `previewReview`：应用范围为 0，alpha 会话仅列出自己的 1 个 proposal，beta 被隔离；核对列表 proposalHash、精确 before/after/受保护文本、来源行号及 hash；旧 proposalHash、篡改 proposal、伪造项目输入拒绝，来源或目标改变后 `canApply:false`。只读预览前后的 proposal 文件和 Wiki 目标保持不变，未执行审核写入。前述阅读、状态设置及 native 两工具回归同时通过，实际子进程退出、reservation 释放。
+
+合成 proposal 的不可变 hash 由干净安装包的公开 `@gyoungwe/pi-knowledge/host` API 在独立、仅临时配置的 Node 进程构造，未复制领域实现；实际列表/预览仍通过隔离 runtime 与真实授权调用。回执 `.local/acceptance/native-runtime-review-2026-10-26/coordinator.json` SHA256 `1cd6cca347a65a4a878528ac814589cf31185a2f319aa1813a2693aac3946d53`，同目录 `coordinator.log` SHA256 `73dc1dcde76aab6d83cd0d08eedc77a0b9cb6f8e1da65b0c685a9b4ebbec1ac9`。这是实际包/SDK 验收，不代替正式安装包 GUI，也不宣称 Wiki 写入或完整 publication 已迁移。
