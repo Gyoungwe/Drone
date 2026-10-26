@@ -44,6 +44,7 @@ if (!check) {
 	await rm(distRoot, { recursive: true, force: true });
 	await mkdir(distRoot, { recursive: true });
 	const result = await build({
+		absWorkingDir: root,
 		entryPoints: [join(packageRoot, "src/index.ts")],
 		outfile: join(distRoot, "index.mjs"),
 		bundle: true,
