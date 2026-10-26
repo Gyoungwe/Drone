@@ -12,6 +12,7 @@ import { CapabilityRuntime, type CapabilityRuntime as CapabilityRuntimeType } fr
 import type { KnowledgeUiService } from "../knowledge/ui";
 import { createLogger } from "../log";
 import type { PermissionConfirm } from "../permissions/extension";
+import type { PluginNativeBootstrap } from "../plugins/coordinator";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import { AskGate } from "../session/ask-gate";
 import { inboxFor, observeInbox } from "../session/durable-inbox";
@@ -89,99 +90,118 @@ export class SessionConstructionService {
 			this.host.options.lazyCapabilities === false && !this.host.options.desktopIntegration?.academicPiRoot
 				? undefined
 				: new CapabilityRuntime(skillVisibility);
-		const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(cwd, {
-			confirm: confirmBridge,
-			modeRef,
-			...(capabilities
-				? {
-						extensionFactories: [
-							makeCapabilitySessionExtension(
-								capabilities,
-								this.host.options.desktopIntegration?.academicPiRoot,
-							),
-						],
-					}
-				: {}),
-		});
-		const resourceLoader = capabilities
-			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
-			: baseResourceLoader;
-		const { session, extensionsResult } = await this.host.sessionEngine.create(
-			cwd,
-			{
-				model,
-				thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
-				tools: this.host.options.tools,
-				excludeTools: excludedBuiltinTools(),
-				customTools: buildSessionCustomTools(
-					this.host.sessionExtensionDependencies(),
-					gate,
-					askGate,
-					capabilities,
-				),
-				settingsManager,
-				resourceLoader,
-			},
-			runtime,
-		);
-		const mutex = applySubagentMutex(
-			session,
-			extensionsResult,
-			this.host.options.subagentPreferBuiltin !== false,
-		);
-		if (mutex.shadowed.length > 0) {
-			log.info("third-party subagent tools shadowed", session.sessionId, mutex);
-			for (const shadowed of mutex.shadowed) {
-				this.host.emitEvent(session.sessionId, {
-					type: "subagent_mutex",
-					extensionPath: shadowed.extensionPath,
-					tools: shadowed.tools,
+		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin();
+		let createdSession: AgentSession | undefined;
+		try {
+			const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(
+				cwd,
+				{
+					confirm: confirmBridge,
+					nativeBootstrap,
+					modeRef,
+					...(capabilities
+						? {
+								extensionFactories: [
+									makeCapabilitySessionExtension(
+										capabilities,
+										this.host.options.desktopIntegration?.academicPiRoot,
+									),
+								],
+							}
+						: {}),
+				},
+			);
+			const resourceLoader = capabilities
+				? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
+				: baseResourceLoader;
+			const { session, extensionsResult } = await this.host.sessionEngine.create(
+				cwd,
+				{
+					model,
+					thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
+					tools: this.host.options.tools,
+					excludeTools: excludedBuiltinTools(),
+					customTools: buildSessionCustomTools(
+						this.host.sessionExtensionDependencies(),
+						gate,
+						askGate,
+						capabilities,
+					),
+					settingsManager,
+					resourceLoader,
+				},
+				runtime,
+			);
+			createdSession = session;
+			const mutex = applySubagentMutex(
+				session,
+				extensionsResult,
+				this.host.options.subagentPreferBuiltin !== false,
+			);
+			if (mutex.shadowed.length > 0) {
+				log.info("third-party subagent tools shadowed", session.sessionId, mutex);
+				for (const shadowed of mutex.shadowed) {
+					this.host.emitEvent(session.sessionId, {
+						type: "subagent_mutex",
+						extensionPath: shadowed.extensionPath,
+						tools: shadowed.tools,
+					});
+				}
+			}
+
+			if (capabilities) {
+				capabilities.bind(session, {
+					excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
+					extraAlwaysOn: this.host.options.tools ?? [],
+				});
+				// P12：技能清单预算按当前模型窗口算
+				capabilities.setContextWindow(session.model?.contextWindow);
+				this.host.capabilityRuntimes.set(session.sessionId, capabilities);
+			}
+
+			gate.bindSession(session.sessionId);
+			askGate.bindSession(session.sessionId);
+			this.host.approvals.register(session.sessionId, gate);
+			this.host.registerAskGate(session.sessionId, askGate);
+			this.host.sessionPermissions.bind(session.sessionId, modeRef);
+
+			const causality = createSessionCausalityContext();
+			const recordIntent = bindToolIntentJournal(
+				session,
+				this.host.capabilityRuntimes.get(session.sessionId)?.tools,
+				() => causality.current(),
+			);
+			const unsubscribe = session.subscribe((event) => {
+				causality.observe(event);
+				recordIntent(event);
+				observeInbox(session.sessionFile, event);
+				autoNameSession(session, event);
+				this.host.emitEvent(session.sessionId, event);
+			});
+			this.host.registry.add({ session, unsubscribe, cwd });
+			nativeBootstrap?.bindSession(session.sessionId);
+			if (this.host.options.permissionGates !== false) {
+				await session.bindExtensions({
+					uiContext: makeUiContext(gate, askGate, (text, type) => {
+						// A failed toast must not abort the session; retain a diagnostic for the missing notification.
+						void this.host.knowledge.notify(text, type, session.sessionId).catch((error) =>
+							log.error("session notification delivery failed", session.sessionId, {
+								error: String(error),
+							}),
+						);
+					}),
+					mode: "tui",
 				});
 			}
+
+			await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
+
+			log.info("session created", session.sessionId, { cwd });
+			return this.host.toMetaOrThrow(session.sessionId);
+		} catch (error) {
+			await this.failedConstruction(error, createdSession, nativeBootstrap);
+			throw error;
 		}
-
-		if (capabilities) {
-			capabilities.bind(session, {
-				excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
-				extraAlwaysOn: this.host.options.tools ?? [],
-			});
-			// P12：技能清单预算按当前模型窗口算
-			capabilities.setContextWindow(session.model?.contextWindow);
-			this.host.capabilityRuntimes.set(session.sessionId, capabilities);
-		}
-
-		gate.bindSession(session.sessionId);
-		askGate.bindSession(session.sessionId);
-		this.host.approvals.register(session.sessionId, gate);
-		this.host.registerAskGate(session.sessionId, askGate);
-		this.host.sessionPermissions.bind(session.sessionId, modeRef);
-		if (this.host.options.permissionGates !== false) {
-			await session.bindExtensions({
-				uiContext: makeUiContext(gate, askGate, (text, type) => {
-					void this.host.knowledge.notify(text, type, session.sessionId).catch(() => {});
-				}),
-				mode: "tui",
-			});
-		}
-
-		const causality = createSessionCausalityContext();
-		const recordIntent = bindToolIntentJournal(
-			session,
-			this.host.capabilityRuntimes.get(session.sessionId)?.tools,
-			() => causality.current(),
-		);
-		const unsubscribe = session.subscribe((event) => {
-			causality.observe(event);
-			recordIntent(event);
-			observeInbox(session.sessionFile, event);
-			autoNameSession(session, event);
-			this.host.emitEvent(session.sessionId, event);
-		});
-		this.host.registry.add({ session, unsubscribe, cwd });
-		await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
-
-		log.info("session created", session.sessionId, { cwd });
-		return this.host.toMetaOrThrow(session.sessionId);
 	}
 
 	async openSession(filePath: string): Promise<SessionMeta> {
@@ -218,131 +238,167 @@ export class SessionConstructionService {
 			this.host.options.lazyCapabilities === false && !this.host.options.desktopIntegration?.academicPiRoot
 				? undefined
 				: new CapabilityRuntime(skillVisibility);
-		const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(cwd, {
-			confirm: confirmBridge,
-			modeRef,
-			...(capabilities
-				? {
-						extensionFactories: [
-							makeCapabilitySessionExtension(
-								capabilities,
-								this.host.options.desktopIntegration?.academicPiRoot,
-							),
-						],
-					}
-				: {}),
-		});
-		const resourceLoader = capabilities
-			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
-			: baseResourceLoader;
-		const { session, extensionsResult } = await this.host.sessionEngine.open(
-			filePath,
-			{
-				settingsManager,
-				resourceLoader,
-				excludeTools: excludedBuiltinTools(),
-				customTools: buildSessionCustomTools(
-					this.host.sessionExtensionDependencies(),
-					gate,
-					askGate,
-					capabilities,
-				),
-			},
-			runtime,
-		);
-		const mutex = applySubagentMutex(
-			session,
-			extensionsResult,
-			this.host.options.subagentPreferBuiltin !== false,
-		);
-		if (mutex.shadowed.length > 0) {
-			log.info("third-party subagent tools shadowed", session.sessionId, mutex);
-			for (const shadowed of mutex.shadowed) {
-				this.host.emitEvent(session.sessionId, {
-					type: "subagent_mutex",
-					extensionPath: shadowed.extensionPath,
-					tools: shadowed.tools,
+		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin();
+		let createdSession: AgentSession | undefined;
+		try {
+			const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(
+				cwd,
+				{
+					confirm: confirmBridge,
+					nativeBootstrap,
+					modeRef,
+					...(capabilities
+						? {
+								extensionFactories: [
+									makeCapabilitySessionExtension(
+										capabilities,
+										this.host.options.desktopIntegration?.academicPiRoot,
+									),
+								],
+							}
+						: {}),
+				},
+			);
+			const resourceLoader = capabilities
+				? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
+				: baseResourceLoader;
+			const { session, extensionsResult } = await this.host.sessionEngine.open(
+				filePath,
+				{
+					settingsManager,
+					resourceLoader,
+					excludeTools: excludedBuiltinTools(),
+					customTools: buildSessionCustomTools(
+						this.host.sessionExtensionDependencies(),
+						gate,
+						askGate,
+						capabilities,
+					),
+				},
+				runtime,
+			);
+			createdSession = session;
+			const mutex = applySubagentMutex(
+				session,
+				extensionsResult,
+				this.host.options.subagentPreferBuiltin !== false,
+			);
+			if (mutex.shadowed.length > 0) {
+				log.info("third-party subagent tools shadowed", session.sessionId, mutex);
+				for (const shadowed of mutex.shadowed) {
+					this.host.emitEvent(session.sessionId, {
+						type: "subagent_mutex",
+						extensionPath: shadowed.extensionPath,
+						tools: shadowed.tools,
+					});
+				}
+			}
+
+			if (capabilities) {
+				capabilities.bind(session, {
+					excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
+					extraAlwaysOn: this.host.options.tools ?? [],
+				});
+				// P12：技能清单预算按当前模型窗口算
+				capabilities.setContextWindow(session.model?.contextWindow);
+				this.host.capabilityRuntimes.set(session.sessionId, capabilities);
+			}
+
+			gate.bindSession(session.sessionId);
+			askGate.bindSession(session.sessionId);
+			this.host.approvals.register(session.sessionId, gate);
+			this.host.registerAskGate(session.sessionId, askGate);
+			this.host.sessionPermissions.bind(session.sessionId, modeRef);
+
+			const causality = createSessionCausalityContext();
+			const recordIntent = bindToolIntentJournal(
+				session,
+				this.host.capabilityRuntimes.get(session.sessionId)?.tools,
+				() => causality.current(),
+			);
+			const unsubscribe = session.subscribe((event) => {
+				causality.observe(event);
+				recordIntent(event);
+				observeInbox(session.sessionFile, event);
+				autoNameSession(session, event);
+				this.host.emitEvent(session.sessionId, event);
+			});
+			// 子代理产物目录下的会话文件 = 只读检视（spec §8.1：防能力静默漂移/递归绕过）。
+			// 其运行 trace 由 runner 管理，检视页不可写，故不另建 recorder（避免覆盖运行中的 recorder）。
+			const readOnly = isSubagentSessionPath(filePath);
+			this.host.registry.add({
+				session,
+				unsubscribe,
+				cwd,
+				readOnly: readOnly || undefined,
+			});
+			nativeBootstrap?.bindSession(session.sessionId);
+			if (this.host.options.permissionGates !== false) {
+				await session.bindExtensions({
+					uiContext: makeUiContext(gate, askGate, (text, type) => {
+						// A failed toast must not abort the session; retain a diagnostic for the missing notification.
+						void this.host.knowledge.notify(text, type, session.sessionId).catch((error) =>
+							log.error("session notification delivery failed", session.sessionId, {
+								error: String(error),
+							}),
+						);
+					}),
+					mode: "tui",
 				});
 			}
-		}
-
-		if (capabilities) {
-			capabilities.bind(session, {
-				excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
-				extraAlwaysOn: this.host.options.tools ?? [],
-			});
-			// P12：技能清单预算按当前模型窗口算
-			capabilities.setContextWindow(session.model?.contextWindow);
-			this.host.capabilityRuntimes.set(session.sessionId, capabilities);
-		}
-
-		gate.bindSession(session.sessionId);
-		askGate.bindSession(session.sessionId);
-		this.host.approvals.register(session.sessionId, gate);
-		this.host.registerAskGate(session.sessionId, askGate);
-		this.host.sessionPermissions.bind(session.sessionId, modeRef);
-		if (this.host.options.permissionGates !== false) {
-			await session.bindExtensions({
-				uiContext: makeUiContext(gate, askGate, (text, type) => {
-					void this.host.knowledge.notify(text, type, session.sessionId).catch(() => {});
-				}),
-				mode: "tui",
-			});
-		}
-		const causality = createSessionCausalityContext();
-		const recordIntent = bindToolIntentJournal(
-			session,
-			this.host.capabilityRuntimes.get(session.sessionId)?.tools,
-			() => causality.current(),
-		);
-		const unsubscribe = session.subscribe((event) => {
-			causality.observe(event);
-			recordIntent(event);
-			observeInbox(session.sessionFile, event);
-			autoNameSession(session, event);
-			this.host.emitEvent(session.sessionId, event);
-		});
-		// 子代理产物目录下的会话文件 = 只读检视（spec §8.1：防能力静默漂移/递归绕过）。
-		// 其运行 trace 由 runner 管理，检视页不可写，故不另建 recorder（避免覆盖运行中的 recorder）。
-		const readOnly = isSubagentSessionPath(filePath);
-		this.host.registry.add({
-			session,
-			unsubscribe,
-			cwd,
-			readOnly: readOnly || undefined,
-		});
-		if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
-		log.info("session opened", session.sessionId, { file: filePath });
-		const autoResume = this.host.options.autoResumeInterrupted !== false;
-		let resumed: Promise<unknown> = Promise.resolve();
-		if (interrupted.length) {
-			log.info("interrupted tool calls repaired", session.sessionId, {
-				calls: interrupted.map((c) => ({ tool: c.toolName, replay: c.replay, started: c.started })),
-			});
-			if (autoResume && shouldAutoResume(interrupted))
-				resumed =
-					this.host
-						.resumeInterrupted?.(session, interrupted)
-						?.catch((error) =>
-							log.error("interrupted tool resume failed", session.sessionId, { error: String(error) }),
-						) ?? resumed;
-		}
-		// 崩溃前已受理、未进入上下文的排队消息：最近 24 小时内的按原顺序重新投递，更早的保留在侧车文件里。
-		if (!readOnly && autoResume) {
-			const restored = restorableInbox(filePath);
-			if (restored.length) {
-				log.info("restoring queued messages", session.sessionId, { count: restored.length });
-				void resumed.then(async () => {
-					for (const item of restored)
-						await this.host.sessionEngine
-							.prompt(session, item.text, { streamingBehavior: "followUp" })
-							.catch((error) =>
-								log.error("restored message delivery failed", session.sessionId, { error: String(error) }),
-							);
+			if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
+			log.info("session opened", session.sessionId, { file: filePath });
+			const autoResume = this.host.options.autoResumeInterrupted !== false;
+			let resumed: Promise<unknown> = Promise.resolve();
+			if (interrupted.length) {
+				log.info("interrupted tool calls repaired", session.sessionId, {
+					calls: interrupted.map((c) => ({ tool: c.toolName, replay: c.replay, started: c.started })),
 				});
+				if (autoResume && shouldAutoResume(interrupted))
+					resumed =
+						this.host
+							.resumeInterrupted?.(session, interrupted)
+							?.catch((error) =>
+								log.error("interrupted tool resume failed", session.sessionId, { error: String(error) }),
+							) ?? resumed;
 			}
+			// 崩溃前已受理、未进入上下文的排队消息：最近 24 小时内的按原顺序重新投递，更早的保留在侧车文件里。
+			if (!readOnly && autoResume) {
+				const restored = restorableInbox(filePath);
+				if (restored.length) {
+					log.info("restoring queued messages", session.sessionId, { count: restored.length });
+					void resumed.then(async () => {
+						for (const item of restored)
+							await this.host.sessionEngine
+								.prompt(session, item.text, { streamingBehavior: "followUp" })
+								.catch((error) =>
+									log.error("restored message delivery failed", session.sessionId, { error: String(error) }),
+								);
+					});
+				}
+			}
+			return this.host.toMetaOrThrow(session.sessionId);
+		} catch (error) {
+			await this.failedConstruction(error, createdSession, nativeBootstrap);
+			throw error;
 		}
-		return this.host.toMetaOrThrow(session.sessionId);
+	}
+	private async failedConstruction(
+		error: unknown,
+		session: AgentSession | undefined,
+		bootstrap: PluginNativeBootstrap | undefined,
+	): Promise<void> {
+		if (session) this.host.registry.delete(session.sessionId);
+		const engine = await Promise.allSettled([
+			session ? this.host.sessionEngine.dispose(session) : Promise.resolve(),
+		]);
+		const results = [...engine, ...(await Promise.allSettled([bootstrap?.dispose()]))];
+		const failures = results.filter((result) => result.status === "rejected");
+		if (failures.length)
+			throw new AggregateError(
+				[error, ...failures.map((result) => result.reason)],
+				"Session creation and native plugin cleanup failed",
+			);
 	}
 }
 

@@ -197,7 +197,7 @@ describe.skipIf(!hasRuntime)("installed runtime through main contracts and prelo
 	it("preload selection resolves trusted per-call session scopes inside one shared worker", async () => {
 		const makeSession = (id: string, workspaceId: string): PluginSessionCallerContext => ({
 			identity: {},
-			scope: { kind: "session", sessionId: id, workspaceId },
+			scope: { kind: "session", sessionId: id, workspaceId, workspaceDirectory: `/Trusted/${id}` },
 			signal: new AbortController().signal,
 			projectTrusted: true,
 			readOnly: false,

@@ -20,13 +20,16 @@ const uiManifest = {
 	contributions: [{ id: "results", region: "panel.tab", export: "Results" }],
 };
 
-async function writeManifest(desktopRuntime: unknown = "./runtime.js"): Promise<void> {
+async function writeManifest(
+	desktopRuntime: unknown = "./runtime.js",
+	entries: Record<string, unknown> = {},
+): Promise<void> {
 	await writeFile(
 		join(packageRoot, "plugin.manifest.json"),
 		JSON.stringify({
 			id: "display-id-not-authenticated",
 			hosts: ["drone-desktop"],
-			entrypoints: { ui: "./ui/plugin.json", desktopRuntime },
+			entrypoints: { ui: "./ui/plugin.json", desktopRuntime, ...entries },
 		}),
 	);
 }
@@ -69,6 +72,120 @@ describe("installed UI runtime provenance", () => {
 			plugins: { "results-ui": { enabled: true, trusted: false } },
 		});
 		expect(manager.isEnabled("results-ui")).toBe(false);
+	});
+
+	it("discovers native and resource files from the same package without executing them", async () => {
+		await writeFile(join(packageRoot, "native.js"), 'throw new Error("must not import native");');
+		await writeFile(join(packageRoot, "resource.js"), 'throw new Error("must not import resource");');
+		await symlink("resource.js", join(packageRoot, "resource-link.js"));
+		await writeManifest("./runtime.js", {
+			extension: "./native.js",
+			resources: { index: "./resource-link.js" },
+		});
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")).toEqual({
+			pluginId: "@example/results",
+			packageRoot: await realpath(packageRoot),
+			entrypoint: await realpath(join(packageRoot, "runtime.js")),
+			nativeEntrypoint: await realpath(join(packageRoot, "native.js")),
+			resources: { index: await realpath(join(packageRoot, "resource.js")) },
+		});
+		await writeManifest("./runtime.js", { resources: { replacement: "./native.js" } });
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.nativeEntrypoint).toBeUndefined();
+		expect(manager.runtimeSource("results-ui")?.resources).toEqual({
+			replacement: await realpath(join(packageRoot, "native.js")),
+		});
+		await writeManifest();
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.resources).toBeUndefined();
+	});
+
+	it("diagnoses resource descriptors without a desktop owner", async () => {
+		await writeManifest("./runtime.js", { desktopRuntime: undefined, resources: { index: "./runtime.js" } });
+		const entries = await discoverInstalledUiPackages(installRoot);
+		expect(entries[0]).toMatchObject({ error: "entrypoints.resources requires a desktopRuntime owner" });
+	});
+
+	for (const resources of [
+		null,
+		[],
+		"./runtime.js",
+		{ "": "./runtime.js" },
+		{ index: 42 },
+		{ index: "./missing.js" },
+		{ index: "./ui" },
+	]) {
+		it(`diagnoses invalid resource declarations ${JSON.stringify(resources)}`, async () => {
+			await writeManifest("./runtime.js", { resources });
+			const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+			const infos = await manager.scanAll();
+			expect(infos[0]?.invalidReason).toContain("Invalid desktopRuntime");
+			expect(manager.runtimeSource("results-ui")).toBeUndefined();
+		});
+	}
+
+	for (const field of ["extension", "resources"] as const) {
+		for (const method of ["relative", "symlink", "absolute"]) {
+			it(`rejects ${field} outside its package through ${method}`, async () => {
+				const outside = join(root, "outside.js");
+				await writeFile(outside, 'throw new Error("must not import outside");');
+				await symlink(outside, join(packageRoot, "linked.js"));
+				const entry =
+					method === "relative" ? "../../../outside.js" : method === "symlink" ? "./linked.js" : outside;
+				await writeManifest("./runtime.js", {
+					[field]: field === "resources" ? { index: entry } : entry,
+				});
+				const entries = await discoverInstalledUiPackages(installRoot);
+				expect(entries[0]).toMatchObject({
+					packageName: "@example/results",
+					error: expect.stringContaining(`entrypoints.${field}`),
+				});
+			});
+		}
+	}
+
+	for (const droneUi of [1, 2]) {
+		it(`loads installed UI contract v${droneUi} with verified runtime provenance`, async () => {
+			await writeFile(join(packageRoot, "ui", "plugin.json"), JSON.stringify({ ...uiManifest, droneUi }));
+			await writeFile(join(packageRoot, "ui", "src", "index.ts"), "export const Results = () => null;");
+			const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+			await manager.scanAll();
+			expect(manager.info("results-ui")?.invalidReason).toBeUndefined();
+			expect(manager.runtimeSource("results-ui")?.pluginId).toBe("@example/results");
+			expect(await manager.readCode("results-ui")).toMatchObject({
+				manifest: { droneUi },
+				code: expect.any(String),
+			});
+		});
+	}
+
+	it("rejects installed contract v2 without a runtime and unknown future versions", async () => {
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await writeManifest("./runtime.js", { desktopRuntime: undefined });
+		await writeFile(join(packageRoot, "ui", "plugin.json"), JSON.stringify({ ...uiManifest, droneUi: 2 }));
+		await manager.scanAll();
+		expect(manager.info("results-ui")?.invalidReason).toContain("desktopRuntime");
+		expect(manager.runtimeSource("results-ui")).toBeUndefined();
+		expect(await manager.readCode("results-ui")).toHaveProperty("error");
+		await writeFile(join(packageRoot, "ui", "plugin.json"), JSON.stringify({ ...uiManifest, droneUi: 3 }));
+		await manager.scanAll();
+		expect(manager.info("results-ui")?.invalidReason).toContain("版本不匹配");
+	});
+
+	it("rejects local v2 even when its name shadows an installed runtime", async () => {
+		const local = join(environment.userData, "ui-plugins", "results-ui");
+		await mkdir(local);
+		await writeFile(join(local, "plugin.json"), JSON.stringify({ ...uiManifest, droneUi: 2 }));
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await manager.scanAll();
+		expect(manager.info("results-ui")?.invalidReason).toContain("本地 UI");
+		expect(manager.runtimeSource("results-ui")).toBeUndefined();
+		expect(await manager.readCode("results-ui")).toHaveProperty("error");
+		await writeFile(join(local, "plugin.json"), JSON.stringify(uiManifest));
+		await manager.scanAll();
+		expect(manager.info("results-ui")?.invalidReason).toBeUndefined();
 	});
 
 	it("drops installed runtime provenance when a local UI shadows its name", async () => {

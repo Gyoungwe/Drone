@@ -1,5 +1,13 @@
-import { Type } from "typebox";
+import { type Static, Type } from "typebox";
 import { defineDomain } from "./define";
+
+export const PluginRuntimeEventSchema = Type.Object({
+	binding: Type.String({ minLength: 1 }),
+	selectionToken: Type.String({ minLength: 1 }),
+	type: Type.Literal("changed"),
+	revision: Type.Integer({ minimum: 1 }),
+});
+export type PluginRuntimeEvent = Static<typeof PluginRuntimeEventSchema>;
 
 /** Identity and scope belong to the main-issued binding, never the input payload. */
 export const PluginRuntimeContract = defineDomain("pluginRuntime", {
@@ -18,5 +26,5 @@ export const PluginRuntimeContract = defineDomain("pluginRuntime", {
 			result: Type.Unknown(),
 		},
 	},
-	events: {},
+	events: { changed: PluginRuntimeEventSchema },
 });

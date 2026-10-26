@@ -5,7 +5,7 @@
 > 本文件只做**导航**：职责一句话 + 指到源码；实现细节以代码为准，坑记 PITFALLS，不在此堆积。
 
 当前计划最终状态、九个 npm 公开版本及四项未完成验收的恢复配置，统一见[阶段状态汇总](plan-final-status-2026-10-26.md)。
-下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构设计](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已批准并开始实施；[P0–P7 执行计划](pluginization/native-plugin-implementation-plan.md)记录阶段状态，[SDK 运行时证据](pluginization/native-plugin-runtime-evidence.md)区分真实会话、执行适配与自动发现，[P1 正式安装包切片](pluginization/native-plugin-p1-packaged-evidence.md)记录窗口作用域后台的启停、拒绝、恢复与退出，完整领域迁移仍未完成。
+下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构设计](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已批准并开始实施；[P0–P7 执行计划](pluginization/native-plugin-implementation-plan.md)记录阶段状态，[SDK 运行时证据](pluginization/native-plugin-runtime-evidence.md)区分真实会话、执行适配与自动发现，[P1 正式安装包切片](pluginization/native-plugin-p1-packaged-evidence.md)记录窗口作用域后台的启停、拒绝、恢复与退出，完整领域迁移仍未完成。[P2 知识只读共享 owner](pluginization/native-plugin-knowledge-readonly-evidence.md)记录候选包、权限/资源边界、实际会话和安装包验收及完整功能缺口。
 
 后继 [应用 owner 安装包证据](pluginization/native-plugin-app-owner-packaged-evidence.md)基于 `561a370c` 的真实 DMG，覆盖两个真实离线会话间的身份切换、同一后台实例复用和停用恢复；不代表知识 native/UI 已共享领域 owner，也未关闭零领域插件宿主门禁。后继[关闭流程安装包证据](pluginization/native-plugin-shutdown-packaged-evidence.md)记录真实 SDK 互等/异常回归及活跃模型请求期间正常退出。
 
@@ -256,7 +256,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，本次发布源码基线 `main=df4ba329821284b46d26e6f5bf86018cd806aa54`），宿主通过 `plugins.lock.json` 消费 `@gyoungwe/pi-knowledge@0.2.1`。插件仓库负责从源码构建 manifest、host 声明、native extension、worker 和 maintenance；Drone 负责 HostPort、Desktop IPC 与 UI 插件挂载/回退、锁定下载和打包资源验收；完整知识界面由 `../drone-plugins/packages/desktop-ui-pack/ui/` 维护。它不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。
+`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，本次发布源码基线 `main=df4ba329821284b46d26e6f5bf86018cd806aa54`），宿主通过 `plugins.lock.json` 消费 `@gyoungwe/pi-knowledge@0.2.1`。插件仓库负责从源码构建 manifest、host 声明、native extension、worker 和 maintenance；Drone 负责 HostPort、Desktop IPC 与 UI 插件挂载/回退、锁定下载和打包资源验收；已发布基线的完整知识界面来自 `desktop-ui-pack@0.2.0`；本分支候选源码已迁入 `../drone-plugins/packages/pi-knowledge/ui/`，原生后台与只读桌面入口见同包 `src/runtime/`、`src/desktop/`，其余完整功能迁移仍按 P2 跟踪。它不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 
@@ -510,3 +510,9 @@ src/
 `backend/src/plugins/session-caller.ts` 从真实 SessionRegistry entry 提供规范工作区、会话代次及撤销信号；`desktop/src/renderer/src/plugins/caller.ts` 同步活动会话并携带主进程签发的 selection lease，防止旧界面请求在切换会话后被解释为新调用。无会话时显式使用 application scope；应用级后台可以被多个窗口共享。该通用机制尚不代表知识 UI 与原生工具已共用领域实例。
 
 原生插件 P1 机制：`backend/src/plugins/{runtime,process-runtime}.ts` 管理独立实例/进程；`plugin-runtime-executable.ts` 校验随包 Node；`plugin-sandbox-ui.ts` 约束官方 Pi 基础对话请求；`session-engine/engine.ts` 同时启动扩展 shutdown 与 SDK abort，等待两者后销毁会话；`backend/test/session-shutdown-sdk.test.mjs` 回归真实 SDK 工具与关闭 hook 的双向等待；`shared/src/host-api/plugin-runtime.ts`、preload 和 `main/ipc/plugin-runtime.ts` 传递主进程绑定的通用调用。新知识 UI 同包及基础状态/写者迁移设计与证据在插件仓库 `docs/knowledge-ui-co-package-2026-10-26.md`、`docs/native-knowledge-runtime-plan.md`。
+
+P2 原生/桌面共同 owner 最小接入：`backend/src/plugins/coordinator.ts` 管理 native bootstrap、真实 session 绑定及 UI lease；`runtime-capabilities.ts` 执行逐调用 schema/effect/生命周期授权，`process-runtime[-worker].ts` 共用隔离进程协议传递原生只读工具和派生资源调用。`backend/test/native-runtime-owner-sdk.test.mjs` 用真实 SDK 两会话证明同进程 owner 与两种关闭顺序；它不是完整知识领域或正式安装包验收。`plugin-api/src/{native,resource}.ts` 是 1.3 候选的 type-only 可选合同；完整 hooks、publication proof 跨进程投影和其余知识 UI 方法仍未完成。
+
+`backend/src/plugins/file-capabilities.ts` 只读取已批准根的稳定文件快照与配置，区分文件删除、根撤销和 JSON 损坏；`resource-capabilities.ts` 复用实际隔离进程、排空在途请求并管理资源，`resource-reservations.ts` 在完整 owner 关闭后释放跨进程写者租约。`desktop/src/main/ui-plugins/runtime-host.ts` 在每次资源激活时明确选择只读状态/数据目录，构造每插件私有缓存与能力 provider；其单元测试不代替正式 GUI 授权验收。UI 合同 v2 仅接受已验证的 installed desktopRuntime，旧 v1 合同保留；候选知识页目前只有总览/搜索/刷新，其余领域迁移未完成。
+
+知识候选 tarball 的独立实际 SDK 验收见 [packed knowledge runtime acceptance](pluginization/packed-knowledge-runtime-acceptance.md)：`backend/test/packed-knowledge-runtime-sdk.test.mjs` 使用真实 coordinator、只读会话条目和合成 Vault，验证 native/UI 同 owner、逐操作拒绝和双进程退出；默认门禁不设置 tarball 时明确跳过。

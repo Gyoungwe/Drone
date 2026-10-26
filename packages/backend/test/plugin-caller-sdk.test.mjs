@@ -53,6 +53,7 @@ it("derives caller identity, workspace and revocation from a real AgentSession e
 		expect(caller.scope).toEqual({
 			kind: "session",
 			workspaceId: canonicalProjectId(root),
+			workspaceDirectory: alias,
 			sessionId: session.sessionId,
 		});
 		expect(caller.projectTrusted).toBe(settingsManager.isProjectTrusted());

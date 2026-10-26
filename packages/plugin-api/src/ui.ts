@@ -26,6 +26,8 @@ export type * from "./ui-wire.js";
 /** Bound to the installed package by the desktop main process; callers cannot select another package. */
 export interface PluginUiRuntimeClient {
 	invoke(operation: string, input: unknown): Promise<unknown>;
+	/** Content-free invalidation; unsubscribe when the consumer unmounts. */
+	subscribe(listener: (event: { type: "changed"; revision: number }) => void): () => void;
 }
 
 /** Headless UI modules receive the same bound client as their React contributions. */
@@ -216,6 +218,7 @@ export interface KnowledgeUiBindings {
 		}>;
 	};
 	hooks: {
+		usePluginRuntime(): PluginUiRuntimeClient;
 		useAgentActive(sessionId: string | null): boolean;
 		usePluginEntries(region: KnowledgeUiRegion): KnowledgePluginEntry[];
 		useLanguage(): "zh" | "en";

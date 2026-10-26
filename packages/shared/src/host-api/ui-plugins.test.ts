@@ -50,6 +50,18 @@ describe("UiPluginsContract", () => {
 			headless: true,
 		};
 		expect(Check(UiPluginsContract.methods.readCode.result, { manifest, code: "export {};" })).toBe(true);
+		expect(
+			Check(UiPluginsContract.methods.readCode.result, {
+				manifest: { ...manifest, droneUi: 2 },
+				code: "export {};",
+			}),
+		).toBe(true);
+		expect(
+			Check(UiPluginsContract.methods.readCode.result, {
+				manifest: { ...manifest, droneUi: 3 },
+				code: "export {};",
+			}),
+		).toBe(false);
 		expect(Check(UiPluginsContract.methods.readCode.result, { error: "unknown plugin" })).toBe(true);
 		expect(Check(UiPluginsContract.methods.rebuild.result, { ok: true })).toBe(true);
 		expect(Check(UiPluginsContract.methods.rebuild.result, { ok: false, error: "build failed" })).toBe(true);

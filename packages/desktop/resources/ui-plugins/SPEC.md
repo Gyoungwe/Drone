@@ -74,7 +74,7 @@ interface KnowledgeFlowCard {
 
 字段规则（任一不满足 → 插件标记「清单无效」，不加载）：
 - `name`：必填，`/^[a-z0-9][a-z0-9-]*$/`，**必须与目录名一致**；
-- `droneUi`：必填，宿主契约版本，当前只接受 `1`；
+- `droneUi`：必填，宿主契约版本。`1` 保留已发布 UI 合同；`2` 用于依赖绑定 runtime、订阅和资源能力的新 UI。宿主支持 `1` 和 `2`，未知版本拒绝加载。`2` 必须来自具有有效 `entrypoints.desktopRuntime` 的已验证安装包；本地 UI 目录不能冒用包身份。旧宿主只接受 `1`，会在清单校验时拒绝 `2`，不会执行不兼容代码；
 - `main`：必填，插件目录内相对路径，**禁止 `..` 穿越**；后缀 `.ts/.tsx/.js/.jsx`；
 - `slots`：必填非空对象，key 必须是上表槽位名，value 是具名导出名；
 - `version` / `displayName` / `description`：可选展示字段。
@@ -135,7 +135,9 @@ export const i18n: {
 
 ### 插件自己的后台操作
 
-带有已批准 Desktop runtime 的安装包可在槽位或贡献组件内调用 `usePluginRuntime()`（也可用 `hooks.usePluginRuntime`）：
+声明 `droneUi: 2`、带有已批准 Desktop runtime 的安装包可在槽位或贡献组件内调用 `usePluginRuntime()`（也可用 `hooks.usePluginRuntime`）：
+
+`runtime.subscribe(listener)` 接收无正文的 `{ type: "changed", revision }` 失效通知，并返回取消订阅函数。组件卸载时必须取消订阅。主进程校验包、窗口和运行代次；renderer 再过滤绑定和当前会话的选择回执。切换会话后的旧通知不会转发给插件。插件据此重新调用自身只读 operation，不连接宿主领域事件。
 
 ```tsx
 import { usePluginRuntime } from "@gyoungwe/plugin-api";
@@ -148,7 +150,7 @@ export function ResultsPanel() {
 
 客户端只接受操作名和输入。包身份由主进程根据安装来源绑定，UI 不能传入包名来选择别的插件。主进程在每次调用时检查绑定所属窗口、激活状态与操作声明；停用或替换后旧绑定失效。结果为 `unknown`，由插件按自己的操作协议解析。
 
-无 Desktop runtime 的 UI 包仍可使用既有 UI API，但调用此 hook 会明确抛出不可用错误。每个贡献都拥有独立上下文，嵌套渲染不会继承另一插件的客户端。无头模块接收 `activate({ runtime })`，其中 `runtime` 在没有绑定时为 `undefined`；既有不接参数的 `activate()` 无需修改。
+`droneUi: 1` 且无 Desktop runtime 的 UI 包仍可使用既有 UI API，但调用此 hook 会明确抛出不可用错误。每个贡献都拥有独立上下文，嵌套渲染不会继承另一插件的客户端。无头模块接收 `activate({ runtime })`，其中 `runtime` 在没有绑定时为 `undefined`；既有不接参数的 `activate()` 无需修改。
 
 这些 UI 模块仍与宿主共享 React 和 renderer，是经过信任确认的代码。绑定提供来源识别和生命周期撤销，**不构成恶意 UI 代码之间的安全隔离**。
 

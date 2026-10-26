@@ -1,19 +1,46 @@
 /** JSON-compatible operations use null for a void result; no Pi or renderer dependency. */
 export type PluginRuntimeSchema = object;
 
-/** Host-resolved per-call scope. A window without a selected session is explicitly application-scoped. */
+/** Host-resolved per-call scope. workspaceId is opaque identity, never a filesystem path.
+ * workspaceDirectory preserves the actual session directory; it grants no filesystem access by itself.
+ * A window without a selected session is explicitly application-scoped. */
 export type PluginRuntimeScope =
 	| { readonly kind: "application" }
-	| { readonly kind: "workspace"; readonly workspaceId: string }
-	| { readonly kind: "session"; readonly workspaceId: string; readonly sessionId: string };
+	| { readonly kind: "workspace"; readonly workspaceId: string; readonly workspaceDirectory: string }
+	| {
+			readonly kind: "session";
+			readonly workspaceId: string;
+			readonly workspaceDirectory: string;
+			readonly sessionId: string;
+	  };
+
+export interface PluginRuntimeChangedEvent {
+	readonly type: "changed";
+	readonly revision: number;
+}
 
 /** One domain owner per application activation, shared by its caller scopes. */
+export interface PluginRuntimeCapabilities {
+	/** Only host-registered methods are available, under the current invocation authority. */
+	call(name: string, input: unknown): Promise<unknown>;
+}
+
+export interface PluginRuntimeResource {
+	readonly handle: string;
+	readonly kind: "state" | "files";
+}
+
 export interface PluginRuntimeFactoryContext {
 	readonly applicationId: string;
 	readonly signal: AbortSignal;
+	readonly resources: readonly PluginRuntimeResource[];
+	readonly capabilities: PluginRuntimeCapabilities;
+	/** Invalidate derived UI reads without transmitting domain data. Host assigns the revision. */
+	readonly events: { changed(): void };
 }
 
 export interface PluginRuntimeContext {
+	readonly capabilities: PluginRuntimeCapabilities;
 	readonly scope: PluginRuntimeScope;
 	readonly signal: AbortSignal;
 }
@@ -26,8 +53,10 @@ export interface PluginRuntimeOperation {
 	execute(input: unknown, context: PluginRuntimeContext): Promise<unknown>;
 }
 
-export interface PluginRuntimeInstance {
+export interface PluginRuntimeInstance<TNative = never> {
 	readonly operations: Readonly<Record<string, PluginRuntimeOperation>>;
+	/** Optional native Pi projection of this same owner, never a second domain instance. */
+	createNativeSession?(): TNative | Promise<TNative>;
 	/** Release the application's resources after outstanding calls have settled. */
 	dispose(): Promise<void>;
 }
@@ -38,9 +67,12 @@ export interface PluginRuntimeInstance {
  * application-owned, while operation context is resolved separately for every call.
  * A factory that fails before returning releases resources it acquired itself.
  */
-export type PluginRuntimeFactory = (context: PluginRuntimeFactoryContext) => Promise<PluginRuntimeInstance>;
+export type PluginRuntimeFactory<TNative = never> = (
+	context: PluginRuntimeFactoryContext,
+) => Promise<PluginRuntimeInstance<TNative>>;
 
 /** Bound by the host after trust, caller identity and scope resolution. */
 export interface PluginRuntimeClient {
 	invoke(operation: string, input: unknown, signal?: AbortSignal): Promise<unknown>;
+	subscribe(listener: (event: PluginRuntimeChangedEvent) => void): () => void;
 }

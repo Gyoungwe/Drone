@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -20,7 +20,12 @@ function caller(scope: PluginRuntimeScope) {
 	return () => value;
 }
 
-const scope = { kind: "session" as const, workspaceId: "workspace", sessionId: "session" };
+const scope = {
+	kind: "session" as const,
+	workspaceId: "workspace",
+	workspaceDirectory: "/Work/One",
+	sessionId: "session",
+};
 const allow = { authorizeActivation: async () => true, authorizeInvocation: async () => true };
 
 async function fixture(source: string) {
@@ -50,6 +55,91 @@ it("denies activation without starting or resolving plugin code", async () => {
 });
 
 describe.skipIf(!hasRuntime)("packaged process desktop runtime", () => {
+	it("resource mode writes only host-selected derived storage and preserves capability error codes", async () => {
+		const options = await fixture(`import fs from 'node:fs';import{join}from'node:path';
+export default async ({storageDirectory,parameters,capabilities}) => ({
+ async invoke(){fs.writeFileSync(join(storageDirectory,'cache.txt'),'derived');let denied=false,code;
+ try{fs.readFileSync(parameters.outside,'utf8');}catch(error){denied=error.code==='ERR_ACCESS_DENIED';}
+ try{await capabilities.call('missing',null);}catch(error){code=error.code;}
+ return {pid:process.pid,denied,code};},async dispose(){}
+});`);
+		const storageDirectory = join(options.packageRoot, "cache");
+		await mkdir(storageDirectory);
+		const outside = await mkdtemp(join(tmpdir(), "drone-resource-outside-"));
+		roots.push(outside);
+		const path = join(outside, "synthetic.txt");
+		await writeFile(path, "synthetic outside");
+		const registry = new PluginRuntimeRegistry(allow, "resource-test", {
+			resources: [],
+			handlers: {
+				missing: {
+					inputSchema: { type: "null" },
+					resultSchema: {},
+					effect: "read",
+					execute: async () => {
+						throw Object.assign(new Error("synthetic missing"), { code: "ENOENT" });
+					},
+				},
+			},
+		});
+		registry.register(
+			"example",
+			createProcessPluginRuntime({
+				...options,
+				resource: { storageDirectory, parameters: { outside: path } },
+			}),
+		);
+		const client = await registry.activate("example", caller(scope));
+		const receipt = (await client.invoke("request", { operation: "check", input: null })) as {
+			pid: number;
+			denied: boolean;
+			code: string;
+		};
+		expect(receipt).toMatchObject({ denied: true, code: "ENOENT" });
+		expect(await readFile(join(storageDirectory, "cache.txt"), "utf8")).toBe("derived");
+		await registry.deactivate("example");
+		expect(() => process.kill(receipt.pid, 0)).toThrow();
+	});
+
+	it("brokers bootstrap and per-call reads with actual caller authority and payload-free events", async () => {
+		const options = await fixture(`export default async ({capabilities,events,resources}) => {
+ const initial=await capabilities.call("state",null);
+ return {operations:{read:{inputSchema:{type:"null"},resultSchema:{type:"object"},effect:"read",execute:async()=>{const scope=await capabilities.call("scope",null);events.changed();return {initial,scope,resources};}}},dispose:async()=>{}};
+};`);
+		const registry = new PluginRuntimeRegistry(allow, "application", {
+			resources: [{ handle: "opaque", kind: "state" }],
+			handlers: {
+				state: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "string" },
+					effect: "read",
+					bootstrap: true,
+					execute: async (_input, ctx) => (ctx.bootstrap ? "approved-state" : "wrong"),
+				},
+				scope: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "object" },
+					effect: "read",
+					execute: async (_input, ctx) => ctx.scope,
+				},
+			},
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		const events = vi.fn();
+		client.subscribe(events);
+		try {
+			expect(await client.invoke("read", null)).toEqual({
+				initial: "approved-state",
+				scope,
+				resources: [{ handle: "opaque", kind: "state" }],
+			});
+			expect(events).toHaveBeenCalledWith({ type: "changed", revision: 1 });
+		} finally {
+			await registry.deactivate("example");
+		}
+	});
+
 	it("keeps one worker owner across caller scopes and cancels only the revoked caller", async () => {
 		const options = await fixture(`let pending=false,count=0;
 export default async ({applicationId})=>({operations:{
@@ -60,7 +150,12 @@ export default async ({applicationId})=>({operations:{
 		registry.register("example", createProcessPluginRuntime(options));
 		const abort = new AbortController();
 		const a = await registry.activate("example", () => ({ identity: abort, scope, signal: abort.signal }));
-		const other = { kind: "session" as const, workspaceId: "other", sessionId: "other-session" };
+		const other = {
+			kind: "session" as const,
+			workspaceId: "other",
+			workspaceDirectory: "/Work/Other",
+			sessionId: "other-session",
+		};
 		const b = await registry.activate("example", caller(other));
 		try {
 			const first = (await a.invoke("receipt", null)) as {

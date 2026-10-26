@@ -1,16 +1,24 @@
+import { AsyncResource } from "node:async_hooks";
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { readdirSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { createInterface } from "node:readline";
+import type { ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type {
+	PluginNativeRuntimeFactory,
+	PluginNativeRuntimeInstance,
+	PluginNativeSession,
+} from "@gyoungwe/plugin-api/native";
 import type {
 	PluginRuntimeContext,
 	PluginRuntimeFactory,
 	PluginRuntimeFactoryContext,
-	PluginRuntimeInstance,
 } from "@gyoungwe/plugin-api/runtime";
 import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
 import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
+import { canonicalProjectId } from "../project-id";
 import { PROCESS_RUNTIME_WORKER } from "./process-runtime-worker";
 
 export interface ProcessPluginRuntimeOptions {
@@ -19,6 +27,8 @@ export interface ProcessPluginRuntimeOptions {
 	readonly packageRoot: string;
 	/** Archive-verified Node runtime already shipped by the host. */
 	readonly runtimeDirectory?: string;
+	/** Host-selected derived-data directory, never a path supplied by worker messages. */
+	readonly resource?: { readonly storageDirectory: string; readonly parameters: unknown };
 }
 
 const declarationSchema = Type.Record(
@@ -30,7 +40,7 @@ const declarationSchema = Type.Record(
 	}),
 );
 const messageSchema = Type.Union([
-	Type.Object({ type: Type.Literal("ready"), operations: declarationSchema }),
+	Type.Object({ type: Type.Literal("ready"), operations: declarationSchema, native: Type.Boolean() }),
 	Type.Object({
 		type: Type.Literal("result"),
 		id: Type.String(),
@@ -45,9 +55,29 @@ const messageSchema = Type.Union([
 	}),
 	Type.Object({ type: Type.Literal("error"), error: Type.String() }),
 	Type.Object({ type: Type.Literal("canceled") }),
+	Type.Object({ type: Type.Literal("changed") }),
+	Type.Object({
+		type: Type.Literal("capability"),
+		id: Type.String({ minLength: 1 }),
+		callId: Type.String({ minLength: 1 }),
+		name: Type.String({ minLength: 1 }),
+		input: Type.Unknown(),
+	}),
 ]);
 type Message = Static<typeof messageSchema>;
-type Declarations = Static<typeof declarationSchema>;
+type Declarations = { operations: Static<typeof declarationSchema>; native: boolean };
+const nativeDeclarationsSchema = Type.Object({
+	tools: Type.Array(
+		Type.Object({
+			name: Type.String({ minLength: 1 }),
+			label: Type.String(),
+			description: Type.String(),
+			parameters: Type.Record(Type.String(), Type.Unknown()),
+		}),
+	),
+	effects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
+	events: Type.Array(Type.Union([Type.Literal("session_start"), Type.Literal("session_shutdown")])),
+});
 
 function staysInPackage(root: string, path: string): boolean {
 	const pathRelative = relative(root, path);
@@ -66,7 +96,11 @@ function checkPackageLinks(root: string, directory = root): void {
 }
 
 /** Only called after registry authorization. No plugin import occurs in this process. */
-export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions): PluginRuntimeFactory {
+export function createProcessPluginRuntime(
+	options: ProcessPluginRuntimeOptions & { resource: NonNullable<ProcessPluginRuntimeOptions["resource"]> },
+): PluginRuntimeFactory;
+export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions): PluginNativeRuntimeFactory;
+export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions): PluginNativeRuntimeFactory {
 	return async (context) => {
 		context.signal.throwIfAborted();
 		const executable = pluginRuntimeExecutable(options.runtimeDirectory);
@@ -81,6 +115,12 @@ export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions)
 			[
 				"--permission",
 				`--allow-fs-read=${packageRoot}`,
+				...(options.resource
+					? [
+							`--allow-fs-read=${options.resource.storageDirectory}`,
+							`--allow-fs-write=${options.resource.storageDirectory}`,
+						]
+					: []),
 				"--input-type=module",
 				"--eval",
 				PROCESS_RUNTIME_WORKER,
@@ -97,7 +137,7 @@ export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions)
 				windowsHide: true,
 			},
 		);
-		return new RuntimeProcess(options.pluginId, child, context).start();
+		return new RuntimeProcess(options.pluginId, child, context, options.resource).start();
 	};
 }
 
@@ -106,13 +146,20 @@ class RuntimeProcess {
 	private failure: Error | undefined;
 	private stderr = "";
 	private disposed = false;
+	private readonly nativeDisposers = new Set<() => Promise<void>>();
 	private shutdownTimer: ReturnType<typeof setTimeout> | undefined;
 	private readonly closed: Promise<void>;
 	private readonly pending = new Map<
 		string,
-		{ resolve: (value: unknown) => void; reject: (error: Error) => void; cleanup: () => void }
+		{
+			resolve: (value: unknown) => void;
+			reject: (error: Error) => void;
+			cleanup: () => void;
+			context?: PluginRuntimeContext;
+		}
 	>();
 	private readonly ready: Promise<Declarations>;
+	private readonly bootstrapContext: PluginRuntimeFactoryContext;
 	private resolveReady!: (operations: Declarations) => void;
 	private rejectReady!: (error: Error) => void;
 
@@ -120,7 +167,12 @@ class RuntimeProcess {
 		private readonly pluginId: string,
 		private readonly child: ChildProcessWithoutNullStreams,
 		private readonly context: PluginRuntimeFactoryContext,
+		private readonly resource: ProcessPluginRuntimeOptions["resource"],
 	) {
+		this.bootstrapContext = {
+			...context,
+			capabilities: { call: AsyncResource.bind(context.capabilities.call) },
+		};
 		this.ready = new Promise((resolve, reject) => {
 			this.resolveReady = resolve;
 			this.rejectReady = reject;
@@ -199,8 +251,16 @@ class RuntimeProcess {
 			);
 			return;
 		}
+		if (message.type === "capability") {
+			void this.capability(message);
+			return;
+		}
+		if (message.type === "changed") {
+			if (!this.context.signal.aborted) this.context.events.changed();
+			return;
+		}
 		if (message.type === "ready") {
-			this.resolveReady(message.operations);
+			this.resolveReady({ operations: message.operations, native: message.native });
 			return;
 		}
 		if (message.type === "error") {
@@ -218,31 +278,68 @@ class RuntimeProcess {
 		else pending.reject(new Error(message.error));
 	}
 
-	async start(): Promise<PluginRuntimeInstance> {
+	private async capability(message: Extract<Message, { type: "capability" }>): Promise<void> {
+		const context =
+			message.callId === "bootstrap" ? this.bootstrapContext : this.pending.get(message.callId)?.context;
+		if (!context) {
+			this.fail(new Error("Plugin capability requested without a live host invocation"));
+			return;
+		}
+		try {
+			context.signal.throwIfAborted();
+			const value = await context.capabilities.call(message.name, message.input);
+			context.signal.throwIfAborted();
+			this.send({ type: "capability_result", id: message.id, ok: true, value });
+		} catch (error) {
+			this.send({
+				type: "capability_result",
+				id: message.id,
+				ok: false,
+				error: error instanceof Error ? error.message : String(error),
+				...(error instanceof Error &&
+				Object.hasOwn(error, "code") &&
+				typeof (error as Error & { code?: unknown }).code === "string"
+					? { code: (error as Error & { code: string }).code }
+					: {}),
+			});
+		}
+	}
+
+	async start(): Promise<PluginNativeRuntimeInstance> {
 		const timer = setTimeout(
 			() => this.fail(new Error(`Plugin runtime ${this.pluginId} startup timed out after 15000ms`)),
 			15000,
 		);
-		this.send({ type: "start", applicationId: this.context.applicationId });
+		this.send({
+			type: "start",
+			applicationId: this.context.applicationId,
+			resources: this.context.resources,
+			resource: this.resource,
+		});
 		try {
 			const declarations = await this.ready;
 			return {
 				operations: Object.fromEntries(
-					Object.entries(declarations).map(([name, declaration]) => [
+					Object.entries(declarations.operations).map(([name, declaration]) => [
 						name,
 						{
 							...declaration,
-							execute: (input: unknown, { signal, scope }: PluginRuntimeContext) =>
-								this.request("invoke", { operation: name, input, scope }, signal),
+							execute: (input: unknown, context: PluginRuntimeContext) =>
+								this.request("invoke", { operation: name, input, scope: context.scope }, context.signal, {
+									...context,
+									capabilities: { call: AsyncResource.bind(context.capabilities.call) },
+								}),
 						},
 					]),
 				),
+				...(declarations.native ? { createNativeSession: () => this.attachNative() } : {}),
 				dispose: async () => {
 					if (this.failure) {
 						await this.closed;
 						throw this.failure;
 					}
 					this.boundShutdown();
+					const attachments = await Promise.allSettled([...this.nativeDisposers].map((dispose) => dispose()));
 					try {
 						await this.request("dispose", {});
 					} catch (error) {
@@ -254,17 +351,110 @@ class RuntimeProcess {
 					this.disposed = true;
 					await this.closed;
 					if (this.failure) throw this.failure;
+					const failed = attachments.filter((result) => result.status === "rejected");
+					if (failed.length)
+						throw new AggregateError(
+							failed.map((result) => result.reason),
+							"Native attachment disposal failed",
+						);
 				},
 			};
+		} catch (error) {
+			this.fail(error as Error);
+			await this.closed;
+			throw this.failure;
 		} finally {
 			clearTimeout(timer);
 		}
 	}
 
+	private async attachNative(): Promise<PluginNativeSession> {
+		const attachment = randomUUID();
+		const declared = await this.request("native_attach", { attachment });
+		if (!Check(nativeDeclarationsSchema, declared)) throw new Error("Invalid native plugin declarations");
+		const declarations = declared as Static<typeof nativeDeclarationsSchema>;
+		const lifecycle = new AbortController();
+		let stopping: Promise<void> | undefined;
+		const invoke = (
+			kind: "tool" | "event",
+			name: string,
+			input: unknown,
+			ctx: ExtensionContext,
+			signal?: AbortSignal,
+			toolCallId?: string,
+		) => {
+			const combined = AbortSignal.any([this.context.signal, lifecycle.signal, ...(signal ? [signal] : [])]);
+			combined.throwIfAborted();
+			return this.request(
+				"native_call",
+				{
+					attachment,
+					kind,
+					name,
+					input,
+					toolCallId,
+					context: { cwd: ctx.cwd, sessionId: ctx.sessionManager.getSessionId() },
+				},
+				combined,
+				{
+					signal: combined,
+					scope: {
+						kind: "session",
+						workspaceId: canonicalProjectId(ctx.cwd),
+						workspaceDirectory: ctx.cwd,
+						sessionId: ctx.sessionManager.getSessionId(),
+					},
+					capabilities: { call: AsyncResource.bind(this.context.capabilities.call) },
+				},
+			);
+		};
+		const dispose = () => {
+			if (!stopping) {
+				lifecycle.abort(new Error("Native attachment closed"));
+				stopping = this.request("native_detach", { attachment }).then(() => {
+					this.nativeDisposers.delete(dispose);
+				});
+			}
+			return stopping;
+		};
+		this.nativeDisposers.add(dispose);
+		return {
+			toolEffects: declarations.effects,
+			extension: (pi) => {
+				for (const tool of declarations.tools)
+					pi.registerTool({
+						...tool,
+						parameters: tool.parameters as ToolDefinition["parameters"],
+						execute: (id, input, signal, _update, ctx) =>
+							invoke("tool", tool.name, input, ctx, signal, id) as ReturnType<ToolDefinition["execute"]>,
+					});
+				if (declarations.events.includes("session_start"))
+					pi.on("session_start", (event, ctx) => invoke("event", "session_start", event, ctx).then(() => {}));
+				pi.on("session_shutdown", async (event, ctx) => {
+					if (stopping) return stopping;
+					const results = await Promise.allSettled([
+						declarations.events.includes("session_shutdown")
+							? invoke("event", "session_shutdown", event, ctx)
+							: Promise.resolve(),
+					]);
+					const [closed] = await Promise.allSettled([dispose()]);
+					const failures = [...results, closed].filter((result) => result.status === "rejected");
+					if (failures.length)
+						throw new AggregateError(
+							failures.map((result) => result.reason),
+							"Native plugin shutdown failed",
+						);
+				});
+			},
+			dispose,
+		};
+	}
+
 	private request(
-		type: "invoke" | "dispose",
+		type: "invoke" | "dispose" | "native_attach" | "native_detach" | "native_call",
 		payload: Record<string, unknown>,
 		signal?: AbortSignal,
+		context?: PluginRuntimeContext,
 	): Promise<unknown> {
 		if (this.failure) return Promise.reject(this.failure);
 		const id = `${++this.sequence}`;
@@ -277,6 +467,7 @@ class RuntimeProcess {
 			);
 			const cancel = () => this.send({ type: "cancel", id });
 			this.pending.set(id, {
+				context,
 				resolve,
 				reject,
 				cleanup: () => {

@@ -52,11 +52,29 @@ export interface InstalledUiRuntimeSource {
 	pluginId: string;
 	packageRoot: string;
 	entrypoint: string;
+	nativeEntrypoint?: string;
+	resources?: Readonly<Record<string, string>>;
 }
 
 export type InstalledUiDiscovery =
 	| { packageName: string; packageRoot: string; uiDir: string; runtime?: InstalledUiRuntimeSource }
 	| { packageName: string; error: string };
+
+/** Resolve declarations without importing plugin code. All entries belong to one canonical package. */
+async function installedRuntimeFile(packageRoot: string, value: unknown, field: string): Promise<string> {
+	if (typeof value !== "string" || value.length === 0 || isAbsolute(value)) {
+		throw new Error(`entrypoints.${field} must be a nonempty relative path`);
+	}
+	const entrypoint = await realpath(resolve(packageRoot, value));
+	const entryRelative = relative(packageRoot, entrypoint);
+	if (isAbsolute(entryRelative) || entryRelative === ".." || entryRelative.startsWith(`..${sep}`)) {
+		throw new Error(`entrypoints.${field} escapes the installed package`);
+	}
+	if (!(await stat(entrypoint)).isFile()) {
+		throw new Error(`entrypoints.${field} must point to a file`);
+	}
+	return entrypoint;
+}
 
 export async function discoverInstalledUiPackages(root: string): Promise<InstalledUiDiscovery[]> {
 	const graph = await installedPackageGraph(root);
@@ -77,7 +95,12 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 			.then(
 				(value) =>
 					JSON.parse(value) as {
-						entrypoints?: { ui?: unknown; desktopRuntime?: unknown };
+						entrypoints?: {
+							ui?: unknown;
+							desktopRuntime?: unknown;
+							extension?: unknown;
+							resources?: unknown;
+						};
 						hosts?: unknown;
 					},
 			)
@@ -119,27 +142,40 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 		}
 		let runtime: InstalledUiRuntimeSource | undefined;
 		const declaredRuntime = manifest.entrypoints.desktopRuntime;
+		if (declaredRuntime === undefined && manifest.entrypoints.resources !== undefined) {
+			discoveries.push({ packageName, error: "entrypoints.resources requires a desktopRuntime owner" });
+			continue;
+		}
 		if (declaredRuntime !== undefined) {
 			try {
-				if (typeof declaredRuntime !== "string" || declaredRuntime.length === 0) {
-					throw new Error("entrypoints.desktopRuntime must be a nonempty string");
-				}
 				if (typeof packageJson?.name !== "string" || packageJson.name.length === 0) {
 					throw new Error("desktopRuntime requires a package.json name");
 				}
-				const entrypoint = await realpath(resolve(packageRoot, declaredRuntime));
-				const runtimeRelative = relative(packageRoot, entrypoint);
-				if (
-					isAbsolute(runtimeRelative) ||
-					runtimeRelative === ".." ||
-					runtimeRelative.startsWith(`..${sep}`)
-				) {
-					throw new Error("entrypoints.desktopRuntime escapes the installed package");
-				}
-				if (!(await stat(entrypoint)).isFile()) {
-					throw new Error("entrypoints.desktopRuntime must point to a file");
-				}
+				const entrypoint = await installedRuntimeFile(packageRoot, declaredRuntime, "desktopRuntime");
 				runtime = { pluginId: packageName, packageRoot, entrypoint };
+				if (manifest.entrypoints.extension !== undefined) {
+					runtime.nativeEntrypoint = await installedRuntimeFile(
+						packageRoot,
+						manifest.entrypoints.extension,
+						"extension",
+					);
+				}
+				const declaredResources = manifest.entrypoints.resources;
+				if (declaredResources !== undefined) {
+					if (
+						declaredResources === null ||
+						typeof declaredResources !== "object" ||
+						Array.isArray(declaredResources)
+					) {
+						throw new Error("entrypoints.resources must be an object mapping resource IDs to relative files");
+					}
+					const resources: [string, string][] = [];
+					for (const [id, resource] of Object.entries(declaredResources)) {
+						if (id.length === 0) throw new Error("entrypoints.resources IDs must be nonempty");
+						resources.push([id, await installedRuntimeFile(packageRoot, resource, `resources.${id}`)]);
+					}
+					runtime.resources = Object.freeze(Object.fromEntries(resources));
+				}
 			} catch (error) {
 				discoveries.push({ packageName, error: `Invalid desktopRuntime: ${String(error)}` });
 				continue;
@@ -309,12 +345,18 @@ async function seedDocs(): Promise<void> {
 }
 
 /** manifest 校验（spec §5 + §16）：任一不满足 → 返回原因，插件标记 invalid 不参与加载 */
-function validateManifest(dirName: string, m: Partial<UiPluginManifest>): string | null {
+function validateManifest(
+	dirName: string,
+	m: Partial<UiPluginManifest>,
+	runtime?: InstalledUiRuntimeSource,
+): string | null {
 	if (!m || typeof m !== "object") return "plugin.json 缺失或损坏";
 	if (typeof m.name !== "string" || !NAME_RE.test(m.name) || m.name !== dirName) {
 		return `name 非法（须匹配 ${NAME_RE.source} 且与目录名一致）`;
 	}
-	if (m.droneUi !== 1) return "droneUi 版本不匹配（当前只接受 1）";
+	if (m.droneUi !== 1 && m.droneUi !== 2) return "droneUi 版本不匹配（当前支持 1 和 2）";
+	if (m.droneUi === 2 && !runtime)
+		return "droneUi 2 不兼容当前来源：必须使用声明 desktopRuntime 的已验证安装包，本地 UI 目录不能取得后台身份";
 	if (typeof m.main !== "string" || m.main.includes("..") || !MAIN_RE.test(m.main)) {
 		return "main 非法（须为目录内相对路径，禁止 .. 穿越，后缀 .ts/.tsx/.js/.jsx）";
 	}
@@ -487,9 +529,13 @@ export class UiPluginManager {
 	}
 
 	/** 合成单个插件的 UiPluginInfo（统一从用户插件目录扫描；builtin 标志来自随包名单） */
-	private async scanOne(name: string, srcDir: string): Promise<UiPluginInfo> {
+	private async scanOne(
+		name: string,
+		srcDir: string,
+		runtime?: InstalledUiRuntimeSource,
+	): Promise<UiPluginInfo> {
 		const manifest = await readManifest(srcDir);
-		const invalidReason = validateManifest(name, manifest ?? {});
+		const invalidReason = validateManifest(name, manifest ?? {}, runtime);
 		const prev = this.infos.get(name);
 		return {
 			name,
@@ -612,7 +658,7 @@ export class UiPluginManager {
 			const installedName = installedManifest?.name;
 			if (typeof installedName !== "string" || !NAME_RE.test(installedName) || seen.has(installedName))
 				continue;
-			const invalidReason = validateManifest(installedName, installedManifest ?? {});
+			const invalidReason = validateManifest(installedName, installedManifest ?? {}, candidate.runtime);
 			if (invalidReason) {
 				const info: UiPluginInfo = {
 					name: installedName,
@@ -632,7 +678,7 @@ export class UiPluginManager {
 				seen.add(installedName);
 				this.dirNames.set(installedName, candidate.uiDir);
 				installedSources.set(installedName, candidate);
-				const info = await this.scanOne(installedName, candidate.uiDir);
+				const info = await this.scanOne(installedName, candidate.uiDir, candidate.runtime);
 				this.infos.set(installedName, info);
 				out.push(info);
 			} catch (err) {
@@ -726,7 +772,8 @@ export class UiPluginManager {
 				readManifest(pluginDir),
 				readFile(join(pluginDir, "dist/index.js"), "utf-8"),
 			]);
-			if (!manifest || validateManifest(name, manifest)) return { error: "manifest 校验失败" };
+			if (!manifest || validateManifest(name, manifest, this.runtimeSource(name)))
+				return { error: "manifest 校验失败" };
 			// 未知 region 条目已被过滤（与 scanAll 合成 info 同源），registry 只注册已知区域
 			const cleanManifest: UiPluginManifest = {
 				...(manifest as UiPluginManifest),

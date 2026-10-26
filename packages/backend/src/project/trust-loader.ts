@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { createLogger } from "../log";
 import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
 import { createProcessSandboxedExtension, type PluginSandboxPolicy } from "../plugin-sandbox";
+import type { PluginNativeBootstrap, PluginNativeIntegration } from "../plugins/coordinator";
 import { replyLanguagePrompt } from "../reply-language";
 import { sandboxExtensionFactory } from "../session-engine/sandbox-loader";
 import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
@@ -50,20 +51,32 @@ export function preferBundledMcpRuntime(bundledPath: string) {
 	};
 }
 
-export function desktopLoaderOptions(integration: DesktopIntegration | undefined, cwd?: string) {
+export function desktopLoaderOptions(
+	integration: DesktopIntegration | undefined,
+	cwd?: string,
+	nativeBootstrap?: PluginNativeBootstrap,
+) {
 	if (!integration) return {};
-	const { mcpRuntimePath, sandboxedExtensions, pluginRuntimeDirectory, ...rest } = integration;
+	const { mcpRuntimePath, sandboxedExtensions, pluginRuntimeDirectory, nativeRuntime, ...rest } = integration;
+	const sandbox =
+		pluginRuntimeDirectory && cwd
+			? sandboxExtensionFactory(
+					pluginRuntimeDirectory,
+					[...(rest.additionalExtensionPaths ?? []), ...(mcpRuntimePath ? [mcpRuntimePath] : [])],
+					cwd,
+				)
+			: undefined;
 	// The UI language can change between sessions; read it on every (re)load.
 	// P12: project memory index (.pi/memory/MEMORY.md) only — bodies are read on demand.
 	const options = {
 		...rest,
 		...(pluginRuntimeDirectory && cwd
 			? {
-					extensionFactoryForPath: sandboxExtensionFactory(
-						pluginRuntimeDirectory,
-						[...(rest.additionalExtensionPaths ?? []), ...(mcpRuntimePath ? [mcpRuntimePath] : [])],
-						cwd,
-					),
+					extensionFactoryForPath: async (path: string) => {
+						if (nativeRuntime?.manages(path))
+							return nativeBootstrap ? nativeBootstrap.factoryForPath(path) : () => {};
+						return sandbox?.(path);
+					},
 				}
 			: {}),
 		...(sandboxedExtensions?.length
@@ -127,6 +140,7 @@ export class ProjectResourceLoader {
 				/** Optional third-party extensions loaded through the process sandbox proxy. */
 				sandboxedExtensions?: PluginSandboxPolicy[];
 				pluginRuntimeDirectory?: string;
+				nativeRuntime?: PluginNativeIntegration;
 				additionalPromptTemplatePaths?: string[];
 				academicPiRoot?: string;
 				mcpRuntimePath?: string;
@@ -142,6 +156,7 @@ export class ProjectResourceLoader {
 		cwd: string,
 		options?: {
 			askTrust?: boolean;
+			nativeBootstrap?: PluginNativeBootstrap;
 			confirm?: PermissionConfirm;
 			modeRef?: PermissionModeRef;
 			extensionFactories?: InlineExtension[];
@@ -162,7 +177,7 @@ export class ProjectResourceLoader {
 				...this.deps.buildExtensions(cwd, options?.confirm, options?.modeRef),
 				...(options?.extensionFactories ?? []),
 			],
-			...desktopLoaderOptions(this.deps.desktopIntegration, cwd),
+			...desktopLoaderOptions(this.deps.desktopIntegration, cwd, options?.nativeBootstrap),
 		});
 		if (this.deps.projectTrust === false) {
 			settingsManager.setProjectTrusted(true);

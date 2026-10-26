@@ -1,4 +1,4 @@
-/** Window facade for the application-owned backend coordinator. */
+/** Window facade; the application owner and its lifecycle live in the backend coordinator. */
 export {
 	PluginRuntimeBridge as DesktopRuntimeBridge,
 	type PluginRuntimeBridgeOptions as DesktopRuntimeBridgeOptions,

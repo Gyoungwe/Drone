@@ -23,6 +23,7 @@ export function getPluginSessionCaller(
 		scope: {
 			kind: "session",
 			workspaceId: canonicalProjectId(entry.cwd),
+			workspaceDirectory: entry.cwd,
 			sessionId: entry.session.sessionId,
 		},
 		signal,

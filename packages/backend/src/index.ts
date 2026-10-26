@@ -130,13 +130,33 @@ export {
 	type PluginSandboxToolDeclaration,
 	sandboxEntrypointUrl,
 } from "./plugin-sandbox";
+export type {
+	PluginNativeBootstrap,
+	PluginNativeIntegration,
+	PluginRuntimeBridgeOptions,
+	PluginRuntimeOwner,
+	PluginRuntimeSource,
+} from "./plugins/coordinator";
+export { PluginRuntimeBridge } from "./plugins/coordinator";
+export {
+	fileCapabilityHandlers,
+	PluginFileCapabilities,
+	type PluginRootGrant,
+} from "./plugins/file-capabilities";
 export { createProcessPluginRuntime } from "./plugins/process-runtime";
+export { PluginResourceManager, type PluginResourceManagerOptions } from "./plugins/resource-capabilities";
 export type {
 	PluginRuntimeCaller,
 	PluginRuntimeCallerResolver,
 	PluginRuntimePolicy,
 } from "./plugins/runtime";
 export { PluginRuntimeRegistry } from "./plugins/runtime";
+export type {
+	PluginCapabilityContext,
+	PluginCapabilityHandler,
+	PluginRuntimeCapabilitiesOptions,
+	PluginRuntimeCapabilitiesProvider,
+} from "./plugins/runtime-capabilities";
 export type { PluginSessionCallerContext } from "./plugins/session-caller";
 export {
 	buildTrustOptions,
@@ -363,6 +383,3 @@ export {
 	type WebFetchDetails,
 	type WebFetchOptions,
 } from "./tools/webfetch";
-
-export { PluginRuntimeBridge } from "./plugins/coordinator";
-export type { PluginRuntimeBridgeOptions, PluginRuntimeOwner, PluginRuntimeSource } from "./plugins/coordinator";

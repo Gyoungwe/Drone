@@ -1,21 +1,46 @@
 import { randomUUID } from "node:crypto";
+import type { PluginRuntimeEvent } from "@drone/shared";
+import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
+import type { PluginNativeRuntimeFactory, PluginNativeSession } from "@gyoungwe/plugin-api/native";
+import type { PluginRuntimeClient } from "@gyoungwe/plugin-api/runtime";
 import { type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
+import type {
+	PluginRuntimeCapabilitiesOptions,
+	PluginRuntimeCapabilitiesProvider,
+} from "./runtime-capabilities";
 import type { PluginSessionCallerContext } from "./session-caller";
-import type { PluginRuntimeClient, PluginRuntimeFactory } from "@gyoungwe/plugin-api/runtime";
 
 export interface PluginRuntimeSource {
 	readonly pluginId: string;
 	readonly packageRoot: string;
 	readonly entrypoint: string;
+	readonly nativeEntrypoint?: string;
+	readonly resources?: Readonly<Record<string, string>>;
 }
 export interface PluginRuntimeOwner {
 	readonly id: number;
+	readonly approvalOwner?: PluginRuntimeOwner;
+	isSessionBound?(): boolean;
 	isDestroyed(): boolean;
 }
+export interface PluginNativeBootstrap {
+	factoryForPath(path: string): Promise<ExtensionFactory | undefined>;
+	bindSession(sessionId: string): void;
+	dispose(): Promise<void>;
+}
+export interface PluginNativeIntegration {
+	begin(): PluginNativeBootstrap;
+	manages(path: string): boolean;
+}
+
 export interface PluginRuntimeBridgeOptions {
 	source(name: string): PluginRuntimeSource | undefined;
 	enabled(name: string): boolean;
-	factory(source: PluginRuntimeSource): PluginRuntimeFactory;
+	factory(source: PluginRuntimeSource): PluginNativeRuntimeFactory;
+	capabilities?(
+		source: PluginRuntimeSource,
+		owner: PluginRuntimeOwner,
+	): PluginRuntimeCapabilitiesOptions | PluginRuntimeCapabilitiesProvider;
 	approve(owner: PluginRuntimeOwner, source: PluginRuntimeSource, operation?: string): Promise<boolean>;
 	getSessionContext(sessionId: string): PluginSessionCallerContext | undefined;
 }
@@ -42,22 +67,39 @@ interface Binding {
 	readonly abort: AbortController;
 	readonly pending: Set<Promise<unknown>>;
 	readonly ready: Promise<PluginRuntimeClient>;
+	unsubscribe?: () => void;
 }
 function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined): boolean {
-	return a.pluginId === b?.pluginId && a.packageRoot === b.packageRoot && a.entrypoint === b.entrypoint;
+	return (
+		a.pluginId === b?.pluginId &&
+		a.packageRoot === b.packageRoot &&
+		a.entrypoint === b.entrypoint &&
+		a.nativeEntrypoint === b.nativeEntrypoint &&
+		JSON.stringify(a.resources) === JSON.stringify(b.resources)
+	);
 }
 
 /** One domain owner per application/package. Window tokens only grant revocable caller access. */
 export class PluginRuntimeBridge {
 	private readonly applicationId = randomUUID();
+	private nativeSequence = 0;
+	private readonly listeners = new Set<(owner: PluginRuntimeOwner, event: PluginRuntimeEvent) => void>();
+
+	onEvent(listener: (owner: PluginRuntimeOwner, event: PluginRuntimeEvent) => void): () => void {
+		this.listeners.add(listener);
+		return () => this.listeners.delete(listener);
+	}
 	private transitioning = false;
 	private closing = false;
 	private transition: Promise<unknown> | undefined;
 	private readonly bindings = new Map<string, Binding>();
 	private readonly runtimes = new Map<string, Runtime>();
 	private readonly selections = new Map<PluginRuntimeOwner, Selection>();
-	private readonly requests = new Map<string, { name: string; ownerId: number; token: string }>();
-	private readonly stopping = new Map<string, { name: string; ownerId: number; promise: Promise<void> }>();
+	private readonly requests = new Map<string, { name: string; owner: PluginRuntimeOwner; token: string }>();
+	private readonly stopping = new Map<
+		string,
+		{ name: string; owner: PluginRuntimeOwner; promise: Promise<void> }
+	>();
 
 	constructor(private readonly options: PluginRuntimeBridgeOptions) {}
 
@@ -120,7 +162,7 @@ export class PluginRuntimeBridge {
 				authorizeActivation: async (_request, signal) => {
 					if (this.closing || this.transitioning || owner.isDestroyed() || !this.options.enabled(name))
 						return false;
-					const approved = await this.options.approve(owner, source);
+					const approved = await this.options.approve(owner.approvalOwner ?? owner, source);
 					return (
 						approved &&
 						!signal.aborted &&
@@ -148,10 +190,17 @@ export class PluginRuntimeBridge {
 					};
 					if (!permitted()) return false;
 					if (request.effect === "read") return true;
-					return (await this.options.approve(selected.owner, source, request.operation)) && permitted();
+					return (
+						(await this.options.approve(
+							selected.owner.approvalOwner ?? selected.owner,
+							source,
+							request.operation,
+						)) && permitted()
+					);
 				},
 			},
 			this.applicationId,
+			this.options.capabilities?.(source, owner.approvalOwner ?? owner),
 		);
 		registry.register(source.pluginId, this.options.factory(source));
 		const runtime: Runtime = {
@@ -171,10 +220,10 @@ export class PluginRuntimeBridge {
 		const source = this.options.source(name);
 		if (!source) return undefined;
 		if (!this.options.enabled(name) || owner.isDestroyed()) throw new Error("Plugin runtime unavailable");
-		const stopping = this.revoke(name, owner.id);
+		const stopping = this.revoke(name, owner.id, false);
 		const token = randomUUID();
 		const key = JSON.stringify([name, owner.id]);
-		this.requests.set(key, { name, ownerId: owner.id, token });
+		this.requests.set(key, { name, owner, token });
 		await stopping;
 		if (this.requests.get(key)?.token !== token) throw new Error("Plugin runtime load superseded");
 		let runtime = this.runtimes.get(source.pluginId);
@@ -198,14 +247,134 @@ export class PluginRuntimeBridge {
 		this.bindings.set(token, binding);
 		runtime.bindings.add(binding);
 		try {
-			await binding.ready;
+			const client = await binding.ready;
 			runtime.active = true;
 			if (!this.allowed(binding)) throw new Error("Plugin runtime binding revoked");
+			binding.unsubscribe = client.subscribe((event) => {
+				const selected = this.selections.get(owner);
+				if (!selected || !this.caller(binding)) return;
+				for (const listener of this.listeners)
+					listener(owner, { ...event, binding: token, selectionToken: selected.token });
+			});
 			return token;
 		} catch (error) {
 			await this.stopBinding(binding);
 			throw error;
 		}
+	}
+
+	/** Resource discovery owns these leases until the real SDK session adopts their shutdown handlers. */
+	beginNative(
+		owner: PluginRuntimeOwner,
+		findName: (path: string) => string | undefined,
+	): PluginNativeBootstrap {
+		const attachments = new Set<PluginNativeSession>();
+		const owners = new Set<PluginRuntimeOwner>();
+		const pending = new Set<Promise<ExtensionFactory | undefined>>();
+		const binders = new Set<(session: PluginSessionCallerContext) => void>();
+		let bound: PluginSessionCallerContext | undefined;
+		let closed = false;
+		return {
+			bindSession: (sessionId) => {
+				const session = this.options.getSessionContext(sessionId);
+				if (!session || closed || (bound && bound.identity !== session.identity))
+					throw new Error("Native bootstrap requires its actual live session entry");
+				bound = session;
+				for (const bind of binders) bind(session);
+			},
+			factoryForPath: (path) => {
+				const creating = (async () => {
+					if (closed) throw new Error("Native plugin bootstrap is closed");
+					const name = findName(path);
+					if (!name) return undefined;
+					const nativeOwner: PluginRuntimeOwner = {
+						id: --this.nativeSequence,
+						approvalOwner: owner,
+						isDestroyed: () => closed || (bound ? bound.signal.aborted : owner.isDestroyed()),
+						isSessionBound: () => bound !== undefined,
+					};
+					owners.add(nativeOwner);
+					const token = await this.bind(name, nativeOwner);
+					if (!token) throw new Error("Managed native plugin source is unavailable");
+					const binding = this.bindings.get(token);
+					if (!binding) throw new Error("Native plugin binding was revoked");
+					let boundSession: PluginSessionCallerContext | undefined;
+					const bind = (session: PluginSessionCallerContext) => {
+						boundSession = session;
+						this.selectSession(nativeOwner, session.scope.sessionId);
+					};
+					binders.add(bind);
+					if (bound) bind(bound);
+					let native: PluginNativeSession;
+					try {
+						native = await binding.runtime.registry.attachNative(binding.runtime.source.pluginId, (ctx) => {
+							const session = this.options.getSessionContext(ctx.sessionManager.getSessionId());
+							if (!boundSession || !session || boundSession.identity !== session.identity) return undefined;
+							return this.caller(binding);
+						});
+					} catch (error) {
+						await this.stopBinding(binding);
+						throw error;
+					}
+					let stopping: Promise<void> | undefined;
+					const dispose = () => {
+						stopping ??= (async () => {
+							binding.abort.abort(new Error("Native plugin session closed"));
+							const [released] = await Promise.allSettled([native.dispose()]);
+							const [stopped] = await Promise.allSettled([this.stopBinding(binding)]);
+							this.selections.delete(nativeOwner);
+							attachments.delete(adopted);
+							binders.delete(bind);
+							const failures = [released, stopped].filter((result) => result.status === "rejected");
+							if (failures.length)
+								throw new AggregateError(
+									failures.map((result) => result.reason),
+									"Native plugin session disposal failed",
+								);
+						})();
+						return stopping;
+					};
+					const adopted: PluginNativeSession = {
+						...native,
+						dispose,
+						extension: async (pi) => {
+							await native.extension(pi);
+							pi.on("session_shutdown", dispose);
+						},
+					};
+					attachments.add(adopted);
+					if (closed) {
+						await dispose();
+						throw new Error("Native plugin bootstrap was revoked");
+					}
+					return adopted.extension;
+				})();
+				pending.add(creating);
+				void creating.then(
+					() => pending.delete(creating),
+					() => pending.delete(creating),
+				);
+				return creating;
+			},
+			dispose: async () => {
+				closed = true;
+				const revoked = await Promise.allSettled(
+					[...owners].map((owner) => this.revoke(undefined, owner.id)),
+				);
+				// Each loader retains its error; disposal waits for all pending registration cleanup.
+				await Promise.allSettled([...pending]);
+				const results = [
+					...revoked,
+					...(await Promise.allSettled([...attachments].map((native) => native.dispose()))),
+				];
+				const failures = results.filter((result) => result.status === "rejected");
+				if (failures.length)
+					throw new AggregateError(
+						failures.map((result) => result.reason),
+						"Native plugin bootstrap disposal failed",
+					);
+			},
+		};
 	}
 
 	async invoke(
@@ -273,15 +442,19 @@ export class PluginRuntimeBridge {
 	}
 
 	/** Revoke callers immediately. The final caller also drains and disposes the shared owner. */
-	async revoke(name?: string, ownerId?: number): Promise<void> {
+	async revoke(name?: string, ownerId?: number, includeUnadopted = true): Promise<void> {
+		const matches = (owner: PluginRuntimeOwner) =>
+			ownerId === undefined ||
+			owner.id === ownerId ||
+			(includeUnadopted && owner.approvalOwner?.id === ownerId && !owner.isSessionBound?.());
 		for (const [key, request] of this.requests) {
 			if (name !== undefined && request.name !== name) continue;
-			if (ownerId !== undefined && request.ownerId !== ownerId) continue;
+			if (!matches(request.owner)) continue;
 			this.requests.delete(key);
 		}
 		for (const binding of this.bindings.values()) {
 			if (name !== undefined && binding.name !== name) continue;
-			if (ownerId !== undefined && binding.owner.id !== ownerId) continue;
+			if (!matches(binding.owner)) continue;
 			this.stopBinding(binding);
 		}
 		if (name === undefined)
@@ -291,10 +464,7 @@ export class PluginRuntimeBridge {
 				this.selections.delete(owner);
 			}
 		const stops = [...this.stopping.values()]
-			.filter(
-				(stop) =>
-					(name === undefined || stop.name === name) && (ownerId === undefined || stop.ownerId === ownerId),
-			)
+			.filter((stop) => (name === undefined || stop.name === name) && matches(stop.owner))
 			.map((stop) => stop.promise);
 		const results = await Promise.allSettled(stops);
 		const failures = results.filter((result) => result.status === "rejected");
@@ -310,6 +480,7 @@ export class PluginRuntimeBridge {
 		const existing = this.stopping.get(key);
 		if (existing) return existing.promise;
 		this.bindings.delete(binding.token);
+		binding.unsubscribe?.();
 		binding.abort.abort(new Error("Plugin caller binding revoked"));
 		binding.runtime.bindings.delete(binding);
 		const runtime = binding.runtime;
@@ -326,7 +497,7 @@ export class PluginRuntimeBridge {
 			if (runtime.stopping) await runtime.stopping;
 			this.stopping.delete(key);
 		})();
-		this.stopping.set(key, { name: binding.name, ownerId: binding.owner.id, promise });
+		this.stopping.set(key, { name: binding.name, owner: binding.owner, promise });
 		return promise;
 	}
 }

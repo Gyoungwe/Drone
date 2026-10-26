@@ -30,9 +30,23 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("package-bound UI runtime", () => {
+	it("forwards content-free subscriptions and their unsubscribe function", () => {
+		const unsubscribe = vi.fn();
+		const subscribe = vi.fn(() => unsubscribe);
+		const runtime = createPluginRuntimeClient(vi.fn(), subscribe);
+		const listener = vi.fn();
+		const stop = runtime.subscribe(listener);
+		expect(subscribe).toHaveBeenCalledExactlyOnceWith(listener);
+		stop();
+		expect(unsubscribe).toHaveBeenCalledOnce();
+	});
+
 	it("passes the same frozen client to slots, contributions and headless activation", () => {
 		const invoke = vi.fn(async () => ({ count: 1 }));
-		const runtime = createPluginRuntimeClient(invoke);
+		const runtime = createPluginRuntimeClient(
+			invoke,
+			vi.fn(() => vi.fn()),
+		);
 		const activate = vi.fn((_context: PluginUiActivationContext) => dispose);
 		const dispose = vi.fn();
 		const seen: PluginUiRuntimeClient[] = [];
@@ -61,7 +75,7 @@ describe("package-bound UI runtime", () => {
 		fireEvent.click(screen.getByText("contribution"));
 		expect(seen).toEqual([runtime, runtime]);
 		expect(Object.isFrozen(runtime)).toBe(true);
-		expect(Object.keys(runtime)).toEqual(["invoke"]);
+		expect(Object.keys(runtime)).toEqual(["invoke", "subscribe"]);
 		expect(invoke).toHaveBeenNthCalledWith(1, "results.refresh", { limit: 2 });
 		expect(invoke).toHaveBeenNthCalledWith(2, "results.refresh", { limit: 2 });
 		expect(activate).toHaveBeenCalledWith({ runtime });
@@ -70,8 +84,14 @@ describe("package-bound UI runtime", () => {
 	});
 
 	it("keeps distinct clients when one plugin renders another plugin's contribution", () => {
-		const first = createPluginRuntimeClient(vi.fn(async () => "first"));
-		const second = createPluginRuntimeClient(vi.fn(async () => "second"));
+		const first = createPluginRuntimeClient(
+			vi.fn(async () => "first"),
+			vi.fn(() => vi.fn()),
+		);
+		const second = createPluginRuntimeClient(
+			vi.fn(async () => "second"),
+			vi.fn(() => vi.fn()),
+		);
 		const seen: PluginUiRuntimeClient[] = [];
 		function Inner() {
 			seen.push(usePluginRuntime());
@@ -92,7 +112,10 @@ describe("package-bound UI runtime", () => {
 	});
 
 	it("reports unavailable runtime instead of inheriting an outer plugin's client", () => {
-		const runtime = createPluginRuntimeClient(vi.fn(async () => undefined));
+		const runtime = createPluginRuntimeClient(
+			vi.fn(async () => undefined),
+			vi.fn(() => vi.fn()),
+		);
 		const Inner = bindPluginRuntime(() => {
 			usePluginRuntime();
 			return null;
@@ -107,7 +130,10 @@ describe("package-bound UI runtime", () => {
 			.fn()
 			.mockResolvedValueOnce({ id: "receipt-1" })
 			.mockRejectedValueOnce(new Error("Runtime binding was revoked"));
-		const runtime = createPluginRuntimeClient(invoke);
+		const runtime = createPluginRuntimeClient(
+			invoke,
+			vi.fn(() => vi.fn()),
+		);
 		await expect(runtime.invoke("results.read", { id: "receipt-1" })).resolves.toEqual({ id: "receipt-1" });
 		await expect(runtime.invoke("results.read", { id: "receipt-1" })).rejects.toThrow(
 			"Runtime binding was revoked",

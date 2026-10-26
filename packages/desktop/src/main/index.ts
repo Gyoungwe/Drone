@@ -27,7 +27,7 @@ import { migrateLegacyUserDir } from "./legacy-migration";
 import { buildMenuTemplate, DESKTOP_COMMAND_CHANNEL } from "./menu";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
 import type { DesktopRuntimeBridge } from "./ui-plugins/runtime-bridge";
-import { createDesktopRuntime } from "./ui-plugins/runtime-host";
+import { createDesktopRuntime, createNativeRuntimeIntegration } from "./ui-plugins/runtime-host";
 import { loadUiState } from "./ui-state";
 import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
 import { applyChromeTheme, createWindow, resolveTheme } from "./window";
@@ -306,6 +306,16 @@ app.whenReady().then(async () => {
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
 			appendSystemPrompt: desktopSystemPrompt(),
+			nativeRuntime: createNativeRuntimeIntegration(
+				() => {
+					if (!uiPluginsManager) throw new Error("Plugin manager not initialized");
+					return uiPluginsManager;
+				},
+				() => {
+					if (!pluginRuntime) throw new Error("Plugin runtime not initialized");
+					return pluginRuntime;
+				},
+			),
 			pluginRuntimeDirectory: app.isPackaged
 				? join(process.resourcesPath, "plugin-runtime")
 				: join(__dirname, `../../plugin-runtime/${process.platform}-${process.arch}`),

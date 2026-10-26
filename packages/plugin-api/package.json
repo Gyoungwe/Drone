@@ -34,6 +34,16 @@
 			"types": "./dist/runtime.d.ts",
 			"import": "./dist/runtime.js",
 			"default": "./dist/runtime.js"
+		},
+		"./native": {
+			"types": "./dist/native.d.ts",
+			"import": "./dist/native.js",
+			"default": "./dist/native.js"
+		},
+		"./resource": {
+			"types": "./dist/resource.d.ts",
+			"import": "./dist/resource.js",
+			"default": "./dist/resource.js"
 		}
 	},
 	"files": [
@@ -48,10 +58,14 @@
 		"test": "npm run check && node --test test/*.test.mjs"
 	},
 	"peerDependencies": {
-		"@types/react": ">=19"
+		"@types/react": ">=19",
+		"@earendil-works/pi-coding-agent": ">=1.1.0 <2.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@types/react": {
+			"optional": true
+		},
+		"@earendil-works/pi-coding-agent": {
 			"optional": true
 		}
 	}

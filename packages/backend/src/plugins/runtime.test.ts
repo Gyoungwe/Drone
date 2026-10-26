@@ -52,7 +52,12 @@ function caller(scope: PluginRuntimeScope) {
 	return () => value;
 }
 
-const scope = { kind: "session" as const, workspaceId: "workspace-a", sessionId: "session-a" };
+const scope = {
+	kind: "session" as const,
+	workspaceId: "workspace-a",
+	workspaceDirectory: "/Work/A",
+	sessionId: "session-a",
+};
 
 describe("PluginRuntimeRegistry", () => {
 	it("authorizes activation before executing plugin code", async () => {

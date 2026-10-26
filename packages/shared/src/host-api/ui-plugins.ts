@@ -34,7 +34,7 @@ const UiPluginContributionSchema = Type.Object(
 const UiPluginManifestSchema = Type.Object(
 	{
 		name: Type.String({ minLength: 1 }),
-		droneUi: Type.Integer({ minimum: 1 }),
+		droneUi: Type.Union([Type.Literal(1), Type.Literal(2)]),
 		main: Type.String({ minLength: 1 }),
 		slots: Type.Optional(Type.Record(Type.String(), Type.String())),
 		contributions: Type.Optional(Type.Array(UiPluginContributionSchema)),

@@ -4,8 +4,11 @@ import { type ComponentType, createContext, createElement, useContext } from "re
 const PluginRuntimeContext = createContext<PluginUiRuntimeClient | undefined>(undefined);
 
 /** Main owns the binding and validates its package, window and activation generation. */
-export function createPluginRuntimeClient(invoke: PluginUiRuntimeClient["invoke"]): PluginUiRuntimeClient {
-	return Object.freeze({ invoke });
+export function createPluginRuntimeClient(
+	invoke: PluginUiRuntimeClient["invoke"],
+	subscribe: PluginUiRuntimeClient["subscribe"],
+): PluginUiRuntimeClient {
+	return Object.freeze({ invoke, subscribe });
 }
 
 /** Available only inside a contribution with an approved desktop runtime. */

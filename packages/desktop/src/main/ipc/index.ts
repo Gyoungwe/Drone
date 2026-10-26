@@ -1,7 +1,7 @@
 import { type BackendServices, createLogger } from "@drone/backend";
 import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@drone/shared";
 import { IpcChannels } from "@drone/shared";
-import { BrowserWindow } from "electron";
+import { BrowserWindow, webContents } from "electron";
 import { onResearchSkillUpdateState } from "../research-skill-updater";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import type { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
@@ -75,6 +75,10 @@ export function registerIpc(
 	registerInquiryIpc(backendServices, sendToRenderer);
 	registerUiPluginsIpc(uiPluginsManager, runtime);
 	registerPluginRuntimeIpc(runtime);
+	runtime.onEvent((owner, event) => {
+		const contents = webContents.fromId(owner.id);
+		if (contents && !contents.isDestroyed()) contents.send(IpcChannels.PluginRuntimeEvent, event);
+	});
 	registerMemoryIpc(backendServices);
 	registerResearchIpc(backendServices);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）

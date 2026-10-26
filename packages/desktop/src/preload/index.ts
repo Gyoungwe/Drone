@@ -631,6 +631,7 @@ const api: PiApi = {
 	onProviderLoginEvent: (cb) => subscribe(IpcChannels.SettingsLoginEvent, cb),
 	onAskRequest: (cb) => subscribe(IpcChannels.AskRequest, cb),
 	onUiPluginsEvent: (cb) => subscribe(IpcChannels.UiPluginsEvent, cb),
+	onPluginRuntimeEvent: (cb) => subscribe(IpcChannels.PluginRuntimeEvent, cb),
 	onUpdateEvent: (cb) => subscribe(IpcChannels.UpdateEvent, cb),
 	onResearchSkillUpdateEvent: (cb) => subscribe(IpcChannels.ResearchSkillUpdateEvent, cb),
 	onDesktopCommand: (cb) => subscribe(IpcChannels.DesktopCommand, cb),

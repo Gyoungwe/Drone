@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复的领域耦合扫描 | 清单和静态检查已实现；110 项初始耦合；锁定 1.1.0/latest 1.4.0 真实会话基础 UI 对照通过，全 API 兼容尚未完成 | 无 |
 | P1 | 通用 runtime 生命周期、包来源绑定、权限、隔离进程、UI 调用和撤销 | 应用 owner/真实会话/selection lease 回归及正式 DMG application→A→application→B→A、停用/拒绝/恢复/退出切片通过；领域桥接继续由 P2 完成 | P0 |
-| P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | 知识 UI 同包、固定配置目录和 worker 替换单写者修复已提交；原生 owner/双会话隔离及打包 CLI 关闭重启已验证；Desktop 同 owner、能力 broker 和宿主删除尚未完成 | P1 |
+| P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | 知识 UI 同包与原生 owner/双会话隔离已验证；Desktop 同 owner 的总览/搜索、文件能力 broker、受控索引资源和 UI v2 正在真实会话/安装包验收；完整 hooks、写操作和宿主删除仍未完成 | P1 |
 | P3 | research、来源连接器、引用/Zotero 等领域 API/页面迁移 | 待开始 | P2 |
 | P4 | tasks、编排、领域记忆及 UI 迁移 | 待开始 | P2 |
 | P5 | analysis/evidence 迁移；跨插件依赖通过显式合同管理 | 待开始 | P3/P4 |
@@ -48,3 +48,5 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 - 2026-10-26：宿主 `561a370c` 正式 DMG 使用本地离线模型运行两个真实会话，确认后台实例复用、正确逐会话作用域及停用/恢复/退出，见[新证据](native-plugin-app-owner-packaged-evidence.md)。插件 `32cd3a3` 的实例/lease/关闭失败基础门禁通过；`793c890` 与 `c8b75c5` 分别提交 topic/delivery 实例化及 topic 元数据修复；完整 native owner 接入仍在实施，后续统一重建检查。
 
 - 2026-10-26：插件 `3808e84` 完成原生 owner 注入与每会话票据、取消和发布证明隔离，全仓 check 通过（knowledge 64 文件/426 测试）；同 tarball 默认 CLI 真实 SDK 配置态两次运行及租约释放/重启通过。宿主 `0f1740d7` 修复关闭 hook 与取消互等、捕获 SDK 错误通道，完整五门禁及[新安装包活跃请求退出](native-plugin-shutdown-packaged-evidence.md)通过。下一切片为 native/UI 共用 owner 的知识总览/搜索与必要能力 broker。
+
+- 2026-10-26：P2 增加只读桌面入口、独立索引资源和逐调用能力路由；第一轮双仓库完整检查通过。真实协调器验收另发现 workspaceId 被误当路径，独立 UI 复核发现索引更新会清空搜索结果，均进入修复。正式候选以修复后重新固定的 tarball 与门禁为准；P2 不因此标记完成。

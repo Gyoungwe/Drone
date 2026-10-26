@@ -9,6 +9,7 @@ import type { DiscoveryApi } from "./host-api/discovery";
 import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
+import type { PluginRuntimeEvent } from "./host-api/plugin-runtime";
 import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
@@ -415,6 +416,7 @@ export const IpcChannels = {
 	UiPluginsReadCode: "uiPlugins:readCode",
 	PluginRuntimeInvoke: "pluginRuntime:invoke",
 	PluginRuntimeSelectSession: "pluginRuntime:selectSession",
+	PluginRuntimeEvent: "pluginRuntime:event",
 	/** UI 插件：启用/停用单个插件（启用=信任） */
 	UiPluginsSetPluginEnabled: "uiPlugins:setPluginEnabled",
 	/** UI 插件：槽位指派（pluginName=null 取消指派） */
@@ -697,6 +699,7 @@ export interface PiApi
 		name: string,
 	): Promise<{ manifest: UiPluginManifest; code: string; runtimeBinding?: string } | { error: string }>;
 	/** Opaque main-issued binding; caller cannot select plugin identity or scope. */
+	onPluginRuntimeEvent(cb: (event: PluginRuntimeEvent) => void): () => void;
 	pluginRuntimeSelectSession(sessionId: string | null): Promise<string>;
 	pluginRuntimeInvoke(
 		binding: string,

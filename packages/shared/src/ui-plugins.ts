@@ -72,8 +72,8 @@ export interface UiPluginContribution {
 export interface UiPluginManifest {
 	/** 必填：/^[a-z0-9][a-z0-9-]*$/ 且必须与目录名一致 */
 	name: string;
-	/** 必填：宿主契约版本，当前只接受 1 */
-	droneUi: number;
+	/** 1: 已发布 UI 合同；2: 已安装包的绑定 runtime / 资源合同。 */
+	droneUi: 1 | 2;
 	/** 必填：插件目录内相对路径，禁止 .. 穿越；后缀 .ts/.tsx/.js/.jsx */
 	main: string;
 	/** 槽位 → 入口 bundle 的具名导出名（key 必须是已知槽位名）；slots 与 contributions 至少其一非空 */

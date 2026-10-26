@@ -46,6 +46,25 @@ function setup() {
 }
 
 describe("DesktopRuntimeBridge", () => {
+	it("sends invalidations only to live bindings with their current selection lease", async () => {
+		const { bridge, factory } = setup();
+		const listener = vi.fn();
+		bridge.onEvent(listener);
+		const first = (await bridge.bind("ui", owner))!;
+		const token = bridge.selectSession(owner, null);
+		const emit = factory.mock.calls[0]![0].events.changed;
+		emit();
+		expect(listener).toHaveBeenCalledWith(owner, {
+			binding: first,
+			selectionToken: token,
+			type: "changed",
+			revision: 1,
+		});
+		await bridge.revoke(undefined, owner.id);
+		expect(() => emit()).toThrow("deactivated");
+		expect(listener).toHaveBeenCalledTimes(1);
+	});
+
 	it("does not revive a revoked sibling bind after awaiting the former owner's disposal", async () => {
 		const { bridge, factory, dispose } = setup();
 		let finish!: () => void;
@@ -127,7 +146,7 @@ describe("DesktopRuntimeBridge", () => {
 	function sessionContext(sessionId: string, workspaceId = "/workspace"): PluginSessionCallerContext {
 		return {
 			identity: {},
-			scope: { kind: "session", sessionId, workspaceId },
+			scope: { kind: "session", sessionId, workspaceId, workspaceDirectory: "/Work/Bridge" },
 			signal: new AbortController().signal,
 			projectTrusted: true,
 			readOnly: false,
