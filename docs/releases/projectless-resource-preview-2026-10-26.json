@@ -168,5 +168,38 @@
 		"unrelatedFinancialAndMessagingServersNotUsed": true,
 		"externalAccountWritesPerformed": false
 	},
-	"privateBodiesCommitted": false
+	"privateBodiesCommitted": false,
+	"mainIntegration": {
+		"hostHead": "26e7ebbc6050a8989dd6c4999c4971a7cab452fe",
+		"pluginHead": "d2f76a0894ba7de685ba90117f1db63ebd8176f5",
+		"hostProductSourceMatchesFullyTestedCommit": "090fbe7f1ca1f33a8259015071067e5d628e6ff8",
+		"onlyDocumentationChangedAfterFullGates": true,
+		"checks": [
+			{
+				"name": "lint",
+				"command": "npm run lint",
+				"exitCode": 0,
+				"logSha256": "862df66c8ba961530c4f978bdf1d73b8e3dc9beaedd91619a4d2b3dafc17400f"
+			},
+			{
+				"name": "arch",
+				"command": "npm run check:arch",
+				"exitCode": 0,
+				"logSha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"name": "plugin-api",
+				"command": "npm run check:plugin-api",
+				"exitCode": 0,
+				"logSha256": "70503e7f3ec939c56d4b6bb56d905a50f40f415818047bb0049743ce10f32958"
+			},
+			{
+				"name": "diff",
+				"command": "git diff --check",
+				"exitCode": 0,
+				"logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+			}
+		],
+		"pluginProductSourceMatchesFullCheck": "b1db09dc9662ae5039aed56ff926f163b5681965"
+	}
 }

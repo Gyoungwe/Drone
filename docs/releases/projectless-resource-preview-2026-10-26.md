@@ -11,3 +11,5 @@
 DMG SHA256：`229ce073158ef3426f95e225c3637d8a24eed6ddee5ba8e375f66b9cbd34be2d`。app.asar SHA256：`5e49501ae4b7918d9b674ea7ff3b30f4a6e20c1050f4ce674c06b5d9cb9eaacf`。按现有流程生成未签名 macOS arm64 包。
 
 总目标仍为 PARTIAL：Zotero 云端、用户自有认证 MCP、Protocols.io 写入和其他平台桌面仍缺适用配置/设备。本轮复查登记的两台远程桌面仍离线；常用客户端现有 MCP 配置未发现适用的认证科研服务，不使用无关交易或消息服务替代。没有执行账户写入。MinerU/GROBID 与 B8/B8-2 保持暂缓。
+
+双仓库快进合入 main 后，宿主 `26e7ebbc` 与插件 `d2f76a0` 核对为完整门禁所验产品源码不变、仅证据文档新增。合并后 lint、架构、插件 API/migration/lifecycle 和 diff 检查再次通过，回执见 JSON mainIntegration；没有将文档提交冒充新一轮完整测试。
