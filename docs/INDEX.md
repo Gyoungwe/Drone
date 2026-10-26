@@ -5,6 +5,7 @@
 > 本文件只做**导航**：职责一句话 + 指到源码；实现细节以代码为准，坑记 PITFALLS，不在此堆积。
 
 当前计划最终状态、九个 npm 公开版本及四项未完成验收的恢复配置，统一见[阶段状态汇总](plan-final-status-2026-10-26.md)。
+下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构草案](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已记录目标边界，详细设计待评审，尚未实施。
 
 ## 硬约束（改代码前必知）
 
@@ -500,3 +501,5 @@ src/
 - `.local/docs/INDEX-full-2026-08.md` — 本次精简前的完整版索引归档（含实现细节）
 
 `@gyoungwe/pi-knowledge/host` 承载语义 provider 配置验证、bounded request/response 与向量安全校验；宿主只负责凭据、同意和调度。
+
+原生 Pi 插件架构新增执行计划见 [P0–P7](pluginization/native-plugin-implementation-plan.md)，依赖与原生兼容覆盖清单见 [inventory](pluginization/native-plugin-inventory.md)。`scripts/check-native-plugin-boundary.mjs` 是新增最终边界门禁，当前未清零。运行时生命周期在 `packages/backend/src/plugins/`，UI 绑定/context 在 `packages/desktop/src/renderer/src/plugins/runtime.ts`，主进程来源绑定在 `packages/desktop/src/main/ui-plugins/runtime-bridge.ts`。
