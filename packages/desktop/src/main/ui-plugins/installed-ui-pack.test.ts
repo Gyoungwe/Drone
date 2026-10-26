@@ -29,8 +29,23 @@ describe("installed desktop-ui-pack discovery", () => {
 
 	it("keeps the host usable when the managed package root is empty", async () => {
 		root = await mkdtemp(join(tmpdir(), "drone-ui-pack-empty-root-"));
+		electronState.userData = join(root, "user-data");
+		Object.defineProperty(process, "resourcesPath", {
+			configurable: true,
+			enumerable: originalResourcesPath?.enumerable ?? false,
+			value: fileURLToPath(new URL("../../../resources", import.meta.url)),
+			writable: true,
+		});
 		await mkdir(join(root, "agent", "npm", "node_modules"), { recursive: true });
-		expect(await discoverInstalledUiPackages(join(root, "agent", "npm", "node_modules"))).toEqual([]);
+		const installRoot = join(root, "agent", "npm", "node_modules");
+		expect(await discoverInstalledUiPackages(installRoot)).toEqual([]);
+
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await expect(manager.init()).resolves.toBeUndefined();
+		expect(manager.list()).toEqual([]);
+		expect(manager.info("optional-plugin")).toBeNull();
+		expect(manager.runtimeSource("optional-plugin")).toBeUndefined();
+		expect(manager.isEnabled("optional-plugin")).toBe(false);
 	});
 
 	it("loads the installed package through the normal UI plugin lifecycle", async () => {
