@@ -16,6 +16,7 @@ import {
 	type KnowledgeWorkerMetadata,
 } from "@gyoungwe/pi-knowledge/host";
 import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoader } from "../research-host";
+import type { DailyDiscoveryOperations } from "../services/daily-discovery";
 import type { KnowledgeMaintenanceOperations } from "../services/knowledge-maintenance";
 import { KnowledgeWebDavService } from "./webdav";
 
@@ -35,6 +36,8 @@ export interface KnowledgeHostPort {
 	/** Optional maintenance implementation supplied by the installed package. */
 	planMaintenance?: KnowledgeMaintenanceOperations["planMaintenance"];
 	runMaintenance?: KnowledgeMaintenanceOperations["runMaintenance"];
+	/** Optional daily-discovery prompt/parser implementation supplied by the installed package. */
+	dailyDiscovery?: DailyDiscoveryOperations;
 }
 
 /**
@@ -91,6 +94,18 @@ export function createKnowledgeMaintenanceOperations(
 	return {
 		planMaintenance: source.planMaintenance ?? knowledgeUiService.planMaintenance,
 		runMaintenance: source.runMaintenance ?? knowledgeUiService.runMaintenance,
+	};
+}
+
+/** Keep daily-discovery prompt/parser logic behind the discovered host seam. */
+export function createKnowledgeDailyDiscoveryOperations(host?: KnowledgeHostPort): DailyDiscoveryOperations {
+	const source = host?.dailyDiscovery;
+	if (source) return source;
+	return {
+		systemPrompt: knowledgeUiService.DAILY_DISCOVERY_SYSTEM,
+		buildMessage: (fresh, related) => knowledgeUiService.buildDailyDiscoveryMessage([...fresh], [...related]),
+		parseIdeas: (text, allowedPaths, freshPaths) =>
+			knowledgeUiService.parseDailyIdeas(text, allowedPaths, freshPaths),
 	};
 }
 

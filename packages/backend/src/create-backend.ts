@@ -35,6 +35,7 @@ import {
 import { JsonStore } from "./json-store";
 import {
 	configureBackendKnowledgeWorker,
+	createKnowledgeDailyDiscoveryOperations,
 	createKnowledgeMaintenanceOperations,
 	createKnowledgeReadProvider,
 	type KnowledgeHostPort,
@@ -594,6 +595,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	void discovery.init();
 	const dailyDiscoveryOptions: DailyDiscoveryOptions = {
 		path: join(getAgentDir(), "daily-discovery.json"),
+		operations: createKnowledgeDailyDiscoveryOperations(knowledgeHost),
 		context: async (sinceMs) => {
 			const base = await sessions.knowledge.dailyContext(sinceMs);
 			if (!base.bound) return base;
