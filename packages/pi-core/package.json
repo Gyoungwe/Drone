@@ -37,6 +37,11 @@
 			"import": "./dist/index.mjs",
 			"default": "./dist/index.mjs"
 		},
+		"./host": {
+			"types": "./src/host.ts",
+			"import": "./dist/host.mjs",
+			"default": "./dist/host.mjs"
+		},
 		"./tools/*": "./src/tools/*.ts",
 		"./memory": "./src/memory.ts"
 	},

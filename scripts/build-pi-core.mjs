@@ -18,7 +18,9 @@ const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 async function checkOutput() {
 	const outputPath = join(distRoot, "index.mjs");
-	if (!existsSync(outputPath)) throw new Error("pi-core dist/index.mjs is missing");
+	const hostOutputPath = join(distRoot, "host.mjs");
+	if (!existsSync(outputPath) || !existsSync(hostOutputPath))
+		throw new Error("pi-core dist/index.mjs and dist/host.mjs are required");
 	const output = await readFile(outputPath, "utf8");
 	for (const pattern of [
 		/(?:from|import\s*\(|require\s*\()["']electron["']/u,
@@ -45,19 +47,22 @@ if (!check) {
 	await mkdir(distRoot, { recursive: true });
 	const result = await build({
 		absWorkingDir: root,
-		entryPoints: [join(packageRoot, "src/index.ts")],
-		outfile: join(distRoot, "index.mjs"),
+		entryPoints: [join(packageRoot, "src/index.ts"), join(packageRoot, "src/host.ts")],
+		outdir: distRoot,
 		bundle: true,
 		format: "esm",
 		platform: "node",
 		packages: "bundle",
+		outExtension: { ".js": ".mjs" },
 		metafile: true,
 		sourcemap: false,
 		logLevel: "silent",
 	});
-	const output = await readFile(join(distRoot, "index.mjs"), "utf8");
-	if (!output.startsWith("// @ts-nocheck"))
-		await writeFile(join(distRoot, "index.mjs"), `// @ts-nocheck\n${output}`);
+	const outputPaths = [join(distRoot, "index.mjs"), join(distRoot, "host.mjs")];
+	for (const outputPath of outputPaths) {
+		const output = await readFile(outputPath, "utf8");
+		if (!output.startsWith("// @ts-nocheck")) await writeFile(outputPath, `// @ts-nocheck\n${output}`);
+	}
 	const inputHash = createHash("sha256");
 	for (const input of Object.keys(result.metafile?.inputs || {}).sort()) {
 		inputHash.update(input.replaceAll("\\", "/"));
@@ -66,9 +71,26 @@ if (!check) {
 		if (existsSync(candidate)) inputHash.update(await readFile(candidate));
 		inputHash.update("\0");
 	}
+	const outputHashes = Object.fromEntries(
+		await Promise.all(
+			outputPaths.map(async (outputPath) => [
+				`dist/${outputPath.split("/").pop()}`,
+				sha256(await readFile(outputPath)),
+			]),
+		),
+	);
 	await writeFile(
 		join(packageRoot, "build-manifest.json"),
-		`${JSON.stringify({ version: 1, generator: "scripts/build-pi-core.mjs", inputsSha256: inputHash.digest("hex"), outputs: { "dist/index.mjs": sha256(await readFile(join(distRoot, "index.mjs"))) } }, null, "\t")}\n`,
+		`${JSON.stringify(
+			{
+				version: 1,
+				generator: "scripts/build-pi-core.mjs",
+				inputsSha256: inputHash.digest("hex"),
+				outputs: outputHashes,
+			},
+			null,
+			"\t",
+		)}\n`,
 	);
 }
 await checkOutput();
