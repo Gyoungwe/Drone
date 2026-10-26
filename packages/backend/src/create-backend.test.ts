@@ -189,6 +189,60 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
+	it("reports semantic UI as unavailable when the knowledge plugin is absent", async () => {
+		const service = new KnowledgeUiService();
+		await expect(service.semanticStatus(undefined)).rejects.toThrow(
+			"Knowledge semantic UI is unavailable: install the knowledge plugin",
+		);
+		await expect(service.saveSemanticSettings({} as never)).rejects.toThrow(
+			"Knowledge semantic UI is unavailable",
+		);
+		await expect(service.testSemanticProvider({} as never)).rejects.toThrow(
+			"Knowledge semantic UI is unavailable",
+		);
+		await expect(service.indexSemantic({} as never)).rejects.toThrow("Knowledge semantic UI is unavailable");
+		await expect(service.cancelSemanticIndex({} as never)).rejects.toThrow(
+			"Knowledge semantic UI is unavailable",
+		);
+		service.dispose();
+	});
+
+	it("routes every semantic UI operation through the installed knowledge host", async () => {
+		const calls: string[] = [];
+		const service = new KnowledgeUiService(undefined, {
+			knowledgeHost: {
+				semantic: {
+					status: async () => {
+						calls.push("status");
+						return {} as never;
+					},
+					saveSettings: async () => {
+						calls.push("save");
+						return {} as never;
+					},
+					testProvider: async () => {
+						calls.push("test");
+						return {} as never;
+					},
+					index: async () => {
+						calls.push("index");
+						return {} as never;
+					},
+					cancelIndex: async () => {
+						calls.push("cancel");
+					},
+				},
+			},
+		});
+		await service.semanticStatus(undefined);
+		await service.saveSemanticSettings({} as never);
+		await service.testSemanticProvider({} as never);
+		await service.indexSemantic({} as never);
+		await service.cancelSemanticIndex({} as never);
+		expect(calls).toEqual(["status", "save", "test", "index", "cancel"]);
+		service.dispose();
+	});
+
 	it("uses a declared research detail adapter when the plugin provides one", async () => {
 		const calls: unknown[] = [];
 		const service = new KnowledgeUiService(undefined, {

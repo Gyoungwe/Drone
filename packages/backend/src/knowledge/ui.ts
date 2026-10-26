@@ -57,6 +57,8 @@ export interface KnowledgeHostPort {
 	reviewWikiWithModel?: (input: unknown, options: unknown) => Promise<unknown>;
 	/** Optional publication registration supplied by an installed knowledge host. */
 	registerAnswerPublication?: KnowledgePublicationRegistrar;
+	/** Semantic-index UI operations supplied by the installed knowledge host. */
+	semantic?: KnowledgeSemanticOperations;
 }
 
 export type KnowledgePublicationRegistrar = (
@@ -86,6 +88,29 @@ export interface KnowledgeReadProvider {
 }
 
 export type KnowledgeWriteProvider = Pick<KnowledgeHostPort, "reviews" | "preview" | "decide">;
+
+/**
+ * Semantic settings and indexing are owned by the knowledge plugin.  Keeping
+ * this port explicit prevents the host from silently reaching back into the
+ * compatibility package when no plugin is installed.
+ */
+export interface KnowledgeSemanticOperations {
+	status(
+		input: Parameters<KnowledgeApi["getKnowledgeSemanticStatus"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeSemanticStatus"]>;
+	saveSettings(
+		input: Parameters<KnowledgeApi["saveKnowledgeSemanticSettings"]>[0],
+	): ReturnType<KnowledgeApi["saveKnowledgeSemanticSettings"]>;
+	testProvider(
+		input: Parameters<KnowledgeApi["testKnowledgeSemanticProvider"]>[0],
+	): ReturnType<KnowledgeApi["testKnowledgeSemanticProvider"]>;
+	index(
+		input: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>[0],
+	): ReturnType<KnowledgeApi["indexKnowledgeSemantic"]>;
+	cancelIndex(
+		input: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>[0],
+	): ReturnType<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
+}
 
 /** Default provider delegates the read vertical to the packaged knowledge host entry. */
 export function createKnowledgeReadProvider(host?: KnowledgeHostPort): KnowledgeReadProvider {
@@ -462,14 +487,14 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private readonly cloud: KnowledgeWebDavService;
 	private readonly readProvider: KnowledgeReadProvider;
 	private readonly writeProvider?: KnowledgeWriteProvider &
-		Pick<KnowledgeHostPort, "vault" | "uiState" | "reviewWikiWithModel">;
+		Pick<KnowledgeHostPort, "vault" | "uiState" | "reviewWikiWithModel" | "semantic">;
 	private readonly researchHost?: ResearchHostAdapter;
 	constructor(
 		readProvider: KnowledgeReadProvider = createKnowledgeReadProvider(),
 		options: {
 			researchHostLoader?: ResearchHostLoader;
 			knowledgeHost?: KnowledgeWriteProvider &
-				Pick<KnowledgeHostPort, "vault" | "uiState" | "reviewWikiWithModel">;
+				Pick<KnowledgeHostPort, "vault" | "uiState" | "reviewWikiWithModel" | "semantic">;
 		} = {},
 	) {
 		this.readProvider = readProvider;
@@ -681,27 +706,35 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	semanticStatus(
 		input: Parameters<KnowledgeApi["getKnowledgeSemanticStatus"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeSemanticStatus"]> {
-		return this.call("knowledgeSemanticStatus", input);
+		const operation = this.writeProvider?.semantic?.status;
+		return operation ? operation(input) : this.semanticUnavailable();
 	}
 	saveSemanticSettings(
 		input: Parameters<KnowledgeApi["saveKnowledgeSemanticSettings"]>[0],
 	): ReturnType<KnowledgeApi["saveKnowledgeSemanticSettings"]> {
-		return this.call("saveKnowledgeSemanticSettings", input);
+		const operation = this.writeProvider?.semantic?.saveSettings;
+		return operation ? operation(input) : this.semanticUnavailable();
 	}
 	testSemanticProvider(
 		input: Parameters<KnowledgeApi["testKnowledgeSemanticProvider"]>[0],
 	): ReturnType<KnowledgeApi["testKnowledgeSemanticProvider"]> {
-		return this.call("testKnowledgeSemanticProvider", input);
+		const operation = this.writeProvider?.semantic?.testProvider;
+		return operation ? operation(input) : this.semanticUnavailable();
 	}
 	indexSemantic(
 		input: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>[0],
 	): ReturnType<KnowledgeApi["indexKnowledgeSemantic"]> {
-		return this.call("indexKnowledgeSemantic", input);
+		const operation = this.writeProvider?.semantic?.index;
+		return operation ? operation(input) : this.semanticUnavailable();
 	}
 	cancelSemanticIndex(
 		input: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>[0],
 	): ReturnType<KnowledgeApi["cancelKnowledgeSemanticIndex"]> {
-		return this.call("cancelKnowledgeSemanticIndex", input);
+		const operation = this.writeProvider?.semantic?.cancelIndex;
+		return operation ? operation(input) : this.semanticUnavailable();
+	}
+	private semanticUnavailable(): Promise<never> {
+		return Promise.reject(new Error("Knowledge semantic UI is unavailable: install the knowledge plugin"));
 	}
 	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]> {
 		return this.readProvider.search(input);
