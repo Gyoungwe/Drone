@@ -1,0 +1,172 @@
+{
+	"date": "2026-10-26",
+	"status": "PASS",
+	"issue": "PDF_WITHOUT_SELECTED_PROJECT",
+	"scope": "Host IPC contract correction; installed macOS arm64 application, synthetic Vault and public PDF. No cloud/account/cross-platform acceptance implied.",
+	"artifact": {
+		"sourceCommit": "090fbe7f1ca1f33a8259015071067e5d628e6ff8",
+		"installedFromMountedDmg": true,
+		"platform": "darwin-arm64",
+		"unsigned": true,
+		"dmgSha256": "229ce073158ef3426f95e225c3637d8a24eed6ddee5ba8e375f66b9cbd34be2d",
+		"asarSha256": "5e49501ae4b7918d9b674ea7ff3b30f4a6e20c1050f4ce674c06b5d9cb9eaacf",
+		"packLogSha256": "71ab66f847d011f2aa936d660d89dd7bae15d30c04da2298aebd3c369460c642"
+	},
+	"verification": {
+		"checks": [
+			{
+				"name": "lint",
+				"command": "npm run lint",
+				"exitCode": 0,
+				"seconds": 1.15,
+				"logSha256": "d4ed8726a90c80e1b52463cf170aa486495cc584c92e09e5671988d7f6793388"
+			},
+			{
+				"name": "typecheck",
+				"command": "npm run typecheck",
+				"exitCode": 0,
+				"seconds": 90.74,
+				"logSha256": "af01918e328904d142812415dbffdc611beb276e433d02baf36db479101783e3"
+			},
+			{
+				"name": "test",
+				"command": "npm test",
+				"exitCode": 0,
+				"seconds": 132.59,
+				"logSha256": "5a365aed01c9c6fd6c8ca693bf00e2fa2265639300f0a26eea8e2c0191b07d19"
+			},
+			{
+				"name": "build",
+				"command": "npm run build",
+				"exitCode": 0,
+				"seconds": 80.03,
+				"logSha256": "e4bd97686641141097205fcbed24a72046373c6a029f601c4cce1c50fddce78b"
+			},
+			{
+				"name": "arch",
+				"command": "npm run check:arch",
+				"exitCode": 0,
+				"seconds": 0.99,
+				"logSha256": "8f98cf2416aa10c9d14e6ec86b5b49f260c8550b4562c7b19832f42a7a006e54"
+			},
+			{
+				"name": "plugin-api",
+				"command": "npm run check:plugin-api",
+				"exitCode": 0,
+				"seconds": 13.15,
+				"logSha256": "7d79e5f2984181de93c2cd9af7b45a7a5c4a86626b982f9cf10153ba45a4a4ed"
+			},
+			{
+				"name": "upgrade",
+				"command": "npm run test:upgrade",
+				"exitCode": 0,
+				"seconds": 1.5,
+				"logSha256": "81c4875a6e8e0d863e35fdab37b57c3fa2245ee92b8b7d1bb84ca345fde7ffdd"
+			},
+			{
+				"name": "native-pi",
+				"command": "npm run check:native-pi",
+				"exitCode": 0,
+				"seconds": 0.17,
+				"logSha256": "f6a2df472131118416c34e372825febc92ae1d9b5aca14e461c528d9bf68ea54"
+			},
+			{
+				"name": "public-plugin-host",
+				"command": "npm run check:public-plugin-host",
+				"exitCode": 0,
+				"logSha256": "a6f7a756d372de4e896e1ada8f86615c2b56f0b08e6593cc9d7347de19ed24b2"
+			}
+		],
+		"pluginRepository": {
+			"head": "b1db09dc9662ae5039aed56ff926f163b5681965",
+			"command": "npm run check",
+			"exitCode": 0,
+			"logSha256": "29a09b23f9f40b9580263cc4ada8d17c676a02df967f0ddeee69f4efc2332684"
+		},
+		"sourceCommit": "090fbe7f1ca1f33a8259015071067e5d628e6ff8",
+		"regression": {
+			"red": {
+				"exitCode": 1,
+				"expectedError": "Invalid arguments for host method file:preview",
+				"sha256": "2d942458787749b41eac9d29f1092551b6bdafb46d4fbc6c50fef2eeb48833d4"
+			},
+			"green": {
+				"exitCode": 0,
+				"files": 4,
+				"tests": 34,
+				"sha256": "e77ed5fbcc8ae5c353934ca6937ac4ca2b6a3649a92b997712cceeef4df6de39"
+			}
+		}
+	},
+	"gui": {
+		"status": "PASS_INSTALLED_DMG",
+		"noProjectSelectedThroughout": true,
+		"freshProfile": true,
+		"freshAgentWithoutCredentials": true,
+		"publicUi": {
+			"version": "0.2.0",
+			"filesMatchPublicTarball": 61,
+			"tarballSha256": "c9f468edb8eef41ca6cb7aae613eedd7040ba6be774e16295170e6dd241ddf2a"
+		},
+		"citationPage": "3/15",
+		"nextPage": "4/15",
+		"outOfRangeFallback": "1/15 with explicit notice",
+		"closedAndReturnedNotePreserved": true,
+		"pdfAspectRatioVisuallyChecked": true,
+		"syntheticVaultFilesUnchanged": 23,
+		"applicationExited": true,
+		"evidence": [
+			{
+				"file": "initial-no-project.png",
+				"sha256": "5b8d28f68c6f9c9154c381efd7625eb1588642e5900751d8472209ccc3b94938"
+			},
+			{
+				"file": "pdf-out-of-range.png",
+				"sha256": "73018c7089811039c3997599fa2e0435b145eb16c798828cb7f4bd895624da6c"
+			},
+			{
+				"file": "pdf-page3.png",
+				"sha256": "83589f8749d06ba6743ca7c96490048d7e30bfaa22136010d41c36d9f7e30c8d"
+			},
+			{
+				"file": "pdf-page4.png",
+				"sha256": "46fd5c2cb3394232e69ec5160e4562f9a42f60bd65fcf595680a599fa7add34a"
+			},
+			{
+				"file": "initial-no-project.ax.txt",
+				"sha256": "9fe0ab096fa6d48515132cb8d4b591374b2fd68e06ddfba4ed648239b240c119"
+			},
+			{
+				"file": "pdf-out-of-range.ax.txt",
+				"sha256": "0d92a153883edee6689adf60eb32d14907e2769f38fe128823d9ab957f96052c"
+			},
+			{
+				"file": "pdf-page3.ax.txt",
+				"sha256": "82f050e98b714a98a538943cfad638d54262fcef4f55795bd31a085e6067e417"
+			},
+			{
+				"file": "pdf-page4.ax.txt",
+				"sha256": "50dd7c6216cb91f30e927f56f6c054af140861c195c0ba2d5623e051fa6b0778"
+			},
+			{
+				"file": "returned-note.ax.txt",
+				"sha256": "9fe0ab096fa6d48515132cb8d4b591374b2fd68e06ddfba4ed648239b240c119"
+			}
+		]
+	},
+	"externalTargetRecheck": {
+		"remoteDesktopRegistered": 2,
+		"remoteDesktopOnline": 0,
+		"applicableAuthenticatedResearchMcpFound": false,
+		"checkedConfigurations": [
+			"Codex MCP",
+			"Claude desktop MCP",
+			"Claude project MCP",
+			"Pi MCP",
+			"Pi MCP adapter"
+		],
+		"unrelatedFinancialAndMessagingServersNotUsed": true,
+		"externalAccountWritesPerformed": false
+	},
+	"privateBodiesCommitted": false
+}

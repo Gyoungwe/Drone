@@ -1061,8 +1061,10 @@
 	},
 	"remainingProductObservation": {
 		"id": "PDF_WITHOUT_SELECTED_PROJECT",
-		"status": "OPEN",
+		"status": "CLOSED_PASS_INSTALLED_DMG",
 		"observed": "Knowledge PDF link without a selected project reports Invalid arguments for host method file:preview. Selecting the synthetic project permits page 3/15 preview.",
-		"fixIncluded": false
+		"fixIncluded": true,
+		"sourceCommit": "090fbe7f1ca1f33a8259015071067e5d628e6ff8",
+		"closureEvidence": "projectless-resource-preview-2026-10-26.json"
 	}
 }
