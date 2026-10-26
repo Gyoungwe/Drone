@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { promisify } from "node:util";
+import { inspect, promisify } from "node:util";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
 	createAgentSession,
@@ -14,6 +14,8 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { expect, it } from "vitest";
+import { SkillVisibility } from "../src/capabilities/resource-loader";
+import { CapabilityRuntime } from "../src/capabilities/runtime";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { fileCapabilityHandlers, PluginFileCapabilities } from "../src/plugins/file-capabilities";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
@@ -22,6 +24,7 @@ import { getPluginSessionCaller } from "../src/plugins/session-caller";
 import { canonicalProjectId } from "../src/project-id";
 import { SessionRegistry } from "../src/session/registry";
 import { SessionEngine } from "../src/session-engine/engine";
+import { StorageRegistry } from "../src/storage/registry";
 
 const run = promisify(execFile);
 const tarball = process.env.DRONE_KNOWLEDGE_TARBALL;
@@ -109,6 +112,7 @@ it.skipIf(!tarball)(
 			const manifest = JSON.parse(await readFile(join(packageRoot, "plugin.manifest.json"), "utf8"));
 			const source = {
 				pluginId: manifest.id,
+				requestsStateWrite: manifest.permissions?.filesystem?.includes("application-state-write") === true,
 				packageRoot,
 				entrypoint: await declaredPath(packageRoot, manifest.entrypoints.desktopRuntime),
 				nativeEntrypoint: await declaredPath(packageRoot, manifest.entrypoints.extension),
@@ -124,7 +128,19 @@ it.skipIf(!tarball)(
 			expect(await Promise.all(pkg.pi.extensions.map((path) => declaredPath(packageRoot, path)))).toContain(
 				source.nativeEntrypoint,
 			);
-			await mkdir(join(vault, "Library/Methods"), { recursive: true });
+			const sharedNote = "Library/Methods/orchid.md";
+			const currentNote = "Projects/alpha/Methods/alpha.md";
+			const otherNote = "Projects/beta/Methods/beta.md";
+			const currentText =
+				`# Alpha method\n[[${sharedNote.slice(0, -3)}]]\n` +
+				Array.from({ length: 120 }, (_, index) => `alphasentinel line ${index} ${"a".repeat(90)}`).join("\n");
+			for (const directory of ["Library/Methods", "Projects/alpha/Methods", "Projects/beta/Methods"])
+				await mkdir(join(vault, directory), { recursive: true });
+			await mkdir(join(workspace, ".pi"));
+			await writeFile(
+				join(workspace, ".pi/research-workspace.json"),
+				JSON.stringify({ knowledgeProjectId: "alpha" }),
+			);
 			await writeFile(
 				join(state, "binding.json"),
 				JSON.stringify({
@@ -138,7 +154,15 @@ it.skipIf(!tarball)(
 					updatedAt: new Date().toISOString(),
 				}),
 			);
-			await writeFile(join(vault, "Library/Methods/orchid.md"), "# Orchid method\nOrchid assay evidence.\n");
+			await writeFile(
+				join(vault, sharedNote),
+				`# Orchid method\nOrchid assay evidence.\n[[${currentNote.slice(0, -3)}]]\n[[${otherNote.slice(0, -3)}]]\n`,
+			);
+			await writeFile(join(vault, currentNote), currentText);
+			await writeFile(
+				join(vault, otherNote),
+				`# Beta method\nprivatebetasentinel\n[[${sharedNote.slice(0, -3)}]]\n`,
+			);
 
 			// Separate negative controls. The installed knowledge artifact remains byte-for-byte untouched.
 			const controls = {
@@ -155,13 +179,23 @@ it.skipIf(!tarball)(
 				controls.entrypoint,
 				`export default async()=>{let executed=0;return {
  operations:{count:{inputSchema:{type:"null"},resultSchema:{type:"number"},effect:"read",execute:async()=>executed}},
- createNativeSession:()=>({toolEffects:{effect_probe_write:"write"},extension(pi){for(const name of ["effect_probe_unknown","effect_probe_write"])pi.registerTool({name,label:name,description:"Negative authorization control",parameters:{type:"object",properties:{}},async execute(){executed++;return {content:[{type:"text",text:"unexpected execution"}]};}});},dispose:async()=>{}}),dispose:async()=>{}};};`,
+ createNativeSession:()=>({toolEffects:{effect_probe_write:"write"},extension(pi){for(const name of ["effect_probe_unknown","effect_probe_write"])pi.registerTool({name,label:name,description:"Negative authorization control",drone:{readOnly:true,capabilities:["knowledge"]},parameters:{type:"object",properties:{}},async execute(){executed++;return {content:[{type:"text",text:"unexpected execution"}]};}});},dispose:async()=>{}}),dispose:async()=>{}};};`,
 			);
 			const sources = new Map([
 				["knowledge-artifact", source],
 				["effect-controls", controls],
 			]);
 			const approvals = [];
+			let grantStateWrite = false;
+			let denyStateWrite = false;
+			const storage = new StorageRegistry().register({
+				id: "packed-plugin-state",
+				path: state,
+				owner: `plugin:${source.pluginId}`,
+				schema: "plugin-owned",
+				sensitivity: "private",
+			});
+			let stateReceipt = { status: "NOT_DECLARED" };
 			const capabilityScopes = [];
 			bridge = new PluginRuntimeBridge({
 				source: (name) => sources.get(name),
@@ -169,7 +203,7 @@ it.skipIf(!tarball)(
 				factory: (value) => createProcessPluginRuntime({ ...value, runtimeDirectory }),
 				approve: async (_owner, value, operation) => {
 					approvals.push({ pluginId: value.pluginId, operation: operation ?? null });
-					return true;
+					return !(denyStateWrite && operation === "setReviewPolicy");
 				},
 				getSessionContext: (id) => getPluginSessionCaller(sessions, id),
 				capabilities:
@@ -178,7 +212,15 @@ it.skipIf(!tarball)(
 						if (value === controls) return { resources: [], handlers: {} };
 						const files = await PluginFileCapabilities.create(
 							[
-								{ handle: "state", path: state, kind: "state", scope: { kind: "application" } },
+								{
+									handle: "state",
+									path: state,
+									kind: "state",
+									scope: { kind: "application" },
+									...(grantStateWrite
+										? { stateWrite: { registry: storage, storageId: "packed-plugin-state" } }
+										: {}),
+								},
 								{ handle: "vault", path: vault, kind: "files", scope: { kind: "application" } },
 								{
 									handle: "workspace",
@@ -216,17 +258,114 @@ it.skipIf(!tarball)(
 						);
 						return {
 							handlers,
-							resources: [{ kind: "state", handle: "state" }],
+							resources: [
+								{ kind: "state", handle: "state", access: grantStateWrite ? "read-write" : "read" },
+							],
 							dispose: () => resources.dispose(),
 						};
 					},
 			});
 			const window = { id: 1, isDestroyed: () => false };
-			const binding = await bridge.bind("knowledge-artifact", window);
+			let binding = await bridge.bind("knowledge-artifact", window);
 			const application = bridge.selectSession(window, null);
+			if (source.requestsStateWrite) {
+				stage = "state-policy-readonly-grant";
+				const readOnly = await bridge.invoke(window, binding, "preferences", null, application);
+				expect(readOnly).toMatchObject({
+					canWriteState: false,
+					reviewPolicy: { version: null, persistedMode: null, diagnostic: null },
+				});
+				await expect(
+					bridge.invoke(
+						window,
+						binding,
+						"setReviewPolicy",
+						{ bindingRevision: 1, expectedVersion: null, mode: "strict" },
+						application,
+					),
+				).rejects.toThrow("write permission");
+				await expect(readFile(join(state, "review-policy.json"))).rejects.toMatchObject({ code: "ENOENT" });
+				await bridge.revoke("knowledge-artifact");
+				grantStateWrite = true;
+				binding = await bridge.bind("knowledge-artifact", window);
+				stage = "state-policy-write-and-readback";
+				const writable = await bridge.invoke(window, binding, "preferences", null, application);
+				expect(writable.canWriteState).toBe(true);
+				denyStateWrite = true;
+				await expect(
+					bridge.invoke(
+						window,
+						binding,
+						"setReviewPolicy",
+						{ bindingRevision: 1, expectedVersion: null, mode: "strict" },
+						application,
+					),
+				).rejects.toThrow("denied");
+				await expect(readFile(join(state, "review-policy.json"))).rejects.toMatchObject({ code: "ENOENT" });
+				denyStateWrite = false;
+				const saved = await bridge.invoke(
+					window,
+					binding,
+					"setReviewPolicy",
+					{ bindingRevision: 1, expectedVersion: null, mode: "strict" },
+					application,
+				);
+				const raw = await readFile(join(state, "review-policy.json"), "utf8");
+				expect(JSON.parse(raw)).toEqual({ version: 1, mode: "strict" });
+				expect(saved.reviewPolicy).toMatchObject({
+					mode: "strict",
+					persistedMode: "strict",
+					version: sha256(raw),
+					diagnostic: null,
+				});
+				expect(await bridge.invoke(window, binding, "preferences", null, application)).toEqual(saved);
+				await expect(
+					bridge.invoke(
+						window,
+						binding,
+						"setReviewPolicy",
+						{ bindingRevision: 1, expectedVersion: null, mode: "automatic" },
+						application,
+					),
+				).rejects.toThrow("version conflict");
+				expect(await readFile(join(state, "review-policy.json"), "utf8")).toBe(raw);
+				await writeFile(join(state, "review-policy.json"), "{broken");
+				const corrupted = await bridge.invoke(window, binding, "preferences", null, application);
+				expect(corrupted.reviewPolicy).toMatchObject({ mode: "strict", diagnostic: "invalid-json" });
+				await expect(
+					bridge.invoke(
+						window,
+						binding,
+						"setReviewPolicy",
+						{ bindingRevision: 1, expectedVersion: null, mode: "automatic" },
+						application,
+					),
+				).rejects.toThrow();
+				expect(await readFile(join(state, "review-policy.json"), "utf8")).toBe("{broken");
+				await writeFile(join(state, "review-policy.json"), raw);
+				stage = "state-policy-revoke-and-reload";
+				await bridge.revoke("knowledge-artifact");
+				await expect(bridge.invoke(window, binding, "preferences", null, application)).rejects.toThrow();
+				binding = await bridge.bind("knowledge-artifact", window);
+				expect(await bridge.invoke(window, binding, "preferences", null, application)).toEqual(saved);
+
+				stateReceipt = {
+					status: "PASS",
+					readOnlyGrantRejected: true,
+					deniedApprovalNoWrite: true,
+					atomicReadback: true,
+					staleVersionRejected: true,
+					malformedStrictDiagnostic: true,
+					savedVersion: sha256(raw),
+					revokedBindingRejected: true,
+					reloadedPersistedValue: true,
+				};
+			}
 			stage = "application-overview";
 			const overview = await bridge.invoke(window, binding, "overview", null, application);
-			expect(overview.index.noteCount).toBe(1);
+			// Index totals describe the entire approved Vault; visible lists/counts below are scoped.
+			expect(overview.index.noteCount).toBe(3);
+			expect(overview.recentNotes.map((note) => note.path)).toEqual([sharedNote]);
 			const processes = await packageChildren(packageRoot);
 			expect(processes).toHaveLength(2);
 			expect(processes.filter((child) => child.resource)).toHaveLength(1);
@@ -239,6 +378,85 @@ it.skipIf(!tarball)(
 				application,
 			);
 			expect(uiSearch.hits[0].path).toBe("Library/Methods/orchid.md");
+
+			const readingScopes = [];
+			async function verifyReadingScope(lease, project, visible) {
+				const input = { revision: overview.binding.revision };
+				const invoke = (operation, args) => bridge.invoke(window, binding, operation, args, lease);
+				const [graph, links, categories, jobs] = await Promise.all([
+					invoke("graph", { ...input, view: "all" }),
+					invoke("links", { ...input, path: sharedNote }),
+					invoke("recentByCategory", input),
+					invoke("jobs", { ...input, limit: 50 }),
+				]);
+				for (const response of [graph, links, categories, jobs]) {
+					expect(response).toMatchObject({ bindingRevision: input.revision, project });
+					expect(JSON.stringify(response)).not.toContain(otherNote);
+				}
+				expect(graph.nodes.map((node) => node.path).sort()).toEqual([...visible].sort());
+				expect(graph.totalNotes).toBe(visible.length);
+				expect(graph.semantic.totalNotes).toBe(visible.length);
+				expect(categories.groups.method.map((note) => note.path).sort()).toEqual([...visible].sort());
+				expect(categories.counts).toEqual({
+					paper: 0,
+					software: 0,
+					method: visible.length,
+					idea: 0,
+					other: 0,
+				});
+				const linked = project === null ? [] : [currentNote];
+				expect(links.outgoing.map((link) => link.path)).toEqual(linked);
+				expect(links.incoming.map((link) => link.path)).toEqual(linked);
+				expect(jobs.items.every((job) => job.scope === "shared" || job.scope === project)).toBe(true);
+				expect(jobs.items.length).toBe(jobs.total);
+				expect(jobs.total).toBeGreaterThan(1);
+				const firstJob = await invoke("jobs", { ...input, limit: 1 });
+				expect(firstJob.items).toHaveLength(1);
+				expect(firstJob.nextOffset).toBe(1);
+				const remainingJobs = await invoke("jobs", { ...input, offset: firstJob.nextOffset, limit: 50 });
+				expect([firstJob.items[0].key, ...remainingJobs.items.map((job) => job.key)].sort()).toEqual(
+					jobs.items.map((job) => job.key).sort(),
+				);
+				expect(remainingJobs.nextOffset).toBeNull();
+				const shared = await invoke("readNote", { ...input, path: sharedNote });
+				expect(shared).toMatchObject({ missing: false, category: "method", project, startLine: 1 });
+				for (const hidden of project === null ? [currentNote, otherNote] : [otherNote]) {
+					await expect(invoke("readNote", { ...input, path: hidden })).rejects.toThrow("scope");
+					await expect(invoke("links", { ...input, path: hidden })).rejects.toThrow("scope");
+				}
+				expect((await invoke("search", { ...input, query: "privatebetasentinel" })).hits).toEqual([]);
+				expect(
+					(await invoke("search", { ...input, query: "alphasentinel" })).hits.map((hit) => hit.path),
+				).toEqual(project === null ? [] : [currentNote]);
+				readingScopes.push({
+					project,
+					visibleNotes: visible.length,
+					jobs: jobs.total,
+					hiddenProjectDenied: true,
+				});
+			}
+			stage = "application-reading-scope";
+			await verifyReadingScope(application, null, [sharedNote]);
+			stage = "reading-input-schemas";
+			for (const [operation, extra] of [
+				["readNote", { path: sharedNote, startLine: 0 }],
+				["links", { path: sharedNote, project: "beta" }],
+				["graph", { limit: 1 }],
+				["jobs", { limit: 0 }],
+				["recentByCategory", { limit: 25 }],
+			])
+				await expect(
+					bridge.invoke(
+						window,
+						binding,
+						operation,
+						{ revision: overview.binding.revision, ...extra },
+						application,
+					),
+				).rejects.toThrow("Invalid plugin operation input");
+			await expect(
+				bridge.invoke(window, binding, "jobs", { revision: overview.binding.revision + 1 }, application),
+			).rejects.toThrow("binding changed");
 
 			stage = "real-readonly-sdk-session";
 			bootstrap = bridge.beginNative(
@@ -289,6 +507,19 @@ it.skipIf(!tarball)(
 				sessionManager: SessionManager.inMemory(workspace),
 				model: faux.getModel(),
 			}));
+			const capabilities = new CapabilityRuntime(new SkillVisibility());
+			capabilities.bind(session);
+			capabilities.activate(["knowledge"]);
+			for (const name of [
+				"knowledge_status",
+				"knowledge_search",
+				"effect_probe_unknown",
+				"effect_probe_write",
+			])
+				expect(
+					session.getActiveToolNames(),
+					"declared capability metadata survives process registration",
+				).toContain(name);
 			sessions.add({ session, cwd: workspace, readOnly: true, unsubscribe: () => {} });
 			bootstrap.bindSession(session.sessionId);
 			const errors = [];
@@ -317,13 +548,108 @@ it.skipIf(!tarball)(
 			await expect(bridge.invoke(window, binding, "not_registered", null, selection)).rejects.toThrow(
 				"not registered",
 			);
-			expect(approvals.every((approval) => approval.operation === null)).toBe(true);
+			expect(
+				approvals.every(
+					(approval) =>
+						approval.operation === null ||
+						(source.requestsStateWrite &&
+							["setReviewPolicy", "capability:state.writeJson"].includes(approval.operation)),
+				),
+			).toBe(true);
 			expect(
 				capabilityScopes.some(
 					(call) => call.scope.kind === "session" && call.scope.sessionId === session.sessionId,
 				),
 			).toBe(true);
 			expect(await packageChildren(packageRoot)).toEqual(processes);
+			if (source.requestsStateWrite) {
+				const current = await bridge.invoke(window, binding, "preferences", null, selection);
+				const before = await readFile(join(state, "review-policy.json"), "utf8");
+				await expect(
+					bridge.invoke(
+						window,
+						binding,
+						"setReviewPolicy",
+						{ bindingRevision: 1, expectedVersion: current.reviewPolicy.version, mode: "automatic" },
+						selection,
+					),
+				).rejects.toThrow("denied");
+				expect(await readFile(join(state, "review-policy.json"), "utf8")).toBe(before);
+				stateReceipt.readOnlySessionRejected = true;
+			}
+			stage = "session-reading-scope";
+			await verifyReadingScope(selection, "alpha", [sharedNote, currentNote]);
+			const sessionOverview = await bridge.invoke(window, binding, "overview", null, selection);
+			expect(sessionOverview.project).toBe("alpha");
+			expect(sessionOverview.recentNotes.map((note) => note.path).sort()).toEqual(
+				[sharedNote, currentNote].sort(),
+			);
+			stage = "paged-reading-hash-and-lines";
+			const firstPage = await bridge.invoke(
+				window,
+				binding,
+				"readNote",
+				{ path: currentNote, revision: overview.binding.revision },
+				selection,
+			);
+			expect(firstPage).toMatchObject({
+				missing: false,
+				title: "Alpha method",
+				category: "method",
+				project: "alpha",
+				startLine: 1,
+				truncated: true,
+			});
+			expect(firstPage.hash).toBe(sha256(currentText));
+			const lines = currentText.split("\n");
+			expect(firstPage.totalLines).toBe(lines.length);
+			expect(firstPage.text).toBe(lines.slice(0, firstPage.endLine).join("\n"));
+			const secondPage = await bridge.invoke(
+				window,
+				binding,
+				"readNote",
+				{
+					path: currentNote,
+					revision: overview.binding.revision,
+					startLine: firstPage.endLine + 1,
+					expectedHash: firstPage.hash,
+				},
+				selection,
+			);
+			expect(secondPage.startLine).toBe(firstPage.endLine + 1);
+			expect(secondPage.hash).toBe(firstPage.hash);
+			expect(secondPage.text).toBe(lines.slice(secondPage.startLine - 1, secondPage.endLine).join("\n"));
+			await writeFile(join(vault, currentNote), "# Alpha method\nChanged after first page.\n");
+			await expect(
+				bridge.invoke(
+					window,
+					binding,
+					"readNote",
+					{ path: currentNote, revision: overview.binding.revision, expectedHash: firstPage.hash },
+					selection,
+				),
+			).rejects.toThrow("Note changed");
+			expect(
+				await bridge.invoke(
+					window,
+					binding,
+					"readNote",
+					{ path: "Library/Methods/missing.md", revision: overview.binding.revision },
+					selection,
+				),
+			).toMatchObject({ missing: true, project: "alpha" });
+			const backToApplication = bridge.selectSession(window, null);
+			await verifyReadingScope(backToApplication, null, [sharedNote]);
+			const restoredSelection = bridge.selectSession(window, session.sessionId);
+			await expect(
+				bridge.invoke(
+					window,
+					binding,
+					"readNote",
+					{ path: currentNote, revision: overview.binding.revision },
+					selection,
+				),
+			).rejects.toThrow();
 			await writeFile(join(vault, "Library/Methods/willow.md"), "# Willow method\nWillow assay evidence.\n");
 			stage = "selected-session-ui-refresh";
 			const refreshed = await bridge.invoke(
@@ -331,9 +657,10 @@ it.skipIf(!tarball)(
 				binding,
 				"search",
 				{ query: "Willow", revision: overview.binding.revision },
-				selection,
+				restoredSelection,
 			);
 			expect(refreshed.hits[0].path).toBe("Library/Methods/willow.md");
+			expect(await packageChildren(packageRoot)).toEqual(processes);
 			stage = "sdk-version-evidence";
 			// Resolve the installed ESM package in Node; Vitest's transformed import.meta omits resolve.
 			const { stdout: sdkPackageUrl } = await run(
@@ -356,11 +683,18 @@ it.skipIf(!tarball)(
 				sdk: sdk.version,
 				model: "faux-offline",
 				actualReadOnlySession: true,
+				productionCapabilityRouting: true,
 				tools: results.map((result) => ({ name: result.toolName, error: result.isError })),
 				sameOwnerProcesses: processes,
 				uiOverviewNotes: overview.index.noteCount,
 				searchMatchesNative: true,
 				refresh: true,
+				readingOperations: ["readNote", "links", "graph", "jobs", "recentByCategory"],
+				readingScopes,
+				statePolicy: stateReceipt,
+				readingInputSchemas: true,
+				pagedReadHashAndLines: true,
+				changedHashRejected: true,
 				unknownAndWriteExecuted: 0,
 				fullHooksAndPublication: "NOT_IMPLEMENTED",
 			};
@@ -375,34 +709,59 @@ it.skipIf(!tarball)(
 				);
 			}
 		} finally {
-			// Attempt every cleanup phase; a failed assertion must not strand resource workers or leases.
+			// Separate real shutdown and census phases so a failure identifies its owner.
+			async function cleanupPhase(phase, operation) {
+				const started = performance.now();
+				const [result] = await Promise.allSettled([operation]);
+				cleanup.push({ phase, durationMs: Math.round(performance.now() - started), ...result });
+			}
 			if (session) {
 				sessions.revoke(session.sessionId);
-				cleanup.push(...(await Promise.allSettled([new SessionEngine().dispose(session)])));
+				await cleanupPhase("sdk-dispose", new SessionEngine().dispose(session));
 				sessions.delete(session.sessionId);
 			}
-			cleanup.push(...(await Promise.allSettled([bootstrap?.dispose()])));
-			cleanup.push(...(await Promise.allSettled([bridge?.close()])));
-			cleanup.push(
-				...(await Promise.allSettled([
-					(async () => {
-						if (packageRoot) expect(await packageChildren(packageRoot)).toEqual([]);
-						expect(await packageChildren(controlsRoot)).toEqual([]);
-						for (const namespace of await readdir(leases))
-							expect(await readdir(join(leases, namespace))).toEqual([]);
-					})(),
-				])),
+			await cleanupPhase("native-bootstrap-dispose", bootstrap?.dispose());
+			await cleanupPhase("coordinator-close", bridge?.close());
+			await cleanupPhase(
+				"knowledge-child-census",
+				(async () => {
+					if (packageRoot) expect(await packageChildren(packageRoot)).toEqual([]);
+				})(),
 			);
-			cleanup.push(...(await Promise.allSettled([rm(root, { recursive: true, force: true })])));
+			await cleanupPhase(
+				"control-child-census",
+				(async () => {
+					expect(await packageChildren(controlsRoot)).toEqual([]);
+				})(),
+			);
+			await cleanupPhase(
+				"reservation-census",
+				(async () => {
+					for (const namespace of await readdir(leases))
+						expect(await readdir(join(leases, namespace))).toEqual([]);
+				})(),
+			);
+			await cleanupPhase("fixture-remove", rm(root, { recursive: true, force: true }));
 		}
 		const failures = cleanup.filter((result) => result.status === "rejected");
-		if (failures.length)
+		if (failures.length) {
+			if (process.env.DRONE_KNOWLEDGE_EVIDENCE) {
+				const path = `${resolve(process.env.DRONE_KNOWLEDGE_EVIDENCE)}.cleanup-failure.txt`;
+				await mkdir(dirname(path), { recursive: true });
+				await writeFile(path, inspect(cleanup, { depth: 8 }));
+			}
 			throw new AggregateError(
 				[...(failure ? [failure] : []), ...failures.map((result) => result.reason)],
 				"Packed knowledge cleanup failed",
 			);
+		}
 		if (failure) throw failure;
-		const evidence = { ...receipt, childrenExited: true, reservationsReleased: true };
+		const evidence = {
+			...receipt,
+			childrenExited: true,
+			reservationsReleased: true,
+			cleanup: cleanup.map(({ phase, status, durationMs }) => ({ phase, status, durationMs })),
+		};
 		if (process.env.DRONE_KNOWLEDGE_EVIDENCE) {
 			const path = resolve(process.env.DRONE_KNOWLEDGE_EVIDENCE);
 			await mkdir(dirname(path), { recursive: true });

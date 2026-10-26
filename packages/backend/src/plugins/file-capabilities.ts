@@ -2,10 +2,15 @@ import { createHash } from "node:crypto";
 import type { Stats } from "node:fs";
 import { constants } from "node:fs";
 import { lstat, mkdir, open, readdir, realpath } from "node:fs/promises";
-import { isAbsolute, join, relative, sep } from "node:path";
-import type { PluginRuntimeScope } from "@gyoungwe/plugin-api/runtime";
+import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import type {
+	PluginRuntimeScope,
+	PluginStateReadResult,
+	PluginStateWriteInput,
+} from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
-import { JsonStoreCorruptedError } from "../json-store";
+import { JsonStore, JsonStoreCorruptedError } from "../json-store";
+import type { StorageRegistry } from "../storage/registry";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 
 export interface PluginRootGrant {
@@ -13,6 +18,8 @@ export interface PluginRootGrant {
 	/** Selected and authorized by the host; never supplied in a capability request. */
 	readonly path: string;
 	readonly kind: "state" | "files";
+	/** A separate host-approved JSON write grant. Read-only selections omit this entirely. */
+	readonly stateWrite?: { readonly registry: StorageRegistry; readonly storageId: string };
 	readonly scope:
 		| { readonly kind: "application" }
 		| { readonly kind: "workspace"; readonly workspaceId: string };
@@ -35,6 +42,13 @@ export interface PluginFileVersion {
 	readonly size: number;
 	readonly mtimeMs: number;
 	readonly ctimeMs: number;
+}
+
+export class PluginStateConflictError extends Error {
+	readonly code = "ESTATECONFLICT";
+	constructor() {
+		super("Plugin state version conflict; read current state before writing");
+	}
 }
 
 type FileKind = "file" | "directory" | "symlink" | "other";
@@ -62,7 +76,7 @@ function kind(stat: Pick<Stats, "isFile" | "isDirectory" | "isSymbolicLink">): F
 	return "other";
 }
 
-/** Read ports for one authorized activation. No OS path or caller identity is accepted from the plugin. */
+/** File/state ports for one authorized activation. No OS path or caller identity is accepted from the plugin. */
 export class PluginFileCapabilities {
 	private constructor(
 		private readonly roots: ReadonlyMap<string, Root>,
@@ -84,6 +98,11 @@ export class PluginFileCapabilities {
 			const path = await realpath(grant.path);
 			const identity = await lstat(path);
 			if (!identity.isDirectory()) throw new Error("Plugin root must be a directory");
+			if (grant.stateWrite) {
+				const entry = grant.stateWrite.registry.assertRegistered(grant.stateWrite.storageId);
+				if (grant.kind !== "state" || (await realpath(entry.path)) !== path)
+					throw new Error("State write grant must match its registered state root");
+			}
 			roots.set(grant.handle, { ...grant, path, identity });
 		}
 		return new PluginFileCapabilities(roots, { path: cachePath, identity: cacheIdentity });
@@ -232,33 +251,79 @@ export class PluginFileCapabilities {
 		return result;
 	}
 
-	async readJson(
-		input: PluginFileInput,
-		call: PluginFileCall,
-	): Promise<{ kind: "missing" } | { kind: "value"; value: unknown }> {
+	async readJson(input: PluginFileInput, call: PluginFileCall): Promise<PluginStateReadResult> {
 		const root = this.grant(input, call, "state");
 		// Missing state is allowed; a revoked/replaced root is never missing configuration.
 		await this.checkRoot(root);
-		let text: string;
+		let snapshot: Awaited<ReturnType<PluginFileCapabilities["snapshot"]>>;
 		try {
-			text = (await this.snapshot(root, input)).text;
+			snapshot = await this.snapshot(root, input);
 		} catch (error) {
 			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
 			await this.checkRoot(root);
 			call.signal.throwIfAborted();
-			return { kind: "missing" };
+			return { kind: "missing", version: null };
 		}
 		call.signal.throwIfAborted();
 		try {
-			return { kind: "value", value: JSON.parse(text.replace(/^\uFEFF/, "")) };
+			return {
+				kind: "value",
+				value: JSON.parse(snapshot.text.replace(/^\uFEFF/, "")),
+				version: snapshot.sha256,
+			};
 		} catch (error) {
 			// Preserve JsonStore corruption semantics; this read port never rewrites a broken file.
 			throw new JsonStoreCorruptedError(join(root.path, input.path), error);
 		}
 	}
 
+	async writeJson(input: PluginStateWriteInput, call: PluginFileCall): Promise<PluginStateReadResult> {
+		const root = this.grant(input, call, "state");
+		if (call.bootstrap || !root.stateWrite) throw new Error("Plugin state JSON write access was not granted");
+		if (!input.path.endsWith(".json")) throw new Error("State writes require a .json file");
+		const serialized = `${JSON.stringify(input.value, null, 2)}\n`;
+		if (Buffer.byteLength(serialized) > MAX_TEXT_BYTES)
+			throw new Error("Plugin state write exceeds the 1 MiB limit");
+		const parentRelative = dirname(input.path) === "." ? "" : dirname(input.path);
+		const parent = await this.path(root, parentRelative);
+		const parentIdentity = await lstat(parent);
+		if (!parentIdentity.isDirectory()) throw new Error("State write parent must be an existing directory");
+		const target = join(root.path, input.path);
+		const check = async () => {
+			this.grant(input, call, "state");
+			const currentParent = await lstat(await this.path(root, parentRelative));
+			if (currentParent.dev !== parentIdentity.dev || currentParent.ino !== parentIdentity.ino)
+				throw new Error("Plugin state parent changed after authorization");
+			const current = await this.readJson(input, call);
+			if (current.version !== input.expectedVersion) throw new PluginStateConflictError();
+		};
+		const expectedHash = createHash("sha256").update(serialized).digest("hex");
+		const store = new JsonStore<unknown>({
+			path: target,
+			storageId: root.stateWrite.registry.assertRegistered(root.stateWrite.storageId).id,
+			defaultValue: () => null,
+			mode: 0o600,
+		});
+		return store.writeChecked(input.value, {
+			check,
+			readBack: async () => {
+				const result = await this.readJson(input, call);
+				if (result.kind !== "value" || result.version !== expectedHash)
+					throw new Error("Plugin state changed after atomic write");
+				return result;
+			},
+		});
+	}
+
+	async listState(input: PluginFileInput, call: PluginFileCall) {
+		return this.listRoot(this.grant(input, call, "state"), input, call);
+	}
+
 	async list(input: PluginFileInput, call: PluginFileCall) {
-		const root = this.grant(input, call, "files");
+		return this.listRoot(this.grant(input, call, "files"), input, call);
+	}
+
+	private async listRoot(root: Root, input: PluginFileInput, call: PluginFileCall) {
 		const path = await this.path(root, input.path);
 		const before = await lstat(path);
 		const entries = await readdir(path, { withFileTypes: true });
@@ -299,7 +364,50 @@ export function fileCapabilityHandlers(
 		Type.Literal("symlink"),
 		Type.Literal("other"),
 	]);
+	const stateVersion = Type.Union([Type.Null(), Type.String({ pattern: "^[a-f0-9]{64}$" })]);
+	const stateResult = Type.Union([
+		Type.Object({ kind: Type.Literal("missing"), version: Type.Null() }),
+		Type.Object({
+			kind: Type.Literal("value"),
+			value: Type.Unknown(),
+			version: Type.String({ pattern: "^[a-f0-9]{64}$" }),
+		}),
+	]);
+	const json = Type.Cyclic(
+		{
+			Json: Type.Union([
+				Type.Null(),
+				Type.Boolean(),
+				Type.Number(),
+				Type.String(),
+				Type.Array(Type.Ref("Json")),
+				Type.Record(Type.String(), Type.Ref("Json")),
+			]),
+		},
+		"Json",
+	);
 	return {
+		"state.list": {
+			inputSchema: input,
+			resultSchema: Type.Array(Type.Object({ name: Type.String(), kind: fileKind })),
+			effect: "read",
+			bootstrap: true,
+			execute: (input, call) => ports.listState(input as PluginFileInput, call),
+		},
+		"state.writeJson": {
+			inputSchema: Type.Object(
+				{
+					root: Type.String({ minLength: 1 }),
+					path: Type.String({ minLength: 1 }),
+					value: json,
+					expectedVersion: stateVersion,
+				},
+				{ additionalProperties: false },
+			),
+			resultSchema: stateResult,
+			effect: "write",
+			execute: (input, call) => ports.writeJson(input as PluginStateWriteInput, call),
+		},
 		"roots.resolve": {
 			inputSchema: Type.Object(
 				{ path: Type.String(), kind: Type.Union([Type.Literal("state"), Type.Literal("files")]) },
@@ -312,10 +420,7 @@ export function fileCapabilityHandlers(
 		},
 		"state.readJson": {
 			inputSchema: input,
-			resultSchema: Type.Union([
-				Type.Object({ kind: Type.Literal("missing") }),
-				Type.Object({ kind: Type.Literal("value"), value: Type.Unknown() }),
-			]),
+			resultSchema: stateResult,
 			effect: "read",
 			bootstrap: true,
 			execute: (input, call) => ports.readJson(input as PluginFileInput, call),

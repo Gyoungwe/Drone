@@ -23,12 +23,14 @@ const uiManifest = {
 async function writeManifest(
 	desktopRuntime: unknown = "./runtime.js",
 	entries: Record<string, unknown> = {},
+	filesystem: unknown = [],
 ): Promise<void> {
 	await writeFile(
 		join(packageRoot, "plugin.manifest.json"),
 		JSON.stringify({
 			id: "display-id-not-authenticated",
 			hosts: ["drone-desktop"],
+			permissions: { filesystem },
 			entrypoints: { ui: "./ui/plugin.json", desktopRuntime, ...entries },
 		}),
 	);
@@ -72,6 +74,19 @@ describe("installed UI runtime provenance", () => {
 			plugins: { "results-ui": { enabled: true, trusted: false } },
 		});
 		expect(manager.isEnabled("results-ui")).toBe(false);
+	});
+
+	it("requests state writes only for the explicit filesystem token and clears it on rescan", async () => {
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await writeManifest("./runtime.js", {}, ["application-state"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsStateWrite).toBeUndefined();
+		await writeManifest("./runtime.js", {}, ["application-state-write"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsStateWrite).toBe(true);
+		await writeManifest("./runtime.js", {}, ["application-state"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsStateWrite).toBeUndefined();
 	});
 
 	it("discovers native and resource files from the same package without executing them", async () => {
@@ -219,7 +234,10 @@ describe("installed UI runtime provenance", () => {
 		// Omitting the entrypoint must retain the ordinary UI module.
 		await writeFile(
 			join(packageRoot, "plugin.manifest.json"),
-			JSON.stringify({ hosts: ["drone-desktop"], entrypoints: { ui: "./ui/plugin.json" } }),
+			JSON.stringify({
+				hosts: ["drone-desktop"],
+				entrypoints: { ui: "./ui/plugin.json" },
+			}),
 		);
 		await manager.scanAll();
 		expect(manager.runtimeSource("results-ui")).toBeUndefined();

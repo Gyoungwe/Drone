@@ -81,9 +81,13 @@ describe("authorized plugin file ports", () => {
 	it("distinguishes missing, JSON null and corrupt state without overwriting it", async () => {
 		const input = { root: "application-state", path: "binding.json" };
 		const bootstrap = { ...call, scope: { kind: "application" } as const, bootstrap: true };
-		expect(await ports.readJson(input, bootstrap)).toEqual({ kind: "missing" });
+		expect(await ports.readJson(input, bootstrap)).toEqual({ kind: "missing", version: null });
 		await fs.writeFile(join(state, "binding.json"), "null\n");
-		expect(await ports.readJson(input, bootstrap)).toEqual({ kind: "value", value: null });
+		expect(await ports.readJson(input, bootstrap)).toEqual({
+			kind: "value",
+			value: null,
+			version: createHash("sha256").update("null\n").digest("hex"),
+		});
 		await fs.writeFile(join(state, "binding.json"), "{broken");
 		await expect(ports.readJson(input, bootstrap)).rejects.toBeInstanceOf(JsonStoreCorruptedError);
 		expect(await fs.readFile(join(state, "binding.json"), "utf8")).toBe("{broken");

@@ -320,6 +320,19 @@ describe("DesktopRuntimeBridge", () => {
 		expect(await bridge.bind("local", owner)).toBeUndefined();
 	});
 
+	it("revokes old bindings when the manifest changes state write authority", async () => {
+		const { bridge, options, dispose, factory } = setup();
+		const token = (await bridge.bind("ui", owner))!;
+		options.source.mockReturnValue({ ...source, requestsStateWrite: true });
+		await expect(bridge.invoke(owner, token, "read", "data", selection(bridge, owner))).rejects.toThrow(
+			"no longer enabled",
+		);
+		expect(dispose).toHaveBeenCalledOnce();
+		await bridge.bind("ui", owner);
+		expect(factory).toHaveBeenCalledTimes(2);
+		await bridge.close();
+	});
+
 	it("keeps windows independent and cancels superseded parallel loads", async () => {
 		const { bridge, factory } = setup();
 		const first = bridge.bind("ui", owner);

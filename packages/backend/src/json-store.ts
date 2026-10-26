@@ -22,6 +22,7 @@ export type ReadResult<T> = { kind: "ok" | "missing"; value: T } | { kind: "corr
 
 /** update 路径遇到损坏文件时抛出；message 面向用户（经 IPC 传给 renderer 展示） */
 export class JsonStoreCorruptedError extends Error {
+	readonly code = "ESTATECORRUPTED";
 	constructor(
 		readonly path: string,
 		readonly cause?: unknown,
@@ -117,7 +118,7 @@ export class JsonStore<T> {
 	}
 
 	/** 同目录 tmp + rename 原子写；失败清理 tmp 后重抛（跨卷 EXDEV 不可能发生在同目录 rename） */
-	private async writeInternal(value: T): Promise<void> {
+	private async writeInternal(value: T, beforeCommit?: () => Promise<void>): Promise<void> {
 		const dir = dirname(this.path);
 		await mkdir(dir, { recursive: true });
 		const tmp = join(
@@ -125,10 +126,13 @@ export class JsonStore<T> {
 			`.${basename(this.path)}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`,
 		);
 		try {
-			await writeFile(tmp, `${this.serialize(value)}\n`, { encoding: "utf8", mode: this.mode });
+			await writeFile(tmp, `${this.serialize(value)}\n`, { encoding: "utf8", mode: this.mode, flag: "wx" });
+			await beforeCommit?.();
 			await rename(tmp, this.path);
 		} catch (err) {
-			await rm(tmp, { force: true }).catch(() => {});
+			const [cleanup] = await Promise.allSettled([rm(tmp, { force: true })]);
+			if (cleanup.status === "rejected")
+				throw new AggregateError([err, cleanup.reason], "JSON write and temporary cleanup failed");
 			throw err;
 		}
 	}
@@ -204,6 +208,15 @@ export class JsonStore<T> {
 		if (replacement !== undefined) value = replacement;
 		this.writeInternalSync(value);
 		return value;
+	}
+
+	/** Capability boundaries supply containment/version checks; the same path queue includes readback. */
+	async writeChecked<R>(value: T, boundary: { check(): Promise<void>; readBack(): Promise<R> }): Promise<R> {
+		return enqueue(this.path, async () => {
+			await boundary.check();
+			await this.writeInternal(value, boundary.check);
+			return boundary.readBack();
+		});
 	}
 
 	/** 全量写入（调用方保证 value 是完整真相；同路径与其他 update/write 串行） */

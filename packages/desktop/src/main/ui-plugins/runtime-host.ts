@@ -13,6 +13,7 @@ import {
 	type PluginRuntimeCapabilitiesProvider,
 	type PluginRuntimeSource,
 	type SessionServicePort,
+	type StorageRegistry,
 } from "@drone/backend";
 import { app, BrowserWindow, dialog, webContents } from "electron";
 import type { UiPluginManager } from "./manager";
@@ -20,13 +21,14 @@ import { DesktopRuntimeBridge } from "./runtime-bridge";
 
 interface ResourceAccessSelection {
 	readonly profileDirectory: string;
-	selectDirectories(kind: "state" | "files"): Promise<readonly string[]>;
+	readonly storage: StorageRegistry;
+	selectDirectories(kind: "state" | "state-write" | "files"): Promise<readonly string[]>;
 }
 
 /** A native picker may remain open after cancellation; its late answer grants nothing. */
 function selectWhileActive(
 	selection: ResourceAccessSelection,
-	kind: "state" | "files",
+	kind: "state" | "state-write" | "files",
 	signal: AbortSignal,
 ): Promise<readonly string[]> {
 	signal.throwIfAborted();
@@ -61,7 +63,11 @@ export function createDesktopResourceCapabilities(
 		if (!source.resources || Object.keys(source.resources).length === 0)
 			return { resources: [], handlers: {} };
 		activation.signal.throwIfAborted();
-		const state = await selectWhileActive(selection, "state", activation.signal);
+		const state = await selectWhileActive(
+			selection,
+			source.requestsStateWrite ? "state-write" : "state",
+			activation.signal,
+		);
 		activation.signal.throwIfAborted();
 		if (state.length !== 1 || state[0] === undefined)
 			throw new Error("Plugin state directory selection was canceled");
@@ -70,8 +76,23 @@ export function createDesktopResourceCapabilities(
 		if (files.length === 0) throw new Error("Plugin data directory selection was canceled");
 		const statePath = await realpath(state[0]);
 		const filePaths = [...new Set(await Promise.all(files.map((path) => realpath(path))))];
+		const stateEntry = selection.storage.registerDiscoveredRoot(
+			`desktop-plugin-state-${createHash("sha256").update(source.pluginId).digest("hex").slice(0, 16)}`,
+			statePath,
+			`plugin:${source.pluginId}`,
+			"private",
+			"plugin-owned",
+		);
 		const grants: PluginRootGrant[] = [
-			{ handle: randomUUID(), path: statePath, kind: "state", scope: { kind: "application" } },
+			{
+				handle: randomUUID(),
+				path: statePath,
+				kind: "state",
+				scope: { kind: "application" },
+				...(source.requestsStateWrite
+					? { stateWrite: { registry: selection.storage, storageId: stateEntry.id } }
+					: {}),
+			},
 			...filePaths.map((path) => ({
 				handle: randomUUID(),
 				path,
@@ -105,7 +126,11 @@ export function createDesktopResourceCapabilities(
 			events: activation.events,
 		});
 		return {
-			resources: grants.map(({ handle, kind }) => ({ handle, kind })),
+			resources: grants.map(({ handle, kind, stateWrite }) => ({
+				handle,
+				kind,
+				access: stateWrite ? ("read-write" as const) : ("read" as const),
+			})),
 			handlers: { ...fileCapabilityHandlers(ports), ...resources.handlers() },
 			dispose: () => resources.dispose(),
 		};
@@ -116,7 +141,7 @@ export function createDesktopResourceCapabilities(
 export function createDesktopRuntime(
 	manager: UiPluginManager,
 	runtimeDirectory: string,
-	sessions: Pick<SessionServicePort, "getPluginCallerContext">,
+	sessions: Pick<SessionServicePort, "getPluginCallerContext" | "getStorageRegistry">,
 ): DesktopRuntimeBridge {
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
@@ -126,6 +151,7 @@ export function createDesktopRuntime(
 		capabilities: (source, owner) =>
 			createDesktopResourceCapabilities(source, runtimeDirectory, {
 				profileDirectory: app.getPath("userData"),
+				storage: sessions.getStorageRegistry(),
 				selectDirectories: async (kind) => {
 					const contents = webContents.fromId(owner.id);
 					if (!contents || contents.isDestroyed()) throw new Error("Plugin approving window is unavailable");
@@ -133,21 +159,34 @@ export function createDesktopRuntime(
 					if (!window) throw new Error("Plugin directory selection requires its approving window");
 					const result = await dialog.showOpenDialog(window, {
 						title:
-							kind === "state"
-								? hostText("选择插件只读状态目录", "Select the plugin's read-only state directory")
-								: hostText("选择插件可只读访问的数据目录", "Select data directories the plugin may read"),
-						message:
-							kind === "state"
+							kind === "state-write"
 								? hostText(
-										`${source.pluginId} 可通过宿主读取所选目录内的状态 JSON。此授权仅用于本次启用；取消将终止启用。`,
-										`${source.pluginId} may read state JSON under this directory through the host for this activation. Cancel to stop activation.`,
+										"授权插件读写状态 JSON 的目录",
+										"Authorize a directory for plugin state JSON writes",
 									)
-								: hostText(
-										"插件可通过宿主读取所选目录及子目录的文件；不会自动授权状态文件引用的其他路径。受控索引进程只能写入宿主私有缓存。取消将终止启用。",
-										"The plugin may read files under selected directories through the host. Paths mentioned in state files are not automatically approved. Controlled index processes write only to private host caches. Cancel to stop activation.",
-									),
-						properties: kind === "state" ? ["openDirectory"] : ["openDirectory", "multiSelections"],
-						buttonLabel: hostText("授权只读访问", "Allow read-only access"),
+								: kind === "state"
+									? hostText("选择插件只读状态目录", "Select the plugin's read-only state directory")
+									: hostText("选择插件可只读访问的数据目录", "Select data directories the plugin may read"),
+						message:
+							kind === "state-write"
+								? hostText(
+										`${source.pluginId} 申请通过宿主读取并修改所选目录已有子目录内的状态 JSON。仅授权本次启用，具体写操作仍需批准。不会授权笔记或任意文件写入。取消将终止启用。`,
+										`${source.pluginId} requests access to read and modify state JSON in this directory and existing subdirectories for this activation. Each write still requires approval. Notes and arbitrary file writes are not granted. Cancel to stop activation.`,
+									)
+								: kind === "state"
+									? hostText(
+											`${source.pluginId} 可通过宿主读取所选目录内的状态 JSON。此授权仅用于本次启用；取消将终止启用。`,
+											`${source.pluginId} may read state JSON under this directory through the host for this activation. Cancel to stop activation.`,
+										)
+									: hostText(
+											"插件可通过宿主读取所选目录及子目录的文件；不会自动授权状态文件引用的其他路径。受控索引进程只能写入宿主私有缓存。取消将终止启用。",
+											"The plugin may read files under selected directories through the host. Paths mentioned in state files are not automatically approved. Controlled index processes write only to private host caches. Cancel to stop activation.",
+										),
+						properties: kind !== "files" ? ["openDirectory"] : ["openDirectory", "multiSelections"],
+						buttonLabel:
+							kind === "state-write"
+								? hostText("授权状态 JSON 读写", "Allow state JSON access")
+								: hostText("授权只读访问", "Allow read-only access"),
 					});
 					if (contents.isDestroyed())
 						throw new Error("Plugin approving window closed during directory selection");
@@ -172,8 +211,8 @@ export function createDesktopRuntime(
 							`Start the desktop runtime for ${source.pluginId}?`,
 						),
 				detail: hostText(
-					"领域后台在独立进程中运行，不能直接访问数据目录或联网。声明独立资源的插件会另行要求选择只读状态与数据目录；受控索引子进程只能写宿主私有缓存。停用插件会撤销访问；窗口关闭撤销该窗口访问，已打开会话随会话关闭释放。",
-					"The domain runtime runs in a separate process without direct data-directory or network access. Plugins declaring resources separately request read-only state and data directories; controlled index subprocesses write only private host caches. Disabling revokes access. Closing a window revokes that window's access; open sessions release their access when closed.",
+					"领域后台在独立进程中运行，不能直接访问数据目录或联网。声明独立资源的插件会另行选择状态与只读数据目录；状态 JSON 写入必须单独明确授权，受控索引子进程只能写宿主私有缓存。停用插件会撤销访问；窗口关闭撤销该窗口访问，已打开会话随会话关闭释放。",
+					"The domain runtime runs in a separate process without direct data-directory or network access. Plugins declaring resources separately request state and read-only data directories; state JSON writes require explicit separate authorization, controlled index subprocesses write only private host caches. Disabling revokes access. Closing a window revokes that window's access; open sessions release their access when closed.",
 				),
 				buttons: [hostText("拒绝", "Deny"), hostText("允许", "Allow")],
 				defaultId: 0,

@@ -317,7 +317,7 @@ src/
 | `src/services/compute-{data-design,preflight,experience}.ts` | B7 registry/gate、`createComputeExperienceRecorder` | 数据集版本、公共数据回执、RO-Crate、设计/混杂检查在提交前阻断并生成 proposal questions；终态 compute 事件可写入知识 experience store，保留 observed/verified 边界 |
 | `src/services/execution-route.ts` | `routeRnaseqIntent`、`preflightRnaseqExecution`、`RnaseqExecutionService` | 将受支持的 bulk RNA-seq 自然语言意图绑定到固定 `nf-core/rnaseq` spec；在调用注入的 ComputeService 前完成纯 preflight，并提供离线 fixture 回执 |
 | `src/pi-backend.ts` | `PiBackend` | **兼容门面**：create/open/close/delete/prompt（followUp 排队，preflight 回执见 `use-composer-send`）/abort/fork/recall/compact/stats/listModels（附 `thinkingLevels`/`imageInput`）/事件与权限·信任分发。新 host 通过 `BackendServices` 端口接入；兼容期保留旧委托 |
-| `src/json-store.ts` | `JsonStore`、`JsonStoreCorruptedError` | 统一 JSON 持久化：tmp+rename 原子写；read 损坏回退默认、update 损坏抛 CorruptedError 拒写；async 版 per-path 队列串行化、sync 变体热路径用；缓存/normalize 不进本层 |
+| `src/json-store.ts` | `JsonStore`、`JsonStoreCorruptedError` | 统一 JSON 持久化：tmp+rename 原子写；read 损坏回退默认、update 损坏抛 CorruptedError 拒写；async 版 per-path 队列串行化，writeChecked 将能力授权/CAS/回读纳入同队列；sync 变体热路径用；缓存/normalize 不进本层 |
 | `src/slash-commands.ts` | `BUILTIN_SLASH_COMMANDS` | 内置静态表（compact/name/export/settings）+ 模板/skill/扩展命令映射（纯函数） |
 | `src/log.ts` | `createLogger`、`initLogging` | 结构化日志：按天落盘 `main-<本地日期>.log`（`PI_LOG_LEVEL`/`PI_LOG_DIR`） |
 | `src/session/messages.ts` | `toSessionMessages`、`resolveRecallEntryId`、`resolveForkEntryId`、`block*` | pi 消息 → SessionMessage 解析（纯函数，可独立单测）：toolResult 回填、show_image/subagent 提取、edit `details.patch` → `SessionToolCall.diff`、entryId 配对（user·assistant 分表防同 ms 碰撞）；fork/recall 目标解析 |
@@ -513,6 +513,6 @@ src/
 
 P2 原生/桌面共同 owner 最小接入：`backend/src/plugins/coordinator.ts` 管理 native bootstrap、真实 session 绑定及 UI lease；`runtime-capabilities.ts` 执行逐调用 schema/effect/生命周期授权，`process-runtime[-worker].ts` 共用隔离进程协议传递原生只读工具和派生资源调用。`backend/test/native-runtime-owner-sdk.test.mjs` 用真实 SDK 两会话证明同进程 owner 与两种关闭顺序；它不是完整知识领域或正式安装包验收。`plugin-api/src/{native,resource}.ts` 是 1.3 候选的 type-only 可选合同；完整 hooks、publication proof 跨进程投影和其余知识 UI 方法仍未完成。
 
-`backend/src/plugins/file-capabilities.ts` 只读取已批准根的稳定文件快照与配置，区分文件删除、根撤销和 JSON 损坏；`resource-capabilities.ts` 复用实际隔离进程、排空在途请求并管理资源，`resource-reservations.ts` 在完整 owner 关闭后释放跨进程写者租约。`desktop/src/main/ui-plugins/runtime-host.ts` 在每次资源激活时明确选择只读状态/数据目录，构造每插件私有缓存与能力 provider；其单元测试不代替正式 GUI 授权验收。UI 合同 v2 仅接受已验证的 installed desktopRuntime，旧 v1 合同保留；候选知识页目前只有总览/搜索/刷新，其余领域迁移未完成。
+`backend/src/plugins/file-capabilities.ts` 读取已批准根的稳定文件快照与配置，区分文件删除、根撤销和 JSON 损坏；独立 `application-state-write` 授权允许通过 JsonStore 执行受限 JSON CAS 写入，具体合同与并发边界见[状态能力](pluginization/native-plugin-state-capabilities.md)；`resource-capabilities.ts` 复用实际隔离进程、排空在途请求并管理资源，`resource-reservations.ts` 在完整 owner 关闭后释放跨进程写者租约。`desktop/src/main/ui-plugins/runtime-host.ts` 在每次资源激活时明确选择只读数据目录及只读或独立授权的 JSON 状态目录，构造每插件私有缓存与能力 provider；其单元测试不代替正式 GUI 授权验收。UI 合同 v2 仅接受已验证的 installed desktopRuntime，旧 v1 合同保留；候选知识页目前只有总览/搜索/刷新，其余领域迁移未完成。
 
 知识候选 tarball 的独立实际 SDK 验收见 [packed knowledge runtime acceptance](pluginization/packed-knowledge-runtime-acceptance.md)：`backend/test/packed-knowledge-runtime-sdk.test.mjs` 使用真实 coordinator、只读会话条目和合成 Vault，验证 native/UI 同 owner、逐操作拒绝和双进程退出；默认门禁不设置 tarball 时明确跳过。

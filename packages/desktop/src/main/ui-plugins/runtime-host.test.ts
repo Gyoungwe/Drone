@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { PluginCapabilityContext, PluginRuntimeSource } from "@drone/backend";
+import { type PluginCapabilityContext, type PluginRuntimeSource, StorageRegistry } from "@drone/backend";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({ app: {}, BrowserWindow: {}, dialog: {}, webContents: {} }));
@@ -57,6 +57,7 @@ describe("desktop activation directory grants", () => {
 		const selectDirectories = vi.fn();
 		const ports = await createDesktopResourceCapabilities({ ...source, resources: undefined }, root, {
 			profileDirectory: profile,
+			storage: new StorageRegistry(),
 			selectDirectories,
 		})(activation());
 		expect(ports.resources).toEqual([]);
@@ -65,13 +66,21 @@ describe("desktop activation directory grants", () => {
 		expect(await readdir(profile)).toEqual([]);
 	});
 
-	for (const canceled of ["state", "files"] as const) {
+	for (const canceled of ["state", "state-write", "files"] as const) {
 		it(`rejects a canceled ${canceled} selection without initializing resources`, async () => {
-			const selectDirectories = vi.fn(async (kind: "state" | "files") => (kind === canceled ? [] : [state]));
+			const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files") =>
+				kind === canceled ? [] : [state],
+			);
 			await expect(
-				createDesktopResourceCapabilities(source, root, { profileDirectory: profile, selectDirectories })(
-					activation(),
-				),
+				createDesktopResourceCapabilities(
+					{ ...source, requestsStateWrite: canceled === "state-write" },
+					root,
+					{
+						profileDirectory: profile,
+						storage: new StorageRegistry(),
+						selectDirectories,
+					},
+				)(activation()),
 			).rejects.toThrow("selection was canceled");
 			expect(await readdir(profile)).toEqual([]);
 		});
@@ -88,6 +97,7 @@ describe("desktop activation directory grants", () => {
 		);
 		const pending = createDesktopResourceCapabilities(source, root, {
 			profileDirectory: profile,
+			storage: new StorageRegistry(),
 			selectDirectories,
 		})({ ...activation(), signal: abort.signal });
 		await vi.waitFor(() => expect(answer).toBeDefined());
@@ -104,11 +114,12 @@ describe("desktop activation directory grants", () => {
 		await writeFile(join(data, "note.md"), "selected data");
 		const alias = join(root, "data-alias");
 		await symlink(data, alias);
-		const selectDirectories = vi.fn(async (kind: "state" | "files") =>
+		const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files") =>
 			kind === "state" ? [state] : [alias, data],
 		);
 		const provider = createDesktopResourceCapabilities(source, root, {
 			profileDirectory: profile,
+			storage: new StorageRegistry(),
 			selectDirectories,
 		});
 		const current = activation();
@@ -117,6 +128,13 @@ describe("desktop activation directory grants", () => {
 		const stateHandle = ports.resources.find((root) => root.kind === "state")?.handle;
 		const fileHandle = ports.resources.find((root) => root.kind === "files")?.handle;
 		const call = context(current.signal);
+		expect(ports.resources.every((root) => root.access === "read")).toBe(true);
+		await expect(
+			ports.handlers["state.writeJson"]?.execute(
+				{ root: stateHandle, path: "new.json", value: {}, expectedVersion: null },
+				call,
+			),
+		).rejects.toThrow("not granted");
 		expect(
 			await ports.handlers["state.readJson"]?.execute({ root: stateHandle, path: "binding.json" }, call),
 		).toMatchObject({ kind: "value" });
@@ -143,6 +161,48 @@ describe("desktop activation directory grants", () => {
 		await again.dispose?.();
 	});
 
+	it("requires the explicit write picker and registers the selected private state before writing", async () => {
+		const storage = new StorageRegistry();
+		const selectDirectories = vi.fn(async (kind: "state" | "state-write" | "files") => [
+			kind === "state-write" ? state : data,
+		]);
+		const current = activation();
+		const ports = await createDesktopResourceCapabilities({ ...source, requestsStateWrite: true }, root, {
+			profileDirectory: profile,
+			storage,
+			selectDirectories,
+		})(current);
+		expect(selectDirectories.mock.calls.map(([kind]) => kind)).toEqual(["state-write", "files"]);
+		expect(storage.list()).toMatchObject([
+			{
+				path: await realpath(state),
+				owner: "plugin:@example/index",
+				sensitivity: "private",
+				schema: "plugin-owned",
+			},
+		]);
+		const stateRoot = ports.resources.find((root) => root.kind === "state")!;
+		expect(stateRoot.access).toBe("read-write");
+		expect(ports.resources.find((root) => root.kind === "files")?.access).toBe("read");
+		const written = await ports.handlers["state.writeJson"]!.execute(
+			{
+				root: stateRoot.handle,
+				path: "policy.json",
+				value: { version: 1, mode: "strict" },
+				expectedVersion: null,
+			},
+			context(current.signal),
+		);
+		expect(written).toMatchObject({ kind: "value", value: { version: 1, mode: "strict" } });
+		expect(
+			await ports.handlers["state.readJson"]!.execute(
+				{ root: stateRoot.handle, path: "policy.json" },
+				context(current.signal),
+			),
+		).toEqual(written);
+		await ports.dispose?.();
+	});
+
 	it("rejects a private-cache symlink before creating anything in the outside directory", async () => {
 		const outside = join(root, "outside");
 		await mkdir(outside);
@@ -150,6 +210,7 @@ describe("desktop activation directory grants", () => {
 		await expect(
 			createDesktopResourceCapabilities(source, root, {
 				profileDirectory: profile,
+				storage: new StorageRegistry(),
 				selectDirectories: async (kind) => [kind === "state" ? state : data],
 			})(activation()),
 		).rejects.toThrow("inside the host profile");

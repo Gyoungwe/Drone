@@ -28,6 +28,8 @@ export interface PluginRuntimeCapabilities {
 export interface PluginRuntimeResource {
 	readonly handle: string;
 	readonly kind: "state" | "files";
+	/** Informational; the host still checks the actual root grant on every call. Omission means read-only. */
+	readonly access?: "read" | "read-write";
 }
 
 export interface PluginRuntimeFactoryContext {
@@ -75,4 +77,20 @@ export type PluginRuntimeFactory<TNative = never> = (
 export interface PluginRuntimeClient {
 	invoke(operation: string, input: unknown, signal?: AbortSignal): Promise<unknown>;
 	subscribe(listener: (event: PluginRuntimeChangedEvent) => void): () => void;
+}
+
+/** Version tokens describe raw stored JSON bytes, never a domain schema/revision field. */
+export type PluginStateReadResult =
+	| { readonly kind: "missing"; readonly version: null }
+	| { readonly kind: "value"; readonly value: unknown; readonly version: string };
+export interface PluginStateWriteInput {
+	readonly root: string;
+	readonly path: string;
+	readonly value: unknown;
+	/** null creates only a missing file. Existing files require the readJson SHA-256 token. */
+	readonly expectedVersion: string | null;
+}
+export interface PluginStateListEntry {
+	readonly name: string;
+	readonly kind: "file" | "directory" | "symlink" | "other";
 }

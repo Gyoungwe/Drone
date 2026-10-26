@@ -99,6 +99,7 @@ import { SessionService, type SessionServiceOptions } from "./session-service";
 import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
+import type { StorageRegistry } from "./storage/registry";
 import type { SshHostEntry } from "./tools/ssh";
 import { applyStoredZoteroLocalKey } from "./zotero/local-write";
 import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
@@ -128,6 +129,7 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	replySubagentSupervisor(sessionId: string, requestId: string, message: string): void | Promise<void>;
 	init(): Promise<void>;
 	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined;
+	getStorageRegistry(): StorageRegistry;
 	getEventRates(): Map<string, { window60s: number[]; lastEventAt: number }>;
 	onEvent(handler: (sessionId: string, event: SessionEvent) => void): () => void;
 	onAskRequest(handler: (request: AskRequest) => void): () => void;

@@ -53,6 +53,7 @@ export interface InstalledUiRuntimeSource {
 	packageRoot: string;
 	entrypoint: string;
 	nativeEntrypoint?: string;
+	requestsStateWrite?: boolean;
 	resources?: Readonly<Record<string, string>>;
 }
 
@@ -102,6 +103,7 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 							resources?: unknown;
 						};
 						hosts?: unknown;
+						permissions?: { filesystem?: unknown };
 					},
 			)
 			.catch(() => null);
@@ -153,6 +155,11 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 				}
 				const entrypoint = await installedRuntimeFile(packageRoot, declaredRuntime, "desktopRuntime");
 				runtime = { pluginId: packageName, packageRoot, entrypoint };
+				if (
+					Array.isArray(manifest.permissions?.filesystem) &&
+					manifest.permissions.filesystem.includes("application-state-write")
+				)
+					runtime.requestsStateWrite = true;
 				if (manifest.entrypoints.extension !== undefined) {
 					runtime.nativeEntrypoint = await installedRuntimeFile(
 						packageRoot,
