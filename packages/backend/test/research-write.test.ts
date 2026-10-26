@@ -58,6 +58,7 @@ describe("ResearchWriteService", () => {
 	it("persists a prepare plan and blocks execution without explicit approval", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-research-write-"));
 		const service = new ResearchWriteService({
+			adapters: new ResearchWriteAdapterRegistry(),
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-writes",
@@ -83,6 +84,7 @@ describe("ResearchWriteService", () => {
 	it("fails closed and records the adapter failure", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-research-write-"));
 		const service = new ResearchWriteService({
+			adapters: new ResearchWriteAdapterRegistry(),
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-writes-fail",
@@ -136,6 +138,7 @@ describe("ResearchWriteService", () => {
 	it("revokes a plan before it can be executed", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-research-write-"));
 		const service = new ResearchWriteService({
+			adapters: new ResearchWriteAdapterRegistry(),
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-write-revoke",

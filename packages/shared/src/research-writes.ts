@@ -72,3 +72,26 @@ export interface ResearchWriteAdapterDescriptor {
 	readonly writeEnabled: boolean;
 	readonly requiresExplicitApproval: true;
 }
+
+/**
+ * Host-neutral adapter contract.  The host owns registration, authorization,
+ * persistence and audit; an adapter only prepares a bounded plan and executes
+ * one explicitly approved plan.
+ */
+export interface ResearchWriteExecutionContext {
+	readonly approved: boolean;
+	readonly signal?: AbortSignal;
+}
+
+export interface ResearchWriteAdapterPort {
+	readonly id: string;
+	readonly label: string;
+	readonly writeEnabled: boolean;
+	prepare(input: ResearchWriteRequest): ResearchWritePlan;
+	execute(plan: ResearchWritePlan, context: ResearchWriteExecutionContext): Promise<ResearchWriteReceipt>;
+}
+
+export interface ResearchWriteAdapterRegistryPort {
+	descriptors(): readonly ResearchWriteAdapterDescriptor[];
+	get(id: string): ResearchWriteAdapterPort | undefined;
+}
