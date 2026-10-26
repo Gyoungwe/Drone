@@ -10,6 +10,8 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
+import { SkillVisibility } from "../src/capabilities/resource-loader";
+import { CapabilityRuntime } from "../src/capabilities/runtime";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 import { getPluginSessionCaller } from "../src/plugins/session-caller";
@@ -37,7 +39,7 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
  const read=async()=>({pid:process.pid,tools,sessions,scope:await capabilities.call("scope",null)});
  return {operations:{overview:{inputSchema:{type:"null"},resultSchema:{type:"object"},effect:"read",execute:read}},
  createNativeSession(){sessions++;let closed=false;return {toolEffects:{owner_read:"read"},extension(pi){
- pi.registerTool({name:"owner_read",label:"Owner read",description:"Read shared owner",parameters:{type:"object",properties:{}},async execute(){tools++;return {content:[{type:"text",text:JSON.stringify(await read())}]};}});
+ pi.registerTool({name:"owner_read",label:"Owner read",description:"Read shared owner",drone:{readOnly:true,capabilities:["files"]},parameters:{type:"object",properties:{}},async execute(){tools++;return {content:[{type:"text",text:JSON.stringify(await read())}]};}});
  pi.on("session_start",async()=>{await capabilities.call("scope",null);});
  },async dispose(){if(!closed){closed=true;sessions--;}}};},async dispose(){if(sessions)throw new Error("native sessions still attached");}};
 };`,
@@ -114,6 +116,10 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 					sessionManager: SessionManager.inMemory(cwd),
 					model: faux.getModel(),
 				});
+				const capabilities = new CapabilityRuntime(new SkillVisibility());
+				capabilities.bind(session);
+				capabilities.activate(["files"]);
+				expect(session.getActiveToolNames()).toContain("owner_read");
 				sessions.push(session);
 				registry.add({ session, cwd, unsubscribe: () => {} });
 				bootstrap.bindSession(session.sessionId);

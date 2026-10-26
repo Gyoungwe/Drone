@@ -356,3 +356,9 @@ PDF Canvas 设置 max-width 时不可同时固定 CSS height；否则窄侧栏�
 Node permission 的目录读取授权会跟随包内数据符号链接。只校验入口 realpath 不够：新的 desktopRuntime 在启动前检查整个包的链接目标，拒绝包外链接。该检查仍依赖启动期间安装目录不被其他宿主流程改写；完整包不可变快照/安装代次属于 P6，不能将预扫描描述为解决任意并发文件替换。
 
 UI 授权等待、配置落盘和进程清理都是异步阶段。停用/关闭先撤销调用资格，安装/配置变更维持转换屏障；替换实例要等待旧清理回执，不能因旧 token 已删就越过在途清理。失败仍向上报错并刷新真实存留配置；一个插件拒绝加载不能阻断其他插件。
+
+## 2026-10-26：原生工具注册成功但生产能力筛选隐藏工具
+
+P2 的打包知识 runtime 在实际 SDK 直接调度时通过，但正式 DMG 聊天的模型工具清单缺少两项知识工具。独立进程 native 注册只传 name/label/description/parameters，丢失了插件声明的 `drone` 元数据；生产 `CapabilityRuntime` 将未分类工具视为 external，知识能力激活时不会曝光它们。通用进程协议必须保留可选 JSON 元数据，让现有 `ToolManifest` 边界解析分类，不能靠硬编码工具名或关闭 lazy capabilities 修复。
+
+artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读会话：断言知识分类工具实际进入 active tools，并令控制工具即使自报 `drone.readOnly=true`、仍因未知/write toolEffects 被 broker 拒绝。分类是曝光信息，不是文件或副作用授权。真实安装包仍必须在重建后复验。

@@ -75,7 +75,7 @@ input.on("line", async (line) => {
       try { await adapter.extension(pi); }
       catch(error) { await adapter.dispose(); throw error; }
       nativeSessions.set(message.attachment, {adapter,tools,hooks,pending:new Map(),closed:false});
-      send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(({name,label,description,parameters})=>({name,label,description,parameters})),effects:adapter.toolEffects||{},events:[...hooks.keys()]}});
+      send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(({name,label,description,parameters,drone})=>({name,label,description,parameters,...(drone===undefined?{}:{drone})})),effects:adapter.toolEffects||{},events:[...hooks.keys()]}});
       return;
     }
     if (message.type === "native_detach") {

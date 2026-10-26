@@ -73,6 +73,7 @@ const nativeDeclarationsSchema = Type.Object({
 			label: Type.String(),
 			description: Type.String(),
 			parameters: Type.Record(Type.String(), Type.Unknown()),
+			drone: Type.Optional(Type.Unknown()),
 		}),
 	),
 	effects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
