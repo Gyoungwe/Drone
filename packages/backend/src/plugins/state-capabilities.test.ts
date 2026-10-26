@@ -388,3 +388,91 @@ describe("explicit state directory initialization", () => {
 		expect(await fs.readdir(join(root, "outside"))).toEqual([]);
 	});
 });
+
+describe("checked state JSON removal", () => {
+	it("removes the read version and verifies absence without treating repeat removal as success", async () => {
+		const written = await ports.writeJson(
+			{ ...input, value: { candidate: "pending" }, expectedVersion: null },
+			call,
+		);
+		const version = written.version as string;
+		expect(await ports.removeJson({ ...input, expectedVersion: version }, call)).toEqual({
+			kind: "missing",
+			version: null,
+		});
+		expect(await fs.readdir(state)).toEqual([]);
+		await expect(ports.removeJson({ ...input, expectedVersion: version }, call)).rejects.toMatchObject({
+			code: "ESTATECONFLICT",
+		});
+	});
+	it("serializes an actual concurrent JSON edit and removal across capability instances", async () => {
+		const first = await ports.writeJson({ ...input, value: { value: 0 }, expectedVersion: null }, call);
+		const other = await writable();
+		const results = await Promise.allSettled([
+			ports.writeJson({ ...input, value: { value: 1 }, expectedVersion: first.version }, call),
+			other.removeJson({ ...input, expectedVersion: first.version as string }, call),
+		]);
+		expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+		expect(results.filter((result) => result.status === "rejected")).toEqual([
+			expect.objectContaining({ reason: expect.objectContaining({ code: "ESTATECONFLICT" }) }),
+		]);
+	});
+	it("preserves corrupt documents and symlink targets", async () => {
+		await fs.writeFile(join(state, input.path), "{broken");
+		await expect(
+			ports.removeJson({ ...input, expectedVersion: hash("{broken") }, call),
+		).rejects.toMatchObject({ code: "ESTATECORRUPTED" });
+		expect(await fs.readFile(join(state, input.path), "utf8")).toBe("{broken");
+		await fs.writeFile(join(root, "outside.json"), "{}");
+		await fs.symlink(join(root, "outside.json"), join(state, "alias.json"));
+		await expect(
+			ports.removeJson({ root: "state", path: "alias.json", expectedVersion: hash("{}") }, call),
+		).rejects.toThrow("symlinks");
+		expect(await fs.readFile(join(root, "outside.json"), "utf8")).toBe("{}");
+	});
+	it("requires explicit write approval and a live caller before removing anything", async () => {
+		const written = await ports.writeJson({ ...input, value: { keep: true }, expectedVersion: null }, call);
+		const broker = new PluginCapabilityBroker({ handlers: fileCapabilityHandlers(ports), resources: [] });
+		const controller = new AbortController();
+		const context = {
+			pluginId: "test",
+			applicationId: "app",
+			callerIdentity: {},
+			...call,
+			signal: controller.signal,
+		};
+		const request = () =>
+			broker.port.call("state.removeJson", { ...input, expectedVersion: written.version });
+		await expect(
+			broker.run(
+				context,
+				"read",
+				() => {},
+				async () => true,
+				request,
+			),
+		).rejects.toThrow("Read-only");
+		await expect(
+			broker.run(
+				context,
+				"write",
+				() => {},
+				async () => false,
+				request,
+			),
+		).rejects.toThrow("denied");
+		await expect(
+			broker.run(
+				context,
+				"write",
+				() => {},
+				async () => {
+					controller.abort(new Error("closed"));
+					return true;
+				},
+				request,
+			),
+		).rejects.toThrow("closed");
+		expect(await ports.readJson(input, call)).toEqual(written);
+	});
+});

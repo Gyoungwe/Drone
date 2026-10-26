@@ -6,6 +6,7 @@ import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import type {
 	PluginRuntimeScope,
 	PluginStateReadResult,
+	PluginStateRemoveInput,
 	PluginStateWriteInput,
 } from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
@@ -315,6 +316,28 @@ export class PluginFileCapabilities {
 		});
 	}
 
+	async removeJson(input: PluginStateRemoveInput, call: PluginFileCall): Promise<PluginStateReadResult> {
+		const root = this.grant(input, call, "state");
+		if (call.bootstrap || !root.stateWrite) throw new Error("Plugin state JSON write access was not granted");
+		if (!input.path.endsWith(".json")) throw new Error("State removal requires a .json file");
+		const store = new JsonStore<unknown>({
+			path: join(root.path, input.path),
+			storageId: root.stateWrite.registry.assertRegistered(root.stateWrite.storageId).id,
+			defaultValue: () => null,
+		});
+		return store.removeChecked({
+			check: async () => {
+				const current = await this.readJson(input, call);
+				if (current.version !== input.expectedVersion) throw new PluginStateConflictError();
+			},
+			readBack: async () => {
+				const result = await this.readJson(input, call);
+				if (result.kind !== "missing") throw new Error("Plugin state reappeared after removal");
+				return result;
+			},
+		});
+	}
+
 	/** Create one state directory after explicit write approval; reads never initialize state. */
 	async ensureStateDirectory(input: PluginFileInput, call: PluginFileCall): Promise<{ created: boolean }> {
 		const root = this.grant(input, call, "state");
@@ -420,6 +443,19 @@ export function fileCapabilityHandlers(
 			effect: "read",
 			bootstrap: true,
 			execute: (input, call) => ports.listState(input as PluginFileInput, call),
+		},
+		"state.removeJson": {
+			inputSchema: Type.Object(
+				{
+					root: Type.String({ minLength: 1 }),
+					path: Type.String({ minLength: 1 }),
+					expectedVersion: Type.String({ pattern: "^[a-f0-9]{64}$" }),
+				},
+				{ additionalProperties: false },
+			),
+			resultSchema: stateResult,
+			effect: "write",
+			execute: (input, call) => ports.removeJson(input as PluginStateRemoveInput, call),
 		},
 		"state.ensureDirectory": {
 			inputSchema: Type.Object(

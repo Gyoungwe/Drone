@@ -219,6 +219,15 @@ export class JsonStore<T> {
 		});
 	}
 
+	/** Checked removal shares the JSON writer queue; missing files are not reported as deleted. */
+	async removeChecked<R>(boundary: { check(): Promise<void>; readBack(): Promise<R> }): Promise<R> {
+		return enqueue(this.path, async () => {
+			await boundary.check();
+			await rm(this.path);
+			return boundary.readBack();
+		});
+	}
+
 	/** 全量写入（调用方保证 value 是完整真相；同路径与其他 update/write 串行） */
 	async write(value: T): Promise<void> {
 		return enqueue(this.path, () => this.writeInternal(value));

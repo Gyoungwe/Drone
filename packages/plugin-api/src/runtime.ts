@@ -99,6 +99,12 @@ export interface PluginStateWriteInput {
 	/** null creates only a missing file. Existing files require the readJson SHA-256 token. */
 	readonly expectedVersion: string | null;
 }
+/** Remove only a stored JSON document whose current bytes match a prior read. */
+export interface PluginStateRemoveInput {
+	readonly root: string;
+	readonly path: string;
+	readonly expectedVersion: string;
+}
 export interface PluginStateListEntry {
 	readonly name: string;
 	readonly kind: "file" | "directory" | "symlink" | "other";
