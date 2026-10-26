@@ -28,6 +28,7 @@
 - `npm test`：PASS；backend 252 files/2029 passed/18 skipped，desktop 164 files/898 tests passed，其他 workspace 与脚本测试通过。
 - `npm run build`：PASS。
 - `npm run check:arch`：PASS；`Architecture check passed (0 baseline finding(s), 0 fixed)`，`Host independence check passed`。
+- `485221d5` 的 runtime slice：Biome、`npm run typecheck -w @drone/shared`、`npm run typecheck -w @drone/backend` 及 `npm test -w @drone/backend -- src/create-backend.test.ts src/runtime.test.ts` 均 PASS（12 tests）。runtime event bus 按 backend 实例隔离；legacy `process.emit` 仅作兼容桥并按 cwd 过滤，双 backend 回归通过，dispose 清理 bus 与进程监听。
 
 插件 worktree：
 
