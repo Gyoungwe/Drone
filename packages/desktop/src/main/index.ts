@@ -17,6 +17,7 @@ import {
 	setReplyLanguage,
 } from "@drone/backend";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
+import { registerAppLifecycle } from "./app-lifecycle";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
 import { electronDesktopHost, launchedHidden } from "./desktop-host";
@@ -39,8 +40,6 @@ app.setName("Drone");
 let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
 let pluginRuntime: DesktopRuntimeBridge | undefined;
-let runtimeStopped = false;
-let runtimeStopping = false;
 let latestIncidentSnapshot: ReturnType<typeof buildIncidentSnapshot> | undefined;
 
 /** renderer 加载自定义背景图的协议（pi-bg://background/<文件名>，只读 userData/backgrounds/） */
@@ -373,7 +372,7 @@ app.whenReady().then(async () => {
 	applyDesktopPrefs(uiState?.desktop, electronDesktopHost, app.isPackaged);
 	createWindow(resolveTheme(uiState?.theme), launchedHidden);
 
-	app.on("activate", () => {
+	appLifecycle.onActivate(() => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow(resolveTheme(uiState?.theme));
 	});
 });
@@ -391,28 +390,22 @@ app.on("web-contents-created", (_event, contents) => {
 	});
 });
 
-app.on("before-quit", (event) => {
-	if (!runtimeStopped) {
-		event.preventDefault();
-		if (runtimeStopping) return;
-		runtimeStopping = true;
-		void (async () => {
-			await pluginRuntime?.close();
-			await backendServices?.dispose();
-			uiPluginsManager?.disposeWatcher();
-		})()
-			.then(() => {
-				runtimeStopped = true;
-				app.quit();
-			})
-			.catch((error) => {
-				runtimeStopping = false;
-				log.error("Plugin runtime shutdown failed", error);
-				dialog.showErrorBox(
-					"Plugin runtime shutdown failed",
-					error instanceof Error ? error.message : String(error),
-				);
-			});
-		return;
-	}
+const appLifecycle = registerAppLifecycle(app, {
+	log,
+	cleanup: async () => {
+		log.info("app shutdown: closing plugin runtimes");
+		await pluginRuntime?.close();
+		log.info("app shutdown: plugin runtimes closed; disposing backend services");
+		await backendServices?.dispose();
+		log.info("app shutdown: backend services disposed");
+		uiPluginsManager?.disposeWatcher();
+		log.info("app shutdown: plugin watchers closed");
+	},
+	onShutdownError: (error) => {
+		log.error("Plugin runtime shutdown failed", error);
+		dialog.showErrorBox(
+			"Plugin runtime shutdown failed",
+			error instanceof Error ? error.message : String(error),
+		);
+	},
 });
