@@ -35,10 +35,12 @@
 - 本轮独立性门禁收紧：`check-host-independence.mjs` 将 `@gyoungwe/pi-core` 纳入 versioned host-entry 规则，仅登记 backend 的 5 个历史兼容 facade（project memory、todo、status、memory-save、deliver-files）；新宿主源码直接导入 pi-core 会失败。`node --test scripts/check-host-independence.test.mjs`（5 tests）与完整扫描均通过。该登记是 P4 迁移边界，不代表 pi-core 已从宿主运行时依赖移除。
 - 宿主 `0e65b396` 增加 research host capability 注入：Desktop 使用通用 manifest discovery 加载任意已安装包的 `ResearchHostLoader`，backend 以 `createResearchHostPort` 授予受限 workspace/results 文件读取并将 `status/listRuns` 接到 knowledge IPC；research host file port 的越界/绝对路径 2 项回归、backend/desktop typecheck 通过。当前只读摘要合同不覆盖完整 run detail，宿主仍有其他 `pi-research` 兼容导入，不能作为 P3 完成或零插件正式 DMG 证据。
 - 宿主 `0e65b396` 同步接入 knowledge host capability：Desktop 通过 manifest capability discovery 加载任意已安装包的 `knowledgeHostLoader`，backend 注入 `KnowledgeReadProvider` 覆盖 overview/search/read/noteLinks/graph；插件 `657d6f1` 的版本化 read port 与宿主发现回归 `8ed0a7fe`（4 项）通过。worker、写入服务、UI 所有权和旧组合根仍在迁移，不能作为 P2 完成或零插件正式 DMG 证据。
+- 本轮合并验证（`730370b1`、`1b239a09`、`ded51ba1`）：`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch` 均通过；第二次全量测试回执为 backend 254 files/2040 passed/18 skipped、desktop 165 files/902 passed，`check-build-inputs` 已改为验证注入式 research host seam。仅保留既有设计稿体积 warning。
 
 插件 worktree：
 
 - `DRONE_PLUGIN_API_TARBALL=/tmp/gyoungwe-plugin-api-1.3.0.tgz npm run check`：PASS；8 manifests、知识 486 tests、研究 134 tests、locked/latest SDK matrix、research-suite PDF、clean-prefix smoke、pack checks 均通过。
+- 在 `657d6f1` 后以当前宿主构建的 `@gyoungwe/plugin-api@1.3.0` 候选 tarball（SHA-256 `0916b3c5822548189ee1b3d7c28554cb459714a469074aef779021ae8191a027`）重跑 workspace check：knowledge host-loader smoke、research host/Zotero lookup、locked 1.1.0/latest 1.4.0 SDK matrix、research-suite clean install/PDF、analysis/evidence/connectors/workbench/UI pack 与 pack check 全部通过；真实 GUI 仍记为 `NOT_RUN`。
 - 在该基线后，插件提交 `f476a7b` 增加 connector-backed Zotero host seam；pi-research 26 文件/136 tests、typecheck、build/build:check 和 package smoke 通过，smoke receipt 为 `lookup → found`。本轮 `test:sdk` 因网络会话挂起被终止，未宣称新 SDK PASS。
 
 ## 未关闭项
