@@ -93,13 +93,22 @@ function checkDist() {
 		const path = join(dist, name);
 		if (!name.endsWith(".js") && !name.endsWith(".d.ts")) continue;
 		const output = readFileSync(path, "utf8");
+		// Only the opt-in native declaration may reference the official SDK's type.
+		// Keep the ban on every runtime output and on all other public subpaths.
+		const dependencies =
+			name === "native.d.ts"
+				? output.replace(
+						/^import type \{ ExtensionFactory \} from "@earendil-works\/pi-coding-agent";$/mu,
+						"",
+					)
+				: output;
 		for (const pattern of [
 			/from ["']electron["']/u,
 			/@earendil-works\/pi-/u,
 			/@drone\/(?:backend|desktop)/u,
 			/(?:from|import\s*\()["']\.\.\/\.\./u,
 		]) {
-			assert(!pattern.test(output), `forbidden dependency in ${name}: ${pattern}`);
+			assert(!pattern.test(dependencies), `forbidden dependency in ${name}: ${pattern}`);
 		}
 	}
 }
