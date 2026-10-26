@@ -50,6 +50,7 @@ import { MemoryStore } from "./memory/store";
 import { DomainCapabilityRegistry, type DomainCapabilityRegistryPort } from "./plugins/domain-capabilities";
 import type { PluginSessionCallerContext } from "./plugins/session-caller";
 import { walkProjectFiles } from "./project/files";
+import { writeMemory } from "./project/memory";
 import { canonicalProjectId } from "./project-id";
 import type { ResearchHostLoader } from "./research-host";
 import { createDroneRuntime } from "./runtime";
@@ -790,7 +791,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				return memory.status(canonicalProjectId(cwd));
 			},
 			promote: (cwd, id) => {
-				promoteObservation(memory, cwd, canonicalProjectId(cwd), id);
+				promoteObservation(memory, cwd, canonicalProjectId(cwd), id, writeMemory);
 				return memory.status(canonicalProjectId(cwd));
 			},
 			promoteToKnowledge: (cwd, id) =>
