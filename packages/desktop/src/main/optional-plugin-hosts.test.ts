@@ -38,7 +38,10 @@ describe("discoverPluginHostLoader", () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-plugin-knowledge-discovery-"));
 		const packageRoot = join(root, "knowledge-provider");
 		await mkdir(join(packageRoot, "dist"), { recursive: true });
-		await writeFile(join(packageRoot, "package.json"), JSON.stringify({ name: "knowledge-provider", version: "0.3.0" }));
+		await writeFile(
+			join(packageRoot, "package.json"),
+			JSON.stringify({ name: "knowledge-provider", version: "0.3.0" }),
+		);
 		await writeFile(
 			join(packageRoot, "plugin.manifest.json"),
 			JSON.stringify({

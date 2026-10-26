@@ -24,7 +24,7 @@ import type {
 	TrustRequest,
 } from "@drone/shared";
 import type { ExperienceStorePort } from "@gyoungwe/pi-knowledge/host";
-import type { AnalysisHostLoader } from "@gyoungwe/plugin-api";
+import type { AnalysisHostLoader, KnowledgeHostLoader } from "@gyoungwe/plugin-api";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import {
@@ -35,26 +35,13 @@ import {
 import { JsonStore } from "./json-store";
 import { createKnowledgeReadProvider, KnowledgeUiService, type KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
-import type { ResearchHostLoader } from "./research-host";
-
-interface KnowledgeHostLoader {
-	readonly contractVersion: 1;
-	load(): {
-		readonly contractVersion: 1;
-		overview(input: unknown): Promise<unknown>;
-		search(input: unknown): Promise<unknown>;
-		read(input: unknown): Promise<unknown>;
-		noteLinks(input: unknown): Promise<unknown>;
-		graph(input: unknown): Promise<unknown>;
-	};
-}
-
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
 import { DomainCapabilityRegistry, type DomainCapabilityRegistryPort } from "./plugins/domain-capabilities";
 import type { PluginSessionCallerContext } from "./plugins/session-caller";
 import { walkProjectFiles } from "./project/files";
 import { canonicalProjectId } from "./project-id";
+import type { ResearchHostLoader } from "./research-host";
 import { createDroneRuntime } from "./runtime";
 import { AnalysisEvidenceService, type EvidenceReplayRunner } from "./services/analysis-evidence";
 import type { AnalysisEvidencePluginHost } from "./services/analysis-evidence-host";
