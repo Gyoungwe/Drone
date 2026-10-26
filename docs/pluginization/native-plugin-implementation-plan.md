@@ -9,7 +9,7 @@
 | P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | 同 owner 的阅读、图谱、分类、最小审核策略和 native hook 生命周期切片已通过候选包/真实 SDK；正式阅读 GUI 历史失败保留；后继正式包的工具、设置、停用恢复与退出复验通过；完整服务写操作和宿主删除仍未完成 | P1 |
 | P3 | research、来源连接器、引用/Zotero 等领域 API/页面迁移 | **部分完成**：`pi-connectors` 已新增 arXiv 与 Semantic Scholar 只读声明；`pi-research` 已增加只读 Desktop runtime 的 status/listRuns host 合同和路径隔离回归；完整 Zotero host adapter、页面和写入迁移仍未完成 | P2 |
 | P4 | tasks、编排、领域记忆及 UI 迁移 | **部分完成**：`@gyoungwe/pi-workbench@0.1.0` 提供 registration-scoped 工具、host-owned state.read/write、版本 CAS、取消/停用和官方 loader smoke；桌面 UI 与旧宿主装配仍未完成 | P2 |
-| P5 | analysis/evidence 迁移；跨插件依赖通过显式合同管理 | **部分完成**：`analysis_prepare_evidence` 产出 host-required 的只读 evidence plan，`pi-evidence` 提供只读校验；主机工作流接线、持久化证据和真实会话仍未完成 | P3/P4 |
+| P5 | analysis/evidence 迁移；跨插件依赖通过显式合同管理 | **部分完成**：宿主已接入 manifest 声明的 `analysis_prepare_evidence` 与 `evidence_validate_manifest` 只读合同，缺失时返回 `unavailable`，成功回执带稳定内容哈希；持久化证据和真实会话仍未完成 | P3/P4 |
 | P6 | 科研发行为可卸载预设；构建/锁文件去除领域必需依赖；删除旧路径 | **部分完成**：UI 已安装包内容寻址，入口或嵌套依赖就地替换会撤销旧绑定并要求 reload；跨包 hoisted 依赖闭包、持久化安装代次和旧路径删除仍未完成 | P2–P5 |
 | P7 | 双仓库最终门禁、同 tarball 原生 Pi 真实会话、正式安装包零插件及升级/停用/回滚 | 待开始 | P6 |
 
@@ -57,3 +57,5 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 - 2026-10-26：P2 native hook 切片 `25eacb4` 为 `appendEntry`、`sendUserMessage`、`events` 和 `sessionManager` 绑定会话 owner/票据并在 dispose 撤销，6/6 生命周期测试通过。P3 连接器切片 `1f7778a`、P4 workbench 切片 `7163aee`、P6 安装代次切片 `6fc5cf11` 已提交；插件仓库在 API 1.3 候选环境下完成知识包、各独立包、干净安装、UI smoke 与 PDF Canvas 检查，`research-suite` manifest 工具一致性测试修复并由 `5e81503` 刷新生成物。完整 SDK locked/latest 干净安装和正式 GUI 候选替换仍未完成；API 1.3 尚未发布。
 - 2026-10-26：P3 host runtime `699b02f`、P4 host-owned workbench `638d699`/官方 loader smoke `bd358df`、P5 analysis/evidence 合同 `0ad8ae5` 已提交；对应 typecheck、注册测试、clean install/loader smoke 和 8 包 manifest 检查通过。P3/P4/P5 仍只完成 host contract 切片，未标记完整领域迁移或真实桌面工作流 PASS。
 - 2026-10-26：宿主补充零可选 UI 插件启动/发现回归：在空的 Pi 托管 `node_modules` 下创建 `UiPluginManager` 并执行 `init()`，确认扫描列表、未知插件信息、runtime source 和启用状态均保持空/禁用且不抛错。测试为 `packages/desktop/src/main/ui-plugins/installed-ui-pack.test.ts` 的 `keeps the host usable when the managed package root is empty`；该切片只覆盖宿主 UI 发现，不代表 P7 正式安装包零插件验收。
+
+- 2026-10-26：宿主新增 `analysis-evidence-host` 通用组合：仅消费已声明的 analysis/evidence 工具，要求 evidence plan 声明 `execution=host-required`，再由 validator 校验宿主 manifest；`analysisEvidence.prepareEvidence` 返回稳定只读回执。当前锁定的公开 `pi-analysis@0.1.2` 尚未声明该工具，因此默认明确返回 `unavailable`。

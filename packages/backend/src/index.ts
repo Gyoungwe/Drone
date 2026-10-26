@@ -199,6 +199,17 @@ export {
 	type FrozenFile,
 } from "./services/analysis-evidence";
 export {
+	ANALYSIS_PREPARE_EVIDENCE_TOOL,
+	type AnalysisEvidencePluginHost,
+	type AnalysisEvidencePluginManifest,
+	type AnalysisEvidencePreparationInput,
+	type AnalysisEvidenceReceipt,
+	type AnalysisEvidenceReceiptStatus,
+	EVIDENCE_VALIDATE_MANIFEST_TOOL,
+	prepareAnalysisEvidence,
+	type ReadOnlyPluginTool,
+} from "./services/analysis-evidence-host";
+export {
 	type AnalysisComputeBinding,
 	type AnalysisLedger,
 	AnalysisOrchestrationService,

@@ -15,6 +15,11 @@ import { assertCausalEnvelope, childCausalEnvelope } from "@drone/shared";
 import { newEventId, rootCausalEnvelope } from "../causality";
 import { JsonStore } from "../json-store";
 import type { StorageRegistry } from "../storage/registry";
+import {
+	type AnalysisEvidencePluginHost,
+	type AnalysisEvidenceReceipt,
+	prepareAnalysisEvidence,
+} from "./analysis-evidence-host";
 import type { AnalysisOrchestrationService } from "./analysis-orchestration";
 
 /** Bounded, portable JSON capsule. No code from a capsule is executed on import. */
@@ -239,6 +244,8 @@ export class AnalysisEvidenceService {
 			analysis: AnalysisOrchestrationService;
 			storage: StorageRegistry;
 			replayRunner?: EvidenceReplayRunner;
+			/** Optional installed plugin composition; absent means explicitly unavailable. */
+			evidenceHost?: AnalysisEvidencePluginHost;
 		},
 	) {
 		this.root = resolve(options.root);
@@ -255,6 +262,21 @@ export class AnalysisEvidenceService {
 			storageId: entry.id,
 			defaultValue: () => ({ version: 1, checkpoints: {}, branches: {}, replays: {} }),
 			mode: 0o600,
+		});
+	}
+
+	/** Compose plugin planning and validation as a stable, read-only receipt. */
+	async prepareEvidence(input: {
+		analysisId: string;
+		manifest: unknown;
+		request?: unknown;
+	}): Promise<AnalysisEvidenceReceipt> {
+		const analysis = await this.options.analysis.get(input.analysisId);
+		if (!analysis) throw new Error(`Analysis not found: ${input.analysisId}`);
+		return prepareAnalysisEvidence(this.options.evidenceHost, {
+			analysis,
+			manifest: input.manifest,
+			...(input.request !== undefined ? { request: input.request } : {}),
 		});
 	}
 	/** Small UI projection; persisted receipts remain the authority for reproduction. */
