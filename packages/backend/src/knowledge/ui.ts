@@ -3,7 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
-import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
+import type { KnowledgeApi, KnowledgeUiEvent, ResearchKnowledgeOperations } from "@drone/shared";
+import type { ExperienceStorePort, TerminalJobExperienceInput } from "@gyoungwe/pi-knowledge/host";
 import * as knowledgeUiService from "@gyoungwe/pi-knowledge/host";
 import * as knowledgeUiState from "@gyoungwe/pi-knowledge/host";
 import * as knowledgeWikiModelReview from "@gyoungwe/pi-knowledge/host";
@@ -38,6 +39,13 @@ export interface KnowledgeHostPort {
 	runMaintenance?: KnowledgeMaintenanceOperations["runMaintenance"];
 	/** Optional daily-discovery prompt/parser implementation supplied by the installed package. */
 	dailyDiscovery?: DailyDiscoveryOperations;
+	/** Optional research capture implementation supplied by the installed package. */
+	researchResource?: ResearchKnowledgeOperations;
+	/** Optional terminal compute observation writer supplied by the installed package. */
+	recordTerminalJobExperience?: (
+		store: ExperienceStorePort,
+		input: TerminalJobExperienceInput,
+	) => Promise<unknown>;
 }
 
 /**
@@ -107,6 +115,23 @@ export function createKnowledgeDailyDiscoveryOperations(host?: KnowledgeHostPort
 		parseIdeas: (text, allowedPaths, freshPaths) =>
 			knowledgeUiService.parseDailyIdeas(text, allowedPaths, freshPaths),
 	};
+}
+
+/** Keep research capture snapshot semantics behind the discovered knowledge host seam. */
+export function createKnowledgeResearchResourceOperations(
+	host?: KnowledgeHostPort,
+): ResearchKnowledgeOperations {
+	const source = host?.researchResource;
+	if (source) return source;
+	return {
+		resolveContext: knowledgeUiService.resolveKnowledgeContext,
+		ingestSnapshot: knowledgeUiService.ingestKnowledgeSnapshot,
+	};
+}
+
+/** Keep compute experience persistence behind the discovered knowledge host seam. */
+export function createKnowledgeExperienceOperation(host?: KnowledgeHostPort) {
+	return host?.recordTerminalJobExperience ?? knowledgeUiService.recordTerminalJobExperience;
 }
 
 export interface KnowledgeWorkerLifecycleSnapshot {

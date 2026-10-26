@@ -8,7 +8,6 @@ import type {
 	ExperienceStorePort,
 	TerminalJobExperienceInput,
 } from "@gyoungwe/pi-knowledge/host";
-import { recordTerminalJobExperience } from "@gyoungwe/pi-knowledge/host";
 import type { ComputeEvent } from "./compute";
 
 export type { ComputeExperienceRecorder } from "./compute";
@@ -19,6 +18,11 @@ const TERMINAL = new Set(["succeeded", "failed", "cancelled", "blocked", "partia
 
 export interface ComputeExperienceBridgeOptions {
 	readonly store: ExperienceStorePort;
+	/** Host-owned terminal observation adapter supplied by the installed knowledge provider. */
+	readonly recordTerminalJobExperience: (
+		store: ExperienceStorePort,
+		input: TerminalJobExperienceInput,
+	) => Promise<unknown>;
 	/** Optional stable topic/project linkage supplied by the host. */
 	readonly topicId?: string | null;
 	readonly tags?: readonly string[];
@@ -182,7 +186,7 @@ export function createComputeExperienceRecorder(
 			// The knowledge store accepts its normalized ExperienceInput shape. Use
 			// the terminal-job adapter so the host observation/provenance envelope is
 			// constructed before the store validates and persists it.
-			await recordTerminalJobExperience(options.store, input);
+			await options.recordTerminalJobExperience(options.store, input);
 		},
 	};
 }

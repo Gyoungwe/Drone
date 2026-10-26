@@ -36,6 +36,7 @@ import { JsonStore } from "./json-store";
 import {
 	configureBackendKnowledgeWorker,
 	createKnowledgeDailyDiscoveryOperations,
+	createKnowledgeExperienceOperation,
 	createKnowledgeMaintenanceOperations,
 	createKnowledgeReadProvider,
 	type KnowledgeHostPort,
@@ -504,6 +505,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		options.computeExperienceRecorder ??
 		(options.computeExperienceStore
 			? createComputeExperienceRecorder({
+					recordTerminalJobExperience: createKnowledgeExperienceOperation(knowledgeHost),
 					store: options.computeExperienceStore,
 					...(options.computeExperienceTopicId !== undefined
 						? { topicId: options.computeExperienceTopicId }
