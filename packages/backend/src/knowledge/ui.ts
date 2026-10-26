@@ -20,13 +20,17 @@ import { KnowledgeWebDavService } from "./webdav";
 
 type Handler = (event: KnowledgeUiEvent) => void;
 
-interface KnowledgeHostPort {
+export interface KnowledgeHostPort {
 	readonly contractVersion: 1;
 	overview(input: unknown): Promise<unknown>;
 	search(input: unknown): Promise<unknown>;
 	read(input: unknown): Promise<unknown>;
 	noteLinks(input: unknown): Promise<unknown>;
 	graph(input: unknown): Promise<unknown>;
+	/** Optional write-side operations supplied by an installed knowledge host. */
+	reviews?(input: unknown): Promise<unknown>;
+	preview?(input: unknown): Promise<unknown>;
+	decide?(input: unknown): Promise<unknown>;
 }
 
 /**
@@ -49,6 +53,8 @@ export interface KnowledgeReadProvider {
 		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 }
+
+export type KnowledgeWriteProvider = Pick<KnowledgeHostPort, "reviews" | "preview" | "decide">;
 
 /** Default provider delegates the read vertical to the packaged knowledge host entry. */
 export function createKnowledgeReadProvider(host?: KnowledgeHostPort): KnowledgeReadProvider {
@@ -360,12 +366,14 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private loading: Promise<void> | null = null;
 	private readonly cloud = new KnowledgeWebDavService();
 	private readonly readProvider: KnowledgeReadProvider;
+	private readonly writeProvider?: KnowledgeWriteProvider;
 	private readonly researchHost?: ResearchHostAdapter;
 	constructor(
 		readProvider: KnowledgeReadProvider = createKnowledgeReadProvider(),
-		options: { researchHostLoader?: ResearchHostLoader } = {},
+		options: { researchHostLoader?: ResearchHostLoader; knowledgeHost?: KnowledgeWriteProvider } = {},
 	) {
 		this.readProvider = readProvider;
+		this.writeProvider = options.knowledgeHost;
 		this.researchHost = options.researchHostLoader?.load(createResearchHostPort());
 	}
 	private root() {
@@ -486,16 +494,25 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	reviews(
 		input: Parameters<KnowledgeApi["getKnowledgeReviews"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeReviews"]> {
+		if (this.writeProvider?.reviews) {
+			return this.writeProvider.reviews(input) as ReturnType<KnowledgeApi["getKnowledgeReviews"]>;
+		}
 		return this.call("knowledgeReviews", input);
 	}
 	preview(
 		input: Parameters<KnowledgeApi["previewKnowledgeReview"]>[0],
 	): ReturnType<KnowledgeApi["previewKnowledgeReview"]> {
+		if (this.writeProvider?.preview) {
+			return this.writeProvider.preview(input) as ReturnType<KnowledgeApi["previewKnowledgeReview"]>;
+		}
 		return this.call("knowledgePreviewReview", input);
 	}
 	decide(
 		input: Parameters<KnowledgeApi["decideKnowledgeReview"]>[0],
 	): ReturnType<KnowledgeApi["decideKnowledgeReview"]> {
+		if (this.writeProvider?.decide) {
+			return this.writeProvider.decide(input) as ReturnType<KnowledgeApi["decideKnowledgeReview"]>;
+		}
 		return this.call("knowledgeDecideReview", input);
 	}
 	read(

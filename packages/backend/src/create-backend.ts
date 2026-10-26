@@ -36,6 +36,7 @@ import { JsonStore } from "./json-store";
 import {
 	configureBackendKnowledgeWorker,
 	createKnowledgeReadProvider,
+	type KnowledgeHostPort,
 	KnowledgeUiService,
 	type KnowledgeUiServicePort,
 } from "./knowledge/ui";
@@ -329,12 +330,16 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		options.knowledgeFactory ??
 		(options.knowledgeHostLoader || options.researchHostLoader
 			? () =>
-					new KnowledgeUiService(
-						options.knowledgeHostLoader
-							? createKnowledgeReadProvider(options.knowledgeHostLoader.load())
-							: undefined,
-						options.researchHostLoader ? { researchHostLoader: options.researchHostLoader } : {},
-					)
+					(() => {
+						const knowledgeHost = options.knowledgeHostLoader?.load() as KnowledgeHostPort | undefined;
+						return new KnowledgeUiService(
+							knowledgeHost ? createKnowledgeReadProvider(knowledgeHost) : undefined,
+							{
+								...(knowledgeHost ? { knowledgeHost } : {}),
+								...(options.researchHostLoader ? { researchHostLoader: options.researchHostLoader } : {}),
+							},
+						);
+					})()
 			: undefined);
 	const sessions = new SessionService({
 		...options,

@@ -233,6 +233,45 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
+	it("routes knowledge review operations through the installed host when declared", async () => {
+		const calls: string[] = [];
+		const service = new KnowledgeUiService(
+			{
+				overview: async () => ({}),
+				search: async () => ({}),
+				read: async () => ({}),
+				noteLinks: async () => ({}),
+				graph: async () => ({}),
+			} as unknown as KnowledgeReadProvider,
+			{
+				knowledgeHost: {
+					reviews: async () => {
+						calls.push("reviews");
+						return { items: [], total: 0 };
+					},
+					preview: async () => {
+						calls.push("preview");
+						return { id: "candidate" };
+					},
+					decide: async () => {
+						calls.push("decide");
+						return { status: "rejected" };
+					},
+				},
+			},
+		);
+
+		await service.reviews({ revision: 1, offset: 0, limit: 10 });
+		await service.preview({ cwd: "/tmp/project", id: "candidate", revision: 1 });
+		await service.decide({
+			cwd: "/tmp/project",
+			token: "review-token",
+			decision: "reject",
+		});
+		expect(calls).toEqual(["reviews", "preview", "decide"]);
+		service.dispose();
+	});
+
 	it("does not require the legacy worker resource when a knowledge plugin is installed", () => {
 		const previousRoot = process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
 		process.env.DRONE_RESEARCH_WORKBENCH_ROOT = "/tmp/drone-no-legacy-knowledge-worker";
