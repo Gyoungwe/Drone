@@ -52,6 +52,8 @@
 - 宿主 `1cb765c8` 补强 P6/P7 失败回执：卸载无变化和 registry 不可用的更新均保持 `failed`/`not-installed`，不写入 `disabled` 或新版本，也不触发 reload；backend lifecycle 8/8、Biome 通过。正式 DMG 的零插件、升级/回滚和销毁失败回执仍未完成。
 - 宿主 `369f7c58` 收紧真实 arm64 `Drone.app` 的零可选插件回归：空 `profile/ui-plugins`、空 Pi managed npm root、空 auth/model、未绑定 knowledge、generic Pi session create/close 及现有 research/Obsidian IPC 均通过。该回执只证明空插件宿主可启动与通用会话生命周期，不证明插件安装/停用恢复、升级回滚或销毁失败。
 - P6 依赖策略门禁已加入 `check:host-domain-deps` 并接入 `check:arch`：backend 当前的 `@drone/research`、`@drone/tasks`、`@gyoungwe/pi-core`、`@gyoungwe/pi-knowledge`、`@gyoungwe/pi-research` 被列为带移除条件的迁移依赖；新增未登记的 `@gyoungwe/pi-*` 或把 `pi-analysis`/evidence/connectors/UI/suite 提升为 runtime dependency 会直接失败。三项策略回归、Biome、`check:arch` 通过；输出保持 `PARTIAL`，不掩盖 P2–P5 未完成的宿主装配删除。
+- P4 `1616ce6b` 将 backend 任务 acceptance registry 改为直接写入 host-owned `DroneRuntime.tasks.acceptance`，移除 `package-runtime.ts` 对 `@drone/tasks/acceptance` 与 `runtime-bridge` 的运行时导入；保留 v1 registration shape 校验和默认值语义。acceptance bridge 测试、backend typecheck 与 Biome 通过，P4 仍有完整任务状态机/编排迁移缺口。
+- P2 `ca97c1e2` 将 `KnowledgeMaintenanceService` 改为注入 `KnowledgeMaintenanceOperations`；已发现 knowledge host 可提供 `planMaintenance/runMaintenance`，无插件时回退既有兼容实现。create-backend/knowledge-ui seam、4 项 maintenance 测试、backend typecheck 与 Biome 通过；worker、完整写入和 UI 所有权仍未迁出。
 
 - 宿主 `55699c2f` 扩展通用发现：除 `plugin.manifest.json` 外，发现器也接受标准 Pi `package.json` 中可选的 `drone` 声明；普通 Pi 包可在不增加 Drone 专用清单的情况下声明 Desktop host entry。路径仍限制在包根内，5 项发现回归通过。
 - 宿主 `649b465e` 增加可选 `ResearchHostOperations.detail` 合同；提供完整详情适配器的研究插件可直接返回 run detail，未提供时继续使用 metadata-only fallback。backend typecheck、Biome 与 11 项 create-backend 回归通过；完整 Zotero/连接器页面、写入和正式 GUI 仍未完成。
