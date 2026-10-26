@@ -1,0 +1,39 @@
+# 原生插件能力发现与 clean-prefix 包验收
+
+日期：2026-10-27
+
+本记录只证明本轮新增切片，不替代 P2–P7 的完整领域迁移和正式安装包验收。
+
+## 宿主
+
+- `198c21d1` 新增 `DomainCapabilityRegistry`，由 `createBackend` 暴露只读 capability view。它只报告当前 provider、状态和原因，不构造领域服务，也不新增 IPC；后续可将 provider 从 `host-compat` 换成已安装插件而不改变 renderer 合同。
+- `198c21d1` 同时让空的 managed UI package root 返回空 diagnostics；无可选 UI 插件时 `UiPluginManager.init()`、列表、来源、启用状态和诊断均保持可用。
+- targeted checks：backend registry 2 tests、desktop empty-root 4 tests、backend/desktop typecheck、Biome 均通过。
+
+## 插件
+
+插件分支 `codex/native-plugin-architecture`：
+
+- `3a84525` 增加 `research-suite` 自身 tarball clean-prefix 安装脚本。
+- `a62708d` 从安装前缀加载 Pi SDK，并固定 1.1.0 SDK family，排除 workspace module resolution 假通过。
+- `f7c68b1` 将该 smoke 接入 `check:research-suite`。
+- `npm run check:research-suite` 和 workspace `npm run check` 通过；clean-prefix receipt：`@gyoungwe/research-suite@0.2.0`，4 extensions、22 tools，tarball SHA-256 `9bf75e0eb78d09a16bdc730ca2831a231cc68dbadc526d5d31e23fc220c7bc01`。
+
+## 合并后门禁
+
+宿主 worktree `codex/native-plugin-architecture-plan`：
+
+- `npm run lint`：PASS；保留既有 2 MiB 设计稿文件大小 warning。
+- `npm run typecheck`：PASS。
+- `npm test`：PASS；backend 252 files/2029 passed/18 skipped，desktop 164 files/898 tests passed，其他 workspace 与脚本测试通过。
+- `npm run build`：PASS。
+- `npm run check:arch`：PASS；`Architecture check passed (0 baseline finding(s), 0 fixed)`，`Host independence check passed`。
+
+插件 worktree：
+
+- `DRONE_PLUGIN_API_TARBALL=/tmp/gyoungwe-plugin-api-1.3.0.tgz npm run check`：PASS；8 manifests、知识 486 tests、研究 134 tests、locked/latest SDK matrix、research-suite PDF、clean-prefix smoke、pack checks 均通过。
+
+## 未关闭项
+
+本轮仍未证明：P2–P5 宿主领域装配删除；无领域插件的正式 DMG 启动与升级/停用/回滚；同一候选 tarball 的正式安装包 GUI；真实 Zotero/用户 MCP/Protocols.io 写入及其他平台验收。`check:native-plugin-boundary` 仍按计划输出 `INCOMPLETE`，不得改写为 PASS。
+
