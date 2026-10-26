@@ -253,6 +253,7 @@ export type PluginFilesystemPermission =
 	| "workspace-read"
 	| "workspace"
 	| "configured-vault"
+	| "configured-vault-write"
 	| "vault-read"
 	/** Declares explicit state/lease roots; requires a scoped storage broker, not arbitrary file access. */
 	| "application-state";
@@ -329,10 +330,10 @@ export function createPermissionedHostPort(
 		switch (operation) {
 			case "filesystem-read":
 				return options.permissions.filesystem.some((scope) =>
-					["workspace-read", "workspace", "configured-vault", "vault-read"].includes(scope),
+					["workspace-read", "workspace", "configured-vault", "configured-vault-write", "vault-read"].includes(scope),
 				);
 			case "filesystem-write":
-				return options.permissions.filesystem.includes("workspace");
+				return options.permissions.filesystem.some((scope) => ["workspace", "configured-vault-write"].includes(scope));
 			case "network":
 				return options.permissions.network.length > 0;
 			case "subprocess":

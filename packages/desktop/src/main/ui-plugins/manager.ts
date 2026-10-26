@@ -224,7 +224,8 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 					runtime.requestsStateWrite = true;
 				if (
 					Array.isArray(manifest.permissions?.filesystem) &&
-					manifest.permissions.filesystem.includes("workspace-write")
+					(manifest.permissions.filesystem.includes("workspace-write") ||
+						manifest.permissions.filesystem.includes("configured-vault-write"))
 				)
 					runtime.requestsFileWrite = true;
 				if (manifest.entrypoints.extension !== undefined) {

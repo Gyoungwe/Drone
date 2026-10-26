@@ -144,6 +144,13 @@ describe("installed UI runtime provenance", () => {
 		expect(manager.runtimeSource("results-ui")?.requestsFileWrite).toBeUndefined();
 	});
 
+	it("requests a separate configured-vault write root", async () => {
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await writeManifest("./runtime.js", {}, ["configured-vault-write"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsFileWrite).toBe(true);
+	});
+
 	it("discovers native and resource files from the same package without executing them", async () => {
 		await writeFile(join(packageRoot, "native.js"), 'throw new Error("must not import native");');
 		await writeFile(join(packageRoot, "resource.js"), 'throw new Error("must not import resource");');
