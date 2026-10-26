@@ -43,6 +43,8 @@
 - 在 `657d6f1` 后以当前宿主构建的 `@gyoungwe/plugin-api@1.3.0` 候选 tarball（SHA-256 `0916b3c5822548189ee1b3d7c28554cb459714a469074aef779021ae8191a027`）重跑 workspace check：knowledge host-loader smoke、research host/Zotero lookup、locked 1.1.0/latest 1.4.0 SDK matrix、research-suite clean install/PDF、analysis/evidence/connectors/workbench/UI pack 与 pack check 全部通过；真实 GUI 仍记为 `NOT_RUN`。
 - 在该基线后，插件提交 `f476a7b` 增加 connector-backed Zotero host seam；pi-research 26 文件/136 tests、typecheck、build/build:check 和 package smoke 通过，smoke receipt 为 `lookup → found`。本轮 `test:sdk` 因网络会话挂起被终止，未宣称新 SDK PASS。
 
+- 宿主 P2 worker 边界切片：移除 `knowledge/ui.ts` 的模块加载期 worker 配置；`createBackend` 仅在未发现 `KnowledgeHostLoader` 时启用 legacy `.pi/extensions/knowledge-worker.mjs`。已安装 knowledge 插件的通用宿主因此不再要求宿主 workbench worker 资源，缺失 worker 根的插件路径回归通过（13 项 focused tests）。worker 本体、写入服务和完整 UI 所有权仍未迁出，P2 继续保持部分完成。
+
 ## 未关闭项
 
 本轮仍未证明：P2–P5 宿主领域装配删除；无领域插件的正式 DMG 启动与升级/停用/回滚；同一候选 tarball 的正式安装包 GUI；真实 Zotero/用户 MCP/Protocols.io 写入及其他平台验收。`check:native-plugin-boundary` 仍按计划输出 `INCOMPLETE`，不得改写为 PASS。

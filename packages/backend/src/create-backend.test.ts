@@ -188,6 +188,77 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
+	it("uses a declared research detail adapter when the plugin provides one", async () => {
+		const calls: unknown[] = [];
+		const service = new KnowledgeUiService(undefined, {
+			researchHostLoader: {
+				contractVersion: 1,
+				load: () => ({
+					contractVersion: 1,
+					operations: {
+						listRuns: async () => ({ items: [], total: 0 }),
+						status: async () => ({ items: [], total: 0 }),
+						detail: async (input) => {
+							calls.push(input);
+							return {
+								runId: "run-1",
+								resultSlug: "topic",
+								project: "demo",
+								topicId: null,
+								query: "query",
+								status: "complete",
+								stage: "answerable",
+								answerable: true,
+								startedAt: null,
+								updatedAt: null,
+								runDir: "topic/run-1",
+								route: [{ key: "created", label: "Created", state: "complete", at: null, detail: null }],
+								sources: [],
+								claims: [],
+								warnings: [],
+								coverage: null,
+								archive: { count: 0, reused: 0, verified: true },
+							};
+						},
+					},
+				}),
+			},
+		});
+
+		const result = await service.researchRun({ cwd: "/tmp/research", runId: "run-1" });
+		expect(result.runId).toBe("run-1");
+		expect(result.route[0]?.key).toBe("created");
+		expect(result.scientificallyVerified).toBe(false);
+		expect(calls).toEqual([{ workspace: "/tmp/research", runDir: undefined, runId: "run-1" }]);
+		service.dispose();
+	});
+
+	it("does not require the legacy worker resource when a knowledge plugin is installed", () => {
+		const previousRoot = process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
+		process.env.DRONE_RESEARCH_WORKBENCH_ROOT = "/tmp/drone-no-legacy-knowledge-worker";
+		try {
+			const services = createBackend({
+				projectTrust: false,
+				permissionGates: false,
+				knowledgeHostLoader: {
+					contractVersion: 1,
+					load: () => ({
+						contractVersion: 1,
+						overview: async () => ({}),
+						search: async () => ({}),
+						read: async () => ({}),
+						noteLinks: async () => ({}),
+						graph: async () => ({}),
+					}),
+				},
+			});
+			services.dispose();
+		} finally {
+			if (previousRoot === undefined) delete process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
+			else process.env.DRONE_RESEARCH_WORKBENCH_ROOT = previousRoot;
+		}
+	});
+
 	it("routes legacy knowledge events only to the matching backend", async () => {
 		const firstEvents: string[] = [];
 		const secondEvents: string[] = [];

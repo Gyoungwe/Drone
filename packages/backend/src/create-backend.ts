@@ -33,7 +33,12 @@ import {
 	type DiscoveryServicePort,
 } from "./discovery/service";
 import { JsonStore } from "./json-store";
-import { createKnowledgeReadProvider, KnowledgeUiService, type KnowledgeUiServicePort } from "./knowledge/ui";
+import {
+	configureBackendKnowledgeWorker,
+	createKnowledgeReadProvider,
+	KnowledgeUiService,
+	type KnowledgeUiServicePort,
+} from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
@@ -303,6 +308,10 @@ export interface BackendOptions extends SessionServiceOptions {
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
+	// The packaged knowledge capability owns its runtime when installed. Keep
+	// the legacy worker only for the no-plugin compatibility path so a generic
+	// host can start without the research-workbench resource tree.
+	if (!options.knowledgeHostLoader) configureBackendKnowledgeWorker();
 	const domainCapabilities = new DomainCapabilityRegistry();
 	// Transitional host providers are explicit so callers can distinguish an
 	// installed plugin from an unavailable optional domain during migration.

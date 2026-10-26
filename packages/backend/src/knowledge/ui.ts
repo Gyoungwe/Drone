@@ -231,11 +231,11 @@ export function resolveBackendKnowledgeWorkerResource(
 	};
 }
 
-// Session/UI services are imported before the host loads its extension list.
-// Configure lazily through the path above; the environment root is resolved
-// when the first worker is created, after Electron has selected dev/packaged
-// resources.
-configureBackendKnowledgeWorker();
+// Worker configuration is deliberately not performed at module load.  When a
+// packaged knowledge plugin supplies the read host, importing this module must
+// not require the host's legacy `.pi/extensions/knowledge-worker.mjs` resource.
+// The composition root enables this compatibility worker only when no plugin
+// host was discovered.
 
 /** Host-facing knowledge management boundary; keeps IPC adapters independent of implementation state. */
 export interface KnowledgeUiServicePort {
@@ -447,6 +447,16 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["getResearchRun"]>[0],
 	): ReturnType<KnowledgeApi["getResearchRun"]> {
 		if (!this.researchHost) throw new Error("Research plugin is not installed");
+		if (this.researchHost.operations.detail) {
+			const detail = await this.researchHost.operations.detail({
+				workspace: input?.cwd || process.cwd(),
+				runDir: input?.runDir,
+				runId: input?.runId,
+			});
+			return { ...detail, scientificallyVerified: false } as Awaited<
+				ReturnType<KnowledgeApi["getResearchRun"]>
+			>;
+		}
 		const result = await this.researchHost.operations.status({
 			workspace: input?.cwd || process.cwd(),
 			runDir: input?.runDir,
