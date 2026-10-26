@@ -87,6 +87,7 @@ export * from "./knowledge-paths";
 export * from "./knowledge-publication";
 export * from "./knowledge-specialists";
 export * from "./knowledge-upgrade";
+export * from "./knowledge-worker";
 export { literatureRecoverySummary } from "./literature-recovery";
 export * from "./marquee-motion";
 export * from "./mcp";

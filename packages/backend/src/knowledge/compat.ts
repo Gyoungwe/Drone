@@ -7,12 +7,16 @@
  */
 import * as knowledgeHost from "@gyoungwe/pi-knowledge/host";
 
-export type { KnowledgeWorkerLifecycleEvent, KnowledgeWorkerMetadata } from "@gyoungwe/pi-knowledge/host";
+export {
+	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
+	type KnowledgeWorkerLifecycleEvent,
+	type KnowledgeWorkerMetadata,
+} from "@drone/shared";
+
 export {
 	configureKnowledgeHost,
 	configureKnowledgeRuntime,
 	configureKnowledgeWorker,
-	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
 } from "@gyoungwe/pi-knowledge/host";
 
 export { knowledgeHost };

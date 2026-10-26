@@ -3,7 +3,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
-import type { KnowledgeApi, KnowledgeUiEvent, ResearchKnowledgeOperations } from "@drone/shared";
+import {
+	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
+	type KnowledgeApi,
+	type KnowledgeUiEvent,
+	type KnowledgeWorkerLifecycleEvent,
+	type KnowledgeWorkerMetadata,
+	type ResearchKnowledgeOperations,
+} from "@drone/shared";
 import type {
 	DailyIdea,
 	ExperienceStorePort,
@@ -18,9 +25,6 @@ import {
 	configureKnowledgeHost,
 	configureKnowledgeRuntime,
 	configureKnowledgeWorker,
-	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
-	type KnowledgeWorkerLifecycleEvent,
-	type KnowledgeWorkerMetadata,
 	knowledgeHost,
 } from "./compat";
 import { KnowledgeWebDavService } from "./webdav";
