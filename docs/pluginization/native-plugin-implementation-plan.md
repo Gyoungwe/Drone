@@ -5,7 +5,7 @@
 | 阶段 | 交付与完成条件 | 当前状态 | 依赖 |
 | --- | --- | --- | --- |
 | P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复的领域耦合扫描 | 清单和静态检查已实现；110 项初始耦合；锁定 1.1.0/latest 1.4.0 真实会话基础 UI 对照通过，全 API 兼容尚未完成 | 无 |
-| P1 | 通用 runtime 生命周期、包来源绑定、权限、隔离进程、UI 调用和撤销 | 生产连线完成；旧窗口作用域正式 DMG 切片通过；应用 owner/真实会话/selection lease 与双调用者回归已通过，新安装包待验 | P0 |
+| P1 | 通用 runtime 生命周期、包来源绑定、权限、隔离进程、UI 调用和撤销 | 应用 owner/真实会话/selection lease 回归及正式 DMG application→A→application→B→A、停用/拒绝/恢复/退出切片通过；领域桥接继续由 P2 完成 | P0 |
 | P2 | knowledge 领域服务、worker、schema 和 UI 同包；宿主删除对应装配和专用接口 | 知识 UI 同包、固定配置目录和 worker 替换单写者修复已提交；服务实例化实施中，宿主删除尚未完成 | P1 |
 | P3 | research、来源连接器、引用/Zotero 等领域 API/页面迁移 | 待开始 | P2 |
 | P4 | tasks、编排、领域记忆及 UI 迁移 | 待开始 | P2 |
@@ -32,7 +32,7 @@
 
 ## 安装代次与后续验收
 
-P1 的 runtime 已改为应用级 owner 与逐调用可信上下文：无会话是 application scope；选择已有会话后由 backend 的真实 entry 提供 workspace/session、信任与寿命。主进程签发的 selection lease 防止 A→B→A 切换后旧请求复活。该新版尚待正式安装包验收，也尚未接入知识原生工具的领域 owner。包管理 IPC 的替换和删除先撤销绑定并等待运行中操作及进程销毁，再改包文件。扫描缓存现在只记录 npm 包身份及规范路径，不能识别在同一路径直接覆盖包内容的外部修改；该情形尚未完成验收。
+P1 的 runtime 已改为应用级 owner 与逐调用可信上下文：无会话是 application scope；选择已有会话后由 backend 的真实 entry 提供 workspace/session、信任与寿命。主进程签发的 selection lease 防止 A→B→A 切换后旧请求复活。[新版正式安装包切片](native-plugin-app-owner-packaged-evidence.md)已通过，尚未接入知识原生工具的领域 owner。包管理 IPC 的替换和删除先撤销绑定并等待运行中操作及进程销毁，再改包文件。扫描缓存现在只记录 npm 包身份及规范路径，不能识别在同一路径直接覆盖包内容的外部修改；该情形尚未完成验收。
 
 P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变安装代次，不能只散列 runtime 入口。具体回归包括：保持包名/安装路径/入口路径不变，分别替换入口、被导入模块及依赖文件；旧绑定必须失效，授权等待不得随后启动被替换内容；新绑定只执行已确认代次。还需验证旧进程真实退出之前不可切换或回滚安装代次，销毁失败时禁止继续替换，并完成正式安装包的升级/回滚证据。
 
@@ -45,3 +45,4 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 - 2026-10-26：新目标登记成功，三个子代理并行工作。P0 初始扫描 110 项领域耦合；P1 生命周期和 UI context 已有行为回归，尚无新正式安装包验收。
 - 2026-10-26：宿主 `370038de` 与插件 `a275f7d` 建立第一轮检查基线；实际 DMG 的窗口作用域后台/UI 切片通过，见[安装包证据](native-plugin-p1-packaged-evidence.md)。不是 P2 或零领域插件完成。三个子代理继续实例化、应用 owner/真实会话上下文及聚合包声明依赖的 UI 发现。
 - 2026-10-26：应用 owner、真实 session identity 与 selection lease 已接入生产 IPC，独立复核修复授权窗口关闭、切换会话旧输入和等待停用时迟到加载三个竞态。宿主完整 lint/typecheck/test/build/check:arch 通过（`/tmp/drone-app-owner-*.log`）；聚合包声明依赖 UI 发现已提交 `891309b9`。API 1.3.0 仍为候选；application-state 仅声明专用状态/租约目录，不自动授予任意文件权限，新知识 state broker 尚未接入。
+- 2026-10-26：宿主 `561a370c` 正式 DMG 使用本地离线模型运行两个真实会话，确认后台实例复用、正确逐会话作用域及停用/恢复/退出，见[新证据](native-plugin-app-owner-packaged-evidence.md)。插件 `32cd3a3` 的实例/lease/关闭失败基础门禁通过；`793c890` 与 `c8b75c5` 分别提交 topic/delivery 实例化及 topic 元数据修复；完整 native owner 接入仍在实施，后续统一重建检查。
