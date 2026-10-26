@@ -196,6 +196,7 @@ export {
 	type ResearchHostLoader,
 	type ResearchHostOperations,
 	type ResearchHostPort,
+	type ResearchRunDetailInput,
 	type ResearchRunListInput,
 	type ResearchRunListResult,
 	type ResearchRunStatusInput,

@@ -22,6 +22,11 @@ export interface ResearchRunStatusInput extends ResearchRunListInput {
 	readonly runDir?: string | null;
 }
 
+/** Inputs accepted by a provider that owns the complete run-detail projection. */
+export interface ResearchRunDetailInput extends ResearchRunStatusInput {
+	readonly runId?: string | null;
+}
+
 export interface ResearchRunSummary {
 	readonly runId: string;
 	readonly resultSlug: string;
@@ -44,6 +49,8 @@ export interface ResearchRunListResult {
 export interface ResearchHostOperations {
 	status(input: ResearchRunStatusInput): Promise<ResearchRunListResult | { item: ResearchRunSummary }>;
 	listRuns(input: ResearchRunListInput): Promise<ResearchRunListResult>;
+	/** Optional full evidence projection; metadata-only providers remain valid. */
+	detail?(input: ResearchRunDetailInput): Promise<unknown>;
 }
 
 export interface ResearchHostAdapter {

@@ -448,11 +448,11 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	): ReturnType<KnowledgeApi["getResearchRun"]> {
 		if (!this.researchHost) throw new Error("Research plugin is not installed");
 		if (this.researchHost.operations.detail) {
-			const detail = await this.researchHost.operations.detail({
+			const detail = (await this.researchHost.operations.detail({
 				workspace: input?.cwd || process.cwd(),
 				runDir: input?.runDir,
 				runId: input?.runId,
-			});
+			})) as Record<string, unknown>;
 			return { ...detail, scientificallyVerified: false } as Awaited<
 				ReturnType<KnowledgeApi["getResearchRun"]>
 			>;
