@@ -51,6 +51,7 @@
 - 首次全量 `npm test` 复跑暴露两个 knowledge fixture 问题：独立 UI 测试未显式配置 host seam，worker 测试的独立模块图未注入已校验 metadata。`aa1d63d6` 修正测试夹具后，干净 `npm ci` 下全量 `npm test` 通过：backend 252 文件、desktop 165 文件/903 项及其他 workspace、脚本检查全部通过。
 - 插件 P5/P6 `4467782` 为 `pi-analysis` 与 `pi-evidence` clean-install smoke 增加声明一致性校验：安装后的 capabilities、host entry、`manifest.tools` 必须与真实 Pi loader 注册工具一致；analysis 3 工具、evidence 4 只读工具均通过。正式 GUI、零插件安装包和完整领域迁移仍未完成。
 - 宿主 `bcbc4e07` 将根 devDependency 对齐到 `plugins.lock.json` 与公开版本（`pi-knowledge@0.2.1`、`pi-research@0.2.0`）；干净 `npm ci` 后 `npm ls` 无版本漂移，随后 `aa1d63d6` 的夹具修复使全量测试恢复通过。
+- P6/P7 lifecycle guard：`packages/backend/test/packages-lifecycle.test.ts` 新增卸载无变化与更新失败回归。包管理器返回未安装或 registry 不可用时，回执保持 `failed`、不写入 `disabled`/新版本、不触发会话 reload；该切片验证了失败状态的可观察性，但不替代正式 DMG 的零插件、升级/回滚或销毁失败验收。
 
 ## 未关闭项
 

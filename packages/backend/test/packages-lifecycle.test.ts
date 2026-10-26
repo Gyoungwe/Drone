@@ -105,6 +105,39 @@ describe("PackageService lifecycle receipts", () => {
 		expect(manager.removeAndPersist).not.toHaveBeenCalled();
 	});
 
+	it("does not claim a package was disabled when removal returns no change", async () => {
+		const manager = managerFixture([{ source: "npm:fixture-extension", scope: "user" }]);
+		manager.removeAndPersist.mockResolvedValue(false);
+		const { service, reload } = harness({ manager });
+
+		const receipt = await service.removePackage("npm:fixture-extension", "user");
+
+		expect(receipt).toMatchObject({
+			operation: "remove",
+			status: "failed",
+			effect: "current-session",
+			error: { code: "not-installed" },
+		});
+		expect(receipt.events.map((event) => event.type)).toEqual(["failed"]);
+		expect(reload).not.toHaveBeenCalled();
+	});
+
+	it("keeps failed updates from reporting a new version or reload", async () => {
+		const manager = managerFixture([{ source: "npm:fixture-extension@1.0.0", scope: "user" }]);
+		manager.update.mockRejectedValue(new Error("registry unavailable"));
+		const { service, reload } = harness({ manager });
+
+		const receipt = await service.updatePackage("fixture-extension");
+
+		expect(receipt).toMatchObject({
+			operation: "update",
+			status: "failed",
+			error: { code: "unavailable", retryable: true },
+		});
+		expect(receipt.version).toBeUndefined();
+		expect(reload).not.toHaveBeenCalled();
+	});
+
 	it("updates project-scoped packages and returns the selected scope", async () => {
 		const manager = managerFixture([{ source: "npm:fixture-extension", scope: "project" }]);
 		const { service } = harness({ manager });
