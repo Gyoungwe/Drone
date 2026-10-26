@@ -19397,9 +19397,14 @@ function registerWorkbench(pi, options = {}) {
   };
   let journal = createTaskWorkbench({
     requireAuthorization: true,
-    // SDK hooks run outside the extension's registration context. Resolve the
-    // manifest against this host on every call, including after a late binding.
-    readOnly: (name) => withHostRuntime(pi, () => isReadOnlyTool(name)),
+    // Resolve the effective SDK registration in this session on every call.
+    // Native adapters publish an explicit false for write/unknown effects, which
+    // must override any older same-name manifest. Unannotated v1 tools still
+    // use their host-bound manifest until that registration path is migrated.
+    readOnly: (name) => {
+      const declared = pi.getAllTools().find((tool2) => tool2.name === name)?.annotations?.readOnlyHint;
+      return declared !== void 0 ? declared : withHostRuntime(pi, () => isReadOnlyTool(name));
+    },
     persist: (snapshot) => pi.appendEntry(WORKBENCH_ENTRY, snapshot),
     onCheckpoint: () => send(),
     // 里程碑验收器（zotero_item / wiki_review / …）由各自的扩展 registerAcceptanceVerifier 登记（挂钩 2）
