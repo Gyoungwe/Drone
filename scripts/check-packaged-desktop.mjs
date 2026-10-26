@@ -137,6 +137,19 @@ try {
 		`fresh profile contains optional UI plugins: ${optionalUiEntries.join(", ")}`,
 	);
 	report.checks.push("fresh packaged profile contains no optional UI plugins (only host seed files)");
+	const managedPackageRoot = join(agent, "npm", "node_modules");
+	const managedPackageEntries = (
+		await readdir(managedPackageRoot).catch((error) => {
+			if (error.code === "ENOENT") return [];
+			throw error;
+		})
+	).filter((entry) => entry !== ".package-lock.json");
+	assert.deepEqual(
+		managedPackageEntries,
+		[],
+		`fresh Pi managed npm root contains optional packages: ${managedPackageEntries.join(", ")}`,
+	);
+	report.checks.push("fresh Pi managed npm root contains no optional packages");
 	const overview = await evaluate(`window.pi.getKnowledgeOverview({cwd:${JSON.stringify(cwd)}})`);
 	assert.equal(overview.enabled, true);
 	assert.equal(overview.bound, false);
