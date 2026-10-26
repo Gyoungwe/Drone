@@ -51,6 +51,7 @@
 - 宿主 `ada749a4` 将知识发布失败关闭提示迁入 `@drone/shared`，删除 backend `session/knowledge-publication.ts` 对 `@gyoungwe/pi-knowledge/host` 的运行时直接依赖；shared/backend typecheck、Biome 和 publication fallback 10 项测试通过，native boundary 的 runtime-import 计数由 32 降至 30。知识事件投影仍依赖注入的 `DroneRuntime` bridge，P2/P6 继续部分完成。
 - 宿主 `1cb765c8` 补强 P6/P7 失败回执：卸载无变化和 registry 不可用的更新均保持 `failed`/`not-installed`，不写入 `disabled` 或新版本，也不触发 reload；backend lifecycle 8/8、Biome 通过。正式 DMG 的零插件、升级/回滚和销毁失败回执仍未完成。
 - 宿主 `369f7c58` 收紧真实 arm64 `Drone.app` 的零可选插件回归：空 `profile/ui-plugins`、空 Pi managed npm root、空 auth/model、未绑定 knowledge、generic Pi session create/close 及现有 research/Obsidian IPC 均通过。该回执只证明空插件宿主可启动与通用会话生命周期，不证明插件安装/停用恢复、升级回滚或销毁失败。
+- P6 依赖策略门禁已加入 `check:host-domain-deps` 并接入 `check:arch`：backend 当前的 `@drone/research`、`@drone/tasks`、`@gyoungwe/pi-core`、`@gyoungwe/pi-knowledge`、`@gyoungwe/pi-research` 被列为带移除条件的迁移依赖；新增未登记的 `@gyoungwe/pi-*` 或把 `pi-analysis`/evidence/connectors/UI/suite 提升为 runtime dependency 会直接失败。三项策略回归、Biome、`check:arch` 通过；输出保持 `PARTIAL`，不掩盖 P2–P5 未完成的宿主装配删除。
 
 - 宿主 `55699c2f` 扩展通用发现：除 `plugin.manifest.json` 外，发现器也接受标准 Pi `package.json` 中可选的 `drone` 声明；普通 Pi 包可在不增加 Drone 专用清单的情况下声明 Desktop host entry。路径仍限制在包根内，5 项发现回归通过。
 - 宿主 `649b465e` 增加可选 `ResearchHostOperations.detail` 合同；提供完整详情适配器的研究插件可直接返回 run detail，未提供时继续使用 metadata-only fallback。backend typecheck、Biome 与 11 项 create-backend 回归通过；完整 Zotero/连接器页面、写入和正式 GUI 仍未完成。
