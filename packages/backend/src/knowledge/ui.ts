@@ -5,9 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import type { KnowledgeApi, KnowledgeUiEvent, ResearchKnowledgeOperations } from "@drone/shared";
 import type { ExperienceStorePort, TerminalJobExperienceInput } from "@gyoungwe/pi-knowledge/host";
-import * as knowledgeUiService from "@gyoungwe/pi-knowledge/host";
-import * as knowledgeUiState from "@gyoungwe/pi-knowledge/host";
-import * as knowledgeWikiModelReview from "@gyoungwe/pi-knowledge/host";
+import * as knowledgeHost from "@gyoungwe/pi-knowledge/host";
 import {
 	configureKnowledgeHost,
 	configureKnowledgeRuntime,
@@ -50,6 +48,13 @@ export interface KnowledgeHostPort {
 	) => Promise<unknown>;
 	/** Optional Vault boundary used by explicit WebDAV sync. */
 	vault?: KnowledgeWebDavVault;
+	/** Optional UI event port supplied by an installed knowledge host. */
+	uiState?: {
+		subscribe(listener: (event: KnowledgeUiEvent) => void): () => void;
+		notify(text: string, severity?: "info" | "warning" | "error", sessionId?: string | null): void;
+	};
+	/** Optional foreground Wiki review operation supplied by an installed knowledge host. */
+	reviewWikiWithModel?: (input: unknown, options: unknown) => Promise<unknown>;
 }
 
 /**
@@ -78,11 +83,11 @@ export type KnowledgeWriteProvider = Pick<KnowledgeHostPort, "reviews" | "previe
 /** Default provider delegates the read vertical to the packaged knowledge host entry. */
 export function createKnowledgeReadProvider(host?: KnowledgeHostPort): KnowledgeReadProvider {
 	const source = host ?? {
-		overview: knowledgeUiService.knowledgeOverview,
-		search: knowledgeUiService.searchKnowledge,
-		read: knowledgeUiService.knowledgeReadNote,
-		noteLinks: knowledgeUiService.knowledgeNoteLinks,
-		graph: knowledgeUiService.knowledgeGraph,
+		overview: knowledgeHost.knowledgeOverview,
+		search: knowledgeHost.searchKnowledge,
+		read: knowledgeHost.knowledgeReadNote,
+		noteLinks: knowledgeHost.knowledgeNoteLinks,
+		graph: knowledgeHost.knowledgeGraph,
 	};
 	const overview = source.overview as unknown as KnowledgeReadProvider["overview"];
 	const search = source.search as unknown as KnowledgeReadProvider["search"];
@@ -104,8 +109,8 @@ export function createKnowledgeMaintenanceOperations(
 ): KnowledgeMaintenanceOperations {
 	const source = host ?? ({} as KnowledgeHostPort);
 	return {
-		planMaintenance: source.planMaintenance ?? knowledgeUiService.planMaintenance,
-		runMaintenance: source.runMaintenance ?? knowledgeUiService.runMaintenance,
+		planMaintenance: source.planMaintenance ?? knowledgeHost.planMaintenance,
+		runMaintenance: source.runMaintenance ?? knowledgeHost.runMaintenance,
 	};
 }
 
@@ -114,10 +119,10 @@ export function createKnowledgeDailyDiscoveryOperations(host?: KnowledgeHostPort
 	const source = host?.dailyDiscovery;
 	if (source) return source;
 	return {
-		systemPrompt: knowledgeUiService.DAILY_DISCOVERY_SYSTEM,
-		buildMessage: (fresh, related) => knowledgeUiService.buildDailyDiscoveryMessage([...fresh], [...related]),
+		systemPrompt: knowledgeHost.DAILY_DISCOVERY_SYSTEM,
+		buildMessage: (fresh, related) => knowledgeHost.buildDailyDiscoveryMessage([...fresh], [...related]),
 		parseIdeas: (text, allowedPaths, freshPaths) =>
-			knowledgeUiService.parseDailyIdeas(text, allowedPaths, freshPaths),
+			knowledgeHost.parseDailyIdeas(text, allowedPaths, freshPaths),
 	};
 }
 
@@ -128,14 +133,14 @@ export function createKnowledgeResearchResourceOperations(
 	const source = host?.researchResource;
 	if (source) return source;
 	return {
-		resolveContext: knowledgeUiService.resolveKnowledgeContext,
-		ingestSnapshot: knowledgeUiService.ingestKnowledgeSnapshot,
+		resolveContext: knowledgeHost.resolveKnowledgeContext,
+		ingestSnapshot: knowledgeHost.ingestKnowledgeSnapshot,
 	};
 }
 
 /** Keep compute experience persistence behind the discovered knowledge host seam. */
 export function createKnowledgeExperienceOperation(host?: KnowledgeHostPort) {
-	return host?.recordTerminalJobExperience ?? knowledgeUiService.recordTerminalJobExperience;
+	return host?.recordTerminalJobExperience ?? knowledgeHost.recordTerminalJobExperience;
 }
 
 /** Keep WebDAV's local read/write operations behind the discovered knowledge host seam. */
@@ -144,18 +149,18 @@ export function createKnowledgeVaultOperations(
 ): KnowledgeWebDavVault {
 	if (host?.vault) return host.vault;
 	return {
-		readBinding: knowledgeUiService.readKnowledgeBinding,
-		readNote: knowledgeUiService.readNoteFile,
-		containedFile: knowledgeUiService.containedVaultFile,
-		createFileOnly: knowledgeUiService.createVaultFileOnly,
-		replaceFile: knowledgeUiService.replaceVaultFile,
-		isConflict: (error) => error instanceof knowledgeUiService.VaultFileConflictError,
+		readBinding: knowledgeHost.readKnowledgeBinding,
+		readNote: knowledgeHost.readNoteFile,
+		containedFile: knowledgeHost.containedVaultFile,
+		createFileOnly: knowledgeHost.createVaultFileOnly,
+		replaceFile: knowledgeHost.replaceVaultFile,
+		isConflict: (error) => error instanceof knowledgeHost.VaultFileConflictError,
 	};
 }
 
 /** Construct the domain reviewer only at the compatibility/plugin composition root. */
 export const createKnowledgeBackgroundReviewer: BackgroundReviewerFactory = (options) =>
-	new knowledgeUiService.BackgroundReviewer(options) as unknown as BackgroundReviewerPort;
+	new knowledgeHost.BackgroundReviewer(options) as unknown as BackgroundReviewerPort;
 
 export interface KnowledgeWorkerLifecycleSnapshot {
 	readonly currentVersion: string | null;
@@ -444,13 +449,15 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private loading: Promise<void> | null = null;
 	private readonly cloud: KnowledgeWebDavService;
 	private readonly readProvider: KnowledgeReadProvider;
-	private readonly writeProvider?: KnowledgeWriteProvider;
+	private readonly writeProvider?: KnowledgeWriteProvider &
+		Pick<KnowledgeHostPort, "vault" | "uiState" | "reviewWikiWithModel">;
 	private readonly researchHost?: ResearchHostAdapter;
 	constructor(
 		readProvider: KnowledgeReadProvider = createKnowledgeReadProvider(),
 		options: {
 			researchHostLoader?: ResearchHostLoader;
-			knowledgeHost?: KnowledgeWriteProvider & Pick<KnowledgeHostPort, "vault">;
+			knowledgeHost?: KnowledgeWriteProvider &
+				Pick<KnowledgeHostPort, "vault" | "uiState" | "reviewWikiWithModel">;
 		} = {},
 	) {
 		this.readProvider = readProvider;
@@ -469,15 +476,26 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			this.loading = Promise.resolve()
 				.then(() => {
 					if (!this.disposed)
-						this.unsubscribe = knowledgeUiState.subscribeKnowledgeUi((event: KnowledgeUiEvent) => {
-							for (const listener of this.listeners) {
-								try {
-									listener(event);
-								} catch {
-									/* closed renderer */
-								}
-							}
-						});
+						this.unsubscribe =
+							this.writeProvider && "uiState" in this.writeProvider && this.writeProvider.uiState
+								? this.writeProvider.uiState.subscribe((event) => {
+										for (const listener of this.listeners) {
+											try {
+												listener(event);
+											} catch {
+												/* closed renderer */
+											}
+										}
+									})
+								: knowledgeHost.subscribeKnowledgeUi((event: KnowledgeUiEvent) => {
+										for (const listener of this.listeners) {
+											try {
+												listener(event);
+											} catch {
+												/* closed renderer */
+											}
+										}
+									});
 				})
 				.finally(() => {
 					this.loading = null;
@@ -489,13 +507,21 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		void this.connect().catch(() => {});
 		return () => this.listeners.delete(listener);
 	}
-	async notify(text: string, severity = "info", sessionId: string | null = null): Promise<void> {
+	async notify(
+		text: string,
+		severity: "info" | "warning" | "error" = "info",
+		sessionId: string | null = null,
+	): Promise<void> {
 		await this.connect();
-		knowledgeUiState.notifyKnowledgeUi(text, severity, sessionId ?? undefined);
+		if (this.writeProvider && "uiState" in this.writeProvider && this.writeProvider.uiState) {
+			this.writeProvider.uiState.notify(text, severity, sessionId);
+			return;
+		}
+		knowledgeHost.notifyKnowledgeUi(text, severity, sessionId ?? undefined);
 	}
 	private async call(name: string, input: unknown): Promise<any> {
 		await this.connect();
-		const fn = (knowledgeUiService as unknown as Record<string, (value: unknown) => unknown>)[name];
+		const fn = (knowledgeHost as unknown as Record<string, (value: unknown) => unknown>)[name];
 		if (!fn) throw new Error(`Unknown knowledge UI operation: ${name}`);
 		return fn(input);
 	}
@@ -508,10 +534,11 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["reviewKnowledgeWithModel"]>[0],
 		options: unknown,
 	): ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]> {
-		return (await knowledgeWikiModelReview.reviewWikiWithModel(
-			input,
-			options as Parameters<typeof knowledgeWikiModelReview.reviewWikiWithModel>[1],
-		)) as Awaited<ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]>>;
+		const review = (this.writeProvider?.reviewWikiWithModel ?? knowledgeHost.reviewWikiWithModel) as (
+			input: unknown,
+			options: unknown,
+		) => Promise<unknown>;
+		return (await review(input, options)) as Awaited<ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]>>;
 	}
 	overview(
 		input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0],

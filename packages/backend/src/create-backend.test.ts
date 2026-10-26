@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { KnowledgeUiEvent } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { createBackend } from "./create-backend";
 import { type KnowledgeReadProvider, KnowledgeUiService } from "./knowledge/ui";
@@ -270,6 +271,42 @@ describe("createBackend", () => {
 		});
 		expect(calls).toEqual(["reviews", "preview", "decide"]);
 		service.dispose();
+	});
+
+	it("routes UI events and model review through the installed host", async () => {
+		const previousDir = process.env.DRONE_KNOWLEDGE_DIR;
+		process.env.DRONE_KNOWLEDGE_DIR = "/tmp/drone-knowledge-ui-host";
+		const events: KnowledgeUiEvent[] = [];
+		let subscribed: ((event: KnowledgeUiEvent) => void) | undefined;
+		const notifications: string[] = [];
+		try {
+			const service = new KnowledgeUiService(undefined, {
+				knowledgeHost: {
+					uiState: {
+						subscribe: (listener) => {
+							subscribed = listener;
+							return () => {
+								subscribed = undefined;
+							};
+						},
+						notify: (text) => notifications.push(text),
+					},
+					reviewWikiWithModel: async () => ({ verdict: "accepted" }),
+				},
+			});
+			service.subscribe((event) => events.push(event));
+			await service.connect();
+			subscribed?.({ kind: "invalidate" });
+			await service.notify("host notice", "warning", "session-1");
+			const review = await service.reviewWithModel({} as never, {});
+			expect(events).toEqual([{ kind: "invalidate" }]);
+			expect(notifications).toEqual(["host notice"]);
+			expect(review).toEqual({ verdict: "accepted" });
+			service.dispose();
+		} finally {
+			if (previousDir === undefined) delete process.env.DRONE_KNOWLEDGE_DIR;
+			else process.env.DRONE_KNOWLEDGE_DIR = previousDir;
+		}
 	});
 
 	it("does not require the legacy worker resource when a knowledge plugin is installed", () => {
