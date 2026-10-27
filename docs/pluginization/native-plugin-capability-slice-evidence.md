@@ -137,7 +137,7 @@
 - 2026-10-27：P2 semantic host seam：插件 `449d3cf` 将 semantic status/settings/provider-test/index/cancel 五项操作作为版本化 `knowledgeHostLoader.semantic` 暴露，宿主 `plugin-api` 同步声明；宿主已有五项 semantic routing/unavailable 回归覆盖安装与缺失两种状态。插件 build-check/host-loader、宿主 plugin-api/backend typecheck 通过；semantic worker 资源归属和完整 knowledge 兼容组合仍未删除。
 - 2026-10-27：P4/P6 `798ec00e` 删除 backend 的 `deliver-files`、`memory-save`、`status`、`todo`、`project/memory` 五个 pi-core 兼容门面，生产代码、公共导出和回归测试直接使用 `@gyoungwe/pi-core` 公共子路径；33 项相关回归、backend typecheck、Biome 与 `check:arch` 通过。该切片减少旧路径，但不代表任务域完整迁移、pi-core 依赖清零或正式安装包生命周期完成。
 - 2026-10-27：P4 task acceptance seam：`@gyoungwe/plugin-api/tasks` 新增 host-owned `TaskAcceptanceRegistry`、声明校验和 typed verifier 回执；backend `package-runtime` 仅负责把该 registry 绑定到实例级 `DroneRuntime`，删除重复的宿主校验实现。plugin-api contract 回归、backend typecheck 与相关测试通过；任务工作流、正式安装包和 Pi workbench GUI 仍未完成。
-- 2026-10-27：P2 Vault host seam：插件 `c8edf25` 将 readBinding/readNote/containedFile/createFileOnly/replaceFile/conflict-detection 接入版本化 `knowledgeHostLoader.vault`，宿主 `plugin-api` 同步声明并继续由既有 `KnowledgeWebDavVault` 适配。插件 workspace typecheck、manifest、knowledge build-check 与 host-loader 回归通过；正式 Vault GUI 写入/回读/rollback 仍未验收。
+- 2026-10-27：P2 Vault host seam：插件 `c8edf25` 将 readBinding/readNote/containedFile/createFileOnly/replaceFile/conflict-detection 接入版本化 `knowledgeHostLoader.vault`，`e7340e7` 增加临时 Vault 的 create/read/replace-CAS 真回归；宿主 `plugin-api` 同步声明并继续由既有 `KnowledgeWebDavVault` 适配。插件 workspace typecheck、manifest、knowledge build-check 与 host-loader 2 项回归通过；正式 Vault GUI 写入/回读/rollback 仍未验收。
 
 ## 未关闭项
 
