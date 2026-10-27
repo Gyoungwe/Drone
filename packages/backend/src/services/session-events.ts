@@ -104,6 +104,7 @@ export class SessionEventService {
 							"subagent_run",
 							"reviewer_finding",
 							"extension_notification",
+							"extension_status",
 						].includes(current.type)
 					)
 						this.deps.traces.record(sid, current as AgentSessionEvent);

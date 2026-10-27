@@ -440,6 +440,13 @@ export interface ExtensionNotificationEvent {
 	message: string;
 }
 
+/** Keyed transient extension status. A null key clears the revoked session UI. */
+export interface ExtensionStatusEvent {
+	type: "extension_status";
+	key: string | null;
+	text: string | null;
+}
+
 export interface ModelWaitEvent {
 	type: "model_wait";
 	status: "waiting" | "resumed" | "stopping" | "stop-failed" | "timed-out";
@@ -503,6 +510,7 @@ export type SessionEvent =
 	| StreamGuardTrippedEvent
 	| ModelWaitEvent
 	| ExtensionNotificationEvent
+	| ExtensionStatusEvent
 	| SubagentRunEvent
 	| ReviewerFindingEvent;
 

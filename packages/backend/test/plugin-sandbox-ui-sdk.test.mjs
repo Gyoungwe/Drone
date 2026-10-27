@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
@@ -11,6 +12,7 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
+import { ApprovalService } from "../src/services/approvals";
 import { makeUiContext } from "../src/session/ui-context";
 import { SessionEngine } from "../src/session-engine/engine";
 import { sandboxExtensionFactory } from "../src/session-engine/sandbox-loader";
@@ -205,3 +207,98 @@ it.each(["native", "sandbox"])(
 	},
 	20000,
 );
+
+it("real Desktop approval signal authorizes a real sandbox network tool and an ordinary SDK read", async () => {
+	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-desktop-sandbox-confirm-")));
+	const agentDir = join(root, "agent");
+	await mkdir(agentDir);
+	await writeFile(join(root, "evidence.txt"), "read after sandbox network permission");
+	const server = createServer((_request, response) => {
+		response.end("synthetic local research data");
+	});
+	await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+	const url = `http://127.0.0.1:${server.address().port}/synthetic`;
+	const entrypoint = join(root, "network-extension.mjs");
+	await writeFile(
+		entrypoint,
+		`export default pi=>pi.registerTool({name:"network_probe",label:"Network probe",description:"Fetch synthetic local data",parameters:{type:"object",properties:{}},async execute(_id,_params,signal,_update,ctx){if(!await ctx.ui.confirm("Synthetic tool consent","Allow test request?",{signal}))throw new Error("Synthetic consent denied");const response=await fetch(${JSON.stringify(url)});return{content:[{type:"text",text:JSON.stringify({text:await response.text(),pid:process.pid})}]};}});`,
+	);
+	const approvals = new ApprovalService();
+	const gate = approvals.createGate();
+	const requests = [],
+		resolved = [];
+	approvals.onRequest((request) => {
+		requests.push(request);
+		queueMicrotask(() => approvals.respond(request.id, "allow"));
+	});
+	approvals.onResolved((result) => resolved.push(result));
+	let session, workerPid;
+	try {
+		const settingsManager = SettingsManager.inMemory({});
+		const resourceLoader = new DefaultResourceLoader({
+			cwd: root,
+			agentDir,
+			settingsManager,
+			noExtensions: true,
+			additionalExtensionPaths: [entrypoint],
+			extensionFactoryForPath: sandboxExtensionFactory(runtimeDirectory, [], root),
+		});
+		await resourceLoader.reload({ resolveProjectTrust: async () => true });
+		expect(resourceLoader.getExtensions().errors).toEqual([]);
+		const modelRuntime = await ModelRuntime.create({
+			authPath: join(agentDir, "auth.json"),
+			modelsPath: null,
+			allowModelNetwork: false,
+			refreshOnCreate: false,
+		});
+		const faux = fauxProvider({ provider: "desktop-real-permission-offline", tokensPerSecond: 0 });
+		modelRuntime.registerNativeProvider(faux.provider);
+		vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
+		({ session } = await createAgentSession({
+			cwd: root,
+			agentDir,
+			settingsManager,
+			resourceLoader,
+			modelRuntime,
+			sessionManager: SessionManager.inMemory(root),
+			model: faux.getModel(),
+		}));
+		gate.bindSession(session.sessionId);
+		approvals.register(session.sessionId, gate);
+		await session.bindExtensions({ mode: "rpc", uiContext: makeUiContext(gate) });
+		faux.setResponses([
+			fauxAssistantMessage(fauxToolCall("network_probe", {})),
+			fauxAssistantMessage(fauxToolCall("read", { path: "evidence.txt" })),
+			fauxAssistantMessage("Done"),
+		]);
+		await session.prompt("Fetch synthetic data and read evidence.");
+		await session.waitForIdle();
+		const toolResult = session.messages.find(
+			(message) => message.role === "toolResult" && message.toolName === "network_probe",
+		);
+		expect(toolResult?.isError, JSON.stringify(toolResult)).toBe(false);
+		const details = JSON.parse(toolResult.content[0].text);
+		expect(details.text).toBe("synthetic local research data");
+		workerPid = details.pid;
+		expect(workerPid).not.toBe(process.pid);
+		expect(requests).toHaveLength(2);
+		expect(requests[1].title).toBe("Synthetic tool consent");
+		expect(resolved).toEqual(
+			requests.map((request) => ({ sessionId: session.sessionId, requestId: request.id, answered: true })),
+		);
+		expect(approvals.listPending()).toEqual([]);
+		expect(
+			session.messages.some(
+				(message) => message.role === "toolResult" && message.toolName === "read" && !message.isError,
+			),
+		).toBe(true);
+	} finally {
+		if (session) await new SessionEngine().dispose(session);
+		if (workerPid)
+			await vi.waitFor(() => expect(() => process.kill(workerPid, 0)).toThrow(), { timeout: 3000 });
+		approvals.dispose();
+		await new Promise((resolve) => server.close(resolve));
+		vi.restoreAllMocks();
+		await rm(root, { recursive: true, force: true });
+	}
+}, 20000);
