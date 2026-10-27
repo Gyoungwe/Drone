@@ -52,7 +52,9 @@ import {
 	type KnowledgeHostPort,
 	KnowledgeUiService,
 	type KnowledgeUiServicePort,
+	unavailableKnowledgeCompatibility,
 } from "./knowledge/ui";
+import { defaultKnowledgeCompatibility } from "./knowledge/compat-adapter";
 import type { McpServicePort } from "./mcp/service";
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
@@ -382,20 +384,28 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const memory = new MemoryStore(join(getAgentDir(), "memory", "memory.db"));
 	runtime.registerDisposable?.({ dispose: () => memory.close() });
 	const knowledgeHost = options.knowledgeHostLoader?.load() as KnowledgeHostPort | undefined;
-	runtime.knowledge.registerAnswerPublication ??= createKnowledgePublicationOperation(knowledgeHost);
+	const knowledgeCompatibility = options.knowledgeHostLoader
+		? defaultKnowledgeCompatibility
+		: unavailableKnowledgeCompatibility;
+	runtime.knowledge.registerAnswerPublication ??= createKnowledgePublicationOperation(
+		knowledgeHost,
+		knowledgeCompatibility,
+	);
 	const knowledgeFactory =
 		options.knowledgeFactory ??
-		(options.knowledgeHostLoader || options.researchHostLoader
-			? () =>
-					new KnowledgeUiService(knowledgeHost ? createKnowledgeReadProvider(knowledgeHost) : undefined, {
-						...(knowledgeHost ? { knowledgeHost } : {}),
-						...(options.researchHostLoader ? { researchHostLoader: options.researchHostLoader } : {}),
-					})
-			: undefined);
+		(() =>
+			new KnowledgeUiService(
+				knowledgeHost ? createKnowledgeReadProvider(knowledgeHost, knowledgeCompatibility) : undefined,
+				{
+					compatibility: knowledgeCompatibility,
+					...(knowledgeHost ? { knowledgeHost } : {}),
+					...(options.researchHostLoader ? { researchHostLoader: options.researchHostLoader } : {}),
+				},
+			));
 	const sessions = new SessionService({
 		...options,
 		workbenchPort: workbench,
-		...(knowledgeFactory ? { knowledgeFactory } : {}),
+		knowledgeFactory,
 		memory,
 		runtime,
 		permissions,
@@ -464,7 +474,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			(researchConnectorHostLoader
 				? createResearchConnectorRegistryFromHost(researchConnectorHostLoader)
 				: createDefaultResearchConnectorRegistry()),
-		knowledgeOperations: createKnowledgeResearchResourceOperations(knowledgeHost),
+		knowledgeOperations: createKnowledgeResearchResourceOperations(knowledgeHost, knowledgeCompatibility),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "captures.json"),
 			storageId: "agent-research-captures",
@@ -579,7 +589,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		options.computeExperienceRecorder ??
 		(options.computeExperienceStore
 			? createComputeExperienceRecorder({
-					recordTerminalJobExperience: createKnowledgeExperienceOperation(knowledgeHost),
+					recordTerminalJobExperience: createKnowledgeExperienceOperation(knowledgeHost, knowledgeCompatibility),
 					store: options.computeExperienceStore,
 					...(options.computeExperienceTopicId !== undefined
 						? { topicId: options.computeExperienceTopicId }
@@ -671,7 +681,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	void discovery.init();
 	const dailyDiscoveryOptions: DailyDiscoveryOptions = {
 		path: join(getAgentDir(), "daily-discovery.json"),
-		operations: createKnowledgeDailyDiscoveryOperations(knowledgeHost),
+		operations: createKnowledgeDailyDiscoveryOperations(knowledgeHost, knowledgeCompatibility),
 		context: async (sinceMs) => {
 			const base = await sessions.knowledge.dailyContext(sinceMs);
 			if (!base.bound) return base;
@@ -750,7 +760,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	if (options.dailyDiscovery !== false) dailyDiscovery.start();
 	const knowledgeMaintenanceOptions: KnowledgeMaintenanceOptions = {
 		path: join(getAgentDir(), "knowledge-maintenance.json"),
-		maintenance: createKnowledgeMaintenanceOperations(knowledgeHost),
+		maintenance: createKnowledgeMaintenanceOperations(knowledgeHost, knowledgeCompatibility),
 		readOverview: (cwd) => sessions.knowledge.overview({ cwd }),
 		readGraph: (_cwd, revision) =>
 			sessions.knowledge.graph({ revision, limit: 5000, view: "all", mergeMirrors: false }),
