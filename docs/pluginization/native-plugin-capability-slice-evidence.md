@@ -124,6 +124,10 @@
 - P5 evidence loader wiring：Desktop 发现到任意已安装、声明 `evidence` 能力的包后，现实际调用 `evidenceHost.loader.load()` 并将 host 传入 backend `analysisEvidenceHost`；此前只发现并记录日志、未注入的缺口已修复。新增静态 wiring 回归，optional host discovery 6 项、Desktop typecheck 与 Biome 通过；正式安装包 clean-install 与真实 evidence workflow 仍未验收。
 - 本轮合并后的宿主验证：`npm run lint`（仅既有 2 个 warning）、全 workspace `npm run typecheck`、`npm run build`、`npm run check:arch` 均退出 0；plugin-api 15 项测试、backend research/create-backend 34 项定向测试、Desktop optional-host 6 项测试通过。`check-native-plugin-boundary` 仍明确为 `INCOMPLETE`（runtime-import 11、type-import 12、required-domain-plugin 3），未把部分迁移误报为完成。
 
+## 本轮新增
+
+- P3/P6 `28c34c50` 收窄 research 兼容边界：无插件时 connector registry 返回明确的 `Research connector plugin is unavailable` 失败回执，write registry 保持空清单；backend 删除 `@drone/research` runtime dependency 并同步锁文件。新增 create-backend 回归覆盖无插件清单、搜索失败回执以及显式 host registry 仍可注入；backend typecheck、create-backend/research-host-adapters 27 项定向测试、plugin-api migration/lifecycle gate 与 `check:host-domain-deps` 均通过。后者由原先追踪 `@drone/research`、`@gyoungwe/pi-core`、`@gyoungwe/pi-knowledge`、`@gyoungwe/pi-research` 收窄为后三项；完整领域迁移、正式 GUI 和外部验收仍未完成。
+
 ## 未关闭项
 
 本轮仍未证明：P2–P5 宿主领域装配删除；无领域插件的正式 DMG 启动与升级/停用/回滚；同一候选 tarball 的正式安装包 GUI；真实 Zotero/用户 MCP/Protocols.io 写入及其他平台验收。`check:native-plugin-boundary` 仍按计划输出 `INCOMPLETE`，不得改写为 PASS。
