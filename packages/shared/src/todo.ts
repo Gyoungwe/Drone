@@ -13,6 +13,11 @@ export const TODO_TOOL_NAME = "todo";
 /** compaction 后注入的恢复消息 customType（getTodos 扫历史时识别） */
 export const TODO_REMINDER_CUSTOM_TYPE = "todo-reminder";
 
+/** 文本清单（模型可见；空列表 = 已清空）。 */
+export function formatTodoList(todos: readonly TodoItem[]): string {
+	return todos.map((t, i) => `${i + 1}. [${t.status}] ${t.content}`).join("\n");
+}
+
 /**
  * 从工具结果 details 提取 todo 列表（结构检测：details.todos 数组）。
  * 前后端共用：backend 注入/getTodos 提取，renderer 面板数据提取。

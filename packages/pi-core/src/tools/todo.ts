@@ -1,6 +1,8 @@
-import { TODO_TOOL_NAME, type TodoItem } from "@drone/shared";
+import { formatTodoList, TODO_TOOL_NAME, type TodoItem } from "@drone/shared";
 import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+
+export { formatTodoList } from "@drone/shared";
 
 /** 单次调用最多任务数（全量替换协议，防滥用） */
 const MAX_TODOS = 50;
@@ -24,11 +26,6 @@ export function normalizeTodos(raw: TodoItem[]): TodoItem[] {
 		out.push({ content, status });
 	}
 	return out;
-}
-
-/** 文本清单（模型可见；空列表 = 已清空） */
-export function formatTodoList(todos: TodoItem[]): string {
-	return todos.map((t, i) => `${i + 1}. [${t.status}] ${t.content}`).join("\n");
 }
 
 const todoParams = Type.Object({
