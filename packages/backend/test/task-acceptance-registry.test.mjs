@@ -15,8 +15,10 @@ import {
 } from "@drone/tasks/acceptance";
 import { validateToolArguments } from "@earendil-works/pi-ai";
 import { createEventBus } from "@earendil-works/pi-coding-agent";
+import registerPiCore from "@gyoungwe/pi-core";
 import { afterEach, describe, expect, it } from "vitest";
-import { registerTaskRuntime } from "./fixtures/task-plugin.mjs";
+import { bindAcceptanceVerifierEvents } from "../src/tasks/acceptance";
+import { createInstalledTaskRuntime, registerTaskRuntime } from "./fixtures/task-plugin.mjs";
 
 /** 只捕获 registerTool、其余 API 全部 no-op 的 pi 桩。 */
 function stubPi(tools = new Map()) {
@@ -24,7 +26,7 @@ function stubPi(tools = new Map()) {
 		registerTool: (tool) => tools.set(tool.name, tool),
 		getAllTools: () => [...tools.values()],
 		getCommands: () => [],
-		events: { on() {}, emit: async () => {} },
+		events: createEventBus(),
 	};
 	return { pi: new Proxy(base, { get: (t, p) => (p in t ? t[p] : () => {}) }), tools };
 }
@@ -58,7 +60,7 @@ describe("acceptance verifier registry (hook 2)", () => {
 			getAllTools: () => [...tools.values()],
 			registerCommand: () => {},
 			on: (name, _listener) => listeners.set(name, (listeners.get(name) || 0) + 1),
-			events: { on() {}, emit: async () => {} },
+			events: createEventBus(),
 		};
 		const first = registerTaskRuntime(pi);
 		const second = registerTaskRuntime(pi, { readKnowledgeBinding: async () => null });
@@ -278,12 +280,16 @@ describe("acceptance verifier registry (hook 2)", () => {
 		delete process.env.PI_SUBAGENT_CHILD;
 		process.env.DRONE_KNOWLEDGE_DIR = join(tmpdir(), "drone-acceptance-registry-test");
 		const { pi, tools } = stubPi();
-		registerKnowledgeInterface(pi, { readOnly: false }); // → registerTaskRuntime → task_plan
+		registerPiCore(pi);
+		registerKnowledgeInterface(pi, { readOnly: false });
 		const taskPlan = tools.get("task_plan");
 		expect(taskPlan).toBeTruthy();
 		expect(acceptanceOf(taskPlan).properties.kind.enum).not.toContain("zotero_item");
 
-		zoteroLiterature(stubPi().pi); // → registerZoteroAcceptance()
+		zoteroLiterature(pi);
+		const runtime = createInstalledTaskRuntime();
+		bindAcceptanceVerifierEvents(pi.events, runtime);
+		pi.events.emit("drone:runtime/v1", { version: 1, runtime });
 
 		const schema = acceptanceOf(taskPlan);
 		expect(schema.properties.kind.enum).toEqual(expect.arrayContaining(["wiki_review", "zotero_item"]));
