@@ -6,6 +6,7 @@
  * admitted.  This module intentionally has no Drone, Electron or Pi SDK
  * dependency so native Pi and Desktop can share the same seam.
  */
+import type { PluginRuntimeClient } from "./runtime";
 export const TASK_HOST_CONTRACT_VERSION = 1 as const;
 export type TaskHostContractVersion = typeof TASK_HOST_CONTRACT_VERSION;
 
@@ -87,6 +88,8 @@ export interface TaskAcceptanceHostPort {
 	readonly contractVersion: TaskHostContractVersion;
 	readonly registerAcceptanceVerifier: (kind: string, definition: TaskAcceptanceDefinition) => void;
 	readonly readAcceptanceVerifier: (kind: string) => TaskAcceptanceVerifier | null;
+	/** Optional host-owned workbench client. The host may use it for read-only status while the task plugin is installed. */
+	readonly workbench?: PluginRuntimeClient;
 }
 
 export interface TaskHostLoader {

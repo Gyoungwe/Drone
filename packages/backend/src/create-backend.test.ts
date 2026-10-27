@@ -420,11 +420,16 @@ describe("createBackend", () => {
 		services.dispose();
 	});
 
-	it("accepts an installed task host loader without rebuilding its registry", () => {
+	it("accepts an installed task host loader without rebuilding its registry", async () => {
+		const workbench = {
+			invoke: async (operation: string) => ({ operation }),
+			subscribe: () => () => undefined,
+		};
 		const host = {
 			contractVersion: 1 as const,
 			registerAcceptanceVerifier: () => undefined,
 			readAcceptanceVerifier: () => null,
+			workbench,
 		};
 		const services = createBackend({
 			projectTrust: false,
@@ -432,6 +437,8 @@ describe("createBackend", () => {
 			taskHostLoader: { contractVersion: 1, load: () => host },
 		});
 		expect(services.taskHost).toBe(host);
+		expect(services.workbench.client).toBe(workbench);
+		expect(await services.workbench.client.invoke("status", {})).toEqual({ operation: "status" });
 		expect(services.domainCapabilities.list().find((item) => item.id === "tasks")).toMatchObject({
 			provider: "plugin:tasks",
 		});
