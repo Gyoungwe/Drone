@@ -10,6 +10,8 @@
 export const PLUGIN_API_VERSION = 1 as const;
 export const RESULT_CONTRACT = "drone-result/v3" as const;
 
+export * from "./research.js";
+
 export type PluginApiVersion = typeof PLUGIN_API_VERSION;
 export type ResultContractVersion = typeof RESULT_CONTRACT;
 export type PluginHost = "native-pi" | "drone-desktop";

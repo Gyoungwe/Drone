@@ -44,6 +44,11 @@
 			"types": "./dist/resource.d.ts",
 			"import": "./dist/resource.js",
 			"default": "./dist/resource.js"
+		},
+		"./research": {
+			"types": "./dist/research.d.ts",
+			"import": "./dist/research.js",
+			"default": "./dist/research.js"
 		}
 	},
 	"files": [
