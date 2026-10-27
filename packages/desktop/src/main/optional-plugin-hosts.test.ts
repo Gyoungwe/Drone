@@ -2,9 +2,47 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { discoverPluginHostLoader } from "./optional-plugin-hosts";
+import { discoverCoreHostLoader, discoverPluginHostLoader } from "./optional-plugin-hosts";
 
 describe("discoverPluginHostLoader", () => {
+	it("discovers the versioned core host loader without a package-name allowlist", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-core-host-discovery-"));
+		const packageRoot = join(root, "@example", "pi-core");
+		await mkdir(join(packageRoot, "dist"), { recursive: true });
+		await writeFile(
+			join(packageRoot, "package.json"),
+			JSON.stringify({ name: "@example/pi-core", version: "0.1.9" }),
+		);
+		await writeFile(
+			join(packageRoot, "plugin.manifest.json"),
+			JSON.stringify({
+				capabilities: ["core"],
+				hosts: ["drone-desktop"],
+				entrypoints: { host: "./dist/host.mjs" },
+			}),
+		);
+		await writeFile(
+			join(packageRoot, "dist", "host.mjs"),
+			"export const coreHostLoader = { contractVersion: 1, load: () => ({ contractVersion: 1 }) };",
+		);
+		const result = await discoverCoreHostLoader({ packageRoots: [root] });
+		expect(result?.discovery.capability).toBe("core");
+		expect(result?.discovery.exportName).toBe("coreHostLoader");
+		expect(result?.loader.load()).toEqual({ contractVersion: 1 });
+	});
+
+	it("fails closed for a malformed core loader", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-core-host-invalid-"));
+		const packageRoot = join(root, "pi-core");
+		await mkdir(join(packageRoot, "dist"), { recursive: true });
+		await writeFile(join(packageRoot, "package.json"), JSON.stringify({ name: "pi-core", version: "0.1.9" }));
+		await writeFile(
+			join(packageRoot, "plugin.manifest.json"),
+			JSON.stringify({ capabilities: ["core"], hosts: ["drone-desktop"], entrypoints: { host: "./dist/host.mjs" } }),
+		);
+		await writeFile(join(packageRoot, "dist", "host.mjs"), "export const coreHostLoader = { contractVersion: 2 };\n");
+		expect(await discoverCoreHostLoader({ packageRoots: [root] })).toBeUndefined();
+	});
 	it("loads a declared capability host without a package-name allowlist", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-plugin-host-discovery-"));
 		const packageRoot = join(root, "@example", "analysis-extension");

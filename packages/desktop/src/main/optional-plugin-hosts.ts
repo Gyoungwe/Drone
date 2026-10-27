@@ -1,6 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import type { CoreHostLoader } from "@gyoungwe/plugin-api";
 
 export interface PluginHostLoaderDiscovery {
 	readonly capability: string;
@@ -15,6 +16,23 @@ export interface DiscoveredPluginHostLoader<T> {
 	/** The declared host module, retained for optional factory exports. */
 	readonly module: Readonly<Record<string, unknown>>;
 	readonly discovery: PluginHostLoaderDiscovery;
+}
+
+/**
+ * Discover the portable pi-core host seam.  A missing or malformed package is
+ * intentionally represented as undefined so composition can fail closed.
+ */
+export async function discoverCoreHostLoader(options: {
+	packageRoots: readonly string[];
+}): Promise<DiscoveredPluginHostLoader<CoreHostLoader> | undefined> {
+	const result = await discoverPluginHostLoader<CoreHostLoader>({
+		packageRoots: options.packageRoots,
+		capability: "core",
+		exportName: "coreHostLoader",
+	});
+	if (!result) return undefined;
+	if (result.loader.contractVersion !== 1 || typeof result.loader.load !== "function") return undefined;
+	return result;
 }
 
 interface PluginManifest {
