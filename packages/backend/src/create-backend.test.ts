@@ -10,6 +10,14 @@ import type { DailyDiscoveryService } from "./services/daily-discovery";
 import type { KnowledgeMaintenanceService } from "./services/knowledge-maintenance";
 
 describe("createBackend", () => {
+	it("fails closed for knowledge operations when no knowledge plugin is installed", async () => {
+		const services = createBackend({ projectTrust: false, permissionGates: false });
+		await expect(services.knowledge.overview({ cwd: "/tmp/no-knowledge-plugin" })).rejects.toThrow(
+			"Knowledge overview is unavailable: install the knowledge plugin",
+		);
+		await services.dispose();
+	});
+
 	it("exposes the workbench operation port through the host runtime and fails closed without handlers", async () => {
 		const unavailable = createBackend({ projectTrust: false, permissionGates: false });
 		await expect(unavailable.workbench.client.invoke("status", {})).rejects.toThrow(
