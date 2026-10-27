@@ -259,7 +259,7 @@ try {
 		const lifecycle = {
 			package: lifecyclePackage,
 			operations: lifecycleFixture
-				? ["install", "upgrade", "rollback", "remove"]
+				? ["install", "upgrade", "rollback", "remove", "restore", "remove"]
 				: ["install", "update", "remove"],
 		};
 		let lifecycleStage = "install";
@@ -327,6 +327,27 @@ try {
 			const remaining = await evaluate("window.pi.listConfiguredPackages()");
 			assert(!remaining.some((entry) => entry.source === source && entry.scope === "user"));
 			lifecycle.remove = removed;
+			if (lifecycleFixture) {
+				const restored = await evaluate(`window.pi.installPackage(${JSON.stringify(lifecyclePackage)})`);
+				assert(restored?.status === "succeeded", `package restore failed: ${JSON.stringify(restored)}`);
+				assert.equal(await installedVersion(), "1.0.0");
+				const restoredConfigured = await evaluate("window.pi.listConfiguredPackages()");
+				assert(restoredConfigured.some((entry) => entry.source === source && entry.scope === "user"));
+				lifecycle.restore = restored;
+				const removedAgain = await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`);
+				assert(
+					removedAgain?.status === "succeeded",
+					`package final remove failed: ${JSON.stringify(removedAgain)}`,
+				);
+				assert(
+					!(await access(packagePath).then(
+						() => true,
+						() => false,
+					)),
+					"restored package directory remains after final remove",
+				);
+				lifecycle.removeFinal = removedAgain;
+			}
 			report.lifecycleAcceptance = {
 				status: "PASS",
 				operations: lifecycle.operations,
@@ -335,7 +356,7 @@ try {
 			};
 			report.checks.push(
 				lifecycleFixture
-					? `isolated packaged host installed, upgraded, rolled back and removed ${lifecyclePackage}`
+					? `isolated packaged host installed, upgraded, rolled back, removed, restored and removed ${lifecyclePackage}`
 					: `isolated packaged host installed and removed ${lifecyclePackage}`,
 			);
 		} catch (error) {
