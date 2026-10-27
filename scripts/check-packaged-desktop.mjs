@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 
 if (process.argv.includes("--help")) {
 	console.log(
-		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app [--lifecycle-package=@scope/name|--lifecycle-fixture]\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used. With --lifecycle-package, installs, updates and removes that explicitly selected public fixture. With --lifecycle-fixture, a temporary local registry serves 1.0.0/1.1.0 so the packaged host exercises install→upgrade→rollback→remove without touching public npm.",
+		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app [--lifecycle-package=@scope/name|--lifecycle-fixture]\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used. With --lifecycle-package, installs, updates and removes that explicitly selected public fixture. With --lifecycle-fixture, a temporary local registry serves 1.0.0/1.1.0 and a loopback OpenAI-compatible model keeps one real packaged session streaming while the first install is attempted, so the host must return reload_deferred before the stream is released.",
 	);
 	process.exit(0);
 }
@@ -40,6 +40,17 @@ for (const path of [home, profile, agent, knowledge, cwd, join(root, "tmp")])
 	await mkdir(path, { recursive: true });
 let registryServer;
 let registryUrl;
+let modelServer;
+let modelUrl;
+let releaseStreamingResponse;
+let streamingRequestResolve;
+let streamingResponseReadyResolve;
+const streamingRequestSeen = new Promise((resolve, reject) => {
+	streamingRequestResolve = resolve;
+});
+const streamingResponseReady = new Promise((resolve) => {
+	streamingResponseReadyResolve = resolve;
+});
 let fixtureLatest = "1.0.0";
 let fixtureHasUpgraded = false;
 const fixtureTarballs = new Map();
@@ -118,6 +129,71 @@ if (lifecycleFixture) {
 	registryServer.listen(0, "127.0.0.1");
 	await once(registryServer, "listening");
 	registryUrl = `http://127.0.0.1:${registryServer.address().port}/`;
+	modelServer = createHttpServer(async (request, response) => {
+		if (request.method !== "POST" || request.url !== "/v1/chat/completions") {
+			response.statusCode = 404;
+			response.end("not found");
+			return;
+		}
+		request.resume();
+		streamingRequestResolve?.();
+		response.writeHead(200, {
+			"content-type": "text/event-stream",
+			"cache-control": "no-cache",
+			connection: "keep-alive",
+		});
+		response.write(
+			`data: ${JSON.stringify({
+				id: "drone-packaged-stream",
+				object: "chat.completion.chunk",
+				created: Math.floor(Date.now() / 1000),
+				model: "drone-packaged-stream",
+				choices: [{ index: 0, delta: { role: "assistant", content: "streaming" }, finish_reason: null }],
+			})}\n\n`,
+		);
+		await new Promise((resolve) => {
+			releaseStreamingResponse = resolve;
+			streamingResponseReadyResolve?.();
+		});
+		response.write(
+			`data: ${JSON.stringify({
+				id: "drone-packaged-stream",
+				object: "chat.completion.chunk",
+				created: Math.floor(Date.now() / 1000),
+				model: "drone-packaged-stream",
+				choices: [{ index: 0, delta: { content: " complete" }, finish_reason: "stop" }],
+			})}\n\n`,
+		);
+		response.end("data: [DONE]\n\n");
+	});
+	modelServer.listen(0, "127.0.0.1");
+	await once(modelServer, "listening");
+	modelUrl = `http://127.0.0.1:${modelServer.address().port}/v1`;
+	await mkdir(agent, { recursive: true });
+	await writeFile(
+		join(agent, "models.json"),
+		`${JSON.stringify(
+			{
+				providers: {
+					openai: {
+						name: "Drone packaged streaming fixture",
+						baseUrl: modelUrl,
+						apiKey: "drone-packaged-stream-fixture",
+						models: [
+							{
+								id: "drone-packaged-stream",
+								name: "Drone packaged streaming fixture",
+								api: "openai-completions",
+								contextWindow: 16_384,
+								maxTokens: 256,
+							},
+						],
+					},
+				},
+			},
+			null,
+		)}\n`,
+	);
 }
 const server = createNetServer();
 server.listen(0, "127.0.0.1");
@@ -260,7 +336,7 @@ try {
 		const lifecycle = {
 			package: lifecyclePackage,
 			operations: lifecycleFixture
-				? ["install", "upgrade", "rollback", "remove", "restore", "remove"]
+				? ["install", "reload-deferred", "upgrade", "rollback", "remove", "restore", "remove"]
 				: ["install", "update", "remove"],
 		};
 		let lifecycleStage = "install";
@@ -268,9 +344,19 @@ try {
 			JSON.parse(await readFile(join(packagePath, "package.json"), "utf8")).version;
 		try {
 			if (lifecycleFixture) {
-				const lifecycleSession = await evaluate(`window.pi.createSession({cwd:${JSON.stringify(cwd)}})`);
+				const lifecycleSession = await evaluate(
+					`window.pi.createSession({cwd:${JSON.stringify(cwd)},provider:"openai",modelId:"drone-packaged-stream"})`,
+				);
 				assert(typeof lifecycleSession?.sessionId === "string" && lifecycleSession.sessionId.length > 0);
 				lifecycleSessionId = lifecycleSession.sessionId;
+				await evaluate(
+					`window.__droneStreamingPromptDone=false; window.__droneStreamingPromptError=null; window.pi.prompt(${JSON.stringify(lifecycleSessionId)}, "streaming lifecycle fixture").then(()=>window.__droneStreamingPromptDone=true, error=>{window.__droneStreamingPromptError=String(error); window.__droneStreamingPromptDone=true;}); undefined`,
+				);
+				await Promise.race([
+					streamingRequestSeen,
+					new Promise((_, reject) => setTimeout(() => reject(new Error("streaming model request timed out")), 30_000)),
+				]);
+				await streamingResponseReady;
 			}
 			if (lifecycleFixture) fixtureLatest = "1.0.0";
 			const installed = await evaluate(`window.pi.installPackage(${JSON.stringify(lifecyclePackage)})`);
@@ -287,7 +373,17 @@ try {
 			if (lifecycleFixture) {
 				const version = await installedVersion();
 				assert.equal(version, "1.0.0");
-				assert(installed.events.some((event) => event.type === "reloaded"));
+				assert.equal(installed.effect, "next-session");
+				assert(installed.events.some((event) => event.type === "reload_deferred"));
+				assert.deepEqual(installed.deferredSessionIds, [lifecycleSessionId]);
+				lifecycle.reloadDeferred = installed;
+				releaseStreamingResponse?.();
+				for (let i = 0; i < 300; i++) {
+					if (await evaluate("Boolean(window.__droneStreamingPromptDone)")) break;
+					await delay(100);
+				}
+				assert.equal(await evaluate("Boolean(window.__droneStreamingPromptDone)"), true);
+				assert.equal(await evaluate("window.__droneStreamingPromptError ?? null"), null);
 			}
 			lifecycle.install = installed;
 
@@ -414,14 +510,23 @@ try {
 	await evaluate(`window.pi.closeSession(${JSON.stringify(session.sessionId)})`);
 	report.genericSession = { sessionId: session.sessionId, cwd };
 	report.checks.push("packaged host can create and close a generic Pi session with no optional plugin");
-	for (const name of ["auth.json", "models.json"]) {
-		const data = await readFile(join(agent, name), "utf8").catch((error) => {
-			if (error.code === "ENOENT") return "{}";
-			throw error;
-		});
-		assert.deepEqual(JSON.parse(data), {});
+	const authData = await readFile(join(agent, "auth.json"), "utf8").catch((error) => {
+		if (error.code === "ENOENT") return "{}";
+		throw error;
+	});
+	assert.deepEqual(JSON.parse(authData), {});
+	const modelsData = await readFile(join(agent, "models.json"), "utf8").catch((error) => {
+		if (error.code === "ENOENT") return "{}";
+		throw error;
+	});
+	const models = JSON.parse(modelsData);
+	if (lifecycleFixture) {
+		assert.equal(models.providers?.openai?.models?.[0]?.id, "drone-packaged-stream");
+		report.checks.push("fresh auth store is empty; isolated loopback model config is test-only and contains no credential");
+	} else {
+		assert.deepEqual(models, {});
+		report.checks.push("fresh auth/model stores are empty; no inherited model credentials");
 	}
-	report.checks.push("fresh auth/model stores are empty; no inherited model credentials");
 	const capture = await call("Page.captureScreenshot", { format: "png" });
 	await writeFile(join(root, "fresh-install.png"), Buffer.from(capture.data, "base64"));
 	report.screenshot = join(root, "fresh-install.png");
@@ -430,6 +535,7 @@ try {
 	report.error = String(error);
 	process.exitCode = 1;
 } finally {
+	releaseStreamingResponse?.();
 	socket?.close();
 	if (child.exitCode === null) {
 		child.kill("SIGTERM");
@@ -439,6 +545,10 @@ try {
 	if (registryServer) {
 		registryServer.close();
 		await once(registryServer, "close").catch(() => undefined);
+	}
+	if (modelServer) {
+		modelServer.close();
+		await once(modelServer, "close").catch(() => undefined);
 	}
 	closeSync(logFd);
 	report.completedAt = new Date().toISOString();
