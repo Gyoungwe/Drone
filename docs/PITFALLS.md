@@ -393,3 +393,9 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 ### Managed native 工具不能只传 name/description/schema
 
 现象：包加载成功，但 outputSchema、namespace、executionMode 等标准字段消失，execute 的 onUpdate 永远是 undefined。原因：受限 worker 注册回执只提取基础四项，调用协议也没有 progress 消息。处理：显式传输标准 JSON 字段；不能序列化的 prepareArguments/prepareLoadout/renderCall/renderResult 在加载时报错；进度绑定尚未结束且未撤销的调用 ID，取消和迟到回调不得串给其他 attachment。`native-tool-protocol-sdk.test.mjs` 用真实 SDK/受限进程回归。普通第三方沙箱也需从两条 SDK 注册路径传入 observer，不能仅修改 worker；共享 `tool-progress.ts` 的进度边界 schema。不能借此切片宣布全 API 兼容。
+
+### Discovery 的 closed 状态不能代替资源关闭
+
+杀死 Docker CLI 并不保证 daemon 内的容器已停止。每次 runner 使用唯一容器名和 ownership label；取消、超时、关闭和 dispose 必须等待 CLI 退出，只删除 label 匹配的自有容器，再以成功的 daemon 查询确认精确名称不存在。inspect 非零可能是 daemon 故障，不能据此报告清理成功。`DiscoveryRunner.run` 以 `DISCOVERY_CLEANUP_FAILED` 保留无法验证清理的错误，插件 execute/close/dispose 必须继续拒绝；迟到的执行不能将 closed 恢复成 ready。
+
+真实容器首次运行暴露 `--mount type=bind,...,rw` 无效，移除末尾 `rw`（bind 默认可写）后通过。验收不得依赖隐式拉镜像；本轮仅使用已缓存的 python:3.12-slim，`--pull=never`。本机出现 tag inspect 失败而 image ID inspect 成功的情况，保留失败并使用同一已缓存镜像的完整 ID 验证，未 pull 或 retag。完整 B5 UI 与正式安装包须单独验收。
