@@ -2,7 +2,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildPlugin } from "./build";
 
 const tmpDirs: string[] = [];
@@ -20,6 +20,33 @@ afterEach(async () => {
 });
 
 describe("ui-plugins build", () => {
+	it("exports generic sessions and messages while preserving the existing named prompt binding", async () => {
+		const dir = await makePlugin(`import { sessions, prompt, useSessionMessages } from "@gyoungwe/plugin-api";
+export function bindings() { return { sessionPrompt: sessions.prompt, legacyPrompt: prompt, messages: useSessionMessages }; }`);
+		expect(await buildPlugin(dir, "src/index.tsx")).toEqual({ ok: true });
+		const sessionPrompt = vi.fn(),
+			legacyPrompt = vi.fn(),
+			messages = vi.fn();
+		vi.stubGlobal("window", {
+			DroneUI: {
+				version: 1,
+				components: {},
+				helpers: {},
+				stores: {},
+				i18n: {},
+				hooks: { useSessionMessages: messages },
+				knowledge: { prompt: legacyPrompt },
+				sessions: { prompt: sessionPrompt },
+			},
+		});
+		try {
+			const out = await readFile(join(dir, "dist/index.js"), "utf8");
+			const plugin = await import(`data:text/javascript;base64,${Buffer.from(out).toString("base64")}`);
+			expect(plugin.bindings()).toEqual({ sessionPrompt, legacyPrompt, messages });
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
 	it("引用 react 的 tsx 构建成功，产物无裸导入（已重写为 window.DroneUI shim）", async () => {
 		const dir = await makePlugin(`
 import { useState } from "react";

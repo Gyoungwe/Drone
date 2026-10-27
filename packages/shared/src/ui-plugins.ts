@@ -8,6 +8,7 @@
  * 与 renderer 的 plugins/slots.ts 对齐（registry.test.ts 有断言），两处不可漂移。
  */
 export const KNOWN_UI_SLOTS: string[] = [
+	"chat.message",
 	"chat.tool-call-card",
 	"chat.subagent-card",
 	"chat.todo-panel",

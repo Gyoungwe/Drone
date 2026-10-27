@@ -5,6 +5,7 @@ import type {
 	UIToolCall,
 	WorkbenchTask,
 } from "@drone/shared";
+import type { ChatMessageProps } from "@gyoungwe/plugin-api/ui";
 import type { ReactNode } from "react";
 
 /**
@@ -13,6 +14,7 @@ import type { ReactNode } from "react";
  * 由 registry.test.ts 断言两者一致，避免两端漂移。
  */
 export const UI_SLOTS = {
+	Message: "chat.message",
 	ToolCallCard: "chat.tool-call-card",
 	SubagentCard: "chat.subagent-card",
 	/** 待办卡：现渲染在右侧上下文面板「任务」页签内（TasksPane），不再是聊天区悬浮胶囊 */
@@ -58,6 +60,7 @@ export type RegionName = (typeof UI_REGIONS)[keyof typeof UI_REGIONS];
 
 /** 每个槽位的 props 契约：插件组件与 fallback 组件都按此签名 */
 export interface SlotPropsMap {
+	[UI_SLOTS.Message]: ChatMessageProps;
 	[UI_SLOTS.ToolCallCard]: { tool: UIToolCall };
 	[UI_SLOTS.SubagentCard]: { runs: SubagentRunUi[] };
 	[UI_SLOTS.TodoPanel]: Record<string, never>;

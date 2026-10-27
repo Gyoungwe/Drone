@@ -157,6 +157,16 @@ export interface AvailableModel {
 	imageInput?: boolean;
 }
 
+/** 上下文压缩系统消息状态（compaction_start → compaction_end 更新同一条） */
+export interface CompactionUiState {
+	status: "running" | "done" | "cancelled" | "error";
+	reason: "manual" | "threshold" | "overflow";
+	summary?: string;
+	tokensBefore?: number;
+	tokensAfter?: number;
+	errorMessage?: string;
+}
+
 export type ComputeAuthorization = {
 	agentCode?: boolean | undefined;
 	dataDesign?:
@@ -1456,10 +1466,57 @@ export interface ModelPrefs {
 	backgroundReviewerModel: boolean;
 }
 
+/** Public progress explanation, deliberately separate from provider hidden reasoning. */
+export interface ProgressDisplay {
+	text: string;
+	detail?: string;
+	next?: string;
+	phase?: string;
+	kind?: "plan" | "update" | "summary";
+}
+
 /** Optimistic：客户端在发送前生成的两个 id，随 prompt 一起发出并由回执原样带回，用于对账。 */
 export interface PromptIds {
 	clientMessageId: string;
 	assistantMessageId: string;
+}
+
+/**
+ * Prompt preflight receipt: tells the renderer whether this input owns an agent run.
+ *
+ * NOT a running-state authority. SDK events (agent_start/agent_end/agent_settled)
+ * own agentActive; this ack can resolve *after* agent_settled on a fast completion,
+ * so driving running-state from it would revive an already-finished run (the exact
+ * v0.7.2 regression). Consumers must keep using `sending` for preflight and SDK
+ * events for the live run — do not set agentActive from this value.
+ */
+export type PromptReceipt = (
+	| {
+			kind: "agent";
+	  }
+	| {
+			kind: "queued";
+	  }
+	| {
+			kind: "command";
+	  }
+) & {
+	/** P14 Optimistic：回执原样带回客户端生成的 id */
+	clientMessageId?: string;
+	assistantMessageId?: string;
+};
+
+/** Display adapter for SDK-reported usage. No tokenizer, price table, new accounting store or model call. */
+export interface ReportedUsage {
+	id: string;
+	input: number;
+	output: number;
+	cacheRead: number | null;
+	cacheWrite: number | null;
+	reasoning?: number;
+	cost: number | null;
+	provider?: string;
+	model?: string;
 }
 
 export interface ResearchRunClaim {
@@ -1604,6 +1661,155 @@ export interface SessionModelRef {
 	modelId: string;
 }
 
+/** A successfully expanded SDK `/skill:` command, parsed from its persisted canonical text. */
+export interface SkillInvocation {
+	name: string;
+	/** SDK skill file path. Kept for parsing/tests only; never render it. */
+	location: string;
+	args?: string;
+}
+
+/** The safe subset used for UI presentation and command restoration. */
+export type SkillInvocationDisplay = Pick<SkillInvocation, "name" | "args">;
+
+/**
+ * 结果进入主模型上下文的状态：none = 未勾选 followUp（只留结果卡，用户手动引用）；
+ * pending = 已交给 followUp 队列，主模型仍在生成；delivered = 已进入上下文。
+ */
+export type SubagentPanelContextState = "none" | "pending" | "delivered";
+
+/** 面板派发运行记录（后端事实源；`subagent_run` 事件整条推送） */
+export interface SubagentPanelRun {
+	runId: string;
+	/** 同一次派发（一批任务）共享 */
+	dispatchId: string;
+	parentSessionId: string;
+	agent: string;
+	source: SubagentPanelSource;
+	task: string;
+	cwd: string;
+	requiredTools: string[];
+	followUp: boolean;
+	status: SubagentPanelRunStatus;
+	contextState: SubagentPanelContextState;
+	/** 排队位置（仅 queued） */
+	queuePosition?: number;
+	createdAt: number;
+	startedAt?: number;
+	endedAt?: number;
+	/** 子会话 id（运行中内联 transcript / steer / 回复上级请求） */
+	childSessionId?: string;
+	/** 子会话文件（回放） */
+	sessionFile?: string;
+	model?: string;
+	tokens?: number;
+	exitCode?: number;
+	error?: string;
+	/** 子智能体最终结论（已按上限截断） */
+	content?: string;
+	statusText?: string;
+	statusPhase?: string;
+	currentAction?: string;
+	currentTool?: string;
+	lastSteerAt?: number;
+	supervisorRequest?: SubagentRunData["supervisorRequest"];
+	/** 正挂在父会话 gate 上的审批请求 id（审批坞来源胶囊 / 等待审批 join 用） */
+	pendingApprovalIds: string[];
+}
+
+/**
+ * 面板运行状态机：queued（等运行槽）→ running（子会话已创建）⇄ needs_reply / waiting_approval
+ * → done / error / aborted。needs_reply / waiting_approval 都是「运行中」的子态，只是需要用户。
+ */
+export type SubagentPanelRunStatus =
+	| "queued"
+	| "running"
+	| "needs_reply"
+	| "waiting_approval"
+	| "done"
+	| "error"
+	| "aborted";
+
+/* ───────────────────────── 子智能体面板（会话内专属派发） ───────────────────────── */
+/** 子智能体定义来源：内置（Drone）/ 用户（~/.pi/agent/agents）/ 项目（.pi/agents） */
+export type SubagentPanelSource = "builtin" | "user" | "project";
+
+/**
+ * 子代理运行数据提取（跨进程共用）：从 subagent 工具结果的 details 结构检测运行组。
+ * 从 session.ts 拆出（session.ts 回归纯类型 + 消息 union 定义）。
+ */
+/** 子代理运行结果（扩展 subagent 工具 details 提取，独立消息展示用） */
+export interface SubagentRunData {
+	/** 子代理名（如 reviewer / scout） */
+	agent: string;
+	/** 子会话 id（live progress / 内联 transcript 绑定） */
+	sessionId?: string;
+	parentSessionId?: string;
+	attempt?: number;
+	artifactRefs?: string[];
+	evidenceRefs?: string[];
+	task?: string;
+	status: "done" | "error";
+	model?: string;
+	/** 子代理消耗的 token 数 */
+	tokens?: number;
+	/** 非 0 表示子代理执行出错 */
+	exitCode?: number;
+	/** 产物目录 */
+	artifactsDir?: string;
+	/** 子代理会话文件路径（点击可打开完整对话） */
+	sessionFile?: string;
+	/** 运行中的用户可见状态（仅 live progress 携带） */
+	statusText?: string;
+	statusPhase?: string;
+	currentAction?: string;
+	currentTool?: string;
+	startedAt?: number;
+	lastSteerAt?: number;
+	supervisorRequest?: {
+		id: string;
+		reason: "need_decision" | "interview_request" | "progress_update";
+		message: string;
+		expectsReply: boolean;
+	} | null;
+	/** 面板派发的运行携带全量面板记录（排队 / 中止 / 上下文状态等只有面板运行才有） */
+	panel?: SubagentPanelRun;
+}
+
+/** 会话 UI 态类型（transcript reducer 的状态形状） */
+/** 子代理运行（UI 态：流式期 running，固化后 done/error） */
+export interface SubagentRunUi {
+	/** 本地稳定标识（React key 用） */
+	key: string;
+	agent: string;
+	/** 子会话 id：内联展开绑定实时 transcript */
+	sessionId?: string;
+	task?: string;
+	status: "running" | "done" | "error";
+	model?: string;
+	tokens?: number;
+	exitCode?: number;
+	artifactsDir?: string;
+	/** 子代理会话文件路径（点击打开完整对话） */
+	sessionFile?: string;
+	/** 子代理运行中的短状态；父会话实时展示，不进入最终回答。 */
+	statusText?: string;
+	statusPhase?: string;
+	/** Observable child activity (not hidden reasoning). */
+	currentAction?: string;
+	currentTool?: string;
+	startedAt?: number;
+	lastSteerAt?: number;
+	supervisorRequest?: {
+		id: string;
+		reason: "need_decision" | "interview_request" | "progress_update";
+		message: string;
+		expectsReply: boolean;
+	} | null;
+	/** 面板派发运行的全量记录（排队 / 中止 / 上下文状态 / 审批归因；模型调用的运行没有） */
+	panel?: SubagentPanelRun;
+}
+
 export type SubagentThinkingLevel = (readonly [
 	"off",
 	"minimal",
@@ -1706,6 +1912,196 @@ export interface TaskUserAction {
 	file?: TaskArtifact | null;
 }
 
+export interface TaskView {
+	version: 2;
+	revision: number;
+	activeTaskId: string | null;
+	selectionRequired: boolean;
+	tasks: WorkbenchTask[];
+	limits: {
+		stageCalls: number;
+		totalCalls: number;
+	};
+}
+
+export type TurnIntake = "new-topic" | "continuation" | "task-command" | "read-only" | "status";
+
+export type TurnLanding = "workflow" | "host-gate" | "ordinary" | "library";
+
+export interface TurnRoute {
+	utterance: string;
+	intake: TurnIntake;
+	capabilities: string[];
+	topics: string[];
+	direction: string | null;
+	stage: string | null;
+	contract: string | null;
+	primary: string | null;
+	reason: string | null;
+	unavailableStage: string | null;
+	comparison: boolean;
+	academic: boolean;
+	keptCheckpoint: boolean;
+	deferPhrase: boolean;
+	visiblePrimary: boolean;
+	landing: TurnLanding;
+	host: TurnRouteHost | null;
+}
+
+/** Language-neutral record of one user turn. The sentences are rendered later. */
+export interface TurnRouteHost {
+	reason: string | null;
+	state: string | null;
+	stageCalls: number;
+	calls: number;
+	progressCount: number;
+	stageStartProgress: number;
+	stageLimited: boolean;
+	hasProgress: boolean;
+	pendingReview: boolean;
+	reviewLinked: boolean;
+	deferredReviews: number;
+	releasedStage: boolean;
+}
+
+/**
+ * 轮次计时派生（纯函数）：UIMessage[] → 每轮工作时长（轮末计时器数据源，codex/claude code 同款）。
+ *
+ * 时间口径（jsonl/事件流已有字段，纯推导零存储）：
+ * - startedAt = user 消息 timestamp（提交 prompt 时刻）
+ * - endedAt = 轮内各消息时刻的最大值：
+ *   - assistant.timestamp：live 固化时 = turn_end 时刻（准）；历史回放 = LLM 请求发起时刻
+ *   - tool.endedAt：工具执行结束（toolResult entry timestamp；工具收尾轮的决定分量）
+ *   - subagent/image 消息 timestamp：结果落地时刻
+ * - runEndedAt（reducer 在 agent_end/agent_settled 盖戳）只服务最后一轮定格：agent 结束晚于
+ *   最后一条消息落地，与推导值取 max，保证「运行中末帧 ≤ 定格值」单调不回退
+ *
+ * 已知下界：正文收尾轮的历史回放 endedAt = 最后 LLM 请求发起时刻，低估最后一段输出时长
+ * （jsonl 无逐轮耗时字段；工具收尾轮准确）。彻底精确需持久化逐轮耗时进会话文件，暂不做。
+ */
+/** 一轮的工作时间区间（endedAt 缺省 = 尚未结束/推不出结束，渲染端运行中用 now 跳动） */
+export interface TurnTiming {
+	/** 第几轮（从 0 计，user 消息为边界，与 TurnChanges.turnIndex 同规则） */
+	turnIndex: number;
+	startedAt: number;
+	endedAt?: number;
+}
+
+export interface UiError {
+	/** Stable machine-readable code for adapters that need to branch without parsing titleKey. */
+	code?: string;
+	severity: UiErrorSeverity;
+	source: UiErrorSource;
+	/** i18n key（error.title.*）+ 插值参数（只放 provider/model 等安全值） */
+	titleKey: string;
+	titleParams?: Record<string, string | number>;
+	/** 原始错误文本，折叠区展示；构造时截断到 DETAIL_MAX_LENGTH */
+	detail?: string;
+	/** 建议动作 i18n key（error.hint.*；无建议时缺省） */
+	hintKey?: string;
+	/** 操作行；有 detail 时恒含 copyDetail */
+	actions: UiErrorAction[];
+	timestamp: number;
+}
+
+/** continue（P8）：会话级重做，发一条普通用户消息「继续」 */
+export type UiErrorAction = "retry" | "continue" | "compact" | "openSettings" | "copyDetail";
+
+/**
+ * 统一错误信封 UiError（跨进程共用）：reducer（live 产卡）、mapping（历史回放产卡）、
+ * Composer 内联条、全局 Toast 四个消费面共用同一结构。
+ *
+ * 设计约束（spec §7 安全清单）：
+ * - detail 只做纯文本展示（绝不 dangerouslySetInnerHTML），构造时截断到 DETAIL_MAX_LENGTH；
+ * - i18n 插值参数只放 provider/model/时间等安全值，禁止把 detail 塞进 titleParams。
+ */
+export type UiErrorSeverity = "error" | "warning" | "info";
+
+/** 责任域（元信息行 + 未来 P2 面板的分类维度） */
+export type UiErrorSource = "llm" | "session" | "tool" | "extension" | "app" | "network";
+
+/** 单条 UI 消息 */
+export type UIMessage =
+	| {
+			kind: "user";
+			id: string;
+			text: string;
+			images: ImageInput[];
+			timestamp: number;
+			/** 会话树 entry id（仅历史回放消息有；撤回精确定位，缺省时按文本+时间戳兑底） */
+			entryId?: string;
+			/** 已展开 skill 的安全展示信息（不含正文或路径） */
+			skill?: SkillInvocationDisplay;
+			/** 完整持久化文本（skill 展开或展示净化后保留），仅供撤回匹配；绝不能渲染、复制或进入可访问文本 */
+			sourceText?: string;
+	  }
+	| {
+			kind: "assistant";
+			taskView?: TaskView;
+			route?: TurnRoute;
+			cycleId?: string;
+			usage?: ReportedUsage;
+			progress?: ProgressDisplay;
+			id: string;
+			text: string;
+			thinking: string;
+			/** 本轮思考起止（仅 live 记录；历史回放无持久化时间 → 缺省，思考行不显示时长） */
+			thinkingStartedAt?: number;
+			thinkingEndedAt?: number;
+			tools: UIToolCall[];
+			timestamp: number;
+			/** P14 Stopped：本轮被用户停止（已写入内容保留，折叠组末尾显示「已停止」） */
+			stopped?: boolean;
+			/** 会话树 entry id（仅历史回放消息有；fork 精确定位，缺省时 fork 按正文文本兜底） */
+			entryId?: string;
+			/** 完整持久化正文（展示净化后保留），仅供 fork fallback 匹配；绝不能渲染、复制或进入可访问文本 */
+			sourceText?: string;
+	  }
+	| {
+			/** 错误卡（live 与历史回放共用的统一报错信封；派生消息，不持久化 — text 恒为空串，渲染走 error） */
+			kind: "error";
+			id: string;
+			text: string;
+			timestamp: number;
+			error: UiError;
+	  }
+	| {
+			kind: "system";
+			id: string;
+			text: string;
+			timestamp: number;
+			compact?: CompactionUiState;
+			/** subagent 互斥接管通知（结构化字段，渲染层 i18n；dedup 以 extensionPath 为准） */
+			mutex?: {
+				extensionPath: string;
+				tools: string[];
+			};
+			/** 内联问询卡回答后的回执行（P9，仅 UI，不持久化） */
+			askReceipt?: {
+				summary: string;
+				waitedMs: number;
+			};
+			/** H4：上下文蒸发精简了 N 条旧工具结果（连续批次合并为一行） */
+			evaporated?: {
+				count: number;
+			};
+	  }
+	| {
+			/** show_image 工具发给用户看的图片（assistant 侧独立消息，tool_execution_end 时立即落 messages） */
+			kind: "image";
+			id: string;
+			images: ImageInput[];
+			paths: string[];
+			timestamp: number;
+	  }
+	| {
+			/** subagent 工具调用（独立行，不收进工具折叠区；流式期 running，固化后 done/error） */
+			kind: "subagent";
+			id: string;
+			runs: SubagentRunUi[];
+			timestamp: number;
+	  };
+
 export type UiPluginAnchor = (readonly [
 	"top-left",
 	"top-center",
@@ -1717,6 +2113,29 @@ export type UiPluginAnchor = (readonly [
 	"bottom-center",
 	"bottom-right",
 ])[number];
+
+/** 工具调用卡片状态 */
+export interface UIToolCall {
+	/** 本地稳定标识（React key 用）：创建时分配，不随 toolcall_end 改写（id 会从 "" 翻转为真实 id） */
+	key: string;
+	id: string;
+	name: string;
+	/** 参数摘要（JSON 或纯文本） */
+	args: string;
+	/** 执行输出累积 */
+	output: string;
+	/** unified patch（仅 edit 工具成功时由 SDK details.patch 写入；write/其他工具无此字段） */
+	diff?: string;
+	state: "running" | "done" | "error";
+	/** 开始时刻（live = reducer 在 toolcall_start 盖戳；历史回放无此字段，步骤耗时回退为不显示） */
+	startedAt?: number;
+	/** 执行结束时刻（live = reducer 在 tool_execution_end 盖戳；历史 = toolResult entry timestamp 透传）；
+	 * 轮次计时（deriveTurnTimings）用，子代理工具除外（独立行 timestamp 承担） */
+	endedAt?: number;
+	/** content 块绝对索引（toolcall_start 时记录）：与 StreamingState.textBlockIndex 比较判定「正文前/正文后」，
+	 * 保住同 turn 内 text→toolCall 交错的时序；历史回放消息由 backend 预拆分，不带此字段 */
+	blockIndex?: number;
+}
 
 export interface WikiModelReviewInput {
 	cwd: string;
