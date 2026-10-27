@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { SubprocessFixtureRunner } from "@drone/discovery";
+import { readDroneToolMeta } from "@drone/shared";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
 	createAgentSession,
@@ -132,6 +133,12 @@ it.skipIf(!tarball)(
 				});
 				opened.push(session);
 				await session.bindExtensions({});
+				for (const name of manifest.tools) {
+					expect(readDroneToolMeta(session.getToolDefinition(name))).toMatchObject({
+						readOnly: true,
+						capabilities: ["research", "analysis"],
+					});
+				}
 				const call = async (name: string, input: Record<string, unknown>) => {
 					const receipts: any[] = [];
 					const stop = session.subscribe((event) => {
