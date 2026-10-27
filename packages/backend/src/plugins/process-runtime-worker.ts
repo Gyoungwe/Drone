@@ -114,8 +114,11 @@ input.on("line", async (line) => {
         if(message.kind==="tool") return session.tools.get(message.name).execute(message.toolCallId,message.input,signal,undefined,ctx);
         const hook=session.hooks[message.hookIndex];
         if(!hook||hook.name!==message.name)throw new Error("Unknown native event handler");
-        if(!hook.active)return null;
-        const result=await hook.handler(message.input,ctx);
+        if(!hook.active&&message.name!=="before_agent_start")return null;
+        // The SDK retains this object even if a handler reassigns the event property.
+        const systemPromptOptions=message.input.systemPromptOptions;
+        const result=hook.active?await hook.handler(message.input,ctx):undefined;
+        if(message.name==="before_agent_start")return {systemPromptOptions,result:result??null};
         // Official context handlers may mutate their message list instead of returning it.
         if(message.name==="context")return {messages:result?.messages??message.input.messages};
         // Preserve final-message mutation before the SDK persists its replacement.

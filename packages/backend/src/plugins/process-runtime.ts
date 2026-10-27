@@ -91,6 +91,27 @@ const nativeDeclarationsSchema = Type.Object({
 	),
 });
 
+const jsonValueSchema = Type.Cyclic(
+	{
+		Json: Type.Union([
+			Type.Null(),
+			Type.Boolean(),
+			Type.Number(),
+			Type.String(),
+			Type.Array(Type.Ref("Json")),
+			Type.Record(Type.String(), Type.Ref("Json")),
+		]),
+	},
+	"Json",
+);
+const beforeAgentStartResponseSchema = Type.Object(
+	{
+		systemPromptOptions: Type.Record(Type.String(), jsonValueSchema),
+		result: Type.Union([Type.Null(), Type.Record(Type.String(), jsonValueSchema)]),
+	},
+	{ additionalProperties: false },
+);
+
 function staysInPackage(root: string, path: string): boolean {
 	const pathRelative = relative(root, path);
 	return pathRelative !== ".." && !pathRelative.startsWith(`..${sep}`) && !isAbsolute(pathRelative);
@@ -471,9 +492,22 @@ class RuntimeProcess {
 				// Register each callback independently so the real SDK chains hook results.
 				for (const hook of declarations.events) {
 					if (hook.name !== "session_shutdown")
-						on(hook.name, (event, ctx) =>
-							invoke("event", hook.name, event, ctx, ctx.signal, undefined, hook.index),
-						);
+						on(hook.name, async (event, ctx) => {
+							const value = await invoke("event", hook.name, event, ctx, ctx.signal, undefined, hook.index);
+							if (hook.name !== "before_agent_start") return value;
+							if (!Check(beforeAgentStartResponseSchema, value))
+								throw new Error("Invalid native before_agent_start response");
+							const response = value as Static<typeof beforeAgentStartResponseSchema>;
+							const options = (event as { systemPromptOptions: Record<PropertyKey, unknown> })
+								.systemPromptOptions;
+							// Preserve the SDK reference; descriptors keep __proto__ as an own data field.
+							for (const key of Reflect.ownKeys(options)) delete options[key];
+							Object.defineProperties(
+								options,
+								Object.getOwnPropertyDescriptors(response.systemPromptOptions),
+							);
+							return response.result;
+						});
 				}
 				pi.on("session_shutdown", async (event, ctx) => {
 					if (stopping) return stopping;

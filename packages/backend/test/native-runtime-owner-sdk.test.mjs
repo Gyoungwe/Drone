@@ -268,3 +268,151 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 	},
 	20000,
 );
+
+it("chains managed before-start option mutations without replacing the SDK options object", async () => {
+	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-native-prompt-options-")));
+	const entrypoint = join(root, "runtime.mjs");
+	await writeFile(
+		entrypoint,
+		`export default async () => ({operations:{},async dispose(){},createNativeSession(){return {async dispose(){},extension(pi){
+ const remove=pi.on("before_agent_start",()=>{throw new Error("Unsubscribed before-start handler ran");});remove();
+ pi.on("before_agent_start",event=>{
+  const options=event.systemPromptOptions;
+  delete options.forceSystemPrompt;delete options.fixtureRemove;
+  options.sections.managed="managed mutation is rendered";
+  options.promptGuidelines.push("managed guideline");
+  Object.defineProperty(options,"__proto__",{value:{polluted:"own JSON data"},enumerable:true,writable:true,configurable:true});
+  event.systemPromptOptions={...options,forceSystemPrompt:"replacement must be ignored"};
+ });
+ pi.on("before_agent_start",event=>{
+  if(event.systemPromptOptions.fixtureRemove!==undefined||event.systemPromptOptions.forceSystemPrompt!==undefined)throw new Error("Option deletion or original reference was lost");
+  if(!event.systemPrompt.includes("managed mutation is rendered")||!event.systemPrompt.includes("managed guideline"))throw new Error("Later handler missed rendered mutation");
+  return {systemPrompt:"returned managed system prompt",message:{customType:"managed-prompt-proof",content:"managed before-start message",display:false,details:{workerPid:process.pid}}};
+ });
+}};}});`,
+	);
+	const lifecycle = new AbortController();
+	let runtime;
+	let native;
+	let session;
+	const observed = [];
+	const modelContexts = [];
+	const errors = [];
+	let originalOptions;
+	try {
+		runtime = await createProcessPluginRuntime({
+			pluginId: "prompt-options",
+			packageRoot: root,
+			entrypoint,
+			runtimeDirectory,
+		})({
+			applicationId: "prompt-options-test",
+			signal: lifecycle.signal,
+			resources: [],
+			capabilities: {
+				call: async () => {
+					throw new Error("No capabilities requested by this fixture");
+				},
+			},
+			events: { changed() {} },
+		});
+		native = await runtime.createNativeSession();
+		const settingsManager = SettingsManager.inMemory({});
+		const resourceLoader = new DefaultResourceLoader({
+			cwd: root,
+			agentDir: root,
+			settingsManager,
+			noExtensions: true,
+			noSkills: true,
+			noPromptTemplates: true,
+			extensionFactories: [
+				(pi) =>
+					pi.on("before_agent_start", (event) => {
+						originalOptions = event.systemPromptOptions;
+						event.systemPromptOptions.forceSystemPrompt = "initial override must be deleted";
+						event.systemPromptOptions.fixtureRemove = "delete this own field";
+					}),
+				native.extension,
+				(pi) =>
+					pi.on("before_agent_start", (event) => {
+						observed.push({
+							identity: event.systemPromptOptions === originalOptions,
+							removed: Object.hasOwn(event.systemPromptOptions, "fixtureRemove"),
+							prototype: Object.getPrototypeOf(event.systemPromptOptions),
+							ownProto: Object.getOwnPropertyDescriptor(event.systemPromptOptions, "__proto__")?.value,
+							systemPrompt: event.systemPrompt,
+							sections: event.systemPromptOptions.sections,
+						});
+					}),
+			],
+		});
+		await resourceLoader.reload({ resolveProjectTrust: async () => true });
+		expect(resourceLoader.getExtensions().errors).toEqual([]);
+		const modelRuntime = await ModelRuntime.create({
+			authPath: join(root, "auth.json"),
+			modelsPath: null,
+			allowModelNetwork: false,
+			refreshOnCreate: false,
+		});
+		const faux = fauxProvider({ provider: "native-prompt-options-offline", tokensPerSecond: 0 });
+		modelRuntime.registerNativeProvider(faux.provider);
+		vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
+		faux.setResponses([
+			(context) => {
+				modelContexts.push(context);
+				return fauxAssistantMessage("completed");
+			},
+		]);
+		const sessionManager = SessionManager.inMemory(root);
+		({ session } = await createAgentSession({
+			cwd: root,
+			agentDir: root,
+			settingsManager,
+			resourceLoader,
+			modelRuntime,
+			model: faux.getModel(),
+			sessionManager,
+		}));
+		await session.bindExtensions({ onError: (error) => errors.push(error) });
+		await session.prompt("Check managed prompt mutations.");
+		await session.waitForIdle();
+		expect(errors).toEqual([]);
+		expect(observed).toEqual([
+			{
+				identity: true,
+				removed: false,
+				prototype: Object.prototype,
+				ownProto: { polluted: "own JSON data" },
+				systemPrompt: "returned managed system prompt",
+				sections: { managed: "managed mutation is rendered" },
+			},
+		]);
+		expect(Object.prototype).not.toHaveProperty("polluted");
+		expect(modelContexts[0].messages.find((message) => message.role === "system")).toMatchObject({
+			content: "returned managed system prompt",
+		});
+		// Pi persists the mutable structured sections; its exact returned override is request-only.
+		const persistedSystem = sessionManager
+			.getEntries()
+			.filter((entry) => entry.type === "message" && entry.message.role === "system")
+			.at(-1)?.message;
+		expect(persistedSystem.sections.managed).toContain("managed mutation is rendered");
+		expect(persistedSystem.sections.rules).toContain("managed guideline");
+		const custom = session.messages.find(
+			(message) => message.role === "custom" && message.customType === "managed-prompt-proof",
+		);
+		expect(custom).toMatchObject({ content: "managed before-start message", display: false });
+		expect(custom.details.workerPid).not.toBe(process.pid);
+		expect(
+			sessionManager
+				.getEntries()
+				.some((entry) => entry.type === "custom_message" && entry.customType === "managed-prompt-proof"),
+		).toBe(true);
+	} finally {
+		if (session) await new SessionEngine().dispose(session);
+		if (native) await native.dispose();
+		if (runtime) await runtime.dispose();
+		vi.restoreAllMocks();
+		await rm(root, { recursive: true, force: true });
+	}
+}, 20000);
