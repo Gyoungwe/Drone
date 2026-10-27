@@ -1895,6 +1895,7 @@ export const zh = {
 		},
 	},
 	toast: {
+		extensionNotification: "扩展通知",
 		tabsSaveFailed: "标签页保存失败",
 		uiStateSaveFailed: "界面设置保存失败",
 		trustFailed: "项目信任检查失败",

@@ -284,7 +284,6 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		traces: service.traces,
 		storage: service.storage,
 		projectLoader: service.projectLoader,
-		knowledge: service.knowledge,
 		getModelRuntime: () => service.getModelRuntime(),
 		sessionExtensionDependencies: () => service.sessionExtensionDependencies(),
 		registerAskGate: (id, gate) => service.registerAskGate(id, gate),

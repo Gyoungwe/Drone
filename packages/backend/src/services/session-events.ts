@@ -103,6 +103,7 @@ export class SessionEventService {
 							"model_wait",
 							"subagent_run",
 							"reviewer_finding",
+							"extension_notification",
 						].includes(current.type)
 					)
 						this.deps.traces.record(sid, current as AgentSessionEvent);

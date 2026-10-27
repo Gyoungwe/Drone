@@ -1986,6 +1986,7 @@ export const en: Messages = {
 		},
 	},
 	toast: {
+		extensionNotification: "Extension notification",
 		tabsSaveFailed: "Failed to save tabs",
 		uiStateSaveFailed: "Failed to save UI state",
 		trustFailed: "Failed to check project trust",
