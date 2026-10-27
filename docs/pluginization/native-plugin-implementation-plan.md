@@ -19,6 +19,9 @@
 - `042c44ff` 将 pi-core 的 status/todo/memory-save/deliver-files 兼容门面统一到版本化 `@gyoungwe/pi-core/host` 入口；host bundle 检查和 runtime 回归通过，backend 工具仍是短期兼容 facade，P4/P6 未因此完成。
 - `7980b0e8` 将 knowledge worker 的 metadata、生命周期事件和稳定事件名发布到 `@drone/shared`；backend 只消费 shared 合同，pi-knowledge 兼容组合仍仅负责 runtime 配置，P2/P6 仍未完成。
 - `61787440` 修正无分析插件时的 capability 状态：`analysisHostLoader` 缺失现在明确登记为 `unavailable`，发现插件后才登记 `plugin:analysis`；新增 create-backend 回归，P5 的完整分析迁移仍未完成。
+- `54f7d515` 将版本化 `CoreHostLoader` 从 Desktop 通用发现贯穿到 `createBackend`、SessionService、session extension/subagent 工具和 trust-loader；无 `pi-core` 时核心工具不注册，memory promote 明确 fail-closed，生产源码已无 `@gyoungwe/pi-core/host` runtime import。backend/desktop typecheck、17 项定向回归和 `check:arch` 通过。
+- `b5d62102`/`f2128217` 仅修复既有 SDK publication fixture：注入最小 `CoreHostPort` 并改用当前 worktree 的 `.pi` 扩展/技能路径，knowledge-publication-delivery 15/15 通过；不改变生产边界。
+- `4a00e695` 让通用 backend 不再默认选择 `defaultKnowledgeCompatibility`，未声明 host 操作统一返回 unavailable；legacy worker/compat adapter 仍是显式过渡边界，P2/P6 继续部分完成。
 
 ## 工作分配
 

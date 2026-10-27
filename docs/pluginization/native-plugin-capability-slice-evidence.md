@@ -160,6 +160,9 @@
 - 2026-10-27：pi-core 独立化闭环已完成：`0f6b4ae` 将 20 个 tasks runtime 模块 vendoring 到包内，`33f525c` 移除 `@drone/shared` 源码依赖，`f9c8ca1` 修复 task journal 类型，`f409d4a` 增加独立 tsconfig、双入口构建（`index.mjs`/`host.mjs`）、manifest、smoke 和 workspace 门禁。插件仓库完整 `npm run check` exit 0；pi-core typecheck/build/build:check/smoke、13 项测试、8 包/14 项 manifest 检查和 pack smoke 均通过。宿主锁文件仍未改为未发布候选。
 - 2026-10-27：宿主 `8e55fd41`/`144fb1fc` 将 KnowledgeCompatibilityPort 显式注入并验证无 pi-knowledge 时 fail-closed；宿主 `13002c70` 与插件 `d5a40e9` 增加版本化 CoreHostLoader 合同、任意已安装包发现、pi-core host 入口和 manifest capability。宿主 plugin-api/desktop discovery 回归与插件仓库完整 check 均通过；CoreHostLoader 尚未接入 session-engine 工具工厂，因此不能宣称已删除宿主 pi-core runtime import。
 - 2026-10-27：尝试在同一 arm64 正式包中运行真实销毁失败夹具时，首次运行在 `readCode` 阶段观察到 `Plugin runtime deactivated`；打开全局 UI 插件开关后进入真实 `withTransition`，但因桌面运行时权限审批/销毁屏障未得到人工确认而在 `Runtime.evaluate` 超时，未形成可复现回执。夹具代码已回退且未提交；销毁失败仍保持 `NOT_RUN`，不把该失败尝试记为 PASS。
+- 2026-10-27：`54f7d515` 完成 CoreHostLoader 宿主接线：Desktop 通用 discovery → `createBackend` → SessionService/session extensions/subagent/trust-loader；无 `pi-core` 时核心工具不注册，memory promotion 明确返回 unavailable，生产源码不再 runtime import `@gyoungwe/pi-core/host`。backend/desktop typecheck、17 项定向回归与 `check:arch` 通过。
+- 2026-10-27：`b5d62102`/`f2128217` 只修复 publication SDK fixture 的 host 注入和 worktree `.pi` 路径，`knowledge-publication-delivery` 15/15 通过；不把 fixture 证据当作正式安装包 PASS。
+- 2026-10-27：`4a00e695` 收窄 knowledge 无插件边界：通用 backend 不再默认选择 `defaultKnowledgeCompatibility`，未声明 host 操作统一 fail-closed；legacy worker/compat adapter 仍登记为显式迁移边界。backend typecheck、create-backend 27 项回归、`check:arch` 通过；P2/P6 仍未完成。
 
 ## 未关闭项
 
