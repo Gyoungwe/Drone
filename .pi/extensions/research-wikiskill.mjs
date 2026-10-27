@@ -2,7 +2,7 @@
 // packages/extensions/src/research-wikiskill.ts
 import { spawn } from "node:child_process";
 import { createHash as createHash5, randomUUID as randomUUID17 } from "node:crypto";
-import { access as access2, appendFile, cp, mkdir as mkdir14, readdir as readdir4, readFile as readFile14, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
+import { access, appendFile, cp, mkdir as mkdir14, readdir as readdir4, readFile as readFile14, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
 import { basename as basename4, dirname as dirname10, isAbsolute as isAbsolute10, join as join18, relative as relative12, resolve as resolve13, sep as sep11 } from "node:path";
 
 // node_modules/@gyoungwe/pi-knowledge/dist/host.mjs
@@ -10827,7 +10827,7 @@ var compatibility4 = createKnowledgeInterfaceApi({
 var { configureKnowledgeExtensionHost, LOCAL_FIRST_GUIDANCE, registerWikiReviewAcceptance, registerKnowledgeInterface } = compatibility4;
 
 // packages/extensions/src/workspace-config.ts
-import { access, mkdir as mkdir13, readFile as readFile13, realpath as realpath9, rename as rename11, writeFile as writeFile13 } from "node:fs/promises";
+import { mkdir as mkdir13, readFile as readFile13, realpath as realpath9, rename as rename11, writeFile as writeFile13 } from "node:fs/promises";
 import { dirname as dirname9, isAbsolute as isAbsolute6, join as join17, relative as relative11, resolve as resolve8, sep as sep10 } from "node:path";
 
 // packages/extensions/src/internal/vault.ts
@@ -11119,11 +11119,11 @@ async function sourceStatus({ cwd = process.cwd(), run_dir } = {}) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  const manifestExists = await access2(manifestPath).then(
+  const manifestExists = await access(manifestPath).then(
     () => true,
     () => false
   );
-  const failuresExists = await access2(failuresPath).then(
+  const failuresExists = await access(failuresPath).then(
     () => true,
     () => false
   );
@@ -11300,7 +11300,7 @@ async function proposeWikiSkill({
   const root = evolutionRoot(config.resultsRoot, project);
   await ensureEvolution(root);
   for (const id2 of patternIds)
-    await access2(join18(root, "wiki", "patterns", `${safeSlug(id2, "pattern id")}.md`));
+    await access(join18(root, "wiki", "patterns", `${safeSlug(id2, "pattern id")}.md`));
   const active = await readText(skillPath(cwd, targetSkill));
   if (active === null) throw new Error(`active skill not found: ${targetSkill}`);
   const safety = safetyChecks(targetSkill, candidateMarkdown);

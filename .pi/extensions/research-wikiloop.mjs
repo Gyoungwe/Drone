@@ -11215,7 +11215,7 @@ project: ${JSON.stringify(slug2)}
 }
 
 // packages/extensions/src/workspace-config.ts
-import { access, mkdir as mkdir14, readFile as readFile14, realpath as realpath10, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
+import { mkdir as mkdir14, readFile as readFile14, realpath as realpath10, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
 import { dirname as dirname10, isAbsolute as isAbsolute10, join as join18, relative as relative12, resolve as resolve13, sep as sep11 } from "node:path";
 
 // packages/extensions/src/research-policy.ts

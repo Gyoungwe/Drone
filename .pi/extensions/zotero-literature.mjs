@@ -5,7 +5,7 @@ import { readFile as readFile15, realpath as realpath11, rename as rename13, wri
 import { isAbsolute as isAbsolute11, join as join20, relative as relative13, resolve as resolve14, sep as sep12 } from "node:path";
 
 // packages/extensions/src/workspace-config.ts
-import { access, mkdir as mkdir13, readFile as readFile13, realpath as realpath9, rename as rename11, writeFile as writeFile13 } from "node:fs/promises";
+import { mkdir as mkdir13, readFile as readFile13, realpath as realpath9, rename as rename11, writeFile as writeFile13 } from "node:fs/promises";
 import { dirname as dirname9, isAbsolute as isAbsolute6, join as join17, relative as relative11, resolve as resolve8, sep as sep10 } from "node:path";
 
 // node_modules/@gyoungwe/pi-knowledge/dist/host.mjs
@@ -11497,7 +11497,7 @@ import { isAbsolute as isAbsolute10, relative as relative12, resolve as resolve1
 import { realpath as realpath22 } from "node:fs/promises";
 import { resolve as resolve22 } from "node:path";
 import { createHash as createHash42, randomUUID as randomUUID22 } from "node:crypto";
-import { access as access2, mkdir as mkdir22, readFile as readFile32, realpath as realpath32, rename as rename12, writeFile as writeFile22 } from "node:fs/promises";
+import { access, mkdir as mkdir22, readFile as readFile32, realpath as realpath32, rename as rename12, writeFile as writeFile22 } from "node:fs/promises";
 import { dirname as dirname22, isAbsolute as isAbsolute22, join as join22, relative as relative22, resolve as resolve32, sep as sep22 } from "node:path";
 import { createHash as createHash52 } from "node:crypto";
 import { readdir as readdir4, readFile as readFile42 } from "node:fs/promises";
@@ -11507,7 +11507,7 @@ import { createReadStream } from "node:fs";
 import { lstat as lstat11, readFile as readFile52, realpath as realpath42, rename as rename22, stat as stat22, writeFile as writeFile32 } from "node:fs/promises";
 import { isAbsolute as isAbsolute42, join as join42, relative as relative42, resolve as resolve52, sep as sep42 } from "node:path";
 import { createHash as createHash82, randomUUID as randomUUID42 } from "node:crypto";
-import { access as access22, mkdir as mkdir32, readFile as readFile62, realpath as realpath52, rename as rename32, writeFile as writeFile42 } from "node:fs/promises";
+import { access as access2, mkdir as mkdir32, readFile as readFile62, realpath as realpath52, rename as rename32, writeFile as writeFile42 } from "node:fs/promises";
 import { basename as basename32, dirname as dirname32, extname, isAbsolute as isAbsolute62, join as join52, relative as relative62, resolve as resolve72, sep as sep62 } from "node:path";
 import { createHash as createHash72 } from "node:crypto";
 import { basename as basename22, isAbsolute as isAbsolute52, relative as relative52, resolve as resolve62, sep as sep52 } from "node:path";
@@ -12900,7 +12900,7 @@ function createResearchLoop(ports) {
     const rel = relative22(config.resultsRoot, path).split(sep22);
     if (rel.length !== 2 || !rel[1]?.startsWith("run-"))
       throw new Error("run_dir must be directly inside a result slug");
-    await access2(join22(path, "metadata.json"));
+    await access(join22(path, "metadata.json"));
     return { config, path, metadataPath: join22(path, "metadata.json") };
   }
   async function startResearchRun({
@@ -14339,7 +14339,7 @@ async function archiveSource(options = {}, ports) {
     throw new Error(`max_candidates must be between 1 and ${OA_MAX_CANDIDATES}`);
   const config = await ports.workspace(cwd);
   const runDir = validateRunDir(config.resultsRoot, resolve72(cwd, run_dir));
-  await access22(runDir);
+  await access2(runDir);
   if (!isWithin(await realpath52(config.resultsRoot), await realpath52(runDir)))
     throw new Error("run_dir escapes results root through a link");
   const limit = Number(max_bytes);
@@ -14435,7 +14435,7 @@ async function archiveSource(options = {}, ports) {
       ...openAccess ? { open_access: openAccess } : {},
       manifest_path: manifestPath,
       manifestPath,
-      failures_path: await access22(failuresPath).then(
+      failures_path: await access2(failuresPath).then(
         () => failuresPath,
         () => null
       )
@@ -14862,11 +14862,11 @@ async function sourceStatus(options = {}, ports) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  const manifestExists = await access22(manifestPath).then(
+  const manifestExists = await access2(manifestPath).then(
     () => true,
     () => false
   );
-  const failuresExists = await access22(failuresPath).then(
+  const failuresExists = await access2(failuresPath).then(
     () => true,
     () => false
   );

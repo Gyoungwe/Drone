@@ -11805,7 +11805,7 @@ function createKnowledgeNativeAdapter(owner, controller, register, cleanup) {
         return Reflect.get(target, property, target);
       }
     });
-    const scopedEvents = pi.events && typeof pi.events === "object" ? {
+    const scopedEvents = {
       on: (channel, handler) => {
         assertOpen();
         const unsubscribe = pi.events.on(channel, (data) => {
@@ -11821,7 +11821,7 @@ function createKnowledgeNativeAdapter(owner, controller, register, cleanup) {
         assertOpen();
         return pi.events.emit(channel, data);
       }
-    } : pi.events;
+    };
     const scopedSignal = (signal) => signal ? AbortSignal.any([controller.signal, signal]) : controller.signal;
     const ownedPi = new Proxy(pi, {
       get(target, property) {
@@ -11830,7 +11830,10 @@ function createKnowledgeNativeAdapter(owner, controller, register, cleanup) {
           return target.appendEntry(...args);
         };
         if (property === "sendUserMessage") return (...args) => run2(() => target.sendUserMessage(...args));
-        if (property === "events") return scopedEvents;
+        if (property === "events") {
+          const events = Reflect.get(target, property, target);
+          return events && typeof events === "object" ? scopedEvents : events;
+        }
         if (property === "registerTool") return (definition) => target.registerTool({
           ...definition,
           execute: (id2, input, signal, update, context) => {
@@ -13569,7 +13572,7 @@ import { basename as basename7, dirname as dirname14, isAbsolute as isAbsolute13
 import { fileURLToPath as fileURLToPath3, pathToFileURL as pathToFileURL5 } from "node:url";
 
 // packages/extensions/src/workspace-config.ts
-import { access, mkdir as mkdir14, readFile as readFile14, realpath as realpath10, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
+import { mkdir as mkdir14, readFile as readFile14, realpath as realpath10, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
 import { dirname as dirname12, isAbsolute as isAbsolute11, join as join21, relative as relative12, resolve as resolve14, sep as sep11 } from "node:path";
 init_host();
 
@@ -13934,7 +13937,7 @@ import { isAbsolute as isAbsolute12, relative as relative13, resolve as resolve1
 import { realpath as realpath23 } from "node:fs/promises";
 import { resolve as resolve23 } from "node:path";
 import { createHash as createHash42, randomUUID as randomUUID22 } from "node:crypto";
-import { access as access2, mkdir as mkdir22, readFile as readFile32, realpath as realpath32, rename as rename13, writeFile as writeFile22 } from "node:fs/promises";
+import { access, mkdir as mkdir22, readFile as readFile32, realpath as realpath32, rename as rename13, writeFile as writeFile22 } from "node:fs/promises";
 import { dirname as dirname22, isAbsolute as isAbsolute23, join as join24, relative as relative22, resolve as resolve32, sep as sep22 } from "node:path";
 import { createHash as createHash52 } from "node:crypto";
 import { readdir as readdir5, readFile as readFile42 } from "node:fs/promises";
@@ -13944,7 +13947,7 @@ import { createReadStream } from "node:fs";
 import { lstat as lstat12, readFile as readFile52, realpath as realpath42, rename as rename22, stat as stat23, writeFile as writeFile32 } from "node:fs/promises";
 import { isAbsolute as isAbsolute42, join as join42, relative as relative42, resolve as resolve52, sep as sep42 } from "node:path";
 import { createHash as createHash82, randomUUID as randomUUID42 } from "node:crypto";
-import { access as access22, mkdir as mkdir32, readFile as readFile62, realpath as realpath52, rename as rename32, writeFile as writeFile42 } from "node:fs/promises";
+import { access as access2, mkdir as mkdir32, readFile as readFile62, realpath as realpath52, rename as rename32, writeFile as writeFile42 } from "node:fs/promises";
 import { basename as basename32, dirname as dirname32, extname, isAbsolute as isAbsolute62, join as join52, relative as relative62, resolve as resolve72, sep as sep62 } from "node:path";
 import { createHash as createHash72 } from "node:crypto";
 import { basename as basename23, isAbsolute as isAbsolute52, relative as relative52, resolve as resolve62, sep as sep52 } from "node:path";
@@ -15337,7 +15340,7 @@ function createResearchLoop(ports) {
     const rel = relative22(config.resultsRoot, path).split(sep22);
     if (rel.length !== 2 || !rel[1]?.startsWith("run-"))
       throw new Error("run_dir must be directly inside a result slug");
-    await access2(join24(path, "metadata.json"));
+    await access(join24(path, "metadata.json"));
     return { config, path, metadataPath: join24(path, "metadata.json") };
   }
   async function startResearchRun({
@@ -16776,7 +16779,7 @@ async function archiveSource(options = {}, ports) {
     throw new Error(`max_candidates must be between 1 and ${OA_MAX_CANDIDATES}`);
   const config = await ports.workspace(cwd);
   const runDir = validateRunDir(config.resultsRoot, resolve72(cwd, run_dir));
-  await access22(runDir);
+  await access2(runDir);
   if (!isWithin(await realpath52(config.resultsRoot), await realpath52(runDir)))
     throw new Error("run_dir escapes results root through a link");
   const limit = Number(max_bytes);
@@ -16872,7 +16875,7 @@ async function archiveSource(options = {}, ports) {
       ...openAccess ? { open_access: openAccess } : {},
       manifest_path: manifestPath,
       manifestPath,
-      failures_path: await access22(failuresPath).then(
+      failures_path: await access2(failuresPath).then(
         () => failuresPath,
         () => null
       )
@@ -17299,11 +17302,11 @@ async function sourceStatus(options = {}, ports) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  const manifestExists = await access22(manifestPath).then(
+  const manifestExists = await access2(manifestPath).then(
     () => true,
     () => false
   );
-  const failuresExists = await access22(failuresPath).then(
+  const failuresExists = await access2(failuresPath).then(
     () => true,
     () => false
   );
