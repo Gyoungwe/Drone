@@ -607,6 +607,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		});
 	});
 	const abort = () => {
+		deps.onEvent?.(session.sessionId, { type: "extension_status", key: null, text: null });
 		void session.abort();
 	};
 	if (input.signal) {
@@ -616,13 +617,24 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 	try {
 		await deps.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 		await session.bindExtensions({
-			uiContext: makeUiContext(deps.gate, undefined, (message, severity) => {
-				// The sealed result or revoked caller ends this UI context. Notifications
-				// are transient and never enter the raw-SDK trace fallback.
-				if (result.exitCode !== -1 || input.signal?.aborted) return;
-				deps.onEvent?.(session.sessionId, { type: "extension_notification", severity, message });
-			}),
-			mode: "tui",
+			uiContext: makeUiContext(
+				deps.gate,
+				undefined,
+				deps.onEvent
+					? (message, severity) => {
+							// Revoked contexts never publish late UI output; these events are not traces.
+							if (result.exitCode !== -1 || input.signal?.aborted) return;
+							deps.onEvent?.(session.sessionId, { type: "extension_notification", severity, message });
+						}
+					: undefined,
+				deps.onEvent
+					? (key, text) => {
+							if (result.exitCode !== -1 || input.signal?.aborted) return;
+							deps.onEvent?.(session.sessionId, { type: "extension_status", key, text: text ?? null });
+						}
+					: undefined,
+			),
+			mode: "rpc",
 			onError: diagnostics.onError,
 		});
 		// Set the title before the first progress notification and model event.
@@ -649,6 +661,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		result.exitCode = 1;
 		result.error = failure;
 	} finally {
+		deps.onEvent?.(session.sessionId, { type: "extension_status", key: null, text: null });
 		diagnostics.dispose();
 		unsubscribeEvents?.();
 		unregisterLiveChild?.();

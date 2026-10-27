@@ -345,9 +345,9 @@ src/
 | `src/session/stream-guard.ts` | `StreamGuard` | 流式熔断（emitEvent 单点）：连续空白 >8KB 或单消息 >2MB → abort + 丢弃后续增量；双路径清理防 Map 泄漏 |
 | `src/session/rates.ts` | `EventRateTracker` | 每会话事件速率统计（60s 滑窗），心跳/崩溃快照数据源；prune 防泄漏 |
 | `src/session/naming.ts` | `autoNameSession` | 首条用户消息 message_start 即取首行做标题（skill 命令先还原 `/skill:name` 投影，有测试） |
-| `src/session/ui-context.ts` | `makeUiContext` | `ExtensionUIContext` 桥接基础询问/通知；终端 custom 明确拒绝、setTheme 返回失败，其他终端成员仍有待迁移 no-op；**theme 必须是真实 `Theme` 类实例**（假对象会让 pi-mcp-adapter 等扩展 `theme.fg()` 抛错、MCP 服务器全连不上）；SDK 接口变化时在此补新成员 |
+| `src/session/ui-context.ts` | `makeUiContext` | `ExtensionUIContext` 以 SDK `rpc` 模式桥接基础询问、通知与瞬时 keyed 状态栏；终端专属成员明确拒绝、setTheme 返回失败；对话倒计时未支持时明确拒绝、signal 经门控单请求取消；**theme 必须是真实 `Theme` 类实例**（假对象会让 pi-mcp-adapter 等扩展 `theme.fg()` 抛错、MCP 服务器全连不上）；SDK 接口变化时在此补新成员；[真实 SDK / MCP 状态证据](pluginization/native-plugin-terminal-ui-evidence.md) |
 | `src/session/extension-errors.ts` | `createSessionExtensionDiagnostics` | 主/子会话持续记录 SDK hook 错误到日志与 traces，随关闭解除监听；不依赖知识插件通知 |
-| `src/permissions/gate.ts` | `PermissionGate` | 权限确认队列：allow/deny/allowAlways/allowDir + kind/suggestDir 元数据；respond 前供 PiBackend 持久化 |
+| `src/permissions/gate.ts` | `PermissionGate` | 权限确认队列：allow/deny/allowAlways/allowDir + kind/suggestDir 元数据；signal 单请求取消并经既有审批回执撤卡，respond 前供 PiBackend 持久化 |
 | `src/permissions/index.ts`（+ bash-chain/pattern/config/tmp-zone） | `evaluateBashCommand` 等 | 逐工具权限规则引擎：allow/ask/deny × 通配模式；bash 命令链取最严段；自保护（permissions/workspaces/auth/trust 四文件）；tmp-zone = 临时区判定 + rm 豁免（纯函数）。已知天花板：xargs/find -exec/python -c 不覆盖 |
 | `src/permissions/settings.ts`（+ config.ts 的 `parseConfig`/`serializeConfig`/`validateConfig`） | `readPermissionSettings`、`writePermissionSettings`、`resetPermissionSettings`、`probePermission`、`readPermissionAuditTail` | 设置 → 权限 面板后端：快照（路径/原文/默认合并视图/mtime）、整表校验（动作枚举 / 纯数字键 / 自保护四模式存在、非 allow 且未被其后 allow 覆盖）、mtime 冲突检查 + tmp+rename 原子写（留 `.bak`，`enabled` 保留文件原值）、规则试算（同一求值链，只跑规则不模拟边界）。写后 `createPermissionConfigLoader` 下一次 tool_call 重读 = 保存即生效 |
 | `src/permissions/extension.ts` | `makePermissionGateExtension` | 权限门控内置扩展（tool_call 钩子 + 确认通道 + 会话权限模式分支）。求值链：① deny 直接 block → ② 临时区 → ③ 多根边界（projectRoot ∪ workspaces roots）读写分离（读默认放行/写默认确认）→ ④ 项目记忆 allowed[] → ⑤ ask；`getMode` 每次调用实时读，fullAccess 档下 ①⑤ 降级为审计 + 放行（spec permission-mode） |

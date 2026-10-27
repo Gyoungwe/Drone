@@ -10,6 +10,11 @@ function fakeGate(): PermissionGate {
 }
 
 describe("makeUiContext — ui.theme 契约", () => {
+	it("rejects UI output with no transport instead of silently dropping it", () => {
+		const ui = makeUiContext(fakeGate());
+		expect(() => ui.notify("message")).toThrow("notify without a notification transport");
+		expect(() => ui.setStatus("status", "message")).toThrow("setStatus without a status transport");
+	});
 	it("does not report a terminal theme change as successful", () => {
 		const ui = makeUiContext(fakeGate());
 		const original = ui.theme;
@@ -111,6 +116,15 @@ describe("makeUiContext — native setup questions", () => {
 		return { gate, send, ui: makeUiContext(fakeGate(), gate) };
 	}
 
+	it("rejects unsupported dialog options without opening a request", async () => {
+		const { ui, send } = bridge();
+		await expect(ui.select("Choice", ["A"], { timeout: 100 })).rejects.toThrow("select timeout countdown");
+		await expect(ui.input("Input", "", { timeout: 100 })).rejects.toThrow("input timeout countdown");
+
+		expect(() => ui.confirm("Confirm", "Message", { timeout: 100 })).toThrow("confirm timeout countdown");
+		expect(send).not.toHaveBeenCalled();
+	});
+
 	it("input uses a text-only question and returns the custom answer", async () => {
 		const { ui, gate, send } = bridge();
 		const pending = ui.input("Vault path", "/path/to/Vault");
@@ -155,10 +169,11 @@ describe("makeUiContext — native setup questions", () => {
 		expect(send).not.toHaveBeenCalled();
 	});
 
-	it("no question transport or no choices returns cancellation", async () => {
+	it("missing question transport is unsupported, while an empty selection cancels", async () => {
 		const ui = makeUiContext(fakeGate());
-		await expect(ui.input("Vault")).resolves.toBeUndefined();
-		await expect(ui.select("Profile", [])).resolves.toBeUndefined();
+		await expect(ui.input("Vault")).rejects.toThrow("input without a question transport");
+		await expect(ui.select("Profile", ["A"])).rejects.toThrow("select without a question transport");
+		await expect(bridge().ui.select("Profile", [])).resolves.toBeUndefined();
 	});
 });
 
