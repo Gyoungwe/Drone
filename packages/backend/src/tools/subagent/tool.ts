@@ -1,6 +1,5 @@
-import { type DroneRuntime, normalizeSubagentLaunchInputs } from "@drone/shared";
+import { type DroneRuntime, normalizeSubagentLaunchInputs, type SessionEvent } from "@drone/shared";
 import type {
-	AgentSessionEvent,
 	AgentToolResult,
 	ExtensionContext,
 	ModelRuntime,
@@ -73,7 +72,7 @@ export interface MakeSubagentToolDeps {
 	gate: PermissionGate;
 	traces: SessionTraces;
 	/** 把运行中子会话事件转发给桌面会话订阅方。 */
-	onEvent?: (sessionId: string, event: AgentSessionEvent) => void;
+	onEvent?: (sessionId: string, event: SessionEvent) => void;
 	registerLiveChild?: (
 		sessionId: string,
 		control: {

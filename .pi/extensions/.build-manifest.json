@@ -17,7 +17,7 @@
 			"output": "knowledge-extension.mjs",
 			"status": "generated",
 			"sourceSha256": "ae2078b76ab6866bf7c0543bfbc9e3053dc2266d99bd659ea4ce47fea414dadb",
-			"inputsSha256": "802b316a14e64c400c852fd95f30abcd3443e7332fdeccbe8092c33369721c37",
+			"inputsSha256": "a77be9921b2753c79b0f75ca57f3a4d93c4c10acff3beb36319aa52cb76d66c8",
 			"outputSha256": "653407cfa9ea866cbce84f98fdf034f9bb159dc6c6eada2413f8324fe58c4cbe"
 		},
 		"obsidian-workbench": {
@@ -25,16 +25,16 @@
 			"output": "obsidian-workbench.mjs",
 			"status": "generated",
 			"sourceSha256": "9d002426142cf1c0cc3345462df95e9a5ed7e47d78a897cb3c43ee4a9d97d3a0",
-			"inputsSha256": "5a380889bef72bcadbd26ce664bc5404e97dbd923c8f7223bd5db4f1c853ebc8",
-			"outputSha256": "d4c0c68fbf65c307867b42d430c08d2e4d533fc6ef9ee6aac269d468d085ce64"
+			"inputsSha256": "cb09c9df4aeb44fd08e4d746935d329e68b8e2f7f3d58af457d721dae843367a",
+			"outputSha256": "02bb40ca8c18b5cee90b6977499374e106871922d1946cb356d7f0427c71ecee"
 		},
 		"research-loop": {
 			"source": "research-loop.ts",
 			"output": "research-loop.mjs",
 			"status": "generated",
-			"sourceSha256": "6cbb700d8f146c11912dfe0bc71ffad52abd73d3354e96ef3a85225f9f7e9b84",
-			"inputsSha256": "8003e40f28c2687fe865285b2e8eeb6ebaee6c1dbf63a6f5997276364df05d24",
-			"outputSha256": "e92627d9101ad38336fee206322852ef9af1c527e338107d9c181ba572922c71"
+			"sourceSha256": "36cd175b14d6bf6b02a7f372819a0d8b30fb8d3480749166e5e1556651bd3ad0",
+			"inputsSha256": "1296e59b70385906c4e4ee4c4b3f80d6d8af35d3bb4c74eafa9f5c910f1e1617",
+			"outputSha256": "8cfa579d4fd3ebf14971c9bad74f06e0de27eeaf4a230af3d845832b61432405"
 		},
 		"research-policy": {
 			"source": "research-policy.ts",
@@ -49,31 +49,31 @@
 			"output": "research-wikiloop.mjs",
 			"status": "generated",
 			"sourceSha256": "eca31fb426eaecd2dc5d6a278470805846ce5057117b618b139e30c6bc150da4",
-			"inputsSha256": "ec035a470395da246e57a5dc28e868cdbaed312864a81dcd390d9ea03e8d54bf",
-			"outputSha256": "cd946915a2d8e49ef2d3f52957bed684bc193f6dbb52fe1c93f304e8ec4f6b4d"
+			"inputsSha256": "8b21e6408416d357ffb5fc00a94e23641e5a2c5436762856e45fcd4b971c726b",
+			"outputSha256": "49c6b54d33ce3081af6f0ea91615b277168c06e4dc10b81d2986a4f4bc021132"
 		},
 		"research-wikiskill": {
 			"source": "research-wikiskill.ts",
 			"output": "research-wikiskill.mjs",
 			"status": "generated",
 			"sourceSha256": "dfccf623d16b387ebf498766b68280c92bfe00247091151879e61661cbb81421",
-			"inputsSha256": "cafe3e955fec1489d91318c30919ad84069bb593149cd72882e30653d10252c4",
-			"outputSha256": "cebd3cb01635854a3997a55f951c9d9a7d2f017ba72382d40b8ecceda3ed038e"
+			"inputsSha256": "a2c62a7668025977fa72b12920e448f9880b2612b60f9e539ea6685e3d1c2444",
+			"outputSha256": "9756404dabfebb0c6568cfcaa217845a56a52144530387b84452d77ed19b275c"
 		},
 		"source-archive": {
 			"source": "source-archive.ts",
 			"output": "source-archive.mjs",
 			"status": "generated",
 			"sourceSha256": "8be5cfc599bc7f0c17a24f0c160921c35bbf9c42d7de80b3a5b037db85167ba9",
-			"inputsSha256": "d4f0e2ed59890916158df4dbf0311e9412f5829e644aaa2ba1ae6a3083ec2310",
-			"outputSha256": "84de6f7a1bf86e70513487a9fadd702b7dc721947ff9f245736ae7c672d7cbf5"
+			"inputsSha256": "c6123afcd349f684e3d34437632fda38bdfa3677d68ab811fdbb067046669dad",
+			"outputSha256": "c52c71c221797c3eec7724362bb9850ea96f3927eecf685abb3f9ffc77149161"
 		},
 		"subagent-mcp-readonly": {
 			"source": "subagent-mcp-readonly.ts",
 			"output": "subagent-mcp-readonly.mjs",
 			"status": "generated",
 			"sourceSha256": "08b10aac2ab29c9cb314efe11434f43671903ab2e50c11d430f3aaa12d843728",
-			"inputsSha256": "ecaad2896eca55aab7fd44877c9e50fe77eb5eb4f3bd135d33a7d106bbcccdd8",
+			"inputsSha256": "62a91d7023ae67c85af166f69129f014630d70ce8f1fbd1e97be0142f25acf7b",
 			"outputSha256": "be3e4af7e4eaee25e812d4fd0936ef683b8b1e1b4bbeaccac0ca4b8173edb8b8"
 		},
 		"subagent-research": {
@@ -88,17 +88,17 @@
 			"source": "workspace-config.ts",
 			"output": "workspace-config.mjs",
 			"status": "generated",
-			"sourceSha256": "03a01879328098856fb155e4e3ab8c4e4ed233d30a0b7d60567322f069eb4584",
-			"inputsSha256": "d7a1da9313c9b4a10761907f75d2a323bde297850dd36a4bc9cb1ef7dd21c182",
-			"outputSha256": "eb3aea99f82a8d7ad95bc3918e33f1189040709cad78f86bffc445897e80644a"
+			"sourceSha256": "ca82724cdd44ea42cc5b42618c48f443be36be1206e14475242142c3816398ba",
+			"inputsSha256": "f2b1db6531aeacecc4405cd28d303b0b7a8a5a7687640764f3d0a4a734a6ae91",
+			"outputSha256": "262585f0bef68ff234c471b823530c5c431bde377029057fea806f7f1e40e88c"
 		},
 		"zotero-literature": {
 			"source": "zotero-literature.ts",
 			"output": "zotero-literature.mjs",
 			"status": "generated",
 			"sourceSha256": "db0c8294396c94396a3beedfc8ae76250dbe842e012859e830f030e5dfae1a6f",
-			"inputsSha256": "f0e0c8e727c7ab7b0a895d69283464a76817cef255e26bc53234f367ee87c72d",
-			"outputSha256": "ceba9cbef41e32d2d1d4662869cf4ca3a880f041a1b729015116a2470bffd74d"
+			"inputsSha256": "9e1c18dcc2eaf66f1c819c7db0a8b09bc7c0af3d073bb80a64e86feef40f48a7",
+			"outputSha256": "471918ce8f560bf5599601601e304e6ce87e4643ab0291d0f029860d96080c33"
 		}
 	},
 	"legacyOutputs": ["knowledge-worker.mjs"]

@@ -1,8 +1,8 @@
 // @ts-nocheck
 // packages/extensions/src/workspace-config.ts
-import { randomUUID as randomUUID18 } from "node:crypto";
-import { access, mkdir as mkdir14, readFile as readFile14, realpath as realpath10, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
-import { dirname as dirname10, isAbsolute as isAbsolute10, join as join18, relative as relative12, resolve as resolve13, sep as sep11 } from "node:path";
+import { randomUUID as randomUUID19 } from "node:crypto";
+import { mkdir as mkdir15, readFile as readFile15, realpath as realpath10, rename as rename13, writeFile as writeFile15 } from "node:fs/promises";
+import { dirname as dirname11, isAbsolute as isAbsolute10, join as join18, relative as relative12, resolve as resolve13, sep as sep11 } from "node:path";
 import { pathToFileURL as pathToFileURL4 } from "node:url";
 
 // node_modules/@gyoungwe/pi-knowledge/dist/host.mjs
@@ -10835,21 +10835,79 @@ var compatibility4 = createKnowledgeInterfaceApi({
 }, {}, true);
 var { configureKnowledgeExtensionHost, LOCAL_FIRST_GUIDANCE, registerWikiReviewAcceptance, registerKnowledgeInterface } = compatibility4;
 
-// packages/extensions/src/internal/vault.ts
+// packages/extensions/src/internal/summary-write-transaction.ts
 import { randomUUID as randomUUID17 } from "node:crypto";
+import { mkdir as mkdir13, readFile as readFile13, rename as rename11, rm, unlink as unlink9, writeFile as writeFile13 } from "node:fs/promises";
+import { dirname as dirname9 } from "node:path";
+async function existingBytes(path) {
+  try {
+    return await readFile13(path);
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+async function assertPreimage(path, expected) {
+  const current = await existingBytes(path);
+  if (expected ? !current?.equals(expected) : current !== null)
+    throw new Error(`Summary destination changed before committing: ${path}`);
+}
+async function atomicBytes(path, bytes, expected) {
+  await mkdir13(dirname9(path), { recursive: true });
+  const temporary = `${path}.${randomUUID17()}.tmp`;
+  try {
+    await writeFile13(temporary, bytes);
+    await assertPreimage(path, expected);
+    await rename11(temporary, path);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+function createSummaryWriteTransaction() {
+  const writes = [];
+  return {
+    async write(path, text3, expectedBefore) {
+      const before = expectedBefore === void 0 ? await existingBytes(path) : expectedBefore, after = Buffer.from(text3);
+      await atomicBytes(path, after, before);
+      writes.push({ path, before, after });
+      if (!(await readFile13(path)).equals(after)) throw new Error(`Summary write readback changed: ${path}`);
+    },
+    async rollback() {
+      const failures = [];
+      for (const { path, before, after } of writes.toReversed()) {
+        try {
+          if (before) await atomicBytes(path, before, after);
+          else {
+            await assertPreimage(path, after);
+            await unlink9(path);
+          }
+          const restored = await existingBytes(path);
+          if (before ? !restored?.equals(before) : restored !== null)
+            throw new Error(`Summary rollback readback failed: ${path}`);
+        } catch (error) {
+          failures.push(new Error(`Partial summary delivery at ${path}`, { cause: error }));
+        }
+      }
+      if (failures.length) throw new AggregateError(failures, `Partial summary delivery: rollback retained changed or unreadable outputs: ${failures.map((failure) => failure.message).join("; ")}`);
+    }
+  };
+}
+
+// packages/extensions/src/internal/vault.ts
+import { randomUUID as randomUUID18 } from "node:crypto";
 import {
   link as link3,
   lstat as lstat11,
-  mkdir as mkdir13,
+  mkdir as mkdir14,
   readdir as readdir4,
-  readFile as readFile13,
+  readFile as readFile14,
   realpath as realpath9,
-  rename as rename11,
+  rename as rename12,
   stat as stat4,
-  unlink as unlink9,
-  writeFile as writeFile13
+  unlink as unlink10,
+  writeFile as writeFile14
 } from "node:fs/promises";
-import { basename as basename4, dirname as dirname9, isAbsolute as isAbsolute6, join as join17, relative as relative11, resolve as resolve8, sep as sep10 } from "node:path";
+import { basename as basename4, dirname as dirname10, isAbsolute as isAbsolute6, join as join17, relative as relative11, resolve as resolve8, sep as sep10 } from "node:path";
 var VAULT_PROFILES = {
   project: {
     id: "project",
@@ -10919,8 +10977,8 @@ async function canonicalPath2(path) {
   try {
     return await realpath9(path);
   } catch (error) {
-    if (error.code !== "ENOENT" || dirname9(path) === path) throw error;
-    return join17(await canonicalPath2(dirname9(path)), basename4(path));
+    if (error.code !== "ENOENT" || dirname10(path) === path) throw error;
+    return join17(await canonicalPath2(dirname10(path)), basename4(path));
   }
 }
 async function containedFile(root, path) {
@@ -10948,9 +11006,9 @@ async function validateVaultPath(input, excluded = []) {
   return path;
 }
 async function createOnly(path, content) {
-  await mkdir13(dirname9(path), { recursive: true });
-  const temporary = `${path}.${randomUUID17()}.tmp`;
-  await writeFile13(temporary, content, { encoding: "utf8", flag: "wx" });
+  await mkdir14(dirname10(path), { recursive: true });
+  const temporary = `${path}.${randomUUID18()}.tmp`;
+  await writeFile14(temporary, content, { encoding: "utf8", flag: "wx" });
   try {
     await link3(temporary, path);
     return true;
@@ -10961,7 +11019,7 @@ async function createOnly(path, content) {
       throw new Error(`Expected a regular Vault file: ${path}`);
     return false;
   } finally {
-    await unlink9(temporary).catch(() => {
+    await unlink10(temporary).catch(() => {
     });
   }
 }
@@ -11011,7 +11069,7 @@ ${MANAGED_END3}
     ".obsidian/community-plugins.json": "[]\n"
   });
   for (const file of Object.keys(notes)) await containedFile(vault, file);
-  for (const directory of directories) await mkdir13(join17(vault, directory), { recursive: true });
+  for (const directory of directories) await mkdir14(join17(vault, directory), { recursive: true });
   for (const [file, content] of Object.entries(notes)) await createOnly(join17(vault, file), content);
   return {
     vault,
@@ -11022,7 +11080,7 @@ ${MANAGED_END3}
 }
 async function readText(path) {
   try {
-    return await readFile13(path, "utf8");
+    return await readFile14(path, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -11051,10 +11109,10 @@ ${MANAGED_END3}`;
 ${original.slice(review)}`;
   }
   if (updated === original) return;
-  await mkdir13(dirname9(path), { recursive: true });
-  const temporary = `${path}.${randomUUID17()}.tmp`;
-  await writeFile13(temporary, updated, "utf8");
-  await rename11(temporary, path);
+  await mkdir14(dirname10(path), { recursive: true });
+  const temporary = `${path}.${randomUUID18()}.tmp`;
+  await writeFile14(temporary, updated, "utf8");
+  await rename12(temporary, path);
 }
 async function childEntries(directory) {
   try {
@@ -11202,7 +11260,7 @@ function validatePatch(config) {
 }
 async function loadWorkspaceConfig2(cwd = process.cwd()) {
   if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
-    const desktop = JSON.parse(await readFile14(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
+    const desktop = JSON.parse(await readFile15(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
     return {
       ...DEFAULT_WORKSPACE_CONFIG,
       resultsRoot: desktop.resultsRoot,
@@ -11214,7 +11272,7 @@ async function loadWorkspaceConfig2(cwd = process.cwd()) {
   const projectRoot = resolve13(cwd);
   let raw = {};
   try {
-    raw = JSON.parse(await readFile14(configPath(projectRoot), "utf8"));
+    raw = JSON.parse(await readFile15(configPath(projectRoot), "utf8"));
   } catch (error) {
     if (error.code !== "ENOENT") raw = {};
   }
@@ -11296,11 +11354,11 @@ async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
     );
   }
   const target = configPath(projectRoot);
-  await mkdir14(dirname10(target), { recursive: true });
+  await mkdir15(dirname11(target), { recursive: true });
   const temporary = `${target}.${process.pid}.tmp`;
-  await writeFile14(temporary, `${JSON.stringify(payload, null, 2)}
+  await writeFile15(temporary, `${JSON.stringify(payload, null, 2)}
 `, "utf8");
-  await rename12(temporary, target);
+  await rename13(temporary, target);
   return {
     ...merged,
     resultsRoot: resolve13(merged.resultsRoot),
@@ -11333,52 +11391,35 @@ ${end}`;
 ${replacement}
 `;
 }
-async function atomicText(path, text3) {
-  await mkdir14(dirname10(path), { recursive: true });
-  const temporary = `${path}.${process.pid}.tmp`;
-  await writeFile14(temporary, text3, "utf8");
-  await rename12(temporary, path);
-}
-async function writeSummary(runDir, summary, status) {
-  const runPath = resolve13(runDir);
-  const resultRoot = dirname10(runPath);
-  const historyRoot = join18(resultRoot, "summary-history");
-  await mkdir14(historyRoot, { recursive: true });
+async function writeSummary(resultsRoot, runDir, summary, write) {
+  const root = await realpath10(resultsRoot);
+  const runPath = await containedFile(root, await realpath10(runDir));
+  const resultRoot = dirname11(runPath);
+  const historyRoot = await containedFile(root, join18(resultRoot, "summary-history"));
+  const stamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
+  const run = await containedFile(root, join18(runPath, "SUMMARY.md"));
+  const latest = await containedFile(root, join18(resultRoot, "SUMMARY.md"));
+  const history = await containedFile(root, join18(historyRoot, `${stamp}.md`));
+  await mkdir15(historyRoot, { recursive: true });
   const content = `${String(summary).trim()}
 `;
-  await atomicText(join18(runPath, "SUMMARY.md"), content);
-  await atomicText(join18(resultRoot, "SUMMARY.md"), content);
-  const stamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
-  const history = join18(historyRoot, `${stamp}.md`);
-  await atomicText(history, content);
-  const metadataPath = join18(runPath, "metadata.json");
-  let metadata = {};
-  try {
-    metadata = JSON.parse(await readFile14(metadataPath, "utf8"));
-  } catch {
-  }
-  metadata.summary_status = status === "pending" ? "pending" : "written";
-  metadata.summary_updated_at = (/* @__PURE__ */ new Date()).toISOString();
-  await atomicText(metadataPath, `${JSON.stringify(metadata, null, 2)}
-`);
-  return { run: join18(runPath, "SUMMARY.md"), latest: join18(resultRoot, "SUMMARY.md"), history };
+  await write(run, content);
+  await write(latest, content);
+  await write(history, content);
+  return { run, latest, history };
 }
-async function syncRunNote(vault, project, resultSlug, runDir, summary) {
+async function syncRunNote(vault, project, resultSlug, runDir, summary, write) {
   const safeProject = safeSegment(project, "project");
   const safeSlug = safeSegment(resultSlug || "research-question", "result_slug");
   const runPath = resolve13(runDir);
   const metadataPath = join18(runPath, "metadata.json");
-  let metadata = {};
-  try {
-    metadata = JSON.parse(await readFile14(metadataPath, "utf8"));
-  } catch {
-  }
+  const metadata = JSON.parse(await readFile15(metadataPath, "utf8"));
   const runId = safeSegment(metadata.run_id || runPath.split(sep11).at(-1), "run_id");
   const note = await containedFile(vault, join18("Projects", safeProject, "Runs", `${safeSlug}-${runId}.md`));
   if (!knowledgeDirectory()) await initializeVault(vault, safeProject);
   const frontmatter = [
     "---",
-    `id: pi-${randomUUID18()}`,
+    `id: pi-${randomUUID19()}`,
     `run_id: ${JSON.stringify(runId)}`,
     "type: run",
     `project: ${JSON.stringify(safeProject)}`,
@@ -11391,11 +11432,13 @@ async function syncRunNote(vault, project, resultSlug, runDir, summary) {
   ].join("\n");
   const resultUri = pathToFileURL4(runPath).href;
   const summaryUri = pathToFileURL4(join18(runPath, "SUMMARY.md")).href;
-  let original = "";
+  let before = null;
   try {
-    original = await readFile14(note, "utf8");
-  } catch {
+    before = await readFile15(note);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
   }
+  let original = before?.toString("utf8") || "";
   if (!original) {
     original = `${frontmatter}
 
@@ -11413,11 +11456,15 @@ ${String(summary).trim()}
 ## Human review
 
 `;
-    await atomicText(note, original);
+    await write(note, original, before);
   } else {
-    await atomicText(note, updateManagedBlock(original, summary));
+    original = updateManagedBlock(original, summary);
+    await write(note, original, before);
   }
-  return note;
+  const marker = "<!-- pi-agent:managed:start -->\n";
+  const start = Buffer.byteLength(original.slice(0, original.indexOf(marker) + marker.length));
+  return { path: note, bodyRegion: { start, end: start + Buffer.byteLength(`${String(summary).trim()}
+`) } };
 }
 function runSummaryCard(event) {
   const d = event.result?.details || {};
@@ -11435,52 +11482,7 @@ function runSummaryCard(event) {
     source: event.toolName
   });
 }
-function registerWorkspaceConfig(pi, options = {}) {
-  const baseCwd = options.cwd ? resolve13(options.cwd) : process.cwd();
-  registerTool(pi, {
-    name: "research_workspace_status",
-    label: "Research workspace status",
-    drone: { readOnly: true, capabilities: ["research"] },
-    description: "Show result and Obsidian workspace configuration.",
-    parameters: { type: "object", properties: {} },
-    async execute(_id, _params, _signal, _update, ctx) {
-      const config = await loadWorkspaceConfig2(ctx?.cwd || baseCwd);
-      return { content: [{ type: "text", text: JSON.stringify(config, null, 2) }], details: config };
-    }
-  });
-  registerTool(pi, {
-    name: "research_init_vault",
-    label: "Initialize Obsidian vault",
-    drone: { capabilities: ["research", "knowledge"], subagent: "exclude" },
-    description: "Create the new Obsidian knowledge vault structure without overwriting files.",
-    parameters: {
-      type: "object",
-      properties: {
-        path: { type: "string" },
-        project: { type: "string" },
-        profile: { type: "string", enum: ["project", "literature", "hybrid"] }
-      },
-      required: ["path"]
-    },
-    async execute(_id, params) {
-      if (knowledgeDirectory())
-        throw new Error("Use /obsidian-setup for confirmed application-wide initialization");
-      const profile = params.profile || (await loadWorkspaceConfig2(baseCwd)).knowledgeProfile;
-      const result2 = await initializeVaultLayout(params.path, {
-        project: params.project || null,
-        profile,
-        excluded: [baseCwd, (await loadWorkspaceConfig2(baseCwd)).resultsRoot]
-      });
-      const config = await saveWorkspaceConfig(baseCwd, {
-        obsidianVault: result2.vault,
-        knowledgeProfile: profile
-      });
-      return {
-        content: [{ type: "text", text: `Initialized Obsidian vault at ${result2.vault}` }],
-        details: { result: result2, config }
-      };
-    }
-  });
+function registerResearchSummaryTool(pi, delivery) {
   registerTool(pi, {
     name: "research_summarize_run",
     label: "Summarize research run",
@@ -11529,7 +11531,7 @@ function registerWorkspaceConfig(pi, options = {}) {
       required: ["run_dir", "summary_markdown"]
     },
     async execute(_id, params, _signal, _update, ctx) {
-      const cwd = ctx?.cwd || baseCwd;
+      const cwd = ctx.cwd;
       const config = await loadWorkspaceConfig2(cwd);
       const runDir = resolve13(cwd, params.run_dir);
       if (!isWithin(config.resultsRoot, runDir))
@@ -11540,21 +11542,7 @@ function registerWorkspaceConfig(pi, options = {}) {
       if (!relativeRun || relativeRun.startsWith(`..${sep11}`) || relativeRun.split(sep11).length !== 2 || !relativeRun.split(sep11)[1].startsWith("run-")) {
         throw new Error("run_dir must point to a run directory directly inside a result slug");
       }
-      if (!await access(join18(runDir, "metadata.json")).then(
-        () => true,
-        () => false
-      )) {
-        throw new Error("run_dir is missing metadata.json");
-      }
-      const metadata = JSON.parse(await readFile14(join18(runDir, "metadata.json"), "utf8"));
-      const gate = metadata.evidence_gate;
-      if (gate?.stage !== "answerable" || gate.status !== "ok" || gate.answerable !== true || !Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0) {
-        throw new Error(
-          "Evidence gate is closed: research_loop must complete retrieval, inspection, archiving and structured claim binding before summarization"
-        );
-      }
-      const outputs = await writeSummary(runDir, params.summary_markdown, "succeeded");
-      let note = null, indexes = null, obsidianError = null, indexError = null;
+      const metadata = JSON.parse(await readFile15(join18(runDir, "metadata.json"), "utf8"));
       const resolution = await resolveWorkspaceProject({
         cwd,
         sessionEntries: sessionEntriesOf(ctx),
@@ -11566,41 +11554,117 @@ function registerWorkspaceConfig(pi, options = {}) {
         project,
         ignoredRequest: resolution.requested !== null && normalizeProjectSlug(resolution.requested) !== project
       });
-      if (config.obsidianVault) {
-        try {
-          note = await syncRunNote(
-            config.obsidianVault,
-            project,
-            params.result_slug || metadata.result_slug,
-            runDir,
-            params.summary_markdown
-          );
-        } catch (error) {
-          obsidianError = String(error.message).slice(0, 600);
-        }
-        if (note) {
+      const delivered = await delivery.deliver(
+        ctx,
+        {
+          runDir,
+          markdown: params.summary_markdown,
+          claims: params.claims
+        },
+        async (prepared) => {
+          const transaction = createSummaryWriteTransaction();
           try {
-            indexes = await refreshProjectIndexes(config.obsidianVault, {
-              project,
-              profile: config.knowledgeProfile
-            });
+            _signal?.throwIfAborted();
+            const outputs = await writeSummary(config.resultsRoot, runDir, prepared.body, transaction.write);
+            const copies = Object.entries(outputs).map(([role, path]) => ({ role, path }));
+            let note = null;
+            if (config.obsidianVault) {
+              const saved = await syncRunNote(
+                config.obsidianVault,
+                project,
+                params.result_slug || metadata.result_slug,
+                runDir,
+                prepared.body,
+                transaction.write
+              );
+              note = saved.path;
+              copies.push({ role: "vault", path: note, bodyRegion: saved.bodyRegion });
+            }
+            _signal?.throwIfAborted();
+            return { value: { ...outputs, obsidian_note: note }, copies, rollback: transaction.rollback };
           } catch (error) {
-            indexError = String(error.message).slice(0, 600);
+            try {
+              await transaction.rollback();
+            } catch (rollbackError) {
+              throw new AggregateError(
+                [error, rollbackError],
+                `Partial summary delivery: write and rollback failed: ${rollbackError.message}`
+              );
+            }
+            throw error;
           }
+        }
+      );
+      let indexes = null, indexError = null;
+      if (config.obsidianVault && delivered.value.obsidian_note) {
+        try {
+          indexes = await refreshProjectIndexes(config.obsidianVault, {
+            project,
+            profile: config.knowledgeProfile
+          });
+        } catch (error) {
+          indexError = String(error.message).slice(0, 600);
         }
       }
       const result2 = {
-        ...outputs,
-        claims: Array.isArray(params.claims) ? params.claims : [],
-        obsidian_note: note,
+        ...delivered.value,
+        claims: delivered.claims,
+        delivery_receipt: delivered.receipt,
         project: projectResolution,
         indexes,
         summary_saved: true,
-        partial: Boolean(obsidianError || indexError),
-        obsidian_error: obsidianError,
+        partial: Boolean(indexError),
+        obsidian_error: null,
         index_error: indexError
       };
       return { content: [{ type: "text", text: JSON.stringify(result2, null, 2) }], details: result2 };
+    }
+  });
+}
+function registerWorkspaceConfig(pi, options = {}) {
+  const baseCwd = options.cwd ? resolve13(options.cwd) : process.cwd();
+  registerTool(pi, {
+    name: "research_workspace_status",
+    label: "Research workspace status",
+    drone: { readOnly: true, capabilities: ["research"] },
+    description: "Show result and Obsidian workspace configuration.",
+    parameters: { type: "object", properties: {} },
+    async execute(_id, _params, _signal, _update, ctx) {
+      const config = await loadWorkspaceConfig2(ctx?.cwd || baseCwd);
+      return { content: [{ type: "text", text: JSON.stringify(config, null, 2) }], details: config };
+    }
+  });
+  registerTool(pi, {
+    name: "research_init_vault",
+    label: "Initialize Obsidian vault",
+    drone: { capabilities: ["research", "knowledge"], subagent: "exclude" },
+    description: "Create the new Obsidian knowledge vault structure without overwriting files.",
+    parameters: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        project: { type: "string" },
+        profile: { type: "string", enum: ["project", "literature", "hybrid"] }
+      },
+      required: ["path"]
+    },
+    async execute(_id, params) {
+      if (knowledgeDirectory())
+        throw new Error("Use /obsidian-setup for confirmed application-wide initialization");
+      const profile = params.profile || (await loadWorkspaceConfig2(baseCwd)).knowledgeProfile;
+      const result2 = await initializeVaultLayout(params.path, {
+        project: params.project || null,
+        profile,
+        excluded: [baseCwd, (await loadWorkspaceConfig2(baseCwd)).resultsRoot]
+      });
+      const config = await saveWorkspaceConfig(baseCwd, {
+        obsidianVault: result2.vault,
+        knowledgeProfile: profile
+      });
+      return {
+        content: [{ type: "text", text: `Initialized Obsidian vault at ${result2.vault}` }],
+        details: { result: result2, config }
+      };
     }
   });
   pi.registerCommand("research-workspace", {
@@ -11620,6 +11684,7 @@ export {
   workspace_config_default as default,
   initializeVault,
   loadWorkspaceConfig2 as loadWorkspaceConfig,
+  registerResearchSummaryTool,
   registerWorkspaceConfig,
   saveWorkspaceConfig
 };

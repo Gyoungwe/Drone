@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { getCurrentSystemPrompt } from "@earendil-works/pi-ai/utils/transcript";
@@ -34,7 +34,7 @@ afterEach(async () => {
 	if (root) await rm(root, { recursive: true, force: true });
 });
 const tool = (name, args) => reply([call(name, args)], { stopReason: "toolUse" });
-it.each(["reviewed", "malformed-review", "unsupported-review", "source-changed"])(
+it.each(["reviewed", "malformed-review", "unsupported-review", "source-changed", "history-linked"])(
 	"real SDK research delivery %s preserves the evidence gate and specialist stages",
 	async (mode) => {
 		root = await realpath(await mkdtemp(join(tmpdir(), "drone-specialists-sdk-")));
@@ -146,6 +146,12 @@ it.each(["reviewed", "malformed-review", "unsupported-review", "source-changed"]
 				expect(JSON.stringify(context)).not.toContain("AMBIENT_PROJECT_SECRET");
 				if (mode === "malformed-review") return reply("No structured assessment");
 				if (mode === "source-changed") await writeFile(join(vault, source), "Changed while reviewing");
+				if (mode === "history-linked") {
+					const outside = join(root, "outside-history");
+					await mkdir(outside);
+					await writeFile(join(outside, "human.md"), "Outside content retained");
+					await symlink(outside, join(dirname(run), "summary-history"));
+				}
 				const packet = JSON.parse(
 					context.messages.find((message) => message.role === "user").content[0].text,
 				);
@@ -332,6 +338,15 @@ it.each(["reviewed", "malformed-review", "unsupported-review", "source-changed"]
 			expect(summarized.isError).toBe(true);
 			expect(summarized.details?.delivery_receipt).toBeUndefined();
 			await expect(readFile(join(run, "SUMMARY.md"))).rejects.toMatchObject({ code: "ENOENT" });
+			if (mode === "history-linked") {
+				expect(JSON.stringify(summarized)).toContain("Path must stay inside Vault");
+				await expect(readFile(join(dirname(run), "SUMMARY.md"))).rejects.toMatchObject({ code: "ENOENT" });
+				const metadata = JSON.parse(await readFile(join(run, "metadata.json"), "utf8"));
+				expect(metadata.delivery_receipt).toBeUndefined();
+				const outside = join(root, "outside-history");
+				expect(await readdir(outside)).toEqual(["human.md"]);
+				expect(await readFile(join(outside, "human.md"), "utf8")).toBe("Outside content retained");
+			}
 			expect(counts.explainer).toBeUndefined();
 			expect(counts["wiki-editor"]).toBeUndefined();
 			return;

@@ -11805,7 +11805,7 @@ function createKnowledgeNativeAdapter(owner, controller, register, cleanup) {
         return Reflect.get(target, property, target);
       }
     });
-    const scopedEvents = pi.events && typeof pi.events === "object" ? {
+    const scopedEvents = {
       on: (channel, handler) => {
         assertOpen();
         const unsubscribe = pi.events.on(channel, (data) => {
@@ -11821,7 +11821,7 @@ function createKnowledgeNativeAdapter(owner, controller, register, cleanup) {
         assertOpen();
         return pi.events.emit(channel, data);
       }
-    } : pi.events;
+    };
     const scopedSignal = (signal) => signal ? AbortSignal.any([controller.signal, signal]) : controller.signal;
     const ownedPi = new Proxy(pi, {
       get(target, property) {
@@ -11830,7 +11830,10 @@ function createKnowledgeNativeAdapter(owner, controller, register, cleanup) {
           return target.appendEntry(...args);
         };
         if (property === "sendUserMessage") return (...args) => run2(() => target.sendUserMessage(...args));
-        if (property === "events") return scopedEvents;
+        if (property === "events") {
+          const events = Reflect.get(target, property, target);
+          return events && typeof events === "object" ? scopedEvents : events;
+        }
         if (property === "registerTool") return (definition) => target.registerTool({
           ...definition,
           execute: (id2, input, signal, update, context) => {
@@ -19329,12 +19332,12 @@ var researchConnectorHostLoader = createResearchConnectorHostLoader({});
 
 // packages/extensions/src/internal/obsidian-workbench.ts
 import { createHash as createHash21, randomUUID as randomUUID19 } from "node:crypto";
-import { access as access4, mkdir as mkdir15, readdir as readdir6, readFile as readFile15, realpath as realpath12, rename as rename13, stat as stat6, writeFile as writeFile15 } from "node:fs/promises";
+import { access as access3, mkdir as mkdir15, readdir as readdir6, readFile as readFile15, realpath as realpath12, rename as rename13, stat as stat6, writeFile as writeFile15 } from "node:fs/promises";
 import { basename as basename7, dirname as dirname13, isAbsolute as isAbsolute13, join as join24, relative as relative13, resolve as resolve16, sep as sep12 } from "node:path";
 import { fileURLToPath as fileURLToPath3, pathToFileURL as pathToFileURL5 } from "node:url";
 
 // packages/extensions/src/workspace-config.ts
-import { access as access3, mkdir as mkdir14, readFile as readFile14, realpath as realpath10, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
+import { mkdir as mkdir14, readFile as readFile14, realpath as realpath10, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
 import { dirname as dirname12, isAbsolute as isAbsolute11, join as join21, relative as relative12, resolve as resolve14, sep as sep11 } from "node:path";
 init_host();
 
