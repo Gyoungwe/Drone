@@ -13,7 +13,9 @@ describe("knowledge host operations", () => {
 			dailyDiscovery: {
 				systemPrompt: "installed prompt",
 				buildMessage: () => "installed message",
-				parseIdeas: () => [{ title: "installed", idea: "idea", basis: [], test: "test", whyOverlooked: "why" }],
+				parseIdeas: () => [
+					{ title: "installed", idea: "idea", basis: [], test: "test", whyOverlooked: "why" },
+				],
 			},
 		};
 		const operations = createKnowledgeDailyDiscoveryOperations(host);
