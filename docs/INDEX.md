@@ -74,7 +74,7 @@ Paper2Agent 生成的 MCP 服务器接入方式和证据边界见 [paper2agent.m
 
 2026-10-19 实机验收问题、截图编号与下一轮修复状态见 [real-device-acceptance-20261019](real-device-acceptance-20261019/README.md)。
 
-插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型、host-neutral analysis contract，以及版本化 `AnalysisHostPort` registry/loader 合同。`@gyoungwe/pi-analysis/host` 是宿主唯一的分析 adapter 入口；`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
+插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型、host-neutral analysis contract、版本化 `AnalysisHostPort` registry/loader 合同，以及 research connector/write registry 的 `ResearchConnectorHostLoader`/`ResearchWriteAdapterHostLoader` 合同。`@gyoungwe/pi-analysis/host` 是宿主唯一的分析 adapter 入口；`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
 
 通用领域可用性只读投影位于 `packages/backend/src/plugins/domain-capabilities.ts`，由组合根登记当前 provider；它是迁移诊断边界，不承载领域实现或替代插件生命周期。
 本轮切片的命令回执和剩余边界见[能力发现与 clean-prefix 包验收](pluginization/native-plugin-capability-slice-evidence.md)。

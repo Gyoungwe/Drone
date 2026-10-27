@@ -117,6 +117,7 @@
 - `d5f04b9b` 后宿主完整五门禁均退出 0：lint（保留既有 2 MiB 设计稿与动态 namespace warning）、typecheck、全量 `npm test`（backend 254/2052 passed/18 skipped，desktop 165/903 passed）、build、check:arch；`check:native-plugin-boundary` 真实输出仍为 `INCOMPLETE`，domain-runtime-import 12、domain-type-import 12，build manifest 已恢复提交态。
 - 另外删除 backend index 中无人消费的 `formatTodoList`/`makeTodoTool`/`normalizeTodos` 再导出；该改动只收窄公共 API，剩余会话工具和 reminder 仍由 `@gyoungwe/pi-core/host` 提供。
 - `c4cadc28` 后 `node scripts/check-native-plugin-boundary.mjs` 仍退出 1（预期），JSON 状态为 `INCOMPLETE`；domain-runtime-import=11，domain-type-import=12，其余 build-step=15、manifest-dependency=12、packaged-resource=23、required-domain-plugin=3。
+- Research seam：宿主 `e5d082a3` 的 `@gyoungwe/plugin-api/research` 只定义 connector/write host contract；插件 `202d344` 的两个 loader 在无宿主授权 transport 时返回 `unavailable` 并拒绝 I/O。插件 typecheck、build:check、151 项全量测试和 smoke 通过，SDK probe 超时标记 NOT_RUN；没有改写默认 compatibility registry，也没有将 P3/P6 标记完成。
 
 ## 未关闭项
 
