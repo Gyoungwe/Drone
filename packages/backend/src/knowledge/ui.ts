@@ -22,7 +22,7 @@ import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoad
 import type { DailyDiscoveryOperations } from "../services/daily-discovery";
 import type { BackgroundReviewerFactory, BackgroundReviewerPort } from "../services/deliverable-reviewer";
 import type { KnowledgeMaintenanceOperations } from "../services/knowledge-maintenance";
-import { defaultKnowledgeCompatibility, defaultKnowledgeRuntimeSetup } from "./compat-adapter";
+import { defaultKnowledgeRuntimeSetup } from "./compat-adapter";
 import { KnowledgeWebDavService } from "./webdav";
 import type { KnowledgeWebDavVault } from "./webdav-sync";
 
@@ -127,6 +127,20 @@ const unavailable = (operation: string): never => {
 	throw new Error(`Knowledge ${operation} is unavailable: install the knowledge plugin`);
 };
 
+/**
+ * Session composition is present even when the optional knowledge package is
+ * absent. Keep the reviewer lifecycle inert until an installed host provides
+ * the implementation; review observations must never load the legacy package
+ * as a side effect of constructing a generic backend.
+ */
+const unavailableBackgroundReviewer = (): BackgroundReviewerPort => ({
+	schedule: () => undefined,
+	getCached: () => undefined,
+	getFindings: () => [],
+	clearSession: () => undefined,
+	dispose: () => undefined,
+});
+
 /** Explicit no-plugin behavior. Never silently reaches the legacy package. */
 export const unavailableKnowledgeCompatibility: KnowledgeCompatibilityPort = {
 	read: {
@@ -165,7 +179,7 @@ export const unavailableKnowledgeCompatibility: KnowledgeCompatibilityPort = {
 	},
 	reviewWikiWithModel: async () => unavailable("Wiki review"),
 	call: (name) => unavailable(name),
-	backgroundReviewer: () => unavailable("background review"),
+	backgroundReviewer: unavailableBackgroundReviewer,
 };
 
 /**
@@ -194,7 +208,7 @@ export interface KnowledgeSemanticOperations {
 /** Default provider delegates the read vertical to the packaged knowledge host entry. */
 export function createKnowledgeReadProvider(
 	host?: KnowledgeHostPort,
-	compatibility: KnowledgeCompatibilityPort = defaultKnowledgeCompatibility,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
 ): KnowledgeReadProvider {
 	const source = host ?? {
 		overview: compatibility.read.overview,
@@ -220,7 +234,7 @@ export function createKnowledgeReadProvider(
 /** Keep maintenance domain code behind the same discovered host seam as reads/writes. */
 export function createKnowledgeMaintenanceOperations(
 	host?: KnowledgeHostPort,
-	compatibility: KnowledgeCompatibilityPort = defaultKnowledgeCompatibility,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
 ): KnowledgeMaintenanceOperations {
 	const source = host ?? ({} as KnowledgeHostPort);
 	return {
@@ -232,7 +246,7 @@ export function createKnowledgeMaintenanceOperations(
 /** Keep daily-discovery prompt/parser logic behind the discovered host seam. */
 export function createKnowledgeDailyDiscoveryOperations(
 	host?: KnowledgeHostPort,
-	compatibility: KnowledgeCompatibilityPort = defaultKnowledgeCompatibility,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
 ): DailyDiscoveryOperations {
 	const source = host?.dailyDiscovery;
 	if (source) return source;
@@ -257,7 +271,7 @@ export function createKnowledgeResearchResourceOperations(
 /** Keep compute experience persistence behind the discovered knowledge host seam. */
 export function createKnowledgeExperienceOperation(
 	host?: KnowledgeHostPort,
-	compatibility: KnowledgeCompatibilityPort = defaultKnowledgeCompatibility,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
 ) {
 	return host?.recordTerminalJobExperience ?? compatibility.experience;
 }
@@ -265,7 +279,7 @@ export function createKnowledgeExperienceOperation(
 /** Keep child-session publication registration behind the discovered host seam. */
 export function createKnowledgePublicationOperation(
 	host?: KnowledgeHostPort,
-	compatibility: KnowledgeCompatibilityPort = defaultKnowledgeCompatibility,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
 ): KnowledgePublicationRegistrar {
 	return host?.registerAnswerPublication ?? compatibility.publication;
 }
@@ -273,7 +287,7 @@ export function createKnowledgePublicationOperation(
 /** Keep foreground Wiki model review behind the discovered knowledge host seam. */
 export function createKnowledgeReviewWithModelOperation(
 	host?: Pick<KnowledgeHostPort, "reviewWikiWithModel">,
-	compatibility: KnowledgeCompatibilityPort = defaultKnowledgeCompatibility,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
 ): (input: unknown, options: unknown) => Promise<unknown> {
 	return (
 		host?.reviewWikiWithModel ??
@@ -284,7 +298,7 @@ export function createKnowledgeReviewWithModelOperation(
 /** Keep WebDAV's local read/write operations behind the discovered knowledge host seam. */
 export function createKnowledgeVaultOperations(
 	host?: Pick<KnowledgeHostPort, "vault">,
-	compatibility: KnowledgeCompatibilityPort = defaultKnowledgeCompatibility,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
 ): KnowledgeWebDavVault {
 	if (host?.vault) return host.vault;
 	return compatibility.vault;
@@ -292,7 +306,7 @@ export function createKnowledgeVaultOperations(
 
 /** Construct the domain reviewer only at the compatibility/plugin composition root. */
 export const createKnowledgeBackgroundReviewer: BackgroundReviewerFactory = (options) =>
-	defaultKnowledgeCompatibility.backgroundReviewer(options) as unknown as BackgroundReviewerPort;
+	unavailableKnowledgeCompatibility.backgroundReviewer(options) as unknown as BackgroundReviewerPort;
 
 export interface KnowledgeWorkerLifecycleSnapshot {
 	readonly currentVersion: string | null;
@@ -626,7 +640,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 				>;
 		} = {},
 	) {
-		this.compatibility = options.compatibility ?? defaultKnowledgeCompatibility;
+		this.compatibility = options.compatibility ?? unavailableKnowledgeCompatibility;
 		this.readProvider = readProvider ?? createKnowledgeReadProvider(undefined, this.compatibility);
 		this.writeProvider = options.knowledgeHost;
 		this.researchHost = options.researchHostLoader?.load(createResearchHostPort());

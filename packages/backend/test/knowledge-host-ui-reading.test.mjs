@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { build } from "esbuild";
 import { expect, it, vi } from "vitest";
+import { defaultKnowledgeCompatibility } from "../src/knowledge/compat-adapter";
 import { configureBackendKnowledgeWorker, KnowledgeUiService } from "../src/knowledge/ui";
 
 it("keeps the UI service free of the package compatibility import", async () => {
@@ -33,7 +34,7 @@ it("reads a project-owned note through the backend after setup in an independent
 		depositKnowledge,
 		closeKnowledgeServices: closeExtensionServices,
 	} = await import(/* @vite-ignore */ pathToFileURL(bundle).href);
-	const ui = new KnowledgeUiService();
+	const ui = new KnowledgeUiService(undefined, { compatibility: defaultKnowledgeCompatibility });
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "knowledge"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	try {

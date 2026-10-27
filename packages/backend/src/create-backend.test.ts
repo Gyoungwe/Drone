@@ -18,6 +18,14 @@ describe("createBackend", () => {
 		await services.dispose();
 	});
 
+	it("defaults a directly constructed knowledge UI service to fail closed", async () => {
+		const service = new KnowledgeUiService();
+		await expect(service.overview({ cwd: "/tmp/no-knowledge-plugin" })).rejects.toThrow(
+			"Knowledge overview is unavailable: install the knowledge plugin",
+		);
+		service.dispose();
+	});
+
 	it("exposes the workbench operation port through the host runtime and fails closed without handlers", async () => {
 		const unavailable = createBackend({ projectTrust: false, permissionGates: false });
 		await expect(unavailable.workbench.client.invoke("status", {})).rejects.toThrow(
