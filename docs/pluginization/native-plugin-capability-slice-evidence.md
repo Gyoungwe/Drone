@@ -178,8 +178,6 @@
 - 2026-10-27：discovery host seam contract：`@gyoungwe/plugin-api` 新增版本化 `DiscoveryHostLoader`/`DiscoveryHostPort`（status、kernel session 基础操作），backend 通过 `BackendOptions.discoveryHostLoader` 暴露显式 `discoveryHost`。现有 backend `DiscoveryService` 仍是权威实现，loader 只建立注入合同，不替换 IPC 或宣称插件行为 PASS；plugin-api build、backend typecheck、create-backend 32 项回归与 Biome 通过。
 - 2026-10-27：Desktop discovery wiring：通用 `discoverPluginHostLoader` 现在按 `capability: "discovery"` 发现任意已安装包的 `discoveryHostLoader`，并把它注入 backend 的显式 seam；新增声明包 fixture 回归与 Desktop source wiring 断言。native `DiscoveryService` 仍保持权威实现，尚未迁移 B5d–B5f 行为或切换 IPC。
 
- - 2026-10-27：Desktop discovery wiring：主进程复用通用已安装包扫描，以 `capability=discovery`/`discoveryHostLoader` 发现并注入 host seam；新增 package fixture 回归，10 项 optional-plugin-hosts 测试、Desktop typecheck 与 Biome 通过。无插件仍使用 native `DiscoveryService`，未宣称 Discovery 插件行为或正式 GUI PASS。
-
 ## 未关闭项
 
 本轮仍未证明：P2–P5 宿主领域装配删除；无领域插件的正式 DMG 启动与升级/停用/回滚；同一候选 tarball 的正式安装包 GUI；真实 Zotero/用户 MCP/Protocols.io 写入及其他平台验收。`check:native-plugin-boundary` 仍按计划输出 `INCOMPLETE`，不得改写为 PASS。

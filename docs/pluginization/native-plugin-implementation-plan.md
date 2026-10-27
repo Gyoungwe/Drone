@@ -52,8 +52,6 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 
 旧 Zotero 云端/身份冲突、用户自有认证 MCP、Protocols.io 写入、其他平台真实设备四项保持未完成。MinerU/GROBID、B8/B8-2 保持暂缓；不增加相应基础实现。
 
- - 2026-10-27：Desktop discovery wiring：通用 package discovery 现在可发现并注入 `discoveryHostLoader`，新增 10 项 host discovery 回归；native DiscoveryService 仍为默认实现，后续继续迁移 kernel/container/auth 与 B5d–B5f 业务实现。
-
 ## 执行记录
 
 - 2026-10-26：新目标登记成功，三个子代理并行工作。P0 初始扫描 110 项领域耦合；P1 生命周期和 UI context 已有行为回归，尚无新正式安装包验收。
