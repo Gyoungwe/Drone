@@ -138,6 +138,7 @@
 - 2026-10-27：P4/P6 `798ec00e` 删除 backend 的 `deliver-files`、`memory-save`、`status`、`todo`、`project/memory` 五个 pi-core 兼容门面，生产代码、公共导出和回归测试直接使用 `@gyoungwe/pi-core` 公共子路径；33 项相关回归、backend typecheck、Biome 与 `check:arch` 通过。该切片减少旧路径，但不代表任务域完整迁移、pi-core 依赖清零或正式安装包生命周期完成。
 - 2026-10-27：P4 task acceptance seam：`@gyoungwe/plugin-api/tasks` 新增 host-owned `TaskAcceptanceRegistry`、声明校验和 typed verifier 回执；backend `package-runtime` 仅负责把该 registry 绑定到实例级 `DroneRuntime`，删除重复的宿主校验实现。plugin-api contract 回归、backend typecheck 与相关测试通过；任务工作流、正式安装包和 Pi workbench GUI 仍未完成。
 - 2026-10-27：P2 Vault host seam：插件 `c8edf25` 将 readBinding/readNote/containedFile/createFileOnly/replaceFile/conflict-detection 接入版本化 `knowledgeHostLoader.vault`，`e7340e7` 增加临时 Vault 的 create/read/replace-CAS 真回归；宿主 `plugin-api` 同步声明并继续由既有 `KnowledgeWebDavVault` 适配。插件 workspace typecheck、manifest、knowledge build-check 与 host-loader 2 项回归通过；正式 Vault GUI 写入/回读/rollback 仍未验收。
+- 2026-10-27：P2 daily-discovery host seam：插件 `3b709ef` 将 `DAILY_DISCOVERY_SYSTEM`、消息构建和受允许路径约束的 JSON 想法解析接入版本化 `knowledgeHostLoader.dailyDiscovery`，并从公开 `/host` 入口导出 loader；宿主 `plugin-api` 合同同步声明，`host-operations.test.ts` 验证 backend 只消费已安装 host 提供的 prompt/parser。插件 typecheck、host-loader 2 项回归与 build-check，宿主 backend typecheck、定向回归和 `check:arch` 通过；未迁移 researchResource、experience/publication、uiState/reviewWikiWithModel，也未宣称完整 knowledge GUI 或正式安装包 PASS。
 
 ## 未关闭项
 

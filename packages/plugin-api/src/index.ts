@@ -542,6 +542,11 @@ export interface KnowledgeReadHostPort {
 	setupPreview?(input: unknown): Promise<unknown>;
 	specialistSettings?(input: unknown): Promise<unknown>;
 	openTarget?(input: unknown): Promise<unknown>;
+	dailyDiscovery?: {
+		systemPrompt: string;
+		buildMessage(fresh: readonly { path: string; title: string; text: string; mtime: number }[], related: readonly { path: string; title: string; text: string; mtime: number }[]): string;
+		parseIdeas(text: string, allowedPaths: Iterable<string>, freshPaths: Iterable<string>): unknown;
+	};
 	vault?: {
 		readBinding(options?: { fresh?: boolean }): Promise<unknown>;
 		readNote(vault: string, path: string): Promise<unknown>;
