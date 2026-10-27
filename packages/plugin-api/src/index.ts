@@ -653,13 +653,28 @@ export interface DiscoveryHostPort {
 	listKernelSessions?(input: unknown): Promise<unknown>;
 	createKernelSession?(input: unknown): Promise<unknown>;
 	executeKernel?(input: unknown): Promise<unknown>;
+	exportKernel?(input: unknown): Promise<unknown>;
 	closeKernelSession?(input: unknown): Promise<unknown>;
+	listCriticReviews?(input: unknown): Promise<unknown>;
+	listMultipathAssessments?(input: unknown): Promise<unknown>;
+	listExplorationPlans?(input: unknown): Promise<unknown>;
+	listEvaluations?(input: unknown): Promise<unknown>;
+	createExplorationPlan?(input: unknown): Promise<unknown>;
+	runCritic?(input: unknown): Promise<unknown>;
+	runMultipath?(input: unknown): Promise<unknown>;
+	runEvaluation?(input: unknown): Promise<unknown>;
 }
 
-/** Versioned loader contract for a future optional discovery package. */
+/** Versioned loader contract for an optional discovery package.
+ *
+ * `load` remains the zero-argument compatibility surface. New packages may
+ * expose `create` to receive a host-owned project/inquiry/authorization bundle
+ * without importing backend or Electron types.
+ */
 export interface DiscoveryHostLoader {
 	readonly contractVersion: 1;
 	load(): DiscoveryHostPort;
+	create?(input: unknown): DiscoveryHostPort;
 }
 
 function stableContractJson(value: unknown): string {
