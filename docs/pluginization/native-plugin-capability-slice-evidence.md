@@ -158,6 +158,7 @@
 - 2026-10-27：基于 `315192ef` 重建 arm64/x64 unsigned 正式包；新的 arm64 `Drone.app` 在隔离 root `/private/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-fresh-package-LpUihZ` 通过零插件 smoke（实际 Electron/preload、generic Pi session create/close、空 optional UI/managed npm/auth/model、未绑定 knowledge）。生命周期仍按脚本回执保持 `NOT_RUN`。
 - 2026-10-27：`drone-plugins` 以 subtree 提交 `b87464c` 接管 `packages/pi-core`，源 split `826afa9d` 可由 `git log --follow` 追溯；但独立 `pi-core` typecheck 仍因 `@drone/shared`、`@drone/tasks/runtime` 和宿主根构建脚本而失败。该提交仅证明历史迁移，不是可发布包；需先迁移共享合同与 tasks runtime，再更新插件 workspace 门禁。
 - 2026-10-27：pi-core 独立化闭环已完成：`0f6b4ae` 将 20 个 tasks runtime 模块 vendoring 到包内，`33f525c` 移除 `@drone/shared` 源码依赖，`f9c8ca1` 修复 task journal 类型，`f409d4a` 增加独立 tsconfig、双入口构建（`index.mjs`/`host.mjs`）、manifest、smoke 和 workspace 门禁。插件仓库完整 `npm run check` exit 0；pi-core typecheck/build/build:check/smoke、13 项测试、8 包/14 项 manifest 检查和 pack smoke 均通过。宿主锁文件仍未改为未发布候选。
+- 2026-10-27：宿主 `8e55fd41`/`144fb1fc` 将 KnowledgeCompatibilityPort 显式注入并验证无 pi-knowledge 时 fail-closed；宿主 `13002c70` 与插件 `d5a40e9` 增加版本化 CoreHostLoader 合同、任意已安装包发现、pi-core host 入口和 manifest capability。宿主 plugin-api/desktop discovery 回归与插件仓库完整 check 均通过；CoreHostLoader 尚未接入 session-engine 工具工厂，因此不能宣称已删除宿主 pi-core runtime import。
 - 2026-10-27：尝试在同一 arm64 正式包中运行真实销毁失败夹具时，首次运行在 `readCode` 阶段观察到 `Plugin runtime deactivated`；打开全局 UI 插件开关后进入真实 `withTransition`，但因桌面运行时权限审批/销毁屏障未得到人工确认而在 `Runtime.evaluate` 超时，未形成可复现回执。夹具代码已回退且未提交；销毁失败仍保持 `NOT_RUN`，不把该失败尝试记为 PASS。
 
 ## 未关闭项
