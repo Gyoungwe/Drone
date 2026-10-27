@@ -47,6 +47,29 @@ describe("createBackend", () => {
 		await services.dispose();
 	});
 
+	it("passes host-owned project context to a discovery plugin factory", async () => {
+		let received: unknown;
+		const host = { contractVersion: 1 as const, status: async () => ({ status: "plugin" }) };
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			defaultCwd: "/tmp/discovery-project",
+			discoveryHostLoader: {
+				contractVersion: 1,
+				create: (input) => {
+					received = input;
+					return host;
+				},
+				load: () => {
+					throw new Error("load should not run when create is available");
+				},
+			},
+		});
+		expect(received).toMatchObject({ projectId: "default", projectRoot: "/tmp/discovery-project" });
+		expect(services.discoveryHost).toBe(host);
+		await services.dispose();
+	});
+
 	it("exposes the workbench operation port through the host runtime and fails closed without handlers", async () => {
 		const unavailable = createBackend({ projectTrust: false, permissionGates: false });
 		await expect(unavailable.workbench.client.invoke("status", {})).rejects.toThrow(

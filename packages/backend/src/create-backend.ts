@@ -574,7 +574,14 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		onExecution: (event) =>
 			localExecution.recordKernelExecution({ ...event, projectId: canonicalProjectId(event.cwd) }),
 	});
-	const discoveryHost = options.discoveryHostLoader?.load();
+	const discoveryHost =
+		options.discoveryHostLoader?.create?.({
+			projectId: canonicalProjectId(options.discoveryProjectId ?? "default"),
+			projectRoot: options.discoveryProjectRoot ?? options.defaultCwd ?? process.cwd(),
+			agentDir: options.discoveryAgentDir ?? join(getAgentDir(), "discovery"),
+			inquiry: inquiry.domain,
+			authorize: options.discoveryAuthorize,
+		}) ?? options.discoveryHostLoader?.load();
 	if (discoveryHost && discoveryHost.contractVersion !== 1)
 		throw new Error(`Unsupported discovery host contract: ${discoveryHost.contractVersion}`);
 	const dataDesign =
