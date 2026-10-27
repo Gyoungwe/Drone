@@ -32,7 +32,7 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
-	it("exposes an explicit discovery host seam without replacing the native service", async () => {
+	it("exposes an installed discovery host through the sole backend adapter", async () => {
 		const host = {
 			contractVersion: 1 as const,
 			status: async () => ({ status: "unavailable" }),
@@ -65,7 +65,16 @@ describe("createBackend", () => {
 				},
 			},
 		});
-		expect(received).toMatchObject({ projectId: "default", projectRoot: "/tmp/discovery-project" });
+		expect(received).toMatchObject({
+			projectId: expect.stringMatching(/^discovery-[a-f0-9]{32}$/),
+			projectRoot: "/tmp/discovery-project",
+			services: {
+				journal: expect.any(Function),
+				runner: expect.any(Function),
+				authorize: expect.any(Function),
+				inquiry: { recordQuestion: expect.any(Function) },
+			},
+		});
 		expect(services.discoveryHost).toBe(host);
 		await services.dispose();
 	});

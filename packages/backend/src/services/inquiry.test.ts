@@ -388,4 +388,49 @@ describe("backend inquiry composition adapter", () => {
 			await rm(root, { recursive: true, force: true });
 		}
 	});
+	it("binds discovery writes to canonical project closures across real SQLite ledgers", async () => {
+		const root = await mkdtemp(join(tmpdir(), "inquiry-discovery-isolation-"));
+		const service = new InquiryService({ projectsDir: join(root, "ledgers") });
+		try {
+			const a = join(root, "workspace-a");
+			const b = join(root, "workspace-b");
+			const portA = service.discoveryPort(a, "discovery-a");
+			const portB = service.discoveryPort(b, "discovery-b");
+			const question = {
+				id: "shared-id",
+				schemaVersion: 1 as const,
+				projectId: "discovery-a",
+				kind: "question" as const,
+				statement: "Workspace A question",
+				competingExplanations: [],
+				testsDone: [],
+				testsPlanned: [],
+				status: "open" as const,
+				proposer: "agent" as const,
+				priority: 0.5,
+				createdAt: "2026-01-01T00:00:00.000Z",
+				updatedAt: "2026-01-01T00:00:00.000Z",
+			};
+			await portA.recordQuestion(question);
+			await portB.recordQuestion({
+				...question,
+				projectId: "discovery-b",
+				statement: "Workspace B question",
+			});
+			await expect(portA.recordQuestion({ ...question, projectId: "discovery-b" })).rejects.toThrow(
+				"another project",
+			);
+			const snapshotA = await service.readOnlySnapshot(a);
+			const snapshotB = await service.readOnlySnapshot(b);
+			expect(snapshotA?.questions.map((record) => record.statement)).toEqual(["Workspace A question"]);
+			expect(snapshotB?.questions.map((record) => record.statement)).toEqual(["Workspace B question"]);
+			expect(snapshotA?.questions[0]?.projectId).not.toBe(snapshotB?.questions[0]?.projectId);
+			expect(service.domain).toBeUndefined();
+			service.dispose();
+			await expect(portA.recordQuestion(question)).rejects.toThrow("disposed");
+		} finally {
+			service.dispose();
+			await rm(root, { recursive: true, force: true });
+		}
+	});
 });

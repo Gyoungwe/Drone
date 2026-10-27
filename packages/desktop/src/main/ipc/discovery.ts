@@ -35,30 +35,20 @@ export function registerDiscoveryIpc(backendOrDiscovery: BackendServices | Disco
 	});
 }
 
-/** Build the renderer implementation with an installed discovery host preferred for migrated reads. */
+/** Build the renderer implementation over the single backend discovery capability. */
 export function createDiscoveryIpcImplementation(
 	backendOrDiscovery: BackendServices | DiscoveryServicePort,
 ): ContractImplementation<typeof DiscoveryContract> {
 	const discovery = "discovery" in backendOrDiscovery ? backendOrDiscovery.discovery : backendOrDiscovery;
-	const discoveryHost = "discoveryHost" in backendOrDiscovery ? backendOrDiscovery.discoveryHost : undefined;
-	const hostRead = <T>(
-		operation: "listCriticReviews" | "listMultipathAssessments" | "listExplorationPlans" | "listEvaluations",
-		fallback: () => Promise<T>,
-	): Promise<T> => {
-		const method = discoveryHost?.[operation];
-		return method ? (method.call(discoveryHost, {}) as Promise<T>) : fallback();
-	};
+
 	return {
 		getCapabilities: (language) => discovery.getCapabilities(language),
 		listKernelSessions: async () => [...(await discovery.listKernelSessions())],
 		getKernelSession: (id) => discovery.getKernelSession(id),
 		closeKernelSession: (id) => discovery.closeKernelSession(id),
-		listCriticReviews: () =>
-			hostRead("listCriticReviews", async () => [...(await discovery.listCriticReviews())]),
-		listMultipathAssessments: () =>
-			hostRead("listMultipathAssessments", async () => [...(await discovery.listMultipathAssessments())]),
-		listExplorationPlans: () =>
-			hostRead("listExplorationPlans", async () => [...(await discovery.listExplorationPlans())]),
-		listEvaluations: () => hostRead("listEvaluations", async () => [...(await discovery.listEvaluations())]),
+		listCriticReviews: async () => [...(await discovery.listCriticReviews())],
+		listMultipathAssessments: async () => [...(await discovery.listMultipathAssessments())],
+		listExplorationPlans: async () => [...(await discovery.listExplorationPlans())],
+		listEvaluations: async () => [...(await discovery.listEvaluations())],
 	};
 }

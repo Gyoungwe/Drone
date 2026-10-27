@@ -491,6 +491,31 @@ export class InquiryService implements InquiryServicePort {
 		});
 	}
 
+	/** Bind optional discovery writes to one host-selected workspace ledger. */
+	discoveryPort(
+		projectId: string,
+		discoveryProjectId: string,
+	): import("@drone/discovery").InquiryDiscoveryPort {
+		const boundProjectId = canonicalProjectId(projectId);
+		const domain = () => {
+			if (this.disposed) throw new Error("Inquiry service is disposed");
+			const service = this.options.projectsDir ? this.project(boundProjectId) : this;
+			if (!service.domain || service.storage?.projectId !== boundProjectId)
+				throw new Error("Inquiry service is unavailable for the discovery project");
+			return service.domain;
+		};
+		const bind = <T extends { readonly projectId: string }>(record: T): T => {
+			if (record.projectId !== discoveryProjectId)
+				throw new Error("Discovery record belongs to another project");
+			return { ...record, projectId: boundProjectId };
+		};
+		return {
+			recordQuestion: async (record) => domain().recordQuestion(bind(record)),
+			recordAttempt: async (record) => domain().recordAttempt(bind(record)),
+			recordFinding: async (record) => domain().recordFinding(bind(record)),
+		};
+	}
+
 	async listDecisions(projectId?: string): Promise<readonly DecisionRecord[]> {
 		const normalized = canonicalProjectId(projectId ?? this.options.projectId);
 		if (this.options.projectsDir) return normalized ? this.project(normalized).listDecisions(normalized) : [];

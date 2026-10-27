@@ -4,20 +4,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import type { DiscoveryHostLoader } from "@gyoungwe/plugin-api";
 import { afterAll, beforeAll, expect, it } from "vitest";
-import { DiscoveryService } from "./service";
+import { DiscoveryService } from "../../test/legacy-discovery-service";
+import { createDiscoveryService } from "./service";
 
 const tarball = process.env.DRONE_DISCOVERY_PLUGIN_TARBALL;
 const exec = promisify(execFile);
 let installedRoot: string;
-let loader: {
-	create(input: { projectId: string; projectRoot: string; agentDir?: string }): {
-		listCriticReviews(): Promise<unknown[]>;
-		listMultipathAssessments(): Promise<unknown[]>;
-		listExplorationPlans(): Promise<unknown[]>;
-		listEvaluations(): Promise<unknown[]>;
-	};
-};
+let loader: DiscoveryHostLoader;
 
 beforeAll(async () => {
 	if (!tarball) return;
@@ -111,18 +106,32 @@ it.skipIf(!tarball).each(["project-default", "host-agent-dir"] as const)(
 				{ runId: "evaluation-a" },
 			);
 
-			const host = loader.create(input);
+			const originalBytes = await readFile(join(journalRoot, "critics.json"));
+			const unassigned = createDiscoveryService(
+				{ ...input, agentDir: join(root, "new-project-journals"), legacyJournalRoot: journalRoot },
+				loader,
+			);
+			expect(await unassigned.host?.status?.({})).toMatchObject({
+				legacyJournal: { status: "unassigned", path: journalRoot },
+			});
+			expect(await unassigned.service.listCriticReviews()).toEqual([]);
+			await unassigned.service.dispose();
+			expect(await readFile(join(journalRoot, "critics.json"))).toEqual(originalBytes);
+			const host = createDiscoveryService(input, loader).service;
 			expect(await host.listCriticReviews()).toEqual(await service.listCriticReviews());
 			expect(await host.listMultipathAssessments()).toEqual(await service.listMultipathAssessments());
 			expect(await host.listExplorationPlans()).toEqual(await service.listExplorationPlans());
 			expect(await host.listEvaluations()).toEqual(await service.listEvaluations());
 			for (const file of ["critics.json", "multipath.json"])
 				expect(JSON.parse(await readFile(join(journalRoot, file), "utf8"))[0]).toHaveProperty("recordedAt");
-			const other = loader.create({
-				projectId: "project-b",
-				projectRoot: join(root, "project-b"),
-				...(agentDir ? { agentDir: join(root, "journal-b") } : {}),
-			});
+			const other = createDiscoveryService(
+				{
+					projectId: "project-b",
+					projectRoot: join(root, "project-b"),
+					...(agentDir ? { agentDir: join(root, "journal-b") } : {}),
+				},
+				loader,
+			).service;
 			expect(await other.listCriticReviews()).toEqual([]);
 			expect(await other.listMultipathAssessments()).toEqual([]);
 			expect(await other.listExplorationPlans()).toEqual([]);

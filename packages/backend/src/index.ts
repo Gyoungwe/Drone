@@ -39,10 +39,11 @@ export {
 	unavailableContainerCapabilities,
 } from "./discovery/container-runner";
 export {
+	createDiscoveryHostInput,
+	createDiscoveryService,
 	type DiscoveryAuthorization,
 	type DiscoveryAuthorizationOperation,
 	type DiscoveryKernelSessionInput,
-	DiscoveryService,
 	type DiscoveryServiceOptions,
 	type DiscoveryServicePort,
 } from "./discovery/service";
