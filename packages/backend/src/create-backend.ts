@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
@@ -36,8 +37,8 @@ import type { TaskAcceptanceHostPort, TaskHostLoader } from "@gyoungwe/plugin-ap
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import {
+	createDiscoveryService,
 	type DiscoveryAuthorization,
-	DiscoveryService,
 	type DiscoveryServicePort,
 } from "./discovery/service";
 import { JsonStore } from "./json-store";
@@ -263,7 +264,7 @@ export interface BackendServices {
 	workbench: WorkbenchHostPort;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
-	/** Optional package-owned discovery surface; native service remains authoritative during migration. */
+	/** Installed package-owned discovery surface; absent means discovery operations are unavailable. */
 	discoveryHost?: import("@gyoungwe/plugin-api").DiscoveryHostPort;
 	/** Durable B7 dataset, public-fetch and RO-Crate registry. */
 	dataDesign: ComputeDataDesignServicePort;
@@ -368,7 +369,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const workbench = taskHost.workbench
 		? { contractVersion: 1 as const, client: taskHost.workbench }
 		: hostWorkbench;
-	runtime.tasks.workbench = { version: workbench.contractVersion, client: workbench.client };
+	runtime.tasks.workbench = {
+		version: workbench.contractVersion,
+		client: workbench.client,
+		...(taskHost.normalizeMilestones ? { normalizeMilestones: taskHost.normalizeMilestones } : {}),
+	};
 	// The packaged knowledge capability owns its runtime when installed. The
 	// generic host does not bootstrap the legacy worker; callers that still need
 	// that compatibility adapter is test-only and outside this composition path.
@@ -574,27 +579,30 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		localExecution.observe(sessionId, event),
 	);
 	runtime.registerDisposable?.({ dispose: detachLocalExecution });
-	const discovery = new DiscoveryService({
-		projectId: canonicalProjectId(options.discoveryProjectId ?? "default"),
-		projectRoot: options.discoveryProjectRoot ?? options.defaultCwd ?? process.cwd(),
-		agentDir: options.discoveryAgentDir ?? join(getAgentDir(), "discovery"),
-		storage: sessions.getStorageRegistry(),
-		...(inquiry.domain ? { inquiry: inquiry.domain } : {}),
-		...(options.discoveryAuthorize ? { authorize: options.discoveryAuthorize } : {}),
-		...(options.discoveryRunner ? { runner: options.discoveryRunner } : {}),
-		onExecution: (event) =>
-			localExecution.recordKernelExecution({ ...event, projectId: canonicalProjectId(event.cwd) }),
-	});
-	const discoveryHost =
-		options.discoveryHostLoader?.create?.({
-			projectId: canonicalProjectId(options.discoveryProjectId ?? "default"),
-			projectRoot: options.discoveryProjectRoot ?? options.defaultCwd ?? process.cwd(),
-			agentDir: options.discoveryAgentDir ?? join(getAgentDir(), "discovery"),
-			inquiry: inquiry.domain,
-			authorize: options.discoveryAuthorize,
-		}) ?? options.discoveryHostLoader?.load();
-	if (discoveryHost && discoveryHost.contractVersion !== 1)
-		throw new Error(`Unsupported discovery host contract: ${discoveryHost.contractVersion}`);
+	const discoveryProjectRoot = resolve(options.discoveryProjectRoot ?? options.defaultCwd ?? process.cwd());
+	const discoveryProjectKey = createHash("sha256")
+		.update(canonicalProjectId(discoveryProjectRoot))
+		.digest("hex")
+		.slice(0, 32);
+	const discoveryProjectId = canonicalProjectId(
+		options.discoveryProjectId ?? `discovery-${discoveryProjectKey}`,
+	);
+	const { service: discovery, host: discoveryHost } = createDiscoveryService(
+		{
+			projectId: discoveryProjectId,
+			projectRoot: discoveryProjectRoot,
+			agentDir: options.discoveryAgentDir ?? join(getAgentDir(), "discovery", discoveryProjectKey),
+			...(!options.discoveryAgentDir ? { legacyJournalRoot: join(getAgentDir(), "discovery") } : {}),
+			storage: sessions.getStorageRegistry(),
+			inquiry: inquiry.discoveryPort(options.inquiryProjectId ?? discoveryProjectRoot, discoveryProjectId),
+			...(options.discoveryAuthorize ? { authorize: options.discoveryAuthorize } : {}),
+			...(options.discoveryRunner ? { runner: options.discoveryRunner } : {}),
+			onExecution: (event) =>
+				localExecution.recordKernelExecution({ ...event, projectId: canonicalProjectId(event.cwd) }),
+		},
+		options.discoveryHostLoader,
+	);
+
 	const dataDesign =
 		options.computeDataDesign ??
 		createComputeDataDesignService({
@@ -720,7 +728,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		runtime.compute = { service: compute, adapter: computeAdapter };
 	}
 	void computeAdapter.init?.();
-	void discovery.init();
+	// The plugin initializes lazily on first operation; absence never opens domain storage.
 	const dailyDiscoveryOptions: DailyDiscoveryOptions = {
 		path: join(getAgentDir(), "daily-discovery.json"),
 		operations: createKnowledgeDailyDiscoveryOperations(knowledgeHost, knowledgeCompatibility),
@@ -1002,7 +1010,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			await compute.dispose();
 			await computeAdapter.dispose?.();
 			inquiry.dispose();
-			discovery.dispose();
+			await discovery.dispose();
 			await runtime.dispose();
 		},
 	};
