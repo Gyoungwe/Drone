@@ -147,6 +147,7 @@
 - 2026-10-27：重新运行 arm64 正式 `Drone.app` 的 `check-packaged-desktop.mjs`，在全新 HOME/profile、空 optional UI 根、空 managed npm 根和空 auth/model 存储下通过实际 Electron 启动、preload、知识未绑定、semantic/topic IPC、研究命令及 generic Pi session 创建/关闭，回执 `passed:true`。生命周期 `install/disable/restore/upgrade/rollback/destroy-failure` 为 `NOT_RUN`，因此仅更新零可选插件 smoke，不关闭 P7。
 - 2026-10-27：正式包隔离 profile 生命周期切片：`check-packaged-desktop.mjs --lifecycle-package=@gyoungwe/pi-evidence` 实际安装 `0.1.1`，收到 `staged → verified → enabled`；随后移除并收到 `disabled → drained → disabled`，读回确认 managed package 目录和配置入口消失。仅标记 packaged install/remove PASS，restore/upgrade/rollback/destroy-failure 仍 `NOT_RUN`。
 - 2026-10-27：正式包生命周期脚本扩展为 install→update→remove；隔离 profile 对 `@gyoungwe/pi-evidence` 三组回执均成功，update 回读 `previousVersion=version=0.1.1`。仅标记真实 update/disable 清理路径通过，不将同版本重装写成跨版本升级；restore/跨版本 rollback/destroy-failure 仍 `NOT_RUN`。
+- 2026-10-27：新增 `check-packaged-desktop.mjs --lifecycle-fixture`，在实际 arm64 `Drone.app`、隔离 HOME/profile 与临时本地 npm registry 中完成 `1.0.0 → 1.1.0` 的真实安装/升级回执；回读确认 install `version=1.0.0`、update `previousVersion=1.0.0`/`version=1.1.0`。回滚阶段如实保持 `BLOCKED`：当前宿主 `updatePackage(name)` 只能按已配置的 npm range 更新，升级后 lockfile 为 `^1.1.0`，没有显式目标版本的回滚 API，npm 不会降级到 `1.0.0`；脚本随后移除 fixture 并继续完成零插件宿主检查。该结果关闭了正式包跨版本升级切片，但不把失败的回滚写成 PASS；rollback/destroy-failure 仍未完成。
 
 ## 未关闭项
 
