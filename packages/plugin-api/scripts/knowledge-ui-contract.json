@@ -98,6 +98,9 @@
 		"WorkbenchTask",
 		"ZoteroLocalWriteStatus",
 		"ZoteroStatus",
-		"ZoteroWebApiStatus"
+		"ZoteroWebApiStatus",
+		"UIMessage",
+		"TurnTiming",
+		"PromptReceipt"
 	]
 }

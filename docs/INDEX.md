@@ -507,6 +507,7 @@ src/
 | 自动更新 | `main/updater.ts` + `update-policy.ts` + shared `update.ts`；UI `session/UpdateButton.tsx`（顶栏）+ `settings/AboutPanel.tsx`（手动检查） |
 | 主题 / 背景图 / Markdown 代码块主题 | `stores/theme.ts` + `styles/globals.css`（双套 token）；main `background.ts` + `pi-bg://` 协议（CSP img-src 含 pi-bg:）；UI `settings/AppearancePanel.tsx`；代码块主题走 `Markdown.tsx` 的 isDark + 显式双主题 |
 | Toast | `stores/toasts.ts` + globals.css `.toast` 样式段 |
+| 通用插件消息呈现 / 会话动作 | `plugins/session-api.ts` 复用现有 prompt IPC 并提供稳定的安全消息 hook；`MessageItem.tsx` 的 `chat.message` 槽位支持直接默认回退，合同见 `plugin-api/src/ui.ts` 与 UI SPEC。 |
 | UI 插件（槽位/区域/面板/无头/热重载） | 运行时 `renderer/src/plugins/`（registry：headless activate/cleanup 生命周期）；构建/扫描 `main/ui-plugins/`（build/manager/config，已安装包完整树内容寻址并在代次变化后要求重新确认）；IPC `main/ipc/ui-plugins.ts`；类型 shared `ui-plugins.ts`；规范与内置插件 `desktop/resources/ui-plugins/`（SPEC.md / drone-ui.d.ts / skills / examples / builtin/，含 voice-alerts 语音提醒） |
 | 语音提醒（任务完成/审批等待播提示音） | 内置无头插件 `resources/ui-plugins/builtin/voice-alerts/`（全局安静检测状态机 + `new Audio(dataUrl)`，激活/清理走 registry headless 生命周期；开关 = UI 插件面板的插件启用）；音频 = 插件 `src/assets/*.mp3` dataurl 内联，替换文件即热重载；主窗口 `backgroundThrottling: false`（锁屏/后台不节流提醒计时） |
 | 新增 IPC 通道 | 见硬约束「四处同步」 |

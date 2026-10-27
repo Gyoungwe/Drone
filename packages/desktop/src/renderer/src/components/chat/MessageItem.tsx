@@ -1,22 +1,58 @@
 import { type TurnTiming, tasksForDecision } from "@drone/shared";
+import type { ChatMessageProps } from "@gyoungwe/plugin-api/ui";
 import { memo, useState } from "react";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import { useAgentModeStore } from "../../stores/agent-mode";
+import { useSessionsStore } from "../../stores/sessions";
 import type { UIMessage } from "../../stores/transcript";
 import { useAgentActive } from "../session/session-status";
 import { AssistantMessage } from "./AssistantMessage";
 import { ErrorNote } from "./ErrorNote";
 import { ImagePreviewOverlay, imageSrc } from "./ImagePreview";
 import { CopyButton, ForkButton } from "./message-actions";
+import { ProgressNote } from "./ProgressNote";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { SystemMessage } from "./SystemMessage";
 import { TaskDecisionCard } from "./TaskDecisionCard";
 import { UserMessage } from "./UserMessage";
 
-/** 单条消息：按类型分发（用户气泡 / 图片块 / 子代理卡 / 错误卡 / 系统分割线 / 助手消息体） */
-export const MessageItem = memo(function MessageItem({
+function DefaultChatMessage({ renderDefault }: ChatMessageProps) {
+	return renderDefault();
+}
+
+/** Plugins receive the existing safe projection; fallback never enters this slot recursively. */
+export const MessageItem = memo(function MessageItem(
+	props: Omit<Parameters<typeof DefaultMessageItem>[0], "agentActive">,
+) {
+	const sessionId = props.sessionId ?? null;
+	const agentActive = useAgentActive(sessionId);
+	const readOnly = useSessionsStore((state) =>
+		state.sessions.some((session) => session.sessionId === sessionId && session.readOnly === true),
+	);
+	return (
+		<Slot
+			name={UI_SLOTS.Message}
+			props={{
+				message: props.message,
+				sessionId,
+				agentActive,
+				readOnly,
+				streaming: props.streaming,
+				metaInGroup: props.metaInGroup,
+				showActions: props.showActions ?? true,
+				turnTiming: props.turnTiming,
+				turnStepCount: props.turnStepCount,
+				renderDefault: () => <DefaultMessageItem {...props} agentActive={agentActive} />,
+			}}
+			fallback={DefaultChatMessage}
+		/>
+	);
+});
+
+/** 单条消息默认呈现：用户气泡 / 图片 / 子代理 / 错误 / 系统 / 助手正文。 */
+function DefaultMessageItem({
 	message,
 	streaming,
 	metaInGroup,
@@ -25,6 +61,7 @@ export const MessageItem = memo(function MessageItem({
 	sessionId = null,
 	turnTiming,
 	turnStepCount,
+	agentActive,
 }: {
 	message: UIMessage;
 	streaming?: boolean;
@@ -40,10 +77,10 @@ export const MessageItem = memo(function MessageItem({
 	turnTiming?: TurnTiming;
 	/** 轮次内真实工具步数；工具可能被合并到正文前的 MetaGroup。 */
 	turnStepCount?: number;
+	agentActive: boolean;
 }) {
 	const t = useT();
 	const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-	const agentActive = useAgentActive(sessionId ?? null);
 	const mode = useAgentModeStore((state) => (sessionId ? (state.bySession[sessionId] ?? "lead") : "lead"));
 
 	if (message.kind === "user") {
@@ -100,6 +137,9 @@ export const MessageItem = memo(function MessageItem({
 	if (message.kind === "system") {
 		return <SystemMessage message={message} />;
 	}
+	if (message.kind === "assistant" && message.progress && !message.text) {
+		return <ProgressNote progress={message.progress} />;
+	}
 
 	if (message.kind === "assistant" && (message.route || (message.taskView && showTaskCard))) {
 		const view = message.taskView;
@@ -155,4 +195,4 @@ export const MessageItem = memo(function MessageItem({
 			)}
 		</div>
 	);
-});
+}

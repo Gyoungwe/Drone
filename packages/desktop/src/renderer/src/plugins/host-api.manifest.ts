@@ -18,6 +18,7 @@ export const PLUGIN_HOST_API_MANIFEST = {
 		stores: manifest.namespaces.stores.map(({ name }) => name),
 		i18n: manifest.namespaces.i18n.map(({ name }) => name),
 		knowledge: manifest.namespaces.knowledge.map(({ name }) => name),
+		sessions: manifest.namespaces.sessions.map(({ name }) => name),
 	},
 } as const;
 
