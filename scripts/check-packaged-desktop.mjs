@@ -256,6 +256,7 @@ try {
 	if (lifecyclePackage) {
 		const packagePath = join(managedPackageRoot, ...lifecyclePackage.split("/"));
 		const source = `npm:${lifecyclePackage}`;
+		let lifecycleSessionId;
 		const lifecycle = {
 			package: lifecyclePackage,
 			operations: lifecycleFixture
@@ -266,6 +267,11 @@ try {
 		const installedVersion = async () =>
 			JSON.parse(await readFile(join(packagePath, "package.json"), "utf8")).version;
 		try {
+			if (lifecycleFixture) {
+				const lifecycleSession = await evaluate(`window.pi.createSession({cwd:${JSON.stringify(cwd)}})`);
+				assert(typeof lifecycleSession?.sessionId === "string" && lifecycleSession.sessionId.length > 0);
+				lifecycleSessionId = lifecycleSession.sessionId;
+			}
 			if (lifecycleFixture) fixtureLatest = "1.0.0";
 			const installed = await evaluate(`window.pi.installPackage(${JSON.stringify(lifecyclePackage)})`);
 			assert(installed?.status === "succeeded", `package install failed: ${JSON.stringify(installed)}`);
@@ -281,6 +287,7 @@ try {
 			if (lifecycleFixture) {
 				const version = await installedVersion();
 				assert.equal(version, "1.0.0");
+				assert(installed.events.some((event) => event.type === "reloaded"));
 			}
 			lifecycle.install = installed;
 
@@ -359,12 +366,17 @@ try {
 					? `isolated packaged host installed, upgraded, rolled back, removed, restored and removed ${lifecyclePackage}`
 					: `isolated packaged host installed and removed ${lifecyclePackage}`,
 			);
+			if (lifecycleSessionId) await evaluate(`window.pi.closeSession(${JSON.stringify(lifecycleSessionId)})`);
 		} catch (error) {
 			const message = String(error);
 			if (lifecycleFixture || /network|registry|npm|fetch|timeout|unavailable|not found/iu.test(message)) {
 				if (lifecycleFixture) {
 					await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`).catch(() => undefined);
 				}
+				if (lifecycleSessionId)
+					await evaluate(`window.pi.closeSession(${JSON.stringify(lifecycleSessionId)})`).catch(
+						() => undefined,
+					);
 				report.lifecycleAcceptance = {
 					status: "BLOCKED",
 					operations: lifecycle.operations,
