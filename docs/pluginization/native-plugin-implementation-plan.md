@@ -29,6 +29,7 @@
 
 - P2 插件 `codex/native-knowledge-review-owner@28819ba`：删除重复 desktop review writer，CLI/Desktop 共用审核算法，history/undo 与 UI 已消费；525 测试与真实受限进程/SDK apply→partial→retry→history→undo、拒权/隔离/人工编辑保护、SQLite/进程/租约清理通过。配套宿主测试 `codex/knowledge-review-process-acceptance@3047f28`；候选 SHA-256 `f423c3b6be163bb48b392930cb7fe48523fbcccc98d51c5b4aaabac4e70ac0f8`。**尚未合入当前源码锁、套件或正式安装包**。
 - P4 `codex/native-task-owner-migration`：canonical owner/registry 与 native session 接线、宿主 tasks 删除及规则测试迁移正在独立工作树完成门禁；当前宿主仍保留旧实现，不能提前关闭 P4。新增 native 合同依赖未发布 API 1.3 候选，下一轮需统一 API/vendor/声明/锁。
+- 新的完整 native core+knowledge 组合探针发现：宿主旧 publication fallback 在 bridge 缺失时会原地丢失 toolCall/usage 等 SDK 字段；隔离分支正在修复并验证 private provider 协议重放。公开 tool-only 策略与最终 fail-closed 必须保留；本轮标准门禁和只读 worker 切片不证明该完整组合已通过。
 - 顺序：整合已通过的 P2 候选与测试 → 固定双仓库来源/套件/锁并复验 → 同候选正式 GUI；并行完成 P4 的实际删除与完整门禁。模型审核、完整 native hooks/publication 和旧宿主 IPC 删除仍须逐项迁移。
 
 ## 检查与证据规则

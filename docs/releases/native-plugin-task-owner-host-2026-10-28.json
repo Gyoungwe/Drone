@@ -686,5 +686,11 @@
 		"realAgentSessionAndToolDispatch": true,
 		"remoteModelInference": false,
 		"inferenceQualityAssessed": false
+	},
+	"knownUnfinishedRuntimeIssue": {
+		"scope": "isolated full native core + knowledge composition; outside this checkpoint acceptance",
+		"observed": "legacy host publication fallback mutates toolUse messages and drops SDK control metadata when the legacy bridge is absent",
+		"status": "separate host/plugin fixes and private protocol replay validation in progress; no full native-composition PASS claimed",
+		"publicPolicy": "keep tool-only public projection, private provider replay, and fail-closed final persistence"
 	}
 }

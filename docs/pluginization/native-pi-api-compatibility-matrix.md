@@ -102,7 +102,7 @@ UI 完整成员：`select`、`confirm`、`input`、`notify`、`onTerminalInput`�
 
 主/子会话的持续 onError 已由 `2f9b6d16` 接入日志与 traces；真实 SDK create/reload/restore 与子会话覆盖权限门禁开关、错误后继续 read、关闭退订。日志记录非致命 hook 异常，不把 loader.errors 为空当作 hook 成功。
 
-1. 完成其余事件/Context 的错误传播与逐项真实回执；既有 onError 切片不代表全部 41 种事件已验收。
+1. 收口完整 native core+knowledge 组合中的 publication 事件投影：bridge 缺失时不能破坏 toolCall/usage/官方 metadata，provider 私有协议重放与公开 tool-only/最终 fail-closed 均须保留。该组合仍在隔离分支验证；既有 onError 切片不代表全部 41 种事件已验收。
 2. 删除旧 Desktop UI 的静默 no-op/假成功，按支持能力返回真实结果或明确拒绝；核对 bind mode 与 hasUI。
 3. 补 managed 工具 metadata、onUpdate、上下文与 getter 的完整声明矩阵和真实失败回执；不增加同步跨进程缓存来伪装支持。
 4. 用完整 33/41/28 探针及 locked/latest 真 SDK 回归固定支持/拒绝清单，补格式相同但 API 不兼容包的实际安装诊断。
