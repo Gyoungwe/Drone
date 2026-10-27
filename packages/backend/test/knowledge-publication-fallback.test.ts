@@ -126,6 +126,33 @@ describe("knowledge-publication fallback（bridge 缺失）", () => {
 			expect(JSON.stringify(message)).not.toMatch(/UNPUBLISHED_DRAFT|fixture-secret/);
 		},
 	);
+	it("publishes only sanitized SDK diagnostic text and omits arbitrary details/stacks", () => {
+		const message = Object.assign(fauxAssistantMessage("UNPUBLISHED_DRAFT"), {
+			diagnostics: [
+				{
+					type: "provider-warning",
+					timestamp: 123,
+					error: {
+						message:
+							"Retry https://example.test/result?token=query-private Authorization: Bearer header-private",
+						stack: "STACK_PRIVATE",
+					},
+					details: { headers: { authorization: "DETAIL_HEADER_PRIVATE" } },
+				},
+			],
+		});
+		projectKnowledgeEvent(ev({ type: "message_end", message }));
+		expect(message.diagnostics).toEqual([
+			{
+				type: "provider-warning",
+				timestamp: 123,
+				error: { message: expect.stringContaining("https://example.test/result") },
+			},
+		]);
+		expect(JSON.stringify(message)).not.toMatch(
+			/query-private|header-private|STACK_PRIVATE|DETAIL_HEADER_PRIVATE/,
+		);
+	});
 
 	it("agent_end：封条化 messages 内的 assistant 项，保留其它角色", () => {
 		const out = projectKnowledgeEvent(

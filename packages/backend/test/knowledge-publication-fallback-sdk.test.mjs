@@ -56,12 +56,43 @@ it("native core plus knowledge executes actual SDK read through fallback without
 			modelId: provider.getModel().id,
 		});
 		const session = backend.sessions.registry.get(meta.sessionId).session;
+		const protocol = [
+			{ type: "text", text: "PRIVATE_PROGRESS_BEFORE_READ" },
+			{
+				type: "thinking",
+				thinking: "PRIVATE_SIGNED_THINKING",
+				thinkingSignature: "provider-thinking-signature",
+			},
+			fauxToolCall("read", { path: "input.txt" }),
+		];
+		const providerHistory = [];
 		provider.setResponses([
-			fauxAssistantMessage(
-				[{ type: "text", text: "PRIVATE_PROGRESS_BEFORE_READ" }, fauxToolCall("read", { path: "input.txt" })],
-				{ stopReason: "toolUse", responseId: "actual-provider-call" },
+			Object.assign(
+				fauxAssistantMessage(protocol, { stopReason: "toolUse", responseId: "actual-provider-call" }),
+				{
+					responseModel: "served-model-version",
+					providerThinkingLevel: "low",
+					thinkingLevel: "low",
+					diagnostics: [
+						{
+							type: "provider-warning",
+							timestamp: 123,
+							error: {
+								message:
+									"Retry https://example.test/result?token=query-private Authorization: Bearer header-private",
+								stack: "STACK_PRIVATE",
+							},
+							details: { headers: { authorization: "DETAIL_HEADER_PRIVATE" } },
+						},
+					],
+					rawStopReason: "tool_use",
+					endTurn: false,
+				},
 			),
-			fauxAssistantMessage(draft, { responseId: "actual-provider-final" }),
+			(context) => {
+				providerHistory.push(structuredClone(context.messages));
+				return fauxAssistantMessage(draft, { responseId: "actual-provider-final" });
+			},
 		]);
 		await session.prompt("Read input.txt and explain its bounded result.");
 		await session.waitForIdle();
@@ -75,6 +106,11 @@ it("native core plus knowledge executes actual SDK read through fallback without
 		);
 		expect(toolMessage).toMatchObject({
 			responseId: "actual-provider-call",
+			responseModel: "served-model-version",
+			providerThinkingLevel: "low",
+			thinkingLevel: session.thinkingLevel,
+			rawStopReason: "tool_use",
+			endTurn: false,
 			api: provider.getModel().api,
 			provider: provider.provider.id,
 			model: provider.getModel().id,
@@ -83,6 +119,15 @@ it("native core plus knowledge executes actual SDK read through fallback without
 			],
 		});
 		expect(toolMessage.usage.input).toBeGreaterThan(0);
+		expect(providerHistory).toHaveLength(1);
+		expect(providerHistory[0].find((message) => message.role === "assistant").content).toEqual(protocol);
+		expect(toolMessage.diagnostics).toMatchObject([
+			{
+				type: "provider-warning",
+				timestamp: 123,
+				error: { message: expect.stringContaining("https://example.test/result") },
+			},
+		]);
 		const final = session.messages.filter((message) => message.role === "assistant").at(-1);
 		expect(final).toMatchObject({
 			responseId: "actual-provider-final",
@@ -96,6 +141,9 @@ it("native core plus knowledge executes actual SDK read through fallback without
 		for (const visible of [JSON.stringify(session.messages), JSON.stringify(observed), persisted]) {
 			expect(visible).not.toContain(draft);
 			expect(visible).not.toContain("PRIVATE_PROGRESS_BEFORE_READ");
+			expect(visible).not.toMatch(
+				/PRIVATE_SIGNED_THINKING|query-private|header-private|STACK_PRIVATE|DETAIL_HEADER_PRIVATE/,
+			);
 		}
 		expect(observed.find((message) => message.stopReason === "toolUse").usage).toEqual(toolMessage.usage);
 	} finally {
