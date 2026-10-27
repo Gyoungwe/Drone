@@ -80,6 +80,11 @@ export interface KnowledgeHostPort {
 		relatedForMemory(input: unknown): Promise<unknown>;
 		saveMemory(input: unknown): Promise<unknown>;
 	};
+	/** Maintenance topic/wiki operations supplied by the installed knowledge host. */
+	maintenanceTopic?: {
+		setTopic(input: unknown): Promise<unknown>;
+		proposeWiki(input: unknown): Promise<unknown>;
+	};
 	/** Incrementally migrated UI operations supplied by the installed knowledge host. */
 	jobs?: (input: unknown) => Promise<unknown>;
 	maintenance?: (input: unknown) => Promise<unknown>;
@@ -581,6 +586,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			| "reviewWikiWithModel"
 			| "semantic"
 			| "topics"
+			| "maintenanceTopic"
 			| "memory"
 			| "jobs"
 			| "maintenance"
@@ -603,6 +609,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 					| "reviewWikiWithModel"
 					| "semantic"
 					| "topics"
+					| "maintenanceTopic"
 					| "memory"
 					| "jobs"
 					| "maintenance"
@@ -799,6 +806,8 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		topic: string;
 		revision: number;
 	}): Promise<unknown> {
+		await this.connect();
+		if (this.writeProvider?.maintenanceTopic) return this.writeProvider.maintenanceTopic.setTopic(input);
 		const fn = (await this.workbenchModule()).runKnowledgeMaintenanceTopic;
 		if (!fn) throw new Error("Knowledge maintenance topic port is unavailable");
 		return fn(input);
@@ -811,6 +820,8 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		rationale: string;
 		revision: number;
 	}): Promise<unknown> {
+		await this.connect();
+		if (this.writeProvider?.maintenanceTopic) return this.writeProvider.maintenanceTopic.proposeWiki(input);
 		const fn = (await this.workbenchModule()).runKnowledgeMaintenanceWiki;
 		if (!fn) throw new Error("Knowledge maintenance Wiki port is unavailable");
 		return fn(input);

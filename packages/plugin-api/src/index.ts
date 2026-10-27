@@ -578,6 +578,11 @@ export interface KnowledgeReadHostPort {
 		relatedForMemory(input: unknown): Promise<unknown>;
 		saveMemory(input: unknown): Promise<unknown>;
 	};
+	/** Maintenance topic/wiki operations supplied by the installed knowledge plugin. */
+	maintenanceTopic?: {
+		setTopic(input: unknown): Promise<unknown>;
+		proposeWiki(input: unknown): Promise<unknown>;
+	};
 	/** Optional research capture operations supplied by the installed knowledge plugin. */
 	researchResource?: {
 		resolveContext(input: unknown): unknown;
