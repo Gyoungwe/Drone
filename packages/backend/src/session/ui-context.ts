@@ -77,7 +77,8 @@ const EXTENSION_THEME = new Theme(
 
 /**
  * ExtensionUIContext：select/input 通过 AskGate 桥接原生问答，confirm 通过权限门控。
- * 其余终端专用 UI 方法保持 no-op。
+ * Terminal custom components are rejected; theme changes report failure.
+ * Remaining terminal-only methods still require a Desktop capability decision.
  * SDK 接口变化时在这里补齐新成员，别在 PiBackend 里重写。
  */
 export function makeUiContext(
@@ -145,7 +146,9 @@ export function makeUiContext(
 		setFooter: () => {},
 		setHeader: () => {},
 		setTitle: () => {},
-		custom: (async () => undefined) as ExtensionUIContext["custom"],
+		custom: async () => {
+			throw new Error("Drone Desktop does not support terminal custom UI");
+		},
 		pasteToEditor: () => {},
 		setEditorText: () => {},
 		getEditorText: () => "",
@@ -156,7 +159,10 @@ export function makeUiContext(
 		theme: EXTENSION_THEME,
 		getAllThemes: () => [],
 		getTheme: () => undefined,
-		setTheme: () => ({ success: true }),
+		setTheme: () => ({
+			success: false,
+			error: "Drone Desktop does not support terminal UI themes",
+		}),
 		getToolsExpanded: () => false,
 		setToolsExpanded: () => {},
 	};

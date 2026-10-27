@@ -11,6 +11,7 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
+import { makeUiContext } from "../src/session/ui-context";
 import { SessionEngine } from "../src/session-engine/engine";
 import { sandboxExtensionFactory } from "../src/session-engine/sandbox-loader";
 
@@ -29,6 +30,90 @@ const source = `export default pi => pi.registerTool({
    return {content:[{type:"text",text:JSON.stringify({selected,entered,pid:process.pid})}]};
  }
 });`;
+
+it("the real SDK receives truthful Desktop UI refusals and continues with read", async () => {
+	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-ui-refusal-sdk-")));
+	const agentDir = join(root, "agent");
+	await mkdir(agentDir);
+	await writeFile(join(root, "evidence.txt"), "local evidence remains readable");
+	let session;
+	try {
+		const settingsManager = SettingsManager.inMemory({});
+		const resourceLoader = new DefaultResourceLoader({
+			cwd: root,
+			agentDir,
+			settingsManager,
+			noExtensions: true,
+			extensionFactories: [
+				(pi) => {
+					pi.registerTool({
+						name: "custom_probe",
+						label: "Custom probe",
+						description: "Try terminal custom UI",
+						parameters: { type: "object", properties: {} },
+						async execute(_id, _input, _signal, _update, ctx) {
+							await ctx.ui.custom(() => {
+								throw new Error("Terminal component must not run");
+							});
+							return { content: [{ type: "text", text: "custom completed" }] };
+						},
+					});
+					pi.registerTool({
+						name: "theme_probe",
+						label: "Theme probe",
+						description: "Try terminal theme change",
+						parameters: { type: "object", properties: {} },
+						async execute(_id, _input, _signal, _update, ctx) {
+							return { content: [{ type: "text", text: JSON.stringify(ctx.ui.setTheme("solarized")) }] };
+						},
+					});
+				},
+			],
+		});
+		await resourceLoader.reload({ resolveProjectTrust: async () => true });
+		expect(resourceLoader.getExtensions().errors).toEqual([]);
+		const modelRuntime = await ModelRuntime.create({
+			authPath: join(agentDir, "auth.json"),
+			modelsPath: null,
+			allowModelNetwork: false,
+			refreshOnCreate: false,
+		});
+		const faux = fauxProvider({ provider: "desktop-ui-refusal-offline", tokensPerSecond: 0 });
+		modelRuntime.registerNativeProvider(faux.provider);
+		vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
+		faux.setResponses([
+			fauxAssistantMessage(fauxToolCall("custom_probe", {})),
+			fauxAssistantMessage(fauxToolCall("theme_probe", {})),
+			fauxAssistantMessage(fauxToolCall("read", { path: "evidence.txt" })),
+			fauxAssistantMessage("read still works"),
+		]);
+		({ session } = await createAgentSession({
+			cwd: root,
+			agentDir,
+			settingsManager,
+			resourceLoader,
+			modelRuntime,
+			sessionManager: SessionManager.inMemory(root),
+			model: faux.getModel(),
+		}));
+		await session.bindExtensions({ uiContext: makeUiContext({ confirm: async () => false }), mode: "tui" });
+		await session.prompt("Try the UI probes, then read local evidence.");
+		await session.waitForIdle();
+		const results = session.messages.filter((message) => message.role === "toolResult");
+		const custom = results.find((message) => message.toolName === "custom_probe");
+		expect(custom.isError).toBe(true);
+		expect(JSON.stringify(custom.content)).toContain("Drone Desktop does not support terminal custom UI");
+		const theme = results.find((message) => message.toolName === "theme_probe");
+		expect(JSON.parse(theme.content[0].text)).toMatchObject({ success: false });
+		const read = results.find((message) => message.toolName === "read");
+		expect(read.isError).toBe(false);
+		expect(JSON.stringify(read.content)).toContain("local evidence remains readable");
+	} finally {
+		if (session) await new SessionEngine().dispose(session);
+		vi.restoreAllMocks();
+		await rm(root, { recursive: true, force: true });
+	}
+}, 20000);
 
 it.each(["native", "sandbox"])(
 	"same official Pi extension completes a real %s AgentSession UI/tool loop",

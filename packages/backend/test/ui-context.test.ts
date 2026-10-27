@@ -10,6 +10,23 @@ function fakeGate(): PermissionGate {
 }
 
 describe("makeUiContext — ui.theme 契约", () => {
+	it("does not report a terminal theme change as successful", () => {
+		const ui = makeUiContext(fakeGate());
+		const original = ui.theme;
+		expect(ui.setTheme("solarized")).toEqual({
+			success: false,
+			error: "Drone Desktop does not support terminal UI themes",
+		});
+		expect(ui.theme).toBe(original);
+	});
+
+	it("rejects a terminal custom component instead of inventing cancellation", async () => {
+		const ui = makeUiContext(fakeGate());
+		const factory = vi.fn();
+		await expect(ui.custom(factory)).rejects.toThrow("Drone Desktop does not support terminal custom UI");
+		expect(factory).not.toHaveBeenCalled();
+	});
+
 	it("theme 是对象且 fg/bg/bold 等样式方法全部可调用并返回字符串", () => {
 		const ui = makeUiContext(fakeGate());
 		// pi-mcp-adapter init.ts updateStatusBar 的实际用法：ui.theme ? theme.fg(...) : ...
