@@ -16,8 +16,6 @@ import {
 } from "@drone/extensions/internal/obsidian-workbench";
 import { USER_QUESTION_FOCUS } from "@drone/extensions/internal/reply-focus";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
-import { registerAcceptanceVerifier } from "@drone/tasks/acceptance";
-import { registerTool } from "@drone/tasks/tool-manifest-runtime";
 import {
 	appendRelatedLinks,
 	cardLink,
@@ -32,6 +30,7 @@ import {
 	SESSION_PROJECT_ENTRY,
 	sessionEntriesOf,
 } from "@gyoungwe/pi-knowledge/host";
+import { registerTool } from "./internal/runtime/tool-manifest";
 
 // These named exports are used by offline knowledge benchmarks and packaging
 // smoke tests. Keeping them on the generated entry exercises the same
@@ -136,13 +135,6 @@ async function startSetup(pi, args, ctx) {
 
 export default function obsidianWorkbench(pi, options: { readOnly?: boolean } = {}) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
-	// Each published extension entry is bundled independently. Replay acceptance
-	// declarations into this entry's live task-plan schema so a later Zotero/Wiki
-	// entry is visible to the validator that registered task_plan first.
-	pi.events?.on?.("drone:acceptance-verifier/v1", (payload) => {
-		if (payload?.version !== 1 || typeof payload.kind !== "string") return;
-		registerAcceptanceVerifier(payload.kind, payload.definition || {});
-	});
 	const knowledge = registerKnowledgeInterface(pi, { readOnly: options.readOnly === true });
 
 	registerTool(pi, {

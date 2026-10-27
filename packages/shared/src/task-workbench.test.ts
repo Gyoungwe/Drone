@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-	TASK_REASON_TEXT,
 	type TaskView,
 	taskDecision,
 	taskDeliveryPresentation,
@@ -258,13 +257,5 @@ describe("task decision card", () => {
 		expect(decision.stop).toBe("Stopped at this stage's step limit");
 		expect(decision.deferLabel).toBe("Leave it unchecked and continue");
 		expect(decision.cannotComplete).toContain("cannot be marked complete");
-	});
-});
-
-describe("task reason contract", () => {
-	it("keeps the shared reason text aligned with the CLI workbench", async () => {
-		// @ts-expect-error The checked-in runtime artifact is JavaScript; package source owns its declarations.
-		const cli = await import("../../tasks/src/runtime-compiled/workbench.mjs");
-		expect(TASK_REASON_TEXT).toEqual(cli.REASON_TEXT);
 	});
 });

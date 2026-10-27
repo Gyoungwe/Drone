@@ -1,8 +1,6 @@
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { registerTaskRuntime } from "@drone/tasks/runtime";
-import { createStandaloneRuntime } from "@drone/tasks/runtime-bridge";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
 	createAgentSession,
@@ -17,8 +15,10 @@ import { CapabilityRuntime } from "../src/capabilities/runtime";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 import { getPluginSessionCaller } from "../src/plugins/session-caller";
+import { createDroneRuntime as createStandaloneRuntime } from "../src/runtime";
 import { SessionRegistry } from "../src/session/registry";
 import { SessionEngine } from "../src/session-engine/engine";
+import { registerTaskRuntime } from "./fixtures/task-plugin.mjs";
 
 const runtimeDirectory = resolve(
 	import.meta.dirname,
@@ -120,12 +120,12 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 					additionalExtensionPaths: [nativeEntrypoint],
 					extensionFactoryForPath: bootstrap.factoryForPath,
 					extensionFactories: [
-						(pi) => {
+						async (pi) => {
 							const runtime = createStandaloneRuntime();
 							pi.events.on("drone:runtime/request/v1", () =>
 								pi.events.emit("drone:runtime/v1", { version: 1, runtime }),
 							);
-							registerTaskRuntime(pi);
+							await registerTaskRuntime(pi);
 							pi.on("session_shutdown", () => runtime.dispose());
 						},
 					],

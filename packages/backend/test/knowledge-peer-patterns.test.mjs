@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import { buildResearchWikiPage } from "@drone/extensions/research-wikiloop";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import {
 	closeKnowledgeServices,
 	decideWikiProposal,
@@ -256,6 +257,7 @@ describe("human-only review surface", () => {
 			commands = new Map(),
 			events = new Map();
 		const pi = {
+			events: createEventBus(),
 			registerTool: (t) => tools.set(t.name, t),
 			registerCommand: (name, command) => commands.set(name, command),
 			on: (name, fn) => events.set(name, fn),
@@ -338,6 +340,7 @@ describe("review lifecycle and context budget", () => {
 		const events = new Map(),
 			tools = new Map();
 		const pi = {
+			events: createEventBus(),
 			registerTool: (t) => tools.set(t.name, t),
 			registerCommand: () => {},
 			on: (name, fn) => events.set(name, fn),

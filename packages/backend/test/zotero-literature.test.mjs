@@ -5,9 +5,9 @@ import { join, resolve } from "node:path";
 import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
 import zoteroLiterature, {
 	identifyZoteroReceipt,
-	registerZoteroAcceptance,
+	zoteroAcceptanceDefinition,
 } from "@drone/extensions/zotero-literature";
-import { resetAcceptanceVerifiers } from "@drone/tasks/acceptance";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices, normalizeSourceLinks } from "@gyoungwe/pi-knowledge/host";
 import {
 	bootstrapZotero,
@@ -290,10 +290,11 @@ describe("capability routing", () => {
 	it("loads research plus external for Zotero requests without treating CLI as knowledge evidence", () => {
 		// 能力来自扩展 registerTool 的 drone.capabilities 声明（挂钩 1）
 		zoteroLiterature({
+			on() {},
 			registerTool: () => {},
 			registerCommand: () => {},
 			getCommands: () => [],
-			events: { on: () => {}, emit: async () => {} },
+			events: createEventBus(),
 		});
 		expect(detectCapabilities("在 zotero 里找这篇论文")).toEqual(
 			expect.arrayContaining(["research", "external"]),
@@ -308,6 +309,8 @@ describe("capability routing", () => {
 it("slash command is labeled as from-zero install", () => {
 	const commands = new Map();
 	zoteroLiterature({
+		on() {},
+		events: createEventBus(),
 		registerTool: () => {},
 		registerCommand: (name, command) => commands.set(name, command),
 		getCommands: () => [],
@@ -332,7 +335,6 @@ it("ships a parseable zotero-literature skill", async () => {
 });
 
 describe("zotero_item runtime DOI binding (hook 2 identify)", () => {
-	afterEach(() => resetAcceptanceVerifiers());
 	it("only host-read-back save receipts yield a bindable, normalised DOI", () => {
 		const event = { toolName: "research_zotero_save" };
 		expect(
@@ -365,7 +367,7 @@ describe("zotero_item runtime DOI binding (hook 2 identify)", () => {
 		).toBeNull();
 	});
 	it("labels, verifies and explains DOI-less milestones as pending rather than failed", async () => {
-		const verifier = registerZoteroAcceptance();
+		const verifier = zoteroAcceptanceDefinition();
 		expect(verifier.identify).toBe(identifyZoteroReceipt);
 		expect(verifier.label({ kind: "zotero_item" })).toContain("精读后写入的一篇");
 		expect(verifier.label({ kind: "zotero_item", doi: "10.1/x" })).toBe("文献进入 Zotero（10.1/x）");

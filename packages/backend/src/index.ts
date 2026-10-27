@@ -379,13 +379,6 @@ export {
 	type StorageSensitivity,
 	type StorageState,
 } from "./storage/registry";
-export {
-	createWorkbenchHostPort,
-	WORKBENCH_HOST_CONTRACT_VERSION,
-	type WorkbenchHostPort,
-	type WorkbenchOperation,
-	type WorkbenchOperationHandlers,
-} from "./tasks/workbench-runtime";
 export { makeShowImageTool, resolveShowImagePath, type ShowImageDetails } from "./tools/show-image";
 export {
 	buildSshArgs,

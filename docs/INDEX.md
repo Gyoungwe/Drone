@@ -10,7 +10,8 @@
 原生迁移的[能力切片证据与当前缺口](pluginization/native-plugin-capability-slice-evidence.md)与执行计划同步；完整历史分别见[计划归档](archive/native-plugin-implementation-plan-through-2026-10-27.md)和[切片证据归档](archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。历史 PASS 只适用于原版本与范围，四项外部验收不属于本轮 P0–P7。
 锁定 SDK 的 33 API、41 事件、28 UI 成员与三条运行路径的支持/拒绝边界见[原生 API 盘点](pluginization/native-pi-api-compatibility-matrix.md)；P0 仍未完成，不能用格式兼容替代运行 API 验收。
 当前四包源码锁 `f4a530a` 与宿主 `5e0c9aab` 的独立 checkout 根门禁、真实 packed owner、错误/通知和研究 delivery 修复见[当前回执](releases/native-plugin-task-owner-host-2026-10-28.json)。领域边界仍 INCOMPLETE；P2 完整审核与 P4 状态机的独立分支状态见[执行计划](pluginization/native-plugin-implementation-plan.md)。旧 [6c9400c6/b1c11f3 回执](releases/native-plugin-integrated-host-2026-10-28.json)与[c29c5037 回执](releases/native-plugin-clean-host-2026-10-27.json)保留历史范围。
-版本化的通用 pi-core 宿主合同位于 `packages/plugin-api/src/core.ts`，桌面端通过 `packages/desktop/src/main/optional-plugin-hosts.ts` 按已安装包清单发现 `coreHostLoader` 并贯穿会话组合；task host 与 workbench client 的首条接线已完成，完整任务状态机迁移与正式安装包工作流仍待验收。
+版本化的通用 pi-core 宿主合同位于 `packages/plugin-api/src/core.ts`，桌面端通过 `packages/desktop/src/main/optional-plugin-hosts.ts` 按已安装包清单发现 `coreHostLoader` 并贯穿会话组合；task host 通过既有 `PluginNativeSession` 生成每会话 adapter，与标准 Pi 根入口共用 canonical owner；完整任务 UI、动态安装停用与正式安装包工作流仍待验收。
+
 
 后继 [应用 owner 安装包证据](pluginization/native-plugin-app-owner-packaged-evidence.md)基于 `561a370c` 的真实 DMG，覆盖两个真实离线会话间的身份切换、同一后台实例复用和停用恢复；不代表知识 native/UI 已共享领域 owner，也未关闭零领域插件宿主门禁。后继[关闭流程安装包证据](pluginization/native-plugin-shutdown-packaged-evidence.md)记录真实 SDK 互等/异常回归及活跃模型请求期间正常退出。
 
@@ -62,7 +63,7 @@ P0 权限执行切片、plugin-api v1 合同治理与当前进程沙箱实现见
 原生 Pi 的任务文件回读适配已迁至插件仓库 `packages/pi-core/src/native-task-readback.ts` 与同包测试；它复用所属会话当前批准的产物范围，Desktop 仍使用现有权限引擎。公开 core 0.1.9 与 suite 0.1.11 的历史干净安装及双 SDK 会话证据保留；本轮 core 0.2.0 属源码锁候选，宿主不再保留或构建旧 `packages/pi-core/`。发布后 UI 0.2.0 正式安装包验收见上述剩余验收；未选项目 PDF 修复及新安装包验证见[专项证据](releases/projectless-resource-preview-2026-10-26.md)。空项目资源参数合同位于 `shared/src/host-api/app.ts`，preload→主进程校验→文件读取回归见 `desktop/src/preload/file-preview-contract.test.ts`，不改变文件 confinement 规则。
 
 知识库分类由插件 `src/core/note-category.ts` 统一决定；worker 计数与最近分组共享规则。插件知识 UI 的最近标签读取分组结果，路径推断只用于已有搜索/图投影；回归见 `../drone-plugins/packages/pi-knowledge/test/category.integration.test.ts` 和 `../drone-plugins/packages/desktop-ui-pack/ui/knowledge/KnowledgeHome.test.ts`。
-跨 bundle 的知识阅读器回归见 `packages/backend/test/knowledge-host-ui-reading.test.mjs`，backend 显式配置工作区读取端口。任务门禁的会话工具清单隔离回归见 `packages/backend/test/task-manifest-session.test.mjs`；SDK 回调的只读判定由 `packages/tasks/src/runtime/register.ts` 绑定所属宿主，避免跨轮只读操作误触重复写入门禁。
+跨 bundle 的知识阅读器回归见 `packages/backend/test/knowledge-host-ui-reading.test.mjs`，backend 显式配置工作区读取端口。任务门禁的会话工具清单隔离回归见 `packages/backend/test/task-manifest-session.test.mjs`；SDK 回调的只读判定由插件 `packages/pi-core/src/task-runtime/register.mjs` 绑定所属宿主，避免跨轮只读操作误触重复写入门禁。
 P1 第三方扩展、外部 MCP 与 Protocols.io 真实只读验收见 [next-stage-p1-evidence.md](pluginization/next-stage-p1-evidence.md)；研究运行时迁移边界见 [research-migration-status.md](research-migration-status.md)。 GUI 真实 Electron 验收回执见 [next-stage-gui-acceptance-2026-10-24.json](releases/next-stage-gui-acceptance-2026-10-24.json)。
 OmicOS 文献雷达与阅读闭环的六个 PR 计划见 [omicos-platform-plan.md](omicos-platform-plan.md)，实现证据见 [pluginization/omicos-evidence.md](pluginization/omicos-evidence.md)，原始 handoff 见 [claude/drone-omicos-handoff.md](../claude/drone-omicos-handoff.md)。
 P3 宿主消费锁定的 `@gyoungwe/pi-knowledge`、本地 macOS DMG/ZIP 构建与资源验收见 [pluginization/P3-evidence.md](pluginization/P3-evidence.md)；P4 自动维护调度、IPC、UI 和插件测试见 [pluginization/P4-evidence.md](pluginization/P4-evidence.md)。
@@ -133,15 +134,13 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，11 个 workspace 包；知识、原生研究与完整知识 UI 的源码归外部插件仓库：
+npm workspaces monorepo，9 个 workspace 包；知识、原生研究与完整知识 UI 的源码归外部插件仓库：
 
 ```
 packages/
 ├── shared/     IPC 契约层（纯类型 + 通道常量，三方共享）
 ├── plugin-api/ 插件公开合同（HostPort、能力协商、结果/回执、analysis 与知识 UI 合同）
-├── pi-core/     原生 Pi 核心任务与回执插件
 ├── backend/    纯 Node；pi SDK 适配层
-├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
 ├── research/   文献回执与来源交付合约（TS 包，迁移中）
 ├── compute/    远程计算与声明式工作流领域包（TS 包，B3 垂直切片）
 ├── inquiry/    研究状态层领域包（TS 包，B5a 五本账与工作区合同）
@@ -237,9 +236,13 @@ packages/
 
 知识入库标准（`drone-note/1`）：`ingest-policy.ts`（知识 / 运行结果 / 临时内容九条有序分类规则）、`ingest-frontmatter.ts`（frontmatter 模式、受限 YAML 解析、校验与确定性序列化）、`ingest-identity.ts`（DOI / PMID / arXiv / ISBN / URL 规范化、去重键、内容与结论哈希）；均为纯函数，尚未接入写入路径。规范见 [knowledge-ingest-standard.md](knowledge-ingest-standard.md)。
 
-## packages/tasks — 任务领域包（迁移中）
+## 外部任务 owner 与通用宿主装配
 
-`@drone/tasks` 的剩余 runtime 位于 `src/runtime/*.ts`，由 `scripts/build-runtime.mjs` 生成并提交 `src/runtime-compiled/*.mjs`；workbench、register、acceptance、授权、方案提案卡、PDF worker、tool manifest 与 runtime bridge 尚未整体迁走。milestone 规范化规则已由插件 `pi-core/src/milestone-plan.ts` 拥有，宿主经已安装 task host 调用；缺插件不回退到旧规则。旧 guard 的基本工具阻断仍待迁移，完整 P4 未关闭。
+任务状态机、guard、acceptance registry、规范化、授权续作及 SDK checkpoint 恢复由 `../drone-plugins/packages/pi-core/src/task-runtime/` 和 `src/milestone-plan.ts` 拥有。标准 Pi 根入口与版本化 `taskHostLoader` 使用同一 owner 构造器；每个 native session 拥有独立 registry/journal，官方 Pi event bus 只在同一会话内路由版本化声明与当前 journal。知识/Zotero 扩展声明验收器，不再创建任务引擎。
+
+宿主 `packages/backend/src/session-engine/extensions.ts` 实际消费已安装 task host 的 `createNativeSession`；缺少 adapter 时能力 unavailable，无本地引擎回退。`packages/extensions/src/internal/runtime/` 仅保留旧扩展仍使用的通用 scheduler/slot/tool 声明机制；`packages/tasks`、compiled runtime、反向 workbench handler 和 acceptance collector 已删除。已发布 `plugin-api/tasks` 的旧 helpers/字段保留 1.x 类型兼容，不作为生产 owner。
+
+规则回归位于插件 `packages/pi-core/test/task-runtime/`，宿主的 `test/task-plugin-activation-sdk.test.mjs` 与 `test/packed-core-host-sdk.test.ts` 检查实际安装包、生产 SessionService、独立会话和停用后的基础权限；`scripts/knowledge-ui-smoke/task-owner.mjs` 从安装包读取 UI fixture 的 journal，不复制算法。完整任务 UI/可选资源生命周期和正式安装包验收仍未完成。
 
 ## packages/research — 宿主研究合同与知识桥
 
@@ -276,7 +279,7 @@ PR-4 历史入口曾在同一入口注册 `knowledge_search`、`knowledge_read`�
 
 ## 外置 pi-core — 原生 Pi 核心插件
 
-插件仓库 `packages/pi-core/` 拥有工具、项目记忆、native runtime 和 milestone 校验；host loader 通过公开 client 合同接入。宿主旧源码和重复测试已删除，插件仓库保留原历史、同名测试及严格干净消费者 tsc。`scripts/build-pi-core.mjs` 现在只验证源码锁、fetch receipt、产物哈希与公开声明；`scripts/smoke-pi-core.mjs`、`scripts/check-pi-compat.mjs` 消费 `vendor/plugins/pi-core/`，不再构建宿主副本。`scripts/check-core-artifact.test.mjs` 验证无旧源码的锁定产物边界；backend 的真实 tarball 回归位于 `test/packed-core-host.test.ts`。公开 0.1.9 仅用于 npm-ci bootstrap，本轮源码锁候选为 0.2.0。
+插件仓库 `packages/pi-core/` 拥有工具、项目记忆、native runtime 和 milestone 校验；host loader 通过公开 client 合同接入。宿主旧源码和重复测试已删除，插件仓库保留原历史、同名测试及严格干净消费者 tsc。`scripts/build-pi-core.mjs` 现在只验证源码锁、fetch receipt、产物哈希与公开声明；`scripts/smoke-pi-core.mjs`、`scripts/check-pi-compat.mjs` 消费 `vendor/plugins/pi-core/`，不再构建宿主副本。`scripts/check-core-artifact.test.mjs` 验证无旧源码的锁定产物边界；backend 的真实 tarball 回归位于 `test/packed-core-host-sdk.test.ts`。公开 0.1.9 仅用于 npm-ci bootstrap，本轮源码锁候选为 0.2.0。
 
 Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain/`，宿主 `backend/src/discovery/service.ts` 仅注入授权、惰性 container runner、原子 JsonStore、runs 文件边界和项目绑定 Inquiry。无插件不登记 discovery 存储；旧共享 journal 保持字节并报告 unassigned，不自动冒认项目。候选目前只有 Desktop host 入口，原生工具、真实容器和完整 B5 GUI 仍未完成。
 

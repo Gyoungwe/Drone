@@ -4,11 +4,7 @@
 		"lib": ["ES2023"],
 		"types": ["node"],
 		"declaration": false,
-		"baseUrl": ".",
-		"paths": {
-			"@drone/tasks/acceptance": ["types/tasks-runtime.d.ts"],
-			"@drone/tasks/runtime-bridge": ["types/tasks-runtime.d.ts"]
-		}
+		"baseUrl": "."
 	},
 	"include": ["src", "types"]
 }

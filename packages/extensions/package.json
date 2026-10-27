@@ -13,7 +13,6 @@
 		"typescript": "^5.9.0"
 	},
 	"dependencies": {
-		"@drone/tasks": "*",
 		"@drone/shared": "*",
 		"@gyoungwe/pi-knowledge": "*",
 		"@gyoungwe/pi-research": "*"

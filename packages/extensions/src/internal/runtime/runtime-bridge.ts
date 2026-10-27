@@ -145,7 +145,7 @@ export function bindRuntime(pi: RuntimeHost | null | undefined): () => void {
 	runtimeBindings.add(pi);
 	const inherited = currentRuntime();
 	const fallback = createStandaloneRuntime();
-	// Extensions register immutable tool/acceptance declarations before the
+	// Extensions register immutable tool declarations before the
 	// desktop host announces its runtime. Give this host a private copy so
 	// callbacks that run in the fallback still see those declarations without
 	// sharing mutable journals, queues, or UI state from another host.
@@ -202,28 +202,6 @@ function adoptRuntimeState(previous: RuntimeLike, runtime: RuntimeLike): void {
 		for (const [name, meta] of sourceTools.families || []) {
 			if (!targetTools.families.has(name)) targetTools.families.set(name, meta);
 		}
-	}
-	const sourceAcceptance = previous?.tasks?.acceptance;
-	if (sourceAcceptance) {
-		if (!runtime.tasks) runtime.tasks = {};
-		const targetAcceptance = runtime.tasks.acceptance ?? {
-			verifiers: new Map(),
-			kinds: [],
-			properties: {},
-		};
-		runtime.tasks.acceptance = targetAcceptance;
-		if (!targetAcceptance.verifiers) targetAcceptance.verifiers = new Map();
-		for (const [kind, verifier] of sourceAcceptance.verifiers || []) {
-			if (!targetAcceptance.verifiers.has(kind)) targetAcceptance.verifiers.set(kind, verifier);
-		}
-		if (Array.isArray(sourceAcceptance.kinds)) {
-			targetAcceptance.kinds ??= [];
-			for (const kind of sourceAcceptance.kinds)
-				if (!targetAcceptance.kinds.includes(kind)) targetAcceptance.kinds.push(kind);
-		}
-		targetAcceptance.properties ??= {};
-		for (const [key, value] of Object.entries(sourceAcceptance.properties || {}))
-			if (!(key in targetAcceptance.properties)) targetAcceptance.properties[key] = value;
 	}
 	for (const domain of ["knowledge", "tasks", "tools"]) {
 		const source = previous?.[domain];

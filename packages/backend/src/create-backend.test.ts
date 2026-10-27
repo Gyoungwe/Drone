@@ -79,58 +79,9 @@ describe("createBackend", () => {
 		await services.dispose();
 	});
 
-	it("exposes the workbench operation port through the host runtime and fails closed without handlers", async () => {
-		const unavailable = createBackend({ projectTrust: false, permissionGates: false });
-		await expect(unavailable.workbench.client.invoke("status", {})).rejects.toThrow(
-			"Workbench operation unavailable: status",
-		);
-		await expect(unavailable.sessions.workbench.client.invoke("persist", {})).rejects.toThrow(
-			"Workbench operation unavailable: persist",
-		);
-		await unavailable.dispose();
-
-		const calls: string[] = [];
-		const services = createBackend({
-			projectTrust: false,
-			permissionGates: false,
-			workbench: {
-				status: () => {
-					calls.push("status");
-					return { state: "idle" };
-				},
-				plan: ({ items }) => {
-					calls.push(`plan:${items.join(",")}`);
-					return { accepted: items.length };
-				},
-			},
-		});
-		expect(services.runtime.tasks.workbench).toMatchObject({ version: 1 });
-		expect((services.runtime.tasks.workbench as { client: unknown }).client).toBe(services.workbench.client);
-		expect(services.sessions.workbench.client).toBe(services.workbench.client);
-		await expect(services.workbench.client.invoke("status", {})).resolves.toEqual({ state: "idle" });
-		await expect(services.workbench.client.invoke("plan", { items: ["read", "record"] })).resolves.toEqual({
-			accepted: 2,
-		});
-		expect(calls).toEqual(["status", "plan:read,record"]);
-		await services.dispose();
-	});
-
-	it("rejects malformed workbench operation input before invoking a host handler", async () => {
-		let called = false;
-		const services = createBackend({
-			projectTrust: false,
-			permissionGates: false,
-			workbench: {
-				plan: () => {
-					called = true;
-					return null;
-				},
-			},
-		});
-		await expect(services.workbench.client.invoke("plan", { items: [1] })).rejects.toThrow(
-			"Workbench operation unavailable: plan",
-		);
-		expect(called).toBe(false);
+	it("exposes no host task engine when the optional provider is absent", async () => {
+		const services = createBackend({ projectTrust: false, permissionGates: false });
+		expect(services.runtime.tasks).toEqual({});
 		await services.dispose();
 	});
 
@@ -414,32 +365,23 @@ describe("createBackend", () => {
 		explicit.dispose();
 	});
 
-	it("exposes an isolated task acceptance host bound to the backend runtime", () => {
+	it("leaves task capability unavailable without an installed native owner", () => {
 		const services = createBackend({ projectTrust: false, permissionGates: false });
-		services.taskHost.registerAcceptanceVerifier("test_acceptance", {
-			fields: ["doi"],
-			label: () => "test",
+		expect(services.taskHost).toBeUndefined();
+		expect(services.domainCapabilities.list().find((item) => item.id === "tasks")).toMatchObject({
+			status: "unavailable",
+			provider: "none",
 		});
-		expect(services.taskHost.contractVersion).toBe(1);
-		expect(services.taskHost.readAcceptanceVerifier("test_acceptance")).toMatchObject({
-			kind: "test_acceptance",
-			fields: ["doi"],
-		});
-		expect(services.taskHost.readAcceptanceVerifier("missing")).toBeNull();
 		services.dispose();
 	});
 
 	it("accepts an installed task host loader without rebuilding its registry", async () => {
 		let loaderInput: { workbench?: unknown } | undefined;
-		const workbench = {
-			invoke: async (operation: string) => ({ operation }),
-			subscribe: () => () => undefined,
-		};
 		const host = {
 			contractVersion: 1 as const,
 			registerAcceptanceVerifier: () => undefined,
 			readAcceptanceVerifier: () => null,
-			workbench,
+			createNativeSession: () => ({ extension: () => {}, dispose: async () => {} }),
 		};
 		const services = createBackend({
 			projectTrust: false,
@@ -452,10 +394,8 @@ describe("createBackend", () => {
 				},
 			},
 		});
-		expect(loaderInput?.workbench).toBeDefined();
+		expect(loaderInput).toBeUndefined();
 		expect(services.taskHost).toBe(host);
-		expect(services.workbench.client).toBe(workbench);
-		expect(await services.workbench.client.invoke("status", {})).toEqual({ operation: "status" });
 		expect(services.domainCapabilities.list().find((item) => item.id === "tasks")).toMatchObject({
 			provider: "plugin:tasks",
 		});

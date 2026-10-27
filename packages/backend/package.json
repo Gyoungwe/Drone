@@ -28,7 +28,6 @@
 	},
 	"devDependencies": {
 		"@drone/discovery": "*",
-		"@drone/tasks": "*",
 		"@gyoungwe/pi-analysis": "0.1.2",
 		"@gyoungwe/pi-knowledge": "*",
 		"@gyoungwe/pi-research": "*",

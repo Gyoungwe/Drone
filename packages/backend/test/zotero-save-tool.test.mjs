@@ -5,6 +5,7 @@ import { startResearchRun } from "@drone/extensions/research-host";
 import sourceArchive from "@drone/extensions/source-archive";
 import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
 import zoteroLiterature from "@drone/extensions/zotero-literature";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { beginKnowledgeFlow, flowFor, noteKnowledgeOperation } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { detectCapabilities, isReadOnlyLibraryTool, toolCapabilities } from "../src/capabilities/runtime";
@@ -15,21 +16,16 @@ const ITEM = {
 	key: "ABCD1234",
 	data: { key: "ABCD1234", title: "Example", itemType: "journalArticle", DOI, collections: [] },
 };
-let cwd, runDir, saves, saved, tools, listeners;
+let cwd, runDir, saves, saved, tools;
 
 function fakePi() {
 	tools = new Map();
-	listeners = new Map();
 	return {
 		registerTool: (tool) => tools.set(tool.name, tool),
+		getAllTools: () => [...tools.values()],
 		registerCommand: () => {},
 		on: () => {},
-		events: {
-			on: (name, fn) => listeners.set(name, fn),
-			emit: async (name, payload) => {
-				await listeners.get(name)?.(payload);
-			},
-		},
+		events: createEventBus(),
 	};
 }
 function stubZotero() {
@@ -161,8 +157,8 @@ it("an authorized task plan naming the DOI as a zotero_item milestone covers the
 	const pi = fakePi();
 	zoteroLiterature(pi);
 	const entries = [];
-	const journal = createTaskWorkbench({
-		requireAuthorization: true,
+	const journal = await createTaskWorkbench({
+		pi,
 		persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }),
 	});
 	journal.attach("session-z");
@@ -200,7 +196,10 @@ it("an authorized task plan naming the DOI as a zotero_item milestone covers the
 it("a DOI-less zotero_item milestone is a one-write slot covered by the task authorization; extra papers go back to the card", async () => {
 	const pi = fakePi();
 	zoteroLiterature(pi);
-	const journal = createTaskWorkbench({ requireAuthorization: true, persist: () => {} });
+	const journal = await createTaskWorkbench({
+		pi,
+		persist: () => {},
+	});
 	journal.attach("session-z");
 	journal.begin("精读后把文献收进 Zotero");
 	journal.plan({
