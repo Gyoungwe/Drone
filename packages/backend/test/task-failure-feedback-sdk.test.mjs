@@ -7,7 +7,11 @@ import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
-import { createInstalledTaskRuntime, taskSdkExtensionPath } from "./fixtures/task-plugin.mjs";
+import {
+	createInstalledTaskRuntime,
+	installedTaskPluginPath,
+	taskSdkExtensionPath,
+} from "./fixtures/task-plugin.mjs";
 
 // Actual SDK/provider/tool-result transport, but an in-memory fake model: no paid model or user credentials.
 it("real SDK failure → task_status → natural handoff keeps pairing and does not replace the final answer", async () => {
@@ -41,7 +45,7 @@ it("real SDK failure → task_status → natural handoff keeps pairing and does 
 			webFetch: false,
 			desktopIntegration: {
 				appendSystemPrompt: [],
-				additionalExtensionPaths: [taskSdkExtensionPath("obsidian-workbench.mjs")],
+				additionalExtensionPaths: [installedTaskPluginPath(), taskSdkExtensionPath("obsidian-workbench.mjs")],
 				additionalSkillPaths: [],
 			},
 		});

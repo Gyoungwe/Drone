@@ -9,7 +9,6 @@ import {
 import { runRuntimeExclusive, runtimeSlot } from "@drone/tasks/runtime-bridge";
 import { flowCardBuilder, toolMeta } from "@drone/tasks/tool-manifest-runtime";
 import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
-import { registerTaskRuntime } from "@drone/tasks/runtime";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
 import { configureKnowledgeExtensionHost } from "@gyoungwe/pi-knowledge/host";
 
@@ -29,7 +28,6 @@ export function configureKnowledgeExtensionRuntime(): void {
 	configureKnowledgeExtensionHost({
 		bindAcceptanceVerifierEvents,
 		registerAcceptanceVerifier,
-		registerTaskRuntime,
 		registerTool,
 	});
 	configureKnowledgeRuntime({

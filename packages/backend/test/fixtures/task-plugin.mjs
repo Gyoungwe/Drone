@@ -1,6 +1,7 @@
 /** Explicit installed-package fixture: task rules are never copied into host tests. */
 
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { join, resolve } from "node:path";
 import { registerWorkbench as register } from "@drone/tasks/register";
 import { registerTaskRuntime as registerRuntime } from "@drone/tasks/runtime";
 import { createTaskWorkbench as createWorkbench } from "@drone/tasks/workbench";
@@ -29,4 +30,7 @@ export function createInstalledTaskRuntime() {
 
 /** Resolve legacy SDK extension fixtures independently of the test runner working directory. */
 export const taskSdkExtensionPath = (name) =>
-	fileURLToPath(new URL(`../../../../.pi/extensions/${name}`, import.meta.url));
+	join(resolve(import.meta.dirname, "../../../.."), ".pi", "extensions", name);
+
+/** Task hooks are activated by the installed native package, never by knowledge resources. */
+export const installedTaskPluginPath = () => createRequire(import.meta.url).resolve("@gyoungwe/pi-core");

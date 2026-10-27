@@ -8,7 +8,11 @@ import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
-import { createInstalledTaskRuntime, taskSdkExtensionPath } from "./fixtures/task-plugin.mjs";
+import {
+	createInstalledTaskRuntime,
+	installedTaskPluginPath,
+	taskSdkExtensionPath,
+} from "./fixtures/task-plugin.mjs";
 
 /**
  * 六方向示例任务 · 一次授权闭环（真实 SDK 端到端模拟）。
@@ -325,6 +329,7 @@ it.each(SCENARIOS.map((s) => ({ ...s, label: s.label || s.id })))(
 				desktopIntegration: {
 					appendSystemPrompt: [],
 					additionalExtensionPaths: [
+						installedTaskPluginPath(),
 						taskSdkExtensionPath("obsidian-workbench.mjs"),
 						...(scenario.zotero ? [taskSdkExtensionPath("zotero-literature.mjs")] : []),
 					],

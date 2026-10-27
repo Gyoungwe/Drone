@@ -6,7 +6,11 @@ import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
-import { createInstalledTaskRuntime, taskSdkExtensionPath } from "./fixtures/task-plugin.mjs";
+import {
+	createInstalledTaskRuntime,
+	installedTaskPluginPath,
+	taskSdkExtensionPath,
+} from "./fixtures/task-plugin.mjs";
 
 function assertWire(messages) {
 	let pending = new Set();
@@ -55,7 +59,10 @@ it.each([true, false])(
 				subagentPreferBuiltin: false,
 				desktopIntegration: {
 					appendSystemPrompt: [],
-					additionalExtensionPaths: [taskSdkExtensionPath("obsidian-workbench.mjs")],
+					additionalExtensionPaths: [
+						installedTaskPluginPath(),
+						taskSdkExtensionPath("obsidian-workbench.mjs"),
+					],
 					additionalSkillPaths: [],
 				},
 			});
