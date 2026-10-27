@@ -269,7 +269,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## packages/pi-core — 原生 Pi 核心插件（PR-6）
 
-`packages/pi-core/` 是可独立安装的任务与回执插件：组装 `@drone/tasks` runtime，并提供 `ask_user`、`set_status`、`todo`、`deliver_files`、`memory_save` 五个可移植工具，以及只读 onboarding 命令 `/drone-doctor`、`/drone-example`。工具实现、项目记忆持久化和路径规整均由该包拥有；`packages/backend/src/tools/` 与 `src/project/memory.ts` 仅保留兼容 facade，Desktop 继续注入既有 ask gate。原生 Pi 通过 `ctx.ui` 提供询问与授权，宿主差异收敛在 `PiCoreHostPort`（host/capabilities/requestAuthorization）。`scripts/build-pi-core.mjs` 生成自包含 dist 并拒绝 Electron/backend/Desktop 或越界导入，`scripts/smoke-pi-core.mjs` 和包内 registration test 覆盖安装前的工具清单与 native host adapter；命令合同和状态机见 [插件化计划 §7](final-pluginization-plan.md#7-安装和首次使用)。
+`packages/pi-core/` 是可独立安装的任务与回执插件：组装 `@drone/tasks` runtime，并提供 `ask_user`、`set_status`、`todo`、`deliver_files`、`memory_save` 五个可移植工具，以及只读 onboarding 命令 `/drone-doctor`、`/drone-example`。工具实现、项目记忆持久化和路径规整均由该包拥有；backend 直接消费版本化 `/host` 入口，不再保留 `tools/*` 或 `project/memory.ts` 兼容 facade，Desktop 继续注入既有 ask gate。原生 Pi 通过 `ctx.ui` 提供询问与授权，宿主差异收敛在 `PiCoreHostPort`（host/capabilities/requestAuthorization）。`scripts/build-pi-core.mjs` 生成自包含 dist 并拒绝 Electron/backend/Desktop 或越界导入，`scripts/smoke-pi-core.mjs` 和包内 registration test 覆盖安装前的工具清单与 native host adapter；命令合同和状态机见 [插件化计划 §7](final-pluginization-plan.md#7-安装和首次使用)。
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 

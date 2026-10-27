@@ -1,8 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { listMemories, writeMemory } from "@gyoungwe/pi-core/host";
 import { afterEach, expect, it } from "vitest";
-import { listMemories, writeMemory } from "../project/memory";
 import { promoteObservation } from "./promote";
 import { MemoryStore } from "./store";
 

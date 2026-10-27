@@ -1,4 +1,5 @@
 import { dirname, resolve } from "node:path";
+import { memoryIndexPrompt } from "@gyoungwe/pi-core/host";
 import { createLogger } from "../log";
 import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
 import { createProcessSandboxedExtension, type PluginSandboxPolicy } from "../plugin-sandbox";
@@ -7,7 +8,6 @@ import { replyLanguagePrompt } from "../reply-language";
 import { sandboxExtensionFactory } from "../session-engine/sandbox-loader";
 import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
 import { DefaultResourceLoader, getAgentDir, SettingsManager } from "../session-engine/sdk";
-import { memoryIndexPrompt } from "./memory";
 import { resolveProjectTrust, type TrustOptionInternal } from "./trust";
 
 const log = createLogger("backend");

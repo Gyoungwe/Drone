@@ -113,6 +113,7 @@
 - `de68e43a` 后宿主完整五门禁再次通过：lint、typecheck、全量 `npm test`、build、check:arch 均退出 0；`packages/pi-core/build-manifest.json` 已恢复提交态，domain dependency 仍诚实标为 `PARTIAL`。
 - P4/P6 `4ee796df` 删除 todo 兼容门面，session-engine、todo-reminder、backend index 和回归测试直接使用 `/host`；Biome、backend typecheck、todo 7 tests 和 host-independence 7 tests 通过。剩余三个 pi-core facade 未标记完成。
 - `4ee796df` 后宿主完整五门禁再次通过：lint、typecheck、全量 `npm test`、build、check:arch 均退出 0；保留既有 lint warnings，domain dependency 仍为 `PARTIAL`，未把 P4/P6 误报为完成。
+- P4/P6 后续切片删除三条剩余 `pi-core` 兼容门面：`deliver-files.ts`、`memory-save.ts`、`project/memory.ts`；backend 生产代码与测试均改用版本化 `/host` 入口。Biome、backend typecheck、project-memory/deliver-files/memory-save 9 项回归和 host-independence 8 项测试通过；扫描已不再维护 facade 白名单。该切片仍不关闭 P4/P6，任务域、零领域宿主与正式安装包生命周期证据仍缺失。
 
 ## 未关闭项
 

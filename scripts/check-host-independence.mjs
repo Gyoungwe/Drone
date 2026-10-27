@@ -24,15 +24,6 @@ const hostOnly = new Set([
 	"@gyoungwe/pi-research",
 	"@gyoungwe/pi-analysis",
 ]);
-// pi-core is the remaining native task/tool compatibility seam. Keep the
-// exception narrow and explicit while P4 moves those facades into the plugin.
-// New host code must use a package host entry (or the generic capability
-// loader); adding another exception requires moving a concrete facade here.
-const coreCompatibilityFacades = new Set([
-	"packages/backend/src/project/memory.ts",
-	"packages/backend/src/tools/deliver-files.ts",
-	"packages/backend/src/tools/memory-save.ts",
-]);
 /** Return optional plugin imports that would couple the host to a package. */
 export function findHostImportViolations(file, source) {
 	const violations = [];
@@ -43,7 +34,6 @@ export function findHostImportViolations(file, source) {
 		const packageName = specifier.split("/").slice(0, 2).join("/");
 		const relativeFile = relative(root, file).replaceAll("\\", "/");
 		if (hostOnly.has(packageName) && specifier !== `${packageName}/host`) {
-			if (packageName === "@gyoungwe/pi-core" && coreCompatibilityFacades.has(relativeFile)) continue;
 			const label = packageName === "@gyoungwe/pi-analysis" ? "pi-analysis" : packageName;
 			violations.push(`${relativeFile}: ${label} imports must use the versioned host entry`);
 		} else if (optional.has(packageName) && !allowed.has(packageName)) {

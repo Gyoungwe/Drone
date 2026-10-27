@@ -48,7 +48,7 @@ test("rejects an optional plugin import and identifies its package", () => {
 	);
 });
 
-test("allows only the registered pi-core compatibility facades", () => {
+test("rejects pi-core imports that bypass the versioned host entry", () => {
 	assert.deepEqual(
 		findHostImportViolations(
 			"packages/backend/src/tools/memory-save.ts",
@@ -64,6 +64,16 @@ test("allows only the registered pi-core compatibility facades", () => {
 		[
 			"packages/backend/src/services/new-task-service.ts: @gyoungwe/pi-core imports must use the versioned host entry",
 		],
+	);
+});
+
+test("project memory consumers use the versioned pi-core host entry", () => {
+	assert.deepEqual(
+		findHostImportViolations(
+			"packages/backend/src/project/trust-loader.ts",
+			'import { memoryIndexPrompt } from "@gyoungwe/pi-core/host";',
+		),
+		[],
 	);
 });
 

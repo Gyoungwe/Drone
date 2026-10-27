@@ -23,6 +23,7 @@ import type {
 	TrustAnswer,
 	TrustRequest,
 } from "@drone/shared";
+import { writeMemory } from "@gyoungwe/pi-core/host";
 import type { AnalysisHostLoader, KnowledgeHostLoader } from "@gyoungwe/plugin-api";
 import type { ExperienceStorePort } from "@gyoungwe/plugin-api/knowledge";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
@@ -51,7 +52,6 @@ import { MemoryStore } from "./memory/store";
 import { DomainCapabilityRegistry, type DomainCapabilityRegistryPort } from "./plugins/domain-capabilities";
 import type { PluginSessionCallerContext } from "./plugins/session-caller";
 import { walkProjectFiles } from "./project/files";
-import { writeMemory } from "./project/memory";
 import { canonicalProjectId } from "./project-id";
 import type { ResearchHostLoader } from "./research-host";
 import { createDroneRuntime } from "./runtime";
