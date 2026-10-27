@@ -570,7 +570,7 @@ export interface KnowledgeUiServicePort {
 	): ReturnType<KnowledgeApi["syncKnowledgeCloud"]>;
 	dispose(): void;
 }
-/** Dynamic resource boundary works in source and electron-builder layouts. */
+/** Host-facing knowledge adapter; domain operations come from an installed provider. */
 export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private listeners = new Set<Handler>();
 	private unsubscribe: (() => void) | null = null;
@@ -626,11 +626,6 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		this.cloud = new KnowledgeWebDavService({
 			vault: createKnowledgeVaultOperations(options.knowledgeHost, this.compatibility),
 		});
-	}
-	private root() {
-		return (
-			process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url))
-		);
 	}
 	async connect(): Promise<void> {
 		if (!process.env.DRONE_KNOWLEDGE_DIR || this.unsubscribe || this.disposed) return;
@@ -795,22 +790,15 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	): ReturnType<KnowledgeApi["readKnowledgeNote"]> {
 		return this.readProvider.read(input);
 	}
-	private async workbenchModule(): Promise<Record<string, (...args: any[]) => unknown>> {
-		return (await import(
-			/* @vite-ignore */ pathToFileURL(join(this.root(), "extensions", "obsidian-workbench.mjs")).href
-		)) as Record<string, (...args: any[]) => unknown>;
-	}
 	async setMaintenanceTopic(input: {
 		cwd: string;
 		notePath: string;
 		topic: string;
 		revision: number;
 	}): Promise<unknown> {
-		await this.connect();
-		if (this.writeProvider?.maintenanceTopic) return this.writeProvider.maintenanceTopic.setTopic(input);
-		const fn = (await this.workbenchModule()).runKnowledgeMaintenanceTopic;
-		if (!fn) throw new Error("Knowledge maintenance topic port is unavailable");
-		return fn(input);
+		const operations = this.writeProvider?.maintenanceTopic;
+		if (!operations) return unavailable("maintenance topic");
+		return operations.setTopic(input);
 	}
 	async proposeMaintenanceWiki(input: {
 		cwd: string;
@@ -820,11 +808,9 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		rationale: string;
 		revision: number;
 	}): Promise<unknown> {
-		await this.connect();
-		if (this.writeProvider?.maintenanceTopic) return this.writeProvider.maintenanceTopic.proposeWiki(input);
-		const fn = (await this.workbenchModule()).runKnowledgeMaintenanceWiki;
-		if (!fn) throw new Error("Knowledge maintenance Wiki port is unavailable");
-		return fn(input);
+		const operations = this.writeProvider?.maintenanceTopic;
+		if (!operations) return unavailable("maintenance Wiki");
+		return operations.proposeWiki(input);
 	}
 	maintain(
 		input: Parameters<KnowledgeApi["maintainKnowledge"]>[0],

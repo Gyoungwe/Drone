@@ -724,6 +724,29 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
+	it("requires an installed knowledge host for maintenance writes", async () => {
+		const service = new KnowledgeUiService();
+		await expect(
+			service.setMaintenanceTopic({
+				cwd: "/tmp/project",
+				notePath: "Library/Papers/a.md",
+				topic: "A topic",
+				revision: 1,
+			}),
+		).rejects.toThrow("Knowledge maintenance topic is unavailable: install the knowledge plugin");
+		await expect(
+			service.proposeMaintenanceWiki({
+				cwd: "/tmp/project",
+				sourcePath: "Library/Papers/a.md",
+				title: "A wiki",
+				markdown: "# A wiki",
+				rationale: "evidence",
+				revision: 1,
+			}),
+		).rejects.toThrow("Knowledge maintenance Wiki is unavailable: install the knowledge plugin");
+		service.dispose();
+	});
+
 	it("routes daily discovery and memory operations through the installed host", async () => {
 		const calls: string[] = [];
 		const service = new KnowledgeUiService(undefined, {
