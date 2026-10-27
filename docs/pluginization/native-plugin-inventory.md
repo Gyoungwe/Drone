@@ -2,6 +2,8 @@
 
 日期：2026-10-26。范围依据：[已批准设计](../superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)。本页是实现前源码盘点，不是迁移完成或新安装包验收报告。宿主盘点基线 `a8f004bf`，插件仓库基线 `d2f76a0`；并行实现后的状态以重新执行检查及后续验收为准。
 
+2026-10-28 状态导航：以下源码路径表是 2026-10-26 的历史输入快照；其中旧 `packages/pi-core`、`packages/tasks` 和反向 workbench port 已删除，canonical owner 归插件。最新已验证来源、完整知识审核/任务 owner 与仍未完成的 UI/IPC/构建闭包见[执行计划](native-plugin-implementation-plan.md)及[本轮回执](../releases/native-plugin-owner-migration-2026-10-28.json)，不能将下表旧路径视为当前生产实现。
+
 **当前结论：INCOMPLETE。** 已发布包能够在原生 Pi 中加载，部分真实 AgentSession 工作流已有回执；但宿主仍强制构建、导入、打包领域功能，不能称为“无科研插件也可用的通用宿主”。旧 `check:arch`、`check:native-pi` 的通过不代表新架构完成。
 
 ## 可执行盘点
@@ -19,7 +21,7 @@ node scripts/check-native-plugin-boundary.mjs > /tmp/drone-native-plugin-boundar
 
 ## 所有权与删除条件
 
-| 边界 | 当前源码与耦合 | 迁移目标和删除条件 |
+| 边界 | 初始盘点源码与耦合（历史快照） | 迁移目标和删除条件 |
 | --- | --- | --- |
 | 组合根 | `packages/backend/src/create-backend.ts` 的 BackendServices 强制拥有 knowledge、knowledgeSession、research、researchWrites、dailyDiscovery、knowledgeMaintenance、zotero、institutional、inquiry、analysis、analysisEvidence、analysisTasks、dataDesign 等 | 领域工厂由已安装包注册；组合根仅管理实例生命周期、受限权限与路由。无领域包时不能构造这些服务、开启定时器或导入领域代码。 |
 | 知识领域 | `backend/src/knowledge/{ui,webdav,webdav-sync,specialist-bridge}.ts`；`services/{knowledge-session,knowledge-maintenance,daily-discovery,deliverable-reviewer}.ts`；`session/knowledge-publication.ts` | 领域行为、worker、队列和审核语义进入知识插件；宿主保留通用文件/持久化/授权/事件机制。不能把原模块改名为 adapter 就保留业务实现。 |
