@@ -550,14 +550,6 @@ export interface KnowledgeReadHostPort {
 		replaceFile(path: string, content: string, options: { expectedHash?: string }): Promise<void>;
 		isConflict(error: unknown): boolean;
 	};
-	vault?: {
-		readBinding(options?: { fresh?: boolean }): Promise<unknown>;
-		readNote(vault: string, path: string): Promise<unknown>;
-		containedFile(vault: string, path: string): Promise<string>;
-		createFileOnly(path: string, content: string): Promise<boolean>;
-		replaceFile(path: string, content: string, options: { expectedHash?: string }): Promise<void>;
-		isConflict(error: unknown): boolean;
-	};
 	semantic?: {
 		status(input: unknown): Promise<unknown>;
 		saveSettings(input: unknown): Promise<unknown>;
