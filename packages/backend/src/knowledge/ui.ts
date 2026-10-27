@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import {
@@ -393,19 +393,14 @@ export function configureBackendKnowledgeWorker(setup = defaultKnowledgeRuntimeS
 	// instances. UI reads need their own host port, even after extension setup.
 	setup.configureHost({ loadWorkspaceConfig: loadBackendWorkspaceConfig });
 	setup.configureRuntime({ emitProcessEvent: (event, payload) => (process as any).emit(event, payload) });
-	const worker = createBackendKnowledgeWorkerSetup();
+	const worker = createLegacyBackendKnowledgeWorkerSetup();
 	setup.configureWorker(
 		worker.createWorker,
 		worker.workerMetadata as (() => KnowledgeWorkerMetadata) | undefined,
 	);
 }
 
-/**
- * Host-owned worker seam passed to an installed KnowledgeHostLoader. The
- * package chooses when to install this factory; the host remains responsible
- * for resolving and verifying its own worker resource.
- */
-export function createBackendKnowledgeWorkerSetup(): KnowledgeHostWorkerSetup {
+function createLegacyBackendKnowledgeWorkerSetup(): KnowledgeHostWorkerSetup {
 	return {
 		createWorker: (_url, options) => {
 			const resource = resolveBackendKnowledgeWorkerResource();
@@ -419,6 +414,27 @@ export function createBackendKnowledgeWorkerSetup(): KnowledgeHostWorkerSetup {
 			} as any);
 		},
 		workerMetadata: () => resolveBackendKnowledgeWorkerResource().metadata,
+	};
+}
+
+/**
+ * Host-owned worker seam passed to an installed KnowledgeHostLoader. The
+ * package chooses when to install this factory; the host remains responsible
+ * for resolving and verifying its own worker resource.
+ */
+export function createBackendKnowledgeWorkerSetup(): KnowledgeHostWorkerSetup {
+	return {
+		createWorker: (url, options) => {
+			const resource = resolveKnowledgeWorkerResource(url);
+			const workerData =
+				options && typeof options === "object" && options.workerData && typeof options.workerData === "object"
+					? options.workerData
+					: {};
+			return new Worker(pathToFileURL(resource.path), {
+				...options,
+				workerData: { ...workerData, workerResource: resource.metadata },
+			} as any);
+		},
 	};
 }
 
@@ -445,6 +461,13 @@ export interface BackendKnowledgeWorkerResource {
 	readonly metadata: KnowledgeWorkerMetadata;
 }
 
+/** Resolve a package-selected worker URL and verify its adjacent manifest. */
+export function resolveKnowledgeWorkerResource(url: URL): BackendKnowledgeWorkerResource {
+	if (url.protocol !== "file:") throw new Error(`Knowledge worker URL must use file: protocol: ${url.href}`);
+	const path = fileURLToPath(url);
+	return verifyKnowledgeWorkerResource(path, join(dirname(path), ".knowledge-worker-manifest.json"));
+}
+
 /**
  * Resolve and verify the generated worker and its checked-in build manifest.
  * A file that merely exists is insufficient: packaged resources can be stale
@@ -456,7 +479,13 @@ export function resolveBackendKnowledgeWorkerResource(
 ): BackendKnowledgeWorkerResource {
 	const workbenchRoot = root ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
 	const path = join(workbenchRoot, "extensions", "knowledge-worker.mjs");
-	const manifestPath = join(workbenchRoot, "extensions", ".knowledge-worker-manifest.json");
+	return verifyKnowledgeWorkerResource(
+		path,
+		join(workbenchRoot, "extensions", ".knowledge-worker-manifest.json"),
+	);
+}
+
+function verifyKnowledgeWorkerResource(path: string, manifestPath: string): BackendKnowledgeWorkerResource {
 	if (!existsSync(path)) throw new Error(`Knowledge worker resource is missing from the host: ${path}`);
 	if (!existsSync(manifestPath))
 		throw new Error(`Knowledge worker manifest is missing from the host: ${manifestPath}`);

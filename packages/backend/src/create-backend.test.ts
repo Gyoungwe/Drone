@@ -1,10 +1,16 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import type { KnowledgeUiEvent } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { createBackend } from "./create-backend";
-import { type KnowledgeReadProvider, KnowledgeUiService } from "./knowledge/ui";
+import {
+	createBackendKnowledgeWorkerSetup,
+	type KnowledgeReadProvider,
+	KnowledgeUiService,
+} from "./knowledge/ui";
 import { createDroneRuntime } from "./runtime";
 import type { DailyDiscoveryService } from "./services/daily-discovery";
 import type { KnowledgeMaintenanceService } from "./services/knowledge-maintenance";
@@ -688,7 +694,7 @@ describe("createBackend", () => {
 	it("passes the verified worker seam to an installed knowledge loader", () => {
 		const previousRoot = process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
 		process.env.DRONE_RESEARCH_WORKBENCH_ROOT = "/tmp/drone-no-legacy-knowledge-worker";
-		let workerSetup: { createWorker: unknown; workerMetadata?: unknown } | undefined;
+		let workerSetup: { createWorker: unknown } | undefined;
 		try {
 			const services = createBackend({
 				projectTrust: false,
@@ -709,11 +715,29 @@ describe("createBackend", () => {
 				},
 			});
 			expect(typeof workerSetup?.createWorker).toBe("function");
-			expect(typeof workerSetup?.workerMetadata).toBe("function");
 			services.dispose();
 		} finally {
 			if (previousRoot === undefined) delete process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
 			else process.env.DRONE_RESEARCH_WORKBENCH_ROOT = previousRoot;
+		}
+	});
+
+	it("verifies a package-local worker before starting it", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-package-worker-"));
+		const workerPath = join(root, "worker.mjs");
+		const manifestPath = join(root, ".knowledge-worker-manifest.json");
+		const source = "export {};\n";
+		await writeFile(workerPath, source);
+		const hash = createHash("sha256").update(source).digest("hex");
+		await writeFile(manifestPath, JSON.stringify({ version: 1, outputSha256: hash }));
+		try {
+			const setup = createBackendKnowledgeWorkerSetup();
+			const worker = setup.createWorker(pathToFileURL(workerPath), {}) as { terminate(): Promise<unknown> };
+			await worker.terminate();
+			await writeFile(workerPath, "// tampered\n");
+			expect(() => setup.createWorker(pathToFileURL(workerPath), {})).toThrow(/hash mismatch/);
+		} finally {
+			await rm(root, { recursive: true, force: true });
 		}
 	});
 
