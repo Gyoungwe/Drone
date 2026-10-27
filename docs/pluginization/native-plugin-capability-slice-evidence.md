@@ -115,6 +115,7 @@
 - `4ee796df` 后宿主完整五门禁再次通过：lint、typecheck、全量 `npm test`、build、check:arch 均退出 0；保留既有 lint warnings，domain dependency 仍为 `PARTIAL`，未把 P4/P6 误报为完成。
 - P4/P6 后续切片删除三条剩余 `pi-core` 兼容门面：`deliver-files.ts`、`memory-save.ts`、`project/memory.ts`；backend 生产代码与测试均改用版本化 `/host` 入口。Biome、backend typecheck、project-memory/deliver-files/memory-save 9 项回归和 host-independence 8 项测试通过；扫描已不再维护 facade 白名单。该切片仍不关闭 P4/P6，任务域、零领域宿主与正式安装包生命周期证据仍缺失。
 - `d5f04b9b` 后宿主完整五门禁均退出 0：lint（保留既有 2 MiB 设计稿与动态 namespace warning）、typecheck、全量 `npm test`（backend 254/2052 passed/18 skipped，desktop 165/903 passed）、build、check:arch；`check:native-plugin-boundary` 真实输出仍为 `INCOMPLETE`，domain-runtime-import 12、domain-type-import 12，build manifest 已恢复提交态。
+- 另外删除 backend index 中无人消费的 `formatTodoList`/`makeTodoTool`/`normalizeTodos` 再导出；该改动只收窄公共 API，剩余会话工具和 reminder 仍由 `@gyoungwe/pi-core/host` 提供。
 
 ## 未关闭项
 
