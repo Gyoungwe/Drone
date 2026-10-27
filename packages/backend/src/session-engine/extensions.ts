@@ -8,12 +8,7 @@ import {
 import type { ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { InlineExtension, ModelRuntime, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import {
-	makeDeliverFilesTool,
-	makeMemorySaveTool,
-	makeStatusTool,
-	makeTodoTool,
-} from "@gyoungwe/pi-core/host";
+import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { makeCapabilityExtension } from "../capabilities/extension";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { makeKnowledgeSpecialistBridge } from "../knowledge/specialist-bridge";
@@ -71,6 +66,8 @@ type LiveChildControl = {
 };
 
 export interface SessionExtensionDependencies {
+	/** Optional core plugin host port; absent means core tools are unavailable. */
+	coreHost?: CoreHostPort;
 	/** Host-owned runtime shared with first-party .pi extensions through a versioned event. */
 	runtime: DroneRuntime;
 	permissionGates?: boolean;
@@ -124,7 +121,9 @@ export function buildSessionCustomTools(
 	// submission remains behind the desktop approval and compute preflight gates.
 	tools.push(makeComputeRouteTool());
 	tools.push(makeShowImageTool());
-	tools.push(makeDeliverFilesTool());
+	if (deps.coreHost) {
+		tools.push(deps.coreHost.makeDeliverFilesTool() as ToolDefinition);
+	}
 	tools.push(
 		makeSshTool({
 			confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
@@ -147,9 +146,11 @@ export function buildSessionCustomTools(
 		}) as ToolDefinition,
 	);
 	tools.push(makeBioDatabaseTool() as ToolDefinition);
-	tools.push(makeStatusTool());
-	tools.push(makeTodoTool());
-	tools.push(makeMemorySaveTool() as ToolDefinition);
+	if (deps.coreHost) {
+		tools.push(deps.coreHost.makeStatusTool() as ToolDefinition);
+		tools.push(deps.coreHost.makeTodoTool() as ToolDefinition);
+		tools.push(deps.coreHost.makeMemorySaveTool() as ToolDefinition);
+	}
 	if (harness.recall) {
 		tools.push(
 			makeHarnessRecallTool({
@@ -161,6 +162,7 @@ export function buildSessionCustomTools(
 	if (deps.subagentPreferBuiltin !== false) {
 		tools.push(
 			makeSubagentTool({
+				coreHost: deps.coreHost,
 				registerAnswerPublication: deps.runtime.knowledge.registerAnswerPublication,
 				getModelRuntime: deps.getModelRuntime,
 				getSubagentModel: deps.getSubagentModel,

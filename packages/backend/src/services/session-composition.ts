@@ -264,6 +264,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		onSessionReloaded: (sessionId) => service.reapplyCapabilities(sessionId),
 	});
 	service.projectLoader = new ProjectResourceLoader({
+		coreHost: options.coreHost,
 		trustStore: service.projectTrust.store,
 		ask: (dir, opts) => service.projectTrust.ask(dir, opts),
 		canAsk: () => service.trustHandlers.size > 0,

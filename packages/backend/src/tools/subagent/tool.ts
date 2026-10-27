@@ -6,6 +6,7 @@ import type {
 	ModelRuntime,
 	ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
+import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { type Static, Type } from "typebox";
 import type { PermissionGate } from "../../permissions/gate";
 import type { SessionTraces } from "../../session/traces";
@@ -64,6 +65,8 @@ export const subagentParams = Type.Object({
 });
 
 export interface MakeSubagentToolDeps {
+	/** Optional installed pi-core host port; absent means core child tools are unavailable. */
+	coreHost?: CoreHostPort;
 	registerAnswerPublication?: DroneRuntime["knowledge"]["registerAnswerPublication"];
 	getModelRuntime: () => Promise<ModelRuntime>;
 	getSubagentModel: (agentName: string) => Promise<string | undefined>;

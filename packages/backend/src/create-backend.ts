@@ -24,7 +24,6 @@ import type {
 	TrustAnswer,
 	TrustRequest,
 } from "@drone/shared";
-import { writeMemory } from "@gyoungwe/pi-core/host";
 import type {
 	AnalysisHostLoader,
 	KnowledgeHostLoader,
@@ -41,6 +40,7 @@ import {
 	type DiscoveryServicePort,
 } from "./discovery/service";
 import { JsonStore } from "./json-store";
+import { defaultKnowledgeCompatibility } from "./knowledge/compat-adapter";
 import {
 	configureBackendKnowledgeWorker,
 	createKnowledgeDailyDiscoveryOperations,
@@ -54,7 +54,6 @@ import {
 	type KnowledgeUiServicePort,
 	unavailableKnowledgeCompatibility,
 } from "./knowledge/ui";
-import { defaultKnowledgeCompatibility } from "./knowledge/compat-adapter";
 import type { McpServicePort } from "./mcp/service";
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
@@ -589,7 +588,10 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		options.computeExperienceRecorder ??
 		(options.computeExperienceStore
 			? createComputeExperienceRecorder({
-					recordTerminalJobExperience: createKnowledgeExperienceOperation(knowledgeHost, knowledgeCompatibility),
+					recordTerminalJobExperience: createKnowledgeExperienceOperation(
+						knowledgeHost,
+						knowledgeCompatibility,
+					),
 					store: options.computeExperienceStore,
 					...(options.computeExperienceTopicId !== undefined
 						? { topicId: options.computeExperienceTopicId }
@@ -872,7 +874,8 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				return memory.status(canonicalProjectId(cwd));
 			},
 			promote: (cwd, id) => {
-				promoteObservation(memory, cwd, canonicalProjectId(cwd), id, writeMemory);
+				if (!options.coreHost) throw new Error("Core plugin is unavailable: memory promotion is disabled");
+				promoteObservation(memory, cwd, canonicalProjectId(cwd), id, options.coreHost.writeMemory);
 				return memory.status(canonicalProjectId(cwd));
 			},
 			promoteToKnowledge: (cwd, id) =>

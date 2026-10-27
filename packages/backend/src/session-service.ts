@@ -12,6 +12,7 @@ import type {
 } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
 import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import type { CapabilityRuntime } from "./capabilities/runtime";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
 import { KnowledgeUiService, type KnowledgeUiServicePort } from "./knowledge/ui";
@@ -60,6 +61,8 @@ import { withNativeSubagentSlot } from "./tools/subagent/slots";
 const _log = createLogger("backend");
 
 export interface SessionServiceOptions {
+	/** Optional installed pi-core host port; absent means core plugin tools are unavailable. */
+	coreHost?: CoreHostPort;
 	/** 已登记的远程主机目录（由组合根接到计算主机登记表），供 ssh / ssh_hosts 工具使用 */
 	listSshHosts?: () => Promise<import("./tools/ssh").SshHostEntry[]>;
 	/** 观察记忆库；缺省不捕获、不注入。 */
@@ -282,6 +285,7 @@ export class SessionService extends SessionServiceApi {
 
 	sessionExtensionDependencies(): SessionExtensionDependencies {
 		return {
+			coreHost: this.options.coreHost,
 			runtime: this.runtime,
 			permissionGates: this.options.permissionGates,
 			permissionExtension: this.options.permissionExtension,

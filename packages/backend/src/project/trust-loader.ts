@@ -1,5 +1,5 @@
 import { dirname, resolve } from "node:path";
-import { memoryIndexPrompt } from "@gyoungwe/pi-core/host";
+import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { createLogger } from "../log";
 import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
 import { createProcessSandboxedExtension, type PluginSandboxPolicy } from "../plugin-sandbox";
@@ -55,6 +55,7 @@ export function desktopLoaderOptions(
 	integration: DesktopIntegration | undefined,
 	cwd?: string,
 	nativeBootstrap?: PluginNativeBootstrap,
+	coreHost?: CoreHostPort,
 ) {
 	if (!integration) return {};
 	const { mcpRuntimePath, sandboxedExtensions, pluginRuntimeDirectory, nativeRuntime, ...rest } = integration;
@@ -87,7 +88,7 @@ export function desktopLoaderOptions(
 		appendSystemPrompt: [
 			...rest.appendSystemPrompt,
 			...replyLanguagePrompt(),
-			...(cwd ? memoryIndexPrompt(cwd) : []),
+			...(cwd && coreHost ? coreHost.memoryIndexPrompt(cwd) : []),
 		],
 	};
 	if (!mcpRuntimePath) return options;
@@ -123,6 +124,7 @@ export function useUtf8WindowsShell<T extends Pick<SettingsManager, "getShellCom
 export class ProjectResourceLoader {
 	constructor(
 		private readonly deps: {
+			coreHost?: CoreHostPort;
 			trustStore: ProjectTrustStore;
 			/** 信任未决时弹窗询问（TrustGate.ask） */
 			ask: (cwd: string, options: TrustOptionInternal[]) => Promise<number | undefined>;
@@ -177,7 +179,12 @@ export class ProjectResourceLoader {
 				...this.deps.buildExtensions(cwd, options?.confirm, options?.modeRef),
 				...(options?.extensionFactories ?? []),
 			],
-			...desktopLoaderOptions(this.deps.desktopIntegration, cwd, options?.nativeBootstrap),
+			...desktopLoaderOptions(
+				this.deps.desktopIntegration,
+				cwd,
+				options?.nativeBootstrap,
+				this.deps.coreHost,
+			),
 		});
 		if (this.deps.projectTrust === false) {
 			settingsManager.setProjectTrusted(true);

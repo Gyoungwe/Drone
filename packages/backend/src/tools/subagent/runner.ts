@@ -11,7 +11,7 @@ import {
 	resolveHarnessModelFamily,
 } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
-import { makeStatusTool } from "@gyoungwe/pi-core/host";
+import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
@@ -93,6 +93,8 @@ export interface RunSubagentInput {
 }
 
 export interface RunSubagentDeps {
+	/** Optional installed pi-core host port; absent means core child tools are unavailable. */
+	coreHost?: CoreHostPort;
 	/** Host-owned runtime operation used to keep child answers fail-closed. */
 	registerAnswerPublication?: DroneRuntime["knowledge"]["registerAnswerPublication"];
 	getModelRuntime: () => Promise<ModelRuntime>;
@@ -419,7 +421,8 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 			};
 		},
 	};
-	const customTools: ToolDefinition[] = [makeStatusTool(), contactSupervisorTool];
+	const customTools: ToolDefinition[] = [contactSupervisorTool];
+	if (deps.coreHost) customTools.unshift(deps.coreHost.makeStatusTool() as ToolDefinition);
 	if (safeTools.includes("webfetch")) customTools.push(makeWebFetchTool());
 	if (safeTools.includes("ssh"))
 		customTools.push(

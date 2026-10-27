@@ -27,7 +27,7 @@ import { HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest } from "./html-preview-
 import { registerIpc, sendToRenderer } from "./ipc";
 import { migrateLegacyUserDir } from "./legacy-migration";
 import { buildMenuTemplate, DESKTOP_COMMAND_CHANNEL } from "./menu";
-import { discoverPluginHostLoader } from "./optional-plugin-hosts";
+import { discoverCoreHostLoader, discoverPluginHostLoader } from "./optional-plugin-hosts";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
 import type { DesktopRuntimeBridge } from "./ui-plugins/runtime-bridge";
 import { createDesktopRuntime, createNativeRuntimeIntegration } from "./ui-plugins/runtime-host";
@@ -296,6 +296,23 @@ app.whenReady().then(async () => {
 		},
 	);
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
+	const pluginPackageRoots = [
+		join(process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"), "npm", "node_modules"),
+		app.isPackaged
+			? join(process.resourcesPath, "pi-packages", "node_modules")
+			: join(__dirname, "../../pi-packages/node_modules"),
+		join(app.getAppPath(), "node_modules"),
+	];
+	const coreHost = await discoverCoreHostLoader({ packageRoots: pluginPackageRoots });
+	let coreHostPort: ReturnType<NonNullable<typeof coreHost>["loader"]["load"]> | undefined;
+	if (coreHost) {
+		try {
+			coreHostPort = coreHost.loader.load();
+		} catch (error) {
+			log.warn("Core host unavailable; continuing without core plugin", { error: String(error) });
+		}
+	}
+	if (coreHost) log.info("Core host discovered", coreHost.discovery);
 	const analysisHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").AnalysisHostLoader>({
 		packageRoots: [
 			join(
@@ -381,6 +398,7 @@ app.whenReady().then(async () => {
 			: undefined;
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
+		...(coreHostPort ? { coreHost: coreHostPort } : {}),
 		...(analysisHost ? { analysisHostLoader: analysisHost.loader } : {}),
 		...(evidenceHost ? { analysisEvidenceHost: evidenceHost.loader.load() } : {}),
 		...(knowledgeHost ? { knowledgeHostLoader: knowledgeHost.loader } : {}),
