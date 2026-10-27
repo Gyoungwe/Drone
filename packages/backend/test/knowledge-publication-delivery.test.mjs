@@ -80,8 +80,8 @@ beforeEach(async () => {
 		},
 		desktopIntegration: {
 			appendSystemPrompt: [],
-			additionalExtensionPaths: [resolve(".pi/extensions/obsidian-workbench.mjs")],
-			additionalSkillPaths: [resolve(".pi/skills/research-vault/SKILL.md")],
+			additionalExtensionPaths: [resolve(import.meta.dirname, "../../../.pi/extensions/obsidian-workbench.mjs")],
+			additionalSkillPaths: [resolve(import.meta.dirname, "../../../.pi/skills/research-vault/SKILL.md")],
 		},
 	});
 	backend.modelRuntime = runtime;
