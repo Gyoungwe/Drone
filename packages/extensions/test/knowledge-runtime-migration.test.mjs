@@ -6,12 +6,13 @@ import { test } from "node:test";
 
 const root = resolve(import.meta.dirname, "../../..");
 
-test("knowledge production runtime uses the generated worker resource", async () => {
+test("knowledge production runtime uses the installed package worker resource", async () => {
 	const runtime = await readFile(
 		resolve(root, "packages/extensions/src/internal/knowledge-runtime.ts"),
 		"utf8",
 	);
-	assert.match(runtime, /knowledge-worker\.mjs/);
+	assert.match(runtime, /resolveKnowledgePackageWorker(?:Url|Metadata)/);
+	assert.doesNotMatch(runtime, /knowledge-worker\.mjs/);
 	assert.doesNotMatch(runtime, /(?:\.\.?[\\/])+\.pi[\\/]lib[\\/]knowledge/);
 	const fetcher = await readFile(resolve(root, "scripts/fetch-plugins.mjs"), "utf8");
 	assert.match(fetcher, /knowledge-worker\.mjs/);
