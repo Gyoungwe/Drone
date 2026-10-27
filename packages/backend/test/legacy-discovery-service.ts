@@ -39,9 +39,9 @@ import type {
 	DiscoveryKernelSession,
 	DiscoveryMultipathAssessment,
 } from "@drone/shared";
+import { ContainerKernelRunner, type ContainerKernelRunnerOptions } from "../src/discovery/container-runner";
 import { JsonStore } from "../src/json-store";
 import type { StorageRegistry } from "../src/storage/registry";
-import { ContainerKernelRunner, type ContainerKernelRunnerOptions } from "../src/discovery/container-runner";
 
 export type DiscoveryAuthorizationOperation =
 	| { readonly kind: "create-kernel-session"; readonly projectId: string }
