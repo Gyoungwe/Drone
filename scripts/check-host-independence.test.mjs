@@ -51,8 +51,8 @@ test("rejects an optional plugin import and identifies its package", () => {
 test("allows only the registered pi-core compatibility facades", () => {
 	assert.deepEqual(
 		findHostImportViolations(
-			"packages/backend/src/tools/todo.ts",
-			'export * from "@gyoungwe/pi-core/tools/todo";',
+			"packages/backend/src/tools/memory-save.ts",
+			'export * from "@gyoungwe/pi-core/host";',
 		),
 		[],
 	);
@@ -72,6 +72,16 @@ test("status tools use the versioned pi-core host entry directly", () => {
 		findHostImportViolations(
 			"packages/backend/src/session-engine/extensions.ts",
 			'import { makeStatusTool } from "@gyoungwe/pi-core/host";',
+		),
+		[],
+	);
+});
+
+test("todo tools use the versioned pi-core host entry directly", () => {
+	assert.deepEqual(
+		findHostImportViolations(
+			"packages/backend/src/session-engine/extensions.ts",
+			'import { makeTodoTool } from "@gyoungwe/pi-core/host";',
 		),
 		[],
 	);

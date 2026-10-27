@@ -32,7 +32,6 @@ const coreCompatibilityFacades = new Set([
 	"packages/backend/src/project/memory.ts",
 	"packages/backend/src/tools/deliver-files.ts",
 	"packages/backend/src/tools/memory-save.ts",
-	"packages/backend/src/tools/todo.ts",
 ]);
 /** Return optional plugin imports that would couple the host to a package. */
 export function findHostImportViolations(file, source) {

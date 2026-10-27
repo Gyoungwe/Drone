@@ -1,6 +1,6 @@
 import { extractTodos, TODO_REMINDER_CUSTOM_TYPE, TODO_TOOL_NAME, type TodoItem } from "@drone/shared";
 import type { InlineExtension } from "@earendil-works/pi-coding-agent";
-import { formatTodoList } from "./todo";
+import { formatTodoList } from "@gyoungwe/pi-core/host";
 
 /**
  * 内置 todo 恢复扩展：compaction 后把当前 todo 列表自动注入上下文。

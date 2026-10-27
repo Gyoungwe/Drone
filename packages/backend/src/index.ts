@@ -1,4 +1,5 @@
 export type { DiscoveryExplorationPlan } from "@drone/shared";
+export { formatTodoList, makeTodoTool, normalizeTodos } from "@gyoungwe/pi-core/host";
 export type {
 	AnalysisAdapter,
 	AnalysisAdapterContract,
@@ -395,7 +396,6 @@ export {
 	type SshToolOptions,
 	type SshToolParams,
 } from "./tools/ssh";
-export { formatTodoList, makeTodoTool, normalizeTodos } from "./tools/todo";
 export { makeTodoReminderExtension } from "./tools/todo-reminder";
 export {
 	assertPublicUrl,
