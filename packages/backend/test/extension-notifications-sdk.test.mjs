@@ -1,10 +1,12 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
+import * as sdk from "../src/session-engine/sdk";
+import { runSubagent } from "../src/tools/subagent/runner";
 
 it("delivers official notifications from real created/restored sessions with no knowledge plugin and revokes old contexts", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-generic-notify-")));
@@ -92,6 +94,148 @@ it("delivers official notifications from real created/restored sessions with no 
 			),
 		).toHaveLength(2);
 		expect(knowledgeNotify).not.toHaveBeenCalled();
+	} finally {
+		off();
+		for (const entry of backend.registry.list()) await backend.closeSession(entry.session.sessionId);
+		backend.dispose();
+		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+it("forwards real child SDK notifications with child identity through the host event stream and revokes them at completion", async () => {
+	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-child-notify-")));
+	const agentDir = join(root, "agent"),
+		cwd = join(root, "project");
+	await mkdir(agentDir);
+	await mkdir(cwd);
+	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
+	const path = join(cwd, "source.txt");
+	await writeFile(path, "child generic read\n");
+	const modelRuntime = await ModelRuntime.create({
+		authPath: join(agentDir, "auth.json"),
+		modelsPath: null,
+		allowModelNetwork: false,
+		refreshOnCreate: false,
+	});
+	const faux = fauxProvider({ provider: "child-notify-offline", tokensPerSecond: 0 });
+	modelRuntime.registerNativeProvider(faux.provider);
+	vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
+	const backend = new PiBackend({
+		projectTrust: false,
+		lazyCapabilities: false,
+		tools: ["read"],
+		desktopIntegration: {
+			appendSystemPrompt: [],
+			additionalSkillPaths: [],
+			noExtensions: true,
+			noSkills: true,
+			noPromptTemplates: true,
+		},
+	});
+	backend.modelRuntime = modelRuntime;
+	const events = [];
+	const off = backend.onEvent((sessionId, event) => events.push({ sessionId, event }));
+	let child;
+	const create = sdk.createAgentSession;
+	vi.spyOn(sdk, "createAgentSession").mockImplementation(async (options) => {
+		const value = await create(options);
+		child = value.session;
+		return value;
+	});
+	try {
+		const parent = await backend.createSession({
+			cwd,
+			provider: faux.provider.id,
+			modelId: faux.getModel().id,
+		});
+		const progress = [];
+		faux.setResponses([
+			fauxAssistantMessage(fauxToolCall("set_status", {})),
+			fauxAssistantMessage(fauxToolCall("read", { path })),
+			fauxAssistantMessage("Child completed."),
+		]);
+		const result = await runSubagent(
+			{
+				getModelRuntime: async () => modelRuntime,
+				getSubagentModel: async () => undefined,
+				gate: { confirm: async () => true },
+				traces: backend.traces,
+				onEvent: (id, event) => backend.emitEvent(id, event),
+				coreHost: {
+					makeStatusTool: () => ({
+						name: "set_status",
+						label: "Notify child",
+						description: "Exercise official child UI notifications",
+						parameters: { type: "object", properties: {} },
+						async execute(_id, _input, _signal, _update, ctx) {
+							for (const severity of ["info", "warning", "error"])
+								ctx.ui.notify(`child ${severity}`, severity);
+							return { content: [{ type: "text", text: "Notifications requested" }] };
+						},
+					}),
+				},
+			},
+			{
+				cwd,
+				projectTrusted: true,
+				model: faux.getModel(),
+				parentSessionId: parent.sessionId,
+				agent: {
+					name: "notification-reader",
+					tools: ["read", "set_status"],
+					systemPrompt: "Read the provided local text.",
+				},
+				task: "Notify then read source.txt",
+				onProgress: (value) =>
+					progress.push({ sessionId: value.sessionId, parentSessionId: value.parentSessionId }),
+			},
+		);
+		expect(result.exitCode, result.error).toBe(0);
+		expect(result.sessionId).not.toBe(parent.sessionId);
+		expect(
+			events.filter(
+				({ event }) => event.type === "extension_notification" && event.message.startsWith("child "),
+			),
+		).toEqual(
+			["info", "warning", "error"].map((severity) => ({
+				sessionId: result.sessionId,
+				event: { type: "extension_notification", severity, message: `child ${severity}` },
+			})),
+		);
+		expect(progress).toEqual(
+			expect.arrayContaining([{ sessionId: result.sessionId, parentSessionId: parent.sessionId }]),
+		);
+		expect(events).toEqual(
+			expect.arrayContaining([
+				{
+					sessionId: result.sessionId,
+					event: expect.objectContaining({ type: "tool_execution_end", toolName: "read", isError: false }),
+				},
+			]),
+		);
+		const raw = await readFile(result.artifactPaths.jsonlPath, "utf8");
+		const trace = await readFile(
+			join(dirname(result.artifactPaths.jsonlPath), "traces", `trace-${result.sessionId}.jsonl`),
+			"utf8",
+		);
+		for (const text of [raw, trace]) {
+			expect(text).not.toContain('"type":"extension_notification"');
+			expect(text).not.toContain("child warning");
+		}
+		const count = events.length;
+		child.extensionRunner.getUIContext().notify("late child context", "error");
+		expect(events).toHaveLength(count);
+		backend.registry
+			.get(parent.sessionId)
+			.session.extensionRunner.getUIContext()
+			.notify("parent still alive", "info");
+		expect(events.at(-1)).toEqual({
+			sessionId: parent.sessionId,
+			event: { type: "extension_notification", severity: "info", message: "parent still alive" },
+		});
 	} finally {
 		off();
 		for (const entry of backend.registry.list()) await backend.closeSession(entry.session.sessionId);

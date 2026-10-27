@@ -47,10 +47,14 @@ it("renders generic session notifications as localized severity toasts and remov
 	});
 	const view = render(createElement(App));
 	act(() => {
+		for (const listener of listeners) listener({ sessionId: "parent", event: { type: "agent_start" } });
+	});
+	const parentTranscript = useTranscriptStore.getState().bySession;
+	act(() => {
 		for (const severity of ["info", "warning", "error"] as const)
 			for (const listener of listeners)
 				listener({
-					sessionId: "a",
+					sessionId: "child",
 					event: { type: "extension_notification", severity, message: `Extension ${severity}` },
 				});
 	});
@@ -61,7 +65,8 @@ it("renders generic session notifications as localized severity toasts and remov
 		"warning",
 		"error",
 	]);
-	expect(useTranscriptStore.getState().bySession).toEqual({});
+	expect(useTranscriptStore.getState().bySession).toBe(parentTranscript);
+	expect(useTranscriptStore.getState().bySession.child).toBeUndefined();
 	act(() => useI18nStore.setState({ language: "zh" }));
 	expect(screen.getAllByText("扩展通知")).toHaveLength(3);
 	view.unmount();

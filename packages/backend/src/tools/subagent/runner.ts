@@ -9,6 +9,7 @@ import {
 	PROTECTED_KNOWLEDGE_AGENTS,
 	renderHarnessPromptLayer,
 	resolveHarnessModelFamily,
+	type SessionEvent,
 } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
 import type { CoreHostPort } from "@gyoungwe/plugin-api";
@@ -103,8 +104,8 @@ export interface RunSubagentDeps {
 	getSubagentModel: (agentName: string) => Promise<string | undefined>;
 	gate: PermissionGate;
 	traces: SessionTraces;
-	/** 把运行中子会话事件转发给宿主；未提供时只写 trace（供非桌面宿主使用）。 */
-	onEvent?: (sessionId: string, event: AgentSessionEvent) => void;
+	/** Forward child events with their own identity. Without a host stream, only SDK events enter trace. */
+	onEvent?: (sessionId: string, event: SessionEvent) => void;
 	/** Register/unregister a live child so the host can steer it or answer supervisor requests. */
 	registerLiveChild?: (
 		sessionId: string,
@@ -615,7 +616,12 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 	try {
 		await deps.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 		await session.bindExtensions({
-			uiContext: makeUiContext(deps.gate),
+			uiContext: makeUiContext(deps.gate, undefined, (message, severity) => {
+				// The sealed result or revoked caller ends this UI context. Notifications
+				// are transient and never enter the raw-SDK trace fallback.
+				if (result.exitCode !== -1 || input.signal?.aborted) return;
+				deps.onEvent?.(session.sessionId, { type: "extension_notification", severity, message });
+			}),
 			mode: "tui",
 			onError: diagnostics.onError,
 		});
