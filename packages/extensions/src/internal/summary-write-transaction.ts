@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 async function existingBytes(path: string): Promise<Buffer | null> {
@@ -11,11 +11,24 @@ async function existingBytes(path: string): Promise<Buffer | null> {
 	}
 }
 
-async function atomicBytes(path: string, bytes: Uint8Array): Promise<void> {
+async function assertPreimage(path: string, expected: Buffer | null): Promise<void> {
+	const current = await existingBytes(path);
+	if (expected ? !current?.equals(expected) : current !== null)
+		throw new Error(`Summary destination changed before committing: ${path}`);
+}
+
+async function atomicBytes(path: string, bytes: Uint8Array, expected: Buffer | null): Promise<void> {
 	await mkdir(dirname(path), { recursive: true });
 	const temporary = `${path}.${randomUUID()}.tmp`;
-	await writeFile(temporary, bytes);
-	await rename(temporary, path);
+	try {
+		await writeFile(temporary, bytes);
+		// Optimistic path CAS: recheck after preparation, immediately before rename.
+		// Node does not provide an atomic cross-process compare-and-rename operation.
+		await assertPreimage(path, expected);
+		await rename(temporary, path);
+	} finally {
+		await rm(temporary, { force: true });
+	}
 }
 
 /** Roll back only bytes written by this delivery; retain concurrent user edits. */
@@ -23,10 +36,8 @@ export function createSummaryWriteTransaction() {
 	const writes: Array<{ path: string; before: Buffer | null; after: Buffer }> = [];
 	return {
 		async write(path: string, text: string, expectedBefore?: Buffer | null): Promise<void> {
-			const before = await existingBytes(path), after = Buffer.from(text);
-			if (expectedBefore !== undefined && (expectedBefore ? !before?.equals(expectedBefore) : before !== null))
-				throw new Error(`Summary destination changed before writing: ${path}`);
-			await atomicBytes(path, after);
+			const before = expectedBefore === undefined ? await existingBytes(path) : expectedBefore, after = Buffer.from(text);
+			await atomicBytes(path, after, before);
 			writes.push({ path, before, after });
 			if (!(await readFile(path)).equals(after)) throw new Error(`Summary write readback changed: ${path}`);
 		},
@@ -34,10 +45,12 @@ export function createSummaryWriteTransaction() {
 			const failures: Error[] = [];
 			for (const { path, before, after } of writes.toReversed()) {
 				try {
-					const current = await existingBytes(path);
-					if (!current?.equals(after)) throw new Error(`Concurrent edit retained: ${path}`);
-					if (before) await atomicBytes(path, before);
-					else await rm(path);
+					if (before) await atomicBytes(path, before, after);
+					else {
+						// This adjacent check/unlink is optimistic too; it is not kernel-level CAS.
+						await assertPreimage(path, after);
+						await unlink(path);
+					}
 					const restored = await existingBytes(path);
 					if (before ? !restored?.equals(before) : restored !== null)
 						throw new Error(`Summary rollback readback failed: ${path}`);

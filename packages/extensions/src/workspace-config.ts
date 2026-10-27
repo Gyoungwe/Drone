@@ -267,18 +267,22 @@ function updateManagedBlock(original, body) {
 		: `${original.trimEnd()}\n\n${replacement}\n`;
 }
 
-async function writeSummary(runDir, summary, write) {
-	const runPath = resolve(runDir);
+async function writeSummary(resultsRoot, runDir, summary, write) {
+	const root = await realpath(resultsRoot);
+	const runPath = await containedFile(root, await realpath(runDir));
 	const resultRoot = dirname(runPath);
-	const historyRoot = join(resultRoot, "summary-history");
+	const historyRoot = await containedFile(root, join(resultRoot, "summary-history"));
+	const stamp = new Date().toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
+	// Confirm every destination before any summary copy is written.
+	const run = await containedFile(root, join(runPath, "SUMMARY.md"));
+	const latest = await containedFile(root, join(resultRoot, "SUMMARY.md"));
+	const history = await containedFile(root, join(historyRoot, `${stamp}.md`));
 	await mkdir(historyRoot, { recursive: true });
 	const content = `${String(summary).trim()}\n`;
-	await write(join(runPath, "SUMMARY.md"), content);
-	await write(join(resultRoot, "SUMMARY.md"), content);
-	const stamp = new Date().toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
-	const history = join(historyRoot, `${stamp}.md`);
+	await write(run, content);
+	await write(latest, content);
 	await write(history, content);
-	return { run: join(runPath, "SUMMARY.md"), latest: join(resultRoot, "SUMMARY.md"), history };
+	return { run, latest, history };
 }
 
 async function syncRunNote(vault, project, resultSlug, runDir, summary, write) {
@@ -441,7 +445,7 @@ export function registerResearchSummaryTool(pi, delivery) {
 					const transaction = createSummaryWriteTransaction();
 					try {
 						_signal?.throwIfAborted();
-						const outputs = await writeSummary(runDir, prepared.body, transaction.write);
+						const outputs = await writeSummary(config.resultsRoot, runDir, prepared.body, transaction.write);
 						const copies = Object.entries(outputs).map(([role, path]) => ({ role, path }));
 						let note = null;
 						if (config.obsidianVault) {
