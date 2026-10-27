@@ -16,6 +16,7 @@ import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
 import { researchWorkbenchRoot } from "../../research-root";
+import { createSessionExtensionDiagnostics } from "../../session/extension-errors";
 import { projectKnowledgeEvent } from "../../session/knowledge-publication";
 import type { SessionTraces } from "../../session/traces";
 import { makeUiContext } from "../../session/ui-context";
@@ -484,9 +485,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		settingsManager: childSettings,
 		resourceLoader,
 	});
-	// 子会话没有主会话的 message_start 自动命名器；创建后立即把任务首行写进自己的 jsonl。
-	session.setSessionName(subagentSessionName(input.agent.name, input.task));
-	await session.bindExtensions({ uiContext: makeUiContext(deps.gate), mode: "tui" });
+	const diagnostics = createSessionExtensionDiagnostics(session, deps.traces);
 	const result: SingleResult = {
 		agent: input.agent.name,
 		parentSessionId: input.parentSessionId,
@@ -614,9 +613,16 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		else input.signal.addEventListener("abort", abort, { once: true });
 	}
 	try {
+		await deps.traces.start(session.sessionId, session.sessionManager.getSessionDir());
+		await session.bindExtensions({
+			uiContext: makeUiContext(deps.gate),
+			mode: "tui",
+			onError: diagnostics.onError,
+		});
+		// Set the title before the first progress notification and model event.
+		session.setSessionName(subagentSessionName(input.agent.name, input.task));
 		// sessionFile 已在创建时落盘；先通知父工具/UI，用户即可在首个模型事件前进入实时子会话。
 		input.onProgress?.(result);
-		await deps.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 		// expandPromptTemplates: false——子会话无任何模板/命令，任务文本以 "/" 开头也不触发命令解析
 		await session.prompt(input.task, { expandPromptTemplates: false });
 		if (!settled) await endPromise;
@@ -637,6 +643,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		result.exitCode = 1;
 		result.error = failure;
 	} finally {
+		diagnostics.dispose();
 		unsubscribeEvents?.();
 		unregisterLiveChild?.();
 		for (const pending of pendingSupervisor.values())

@@ -16,6 +16,7 @@ import type { PluginNativeBootstrap } from "../plugins/coordinator";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import { AskGate } from "../session/ask-gate";
 import { inboxFor, observeInbox } from "../session/durable-inbox";
+import { createSessionExtensionDiagnostics } from "../session/extension-errors";
 import { bindToolIntentJournal, createSessionCausalityContext } from "../session/intent-binding";
 import {
 	AUTO_RESUME_WINDOW_MS,
@@ -171,30 +172,37 @@ export class SessionConstructionService {
 				this.host.capabilityRuntimes.get(session.sessionId)?.tools,
 				() => causality.current(),
 			);
-			const unsubscribe = session.subscribe((event) => {
+			const diagnostics = createSessionExtensionDiagnostics(session, this.host.traces);
+			const unsubscribeEvents = session.subscribe((event) => {
 				causality.observe(event);
 				recordIntent(event);
 				observeInbox(session.sessionFile, event);
 				autoNameSession(session, event);
 				this.host.emitEvent(session.sessionId, event);
 			});
+			const unsubscribe = () => {
+				unsubscribeEvents();
+				diagnostics.dispose();
+			};
 			this.host.registry.add({ session, unsubscribe, cwd });
 			nativeBootstrap?.bindSession(session.sessionId);
-			if (this.host.options.permissionGates !== false) {
-				await session.bindExtensions({
-					uiContext: makeUiContext(gate, askGate, (text, type) => {
-						// A failed toast must not abort the session; retain a diagnostic for the missing notification.
-						void this.host.knowledge.notify(text, type, session.sessionId).catch((error) =>
-							log.error("session notification delivery failed", session.sessionId, {
-								error: String(error),
-							}),
-						);
-					}),
-					mode: "tui",
-				});
-			}
-
 			await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
+			await session.bindExtensions({
+				onError: diagnostics.onError,
+				...(this.host.options.permissionGates !== false
+					? {
+							uiContext: makeUiContext(gate, askGate, (text, type) => {
+								// A failed toast must not abort the session; retain a diagnostic for the missing notification.
+								void this.host.knowledge.notify(text, type, session.sessionId).catch((error) =>
+									log.error("session notification delivery failed", session.sessionId, {
+										error: String(error),
+									}),
+								);
+							}),
+							mode: "tui",
+						}
+					: {}),
+			});
 
 			log.info("session created", session.sessionId, { cwd });
 			return this.host.toMetaOrThrow(session.sessionId);
@@ -316,7 +324,8 @@ export class SessionConstructionService {
 				this.host.capabilityRuntimes.get(session.sessionId)?.tools,
 				() => causality.current(),
 			);
-			const unsubscribe = session.subscribe((event) => {
+			const diagnostics = createSessionExtensionDiagnostics(session, this.host.traces);
+			const unsubscribeEvents = session.subscribe((event) => {
 				causality.observe(event);
 				recordIntent(event);
 				observeInbox(session.sessionFile, event);
@@ -326,6 +335,10 @@ export class SessionConstructionService {
 			// 子代理产物目录下的会话文件 = 只读检视（spec §8.1：防能力静默漂移/递归绕过）。
 			// 其运行 trace 由 runner 管理，检视页不可写，故不另建 recorder（避免覆盖运行中的 recorder）。
 			const readOnly = isSubagentSessionPath(filePath);
+			const unsubscribe = () => {
+				unsubscribeEvents();
+				diagnostics.dispose();
+			};
 			this.host.registry.add({
 				session,
 				unsubscribe,
@@ -333,20 +346,23 @@ export class SessionConstructionService {
 				readOnly: readOnly || undefined,
 			});
 			nativeBootstrap?.bindSession(session.sessionId);
-			if (this.host.options.permissionGates !== false) {
-				await session.bindExtensions({
-					uiContext: makeUiContext(gate, askGate, (text, type) => {
-						// A failed toast must not abort the session; retain a diagnostic for the missing notification.
-						void this.host.knowledge.notify(text, type, session.sessionId).catch((error) =>
-							log.error("session notification delivery failed", session.sessionId, {
-								error: String(error),
-							}),
-						);
-					}),
-					mode: "tui",
-				});
-			}
 			if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
+			await session.bindExtensions({
+				onError: diagnostics.onError,
+				...(this.host.options.permissionGates !== false
+					? {
+							uiContext: makeUiContext(gate, askGate, (text, type) => {
+								// A failed toast must not abort the session; retain a diagnostic for the missing notification.
+								void this.host.knowledge.notify(text, type, session.sessionId).catch((error) =>
+									log.error("session notification delivery failed", session.sessionId, {
+										error: String(error),
+									}),
+								);
+							}),
+							mode: "tui",
+						}
+					: {}),
+			});
 			log.info("session opened", session.sessionId, { file: filePath });
 			const autoResume = this.host.options.autoResumeInterrupted !== false;
 			let resumed: Promise<unknown> = Promise.resolve();
