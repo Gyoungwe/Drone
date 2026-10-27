@@ -45,7 +45,7 @@ let modelUrl;
 let releaseStreamingResponse;
 let streamingRequestResolve;
 let streamingResponseReadyResolve;
-const streamingRequestSeen = new Promise((resolve, reject) => {
+const streamingRequestSeen = new Promise((resolve) => {
 	streamingRequestResolve = resolve;
 });
 const streamingResponseReady = new Promise((resolve) => {
@@ -354,7 +354,9 @@ try {
 				);
 				await Promise.race([
 					streamingRequestSeen,
-					new Promise((_, reject) => setTimeout(() => reject(new Error("streaming model request timed out")), 30_000)),
+					new Promise((_, reject) =>
+						setTimeout(() => reject(new Error("streaming model request timed out")), 30_000),
+					),
 				]);
 				await streamingResponseReady;
 			}
@@ -522,7 +524,9 @@ try {
 	const models = JSON.parse(modelsData);
 	if (lifecycleFixture) {
 		assert.equal(models.providers?.openai?.models?.[0]?.id, "drone-packaged-stream");
-		report.checks.push("fresh auth store is empty; isolated loopback model config is test-only and contains no credential");
+		report.checks.push(
+			"fresh auth store is empty; isolated loopback model config is test-only and contains no credential",
+		);
 	} else {
 		assert.deepEqual(models, {});
 		report.checks.push("fresh auth/model stores are empty; no inherited model credentials");
