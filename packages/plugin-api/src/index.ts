@@ -542,6 +542,13 @@ export interface KnowledgeReadHostPort {
 	setupPreview?(input: unknown): Promise<unknown>;
 	specialistSettings?(input: unknown): Promise<unknown>;
 	openTarget?(input: unknown): Promise<unknown>;
+	semantic?: {
+		status(input: unknown): Promise<unknown>;
+		saveSettings(input: unknown): Promise<unknown>;
+		testProvider(input: unknown): Promise<unknown>;
+		index(input: unknown): Promise<unknown>;
+		cancelIndex(input: unknown): Promise<unknown>;
+	};
 	/** Optional UI operations supplied by the installed knowledge plugin. */
 	jobs?(input: unknown): Promise<unknown>;
 	maintenance?(input: unknown): Promise<unknown>;
