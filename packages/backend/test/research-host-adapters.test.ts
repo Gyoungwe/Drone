@@ -84,6 +84,20 @@ describe("research plugin host adapters", () => {
 		expect(() => registry.list()).toThrow("Research connector host is unavailable");
 	});
 
+	it("preserves a connector descriptor disabled by the installed host", () => {
+		const registry = createResearchConnectorRegistryFromHost({
+			contractVersion: 1,
+			load: () => ({
+				contractVersion: 1,
+				status: "ready",
+				list: () => [{ id: "disabled", kind: "literature", label: "Disabled", enabled: false }],
+				recommend: async () => ({ hits: [], failures: [] }),
+				search: async () => ({ query: "", hits: [], failures: [], connectors: [], complete: true }),
+			}),
+		});
+		expect(registry.list()[0]?.enabled).toBe(false);
+	});
+
 	it("maps write host plans and receipts while preserving explicit approval", async () => {
 		const plan = {
 			id: "plan-1",

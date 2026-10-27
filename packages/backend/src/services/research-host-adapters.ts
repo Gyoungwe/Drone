@@ -128,6 +128,7 @@ function createConnector(
 		id: descriptor.id,
 		kind: descriptor.kind,
 		label: descriptor.label,
+		enabled: descriptor.enabled,
 		search: async (query, options) => {
 			const response = await host.search(
 				{

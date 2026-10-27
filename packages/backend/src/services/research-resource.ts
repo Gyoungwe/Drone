@@ -400,7 +400,7 @@ export class ResearchResourceService {
 			id: connector.id,
 			kind: connector.kind,
 			label: connector.label,
-			enabled: !disabled.has(connector.id),
+			enabled: connector.enabled !== false && !disabled.has(connector.id),
 		};
 	}
 

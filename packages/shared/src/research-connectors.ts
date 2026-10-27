@@ -130,6 +130,8 @@ export interface ResearchConnector {
 	readonly id: string;
 	readonly kind: ResearchConnectorKind;
 	readonly label: string;
+	/** Optional host/plugin availability; omitted means enabled. */
+	readonly enabled?: boolean;
 	search(
 		query: string,
 		options?: ResearchConnectorContext & { readonly limit?: number },
