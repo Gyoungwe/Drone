@@ -356,7 +356,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	runtime.tasks.workbench = { version: workbench.contractVersion, client: workbench.client };
 	// The packaged knowledge capability owns its runtime when installed. The
 	// generic host does not bootstrap the legacy worker; callers that still need
-	// that compatibility adapter must opt in explicitly via configureBackendKnowledgeWorker.
+	// that compatibility adapter is test-only and outside this composition path.
 	if (options.knowledgeHostLoader?.configureWorker) {
 		options.knowledgeHostLoader.configureWorker(createBackendKnowledgeWorkerSetup());
 	}
@@ -388,7 +388,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	// installed knowledge loader must provide each operation it advertises;
 	// undeclared operations fail closed instead of silently reaching a bundled
 	// optional package.  The compatibility worker remains an explicit test/host
-	// adapter via configureBackendKnowledgeWorker, outside this composition path.
+	// adapter via an explicit test fixture, outside this composition path.
 	const knowledgeCompatibility = unavailableKnowledgeCompatibility;
 	runtime.knowledge.registerAnswerPublication ??= createKnowledgePublicationOperation(
 		knowledgeHost,

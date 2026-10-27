@@ -54,14 +54,10 @@ export {
 	type ReadResult,
 } from "./json-store";
 export {
-	type BackendKnowledgeWorkerResource,
-	configureBackendKnowledgeWorker,
 	getKnowledgeWorkerLifecycle,
 	KnowledgeUiService,
 	type KnowledgeUiServicePort,
 	type KnowledgeWorkerLifecycleSnapshot,
-	resolveBackendKnowledgeWorkerPath,
-	resolveBackendKnowledgeWorkerResource,
 } from "./knowledge/ui";
 export {
 	DEFAULT_WEBDAV_ENDPOINT,

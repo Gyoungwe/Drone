@@ -6,8 +6,8 @@ import { pathToFileURL } from "node:url";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { build } from "esbuild";
 import { expect, it, vi } from "vitest";
-import { configureBackendKnowledgeWorker, KnowledgeUiService } from "../src/knowledge/ui";
-import { defaultKnowledgeCompatibility, defaultKnowledgeRuntimeSetup } from "./knowledge-compat-fixture";
+import { KnowledgeUiService } from "../src/knowledge/ui";
+import { configureBackendKnowledgeWorker, defaultKnowledgeCompatibility } from "./knowledge-compat-fixture";
 
 it("keeps the UI service free of the package compatibility import", async () => {
 	const uiSource = await readFile(new URL("../src/knowledge/ui.ts", import.meta.url), "utf8");
@@ -41,7 +41,7 @@ it("reads a project-owned note through the backend after setup in an independent
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "knowledge"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	try {
-		configureBackendKnowledgeWorker(defaultKnowledgeRuntimeSetup);
+		configureBackendKnowledgeWorker();
 		await mkdir(cwd);
 		const setup = await configureObsidian({ cwd, vault, project: "reading-test" });
 		const saved = await depositKnowledge({

@@ -383,53 +383,6 @@ export function getKnowledgeWorkerLifecycle(): KnowledgeWorkerLifecycleSnapshot 
 }
 
 /**
- * Backend UI calls can construct KnowledgeService before a Pi extension is
- * loaded. Install the same generated worker seam used by the extension entry
- * so review and graph IPC work in both development and packaged hosts.
- */
-export interface KnowledgeRuntimeSetup {
-	configureHost(host: { loadWorkspaceConfig(cwd: string): Promise<Record<string, unknown>> }): void;
-	configureRuntime(host: { emitProcessEvent(event: string, payload?: unknown): void }): void;
-	configureWorker(
-		factory: (url: URL, options: Record<string, unknown>) => unknown,
-		metadata?: () => KnowledgeWorkerMetadata,
-	): void;
-}
-
-/**
- * Explicit migration/test adapter. Production composition uses the installed
- * knowledge host loader and never calls this legacy setup path.
- */
-export function configureBackendKnowledgeWorker(setup: KnowledgeRuntimeSetup): void {
-	// The backend and each bundled Pi extension have separate plugin module
-	// instances. UI reads need their own host port, even after extension setup.
-	setup.configureHost({ loadWorkspaceConfig: loadBackendWorkspaceConfig });
-	setup.configureRuntime({ emitProcessEvent: (event, payload) => (process as any).emit(event, payload) });
-	const worker = createLegacyBackendKnowledgeWorkerSetup();
-	setup.configureWorker(
-		worker.createWorker,
-		worker.workerMetadata as (() => KnowledgeWorkerMetadata) | undefined,
-	);
-}
-
-function createLegacyBackendKnowledgeWorkerSetup(): KnowledgeHostWorkerSetup {
-	return {
-		createWorker: (_url, options) => {
-			const resource = resolveBackendKnowledgeWorkerResource();
-			const workerData =
-				options && typeof options === "object" && options.workerData && typeof options.workerData === "object"
-					? options.workerData
-					: {};
-			return new Worker(pathToFileURL(resource.path), {
-				...options,
-				workerData: { ...workerData, workerResource: resource.metadata },
-			} as any);
-		},
-		workerMetadata: () => resolveBackendKnowledgeWorkerResource().metadata,
-	};
-}
-
-/**
  * Host-owned worker seam passed to an installed KnowledgeHostLoader. The
  * package chooses when to install this factory; the host remains responsible
  * for resolving and verifying its own worker resource.
@@ -450,51 +403,17 @@ export function createBackendKnowledgeWorkerSetup(): KnowledgeHostWorkerSetup {
 	};
 }
 
-async function loadBackendWorkspaceConfig(cwd: string) {
-	const root =
-		process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
-	const mod = await import(
-		/* @vite-ignore */ pathToFileURL(join(root, "extensions", "workspace-config.mjs")).href
-	);
-	return mod.loadWorkspaceConfig(cwd);
-}
-
-export function resolveBackendKnowledgeWorkerPath(root = process.env.DRONE_RESEARCH_WORKBENCH_ROOT): string {
-	const workbenchRoot = root ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
-	const workerPath = join(workbenchRoot, "extensions", "knowledge-worker.mjs");
-	if (!existsSync(workerPath))
-		throw new Error(`Knowledge worker resource is missing from the host: ${workerPath}`);
-	return workerPath;
-}
-
-export interface BackendKnowledgeWorkerResource {
+interface BackendKnowledgeWorkerResource {
 	readonly path: string;
 	readonly manifestPath: string;
 	readonly metadata: KnowledgeWorkerMetadata;
 }
 
 /** Resolve a package-selected worker URL and verify its adjacent manifest. */
-export function resolveKnowledgeWorkerResource(url: URL): BackendKnowledgeWorkerResource {
+function resolveKnowledgeWorkerResource(url: URL): BackendKnowledgeWorkerResource {
 	if (url.protocol !== "file:") throw new Error(`Knowledge worker URL must use file: protocol: ${url.href}`);
 	const path = fileURLToPath(url);
 	return verifyKnowledgeWorkerResource(path, join(dirname(path), ".knowledge-worker-manifest.json"));
-}
-
-/**
- * Resolve and verify the generated worker and its checked-in build manifest.
- * A file that merely exists is insufficient: packaged resources can be stale
- * or partially copied, so the host refuses to start a worker whose bytes do
- * not match the manifest hash.
- */
-export function resolveBackendKnowledgeWorkerResource(
-	root = process.env.DRONE_RESEARCH_WORKBENCH_ROOT,
-): BackendKnowledgeWorkerResource {
-	const workbenchRoot = root ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
-	const path = join(workbenchRoot, "extensions", "knowledge-worker.mjs");
-	return verifyKnowledgeWorkerResource(
-		path,
-		join(workbenchRoot, "extensions", ".knowledge-worker-manifest.json"),
-	);
 }
 
 function verifyKnowledgeWorkerResource(path: string, manifestPath: string): BackendKnowledgeWorkerResource {
@@ -519,12 +438,6 @@ function verifyKnowledgeWorkerResource(path: string, manifestPath: string): Back
 		metadata: { version, source: path, integrity: expected },
 	};
 }
-
-// Worker configuration is deliberately not performed at module load.  When a
-// packaged knowledge plugin supplies the read host, importing this module must
-// not require the host's legacy `.pi/extensions/knowledge-worker.mjs` resource.
-// The composition root enables this compatibility worker only when no plugin
-// host was discovered.
 
 /** Host-facing knowledge management boundary; keeps IPC adapters independent of implementation state. */
 export interface KnowledgeUiServicePort {

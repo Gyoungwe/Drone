@@ -11,12 +11,11 @@ import {
 	getKnowledgeService,
 } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getKnowledgeWorkerLifecycle } from "../src/knowledge/ui";
 import {
 	configureBackendKnowledgeWorker,
-	getKnowledgeWorkerLifecycle,
-	resolveBackendKnowledgeWorkerResource,
-} from "../src/knowledge/ui";
-import { defaultKnowledgeRuntimeSetup } from "./knowledge-compat-fixture";
+	resolveLegacyKnowledgeWorkerResource,
+} from "./knowledge-compat-fixture";
 
 vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
@@ -52,20 +51,20 @@ beforeEach(async () => {
 	await closeKnowledgeServices();
 	// The backend host is the composition root for packaged Desktop resources;
 	// explicitly re-install it after the extension source module has loaded.
-	configureBackendKnowledgeWorker(defaultKnowledgeRuntimeSetup);
+	configureBackendKnowledgeWorker();
 	// Vitest loads the bundled extension and the direct host entry as separate
 	// module graphs. Configure the direct host entry with the same verified
 	// resource so this regression observes the production worker contract.
 	configureKnowledgeWorker(
 		(_url, options) =>
-			new Worker(pathToFileURL(resolveBackendKnowledgeWorkerResource().path), {
+			new Worker(pathToFileURL(resolveLegacyKnowledgeWorkerResource().path), {
 				...options,
 				workerData: {
 					...(options?.workerData ?? {}),
-					workerResource: resolveBackendKnowledgeWorkerResource().metadata,
+					workerResource: resolveLegacyKnowledgeWorkerResource().metadata,
 				},
 			}),
-		() => resolveBackendKnowledgeWorkerResource().metadata,
+		() => resolveLegacyKnowledgeWorkerResource().metadata,
 	);
 	binding = await (await import("@gyoungwe/pi-knowledge/host")).readKnowledgeBinding();
 });
@@ -78,7 +77,7 @@ afterEach(async () => {
 
 describe("knowledge worker packaged lifecycle", () => {
 	it("loads the shipped worker, drains it, and records bounded lifecycle events", async () => {
-		const resource = resolveBackendKnowledgeWorkerResource(packagedRoot);
+		const resource = resolveLegacyKnowledgeWorkerResource(packagedRoot);
 		expect(resource.metadata.integrity).toBe(
 			createHash("sha256")
 				.update(await readFile(resource.path))
@@ -115,6 +114,6 @@ describe("knowledge worker packaged lifecycle", () => {
 
 	it("rejects a packaged worker whose bytes do not match its build manifest", async () => {
 		await writeFile(join(packagedRoot, "extensions/knowledge-worker.mjs"), "// tampered\n");
-		expect(() => resolveBackendKnowledgeWorkerResource(packagedRoot)).toThrow(/hash mismatch/);
+		expect(() => resolveLegacyKnowledgeWorkerResource(packagedRoot)).toThrow(/hash mismatch/);
 	});
 });
