@@ -1,17 +1,14 @@
 import type { AskResponse, DecisionRecord, TodoItem } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
-import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import { useSessionsStore } from "../../stores/sessions";
 import { EMPTY_TODOS, selectTranscript, useTranscriptStore } from "../../stores/transcript";
-import { TaskRow } from "../chat/TaskRow";
 import { TodoCompleteIcon, TodoPendingIcon, TodoSpinnerIcon } from "../icons";
 import { AskDialog } from "../session/AskDialog";
 import { useAgentActive } from "../session/session-status";
-import { ExampleTaskCards } from "../tasks/ExampleTaskCards";
 import { decisionConfirmationChoice, decisionConfirmationRequest } from "./decision-confirm";
 import { stableEmptyConfirmedIds, stableEmptyDecisions } from "./decision-projection";
 import { RunOverviewCard } from "./RunOverviewCard";
@@ -228,11 +225,10 @@ export function TodoCard() {
 }
 
 /**
- * 「任务」页签：待确认提示 → 任务清单（todo，带进度条）→ 任务契约（最新一份 TaskView 的任务卡）。
+ * 通用总览：权限提示、工具待办和决策记录。领域任务界面由已安装插件贡献。
  * 审批本身仍在输入框位置的 ApprovalDock 决策（一处一事），这里只给指向。
- * 空态给六方向示例卡（只读会话除外）：点击只打开示例对话框，任务仍由 task_plan + 授权卡建立。
  */
-export function TasksPane({
+export function SessionOverviewSections({
 	sessionId,
 	embedded = false,
 	includeDecisions = true,
@@ -248,11 +244,8 @@ export function TasksPane({
 	const pendingCount = useTranscriptStore((s) => selectTranscript(s, sessionId).pendingPermissions.length);
 	const messages = useTranscriptStore((s) => selectTranscript(s, sessionId).messages);
 	const agentActive = useAgentActive(sessionId);
-	const readOnly = useSessionReadOnly();
 	const projectId = useSessionsStore((s) => s.cwd);
-	const latestMessage = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
-	const view = latestMessage?.kind === "assistant" ? latestMessage.taskView : undefined;
-	const empty = todoCount === 0 && !(view && view.tasks.length > 0);
+	const empty = todoCount === 0;
 	const overview = runOverview(messages);
 
 	const content = (
@@ -264,30 +257,6 @@ export function TasksPane({
 			)}
 			<Slot name={UI_SLOTS.TodoPanel} props={{}} fallback={TodoCard} />
 			{includeDecisions && <DecisionsSection projectId={projectId} />}
-			{view && view.tasks.length > 0 && (
-				<section className="panel-card">
-					<header className="flex items-center gap-2">
-						<span className="text-[12px] font-medium text-ink">{t("panel.taskViewTitle")}</span>
-						<span className="text-[11px] tabular-nums text-ink-faint">{view.tasks.length}</span>
-					</header>
-					<div className="mt-1">
-						{view.tasks.slice(0, MAX_PANEL_ROWS).map((task) => (
-							<TaskRow
-								key={task.id}
-								task={task}
-								view={view}
-								sessionId={sessionId}
-								agentActive={agentActive}
-							/>
-						))}
-					</div>
-					{view.tasks.length > MAX_PANEL_ROWS && (
-						<p className="mt-2 text-[11px] text-ink-faint">
-							{t("panel.listTruncated", { count: MAX_PANEL_ROWS })}
-						</p>
-					)}
-				</section>
-			)}
 			{empty &&
 				(messages.length > 0 || agentActive ? (
 					<RunOverviewCard
@@ -301,10 +270,8 @@ export function TasksPane({
 							waiting: t("panel.runOverview.waiting"),
 						}}
 					/>
-				) : readOnly ? (
-					<p className="panel-empty">{t("panel.tasksEmpty")}</p>
 				) : (
-					<ExampleTaskCards />
+					<p className="panel-empty">{t("panel.tasksEmpty")}</p>
 				))}
 		</>
 	);

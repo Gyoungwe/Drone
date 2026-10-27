@@ -6,7 +6,6 @@ import type {
 import type { KnowledgeUiPort, SessionUiPort } from "@gyoungwe/plugin-api/ui";
 import type { ImagePreviewOverlay } from "../components/chat/ImagePreview";
 import type { Markdown } from "../components/chat/Markdown";
-import type { taskArtifactLinks } from "../components/chat/TaskArtifactLinks";
 import type { displayName, summarizeArgs } from "../components/chat/ToolCallCard";
 import type { ChevronDownIcon, ObsidianIcon } from "../components/icons";
 import type { RoadmapLane, roadmapStatus } from "../components/route/Roadmap";
@@ -31,6 +30,7 @@ import type { pushToast } from "../stores/toasts";
 import type { selectTranscript, useTranscriptStore } from "../stores/transcript";
 import type { useUiStore } from "../stores/ui";
 import type { useUiPreferencesStore } from "../stores/ui-preferences";
+import type { taskArtifactLinks } from "./legacy-task-artifacts";
 import type { PluginEntryHost, usePluginEntries } from "./PluginRegions";
 import type { usePluginRuntime } from "./runtime";
 import type { useSessionMessages } from "./session-api";

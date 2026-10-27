@@ -139,17 +139,13 @@ function useTabBadges(sessionId: string | null): TabBadges {
 			if (summary.active > 0) badges.subagents = String(summary.active);
 			if (summary.attention) attention.subagents = true;
 		}
-		const latestTask = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
-		const tasks = latestTask?.kind === "assistant" ? (latestTask.taskView?.tasks ?? []) : [];
 		if (todos.length > 0) {
 			const done = todos.filter((x) => x.status === "completed").length;
 			badges.tasks = `${done}/${todos.length}`;
-		} else if (tasks.length > 0) {
-			badges.tasks = String(tasks.length);
 		}
 		const files = deriveTurnChanges(messages).reduce((sum, tc) => sum + tc.files.length, 0);
 		if (files > 0) badges.process = String(files);
-		const artifacts = mergeKnowledgeArtifacts(flow?.cards || [], tasks, cwd || "");
+		const artifacts = mergeKnowledgeArtifacts(flow?.cards || [], cwd || "");
 		if (artifacts.length > 0) badges.artifacts = String(artifacts.length);
 		return { badges, attention };
 	}, [todos, messages, flow, cwd, runsRecord]);

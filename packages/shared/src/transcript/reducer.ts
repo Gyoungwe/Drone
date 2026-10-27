@@ -463,7 +463,10 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				if (state.messages.some((message) => message.id === report.id)) return state;
 				return {
 					...state,
-					messages: [...state.messages, { kind: "assistant", ...report, thinking: "", tools: [] }],
+					messages: [
+						...state.messages,
+						{ kind: "assistant", ...report, hostStatus: true, thinking: "", tools: [] },
+					],
 				};
 			}
 			const route = turnRouteDisplay(event.message);
