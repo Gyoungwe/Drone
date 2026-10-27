@@ -40,6 +40,14 @@ export interface ResearchWriteServiceOptions {
 	readonly adapters: ResearchWriteAdapterRegistryPort;
 }
 
+/** Empty host-owned registry used when no external write plugin is installed. */
+export function createUnavailableResearchWriteRegistry(): ResearchWriteAdapterRegistryPort {
+	return {
+		descriptors: () => [],
+		get: () => undefined,
+	};
+}
+
 function auditId(planId: string, status: string): string {
 	return `research-write-audit-${createHash("sha256").update(`${planId}:${status}:${Date.now()}`).digest("hex").slice(0, 24)}`;
 }

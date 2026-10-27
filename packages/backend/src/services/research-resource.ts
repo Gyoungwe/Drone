@@ -53,6 +53,38 @@ export interface ResearchConnectorRegistryPort {
 	search(input: ResearchSearchRequest, context?: ResearchConnectorContext): Promise<ResearchSearchResponse>;
 }
 
+/** Empty host-owned registry used when no connector plugin is installed. */
+export function createUnavailableResearchConnectorRegistry(): ResearchConnectorRegistryPort {
+	return {
+		list: () => [],
+		recommend: async (_seed, connectorId) => ({
+			hits: [],
+			failures: [
+				{
+					connectorId,
+					message: "Research connector plugin is unavailable",
+					retryable: false,
+					at: new Date().toISOString(),
+				},
+			],
+		}),
+		search: async (input) => ({
+			query: input.query,
+			hits: [],
+			failures: [
+				{
+					connectorId: input.connectorIds?.[0] ?? "research",
+					message: "Research connector plugin is unavailable",
+					retryable: false,
+					at: new Date().toISOString(),
+				},
+			],
+			connectors: [...(input.connectorIds ?? [])],
+			complete: false,
+		}),
+	};
+}
+
 const TEXT_EXTENSIONS = new Set([
 	".txt",
 	".md",

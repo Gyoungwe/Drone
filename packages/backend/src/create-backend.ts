@@ -109,19 +109,22 @@ import { LocalExecutionRecorder } from "./services/local-execution";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
-import { createDefaultResearchConnectorRegistry } from "./services/research-connector-compat";
 import {
 	createResearchConnectorRegistryFromHost,
 	createResearchWriteAdapterRegistryFromHost,
 } from "./services/research-host-adapters";
-import type { ResearchConnectorRegistryPort } from "./services/research-resource";
 import {
+	createUnavailableResearchConnectorRegistry,
 	emptyCaptureLedger,
 	emptyResearchConnectorSettings,
+	type ResearchConnectorRegistryPort,
 	ResearchResourceService,
 } from "./services/research-resource";
-import { createEmptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
-import { createDefaultResearchWriteRegistry } from "./services/research-write-compat";
+import {
+	createEmptyResearchWriteLedger,
+	createUnavailableResearchWriteRegistry,
+	ResearchWriteService,
+} from "./services/research-write";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
@@ -476,7 +479,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			options.researchWriteAdapterRegistry?.() ??
 			(options.researchWriteAdapterHostLoader
 				? createResearchWriteAdapterRegistryFromHost(options.researchWriteAdapterHostLoader)
-				: createDefaultResearchWriteRegistry()),
+				: createUnavailableResearchWriteRegistry()),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "writes.json"),
 			storageId: "agent-research-writes",
@@ -488,7 +491,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			explicitResearchConnectorRegistry ??
 			(researchConnectorHostLoader
 				? createResearchConnectorRegistryFromHost(researchConnectorHostLoader)
-				: createDefaultResearchConnectorRegistry()),
+				: createUnavailableResearchConnectorRegistry()),
 		knowledgeOperations: createKnowledgeResearchResourceOperations(knowledgeHost, knowledgeCompatibility),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "captures.json"),
