@@ -57,7 +57,7 @@ P0 权限执行切片、plugin-api v1 合同治理与当前进程沙箱实现见
 2026-10-25 知识/研究插件 npm 正式发布与发布后验收见 [发布记录](releases/knowledge-research-npm-2026-10-25.md) 和 [机器回执](releases/knowledge-research-npm-2026-10-25.json)。三个目标包已公开，下方版本快照同步更新。
 2026-10-26 的公开包、在线两场景研究复核（累计七次真实会话）和 PDF 修复进展见 [剩余验收](releases/remaining-closure-2026-10-26.md)；未完成的账户与其他平台验收保留状态。非聊天页面资源预览由 `renderer/src/components/diff/PageResourcePreview.tsx` 挂载，复用现有资源读者；研究聚合包原生 PDF Canvas 安装检查归插件 `research-suite test:pdf`。
 知识整页所有权迁移（方案 1）候选已合入双仓库 main，合并后门禁与此前正式 macOS 安装包验收均通过，见 [验收证据](pluginization/knowledge-page-closure-evidence.md)；实施见 [实施计划](superpowers/plans/2026-10-25-knowledge-page-closure.md) 与 [已确认设计](superpowers/specs/2026-10-25-knowledge-page-closure-design.md)。宿主 `components/knowledge/` 只保留挂载、绑定状态回退及事件桥；完整界面、组件回归、文案与样式移入插件仓库的 UI 包，保留 Git 历史。公开 `KnowledgeUiPort` / `KnowledgeUiBindings` / `KnowledgeSurfaceProps` 位于 `packages/plugin-api/src/ui.ts`；`ui-wire.ts` 由 `scripts/generate-knowledge-ui-contract.mjs` 按 `packages/plugin-api/scripts/knowledge-ui-contract.json` 的有限清单生成并校验。宿主适配在 `renderer/src/plugins/knowledge-api.ts`，嵌入区为 `knowledge.surface`；无插件及停用恢复回归见 `KnowledgeView.test.tsx`。
-原生 Pi 的任务文件回读适配见 `packages/pi-core/src/native-task-readback.ts` 与 `test/native-task-readback.test.mjs`；它复用所属会话当前批准的产物范围，Desktop 仍使用现有权限引擎。公开 core 0.1.9 与 suite 0.1.11 的干净安装及实际双 SDK 会话通过；发布后 UI 0.2.0 正式安装包验收见上述剩余验收；未选项目 PDF 修复及新安装包验证见[专项证据](releases/projectless-resource-preview-2026-10-26.md)。空项目资源参数合同位于 `shared/src/host-api/app.ts`，preload→主进程校验→文件读取回归见 `desktop/src/preload/file-preview-contract.test.ts`，不改变文件 confinement 规则。
+原生 Pi 的任务文件回读适配已迁至插件仓库 `packages/pi-core/src/native-task-readback.ts` 与同包测试；它复用所属会话当前批准的产物范围，Desktop 仍使用现有权限引擎。公开 core 0.1.9 与 suite 0.1.11 的历史干净安装及双 SDK 会话证据保留；本轮 core 0.2.0 属源码锁候选，宿主不再保留或构建旧 `packages/pi-core/`。发布后 UI 0.2.0 正式安装包验收见上述剩余验收；未选项目 PDF 修复及新安装包验证见[专项证据](releases/projectless-resource-preview-2026-10-26.md)。空项目资源参数合同位于 `shared/src/host-api/app.ts`，preload→主进程校验→文件读取回归见 `desktop/src/preload/file-preview-contract.test.ts`，不改变文件 confinement 规则。
 
 知识库分类由插件 `src/core/note-category.ts` 统一决定；worker 计数与最近分组共享规则。插件知识 UI 的最近标签读取分组结果，路径推断只用于已有搜索/图投影；回归见 `../drone-plugins/packages/pi-knowledge/test/category.integration.test.ts` 和 `../drone-plugins/packages/desktop-ui-pack/ui/knowledge/KnowledgeHome.test.ts`。
 跨 bundle 的知识阅读器回归见 `packages/backend/test/knowledge-host-ui-reading.test.mjs`，backend 显式配置工作区读取端口。任务门禁的会话工具清单隔离回归见 `packages/backend/test/task-manifest-session.test.mjs`；SDK 回调的只读判定由 `packages/tasks/src/runtime/register.ts` 绑定所属宿主，避免跨轮只读操作误触重复写入门禁。
@@ -237,7 +237,7 @@ packages/
 
 ## packages/tasks — 任务领域包（迁移中）
 
-`@drone/tasks` 的 canonical runtime 位于 `src/runtime/*.ts`，并由 `scripts/build-runtime.mjs` 生成并提交 `src/runtime-compiled/*.mjs`；其中 workbench、register、acceptance、授权、方案提案卡、PDF worker、tool manifest 与 runtime bridge 通过 host ports 接入。`npm run build:tasks` 只检查旧目录残留，运行时由 package-owned artifacts 提供。
+`@drone/tasks` 的剩余 runtime 位于 `src/runtime/*.ts`，由 `scripts/build-runtime.mjs` 生成并提交 `src/runtime-compiled/*.mjs`；workbench、register、acceptance、授权、方案提案卡、PDF worker、tool manifest 与 runtime bridge 尚未整体迁走。milestone 规范化规则已由插件 `pi-core/src/milestone-plan.ts` 拥有，宿主经已安装 task host 调用；缺插件不回退到旧规则。旧 guard 的基本工具阻断仍待迁移，完整 P4 未关闭。
 
 ## packages/research — 宿主研究合同与知识桥
 
@@ -266,13 +266,15 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`pi-knowledge` 的源码权威版本位于 `drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`）。公开 npm 版本仍为 0.2.1；当前宿主源码锁固定 `11154ae` 的 0.3.0 候选，记录可复现 tarball SHA-256。插件负责 manifest、host 声明、native extension、worker 和 maintenance；`src/core/maintenance-topic.ts` 负责绑定 revision、canonical/mirror CAS 更新与回读。Drone 负责端口、IPC、挂载/回退和资源验收。已发布完整界面来自 `desktop-ui-pack@0.2.0`；同包 `pi-knowledge/ui/`、`src/runtime/` 与 `src/desktop/` 位于另一条原生架构分支，本轮正在隔离工作树整合，不能当作当前锁定候选已含完整 UI。其余迁移按 P2 跟踪。task 工具由 `@gyoungwe/pi-core` 独占。
+`pi-knowledge` 的源码权威版本位于 `drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`）。公开 npm 版本仍为 0.2.1；当前宿主源码锁固定 `1d349f0` 的 0.3.0 候选，记录可复现 tarball SHA-256。插件负责 manifest、host 声明、native extension、worker 和 maintenance；`src/core/maintenance-topic.ts` 负责绑定 revision、canonical/mirror CAS 更新与回读。保留双方历史的整合已恢复同包 `ui/`、`src/native/` 和 `src/desktop/`；完整 hooks 共享 owner、undo、surfaces 与正式安装包 GUI 继续按 P2 跟踪，不因包构建通过而完成。Drone 暂保留端口、IPC、挂载/回退和旧资源装配。
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 
-## packages/pi-core — 原生 Pi 核心插件（PR-6）
+## 外置 pi-core — 原生 Pi 核心插件
 
-`packages/pi-core/` 是可独立安装的任务与回执插件：组装 `@drone/tasks` runtime，并提供 `ask_user`、`set_status`、`todo`、`deliver_files`、`memory_save` 五个可移植工具，以及只读 onboarding 命令 `/drone-doctor`、`/drone-example`。工具实现、项目记忆持久化和路径规整均由该包拥有；backend 直接消费版本化 `/host` 入口，不再保留 `tools/*` 或 `project/memory.ts` 兼容 facade，Desktop 继续注入既有 ask gate。原生 Pi 通过 `ctx.ui` 提供询问与授权，宿主差异收敛在 `PiCoreHostPort`（host/capabilities/requestAuthorization）。`scripts/build-pi-core.mjs` 生成自包含 dist 并拒绝 Electron/backend/Desktop 或越界导入，`scripts/smoke-pi-core.mjs` 和包内 registration test 覆盖安装前的工具清单与 native host adapter；命令合同和状态机见 [插件化计划 §7](final-pluginization-plan.md#7-安装和首次使用)。
+插件仓库 `packages/pi-core/` 拥有工具、项目记忆、native runtime 和 milestone 校验；host loader 通过公开 client 合同接入。宿主旧源码和重复测试已删除，插件仓库保留原历史、同名测试及严格干净消费者 tsc。`scripts/build-pi-core.mjs` 现在只验证源码锁、fetch receipt、产物哈希与公开声明；`scripts/smoke-pi-core.mjs`、`scripts/check-pi-compat.mjs` 消费 `vendor/plugins/pi-core/`，不再构建宿主副本。`scripts/check-core-artifact.test.mjs` 验证无旧源码的锁定产物边界；backend 的真实 tarball 回归位于 `test/installed-task-host.test.mjs`。公开 0.1.9 仅用于 npm-ci bootstrap，本轮源码锁候选为 0.2.0。
+
+Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain/`，宿主 `backend/src/discovery/service.ts` 仅注入授权、惰性 container runner、原子 JsonStore、runs 文件边界和项目绑定 Inquiry。无插件不登记 discovery 存储；旧共享 journal 保持字节并报告 unassigned，不自动冒认项目。候选目前只有 Desktop host 入口，原生工具、真实容器和完整 B5 GUI 仍未完成。
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 
