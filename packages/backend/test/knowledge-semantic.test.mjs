@@ -199,7 +199,7 @@ describe("semantic HTTP adapter", () => {
 describe("semantic settings concurrency and safety", () => {
 	it("allows only one concurrent compare-and-swap save and rejects a symlink", async () => {
 		const configured = await configureObsidian({ cwd, vault, project: "project-a" });
-		const service = new KnowledgeService(await readKnowledgeBinding(), app);
+		const service = new KnowledgeService(await readKnowledgeBinding());
 		try {
 			const input = { provider: "ollama", baseUrl: "http://127.0.0.1:9", model: "m", enabled: false };
 			const saves = await Promise.allSettled([
@@ -279,7 +279,7 @@ describe("worker-owned hybrid retrieval", () => {
 			i === 30 ? "MATCHED_POLLEN_BEHAVIOR evidence" : `line-${i} ${"x".repeat(24)}`,
 		).join("\n");
 		await note("Library/Papers/chunked.md", `# Chunked\n${lines}`);
-		const service = new KnowledgeService(await readKnowledgeBinding(), app);
+		const service = new KnowledgeService(await readKnowledgeBinding());
 		try {
 			await service.request("reconcile");
 			const fingerprint = "hydrate-regression";
@@ -319,7 +319,7 @@ describe("worker-owned hybrid retrieval", () => {
 		await configureObsidian({ cwd, vault, project: "project-a" });
 		await note("Library/Papers/lexical.md", "# butterfly\nlexical butterfly evidence");
 		await note("Library/Papers/semantic.md", "# synonym\nsemantic-only evidence");
-		const service = new KnowledgeService(await readKnowledgeBinding(), app, {
+		const service = new KnowledgeService(await readKnowledgeBinding(), {
 			semanticCandidateProvider: async () => [
 				{ path: "Library/Papers/lexical.md", score: 1 },
 				{ path: "Library/Papers/semantic.md", score: 0.9 },
@@ -343,7 +343,7 @@ describe("worker-owned hybrid retrieval", () => {
 		await configureObsidian({ cwd, vault, project: "project-a" });
 		await note("Library/Papers/current.md", "# Current\nsource");
 		await note("Projects/project-b/Evidence/private.md", "# Private\nsource");
-		const service = new KnowledgeService(await readKnowledgeBinding(), app);
+		const service = new KnowledgeService(await readKnowledgeBinding());
 		try {
 			await service.request("reconcile");
 			const batch = await service.request("semanticBatch", {
@@ -403,7 +403,7 @@ describe("worker-owned hybrid retrieval", () => {
 		await note("Library/Papers/synonym.md", "# Lepidoptera\nButterfly synonym evidence.");
 		const fake = await fakeEmbeddings();
 		if (!fake) return;
-		const service = new KnowledgeService(await readKnowledgeBinding(), app);
+		const service = new KnowledgeService(await readKnowledgeBinding());
 		try {
 			const initial = await service.getSemanticSettings();
 			expect(initial.enabled).toBe(false);

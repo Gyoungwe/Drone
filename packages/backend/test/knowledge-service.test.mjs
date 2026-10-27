@@ -624,7 +624,7 @@ describe("optional semantic candidate retrieval", () => {
 			"# Mechanosensory escape circuit\n\nThis note intentionally omits the lexical query token.\n",
 		);
 		const binding = await readKnowledgeBinding();
-		const semantic = new KnowledgeService(binding, app, {
+		const semantic = new KnowledgeService(binding, {
 			semanticCandidateProvider: async ({ query }) =>
 				query === "nomatchinguniquetoken" ? [{ path: "Library/Papers/semantic-only.md", score: 0.98 }] : [],
 		});
