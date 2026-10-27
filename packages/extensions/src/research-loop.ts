@@ -6,8 +6,9 @@ import {
 	registerResearchExtension,
 	sourceArchive,
 } from "@gyoungwe/pi-research/host";
+import { reviewResearchSummary } from "./internal/research-summary-review";
 import { bindExtensionRuntime, runExtensionExclusive } from "./internal/runtime";
-import { loadWorkspaceConfig } from "./workspace-config";
+import { loadWorkspaceConfig, registerResearchSummaryTool } from "./workspace-config";
 
 /** Desktop composition: workspace binding and task scheduling remain host-owned. */
 export default function researchLoop(pi: any): void {
@@ -22,6 +23,7 @@ export default function researchLoop(pi: any): void {
 			resolveWorkspaceProject({ cwd: ctx.cwd, sessionEntries: sessionEntriesOf(ctx), requested }),
 		describeProject,
 		registerTool,
+		reviewSummary: reviewResearchSummary,
 		run: (operation) => runExtensionExclusive(pi, "research-loop", operation),
 		verifyLiteratureReceipt: (input) => literatureReceipt.verifyLiteratureReceipt(input as any),
 		sourceStatus: (input) =>
@@ -33,5 +35,6 @@ export default function researchLoop(pi: any): void {
 				exclusive,
 			}),
 	};
-	registerResearchExtension(pi, ports);
+	const delivery = registerResearchExtension(pi, ports);
+	if (delivery) registerResearchSummaryTool(pi, delivery);
 }
