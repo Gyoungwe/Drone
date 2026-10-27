@@ -36,12 +36,7 @@
 			"logSha256": "f4b011f84b68621fc1d877cccdbde48ae5dff6a6a33be959d559f1294aa53c88"
 		},
 		{
-			"command": [
-				"git",
-				"checkout",
-				"--detach",
-				"74fe57e27491750279ca66010ab03f18da8a0072"
-			],
+			"command": ["git", "checkout", "--detach", "74fe57e27491750279ca66010ab03f18da8a0072"],
 			"startedAt": "2026-10-27T14:44:41.612Z",
 			"finishedAt": "2026-10-27T14:44:42.179Z",
 			"exitCode": 0,
@@ -50,12 +45,7 @@
 			"logSha256": "0cc88887ca935dbfacc0dd93ed79774d2b1051e81f9f3ab7e70b170592a21163"
 		},
 		{
-			"command": [
-				"npm",
-				"ci",
-				"--no-audit",
-				"--no-fund"
-			],
+			"command": ["npm", "ci", "--no-audit", "--no-fund"],
 			"startedAt": "2026-10-27T14:44:42.180Z",
 			"finishedAt": "2026-10-27T14:45:01.446Z",
 			"exitCode": 0,
@@ -64,11 +54,7 @@
 			"logSha256": "3a2c6ea9e3bfc584b531671a138f8673dab8c8c990279e88e4d6bd925498e9c4"
 		},
 		{
-			"command": [
-				"npm",
-				"run",
-				"lint"
-			],
+			"command": ["npm", "run", "lint"],
 			"startedAt": "2026-10-27T14:45:01.447Z",
 			"finishedAt": "2026-10-27T14:45:03.568Z",
 			"exitCode": 0,
@@ -77,11 +63,7 @@
 			"logSha256": "ab6e84f14a3b35e1c3a1a26f240acb864aebdf9e6fdaa5748bb35d0b2a9a6221"
 		},
 		{
-			"command": [
-				"npm",
-				"run",
-				"typecheck"
-			],
+			"command": ["npm", "run", "typecheck"],
 			"startedAt": "2026-10-27T14:45:03.568Z",
 			"finishedAt": "2026-10-27T14:46:42.793Z",
 			"exitCode": 0,
@@ -90,11 +72,7 @@
 			"logSha256": "3ac9ed78239cd46d152b9756254144133cac00ecb8eacfc88d7601bf904ef710"
 		},
 		{
-			"command": [
-				"npm",
-				"run",
-				"test"
-			],
+			"command": ["npm", "run", "test"],
 			"startedAt": "2026-10-27T14:46:42.794Z",
 			"finishedAt": "2026-10-27T14:49:29.064Z",
 			"exitCode": 1,
@@ -104,11 +82,7 @@
 		},
 		{
 			"commit": "c29c5037f736f7001c7aa1f24fd216c3ae3b435c",
-			"command": [
-				"npm",
-				"run",
-				"lint"
-			],
+			"command": ["npm", "run", "lint"],
 			"startedAt": "2026-10-27T14:54:17.385Z",
 			"finishedAt": "2026-10-27T14:54:18.899Z",
 			"exitCode": 0,
@@ -117,11 +91,7 @@
 		},
 		{
 			"commit": "c29c5037f736f7001c7aa1f24fd216c3ae3b435c",
-			"command": [
-				"npm",
-				"run",
-				"typecheck"
-			],
+			"command": ["npm", "run", "typecheck"],
 			"startedAt": "2026-10-27T14:54:18.901Z",
 			"finishedAt": "2026-10-27T14:54:28.800Z",
 			"exitCode": 1,
@@ -130,11 +100,7 @@
 		},
 		{
 			"commit": "c29c5037f736f7001c7aa1f24fd216c3ae3b435c",
-			"command": [
-				"npm",
-				"run",
-				"typecheck"
-			],
+			"command": ["npm", "run", "typecheck"],
 			"startedAt": "2026-10-27T14:55:38.535Z",
 			"finishedAt": "2026-10-27T14:57:19.849Z",
 			"exitCode": 0,
@@ -143,11 +109,7 @@
 		},
 		{
 			"commit": "c29c5037f736f7001c7aa1f24fd216c3ae3b435c",
-			"command": [
-				"npm",
-				"run",
-				"test"
-			],
+			"command": ["npm", "run", "test"],
 			"startedAt": "2026-10-27T14:57:19.851Z",
 			"finishedAt": "2026-10-27T15:00:59.213Z",
 			"exitCode": 0,
@@ -156,11 +118,7 @@
 		},
 		{
 			"commit": "c29c5037f736f7001c7aa1f24fd216c3ae3b435c",
-			"command": [
-				"npm",
-				"run",
-				"build"
-			],
+			"command": ["npm", "run", "build"],
 			"startedAt": "2026-10-27T15:00:59.214Z",
 			"finishedAt": "2026-10-27T15:02:59.961Z",
 			"exitCode": 0,
@@ -169,11 +127,7 @@
 		},
 		{
 			"commit": "c29c5037f736f7001c7aa1f24fd216c3ae3b435c",
-			"command": [
-				"npm",
-				"run",
-				"check:arch"
-			],
+			"command": ["npm", "run", "check:arch"],
 			"startedAt": "2026-10-27T15:02:59.962Z",
 			"finishedAt": "2026-10-27T15:03:01.056Z",
 			"exitCode": 0,
@@ -182,11 +136,7 @@
 		},
 		{
 			"commit": "c29c5037f736f7001c7aa1f24fd216c3ae3b435c",
-			"command": [
-				"npm",
-				"run",
-				"check:plugin-api"
-			],
+			"command": ["npm", "run", "check:plugin-api"],
 			"startedAt": "2026-10-27T15:03:01.057Z",
 			"finishedAt": "2026-10-27T15:03:12.244Z",
 			"exitCode": 0,
