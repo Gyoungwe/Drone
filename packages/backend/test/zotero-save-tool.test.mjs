@@ -5,10 +5,10 @@ import { startResearchRun } from "@drone/extensions/research-host";
 import sourceArchive from "@drone/extensions/source-archive";
 import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
 import zoteroLiterature from "@drone/extensions/zotero-literature";
-import { createTaskWorkbench, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { beginKnowledgeFlow, flowFor, noteKnowledgeOperation } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { detectCapabilities, isReadOnlyLibraryTool, toolCapabilities } from "../src/capabilities/runtime";
+import { createTaskWorkbench, WORKBENCH_ENTRY } from "./fixtures/task-plugin.mjs";
 
 const DOI = "10.1234/example.2024";
 const ITEM = {

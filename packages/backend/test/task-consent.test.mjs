@@ -2,9 +2,8 @@ import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveWriteRoots } from "@drone/tasks/consent";
-import { registerWorkbench } from "@drone/tasks/register";
-import { createTaskWorkbench, LIMITS, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { afterEach, expect, it, vi } from "vitest";
+import { createTaskWorkbench, LIMITS, registerWorkbench, WORKBENCH_ENTRY } from "./fixtures/task-plugin.mjs";
 
 const dirs = [];
 afterEach(async () => {

@@ -1,5 +1,5 @@
-import { createTaskWorkbench } from "@drone/tasks/workbench";
 import { expect, it } from "vitest";
+import { createTaskWorkbench } from "./fixtures/task-plugin.mjs";
 
 // 会话 01a1172e：单个里程碑 id "dhx16_plot" 曾被报成 "Milestone IDs must be unique."，模型连续重试 4 次。
 const ms = (...ids) =>

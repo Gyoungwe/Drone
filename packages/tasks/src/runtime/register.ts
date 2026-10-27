@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import type { TaskMilestoneNormalizer } from "@gyoungwe/plugin-api/tasks";
 import { acceptanceSchema } from "./acceptance";
 import { createTaskAuthorization } from "./ask-authorization";
 import { resolveWriteRoots } from "./consent";
@@ -26,6 +27,7 @@ export function registerWorkbench(
 	pi: any,
 	options: {
 		readKnowledgeBinding?: () => Promise<{ vaultId: string; revision: number; vault?: string } | null>;
+		normalizeMilestones?: TaskMilestoneNormalizer;
 	} = {},
 ) {
 	let context: any,
@@ -105,6 +107,7 @@ export function registerWorkbench(
 	};
 	let journal: any = createTaskWorkbench({
 		requireAuthorization: true,
+		...(options.normalizeMilestones ? { normalizeMilestones: options.normalizeMilestones } : {}),
 		// Resolve the effective SDK registration in this session on every call.
 		// Native adapters publish an explicit false for write/unknown effects, which
 		// must override any older same-name manifest. Unannotated v1 tools still

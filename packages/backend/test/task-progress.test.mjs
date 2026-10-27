@@ -1,8 +1,8 @@
 import { createTaskAuthorization } from "@drone/tasks/ask-authorization";
 import { createTaskProgression } from "@drone/tasks/progress-action-runtime";
 import { remainingExplanation } from "@drone/tasks/remaining";
-import { createTaskWorkbench } from "@drone/tasks/workbench";
 import { expect, it, vi } from "vitest";
+import { createTaskWorkbench } from "./fixtures/task-plugin.mjs";
 
 function fixture(approved = true, kind = "file") {
 	const j = createTaskWorkbench({

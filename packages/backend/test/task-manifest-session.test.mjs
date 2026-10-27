@@ -3,12 +3,12 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { registerTaskRuntime } from "@drone/tasks/runtime";
 import { createStandaloneRuntime, withRuntime } from "@drone/tasks/runtime-bridge";
 import { isReadOnlyTool } from "@drone/tasks/tool-manifest-runtime";
 import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { build } from "esbuild";
 import { afterEach, expect, it, vi } from "vitest";
+import { registerTaskRuntime } from "./fixtures/task-plugin.mjs";
 
 const runtimes = [];
 const directories = [];

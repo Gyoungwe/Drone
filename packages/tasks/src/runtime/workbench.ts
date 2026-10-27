@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, open, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import type { TaskMilestoneNormalizer } from "@gyoungwe/plugin-api/tasks";
 import {
 	acceptanceKinds,
 	CORE_ACCEPTANCE_KINDS,
 	effectiveAcceptance,
-	normalizeAcceptance,
 	acceptanceVerifier as registeredVerifier,
 	acceptanceVerifiers as registeredVerifiers,
 } from "./acceptance";
@@ -14,10 +14,18 @@ import { failureObservation, failureReceipt, toolResultFailed } from "./failure-
 import { bilingual } from "./host-language";
 import { readPdfIdentity } from "./pdf-identity";
 import { remainingExplanation } from "./remaining";
+import { runtimeSlot } from "./runtime-bridge";
 import { isReadOnlyTool } from "./tool-manifest";
 
-/** MCP configuration files: writing them is setup, never evidence that MCP tools loaded or ran. */
-const MCP_CONFIG_FILE = /(?:^|[\\/])(?:\.?mcp|mcp-adapter)\.json$/i;
+const taskWorkbench = runtimeSlot<{ normalizeMilestones?: TaskMilestoneNormalizer }>(
+	"tasks",
+	"workbench",
+	() => ({}),
+);
+const installedMilestoneNormalizer: TaskMilestoneNormalizer = (input, catalog) => {
+	if (!taskWorkbench.normalizeMilestones) throw new Error("Task milestone planning plugin is unavailable");
+	return taskWorkbench.normalizeMilestones(input, catalog);
+};
 
 export const WORKBENCH_ENTRY = "drone-task-workbench-v2";
 export const LIMITS = Object.freeze({
@@ -207,6 +215,7 @@ export function createTaskWorkbench({
 	requireAuthorization = false,
 	// The host supplies its session-bound manifest; standalone callers use the active runtime.
 	readOnly = isReadOnlyTool,
+	normalizeMilestones = installedMilestoneNormalizer,
 }: any = {}) {
 	const verifierFor = (kind) => {
 		if (verifiers && Object.hasOwn(verifiers, kind))
@@ -459,46 +468,10 @@ export function createTaskWorkbench({
 	function plan(input) {
 		// task_plan is the only entry point that may open a task, so a turn that never plans stays task-free.
 		if (book.selectionRequired) throw error("task-selection-required", "Select a task first.");
-		if (
-			!Array.isArray(input.milestones) ||
-			!input.milestones.length ||
-			input.milestones.length > LIMITS.milestones
-		)
-			throw error("plan-limit", "Plan needs 1–24 milestones.");
-		const badId = input.milestones.find((m) => !/^[a-zA-Z0-9_-]{1,40}$/.test(String(m.id)));
-		if (badId)
-			throw error(
-				"plan-id-format",
-				`Milestone ID ${JSON.stringify(String(badId.id).slice(0, 60))} is invalid: use 1–40 letters, digits, "-" or "_".`,
-			);
-		const ids = new Set(input.milestones.map((m) => m.id));
-		if (ids.size !== input.milestones.length) throw error("plan-id", "Milestone IDs must be unique.");
-		const seen = new Set();
-		const milestones = input.milestones.map((m) => {
-			if ((m.dependsOn || []).some((id) => !seen.has(id)))
-				throw error(
-					"plan-dependency",
-					"Dependencies must refer to earlier milestones, not cycles or missing IDs.",
-				);
-			if (!knownKinds().has(m.acceptance?.kind))
-				throw error(
-					"acceptance-required",
-					`Acceptance must be one of ${[...knownKinds()].join(" | ")} (observed by the host or confirmed by the user); model labels cannot complete it.`,
-				);
-			if (m.acceptance.kind === "file" && MCP_CONFIG_FILE.test(String(m.acceptance.path || "")))
-				throw error(
-					"acceptance-config-write",
-					"Writing an MCP config file (mcp.json) does not load MCP tools, so it cannot complete a milestone. Use human_review, or finish only after the mcp tool actually ran in a reloaded session; if no MCP tools are available, tell the user instead.",
-				);
-			seen.add(m.id);
-			return {
-				id: m.id,
-				title: clean(m.title),
-				dependsOn: [...(m.dependsOn || [])],
-				acceptance: normalizeAcceptance(m.acceptance, clean, { get: verifierFor }),
-				state: "pending",
-				evidence: null,
-			};
+		const kinds = [...knownKinds()];
+		const milestones = normalizeMilestones(input.milestones, {
+			kinds,
+			fields: Object.fromEntries(kinds.map((kind) => [kind, verifierFor(kind)?.fields || []])),
 		});
 		// Validate the contract before opening or switching tasks; failed proposals
 		// must not leave empty tasks or mutate the previous checkpoint.

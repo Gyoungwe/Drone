@@ -1,5 +1,5 @@
-import { createTaskWorkbench } from "@drone/tasks/workbench";
 import { afterEach, expect, it } from "vitest";
+import { createTaskWorkbench } from "./fixtures/task-plugin.mjs";
 
 // 宿主拦截文案进入工具卡片：中文界面先给中文说明，英文契约原文保留（模型与 process-lanes 依赖它）。
 const saved = process.env.DRONE_REPLY_LANGUAGE;

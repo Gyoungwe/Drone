@@ -1,5 +1,5 @@
-import { createTaskWorkbench } from "@drone/tasks/workbench";
 import { expect, it } from "vitest";
+import { createTaskWorkbench } from "./fixtures/task-plugin.mjs";
 
 // 会话 01a11779：浏览器 MCP 没加载，模型改写 packages/desktop/.pi/mcp.json 后把「写配置」当作验收完成。
 function plan(path) {

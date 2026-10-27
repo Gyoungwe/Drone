@@ -80,6 +80,7 @@ function registerWorkbench(pi, options = {}) {
   };
   let journal = createTaskWorkbench({
     requireAuthorization: true,
+    ...options.normalizeMilestones ? { normalizeMilestones: options.normalizeMilestones } : {},
     // Resolve the effective SDK registration in this session on every call.
     // Native adapters publish an explicit false for write/unknown effects, which
     // must override any older same-name manifest. Unannotated v1 tools still

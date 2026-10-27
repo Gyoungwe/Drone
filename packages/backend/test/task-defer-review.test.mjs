@@ -1,5 +1,5 @@
-import { createTaskWorkbench, LIMITS } from "@drone/tasks/workbench";
 import { expect, it } from "vitest";
+import { createTaskWorkbench, LIMITS } from "./fixtures/task-plugin.mjs";
 
 function setup() {
 	const j = createTaskWorkbench({ requireAuthorization: true, persist: () => undefined });

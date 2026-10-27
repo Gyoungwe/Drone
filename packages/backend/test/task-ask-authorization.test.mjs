@@ -1,8 +1,8 @@
 import { createTaskAuthorization } from "@drone/tasks/ask-authorization";
-import { createTaskWorkbench, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { expect, it, vi } from "vitest";
 import { AskGate } from "../src/session/ask-gate";
 import { makeUiContext } from "../src/session/ui-context";
+import { createTaskWorkbench, WORKBENCH_ENTRY } from "./fixtures/task-plugin.mjs";
 
 function fixture(compute) {
 	const journal = createTaskWorkbench({ requireAuthorization: true });

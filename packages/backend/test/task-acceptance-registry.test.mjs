@@ -13,10 +13,10 @@ import {
 	registerAcceptanceVerifier,
 	resetAcceptanceVerifiers,
 } from "@drone/tasks/acceptance";
-import { registerTaskRuntime } from "@drone/tasks/runtime";
 import { validateToolArguments } from "@earendil-works/pi-ai";
 import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
+import { registerTaskRuntime } from "./fixtures/task-plugin.mjs";
 
 /** 只捕获 registerTool、其余 API 全部 no-op 的 pi 桩。 */
 function stubPi(tools = new Map()) {

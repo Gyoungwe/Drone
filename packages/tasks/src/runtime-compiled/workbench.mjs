@@ -5,7 +5,6 @@ import {
   acceptanceKinds,
   CORE_ACCEPTANCE_KINDS,
   effectiveAcceptance,
-  normalizeAcceptance,
   acceptanceVerifier as registeredVerifier,
   acceptanceVerifiers as registeredVerifiers
 } from "./acceptance.mjs";
@@ -14,8 +13,17 @@ import { failureObservation, failureReceipt, toolResultFailed } from "./failure-
 import { bilingual } from "./host-language.mjs";
 import { readPdfIdentity } from "./pdf-identity.mjs";
 import { remainingExplanation } from "./remaining.mjs";
+import { runtimeSlot } from "./runtime-bridge.mjs";
 import { isReadOnlyTool } from "./tool-manifest.mjs";
-const MCP_CONFIG_FILE = /(?:^|[\\/])(?:\.?mcp|mcp-adapter)\.json$/i;
+const taskWorkbench = runtimeSlot(
+  "tasks",
+  "workbench",
+  () => ({})
+);
+const installedMilestoneNormalizer = (input, catalog) => {
+  if (!taskWorkbench.normalizeMilestones) throw new Error("Task milestone planning plugin is unavailable");
+  return taskWorkbench.normalizeMilestones(input, catalog);
+};
 const WORKBENCH_ENTRY = "drone-task-workbench-v2";
 const LIMITS = Object.freeze({
   tasks: 12,
@@ -155,7 +163,8 @@ function createTaskWorkbench({
   },
   requireAuthorization = false,
   // The host supplies its session-bound manifest; standalone callers use the active runtime.
-  readOnly = isReadOnlyTool
+  readOnly = isReadOnlyTool,
+  normalizeMilestones = installedMilestoneNormalizer
 } = {}) {
   const verifierFor = (kind) => {
     if (verifiers && Object.hasOwn(verifiers, kind))
@@ -360,42 +369,10 @@ function createTaskWorkbench({
   }
   function plan(input) {
     if (book.selectionRequired) throw error("task-selection-required", "Select a task first.");
-    if (!Array.isArray(input.milestones) || !input.milestones.length || input.milestones.length > LIMITS.milestones)
-      throw error("plan-limit", "Plan needs 1\u201324 milestones.");
-    const badId = input.milestones.find((m) => !/^[a-zA-Z0-9_-]{1,40}$/.test(String(m.id)));
-    if (badId)
-      throw error(
-        "plan-id-format",
-        `Milestone ID ${JSON.stringify(String(badId.id).slice(0, 60))} is invalid: use 1\u201340 letters, digits, "-" or "_".`
-      );
-    const ids = new Set(input.milestones.map((m) => m.id));
-    if (ids.size !== input.milestones.length) throw error("plan-id", "Milestone IDs must be unique.");
-    const seen = /* @__PURE__ */ new Set();
-    const milestones = input.milestones.map((m) => {
-      if ((m.dependsOn || []).some((id) => !seen.has(id)))
-        throw error(
-          "plan-dependency",
-          "Dependencies must refer to earlier milestones, not cycles or missing IDs."
-        );
-      if (!knownKinds().has(m.acceptance?.kind))
-        throw error(
-          "acceptance-required",
-          `Acceptance must be one of ${[...knownKinds()].join(" | ")} (observed by the host or confirmed by the user); model labels cannot complete it.`
-        );
-      if (m.acceptance.kind === "file" && MCP_CONFIG_FILE.test(String(m.acceptance.path || "")))
-        throw error(
-          "acceptance-config-write",
-          "Writing an MCP config file (mcp.json) does not load MCP tools, so it cannot complete a milestone. Use human_review, or finish only after the mcp tool actually ran in a reloaded session; if no MCP tools are available, tell the user instead."
-        );
-      seen.add(m.id);
-      return {
-        id: m.id,
-        title: clean(m.title),
-        dependsOn: [...m.dependsOn || []],
-        acceptance: normalizeAcceptance(m.acceptance, clean, { get: verifierFor }),
-        state: "pending",
-        evidence: null
-      };
+    const kinds = [...knownKinds()];
+    const milestones = normalizeMilestones(input.milestones, {
+      kinds,
+      fields: Object.fromEntries(kinds.map((kind) => [kind, verifierFor(kind)?.fields || []]))
     });
     const current = active();
     const t = current && !terminal(current.state) && !current.milestones.length ? current : openTask(input.goal || "\u4EFB\u52A1", turnBinding);

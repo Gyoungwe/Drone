@@ -84,12 +84,41 @@ export function readTaskAcceptanceVerifier(
 	return registry.verifiers.get(kind) ?? null;
 }
 
+/** Model plan data; authorization and persistence remain host-owned. */
+export interface TaskMilestoneInput {
+	readonly id: string;
+	readonly title: string;
+	readonly dependsOn?: readonly string[];
+	readonly acceptance: Readonly<Record<string, unknown>> & { readonly kind: string };
+}
+
+export interface TaskMilestoneAcceptanceCatalog {
+	readonly kinds: readonly string[];
+	readonly fields: Readonly<Record<string, readonly string[]>>;
+}
+
+export interface TaskPlanMilestone {
+	readonly id: string;
+	readonly title: string;
+	readonly dependsOn: readonly string[];
+	readonly acceptance: Readonly<Record<string, unknown>>;
+	readonly state: "pending";
+	readonly evidence: null;
+}
+
+export type TaskMilestoneNormalizer = (
+	input: readonly TaskMilestoneInput[],
+	catalog: TaskMilestoneAcceptanceCatalog,
+) => readonly TaskPlanMilestone[];
+
 export interface TaskAcceptanceHostPort {
 	readonly contractVersion: TaskHostContractVersion;
 	readonly registerAcceptanceVerifier: (kind: string, definition: TaskAcceptanceDefinition) => void;
 	readonly readAcceptanceVerifier: (kind: string) => TaskAcceptanceVerifier | null;
 	/** Optional host-owned workbench client. The host may use it for read-only status while the task plugin is installed. */
 	readonly workbench?: PluginRuntimeClient;
+	/** Installed task plugin owns milestone validation; absent means unavailable. */
+	readonly normalizeMilestones?: TaskMilestoneNormalizer;
 }
 
 export interface TaskHostLoader {
