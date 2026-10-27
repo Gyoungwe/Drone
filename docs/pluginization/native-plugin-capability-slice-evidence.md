@@ -122,6 +122,7 @@
 - 连接器 host descriptor 的 `enabled` 状态现会贯穿 shared registry 到资源清单；停用的插件连接器不会被呈现为可用资源，仍保留显式禁用列表语义。backend research-resource/research-write 回归与 typecheck 通过。
 - Tasks/workbench host seam：`@gyoungwe/plugin-api/tasks` 发布版本化、依赖零的 `TaskAcceptanceHostPort`；backend 以实例级 runtime 创建该 host port，验收器注册/读取走同一隔离 registry，不再要求任务插件导入 backend 实现。plugin-api package gate 15 项、backend create-backend/acceptance 21 项通过；完整 workbench 状态机和正式安装包任务工作流仍未完成。
 - P5 evidence loader wiring：Desktop 发现到任意已安装、声明 `evidence` 能力的包后，现实际调用 `evidenceHost.loader.load()` 并将 host 传入 backend `analysisEvidenceHost`；此前只发现并记录日志、未注入的缺口已修复。新增静态 wiring 回归，optional host discovery 6 项、Desktop typecheck 与 Biome 通过；正式安装包 clean-install 与真实 evidence workflow 仍未验收。
+- 本轮合并后的宿主验证：`npm run lint`（仅既有 2 个 warning）、全 workspace `npm run typecheck`、`npm run build`、`npm run check:arch` 均退出 0；plugin-api 15 项测试、backend research/create-backend 34 项定向测试、Desktop optional-host 6 项测试通过。`check-native-plugin-boundary` 仍明确为 `INCOMPLETE`（runtime-import 11、type-import 12、required-domain-plugin 3），未把部分迁移误报为完成。
 
 ## 未关闭项
 
