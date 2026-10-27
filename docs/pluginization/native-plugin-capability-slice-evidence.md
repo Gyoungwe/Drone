@@ -163,6 +163,7 @@
 - 2026-10-27：`54f7d515` 完成 CoreHostLoader 宿主接线：Desktop 通用 discovery → `createBackend` → SessionService/session extensions/subagent/trust-loader；无 `pi-core` 时核心工具不注册，memory promotion 明确返回 unavailable，生产源码不再 runtime import `@gyoungwe/pi-core/host`。backend/desktop typecheck、17 项定向回归与 `check:arch` 通过。
 - 2026-10-27：`b5d62102`/`f2128217`/`aff50b6c` 只修复 publication SDK fixture 的 host 注入和从测试文件解析 worktree `.pi` 路径，`knowledge-publication-delivery` 在 root 与 workspace cwd 下均 15/15 通过；不把 fixture 证据当作正式安装包 PASS。
 - 2026-10-27：`4a00e695` 收窄 knowledge 无插件边界：通用 backend 不再默认选择 `defaultKnowledgeCompatibility`，未声明 host 操作统一 fail-closed；legacy worker/compat adapter 仍登记为显式迁移边界。backend typecheck、create-backend 27 项回归、`check:arch` 通过；P2/P6 仍未完成。
+- 2026-10-27：修正 fixture cwd 后重跑 backend 全量回归：`npm test -w @drone/backend -- --pool=forks --poolOptions.forks.singleFork=true --reporter=dot` 以 `259` 个文件、`2079` 项通过、`18` 项跳过退出 0；该结果与 CoreHostLoader/knowledge fail-closed 切片一致，未改变正式安装包或外部账户验收状态。
 
 ## 未关闭项
 
