@@ -146,6 +146,7 @@
 - 2026-10-27：在 `df1eafca` 后运行 `npm run check:plugin-api`：生成的 host API projection、plugin-api package gate、迁移/生命周期门禁和本地 tarball install→upgrade→rollback→uninstall 均通过（API 1.3.0，绑定插件仓库 HEAD `606cc34`）。这只证明合同与本地包生命周期，不替代正式 Drone 安装包或真实模型验收。
 - 2026-10-27：重新运行 arm64 正式 `Drone.app` 的 `check-packaged-desktop.mjs`，在全新 HOME/profile、空 optional UI 根、空 managed npm 根和空 auth/model 存储下通过实际 Electron 启动、preload、知识未绑定、semantic/topic IPC、研究命令及 generic Pi session 创建/关闭，回执 `passed:true`。生命周期 `install/disable/restore/upgrade/rollback/destroy-failure` 为 `NOT_RUN`，因此仅更新零可选插件 smoke，不关闭 P7。
 - 2026-10-27：正式包隔离 profile 生命周期切片：`check-packaged-desktop.mjs --lifecycle-package=@gyoungwe/pi-evidence` 实际安装 `0.1.1`，收到 `staged → verified → enabled`；随后移除并收到 `disabled → drained → disabled`，读回确认 managed package 目录和配置入口消失。仅标记 packaged install/remove PASS，restore/upgrade/rollback/destroy-failure 仍 `NOT_RUN`。
+- 2026-10-27：正式包生命周期脚本扩展为 install→update→remove；隔离 profile 对 `@gyoungwe/pi-evidence` 三组回执均成功，update 回读 `previousVersion=version=0.1.1`。仅标记真实 update/disable 清理路径通过，不将同版本重装写成跨版本升级；restore/跨版本 rollback/destroy-failure 仍 `NOT_RUN`。
 
 ## 未关闭项
 

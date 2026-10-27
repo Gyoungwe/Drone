@@ -11,7 +11,7 @@ import { join, resolve } from "node:path";
 
 if (process.argv.includes("--help")) {
 	console.log(
-		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app [--lifecycle-package=@scope/name]\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used. With --lifecycle-package, installs and removes that explicitly selected public fixture in the isolated Pi prefix and records both receipts.",
+		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app [--lifecycle-package=@scope/name]\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used. With --lifecycle-package, installs, updates and removes that explicitly selected public fixture in the isolated Pi prefix and records all receipts.",
 	);
 	process.exit(0);
 }
@@ -70,7 +70,7 @@ const report = {
 	// proof of install/disable/upgrade/rollback behavior.
 	lifecycleAcceptance: {
 		status: "NOT_RUN",
-		operations: ["install", "disable", "restore", "upgrade", "rollback", "destroy-failure"],
+		operations: ["install", "upgrade", "disable", "restore", "rollback", "destroy-failure"],
 		reason:
 			"A packaged lifecycle run needs an explicitly selected package source and authorized upgrade/rollback fixture; this zero-plugin smoke does not mutate package state.",
 	},
@@ -166,7 +166,7 @@ try {
 	if (lifecyclePackage) {
 		const packagePath = join(managedPackageRoot, ...lifecyclePackage.split("/"));
 		const source = `npm:${lifecyclePackage}`;
-		const lifecycle = { package: lifecyclePackage, operations: ["install", "remove"] };
+		const lifecycle = { package: lifecyclePackage, operations: ["install", "update", "remove"] };
 		try {
 			const installed = await evaluate(`window.pi.installPackage(${JSON.stringify(lifecyclePackage)})`);
 			assert(installed?.status === "succeeded", `package install failed: ${JSON.stringify(installed)}`);
@@ -180,6 +180,19 @@ try {
 			const configured = await evaluate("window.pi.listConfiguredPackages()");
 			assert(configured.some((entry) => entry.source === source && entry.scope === "user"));
 			lifecycle.install = installed;
+
+			const updated = await evaluate(`window.pi.updatePackage(${JSON.stringify(lifecyclePackage)})`);
+			assert(updated?.status === "succeeded", `package update failed: ${JSON.stringify(updated)}`);
+			assert(
+				await access(packagePath).then(
+					() => true,
+					() => false,
+				),
+				"updated package directory is missing",
+			);
+			const afterUpdate = await evaluate("window.pi.listConfiguredPackages()");
+			assert(afterUpdate.some((entry) => entry.source === source && entry.scope === "user"));
+			lifecycle.update = updated;
 
 			const removed = await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`);
 			assert(removed?.status === "succeeded", `package remove failed: ${JSON.stringify(removed)}`);
@@ -195,7 +208,7 @@ try {
 			lifecycle.remove = removed;
 			report.lifecycleAcceptance = {
 				status: "PASS",
-				operations: ["install", "remove"],
+				operations: ["install", "update", "remove"],
 				package: lifecyclePackage,
 				receipts: lifecycle,
 			};
@@ -205,7 +218,7 @@ try {
 			if (/network|registry|npm|fetch|timeout|unavailable|not found/iu.test(message)) {
 				report.lifecycleAcceptance = {
 					status: "BLOCKED",
-					operations: ["install", "remove"],
+					operations: ["install", "update", "remove"],
 					package: lifecyclePackage,
 					reason: message,
 				};
