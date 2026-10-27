@@ -111,6 +111,8 @@
 - 同日以候选 `@gyoungwe/plugin-api@1.3.0` tarball（SHA-256 `212881221bbfe8a5c77aa03893c254743b5e00a82d3ab62178d3a15a08dc7e56`）重跑插件 workspace `npm run check`，8 manifests、知识 487 项测试、研究 136 项测试、analysis/evidence/connectors/workbench/UI、research-suite clean install/PDF、locked/latest SDK matrix、pack checks 全部通过；该结果是候选 API 验证，不替代正式发布后的 clean install。
 - P4/P6 `de68e43a` 删除 status 兼容门面：session-engine extensions、subagent runner 及两组回归测试均直接从 `@gyoungwe/pi-core/host` 入口导入。Biome、backend typecheck、reply-language/stage-timeline 20 tests 和 host-independence 6 tests 通过；其余四个 pi-core facade 仍登记为迁移边界。
 - `de68e43a` 后宿主完整五门禁再次通过：lint、typecheck、全量 `npm test`、build、check:arch 均退出 0；`packages/pi-core/build-manifest.json` 已恢复提交态，domain dependency 仍诚实标为 `PARTIAL`。
+- P4/P6 `4ee796df` 删除 todo 兼容门面，session-engine、todo-reminder、backend index 和回归测试直接使用 `/host`；Biome、backend typecheck、todo 7 tests 和 host-independence 7 tests 通过。剩余三个 pi-core facade 未标记完成。
+- `4ee796df` 后宿主完整五门禁再次通过：lint、typecheck、全量 `npm test`、build、check:arch 均退出 0；保留既有 lint warnings，domain dependency 仍为 `PARTIAL`，未把 P4/P6 误报为完成。
 
 ## 未关闭项
 
