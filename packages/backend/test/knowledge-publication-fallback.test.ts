@@ -1,3 +1,4 @@
+import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/knowledge-publication";
 
@@ -51,6 +52,80 @@ describe("knowledge-publication fallback（bridge 缺失）", () => {
 		expect(JSON.stringify(message)).toContain(NOTICE);
 		expect(out.message).toBe(message);
 	});
+
+	it("preserves the SDK tool-call envelope without publishing draft/thinking or accepting a copied domain proof", () => {
+		const call = fauxToolCall("read", { path: "input.txt" });
+		const metadata = {
+			responseModel: "served-model",
+			providerThinkingLevel: "low",
+			thinkingLevel: "low",
+			diagnostics: [],
+			rawStopReason: "tool_use",
+			endTurn: false,
+			durationMs: 12,
+		};
+		const message = Object.assign(
+			fauxAssistantMessage(
+				[
+					{ type: "text", text: "PRIVATE_PROGRESS" },
+					{ type: "thinking", thinking: "PRIVATE_THINKING", thinkingSignature: "signed-protocol" },
+					call,
+				],
+				{ stopReason: "toolUse", responseId: "provider-response" },
+			),
+			metadata,
+			{
+				knowledgePublication: { status: "released", id: "copied-proof" },
+				privateDomainState: "not-sdk-metadata",
+			},
+		);
+		const usage = message.usage;
+		const out = projectKnowledgeEvent(ev({ type: "message_end", message })) as { message: M };
+		expect(out.message).toBe(message);
+		expect(message).toMatchObject({ ...metadata, responseId: "provider-response", content: [call] });
+		expect(message.usage).toBe(usage);
+		expect(Object.hasOwn(message, "knowledgePublication")).toBe(false);
+		expect(Object.hasOwn(message, "privateDomainState")).toBe(false);
+		for (const projected of [
+			projectKnowledgeEvent(ev({ type: "turn_end", message })),
+			projectKnowledgeEvent(ev({ type: "agent_end", messages: [message] })),
+			projectKnowledgeSnapshot([message], []),
+		]) {
+			expect(JSON.stringify(projected)).toContain(call.id);
+			expect(JSON.stringify(projected)).not.toMatch(/PRIVATE_PROGRESS|PRIVATE_THINKING|copied-proof/);
+		}
+	});
+
+	it.each(["stop", "error", "aborted"] as const)(
+		"keeps official metadata and real usage on a sealed %s message",
+		(stopReason) => {
+			const message = Object.assign(
+				fauxAssistantMessage("UNPUBLISHED_DRAFT", {
+					stopReason,
+					responseId: "provider-response",
+					...(stopReason === "error" ? { errorMessage: "server_error api_key=fixture-secret" } : {}),
+				}),
+				{ responseModel: "served-model", durationMs: 11, knowledgePublication: { status: "released" } },
+			);
+			const { role, api, provider, model, usage, responseId, responseModel, timestamp, durationMs } = message;
+			projectKnowledgeEvent(ev({ type: "message_end", message }));
+			expect(message).toMatchObject({
+				role,
+				api,
+				provider,
+				model,
+				usage,
+				responseId,
+				responseModel,
+				timestamp,
+				durationMs,
+				stopReason,
+			});
+			expect(message.usage).toBe(usage);
+			expect(Object.hasOwn(message, "knowledgePublication")).toBe(false);
+			expect(JSON.stringify(message)).not.toMatch(/UNPUBLISHED_DRAFT|fixture-secret/);
+		},
+	);
 
 	it("agent_end：封条化 messages 内的 assistant 项，保留其它角色", () => {
 		const out = projectKnowledgeEvent(
