@@ -11,6 +11,7 @@ import {
 	resolveHarnessModelFamily,
 } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
+import { makeStatusTool } from "@gyoungwe/pi-core/host";
 import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
@@ -33,7 +34,6 @@ import {
 } from "../../session-engine/sdk";
 import { globalToolManifest, ToolManifest } from "../manifest";
 import { makeSshTool } from "../ssh";
-import { makeStatusTool } from "../status";
 import { makeWebFetchTool } from "../webfetch";
 import type { SubagentDefinition, SubagentMcpAccess } from "./agents";
 import { withNativeSubagentSlot } from "./slots";

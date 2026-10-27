@@ -66,3 +66,13 @@ test("allows only the registered pi-core compatibility facades", () => {
 		],
 	);
 });
+
+test("status tools use the versioned pi-core host entry directly", () => {
+	assert.deepEqual(
+		findHostImportViolations(
+			"packages/backend/src/session-engine/extensions.ts",
+			'import { makeStatusTool } from "@gyoungwe/pi-core/host";',
+		),
+		[],
+	);
+});

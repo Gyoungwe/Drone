@@ -5,9 +5,9 @@ import {
 	messagesToUIMessages,
 	reduceEvent,
 } from "@drone/shared";
+import { makeStatusTool } from "@gyoungwe/pi-core/host";
 import { describe, expect, it } from "vitest";
 import { toSessionMessages } from "../src/session/messages";
-import { makeStatusTool } from "../src/tools/status";
 
 const ev = (type, extra = {}) => ({ type, ...extra });
 const call = (id, name, args = {}) => ({ type: "toolCall", id, name, arguments: args });
