@@ -2,28 +2,34 @@
 
 2026-10-28 更新。用户已批准「通用宿主 + 可卸载功能插件」并要求 P0–P7 并行实现。依据：[架构设计](../superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)。目标仍是完整功能与 UI 同包迁移，当前没有关闭整个目标。
 
-当前门禁基线为宿主 `6c9400c6`、插件 `b1c11f3`：插件完整检查及宿主独立 checkout 的 lint/typecheck/test/build/check:arch/check:plugin-api 均通过。首次全测 8 项失败与修复重跑保存在[机器回执](../releases/native-plugin-integrated-host-2026-10-28.json)；native boundary 仍 exit 1/INCOMPLETE，因此不关闭整个目标。完整历史已[归档](../archive/native-plugin-implementation-plan-through-2026-10-27.md)，历史 PASS 只适用于记录范围。
+当前门禁基线为宿主 `5e0c9aab`、插件 `f4a530a`：插件完整检查、固定源码独立重建及宿主独立 checkout 的 lint/typecheck/test/build/check:arch/check:plugin-api 均通过；backend 2128 passed/17 skipped、Desktop 912 passed/1 skipped、根 Node 24/24。失败与修复重跑保存在[本轮机器回执](../releases/native-plugin-task-owner-host-2026-10-28.json)，旧 `6c9400c6/b1c11f3` [回执](../releases/native-plugin-integrated-host-2026-10-28.json)保留历史范围。native boundary 仍 exit 1/INCOMPLETE，整个目标未关闭。更早历史已[归档](../archive/native-plugin-implementation-plan-through-2026-10-27.md)。
 
 ## 当前阶段状态
 
 | 阶段 | 完成条件 | 当前已证明 | 仍未完成 | 依赖 |
 | --- | --- | --- | --- | --- |
-| P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复领域扫描 | 清单与扫描、33 API/41 事件/28 UI 声明盘点；真实 SDK 基础 UI、沙箱诊断与 managed prompt mutation 回归 | 持续 onError、trusted UI 假成功、managed metadata/onUpdate/ctx 限制；locked/latest 完整矩阵；扫描仍为 `INCOMPLETE` | 无 |
+| P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复领域扫描 | 33 API/41 事件/28 UI 声明盘点；真实 SDK 主/恢复/子会话 onError 与通用通知、custom/theme 明确失败、沙箱诊断与 managed prompt mutation | 其余 terminal no-op、managed metadata/onUpdate/ctx；locked/latest 完整矩阵；扫描仍 `INCOMPLETE` | 无 |
 | P1 | 通用 runtime 生命周期、来源绑定、权限、隔离、UI 调用与撤销 | 正式包应用 owner、会话切换、停用/拒绝/恢复/退出切片；来源内容变化使旧授权失效 | 正式包的销毁失败回执；后续领域包在同一候选版本上的完整生命周期复验 | P0 |
-| P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | host 操作、包内 worker 与同包 UI/native/desktop 源码已保留历史整合；maintenance CAS/mirrors、worker 预检保留旧实例回归 | 完整 hooks/UI 共享 owner、undo runtime/UI、surfaces、宿主领域操作与旧资源装配删除；同候选正式 GUI 与完整写后回读/回滚 | P1 |
-| P3 | research、来源连接器、引用/Zotero 的领域 API 与页面迁移 | connector/write host loader 与停用传播；无插件 fail-closed；backend 已无 research runtime dependency 和两处生产兼容 façade | 完整 Zotero/研究工作流与页面归属；本轮候选包的连接器、写入与正式 GUI 证据 | P2 |
-| P4 | tasks、编排、领域记忆及 UI 迁移 | pi-core 历史与 milestone 规则归插件，宿主旧 core 副本已删；typed tarball、workbench client 与 SDK fixture 回归 | 完整状态机/guard/任务装配与 UI；无 planner 的 legacy guard 仍会阻断基本写工具；真实 task host registry 隔离及完整工作流 | P2 |
+| P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | maintenance plan/run 安装 loader 与调度回归；f4 同 tarball 的真实受限双进程/SDK只读 owner、UI 读取与状态授权；完整审核/history/undo 隔离分支及进程验收已就绪，待整合 | 完整审核候选 28819ba/3047f28 尚未进入当前锁；完整 hooks/publication/UI、宿主领域操作/IPC与旧资源删除；正式 GUI | P1 |
+| P3 | research、来源连接器、引用/Zotero 的领域 API 与页面迁移 | 安装 host fail-closed；真实生产 summary review→delivery→回读→receipt；4 个隔离 specialist 与单独摘要 reviewer、拒绝/rollback/CAS/路径回归 | 仍有迁移期宿主 FS writer；完整 Zotero/研究 owner 与页面归属；本候选连接器/写入正式 GUI；上述测试不覆盖全部 protected Wiki reviewer | P2 |
+| P4 | tasks、编排、领域记忆及 UI 迁移 | knowledge 停止隐式任务 guard；真实 SDK 无 core 的基础 read/write/bash 与权限拒绝、两种安装加载顺序及 24 项任务回归；typed core 与 milestone 规则 | 完整状态机/guard/装配与 UI 从宿主移除；真实 loader/session registry 隔离。codex/native-task-owner-migration 已实施但尚未整合或完成全门禁 | P2 |
 | P5 | analysis/evidence 与 discovery 的可卸载实现；依赖经显式合同管理 | discovery 算法/状态归插件，宿主仅注入机制；无插件不构造旧实现/登记存储；真实包后端 73 项定向测试 | native discovery 工具、真实容器和 B5 GUI；完整分析/证据控制器与 UI 迁移、同候选工作流验收 | P3/P4 |
 | P6 | 科研能力成为可卸载预设；删除构建/锁文件必需依赖与旧路径 | 四包同提交候选已独立重建；core 旧源码/构建链删除；discovery runtime 依赖下移；`trackedRuntimeDependencies=[]` | 4 个必需领域源码锁及 hoisted/dev/build/resource 闭包删除；旧 bundled 装配、领域 schema/IPC 与预设卸载；零领域独立构建 | P2–P5 |
-| P7 | 双仓库最终门禁、同 tarball 原生会话、正式包零插件及升级/停用/回滚 | 当前 6c9400c6/b1c11f3 标准门禁通过；空 managed roots 正式会话仍含旧 bundled 资源；临时 registry/公开 evidence 切片 | 领域迁移完成后的最终候选真实会话与 GUI；销毁失败、公开跨版本回滚；真正无领域资源的宿主验收 | P6 |
+| P7 | 双仓库最终门禁、同 tarball 原生会话、正式包零插件及升级/停用/回滚 | 当前 5e0c9aab/f4a530a 标准门禁通过，opt-in packed core/knowledge/discovery 已启用；真实 knowledge 读侧双进程完整退出 | 全领域最终候选、正式安装包 GUI、销毁失败/公开跨版本回滚、真正无领域资源宿主；本轮未新建正式安装包 | P6 |
 
 ## 当前未完成项
 
 1. 完成 P2–P5 的领域实现和 UI ownership，删除对应宿主装配与临时路径；切片合同、loader 与定向测试通过不等于领域迁移完成。
-2. 完成 discovery 原生工具/容器/B5 GUI 与任务状态机；先消除无任务插件时 legacy guard 对基本写工具的阻断。WebDAV/inquiry 的既有归属记录保留，不借本次状态同步扩大边界。
-3. 四包源码锁已同步为 `b1c11f3`；它仍是迁移期构建必需依赖。继续删除这些领域锁与旧资源闭包，证明不下载科研插件也能独立构建，而不是仅把版本同步当作 P6 完成。
+2. 完成 discovery 原生工具/容器/B5 GUI 与任务状态机；无 core 的隐式 guard 阻断已修复，继续迁移完整任务 owner。WebDAV/inquiry 的既有归属记录保留，不借本次状态同步扩大边界。
+3. 四包源码锁已同步为 `f4a530a`；它仍是迁移期构建必需依赖。继续删除这些领域锁与旧资源闭包，证明不下载科研插件也能独立构建，而不是仅把版本同步当作 P6 完成。
 4. 使用同一候选 tarball 完成原生 Pi 真实会话、正式安装包的领域 GUI、Vault 写入回读/回滚与完整生命周期，包括销毁失败。既有通用宿主和公开 pi-evidence 切片保留其已证明范围。
 5. 当前候选的双仓库标准门禁已完成；后续迁移仍须固定来源后复验，并清理最终领域边界门禁。历史全量或直接 workspace 检查不替代未来最终候选的根命令与正式包验收。
+
+## 已实现但未整合的下一批
+
+- P2 插件 `codex/native-knowledge-review-owner@28819ba`：删除重复 desktop review writer，CLI/Desktop 共用审核算法，history/undo 与 UI 已消费；525 测试与真实受限进程/SDK apply→partial→retry→history→undo、拒权/隔离/人工编辑保护、SQLite/进程/租约清理通过。配套宿主测试 `codex/knowledge-review-process-acceptance@3047f28`；候选 SHA-256 `f423c3b6be163bb48b392930cb7fe48523fbcccc98d51c5b4aaabac4e70ac0f8`。**尚未合入当前源码锁、套件或正式安装包**。
+- P4 `codex/native-task-owner-migration`：canonical owner/registry 与 native session 接线、宿主 tasks 删除及规则测试迁移正在独立工作树完成门禁；当前宿主仍保留旧实现，不能提前关闭 P4。新增 native 合同依赖未发布 API 1.3 候选，下一轮需统一 API/vendor/声明/锁。
+- 顺序：整合已通过的 P2 候选与测试 → 固定双仓库来源/套件/锁并复验 → 同候选正式 GUI；并行完成 P4 的实际删除与完整门禁。模型审核、完整 native hooks/publication 和旧宿主 IPC 删除仍须逐项迁移。
 
 ## 检查与证据规则
 
@@ -41,12 +47,10 @@ MinerU/GROBID、B8 云端协作及 B8-2 保持暂缓/按用户要求暂不实施
 
 ## 执行记录
 
+2026-10-28 新记录的移出部分见[检查点日志归档](../archive/native-plugin-checkpoint-log-through-2026-10-28.md)。
+
 只保留最近 30 条去重记录，描述各切片发生时的状态；后续替代关系以本页“当前阶段状态”为准。更早及重复原始记录见[完整历史](../archive/native-plugin-implementation-plan-through-2026-10-27.md)。
 
-- 2026-10-27：P2 worker package-local seam：`KnowledgeHostLoader.configureWorker` 现在由 pi-knowledge 选择其包内 `lib/knowledge/runtime/worker.mjs`，host factory 尊重该 `file:` URL 并按相邻 manifest 校验字节哈希后再启动；legacy `configureBackendKnowledgeWorker` 拆出独立 host-root 适配，避免旧测试/兼容服务被新 URL 语义改变。插件 host-loader 4 项、backend worker/create-backend 34 项与 typecheck 通过；electron-builder/`.pi` bundled worker 复制暂保留，因为现有 bundled extensions 和 release fixtures 仍依赖旧资源树，待单独迁移。
-- 2026-10-27：worker package-local ownership 收口：`packages/extensions/src/internal/knowledge-runtime.ts` 改为调用已安装 `@gyoungwe/pi-knowledge/host` 的 worker URL/metadata，`check-local-desktop-artifact` 和 knowledge FTS fixture 改校验 `vendor/plugins/pi-knowledge/lib/knowledge/runtime/worker.mjs` 及其 manifest。`.pi/extensions`、`fetch-plugins` 与 electron-builder 的旧复制仍作为显式 legacy/release fixture 保留，尚未宣称资源树完全删除；需要后续迁移 bundled/release 生成链后再清理。
-- 2026-10-27：backend legacy worker 路径收窄：生产 knowledge UI 不再导出或执行 host-root `.pi` worker 配置/解析，package-local setup 是唯一 production worker seam；旧兼容配置与资源校验限定在 `packages/backend/test/knowledge-compat-fixture.ts`。backend typecheck、39 项 focused worker/knowledge 回归、Biome 通过；electron-builder/`.pi` 复制链与正式 GUI 继续保持未完成。
-- 2026-10-27：P6 依赖收窄：`1044fedf` 删除 backend 对 `@gyoungwe/pi-core` 的生产运行时依赖并同步 `package-lock.json`；backend typecheck、memory-save/deliver-files/todo 11 项回归与 `check:arch` 通过。当前宿主仍追踪 `@gyoungwe/pi-knowledge`，compatibility/worker 迁移继续保持未完成。
 - 2026-10-27：知识默认构造 fail-closed：`KnowledgeUiService` 及所有 knowledge operation helper 的默认 compatibility 改为 backend 内置 `unavailableKnowledgeCompatibility`；无插件时直接构造服务不会加载或实例化 legacy background reviewer，默认 overview 返回明确 unavailable。显式迁移测试仍可注入 `defaultKnowledgeCompatibility`。backend typecheck、create-backend/knowledge-host-ui-reading/worker-lifecycle 35 项、Biome 通过；`pi-knowledge` compatibility/worker 删除与正式 GUI 仍未完成。
 - 2026-10-27：P2/P6 runtime dependency 收窄：删除生产源码 `knowledge/compat.ts` 与 `compat-adapter.ts`，legacy package composition 移到 `packages/backend/test/knowledge-compat-fixture.ts`，`configureBackendKnowledgeWorker` 改为显式接收迁移测试 setup；backend 对 `@gyoungwe/pi-knowledge` 从 dependencies 下移到 devDependencies，锁文件同步。backend typecheck、create-backend/knowledge-host-ui-reading/worker-lifecycle 36 项、Biome、`check:arch` 通过；`check:host-domain-deps` 的 `trackedRuntimeDependencies` 已为空，native boundary 的 knowledge runtime import 已清零，剩余 runtime import 仅 discovery/inquiry，worker 本体迁移与正式 GUI 仍未完成。
 - 2026-10-27：native boundary 决策：`@drone/inquiry` 暂保 host foundation，负责跨 compute/tasks/local execution 的 artifact/finding/question/attempt/decision 账本、项目隔离与 decisions/inquiry IPC；不把它误下移为可选插件。`@drone/discovery` 归入下一阶段 optional plugin 迁移（可新建 `pi-discovery` 或并入 `pi-research`），先拆出 host-owned 容器/授权/KernelRunner 与 Inquiry 注入合同，再迁移 B5d–B5f exploration/critic/evaluation/UI 并删除 backend 的无条件构造。当前两项均不改 manifest，native boundary 仍保留 discovery/inquiry runtime findings。
@@ -73,3 +77,8 @@ MinerU/GROBID、B8 云端协作及 B8-2 保持暂缓/按用户要求暂不实施
 - 2026-10-28：宿主 `400744bf` 删除旧 pi-core 源码，build/smoke/compat 仅验证 vendor；milestone 规则归插件。discovery 算法/状态归插件，宿主仅注入 runner/授权/JsonStore/项目 Inquiry；候选 73 项定向回归覆盖重启、拒绝、路径、隔离和旧 journal 原字节。native/B5 GUI 与 legacy guard 仍未关闭。
 - 2026-10-28：首次整合全测 8 项失败已修：合法 BUSCO 版本/counts、异步 policy/timeout、0.3 service constructor、真实 thread exit 观测；worker 严格预检失败保留 live writer，同时保留单 writer 约束。四包由 `b1c11f3` 独立 archive+clean ci 重建并锁 SHA-256；无开发源码 override，未执行 npm publish。
 - 2026-10-28：冻结宿主 `6c9400c6` 的 lint/typecheck/test/build/check:arch/check:plugin-api 全过，backend 2107 passed/18 skipped、Desktop 910 passed/1 skipped、根 Node 24/24。沙箱真实拒绝/声明与 managed prompt mutation 的 SDK 回归已包含。native boundary 仍 exit 1/INCOMPLETE：runtime 1、type 6、required locks 4、packaged resources 21；详见[整合回执](../releases/native-plugin-integrated-host-2026-10-28.json)及[API 盘点](native-pi-api-compatibility-matrix.md)。
+
+- 2026-10-28：P0 宿主诊断/通知收口：9a5471d5/2f9b6d16/5897667d/77ee4f8e 为 custom/theme 提供真实失败，持续记录 hook 错误，主/恢复/子会话通知沿通用 Event/preload/toast 传输并随生命周期撤销，不进 raw trace、不再依赖知识模块；真实 SDK 与 renderer/preload 回归通过，未关闭全部 33/41/28 API 矩阵。
+- 2026-10-28：P4 安装激活修复：knowledge 只通过现有同会话 event bus 获取当前 core journal，不再隐式装 task guard；core 修正 session journal/验收 schema/回调 runtime 接线。24 项真实 SDK 任务回归通过，宿主状态机及 UI 迁移仍留在独立分支。
+- 2026-10-28：P3 生产 delivery handle 实际接入摘要工具；真实 ledger/revision 与当前模型审阅后才写入/回读/commit receipt。4 隔离 specialist 与独立摘要 reviewer、malformed/unknown/source drift 拒绝、rollback/人工编辑/summary-history symlink 边界通过；不以旧手写 answerable metadata 充当成功。仍有宿主 FS writer，未关闭 P3。
+- 2026-10-28：固定宿主 5e0c9aab、插件 f4a530a 的六项标准门禁全过，backend 2128/17 skipped、Desktop 912/1 skipped、根 Node 24/24；真实 packed knowledge 双进程/SDK 回执匹配 SHA60e6b071…5033，关闭清零。native boundary 仍 15/11/6/1/21/4、INCOMPLETE；P2 28819ba/3047f28 的完整审核进程候选待整合，正式新 GUI 未运行。

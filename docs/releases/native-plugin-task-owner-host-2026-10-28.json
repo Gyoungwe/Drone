@@ -1,0 +1,690 @@
+{
+	"schemaVersion": 1,
+	"date": "2026-10-28",
+	"observedAt": "2026-10-27T18:54:51.248Z",
+	"scope": "P0 diagnostics and truthful UI; explicit task activation; reviewed research delivery; installed maintenance loader; real packed read-only knowledge owner",
+	"goalStatus": "IN_PROGRESS",
+	"hostCodeCommit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d",
+	"pluginSourceCommit": "f4a530a4559ffa13e3e3e2dff0b1d693c1f974ce",
+	"pluginCheckCommit": "f4a530a4559ffa13e3e3e2dff0b1d693c1f974ce",
+	"apiSourceCommit": "3328a1517e7446032a4687af2e4d213ae72d52be",
+	"npmPublishPerformed": false,
+	"mainMergePerformed": false,
+	"publicVersionsChanged": false,
+	"candidates": [
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.3.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w/gyoungwe-pi-knowledge-0.3.0.tgz",
+			"sha256": "60e6b07180a69b7c4f462746251c035c08ec1cc969ed708f457d173164935033"
+		},
+		{
+			"name": "@gyoungwe/pi-analysis",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w/gyoungwe-pi-analysis-0.2.0.tgz",
+			"sha256": "325b8e8214837a4d7c1d06db91cd1eb14c9c4bf7cf9eba031e44718cf95d8cdb"
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"version": "0.3.2",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w/gyoungwe-pi-research-0.3.2.tgz",
+			"sha256": "4db7092d8ef47a29f987833fd577ceaa18dc21f2295e605c0ce4be6be7a15176"
+		},
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w/gyoungwe-pi-core-0.2.0.tgz",
+			"sha256": "d0c9a40bd4957271c2304428c93de73a9afe638180797c6dfbcb6d098c77e721"
+		},
+		{
+			"name": "@gyoungwe/pi-discovery",
+			"version": "0.1.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w/gyoungwe-pi-discovery-0.1.0.tgz",
+			"sha256": "84f31574cc12ebfa422b37c07c883c9f6eeb7c727797b1ea1f46c21ad02647a1"
+		}
+	],
+	"sourceReproduction": {
+		"method": "fixed git archive; clean npm ci --ignore-scripts; build each workspace; npm pack",
+		"commit": "f4a530a4559ffa13e3e3e2dff0b1d693c1f974ce",
+		"commands": [
+			{
+				"command": [
+					"git",
+					"archive",
+					"--format=tar",
+					"--output",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w/source.tar",
+					"f4a530a4559ffa13e3e3e2dff0b1d693c1f974ce"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"tar",
+					"-xf",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w/source.tar",
+					"-C",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w/plugins"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-knowledge"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-analysis"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-research"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-core"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-discovery"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w"
+				],
+				"exitCode": 0
+			}
+		],
+		"log": {
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-task-owner-pack-o5Nm3w/build.log",
+			"sha256": "0f3c2379702d28854a279dfe271dfdd46872ac1d5bc46fe22618f7796acf7a90"
+		}
+	},
+	"pluginChecks": [
+		{
+			"command": "npm run check",
+			"commit": null,
+			"exitCode": 1,
+			"reason": "isolated npm install ECONNRESET before completing SDK matrix",
+			"log": {
+				"path": "/tmp/drone-native-task-owner-plugin-check.log",
+				"sha256": "2c3f4e02932d093ae705c0ee4876b0411cd56512c0ad229d80e21ad63a58a514"
+			},
+			"sourceTreeRecordedAs": "56d99f30ca264ec5567f84634c32baa6b8048f43",
+			"workingTreeAttempt": true
+		},
+		{
+			"command": "npm run check",
+			"commit": "56d99f30ca264ec5567f84634c32baa6b8048f43",
+			"exitCode": 1,
+			"reason": "old clean-install fixture events.on did not return official unsubscribe",
+			"log": {
+				"path": "/tmp/drone-native-task-owner-plugin-check-routed.log",
+				"sha256": "86928f95aaa4da36bf49feb7e07b22c6911dc8d9d36c6fa56506e072f4e3783f"
+			}
+		},
+		{
+			"command": "npm run check",
+			"commit": "4c6fbd4f3cd784022cbda2a2f9aa0703a67d2841",
+			"exitCode": 0,
+			"log": {
+				"path": "/tmp/drone-native-task-owner-plugin-check-final.log",
+				"sha256": "c30be75b0023babea01a4b871d2062a22d9a30160946ef66cb0b514a40df9a31"
+			}
+		},
+		{
+			"command": "npm run check",
+			"commit": "f4a530a4559ffa13e3e3e2dff0b1d693c1f974ce",
+			"exitCode": 0,
+			"knowledgeTests": 508,
+			"coreTests": 26,
+			"researchTests": 164,
+			"lockedSdk": "1.1.0",
+			"latestSdkResolved": "1.4.0",
+			"log": {
+				"path": "/tmp/drone-native-events-plugin-check-final.log",
+				"sha256": "4582367c61d3b3f077984f447491d580780f29f591cd66f0af888463249a1f4e"
+			}
+		}
+	],
+	"environment": {
+		"independentCheckout": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/Drone",
+		"reusedIndependentCheckout": true,
+		"cleanNpmCi": true,
+		"npmCiCommit": "027cd8c6a8fed8f04195e4536b699e440298d9a1",
+		"dependencyManifestsAndNpmLockUnchangedFromCi": true,
+		"dronePluginsDirOverride": false,
+		"defaultRemoteFetchAndLockedSha256Verified": true,
+		"gitTransport": "HTTPS, HTTP/1.1; TLS verification retained",
+		"isolatedNpmNetworkRoute": "explicitly inherit the configured local npm proxy; no credentials recorded",
+		"candidateTarballTests": [
+			"DRONE_CORE_TARBALL",
+			"DRONE_KNOWLEDGE_TARBALL",
+			"DRONE_DISCOVERY_PLUGIN_TARBALL"
+		]
+	},
+	"hostCommands": [
+		{
+			"command": [
+				"git",
+				"fetch",
+				"--no-tags",
+				"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+				"codex/native-plugin-architecture-plan"
+			],
+			"startedAt": "2026-10-27T17:32:37.334Z",
+			"finishedAt": "2026-10-27T17:32:37.416Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-fetch.log",
+			"logSha256": "21ede8b200adf44e3f1e70c90ed29016583d02763d978b05b4e1258e74f390b1"
+		},
+		{
+			"command": ["git", "checkout", "--detach", "027cd8c6"],
+			"startedAt": "2026-10-27T17:32:37.417Z",
+			"finishedAt": "2026-10-27T17:32:37.520Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-checkout.log",
+			"logSha256": "f21b84066ddc5b8aab8bafffa59d8bcd1542a2ffc644bc6bd71449aa0a2d3dc5"
+		},
+		{
+			"command": ["npm", "ci", "--no-audit", "--no-fund"],
+			"startedAt": "2026-10-27T17:32:37.521Z",
+			"finishedAt": "2026-10-27T17:33:01.551Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-ci.log",
+			"logSha256": "25f300638954d71abd32717e957222aa5efa90664c512ad287b1438add8f8425"
+		},
+		{
+			"command": ["npm", "run", "lint"],
+			"startedAt": "2026-10-27T17:33:01.552Z",
+			"finishedAt": "2026-10-27T17:33:03.648Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-lint.log",
+			"logSha256": "28f75704d9a38f634f8fcdeae8d0f228e8cd5cdf6b22561433825d51c40da851"
+		},
+		{
+			"commit": "027cd8c6a8fed8f04195e4536b699e440298d9a1",
+			"command": [
+				"git",
+				"fetch",
+				"--no-tags",
+				"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+				"codex/native-plugin-architecture-plan"
+			],
+			"startedAt": "2026-10-27T17:34:15.446Z",
+			"finishedAt": "2026-10-27T17:34:15.540Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-4-fetch.log",
+			"logSha256": "21ede8b200adf44e3f1e70c90ed29016583d02763d978b05b4e1258e74f390b1"
+		},
+		{
+			"commit": "755ab57c031c387ecc47e6aae8f760a967bfaf84",
+			"command": ["git", "checkout", "--detach", "755ab57c"],
+			"startedAt": "2026-10-27T17:34:15.541Z",
+			"finishedAt": "2026-10-27T17:34:15.659Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-5-checkout.log",
+			"logSha256": "c67d0f4a87036f69d182fd4dd8402b13396739516379b9eaeb8d1330e3df57e4"
+		},
+		{
+			"commit": "755ab57c031c387ecc47e6aae8f760a967bfaf84",
+			"command": ["npm", "run", "lint"],
+			"startedAt": "2026-10-27T17:34:15.660Z",
+			"finishedAt": "2026-10-27T17:34:16.948Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-6-lint.log",
+			"logSha256": "480f55802fc71edb69b16fb6c65caa77bad44f6ff5384591d2308aee60d2ca15"
+		},
+		{
+			"commit": "755ab57c031c387ecc47e6aae8f760a967bfaf84",
+			"command": ["npm", "run", "typecheck"],
+			"startedAt": "2026-10-27T17:42:24.631Z",
+			"finishedAt": "2026-10-27T17:44:07.244Z",
+			"exitCode": 2,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-7-typecheck.log",
+			"logSha256": "1b6e9a1be7ae56a3ef205fdfae25477e808b5247ce6f9775f4385cf87ca1f375"
+		},
+		{
+			"commit": "755ab57c031c387ecc47e6aae8f760a967bfaf84",
+			"command": [
+				"git",
+				"fetch",
+				"--no-tags",
+				"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+				"codex/native-plugin-architecture-plan"
+			],
+			"startedAt": "2026-10-27T17:46:22.595Z",
+			"finishedAt": "2026-10-27T17:46:22.686Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-8-fetch.log",
+			"logSha256": "21ede8b200adf44e3f1e70c90ed29016583d02763d978b05b4e1258e74f390b1"
+		},
+		{
+			"commit": "43b81a1f81fb2d353a3a48487d3f0c48aff353cf",
+			"command": ["git", "checkout", "--detach", "43b81a1f"],
+			"startedAt": "2026-10-27T17:46:22.688Z",
+			"finishedAt": "2026-10-27T17:46:22.749Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-9-checkout.log",
+			"logSha256": "669c309ec2319aec3c2435bd4e911c82e3052c0bb06f6d3988823f73f7efd414"
+		},
+		{
+			"commit": "43b81a1f81fb2d353a3a48487d3f0c48aff353cf",
+			"command": ["npm", "run", "lint"],
+			"startedAt": "2026-10-27T17:46:22.750Z",
+			"finishedAt": "2026-10-27T17:46:24.168Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-10-lint.log",
+			"logSha256": "247c29b4aa5853b602c917c26e01bde34bbb69ae162d68d6f1de5fd1397dd4f3"
+		},
+		{
+			"commit": "43b81a1f81fb2d353a3a48487d3f0c48aff353cf",
+			"command": ["npm", "run", "typecheck"],
+			"startedAt": "2026-10-27T17:46:24.169Z",
+			"finishedAt": "2026-10-27T17:48:21.352Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-11-typecheck.log",
+			"logSha256": "e375a22e71b5df94858beb8f33c9f9c5f4f51e4a93150cf138515ec8b3bbe2b7"
+		},
+		{
+			"commit": "43b81a1f81fb2d353a3a48487d3f0c48aff353cf",
+			"command": ["npm", "run", "test"],
+			"startedAt": "2026-10-27T17:48:21.353Z",
+			"finishedAt": "2026-10-27T17:51:47.654Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-12-test.log",
+			"logSha256": "764bf082c500365b5bff58ae5b9ab47e2c35ec8835b3823ec7cb592ff46c5917"
+		},
+		{
+			"commit": "43b81a1f81fb2d353a3a48487d3f0c48aff353cf",
+			"command": [
+				"git",
+				"fetch",
+				"--no-tags",
+				"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+				"codex/native-plugin-architecture-plan"
+			],
+			"startedAt": "2026-10-27T18:18:56.697Z",
+			"finishedAt": "2026-10-27T18:18:56.793Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-13-fetch.log",
+			"logSha256": "21ede8b200adf44e3f1e70c90ed29016583d02763d978b05b4e1258e74f390b1"
+		},
+		{
+			"commit": "28c0483d861252234a7e8b636a6047e3be849e6d",
+			"command": ["git", "checkout", "--detach", "28c0483d"],
+			"startedAt": "2026-10-27T18:18:56.795Z",
+			"finishedAt": "2026-10-27T18:18:56.887Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-14-checkout.log",
+			"logSha256": "fbb8766c0a2c1e6b3ddaa5150f44e7c6ab21b91a2016b02734cb32583b1aeee3"
+		},
+		{
+			"commit": "28c0483d861252234a7e8b636a6047e3be849e6d",
+			"command": ["npm", "run", "lint"],
+			"startedAt": "2026-10-27T18:18:56.888Z",
+			"finishedAt": "2026-10-27T18:18:58.180Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-15-lint.log",
+			"logSha256": "6a4d34797a082608c9205228b479006dd980e341d2bef13b99e556a5e9c1fb3a"
+		},
+		{
+			"commit": "28c0483d861252234a7e8b636a6047e3be849e6d",
+			"command": ["npm", "run", "typecheck"],
+			"startedAt": "2026-10-27T18:18:58.181Z",
+			"finishedAt": "2026-10-27T18:20:33.228Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-16-typecheck.log",
+			"logSha256": "fc8cdaab703bbe94763a468cbde1b08f5f653b207e7bdd3ccfe0b0492b369ae2"
+		},
+		{
+			"commit": "28c0483d861252234a7e8b636a6047e3be849e6d",
+			"command": ["npm", "run", "test"],
+			"startedAt": "2026-10-27T18:20:33.229Z",
+			"finishedAt": "2026-10-27T18:23:21.358Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-17-test.log",
+			"logSha256": "1964c4fb9fe190ba3db2b62377d08da715d7540edea839e566ff824f81681a6c"
+		},
+		{
+			"commit": "28c0483d861252234a7e8b636a6047e3be849e6d",
+			"command": [
+				"git",
+				"fetch",
+				"--no-tags",
+				"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+				"codex/native-plugin-architecture-plan"
+			],
+			"startedAt": "2026-10-27T18:35:09.835Z",
+			"finishedAt": "2026-10-27T18:35:09.925Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-18-fetch.log",
+			"logSha256": "21ede8b200adf44e3f1e70c90ed29016583d02763d978b05b4e1258e74f390b1"
+		},
+		{
+			"commit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d",
+			"command": ["git", "checkout", "--detach", "5e0c9aab"],
+			"startedAt": "2026-10-27T18:35:09.926Z",
+			"finishedAt": "2026-10-27T18:35:10.045Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-19-checkout.log",
+			"logSha256": "bd5996b6c8ee8f2e51993ae9d9869dbc1842448e8f0541f7edaa6be9efea5582"
+		},
+		{
+			"commit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d",
+			"command": ["npm", "run", "lint"],
+			"startedAt": "2026-10-27T18:35:10.046Z",
+			"finishedAt": "2026-10-27T18:35:11.324Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-20-lint.log",
+			"logSha256": "51819b655b389d4473a5e11c34421a8c41002fb0c2bc4ecdfea4f7ad26f537e5"
+		},
+		{
+			"commit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d",
+			"command": ["npm", "run", "typecheck"],
+			"startedAt": "2026-10-27T18:35:11.324Z",
+			"finishedAt": "2026-10-27T18:36:44.596Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-21-typecheck.log",
+			"logSha256": "0b7ab77ca2fc80cf08021643ea266e0b422c33b0c986e61f5e8edffe0c59a487"
+		},
+		{
+			"commit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d",
+			"command": ["npm", "run", "test"],
+			"startedAt": "2026-10-27T18:36:44.597Z",
+			"finishedAt": "2026-10-27T18:39:25.606Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-22-test.log",
+			"logSha256": "9732cd91d1e4c7ef65c16b6a5383b9fbeee7ba653bdc019c0ecd6f0e8f779d7c"
+		},
+		{
+			"commit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d",
+			"command": ["npm", "run", "build"],
+			"startedAt": "2026-10-27T18:39:25.607Z",
+			"finishedAt": "2026-10-27T18:40:56.592Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-23-build.log",
+			"logSha256": "d8c0d6bb1f77c54d78ede97c04a88444893e0931f9c4f6d17fc90cb66d3279e4"
+		},
+		{
+			"commit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d",
+			"command": ["npm", "run", "check:arch"],
+			"startedAt": "2026-10-27T18:40:56.593Z",
+			"finishedAt": "2026-10-27T18:40:57.582Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-24-check-arch.log",
+			"logSha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d"
+		},
+		{
+			"commit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d",
+			"command": ["npm", "run", "check:plugin-api"],
+			"startedAt": "2026-10-27T18:40:57.583Z",
+			"finishedAt": "2026-10-27T18:41:08.003Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-25-check-plugin-api.log",
+			"logSha256": "1e41c2c4d09833eb3f01ccc618ef71c95589ee64bebf38cff32fc84b5ffa0774"
+		},
+		{
+			"commit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d",
+			"command": ["npm", "run", "check:native-plugin-boundary"],
+			"startedAt": "2026-10-27T18:41:08.004Z",
+			"finishedAt": "2026-10-27T18:41:08.891Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-26-boundary.log",
+			"logSha256": "37e65da882b0e8888c12bb0b6fe3db522cdfee95467703f02f37fa729619fcd2"
+		}
+	],
+	"finalCounts": {
+		"backend": {
+			"passed": 2128,
+			"skipped": 17,
+			"filesPassed": 268,
+			"filesSkipped": 3
+		},
+		"desktop": {
+			"passed": 912,
+			"skipped": 1,
+			"filesPassed": 168
+		},
+		"rootNode": {
+			"passed": 24
+		}
+	},
+	"packedKnowledge": {
+		"status": "PASS",
+		"tarballSha256": "60e6b07180a69b7c4f462746251c035c08ec1cc969ed708f457d173164935033",
+		"package": "@gyoungwe/pi-knowledge",
+		"version": "0.3.0",
+		"manifestId": "drone-pi-knowledge",
+		"sdk": "1.1.0",
+		"model": "faux-offline",
+		"actualReadOnlySession": true,
+		"productionCapabilityRouting": true,
+		"tools": [
+			{
+				"name": "knowledge_status",
+				"error": false
+			},
+			{
+				"name": "knowledge_search",
+				"error": false
+			},
+			{
+				"name": "effect_probe_unknown",
+				"error": true
+			},
+			{
+				"name": "effect_probe_write",
+				"error": true
+			}
+		],
+		"uiOverviewNotes": 3,
+		"searchMatchesNative": true,
+		"refresh": true,
+		"readingOperations": ["readNote", "links", "graph", "jobs", "recentByCategory"],
+		"readingScopes": [
+			{
+				"project": null,
+				"visibleNotes": 1,
+				"jobs": 2,
+				"hiddenProjectDenied": true
+			},
+			{
+				"project": "alpha",
+				"visibleNotes": 2,
+				"jobs": 4,
+				"hiddenProjectDenied": true
+			},
+			{
+				"project": null,
+				"visibleNotes": 1,
+				"jobs": 2,
+				"hiddenProjectDenied": true
+			}
+		],
+		"statePolicy": {
+			"status": "PASS",
+			"readOnlyGrantRejected": true,
+			"deniedApprovalNoWrite": true,
+			"atomicReadback": true,
+			"staleVersionRejected": true,
+			"malformedStrictDiagnostic": true,
+			"savedVersion": "c4f5271a63c41cb60059d30d08e9d80238ce5426890b3659b40632bc5f71d4fc",
+			"revokedBindingRejected": true,
+			"reloadedPersistedValue": true,
+			"readOnlySessionRejected": true
+		},
+		"reviews": {
+			"application": 0,
+			"alpha": 1,
+			"betaHidden": true,
+			"readOnlySession": true,
+			"proposalHash": "24b322a163cb60b736a8b9f47657ddfe9f75533ba51bc818a04a31c7ca1a8c5a",
+			"beforeAfterProtectedExact": true,
+			"sourceLineHashes": true,
+			"sourceChangeDetected": true,
+			"targetChangeDetected": true,
+			"staleAndTamperedProposalRejected": true,
+			"noReviewWrites": true
+		},
+		"readingInputSchemas": true,
+		"pagedReadHashAndLines": true,
+		"changedHashRejected": true,
+		"unknownAndWriteExecuted": 0,
+		"fullHooksAndPublication": "NOT_IMPLEMENTED",
+		"childrenExited": true,
+		"reservationsReleased": true,
+		"cleanup": [
+			{
+				"phase": "sdk-dispose",
+				"status": "fulfilled",
+				"durationMs": 2
+			},
+			{
+				"phase": "native-bootstrap-dispose",
+				"status": "fulfilled",
+				"durationMs": 0
+			},
+			{
+				"phase": "coordinator-close",
+				"status": "fulfilled",
+				"durationMs": 11
+			},
+			{
+				"phase": "knowledge-child-census",
+				"status": "fulfilled",
+				"durationMs": 53
+			},
+			{
+				"phase": "control-child-census",
+				"status": "fulfilled",
+				"durationMs": 53
+			},
+			{
+				"phase": "reservation-census",
+				"status": "fulfilled",
+				"durationMs": 0
+			},
+			{
+				"phase": "fixture-remove",
+				"status": "fulfilled",
+				"durationMs": 40
+			}
+		],
+		"ownerProcessCount": 2,
+		"resourceProcessCount": 1,
+		"sourceCommit": "f4a530a4559ffa13e3e3e2dff0b1d693c1f974ce",
+		"hostCommit": "5e0c9aabb69abd54d681e4fc86a93f5cd3fcaa8d"
+	},
+	"boundary": {
+		"exitCode": 1,
+		"status": "INCOMPLETE",
+		"runtimeAcceptance": "NOT_RUN",
+		"counts": {
+			"domain-build-step": 15,
+			"domain-manifest-dependency": 11,
+			"domain-type-import": 6,
+			"domain-runtime-import": 1,
+			"domain-packaged-resource": 21,
+			"required-domain-plugin": 4
+		},
+		"log": {
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/task-owner-26-boundary.log",
+			"sha256": "37e65da882b0e8888c12bb0b6fe3db522cdfee95467703f02f37fa729619fcd2"
+		}
+	},
+	"importantLimits": [
+		"No formal installer GUI acceptance for this candidate",
+		"The packed SDK scenario covers the read-only native tools and UI data/state/review reads; full hooks/publication remain NOT_IMPLEMENTED",
+		"Research SDK delivery covers four isolated specialists plus parent, and a separate summary model review; it does not prove all protected Wiki reviewer roles",
+		"Local file CAS rechecks the preimage before commit and reads back; it is not a kernel atomic cross-process compare-and-replace",
+		"Mandatory domain locks, host algorithms/UI/IPC and packaged resources remain; zero-domain host goal is not complete"
+	],
+	"pendingIntegration": [
+		{
+			"repository": "drone-plugins",
+			"branch": "codex/native-knowledge-review-owner",
+			"commit": "28819ba2cbc0949b5eb4ce4c4915f0b12f660fb3",
+			"status": "SOURCE_AND_REAL_PROCESS_CHECKS_READY_NOT_IN_MAIN_CANDIDATE",
+			"knowledgeTests": 525,
+			"tarballSha256": "f423c3b6be163bb48b392930cb7fe48523fbcccc98d51c5b4aaabac4e70ac0f8"
+		},
+		{
+			"repository": "Drone",
+			"branch": "codex/knowledge-review-process-acceptance",
+			"commit": "3047f28d091db13c3b39758ebb44a79ca5d841b4",
+			"status": "REAL_PROCESS_TEST_READY_NOT_IN_MAIN_CANDIDATE"
+		},
+		{
+			"repository": "both",
+			"branch": "codex/native-task-owner-migration",
+			"status": "IMPLEMENTATION_AND_INTEGRATED_GATES_IN_PROGRESS"
+		}
+	],
+	"excludedUnfinished": [
+		"Zotero cloud/account conflict",
+		"user authenticated MCP",
+		"Protocols.io write",
+		"other physical desktop platforms"
+	],
+	"deferred": ["MinerU/GROBID", "B8", "B8-2"],
+	"modelAcceptance": {
+		"provider": "official SDK deterministic offline faux providers",
+		"realAgentSessionAndToolDispatch": true,
+		"remoteModelInference": false,
+		"inferenceQualityAssessed": false
+	}
+}

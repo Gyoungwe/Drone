@@ -33,6 +33,21 @@
 | Google Antigravity 登录后返回 400 `INVALID_ARGUMENT` 或 403 `UNSUPPORTED_CLIENT` | 二 · Cloud Code Assist ClientMetadata 枚举 |
 | 生信任务 trace 显示 `skills: []`，模型退回临时脚本 | 二 · 研究 skill 路由与开发态资源同步 |
 | 未选项目时知识 PDF 预览报 `Invalid arguments for host method file:preview` | 2026-10-26 · 可选 IPC 参数与显式 undefined |
+| 读取型 native 工具注册即报 Unsupported native Pi API: events | 2026-10-28 · 原生适配器提前读取未支持 API |
+| 摘要写过但缺 reviewed receipt、specialist 不继续 | 2026-10-28 · 研究摘要必须消费真实 delivery handle |
+| 不装知识插件后扩展通知丢失、旧 context 继续通知 | 2026-10-28 · SDK 退订与通用通知 |
+
+## 2026-10-28：原生适配器提前读取未支持 API
+
+managed Pi proxy 的属性读取本身会明确拒绝未支持 API。`createKnowledgeNativeAdapter` 曾在注册前读取 `pi.events`，让只用 registerTool/on 的两个读取工具也加载失败。按扩展实际请求再读取，保留真正请求时的拒绝；不要用 optional chaining 探测会抛错的 API，也不要静默伪造 event bus。真实 tarball→权限受限进程→SDK 回归需启用，默认跳过的 fixture 不能证明包可加载。
+
+## 2026-10-28：研究摘要必须消费真实 delivery handle
+
+只注册工具却丢弃 `registerResearchExtension` 返回值，会让旧 writer 只写 summary 而缺少 reviewed receipt；手写 answerable metadata 的成功测试因此是假前提。生产链必须经过当前 read ledger/revision、真实模型隔离审阅和写后回读。首次写入前逐一检查 summary/history/Vault 的真实路径，run_dir 校验不能保护其兄弟 symlink 目录；临时文件完成后再检查 preimage，失败清理本次临时文件。这里是乐观路径 CAS，不宣称跨进程原子 compare-and-replace；回滚遇到人工更改须保留并报告 partial。
+
+## 2026-10-28：SDK 退订与通用通知
+
+官方 `events.on()` 返回退订函数，测试替身应使用 `createEventBus`。Pi 1.1.0 的 session.dispose 不会移除 extension onError 监听，`session/extension-errors.ts` 用同 callback 的公共 runner.onError 退订，并覆盖 reload；升级 SDK 后需重新验证删除条件。notify 沿通用 SessionEvent 发送到 toast，主/子会话结束后旧 context 不能继续发，消息不落 trace，不能依赖知识插件。生成 `.pi` 后对 manifest 运行 Biome formatter，并验证 source/output 哈希；不手工修改 bundle。
 
 ## 2026-10-26：可选 IPC 参数与显式 undefined
 

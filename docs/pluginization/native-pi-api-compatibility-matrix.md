@@ -96,11 +96,13 @@
 
 基础 Context 的完整成员：`ui`、`mode`、`hasUI`、`cwd`、`sessionManager`、`modelRegistry`、`model`、`scopedModels`、`thinkingLevel`、`isIdle`、`isProjectTrusted`、`signal`、`abort`、`hasPendingMessages`、`shutdown`、`getContextUsage`、`compact`、`getSystemPrompt`。managed worker 仅投影 cwd、hasUI=false、signal 和 sessionManager.getSessionId；其余 Context、ToolContext.tools/executeTool、CommandContext 与 SessionManager API 仍有拒绝或未验收项。Registry 对 in-process factory 的真实 Context 不等于进程 worker 的能力。
 
-UI 完整成员：`select`、`confirm`、`input`、`notify`、`onTerminalInput`、`setStatus`、`setWorkingMessage`、`setWorkingVisible`、`setWorkingIndicator`、`setHiddenThinkingLabel`、`setWidget`、`setFooter`、`setHeader`、`setTitle`、`custom`、`pasteToEditor`、`setEditorText`、`getEditorText`、`editor`、`addAutocompleteProvider`、`setEditorComponent`、`getEditorComponent`、`theme`、`getAllThemes`、`getTheme`、`setTheme`、`getToolsExpanded`、`setToolsExpanded`。普通沙箱已桥接 select/confirm/input/notify；managed native 的 hasUI=false。旧直连 SDK 的 Desktop makeUiContext 仅实现基础询问/通知并提供 theme 对象，其余终端/编辑/状态方法多为 no-op，custom 返回 undefined、setTheme 返回 success:true，属于待修缺口。theme 对象存在也不等于终端渲染能出现在 Desktop。
+UI 完整成员：`select`、`confirm`、`input`、`notify`、`onTerminalInput`、`setStatus`、`setWorkingMessage`、`setWorkingVisible`、`setWorkingIndicator`、`setHiddenThinkingLabel`、`setWidget`、`setFooter`、`setHeader`、`setTitle`、`custom`、`pasteToEditor`、`setEditorText`、`getEditorText`、`editor`、`addAutocompleteProvider`、`setEditorComponent`、`getEditorComponent`、`theme`、`getAllThemes`、`getTheme`、`setTheme`、`getToolsExpanded`、`setToolsExpanded`。普通沙箱已桥接 select/confirm/input/notify；managed native 的 hasUI=false。旧直连 SDK 的 Desktop makeUiContext 仅实现基础询问/通知并提供 theme 对象，其余终端/编辑/状态方法多为 no-op。宿主 `9a5471d5` 已将 custom 改为明确拒绝、setTheme 改为 success:false；真实 SDK 的两个工具分别得到错误/失败结果，后续基础 read 正常。theme 对象存在也不等于终端渲染能出现在 Desktop。
 
 ## 必须继续处理
 
-1. 给主会话与子会话持续绑定 SDK onError。当前 SDK 会吞 hook 异常并发送错误事件，缺少宿主监听可能形成静默继续；不能以 loader.errors 为空证明 hook 成功。
+主/子会话的持续 onError 已由 `2f9b6d16` 接入日志与 traces；真实 SDK create/reload/restore 与子会话覆盖权限门禁开关、错误后继续 read、关闭退订。日志记录非致命 hook 异常，不把 loader.errors 为空当作 hook 成功。
+
+1. 完成其余事件/Context 的错误传播与逐项真实回执；既有 onError 切片不代表全部 41 种事件已验收。
 2. 删除旧 Desktop UI 的静默 no-op/假成功，按支持能力返回真实结果或明确拒绝；核对 bind mode 与 hasUI。
 3. 补 managed 工具 metadata、onUpdate、上下文与 getter 的完整声明矩阵和真实失败回执；不增加同步跨进程缓存来伪装支持。
 4. 用完整 33/41/28 探针及 locked/latest 真 SDK 回归固定支持/拒绝清单，补格式相同但 API 不兼容包的实际安装诊断。
