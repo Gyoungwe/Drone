@@ -1,6 +1,6 @@
 # 原生插件能力发现与 clean-prefix 包验收
 
-日期：2026-10-28。当前基线：宿主 `5e0c9aab`、插件 `f4a530a`。插件完整检查、源码独立重建、默认远程锁定取包与宿主六项标准门禁通过，完整命令与失败重跑见[本轮回执](../releases/native-plugin-task-owner-host-2026-10-28.json)；旧 [6c9400c6/b1c11f3 回执](../releases/native-plugin-integrated-host-2026-10-28.json)仅证明历史范围。领域边界仍 INCOMPLETE，未执行的新正式包 GUI 不补写 PASS。更早历史已[归档](../archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。
+日期：2026-10-28。当前基线：宿主 `fd4c5040`、插件 `dd7effc`。完整知识审核与 canonical task owner 已整合；插件完整检查、固定源码 archive/clean ci 重建、默认远程取包与宿主六项标准门禁通过，完整命令与首次缓存残留失败/重跑见[本轮回执](../releases/native-plugin-owner-migration-2026-10-28.json)。旧 `5e0c9aab/f4a530a` [回执](../releases/native-plugin-task-owner-host-2026-10-28.json)保留历史范围。领域边界仍 INCOMPLETE，未执行的新正式包 GUI 不补写 PASS。更早历史已[归档](../archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。
 
 本轮 P0–P7 仍未全部完成；阶段清单以[执行计划](native-plugin-implementation-plan.md)为准。历史 PASS 继续有效，但只证明其记录的版本、数据与路径，不能外推到当前候选或整个领域。
 
@@ -12,15 +12,15 @@
 | 原生 Pi / 包独立性 | research-suite clean-prefix tarball：4 extensions、22 tools；锁定 1.1.0/latest 1.4.0 部分真实会话；pi-core 独立 check | 所有 API、所有候选 tarball 的最终兼容与发布后干净安装 |
 | 正式包通用宿主 | 隔离 profile、空 optional UI/npm roots 的 generic session create/close；应用 owner、会话切换、停用/恢复和退出切片 | 最新领域候选包的完整 UI / Vault 写入工作流 |
 | 正式包生命周期 | 临时 registry 1.0.0→1.1.0→1.0.0→remove→restore→remove；真实活跃会话 reload 与 reload-deferred；公开 pi-evidence 0.1.1 install/update/remove | 公开包跨版本回滚、销毁失败、同一候选 tarball 的完整 GUI |
-| knowledge 迁移 | 安装 maintenance plan/run；f4 真实 tarball/受限双进程/SDK 验证只读 owner、UI 读取、状态授权与关闭。完整审核/history/undo 的 28819ba 隔离候选已通过真实进程但未整合 | 完整候选锁/套件整合、hooks/publication、全部 UI/IPC 与正式 GUI |
-| research/tasks/discovery | 无 core 时基础读写/权限拒绝、显式加载顺序与 24 SDK 回归；生产 research review/delivery/receipt、4 specialist 与单独摘要 reviewer、拒绝/回滚；discovery 73 项真实包定向测试 | 完整研究/任务/分析 owner 与 UI；native discovery、容器、B5 GUI；任务新分支尚未整合 |
-| 当前门禁 | 宿主独立根命令与 plugin-api lifecycle 全过；backend 2128/17 skipped、Desktop 912/1 skipped；插件完整 check、SDK/clean-install/suite/PDF | native boundary exit 1/INCOMPLETE；后续完整迁移与最终正式包仍未验收 |
+| knowledge 迁移 | 安装 maintenance plan/run；dd7 真实 tarball/受限双进程/SDK 验证 owner、UI 读写授权；审核 apply→partial→retry→history→undo、仅写一次、进程/SQLite/租约清理通过 | 完整 hooks/publication proof、模型审核、其它 UI/IPC 与正式 GUI |
+| research/tasks/discovery | 无 core 时基础读写/权限拒绝、显式加载顺序与 24 SDK 回归；生产 research review/delivery/receipt、4 specialist 与单独摘要 reviewer、拒绝/回滚；discovery 73 项真实包定向测试 | 完整研究/分析 owner 与 UI；任务 UI、native discovery、容器、B5 GUI；任务 canonical owner 已整合 |
+| 当前门禁 | 宿主独立根命令与 plugin-api lifecycle 全过；backend 1957/17 skipped、Desktop 912/1 skipped；根 Node 25/25；插件完整 check、SDK/clean-install/suite/PDF | native boundary exit 1/INCOMPLETE；后续完整迁移与最终正式包仍未验收 |
 
-历史 pi-knowledge 0.2.1 锁缺 exports 已修复。当前四包固定 `f4a530a`，独立 archive/clean ci 可重建，宿主默认远程 fetch 校验 SHA-256。完整检查曾因 isolated npm ECONNRESET、旧 event bus fixture、生成清单格式/端口参数及旧任务/摘要 fixture 失败；真实生产缺口（提前读取不支持的 native events、未消费 delivery handle、知识依赖通知和摘要路径/提交保护）已修复，全部失败保留于回执。HTTP/1.1 保留 HTTPS/TLS 校验，未设置开发源码覆盖。不同提交的计数不合并为一次运行。
+历史 pi-knowledge 0.2.1 锁缺 exports 已修复。当前四包固定 `dd7effc`，独立 archive/clean ci 可重建，宿主默认远程 fetch 校验 SHA-256。完整检查曾因 isolated npm ECONNRESET、旧 event bus fixture、生成清单格式/端口参数及旧任务/摘要 fixture 失败；真实生产缺口（提前读取不支持的 native events、未消费 delivery handle、知识依赖通知和摘要路径/提交保护）已修复，全部失败保留于回执。HTTP/1.1 保留 HTTPS/TLS 校验，未设置开发源码覆盖。不同提交的计数不合并为一次运行。
 
 ## 未关闭项
 
-1. P2–P5 完整领域实现/UI ownership 及宿主装配删除，包含任务状态机、discovery B5d–B5f 和旧知识资源生成/打包链。
+1. P2–P5 完整领域实现/UI ownership 及宿主装配删除，包含任务 UI、知识完整审核以外的剩余功能、discovery B5d–B5f 和旧知识资源生成/打包链。
 2. 删除 4 个必需领域锁和旧 build/resource 闭包；当前版本/锁/标准门禁已同步，不能据此宣称零领域独立宿主。
 3. 同候选 tarball 的原生真实会话和正式包领域 GUI、Vault apply/rollback、销毁失败与公开包跨版本回滚。通用零插件正式包和临时 registry 生命周期切片已取得真实证据，不在此重复列为“完全未验收”。
 4. 最终领域边界扫描仍为 `INCOMPLETE`。WebDAV/inquiry 的既有归属记录不在本次文档整理中重新决策。
@@ -33,9 +33,6 @@
 
 以下为最近 30 条去重后的历史记录；内容中的“仍未提供”“仍保留”等描述属于该次提交，当前结论以上表与未关闭项为准。更早的记录、重复原文及全部证据细节见[完整历史](../archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。
 
-- 2026-10-27：discovery host seam contract：`@gyoungwe/plugin-api` 新增版本化 `DiscoveryHostLoader`/`DiscoveryHostPort`（status、kernel session 基础操作），backend 通过 `BackendOptions.discoveryHostLoader` 暴露显式 `discoveryHost`。现有 backend `DiscoveryService` 仍是权威实现，loader 只建立注入合同，不替换 IPC 或宣称插件行为 PASS；plugin-api build、backend typecheck、create-backend 32 项回归与 Biome 通过。
-- 2026-10-27：Desktop discovery wiring：通用 `discoverPluginHostLoader` 现在按 `capability: "discovery"` 发现任意已安装包的 `discoveryHostLoader`，并把它注入 backend 的显式 seam；新增声明包 fixture 回归与 Desktop source wiring 断言。native `DiscoveryService` 仍保持权威实现，尚未迁移 B5d–B5f 行为或切换 IPC。
-- 2026-10-27：research host-neutral cleanup：`36a2569f` 删除 backend 的 `research-connector-compat.ts`/`research-write-compat.ts` 两个兼容 facade，把无插件 fail-closed registry 收回领域 service 的明确构造函数；create-backend、research-resource、research-write 共 46 项回归、backend typecheck 与 targeted Biome 通过，真实 connector/写入仍需安装插件和外部账户。
 - 2026-10-27：discovery migration seam：`30646945` 扩展 `@gyoungwe/plugin-api` 的 `DiscoveryHostPort`（export/critic/multipath/exploration/evaluation）并增加可选 host-owned `DiscoveryHostLoader.create(input)`；plugin-api build 与 migration/lifecycle gate 通过。native `DiscoveryService`、IPC 和 B5d–B5f 实现仍在宿主，完整 optional discovery 插件迁移未完成。
 - 2026-10-27：discovery read routing：`c7ca4736` 将 critic/multipath/exploration/evaluation 列表 IPC 改为已安装 `discoveryHost` 优先、未提供时回退 native service；新增 host-priority/native-fallback 回归 2 项，Desktop typecheck/Biome 通过。kernel 与执行类 IPC、B5d–B5f 算法仍在宿主。
 - 2026-10-27：tasks/workbench host slice：`5f10468f` 让 `createBackend` 接收可选 `TaskHostLoader`，安装任务 host 时直接复用其 acceptance registry，并把 capability provider 标为 `plugin:tasks`；无 loader 继续使用隔离 host registry。create-backend 回归 35 项与 Biome 通过，完整任务状态机和正式 GUI 仍未完成。
@@ -59,8 +56,10 @@
 - 2026-10-28：宿主 `400744bf` 删除旧 pi-core 源码，build/smoke/compat 仅验证 vendor；milestone 规则归插件。discovery 算法/状态归插件，宿主仅注入 runner/授权/JsonStore/项目 Inquiry；候选 73 项定向回归覆盖重启、拒绝、路径、隔离和旧 journal 原字节。native/B5 GUI 与 legacy guard 仍未关闭。
 - 2026-10-28：首次整合全测 8 项失败已修：合法 BUSCO 版本/counts、异步 policy/timeout、0.3 service constructor、真实 thread exit 观测；worker 严格预检失败保留 live writer，同时保留单 writer 约束。四包由 `b1c11f3` 独立 archive+clean ci 重建并锁 SHA-256；无开发源码 override，未执行 npm publish。
 - 2026-10-28：冻结宿主 `6c9400c6` 的 lint/typecheck/test/build/check:arch/check:plugin-api 全过，backend 2107 passed/18 skipped、Desktop 910 passed/1 skipped、根 Node 24/24。沙箱真实拒绝/声明与 managed prompt mutation 的 SDK 回归已包含。native boundary 仍 exit 1/INCOMPLETE：runtime 1、type 6、required locks 4、packaged resources 21；详见[整合回执](../releases/native-plugin-integrated-host-2026-10-28.json)及[API 盘点](native-pi-api-compatibility-matrix.md)。
-
 - 2026-10-28：P0 宿主诊断/通知收口：9a5471d5/2f9b6d16/5897667d/77ee4f8e 为 custom/theme 提供真实失败，持续记录 hook 错误，主/恢复/子会话通知沿通用 Event/preload/toast 传输并随生命周期撤销，不进 raw trace、不再依赖知识模块；真实 SDK 与 renderer/preload 回归通过，未关闭全部 33/41/28 API 矩阵。
 - 2026-10-28：P4 安装激活修复：knowledge 只通过现有同会话 event bus 获取当前 core journal，不再隐式装 task guard；core 修正 session journal/验收 schema/回调 runtime 接线。24 项真实 SDK 任务回归通过，宿主状态机及 UI 迁移仍留在独立分支。
 - 2026-10-28：P3 生产 delivery handle 实际接入摘要工具；真实 ledger/revision 与当前模型审阅后才写入/回读/commit receipt。4 隔离 specialist 与独立摘要 reviewer、malformed/unknown/source drift 拒绝、rollback/人工编辑/summary-history symlink 边界通过；不以旧手写 answerable metadata 充当成功。仍有宿主 FS writer，未关闭 P3。
-- 2026-10-28：固定宿主 5e0c9aab、插件 f4a530a 的六项标准门禁全过，backend 2128/17 skipped、Desktop 912/1 skipped、根 Node 24/24；真实 packed knowledge 双进程/SDK 回执匹配 SHA60e6b071…5033，关闭清零。native boundary 仍 15/11/6/1/21/4、INCOMPLETE；P2 28819ba/3047f28 的完整审核进程候选待整合，正式新 GUI 未运行。
+- 2026-10-28：固定宿主 5e0c9aab、插件 f4a530a 的六项标准门禁全过，backend 1957/17 skipped、Desktop 912/1 skipped；根 Node 25/25、根 Node 24/24；真实 packed knowledge 双进程/SDK 回执匹配 SHA60e6b071…5033，关闭清零。native boundary 仍 15/11/6/1/21/4、INCOMPLETE；P2 28819ba/3047f28 的完整审核进程候选待整合，正式新 GUI 未运行。
+- 2026-10-28：P2 canonical Wiki review/history/undo 与 private signed replay 已整合，CLI/Desktop 共用算法与 scoped IO；同候选6d7033cb…63b5ab 真实进程/SDK验证授权拒绝、partial→retry Vault仅写一次、history/undo、双进程/SQLite/租约释放。完整 hooks/proof、模型审核和最终 GUI 仍未完成。
+- 2026-10-28：P4 canonical owner/guard迁入插件，宿主 packages/tasks 与反向 workbench port 删除；无 core 基础工具、多会话/registry隔离、任务持久化恢复、9个生产SDK场景与core29+170通过。P0两条process标准metadata/onUpdate、并行/取消/迟到回调和加载失败后read通过；完整API与任务UI待后继。
+- 2026-10-28：冻结宿主 fd4c5040、插件 dd7effc 的双仓库标准门禁与固定源码独立重建通过；backend1957/17 skipped、Desktop912/1 skipped、root25/25、knowledge528。首次复用checkout旧任务node_modules空壳失败与清理后完整重跑已保留；native boundary15/10/6/1/21/4仍INCOMPLETE，无新DMG/npm发布/main合并。
