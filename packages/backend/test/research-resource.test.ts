@@ -2,7 +2,11 @@ import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type ResearchConnector, ResearchConnectorRegistry } from "@drone/research";
-import { checkKnowledgeSnapshotReuse } from "@gyoungwe/pi-knowledge/host";
+import {
+	checkKnowledgeSnapshotReuse,
+	ingestKnowledgeSnapshot,
+	resolveKnowledgeContext,
+} from "@gyoungwe/pi-knowledge/host";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";
 import { createKnowledgeResearchResourceOperations } from "../src/knowledge/ui";
@@ -12,11 +16,19 @@ import {
 	ResearchResourceService,
 } from "../src/services/research-resource";
 
+const installedKnowledgeOperations = () =>
+	createKnowledgeResearchResourceOperations({
+		researchResource: {
+			resolveContext: (input) => resolveKnowledgeContext(input as never),
+			ingestSnapshot: (input) => ingestKnowledgeSnapshot(input as never),
+		},
+	});
+
 async function service(): Promise<ResearchResourceService> {
 	const state = await mkdtemp(join(tmpdir(), "drone-research-state-"));
 	return new ResearchResourceService({
 		connectors: new ResearchConnectorRegistry(),
-		knowledgeOperations: createKnowledgeResearchResourceOperations(),
+		knowledgeOperations: installedKnowledgeOperations(),
 		store: new JsonStore<CaptureLedger>({
 			path: join(state, "captures.json"),
 			storageId: "test-research-captures",
@@ -187,7 +199,7 @@ describe("ResearchResourceService", () => {
 			defaultValue: () => ({ version: 1 as const, disabled: [] }),
 		});
 		const first = new ResearchResourceService({
-			knowledgeOperations: createKnowledgeResearchResourceOperations(),
+			knowledgeOperations: installedKnowledgeOperations(),
 			store: new JsonStore({
 				path: join(state, "captures-a.json"),
 				storageId: "test-research-captures-a",
@@ -200,7 +212,7 @@ describe("ResearchResourceService", () => {
 		expect(await first.setConnectorEnabled("fixture", false)).toMatchObject({ enabled: false });
 
 		const second = new ResearchResourceService({
-			knowledgeOperations: createKnowledgeResearchResourceOperations(),
+			knowledgeOperations: installedKnowledgeOperations(),
 			store: new JsonStore({
 				path: join(state, "captures-b.json"),
 				storageId: "test-research-captures-b",

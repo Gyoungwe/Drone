@@ -174,13 +174,17 @@ export function createKnowledgeDailyDiscoveryOperations(host?: KnowledgeHostPort
 
 /** Keep research capture snapshot semantics behind the discovered knowledge host seam. */
 export function createKnowledgeResearchResourceOperations(
-	host?: KnowledgeHostPort,
+	host?: Pick<KnowledgeHostPort, "researchResource">,
 ): ResearchKnowledgeOperations {
 	const source = host?.researchResource;
 	if (source) return source;
 	return {
-		resolveContext: knowledgeCompatibility.researchResource.resolveContext,
-		ingestSnapshot: knowledgeCompatibility.researchResource.ingestSnapshot,
+		resolveContext: () => {
+			throw new Error("Knowledge research capture is unavailable: install the knowledge plugin");
+		},
+		ingestSnapshot: () => {
+			throw new Error("Knowledge research capture is unavailable: install the knowledge plugin");
+		},
 	};
 }
 

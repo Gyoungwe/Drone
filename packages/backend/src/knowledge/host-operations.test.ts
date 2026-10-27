@@ -100,4 +100,14 @@ describe("knowledge host operations", () => {
 		});
 		expect(review).toHaveBeenCalledWith({ token: "preview" }, { signal: undefined });
 	});
+
+	it("fails closed for research capture when no knowledge plugin is installed", () => {
+		const operations = createKnowledgeResearchResourceOperations();
+		expect(() => operations.resolveContext({ workspaceRoot: "/workspace" })).toThrow(
+			"Knowledge research capture is unavailable: install the knowledge plugin",
+		);
+		expect(() => operations.ingestSnapshot({} as never)).toThrow(
+			"Knowledge research capture is unavailable: install the knowledge plugin",
+		);
+	});
 });
