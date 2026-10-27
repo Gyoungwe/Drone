@@ -145,6 +145,7 @@
 - 2026-10-27：P2 model-review host seam：插件 `606cc34` 将 `reviewWikiWithModel` 暴露为版本化 host loader 操作；宿主 `2e737044` 同步 plugin-api 合同、通过 discovered host 路由前台模型审阅并补安装路由回归。插件 host-loader/build/typecheck 与宿主 backend typecheck、4 项 host-operations 测试、Biome 通过；真实模型/Vault/正式安装包 GUI 仍未验收。
 - 2026-10-27：在 `df1eafca` 后运行 `npm run check:plugin-api`：生成的 host API projection、plugin-api package gate、迁移/生命周期门禁和本地 tarball install→upgrade→rollback→uninstall 均通过（API 1.3.0，绑定插件仓库 HEAD `606cc34`）。这只证明合同与本地包生命周期，不替代正式 Drone 安装包或真实模型验收。
 - 2026-10-27：重新运行 arm64 正式 `Drone.app` 的 `check-packaged-desktop.mjs`，在全新 HOME/profile、空 optional UI 根、空 managed npm 根和空 auth/model 存储下通过实际 Electron 启动、preload、知识未绑定、semantic/topic IPC、研究命令及 generic Pi session 创建/关闭，回执 `passed:true`。生命周期 `install/disable/restore/upgrade/rollback/destroy-failure` 为 `NOT_RUN`，因此仅更新零可选插件 smoke，不关闭 P7。
+- 2026-10-27：正式包隔离 profile 生命周期切片：`check-packaged-desktop.mjs --lifecycle-package=@gyoungwe/pi-evidence` 实际安装 `0.1.1`，收到 `staged → verified → enabled`；随后移除并收到 `disabled → drained → disabled`，读回确认 managed package 目录和配置入口消失。仅标记 packaged install/remove PASS，restore/upgrade/rollback/destroy-failure 仍 `NOT_RUN`。
 
 ## 未关闭项
 
