@@ -169,4 +169,33 @@ describe("PackageService lifecycle receipts", () => {
 		expect(manager.installAndPersist).toHaveBeenCalledWith("npm:fixture-extension");
 		await rm(root, { recursive: true, force: true });
 	});
+
+	it("rolls back an installed package to an explicit exact version", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-package-rollback-"));
+		const installed = join(root, "node_modules", "fixture-extension");
+		await mkdir(installed, { recursive: true });
+		await writeFile(join(installed, "package.json"), JSON.stringify({ version: "1.1.0" }));
+		const manager = managerFixture([{ source: "npm:fixture-extension", scope: "user" }]) as ReturnType<
+			typeof managerFixture
+		> & { getInstalledPath: ReturnType<typeof vi.fn> };
+		manager.getInstalledPath = vi.fn(() => installed);
+		manager.installAndPersist.mockImplementation(async (source: string) => {
+			await writeFile(join(installed, "package.json"), JSON.stringify({ version: source.split("@").at(-1) }));
+		});
+		const { service } = harness({ manager });
+
+		const receipt = await service.rollbackPackage("fixture-extension", "1.0.0");
+
+		expect(receipt).toMatchObject({
+			operation: "rollback",
+			packageName: "fixture-extension",
+			source: "npm:fixture-extension@1.0.0",
+			previousVersion: "1.1.0",
+			version: "1.0.0",
+			status: "succeeded",
+		});
+		expect(receipt.events.map((event) => event.type)).toContain("rolled_back");
+		expect(manager.installAndPersist).toHaveBeenCalledWith("npm:fixture-extension@1.0.0");
+		await rm(root, { recursive: true, force: true });
+	});
 });

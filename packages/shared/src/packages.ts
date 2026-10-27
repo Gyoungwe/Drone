@@ -44,7 +44,7 @@ export interface ConfiguredPackageInfo {
  * for its next boundary. */
 export type PackageLifecycleEffect = "current-session" | "next-session" | "app-restart";
 
-export type PackageLifecycleOperation = "install" | "update" | "remove";
+export type PackageLifecycleOperation = "install" | "update" | "rollback" | "remove";
 
 export type PackageLifecycleStatus = "succeeded" | "failed";
 

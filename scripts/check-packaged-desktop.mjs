@@ -306,7 +306,9 @@ try {
 			lifecycleStage = "rollback";
 			if (lifecycleFixture) {
 				fixtureLatest = "1.0.0";
-				const rollback = await evaluate(`window.pi.updatePackage(${JSON.stringify(lifecyclePackage)})`);
+				const rollback = await evaluate(
+					`window.pi.rollbackPackage(${JSON.stringify(lifecyclePackage)}, "1.0.0")`,
+				);
 				assert(rollback?.status === "succeeded", `package rollback failed: ${JSON.stringify(rollback)}`);
 				assert.equal(await installedVersion(), "1.0.0");
 				lifecycle.rollback = rollback;

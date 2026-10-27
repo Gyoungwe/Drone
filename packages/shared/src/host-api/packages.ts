@@ -95,7 +95,12 @@ const PackageLifecycleErrorSchema = Type.Object(
 
 const PackageLifecycleReceiptSchema = Type.Object(
 	{
-		operation: Type.Union([Type.Literal("install"), Type.Literal("update"), Type.Literal("remove")]),
+		operation: Type.Union([
+			Type.Literal("install"),
+			Type.Literal("update"),
+			Type.Literal("rollback"),
+			Type.Literal("remove"),
+		]),
 		packageName: Type.String({ minLength: 1 }),
 		source: Type.String({ minLength: 1 }),
 		scope: Type.Union([Type.Literal("user"), Type.Literal("project")]),
@@ -160,6 +165,10 @@ export const PackagesContract = defineDomain("packages", {
 			args: Type.Tuple([Type.String({ minLength: 1 })]),
 			result: Type.Unsafe<PackageLifecycleReceipt>(PackageLifecycleReceiptSchema),
 		},
+		rollbackPackage: {
+			args: Type.Tuple([Type.String({ minLength: 1 }), Type.String({ minLength: 1 })]),
+			result: Type.Unsafe<PackageLifecycleReceipt>(PackageLifecycleReceiptSchema),
+		},
 		removePackage: {
 			args: Type.Tuple([
 				Type.String({ minLength: 1 }),
@@ -179,6 +188,7 @@ export type PackagesSchemaTypes = {
 	searchCatalog: [query: string, type?: CatalogPackageType | "", page?: number];
 	installPackage: [name: string];
 	updatePackage: [name: string];
+	rollbackPackage: [name: string, version: string];
 	removePackage: [source: string, scope: "user" | "project"];
 	listConfiguredPackages: [];
 };

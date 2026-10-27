@@ -8,6 +8,7 @@ describe("PackagesContract", () => {
 		expect(channelOf(PackagesContract, "searchCatalog")).toBe("packages:searchCatalog");
 		expect(channelOf(PackagesContract, "installPackage")).toBe("packages:installPackage");
 		expect(channelOf(PackagesContract, "updatePackage")).toBe("packages:updatePackage");
+		expect(channelOf(PackagesContract, "rollbackPackage")).toBe("packages:rollbackPackage");
 		expect(Check(PackagesContract.methods.searchCatalog.args, ["agent"])).toBe(true);
 		expect(Check(PackagesContract.methods.searchCatalog.args, ["agent", undefined, 2])).toBe(true);
 		expect(Check(PackagesContract.methods.searchCatalog.args, ["agent", "extension", 2])).toBe(true);
@@ -17,6 +18,8 @@ describe("PackagesContract", () => {
 		expect(Check(PackagesContract.methods.installPackage.args, [""])).toBe(false);
 		expect(Check(PackagesContract.methods.updatePackage.args, ["@scope/pkg"])).toBe(true);
 		expect(Check(PackagesContract.methods.updatePackage.args, [""])).toBe(false);
+		expect(Check(PackagesContract.methods.rollbackPackage.args, ["@scope/pkg", "1.0.0"])).toBe(true);
+		expect(Check(PackagesContract.methods.rollbackPackage.args, ["@scope/pkg", ""])).toBe(false);
 		expect(Check(PackagesContract.methods.removePackage.args, ["npm:pkg", "user"])).toBe(true);
 		expect(Check(PackagesContract.methods.removePackage.args, ["npm:pkg", "workspace"])).toBe(false);
 		expect(Check(PackagesContract.methods.listConfiguredPackages.args, [])).toBe(true);
@@ -74,5 +77,21 @@ describe("PackagesContract", () => {
 				error: { code: "unknown", message: "bad", retryable: false },
 			}),
 		).toBe(false);
+	});
+
+	it("accepts explicit rollback receipts", () => {
+		expect(
+			Check(PackagesContract.methods.rollbackPackage.result, {
+				operation: "rollback",
+				packageName: "example-extension",
+				source: "npm:example-extension@1.0.0",
+				scope: "user",
+				status: "succeeded",
+				effect: "current-session",
+				previousVersion: "1.1.0",
+				version: "1.0.0",
+				events: [{ type: "rolled_back", at: 1, detail: "1.0.0" }],
+			}),
+		).toBe(true);
 	});
 });

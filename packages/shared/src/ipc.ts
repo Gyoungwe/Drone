@@ -275,6 +275,7 @@ export const IpcChannels = {
 	PackagesSearchCatalog: "packages:searchCatalog",
 	PackagesInstall: "packages:install",
 	PackagesUpdate: "packages:update",
+	PackagesRollback: "packages:rollback",
 	PackagesRemove: "packages:remove",
 	PackagesListConfigured: "packages:listConfigured",
 	PackagesLatestVersions: "packages:latestVersions",
@@ -477,6 +478,7 @@ export interface PiApi
 	installPackage(name: string): Promise<PackageLifecycleReceipt>;
 	/** 更新已配置社区包到 registry 最新版本；返回可审计的生命周期回执 */
 	updatePackage(name: string): Promise<PackageLifecycleReceipt>;
+	rollbackPackage(name: string, version: string): Promise<PackageLifecycleReceipt>;
 	/** 卸载已配置的包（按 source + scope 移除并持久化）；返回可审计的生命周期回执 */
 	removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt>;
 	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
