@@ -690,6 +690,40 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
+	it("routes maintenance topic and Wiki operations through the installed host", async () => {
+		const calls: string[] = [];
+		const service = new KnowledgeUiService(undefined, {
+			knowledgeHost: {
+				maintenanceTopic: {
+					setTopic: async () => {
+						calls.push("topic");
+						return { changed: true };
+					},
+					proposeWiki: async () => {
+						calls.push("wiki");
+						return { id: "proposal-1" };
+					},
+				},
+			},
+		});
+		await service.setMaintenanceTopic({
+			cwd: "/tmp/project",
+			notePath: "Library/Papers/a.md",
+			topic: "A topic",
+			revision: 1,
+		});
+		await service.proposeMaintenanceWiki({
+			cwd: "/tmp/project",
+			sourcePath: "Library/Papers/a.md",
+			title: "A wiki",
+			markdown: "# A wiki",
+			rationale: "evidence",
+			revision: 1,
+		});
+		expect(calls).toEqual(["topic", "wiki"]);
+		service.dispose();
+	});
+
 	it("routes daily discovery and memory operations through the installed host", async () => {
 		const calls: string[] = [];
 		const service = new KnowledgeUiService(undefined, {
