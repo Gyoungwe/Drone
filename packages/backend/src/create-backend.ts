@@ -137,7 +137,6 @@ import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
 import type { StorageRegistry } from "./storage/registry";
-import { createWorkbenchHostPort, type WorkbenchHostPort } from "./tasks/workbench-runtime";
 import type { SshHostEntry } from "./tools/ssh";
 import { applyStoredZoteroLocalKey } from "./zotero/local-write";
 import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
@@ -189,7 +188,6 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	listActiveSessionRuntime(): Array<{ sessionId: string; streaming: boolean; compacting: boolean }>;
 	getPendingPermissionRequests(): PermissionRequest[];
 	checkSessionWritable(sessionId: string): "ok" | "not_found" | "read_only";
-	readonly workbench: WorkbenchHostPort;
 }
 
 export interface MemoryServicePort {
@@ -255,8 +253,6 @@ export interface BackendServices {
 	researchWrites: ResearchWriteService;
 	/** Isolated acceptance registry exposed to an installed task/workbench plugin. */
 	taskHost?: TaskAcceptanceHostPort;
-	/** Standard workbench operation client exposed to an installed task plugin. */
-	workbench: WorkbenchHostPort;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
 	/** Installed package-owned discovery surface; absent means discovery operations are unavailable. */
@@ -358,9 +354,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const taskHost = options.taskHostLoader?.load();
 	if (taskHost?.dispose) runtime.registerDisposable?.({ dispose: taskHost.dispose });
-	const workbench = taskHost?.workbench
-		? { contractVersion: 1 as const, client: taskHost.workbench }
-		: createWorkbenchHostPort();
 	// The packaged knowledge capability owns its runtime when installed. The
 	// generic host does not bootstrap the legacy worker; callers that still need
 	// that compatibility adapter is test-only and outside this composition path.
@@ -424,7 +417,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			));
 	const sessions = new SessionService({
 		...options,
-		workbenchPort: workbench,
 		taskHost,
 		knowledgeFactory,
 		...(knowledgeHost?.backgroundReviewer
@@ -927,7 +919,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		research,
 		researchWrites,
 		taskHost,
-		workbench,
 		discovery,
 		...(discoveryHost ? { discoveryHost } : {}),
 		dataDesign,

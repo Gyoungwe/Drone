@@ -132,7 +132,7 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，11 个 workspace 包；知识、原生研究与完整知识 UI 的源码归外部插件仓库：
+npm workspaces monorepo，9 个 workspace 包；知识、原生研究与完整知识 UI 的源码归外部插件仓库：
 
 ```
 packages/

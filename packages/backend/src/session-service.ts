@@ -55,7 +55,6 @@ import { LoginService } from "./settings/login";
 import { ModelSettingsService } from "./settings/models";
 import { SettingsService } from "./settings/settings";
 import type { StorageRegistry } from "./storage/registry";
-import type { WorkbenchHostPort } from "./tasks/workbench-runtime";
 import { SubagentPanelService } from "./tools/subagent";
 import { withNativeSubagentSlot } from "./tools/subagent/slots";
 
@@ -98,8 +97,6 @@ export interface SessionServiceOptions {
 	userDataDir?: string;
 	/** Host-owned runtime container; omitted only for direct compatibility construction. */
 	runtime?: DroneRuntime;
-	/** Host-owned workbench operation port; absent means workbench operations fail closed. */
-	workbenchPort?: WorkbenchHostPort;
 	/** Optional knowledge domain provider; the default remains the host compatibility adapter. */
 	knowledgeFactory?: () => KnowledgeUiServicePort;
 	/** Optional background reviewer factory supplied by an installed knowledge plugin. */
@@ -150,7 +147,6 @@ type DecisionHandler = (event: unknown) => void;
  */
 export class SessionService extends SessionServiceApi {
 	readonly runtime!: DroneRuntime;
-	readonly workbench!: WorkbenchHostPort;
 	readonly knowledge: KnowledgeUiServicePort;
 	/** Session-bound knowledge actions exposed through BackendServices. */
 	readonly knowledgeSession!: KnowledgeSessionService;
@@ -266,15 +262,6 @@ export class SessionService extends SessionServiceApi {
 
 	constructor(readonly options: SessionServiceOptions = {}) {
 		super();
-		this.workbench = options.workbenchPort ?? {
-			contractVersion: 1,
-			client: {
-				invoke: async (operation: string) => {
-					throw new Error(`Workbench operation unavailable: ${operation}`);
-				},
-				subscribe: () => () => undefined,
-			},
-		};
 		this.knowledge = options.knowledgeFactory?.() ?? new KnowledgeUiService();
 		this.bindHost(this);
 		initializeSessionComposition(this, options);
