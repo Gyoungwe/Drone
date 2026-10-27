@@ -66,7 +66,7 @@ it("queues a new AI page for human review, archives exact history and supports s
 });
 it("strict mode stages without touching live Wiki", async () => {
 	await saveReviewMode("strict");
-	expect(readReviewMode()).toBe("strict");
+	expect(await readReviewMode()).toBe("strict");
 	expect((await stage()).status).toBe("pending");
 	await expect(readFile(join(vault, path))).rejects.toMatchObject({ code: "ENOENT" });
 });

@@ -86,7 +86,8 @@ export function resolveLegacyKnowledgeWorkerResource(
 	return { path, manifestPath, metadata: { version, source: path, integrity: expected } };
 }
 
-export function configureBackendKnowledgeWorker(): void {
+/** The observer lets lifecycle tests confirm the real worker has exited. */
+export function configureBackendKnowledgeWorker(onWorker?: (worker: Worker) => void): void {
 	knowledgeHost.configureKnowledgeHost({
 		loadWorkspaceConfig: async (cwd) => {
 			const root =
@@ -105,10 +106,12 @@ export function configureBackendKnowledgeWorker(): void {
 			const resource = resolveLegacyKnowledgeWorkerResource();
 			const workerData =
 				options?.workerData && typeof options.workerData === "object" ? options.workerData : {};
-			return new Worker(pathToFileURL(resource.path), {
+			const worker = new Worker(pathToFileURL(resource.path), {
 				...options,
 				workerData: { ...workerData, workerResource: resource.metadata },
 			} as any);
+			onWorker?.(worker);
+			return worker;
 		},
 		() => resolveLegacyKnowledgeWorkerResource().metadata,
 	);

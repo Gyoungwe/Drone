@@ -1,14 +1,18 @@
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import "@drone/extensions/internal/obsidian-workbench";
 import { KnowledgeService } from "@gyoungwe/pi-knowledge/host";
+import { configureBackendKnowledgeWorker } from "./knowledge-compat-fixture";
 
-let root, vault, service;
+let root, vault, service, workers;
 beforeEach(async () => {
 	// Production bindings canonicalize the Vault; Windows CI TEMP may use an 8.3 alias.
 	root = await realpath(await mkdtemp(join(tmpdir(), "knowledge-lifecycle-")));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "state"));
+	workers = [];
+	configureBackendKnowledgeWorker((worker) => workers.push(worker));
 	vault = join(root, "Vault");
 	await mkdir(vault);
 	await Promise.all(
@@ -16,10 +20,11 @@ beforeEach(async () => {
 			writeFile(join(vault, `note-${i}.md`), `# Evidence ${i}\nLifecycle regression.\n`),
 		),
 	);
-	service = new KnowledgeService({ vault, vaultId: "fixture", revision: 1 }, join(root, "state"));
+	service = new KnowledgeService({ vault, vaultId: "fixture", revision: 1 });
 });
 afterEach(async () => {
 	await service.close();
+	vi.unstubAllEnvs();
 	await rm(root, { recursive: true, force: true });
 });
 
@@ -31,8 +36,9 @@ it("concurrent close waits for the same worker exit and releases SQLite files", 
 	await expect(service.request("status")).rejects.toThrow("closed");
 	await pending;
 	await first;
-	expect(service.worker.threadId).toBe(-1);
-	expect(service.pending.size).toBe(0);
+	expect(workers).toHaveLength(1);
+	expect(workers[0].threadId).toBe(-1);
+	expect(service.pendingRequestCount).toBe(0);
 	// No retry or sleep: completion must mean handles are actually released on Windows.
 	await rm(join(root, "state"), { recursive: true });
 });
