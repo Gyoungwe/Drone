@@ -107,6 +107,34 @@ describe("discoverPluginHostLoader", () => {
 		expect(result?.loader.load()).toEqual({ contractVersion: 1 });
 	});
 
+	it("discovers the optional discovery host through its declared capability", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-plugin-discovery-discovery-"));
+		const packageRoot = join(root, "discovery-provider");
+		await mkdir(join(packageRoot, "dist"), { recursive: true });
+		await writeFile(
+			join(packageRoot, "package.json"),
+			JSON.stringify({ name: "discovery-provider", version: "0.1.0" }),
+		);
+		await writeFile(
+			join(packageRoot, "plugin.manifest.json"),
+			JSON.stringify({
+				capabilities: ["discovery"],
+				hosts: ["drone-desktop"],
+				entrypoints: { host: "./dist/host.mjs" },
+			}),
+		);
+		await writeFile(
+			join(packageRoot, "dist", "host.mjs"),
+			"export const discoveryHostLoader = { contractVersion: 1, load: () => ({ contractVersion: 1 }) };",
+		);
+		const result = await discoverPluginHostLoader<{ contractVersion: 1; load: () => unknown }>({
+			packageRoots: [root],
+			capability: "discovery",
+		});
+		expect(result?.discovery.capability).toBe("discovery");
+		expect(result?.loader.load()).toEqual({ contractVersion: 1 });
+	});
+
 	it("discovers a Drone host declaration embedded in an otherwise standard Pi package", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-pi-package-discovery-"));
 		const packageRoot = join(root, "@example", "pi-research");
@@ -197,6 +225,7 @@ describe("discoverPluginHostLoader", () => {
 	it("passes the discovered evidence host into the backend composition root", async () => {
 		const source = await readFile(new URL("./index.ts", import.meta.url), "utf8");
 		expect(source).toContain("analysisEvidenceHost: evidenceHost.loader.load()");
+		expect(source).toContain("discoveryHostLoader: discoveryHost.loader");
 		expect(source).toContain("researchConnectorHostLoaderFactory");
 		expect(source).toContain("createResearchConnectorHostLoader");
 	});

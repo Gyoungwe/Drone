@@ -328,6 +328,11 @@ app.whenReady().then(async () => {
 		capability: "analysis",
 	});
 	if (analysisHost) log.info("Optional analysis host discovered", analysisHost.discovery);
+	const discoveryHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").DiscoveryHostLoader>({
+		packageRoots: pluginPackageRoots,
+		capability: "discovery",
+	});
+	if (discoveryHost) log.info("Optional discovery host discovered", discoveryHost.discovery);
 	const evidenceHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").EvidenceHostLoader>({
 		packageRoots: [
 			join(
@@ -400,6 +405,7 @@ app.whenReady().then(async () => {
 		userDataDir: app.getPath("userData"),
 		...(coreHostPort ? { coreHost: coreHostPort } : {}),
 		...(analysisHost ? { analysisHostLoader: analysisHost.loader } : {}),
+		...(discoveryHost ? { discoveryHostLoader: discoveryHost.loader } : {}),
 		...(evidenceHost ? { analysisEvidenceHost: evidenceHost.loader.load() } : {}),
 		...(knowledgeHost ? { knowledgeHostLoader: knowledgeHost.loader } : {}),
 		...(researchHost ? { researchHostLoader: researchHost.loader } : {}),
