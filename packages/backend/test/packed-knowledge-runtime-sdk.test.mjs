@@ -261,10 +261,12 @@ it.skipIf(!tarball)(
 							resources: [
 								{ kind: "state", handle: "state", access: grantStateWrite ? "read-write" : "read" },
 							],
+							resourcesLifecycle: { dispose: () => resources.disposeResources() },
 							dispose: () => resources.dispose(),
 						};
 					},
 			});
+			stage = "runtime-activation";
 			const window = { id: 1, isDestroyed: () => false };
 			let binding = await bridge.bind("knowledge-artifact", window);
 			const application = bridge.selectSession(window, null);

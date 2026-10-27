@@ -159,8 +159,6 @@ describe("slash command to current-model handoff", () => {
 			"project",
 			"research-setup",
 			"setup",
-			"task-action",
-			"task-status",
 			"发现",
 			"项目",
 		]);

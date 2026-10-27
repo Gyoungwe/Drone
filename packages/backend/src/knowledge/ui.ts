@@ -251,13 +251,12 @@ export function createKnowledgeReadProvider(
 
 /** Keep maintenance domain code behind the same discovered host seam as reads/writes. */
 export function createKnowledgeMaintenanceOperations(
-	host?: KnowledgeHostPort,
+	host?: Pick<KnowledgeHostPort, "planMaintenance" | "runMaintenance">,
 	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
 ): KnowledgeMaintenanceOperations {
-	const source = host ?? ({} as KnowledgeHostPort);
 	return {
-		planMaintenance: source.planMaintenance ?? compatibility.maintenance.plan,
-		runMaintenance: source.runMaintenance ?? compatibility.maintenance.run,
+		planMaintenance: host?.planMaintenance ?? compatibility.maintenance.plan,
+		runMaintenance: host?.runMaintenance ?? compatibility.maintenance.run,
 	};
 }
 

@@ -9,7 +9,6 @@ import type { ThinkingLevel } from "@earendil-works/pi-ai";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { CapabilityResourceLoader, SkillVisibility } from "../capabilities/resource-loader";
 import { CapabilityRuntime, type CapabilityRuntime as CapabilityRuntimeType } from "../capabilities/runtime";
-import type { KnowledgeUiService } from "../knowledge/ui";
 import { createLogger } from "../log";
 import type { PermissionConfirm } from "../permissions/extension";
 import type { PluginNativeBootstrap } from "../plugins/coordinator";
@@ -54,7 +53,6 @@ export interface SessionConstructionHost {
 	readonly traces: SessionTraces;
 	readonly storage: Pick<StorageRegistry, "registerDiscoveredRoot">;
 	readonly projectLoader: ProjectResourceLoader;
-	readonly knowledge: Pick<KnowledgeUiService, "notify">;
 	getModelRuntime(): Promise<ModelRuntime>;
 	sessionExtensionDependencies(): SessionExtensionDependencies;
 	registerAskGate(sessionId: string, gate: AskGate): void;
@@ -184,7 +182,9 @@ export class SessionConstructionService {
 				unsubscribeEvents();
 				diagnostics.dispose();
 			};
-			this.host.registry.add({ session, unsubscribe, cwd });
+			const registration = { session, unsubscribe, cwd };
+			this.host.registry.add(registration);
+			const notificationLifetime = this.host.registry.signalFor(registration);
 			nativeBootstrap?.bindSession(session.sessionId);
 			await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 			await session.bindExtensions({
@@ -192,12 +192,14 @@ export class SessionConstructionService {
 				...(this.host.options.permissionGates !== false
 					? {
 							uiContext: makeUiContext(gate, askGate, (text, type) => {
-								// A failed toast must not abort the session; retain a diagnostic for the missing notification.
-								void this.host.knowledge.notify(text, type, session.sessionId).catch((error) =>
-									log.error("session notification delivery failed", session.sessionId, {
-										error: String(error),
-									}),
-								);
+								// Revocation precedes asynchronous shutdown and also rejects an old
+								// context after another session restores the same persisted id.
+								if (notificationLifetime.aborted) return;
+								this.host.emitEvent(session.sessionId, {
+									type: "extension_notification",
+									severity: type,
+									message: text,
+								});
 							}),
 							mode: "tui",
 						}
@@ -339,12 +341,14 @@ export class SessionConstructionService {
 				unsubscribeEvents();
 				diagnostics.dispose();
 			};
-			this.host.registry.add({
+			const registration = {
 				session,
 				unsubscribe,
 				cwd,
 				readOnly: readOnly || undefined,
-			});
+			};
+			this.host.registry.add(registration);
+			const notificationLifetime = this.host.registry.signalFor(registration);
 			nativeBootstrap?.bindSession(session.sessionId);
 			if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 			await session.bindExtensions({
@@ -352,12 +356,14 @@ export class SessionConstructionService {
 				...(this.host.options.permissionGates !== false
 					? {
 							uiContext: makeUiContext(gate, askGate, (text, type) => {
-								// A failed toast must not abort the session; retain a diagnostic for the missing notification.
-								void this.host.knowledge.notify(text, type, session.sessionId).catch((error) =>
-									log.error("session notification delivery failed", session.sessionId, {
-										error: String(error),
-									}),
-								);
+								// Revocation precedes asynchronous shutdown and also rejects an old
+								// context after another session restores the same persisted id.
+								if (notificationLifetime.aborted) return;
+								this.host.emitEvent(session.sessionId, {
+									type: "extension_notification",
+									severity: type,
+									message: text,
+								});
 							}),
 							mode: "tui",
 						}

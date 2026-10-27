@@ -4,6 +4,7 @@ import { getPi } from "../api";
 import { EventConflator } from "../stores/event-conflator";
 import { useSessionsStore } from "../stores/sessions";
 import { useSubagentsStore } from "../stores/subagents";
+import { pushToast } from "../stores/toasts";
 import { useTranscriptStore } from "../stores/transcript";
 import { useUiStore } from "../stores/ui";
 
@@ -32,6 +33,10 @@ export function useSessionEventBridge({
 			},
 		});
 		const offEvent = pi.onEvent(({ sessionId, event }: { sessionId: string; event: SessionEvent }) => {
+			if (event.type === "extension_notification") {
+				pushToast(event.severity, "toast.extensionNotification", event.message);
+				return;
+			}
 			if (event.type === "session_info_changed") {
 				useSessionsStore.getState().updateSessionName(sessionId, event.name);
 				return; // 会话名走 sessions store；reducer 对该类型本就无操作
