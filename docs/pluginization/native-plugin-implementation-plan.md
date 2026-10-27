@@ -14,6 +14,7 @@
 | P7 | 双仓库最终门禁、同 tarball 原生 Pi 真实会话、正式安装包零插件及升级/停用/回滚 | **部分开始**：宿主空 managed package root 的 `UiPluginManager.init()` 回归已通过；`369f7c58`/`d39159d3` 以实际 arm64 Drone.app 加强空 UI root、空 Pi managed npm root、通用 session create/close、未绑定知识和空 auth/model 的可审计回执；`7daf6a13` 真实安装/移除 `pi-evidence@0.1.1` 并回读包目录与配置，restore/reload、升级、回滚、销毁失败和同 tarball GUI 仍未完成 | P6 |
 
 ## 本轮新增迁移记录
+- `28c34c50`/`f03a948d` 收窄 research compatibility composition：无插件时 connector、literature radar 和 write registry 均显式 fail-closed，backend 不再声明 `@drone/research` runtime dependency；完整 research 插件迁移与正式 GUI 仍保持部分完成。
 - `880ebc08` 将 `ResearchConnector`、执行上下文、连接器配置与项目存储端口发布到 `@drone/shared`；`@drone/research` 仅保留兼容 re-export，backend `research-resource.ts` 删除对研究包的类型依赖。shared/research/backend typecheck、research 25 项测试及 Biome 通过；P3/P6 仍保持部分完成。
 - `042c44ff` 将 pi-core 的 status/todo/memory-save/deliver-files 兼容门面统一到版本化 `@gyoungwe/pi-core/host` 入口；host bundle 检查和 runtime 回归通过，backend 工具仍是短期兼容 facade，P4/P6 未因此完成。
 - `7980b0e8` 将 knowledge worker 的 metadata、生命周期事件和稳定事件名发布到 `@drone/shared`；backend 只消费 shared 合同，pi-knowledge 兼容组合仍仅负责 runtime 配置，P2/P6 仍未完成。
