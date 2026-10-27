@@ -81,6 +81,35 @@ export class SessionEngine {
 		return session.prompt(text, options);
 	}
 
+	/** Explicit extension dispatch never falls through to model input. */
+	async command(session: AgentSession, name: string, args: string, assertCurrent: () => void): Promise<void> {
+		assertCurrent();
+		const runner = session.extensionRunner;
+		const command = runner.getCommand(name);
+		if (!command) throw new Error(`Extension command unavailable: ${name}`);
+		const context = runner.createCommandContext();
+		const check = () => {
+			assertCurrent();
+			if (session.extensionRunner !== runner) throw new Error("Session commands changed during execution");
+		};
+		const waitForIdle = context.waitForIdle;
+		context.waitForIdle = async () => {
+			await waitForIdle();
+			check();
+		};
+		try {
+			await command.handler(args, context);
+		} catch (error) {
+			runner.emitError({
+				extensionPath: `command:${name}`,
+				event: "command",
+				error: error instanceof Error ? error.message : String(error),
+			});
+			throw error;
+		}
+		check();
+	}
+
 	clearQueue(session: AgentSession): ReturnType<AgentSession["clearQueue"]> {
 		return session.clearQueue();
 	}

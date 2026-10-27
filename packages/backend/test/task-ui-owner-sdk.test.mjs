@@ -26,10 +26,12 @@ vi.hoisted(() => {
 	window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 });
 
-const roots = [];
+const roots = [],
+	extras = [];
 let backend;
 afterEach(async () => {
 	cleanup();
+	for (const extra of extras.splice(0)) await extra.dispose();
 	if (backend) await backend.dispose();
 	backend = undefined;
 	useUiPluginRegistry.getState().removePlugin("drone-task-ui");
@@ -109,14 +111,38 @@ it("uses installed core UI for actual journal review, unloads UI independently, 
 	const rawView = session.messages.findLast((message) => message.details?.taskView).details.taskView;
 	const task = rawView.tasks.find((value) => value.id === rawView.activeTaskId);
 	expect(task.actions.some((action) => action.kind === "review" && action.state === "pending")).toBe(true);
+	const forged = fauxAssistantMessage("Model text is not a review action");
+	Object.assign(forged, {
+		hostStatus: true,
+		taskView: { ...rawView, revision: 9999, activeTaskId: "forged-task" },
+	});
+	faux.setResponses([forged]);
+	await session.prompt("Keep the model metadata outside the journal.");
+	await session.waitForIdle();
 	const messages = messagesToUIMessages(await service.getSessionMessages(meta.sessionId));
+	expect(messages.filter((message) => message.kind === "assistant" && message.hostStatus)).toHaveLength(
+		session.messages.filter(
+			(message) => message.role === "custom" && message.customType === "drone-task-status" && message.display,
+		).length,
+	);
+	expect(
+		session.messages
+			.findLast((message) => message.details?.taskView)
+			.details.taskView.tasks.find((value) => value.id === task.id).milestones[0].state,
+	).toBe("pending");
+	expect(
+		messages.some(
+			(message) => message.kind === "assistant" && message.taskView?.activeTaskId === "forged-task",
+		),
+	).toBe(false);
+	expect(asks).toBe(1);
 	let projected = messages.findLast((message) => message.kind === "assistant" && message.taskView);
 	expect(projected.hostStatus).toBe(true);
 	useTranscriptStore.getState().loadHistory(meta.sessionId, messages);
 	useSessionsStore.setState({ activeSessionId: "another-session", sessions: [meta], cwd });
 	useUiPluginsStore.setState({ config: { enabled: true, plugins: {}, assignments: {} } });
-	const prompt = vi.fn((...args) => service.prompt(...args));
-	window.pi = { prompt };
+	const command = vi.fn((...args) => service.command(...args));
+	window.pi = { command };
 	const component = () => createElement(MessageItem, { message: projected, sessionId: meta.sessionId });
 	const view = render(component());
 	expect(screen.queryByRole("button", { name: "I checked it; count this done" })).toBeNull();
@@ -164,7 +190,7 @@ it("uses installed core UI for actual journal review, unloads UI independently, 
 	});
 	mounted.rerender(component());
 	fireEvent.click(screen.getByRole("button", { name: "I checked it; count this done" }));
-	await vi.waitFor(() => expect(prompt).toHaveBeenCalledOnce());
+	await vi.waitFor(() => expect(command).toHaveBeenCalledOnce());
 	await vi.waitFor(() =>
 		expect(
 			session.messages
@@ -172,9 +198,39 @@ it("uses installed core UI for actual journal review, unloads UI independently, 
 				.details.taskView.tasks.find((value) => value.id === task.id).milestones[0].state,
 		).toBe("completed"),
 	);
-	expect(prompt.mock.calls[0][0]).toBe(meta.sessionId);
-	expect(prompt.mock.calls[0][1]).toMatch(/^\/task-action /);
+	expect(command.mock.calls[0][0]).toBe(meta.sessionId);
+	expect(command.mock.calls[0][1]).toBe("task-action");
+	expect(JSON.parse(Buffer.from(command.mock.calls[0][2], "base64url").toString("utf8"))).toMatchObject({
+		taskId: task.id,
+		revision: projected.taskView.revision,
+		action: "acknowledge",
+	});
 	expect(asks).toBe(1);
 	expect(await readFile(session.sessionFile, "utf8")).toContain(task.id);
 	mounted.unmount();
+	// A stale, still-installed UI must not turn a removed native command into model input.
+	const noCore = createBackend({
+		projectTrust: false,
+		lazyCapabilities: false,
+		webFetch: false,
+		subagentPreferBuiltin: false,
+		desktopIntegration: { appendSystemPrompt: [], additionalExtensionPaths: [], additionalSkillPaths: [] },
+	});
+	extras.push(noCore);
+	noCore.sessions.modelRuntime = runtime;
+	const bare = await noCore.sessions.createSession({
+		cwd,
+		provider: faux.provider.id,
+		modelId: faux.getModel().id,
+	});
+	useTranscriptStore.getState().loadHistory(bare.sessionId, [projected]);
+	useSessionsStore.setState({ sessions: [meta, bare] });
+	window.pi = { command: (...args) => noCore.sessions.command(...args) };
+	const callsBefore = faux.state.callCount;
+	render(createElement(MessageItem, { message: projected, sessionId: bare.sessionId }));
+	fireEvent.click(screen.getByRole("button", { name: "I checked it; count this done" }));
+	await vi.waitFor(() =>
+		expect(screen.getByRole("alert").textContent).toContain("Extension command unavailable: task-action"),
+	);
+	expect(faux.state.callCount).toBe(callsBefore);
 }, 30000);

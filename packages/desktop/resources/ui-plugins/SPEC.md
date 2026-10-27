@@ -300,3 +300,5 @@ export function activate() {
 ### Markdown navigation ownership
 
 `Markdown` accepts optional `onLink(href: string): void`. When provided, the host renders the supplied Markdown without knowledge-link rewriting and forwards anchor clicks to the contribution after preventing default navigation. Host knowledge lookup/store and resource-preview routing do not run. The contribution must use its own runtime and approved opening capabilities; receiving a URL is not permission to open local files or launch an external application. Omitting `onLink` retains the published UI v1 behavior until its consumers migrate.
+
+`window.DroneUI.sessions.command(sessionId, name, args?)`（API 1.3）只调用该真实会话已注册的扩展命令，返回 `{kind:"command"}`。缺失/卸载的命令、只读/恢复中/取消或已替换的会话均拒绝，不转成模型输入；handler 错误沿既有 extension onError 诊断并使调用失败。普通 `sessions.prompt` 保留自然语言输入语义。领域 UI 的动作必须使用 `sessions.command`，不能以 prompt 的未知 slash 回退代替命令派发。UI 贡献停用与原生 owner 停用是两个独立生命周期。

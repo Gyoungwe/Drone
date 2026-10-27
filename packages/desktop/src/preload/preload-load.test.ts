@@ -23,7 +23,7 @@ describe("preload", () => {
 		await expect(import("./index")).resolves.toBeDefined();
 		const pi = exposed.pi as Record<string, unknown>;
 		expect(pi).toBeTruthy();
-		for (const name of ["memoryList", "memoryRemove", "memoryPromote", "memoryPromoteToKnowledge"])
+		for (const name of ["memoryList", "memoryRemove", "memoryPromote", "memoryPromoteToKnowledge", "command"])
 			expect(typeof pi[name]).toBe("function");
 	}, 15_000);
 });

@@ -486,7 +486,7 @@ src/
 | 上下文蒸发 | backend `tools/context-evaporation/`（见 backend 表）；开关 = 设置 GeneralPanel 二态（默认蒸发，写 settings.json 单 key，2s 生效免重开）；调参 `scripts/replay-evaporation.mts`；观测 = log `context-evaporation` 行 + trace_custom |
 | 上下文用量圆环 | `composer/ContextRing.tsx` + `hooks/use-context-usage.ts`（事件驱动刷新，与插件 host API 共用）→ IPC getContextUsage → SDK `session.getContextUsage()`（percent null 或无消息不渲染；<60% 灰 / 60-85% 琥珀 / >85% 红） |
 | 会话用量与输出速率 | `chat/UsageSettlement.tsx` 的 `SessionUsageSummary` 在输入框上下文环悬浮提示里显示会话累计 token（`SessionUsageFooter` 保留完整明细卡）；`chat/TurnFooter.tsx` 在每轮完成后显示输出 tok/s；累计卡位于 Composer 输入区上方，明细仍可展开 |
-| 审核卡片 | pi-core 同包 UI 消费安全 `UIMessage.taskView`，经 `chat.message` 贡献渲染任务验收动作；任务页经 `panel.tab` 贡献，动作仅走通用 `sessions.prompt` → `/task-action`。宿主 `MessageItem` 仅提供普通消息默认呈现 |
+| 审核卡片 | pi-core 同包 UI 消费安全 `UIMessage.taskView`，经 `chat.message` 贡献渲染任务验收动作；任务页经 `panel.tab` 贡献，动作仅走通用 `sessions.command` → `task-action`。宿主 `MessageItem` 仅提供普通消息默认呈现 |
 | 每轮计时行 + 文件变更 chip + diff 侧栏 | 计时 shared `transcript/turn-timings.ts`（deriveTurnTimings；分量 = reducer 盖戳的 `UIToolCall.endedAt` + `runEndedAt` 定格 + 历史回放透传 toolResult timestamp）；变更 shared `transcript/turn-files.ts`（deriveTurnChanges）+ `chat-rows.ts`（行定位：每轮必有计时行，缺省不传 timings 保持旧行为）；渲染 `chat/TurnDiffChip.tsx`（timer 恒在首位）+ `diff/DiffSidebar.tsx`（含 BranchRow）；开关 = SessionTabBar 的 DiffIcon 按钮 + `stores/ui.ts` diffSidebarOpen |
 | 顶栏 tab / 拖拽排序 | `session/SessionTabBar.tsx`（dnd-kit，DragOverlay ghost 拾起时实测宽度沿用原胶囊 + 轴锁定 + drag-region 退出）+ `stores/sessions.ts` reorderSessions（draft 无 sessionFile 只参与内存序） |
 | 左侧会话轨道 | `session/SessionRail.tsx` + `stores/ui-preferences.ts`（开关持久化）+ `session-status.ts`（状态逻辑与顶栏共用）；逐帧截图 `scripts/shoot-rail.mjs` |
@@ -541,3 +541,5 @@ P2 原生/桌面共同 owner 最小接入：`backend/src/plugins/coordinator.ts`
 P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已通过真实临时目录、撤销、冲突、符号链接和同启用实例并发回归；正式安装包尚未消费该新写端口。
 
 任务 UI 迁移兼容边界：`renderer/plugins/legacy-task-artifacts.ts` 仅保留已公开 1.x `helpers.taskArtifactLinks` 的原行为，无活跃宿主或知识 UI 消费；API 2 删除。`shared/task-workbench.ts` 保留安全投影类型与输入解码；`hostStatus` 仅标记可显示来源，不授予任务动作或发布权限。科研示例/首次引导仍在宿主，留后续插件贡献迁移。
+
+`SessionControlService.command` / `session-engine/engine.ts` 提供中立已注册扩展命令派发；`session:command` 经 SessionsContract、preload 与公开 UI `sessions.command` 同步。缺命令不转成 prompt；取消、会话替换、恢复/只读和 runner reload 均拒绝过期操作。

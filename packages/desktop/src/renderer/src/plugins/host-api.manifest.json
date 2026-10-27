@@ -619,6 +619,12 @@
 				"hostValue": "sessionUiPort.prompt",
 				"envType": "SessionUiPort[\"prompt\"]",
 				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").SessionUiPort[\"prompt\"]"
+			},
+			{
+				"name": "command",
+				"hostValue": "sessionUiPort.command",
+				"envType": "SessionUiPort[\"command\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").SessionUiPort[\"command\"]"
 			}
 		]
 	}

@@ -175,6 +175,7 @@ window.DroneUI = {
 	// <drone:generated namespace="sessions">
 	sessions: {
 		prompt: sessionUiPort.prompt,
+		command: sessionUiPort.command,
 	},
 	// </drone:generated namespace="sessions">
 	// <drone:generated namespace="i18n">

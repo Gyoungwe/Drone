@@ -149,6 +149,9 @@ export class SessionServiceApi extends SessionSettingsApi {
 		}
 		return this.host.control.prompt(sessionId, text, images, requestIdOrIds);
 	}
+	async command(sessionId: string, name: string, args?: string): Promise<PromptReceipt> {
+		return this.host.control.command(sessionId, name, args);
+	}
 	async retry(sessionId: string, requestId: string, expectedUserTimestamp?: number): Promise<PromptReceipt> {
 		return this.host.control.retry(sessionId, requestId, expectedUserTimestamp);
 	}

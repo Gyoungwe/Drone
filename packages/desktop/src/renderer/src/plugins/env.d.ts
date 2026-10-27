@@ -165,6 +165,7 @@ export interface DroneUiApi {
 	// <drone:generated namespace="sessions">
 	sessions: {
 		prompt: SessionUiPort["prompt"];
+		command: SessionUiPort["command"];
 	};
 	// </drone:generated namespace="sessions">
 	// <drone:generated namespace="i18n">

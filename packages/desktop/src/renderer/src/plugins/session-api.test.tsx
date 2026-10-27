@@ -4,8 +4,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useTranscriptStore } from "../stores/transcript";
 import { sessionUiPort, useSessionMessages } from "./session-api";
 
-const { prompt } = vi.hoisted(() => ({ prompt: vi.fn() }));
-vi.mock("../api", () => ({ getPi: () => ({ prompt }) }));
+const { prompt, command } = vi.hoisted(() => ({ prompt: vi.fn(), command: vi.fn() }));
+vi.mock("../api", () => ({ getPi: () => ({ prompt, command }) }));
 beforeEach(() => {
 	prompt.mockReset();
 	useTranscriptStore.setState({ bySession: {} });
@@ -43,4 +43,13 @@ it("keeps empty and selected-session message references stable and switches subs
 	expect(result.current).toBe(useTranscriptStore.getState().bySession["session-b"]!.messages);
 	rerender({ sessionId: null });
 	expect(result.current).toBe(empty);
+});
+
+it("uses explicit command transport and preserves unavailability errors without prompting", async () => {
+	command.mockRejectedValueOnce(new Error("Extension command unavailable: removed"));
+	await expect(sessionUiPort.command("session-b", "removed", "input")).rejects.toThrow(
+		"Extension command unavailable",
+	);
+	expect(command).toHaveBeenCalledExactlyOnceWith("session-b", "removed", "input");
+	expect(prompt).not.toHaveBeenCalled();
 });

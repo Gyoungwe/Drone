@@ -6,7 +6,6 @@ import type {
 	SessionStats,
 } from "@drone/shared";
 import type { ThinkingLevel } from "@earendil-works/pi-ai";
-import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { isTaskStatusQuery } from "../capabilities/runtime";
 import { createLogger } from "../log";
@@ -14,7 +13,7 @@ import { inboxFor } from "../session/durable-inbox";
 import type { ModelWaitMonitor } from "../session/model-wait";
 import type { EventRateTracker } from "../session/rates";
 import type { SessionRecovery } from "../session/recovery";
-import type { SessionRegistry } from "../session/registry";
+import type { RegisteredSession, SessionRegistry } from "../session/registry";
 import type { ModelRuntime, SessionEngine } from "../session-engine/engine";
 import type { ApprovalService } from "./approvals";
 
@@ -29,12 +28,40 @@ export interface SessionControlHost {
 	readonly capabilityRuntimes: Map<string, CapabilityRuntime>;
 	readonly approvals: ApprovalService;
 	getModelRuntime(): Promise<ModelRuntime>;
-	requireSession(id: string): { session: AgentSession; readOnly?: boolean };
+	requireSession(id: string): RegisteredSession;
 	log: { info: (message: string, ...args: unknown[]) => void };
 }
 
 export class SessionControlService {
 	constructor(private readonly host: SessionControlHost) {}
+	private readonly commands = new Map<string, Set<AbortController>>();
+
+	async command(sessionId: string, name: string, args = ""): Promise<PromptReceipt> {
+		const entry = this.host.requireSession(sessionId);
+		const controller = new AbortController();
+		const signal = AbortSignal.any([this.host.registry.signalFor(entry), controller.signal]);
+		const assertCurrent = () => {
+			signal.throwIfAborted();
+			if (this.host.registry.get(sessionId) !== entry)
+				throw new Error("Session changed during command execution");
+			if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
+			if (this.host.recovery.isRecovering(sessionId))
+				throw new Error("Wait for answer recovery to finish or stop it before sending a command");
+		};
+		let pending = this.commands.get(sessionId);
+		if (!pending) {
+			pending = new Set();
+			this.commands.set(sessionId, pending);
+		}
+		pending.add(controller);
+		try {
+			await this.host.sessionEngine.command(entry.session, name, args, assertCurrent);
+			return { kind: "command" };
+		} finally {
+			pending.delete(controller);
+			if (!pending.size) this.commands.delete(sessionId);
+		}
+	}
 
 	async prompt(
 		sessionId: string,
@@ -114,6 +141,8 @@ export class SessionControlService {
 	}
 
 	async abort(sessionId: string): Promise<void> {
+		for (const command of this.commands.get(sessionId) ?? [])
+			command.abort(new Error("Session command cancelled"));
 		this.host.modelWait.cleanup(sessionId);
 		const entry = this.host.registry.get(sessionId);
 		if (!entry) return;
