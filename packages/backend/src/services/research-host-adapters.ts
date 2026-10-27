@@ -143,6 +143,7 @@ function createConnector(
 		recommend: async (seed, options) => {
 			const response = await host.recommend(seed, descriptor.id, {
 				...toHostContext(options),
+				...(options?.limit !== undefined ? { limit: options.limit } : {}),
 			});
 			return response.hits.map(mapHit);
 		},
@@ -270,7 +271,7 @@ export function createResearchWriteAdapterRegistryFromHost(
 		get: (id) => {
 			requireAvailable(host.status, "Research write");
 			const descriptor = host.descriptors().find((item) => item.id === id);
-			if (!descriptor) return undefined;
+			if (!descriptor?.enabled) return undefined;
 			return {
 				id: descriptor.id,
 				label: descriptor.label,
