@@ -690,6 +690,45 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
+	it("routes daily discovery and memory operations through the installed host", async () => {
+		const calls: string[] = [];
+		const service = new KnowledgeUiService(undefined, {
+			knowledgeHost: {
+				memory: {
+					dailyContext: async () => {
+						calls.push("dailyContext");
+						return { bound: false, fresh: [], related: [] };
+					},
+					saveIdea: async () => {
+						calls.push("saveIdea");
+						return { path: "Library/Ideas/test.md" };
+					},
+					relatedForMemory: async () => {
+						calls.push("relatedForMemory");
+						return [];
+					},
+					saveMemory: async () => {
+						calls.push("saveMemory");
+						return { path: "Library/Memory/test.md" };
+					},
+				},
+			},
+		});
+
+		await service.dailyContext(0);
+		await service.saveIdea({ title: "t", idea: "i", basis: [], test: "x", whyOverlooked: "y" });
+		await service.relatedForMemory("/tmp/project", "query");
+		await service.saveMemory("/tmp/project", {
+			id: 1,
+			kind: "note",
+			title: "t",
+			body: "b",
+			createdAt: 1,
+		});
+		expect(calls).toEqual(["dailyContext", "saveIdea", "relatedForMemory", "saveMemory"]);
+		service.dispose();
+	});
+
 	it("routes knowledge setup, specialist settings, and target operations through the installed host", async () => {
 		const calls: string[] = [];
 		const service = new KnowledgeUiService(undefined, {

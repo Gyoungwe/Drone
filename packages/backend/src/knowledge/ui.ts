@@ -73,6 +73,13 @@ export interface KnowledgeHostPort {
 		list(input: unknown): Promise<unknown>;
 		archive(input: unknown): Promise<unknown>;
 	};
+	/** Memory and daily-discovery operations supplied by the installed knowledge host. */
+	memory?: {
+		dailyContext(input: unknown): Promise<unknown>;
+		saveIdea(input: unknown): Promise<unknown>;
+		relatedForMemory(input: unknown): Promise<unknown>;
+		saveMemory(input: unknown): Promise<unknown>;
+	};
 	/** Incrementally migrated UI operations supplied by the installed knowledge host. */
 	jobs?: (input: unknown) => Promise<unknown>;
 	maintenance?: (input: unknown) => Promise<unknown>;
@@ -574,6 +581,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			| "reviewWikiWithModel"
 			| "semantic"
 			| "topics"
+			| "memory"
 			| "jobs"
 			| "maintenance"
 			| "setupPreview"
@@ -595,6 +603,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 					| "reviewWikiWithModel"
 					| "semantic"
 					| "topics"
+					| "memory"
 					| "jobs"
 					| "maintenance"
 					| "setupPreview"
@@ -863,9 +872,16 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		return this.readProvider.graph(input);
 	}
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext> {
+		if (this.writeProvider?.memory) {
+			return this.writeProvider.memory.dailyContext({ sinceMs }) as ReturnType<
+				KnowledgeUiServicePort["dailyContext"]
+			>;
+		}
 		return this.call("dailyDiscoveryContext", { sinceMs });
 	}
 	saveIdea(idea: DailyIdea): Promise<{ path: string }> {
+		if (this.writeProvider?.memory)
+			return this.writeProvider.memory.saveIdea({ idea }) as Promise<{ path: string }>;
 		return this.call("saveDiscoveryIdea", { idea });
 	}
 	relatedForMemory(
@@ -873,9 +889,16 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		query: string,
 		limit = 4,
 	): Promise<Array<{ path: string; title: string; text: string }>> {
+		if (this.writeProvider?.memory) {
+			return this.writeProvider.memory.relatedForMemory({ cwd, query, limit }) as Promise<
+				Array<{ path: string; title: string; text: string }>
+			>;
+		}
 		return this.call("memoryRelatedKnowledge", { cwd, query, limit });
 	}
 	saveMemory(cwd: string, memory: MemoryNoteInput): Promise<{ path: string }> {
+		if (this.writeProvider?.memory)
+			return this.writeProvider.memory.saveMemory({ cwd, memory }) as Promise<{ path: string }>;
 		return this.call("saveMemoryNote", { cwd, memory });
 	}
 	topics(

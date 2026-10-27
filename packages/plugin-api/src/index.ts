@@ -571,6 +571,13 @@ export interface KnowledgeReadHostPort {
 		list(input: unknown): Promise<unknown>;
 		archive(input: unknown): Promise<unknown>;
 	};
+	/** Memory and daily-discovery operations supplied by the installed knowledge plugin. */
+	memory?: {
+		dailyContext(input: unknown): Promise<unknown>;
+		saveIdea(input: unknown): Promise<unknown>;
+		relatedForMemory(input: unknown): Promise<unknown>;
+		saveMemory(input: unknown): Promise<unknown>;
+	};
 	/** Optional research capture operations supplied by the installed knowledge plugin. */
 	researchResource?: {
 		resolveContext(input: unknown): unknown;
