@@ -342,22 +342,36 @@ export class ResearchResourceService {
 	async recommend(seed: string): Promise<ResearchSearchResponse> {
 		const descriptors = await this.listConnectors();
 		const connector = descriptors.find((item) => item.id === "semantic-scholar");
-		if (!connector?.enabled) {
+		if (!connector) {
 			return {
 				query: seed,
 				hits: [],
-				failures: connector
-					? [
-							{
-								connectorId: connector.id,
-								message: "Research connector is disabled",
-								retryable: false,
-								at: isoNow(),
-							},
-						]
-					: [],
+				failures: [
+					{
+						connectorId: "semantic-scholar",
+						message: "Research connector plugin is unavailable",
+						retryable: false,
+						at: isoNow(),
+					},
+				],
 				connectors: ["semantic-scholar"],
-				complete: true,
+				complete: false,
+			};
+		}
+		if (!connector.enabled) {
+			return {
+				query: seed,
+				hits: [],
+				failures: [
+					{
+						connectorId: connector.id,
+						message: "Research connector is disabled",
+						retryable: false,
+						at: isoNow(),
+					},
+				],
+				connectors: ["semantic-scholar"],
+				complete: false,
 			};
 		}
 		const result = await this.connectors.recommend(

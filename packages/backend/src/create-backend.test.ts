@@ -71,6 +71,16 @@ describe("createBackend", () => {
 				retryable: false,
 			}),
 		]);
+		const radar = await services.research.recommend("no-plugin");
+		expect(radar).toMatchObject({
+			query: "no-plugin",
+			connectors: ["semantic-scholar"],
+			complete: false,
+		});
+		expect(radar.failures[0]).toMatchObject({
+			connectorId: "semantic-scholar",
+			message: "Research connector plugin is unavailable",
+		});
 		services.dispose();
 	});
 
