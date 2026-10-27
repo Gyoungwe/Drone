@@ -2,7 +2,9 @@ import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
+import researchLoopExtension from "@drone/extensions/research-loop";
 import { registerWorkspaceConfig } from "@drone/extensions/workspace-config";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import {
 	beginKnowledgeFlow,
 	closeKnowledgeServices,
@@ -54,27 +56,32 @@ afterEach(async () => {
 });
 function tools() {
 	const tools = new Map();
-	registerWorkspaceConfig(
-		{ registerTool: (t) => tools.set(t.name, t), registerCommand: () => {} },
-		{ cwd: join(root, "wrong-captured-workspace") },
-	);
+	const pi = {
+		events: createEventBus(),
+		on: () => () => undefined,
+		registerTool: (tool) => tools.set(tool.name, tool),
+		registerCommand: () => undefined,
+	};
+	registerWorkspaceConfig(pi, { cwd: join(root, "wrong-captured-workspace") });
+	researchLoopExtension(pi);
 	return tools;
 }
-it("run summaries use the session workspace, never the extension/process directory", async () => {
+it("summary delivery uses the session workspace and rejects a hand-written completion", async () => {
 	const t = tools();
 	const status = await t.get("research_workspace_status").execute("s", {}, undefined, undefined, { cwd });
 	expect(status.details.resultsRoot).toBe(join(cwd, "results"));
-	const result = await t
-		.get("research_summarize_run")
-		.execute(
-			"summary",
-			{ run_dir: runDir, summary_markdown: "# Findings\nFixture observations only." },
-			undefined,
-			undefined,
-			{ cwd },
-		);
-	expect(await readFile(result.details.run, "utf8")).toContain("Fixture observations");
-	expect(await readFile(result.details.obsidian_note, "utf8")).toContain("Fixture observations");
+	await expect(
+		t
+			.get("research_summarize_run")
+			.execute(
+				"summary",
+				{ run_dir: runDir, summary_markdown: "# Findings\nFixture observations only." },
+				undefined,
+				undefined,
+				{ cwd },
+			),
+	).rejects.toThrow("fresh completion");
+	await expect(readFile(join(runDir, "SUMMARY.md"))).rejects.toMatchObject({ code: "ENOENT" });
 });
 it("correct workspace does not permit a run directory symlink outside results", async () => {
 	const other = join(root, "external");
@@ -203,26 +210,15 @@ it("findings and artifact events show bounded facts, never raw assistant/protoco
 	expect(JSON.stringify(flowFor(ctx.sessionId))).not.toContain("NO_EXPOSE");
 });
 
-it("a Vault write failure does not erase the fact that the local summary was saved", async () => {
-	// Deliberately use traversal identifiers; no external files are touched. The model-supplied
-	// project is ignored by the shared project resolver; the traversal result slug makes the Vault write fail.
-	const result = await tools().get("research_summarize_run").execute(
-		"summary",
+it("workspace configuration does not expose a summary writer without its research owner", () => {
+	const registered = new Map();
+	registerWorkspaceConfig(
 		{
-			run_dir: runDir,
-			project: "../escape",
-			result_slug: "../escape",
-			summary_markdown: "# Saved local summary",
+			registerTool: (tool) => registered.set(tool.name, tool),
+			registerCommand: () => undefined,
 		},
-		undefined,
-		undefined,
 		{ cwd },
 	);
-	expect(result.details.project.project).not.toBe("../escape");
-	expect(result.details.project.notice).toContain("../escape");
-	expect(result.details.summary_saved).toBe(true);
-	expect(result.details.partial).toBe(true);
-	expect(result.details.obsidian_note).toBeNull();
-	expect(result.details.obsidian_error).toBeTruthy();
-	expect(await readFile(result.details.run, "utf8")).toContain("Saved local summary");
+	expect(registered.has("research_workspace_status")).toBe(true);
+	expect(registered.has("research_summarize_run")).toBe(false);
 });
