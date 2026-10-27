@@ -23,7 +23,6 @@ import { MessageItem } from "./MessageItem";
 import { MetaGroup } from "./MetaGroup";
 import { ModelWaitNote } from "./ModelWaitNote";
 import { ProcessBlock } from "./ProcessBlock";
-import { ProgressNote } from "./ProgressNote";
 import { RetryNote } from "./RetryNote";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { SubagentRunCard } from "./SubagentRunCard";
@@ -242,9 +241,6 @@ export function MessageList() {
 					fallback={SubagentRunCard}
 				/>
 			);
-		}
-		if (row.message.kind === "assistant" && row.message.progress && !row.message.text) {
-			return <ProgressNote key={row.key} progress={row.message.progress} />;
 		}
 		return (
 			<MessageItem

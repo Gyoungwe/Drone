@@ -19,6 +19,7 @@ my-plugin/
 
 | 槽位名 | props | 默认组件 |
 |---|---|---|
+| `chat.message` | `ChatMessageProps`（见下） | 一条安全 UI 消息的宿主默认呈现；插件可选择接管或调用 `renderDefault()` |
 | `chat.tool-call-card` | `{ tool: UIToolCall }` | 工具调用卡（折叠行：工具名 + 参数摘要 + 输出） |
 | `chat.subagent-card` | `{ runs: SubagentRunUi[] }` | 子代理独立行（状态点 + 名称 + 点击打开子会话） |
 | `chat.todo-panel` | `{}` | 任务列表面板（右上角胶囊，内部自行取数） |
@@ -57,6 +58,10 @@ interface KnowledgeFlowCard {
 	source?: string | null; at: number;
 }
 ```
+
+`chat.message` 使用 `@gyoungwe/plugin-api/ui` 的 `ChatMessageProps`：`message: UIMessage`、`sessionId: string | null`、`agentActive`、`readOnly`、可选 `streaming/metaInGroup/showActions/turnTiming/turnStepCount` 和 `renderDefault(): ReactNode`。这里只传 renderer 已有的安全消息投影，不能取得原生 SDK `RawMessage` 或私有协议 thinking。`readOnly` 来自这一行所属会话，而非当前活动会话。`renderDefault()` 直接渲染宿主默认组件，不重新进入槽位；插件不处理的消息应调用它。停用、卸载或渲染异常都会恢复默认呈现。消息内 `sourceText` 仅供既有匹配逻辑，绝不能渲染、复制或放入可访问文本。
+
+消息槽位不提供领域去重或任务状态机。插件可用 `useSessionMessages(sessionId)`（亦可用 `hooks.useSessionMessages`）读取完整的安全 `readonly UIMessage[]`，自行选择需要呈现的领域快照；空会话和未加载会话返回稳定空数组。右栏页面继续使用已有 `panel.tab`，无需新增领域槽位。
 
 `manifest.slots` 的 value 是入口 bundle 的**具名导出名**（一个插件可覆盖多个槽位）：
 
@@ -119,17 +124,23 @@ export const helpers: {
 };
 export const hooks: {
 	useT(): (key: string, params?) => string; // i18n（key 用宿主既有字典，如 "message.working"）
+	useSessionMessages(sessionId: string | null): readonly UIMessage[];
 };
 export const stores: {                      // 宿主 zustand store（与宿主同一实例）
 	useTranscriptStore; useSessionsStore; useUiStore; useProjectsStore; useSettingsStore;
 	useUiPreferencesStore;                   // 应用级 UI 偏好（ui-state.json 持久化：轨道/中央动画等开关）
 	useKnowledgeStore;                       // 知识流（flows[sessionId].cards 等）
 };
+export const sessions: {
+	prompt(sessionId: string, text: string, images?: ImageInput[], ids?: PromptIds): Promise<PromptReceipt>;
+};
 export const i18n: {
 	// 插件自带文案：注册后 useT()(key) 在核心字典找不到时回落到这里（如 flow.status.<自定义记号>）；返回注销函数
 	registerMessages(namespace: string, messages: { zh?: object; en?: object }): () => void;
 };
 ```
+
+`sessions.prompt` 复用现有会话 prompt IPC、权限与生命周期检查；只读或已关闭会话仍由宿主拒绝，错误和 `PromptReceipt` 原样返回。它不依赖知识插件。旧 `knowledge.prompt` 与既有具名 `prompt` 保留原绑定；新代码使用 `sessions.prompt`。会话身份与 cwd 可从既有 `stores.useSessionsStore` 取得，资源打开沿既有 `useUiStore.openResourcePreview`。
 
 `react` 的完整导出（`Children`/`Component`/`memo`/`useEffect` 等全部 hooks）也可用，见 `drone-ui.d.ts`。
 

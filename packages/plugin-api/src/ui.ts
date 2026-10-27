@@ -15,13 +15,41 @@ import type {
 	KnowledgeUiEvent,
 	KnowledgeUiPort,
 	ModelPrefs,
+	PromptIds,
+	PromptReceipt,
 	SessionMeta,
 	SubagentThinkingLevel,
+	TurnTiming,
+	UIMessage,
 	UiPluginAnchor,
 	WorkbenchTask,
 } from "./ui-wire.js";
 
 export type * from "./ui-wire.js";
+
+/** Generic session actions use the existing host prompt authorization/lifecycle. */
+export interface SessionUiPort {
+	prompt(sessionId: string, text: string, images?: ImageInput[], ids?: PromptIds): Promise<PromptReceipt>;
+}
+export interface SessionUiBindings {
+	sessions: SessionUiPort;
+}
+export type SessionMessagesHook = (sessionId: string | null) => readonly UIMessage[];
+
+/** Safe renderer projection only; never a native SDK/RawMessage object. */
+export interface ChatMessageProps {
+	message: UIMessage;
+	sessionId: string | null;
+	agentActive: boolean;
+	readOnly: boolean;
+	streaming?: boolean;
+	metaInGroup?: boolean;
+	showActions?: boolean;
+	turnTiming?: TurnTiming;
+	turnStepCount?: number;
+	/** Renders the host component directly, without entering this slot again. */
+	renderDefault(): ReactNode;
+}
 
 /** Bound to the installed package by the desktop main process; callers cannot select another package. */
 export interface PluginUiRuntimeClient {
@@ -218,6 +246,7 @@ export interface KnowledgeUiBindings {
 		}>;
 	};
 	hooks: {
+		useSessionMessages: SessionMessagesHook;
 		usePluginRuntime(): PluginUiRuntimeClient;
 		useAgentActive(sessionId: string | null): boolean;
 		usePluginEntries(region: KnowledgeUiRegion): KnowledgePluginEntry[];
@@ -267,7 +296,7 @@ export interface KnowledgeUiBindings {
 		useDraftStore: UiStoreBinding<KnowledgeDraftState>;
 	};
 }
-export interface DroneUiRuntime extends KnowledgeUiBindings {
+export interface DroneUiRuntime extends KnowledgeUiBindings, SessionUiBindings {
 	version: 1;
 	knowledge: KnowledgeUiPort;
 }

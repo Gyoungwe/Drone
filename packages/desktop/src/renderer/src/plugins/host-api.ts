@@ -36,6 +36,7 @@ import { PLUGIN_HOST_API_MANIFEST } from "./host-api.manifest";
 import { knowledgeUiPort } from "./knowledge-api";
 import { PluginEntryHost, usePluginEntries } from "./PluginRegions";
 import { usePluginRuntime } from "./runtime";
+import { sessionUiPort, useSessionMessages } from "./session-api";
 import { UI_REGIONS } from "./slots";
 
 /**
@@ -95,6 +96,7 @@ window.DroneUI = {
 		useAgentActive: useAgentActive,
 		usePluginEntries: usePluginEntries,
 		usePluginRuntime: usePluginRuntime,
+		useSessionMessages: useSessionMessages,
 	},
 	// </drone:generated namespace="hooks">
 	// <drone:generated namespace="stores">
@@ -170,6 +172,11 @@ window.DroneUI = {
 		updateDailyDiscovery: knowledgeUiPort.updateDailyDiscovery,
 	},
 	// </drone:generated namespace="knowledge">
+	// <drone:generated namespace="sessions">
+	sessions: {
+		prompt: sessionUiPort.prompt,
+	},
+	// </drone:generated namespace="sessions">
 	// <drone:generated namespace="i18n">
 	i18n: {
 		registerMessages: registerPluginMessages,

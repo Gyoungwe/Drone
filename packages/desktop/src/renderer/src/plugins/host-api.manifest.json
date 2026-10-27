@@ -209,6 +209,12 @@
 				"hostValue": "usePluginRuntime",
 				"envType": "typeof usePluginRuntime",
 				"pluginType": "() => import(\"@gyoungwe/plugin-api/ui\").PluginUiRuntimeClient"
+			},
+			{
+				"name": "useSessionMessages",
+				"hostValue": "useSessionMessages",
+				"envType": "typeof useSessionMessages",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").SessionMessagesHook"
 			}
 		],
 		"stores": [
@@ -605,6 +611,14 @@
 				"hostValue": "knowledgeUiPort.updateDailyDiscovery",
 				"envType": "KnowledgeUiPort[\"updateDailyDiscovery\"]",
 				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").KnowledgeUiPort[\"updateDailyDiscovery\"]"
+			}
+		],
+		"sessions": [
+			{
+				"name": "prompt",
+				"hostValue": "sessionUiPort.prompt",
+				"envType": "SessionUiPort[\"prompt\"]",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").SessionUiPort[\"prompt\"]"
 			}
 		]
 	}
