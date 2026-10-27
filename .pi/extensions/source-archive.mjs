@@ -267,7 +267,7 @@ __export(host_exports, {
   withSpecialistSlot: () => withSpecialistSlot,
   workspaceProjectId: () => workspaceProjectId
 });
-import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, isAbsolute, join, resolve } from "node:path";
@@ -307,25 +307,17 @@ import { createHash as createHash12, randomUUID as randomUUID8 } from "node:cryp
 import { relative as relative7, resolve as resolve7, sep as sep7 } from "node:path";
 import { createHash as createHash14 } from "node:crypto";
 import { createHash as createHash15, randomUUID as randomUUID10 } from "node:crypto";
-import {
-  link as link2,
-  lstat as lstat6,
-  mkdir as mkdir7,
-  readdir as readdir2,
-  readFile as readFile7,
-  rename as rename7,
-  unlink as unlink5,
-  writeFile as writeFile7
-} from "node:fs/promises";
+import { link as link2, lstat as lstat6, mkdir as mkdir7, readFile as readFile7, readdir as readdir2, rename as rename7, rm, unlink as unlink5, writeFile as writeFile7 } from "node:fs/promises";
 import { basename as basename3, dirname as dirname6, join as join11 } from "node:path";
-import { randomUUID as randomUUID11 } from "node:crypto";
+import { createHash as createHash16, randomUUID as randomUUID11 } from "node:crypto";
+import { randomUUID as randomUUID12 } from "node:crypto";
 import { mkdir as mkdir8, readFile as readFile8, rename as rename8, unlink as unlink6, writeFile as writeFile8 } from "node:fs/promises";
 import { join as join12 } from "node:path";
-import { randomUUID as randomUUID14 } from "node:crypto";
+import { randomUUID as randomUUID15 } from "node:crypto";
 import { mkdir as mkdir10, readFile as readFile10, rename as rename9, unlink as unlink7, writeFile as writeFile10 } from "node:fs/promises";
 import { dirname as dirname7, join as join14 } from "node:path";
 import { readdir as readdir3 } from "node:fs/promises";
-import { createHash as createHash16, randomUUID as randomUUID15 } from "node:crypto";
+import { createHash as createHash17, randomUUID as randomUUID16 } from "node:crypto";
 import { lstat as lstat9, mkdir as mkdir11, readFile as readFile11, realpath as realpath8, stat as stat3, writeFile as writeFile11 } from "node:fs/promises";
 import { dirname as dirname8, isAbsolute as isAbsolute8, join as join15, relative as relative9, resolve as resolve10 } from "node:path";
 import { pathToFileURL as pathToFileURL3 } from "node:url";
@@ -339,15 +331,15 @@ import { relative as relative4, resolve as resolve5, sep as sep4 } from "node:pa
 import { pathToFileURL as pathToFileURL2 } from "node:url";
 import { createHash as createHash13, randomUUID as randomUUID9 } from "node:crypto";
 import { isAbsolute as isAbsolute6, resolve as resolve8 } from "node:path";
-import { randomUUID as randomUUID12 } from "node:crypto";
-import { lstat as lstat7, readFile as readFile9 } from "node:fs/promises";
 import { randomUUID as randomUUID13 } from "node:crypto";
+import { lstat as lstat7, readFile as readFile9 } from "node:fs/promises";
+import { randomUUID as randomUUID14 } from "node:crypto";
 import { lstat as lstat8, mkdir as mkdir9, realpath as realpath7, writeFile as writeFile9 } from "node:fs/promises";
 import { isAbsolute as isAbsolute7, join as join13, relative as relative8, resolve as resolve9, sep as sep8 } from "node:path";
-import { createHash as createHash17, randomUUID as randomUUID16 } from "node:crypto";
+import { createHash as createHash18, randomUUID as randomUUID17 } from "node:crypto";
 import { lstat as lstat10, mkdir as mkdir12, readFile as readFile12, rename as rename10, unlink as unlink8, writeFile as writeFile12 } from "node:fs/promises";
 import { isAbsolute as isAbsolute9, join as join16, relative as relative10, resolve as resolve11, sep as sep9 } from "node:path";
-import { createHash as createHash18, randomUUID as randomUUID17 } from "node:crypto";
+import { createHash as createHash19, randomUUID as randomUUID18 } from "node:crypto";
 import {
   closeSync,
   fstatSync,
@@ -361,8 +353,8 @@ import {
 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { basename as basename4, dirname as dirname10, join as join17 } from "node:path";
-import { createHash as createHash19 } from "node:crypto";
 import { createHash as createHash20 } from "node:crypto";
+import { createHash as createHash21 } from "node:crypto";
 import { existsSync, readFileSync as readFileSync3 } from "node:fs";
 import { dirname as dirname11, join as join18 } from "node:path";
 import { fileURLToPath as fileURLToPath2, pathToFileURL as pathToFileURL4 } from "node:url";
@@ -483,7 +475,7 @@ function compareClaimSets(previousClaims = [], incomingClaims = []) {
   return comparisons;
 }
 function createKnowledgeConfigState() {
-  return { local: new AsyncLocalStorage2(), queues: /* @__PURE__ */ new Map() };
+  return { local: new AsyncLocalStorage(), queues: /* @__PURE__ */ new Map() };
 }
 function errorCode(error) {
   return error && typeof error === "object" && "code" in error ? error.code : void 0;
@@ -4410,14 +4402,12 @@ function createKnowledgeServicePool(runtime, config, semantic, reviewPolicy, tra
 }
 function createWikiReviewReader(storage, currentNote) {
   async function loadProposal(service, id2, project) {
-    if (typeof id2 !== "string" || !/^[0-9a-f-]{36}$/.test(id2))
-      throw new Error("Invalid Wiki proposal id");
+    if (typeof id2 !== "string" || !/^[0-9a-f-]{36}$/.test(id2)) throw new Error("Invalid Wiki proposal id");
     const base2 = `${service.binding.vaultId}/wiki-review`;
     const pending = await storage.read(`${base2}/pending/${id2}.json`);
     const p = pending === void 0 ? await storage.read(`${base2}/reviewed/${id2}.json`) : pending;
     if (p === void 0) throw new Error("Wiki proposal does not exist");
-    if (!p || typeof p !== "object" || Array.isArray(p))
-      throw new Error("Invalid Wiki proposal document");
+    if (!p || typeof p !== "object" || Array.isArray(p)) throw new Error("Invalid Wiki proposal document");
     if (p.id !== id2 || p.project !== project || p.vaultId !== service.binding.vaultId || p.bindingRevision !== service.binding.revision)
       throw new Error("Proposal belongs to a different project or binding");
     targetWikiPath(p.path, project);
@@ -4431,8 +4421,7 @@ function createWikiReviewReader(storage, currentNote) {
     const sources = [];
     for (const source of p.sources) {
       validateNote(source.path);
-      if (!canRead(source.path, project))
-        throw new Error("Proposal source is outside the current project");
+      if (!canRead(source.path, project)) throw new Error("Proposal source is outside the current project");
       const current = await currentNote(service, source.path);
       sources.push({
         ...source,
@@ -4441,7 +4430,7 @@ function createWikiReviewReader(storage, currentNote) {
         error: null
       });
     }
-    const expired = now2 > p.createdAt + MAX_AGE, targetChanged = (target?.hash ?? null) !== p.beforeHash;
+    const expired = now2 > p.createdAt + MAX_AGE, targetChanged = (target?.hash ?? null) !== p.beforeHash && target?.hash !== p.afterHash;
     const protectedText = p.before === null ? "" : p.before.replace(
       /<!-- pi-agent:managed:start -->[\s\S]*?<!-- pi-agent:managed:end -->/,
       "\uFF08\u6B64\u5904\u4E3A\u667A\u80FD\u4F53\u6258\u7BA1\u533A\uFF09"
@@ -4468,9 +4457,7 @@ function createWikiReviewReader(storage, currentNote) {
   async function listWikiProposals2(service, project) {
     let names;
     try {
-      names = await storage.list(
-        `${service.binding.vaultId}/wiki-review/pending`
-      );
+      names = await storage.list(`${service.binding.vaultId}/wiki-review/pending`);
     } catch (error) {
       if (error.code === "ENOENT") return { items: [], problems: [] };
       throw error;
@@ -4479,12 +4466,9 @@ function createWikiReviewReader(storage, currentNote) {
     for (const name of names.filter((name2) => /^[0-9a-f-]{36}\.json$/.test(name2)).sort().slice(0, MAX_PENDING)) {
       let p;
       try {
-        p = await storage.read(
-          `${service.binding.vaultId}/wiki-review/pending/${name}`
-        );
+        p = await storage.read(`${service.binding.vaultId}/wiki-review/pending/${name}`);
       } catch (error) {
-        if (!(error instanceof SyntaxError) && error.code !== "ESTATECORRUPTED")
-          throw error;
+        if (!(error instanceof SyntaxError) && error.code !== "ESTATECORRUPTED") throw error;
         problems.push({
           id: name.slice(0, -5),
           error: "Wiki proposal JSON is corrupt"
@@ -4492,19 +4476,15 @@ function createWikiReviewReader(storage, currentNote) {
         continue;
       }
       try {
-        if (p === void 0)
-          throw new Error("Wiki proposal disappeared; refresh the list");
+        if (p === void 0) throw new Error("Wiki proposal disappeared; refresh the list");
         if (!p || typeof p !== "object" || Array.isArray(p))
           throw new Error("Invalid Wiki proposal document");
         if (p.status === "rejected" || p.status === "applied") continue;
         if (p.project !== project) continue;
         if (p.vaultId !== service.binding.vaultId || p.id !== name.slice(0, -5))
-          throw new Error(
-            "Proposal belongs to a different binding or filename"
-          );
+          throw new Error("Proposal belongs to a different binding or filename");
         targetWikiPath(p.path, project);
-        if (immutableWikiProposalHash(p) !== p.proposalHash)
-          throw new Error("Wiki proposal content changed");
+        if (immutableWikiProposalHash(p) !== p.proposalHash) throw new Error("Wiki proposal content changed");
         items.push({
           id: p.id,
           path: p.path,
@@ -4523,28 +4503,139 @@ function createWikiReviewReader(storage, currentNote) {
   }
   return { loadProposal, previewWikiProposal: previewWikiProposal2, listWikiProposals: listWikiProposals2 };
 }
-function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui) {
+async function renameWithRetry(from, to, options = {}) {
+  const attempts = options.attempts ?? 6, delay = options.delayMs ?? 40, doRename = options.renameImpl ?? rename7;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await doRename(from, to);
+      return;
+    } catch (error) {
+      const code = error.code;
+      if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts) throw error;
+      await new Promise((resolve132) => setTimeout(resolve132, delay * attempt));
+    }
+  }
+}
+function createLocalWikiReviewPorts(config) {
+  async function statePath(path) {
+    const root = config.knowledgeDirectory();
+    if (!root) throw new Error("No application knowledge directory");
+    return containedVaultFile(root, path);
+  }
+  const state2 = {
+    async read(path) {
+      const full = await statePath(path);
+      let bytes;
+      try {
+        const info = await lstat6(full);
+        if (!info.isFile() || info.isSymbolicLink()) throw new Error("Expected a regular review record");
+        bytes = await readFile7(full);
+      } catch (error) {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      }
+      if (bytes.length > 256 * 1024) throw new Error("Wiki proposal exceeds its storage budget");
+      return { value: JSON.parse(bytes.toString("utf8")), version: digest4(bytes) };
+    },
+    async list(path) {
+      return readdir2(await statePath(path));
+    },
+    async write(path, value, expectedVersion) {
+      const full = await statePath(path);
+      await mkdir7(dirname6(full), { recursive: true, mode: 448 });
+      const temporary = join11(dirname6(full), `.${randomUUID10()}.tmp`);
+      const text33 = `${JSON.stringify(value, null, 2)}
+`;
+      await writeFile7(temporary, text33, { flag: "wx", mode: 384 });
+      try {
+        const current = await state2.read(path);
+        if ((current?.version ?? null) !== expectedVersion)
+          throw new Error("Wiki review state changed; refresh before writing");
+        if (expectedVersion === null) await link2(temporary, full);
+        else await renameWithRetry(temporary, full);
+      } finally {
+        await rm(temporary, { force: true });
+      }
+      if ((await state2.read(path))?.version !== digest4(text33))
+        throw new Error("Wiki review state write could not be read back");
+    },
+    async remove(path, expectedVersion) {
+      const current = await state2.read(path);
+      if (current?.version !== expectedVersion)
+        throw new Error("Wiki review state changed; refresh before deleting");
+      await unlink5(await statePath(path));
+      if (await state2.read(path)) throw new Error("Wiki review state removal could not be read back");
+    }
+  };
+  const files = {
+    async read(binding, path) {
+      try {
+        return await readNoteFile(binding.vault, path);
+      } catch (error) {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      }
+    },
+    async write(binding, path, text33, expectedHash, check) {
+      let parent = binding.vault;
+      for (const part of path.split("/").slice(0, -1)) {
+        parent = join11(parent, part);
+        try {
+          await mkdir7(parent);
+        } catch (error) {
+          if (error.code !== "EEXIST") throw error;
+        }
+        const info = await lstat6(parent);
+        if (!info.isDirectory() || info.isSymbolicLink())
+          throw new Error("Wiki parent must be a regular directory");
+      }
+      const full = await containedVaultFile(binding.vault, path);
+      const temporary = join11(dirname6(full), `.${basename3(full)}.${randomUUID10()}.tmp`);
+      const mode = expectedHash === null ? 384 : (await lstat6(full)).mode & 511;
+      await writeFile7(temporary, text33, { flag: "wx", mode });
+      try {
+        await check();
+        if (((await files.read(binding, path))?.hash ?? null) !== expectedHash)
+          throw new Error("Wiki changed during review; no overwrite applied");
+        if (expectedHash === null) await link2(temporary, full);
+        else await renameWithRetry(temporary, full);
+      } finally {
+        await rm(temporary, { force: true });
+      }
+      if ((await files.read(binding, path))?.hash !== digest4(text33))
+        throw new Error("Wiki write could not be read back");
+    },
+    async remove(binding, path, expectedHash, check) {
+      await check();
+      if ((await files.read(binding, path))?.hash !== expectedHash)
+        throw new Error("Wiki changed during undo");
+      await unlink5(await containedVaultFile(binding.vault, path));
+      if (await files.read(binding, path)) throw new Error("Wiki removal could not be read back");
+    }
+  };
+  return { state: state2, files };
+}
+function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui, io) {
   const { runRuntimeExclusive: runRuntimeExclusive22 } = runtime;
-  const { knowledgeDirectory: knowledgeDirectory2, withKnowledgeBinding: withKnowledgeBinding2 } = config;
+  const { withKnowledgeBinding: withKnowledgeBinding2 } = config;
   const { readReviewMode: readReviewMode2 } = reviewPolicy;
   const { invalidateKnowledgeUi: invalidateKnowledgeUi2 } = ui;
   const AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
   const START2 = "<!-- pi-agent:managed:start -->", END2 = "<!-- pi-agent:managed:end -->";
-  const digest52 = (text33) => createHash15("sha256").update(text33).digest("hex");
+  const digest62 = (text33) => createHash16("sha256").update(text33).digest("hex");
   const MAX_PENDING2 = 100, MAX_AGE2 = 24 * 60 * 60 * 1e3;
   async function exclusive2(key, operation) {
     return runRuntimeExclusive22("wiki-review", key, operation);
   }
   function rootFor2(service) {
-    return join11(knowledgeDirectory2(), service.binding.vaultId, "wiki-review");
+    return `${service.binding.vaultId}/wiki-review`;
   }
   function checkId(id2) {
-    if (typeof id2 !== "string" || !/^[0-9a-f-]{36}$/.test(id2))
-      throw new Error("Invalid Wiki proposal id");
+    if (typeof id2 !== "string" || !/^[0-9a-f-]{36}$/.test(id2)) throw new Error("Invalid Wiki proposal id");
     return id2;
   }
   function immutableHash(p) {
-    return digest52(
+    return digest62(
       JSON.stringify({
         id: p.id,
         vaultId: p.vaultId,
@@ -4561,29 +4652,10 @@ function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui) {
     );
   }
   async function atomicJson22(path, value) {
-    await mkdir7(dirname6(path), { recursive: true, mode: 448 });
-    const temp = join11(dirname6(path), `.${randomUUID10()}.tmp`);
-    try {
-      await writeFile7(temp, `${JSON.stringify(value, null, 2)}
-`, {
-        flag: "wx",
-        mode: 384
-      });
-      await rename7(temp, path);
-    } finally {
-      await unlink5(temp).catch((error) => {
-        if (error.code !== "ENOENT") throw error;
-      });
-    }
+    const current = await io.state.read(path);
+    await io.state.write(path, value, current?.version ?? null);
   }
-  async function currentNote(service, path) {
-    try {
-      return await readNoteFile(service.binding.vault, path);
-    } catch (error) {
-      if (error.code === "ENOENT") return null;
-      throw error;
-    }
-  }
+  const currentNote = (service, path) => io.files.read(service.binding, path);
   function normalizeCandidate(markdown) {
     return stripManagedHeader(markdown);
   }
@@ -4609,30 +4681,14 @@ ${block}
 ` : original.slice(0, start) + block + original.slice(end + END2.length);
   }
   const reader = createWikiReviewReader(
-    {
-      async read(path) {
-        let text33;
-        try {
-          text33 = await readFile7(join11(knowledgeDirectory2(), path), "utf8");
-        } catch (error) {
-          if (error.code === "ENOENT") return void 0;
-          throw error;
-        }
-        if (Buffer.byteLength(text33) > 256 * 1024)
-          throw new Error("Wiki proposal exceeds its storage budget");
-        return JSON.parse(text33);
-      },
-      list: (path) => readdir2(join11(knowledgeDirectory2(), path))
-    },
+    { read: async (path) => (await io.state.read(path))?.value, list: (path) => io.state.list(path) },
     currentNote
   );
   const loadProposal = reader.loadProposal;
   function validateWikiSourcePaths3(paths) {
     if (!Array.isArray(paths) || !paths.length || paths.length > 12)
       throw Object.assign(
-        new Error(
-          "source_paths: supply 1\u201312 Vault-relative Markdown notes already read this turn"
-        ),
+        new Error("source_paths: supply 1\u201312 Vault-relative Markdown notes already read this turn"),
         { code: "source-note-required", field: "source_paths" }
       );
     for (let index = 0; index < paths.length; index++) {
@@ -4657,37 +4713,25 @@ ${block}
     return withKnowledgeBinding2(service.binding, async () => {
       if (service.binding.depositMode === "run-only")
         throw new Error("Wiki proposals are disabled by run-only mode");
-      const { project, sources } = await service.evidenceReceipts(
-        ticket,
-        cwd,
-        input.source_paths
-      );
+      const { project, sources } = await service.evidenceReceipts(ticket, cwd, input.source_paths);
       const path = targetWikiPath(input.path, project);
-      if (sources.some(
-        (source) => source.path === path || /[[\]#|\r\n]/.test(source.path)
-      ))
+      if (sources.some((source) => source.path === path || /[[\]#|\r\n]/.test(source.path)))
         throw new Error("A Wiki cannot cite itself or an ambiguous link path");
       if (sources.every(
         (source) => /(?:^|\/)Wiki\//.test(source.path) || /(?:^|\/)(?:Home|Index|Context)\.md$/.test(source.path)
       ))
-        throw new Error(
-          "Read at least one underlying evidence/source note, not only Wiki or navigation"
-        );
+        throw new Error("Read at least one underlying evidence/source note, not only Wiki or navigation");
       const { title, markdown, rationale } = input;
       if (typeof title !== "string" || !title.trim() || title.length > 200 || /[\r\n]/.test(title))
         throw new Error("A single-line Wiki title is required");
       if (typeof markdown !== "string" || !markdown.trim() || markdown.length > 24e3 || markdown.includes("<!-- pi-agent:managed:"))
-        throw new Error(
-          "Wiki candidate must contain 1\u201324000 characters and no managed markers"
-        );
+        throw new Error("Wiki candidate must contain 1\u201324000 characters and no managed markers");
       if (typeof rationale !== "string" || !rationale.trim() || rationale.length > 1e3)
         throw new Error("A concise change rationale is required");
       const original = await currentNote(service, path);
       if (original) await service.evidenceReceipts(ticket, cwd, [path]);
       if (original && original.bytes > 64 * 1024)
-        throw new Error(
-          "Existing Wiki exceeds the bounded review size; split it before editing"
-        );
+        throw new Error("Existing Wiki exceeds the bounded review size; split it before editing");
       if (original && managedParts(original.text).body.length > 24e3)
         throw new Error("Existing generated block exceeds the review size");
       const refs = sources.map(
@@ -4702,7 +4746,7 @@ ${block}
 ${refs}`
       );
       const proposal = {
-        id: randomUUID10(),
+        id: randomUUID11(),
         status: "pending",
         vaultId: service.binding.vaultId,
         bindingRevision: service.binding.revision,
@@ -4715,22 +4759,24 @@ ${refs}`
         before: original?.text ?? null,
         beforeHash: original?.hash ?? null,
         after,
-        afterHash: digest52(after)
+        afterHash: digest62(after)
       };
       proposal.proposalHash = immutableHash(proposal);
       if (Buffer.byteLength(JSON.stringify(proposal, null, 2)) + 1 > 256 * 1024)
-        throw new Error(
-          "Wiki proposal exceeds the bounded review storage size"
-        );
+        throw new Error("Wiki proposal exceeds the bounded review storage size");
       const root = rootFor2(service);
       await exclusive2(root, async () => {
-        const directory = join11(root, "pending");
-        await mkdir7(directory, { recursive: true, mode: 448 });
-        if ((await readdir2(directory)).filter((name) => name.endsWith(".json")).length >= MAX_PENDING2)
-          throw new Error(
-            "Pending Wiki review limit reached; review existing candidates first"
-          );
-        await atomicJson22(join11(directory, `${proposal.id}.json`), proposal);
+        const directory = `${root}/pending`;
+        let names;
+        try {
+          names = await io.state.list(directory);
+        } catch (error) {
+          if (error.code !== "ENOENT") throw error;
+          names = [];
+        }
+        if (names.filter((name) => name.endsWith(".json")).length >= MAX_PENDING2)
+          throw new Error("Pending Wiki review limit reached; review existing candidates first");
+        await atomicJson22(`${directory}/${proposal.id}.json`, proposal);
       });
       invalidateKnowledgeUi2();
       return {
@@ -4751,29 +4797,19 @@ ${refs}`
     return exclusive2(
       `${rootFor2(service)}:${id2}`,
       () => withKnowledgeBinding2(service.binding, async () => {
-        const { project, sources: newSources } = await service.evidenceReceipts(
-          ticket,
-          cwd,
-          source_paths
-        );
+        const { project, sources: newSources } = await service.evidenceReceipts(ticket, cwd, source_paths);
         const p = await loadProposal(service, id2, project);
         if (p.status !== "pending")
-          throw new Error(
-            "Only a pending Wiki candidate can accumulate another research round"
-          );
+          throw new Error("Only a pending Wiki candidate can accumulate another research round");
         if (Date.now() > p.createdAt + MAX_AGE2)
           throw new Error(
             "Pending Wiki candidate expired; review or replace it before accumulating more rounds"
           );
         const target = await currentNote(service, p.path);
         if ((target?.hash ?? null) !== p.beforeHash)
-          throw new Error(
-            "Wiki changed since the pending candidate was created"
-          );
+          throw new Error("Wiki changed since the pending candidate was created");
         await verifySources(service, p);
-        const byPath = new Map(
-          p.sources.map((source) => [source.path, source])
-        );
+        const byPath = new Map(p.sources.map((source) => [source.path, source]));
         for (const source of newSources) byPath.set(source.path, source);
         const sources = [...byPath.values()];
         if (sources.length > 12)
@@ -4781,9 +4817,7 @@ ${refs}`
             "Pending topic reached the 12-source review budget; review it before adding another round"
           );
         if (typeof markdown !== "string" || !markdown.trim() || markdown.length > 12e3 || markdown.includes("<!-- pi-agent:managed:"))
-          throw new Error(
-            "Incremental topic summary must contain 1\u201312000 characters and no managed markers"
-          );
+          throw new Error("Incremental topic summary must contain 1\u201312000 characters and no managed markers");
         if (typeof rationale !== "string" || !rationale.trim() || rationale.length > 1e3)
           throw new Error("A concise merge rationale is required");
         const prior = managedParts(p.after).body.replace(/\n\n## Sources\n[\s\S]*$/, "").trim();
@@ -4792,44 +4826,30 @@ ${refs}`
 ${normalizeCandidate(markdown)}`;
         const merged = [prior, update].filter(Boolean).join("\n\n");
         if (merged.length > 22e3)
-          throw new Error(
-            "Pending topic synthesis is too large; review it before adding another round"
-          );
+          throw new Error("Pending topic synthesis is too large; review it before adding another round");
         const refs = sources.map(
           (source) => `- [[${source.path.slice(0, -3)}]] \xB7 lines ${source.startLine}\u2013${source.endLine} \xB7 sha256 ${source.hash}`
         ).join("\n");
-        const after = proposedText(
-          p.before,
-          p.title,
-          `${merged}
+        const after = proposedText(p.before, p.title, `${merged}
 
 ## Sources
-${refs}`
-        );
+${refs}`);
         const updated = {
           ...p,
           createdAt: Date.now(),
           rationale: `${p.rationale}
 
-Accumulated research round: ${rationale.trim()}`.slice(
-            0,
-            1e3
-          ),
+Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
           sources,
           after,
-          afterHash: digest52(after)
+          afterHash: digest62(after)
         };
         updated.proposalHash = immutableHash(updated);
         if (Buffer.byteLength(JSON.stringify(updated, null, 2)) + 1 > 256 * 1024)
-          throw new Error(
-            "Merged Wiki proposal exceeds the bounded review storage size"
-          );
+          throw new Error("Merged Wiki proposal exceeds the bounded review storage size");
         await exclusive2(
           rootFor2(service),
-          () => atomicJson22(
-            join11(rootFor2(service), "pending", `${p.id}.json`),
-            updated
-          )
+          () => atomicJson22(`${rootFor2(service)}/pending/${p.id}.json`, updated)
         );
         invalidateKnowledgeUi2();
         return {
@@ -4848,33 +4868,12 @@ Accumulated research round: ${rationale.trim()}`.slice(
       })
     );
   }
-  const previewWikiProposal2 = (service, id2, project) => withKnowledgeBinding2(
-    service.binding,
-    () => reader.previewWikiProposal(service, id2, project)
-  );
-  const listWikiProposals2 = (service, project) => withKnowledgeBinding2(
-    service.binding,
-    () => reader.listWikiProposals(service, project)
-  );
-  async function ensureParent(vault, path) {
-    let full = vault;
-    for (const part of path.split("/").slice(0, -1)) {
-      full = join11(full, part);
-      try {
-        await mkdir7(full);
-      } catch (error) {
-        if (error.code !== "EEXIST") throw error;
-      }
-      const info = await lstat6(full);
-      if (!info.isDirectory() || info.isSymbolicLink())
-        throw new Error("Wiki parent must be a regular directory");
-    }
-  }
+  const previewWikiProposal2 = (service, id2, project) => withKnowledgeBinding2(service.binding, () => reader.previewWikiProposal(service, id2, project));
+  const listWikiProposals2 = (service, project) => withKnowledgeBinding2(service.binding, () => reader.listWikiProposals(service, project));
   async function verifySources(service, p) {
     for (const source of p.sources) {
       validateNote(source.path);
-      if (!canRead(source.path, p.project))
-        throw new Error("Source is outside proposal scope");
+      if (!canRead(source.path, p.project)) throw new Error("Source is outside proposal scope");
       const current = await currentNote(service, source.path);
       if (!current || current.hash !== source.hash)
         throw new Error(`Source changed since proposal: ${source.path}`);
@@ -4890,15 +4889,14 @@ Accumulated research round: ${rationale.trim()}`.slice(
       humanReviewed: review.actor === "human",
       scientificallyVerified: false
     };
-    await atomicJson22(
-      join11(rootFor2(service), "reviewed", `${p.id}.json`),
-      updated
-    );
-    await unlink5(join11(rootFor2(service), "pending", `${p.id}.json`)).catch(
-      (error) => {
-        if (error.code !== "ENOENT") throw error;
-      }
-    );
+    await atomicJson22(`${rootFor2(service)}/reviewed/${p.id}.json`, updated);
+    const pendingPath = `${rootFor2(service)}/pending/${p.id}.json`;
+    const pending = await io.state.read(pendingPath);
+    if (pending) {
+      if (pending.value.proposalHash !== p.proposalHash)
+        throw new Error("Wiki proposal changed before recording review");
+      await io.state.remove(pendingPath, pending.version);
+    }
     invalidateKnowledgeUi2();
   }
   async function decideWikiProposal2(service, id2, project, expectedHash, decision, review = { actor: "human" }) {
@@ -4912,8 +4910,7 @@ Accumulated research round: ${rationale.trim()}`.slice(
         const p = await loadProposal(service, id2, project);
         if (expectedHash !== p.proposalHash)
           throw new Error("The reviewed candidate changed; preview it again");
-        if (p.status !== "pending")
-          return { id: id2, status: p.status, alreadyReviewed: true };
+        if (p.status !== "pending") return { id: id2, status: p.status, alreadyReviewed: true };
         if (decision === "reject") {
           await finish(service, p, "rejected", review);
           return { id: id2, status: "rejected", vaultWritten: false };
@@ -4922,105 +4919,66 @@ Accumulated research round: ${rationale.trim()}`.slice(
         if (service.binding.depositMode === "run-only")
           throw new Error("Wiki writes are disabled by run-only mode");
         if (Date.now() - p.createdAt > MAX_AGE2)
-          throw new Error(
-            "Wiki proposal expired; regenerate it from current evidence"
-          );
-        return exclusive2(
-          `${service.binding.vault}:wiki:${p.path}`,
-          async () => {
-            const current = await currentNote(service, p.path);
-            const recovered = current?.hash === p.afterHash;
-            if (review.actor === "automatic") {
-              if (await readReviewMode2() !== "automatic")
-                throw new Error("Strict review requires confirmation");
-              if (!recovered && current && !await knownGeneratedPage(
-                service,
-                p.project,
-                p.path,
-                current.hash
-              ))
-                throw new Error(
-                  "Existing or human-edited page requires confirmation"
-                );
-            }
-            if (!recovered) {
-              if ((current?.hash ?? null) !== p.beforeHash)
-                throw new Error(
-                  "Wiki changed after preview; no user edits were overwritten"
-                );
-              await verifySources(service, p);
-              await ensureParent(service.binding.vault, p.path);
-              const full = join11(service.binding.vault, p.path), temp = join11(
-                dirname6(full),
-                `.${basename3(full)}.${randomUUID10()}.tmp`
-              );
-              const mode = current ? (await lstat6(full)).mode & 511 : 384;
-              try {
-                await writeFile7(temp, p.after, { flag: "wx", mode });
-                await withKnowledgeBinding2(service.binding, async () => {
-                });
-                if (((await currentNote(service, p.path))?.hash ?? null) !== p.beforeHash)
-                  throw new Error(
-                    "Wiki changed during review; no overwrite applied"
-                  );
-                await verifySources(service, p);
-                await review.checkCurrent?.();
-                if (p.before === null) await link2(temp, full);
-                else await renameWithRetry2(temp, full);
-              } finally {
-                await unlink5(temp).catch((error) => {
-                  if (error.code !== "ENOENT") throw error;
-                });
-              }
-            }
-            let reviewRecorded = true, recordError = null, indexed = true, indexError = null;
-            try {
-              await finish(service, p, "applied", review);
-            } catch (error) {
-              reviewRecorded = false;
-              recordError = error.message;
-            }
-            try {
-              await service.request("changed", { paths: [p.path] });
-            } catch (error) {
-              indexed = false;
-              indexError = error.message;
-            }
-            return {
-              id: id2,
-              status: "applied",
-              path: p.path,
-              vaultWritten: true,
-              recovered,
-              reviewRecorded,
-              recordError,
-              indexed,
-              indexError,
-              scientificallyVerified: false,
-              humanReviewed: review.actor === "human",
-              reviewMethod: review.actor,
-              maintenance: "queued"
-            };
+          throw new Error("Wiki proposal expired; regenerate it from current evidence");
+        return exclusive2(`${service.binding.vault}:wiki:${p.path}`, async () => {
+          const current = await currentNote(service, p.path);
+          const recovered = current?.hash === p.afterHash;
+          if (review.actor === "automatic") {
+            if (await readReviewMode2() !== "automatic")
+              throw new Error("Strict review requires confirmation");
+            if (!recovered && current && !await knownGeneratedPage(service, p.project, p.path, current.hash))
+              throw new Error("Existing or human-edited page requires confirmation");
           }
-        );
+          if (!recovered) {
+            if ((current?.hash ?? null) !== p.beforeHash)
+              throw new Error("Wiki changed after preview; no user edits were overwritten");
+            await verifySources(service, p);
+            await io.files.write(service.binding, p.path, p.after, p.beforeHash, async () => {
+              await withKnowledgeBinding2(service.binding, async () => {
+              });
+              await verifySources(service, p);
+              await review.checkCurrent?.();
+            });
+          }
+          let reviewRecorded = true, recordError = null, indexed = true, indexError = null;
+          try {
+            await finish(service, p, "applied", review);
+          } catch (error) {
+            reviewRecorded = false;
+            recordError = error.message;
+          }
+          try {
+            await service.request("changed", { paths: [p.path] });
+          } catch (error) {
+            indexed = false;
+            indexError = error.message;
+          }
+          return {
+            id: id2,
+            status: "applied",
+            path: p.path,
+            vaultWritten: true,
+            recovered,
+            reviewRecorded,
+            recordError,
+            indexed,
+            indexError,
+            scientificallyVerified: false,
+            humanReviewed: review.actor === "human",
+            reviewMethod: review.actor,
+            maintenance: "queued"
+          };
+        });
       })
     );
   }
   async function autoApplyWikiProposal2(service, id2, project, expectedHash) {
-    if (await readReviewMode2() !== "automatic")
-      return { id: id2, status: "pending", reason: "strict-review" };
+    if (await readReviewMode2() !== "automatic") return { id: id2, status: "pending", reason: "strict-review" };
     try {
-      return await decideWikiProposal2(
-        service,
-        id2,
-        project,
-        expectedHash,
-        "apply",
-        {
-          actor: "automatic",
-          authority: AUTOMATIC_AUTHORITY
-        }
-      );
+      return await decideWikiProposal2(service, id2, project, expectedHash, "apply", {
+        actor: "automatic",
+        authority: AUTOMATIC_AUTHORITY
+      });
     } catch (error) {
       return {
         id: id2,
@@ -5033,19 +4991,16 @@ Accumulated research round: ${rationale.trim()}`.slice(
     return withKnowledgeBinding2(service.binding, async () => {
       let names;
       try {
-        names = await readdir2(join11(rootFor2(service), "reviewed"));
+        names = await io.state.list(`${rootFor2(service)}/reviewed`);
       } catch (error) {
         if (error.code === "ENOENT") return [];
         throw error;
       }
       const items = [];
       for (const name of names.filter((n) => /^[0-9a-f-]{36}\.json$/.test(n))) {
-        let p;
-        try {
-          p = await loadProposal(service, name.slice(0, -5), project);
-        } catch {
-          continue;
-        }
+        const record22 = await io.state.read(`${rootFor2(service)}/reviewed/${name}`);
+        if (record22 && typeof record22.value?.project === "string" && record22.value.project !== project) continue;
+        const p = await loadProposal(service, name.slice(0, -5), project);
         if (p.status !== "applied") continue;
         items.push({
           id: p.id,
@@ -5059,9 +5014,7 @@ Accumulated research round: ${rationale.trim()}`.slice(
     });
   }
   async function knownGeneratedPage(service, project, path, hash52) {
-    return (await wikiHistory2(service, project)).some(
-      (p) => p.path === path && p.afterHash === hash52
-    );
+    return (await wikiHistory2(service, project)).some((p) => p.path === path && p.afterHash === hash52);
   }
   async function undoWikiUpdate2(service, project, id2, expectedHash) {
     checkId(id2);
@@ -5071,56 +5024,20 @@ Accumulated research round: ${rationale.trim()}`.slice(
         const p = await loadProposal(service, id2, project);
         if (p.status !== "applied" || p.afterHash !== expectedHash)
           throw new Error("Refresh Wiki history before undo");
-        return exclusive2(
-          `${service.binding.vault}:wiki:${p.path}`,
-          async () => {
-            const current = await currentNote(service, p.path);
-            if (current?.hash !== p.afterHash)
-              throw new Error(
-                "Wiki changed since saving; undo would overwrite edits"
-              );
-            const full = join11(service.binding.vault, p.path);
-            if (p.before === null) await unlink5(full);
-            else {
-              const temp = join11(dirname6(full), `.${randomUUID10()}.tmp`);
-              try {
-                await writeFile7(temp, p.before, {
-                  flag: "wx",
-                  mode: (await lstat6(full)).mode & 511
-                });
-                if ((await currentNote(service, p.path))?.hash !== p.afterHash)
-                  throw new Error("Wiki changed during undo");
-                await rename7(temp, full);
-              } finally {
-                await unlink5(temp).catch((e) => {
-                  if (e.code !== "ENOENT") throw e;
-                });
-              }
-            }
-            await finish(service, p, "reverted");
-            await service.request("changed", { paths: [p.path] });
-            return { status: "reverted", path: p.path };
-          }
-        );
+        return exclusive2(`${service.binding.vault}:wiki:${p.path}`, async () => {
+          const current = await currentNote(service, p.path);
+          if (current?.hash !== p.afterHash)
+            throw new Error("Wiki changed since saving; undo would overwrite edits");
+          const check = () => withKnowledgeBinding2(service.binding, async () => {
+          });
+          if (p.before === null) await io.files.remove(service.binding, p.path, p.afterHash, check);
+          else await io.files.write(service.binding, p.path, p.before, p.afterHash, check);
+          await finish(service, p, "reverted");
+          await service.request("changed", { paths: [p.path] });
+          return { status: "reverted", path: p.path };
+        });
       })
     );
-  }
-  const RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
-  async function renameWithRetry2(from, to, options = {}) {
-    const attempts = options.attempts ?? 6;
-    const delay = options.delayMs ?? 40;
-    const doRename = options.renameImpl ?? rename7;
-    for (let attempt = 1; ; attempt++) {
-      try {
-        await doRename(from, to);
-        return;
-      } catch (error) {
-        const code = error?.code;
-        if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts)
-          throw error;
-        await new Promise((resolve132) => setTimeout(resolve132, delay * attempt));
-      }
-    }
   }
   return {
     validateWikiSourcePaths: validateWikiSourcePaths3,
@@ -5132,7 +5049,7 @@ Accumulated research round: ${rationale.trim()}`.slice(
     autoApplyWikiProposal: autoApplyWikiProposal2,
     wikiHistory: wikiHistory2,
     undoWikiUpdate: undoWikiUpdate2,
-    renameWithRetry: renameWithRetry2
+    renameWithRetry
   };
 }
 function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEvent) {
@@ -5288,7 +5205,7 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
           data[key] = Math.min(data[key] ?? SPECIALIST_LIMITS2[key], SPECIALIST_LIMITS2[key]);
         data.mode = mode;
         data.revision = revision + 1;
-        const dir = knowledgeDirectory2(), temp = join12(dir, `specialists.${randomUUID11()}.tmp`);
+        const dir = knowledgeDirectory2(), temp = join12(dir, `specialists.${randomUUID12()}.tmp`);
         await mkdir8(dir, { recursive: true, mode: 448 });
         try {
           await writeFile8(temp, `${JSON.stringify(data)}
@@ -5377,7 +5294,7 @@ function createKnowledgeSpecialistHost(runtime, config, ui) {
 }
 async function atomicJson(path, value) {
   await mkdir10(dirname7(path), { recursive: true, mode: 448 });
-  const temp = `${path}.${randomUUID14()}.tmp`;
+  const temp = `${path}.${randomUUID15()}.tmp`;
   try {
     await writeFile10(temp, `${JSON.stringify(value, null, 2)}
 `, { flag: "wx", mode: 384 });
@@ -5423,7 +5340,7 @@ async function reviewWikiWithModel(input, { evaluate, check, signal, progress = 
   const key = `${binding.vaultId}:${id2}`;
   if (state.active.has(key)) throw new Error("This Wiki candidate is already being reviewed");
   state.active.add(key);
-  const startedAt = Date.now(), auditId = randomUUID14();
+  const startedAt = Date.now(), auditId = randomUUID15();
   let audit = null;
   const stillCurrent = async () => {
     signal?.throwIfAborted();
@@ -5829,7 +5746,7 @@ async function knowledgeReviews({ cwd, offset = 0, limit = 15, revision }) {
 async function knowledgePreviewReview({ cwd, id: id2, revision }) {
   const { binding, service } = await bound(revision), { project } = await projectAt(cwd);
   if (!project) throw new Error("Choose the originating project to review its proposal");
-  const preview = await previewWikiProposal(service, id2, project), token = randomUUID15();
+  const preview = await previewWikiProposal(service, id2, project), token = randomUUID16();
   const expires = Date.now() + 10 * 60 * 1e3;
   runtimeState.previews.set(token, {
     binding,
@@ -6129,7 +6046,7 @@ async function saveDiscoveryIdea({ idea } = {}) {
   if (!idea || typeof idea.title !== "string" || !idea.title.trim()) throw new Error("Idea title is required");
   const binding = await readKnowledgeBinding({ fresh: true });
   if (!binding) throw new Error("No application knowledge Vault is bound");
-  const base2 = idea.title.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || `idea-${createHash16("sha256").update(idea.title).digest("hex").slice(0, 12)}`;
+  const base2 = idea.title.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || `idea-${createHash17("sha256").update(idea.title).digest("hex").slice(0, 12)}`;
   const directory = join15(binding.vault, "Library", "Ideas");
   await mkdir11(directory, { recursive: true });
   const text33 = ideaNoteMarkdown(
@@ -7625,8 +7542,16 @@ function createPublicationApi(ui, reviewPolicy, config, createState, signal = nu
       projectSnapshot: projectKnowledgeSnapshot2
     })
   );
-  const FIELD2 = "knowledgePublication";
+  const FIELD = "knowledgePublication";
   const hash52 = (content) => createHash13("sha256").update(JSON.stringify(content ?? [])).digest("hex");
+  const protocolKey = (message) => hash52({
+    timestamp: message.timestamp,
+    api: message.api,
+    provider: message.provider,
+    model: message.model,
+    responseId: message.responseId,
+    calls: message.content.filter((block) => block.type === "toolCall")
+  });
   function sanitizeError(text33) {
     return diagnosticText(text33, 4096).trim();
   }
@@ -7634,17 +7559,18 @@ function createPublicationApi(ui, reviewPolicy, config, createState, signal = nu
     return /was aborted|request aborted/i.test(String(message?.errorMessage || ""));
   }
   function base2(message, content) {
-    const errorMessage2 = message.stopReason === "error" && typeof message.errorMessage === "string" ? sanitizeError(message.errorMessage) : "";
+    const { errorMessage: originalError, diagnostics, ...metadata } = message;
+    const errorMessage2 = message.stopReason === "error" && typeof originalError === "string" ? sanitizeError(originalError) : "";
     return {
-      role: "assistant",
+      ...metadata,
       content,
-      api: message.api,
-      provider: message.provider,
-      model: message.model,
-      usage: message.usage,
-      timestamp: message.timestamp,
-      stopReason: message.stopReason,
-      ...message.responseId ? { responseId: message.responseId } : {},
+      // Diagnostics do not control provider replay. Keep only safe error text;
+      // arbitrary details and stacks must not enter public/persisted history.
+      ...diagnostics ? { diagnostics: diagnostics.map(({ type, timestamp, error }) => ({
+        type: sanitizeError(type),
+        timestamp,
+        ...error ? { error: { message: sanitizeError(error.message) } } : {}
+      })) } : {},
       ...errorMessage2 ? { errorMessage: errorMessage2 } : {}
     };
   }
@@ -7652,7 +7578,7 @@ function createPublicationApi(ui, reviewPolicy, config, createState, signal = nu
     signal?.throwIfAborted();
     const proof = { version: 1, id: randomUUID9(), ...detail, contentHash: hash52(content) };
     state2.proofs.add(proof);
-    return { ...base2(message, content), [FIELD2]: proof };
+    return { ...base2(message, content), [FIELD]: proof };
   }
   function blocked(message, code = "check-failed", turnId = null, operational = null, paths = [], extra = null) {
     return seal(
@@ -7684,7 +7610,7 @@ function createPublicationApi(ui, reviewPolicy, config, createState, signal = nu
     };
   }
   function isSealed(message, restore = false) {
-    const proof = message?.[FIELD2];
+    const proof = message?.[FIELD];
     return proof?.version === 1 && (state2.proofs.has(proof) || restore) && [
       "released",
       "no-hits",
@@ -7736,7 +7662,7 @@ function createPublicationApi(ui, reviewPolicy, config, createState, signal = nu
     return messages.map((m) => {
       if (m.role !== "assistant" || isSealed(m)) return m;
       const saved = known.has(`${m.timestamp}:${hash52(m.content)}`);
-      if (saved && (!m[FIELD2] || isSealed(m, true))) return m;
+      if (saved && (!m[FIELD] || isSealed(m, true))) return m;
       return projectUnsealed(m);
     });
   }
@@ -7835,7 +7761,8 @@ ${String(footer).slice(0, 2e3)}` }] : [];
     };
     pi.on("context", async (event) => ({
       messages: event.messages.map((message) => {
-        const original = protocol.get(message[FIELD2]?.id);
+        if (message.role !== "assistant") return message;
+        const original = protocol.get(protocolKey(message));
         return original ? { ...message, content: original } : message;
       })
     }));
@@ -7847,8 +7774,8 @@ ${String(footer).slice(0, 2e3)}` }] : [];
       const signal2 = ctx?.signal;
       const flowCtx = { sessionId };
       const report = (message2) => {
-        if (message2[FIELD2]?.status !== "tool-only" && message2[FIELD2]?.reason !== "model-error")
-          publicationKnowledgeFlow2(flowCtx, message2[FIELD2]);
+        if (message2[FIELD]?.status !== "tool-only" && message2[FIELD]?.reason !== "model-error")
+          publicationKnowledgeFlow2(flowCtx, message2[FIELD]);
         return { message: message2 };
       };
       const blocks = Array.isArray(message.content) ? message.content : [];
@@ -7863,7 +7790,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
           task?.pause(limit);
           const reportText = [publicationNotices["tool-loop-stopped"], task?.snapshot() ? task.render() : null].filter(Boolean).join("\n\n");
           const denied = blocked(message, "tool-loop-stopped", turnId, reportText);
-          denied[FIELD2].limit = {
+          denied[FIELD].limit = {
             kind: limit,
             toolRounds,
             maxToolRounds,
@@ -7874,7 +7801,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
           return report(denied);
         }
         const safe = seal(message, tools, { status: "tool-only", turnId, scientificallyVerified: false });
-        protocol.set(safe[FIELD2].id, structuredClone(blocks));
+        protocol.set(protocolKey(message), structuredClone(blocks));
         protocolBytes += bytes;
         return report(safe);
       }
@@ -8847,7 +8774,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
       if (!host) return skip("host-unavailable");
       if (decision.decision !== "run") {
         remember({ decision: decision.decision, reasonCode: decision.reasonCode });
-        const id3 = randomUUID12();
+        const id3 = randomUUID13();
         noteKnowledgeSpecialist2(ctx, {
           id: id3,
           role,
@@ -8907,7 +8834,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
       if (parentSignal?.aborted) abort();
       else parentSignal?.addEventListener("abort", abort, { once: true });
       const deadline = setTimeout(abort, settings.timeoutMs);
-      const [name, label2] = profiles[role], id2 = randomUUID12();
+      const [name, label2] = profiles[role], id2 = randomUUID13();
       let progress = {
         id: id2,
         role,
@@ -9258,7 +9185,7 @@ function createSpecialistDelivery(runtime, bindings) {
     if (!contained(root, run2) || relative8(root, run2).split(sep8).length !== 2 || !run2.split(sep8).at(-1).startsWith("run-") || !(await lstat8(join13(run2, "metadata.json"))).isFile())
       throw new Error("Explainer destination must be an existing research run");
     return bindings.withKnowledgeBinding(c.binding, async () => {
-      const artifactPath = join13(run2, `show-me-${randomUUID13()}.html`);
+      const artifactPath = join13(run2, `show-me-${randomUUID14()}.html`);
       const sources = await c.service.evidenceReceipts(c.ticket, ctx.cwd, answer.data.source_paths);
       await mkdir9(run2, { recursive: true });
       await writeFile9(artifactPath, html, { flag: "wx", mode: 384 });
@@ -9594,7 +9521,7 @@ async function readDocument2(path, vaultId, project, hostId) {
   }
 }
 async function atomicWrite2(path, value) {
-  const temporary = `${path}.${randomUUID16()}.tmp`;
+  const temporary = `${path}.${randomUUID17()}.tmp`;
   try {
     await writeFile12(temporary, `${JSON.stringify(value, null, 2)}
 `, { flag: "wx", mode: 384 });
@@ -9695,7 +9622,7 @@ function createExperienceStore(options) {
     await ensureSafePath(directory, path);
     return readDocument2(path, vaultId, project, hostId);
   };
-  const mutate = async (expectedRevision, updater) => runRuntimeExclusive2("experience-store", path, async () => {
+  const mutate = async (expectedRevision, updater) => runRuntimeExclusive("experience-store", path, async () => {
     await ensureSafePath(directory, path);
     const current = await readDocument2(path, vaultId, project, hostId);
     if (expectedRevision !== void 0 && current.revision !== expectedRevision) throw new Error("Experience revision changed");
@@ -9870,7 +9797,7 @@ function acquireFile(path) {
       }
     );
   }
-  const owner = `${randomUUID17()}
+  const owner = `${randomUUID18()}
 ${process.pid}
 `;
   const identity = fstatSync(fd);
@@ -9924,7 +9851,7 @@ function acquireKnowledgeWriterLease(input, leaseDirectory = join17(
   };
   try {
     for (const resource of resources) {
-      const key = createHash18("sha256").update(resource).digest("hex");
+      const key = createHash19("sha256").update(resource).digest("hex");
       locks.push(acquireFile(join17(leaseDirectory, `${key}.lock`)));
     }
   } catch (error) {
@@ -10020,21 +9947,34 @@ function createKnowledgeRuntime(config, host, extensionHost = {}, acquireWriterL
     config,
     semantic,
     reviewPolicy,
-    createKnowledgeWorkerTransportFactory(host, config, ui.invalidateKnowledgeUi, writerReservations.acquireWorker)
+    createKnowledgeWorkerTransportFactory(
+      host,
+      config,
+      ui.invalidateKnowledgeUi,
+      writerReservations.acquireWorker
+    )
   );
   const specialists = createKnowledgeSpecialistHost(host, config, ui);
   const specialistTools = createKnowledgeSpecialistTools(host, config, specialists, ui);
-  const wiki = createKnowledgeWikiReview(host, config, reviewPolicy, ui);
+  const wiki = createKnowledgeWikiReview(host, config, reviewPolicy, ui, createLocalWikiReviewPorts(config));
   const topics = createTopicMemoryApi(host, config);
   const delivery = createSpecialistDelivery(host, config);
   const lifecycle = createKnowledgeOwnerLifecycle({
     beforeDrain: () => specialists.dispose(),
     async dispose() {
       const serviceResults = await Promise.allSettled([services.dispose()]);
-      const reservationResults = await Promise.allSettled([Promise.resolve().then(() => writerReservations.dispose())]);
+      const reservationResults = await Promise.allSettled([
+        Promise.resolve().then(() => writerReservations.dispose())
+      ]);
       ui.dispose();
-      const failures = [...serviceResults, ...reservationResults].filter((result2) => result2.status === "rejected");
-      if (failures.length) throw new AggregateError(failures.map((result2) => result2.reason), "Knowledge resources could not be disposed");
+      const failures = [...serviceResults, ...reservationResults].filter(
+        (result2) => result2.status === "rejected"
+      );
+      if (failures.length)
+        throw new AggregateError(
+          failures.map((result2) => result2.reason),
+          "Knowledge resources could not be disposed"
+        );
     }
   });
   return {
@@ -10055,10 +9995,10 @@ function createKnowledgeRuntime(config, host, extensionHost = {}, acquireWriterL
 }
 function summaryDeliveryClaims(details, markdown) {
   const receipt2 = details.delivery_receipt;
-  if (!receipt2 || receipt2.version !== 1 || receipt2.semanticAssessment?.status !== "model-assessed" || receipt2.bodySha256 !== digest4(`${markdown.trim()}
+  if (!receipt2 || receipt2.version !== 1 || receipt2.semanticAssessment?.status !== "model-assessed" || receipt2.bodySha256 !== digest5(`${markdown.trim()}
 `))
     throw new Error("Topic memory requires a current, reviewed summary delivery receipt");
-  if (!Array.isArray(details.claims) || receipt2.memoryClaimsSha256 !== digest4(JSON.stringify(details.claims)))
+  if (!Array.isArray(details.claims) || receipt2.memoryClaimsSha256 !== digest5(JSON.stringify(details.claims)))
     throw new Error("Topic memory claims differ from the reviewed delivery packet");
   const reviewed = receipt2.semanticAssessment.memoryClaims;
   if (!Array.isArray(reviewed) || reviewed.length !== details.claims.length)
@@ -10070,7 +10010,7 @@ function summaryDeliveryClaims(details, markdown) {
     ))
       throw new Error("Topic memory claim does not reference the delivered evidence version");
     const assessment = reviewed.find((item) => item.bindingId === claim.bindingId);
-    if (!assessment || seen.has(claim.bindingId) || assessment.assessment !== "supported" || assessment.memoryClaimSha256 !== digest4(JSON.stringify(claim)))
+    if (!assessment || seen.has(claim.bindingId) || assessment.assessment !== "supported" || assessment.memoryClaimSha256 !== digest5(JSON.stringify(claim)))
       throw new Error("Topic memory claim lacks its exact supported scope assessment");
     seen.add(claim.bindingId);
     if (!Array.isArray(assessment.evidence) || !assessment.evidence.some(
@@ -10246,7 +10186,7 @@ function resolvePackageWorkerResource(url) {
   const expected = typeof manifest.outputSha256 === "string" ? manifest.outputSha256 : "";
   if (!/^[a-f0-9]{64}$/u.test(expected))
     throw new Error(`Knowledge worker manifest has no valid output hash: ${manifestPath}`);
-  const actual = createHash20("sha256").update(readFileSync3(path)).digest("hex");
+  const actual = createHash21("sha256").update(readFileSync3(path)).digest("hex");
   if (actual !== expected) throw new Error(`Knowledge worker resource hash mismatch: ${path}`);
   const version = `${typeof manifest.version === "number" || typeof manifest.version === "string" ? manifest.version : "1"}:${expected.slice(0, 16)}`;
   return { metadata: { version, source: path, integrity: expected } };
@@ -10430,12 +10370,6 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
   function configureKnowledgeExtensionHost2(host = {}) {
     extensionHost = { ...defaultHost, ...host };
   }
-  function bindAcceptanceVerifierEvents2(pi) {
-    extensionHost.bindAcceptanceVerifierEvents?.(pi);
-  }
-  function registerAcceptanceVerifier2(name, definition) {
-    return extensionHost.registerAcceptanceVerifier?.(name, definition) ?? definition;
-  }
   function registerTool2(pi, definition) {
     (extensionHost.registerTool || ((target, value) => target.registerTool(value)))(pi, definition);
   }
@@ -10447,7 +10381,7 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
     return { ...staged, ...applied, status: "applied", vaultWritten: true };
   }
   function registerWikiReviewAcceptance2() {
-    return registerAcceptanceVerifier2("wiki_review", {
+    return {
       evidenceKind: "wiki-applied",
       operationVerifier: "wiki-review-record-not-scientific-proof",
       label: () => "Wiki \u66F4\u65B0\u7ECF\u4F60\u5728\u5BA1\u9605\u9875\u786E\u8BA4",
@@ -10475,7 +10409,7 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
         reason: "Wiki \u4E0A\u7684\u4FEE\u6539\u8FD8\u6CA1\u7ECF\u8FC7\u4F60\u5BA1\u9605\u901A\u8FC7",
         next: "\u53BB Wiki \u5BA1\u9605\u9875\u770B\u4E00\u4E0B\u8FD9\u6B21\u6539\u4E86\u4EC0\u4E48\uFF0C\u901A\u8FC7\u6216\u6253\u56DE\u90FD\u5728\u90A3\u91CC\u64CD\u4F5C"
       })
-    });
+    };
   }
   function wikiProposalCard(event) {
     const d = event.result?.details || {};
@@ -10504,8 +10438,16 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
     });
   }
   function registerKnowledgeInterface2(pi, { readOnly = false, runtime = null } = {}) {
-    bindAcceptanceVerifierEvents2(pi);
-    registerWikiReviewAcceptance2();
+    let removeAcceptance;
+    if (!readOnly) {
+      const declaration = { version: 1, kind: "wiki_review", definition: registerWikiReviewAcceptance2() };
+      const publishAcceptance = () => pi.events.emit("drone:acceptance-verifier/v1", declaration);
+      removeAcceptance = pi.events.on("drone:acceptance-verifier/request/v1", (payload) => {
+        if (payload?.version === 1) publishAcceptance();
+      });
+      pi.on("session_shutdown", () => removeAcceptance?.());
+      publishAcceptance();
+    }
     const getTaskRuntime = () => {
       if (readOnly || !pi.events) return null;
       let taskRuntime = null;
@@ -10564,7 +10506,9 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
         },
         beforeStart: async () => ({}),
         withTurnBinding: async (_ctx, operation) => operation(),
-        dispose: async () => void 0
+        dispose: async () => {
+          removeAcceptance?.();
+        }
       };
     let disposed = false;
     const assertSessionActive = () => {
@@ -11579,6 +11523,7 @@ ${text33}`, [
     async function dispose() {
       if (disposed) return;
       disposed = true;
+      removeAcceptance?.();
       current = null;
       bootstrap = null;
       preparing = null;
@@ -12002,7 +11947,7 @@ function createNativeSession(owner) {
 function createNativeExtension(owner) {
   return (pi) => createNativeSession(owner).extension(pi);
 }
-var __defProp2, __getOwnPropNames2, __esm2, __export2, normalize, tokens, overlap, field, init_claim_conflicts, config_exports, defaultState, init_config, files_exports, MAX_NOTE_BYTES, OMIT, RESERVED2, init_files, OK, ERROR, MUTED, clip, record, ZOTERO_KEY, CHANNEL_LABEL, init_flow_cards, MANAGED_START, MANAGED_END, PROJECT_PATTERN, NAVIGATION_TARGETS, VaultFileConflictError, hash, init_layout, init_review_policy_storage, review_policy_exports, readReviewMode, saveReviewMode, advisoryCodes, init_review_policy, MAX_BATCH, MAX_CHARS, MAX_RESPONSE, ENV_NAME, MAX_VECTOR_COMPONENT, MAX_VECTOR_NORM, CONFIG_KEYS, semanticLimits, init_semantic_provider, semantic_settings_exports, MAX_FILE_BYTES, ENV_NAME2, SETTINGS_KEYS, CONFIG_KEYS2, defaultApi, readSemanticSettings, saveSemanticSettings, init_semantic_settings, omittedSegments, init_source_links, MANAGED_START2, MANAGED_END2, init_wiki_policy, runtime_host_exports, KNOWLEDGE_WORKER_LIFECYCLE_EVENT, compatibilityKnowledgeRuntimeHost, configureKnowledgeRuntime, runRuntimeExclusive2, emitProcessEvent2, runtimeSlot2, toolMeta2, flowCardBuilder2, configureKnowledgeWorker, createKnowledgeWorker, knowledgeWorkerMetadata, emitKnowledgeWorkerLifecycle, configureKnowledgeEvidence, deliveryContract, configureKnowledgeHost, loadWorkspaceConfig, publishExplainer, consumeKnowledgeReviewPreview, specialistSettings, configureKnowledgeSetup, LAYOUT, inspectObsidianSetup, inspectSetupDirectory, resolveSetupVault, researchSetupOptions, requiresPaperEvidence, hasPaperCitation, init_runtime_host, topic_memory_exports, TOPIC_MEMORY_VERSION, TOPIC_MEMORY_LIMITS, digest2, text, slug, createTopicMemory, listTopics, readTopic, updateTopic, archiveTopic, init_topic_memory, START, END, hash2, init_maintenance, init_ingest_identity, KNOWLEDGE_TYPES, RUN_RESULT_TYPES, NOTE_TYPES, MAX_FRONTMATTER_CHARS, MAX_DEPTH, UNSAFE_KEYS, KEY_LINE, Parser, init_ingest_frontmatter, clean3, init_note_title, DAILY_DISCOVERY_LIMITS, SCAN_ROOTS, SKIP_DIRS, NAVIGATION, init_daily_discovery, yaml, init_memory_note, STOP, tokens2, init_topic_probe, GRAPH_RETRIEVAL_DEFAULTS, init_graph_retrieval, init_worker_transport, ui_state_exports, compatibilityKnowledgeUi, subscribeKnowledgeUi, emitKnowledgeUi, flowFor, knowledgeAnswerRate, beginKnowledgeFlow, updateKnowledgeFlow, noteKnowledgeRead, publicationKnowledgeFlow, requestWikiReviewUi, notifyKnowledgeUi, invalidateKnowledgeUi, clearKnowledgeFlow, knowledgeExcerpt, noteKnowledgeSearch, noteKnowledgeOperation, noteKnowledgeSpecialist, init_ui_state, service_exports, compatibilityKnowledgeServices, KnowledgeService, getKnowledgeService, notifyKnowledgeChange, closeKnowledgeServices, init_service, MAX_PENDING, MAX_AGE, digest3, init_wiki_review_reader, wiki_review_exports, compatibility2, validateWikiSourcePaths2, stageWikiProposal, mergeWikiProposal, previewWikiProposal, listWikiProposals, decideWikiProposal, autoApplyWikiProposal, wikiHistory, undoWikiUpdate, renameWithRetry, init_wiki_review, specialist_host_exports, compatibilityKnowledgeSpecialists, SPECIALIST_LIMITS, contextSessionId, specialistQueueSnapshot, registerKnowledgeSpecialistHost, knowledgeSpecialistHost, specialistSettings2, setSpecialistSettings, withSpecialistSlot, init_specialist_host, wiki_model_review_exports, state, CHECKS, rootFor, init_wiki_model_review, init_maintenance_topic, ui_service_exports, runtimeState, MAX_PREVIEWS, consumeKnowledgeReviewPreviewEntry, knowledgeSpecialistSettings, init_ui_service, SESSION_PROJECT_ENTRY, LEGACY_DEFAULT_PROJECT, SLUG, RESERVED, SPECIALIST_DECISIONS, clean, digest, publicationFallbackNotice, publicationNotices, advisoryNotices, MAX_FAILURES, MAX_TEXT, SHA256, SHA2562, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_PER_SESSION, NUMBER, CITATION, BackgroundReviewer, replaceControl, clean2, feedbackReason, DAILY_DISCOVERY_SYSTEM, WIDTH, HEIGHT, LAYOUT_MARGIN, INFRASTRUCTURE, MAIN_TYPES, CATEGORY_BY_PATH, SECTOR_ANGLES, publication_exports, compatibility, projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication, RESEARCH_CONTRACT_SCHEMA_VERSION, HASH, ISO_DATE, GRADE_RANK, LEVEL_RANK, KnowledgeReuseIndex, specialists_exports, compatibility3, knowledgeReadStart, shouldOrientKnowledge, createKnowledgeSpecialists, specialist_delivery_exports, contained, saveSpecialistExplainer, EXPERIENCE_VERSION, EXPERIENCE_LIMITS, HASH2, now, terminalJobExperienceInput, EvolutionIndex, digest4, priority, knowledgeHostLoader, compatibility4, configureKnowledgeExtensionHost, LOCAL_FIRST_GUIDANCE, registerWikiReviewAcceptance, registerKnowledgeInterface;
+var __defProp2, __getOwnPropNames2, __esm2, __export2, normalize, tokens, overlap, field, init_claim_conflicts, config_exports, defaultState, init_config, files_exports, MAX_NOTE_BYTES, OMIT, RESERVED2, init_files, OK, ERROR, MUTED, clip, record, ZOTERO_KEY, CHANNEL_LABEL, init_flow_cards, MANAGED_START, MANAGED_END, PROJECT_PATTERN, NAVIGATION_TARGETS, VaultFileConflictError, hash, init_layout, init_review_policy_storage, review_policy_exports, readReviewMode, saveReviewMode, advisoryCodes, init_review_policy, MAX_BATCH, MAX_CHARS, MAX_RESPONSE, ENV_NAME, MAX_VECTOR_COMPONENT, MAX_VECTOR_NORM, CONFIG_KEYS, semanticLimits, init_semantic_provider, semantic_settings_exports, MAX_FILE_BYTES, ENV_NAME2, SETTINGS_KEYS, CONFIG_KEYS2, defaultApi, readSemanticSettings, saveSemanticSettings, init_semantic_settings, omittedSegments, init_source_links, MANAGED_START2, MANAGED_END2, init_wiki_policy, runtime_host_exports, KNOWLEDGE_WORKER_LIFECYCLE_EVENT, compatibilityKnowledgeRuntimeHost, configureKnowledgeRuntime, runRuntimeExclusive, emitProcessEvent, runtimeSlot, toolMeta, flowCardBuilder, configureKnowledgeWorker, createKnowledgeWorker, knowledgeWorkerMetadata, emitKnowledgeWorkerLifecycle, configureKnowledgeEvidence, deliveryContract, configureKnowledgeHost, loadWorkspaceConfig, publishExplainer, consumeKnowledgeReviewPreview, specialistSettings, configureKnowledgeSetup, LAYOUT, inspectObsidianSetup, inspectSetupDirectory, resolveSetupVault, researchSetupOptions, requiresPaperEvidence, hasPaperCitation, init_runtime_host, topic_memory_exports, TOPIC_MEMORY_VERSION, TOPIC_MEMORY_LIMITS, digest2, text, slug, createTopicMemory, listTopics, readTopic, updateTopic, archiveTopic, init_topic_memory, START, END, hash2, init_maintenance, init_ingest_identity, KNOWLEDGE_TYPES, RUN_RESULT_TYPES, NOTE_TYPES, MAX_FRONTMATTER_CHARS, MAX_DEPTH, UNSAFE_KEYS, KEY_LINE, Parser, init_ingest_frontmatter, clean3, init_note_title, DAILY_DISCOVERY_LIMITS, SCAN_ROOTS, SKIP_DIRS, NAVIGATION, init_daily_discovery, yaml, init_memory_note, STOP, tokens2, init_topic_probe, GRAPH_RETRIEVAL_DEFAULTS, init_graph_retrieval, init_worker_transport, ui_state_exports, compatibilityKnowledgeUi, subscribeKnowledgeUi, emitKnowledgeUi, flowFor, knowledgeAnswerRate, beginKnowledgeFlow, updateKnowledgeFlow, noteKnowledgeRead, publicationKnowledgeFlow, requestWikiReviewUi, notifyKnowledgeUi, invalidateKnowledgeUi, clearKnowledgeFlow, knowledgeExcerpt, noteKnowledgeSearch, noteKnowledgeOperation, noteKnowledgeSpecialist, init_ui_state, service_exports, compatibilityKnowledgeServices, KnowledgeService, getKnowledgeService, notifyKnowledgeChange, closeKnowledgeServices, init_service, MAX_PENDING, MAX_AGE, digest3, init_wiki_review_reader, digest4, RENAME_RETRY_CODES, init_wiki_review_node, wiki_review_exports, compatibility2, validateWikiSourcePaths2, stageWikiProposal, mergeWikiProposal, previewWikiProposal, listWikiProposals, decideWikiProposal, autoApplyWikiProposal, wikiHistory, undoWikiUpdate, renameWithRetry2, init_wiki_review, specialist_host_exports, compatibilityKnowledgeSpecialists, SPECIALIST_LIMITS, contextSessionId, specialistQueueSnapshot, registerKnowledgeSpecialistHost, knowledgeSpecialistHost, specialistSettings2, setSpecialistSettings, withSpecialistSlot, init_specialist_host, wiki_model_review_exports, state, CHECKS, rootFor, init_wiki_model_review, init_maintenance_topic, ui_service_exports, runtimeState, MAX_PREVIEWS, consumeKnowledgeReviewPreviewEntry, knowledgeSpecialistSettings, init_ui_service, SESSION_PROJECT_ENTRY, LEGACY_DEFAULT_PROJECT, SLUG, RESERVED, SPECIALIST_DECISIONS, clean, digest, publicationFallbackNotice, publicationNotices, advisoryNotices, MAX_FAILURES, MAX_TEXT, SHA256, SHA2562, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_PER_SESSION, NUMBER, CITATION, BackgroundReviewer, replaceControl, clean2, feedbackReason, DAILY_DISCOVERY_SYSTEM, WIDTH, HEIGHT, LAYOUT_MARGIN, INFRASTRUCTURE, MAIN_TYPES, CATEGORY_BY_PATH, SECTOR_ANGLES, publication_exports, compatibility, projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication, RESEARCH_CONTRACT_SCHEMA_VERSION, HASH, ISO_DATE, GRADE_RANK, LEVEL_RANK, KnowledgeReuseIndex, specialists_exports, compatibility3, knowledgeReadStart, shouldOrientKnowledge, createKnowledgeSpecialists, specialist_delivery_exports, contained, saveSpecialistExplainer, EXPERIENCE_VERSION, EXPERIENCE_LIMITS, HASH2, now, terminalJobExperienceInput, EvolutionIndex, digest5, priority, knowledgeHostLoader, compatibility4, configureKnowledgeExtensionHost, LOCAL_FIRST_GUIDANCE, registerWikiReviewAcceptance, registerKnowledgeInterface;
 var init_host = __esm({
   "node_modules/@gyoungwe/pi-knowledge/dist/host.mjs"() {
     __defProp2 = Object.defineProperty;
@@ -12281,8 +12226,8 @@ var init_host = __esm({
       deliveryContract: () => deliveryContract,
       diagnosticText: () => diagnosticText,
       emitKnowledgeWorkerLifecycle: () => emitKnowledgeWorkerLifecycle,
-      emitProcessEvent: () => emitProcessEvent2,
-      flowCardBuilder: () => flowCardBuilder2,
+      emitProcessEvent: () => emitProcessEvent,
+      flowCardBuilder: () => flowCardBuilder,
       hasPaperCitation: () => hasPaperCitation,
       inspectObsidianSetup: () => inspectObsidianSetup,
       inspectSetupDirectory: () => inspectSetupDirectory,
@@ -12292,10 +12237,10 @@ var init_host = __esm({
       requiresPaperEvidence: () => requiresPaperEvidence,
       researchSetupOptions: () => researchSetupOptions,
       resolveSetupVault: () => resolveSetupVault,
-      runRuntimeExclusive: () => runRuntimeExclusive2,
-      runtimeSlot: () => runtimeSlot2,
+      runRuntimeExclusive: () => runRuntimeExclusive,
+      runtimeSlot: () => runtimeSlot,
       specialistSettings: () => specialistSettings,
-      toolMeta: () => toolMeta2
+      toolMeta: () => toolMeta
     });
     init_runtime_host = __esm2({
       "src/core/runtime-host.ts"() {
@@ -12304,11 +12249,11 @@ var init_host = __esm({
         compatibilityKnowledgeRuntimeHost = createKnowledgeRuntimeHost();
         ({
           configureKnowledgeRuntime,
-          runRuntimeExclusive: runRuntimeExclusive2,
-          emitProcessEvent: emitProcessEvent2,
-          runtimeSlot: runtimeSlot2,
-          toolMeta: toolMeta2,
-          flowCardBuilder: flowCardBuilder2,
+          runRuntimeExclusive,
+          emitProcessEvent,
+          runtimeSlot,
+          toolMeta,
+          flowCardBuilder,
           configureKnowledgeWorker,
           createKnowledgeWorker,
           knowledgeWorkerMetadata,
@@ -12644,6 +12589,15 @@ var init_host = __esm({
         digest3 = (text33) => createHash14("sha256").update(text33).digest("hex");
       }
     });
+    init_wiki_review_node = __esm2({
+      "src/core/wiki-review-node.ts"() {
+        "use strict";
+        init_files();
+        init_layout();
+        digest4 = (text33) => createHash15("sha256").update(text33).digest("hex");
+        RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
+      }
+    });
     wiki_review_exports = {};
     __export2(wiki_review_exports, {
       autoApplyWikiProposal: () => autoApplyWikiProposal,
@@ -12652,7 +12606,7 @@ var init_host = __esm({
       listWikiProposals: () => listWikiProposals,
       mergeWikiProposal: () => mergeWikiProposal,
       previewWikiProposal: () => previewWikiProposal,
-      renameWithRetry: () => renameWithRetry,
+      renameWithRetry: () => renameWithRetry2,
       stageWikiProposal: () => stageWikiProposal,
       undoWikiUpdate: () => undoWikiUpdate,
       validateWikiSourcePaths: () => validateWikiSourcePaths2,
@@ -12668,11 +12622,13 @@ var init_host = __esm({
         init_ui_state();
         init_wiki_review_reader();
         init_wiki_policy();
+        init_wiki_review_node();
         compatibility2 = createKnowledgeWikiReview(
           compatibilityKnowledgeRuntimeHost,
           config_exports,
           review_policy_exports,
-          ui_state_exports
+          ui_state_exports,
+          createLocalWikiReviewPorts(config_exports)
         );
         ({
           validateWikiSourcePaths: validateWikiSourcePaths2,
@@ -12684,7 +12640,7 @@ var init_host = __esm({
           autoApplyWikiProposal,
           wikiHistory,
           undoWikiUpdate,
-          renameWithRetry
+          renameWithRetry: renameWithRetry2
         } = compatibility2);
       }
     });
@@ -12725,7 +12681,7 @@ var init_host = __esm({
         init_specialist_host();
         init_runtime_host();
         init_wiki_review();
-        state = runtimeSlot2("knowledge", "wikiModelReview", () => ({ active: /* @__PURE__ */ new Set() }));
+        state = runtimeSlot("knowledge", "wikiModelReview", () => ({ active: /* @__PURE__ */ new Set() }));
         CHECKS = [
           "evidenceSupportsChanges",
           "scopeAndUncertaintyPreserved",
@@ -12798,7 +12754,7 @@ var init_host = __esm({
         init_ui_state();
         init_wiki_review();
         init_maintenance_topic();
-        runtimeState = runtimeSlot2("knowledge", "uiService", () => ({
+        runtimeState = runtimeSlot("knowledge", "uiService", () => ({
           previews: /* @__PURE__ */ new Map(),
           maintenance: /* @__PURE__ */ new Set(),
           semanticJobs: /* @__PURE__ */ new Map(),
@@ -13098,7 +13054,7 @@ var init_host = __esm({
     init_review_policy();
     init_review_policy();
     init_ui_state();
-    compatibility = createPublicationApi(ui_state_exports, review_policy_exports, config_exports, (create) => runtimeSlot2("knowledge", "publication", create));
+    compatibility = createPublicationApi(ui_state_exports, review_policy_exports, config_exports, (create) => runtimeSlot("knowledge", "publication", create));
     ({ projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication } = compatibility);
     init_service();
     RESEARCH_CONTRACT_SCHEMA_VERSION = 1;
@@ -13227,7 +13183,7 @@ var init_host = __esm({
       maxSchedulerJobIdChars: 180,
       maxQueryChars: 200
     });
-    HASH2 = (value) => createHash17("sha256").update(value).digest("hex");
+    HASH2 = (value) => createHash18("sha256").update(value).digest("hex");
     now = () => (/* @__PURE__ */ new Date()).toISOString();
     terminalJobExperienceInput = experienceInputFromTerminalJob;
     EvolutionIndex = class {
@@ -13331,8 +13287,9 @@ var init_host = __esm({
     init_worker_transport();
     init_specialist_host();
     init_wiki_review();
+    init_wiki_review_node();
     init_topic_memory();
-    digest4 = (text33) => createHash19("sha256").update(text33).digest("hex");
+    digest5 = (text33) => createHash20("sha256").update(text33).digest("hex");
     init_note_title();
     priority = {
       "missing-topic": 0,
@@ -13444,347 +13401,6 @@ var init_host = __esm({
   }
 });
 
-// packages/tasks/src/runtime-compiled/process-events.mjs
-function emitProcessEvent(event, ...args) {
-  process.emit(event, ...args);
-}
-
-// packages/tasks/src/runtime-compiled/runtime-bridge.mjs
-import { AsyncLocalStorage } from "node:async_hooks";
-var contexts = new AsyncLocalStorage();
-var installedRuntime = null;
-var standaloneRuntime = null;
-var runtimeBindings = /* @__PURE__ */ new WeakSet();
-var hostRuntimes = /* @__PURE__ */ new WeakMap();
-var KeyedScheduler = class {
-  #tails = /* @__PURE__ */ new Map();
-  #disposed = false;
-  async acquire(key) {
-    if (this.#disposed) throw new Error("Runtime scheduler has been disposed");
-    const previous = this.#tails.get(key) || Promise.resolve();
-    let unlock;
-    const gate = new Promise((resolve18) => {
-      unlock = resolve18;
-    });
-    const tail = previous.then(() => gate);
-    this.#tails.set(key, tail);
-    await previous;
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      unlock();
-      if (this.#tails.get(key) === tail) this.#tails.delete(key);
-    };
-  }
-  async run(key, task) {
-    const release = await this.acquire(key);
-    try {
-      return await task();
-    } finally {
-      release();
-    }
-  }
-  async dispose() {
-    if (this.#disposed) return;
-    this.#disposed = true;
-    this.#tails.clear();
-  }
-};
-function createStandaloneRuntime(log = {}) {
-  const disposables = /* @__PURE__ */ new Set();
-  let disposed = false;
-  let disposal;
-  const registerDisposable = (resource) => {
-    if (!resource || typeof resource.dispose !== "function" && typeof resource.close !== "function")
-      return () => {
-      };
-    if (disposed) {
-      void (resource.dispose?.() ?? resource.close?.());
-      return () => {
-      };
-    }
-    disposables.add(resource);
-    return () => disposables.delete(resource);
-  };
-  const runtime = {
-    knowledge: {},
-    tasks: {},
-    tools: { tools: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map() },
-    scheduler: new KeyedScheduler(),
-    log,
-    registerDisposable,
-    dispose() {
-      if (disposal) return disposal;
-      disposed = true;
-      disposal = (async () => {
-        const resources = [...disposables];
-        disposables.clear();
-        await Promise.allSettled(
-          resources.map((resource) => {
-            try {
-              return resource.dispose?.() ?? resource.close?.();
-            } catch (error) {
-              return Promise.reject(error);
-            }
-          })
-        );
-        await runtime.scheduler.dispose();
-      })();
-      return disposal;
-    }
-  };
-  return runtime;
-}
-function withRuntime(runtime, operation) {
-  if (!runtime || typeof runtime !== "object" || !runtime.scheduler)
-    throw new TypeError("A DroneRuntime with a scheduler is required");
-  return contexts.run(runtime, operation);
-}
-function bindRuntime(pi) {
-  if (!pi || typeof pi !== "object" && typeof pi !== "function") return () => {
-  };
-  if (runtimeBindings.has(pi)) return () => {
-  };
-  runtimeBindings.add(pi);
-  const inherited = currentRuntime();
-  const fallback = createStandaloneRuntime();
-  adoptRuntimeState(inherited, fallback);
-  hostRuntimes.set(pi, fallback);
-  if (!pi.events?.on || !pi.events?.emit) {
-    return () => {
-      if (hostRuntimes.get(pi) !== fallback) return;
-      runtimeBindings.delete(pi);
-      hostRuntimes.delete(pi);
-      void fallback.dispose();
-    };
-  }
-  const receive = (payload) => {
-    if (!payload || typeof payload !== "object") return;
-    const event = payload;
-    if (event.version !== RUNTIME_BRIDGE_VERSION) return;
-    const runtime = event.runtime;
-    if (!runtime || typeof runtime !== "object" || !runtime.scheduler) return;
-    const previous = hostRuntimes.get(pi);
-    if (previous && previous !== runtime) adoptRuntimeState(previous, runtime);
-    hostRuntimes.set(pi, runtime);
-    if (previous && previous !== runtime) void previous.dispose();
-  };
-  pi.events.on("drone:runtime/v1", receive);
-  void pi.events.emit?.("drone:runtime/request/v1", { version: RUNTIME_BRIDGE_VERSION });
-  return () => {
-    runtimeBindings.delete(pi);
-    if (hostRuntimes.get(pi) === fallback) {
-      hostRuntimes.delete(pi);
-      void fallback.dispose();
-    } else hostRuntimes.delete(pi);
-  };
-}
-function adoptRuntimeState(previous, runtime) {
-  const sourceTools = previous?.tools?.manifest;
-  if (sourceTools) {
-    if (!runtime.tools) runtime.tools = {};
-    const targetTools = runtime.tools.manifest ?? { tools: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map() };
-    runtime.tools.manifest = targetTools;
-    if (!targetTools.tools) targetTools.tools = /* @__PURE__ */ new Map();
-    for (const [name, meta] of sourceTools.tools || []) {
-      if (!targetTools.tools.has(name)) targetTools.tools.set(name, meta);
-    }
-    if (!targetTools.families) targetTools.families = /* @__PURE__ */ new Map();
-    for (const [name, meta] of sourceTools.families || []) {
-      if (!targetTools.families.has(name)) targetTools.families.set(name, meta);
-    }
-  }
-  const sourceAcceptance = previous?.tasks?.acceptance;
-  if (sourceAcceptance) {
-    if (!runtime.tasks) runtime.tasks = {};
-    const targetAcceptance = runtime.tasks.acceptance ?? {
-      verifiers: /* @__PURE__ */ new Map(),
-      kinds: [],
-      properties: {}
-    };
-    runtime.tasks.acceptance = targetAcceptance;
-    if (!targetAcceptance.verifiers) targetAcceptance.verifiers = /* @__PURE__ */ new Map();
-    for (const [kind, verifier] of sourceAcceptance.verifiers || []) {
-      if (!targetAcceptance.verifiers.has(kind)) targetAcceptance.verifiers.set(kind, verifier);
-    }
-    if (Array.isArray(sourceAcceptance.kinds)) {
-      targetAcceptance.kinds ??= [];
-      for (const kind of sourceAcceptance.kinds)
-        if (!targetAcceptance.kinds.includes(kind)) targetAcceptance.kinds.push(kind);
-    }
-    targetAcceptance.properties ??= {};
-    for (const [key, value] of Object.entries(sourceAcceptance.properties || {}))
-      if (!(key in targetAcceptance.properties)) targetAcceptance.properties[key] = value;
-  }
-  for (const domain of ["knowledge", "tasks", "tools"]) {
-    const source = previous?.[domain];
-    if (!source || typeof source !== "object") continue;
-    let target = runtime[domain];
-    if (!target) {
-      target = {};
-      runtime[domain] = target;
-    }
-    for (const key of Reflect.ownKeys(source)) {
-      if (domain === "tasks" && key === "workbench") continue;
-      if (!(key in target)) target[key] = source[key];
-    }
-  }
-}
-function runtimeForHost(pi) {
-  return hostRuntimes.get(pi) ?? currentRuntime();
-}
-function withHostRuntime(pi, operation) {
-  return withRuntime(runtimeForHost(pi), operation);
-}
-function currentRuntime() {
-  const scoped = contexts.getStore();
-  if (scoped) return scoped;
-  if (installedRuntime) return installedRuntime;
-  if (!standaloneRuntime) standaloneRuntime = createStandaloneRuntime();
-  return standaloneRuntime;
-}
-function hasRuntimeContext() {
-  return Boolean(contexts.getStore() || installedRuntime);
-}
-function resolveSlot(domain, slot, create) {
-  const runtime = currentRuntime();
-  let group = runtime[domain];
-  if (!group) {
-    group = {};
-    runtime[domain] = group;
-  }
-  if (!group[slot]) {
-    group[slot] = create();
-    runtime.registerDisposable?.(group[slot]);
-  }
-  return group[slot];
-}
-function runtimeSlot(domain, slot, create) {
-  if (typeof create !== "function") throw new TypeError("runtimeSlot requires a factory");
-  const proxy = new Proxy(
-    {},
-    {
-      get(_target, property) {
-        const value = resolveSlot(domain, slot, create)[property];
-        return typeof value === "function" ? value.bind(resolveSlot(domain, slot, create)) : value;
-      },
-      set(_target, property, value) {
-        resolveSlot(domain, slot, create)[property] = value;
-        return true;
-      },
-      ownKeys() {
-        return Reflect.ownKeys(resolveSlot(domain, slot, create));
-      },
-      getOwnPropertyDescriptor(_target, property) {
-        const descriptor = Object.getOwnPropertyDescriptor(resolveSlot(domain, slot, create), property);
-        return descriptor ? { ...descriptor, configurable: true } : void 0;
-      }
-    }
-  );
-  return proxy;
-}
-function runRuntimeExclusive(namespace, key, operation) {
-  return currentRuntime().scheduler.run(`${namespace}:${key}`, operation);
-}
-var RUNTIME_BRIDGE_VERSION = 1;
-
-// packages/tasks/src/runtime-compiled/tool-manifest.mjs
-var registry = runtimeSlot("tools", "manifest", () => ({ tools: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map() }));
-var compatibilityTools = /* @__PURE__ */ new Map();
-var compatibilityFamilies = /* @__PURE__ */ new Map();
-var TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1";
-var TOOL_MANIFEST_REQUEST_EVENT = "drone:tool-manifest/request/v1";
-var eventBridges = runtimeSlot("tools", "manifestEventBridges", () => /* @__PURE__ */ new WeakSet());
-var SUBAGENT_MODES = /* @__PURE__ */ new Set(["exclude", "inherit"]);
-function assertMeta(name, meta) {
-  if (!meta || typeof meta !== "object") throw new Error(`Tool ${name}: drone metadata must be an object`);
-  if (meta.subagent !== void 0 && !SUBAGENT_MODES.has(meta.subagent))
-    throw new Error(`Tool ${name}: drone.subagent must be "exclude" or "inherit"`);
-  if (meta.capabilities !== void 0 && !Array.isArray(meta.capabilities))
-    throw new Error(`Tool ${name}: drone.capabilities must be an array`);
-  if (meta.activity !== void 0 && (typeof meta.activity?.text !== "string" || typeof meta.activity?.phase !== "string"))
-    throw new Error(`Tool ${name}: drone.activity needs text and phase`);
-  if (meta.flowCards !== void 0 && typeof meta.flowCards !== "function")
-    throw new Error(`Tool ${name}: drone.flowCards must be a function`);
-  for (const family of meta.families || [])
-    if (typeof family?.match !== "string" || !family.match)
-      throw new Error(`Tool ${name}: family.match required`);
-}
-function registration(name, meta) {
-  return { version: 1, name, meta };
-}
-function replayRegistrations(pi) {
-  if (!pi?.events?.emit) return;
-  withHostRuntime(pi, () => {
-    for (const [name, meta] of registry.tools) {
-      void pi.events.emit(TOOL_MANIFEST_EVENT, registration(name, meta));
-    }
-  });
-}
-function installEventBridge(pi) {
-  if (!pi?.events?.on || eventBridges.has(pi)) return;
-  eventBridges.add(pi);
-  pi.events.on(TOOL_MANIFEST_REQUEST_EVENT, (payload) => {
-    if (payload?.version === 1) replayRegistrations(pi);
-  });
-}
-function bindToolRuntime(pi, definition) {
-  if (typeof definition?.execute !== "function") return definition;
-  const execute = definition.execute;
-  return {
-    ...definition,
-    execute(...args) {
-      return withHostRuntime(pi, () => execute.apply(this, args));
-    }
-  };
-}
-function publishRegistration(pi, name, meta) {
-  const payload = registration(name, meta);
-  void pi?.events?.emit?.(TOOL_MANIFEST_EVENT, payload);
-  emitProcessEvent(TOOL_MANIFEST_EVENT, payload);
-}
-function defineTool(definition) {
-  const name = definition?.name;
-  if (typeof name !== "string" || !name) throw new Error("defineTool: name required");
-  const meta = definition.drone || {};
-  assertMeta(name, meta);
-  registry.tools.set(name, meta);
-  for (const family of meta.families || [])
-    registry.families.set(family.match.toLowerCase(), { ...family, owner: name });
-  if (!compatibilityTools.has(name)) compatibilityTools.set(name, meta);
-  for (const family of meta.families || []) {
-    const key = family.match.toLowerCase();
-    if (!compatibilityFamilies.has(key)) compatibilityFamilies.set(key, { ...family, owner: name });
-  }
-  return definition;
-}
-function registerTools(pi, definitions) {
-  bindRuntime(pi);
-  return withHostRuntime(pi, () => {
-    installEventBridge(pi);
-    const registered = [];
-    for (const definition of definitions) {
-      const defined = defineTool(definition);
-      publishRegistration(pi, defined.name, defined.drone || {});
-      if (process.env.PI_SUBAGENT_CHILD && defined.drone?.subagent === "exclude") continue;
-      pi.registerTool(bindToolRuntime(pi, defined));
-      registered.push(defined.name);
-    }
-    return registered;
-  });
-}
-function registerTool(pi, definition) {
-  return registerTools(pi, [definition])[0] ?? null;
-}
-function toolMeta(name) {
-  return registry.tools.get(name) || (hasRuntimeContext() ? null : compatibilityTools.get(name)) || null;
-}
-function flowCardBuilder(name) {
-  const builder = toolMeta(name)?.flowCards;
-  return typeof builder === "function" ? builder : null;
-}
-
 // packages/extensions/src/source-archive.ts
 init_host();
 
@@ -13793,7 +13409,7 @@ import { createHash as createHash11 } from "node:crypto";
 import { mkdir as mkdir13, readFile as readFile13, writeFile as writeFile13 } from "node:fs/promises";
 import { homedir as homedir3 } from "node:os";
 import { dirname as dirname9, join as join20 } from "node:path";
-import { createHash as createHash32, randomUUID as randomUUID18 } from "node:crypto";
+import { createHash as createHash32, randomUUID as randomUUID19 } from "node:crypto";
 import { createHash as createHash22 } from "node:crypto";
 import { readFile as readFile22, realpath as realpath9, stat as stat4 } from "node:fs/promises";
 import { isAbsolute as isAbsolute10, relative as relative11, resolve as resolve13, sep as sep10 } from "node:path";
@@ -14214,7 +13830,7 @@ function literatureOperationId(vault, revision, doi) {
 }
 function createLiteratureOperations(ports) {
   const now2 = ports.now || (() => (/* @__PURE__ */ new Date()).toISOString());
-  const createId = ports.createId || randomUUID18;
+  const createId = ports.createId || randomUUID19;
   return {
     async reconcileLiteratureOperation({ cwd = process.cwd(), runDir, doi, zoteroKey, notePath }, { verify = ports.verify } = {}) {
       const normalized = normalizeDoi(doi);
@@ -15945,7 +15561,7 @@ __export3(run_provenance_exports, {
   saveMethodsSection: () => saveMethodsSection
 });
 var queues = /* @__PURE__ */ new Map();
-var digest5 = (value) => createHash62("sha256").update(value).digest("hex");
+var digest6 = (value) => createHash62("sha256").update(value).digest("hex");
 var defaultWorkspaceConfig = async (cwd) => ({
   resultsRoot: resolve52(cwd, "results")
 });
@@ -16021,9 +15637,9 @@ async function observeExecutionReceipt({
       sessionId,
       observedAt: observedAt || (/* @__PURE__ */ new Date()).toISOString(),
       cwd,
-      commandSha256: digest5(String(args.command || args.cmd || "")),
+      commandSha256: digest6(String(args.command || args.cmd || "")),
       commandLocation: "original-session-tool-call",
-      resultDetailsSha256: digest5(JSON.stringify(details)),
+      resultDetailsSha256: digest6(JSON.stringify(details)),
       outcome: isError ? "failed-or-blocked" : "tool-returned",
       exitCode: Number.isInteger(code) ? Number(code) : null,
       executionConfirmed: !isError && Number.isInteger(code),
@@ -19331,7 +18947,7 @@ function createResearchConnectorHostLoader(options) {
 var researchConnectorHostLoader = createResearchConnectorHostLoader({});
 
 // packages/extensions/src/internal/obsidian-workbench.ts
-import { createHash as createHash21, randomUUID as randomUUID19 } from "node:crypto";
+import { createHash as createHash23, randomUUID as randomUUID20 } from "node:crypto";
 import { access as access3, mkdir as mkdir15, readdir as readdir6, readFile as readFile15, realpath as realpath12, rename as rename13, stat as stat6, writeFile as writeFile15 } from "node:fs/promises";
 import { basename as basename7, dirname as dirname13, isAbsolute as isAbsolute13, join as join24, relative as relative13, resolve as resolve16, sep as sep12 } from "node:path";
 import { fileURLToPath as fileURLToPath3, pathToFileURL as pathToFileURL5 } from "node:url";
@@ -19499,124 +19115,323 @@ async function loadWorkspaceConfig2(cwd = process.cwd()) {
 import { Worker } from "node:worker_threads";
 init_host();
 
-// packages/tasks/src/runtime-compiled/acceptance.mjs
-var CORE_ACCEPTANCE_KINDS = Object.freeze(["file", "human_review"]);
-var CORE_FIELDS = Object.freeze(["kind", "path", "sha256", "rootKind"]);
-var KIND = /^[a-z][a-z0-9_]{1,40}$/;
-var FIELD = /^[a-zA-Z][a-zA-Z0-9]{0,40}$/;
-var stringField = { type: "string", minLength: 1, maxLength: 512 };
-var ACCEPTANCE_VERIFIER_EVENT = "drone:acceptance-verifier/v1";
-var ACCEPTANCE_VERIFIER_REQUEST_EVENT = "drone:acceptance-verifier/request/v1";
-var eventBridges2 = runtimeSlot("tasks", "acceptanceEventBridges", () => /* @__PURE__ */ new WeakSet());
-var createRegistry = () => {
-  const kinds = [...CORE_ACCEPTANCE_KINDS];
-  return {
-    verifiers: /* @__PURE__ */ new Map(),
-    kinds,
-    properties: {
-      kind: { type: "string", enum: kinds },
-      path: stringField,
-      sha256: stringField,
-      rootKind: { type: "string", enum: ["workspace", "vault", "research-run"], minLength: 1, maxLength: 32 }
+// packages/extensions/src/internal/runtime/runtime-bridge.ts
+import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
+var contexts = new AsyncLocalStorage2();
+var installedRuntime = null;
+var standaloneRuntime = null;
+var runtimeBindings = /* @__PURE__ */ new WeakSet();
+var hostRuntimes = /* @__PURE__ */ new WeakMap();
+var KeyedScheduler = class {
+  #tails = /* @__PURE__ */ new Map();
+  #disposed = false;
+  async acquire(key) {
+    if (this.#disposed) throw new Error("Runtime scheduler has been disposed");
+    const previous = this.#tails.get(key) || Promise.resolve();
+    let unlock;
+    const gate = new Promise((resolve18) => {
+      unlock = resolve18;
+    });
+    const tail = previous.then(() => gate);
+    this.#tails.set(key, tail);
+    await previous;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      unlock();
+      if (this.#tails.get(key) === tail) this.#tails.delete(key);
+    };
+  }
+  async run(key, task) {
+    const release = await this.acquire(key);
+    try {
+      return await task();
+    } finally {
+      release();
+    }
+  }
+  async dispose() {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    this.#tails.clear();
+  }
+};
+function createStandaloneRuntime(log = {}) {
+  const disposables = /* @__PURE__ */ new Set();
+  let disposed = false;
+  let disposal;
+  const registerDisposable = (resource) => {
+    if (!resource || typeof resource.dispose !== "function" && typeof resource.close !== "function")
+      return () => {
+      };
+    if (disposed) {
+      void (resource.dispose?.() ?? resource.close?.());
+      return () => {
+      };
+    }
+    disposables.add(resource);
+    return () => disposables.delete(resource);
+  };
+  const runtime = {
+    knowledge: {},
+    tasks: {},
+    tools: { tools: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map() },
+    scheduler: new KeyedScheduler(),
+    log,
+    registerDisposable,
+    dispose() {
+      if (disposal) return disposal;
+      disposed = true;
+      disposal = (async () => {
+        const resources = [...disposables];
+        disposables.clear();
+        await Promise.allSettled(
+          resources.map((resource) => {
+            try {
+              return resource.dispose?.() ?? resource.close?.();
+            } catch (error) {
+              return Promise.reject(error);
+            }
+          })
+        );
+        await runtime.scheduler.dispose();
+      })();
+      return disposal;
     }
   };
-};
-var registry2 = runtimeSlot("tasks", "acceptance", createRegistry);
-function ensureRegistryShape() {
-  registry2.verifiers ??= /* @__PURE__ */ new Map();
-  registry2.kinds ??= [...CORE_ACCEPTANCE_KINDS];
-  registry2.properties ??= {};
-  registry2.properties.kind ??= { type: "string", enum: registry2.kinds };
-  registry2.properties.path ??= stringField;
-  registry2.properties.sha256 ??= stringField;
-  registry2.properties.rootKind ??= {
-    type: "string",
-    enum: ["workspace", "vault", "research-run"],
-    minLength: 1,
-    maxLength: 32
+  return runtime;
+}
+function withRuntime(runtime, operation) {
+  if (!runtime || typeof runtime !== "object" || !runtime.scheduler)
+    throw new TypeError("A DroneRuntime with a scheduler is required");
+  return contexts.run(runtime, operation);
+}
+function bindRuntime(pi) {
+  if (!pi || typeof pi !== "object" && typeof pi !== "function") return () => {
+  };
+  if (runtimeBindings.has(pi)) return () => {
+  };
+  runtimeBindings.add(pi);
+  const inherited = currentRuntime();
+  const fallback = createStandaloneRuntime();
+  adoptRuntimeState(inherited, fallback);
+  hostRuntimes.set(pi, fallback);
+  if (!pi.events?.on || !pi.events?.emit) {
+    return () => {
+      if (hostRuntimes.get(pi) !== fallback) return;
+      runtimeBindings.delete(pi);
+      hostRuntimes.delete(pi);
+      void fallback.dispose();
+    };
+  }
+  const receive = (payload) => {
+    if (!payload || typeof payload !== "object") return;
+    const event = payload;
+    if (event.version !== RUNTIME_BRIDGE_VERSION) return;
+    const runtime = event.runtime;
+    if (!runtime || typeof runtime !== "object" || !runtime.scheduler) return;
+    const previous = hostRuntimes.get(pi);
+    if (previous && previous !== runtime) adoptRuntimeState(previous, runtime);
+    hostRuntimes.set(pi, runtime);
+    if (previous && previous !== runtime) void previous.dispose();
+  };
+  pi.events.on("drone:runtime/v1", receive);
+  void pi.events.emit?.("drone:runtime/request/v1", { version: RUNTIME_BRIDGE_VERSION });
+  return () => {
+    runtimeBindings.delete(pi);
+    if (hostRuntimes.get(pi) === fallback) {
+      hostRuntimes.delete(pi);
+      void fallback.dispose();
+    } else hostRuntimes.delete(pi);
   };
 }
-ensureRegistryShape();
-function definitionOf(verifier) {
-  const definition = {
-    fields: [...verifier.fields || []],
-    evidenceKind: verifier.evidenceKind,
-    operationVerifier: verifier.operationVerifier
+function adoptRuntimeState(previous, runtime) {
+  const sourceTools = previous?.tools?.manifest;
+  if (sourceTools) {
+    if (!runtime.tools) runtime.tools = {};
+    const targetTools = runtime.tools.manifest ?? { tools: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map() };
+    runtime.tools.manifest = targetTools;
+    if (!targetTools.tools) targetTools.tools = /* @__PURE__ */ new Map();
+    for (const [name, meta] of sourceTools.tools || []) {
+      if (!targetTools.tools.has(name)) targetTools.tools.set(name, meta);
+    }
+    if (!targetTools.families) targetTools.families = /* @__PURE__ */ new Map();
+    for (const [name, meta] of sourceTools.families || []) {
+      if (!targetTools.families.has(name)) targetTools.families.set(name, meta);
+    }
+  }
+  for (const domain of ["knowledge", "tasks", "tools"]) {
+    const source = previous?.[domain];
+    if (!source || typeof source !== "object") continue;
+    let target = runtime[domain];
+    if (!target) {
+      target = {};
+      runtime[domain] = target;
+    }
+    for (const key of Reflect.ownKeys(source)) {
+      if (domain === "tasks" && key === "workbench") continue;
+      if (!(key in target)) target[key] = source[key];
+    }
+  }
+}
+function runtimeForHost(pi) {
+  return hostRuntimes.get(pi) ?? currentRuntime();
+}
+function withHostRuntime(pi, operation) {
+  return withRuntime(runtimeForHost(pi), operation);
+}
+function currentRuntime() {
+  const scoped = contexts.getStore();
+  if (scoped) return scoped;
+  if (installedRuntime) return installedRuntime;
+  if (!standaloneRuntime) standaloneRuntime = createStandaloneRuntime();
+  return standaloneRuntime;
+}
+function hasRuntimeContext() {
+  return Boolean(contexts.getStore() || installedRuntime);
+}
+function resolveSlot(domain, slot, create) {
+  const runtime = currentRuntime();
+  let group = runtime[domain];
+  if (!group) {
+    group = {};
+    runtime[domain] = group;
+  }
+  if (!group[slot]) {
+    group[slot] = create();
+    runtime.registerDisposable?.(group[slot]);
+  }
+  return group[slot];
+}
+function runtimeSlot2(domain, slot, create) {
+  if (typeof create !== "function") throw new TypeError("runtimeSlot requires a factory");
+  const proxy = new Proxy(
+    {},
+    {
+      get(_target, property) {
+        const value = resolveSlot(domain, slot, create)[property];
+        return typeof value === "function" ? value.bind(resolveSlot(domain, slot, create)) : value;
+      },
+      set(_target, property, value) {
+        resolveSlot(domain, slot, create)[property] = value;
+        return true;
+      },
+      ownKeys() {
+        return Reflect.ownKeys(resolveSlot(domain, slot, create));
+      },
+      getOwnPropertyDescriptor(_target, property) {
+        const descriptor = Object.getOwnPropertyDescriptor(resolveSlot(domain, slot, create), property);
+        return descriptor ? { ...descriptor, configurable: true } : void 0;
+      }
+    }
+  );
+  return proxy;
+}
+function runRuntimeExclusive2(namespace, key, operation) {
+  return currentRuntime().scheduler.run(`${namespace}:${key}`, operation);
+}
+var RUNTIME_BRIDGE_VERSION = 1;
+
+// packages/extensions/src/internal/runtime/process-events.ts
+function emitProcessEvent2(event, ...args) {
+  process.emit(event, ...args);
+}
+
+// packages/extensions/src/internal/runtime/tool-manifest.ts
+var registry = runtimeSlot2("tools", "manifest", () => ({ tools: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map() }));
+var compatibilityTools = /* @__PURE__ */ new Map();
+var compatibilityFamilies = /* @__PURE__ */ new Map();
+var TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1";
+var TOOL_MANIFEST_REQUEST_EVENT = "drone:tool-manifest/request/v1";
+var eventBridges = runtimeSlot2("tools", "manifestEventBridges", () => /* @__PURE__ */ new WeakSet());
+var SUBAGENT_MODES = /* @__PURE__ */ new Set(["exclude", "inherit"]);
+function assertMeta(name, meta) {
+  if (!meta || typeof meta !== "object") throw new Error(`Tool ${name}: drone metadata must be an object`);
+  if (meta.subagent !== void 0 && !SUBAGENT_MODES.has(meta.subagent))
+    throw new Error(`Tool ${name}: drone.subagent must be "exclude" or "inherit"`);
+  if (meta.capabilities !== void 0 && !Array.isArray(meta.capabilities))
+    throw new Error(`Tool ${name}: drone.capabilities must be an array`);
+  if (meta.activity !== void 0 && (typeof meta.activity?.text !== "string" || typeof meta.activity?.phase !== "string"))
+    throw new Error(`Tool ${name}: drone.activity needs text and phase`);
+  if (meta.flowCards !== void 0 && typeof meta.flowCards !== "function")
+    throw new Error(`Tool ${name}: drone.flowCards must be a function`);
+  for (const family of meta.families || [])
+    if (typeof family?.match !== "string" || !family.match)
+      throw new Error(`Tool ${name}: family.match required`);
+}
+function registration(name, meta) {
+  return { version: 1, name, meta };
+}
+function replayRegistrations(pi) {
+  if (!pi?.events?.emit) return;
+  withHostRuntime(pi, () => {
+    for (const [name, meta] of registry.tools) {
+      void pi.events.emit(TOOL_MANIFEST_EVENT, registration(name, meta));
+    }
+  });
+}
+function installEventBridge(pi) {
+  if (!pi?.events?.on || eventBridges.has(pi)) return;
+  eventBridges.add(pi);
+  pi.events.on(TOOL_MANIFEST_REQUEST_EVENT, (payload) => {
+    if (payload?.version === 1) replayRegistrations(pi);
+  });
+}
+function bindToolRuntime(pi, definition) {
+  if (typeof definition?.execute !== "function") return definition;
+  const execute = definition.execute;
+  return {
+    ...definition,
+    execute(...args) {
+      return withHostRuntime(pi, () => execute.apply(this, args));
+    }
   };
-  for (const key of ["label", "verify", "observe", "resolve", "identify", "consent", "pending"])
-    if (typeof verifier[key] === "function") definition[key] = verifier[key];
-  if (verifier.acknowledgeError) definition.acknowledgeError = verifier.acknowledgeError;
+}
+function publishRegistration(pi, name, meta) {
+  const payload = registration(name, meta);
+  void pi?.events?.emit?.(TOOL_MANIFEST_EVENT, payload);
+  emitProcessEvent2(TOOL_MANIFEST_EVENT, payload);
+}
+function defineTool(definition) {
+  const name = definition?.name;
+  if (typeof name !== "string" || !name) throw new Error("defineTool: name required");
+  const meta = definition.drone || {};
+  assertMeta(name, meta);
+  registry.tools.set(name, meta);
+  for (const family of meta.families || [])
+    registry.families.set(family.match.toLowerCase(), { ...family, owner: name });
+  if (!compatibilityTools.has(name)) compatibilityTools.set(name, meta);
+  for (const family of meta.families || []) {
+    const key = family.match.toLowerCase();
+    if (!compatibilityFamilies.has(key)) compatibilityFamilies.set(key, { ...family, owner: name });
+  }
   return definition;
 }
-function registrationOf(verifier) {
-  return {
-    version: 1,
-    kind: verifier.kind,
-    definition: definitionOf(verifier)
-  };
-}
-function bindAcceptanceVerifierEvents(pi) {
-  if (!pi?.events?.on || eventBridges2.has(pi)) return () => {
-  };
-  eventBridges2.add(pi);
-  const publish = (verifier) => {
-    void pi.events.emit?.(ACCEPTANCE_VERIFIER_EVENT, registrationOf(verifier));
-  };
-  const replay = () => {
-    for (const verifier of acceptanceVerifiers()) publish(verifier);
-  };
-  const onRequest = (payload) => {
-    if (payload?.version === 1) replay();
-  };
-  const onRuntime = (payload) => {
-    if (payload?.version !== 1 || !payload.runtime || typeof payload.runtime !== "object") return;
-    const verifiers = acceptanceVerifiers().map(registrationOf);
-    if (!payload.runtime.scheduler) return;
-    withRuntime(payload.runtime, () => {
-      for (const registration2 of verifiers)
-        registerAcceptanceVerifier(registration2.kind, registration2.definition);
-    });
-    for (const registration2 of verifiers) void pi.events.emit?.(ACCEPTANCE_VERIFIER_EVENT, registration2);
-  };
-  pi.events.on(ACCEPTANCE_VERIFIER_REQUEST_EVENT, onRequest);
-  pi.events.on("drone:runtime/v1", onRuntime);
-  void pi.events.emit?.(ACCEPTANCE_VERIFIER_REQUEST_EVENT, { version: 1 });
-  return () => {
-  };
-}
-function registerAcceptanceVerifier(kind, definition = {}) {
-  ensureRegistryShape();
-  if (!KIND.test(kind || "")) throw new Error(`Acceptance kind "${kind}" must match ${KIND}`);
-  if (CORE_ACCEPTANCE_KINDS.includes(kind)) throw new Error(`Acceptance kind "${kind}" is owned by the host`);
-  for (const fn of ["label", "verify", "observe", "resolve", "identify", "consent", "pending"])
-    if (definition[fn] !== void 0 && typeof definition[fn] !== "function")
-      throw new Error(`Acceptance verifier ${kind}.${fn} must be a function`);
-  const fields = [...new Set(definition.fields || [])];
-  for (const field2 of fields)
-    if (!FIELD.test(field2) || CORE_FIELDS.includes(field2))
-      throw new Error(`Acceptance verifier ${kind}: invalid field "${field2}"`);
-  const verifier = Object.freeze({
-    kind,
-    fields: Object.freeze(fields),
-    evidenceKind: definition.evidenceKind || `${kind}-verified`,
-    operationVerifier: definition.operationVerifier || `${kind}-record-not-scientific-proof`,
-    label: definition.label || (() => kind),
-    verify: definition.verify || null,
-    observe: definition.observe || null,
-    resolve: definition.resolve || null,
-    identify: definition.identify || null,
-    consent: definition.consent || null,
-    pending: definition.pending || null,
-    acknowledgeError: definition.acknowledgeError || null
+function registerTools(pi, definitions) {
+  bindRuntime(pi);
+  return withHostRuntime(pi, () => {
+    installEventBridge(pi);
+    const registered = [];
+    for (const definition of definitions) {
+      const defined = defineTool(definition);
+      publishRegistration(pi, defined.name, defined.drone || {});
+      if (process.env.PI_SUBAGENT_CHILD && defined.drone?.subagent === "exclude") continue;
+      pi.registerTool(bindToolRuntime(pi, defined));
+      registered.push(defined.name);
+    }
+    return registered;
   });
-  registry2.verifiers.set(kind, verifier);
-  if (!registry2.kinds.includes(kind)) registry2.kinds.push(kind);
-  for (const field2 of fields) registry2.properties[field2] ??= stringField;
-  return verifier;
 }
-function acceptanceVerifiers() {
-  ensureRegistryShape();
-  return [...registry2.verifiers.values()];
+function registerTool(pi, definition) {
+  return registerTools(pi, [definition])[0] ?? null;
+}
+function toolMeta2(name) {
+  return registry.tools.get(name) || (hasRuntimeContext() ? null : compatibilityTools.get(name)) || null;
+}
+function flowCardBuilder2(name) {
+  const builder = toolMeta2(name)?.flowCards;
+  return typeof builder === "function" ? builder : null;
 }
 
 // packages/extensions/src/internal/knowledge-runtime.ts
@@ -19626,15 +19441,13 @@ function configureKnowledgeExtensionRuntime() {
   if (configured) return;
   configured = true;
   configureKnowledgeExtensionHost({
-    bindAcceptanceVerifierEvents,
-    registerAcceptanceVerifier,
     registerTool
   });
   configureKnowledgeRuntime({
-    runRuntimeExclusive,
-    runtimeSlot,
-    toolMeta,
-    flowCardBuilder,
+    runRuntimeExclusive: runRuntimeExclusive2,
+    runtimeSlot: runtimeSlot2,
+    toolMeta: toolMeta2,
+    flowCardBuilder: flowCardBuilder2,
     deliveryContract: deliveryContract2,
     emitProcessEvent: (event, payload) => process.emit(event, payload)
   });
@@ -19889,7 +19702,7 @@ ${MANAGED_END3}
 ## Human review
 
 `;
-var runtimeState2 = runtimeSlot("knowledge", "obsidianWorkbench", () => ({
+var runtimeState2 = runtimeSlot2("knowledge", "obsidianWorkbench", () => ({
   vaultUpdates: /* @__PURE__ */ new Map(),
   dispose() {
     this.vaultUpdates.clear();
@@ -19978,7 +19791,7 @@ ${original.slice(review)}`;
   if (updated === original)
     return;
   await mkdir15(dirname13(file), { recursive: true });
-  const temporary = `${file}.${randomUUID19()}.tmp`;
+  const temporary = `${file}.${randomUUID20()}.tmp`;
   await writeFile15(temporary, updated, "utf8");
   await rename13(temporary, file);
   if (knowledgeDirectory())
@@ -20083,7 +19896,7 @@ ${line}
 ${text5}`;
   text5 = text5.replace(/^#\s+(.+)$/m, (heading, value) => autoTitles.includes(value.trim()) || looksLikeFileName(value) ? `# ${topic}` : heading);
   if (text5 === original) return false;
-  const temporary = `${file}.${randomUUID19()}.tmp`;
+  const temporary = `${file}.${randomUUID20()}.tmp`;
   await writeFile15(temporary, text5, "utf8");
   await rename13(temporary, file);
   if (knowledgeDirectory())
@@ -20135,7 +19948,7 @@ async function publishSourceNote({ cwd = process.cwd(), runDir, entry, topic = "
     throw new Error("Only verified downloads can be indexed");
   if (!contains(await canonical(config.resultsRoot), await canonical(runDir)) || !contains(await canonical(runDir), await canonical(entry.path)))
     throw new Error("Source must remain inside its research run");
-  if (createHash21("sha256").update(await readFile15(entry.path)).digest("hex") !== entry.sha256)
+  if (createHash23("sha256").update(await readFile15(entry.path)).digest("hex") !== entry.sha256)
     throw new Error("Source hash changed before indexing");
   const metadata = await readJson4(join24(runDir, "metadata.json"));
   const project = validateProject(runProject(metadata.project, await resolveWorkspaceProject({ cwd })));
@@ -20181,7 +19994,7 @@ ${entry.manualCoverage ? `Manual coverage: ${entry.manualCoverage.status}. Comma
 
 ${chapters}` : ""}`;
     await writeManagedIndex(note, `---
-id: pi-${randomUUID19()}
+id: pi-${randomUUID20()}
 type: ${category === "Papers" ? "paper" : "software"}
 source_sha256: ${entry.sha256}
 source_idempotency_key: ${entry.idempotency_key || "unknown"}${sourceTopic ? `
@@ -20232,10 +20045,10 @@ async function publishExplainer2({ cwd = process.cwd(), project, topicId, title,
   const ext = /\.md$/i.test(artifact) ? ".md" : /\.html?$/i.test(artifact) ? ".html" : null;
   if (!ext)
     throw new Error("Explainer must be HTML or Markdown");
-  const bytes = await readFile15(artifact), digest6 = createHash21("sha256").update(bytes).digest("hex");
+  const bytes = await readFile15(artifact), digest7 = createHash23("sha256").update(bytes).digest("hex");
   const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
   return updateVault(cwd, async (vault) => {
-    const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest6.slice(0, 12)}${ext}`;
+    const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest7.slice(0, 12)}${ext}`;
     const attachment = await vaultPath(vault, ...attachmentRel.split("/"));
     await mkdir15(dirname13(attachment), { recursive: true });
     try {
@@ -20249,7 +20062,7 @@ async function publishExplainer2({ cwd = process.cwd(), project, topicId, title,
     const oldVersions = (previous.match(/^- .*?\[打开讲解\]\([^\n]+\)[^\n]*$/gm) || []).slice(-19);
     const relLink = `../../${attachmentRel}`;
     const sourceLines = sources.slice(0, 12).map((source) => `- [[${String(source.path).replace(/\.md$/, "")}]] \xB7 lines ${source.startLine}\u2013${source.endLine} \xB7 sha256 ${source.hash}`).join("\n");
-    const versionLine = `- ${(/* @__PURE__ */ new Date()).toISOString()} \xB7 [\u6253\u5F00\u8BB2\u89E3](${relLink}) \xB7 sha256 ${digest6}`;
+    const versionLine = `- ${(/* @__PURE__ */ new Date()).toISOString()} \xB7 [\u6253\u5F00\u8BB2\u89E3](${relLink}) \xB7 sha256 ${digest7}`;
     const body = [
       "> [!warning] \u5C55\u793A\u5C42\uFF0C\u4E0D\u662F\u79D1\u5B66\u8BC1\u636E\n> \u6B64\u9875\u9762\u7531 Show Me / \u6A21\u578B\u6839\u636E\u5DF2\u8BFB\u6765\u6E90\u751F\u6210\uFF0C\u7528\u4E8E\u89E3\u91CA\u4E0E\u5BFC\u822A\u3002\u4E0D\u80FD\u4F5C\u4E3A Wiki \u63D0\u6848\u6216\u79D1\u7814\u7ED3\u8BBA\u7684\u8BC1\u636E\u6765\u6E90\u3002",
       `## \u6700\u65B0\u8BB2\u89E3
@@ -20265,7 +20078,7 @@ ${sourceLines}` : "",
 ${[...oldVersions, versionLine].join("\n")}`
     ].filter(Boolean).join("\n\n");
     const heading = `---
-id: pi-${randomUUID19()}
+id: pi-${randomUUID20()}
 type: explainer
 topic_id: ${JSON.stringify(topicId)}
 project: ${JSON.stringify(project)}
@@ -20283,7 +20096,7 @@ updated: ${JSON.stringify((/* @__PURE__ */ new Date()).toISOString())}
       attachment_relative: attachmentRel,
       topicId,
       project,
-      sha256: digest6,
+      sha256: digest7,
       bytes: info.size,
       sourceCount: sources.length,
       knowledge_status: "written",
@@ -20349,7 +20162,7 @@ function researchSetupOptions2() {
 var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for factual research claims, not unrelated citations for ordinary chat. For a simple factual question that can be answered from existing local knowledge, take the light path: retrieve, answer, and auto-deposit a bounded note when appropriate; do not create a task_plan or ask for write authorization just to answer. For substantial tasks, do bounded read-only preparation and consolidate scope, assumptions, needed permissions and deliverables into one task_plan for one user authorization. After authorization, carry out routine steps and recoverable checks within that scope without repeatedly asking whether to continue. Respect prior decisions, especially declined installs. New risks or scope, missing credentials and genuinely unavailable user data still require a specific request; never infer consent. At completion, explain what changed, link actual outputs or show key figures, separate execution from validation, and give one next step only if needed. Keep internal counters and tool logs out of the main answer.";
 
 // packages/extensions/src/internal/research-host.ts
-import { randomUUID as randomUUID20 } from "node:crypto";
+import { randomUUID as randomUUID21 } from "node:crypto";
 import { readFile as readFile16, realpath as realpath13, rename as rename14, writeFile as writeFile16 } from "node:fs/promises";
 import { isAbsolute as isAbsolute14, join as join25, relative as relative14, resolve as resolve17, sep as sep13 } from "node:path";
 init_host();
@@ -20461,7 +20274,7 @@ async function readJournal(file) {
   }
 }
 async function writeJournal(file, journal) {
-  const temporary = `${file}.${randomUUID20()}.tmp`;
+  const temporary = `${file}.${randomUUID21()}.tmp`;
   await writeFile16(temporary, `${JSON.stringify(journal, null, 2)}
 `);
   await rename14(temporary, file);
