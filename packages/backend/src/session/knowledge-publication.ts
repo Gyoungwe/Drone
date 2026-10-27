@@ -5,6 +5,7 @@ import {
 	type SessionEvent,
 	sanitizeProviderError,
 } from "@drone/shared";
+import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { RawMessage } from "./messages";
 
 /**
@@ -26,6 +27,34 @@ function bridge(runtime?: DroneRuntime): PublicationBridge | undefined {
 
 const notice = `【知识库检查未通过】${KNOWLEDGE_PUBLICATION_FALLBACK_NOTICE}`;
 
+// Locked SDK 1.1.0 metadata only. Domain proof objects never gain fallback authority.
+const assistantMetadata = [
+	"api",
+	"provider",
+	"model",
+	"responseModel",
+	"responseId",
+	"providerThinkingLevel",
+	"thinkingLevel",
+	"diagnostics",
+	"usage",
+	"stopReason",
+	"deferred",
+	"rawStopReason",
+	"endTurn",
+	"timestamp",
+	"durationMs",
+] as const satisfies readonly (keyof AssistantMessage)[];
+
+function envelope(message: RawMessage, content: RawMessage["content"]): RawMessage {
+	const metadata = Object.fromEntries(
+		assistantMetadata
+			.filter((key) => Object.hasOwn(message, key))
+			.map((key) => [key, Reflect.get(message, key)]),
+	);
+	return { ...metadata, role: "assistant", content };
+}
+
 /** 兜底封条：隐藏未审草稿，同时区分服务商错误、中断与发布检查故障。 */
 function sealed(message: RawMessage): RawMessage {
 	const error = typeof message.errorMessage === "string" ? sanitizeProviderError(message.errorMessage) : "";
@@ -33,14 +62,22 @@ function sealed(message: RawMessage): RawMessage {
 		message.stopReason === "aborted" || (message.stopReason === "error" && isUserAbortError(error));
 	const providerError = message.stopReason === "error" && !interrupted;
 	return {
-		role: "assistant",
-		content: providerError
-			? []
-			: [{ type: "text", text: interrupted ? "本次请求已中断，未完成的回答没有发布。" : notice }],
-		timestamp: message.timestamp,
-		stopReason: message.stopReason,
+		...envelope(
+			message,
+			providerError
+				? []
+				: [{ type: "text", text: interrupted ? "本次请求已中断，未完成的回答没有发布。" : notice }],
+		),
 		...(message.stopReason === "error" ? { errorMessage: error || "Model request failed" } : {}),
 	};
+}
+
+function projectAssistant(message: RawMessage): RawMessage {
+	if (message.stopReason === "toolUse" && Array.isArray(message.content)) {
+		const calls = message.content.filter((block) => block.type === "toolCall");
+		if (calls.length) return envelope(message, calls);
+	}
+	return sealed(message);
 }
 
 /** 就地清空并覆盖（message_end：SDK 落盘用的是同一对象引用，必须原地改）。 */
@@ -51,9 +88,8 @@ function inplace(target: Record<string, unknown>, source: RawMessage): void {
 
 /**
  * 兜底投影（bridge 缺失/异常时的失败关闭态）——按事件**形状**中和，不逐一枚举事件类型：
- * 流式增量整条丢弃；任何携带 assistant `message` 的事件把该消息封条化；携带 `messages[]` 的
- * 事件把其中 assistant 项封条化。如此即便扩展将来新增一种带草稿的事件类型，兜底仍失败关闭，
- * 不会随两侧枚举漂移而漏放（drift-safe）。
+ * 流式增量整条丢弃；assistant 工具阶段仅保留 toolCall 与 SDK 元数据，最终正文继续封条化；
+ * 携带 `messages[]` 的事件采用相同规则。未来新增携带草稿的事件也不会漏放未核验正文。
  */
 function failClosedEvent(event: SessionEvent): SessionEvent | null {
 	if (event.type === "message_update") return null;
@@ -66,16 +102,16 @@ function failClosedEvent(event: SessionEvent): SessionEvent | null {
 		}
 		// message_end：SDK 随后按引用落盘，必须原地封条化
 		if (event.type === "message_end") {
-			inplace(withMessage.message as Record<string, unknown>, sealed(message));
+			inplace(withMessage.message as Record<string, unknown>, projectAssistant(message));
 			return event;
 		}
-		return { ...event, message: sealed(message) } as unknown as SessionEvent;
+		return { ...event, message: projectAssistant(message) } as unknown as SessionEvent;
 	}
 	const withMessages = event as { messages?: RawMessage[] };
 	if (Array.isArray(withMessages.messages)) {
 		return {
 			...event,
-			messages: withMessages.messages.map((m) => (m.role === "assistant" ? sealed(m) : m)),
+			messages: withMessages.messages.map((m) => (m.role === "assistant" ? projectAssistant(m) : m)),
 		} as unknown as SessionEvent;
 	}
 	return event;
@@ -106,5 +142,5 @@ export function projectKnowledgeSnapshot(
 	} catch {
 		/* fail closed */
 	}
-	return messages.map((m) => (m.role === "assistant" ? sealed(m) : m));
+	return messages.map((m) => (m.role === "assistant" ? projectAssistant(m) : m));
 }
