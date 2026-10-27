@@ -1,7 +1,6 @@
 /** Installed canonical owner only; no host task engine or copied planning rules. */
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
-import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { taskHostLoader } from "@gyoungwe/pi-core/host";
 import { createDroneRuntime } from "../../src/runtime";
 
@@ -24,20 +23,11 @@ export async function registerTaskRuntime(pi) {
 }
 
 /** Unit integration helper still invokes the installed native adapter and its event service. */
-export async function createTaskWorkbench({ pi, persist = () => {} } = {}) {
-	const tools = [];
-	const target = pi || {
-		events: createEventBus(),
-		on() {},
-		registerCommand() {},
-		registerTool: (tool) => tools.push(tool),
-		getAllTools: () => tools,
-		getCommands: () => [],
-		sendMessage() {},
-	};
+export async function createTaskWorkbench({ pi, persist }) {
 	return registerTaskRuntime({
-		...target,
+		...pi,
 		appendEntry: (_type, data) => persist(data),
 	});
 }
+
 export const WORKBENCH_ENTRY = "drone-task-workbench-v2";

@@ -159,7 +159,6 @@ it("an authorized task plan naming the DOI as a zotero_item milestone covers the
 	const entries = [];
 	const journal = await createTaskWorkbench({
 		pi,
-		requireAuthorization: true,
 		persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }),
 	});
 	journal.attach("session-z");
@@ -199,7 +198,6 @@ it("a DOI-less zotero_item milestone is a one-write slot covered by the task aut
 	zoteroLiterature(pi);
 	const journal = await createTaskWorkbench({
 		pi,
-		requireAuthorization: true,
 		persist: () => {},
 	});
 	journal.attach("session-z");
