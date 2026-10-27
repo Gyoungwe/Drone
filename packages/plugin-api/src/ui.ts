@@ -263,6 +263,8 @@ export interface KnowledgeUiBindings {
 		) => string;
 	};
 	helpers: {
+		openExternal(url: string): Promise<void>;
+		openResourceExternal(target: string, cwd?: string): Promise<void>;
 		isDraftSessionId(sessionId: string | null | undefined): boolean;
 		selectTranscript(state: KnowledgeTranscriptState, sessionId: string | null): KnowledgeTranscript;
 		pushToast(
