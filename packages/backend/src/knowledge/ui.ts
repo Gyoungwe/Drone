@@ -22,7 +22,6 @@ import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoad
 import type { DailyDiscoveryOperations } from "../services/daily-discovery";
 import type { BackgroundReviewerFactory, BackgroundReviewerPort } from "../services/deliverable-reviewer";
 import type { KnowledgeMaintenanceOperations } from "../services/knowledge-maintenance";
-import { defaultKnowledgeRuntimeSetup } from "./compat-adapter";
 import { KnowledgeWebDavService } from "./webdav";
 import type { KnowledgeWebDavVault } from "./webdav-sync";
 
@@ -388,7 +387,20 @@ export function getKnowledgeWorkerLifecycle(): KnowledgeWorkerLifecycleSnapshot 
  * loaded. Install the same generated worker seam used by the extension entry
  * so review and graph IPC work in both development and packaged hosts.
  */
-export function configureBackendKnowledgeWorker(setup = defaultKnowledgeRuntimeSetup): void {
+export interface KnowledgeRuntimeSetup {
+	configureHost(host: { loadWorkspaceConfig(cwd: string): Promise<Record<string, unknown>> }): void;
+	configureRuntime(host: { emitProcessEvent(event: string, payload?: unknown): void }): void;
+	configureWorker(
+		factory: (url: URL, options: Record<string, unknown>) => unknown,
+		metadata?: () => KnowledgeWorkerMetadata,
+	): void;
+}
+
+/**
+ * Explicit migration/test adapter. Production composition uses the installed
+ * knowledge host loader and never calls this legacy setup path.
+ */
+export function configureBackendKnowledgeWorker(setup: KnowledgeRuntimeSetup): void {
 	// The backend and each bundled Pi extension have separate plugin module
 	// instances. UI reads need their own host port, even after extension setup.
 	setup.configureHost({ loadWorkspaceConfig: loadBackendWorkspaceConfig });

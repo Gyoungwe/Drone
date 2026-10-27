@@ -1,31 +1,14 @@
 /**
- * Transitional composition root for the optional knowledge package.
+ * Explicit legacy knowledge fixture for SDK/worker regression tests.
  *
- * The service and IPC contracts in `ui.ts` stay host-neutral.  This module is
- * the only backend composition surface that reaches the packaged knowledge
- * implementation while the no-plugin compatibility path is still supported.
+ * Production backend code must discover an installed knowledge host or fail
+ * closed. This fixture keeps the old package implementation available only to
+ * tests that exercise the compatibility behavior during migration.
  */
 import * as knowledgeHost from "@gyoungwe/pi-knowledge/host";
+import type { KnowledgeCompatibilityPort } from "../src/knowledge/ui";
 
-export {
-	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
-	type KnowledgeWorkerLifecycleEvent,
-	type KnowledgeWorkerMetadata,
-} from "@drone/shared";
-
-export {
-	configureKnowledgeHost,
-	configureKnowledgeRuntime,
-	configureKnowledgeWorker,
-} from "@gyoungwe/pi-knowledge/host";
-
-/**
- * The only legacy implementation surface consumed by the backend knowledge
- * service. Keeping these defaults here means `ui.ts` can depend on the
- * host-neutral contracts and the compatibility package can be deleted as one
- * composition-root change when the installed provider is mandatory.
- */
-export const knowledgeCompatibility = {
+export const defaultKnowledgeCompatibility = {
 	read: {
 		overview: knowledgeHost.knowledgeOverview,
 		search: knowledgeHost.searchKnowledge,
@@ -70,4 +53,10 @@ export const knowledgeCompatibility = {
 		new knowledgeHost.BackgroundReviewer(
 			options as ConstructorParameters<typeof knowledgeHost.BackgroundReviewer>[0],
 		),
-} as const;
+} as unknown as KnowledgeCompatibilityPort;
+
+export const defaultKnowledgeRuntimeSetup = {
+	configureHost: knowledgeHost.configureKnowledgeHost,
+	configureRuntime: knowledgeHost.configureKnowledgeRuntime,
+	configureWorker: knowledgeHost.configureKnowledgeWorker,
+};

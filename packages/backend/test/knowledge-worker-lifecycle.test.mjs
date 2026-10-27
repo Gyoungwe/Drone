@@ -16,6 +16,7 @@ import {
 	getKnowledgeWorkerLifecycle,
 	resolveBackendKnowledgeWorkerResource,
 } from "../src/knowledge/ui";
+import { defaultKnowledgeRuntimeSetup } from "./knowledge-compat-fixture";
 
 vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
@@ -51,7 +52,7 @@ beforeEach(async () => {
 	await closeKnowledgeServices();
 	// The backend host is the composition root for packaged Desktop resources;
 	// explicitly re-install it after the extension source module has loaded.
-	configureBackendKnowledgeWorker();
+	configureBackendKnowledgeWorker(defaultKnowledgeRuntimeSetup);
 	// Vitest loads the bundled extension and the direct host entry as separate
 	// module graphs. Configure the direct host entry with the same verified
 	// resource so this regression observes the production worker contract.
