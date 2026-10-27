@@ -135,6 +135,7 @@
 - 2026-10-27：P2 review host seam：插件 `63d2015` 将 `knowledgeReviews`/`knowledgePreviewReview`/`knowledgeDecideReview` 接入版本化 `knowledgeHostLoader`，同步 host-loader 回归和生成物；宿主 `plugin-api` 合同同步声明三个可选操作，已有 `KnowledgeUiService` 审核路由可直接消费。插件单测/build-check、宿主 plugin-api/backend typecheck 通过；正式 Vault GUI apply/rollback 与剩余知识装配仍未完成。
 - 2026-10-27：P2 UI host seam 继续收口：插件 `e246978` 将 `knowledgeSetupPreview`、`knowledgeSpecialistSettings`、`knowledgeOpenTarget` 接入版本化 loader；宿主 `plugin-api` 与 `KnowledgeUiService` 同步声明/路由，新增 24 项 create-backend 回归覆盖三项调用。插件 build-check/host-loader、宿主 backend typecheck/Biome 通过；未声明操作仍兼容回退，完整 knowledge UI 与旧装配仍未删除。
 - 2026-10-27：P2 semantic host seam：插件 `449d3cf` 将 semantic status/settings/provider-test/index/cancel 五项操作作为版本化 `knowledgeHostLoader.semantic` 暴露，宿主 `plugin-api` 同步声明；宿主已有五项 semantic routing/unavailable 回归覆盖安装与缺失两种状态。插件 build-check/host-loader、宿主 plugin-api/backend typecheck 通过；semantic worker 资源归属和完整 knowledge 兼容组合仍未删除。
+- 2026-10-27：P4/P6 `798ec00e` 删除 backend 的 `deliver-files`、`memory-save`、`status`、`todo`、`project/memory` 五个 pi-core 兼容门面，生产代码、公共导出和回归测试直接使用 `@gyoungwe/pi-core` 公共子路径；33 项相关回归、backend typecheck、Biome 与 `check:arch` 通过。该切片减少旧路径，但不代表任务域完整迁移、pi-core 依赖清零或正式安装包生命周期完成。
 
 ## 未关闭项
 
