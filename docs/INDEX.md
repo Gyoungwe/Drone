@@ -7,6 +7,7 @@
 当前计划最终状态、九个 npm 公开版本及四项未完成验收的恢复配置，统一见[阶段状态汇总](plan-final-status-2026-10-26.md)。
 下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构设计](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已批准并开始实施；[P0–P7 执行计划](pluginization/native-plugin-implementation-plan.md)记录阶段状态，[SDK 运行时证据](pluginization/native-plugin-runtime-evidence.md)区分真实会话、执行适配与自动发现，[P1 正式安装包切片](pluginization/native-plugin-p1-packaged-evidence.md)记录窗口作用域后台的启停、拒绝、恢复与退出，完整领域迁移仍未完成。[P2 知识只读共享 owner](pluginization/native-plugin-knowledge-readonly-evidence.md)记录候选包、权限/资源边界、实际会话和安装包验收及完整功能缺口。
 原生迁移的[能力切片证据与当前缺口](pluginization/native-plugin-capability-slice-evidence.md)与执行计划同步；完整历史分别见[计划归档](archive/native-plugin-implementation-plan-through-2026-10-27.md)和[切片证据归档](archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。历史 PASS 只适用于原版本与范围，四项外部验收不属于本轮 P0–P7。
+锁定 SDK 的 33 API、41 事件、28 UI 成员与三条运行路径的支持/拒绝边界见[原生 API 盘点](pluginization/native-pi-api-compatibility-matrix.md)；P0 仍未完成，不能用格式兼容替代运行 API 验收。
 知识源码锁候选 0.3.0 与宿主 `c29c5037` 的独立 checkout 根门禁、早期失败和重跑记录见[干净宿主回执](releases/native-plugin-clean-host-2026-10-27.json)；该冻结结果不覆盖后续 tasks/discovery 迁移或知识 UI 分支整合。
 版本化的通用 pi-core 宿主合同位于 `packages/plugin-api/src/core.ts`，桌面端通过 `packages/desktop/src/main/optional-plugin-hosts.ts` 按已安装包清单发现 `coreHostLoader` 并贯穿会话组合；task host 与 workbench client 的首条接线已完成，完整任务状态机迁移与正式安装包工作流仍待验收。
 
@@ -266,7 +267,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`pi-knowledge` 的源码权威版本位于 `drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`）。公开 npm 版本仍为 0.2.1；当前宿主源码锁固定 `1d349f0` 的 0.3.0 候选，记录可复现 tarball SHA-256。插件负责 manifest、host 声明、native extension、worker 和 maintenance；`src/core/maintenance-topic.ts` 负责绑定 revision、canonical/mirror CAS 更新与回读。保留双方历史的整合已恢复同包 `ui/`、`src/native/` 和 `src/desktop/`；完整 hooks 共享 owner、undo、surfaces 与正式安装包 GUI 继续按 P2 跟踪，不因包构建通过而完成。Drone 暂保留端口、IPC、挂载/回退和旧资源装配。
+`pi-knowledge` 的源码权威版本位于 `drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`）。公开 npm 版本仍为 0.2.1；当前宿主源码锁固定 `b1c11f3` 的 0.3.0 候选，记录可复现 tarball SHA-256。插件负责 manifest、host 声明、native extension、worker 和 maintenance；`src/core/maintenance-topic.ts` 负责绑定 revision、canonical/mirror CAS 更新与回读。保留双方历史的整合已恢复同包 `ui/`、`src/native/` 和 `src/desktop/`；完整 hooks 共享 owner、undo、surfaces 与正式安装包 GUI 继续按 P2 跟踪，不因包构建通过而完成。Drone 暂保留端口、IPC、挂载/回退和旧资源装配。
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 

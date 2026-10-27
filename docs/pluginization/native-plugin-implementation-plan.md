@@ -2,26 +2,26 @@
 
 2026-10-27 整理。用户已批准「通用宿主 + 可卸载功能插件」并要求 P0–P7 并行实现。依据：[架构设计](../superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)。目标仍是完整功能与 UI 同包迁移，当前没有关闭整个目标。
 
-本页当前状态以宿主干净门禁基线 `c29c5037` 与插件完整检查基线 `9646a53` 为限；进行中的代码与尚未取得终态的检查不计入完成结论。完整历史、旧门禁输出和切片证据已[归档](../archive/native-plugin-implementation-plan-through-2026-10-27.md)；各次真实验收的 PASS 只适用于当时记录的版本与范围。
+当前已提交实现与定向回归基线为宿主 `89570262`、插件 `b1c11f3`；插件完整检查通过，最后已完成的宿主干净根门禁仍为 `c29c5037`。整合后的全测曾暴露 8 项失败，修复后仍须取得根命令终态，不能外推为已完成。完整历史、旧门禁输出和切片证据已[归档](../archive/native-plugin-implementation-plan-through-2026-10-27.md)；历史 PASS 只适用于记录的版本与范围。
 
 ## 当前阶段状态
 
 | 阶段 | 完成条件 | 当前已证明 | 仍未完成 | 依赖 |
 | --- | --- | --- | --- | --- |
-| P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复领域扫描 | 清单与扫描已建立；锁定 1.1.0/latest 1.4.0 的真实会话基础 UI 对照通过 | 全 API 兼容矩阵；按最终迁移结果清零或明确登记边界，当前扫描仍为 `INCOMPLETE` | 无 |
+| P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复领域扫描 | 清单与扫描、33 API/41 事件/28 UI 声明盘点；真实 SDK 基础 UI、沙箱诊断与 managed prompt mutation 回归 | 持续 onError、trusted UI 假成功、managed metadata/onUpdate/ctx 限制；locked/latest 完整矩阵；扫描仍为 `INCOMPLETE` | 无 |
 | P1 | 通用 runtime 生命周期、来源绑定、权限、隔离、UI 调用与撤销 | 正式包应用 owner、会话切换、停用/拒绝/恢复/退出切片；来源内容变化使旧授权失效 | 正式包的销毁失败回执；后续领域包在同一候选版本上的完整生命周期复验 | P0 |
-| P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | 已安装 host 覆盖阅读/审核/semantic/Vault/capture/publication/reviewer/topic/memory/maintenance 等切片；worker 已选用插件包内资源；生产 compatibility composition 已移到测试 fixture | 剩余宿主领域操作与完整 UI ownership；旧资源生成/打包链删除；正式包 Vault apply/rollback GUI 与全流程；候选版本和锁文件同步后的干净安装 | P1 |
+| P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | host 操作、包内 worker 与同包 UI/native/desktop 源码已保留历史整合；maintenance CAS/mirrors、worker 预检保留旧实例回归 | 完整 hooks/UI 共享 owner、undo runtime/UI、surfaces、宿主领域操作与旧资源装配删除；同候选正式 GUI 与完整写后回读/回滚 | P1 |
 | P3 | research、来源连接器、引用/Zotero 的领域 API 与页面迁移 | connector/write host loader 与停用传播；无插件 fail-closed；backend 已无 research runtime dependency 和两处生产兼容 façade | 完整 Zotero/研究工作流与页面归属；本轮候选包的连接器、写入与正式 GUI 证据 | P2 |
-| P4 | tasks、编排、领域记忆及 UI 迁移 | pi-core 已保留历史迁到插件仓库并独立检查；CoreHostLoader、taskHostLoader、acceptance registry 与 workbench client 已接线；生产宿主不再 runtime import pi-core | 完整 workbench 状态机与任务领域装配迁移；原生会话及正式包完整工作流和 UI 验收 | P2 |
-| P5 | analysis/evidence 与 discovery 的可卸载实现；依赖经显式合同管理 | analysis/evidence 合同与通用发现；discovery host 合同、Desktop 发现、四组只读 IPC 路由及独立 pi-discovery 包 | discovery B5d–B5f 执行能力和无条件宿主构造的迁移；完整分析/证据工作流与声明矩阵；同候选包实际验收 | P3/P4 |
-| P6 | 科研能力成为可卸载预设；删除构建/锁文件必需依赖与旧路径 | `trackedRuntimeDependencies=[]`；UI 安装代次按包内容哈希绑定；knowledge/core/research 的生产 runtime 依赖已收窄 | 锁文件与候选包同步；hoisted/dev/build/resource 闭包审计；剩余领域装配与旧生成链删除；零领域插件最终构建验证 | P2–P5 |
-| P7 | 双仓库最终门禁、同 tarball 原生会话、正式包零插件及升级/停用/回滚 | 正式 arm64 通用零插件会话；临时 registry 跨版本升级/回滚/移除/恢复及活跃会话 reload；公开 pi-evidence 0.1.1 同版安装/更新/移除切片 | 最终同候选 tarball 的真实会话与 GUI；销毁失败；公开跨版本回滚；候选锁文件干净安装与双仓库最终全量门禁 | P6 |
+| P4 | tasks、编排、领域记忆及 UI 迁移 | pi-core 历史与 milestone 规则归插件，宿主旧 core 副本已删；typed tarball、workbench client 与 SDK fixture 回归 | 完整状态机/guard/任务装配与 UI；无 planner 的 legacy guard 仍会阻断基本写工具；真实 task host registry 隔离及完整工作流 | P2 |
+| P5 | analysis/evidence 与 discovery 的可卸载实现；依赖经显式合同管理 | discovery 算法/状态归插件，宿主仅注入机制；无插件不构造旧实现/登记存储；真实包后端 73 项定向测试 | native discovery 工具、真实容器和 B5 GUI；完整分析/证据控制器与 UI 迁移、同候选工作流验收 | P3/P4 |
+| P6 | 科研能力成为可卸载预设；删除构建/锁文件必需依赖与旧路径 | 四包同提交候选已独立重建；core 旧源码/构建链删除；discovery runtime 依赖下移；`trackedRuntimeDependencies=[]` | 4 个必需领域源码锁及 hoisted/dev/build/resource 闭包删除；旧 bundled 装配、领域 schema/IPC 与预设卸载；零领域独立构建 | P2–P5 |
+| P7 | 双仓库最终门禁、同 tarball 原生会话、正式包零插件及升级/停用/回滚 | 空 managed roots 的正式会话（仍含旧 bundled 资源）；临时 registry 生命周期/活跃 reload；公开 evidence 0.1.1 切片 | 最终候选双仓库根门禁、真实会话与完整 GUI；销毁失败、公开跨版本回滚；真正无领域资源的宿主验收 | P6 |
 
 ## 当前未完成项
 
 1. 完成 P2–P5 的领域实现和 UI ownership，删除对应宿主装配与临时路径；切片合同、loader 与定向测试通过不等于领域迁移完成。
-2. 完成 discovery B5d–B5f 和任务 workbench 全流程，验证未安装/停用时的明确 unavailable 行为。既有 WebDAV、inquiry 归属记录保留，本页整理不新增或扩大宿主边界决定。
-3. 同步候选插件版本、`plugins.lock.json`、构建资源与依赖闭包。知识源码锁已固定 0.3.0 候选并通过默认远程 fetch 和独立宿主根门禁；任务/discovery/同包 UI 整合后的最终候选仍须再次同步和验证。
+2. 完成 discovery 原生工具/容器/B5 GUI 与任务状态机；先消除无任务插件时 legacy guard 对基本写工具的阻断。WebDAV/inquiry 的既有归属记录保留，不借本次状态同步扩大边界。
+3. 四包源码锁已同步为 `b1c11f3`；它仍是迁移期构建必需依赖。继续删除这些领域锁与旧资源闭包，证明不下载科研插件也能独立构建，而不是仅把版本同步当作 P6 完成。
 4. 使用同一候选 tarball 完成原生 Pi 真实会话、正式安装包的领域 GUI、Vault 写入回读/回滚与完整生命周期，包括销毁失败。既有通用宿主和公开 pi-evidence 切片保留其已证明范围。
 5. 在上述结果固定后运行宿主 lint/typecheck/test/build/check:arch、插件仓库完整 check 和最终领域边界门禁，保存终态与来源版本。历史全量或直接 workspace 检查不替代最终根命令的干净安装门禁。
 
