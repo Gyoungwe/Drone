@@ -420,6 +420,24 @@ describe("createBackend", () => {
 		services.dispose();
 	});
 
+	it("accepts an installed task host loader without rebuilding its registry", () => {
+		const host = {
+			contractVersion: 1 as const,
+			registerAcceptanceVerifier: () => undefined,
+			readAcceptanceVerifier: () => null,
+		};
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			taskHostLoader: { contractVersion: 1, load: () => host },
+		});
+		expect(services.taskHost).toBe(host);
+		expect(services.domainCapabilities.list().find((item) => item.id === "tasks")).toMatchObject({
+			provider: "plugin:tasks",
+		});
+		services.dispose();
+	});
+
 	it("accepts a knowledge provider without constructing the host adapter", () => {
 		const knowledge = new KnowledgeUiService();
 		let provided = false;

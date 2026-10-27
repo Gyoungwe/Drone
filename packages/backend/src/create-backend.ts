@@ -32,7 +32,7 @@ import type {
 	ResearchWriteAdapterHostLoader,
 } from "@gyoungwe/plugin-api";
 import type { ExperienceStorePort } from "@gyoungwe/plugin-api/knowledge";
-import type { TaskAcceptanceHostPort } from "@gyoungwe/plugin-api/tasks";
+import type { TaskAcceptanceHostPort, TaskHostLoader } from "@gyoungwe/plugin-api/tasks";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import {
@@ -354,13 +354,15 @@ export interface BackendOptions extends SessionServiceOptions {
 	researchConnectorHostLoaderFactory?: ResearchConnectorHostLoaderFactory;
 	/** Optional installed research plugin write host; takes precedence over compatibility only when no registry is supplied. */
 	researchWriteAdapterHostLoader?: ResearchWriteAdapterHostLoader;
+	/** Optional installed task/workbench host; absent uses the isolated host registry. */
+	taskHostLoader?: TaskHostLoader;
 	/** Optional host-owned workbench operations; omitted means fail-closed. */
 	workbench?: WorkbenchOperationHandlers;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
-	const taskHost = createTaskAcceptanceHost(runtime);
+	const taskHost = options.taskHostLoader?.load() ?? createTaskAcceptanceHost(runtime);
 	const workbench = createWorkbenchHostPort(runtime, options.workbench);
 	runtime.tasks.workbench = { version: workbench.contractVersion, client: workbench.client };
 	// The packaged knowledge capability owns its runtime when installed. The
@@ -372,8 +374,13 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const domainCapabilities = new DomainCapabilityRegistry();
 	// Transitional host providers are explicit so callers can distinguish an
 	// installed plugin from an unavailable optional domain during migration.
-	for (const id of ["knowledge", "research", "tasks"])
+	for (const id of ["knowledge", "research"])
 		domainCapabilities.register({ id, status: "available", provider: "host-compat" });
+	domainCapabilities.register(
+		options.taskHostLoader
+			? { id: "tasks", status: "available", provider: "plugin:tasks" }
+			: { id: "tasks", status: "available", provider: "host-compat" },
+	);
 	domainCapabilities.register(
 		options.analysisHostLoader
 			? { id: "analysis", status: "available", provider: "plugin:analysis" }
