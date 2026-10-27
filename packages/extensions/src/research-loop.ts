@@ -1,4 +1,4 @@
-import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { registerTool } from "./internal/runtime/tool-manifest";
 import { describeProject, resolveWorkspaceProject, sessionEntriesOf } from "@gyoungwe/pi-knowledge/host";
 import {
 	literatureReceipt,

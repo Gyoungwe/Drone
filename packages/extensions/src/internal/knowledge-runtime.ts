@@ -6,10 +6,10 @@ import {
 	resolveKnowledgePackageWorkerMetadata,
 	resolveKnowledgePackageWorkerUrl,
 } from "@gyoungwe/pi-knowledge/host";
-import { runRuntimeExclusive, runtimeSlot } from "@drone/tasks/runtime-bridge";
-import { flowCardBuilder, toolMeta } from "@drone/tasks/tool-manifest-runtime";
+import { runRuntimeExclusive, runtimeSlot } from "./runtime/runtime-bridge";
+import { flowCardBuilder, toolMeta } from "./runtime/tool-manifest";
 import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
-import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { registerTool } from "./runtime/tool-manifest";
 import { configureKnowledgeExtensionHost } from "@gyoungwe/pi-knowledge/host";
 
 let configured = false;

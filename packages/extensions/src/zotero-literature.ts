@@ -4,8 +4,8 @@ import { readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadWorkspaceConfig } from "@drone/extensions/workspace-config";
 import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
-import { bindRuntime, runRuntimeExclusive, runtimeSlot, withHostRuntime } from "@drone/tasks/runtime-bridge";
-import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { bindRuntime, runRuntimeExclusive, runtimeSlot, withHostRuntime } from "./internal/runtime/runtime-bridge";
+import { registerTool } from "./internal/runtime/tool-manifest";
 import { cardLink, literatureCard } from "@gyoungwe/pi-knowledge/host";
 import {
 	bootstrapZotero,

@@ -32,7 +32,7 @@ import {
 import type { LiteratureReceiptOptions } from "@gyoungwe/pi-research/host";
 import type { ResearchLoopWorkspace } from "@gyoungwe/pi-research/host";
 import { resolveWorkspaceProject } from "@gyoungwe/pi-knowledge/host";
-import { toolMeta } from "@drone/tasks/tool-manifest-runtime";
+import { toolMeta } from "./runtime/tool-manifest";
 import { publishSourceNote } from "./obsidian-workbench";
 import { loadWorkspaceConfig } from "../workspace-config";
 import {

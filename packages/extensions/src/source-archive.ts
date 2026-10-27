@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { registerTool } from "./internal/runtime/tool-manifest";
 import { cardLink, flowCard, literatureCard } from "@gyoungwe/pi-knowledge/host";
 import {
 	archiveSource as archiveTyped,

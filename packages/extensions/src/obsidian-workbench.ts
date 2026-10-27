@@ -17,7 +17,7 @@ import {
 import { USER_QUESTION_FOCUS } from "@drone/extensions/internal/reply-focus";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import { registerAcceptanceVerifier } from "@drone/tasks/acceptance";
-import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { registerTool } from "./internal/runtime/tool-manifest";
 import {
 	appendRelatedLinks,
 	cardLink,
