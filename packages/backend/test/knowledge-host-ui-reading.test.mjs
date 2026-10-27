@@ -8,6 +8,13 @@ import { build } from "esbuild";
 import { expect, it, vi } from "vitest";
 import { configureBackendKnowledgeWorker, KnowledgeUiService } from "../src/knowledge/ui";
 
+it("keeps the UI service free of the package compatibility import", async () => {
+	const uiSource = await readFile(new URL("../src/knowledge/ui.ts", import.meta.url), "utf8");
+	const compatibilitySource = await readFile(new URL("../src/knowledge/compat.ts", import.meta.url), "utf8");
+	expect(uiSource).not.toContain("@gyoungwe/pi-knowledge/host");
+	expect(compatibilitySource).toContain('from "@gyoungwe/pi-knowledge/host"');
+});
+
 it("reads a project-owned note through the backend after setup in an independently bundled extension", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-host-note-")));
 	const cwd = join(root, "project");

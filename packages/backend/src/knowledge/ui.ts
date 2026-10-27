@@ -25,7 +25,7 @@ import {
 	configureKnowledgeHost,
 	configureKnowledgeRuntime,
 	configureKnowledgeWorker,
-	knowledgeHost,
+	knowledgeCompatibility,
 } from "./compat";
 import { KnowledgeWebDavService } from "./webdav";
 import type { KnowledgeWebDavVault } from "./webdav-sync";
@@ -124,11 +124,11 @@ export interface KnowledgeSemanticOperations {
 /** Default provider delegates the read vertical to the packaged knowledge host entry. */
 export function createKnowledgeReadProvider(host?: KnowledgeHostPort): KnowledgeReadProvider {
 	const source = host ?? {
-		overview: knowledgeHost.knowledgeOverview,
-		search: knowledgeHost.searchKnowledge,
-		read: knowledgeHost.knowledgeReadNote,
-		noteLinks: knowledgeHost.knowledgeNoteLinks,
-		graph: knowledgeHost.knowledgeGraph,
+		overview: knowledgeCompatibility.read.overview,
+		search: knowledgeCompatibility.read.search,
+		read: knowledgeCompatibility.read.read,
+		noteLinks: knowledgeCompatibility.read.noteLinks,
+		graph: knowledgeCompatibility.read.graph,
 	};
 	const overview = source.overview as unknown as KnowledgeReadProvider["overview"];
 	const search = source.search as unknown as KnowledgeReadProvider["search"];
@@ -150,8 +150,8 @@ export function createKnowledgeMaintenanceOperations(
 ): KnowledgeMaintenanceOperations {
 	const source = host ?? ({} as KnowledgeHostPort);
 	return {
-		planMaintenance: source.planMaintenance ?? knowledgeHost.planMaintenance,
-		runMaintenance: source.runMaintenance ?? knowledgeHost.runMaintenance,
+		planMaintenance: source.planMaintenance ?? knowledgeCompatibility.maintenance.plan,
+		runMaintenance: source.runMaintenance ?? knowledgeCompatibility.maintenance.run,
 	};
 }
 
@@ -160,10 +160,9 @@ export function createKnowledgeDailyDiscoveryOperations(host?: KnowledgeHostPort
 	const source = host?.dailyDiscovery;
 	if (source) return source;
 	return {
-		systemPrompt: knowledgeHost.DAILY_DISCOVERY_SYSTEM,
-		buildMessage: (fresh, related) => knowledgeHost.buildDailyDiscoveryMessage([...fresh], [...related]),
-		parseIdeas: (text, allowedPaths, freshPaths) =>
-			knowledgeHost.parseDailyIdeas(text, allowedPaths, freshPaths),
+		systemPrompt: knowledgeCompatibility.dailyDiscovery.systemPrompt,
+		buildMessage: knowledgeCompatibility.dailyDiscovery.buildMessage,
+		parseIdeas: knowledgeCompatibility.dailyDiscovery.parseIdeas,
 	};
 }
 
@@ -174,19 +173,19 @@ export function createKnowledgeResearchResourceOperations(
 	const source = host?.researchResource;
 	if (source) return source;
 	return {
-		resolveContext: knowledgeHost.resolveKnowledgeContext,
-		ingestSnapshot: knowledgeHost.ingestKnowledgeSnapshot,
+		resolveContext: knowledgeCompatibility.researchResource.resolveContext,
+		ingestSnapshot: knowledgeCompatibility.researchResource.ingestSnapshot,
 	};
 }
 
 /** Keep compute experience persistence behind the discovered knowledge host seam. */
 export function createKnowledgeExperienceOperation(host?: KnowledgeHostPort) {
-	return host?.recordTerminalJobExperience ?? knowledgeHost.recordTerminalJobExperience;
+	return host?.recordTerminalJobExperience ?? knowledgeCompatibility.experience;
 }
 
 /** Keep child-session publication registration behind the discovered host seam. */
 export function createKnowledgePublicationOperation(host?: KnowledgeHostPort): KnowledgePublicationRegistrar {
-	return host?.registerAnswerPublication ?? knowledgeHost.registerAnswerPublication;
+	return host?.registerAnswerPublication ?? knowledgeCompatibility.publication;
 }
 
 /** Keep WebDAV's local read/write operations behind the discovered knowledge host seam. */
@@ -194,19 +193,12 @@ export function createKnowledgeVaultOperations(
 	host?: Pick<KnowledgeHostPort, "vault">,
 ): KnowledgeWebDavVault {
 	if (host?.vault) return host.vault;
-	return {
-		readBinding: knowledgeHost.readKnowledgeBinding,
-		readNote: knowledgeHost.readNoteFile,
-		containedFile: knowledgeHost.containedVaultFile,
-		createFileOnly: knowledgeHost.createVaultFileOnly,
-		replaceFile: knowledgeHost.replaceVaultFile,
-		isConflict: (error) => error instanceof knowledgeHost.VaultFileConflictError,
-	};
+	return knowledgeCompatibility.vault;
 }
 
 /** Construct the domain reviewer only at the compatibility/plugin composition root. */
 export const createKnowledgeBackgroundReviewer: BackgroundReviewerFactory = (options) =>
-	new knowledgeHost.BackgroundReviewer(options) as unknown as BackgroundReviewerPort;
+	knowledgeCompatibility.backgroundReviewer(options) as unknown as BackgroundReviewerPort;
 
 export interface KnowledgeWorkerLifecycleSnapshot {
 	readonly currentVersion: string | null;
@@ -530,7 +522,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 											}
 										}
 									})
-								: knowledgeHost.subscribeKnowledgeUi((event: KnowledgeUiEvent) => {
+								: knowledgeCompatibility.uiState.subscribe((event: KnowledgeUiEvent) => {
 										for (const listener of this.listeners) {
 											try {
 												listener(event);
@@ -560,13 +552,11 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			this.writeProvider.uiState.notify(text, severity, sessionId);
 			return;
 		}
-		knowledgeHost.notifyKnowledgeUi(text, severity, sessionId ?? undefined);
+		knowledgeCompatibility.uiState.notify(text, severity, sessionId ?? undefined);
 	}
 	private async call(name: string, input: unknown): Promise<any> {
 		await this.connect();
-		const fn = (knowledgeHost as unknown as Record<string, (value: unknown) => unknown>)[name];
-		if (!fn) throw new Error(`Unknown knowledge UI operation: ${name}`);
-		return fn(input);
+		return knowledgeCompatibility.call(name, input);
 	}
 	specialistSettings(
 		input: Parameters<KnowledgeApi["setKnowledgeSpecialistSettings"]>[0],
@@ -577,10 +567,8 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["reviewKnowledgeWithModel"]>[0],
 		options: unknown,
 	): ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]> {
-		const review = (this.writeProvider?.reviewWikiWithModel ?? knowledgeHost.reviewWikiWithModel) as (
-			input: unknown,
-			options: unknown,
-		) => Promise<unknown>;
+		const review = (this.writeProvider?.reviewWikiWithModel ??
+			knowledgeCompatibility.reviewWikiWithModel) as (input: unknown, options: unknown) => Promise<unknown>;
 		return (await review(input, options)) as Awaited<ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]>>;
 	}
 	overview(
