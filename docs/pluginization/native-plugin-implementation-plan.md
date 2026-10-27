@@ -23,6 +23,7 @@
 - `b5d62102`/`f2128217`/`aff50b6c` 仅修复既有 SDK publication fixture：注入最小 `CoreHostPort` 并从测试文件解析当前 worktree 的 `.pi` 扩展/技能路径，knowledge-publication-delivery 在 root 与 workspace cwd 下均 15/15 通过；不改变生产边界。
 - `4a00e695` 让通用 backend 不再默认选择 `defaultKnowledgeCompatibility`，未声明 host 操作统一返回 unavailable；legacy worker/compat adapter 仍是显式过渡边界，P2/P6 继续部分完成。
 - fixture cwd 修复后，backend 全量 `npm test` 以 259 个文件、2079 项通过、18 项跳过退出 0；插件仓库完整 check 同样退出 0。该门禁结果不改变 P2–P7、正式 GUI 与四项外部验收的未完成状态。
+- Desktop production build 退出 0；边界扫描降至 domain-runtime-import 4、domain-type-import 12、packaged-resource 21，仍为 `INCOMPLETE`，剩余 knowledge compatibility/宿主发现迁移与正式真实验收按未关闭项保留。
 
 ## 工作分配
 
