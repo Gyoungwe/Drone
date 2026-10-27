@@ -21,6 +21,12 @@ import {
 	getKnowledgeService,
 	subscribeKnowledgeUi,
 } from "@gyoungwe/pi-knowledge/host";
+import {
+	makeDeliverFilesTool,
+	makeMemorySaveTool,
+	makeStatusTool,
+	makeTodoTool,
+} from "@gyoungwe/pi-core/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/knowledge-publication";
@@ -63,6 +69,15 @@ beforeEach(async () => {
 		projectTrust: false,
 		webFetch: false,
 		subagentPreferBuiltin: false,
+		coreHost: {
+			contractVersion: 1,
+			makeDeliverFilesTool,
+			makeMemorySaveTool,
+			makeStatusTool,
+			makeTodoTool,
+			memoryIndexPrompt: () => [],
+			writeMemory: () => "",
+		},
 		desktopIntegration: {
 			appendSystemPrompt: [],
 			additionalExtensionPaths: [resolve("../../.pi/extensions/obsidian-workbench.mjs")],
