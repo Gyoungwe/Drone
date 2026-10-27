@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	createKnowledgeDailyDiscoveryOperations,
 	createKnowledgeExperienceOperation,
+	createKnowledgePublicationOperation,
 	createKnowledgeResearchResourceOperations,
 	type KnowledgeHostPort,
 } from "./ui";
@@ -30,6 +31,29 @@ describe("knowledge host operations", () => {
 		expect(operations.parseIdeas("ignored", [], [])).toEqual([
 			{ title: "installed", idea: "idea", basis: [], test: "test", whyOverlooked: "why" },
 		]);
+	});
+
+	it("routes answer publication registration through the installed host", () => {
+		const begin = vi.fn(() => ({ accepted: true }));
+		const host: KnowledgeHostPort = {
+			contractVersion: 1,
+			overview: async () => undefined,
+			search: async () => undefined,
+			read: async () => undefined,
+			noteLinks: async () => undefined,
+			graph: async () => undefined,
+			registerAnswerPublication: (_pi, options) => {
+				expect(options.evidenceOnly).toBe(true);
+				expect(options.getCurrent()).toEqual({ id: "current" });
+				return { begin };
+			},
+		};
+		const register = createKnowledgePublicationOperation(host);
+
+		expect(register({}, { getCurrent: () => ({ id: "current" }), evidenceOnly: true }).begin(true)).toEqual({
+			accepted: true,
+		});
+		expect(begin).toHaveBeenCalledWith(true);
 	});
 
 	it("routes research capture and terminal experience through the installed host", async () => {

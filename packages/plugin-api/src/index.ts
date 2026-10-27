@@ -576,6 +576,16 @@ export interface KnowledgeReadHostPort {
 		input: unknown,
 		expectedRevision?: number,
 	) => Promise<unknown>;
+	/** Optional instance-scoped UI event bridge supplied by the installed plugin. */
+	uiState?: {
+		subscribe(listener: (event: unknown) => void): () => void;
+		notify(text: string, severity?: "info" | "warning" | "error", sessionId?: string | null): void;
+	};
+	/** Optional answer-publication registrar supplied by the installed plugin. */
+	registerAnswerPublication?: (
+		pi: unknown,
+		options: { getCurrent: () => unknown; evidenceOnly: boolean },
+	) => { begin(required: boolean): unknown };
 	/** Optional UI operations supplied by the installed knowledge plugin. */
 	jobs?(input: unknown): Promise<unknown>;
 	maintenance?(input: unknown): Promise<unknown>;
