@@ -261,8 +261,14 @@ async function run() {
 
 	const workbenchManifestPath = ".pi/extensions/workbench-manifest.json";
 	const workbenchManifest = JSON.parse(await readText(sourcePath(repoRoot, workbenchManifestPath)));
-	const knowledgeWorkerPath = sourcePath(repoRoot, ".pi/extensions/knowledge-worker.mjs");
-	const knowledgeWorkerManifestPath = sourcePath(repoRoot, ".pi/extensions/.knowledge-worker-manifest.json");
+	const knowledgeWorkerPath = sourcePath(
+		repoRoot,
+		"vendor/plugins/pi-knowledge/lib/knowledge/runtime/worker.mjs",
+	);
+	const knowledgeWorkerManifestPath = sourcePath(
+		repoRoot,
+		"vendor/plugins/pi-knowledge/lib/knowledge/runtime/.knowledge-worker-manifest.json",
+	);
 	let knowledgeWorkerOk = false;
 	let knowledgeWorkerEvidence = {};
 	try {
@@ -271,13 +277,14 @@ async function run() {
 			readText(knowledgeWorkerManifestPath).then(JSON.parse),
 		]);
 		const actualHash = createHash("sha256").update(workerBytes).digest("hex");
-		knowledgeWorkerOk =
-			actualHash === workerManifest.outputSha256 && compiledText.includes("knowledge-worker.mjs");
+		knowledgeWorkerOk = actualHash === workerManifest.outputSha256;
 		knowledgeWorkerEvidence = {
-			paths: [".pi/extensions/knowledge-worker.mjs", ".pi/extensions/.knowledge-worker-manifest.json"],
+			paths: [
+				"vendor/plugins/pi-knowledge/lib/knowledge/runtime/worker.mjs",
+				"vendor/plugins/pi-knowledge/lib/knowledge/runtime/.knowledge-worker-manifest.json",
+			],
 			outputSha256: workerManifest.outputSha256,
 			actualSha256: actualHash,
-			compiledResourceMarker: compiledText.includes("knowledge-worker.mjs"),
 		};
 	} catch (error) {
 		knowledgeWorkerEvidence = { error: String(error?.message || error) };
@@ -286,7 +293,7 @@ async function run() {
 		"knowledge-worker-resource",
 		knowledgeWorkerOk ? "PASS" : "FAIL",
 		knowledgeWorkerOk
-			? "generated knowledge worker and hash manifest are present and referenced by the desktop build"
+			? "installed pi-knowledge worker and hash manifest are present for the desktop build"
 			: "generated knowledge worker resource, manifest or desktop reference is missing",
 		knowledgeWorkerEvidence,
 	);

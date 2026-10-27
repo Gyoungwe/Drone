@@ -551,7 +551,10 @@ describe("navigation delivery and bounded maintenance", () => {
 
 it("FTS-first query plan does not enumerate all notes through the scope index", async () => {
 	const source = await readFile(
-		join(dirname(fileURLToPath(import.meta.url)), "../../../.pi/extensions/knowledge-worker.mjs"),
+		join(
+			dirname(fileURLToPath(import.meta.url)),
+			"../../../vendor/plugins/pi-knowledge/lib/knowledge/runtime/worker.mjs",
+		),
 		"utf8",
 	);
 	const schema = source.match(/db\.exec\(`([\s\S]*?)`\);/)[1];
