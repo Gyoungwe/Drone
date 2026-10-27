@@ -49,10 +49,13 @@ export interface PluginSandboxToolDeclaration {
 	readonly label: string;
 	readonly description: string;
 	readonly parameters: unknown;
+	readonly outputSchema?: ToolDefinition["outputSchema"];
+	readonly constrainedSampling?: ToolDefinition["constrainedSampling"];
+	readonly renderShell?: ToolDefinition["renderShell"];
 	readonly promptSnippet?: string;
 	readonly promptGuidelines?: readonly string[];
 	readonly exposure?: string;
-	readonly namespace?: string;
+	readonly namespace?: ToolDefinition["namespace"];
 	readonly annotations?: unknown;
 	readonly defaultActive?: boolean;
 	readonly executionMode?: string;
@@ -99,12 +102,18 @@ let uiSequence = 0;
 const protocol = (message) => process.stdout.write(JSON.stringify(message) + "\n");
 const unsupported = (name) => () => { throw new Error("Process-sandbox extension API is not supported: " + name); };
 const pi = {
-  registerTool(tool) { tools.set(tool.name, tool); },
+  registerTool(tool) {
+    for (const field of ["prepareArguments", "prepareLoadout", "renderCall", "renderResult"]) {
+      if (tool[field] !== undefined) throw new Error("Process-sandbox tool feature is not supported: " + tool.name + "." + field);
+    }
+    tools.set(tool.name, tool);
+  },
   on: unsupported("on"),
   events: { on: unsupported("events.on"), emit: unsupported("events.emit") },
   registerCommand: unsupported("registerCommand"),
   registerShortcut: unsupported("registerShortcut"),
   registerFlag: unsupported("registerFlag"),
+  getFlag: unsupported("getFlag"),
   registerMessageRenderer: unsupported("registerMessageRenderer"),
   registerMarkdownTransformer: unsupported("registerMarkdownTransformer"),
   registerEntryRenderer: unsupported("registerEntryRenderer"),
@@ -113,13 +122,14 @@ const pi = {
   sendUserMessage: unsupported("sendUserMessage"),
   appendEntry: unsupported("appendEntry"),
   setSessionName: unsupported("setSessionName"),
+  getSessionName: unsupported("getSessionName"),
   setLabel: unsupported("setLabel"),
   exec: unsupported("exec"),
-  getActiveTools() { return []; },
-  getAllTools() { return []; },
+  getActiveTools: unsupported("getActiveTools"),
+  getAllTools: unsupported("getAllTools"),
   getSettings: unsupported("getSettings"),
   setActiveTools: unsupported("setActiveTools"),
-  getCommands() { return []; },
+  getCommands: unsupported("getCommands"),
   setModel: unsupported("setModel"),
   getThinkingLevel: unsupported("getThinkingLevel"),
   setThinkingLevel: unsupported("setThinkingLevel"),
@@ -127,7 +137,7 @@ const pi = {
   unregisterProvider: unsupported("unregisterProvider"),
   registerMcpServer: unsupported("registerMcpServer"),
   unregisterMcpServer: unsupported("unregisterMcpServer"),
-  getMcpServers() { return []; },
+  getMcpServers: unsupported("getMcpServers"),
   registerVirtualModel: unsupported("registerVirtualModel"),
   unregisterVirtualModel: unsupported("unregisterVirtualModel")
 };
@@ -163,6 +173,9 @@ const sanitizeTool = (tool) => {
     label: tool.label,
     description: tool.description,
     parameters: tool.parameters,
+    ...(tool.outputSchema === undefined ? {} : { outputSchema: tool.outputSchema }),
+    ...(tool.constrainedSampling === undefined ? {} : { constrainedSampling: tool.constrainedSampling }),
+    ...(tool.renderShell === undefined ? {} : { renderShell: tool.renderShell }),
     ...(tool.promptSnippet === undefined ? {} : { promptSnippet: tool.promptSnippet }),
     ...(tool.promptGuidelines === undefined ? {} : { promptGuidelines: tool.promptGuidelines }),
     ...(tool.exposure === undefined ? {} : { exposure: tool.exposure }),
