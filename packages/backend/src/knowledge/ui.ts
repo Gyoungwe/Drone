@@ -11,6 +11,7 @@ import {
 	type KnowledgeWorkerMetadata,
 	type ResearchKnowledgeOperations,
 } from "@drone/shared";
+import type { KnowledgeHostWorkerSetup } from "@gyoungwe/plugin-api";
 import type {
 	DailyIdea,
 	ExperienceStorePort,
@@ -378,8 +379,21 @@ export function configureBackendKnowledgeWorker(setup = defaultKnowledgeRuntimeS
 	// instances. UI reads need their own host port, even after extension setup.
 	setup.configureHost({ loadWorkspaceConfig: loadBackendWorkspaceConfig });
 	setup.configureRuntime({ emitProcessEvent: (event, payload) => (process as any).emit(event, payload) });
+	const worker = createBackendKnowledgeWorkerSetup();
 	setup.configureWorker(
-		(_url, options) => {
+		worker.createWorker,
+		worker.workerMetadata as (() => KnowledgeWorkerMetadata) | undefined,
+	);
+}
+
+/**
+ * Host-owned worker seam passed to an installed KnowledgeHostLoader. The
+ * package chooses when to install this factory; the host remains responsible
+ * for resolving and verifying its own worker resource.
+ */
+export function createBackendKnowledgeWorkerSetup(): KnowledgeHostWorkerSetup {
+	return {
+		createWorker: (_url, options) => {
 			const resource = resolveBackendKnowledgeWorkerResource();
 			const workerData =
 				options && typeof options === "object" && options.workerData && typeof options.workerData === "object"
@@ -390,8 +404,8 @@ export function configureBackendKnowledgeWorker(setup = defaultKnowledgeRuntimeS
 				workerData: { ...workerData, workerResource: resource.metadata },
 			} as any);
 		},
-		() => resolveBackendKnowledgeWorkerResource().metadata,
-	);
+		workerMetadata: () => resolveBackendKnowledgeWorkerResource().metadata,
+	};
 }
 
 async function loadBackendWorkspaceConfig(cwd: string) {

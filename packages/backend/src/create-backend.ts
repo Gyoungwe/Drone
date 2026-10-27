@@ -42,6 +42,7 @@ import {
 import { JsonStore } from "./json-store";
 import {
 	configureBackendKnowledgeWorker,
+	createBackendKnowledgeWorkerSetup,
 	createKnowledgeDailyDiscoveryOperations,
 	createKnowledgeExperienceOperation,
 	createKnowledgeMaintenanceOperations,
@@ -357,7 +358,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	// The packaged knowledge capability owns its runtime when installed. Keep
 	// the legacy worker only for the no-plugin compatibility path so a generic
 	// host can start without the research-workbench resource tree.
-	if (!options.knowledgeHostLoader) configureBackendKnowledgeWorker();
+	if (options.knowledgeHostLoader?.configureWorker) {
+		options.knowledgeHostLoader.configureWorker(createBackendKnowledgeWorkerSetup());
+	} else if (!options.knowledgeHostLoader) {
+		configureBackendKnowledgeWorker();
+	}
 	const domainCapabilities = new DomainCapabilityRegistry();
 	// Transitional host providers are explicit so callers can distinguish an
 	// installed plugin from an unavailable optional domain during migration.

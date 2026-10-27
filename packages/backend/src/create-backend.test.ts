@@ -665,6 +665,38 @@ describe("createBackend", () => {
 		}
 	});
 
+	it("passes the verified worker seam to an installed knowledge loader", () => {
+		const previousRoot = process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
+		process.env.DRONE_RESEARCH_WORKBENCH_ROOT = "/tmp/drone-no-legacy-knowledge-worker";
+		let workerSetup: { createWorker: unknown; workerMetadata?: unknown } | undefined;
+		try {
+			const services = createBackend({
+				projectTrust: false,
+				permissionGates: false,
+				knowledgeHostLoader: {
+					contractVersion: 1,
+					configureWorker: (setup) => {
+						workerSetup = setup;
+					},
+					load: () => ({
+						contractVersion: 1,
+						overview: async () => ({}),
+						search: async () => ({}),
+						read: async () => ({}),
+						noteLinks: async () => ({}),
+						graph: async () => ({}),
+					}),
+				},
+			});
+			expect(typeof workerSetup?.createWorker).toBe("function");
+			expect(typeof workerSetup?.workerMetadata).toBe("function");
+			services.dispose();
+		} finally {
+			if (previousRoot === undefined) delete process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
+			else process.env.DRONE_RESEARCH_WORKBENCH_ROOT = previousRoot;
+		}
+	});
+
 	it("injects child publication registration through the installed knowledge host", () => {
 		const registerAnswerPublication = () => ({ begin: () => undefined });
 		const services = createBackend({

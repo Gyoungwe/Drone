@@ -597,9 +597,17 @@ export interface KnowledgeReadHostPort {
 /** Stable host entry contract for the knowledge capability. */
 export interface KnowledgeHostPort extends KnowledgeReadHostPort {}
 
+/** Host-owned, dependency-free worker seam for an installed knowledge loader. */
+export interface KnowledgeHostWorkerSetup {
+	createWorker(url: URL, options: Record<string, unknown>): unknown;
+	workerMetadata?(): unknown;
+}
+
 /** Loader contract keeps the host independent of the knowledge implementation. */
 export interface KnowledgeHostLoader {
 	readonly contractVersion: 1;
+	/** Optional process-bound worker setup for the installed knowledge package. */
+	configureWorker?(setup: KnowledgeHostWorkerSetup): void;
 	load(): KnowledgeHostPort;
 }
 
