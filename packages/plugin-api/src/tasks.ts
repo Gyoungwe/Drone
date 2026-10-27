@@ -1,9 +1,10 @@
+import type { PluginNativeSession } from "./native";
 /**
  * Host-neutral task/workbench contract.
  *
- * The task package owns acceptance semantics; a host owns the isolated
- * registry instance and decides which installed extension registrations are
- * admitted.  This module intentionally has no Drone, Electron or Pi SDK
+ * The installed task package owns acceptance semantics, registry instances and
+ * native session registration. Published registry helpers remain for 1.x source
+ * compatibility; the host does not substitute them for a missing task owner.  This module intentionally has no Drone, Electron or Pi SDK
  * dependency so native Pi and Desktop can share the same seam.
  */
 import type { PluginRuntimeClient } from "./runtime";
@@ -112,6 +113,9 @@ export type TaskMilestoneNormalizer = (
 ) => readonly TaskPlanMilestone[];
 
 export interface TaskAcceptanceHostPort {
+	/** Session-scoped native registration from the same canonical owner as the Pi entrypoint. */
+	readonly createNativeSession?: () => PluginNativeSession | Promise<PluginNativeSession>;
+	readonly dispose?: () => Promise<void>;
 	readonly contractVersion: TaskHostContractVersion;
 	readonly registerAcceptanceVerifier: (kind: string, definition: TaskAcceptanceDefinition) => void;
 	readonly readAcceptanceVerifier: (kind: string) => TaskAcceptanceVerifier | null;
