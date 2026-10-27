@@ -53,7 +53,8 @@ beforeEach(async () => {
 		projectTrust: true,
 		subagentPreferBuiltin: false,
 		webFetch: false,
-		knowledgeFactory: () => new KnowledgeUiService(undefined, { compatibility: defaultKnowledgeCompatibility }),
+		knowledgeFactory: () =>
+			new KnowledgeUiService(undefined, { compatibility: defaultKnowledgeCompatibility }),
 		knowledgeBackgroundReviewerFactory: defaultKnowledgeCompatibility.backgroundReviewer,
 		desktopIntegration: {
 			appendSystemPrompt: [],

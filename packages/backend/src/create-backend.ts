@@ -64,7 +64,6 @@ import { canonicalProjectId } from "./project-id";
 import type { ResearchHostLoader } from "./research-host";
 import { createDroneRuntime } from "./runtime";
 import { AnalysisEvidenceService, type EvidenceReplayRunner } from "./services/analysis-evidence";
-import type { BackgroundReviewerPort } from "./services/deliverable-reviewer";
 import type { AnalysisEvidencePluginHost } from "./services/analysis-evidence-host";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "./services/analysis-orchestration";
 import { parseAnalysisReviewDecision } from "./services/analysis-review-decision";
@@ -93,6 +92,7 @@ import {
 	type DailyDiscoveryOptions,
 	DailyDiscoveryService,
 } from "./services/daily-discovery";
+import type { BackgroundReviewerPort } from "./services/deliverable-reviewer";
 import { type InquiryDecisionEvent, InquiryService, type InquiryServicePort } from "./services/inquiry";
 import {
 	computeInquiryMetadata,

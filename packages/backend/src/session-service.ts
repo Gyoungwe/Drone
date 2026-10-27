@@ -23,6 +23,7 @@ import type { PluginNativeIntegration } from "./plugins/coordinator";
 import type { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import type { ApprovalDecision, ApprovalService } from "./services/approvals";
+import type { BackgroundReviewerFactory } from "./services/deliverable-reviewer";
 import { InstitutionalService } from "./services/institutional";
 import type { KnowledgeReviewControl, KnowledgeSessionService } from "./services/knowledge-session";
 import type { PackageService } from "./services/packages";
@@ -57,7 +58,6 @@ import type { StorageRegistry } from "./storage/registry";
 import type { WorkbenchHostPort } from "./tasks/workbench-runtime";
 import { SubagentPanelService } from "./tools/subagent";
 import { withNativeSubagentSlot } from "./tools/subagent/slots";
-import type { BackgroundReviewerFactory } from "./services/deliverable-reviewer";
 
 const _log = createLogger("backend");
 
