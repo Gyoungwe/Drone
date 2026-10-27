@@ -8,7 +8,9 @@ import { getCurrentTools } from "@earendil-works/pi-ai/utils/transcript";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices, getKnowledgeService, stageWikiProposal } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { KnowledgeUiService } from "../src/knowledge/ui";
 import { PiBackend } from "../src/pi-backend";
+import { defaultKnowledgeCompatibility } from "./knowledge-compat-fixture";
 
 let root, cwd, vault, backend, session, sid, faux, preview;
 beforeEach(async () => {
@@ -51,6 +53,8 @@ beforeEach(async () => {
 		projectTrust: true,
 		subagentPreferBuiltin: false,
 		webFetch: false,
+		knowledgeFactory: () => new KnowledgeUiService(undefined, { compatibility: defaultKnowledgeCompatibility }),
+		knowledgeBackgroundReviewerFactory: defaultKnowledgeCompatibility.backgroundReviewer,
 		desktopIntegration: {
 			appendSystemPrompt: [],
 			additionalExtensionPaths: [resolve("../../.pi/extensions/obsidian-workbench.mjs")],

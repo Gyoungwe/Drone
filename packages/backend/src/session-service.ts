@@ -57,6 +57,7 @@ import type { StorageRegistry } from "./storage/registry";
 import type { WorkbenchHostPort } from "./tasks/workbench-runtime";
 import { SubagentPanelService } from "./tools/subagent";
 import { withNativeSubagentSlot } from "./tools/subagent/slots";
+import type { BackgroundReviewerFactory } from "./services/deliverable-reviewer";
 
 const _log = createLogger("backend");
 
@@ -99,6 +100,8 @@ export interface SessionServiceOptions {
 	workbenchPort?: WorkbenchHostPort;
 	/** Optional knowledge domain provider; the default remains the host compatibility adapter. */
 	knowledgeFactory?: () => KnowledgeUiServicePort;
+	/** Optional background reviewer factory supplied by an installed knowledge plugin. */
+	knowledgeBackgroundReviewerFactory?: BackgroundReviewerFactory;
 	/** Optional project research-state root registered for the inquiry adapter. */
 	inquiryDir?: string;
 	/** Host-wide root for per-project inquiry ledgers. */

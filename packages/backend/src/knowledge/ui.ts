@@ -62,6 +62,8 @@ export interface KnowledgeHostPort {
 	};
 	/** Optional foreground Wiki review operation supplied by an installed knowledge host. */
 	reviewWikiWithModel?: (input: unknown, options: unknown) => Promise<unknown>;
+	/** Optional background deliverable reviewer factory supplied by an installed knowledge host. */
+	backgroundReviewer?: (options: unknown) => unknown;
 	/** Optional publication registration supplied by an installed knowledge host. */
 	registerAnswerPublication?: KnowledgePublicationRegistrar;
 	/** Semantic-index UI operations supplied by the installed knowledge host. */

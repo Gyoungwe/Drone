@@ -174,7 +174,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		}),
 	);
 	const reviewer = new DeliverableReviewerService({
-		reviewerFactory: createKnowledgeBackgroundReviewer,
+		reviewerFactory: options.knowledgeBackgroundReviewerFactory ?? createKnowledgeBackgroundReviewer,
 		getCwd: (sessionId) => service.registry.get(sessionId)?.cwd,
 		getProviders: async () =>
 			(await service.settings.listProviders())

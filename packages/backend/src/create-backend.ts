@@ -64,6 +64,7 @@ import { canonicalProjectId } from "./project-id";
 import type { ResearchHostLoader } from "./research-host";
 import { createDroneRuntime } from "./runtime";
 import { AnalysisEvidenceService, type EvidenceReplayRunner } from "./services/analysis-evidence";
+import type { BackgroundReviewerPort } from "./services/deliverable-reviewer";
 import type { AnalysisEvidencePluginHost } from "./services/analysis-evidence-host";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "./services/analysis-orchestration";
 import { parseAnalysisReviewDecision } from "./services/analysis-review-decision";
@@ -414,6 +415,12 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		...options,
 		workbenchPort: workbench,
 		knowledgeFactory,
+		...(knowledgeHost?.backgroundReviewer
+			? {
+					knowledgeBackgroundReviewerFactory: (reviewerOptions) =>
+						knowledgeHost.backgroundReviewer?.(reviewerOptions) as BackgroundReviewerPort,
+				}
+			: {}),
 		memory,
 		runtime,
 		permissions,

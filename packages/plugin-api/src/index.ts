@@ -589,6 +589,8 @@ export interface KnowledgeReadHostPort {
 	) => { begin(required: boolean): unknown };
 	/** Optional foreground model review operation supplied by the installed knowledge plugin. */
 	reviewWikiWithModel?: (input: unknown, options: unknown) => Promise<unknown>;
+	/** Optional background deliverable reviewer factory supplied by the installed plugin. */
+	backgroundReviewer?: (options: unknown) => unknown;
 	/** Optional UI operations supplied by the installed knowledge plugin. */
 	jobs?(input: unknown): Promise<unknown>;
 	maintenance?(input: unknown): Promise<unknown>;

@@ -4,7 +4,7 @@ import type {
 	ReviewerProviderSelection,
 } from "@gyoungwe/plugin-api/knowledge";
 import { describe, expect, it, vi } from "vitest";
-import { createKnowledgeBackgroundReviewer } from "../knowledge/ui";
+import { defaultKnowledgeCompatibility } from "../../test/knowledge-compat-fixture";
 import { DeliverableReviewerService, isDeliverableWriter } from "./deliverable-reviewer";
 
 const waitForReview = () => new Promise((resolve) => setTimeout(resolve, 30));
@@ -26,7 +26,7 @@ describe("DeliverableReviewerService", () => {
 		const getCwd = vi.fn(() => undefined);
 		const onResult = vi.fn();
 		const service = new DeliverableReviewerService({
-			reviewerFactory: createKnowledgeBackgroundReviewer,
+			reviewerFactory: defaultKnowledgeCompatibility.backgroundReviewer,
 			getCwd,
 			onResult,
 		});
@@ -40,7 +40,7 @@ describe("DeliverableReviewerService", () => {
 	it("只对白名单写入工具触发，归档/下载类工具不触发", () => {
 		const scheduled: unknown[] = [];
 		const service = new DeliverableReviewerService({
-			reviewerFactory: createKnowledgeBackgroundReviewer,
+			reviewerFactory: defaultKnowledgeCompatibility.backgroundReviewer,
 			getCwd: () => undefined,
 			onSchedule: (request) => scheduled.push(request),
 			onResult: () => {},
@@ -66,7 +66,7 @@ describe("DeliverableReviewerService", () => {
 			): DeliverableReviewFinding[] => [],
 		);
 		const enabled = new DeliverableReviewerService({
-			reviewerFactory: createKnowledgeBackgroundReviewer,
+			reviewerFactory: defaultKnowledgeCompatibility.backgroundReviewer,
 			getCwd: () => undefined,
 			getProviders: () => [{ provider: "reviewer", model: "review-model" }],
 			getMainProvider: () => "main",
@@ -93,7 +93,7 @@ describe("DeliverableReviewerService", () => {
 			): DeliverableReviewFinding[] => [],
 		);
 		const disabled = new DeliverableReviewerService({
-			reviewerFactory: createKnowledgeBackgroundReviewer,
+			reviewerFactory: defaultKnowledgeCompatibility.backgroundReviewer,
 			getCwd: () => undefined,
 			getProviders: () => [{ provider: "reviewer", model: "review-model" }],
 			getMainProvider: () => "main",
