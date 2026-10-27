@@ -41,7 +41,6 @@ import {
 } from "./discovery/service";
 import { JsonStore } from "./json-store";
 import {
-	configureBackendKnowledgeWorker,
 	createBackendKnowledgeWorkerSetup,
 	createKnowledgeDailyDiscoveryOperations,
 	createKnowledgeExperienceOperation,
@@ -355,13 +354,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const taskHost = createTaskAcceptanceHost(runtime);
 	const workbench = createWorkbenchHostPort(runtime, options.workbench);
 	runtime.tasks.workbench = { version: workbench.contractVersion, client: workbench.client };
-	// The packaged knowledge capability owns its runtime when installed. Keep
-	// the legacy worker only for the no-plugin compatibility path so a generic
-	// host can start without the research-workbench resource tree.
+	// The packaged knowledge capability owns its runtime when installed. The
+	// generic host does not bootstrap the legacy worker; callers that still need
+	// that compatibility adapter must opt in explicitly via configureBackendKnowledgeWorker.
 	if (options.knowledgeHostLoader?.configureWorker) {
 		options.knowledgeHostLoader.configureWorker(createBackendKnowledgeWorkerSetup());
-	} else if (!options.knowledgeHostLoader) {
-		configureBackendKnowledgeWorker();
 	}
 	const domainCapabilities = new DomainCapabilityRegistry();
 	// Transitional host providers are explicit so callers can distinguish an

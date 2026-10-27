@@ -665,6 +665,18 @@ describe("createBackend", () => {
 		}
 	});
 
+	it("does not bootstrap a legacy worker without a knowledge plugin", () => {
+		const previousRoot = process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
+		process.env.DRONE_RESEARCH_WORKBENCH_ROOT = "/tmp/drone-no-legacy-knowledge-worker";
+		try {
+			const services = createBackend({ projectTrust: false, permissionGates: false });
+			services.dispose();
+		} finally {
+			if (previousRoot === undefined) delete process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
+			else process.env.DRONE_RESEARCH_WORKBENCH_ROOT = previousRoot;
+		}
+	});
+
 	it("passes the verified worker seam to an installed knowledge loader", () => {
 		const previousRoot = process.env.DRONE_RESEARCH_WORKBENCH_ROOT;
 		process.env.DRONE_RESEARCH_WORKBENCH_ROOT = "/tmp/drone-no-legacy-knowledge-worker";
