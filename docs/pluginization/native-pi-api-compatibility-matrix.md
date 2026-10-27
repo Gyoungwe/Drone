@@ -9,7 +9,7 @@
 | 成员 | managed native | 普通第三方 process sandbox |
 | --- | --- | --- |
 | `on` | 12 种事件；见下表 | 显式不支持 |
-| `registerTool` | 受限工具声明；其他 metadata/onUpdate 待补 | 支持已验证 JSON 声明及 execute；回调限制见下文 |
+| `registerTool` | 标准 JSON 声明与 execute/onUpdate；不可跨进程回调明确拒绝 | 支持已验证 JSON 声明及 execute；回调限制见下文 |
 | `registerCommand` | 显式不支持 | 显式不支持 |
 | `registerShortcut` | 显式不支持 | 显式不支持 |
 | `registerFlag` | 显式不支持 | 显式不支持 |
@@ -42,7 +42,9 @@
 | `unregisterVirtualModel` | 显式不支持 | 显式不支持 |
 | `events` | 显式不支持 | 显式不支持 |
 
-普通沙箱六个 getter 不再返回假的空快照；不可跨 worker 的 `prepareArguments`、`prepareLoadout`、`renderCall`、`renderResult` 在注册时明确拒绝。`outputSchema`、`constrainedSampling`、`renderShell` 和对象型 `namespace` 保留。宿主 `c7310965` 的真实包→worker→SDK 会话回归证明拒绝后基础 read 仍正常。工具执行的 onUpdate、nested executeTool 等仍未完成，不据此宣称全兼容。
+普通沙箱六个 getter 不再返回假的空快照；不可跨 worker 的 `prepareArguments`、`prepareLoadout`、`renderCall`、`renderResult` 在注册时明确拒绝。`outputSchema`、`constrainedSampling`、`renderShell` 和对象型 `namespace` 保留。宿主 `c7310965` 的真实包→worker→SDK 会话回归证明拒绝后基础 read 仍正常。普通沙箱的 onUpdate 已通过同一调用的进度回执转发；两种沙箱的 nested executeTool 等仍未完成，不据此宣称全兼容。
+
+managed process 工具声明现保留 outputSchema、constrainedSampling、renderShell、promptSnippet/guidelines、exposure、namespace、annotations、defaultActive 与 executionMode。prepareArguments/prepareLoadout/renderCall/renderResult 在注册时明确拒绝。进度回调绑定实际 invocation ID，只在 SDK 提供 observer 时创建；完成、取消后的回调不能进入另一个调用。`native-tool-protocol-sdk.test.mjs` 的真实受限 worker→SDK 回归覆盖并行进度、取消后另一 attachment 继续运行、迟到回调拒绝，以及四种回调导致加载错误后 builtin read 仍正常。普通第三方沙箱现也转发 onUpdate：通过网络授权后的真实 worker→SDK 并行工具事件，以及取消后同进程另一调用继续、未请求 observer 时保持 undefined 的回归通过。两条路径在子进程边界共用文本/图片进度 schema；该切片不代表支持 terminal rendering 或 nested executeTool。
 
 ## on 事件完整声明表
 
@@ -96,13 +98,15 @@
 
 基础 Context 的完整成员：`ui`、`mode`、`hasUI`、`cwd`、`sessionManager`、`modelRegistry`、`model`、`scopedModels`、`thinkingLevel`、`isIdle`、`isProjectTrusted`、`signal`、`abort`、`hasPendingMessages`、`shutdown`、`getContextUsage`、`compact`、`getSystemPrompt`。managed worker 仅投影 cwd、hasUI=false、signal 和 sessionManager.getSessionId；其余 Context、ToolContext.tools/executeTool、CommandContext 与 SessionManager API 仍有拒绝或未验收项。Registry 对 in-process factory 的真实 Context 不等于进程 worker 的能力。
 
-UI 完整成员：`select`、`confirm`、`input`、`notify`、`onTerminalInput`、`setStatus`、`setWorkingMessage`、`setWorkingVisible`、`setWorkingIndicator`、`setHiddenThinkingLabel`、`setWidget`、`setFooter`、`setHeader`、`setTitle`、`custom`、`pasteToEditor`、`setEditorText`、`getEditorText`、`editor`、`addAutocompleteProvider`、`setEditorComponent`、`getEditorComponent`、`theme`、`getAllThemes`、`getTheme`、`setTheme`、`getToolsExpanded`、`setToolsExpanded`。普通沙箱已桥接 select/confirm/input/notify；managed native 的 hasUI=false。旧直连 SDK 的 Desktop makeUiContext 仅实现基础询问/通知并提供 theme 对象，其余终端/编辑/状态方法多为 no-op，custom 返回 undefined、setTheme 返回 success:true，属于待修缺口。theme 对象存在也不等于终端渲染能出现在 Desktop。
+UI 完整成员：`select`、`confirm`、`input`、`notify`、`onTerminalInput`、`setStatus`、`setWorkingMessage`、`setWorkingVisible`、`setWorkingIndicator`、`setHiddenThinkingLabel`、`setWidget`、`setFooter`、`setHeader`、`setTitle`、`custom`、`pasteToEditor`、`setEditorText`、`getEditorText`、`editor`、`addAutocompleteProvider`、`setEditorComponent`、`getEditorComponent`、`theme`、`getAllThemes`、`getTheme`、`setTheme`、`getToolsExpanded`、`setToolsExpanded`。普通沙箱已桥接 select/confirm/input/notify；managed native 的 hasUI=false。旧直连 SDK 的 Desktop makeUiContext 仅实现基础询问/通知并提供 theme 对象，其余终端/编辑/状态方法多为 no-op。宿主 `9a5471d5` 已将 custom 改为明确拒绝、setTheme 改为 success:false；真实 SDK 的两个工具分别得到错误/失败结果，后续基础 read 正常。theme 对象存在也不等于终端渲染能出现在 Desktop。
 
 ## 必须继续处理
 
-1. 给主会话与子会话持续绑定 SDK onError。当前 SDK 会吞 hook 异常并发送错误事件，缺少宿主监听可能形成静默继续；不能以 loader.errors 为空证明 hook 成功。
+主/子会话的持续 onError 已由 `2f9b6d16` 接入日志与 traces；真实 SDK create/reload/restore 与子会话覆盖权限门禁开关、错误后继续 read、关闭退订。日志记录非致命 hook 异常，不把 loader.errors 为空当作 hook 成功。
+
+1. 收口完整 native core+knowledge 组合中的 publication 事件投影：bridge 缺失时不能破坏 toolCall/usage/官方 metadata，provider 私有协议重放与公开 tool-only/最终 fail-closed 均须保留。SDK envelope、私有 signed replay 与诊断隐私已整合并通过真实组合；完整 managed hooks/publication proof 仍未完成，既有 onError 切片不代表全部 41 种事件已验收。
 2. 删除旧 Desktop UI 的静默 no-op/假成功，按支持能力返回真实结果或明确拒绝；核对 bind mode 与 hasUI。
-3. 补 managed 工具 metadata、onUpdate、上下文与 getter 的完整声明矩阵和真实失败回执；不增加同步跨进程缓存来伪装支持。
+3. managed JSON metadata 与 onUpdate 已有真实 SDK 切片；继续补 Context/getter 完整声明矩阵与 nested executeTool，不增加同步跨进程缓存来伪装支持。
 4. 用完整 33/41/28 探针及 locked/latest 真 SDK 回归固定支持/拒绝清单，补格式相同但 API 不兼容包的实际安装诊断。
 
 本页是源码审计和定向 SDK 证据，不关闭 P0/P1，也不替代最终同 tarball 正式安装包 GUI。四项外部验收及暂缓项保持原状态。

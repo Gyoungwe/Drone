@@ -19,6 +19,7 @@ import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
 import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
 import { canonicalProjectId } from "../project-id";
+import { toolProgressSchema } from "../tool-progress";
 import { NATIVE_EVENTS, type NativeEventName } from "./native-events";
 import { PROCESS_RUNTIME_WORKER } from "./process-runtime-worker";
 
@@ -40,7 +41,10 @@ const declarationSchema = Type.Record(
 		effect: Type.Union([Type.Literal("read"), Type.Literal("write")]),
 	}),
 );
+type NativeToolUpdate = NonNullable<Parameters<ToolDefinition["execute"]>[3]>;
+
 const messageSchema = Type.Union([
+	Type.Object({ type: Type.Literal("native_update"), id: Type.String(), value: toolProgressSchema }),
 	Type.Object(
 		{ type: Type.Literal("dispose_resources"), id: Type.String({ minLength: 1 }) },
 		{ additionalProperties: false },
@@ -78,6 +82,35 @@ const nativeDeclarationsSchema = Type.Object({
 			label: Type.String(),
 			description: Type.String(),
 			parameters: Type.Record(Type.String(), Type.Unknown()),
+			outputSchema: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+			constrainedSampling: Type.Optional(
+				Type.Union([Type.Literal(false), Type.Record(Type.String(), Type.Unknown())]),
+			),
+			renderShell: Type.Optional(Type.Union([Type.Literal("default"), Type.Literal("self")])),
+			promptSnippet: Type.Optional(Type.String()),
+			promptGuidelines: Type.Optional(Type.Array(Type.String())),
+			exposure: Type.Optional(
+				Type.Union(
+					["direct", "model-only", "codemode", "deferred", "hidden"].map((value) => Type.Literal(value)),
+				),
+			),
+			namespace: Type.Optional(
+				Type.Object({
+					name: Type.String(),
+					description: Type.Optional(Type.String()),
+					instructions: Type.Optional(Type.String()),
+				}),
+			),
+			annotations: Type.Optional(
+				Type.Object({
+					readOnlyHint: Type.Optional(Type.Boolean()),
+					destructiveHint: Type.Optional(Type.Boolean()),
+					idempotentHint: Type.Optional(Type.Boolean()),
+					openWorldHint: Type.Optional(Type.Boolean()),
+				}),
+			),
+			defaultActive: Type.Optional(Type.Boolean()),
+			executionMode: Type.Optional(Type.Union([Type.Literal("sequential"), Type.Literal("parallel")])),
 			drone: Type.Optional(Type.Unknown()),
 		}),
 	),
@@ -189,6 +222,8 @@ class RuntimeProcess {
 			reject: (error: Error) => void;
 			cleanup: () => void;
 			context?: PluginRuntimeContext;
+			onUpdate?: NativeToolUpdate;
+			signal?: AbortSignal;
 		}
 	>();
 	private readonly ready: Promise<Declarations>;
@@ -307,6 +342,21 @@ class RuntimeProcess {
 		const pending = this.pending.get(message.id);
 		if (!pending) {
 			this.fail(new Error("Plugin runtime replied to an unknown invocation"));
+			return;
+		}
+		if (message.type === "native_update") {
+			if (!pending.onUpdate) {
+				this.fail(new Error("Plugin runtime sent an unrequested tool update"));
+				return;
+			}
+			if (!pending.signal?.aborted) {
+				try {
+					pending.onUpdate(message.value as Parameters<NativeToolUpdate>[0]);
+				} catch (error) {
+					// A failed SDK observer must reject this runtime, never escape the protocol listener.
+					this.fail(error as Error);
+				}
+			}
 			return;
 		}
 		this.pending.delete(message.id);
@@ -437,6 +487,7 @@ class RuntimeProcess {
 			signal?: AbortSignal,
 			toolCallId?: string,
 			hookIndex?: number,
+			onUpdate?: NativeToolUpdate,
 		) => {
 			const combined = AbortSignal.any([this.context.signal, lifecycle.signal, ...(signal ? [signal] : [])]);
 			combined.throwIfAborted();
@@ -449,6 +500,7 @@ class RuntimeProcess {
 					input,
 					toolCallId,
 					hookIndex,
+					updates: onUpdate !== undefined,
 					context: { cwd: ctx.cwd, sessionId: ctx.sessionManager.getSessionId() },
 				},
 				combined,
@@ -462,6 +514,7 @@ class RuntimeProcess {
 					},
 					capabilities: { call: AsyncResource.bind(this.context.capabilities.call) },
 				},
+				onUpdate,
 			);
 		};
 		const dispose = () => {
@@ -482,9 +535,11 @@ class RuntimeProcess {
 					pi.registerTool({
 						...tool,
 						parameters: tool.parameters as ToolDefinition["parameters"],
-						execute: (id, input, signal, _update, ctx) =>
-							invoke("tool", tool.name, input, ctx, signal, id) as ReturnType<ToolDefinition["execute"]>,
-					});
+						execute: (id, input, signal, update, ctx) =>
+							invoke("tool", tool.name, input, ctx, signal, id, undefined, update) as ReturnType<
+								ToolDefinition["execute"]
+							>,
+					} as ToolDefinition);
 				const on = pi.on.bind(pi) as (
 					name: NativeEventName,
 					handler: (event: unknown, ctx: ExtensionContext) => Promise<unknown>,
@@ -538,6 +593,7 @@ class RuntimeProcess {
 		payload: Record<string, unknown>,
 		signal?: AbortSignal,
 		context?: PluginRuntimeContext,
+		onUpdate?: NativeToolUpdate,
 	): Promise<unknown> {
 		if (this.failure) return Promise.reject(this.failure);
 		const id = `${++this.sequence}`;
@@ -551,6 +607,8 @@ class RuntimeProcess {
 			const cancel = () => this.send({ type: "cancel", id });
 			this.pending.set(id, {
 				context,
+				onUpdate,
+				signal,
 				resolve,
 				reject,
 				cleanup: () => {

@@ -82,13 +82,20 @@ input.on("line", async (line) => {
       const tools = new Map(), hooks = [];
       const unsupported = (name) => { throw new Error("Unsupported native Pi API: " + name); };
       const pi = new Proxy({
-        registerTool(tool) { if(tool.renderCall||tool.renderResult) unsupported("tool rendering"); if(tools.has(tool.name)) throw new Error("Duplicate native tool"); tools.set(tool.name,tool); },
+        registerTool(tool) {
+          for(const field of ["prepareArguments","prepareLoadout","renderCall","renderResult"])
+            if(tool[field]!==undefined) unsupported("tool "+tool.name+"."+field);
+          if(tools.has(tool.name)) throw new Error("Duplicate native tool"); tools.set(tool.name,tool);
+        },
         on(name,handler) { if(!supportedEvents.has(name)) unsupported("on("+name+")"); const hook={name,handler,active:true};hooks.push(hook);return ()=>{hook.active=false;}; }
       }, {get(target,name){if(name in target)return target[name];return unsupported(String(name));}});
       try { await adapter.extension(pi); }
       catch(error) { await adapter.dispose(); throw error; }
       nativeSessions.set(message.attachment, {adapter,tools,hooks,pending:new Map(),closed:false});
-      send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(({name,label,description,parameters,drone})=>({name,label,description,parameters,...(drone===undefined?{}:{drone})})),effects:adapter.toolEffects||{},eventEffects:adapter.eventEffects||{},events:hooks.map(({name},index)=>({name,index}))}});
+      send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(tool=>Object.fromEntries(
+        ["name","label","description","parameters","outputSchema","constrainedSampling","renderShell","promptSnippet","promptGuidelines","exposure","namespace","annotations","defaultActive","executionMode","drone"]
+          .filter(key=>tool[key]!==undefined).map(key=>[key,tool[key]])
+      )),effects:adapter.toolEffects||{},eventEffects:adapter.eventEffects||{},events:hooks.map(({name},index)=>({name,index}))}});
       return;
     }
     if (message.type === "native_detach") {
@@ -111,7 +118,14 @@ input.on("line", async (line) => {
       const ctx=new Proxy({cwd:message.context.cwd,hasUI:false,signal,sessionManager:new Proxy({getSessionId:()=>message.context.sessionId},{get(target,name){if(name in target)return target[name];return unsupported("sessionManager."+String(name));}})},{get(target,name){if(name in target)return target[name];return unsupported(String(name));}});
       const pending=currentCall.run(message.id,async()=>{
         signal.throwIfAborted();
-        if(message.kind==="tool") return session.tools.get(message.name).execute(message.toolCallId,message.input,signal,undefined,ctx);
+        if(message.kind==="tool") {
+          const update=message.updates?value=>{
+            signal.throwIfAborted();
+            if(calls.get(message.id)!==controller)throw new Error("Native tool invocation is no longer active");
+            send({type:"native_update",id:message.id,value});
+          }:undefined;
+          return session.tools.get(message.name).execute(message.toolCallId,message.input,signal,update,ctx);
+        }
         const hook=session.hooks[message.hookIndex];
         if(!hook||hook.name!==message.name)throw new Error("Unknown native event handler");
         if(!hook.active&&message.name!=="before_agent_start")return null;

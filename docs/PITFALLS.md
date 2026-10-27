@@ -33,6 +33,21 @@
 | Google Antigravity 登录后返回 400 `INVALID_ARGUMENT` 或 403 `UNSUPPORTED_CLIENT` | 二 · Cloud Code Assist ClientMetadata 枚举 |
 | 生信任务 trace 显示 `skills: []`，模型退回临时脚本 | 二 · 研究 skill 路由与开发态资源同步 |
 | 未选项目时知识 PDF 预览报 `Invalid arguments for host method file:preview` | 2026-10-26 · 可选 IPC 参数与显式 undefined |
+| 读取型 native 工具注册即报 Unsupported native Pi API: events | 2026-10-28 · 原生适配器提前读取未支持 API |
+| 摘要写过但缺 reviewed receipt、specialist 不继续 | 2026-10-28 · 研究摘要必须消费真实 delivery handle |
+| 不装知识插件后扩展通知丢失、旧 context 继续通知 | 2026-10-28 · SDK 退订与通用通知 |
+
+## 2026-10-28：原生适配器提前读取未支持 API
+
+managed Pi proxy 的属性读取本身会明确拒绝未支持 API。`createKnowledgeNativeAdapter` 曾在注册前读取 `pi.events`，让只用 registerTool/on 的两个读取工具也加载失败。按扩展实际请求再读取，保留真正请求时的拒绝；不要用 optional chaining 探测会抛错的 API，也不要静默伪造 event bus。真实 tarball→权限受限进程→SDK 回归需启用，默认跳过的 fixture 不能证明包可加载。
+
+## 2026-10-28：研究摘要必须消费真实 delivery handle
+
+只注册工具却丢弃 `registerResearchExtension` 返回值，会让旧 writer 只写 summary 而缺少 reviewed receipt；手写 answerable metadata 的成功测试因此是假前提。生产链必须经过当前 read ledger/revision、真实模型隔离审阅和写后回读。首次写入前逐一检查 summary/history/Vault 的真实路径，run_dir 校验不能保护其兄弟 symlink 目录；临时文件完成后再检查 preimage，失败清理本次临时文件。这里是乐观路径 CAS，不宣称跨进程原子 compare-and-replace；回滚遇到人工更改须保留并报告 partial。
+
+## 2026-10-28：SDK 退订与通用通知
+
+官方 `events.on()` 返回退订函数，测试替身应使用 `createEventBus`。Pi 1.1.0 的 session.dispose 不会移除 extension onError 监听，`session/extension-errors.ts` 用同 callback 的公共 runner.onError 退订，并覆盖 reload；升级 SDK 后需重新验证删除条件。notify 沿通用 SessionEvent 发送到 toast，主/子会话结束后旧 context 不能继续发，消息不落 trace，不能依赖知识插件。生成 `.pi` 后对 manifest 运行 Biome formatter，并验证 source/output 哈希；不手工修改 bundle。
 
 ## 2026-10-26：可选 IPC 参数与显式 undefined
 
@@ -374,3 +389,11 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 
 独立宿主 checkout 没有 sibling `drone-plugins` 或已忽略的沙箱二进制。默认 `npm test` 在 pretest 按既有 checksum lock 准备 Node runtime；公开 UI 包集成测试只接受 `check:public-plugin-host` 提供的真实安装目录，默认宿主测试保留空安装根与自包含 fixture 覆盖，不回退读取另一仓库源码。缺少外部包时该集成用例明确跳过，不能算公开包验收通过。
 
+
+### Managed native 工具不能只传 name/description/schema
+
+现象：包加载成功，但 outputSchema、namespace、executionMode 等标准字段消失，execute 的 onUpdate 永远是 undefined。原因：受限 worker 注册回执只提取基础四项，调用协议也没有 progress 消息。处理：显式传输标准 JSON 字段；不能序列化的 prepareArguments/prepareLoadout/renderCall/renderResult 在加载时报错；进度绑定尚未结束且未撤销的调用 ID，取消和迟到回调不得串给其他 attachment。`native-tool-protocol-sdk.test.mjs` 用真实 SDK/受限进程回归。普通第三方沙箱也需从两条 SDK 注册路径传入 observer，不能仅修改 worker；共享 `tool-progress.ts` 的进度边界 schema。不能借此切片宣布全 API 兼容。
+
+### npm ci 不会清掉已从 workspace 删除的包内缓存目录
+
+复用旧 checkout 验收任务包迁移时，`packages/tasks` 的已跟踪源码均已删除，但旧 `packages/tasks/node_modules` 空壳仍可能存在。根脚本的源目录删除检查因此会失败，而各 workspace 测试已通过。先核对该临时 checkout 的目录确实只剩旧依赖缓存，再清理这个缓存；不要修改门禁把真实源码残留当作通过。首次失败与完整重跑见 `native-plugin-owner-migration-2026-10-28.json`。这不是产品源代码修复，干净来源和缓存残留应分别记录。

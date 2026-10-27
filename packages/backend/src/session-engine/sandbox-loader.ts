@@ -84,7 +84,7 @@ export function sandboxExtensionFactory(
 				pi.registerTool({
 					...declaration,
 					parameters: declaration.parameters as ToolDefinition["parameters"],
-					async execute(toolCallId, params, signal, _update, ctx) {
+					async execute(toolCallId, params, signal, update, ctx) {
 						const invocationSignal = signal ? AbortSignal.any([signal, lifecycle.signal]) : lifecycle.signal;
 						invocationSignal.throwIfAborted();
 						let session = active;
@@ -97,9 +97,14 @@ export function sandboxExtensionFactory(
 							}
 						}
 						invocationSignal.throwIfAborted();
-						return session.invoke(declaration.name, toolCallId, params, invocationSignal, ctx) as ReturnType<
-							ToolDefinition["execute"]
-						>;
+						return session.invoke(
+							declaration.name,
+							toolCallId,
+							params,
+							invocationSignal,
+							ctx,
+							update,
+						) as ReturnType<ToolDefinition["execute"]>;
 					},
 				} as ToolDefinition);
 			}

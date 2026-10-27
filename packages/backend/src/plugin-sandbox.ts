@@ -15,6 +15,9 @@ import {
 	sandboxUiMessageSchema,
 } from "./plugin-sandbox-ui";
 import type { InlineExtension, ToolDefinition } from "./session-engine/sdk";
+import { toolProgressSchema } from "./tool-progress";
+
+type ToolProgress = NonNullable<Parameters<ToolDefinition["execute"]>[3]>;
 
 /**
  * A process boundary for optional Pi extensions.
@@ -225,7 +228,11 @@ input.on("line", async (line) => {
   const controller = new AbortController();
   controllers.set(message.id, controller);
   try {
-    const value = await tool.execute(message.toolCallId, message.params, controller.signal, undefined, toolContext(message.id, controller, message.hasUI));
+    const update = message.updates ? value => {
+      controller.signal.throwIfAborted();
+      protocol({type:"update",id:message.id,value});
+    } : undefined;
+    const value = await tool.execute(message.toolCallId, message.params, controller.signal, update, toolContext(message.id, controller, message.hasUI));
     protocol({ type: "result", id: message.id, ok: true, value });
   } catch (error) {
     protocol({ type: "result", id: message.id, ok: false, error: error instanceof Error ? error.message : String(error) });
@@ -311,6 +318,7 @@ export class PluginSandboxSession {
 			onAbort?: () => void;
 			uiContext?: PluginSandboxUiContext;
 			uiAbort: AbortController;
+			onUpdate?: ToolProgress;
 		}
 	>();
 	private readonly uiDialogs = new Map<string, AbortController>();
@@ -531,9 +539,24 @@ export class PluginSandboxSession {
 	}
 
 	private handleMessage(message: ResultMessage | UpdateMessage): void {
-		if (message.type === "update") return;
 		const pending = this.pending.get(message.id);
 		if (!pending) return;
+		if (message.type === "update") {
+			if (!pending.onUpdate || !Check(toolProgressSchema, message.value)) {
+				this.protocolFailure = new Error("Invalid plugin sandbox tool progress");
+				this.stderr = this.protocolFailure.message;
+				this.child?.kill("SIGKILL");
+				return;
+			}
+			try {
+				pending.onUpdate(message.value as Parameters<ToolProgress>[0]);
+			} catch (error) {
+				// Observer failures belong to this tool call, including its cancellation cleanup.
+				pending.reject(error as Error);
+				pending.onAbort?.();
+			}
+			return;
+		}
 		this.pending.delete(message.id);
 		clearTimeout(pending.timer);
 		pending.uiAbort.abort();
@@ -548,6 +571,7 @@ export class PluginSandboxSession {
 		params: unknown,
 		signal?: AbortSignal,
 		uiContext?: PluginSandboxUiContext,
+		onUpdate?: ToolProgress,
 	): Promise<unknown> {
 		await this.start();
 		if (!this.child || this.closed) throw new Error("Plugin sandbox is closed");
@@ -578,10 +602,11 @@ export class PluginSandboxSession {
 				onAbort: abort,
 				uiContext,
 				uiAbort,
+				onUpdate,
 			});
 			signal?.addEventListener("abort", abort, { once: true });
 			this.child?.stdin.write(
-				`${JSON.stringify({ type: "invoke", id, tool, toolCallId, params, hasUI: uiContext?.hasUI === true })}\n`,
+				`${JSON.stringify({ type: "invoke", id, tool, toolCallId, params, updates: onUpdate !== undefined, hasUI: uiContext?.hasUI === true })}\n`,
 			);
 		});
 	}
@@ -626,8 +651,8 @@ export function createProcessSandboxedExtension(policy: PluginSandboxPolicy): In
 				pi.registerTool({
 					...declaration,
 					parameters: declaration.parameters as ToolDefinition["parameters"],
-					execute: (toolCallId, params, signal, _update, ctx) =>
-						session.invoke(declaration.name, toolCallId, params, signal, ctx) as ReturnType<
+					execute: (toolCallId, params, signal, update, ctx) =>
+						session.invoke(declaration.name, toolCallId, params, signal, ctx, update) as ReturnType<
 							ToolDefinition["execute"]
 						>,
 				} as ToolDefinition);
