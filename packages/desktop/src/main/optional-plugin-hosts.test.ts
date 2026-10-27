@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -115,5 +115,10 @@ describe("discoverPluginHostLoader", () => {
 		);
 		await writeFile(join(root, "outside.mjs"), "export const analysisHostLoader = {};\n");
 		expect(await discoverPluginHostLoader({ packageRoots: [root], capability: "analysis" })).toBeUndefined();
+	});
+
+	it("passes the discovered evidence host into the backend composition root", async () => {
+		const source = await readFile(new URL("./index.ts", import.meta.url), "utf8");
+		expect(source).toContain("analysisEvidenceHost: evidenceHost.loader.load()");
 	});
 });

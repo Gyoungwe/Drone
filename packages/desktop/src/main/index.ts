@@ -358,6 +358,7 @@ app.whenReady().then(async () => {
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
 		...(analysisHost ? { analysisHostLoader: analysisHost.loader } : {}),
+		...(evidenceHost ? { analysisEvidenceHost: evidenceHost.loader.load() } : {}),
 		...(knowledgeHost ? { knowledgeHostLoader: knowledgeHost.loader } : {}),
 		...(researchHost ? { researchHostLoader: researchHost.loader } : {}),
 		computeAuthorizeRemoteOperation: authorizeComputeOperation,

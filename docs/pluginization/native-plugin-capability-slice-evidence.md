@@ -120,6 +120,7 @@
 - Research seam：宿主 `e5d082a3` 的 `@gyoungwe/plugin-api/research` 只定义 connector/write host contract；插件 `202d344` 的两个 loader 在无宿主授权 transport 时返回 `unavailable` 并拒绝 I/O。插件 typecheck、build:check、151 项全量测试和 smoke 通过，SDK probe 超时标记 NOT_RUN；没有改写默认 compatibility registry，也没有将 P3/P6 标记完成。
 - Research host loader injection：backend 新增 `researchConnectorHostLoader` 与 `researchWriteAdapterHostLoader` 两个 `BackendOptions` 注入点；适配器将 `@gyoungwe/plugin-api/research` 的版本化 connector/write host contract 映射到现有 `ResearchConnectorRegistryPort`/`ResearchWriteAdapterRegistryPort`，校验 contract version，并对 `unavailable` 状态 fail-closed。显式 registry 仍优先，未提供 loader 时继续使用原 compatibility registry。新增 6 项 backend adapter/create-backend 回归，Biome 与 targeted Vitest 通过；真实插件 transport/凭据和正式安装包验收仍未完成。
 - 连接器 host descriptor 的 `enabled` 状态现会贯穿 shared registry 到资源清单；停用的插件连接器不会被呈现为可用资源，仍保留显式禁用列表语义。backend research-resource/research-write 回归与 typecheck 通过。
+- P5 evidence loader wiring：Desktop 发现到任意已安装、声明 `evidence` 能力的包后，现实际调用 `evidenceHost.loader.load()` 并将 host 传入 backend `analysisEvidenceHost`；此前只发现并记录日志、未注入的缺口已修复。新增静态 wiring 回归，optional host discovery 6 项、Desktop typecheck 与 Biome 通过；正式安装包 clean-install 与真实 evidence workflow 仍未验收。
 
 ## 未关闭项
 
