@@ -36,7 +36,6 @@ const assistantMetadata = [
 	"responseId",
 	"providerThinkingLevel",
 	"thinkingLevel",
-	"diagnostics",
 	"usage",
 	"stopReason",
 	"deferred",
@@ -52,6 +51,15 @@ function envelope(message: RawMessage, content: RawMessage["content"]): RawMessa
 			.filter((key) => Object.hasOwn(message, key))
 			.map((key) => [key, Reflect.get(message, key)]),
 	);
+	const diagnostics = Reflect.get(message, "diagnostics") as AssistantMessage["diagnostics"];
+	if (diagnostics) {
+		// SDK diagnostics are advisory, never protocol controls. Omit stack/details.
+		metadata.diagnostics = diagnostics.map(({ type, timestamp, error }) => ({
+			type: sanitizeProviderError(type),
+			timestamp,
+			...(error ? { error: { message: sanitizeProviderError(error.message) } } : {}),
+		}));
+	}
 	return { ...metadata, role: "assistant", content };
 }
 
