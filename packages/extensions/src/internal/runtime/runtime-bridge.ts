@@ -203,28 +203,6 @@ function adoptRuntimeState(previous: RuntimeLike, runtime: RuntimeLike): void {
 			if (!targetTools.families.has(name)) targetTools.families.set(name, meta);
 		}
 	}
-	const sourceAcceptance = previous?.tasks?.acceptance;
-	if (sourceAcceptance) {
-		if (!runtime.tasks) runtime.tasks = {};
-		const targetAcceptance = runtime.tasks.acceptance ?? {
-			verifiers: new Map(),
-			kinds: [],
-			properties: {},
-		};
-		runtime.tasks.acceptance = targetAcceptance;
-		if (!targetAcceptance.verifiers) targetAcceptance.verifiers = new Map();
-		for (const [kind, verifier] of sourceAcceptance.verifiers || []) {
-			if (!targetAcceptance.verifiers.has(kind)) targetAcceptance.verifiers.set(kind, verifier);
-		}
-		if (Array.isArray(sourceAcceptance.kinds)) {
-			targetAcceptance.kinds ??= [];
-			for (const kind of sourceAcceptance.kinds)
-				if (!targetAcceptance.kinds.includes(kind)) targetAcceptance.kinds.push(kind);
-		}
-		targetAcceptance.properties ??= {};
-		for (const [key, value] of Object.entries(sourceAcceptance.properties || {}))
-			if (!(key in targetAcceptance.properties)) targetAcceptance.properties[key] = value;
-	}
 	for (const domain of ["knowledge", "tasks", "tools"]) {
 		const source = previous?.[domain];
 		if (!source || typeof source !== "object") continue;

@@ -8,7 +8,6 @@ import {
 } from "@gyoungwe/pi-knowledge/host";
 import { runRuntimeExclusive, runtimeSlot } from "./runtime/runtime-bridge";
 import { flowCardBuilder, toolMeta } from "./runtime/tool-manifest";
-import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
 import { registerTool } from "./runtime/tool-manifest";
 import { configureKnowledgeExtensionHost } from "@gyoungwe/pi-knowledge/host";
 
@@ -26,8 +25,6 @@ export function configureKnowledgeExtensionRuntime(): void {
 	if (configured) return;
 	configured = true;
 	configureKnowledgeExtensionHost({
-		bindAcceptanceVerifierEvents,
-		registerAcceptanceVerifier,
 		registerTool,
 	});
 	configureKnowledgeRuntime({

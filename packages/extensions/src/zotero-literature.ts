@@ -3,9 +3,6 @@ import { randomUUID } from "node:crypto";
 import { readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadWorkspaceConfig } from "@drone/extensions/workspace-config";
-import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
-import { bindRuntime, runRuntimeExclusive, runtimeSlot, withHostRuntime } from "./internal/runtime/runtime-bridge";
-import { registerTool } from "./internal/runtime/tool-manifest";
 import { cardLink, literatureCard } from "@gyoungwe/pi-knowledge/host";
 import {
 	bootstrapZotero,
@@ -27,6 +24,13 @@ import {
 	ZOTERO_ITEM_TYPES,
 	ZOTERO_SETUP_BINDING,
 } from "@gyoungwe/pi-research/host";
+import {
+	bindRuntime,
+	runRuntimeExclusive,
+	runtimeSlot,
+	withHostRuntime,
+} from "./internal/runtime/runtime-bridge";
+import { registerTool } from "./internal/runtime/tool-manifest";
 
 const contained = (root, target) => {
 	const rel = relative(root, target);
@@ -125,9 +129,9 @@ export function identifyZoteroReceipt(event, details) {
  * DOI 可以在计划时留空（检索/精读后才知道是哪篇）：写入回执经 identify 绑定后再读回；
  * 计划里写错了 DOI 时由 task_wait kind=rebind 请用户确认更换。
  */
-export function registerZoteroAcceptance() {
+export function zoteroAcceptanceDefinition() {
 	const reconcile = createCompositeZoteroReconciler();
-	return registerAcceptanceVerifier("zotero_item", {
+	return {
 		fields: ["doi", "libraryId", "collection"],
 		evidenceKind: "zotero-read-only-item-identity",
 		label: (acceptance) =>
@@ -157,7 +161,7 @@ export function registerZoteroAcceptance() {
 						reason: "这一项还没有对应的文献：精读后写入 Zotero 的回执会把 DOI 绑定过来",
 						next: "对精读过的每篇调用 research_zotero_save（任务授权已涵盖，不再逐条询问），宿主读回后自动绑定并验收",
 					},
-	});
+	};
 }
 
 /** 计划时未点名 DOI 的槽位：同一任务里每个槽位同时只放行一次写入（并行批量写入时两篇不会争同一槽位）。 */
@@ -354,16 +358,14 @@ async function startSetup(pi, args, ctx) {
 export default function zoteroLiterature(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
 	bindRuntime(pi);
-	bindAcceptanceVerifierEvents(pi);
 	const run = (operation) => withHostRuntime(pi, operation);
-	// Registration happens before the host announcement for compatibility with
-	// task_plan schema construction. Replay it in the injected host runtime so
-	// later authorization callbacks observe the same verifier while running in
-	// the host context.
-	pi.events?.on?.("drone:runtime/v1", (payload) => {
-		if (payload?.version === 1) run(() => registerZoteroAcceptance());
+	const declaration = { version: 1, kind: "zotero_item", definition: zoteroAcceptanceDefinition() };
+	const publishAcceptance = () => pi.events.emit("drone:acceptance-verifier/v1", declaration);
+	const removeAcceptance = pi.events.on("drone:acceptance-verifier/request/v1", (payload) => {
+		if (payload?.version === 1) publishAcceptance();
 	});
-	registerZoteroAcceptance();
+	pi.on("session_shutdown", removeAcceptance);
+	publishAcceptance();
 
 	registerTool(pi, {
 		name: "research_zotero_status",
