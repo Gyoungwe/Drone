@@ -2,7 +2,7 @@
 
 2026-10-27 整理。用户已批准「通用宿主 + 可卸载功能插件」并要求 P0–P7 并行实现。依据：[架构设计](../superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)。目标仍是完整功能与 UI 同包迁移，当前没有关闭整个目标。
 
-本页当前状态以宿主已提交基线 `3cd2b246` 与插件已提交基线 `13ea239` 为限；进行中的代码与尚未取得终态的检查不计入完成结论。完整历史、旧门禁输出和切片证据已[归档](../archive/native-plugin-implementation-plan-through-2026-10-27.md)；各次真实验收的 PASS 只适用于当时记录的版本与范围。
+本页当前状态以宿主干净门禁基线 `c29c5037` 与插件完整检查基线 `9646a53` 为限；进行中的代码与尚未取得终态的检查不计入完成结论。完整历史、旧门禁输出和切片证据已[归档](../archive/native-plugin-implementation-plan-through-2026-10-27.md)；各次真实验收的 PASS 只适用于当时记录的版本与范围。
 
 ## 当前阶段状态
 
@@ -21,7 +21,7 @@
 
 1. 完成 P2–P5 的领域实现和 UI ownership，删除对应宿主装配与临时路径；切片合同、loader 与定向测试通过不等于领域迁移完成。
 2. 完成 discovery B5d–B5f 和任务 workbench 全流程，验证未安装/停用时的明确 unavailable 行为。既有 WebDAV、inquiry 归属记录保留，本页整理不新增或扩大宿主边界决定。
-3. 同步候选插件版本、`plugins.lock.json`、构建资源与依赖闭包。当前锁定的 pi-knowledge 0.2.1 不含新增 worker host exports，不能用工作树构建产物代替干净安装验收。
+3. 同步候选插件版本、`plugins.lock.json`、构建资源与依赖闭包。知识源码锁已固定 0.3.0 候选并通过默认远程 fetch 和独立宿主根门禁；任务/discovery/同包 UI 整合后的最终候选仍须再次同步和验证。
 4. 使用同一候选 tarball 完成原生 Pi 真实会话、正式安装包的领域 GUI、Vault 写入回读/回滚与完整生命周期，包括销毁失败。既有通用宿主和公开 pi-evidence 切片保留其已证明范围。
 5. 在上述结果固定后运行宿主 lint/typecheck/test/build/check:arch、插件仓库完整 check 和最终领域边界门禁，保存终态与来源版本。历史全量或直接 workspace 检查不替代最终根命令的干净安装门禁。
 
@@ -43,9 +43,6 @@ MinerU/GROBID、B8 云端协作及 B8-2 保持暂缓/按用户要求暂不实施
 
 只保留最近 30 条去重记录，描述各切片发生时的状态；后续替代关系以本页“当前阶段状态”为准。更早及重复原始记录见[完整历史](../archive/native-plugin-implementation-plan-through-2026-10-27.md)。
 
-- 2026-10-27：重新运行 arm64 正式 `Drone.app` 的 `check-packaged-desktop.mjs`，全新 HOME/profile、空 optional UI 根、空 managed npm 根和空 auth/model 存储下通过实际 Electron 启动、preload、知识未绑定、semantic/topic IPC、研究命令及 generic Pi session 创建/关闭；回执为 `passed:true`。安装/停用/恢复/升级/回滚/销毁失败仍为 `NOT_RUN`，不计为完整 P7 验收。
-- 2026-10-27：同一正式包隔离 profile 运行 `check-packaged-desktop.mjs --lifecycle-package=@gyoungwe/pi-evidence`：真实安装 `0.1.1` 回执为 `staged → verified → enabled`，随后移除回执为 `disabled → drained → disabled`，读回确认 managed package 目录和配置入口已消失。该切片仅关闭 packaged install/remove，restore/upgrade/rollback/destroy-failure 仍未运行。
-- 2026-10-27：正式包生命周期脚本扩展为 install→update→remove；隔离 profile 对 `@gyoungwe/pi-evidence` 收到三组成功回执，update 重新安装并回读 `previousVersion=version=0.1.1`。这证明真实 update/disable 清理路径，但不是跨版本升级；restore/跨版本 rollback/destroy-failure 仍未运行。
 - 2026-10-27：正式 arm64 包通过隔离临时 registry fixture，以真实 generic Pi session 作为 reload 目标，完成 `1.0.0 → 1.1.0 → 1.0.0 → remove → restore(1.0.0) → remove`；显式 `rollbackPackage(name, version)` 产生 `previousVersion=1.1.0`、`version=1.0.0` 和 `rolled_back` 回执，六步均回读同一 `reloadedSessionIds`，restore 再次返回 `staged → verified → enabled`，最终 remove 清理包目录和配置。该结果关闭 P7 的跨版本升级/回滚/停用恢复/活动会话 reload 切片；reload-deferred、销毁失败和同 tarball GUI 仍未完成。
 - 2026-10-27：本轮生命周期合同的 focused Vitest 15 项、shared/backend/desktop typecheck、Biome、`check:arch`、`check:plugin-api -- --migration --lifecycle` 和 `npm run lint` 通过；`npm run dist --workspace=@drone/desktop` 以 `CSC_IDENTITY_AUTO_DISCOVERY=false` 成功生成 arm64/x64 包。默认 `npm test` 的 `fetch:plugins` 因 GitHub SSL 网络失败，绑定当前插件 checkout 的重跑又因 checkout 版本高于 `plugins.lock.json`（`pi-knowledge@0.3.0` vs lock `0.2.1`）停止，均未冒充全量门禁 PASS；已保留这些阻塞原因。
 - 2026-10-27：P2 worker seam 最小切片：`@gyoungwe/plugin-api` 的 `KnowledgeHostLoader` 增加可选 `configureWorker`，backend 仅提供经过 worker manifest 校验的 host-owned factory/metadata，安装 loader 自行决定何时配置 worker；无 loader 仍走 legacy `configureBackendKnowledgeWorker`。backend create-backend 28 项、plugin-api package gate、插件 knowledge host-loader 3 项、backend typecheck 与 `check:arch` 通过。worker 本体、完整 compatibility 删除、锁定插件版本及正式安装包 GUI 仍未完成，P2/P6 保持部分完成。
@@ -73,3 +70,6 @@ MinerU/GROBID、B8 云端协作及 B8-2 保持暂缓/按用户要求暂不实施
 - 2026-10-27：`13ea239`/`54de5567` 将 knowledge maintenance topic 与 Wiki proposal staging 接入安装 host，保留 revision/CAS 与无插件 fallback；create-backend 38/38、插件 host-loader 5/5 通过，P2 仍未完成全部 UI/compatibility 删除。
 - 2026-10-27：P2 reviewer/worker 接缝继续收口：宿主 `9d1218ec`/`a0731632` 通过 `knowledgeHostLoader.backgroundReviewer` 注入已安装知识插件的后台审阅器，并以显式 compatibility fixture 保留单元测试；插件 `042ba7b`/`8a581c5` 同步 reviewer factory、临时 bundled host worker 查找和 host-loader 回归。backend 全量测试 259 files/2085 passed/18 skipped，插件完整 `npm run check` 通过；正式插件版本与 `plugins.lock.json` 的 0.2.1 仍未同步，因此 clean-install gate 继续保持未完成。
 - 2026-10-27：P3 research host-neutral cleanup：`36a2569f` 将无插件 connector/write registry 直接收拢到领域 service，删除 backend 生产路径上的两个 compatibility façade；不改变 host loader 注入优先级或 fail-closed 行为。定向 46 项回归与 typecheck/Biome 通过，P3 真实来源连接器和写入验收仍保持部分完成。
+- 2026-10-27：知识 maintenance 真实 worker 回归补齐 canonical/mirror 标题、metadata、revision、CAS、并发编辑保留、symlink 拒绝与 Wiki proposal staging；插件 `11154ae` 的 knowledge 45 files/356 tests 通过。宿主 `ee52a9c3` 删除无插件时的 `.pi` maintenance 动态导入，create-backend 39/39、backend tsc/Biome/arch 通过。未将 fixture 当作正式 GUI。
+- 2026-10-27：discovery 历史记录四类投影与 native writer 的候选 tarball 回归 2/2 通过（宿主 `86d7e972`、插件 `11154ae`）；插件 `9646a53` 修正 suite event bus fixture 后，独立 archive+clean npm ci 的完整 `npm run check` exit 0，真实 SDK 1.1.0/latest 1.4.0、clean install/smoke/pack 均通过。完整 B5d–B5f 仍未关闭。
+- 2026-10-27：宿主 `c29c5037` 独立 checkout 的 npm ci、lint/typecheck/test/build/check:arch/check:plugin-api 全部通过，未设置 DRONE_PLUGINS_DIR。知识源码锁固定 `11154ae`/0.3.0/SHA-256 `fa122723…e4fd71`，默认远程 fetch 通过；backend 2091 passed/21 skipped、Desktop 910 passed/1 skipped，公开 UI 包单独干净安装 gate 通过。初次环境缺失与 GitHub TLS 失败及重跑结果均保留；该结果不覆盖在途任务/discovery/UI 整合，见[机器回执](../releases/native-plugin-clean-host-2026-10-27.json)。

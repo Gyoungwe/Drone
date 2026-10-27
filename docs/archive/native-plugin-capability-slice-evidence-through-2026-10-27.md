@@ -205,3 +205,9 @@
 - 2026-10-27：研究宿主收窄提交 `36a2569f` 删除 `research-connector-compat.ts` 与 `research-write-compat.ts` 两个生产兼容 façade；无插件注册表直接由 `research-resource.ts`/`research-write.ts` 提供并保持 fail-closed。create-backend、research-resource、research-write 共 46 项回归、backend typecheck 和 Biome 通过；真实连接器/写入及正式账户验收仍未完成。
 
 本轮仍未证明：P2–P5 宿主领域装配删除；无领域插件的正式 DMG 启动与升级/停用/回滚；同一候选 tarball 的正式安装包 GUI；真实 Zotero/用户 MCP/Protocols.io 写入及其他平台验收。`check:native-plugin-boundary` 仍按计划输出 `INCOMPLETE`，不得改写为 PASS。
+
+## 候选源码锁门禁前追加归档（2026-10-27）
+
+- 2026-10-27：修正 fixture cwd 后重跑 backend 全量回归：`npm test -w @drone/backend -- --pool=forks --poolOptions.forks.singleFork=true --reporter=dot` 以 `259` 个文件、`2079` 项通过、`18` 项跳过退出 0；该结果与 CoreHostLoader/knowledge fail-closed 切片一致，未改变正式安装包或外部账户验收状态。
+- 2026-10-27：Desktop production build（`npm run build -w packages/desktop`）退出 0；`check:native-plugin-boundary` 诚实输出 `INCOMPLETE`，domain-runtime-import 已降至 4、domain-type-import 12、packaged-resource 21，剩余 runtime 边界集中在显式 knowledge compatibility/宿主 discovery 迁移项，未改写为 PASS。
+- 2026-10-27：knowledge worker seam 增量：`@gyoungwe/plugin-api` 的版本化 `KnowledgeHostLoader` 新增可选 `configureWorker`，仅接收 host-owned、依赖零的 worker factory/metadata 结构；backend 仅在已安装 loader 声明该 seam 时注入经 manifest 校验的 `createBackendKnowledgeWorkerSetup`，无 loader 不再自动配置 legacy worker。`create-backend` 回归覆盖安装 loader 的惰性 seam 和无插件资源边界；plugin-api build/package gate、backend typecheck、create-backend 28 项回归、plugin `pi-knowledge` host-loader 3 项回归、`check:arch` 均通过。插件仓库 host loader 已实现可选 seam，但宿主锁定版本、完整 worker 所有权迁移与正式安装包 GUI 仍未完成。

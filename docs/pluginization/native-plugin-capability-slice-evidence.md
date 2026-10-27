@@ -1,6 +1,6 @@
 # 原生插件能力发现与 clean-prefix 包验收
 
-日期：2026-10-27。整理基线：宿主 `3cd2b246`、插件 `13ea239`。本页汇总已提交切片，不给进行中的代码或未结束检查补写 PASS。完整原始记录（含所有 receipt 路径、哈希、历史门禁和当时的未完成声明）已[归档](../archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。
+日期：2026-10-27。整理基线：宿主 `c29c5037`、插件 `9646a53`。本页汇总已提交切片，不给进行中的代码或未结束检查补写 PASS。完整原始记录（含所有 receipt 路径、哈希、历史门禁和当时的未完成声明）已[归档](../archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。
 
 本轮 P0–P7 仍未全部完成；阶段清单以[执行计划](native-plugin-implementation-plan.md)为准。历史 PASS 继续有效，但只证明其记录的版本、数据与路径，不能外推到当前候选或整个领域。
 
@@ -16,7 +16,7 @@
 | research/tasks/discovery | research fail-closed 与 façade 删除；tasks acceptance/workbench host 注入；pi-discovery 只读包和 Desktop 路由 | 完整 Zotero/研究/任务工作流、B5d–B5f 执行迁移与完整 GUI |
 | 已记录门禁 | 历史 backend 全量曾记录 259 files/2087 passed/18 skipped；插件完整 check；各切片类型检查与构建 | 当前候选锁文件的根命令/干净安装最终全量通过 |
 
-插件工作树构建产物可支持相应定向/运行时回归；当前历史锁中的 pi-knowledge 0.2.1 缺少新增 worker host exports，根 pretypecheck/fetch 路径的失败不得报告成 clean-install PASS。两次不同提交的全量测试计数分别保留在历史与近期记录中，不合并为同一次运行。
+历史 pi-knowledge 0.2.1 源码锁缺失新 worker exports 的问题已由 `74fe57e2` 修正；候选 0.3.0 通过默认远程 fetch 和冻结宿主 `c29c5037` 的独立根门禁。后续在途领域迁移与 UI 分支整合尚未包含在该冻结结果中；不同提交的测试计数分别保留，不合并为同一次运行。
 
 ## 未关闭项
 
@@ -31,9 +31,6 @@
 
 以下为最近 30 条去重后的历史记录；内容中的“仍未提供”“仍保留”等描述属于该次提交，当前结论以上表与未关闭项为准。更早的记录、重复原文及全部证据细节见[完整历史](../archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。
 
-- 2026-10-27：修正 fixture cwd 后重跑 backend 全量回归：`npm test -w @drone/backend -- --pool=forks --poolOptions.forks.singleFork=true --reporter=dot` 以 `259` 个文件、`2079` 项通过、`18` 项跳过退出 0；该结果与 CoreHostLoader/knowledge fail-closed 切片一致，未改变正式安装包或外部账户验收状态。
-- 2026-10-27：Desktop production build（`npm run build -w packages/desktop`）退出 0；`check:native-plugin-boundary` 诚实输出 `INCOMPLETE`，domain-runtime-import 已降至 4、domain-type-import 12、packaged-resource 21，剩余 runtime 边界集中在显式 knowledge compatibility/宿主 discovery 迁移项，未改写为 PASS。
-- 2026-10-27：knowledge worker seam 增量：`@gyoungwe/plugin-api` 的版本化 `KnowledgeHostLoader` 新增可选 `configureWorker`，仅接收 host-owned、依赖零的 worker factory/metadata 结构；backend 仅在已安装 loader 声明该 seam 时注入经 manifest 校验的 `createBackendKnowledgeWorkerSetup`，无 loader 不再自动配置 legacy worker。`create-backend` 回归覆盖安装 loader 的惰性 seam 和无插件资源边界；plugin-api build/package gate、backend typecheck、create-backend 28 项回归、plugin `pi-knowledge` host-loader 3 项回归、`check:arch` 均通过。插件仓库 host loader 已实现可选 seam，但宿主锁定版本、完整 worker 所有权迁移与正式安装包 GUI 仍未完成。
 - 2026-10-27：knowledge worker fallback 收窄：`createBackend` 删除无 loader 的 legacy worker 自动配置；在缺少插件且 `DRONE_RESEARCH_WORKBENCH_ROOT` 指向不存在目录时，backend 仍可启动并对知识操作 fail-closed。显式 `configureBackendKnowledgeWorker` 仍只用于兼容/测试入口；backend typecheck、create-backend/knowledge-host-ui-reading/worker-lifecycle 34 项、Biome 与 `check:arch` 通过。该切片不代表 worker 本体、compat composition 或正式安装包 GUI 已迁移完成。
 - 2026-10-27：knowledge worker package-local seam：插件 host loader 固定选择 `lib/knowledge/runtime/worker.mjs`，并在 runtime metadata 读取时校验相邻 `.knowledge-worker-manifest.json`；host `createBackendKnowledgeWorkerSetup` 验证 loader 传入的 `file:` URL 与同目录 manifest/hash 后才创建 Worker，新增匹配/篡改回归。legacy `configureBackendKnowledgeWorker` 使用独立 host-root setup，worker lifecycle 3 项保持通过。由于 `.pi` bundled extensions、`fetch-plugins` 和 release fixtures 仍需旧资源树，本轮未删除 electron-builder/`.pi` copies，完整所有权迁移继续保持未完成。
 - 2026-10-27：backend legacy worker 路径收窄：生产 `knowledge/ui.ts` 删除 `configureBackendKnowledgeWorker`、host-root `.pi` worker resolver 和对应 index exports，仅保留安装 loader 传入 URL 的 manifest/hash 校验；旧 worker 配置与 host-root fixture 移到 `packages/backend/test/knowledge-compat-fixture.ts`。backend typecheck、create-backend/knowledge UI/worker host+lifecycle 39 项、Biome 通过；`.pi`/electron-builder 复制链和正式 GUI 仍未完成。
@@ -61,4 +58,6 @@
 - 2026-10-27：Knowledge maintenance topic/wiki slice：插件 `13ea239` 暴露绑定 revision、Vault CAS topic 更新和 Wiki proposal staging；宿主 `54de5567` 让 `setMaintenanceTopic/proposeMaintenanceWiki` 优先走安装 host，旧 `.pi/extensions/obsidian-workbench.mjs` 路径仅作为无插件兼容 fallback。host-loader 5/5、build-check、backend create-backend 38/38、tsc/Biome 通过。
 - 2026-10-27：知识插件 reviewer host seam 收口：宿主提交 `9d1218ec`/`a0731632` 将 `BackgroundReviewer` 改为已安装 `knowledgeHostLoader.backgroundReviewer` 注入，无插件默认保持 fail-closed；`deliverable-reviewer`、model-review SDK、create-backend 定向回归分别通过，backend 全量复跑为 259 files/2085 passed/18 skipped。插件提交 `042ba7b` 暴露 reviewer factory 并覆盖 host-loader 回归，`8a581c5` 让 bundled `/tmp` 入口同时从 `PWD`/`INIT_CWD` 祖先安装树解析 worker；插件 `npm run check` 全部通过。正式 host worker 资源回归在当前候选插件构建产物下 2/2 通过。
 - 2026-10-27：本轮宿主验证中 `npm run lint` 通过（仅既有 2 个 warning）、直接 workspace typecheck、`check:pi`、Desktop build 和 `check:arch` 通过；`check:native-plugin-boundary` 继续诚实输出 `INCOMPLETE`，discovery/inquiry 与 required-domain-plugin 计数仍保留。根 `npm run typecheck` 的 pretypecheck 会按历史 `plugins.lock.json` 拉取 `pi-knowledge@0.2.1`，该包没有当前 worker host exports，因此在锁定候选发布前不计作 clean-install PASS；候选插件工作树构建产物已用于上述真实 backend/worker 回归。P2–P7、正式安装包同 tarball GUI 和四项外部账户验收仍未关闭。
-
+- 2026-10-27：知识 maintenance 真实 worker 回归补齐 canonical/mirror 标题、metadata、revision、CAS、并发编辑保留、symlink 拒绝与 Wiki proposal staging；插件 `11154ae` 的 knowledge 45 files/356 tests 通过。宿主 `ee52a9c3` 删除无插件时的 `.pi` maintenance 动态导入，create-backend 39/39、backend tsc/Biome/arch 通过。未将 fixture 当作正式 GUI。
+- 2026-10-27：discovery 历史记录四类投影与 native writer 的候选 tarball 回归 2/2 通过（宿主 `86d7e972`、插件 `11154ae`）；插件 `9646a53` 修正 suite event bus fixture 后，独立 archive+clean npm ci 的完整 `npm run check` exit 0，真实 SDK 1.1.0/latest 1.4.0、clean install/smoke/pack 均通过。完整 B5d–B5f 仍未关闭。
+- 2026-10-27：宿主 `c29c5037` 独立 checkout 的 npm ci、lint/typecheck/test/build/check:arch/check:plugin-api 全部通过，未设置 DRONE_PLUGINS_DIR。知识源码锁固定 `11154ae`/0.3.0/SHA-256 `fa122723…e4fd71`，默认远程 fetch 通过；backend 2091 passed/21 skipped、Desktop 910 passed/1 skipped，公开 UI 包单独干净安装 gate 通过。初次环境缺失与 GitHub TLS 失败及重跑结果均保留；该结果不覆盖在途任务/discovery/UI 整合，见[机器回执](../releases/native-plugin-clean-host-2026-10-27.json)。

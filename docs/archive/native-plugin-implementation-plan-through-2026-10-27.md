@@ -157,3 +157,9 @@ P6 必须建立覆盖**完整包及其运行依赖**的内容寻址、不可变�
 - 2026-10-27：`13ea239`/`54de5567` 将 knowledge maintenance topic 与 Wiki proposal staging 接入安装 host，保留 revision/CAS 与无插件 fallback；create-backend 38/38、插件 host-loader 5/5 通过，P2 仍未完成全部 UI/compatibility 删除。
 - 2026-10-27：P2 reviewer/worker 接缝继续收口：宿主 `9d1218ec`/`a0731632` 通过 `knowledgeHostLoader.backgroundReviewer` 注入已安装知识插件的后台审阅器，并以显式 compatibility fixture 保留单元测试；插件 `042ba7b`/`8a581c5` 同步 reviewer factory、临时 bundled host worker 查找和 host-loader 回归。backend 全量测试 259 files/2085 passed/18 skipped，插件完整 `npm run check` 通过；正式插件版本与 `plugins.lock.json` 的 0.2.1 仍未同步，因此 clean-install gate 继续保持未完成。
 - 2026-10-27：P3 research host-neutral cleanup：`36a2569f` 将无插件 connector/write registry 直接收拢到领域 service，删除 backend 生产路径上的两个 compatibility façade；不改变 host loader 注入优先级或 fail-closed 行为。定向 46 项回归与 typecheck/Biome 通过，P3 真实来源连接器和写入验收仍保持部分完成。
+
+## 候选源码锁门禁前追加归档（2026-10-27）
+
+- 2026-10-27：重新运行 arm64 正式 `Drone.app` 的 `check-packaged-desktop.mjs`，全新 HOME/profile、空 optional UI 根、空 managed npm 根和空 auth/model 存储下通过实际 Electron 启动、preload、知识未绑定、semantic/topic IPC、研究命令及 generic Pi session 创建/关闭；回执为 `passed:true`。安装/停用/恢复/升级/回滚/销毁失败仍为 `NOT_RUN`，不计为完整 P7 验收。
+- 2026-10-27：同一正式包隔离 profile 运行 `check-packaged-desktop.mjs --lifecycle-package=@gyoungwe/pi-evidence`：真实安装 `0.1.1` 回执为 `staged → verified → enabled`，随后移除回执为 `disabled → drained → disabled`，读回确认 managed package 目录和配置入口已消失。该切片仅关闭 packaged install/remove，restore/upgrade/rollback/destroy-failure 仍未运行。
+- 2026-10-27：正式包生命周期脚本扩展为 install→update→remove；隔离 profile 对 `@gyoungwe/pi-evidence` 收到三组成功回执，update 重新安装并回读 `previousVersion=version=0.1.1`。这证明真实 update/disable 清理路径，但不是跨版本升级；restore/跨版本 rollback/destroy-failure 仍未运行。
