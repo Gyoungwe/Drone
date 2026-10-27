@@ -9,7 +9,7 @@
 | 成员 | managed native | 普通第三方 process sandbox |
 | --- | --- | --- |
 | `on` | 12 种事件；见下表 | 显式不支持 |
-| `registerTool` | 受限工具声明；其他 metadata/onUpdate 待补 | 支持已验证 JSON 声明及 execute；回调限制见下文 |
+| `registerTool` | 标准 JSON 声明与 execute/onUpdate；不可跨进程回调明确拒绝 | 支持已验证 JSON 声明及 execute；回调限制见下文 |
 | `registerCommand` | 显式不支持 | 显式不支持 |
 | `registerShortcut` | 显式不支持 | 显式不支持 |
 | `registerFlag` | 显式不支持 | 显式不支持 |
@@ -42,7 +42,9 @@
 | `unregisterVirtualModel` | 显式不支持 | 显式不支持 |
 | `events` | 显式不支持 | 显式不支持 |
 
-普通沙箱六个 getter 不再返回假的空快照；不可跨 worker 的 `prepareArguments`、`prepareLoadout`、`renderCall`、`renderResult` 在注册时明确拒绝。`outputSchema`、`constrainedSampling`、`renderShell` 和对象型 `namespace` 保留。宿主 `c7310965` 的真实包→worker→SDK 会话回归证明拒绝后基础 read 仍正常。工具执行的 onUpdate、nested executeTool 等仍未完成，不据此宣称全兼容。
+普通沙箱六个 getter 不再返回假的空快照；不可跨 worker 的 `prepareArguments`、`prepareLoadout`、`renderCall`、`renderResult` 在注册时明确拒绝。`outputSchema`、`constrainedSampling`、`renderShell` 和对象型 `namespace` 保留。宿主 `c7310965` 的真实包→worker→SDK 会话回归证明拒绝后基础 read 仍正常。普通沙箱的 onUpdate 仍未转发；两种沙箱的 nested executeTool 等仍未完成，不据此宣称全兼容。
+
+managed process 工具声明现保留 outputSchema、constrainedSampling、renderShell、promptSnippet/guidelines、exposure、namespace、annotations、defaultActive 与 executionMode。prepareArguments/prepareLoadout/renderCall/renderResult 在注册时明确拒绝。进度回调绑定实际 invocation ID，只在 SDK 提供 observer 时创建；完成、取消后的回调不能进入另一个调用。`native-tool-protocol-sdk.test.mjs` 的真实受限 worker→SDK 回归覆盖并行进度、取消后另一 attachment 继续运行、迟到回调拒绝，以及四种回调导致加载错误后 builtin read 仍正常。该切片不代表支持 terminal rendering 或 nested executeTool。
 
 ## on 事件完整声明表
 
@@ -104,7 +106,7 @@ UI 完整成员：`select`、`confirm`、`input`、`notify`、`onTerminalInput`�
 
 1. 收口完整 native core+knowledge 组合中的 publication 事件投影：bridge 缺失时不能破坏 toolCall/usage/官方 metadata，provider 私有协议重放与公开 tool-only/最终 fail-closed 均须保留。该组合仍在隔离分支验证；既有 onError 切片不代表全部 41 种事件已验收。
 2. 删除旧 Desktop UI 的静默 no-op/假成功，按支持能力返回真实结果或明确拒绝；核对 bind mode 与 hasUI。
-3. 补 managed 工具 metadata、onUpdate、上下文与 getter 的完整声明矩阵和真实失败回执；不增加同步跨进程缓存来伪装支持。
+3. managed JSON metadata 与 onUpdate 已有真实 SDK 切片；继续补 Context/getter 完整声明矩阵、普通沙箱进度与 nested executeTool，不增加同步跨进程缓存来伪装支持。
 4. 用完整 33/41/28 探针及 locked/latest 真 SDK 回归固定支持/拒绝清单，补格式相同但 API 不兼容包的实际安装诊断。
 
 本页是源码审计和定向 SDK 证据，不关闭 P0/P1，也不替代最终同 tarball 正式安装包 GUI。四项外部验收及暂缓项保持原状态。
