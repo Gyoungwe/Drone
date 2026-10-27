@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -359,6 +360,18 @@ describe("navigation delivery and bounded maintenance", () => {
 			.execute("read", { path: "Library/Papers/source.md" }, undefined, undefined, ctx);
 		const summary =
 			"# Insect autotomy evidence\n\nThis completed run compares the observed behavior, its method, scope, evidence limits, and what remains unknown. It is reusable across future literature review while preserving species-specific applicability.";
+		const sourcePath = join(vault, "Library/Papers/source.md");
+		const sourceHash = createHash("sha256")
+			.update(await readFile(sourcePath))
+			.digest("hex");
+		const bodySha256 = createHash("sha256").update(`${summary.trim()}\n`).digest("hex");
+		const claim = {
+			bindingId: "claim-one",
+			claim: "The observed behavior is species-specific.",
+			deliveryBodySha256: bodySha256,
+			sourcePath: "Library/Papers/source.md",
+			sourceHash,
+		};
 		await h.events.get("tool_execution_start")(
 			{
 				toolCallId: "sum",
@@ -376,7 +389,34 @@ describe("navigation delivery and bounded maintenance", () => {
 				toolCallId: "sum",
 				toolName: "research_summarize_run",
 				isError: false,
-				result: { details: { summary_saved: true, run: "/tmp/SUMMARY.md" } },
+				result: {
+					details: {
+						summary_saved: true,
+						run: "/tmp/SUMMARY.md",
+						claims: [claim],
+						delivery_receipt: {
+							version: 1,
+							bodySha256,
+							memoryClaimsSha256: createHash("sha256")
+								.update(JSON.stringify([claim]))
+								.digest("hex"),
+							semanticAssessment: {
+								status: "model-assessed",
+								memoryClaims: [
+									{
+										bindingId: claim.bindingId,
+										memoryClaimSha256: createHash("sha256").update(JSON.stringify(claim)).digest("hex"),
+										assessment: "supported",
+										evidence: [
+											{ path: claim.sourcePath, sha256: claim.sourceHash, readReceiptId: "read-one" },
+										],
+									},
+								],
+							},
+							sources: [{ path: claim.sourcePath, sha256: claim.sourceHash, readReceiptIds: ["read-one"] }],
+						},
+					},
+				},
 			},
 			ctx,
 		);
