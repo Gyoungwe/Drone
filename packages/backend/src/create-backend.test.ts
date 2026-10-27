@@ -778,6 +778,39 @@ describe("createBackend", () => {
 		services.dispose();
 	});
 
+	it("injects the installed knowledge background reviewer through the host seam", () => {
+		const reviewer = {
+			schedule: () => undefined,
+			getCached: () => undefined,
+			getFindings: () => [],
+			clearSession: () => undefined,
+			dispose: () => undefined,
+		};
+		let factoryCalls = 0;
+		const backgroundReviewer = () => {
+			factoryCalls += 1;
+			return reviewer;
+		};
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			knowledgeHostLoader: {
+				contractVersion: 1,
+				load: () => ({
+					contractVersion: 1,
+					overview: async () => ({}),
+					search: async () => ({}),
+					read: async () => ({}),
+					noteLinks: async () => ({}),
+					graph: async () => ({}),
+					backgroundReviewer,
+				}),
+			},
+		});
+		expect(factoryCalls).toBe(1);
+		services.dispose();
+	});
+
 	it("routes legacy knowledge events only to the matching backend", async () => {
 		const firstEvents: string[] = [];
 		const secondEvents: string[] = [];
