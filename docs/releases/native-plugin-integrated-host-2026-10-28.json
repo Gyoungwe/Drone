@@ -1,0 +1,283 @@
+{
+	"schemaVersion": 1,
+	"date": "2026-10-28",
+	"scope": "incremental native plugin integration; P0–P7 remains incomplete",
+	"hostCommit": "6c9400c6f7a17be5fbb8cbe6634d7cbe1c9b5a83",
+	"pluginCommit": "b1c11f3bef79a05d187c334b79d4261d292ec7e6",
+	"apiSourceCommit": "3328a1517e7446032a4687af2e4d213ae72d52be",
+	"npmPublishPerformed": false,
+	"mainMergePerformed": false,
+	"candidates": [
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.3.0",
+			"sha256": "cf9d3dde0f2bb904bfce2db53bdfaf447e6934fa7e8bd61ed7ff53499e99439e"
+		},
+		{
+			"name": "@gyoungwe/pi-analysis",
+			"version": "0.2.0",
+			"sha256": "325b8e8214837a4d7c1d06db91cd1eb14c9c4bf7cf9eba031e44718cf95d8cdb"
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"version": "0.3.2",
+			"sha256": "4db7092d8ef47a29f987833fd577ceaa18dc21f2295e605c0ce4be6be7a15176"
+		},
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.2.0",
+			"sha256": "2259745b457c17b95ce854a8ba050663f47efd3c22407317b497570431f4913b"
+		}
+	],
+	"sourceReproduction": {
+		"method": "git archive; npm ci --ignore-scripts; build each locked workspace; npm pack",
+		"commit": "b1c11f3bef79a05d187c334b79d4261d292ec7e6",
+		"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-fixed-pack-hqA67q/build.log",
+		"logSha256": "2e01af46aa3d1b925ce4b0c491209d9da2c30ced62d50738e4b40cdd13098cc0"
+	},
+	"environment": {
+		"freshClone": true,
+		"npmCiExitCode": 0,
+		"ciCommit": "75e7de7168d5d1b78c045cea31ccb78acff905f1",
+		"dependencyLockUnchangedAfterCi": true,
+		"dronePluginsDirOverride": false,
+		"gitTransport": "HTTP/1.1 after transient TLS errors; same HTTPS origin, TLS verification and locked hashes",
+		"candidateTarballTests": true
+	},
+	"commands": [
+		{
+			"command": [
+				"git",
+				"clone",
+				"--shared",
+				"--no-checkout",
+				"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/Drone"
+			],
+			"startedAt": "2026-10-27T15:44:27.701Z",
+			"finishedAt": "2026-10-27T15:44:27.792Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/clone.log",
+			"commit": "75e7de7168d5d1b78c045cea31ccb78acff905f1",
+			"logSha256": "b1258f435b321e3e302e2e7239cab70026083b7572e21ec75e31969b3cb2cd72"
+		},
+		{
+			"command": ["git", "checkout", "--detach", "75e7de7168d5d1b78c045cea31ccb78acff905f1"],
+			"startedAt": "2026-10-27T15:44:27.793Z",
+			"finishedAt": "2026-10-27T15:44:28.536Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/checkout.log",
+			"commit": "75e7de7168d5d1b78c045cea31ccb78acff905f1",
+			"logSha256": "ad4c7b2d95bca6fbc3e0ce88cb4e99a750186970cb055928b26c185df74a13f1"
+		},
+		{
+			"command": ["npm", "ci", "--no-audit", "--no-fund"],
+			"startedAt": "2026-10-27T15:44:28.542Z",
+			"finishedAt": "2026-10-27T15:44:46.533Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/ci.log",
+			"commit": "75e7de7168d5d1b78c045cea31ccb78acff905f1",
+			"logSha256": "e0334d42b92825908dada181a0d6f90c13a316335ea4d657ec21d766cfbcdd86"
+		},
+		{
+			"command": ["npm", "run", "lint"],
+			"startedAt": "2026-10-27T15:44:46.534Z",
+			"finishedAt": "2026-10-27T15:44:48.508Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/lint.log",
+			"commit": "75e7de7168d5d1b78c045cea31ccb78acff905f1",
+			"logSha256": "3a23e3363923ace02f6e9d5a4b3cb125030f8fab5f5bfe12f9ea6fea64ce61ab"
+		},
+		{
+			"commit": "0e57e0aa8fe3a67025ebaacbf94a19710c941e2d",
+			"command": ["npm", "run", "lint"],
+			"startedAt": "2026-10-27T15:47:23.095Z",
+			"finishedAt": "2026-10-27T15:47:24.340Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/retry-lint.log",
+			"logSha256": "40b80cc63bd6802d35047495036b88a64c95a30160e32ad4cac4ad1adc3a0d08"
+		},
+		{
+			"commit": "0e57e0aa8fe3a67025ebaacbf94a19710c941e2d",
+			"command": ["npm", "run", "typecheck"],
+			"startedAt": "2026-10-27T15:47:24.342Z",
+			"finishedAt": "2026-10-27T15:47:45.118Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/retry-typecheck.log",
+			"logSha256": "e18ec3c27effee433d0eb4d1653561fb47b75c7807083b44742531441475afce"
+		},
+		{
+			"commit": "0e57e0aa8fe3a67025ebaacbf94a19710c941e2d",
+			"command": ["npm", "run", "typecheck"],
+			"startedAt": "2026-10-27T15:49:21.532Z",
+			"finishedAt": "2026-10-27T15:50:10.659Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/retry2-typecheck.log",
+			"logSha256": "cb3435af80f5f67a695763086f2a3cad8aaa9452c7226cc4c9d249fb742232cd"
+		},
+		{
+			"commit": "0e57e0aa8fe3a67025ebaacbf94a19710c941e2d",
+			"command": ["npm", "run", "typecheck"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T15:52:01.606Z",
+			"finishedAt": "2026-10-27T15:53:43.316Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/http1-typecheck.log",
+			"logSha256": "6ecc379f0cd6f283004c44952f94e6561993092165ef81d951c93a7ee3e21f09"
+		},
+		{
+			"commit": "0e57e0aa8fe3a67025ebaacbf94a19710c941e2d",
+			"command": ["npm", "run", "test"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T15:53:43.318Z",
+			"finishedAt": "2026-10-27T15:53:48.644Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/http1-test.log",
+			"logSha256": "2466f143a17bfd856df75424e4c0886fb398df43d9d3cc4ba72947c908111033"
+		},
+		{
+			"commit": "0e57e0aa8fe3a67025ebaacbf94a19710c941e2d",
+			"command": ["npm", "run", "test"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T15:56:29.850Z",
+			"finishedAt": "2026-10-27T15:59:56.014Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/http1-retry-test.log",
+			"logSha256": "79aa9390594710f48514166fa9fedb962306bdc0ace27cb52173a31e66b4e338"
+		},
+		{
+			"commit": "6c9400c6f7a17be5fbb8cbe6634d7cbe1c9b5a83",
+			"command": ["npm", "run", "lint"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T16:34:07.010Z",
+			"finishedAt": "2026-10-27T16:34:08.452Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/fixed-lint.log",
+			"logSha256": "abce29ec5713e48c48c08454423f1c244903fba49fa752d48ab0e0f550888afc"
+		},
+		{
+			"commit": "6c9400c6f7a17be5fbb8cbe6634d7cbe1c9b5a83",
+			"command": ["npm", "run", "typecheck"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T16:34:08.454Z",
+			"finishedAt": "2026-10-27T16:35:43.963Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/fixed-typecheck.log",
+			"logSha256": "af0cc5f222037839d8f6feb0c3f4b40e068172e58111bbb561913255c90798f4"
+		},
+		{
+			"commit": "6c9400c6f7a17be5fbb8cbe6634d7cbe1c9b5a83",
+			"command": ["npm", "run", "test"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T16:35:43.964Z",
+			"finishedAt": "2026-10-27T16:38:31.258Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/fixed-test.log",
+			"logSha256": "4eab53537f51a002c95c35a65ed851700736edfcea5bb8b8392606bbfd2b92f4"
+		},
+		{
+			"commit": "6c9400c6f7a17be5fbb8cbe6634d7cbe1c9b5a83",
+			"command": ["npm", "run", "build"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T16:38:31.259Z",
+			"finishedAt": "2026-10-27T16:40:14.029Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/fixed-build.log",
+			"logSha256": "968892e05e1bba20025da766e15f9bcfeec8a787aef3c4d6af55a78696363f14"
+		},
+		{
+			"commit": "6c9400c6f7a17be5fbb8cbe6634d7cbe1c9b5a83",
+			"command": ["npm", "run", "check:arch"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T16:40:14.031Z",
+			"finishedAt": "2026-10-27T16:40:15.118Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/fixed-check-arch.log",
+			"logSha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d"
+		},
+		{
+			"commit": "6c9400c6f7a17be5fbb8cbe6634d7cbe1c9b5a83",
+			"command": ["npm", "run", "check:plugin-api"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T16:40:15.119Z",
+			"finishedAt": "2026-10-27T16:40:26.156Z",
+			"exitCode": 0,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/fixed-check-plugin-api.log",
+			"logSha256": "4d139b6e7bcc16c746cd7fe38facb3229d3886633aa4eb0af424fcf3700500ae"
+		},
+		{
+			"commit": "6c9400c6f7a17be5fbb8cbe6634d7cbe1c9b5a83",
+			"command": ["npm", "run", "check:native-plugin-boundary"],
+			"gitTransport": "HTTP/1.1; default GitHub origin and TLS verification retained",
+			"startedAt": "2026-10-27T16:40:26.156Z",
+			"finishedAt": "2026-10-27T16:40:27.059Z",
+			"exitCode": 1,
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-integrated-clean-Wa2Wwr/fixed-check-native-plugin-boundary.log",
+			"logSha256": "f45cebbdab67a8e5b60ca0a5973cea76591e8d620752f24d89060710ee9d6ef5"
+		}
+	],
+	"tests": {
+		"backend": {
+			"filesPassed": 263,
+			"filesSkipped": 4,
+			"passed": 2107,
+			"skipped": 18
+		},
+		"desktop": {
+			"filesPassed": 166,
+			"passed": 910,
+			"skipped": 1
+		},
+		"rootNodeTests": 24,
+		"pluginKnowledge": 503,
+		"pluginResearch": 164,
+		"pluginCore": 25,
+		"pluginDiscovery": 6
+	},
+	"pluginCheck": {
+		"exitCode": 0,
+		"log": "/tmp/knowledge-preflight-full-plugin-check.log",
+		"logSha256": "45f21bdc67298bcc22b0866ee6c4cfb2f9224eacc0dce7789e84c3089b89f4fc",
+		"includes": ["real SDK 1.1.0/latest 1.4.0", "clean install", "suite/PDF"]
+	},
+	"nativeBoundary": {
+		"exitCode": 1,
+		"status": "INCOMPLETE",
+		"counts": {
+			"domain-build-step": 15,
+			"domain-manifest-dependency": 11,
+			"domain-type-import": 6,
+			"domain-runtime-import": 1,
+			"domain-packaged-resource": 21,
+			"required-domain-plugin": 4
+		}
+	},
+	"earlierFailures": [
+		{
+			"reason": "legacy discovery fixture import sorting",
+			"fix": "0e57e0aa"
+		},
+		{
+			"reason": "GitHub TLS failures during default fetch",
+			"resolution": "retained logs and reran same locked source with HTTP/1.1 transport"
+		},
+		{
+			"reason": "first integrated full run: 8 failed tests",
+			"fixes": [
+				"valid BUSCO versions/counts; scientific validation retained",
+				"legacy constructor and asynchronous review-policy fixtures migrated",
+				"timeout test waits for validation to start",
+				"worker metadata verified before draining live writer"
+			],
+			"result": "current complete root test exited 0"
+		}
+	],
+	"remaining": [
+		"P0 onError binding, trusted UI no-op/false success and complete API matrix",
+		"complete domain/state/UI migration and native discovery/B5 GUI",
+		"legacy task guard blocks basic writes without a planner; task host registry isolation needs verification",
+		"4 required domain locks and old bundled resources; boundary remains INCOMPLETE",
+		"final formal installer GUI, apply/undo/rollback, destruction failure and lifecycle",
+		"four external acceptances outside this goal and deferred MinerU/GROBID/B8/B8-2 unchanged"
+	]
+}
