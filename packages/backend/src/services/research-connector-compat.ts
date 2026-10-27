@@ -1,11 +1,37 @@
-import { createDefaultResearchConnectors, ResearchConnectorRegistry } from "@drone/research";
 import type { ResearchConnectorRegistryPort } from "./research-resource";
 
 /**
- * Compatibility composition for the desktop host. Connector implementations
- * stay behind this boundary while installed connector plugins adopt the same
- * host-neutral registry contract.
+ * No-plugin fallback for the generic host. Connector implementations belong
+ * to an installed research plugin; keeping this fallback empty prevents the
+ * host from silently reintroducing a domain implementation.
  */
 export function createDefaultResearchConnectorRegistry(): ResearchConnectorRegistryPort {
-	return new ResearchConnectorRegistry(createDefaultResearchConnectors());
+	return {
+		list: () => [],
+		recommend: async (_seed, connectorId) => ({
+			hits: [],
+			failures: [
+				{
+					connectorId,
+					message: "Research connector plugin is unavailable",
+					retryable: false,
+					at: new Date().toISOString(),
+				},
+			],
+		}),
+		search: async (input) => ({
+			query: input.query,
+			hits: [],
+			failures: [
+				{
+					connectorId: input.connectorIds?.[0] ?? "research",
+					message: "Research connector plugin is unavailable",
+					retryable: false,
+					at: new Date().toISOString(),
+				},
+			],
+			connectors: [...(input.connectorIds ?? [])],
+			complete: false,
+		}),
+	};
 }

@@ -58,6 +58,22 @@ describe("createBackend", () => {
 		services.dispose();
 	});
 
+	it("fails closed for research when no plugin host is installed", async () => {
+		const services = createBackend({ projectTrust: false, permissionGates: false });
+		expect(await services.research.listConnectors()).toEqual([]);
+		expect(services.researchWrites.listAdapters()).toEqual([]);
+		const response = await services.research.search({ query: "no-plugin" });
+		expect(response).toMatchObject({ query: "no-plugin", hits: [], connectors: [], complete: false });
+		expect(response.failures).toEqual([
+			expect.objectContaining({
+				connectorId: "research",
+				message: "Research connector plugin is unavailable",
+				retryable: false,
+			}),
+		]);
+		services.dispose();
+	});
+
 	it("keeps an injected compute adapter on the backend boundary", () => {
 		const compute = {
 			listHosts: async () => [],
