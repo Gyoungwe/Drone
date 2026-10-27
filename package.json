@@ -20,7 +20,7 @@
 		"build": "npm run build:pi-core && npm run build:pi-research && npm run build -w packages/desktop",
 		"prebuild": "npm run build -w @gyoungwe/plugin-api && npm run fetch:plugins",
 		"pretypecheck": "npm run build -w @gyoungwe/plugin-api && npm run fetch:plugins",
-		"pretest": "npm run fetch:plugins",
+		"pretest": "npm run fetch:plugins && node scripts/stage-plugin-runtime.mjs",
 		"fetch:plugins": "node scripts/fetch-plugins.mjs",
 		"typecheck": "npm run typecheck --workspaces && npm run check:pi",
 		"test": "npm run build:pi-core && npm run build:pi-research && npm run test --workspaces --if-present && node --test scripts/check-build-inputs.test.mjs scripts/academic-eval/score.test.mjs scripts/check-native-pi.test.mjs scripts/b3-pipeline/rnaseq-smoke.test.mjs scripts/check-task-runtime-build.test.mjs scripts/check-native-plugin-boundary.test.mjs scripts/check-host-domain-dependencies.test.mjs",

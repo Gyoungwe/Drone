@@ -368,3 +368,9 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 
 应用开始异步退出后，macOS `activate` 仍可能到达；如果再次创建窗口，会恢复已清理后端上的会话并出现空白/失效页面。退出、失败和已完成状态都必须禁止新建窗口，失败保留错误并允许明确重试退出。日志中的 `backend disposed` 仅指 session service，不能代替整个 Desktop cleanup、will-quit 和实际进程退出证据。
 
+## 2026-10-27：候选插件与干净宿主检查
+
+根 `pretypecheck/pretest/prebuild` 会从 `plugins.lock.json` 重建并覆盖已安装插件。本地候选包的定向测试通过后，若锁仍指向旧版，下一次根命令会丢失新 host exports。必须先提交插件源码、从干净依赖构建并记录 tarball SHA-256，再更新源码锁并验证默认 fetch；开发目录 override 不能证明锁定安装通过。源码候选版本与公开 npm 版本分别记录。
+
+独立宿主 checkout 没有 sibling `drone-plugins` 或已忽略的沙箱二进制。默认 `npm test` 在 pretest 按既有 checksum lock 准备 Node runtime；公开 UI 包集成测试只接受 `check:public-plugin-host` 提供的真实安装目录，默认宿主测试保留空安装根与自包含 fixture 覆盖，不回退读取另一仓库源码。缺少外部包时该集成用例明确跳过，不能算公开包验收通过。
+
