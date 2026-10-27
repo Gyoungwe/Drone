@@ -3,11 +3,12 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createStandaloneRuntime, withRuntime } from "@drone/tasks/runtime-bridge";
-import { isReadOnlyTool } from "@drone/tasks/tool-manifest-runtime";
+import { explainTaskReason } from "@drone/shared";
 import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { build } from "esbuild";
 import { afterEach, expect, it, vi } from "vitest";
+import { createStandaloneRuntime, withRuntime } from "../../extensions/src/internal/runtime/runtime-bridge";
+import { isReadOnlyTool } from "../../extensions/src/internal/runtime/tool-manifest";
 import { registerTaskRuntime } from "./fixtures/task-plugin.mjs";
 
 const runtimes = [];
@@ -18,7 +19,7 @@ afterEach(async () => {
 	await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
 
-function host(id) {
+async function host(id) {
 	const hooks = new Map();
 	const runtime = createStandaloneRuntime();
 	runtimes.push(runtime);
@@ -35,7 +36,7 @@ function host(id) {
 			hooks.set(name, [...(hooks.get(name) || []), handler]);
 		},
 	};
-	const journal = registerTaskRuntime(pi);
+	const journal = await registerTaskRuntime(pi);
 	const ctx = {
 		cwd: tmpdir(),
 		sessionManager: { getSessionId: () => id, getBranch: () => [] },
@@ -62,8 +63,8 @@ it("repeats declared knowledge reads across turns without replaying effects or b
 		logLevel: "silent",
 	});
 	const { registerKnowledgeInterface } = await import(/* @vite-ignore */ pathToFileURL(bundle).href);
-	const first = host("knowledge-session");
-	const other = host("unrelated-session");
+	const first = await host("knowledge-session");
+	const other = await host("unrelated-session");
 	// Load the real independently bundled knowledge extension before the inline
 	// host announces its runtime, matching Desktop's extension initialization.
 	registerKnowledgeInterface({ ...first.pi, on() {} }, { readOnly: true });
@@ -99,4 +100,19 @@ it("repeats declared knowledge reads across turns without replaying effects or b
 				expect.objectContaining({ block: true, reason: expect.stringContaining("idempotency-check") }),
 			]);
 	}
+});
+
+it("renders installed task owner reasons with the shared task presentation copy", async () => {
+	const { journal } = await host("reason-contract");
+	journal.attach("reason-contract");
+	journal.plan({
+		goal: "Review a bounded output",
+		summary: "Human review",
+		milestones: [{ id: "review", title: "Review", acceptance: { kind: "human_review" } }],
+	});
+	expect(journal.snapshot().reason).toBe("task-authorization-required");
+	expect(journal.render()).toContain(explainTaskReason(journal.snapshot().reason));
+	journal.command({ action: "cancel", taskId: journal.snapshot().id, revision: journal.view().revision });
+	expect(journal.snapshot().reason).toBe("user-cancelled");
+	expect(journal.render()).toContain(explainTaskReason(journal.snapshot().reason));
 });

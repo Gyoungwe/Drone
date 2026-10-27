@@ -338,34 +338,39 @@
       "targetPackage": "pi-research"
     },
     "task_evidence_restore": {
-      "source": "packages/tasks/src/runtime/register.ts",
-      "registration": "task-helper",
+      "source": "packages/backend/src/session-engine/extensions.ts",
+      "registration": "native-session",
       "nativePiAvailable": true,
-      "targetPackage": "pi-tasks"
+      "targetPackage": "pi-core",
+      "delegated": true
     },
     "task_plan": {
-      "source": "packages/tasks/src/runtime/register.ts",
-      "registration": "task-helper",
+      "source": "packages/backend/src/session-engine/extensions.ts",
+      "registration": "native-session",
       "nativePiAvailable": true,
-      "targetPackage": "pi-tasks"
+      "targetPackage": "pi-core",
+      "delegated": true
     },
     "task_reconcile": {
-      "source": "packages/tasks/src/runtime/register.ts",
-      "registration": "task-helper",
+      "source": "packages/backend/src/session-engine/extensions.ts",
+      "registration": "native-session",
       "nativePiAvailable": true,
-      "targetPackage": "pi-tasks"
+      "targetPackage": "pi-core",
+      "delegated": true
     },
     "task_status": {
-      "source": "packages/tasks/src/runtime/register.ts",
-      "registration": "task-helper",
+      "source": "packages/backend/src/session-engine/extensions.ts",
+      "registration": "native-session",
       "nativePiAvailable": true,
-      "targetPackage": "pi-tasks"
+      "targetPackage": "pi-core",
+      "delegated": true
     },
     "task_wait": {
-      "source": "packages/tasks/src/runtime/register.ts",
-      "registration": "task-helper",
+      "source": "packages/backend/src/session-engine/extensions.ts",
+      "registration": "native-session",
       "nativePiAvailable": true,
-      "targetPackage": "pi-tasks"
+      "targetPackage": "pi-core",
+      "delegated": true
     }
   }
 }

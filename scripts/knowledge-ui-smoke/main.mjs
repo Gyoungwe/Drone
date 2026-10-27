@@ -6,8 +6,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import { KnowledgeUiService } from "../../packages/backend/src/knowledge/ui.ts";
 import { registerKnowledgeIpc } from "../../packages/desktop/src/main/ipc/knowledge.ts";
 import { IpcChannels } from "../../packages/shared/src/ipc.ts";
-import { createTaskJournal } from "../../packages/tasks/src/runtime/runtime.ts";
-import { createTaskWorkbench, WORKBENCH_ENTRY } from "../../packages/tasks/src/runtime/workbench.ts";
+import { createTaskFixture } from "./task-owner.mjs";
 
 const root = process.env.DRONE_UI_FIXTURE,
 	repo = process.env.DRONE_UI_REPO;
@@ -23,6 +22,13 @@ const checks = [],
 	actions = [];
 const screenshots = join(root, "screenshots");
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+const taskOwners = [];
+async function createTaskWorkbench(cwd, options) {
+	const fixture = await createTaskFixture(cwd, options);
+	taskOwners.push(fixture);
+	return fixture.journal;
+}
+
 async function run() {
 	try {
 		console.log("Electron ready; preparing isolated knowledge fixtures");
@@ -727,9 +733,19 @@ async function run() {
 		await js("window.sidebarFixture.end();true");
 		window.webContents.debugger.detach();
 
-		const journal = createTaskJournal();
+		const journal = await createTaskWorkbench(cwd);
 		journal.attach("isolated-ui");
 		journal.begin("分析实验数据并交付 CSV；不代表实验结论已验证");
+		journal.plan({
+			summary: "隔离界面测试的单文件交付",
+			writeRoots: [cwd],
+			milestones: [{ id: "data", title: "CSV 文件读回", acceptance: { kind: "file", path: "analysis.csv" } }],
+		});
+		journal.command({
+			taskId: journal.snapshot().id,
+			revision: journal.view().revision,
+			action: "authorize-task",
+		});
 		await writeFile(join(cwd, "analysis.csv"), "sample,value\nfixture,1\n");
 		await journal.observe(
 			{ toolName: "write", toolCallId: "fixture-write", input: { path: "analysis.csv" } },
@@ -755,8 +771,8 @@ async function run() {
 		);
 
 		const entries = [];
-		let workbench = createTaskWorkbench({
-			persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }),
+		let workbench = await createTaskWorkbench(cwd, {
+			persist: (data) => entries.push({ customType: "drone-task-workbench-v2", data }),
 		});
 		workbench.attach("isolated-ui-v2");
 		workbench.plan({
@@ -786,7 +802,7 @@ async function run() {
 			"v2 structured task contract view",
 		);
 		assert.equal(workbench.view().tasks[0].state, "waiting_user");
-		workbench.command({ taskId, revision: workbench.view().revision, action: "approve-plan" });
+		workbench.command({ taskId, revision: workbench.view().revision, action: "authorize-task" });
 		await pushTask();
 		await wait(
 			"document.querySelector('[data-testid=task-workbench]').innerText.includes('等待你')",
@@ -822,7 +838,7 @@ async function run() {
 			"(()=>{const node=document.querySelector('[data-testid=task-workbench]');return Boolean(node)&&node.innerText.includes('✓')&&node.innerText.includes('CSV 文件读回')&&node.innerText.includes('人工核对交付文件')&&node.innerText.includes('已验收 2/2')})()",
 			"host file readback updates selected criterion",
 		);
-		workbench = createTaskWorkbench();
+		workbench = await createTaskWorkbench(cwd);
 		workbench.attach("isolated-ui-v2", entries);
 		await workbench.reconcile(cwd);
 		await pushTask();
@@ -861,6 +877,7 @@ async function run() {
 		);
 		assert.equal(errors.length, 0, "renderer errors");
 		console.log(JSON.stringify({ passed: true, checks, root, screenshots }));
+		for (const owner of taskOwners) await owner.dispose();
 		knowledge.dispose();
 		await services.closeKnowledgeServices();
 		window.destroy();
@@ -875,6 +892,7 @@ async function run() {
 			if (window)
 				await writeFile(join(root, "failure.png"), (await window.webContents.capturePage()).toPNG());
 		} catch {}
+		for (const owner of taskOwners) await owner.dispose();
 		await services?.closeKnowledgeServices?.();
 		app.exit(1);
 	}

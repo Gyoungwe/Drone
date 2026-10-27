@@ -1,9 +1,6 @@
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { registerTaskRuntime } from "@drone/tasks/runtime";
-import { createStandaloneRuntime, withRuntime } from "@drone/tasks/runtime-bridge";
-import { defineTool } from "@drone/tasks/tool-manifest-runtime";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
 	createAgentSession,
@@ -13,8 +10,12 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
+import { withRuntime } from "../../extensions/src/internal/runtime/runtime-bridge";
+import { defineTool } from "../../extensions/src/internal/runtime/tool-manifest";
 import { PluginRuntimeRegistry } from "../src/plugins/runtime";
+import { createDroneRuntime as createStandaloneRuntime } from "../src/runtime";
 import { SessionEngine } from "../src/session-engine/engine";
+import { registerTaskRuntime } from "./fixtures/task-plugin.mjs";
 
 it("uses each SDK session's native effects for task guards without borrowing stale read-only manifests", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-task-native-")));
@@ -58,7 +59,7 @@ it("uses each SDK session's native effects for task guards without borrowing sta
 				pi.events.on("drone:runtime/request/v1", () =>
 					pi.events.emit("drone:runtime/v1", { version: 1, runtime }),
 				);
-				registerTaskRuntime(pi);
+				await registerTaskRuntime(pi);
 				// A prior v1 registration must never override a current native write/unknown declaration.
 				if (effect !== "read")
 					withRuntime(runtime, () => defineTool({ name: "native_probe", drone: { readOnly: true } }));

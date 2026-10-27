@@ -1,5 +1,0 @@
-{
-	"version": 1,
-	"generator": "packages/tasks/scripts/build-runtime.mjs",
-	"inputsSha256": "6b9c1869d99657e88c728de86948fdf70eedba3ea362bcacb8f55c4d2c67fde0"
-}

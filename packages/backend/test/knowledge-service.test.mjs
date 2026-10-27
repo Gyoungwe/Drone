@@ -12,6 +12,7 @@ import {
 } from "@drone/extensions/internal/obsidian-workbench";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import { loadWorkspaceConfig, saveWorkspaceConfig } from "@drone/extensions/workspace-config";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import {
 	buildKnowledgeSearchExpression,
 	closeKnowledgeServices,
@@ -343,6 +344,7 @@ describe("navigation delivery and bounded maintenance", () => {
 		const tools = new Map(),
 			events = new Map();
 		const api = {
+			events: createEventBus(),
 			registerCommand: () => {},
 			registerTool: (t) => tools.set(t.name, t),
 			on: (name, fn) => events.set(name, fn),

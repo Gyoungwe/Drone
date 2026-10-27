@@ -145,7 +145,7 @@ export function bindRuntime(pi: RuntimeHost | null | undefined): () => void {
 	runtimeBindings.add(pi);
 	const inherited = currentRuntime();
 	const fallback = createStandaloneRuntime();
-	// Extensions register immutable tool/acceptance declarations before the
+	// Extensions register immutable tool declarations before the
 	// desktop host announces its runtime. Give this host a private copy so
 	// callbacks that run in the fallback still see those declarations without
 	// sharing mutable journals, queues, or UI state from another host.

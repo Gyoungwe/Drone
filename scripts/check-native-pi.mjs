@@ -19,7 +19,6 @@ const SOURCE_ROOTS = [
 	"packages/backend/src/tools",
 	"packages/backend/src/capabilities",
 ];
-const TASK_REGISTER_FILE = "packages/tasks/src/runtime/register.ts";
 
 function lineNumber(source, index) {
 	let line = 1;
@@ -118,21 +117,6 @@ function scanDirectRegistrations(source, relativePath) {
 	return records;
 }
 
-function scanTaskHelperRegistrations(source, relativePath) {
-	const records = [];
-	const callPattern = /\btool\s*\(\s*(["'])([^"'\n]+)\1/g;
-	for (const match of source.matchAll(callPattern)) {
-		records.push({
-			name: match[2],
-			source: relativePath,
-			line: lineNumber(source, match.index),
-			registration: "task-helper",
-			nativePiAvailable: true,
-		});
-	}
-	return records;
-}
-
 function resolveImportedSource(_rootDir, importerPath, modulePath) {
 	if (!modulePath.startsWith(".")) return null;
 	const base = path.resolve(path.dirname(importerPath), modulePath);
@@ -212,7 +196,6 @@ function collectSourceFiles(rootDir) {
 		}
 	};
 	for (const relativeRoot of SOURCE_ROOTS) visit(path.join(rootDir, relativeRoot));
-	visit(path.join(rootDir, TASK_REGISTER_FILE));
 	return files;
 }
 
@@ -222,8 +205,6 @@ export function scanNativePiRegistrations(rootDir = path.resolve(SCRIPT_DIR, "..
 		const relativePath = path.relative(rootDir, absolutePath).replaceAll(path.sep, "/");
 		const source = fs.readFileSync(absolutePath, "utf8");
 		records.push(...scanDirectRegistrations(source, relativePath));
-		if (relativePath === TASK_REGISTER_FILE)
-			records.push(...scanTaskHelperRegistrations(source, relativePath));
 		records.push(...scanDynamicRegistrations(rootDir, absolutePath, relativePath, source));
 	}
 	const byName = new Map();
