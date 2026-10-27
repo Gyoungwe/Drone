@@ -565,6 +565,17 @@ export interface KnowledgeReadHostPort {
 		index(input: unknown): Promise<unknown>;
 		cancelIndex(input: unknown): Promise<unknown>;
 	};
+	/** Optional research capture operations supplied by the installed knowledge plugin. */
+	researchResource?: {
+		resolveContext(input: unknown): unknown;
+		ingestSnapshot(input: unknown): unknown;
+	};
+	/** Optional terminal-job experience writer supplied by the installed knowledge plugin. */
+	recordTerminalJobExperience?: (
+		store: unknown,
+		input: unknown,
+		expectedRevision?: number,
+	) => Promise<unknown>;
 	/** Optional UI operations supplied by the installed knowledge plugin. */
 	jobs?(input: unknown): Promise<unknown>;
 	maintenance?(input: unknown): Promise<unknown>;

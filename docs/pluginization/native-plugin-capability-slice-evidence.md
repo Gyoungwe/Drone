@@ -139,6 +139,7 @@
 - 2026-10-27：P4 task acceptance seam：`@gyoungwe/plugin-api/tasks` 新增 host-owned `TaskAcceptanceRegistry`、声明校验和 typed verifier 回执；backend `package-runtime` 仅负责把该 registry 绑定到实例级 `DroneRuntime`，删除重复的宿主校验实现。plugin-api contract 回归、backend typecheck 与相关测试通过；任务工作流、正式安装包和 Pi workbench GUI 仍未完成。
 - 2026-10-27：P2 Vault host seam：插件 `c8edf25` 将 readBinding/readNote/containedFile/createFileOnly/replaceFile/conflict-detection 接入版本化 `knowledgeHostLoader.vault`，`e7340e7` 增加临时 Vault 的 create/read/replace-CAS 真回归；宿主 `plugin-api` 同步声明并继续由既有 `KnowledgeWebDavVault` 适配。插件 workspace typecheck、manifest、knowledge build-check 与 host-loader 2 项回归通过；正式 Vault GUI 写入/回读/rollback 仍未验收。
 - 2026-10-27：P2 daily-discovery host seam：插件 `3b709ef` 将 `DAILY_DISCOVERY_SYSTEM`、消息构建和受允许路径约束的 JSON 想法解析接入版本化 `knowledgeHostLoader.dailyDiscovery`，并从公开 `/host` 入口导出 loader；宿主 `plugin-api` 合同同步声明，`host-operations.test.ts` 验证 backend 只消费已安装 host 提供的 prompt/parser。插件 typecheck、host-loader 2 项回归与 build-check，宿主 backend typecheck、定向回归和 `check:arch` 通过；未迁移 researchResource、experience/publication、uiState/reviewWikiWithModel，也未宣称完整 knowledge GUI 或正式安装包 PASS。
+- 2026-10-27：P4 workbench backend seam：宿主新增 `createWorkbenchHostPort`，把标准 `PluginRuntimeClient`（`status`/`plan`/`todo`/`memorySave`/`persist`）同时接入 `SessionService` 与 `DroneRuntime.tasks.workbench`；未注入 handler 时操作明确 `unavailable`，输入校验、变更事件和 runtime dispose 均 fail-closed。`create-backend` 2 项及 host runtime 2 项行为测试、backend typecheck、tasks runtime artifact check 和 Biome 通过。该切片仍不是完整任务状态机迁移，也不构成正式安装包 GUI PASS。
 
 ## 未关闭项
 

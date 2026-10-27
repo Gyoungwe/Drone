@@ -239,7 +239,7 @@ export function registerTaskRuntime(pi, options = {}) {
 	const shared = requestSharedTaskRuntime(pi);
 	if (shared?.journal) {
 		shared.journal.configure?.(options);
-		hostRuntime.tasks.workbench = shared;
+		hostRuntime.tasks.workbench = { ...hostRuntime.tasks.workbench, ...shared };
 		return shared.journal;
 	}
 	// Several bundled extension graphs can load the task runtime into the same Pi
@@ -256,7 +256,7 @@ export function registerTaskRuntime(pi, options = {}) {
 	// but it is no longer installed as a fallback when the workbench is disabled.
 	const journal = registerWorkbench(pi, options);
 	if (registry) registry.journal = journal;
-	hostRuntime.tasks.workbench = { version: 1, journal };
+	hostRuntime.tasks.workbench = { ...hostRuntime.tasks.workbench, version: 1, journal };
 	publishTaskRuntimeRegistry(pi, registry);
 	return journal;
 }

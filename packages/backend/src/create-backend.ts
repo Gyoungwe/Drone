@@ -132,6 +132,11 @@ import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
 import type { StorageRegistry } from "./storage/registry";
 import { createTaskAcceptanceHost } from "./tasks/package-runtime";
+import {
+	createWorkbenchHostPort,
+	type WorkbenchHostPort,
+	type WorkbenchOperationHandlers,
+} from "./tasks/workbench-runtime";
 import type { SshHostEntry } from "./tools/ssh";
 import { applyStoredZoteroLocalKey } from "./zotero/local-write";
 import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
@@ -183,6 +188,7 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	listActiveSessionRuntime(): Array<{ sessionId: string; streaming: boolean; compacting: boolean }>;
 	getPendingPermissionRequests(): PermissionRequest[];
 	checkSessionWritable(sessionId: string): "ok" | "not_found" | "read_only";
+	readonly workbench: WorkbenchHostPort;
 }
 
 export interface MemoryServicePort {
@@ -248,6 +254,8 @@ export interface BackendServices {
 	researchWrites: ResearchWriteService;
 	/** Isolated acceptance registry exposed to an installed task/workbench plugin. */
 	taskHost: TaskAcceptanceHostPort;
+	/** Standard workbench operation client exposed to an installed task plugin. */
+	workbench: WorkbenchHostPort;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
 	/** Durable B7 dataset, public-fetch and RO-Crate registry. */
@@ -337,11 +345,15 @@ export interface BackendOptions extends SessionServiceOptions {
 	researchConnectorHostLoaderFactory?: ResearchConnectorHostLoaderFactory;
 	/** Optional installed research plugin write host; takes precedence over compatibility only when no registry is supplied. */
 	researchWriteAdapterHostLoader?: ResearchWriteAdapterHostLoader;
+	/** Optional host-owned workbench operations; omitted means fail-closed. */
+	workbench?: WorkbenchOperationHandlers;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const taskHost = createTaskAcceptanceHost(runtime);
+	const workbench = createWorkbenchHostPort(runtime, options.workbench);
+	runtime.tasks.workbench = { version: workbench.contractVersion, client: workbench.client };
 	// The packaged knowledge capability owns its runtime when installed. Keep
 	// the legacy worker only for the no-plugin compatibility path so a generic
 	// host can start without the research-workbench resource tree.
@@ -382,6 +394,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			: undefined);
 	const sessions = new SessionService({
 		...options,
+		workbenchPort: workbench,
 		...(knowledgeFactory ? { knowledgeFactory } : {}),
 		memory,
 		runtime,
@@ -860,6 +873,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		research,
 		researchWrites,
 		taskHost,
+		workbench,
 		discovery,
 		dataDesign,
 		analysis,
