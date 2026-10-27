@@ -94,5 +94,5 @@ export interface TaskAcceptanceHostPort {
 
 export interface TaskHostLoader {
 	readonly contractVersion: TaskHostContractVersion;
-	readonly load: () => TaskAcceptanceHostPort;
+	readonly load: (input?: { workbench?: PluginRuntimeClient }) => TaskAcceptanceHostPort;
 }

@@ -362,10 +362,12 @@ export interface BackendOptions extends SessionServiceOptions {
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
-	const taskHost = options.taskHostLoader?.load() ?? createTaskAcceptanceHost(runtime);
+	const hostWorkbench = createWorkbenchHostPort(runtime, options.workbench);
+	const taskHost =
+		options.taskHostLoader?.load({ workbench: hostWorkbench.client }) ?? createTaskAcceptanceHost(runtime);
 	const workbench = taskHost.workbench
 		? { contractVersion: 1 as const, client: taskHost.workbench }
-		: createWorkbenchHostPort(runtime, options.workbench);
+		: hostWorkbench;
 	runtime.tasks.workbench = { version: workbench.contractVersion, client: workbench.client };
 	// The packaged knowledge capability owns its runtime when installed. The
 	// generic host does not bootstrap the legacy worker; callers that still need

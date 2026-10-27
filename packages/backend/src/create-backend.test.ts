@@ -421,6 +421,7 @@ describe("createBackend", () => {
 	});
 
 	it("accepts an installed task host loader without rebuilding its registry", async () => {
+		let loaderInput: { workbench?: unknown } | undefined;
 		const workbench = {
 			invoke: async (operation: string) => ({ operation }),
 			subscribe: () => () => undefined,
@@ -434,8 +435,15 @@ describe("createBackend", () => {
 		const services = createBackend({
 			projectTrust: false,
 			permissionGates: false,
-			taskHostLoader: { contractVersion: 1, load: () => host },
+			taskHostLoader: {
+				contractVersion: 1,
+				load: (input) => {
+					loaderInput = input;
+					return host;
+				},
+			},
 		});
+		expect(loaderInput?.workbench).toBeDefined();
 		expect(services.taskHost).toBe(host);
 		expect(services.workbench.client).toBe(workbench);
 		expect(await services.workbench.client.invoke("status", {})).toEqual({ operation: "status" });
@@ -651,6 +659,34 @@ describe("createBackend", () => {
 		await service.jobs({ cwd: "/tmp/project", offset: 0, limit: 10, revision: 1 });
 		await service.maintain({ cwd: "/tmp/project", action: "reconcile", revision: 1 });
 		expect(calls).toEqual(["jobs", "maintenance"]);
+		service.dispose();
+	});
+
+	it("routes topic memory operations through the installed host", async () => {
+		const calls: string[] = [];
+		const service = new KnowledgeUiService(undefined, {
+			knowledgeHost: {
+				topics: {
+					list: async () => {
+						calls.push("list");
+						return { items: [] };
+					},
+					archive: async () => {
+						calls.push("archive");
+						return { status: "archived" };
+					},
+				},
+			},
+		});
+
+		await service.topics({ cwd: "/tmp/project", bindingRevision: 1, query: "" });
+		await service.archiveTopic({
+			cwd: "/tmp/project",
+			bindingRevision: 1,
+			id: "topic-1",
+			expectedRevision: 1,
+		});
+		expect(calls).toEqual(["list", "archive"]);
 		service.dispose();
 	});
 
