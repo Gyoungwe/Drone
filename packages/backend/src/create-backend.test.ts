@@ -514,6 +514,32 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
+	it("routes knowledge setup, specialist settings, and target operations through the installed host", async () => {
+		const calls: string[] = [];
+		const service = new KnowledgeUiService(undefined, {
+			knowledgeHost: {
+				setupPreview: async () => {
+					calls.push("setupPreview");
+					return { status: "preview" };
+				},
+				specialistSettings: async () => {
+					calls.push("specialistSettings");
+					return { status: "saved" };
+				},
+				openTarget: async () => {
+					calls.push("openTarget");
+					return { path: "note.md", kind: "note" };
+				},
+			},
+		});
+
+		await service.setupPreview({ cwd: "/tmp/project", path: null });
+		await service.specialistSettings({ cwd: "/tmp/project", settings: {} } as never);
+		await service.openTarget({ cwd: "/tmp/project", path: "note.md", revision: 1 });
+		expect(calls).toEqual(["setupPreview", "specialistSettings", "openTarget"]);
+		service.dispose();
+	});
+
 	it("routes UI events and model review through the installed host", async () => {
 		const previousDir = process.env.DRONE_KNOWLEDGE_DIR;
 		process.env.DRONE_KNOWLEDGE_DIR = "/tmp/drone-knowledge-ui-host";

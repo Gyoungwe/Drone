@@ -43,6 +43,9 @@ export interface KnowledgeHostPort {
 	reviews?(input: unknown): Promise<unknown>;
 	preview?(input: unknown): Promise<unknown>;
 	decide?(input: unknown): Promise<unknown>;
+	setupPreview?(input: unknown): Promise<unknown>;
+	specialistSettings?(input: unknown): Promise<unknown>;
+	openTarget?(input: unknown): Promise<unknown>;
 	/** Optional maintenance implementation supplied by the installed package. */
 	planMaintenance?: KnowledgeMaintenanceOperations["planMaintenance"];
 	runMaintenance?: KnowledgeMaintenanceOperations["runMaintenance"];
@@ -490,7 +493,15 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private readonly writeProvider?: KnowledgeWriteProvider &
 		Pick<
 			KnowledgeHostPort,
-			"vault" | "uiState" | "reviewWikiWithModel" | "semantic" | "jobs" | "maintenance"
+			| "vault"
+			| "uiState"
+			| "reviewWikiWithModel"
+			| "semantic"
+			| "jobs"
+			| "maintenance"
+			| "setupPreview"
+			| "specialistSettings"
+			| "openTarget"
 		>;
 	private readonly researchHost?: ResearchHostAdapter;
 	constructor(
@@ -500,7 +511,15 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			knowledgeHost?: KnowledgeWriteProvider &
 				Pick<
 					KnowledgeHostPort,
-					"vault" | "uiState" | "reviewWikiWithModel" | "semantic" | "jobs" | "maintenance"
+					| "vault"
+					| "uiState"
+					| "reviewWikiWithModel"
+					| "semantic"
+					| "jobs"
+					| "maintenance"
+					| "setupPreview"
+					| "specialistSettings"
+					| "openTarget"
 				>;
 		} = {},
 	) {
@@ -568,6 +587,12 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		if (name === "knowledgeJobs" && this.writeProvider?.jobs) return this.writeProvider.jobs(input);
 		if (name === "knowledgeMaintenance" && this.writeProvider?.maintenance)
 			return this.writeProvider.maintenance(input);
+		if (name === "knowledgeSetupPreview" && this.writeProvider?.setupPreview)
+			return this.writeProvider.setupPreview(input);
+		if (name === "knowledgeSpecialistSettings" && this.writeProvider?.specialistSettings)
+			return this.writeProvider.specialistSettings(input);
+		if (name === "knowledgeOpenTarget" && this.writeProvider?.openTarget)
+			return this.writeProvider.openTarget(input);
 		return knowledgeCompatibility.call(name, input);
 	}
 	specialistSettings(
