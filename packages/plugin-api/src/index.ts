@@ -10,9 +10,9 @@
 export const PLUGIN_API_VERSION = 1 as const;
 export const RESULT_CONTRACT = "drone-result/v3" as const;
 
+export * from "./core.js";
 export * from "./research.js";
 export * from "./tasks.js";
-export * from "./core.js";
 
 export type PluginApiVersion = typeof PLUGIN_API_VERSION;
 export type ResultContractVersion = typeof RESULT_CONTRACT;

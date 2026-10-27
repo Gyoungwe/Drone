@@ -17,16 +17,16 @@ import {
 } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import {
-	closeKnowledgeServices,
-	getKnowledgeService,
-	subscribeKnowledgeUi,
-} from "@gyoungwe/pi-knowledge/host";
-import {
 	makeDeliverFilesTool,
 	makeMemorySaveTool,
 	makeStatusTool,
 	makeTodoTool,
 } from "@gyoungwe/pi-core/host";
+import {
+	closeKnowledgeServices,
+	getKnowledgeService,
+	subscribeKnowledgeUi,
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/knowledge-publication";
@@ -80,7 +80,9 @@ beforeEach(async () => {
 		},
 		desktopIntegration: {
 			appendSystemPrompt: [],
-			additionalExtensionPaths: [resolve(import.meta.dirname, "../../../.pi/extensions/obsidian-workbench.mjs")],
+			additionalExtensionPaths: [
+				resolve(import.meta.dirname, "../../../.pi/extensions/obsidian-workbench.mjs"),
+			],
 			additionalSkillPaths: [resolve(import.meta.dirname, "../../../.pi/skills/research-vault/SKILL.md")],
 		},
 	});

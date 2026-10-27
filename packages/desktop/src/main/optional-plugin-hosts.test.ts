@@ -38,9 +38,16 @@ describe("discoverPluginHostLoader", () => {
 		await writeFile(join(packageRoot, "package.json"), JSON.stringify({ name: "pi-core", version: "0.1.9" }));
 		await writeFile(
 			join(packageRoot, "plugin.manifest.json"),
-			JSON.stringify({ capabilities: ["core"], hosts: ["drone-desktop"], entrypoints: { host: "./dist/host.mjs" } }),
+			JSON.stringify({
+				capabilities: ["core"],
+				hosts: ["drone-desktop"],
+				entrypoints: { host: "./dist/host.mjs" },
+			}),
 		);
-		await writeFile(join(packageRoot, "dist", "host.mjs"), "export const coreHostLoader = { contractVersion: 2 };\n");
+		await writeFile(
+			join(packageRoot, "dist", "host.mjs"),
+			"export const coreHostLoader = { contractVersion: 2 };\n",
+		);
 		expect(await discoverCoreHostLoader({ packageRoots: [root] })).toBeUndefined();
 	});
 	it("loads a declared capability host without a package-name allowlist", async () => {

@@ -21,10 +21,7 @@ import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoad
 import type { DailyDiscoveryOperations } from "../services/daily-discovery";
 import type { BackgroundReviewerFactory, BackgroundReviewerPort } from "../services/deliverable-reviewer";
 import type { KnowledgeMaintenanceOperations } from "../services/knowledge-maintenance";
-import {
-	defaultKnowledgeCompatibility,
-	defaultKnowledgeRuntimeSetup,
-} from "./compat-adapter";
+import { defaultKnowledgeCompatibility, defaultKnowledgeRuntimeSetup } from "./compat-adapter";
 import { KnowledgeWebDavService } from "./webdav";
 import type { KnowledgeWebDavVault } from "./webdav-sync";
 
@@ -279,10 +276,7 @@ export function createKnowledgeReviewWithModelOperation(
 ): (input: unknown, options: unknown) => Promise<unknown> {
 	return (
 		host?.reviewWikiWithModel ??
-		(compatibility.reviewWikiWithModel as unknown as (
-			input: unknown,
-			options: unknown,
-		) => Promise<unknown>)
+		(compatibility.reviewWikiWithModel as unknown as (input: unknown, options: unknown) => Promise<unknown>)
 	);
 }
 
