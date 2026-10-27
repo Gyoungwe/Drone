@@ -392,4 +392,4 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 
 ### Managed native 工具不能只传 name/description/schema
 
-现象：包加载成功，但 outputSchema、namespace、executionMode 等标准字段消失，execute 的 onUpdate 永远是 undefined。原因：受限 worker 注册回执只提取基础四项，调用协议也没有 progress 消息。处理：显式传输标准 JSON 字段；不能序列化的 prepareArguments/prepareLoadout/renderCall/renderResult 在加载时报错；进度绑定尚未结束且未撤销的调用 ID，取消和迟到回调不得串给其他 attachment。`native-tool-protocol-sdk.test.mjs` 用真实 SDK/受限进程回归。普通第三方沙箱进度仍未完成，不能借此切片宣布全 API 兼容。
+现象：包加载成功，但 outputSchema、namespace、executionMode 等标准字段消失，execute 的 onUpdate 永远是 undefined。原因：受限 worker 注册回执只提取基础四项，调用协议也没有 progress 消息。处理：显式传输标准 JSON 字段；不能序列化的 prepareArguments/prepareLoadout/renderCall/renderResult 在加载时报错；进度绑定尚未结束且未撤销的调用 ID，取消和迟到回调不得串给其他 attachment。`native-tool-protocol-sdk.test.mjs` 用真实 SDK/受限进程回归。普通第三方沙箱也需从两条 SDK 注册路径传入 observer，不能仅修改 worker；共享 `tool-progress.ts` 的进度边界 schema。不能借此切片宣布全 API 兼容。

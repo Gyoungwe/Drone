@@ -19,6 +19,7 @@ import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
 import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
 import { canonicalProjectId } from "../project-id";
+import { toolProgressSchema } from "../tool-progress";
 import { NATIVE_EVENTS, type NativeEventName } from "./native-events";
 import { PROCESS_RUNTIME_WORKER } from "./process-runtime-worker";
 
@@ -41,17 +42,9 @@ const declarationSchema = Type.Record(
 	}),
 );
 type NativeToolUpdate = NonNullable<Parameters<ToolDefinition["execute"]>[3]>;
-const nativeUpdateSchema = Type.Object({
-	content: Type.Array(
-		Type.Union([
-			Type.Object({ type: Type.Literal("text"), text: Type.String() }),
-			Type.Object({ type: Type.Literal("image"), data: Type.String(), mimeType: Type.String() }),
-		]),
-	),
-	details: Type.Optional(Type.Unknown()),
-});
+
 const messageSchema = Type.Union([
-	Type.Object({ type: Type.Literal("native_update"), id: Type.String(), value: nativeUpdateSchema }),
+	Type.Object({ type: Type.Literal("native_update"), id: Type.String(), value: toolProgressSchema }),
 	Type.Object(
 		{ type: Type.Literal("dispose_resources"), id: Type.String({ minLength: 1 }) },
 		{ additionalProperties: false },

@@ -10,6 +10,7 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
+import { PluginSandboxSession } from "../src/plugin-sandbox";
 import { SessionEngine } from "../src/session-engine/engine";
 import { sandboxExtensionFactory } from "../src/session-engine/sandbox-loader";
 
@@ -65,7 +66,7 @@ async function workspace(packages) {
 	return { root, agentDir, settingsManager, resourceLoader };
 }
 
-async function runSession(workspace, responses) {
+async function runSession(workspace, responses, onEvent) {
 	const modelRuntime = await ModelRuntime.create({
 		authPath: join(workspace.agentDir, "auth.json"),
 		modelsPath: null,
@@ -86,6 +87,7 @@ async function runSession(workspace, responses) {
 		sessionManager: SessionManager.inMemory(workspace.root),
 	});
 	sessions.push(session);
+	if (onEvent) session.subscribe(onEvent);
 	await session.bindExtensions({ uiContext: { confirm: async () => true } });
 	await session.prompt("Run the synthetic sandbox checks and then read the local proof.");
 	await session.waitForIdle();
@@ -185,4 +187,82 @@ it("preserves serializable SDK tool declarations across the real worker and reso
 	expect(loaded.errors).toEqual([]);
 	for (const declaration of declarations)
 		expect(loaded.extensions[0].tools.get(declaration.name)?.definition).toMatchObject(declaration);
+}, 20000);
+
+it("routes third-party progress through the approved worker into real SDK tool update events", async () => {
+	const state = await workspace({
+		"third-party-progress": `export default pi => pi.registerTool({name:"third_party_progress",label:"Progress",description:"Synthetic progress",parameters:{type:"object",properties:{tag:{type:"string"}},required:["tag"]},executionMode:"parallel",async execute(id,{tag},signal,update){signal.throwIfAborted();update({content:[{type:"text",text:tag+":progress"}],details:{id,tag,pid:process.pid}});return {content:[{type:"text",text:tag+":done"}]};}});`,
+	});
+	const observed = [];
+	const session = await runSession(
+		state,
+		[
+			fauxAssistantMessage([
+				fauxToolCall("third_party_progress", { tag: "first" }),
+				fauxToolCall("third_party_progress", { tag: "second" }),
+			]),
+			fauxAssistantMessage("continued"),
+		],
+		(event) => observed.push(event),
+	);
+	expect(
+		session.messages.filter((message) => message.role === "toolResult").every((message) => !message.isError),
+	).toBe(true);
+	const updates = observed.filter(
+		(event) => event.type === "tool_execution_update" && event.toolName === "third_party_progress",
+	);
+	expect(updates).toHaveLength(2);
+	for (const tag of ["first", "second"]) {
+		const event = updates.find((event) => event.partialResult.details.tag === tag);
+		expect(event.partialResult.details.id).toBe(event.toolCallId);
+		expect(event.partialResult.details.pid).not.toBe(process.pid);
+		expect(event.partialResult.content).toEqual([{ type: "text", text: `${tag}:progress` }]);
+	}
+	const progressResults = session.messages.filter(
+		(message) => message.role === "toolResult" && message.toolName === "third_party_progress",
+	);
+	expect(progressResults.map((message) => message.content[0].text).sort()).toEqual([
+		"first:done",
+		"second:done",
+	]);
+});
+
+it("revokes ordinary sandbox progress after cancellation without affecting another invocation", async () => {
+	const state = await workspace({
+		"third-party-cancel-progress": `export default pi => pi.registerTool({name:"progress",label:"Progress",description:"Cancelable progress",parameters:{type:"object",properties:{}},async execute(id,args,signal,update){update?.({content:[{type:"text",text:id+":started"}]});if(args.hold){await new Promise(resolve=>signal.addEventListener("abort",resolve,{once:true}));update({content:[{type:"text",text:id+":after-abort"}]});}return {content:[{type:"text",text:update?"observer":"no observer"}]};}});`,
+	});
+	const pkg = join(state.root, "packages/third-party-cancel-progress");
+	const sandbox = new PluginSandboxSession({
+		pluginId: "cancel-progress",
+		packageRoot: pkg,
+		entrypoint: join(pkg, "index.mjs"),
+		cwd: state.root,
+		runtimeDirectory,
+	});
+	try {
+		const firstUpdates = vi.fn(),
+			secondUpdates = vi.fn();
+		const controller = new AbortController();
+		const canceled = sandbox
+			.invoke("progress", "cancel", { hold: true }, controller.signal, undefined, firstUpdates)
+			.then(
+				() => "unexpected success",
+				(error) => error.message,
+			);
+		await vi.waitFor(() => expect(firstUpdates).toHaveBeenCalledTimes(1));
+		controller.abort();
+		expect(await canceled).toContain("aborted");
+		expect(
+			await sandbox.invoke("progress", "sibling", {}, undefined, undefined, secondUpdates),
+		).toMatchObject({ content: [{ type: "text", text: "observer" }] });
+		expect(firstUpdates).toHaveBeenCalledTimes(1);
+		expect(secondUpdates).toHaveBeenCalledExactlyOnceWith({
+			content: [{ type: "text", text: "sibling:started" }],
+		});
+		expect(await sandbox.invoke("progress", "no-observer", {})).toMatchObject({
+			content: [{ type: "text", text: "no observer" }],
+		});
+	} finally {
+		await sandbox.close();
+	}
 }, 20000);
