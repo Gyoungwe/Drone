@@ -137,12 +137,7 @@ import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
 import type { StorageRegistry } from "./storage/registry";
-import { createTaskAcceptanceHost } from "./tasks/package-runtime";
-import {
-	createWorkbenchHostPort,
-	type WorkbenchHostPort,
-	type WorkbenchOperationHandlers,
-} from "./tasks/workbench-runtime";
+import { createWorkbenchHostPort, type WorkbenchHostPort } from "./tasks/workbench-runtime";
 import type { SshHostEntry } from "./tools/ssh";
 import { applyStoredZoteroLocalKey } from "./zotero/local-write";
 import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
@@ -259,7 +254,7 @@ export interface BackendServices {
 	/** Explicitly authorized, auditable research write adapters. */
 	researchWrites: ResearchWriteService;
 	/** Isolated acceptance registry exposed to an installed task/workbench plugin. */
-	taskHost: TaskAcceptanceHostPort;
+	taskHost?: TaskAcceptanceHostPort;
 	/** Standard workbench operation client exposed to an installed task plugin. */
 	workbench: WorkbenchHostPort;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
@@ -355,25 +350,17 @@ export interface BackendOptions extends SessionServiceOptions {
 	researchConnectorHostLoaderFactory?: ResearchConnectorHostLoaderFactory;
 	/** Optional installed research plugin write host; takes precedence over compatibility only when no registry is supplied. */
 	researchWriteAdapterHostLoader?: ResearchWriteAdapterHostLoader;
-	/** Optional installed task/workbench host; absent uses the isolated host registry. */
+	/** Installed task owner; absence leaves task capability unavailable. */
 	taskHostLoader?: TaskHostLoader;
-	/** Optional host-owned workbench operations; omitted means fail-closed. */
-	workbench?: WorkbenchOperationHandlers;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
-	const hostWorkbench = createWorkbenchHostPort(runtime, options.workbench);
-	const taskHost =
-		options.taskHostLoader?.load({ workbench: hostWorkbench.client }) ?? createTaskAcceptanceHost(runtime);
-	const workbench = taskHost.workbench
+	const taskHost = options.taskHostLoader?.load();
+	if (taskHost?.dispose) runtime.registerDisposable?.({ dispose: taskHost.dispose });
+	const workbench = taskHost?.workbench
 		? { contractVersion: 1 as const, client: taskHost.workbench }
-		: hostWorkbench;
-	runtime.tasks.workbench = {
-		version: workbench.contractVersion,
-		client: workbench.client,
-		...(taskHost.normalizeMilestones ? { normalizeMilestones: taskHost.normalizeMilestones } : {}),
-	};
+		: createWorkbenchHostPort();
 	// The packaged knowledge capability owns its runtime when installed. The
 	// generic host does not bootstrap the legacy worker; callers that still need
 	// that compatibility adapter is test-only and outside this composition path.
@@ -386,9 +373,14 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	for (const id of ["knowledge", "research"])
 		domainCapabilities.register({ id, status: "available", provider: "host-compat" });
 	domainCapabilities.register(
-		options.taskHostLoader
+		taskHost?.createNativeSession
 			? { id: "tasks", status: "available", provider: "plugin:tasks" }
-			: { id: "tasks", status: "available", provider: "host-compat" },
+			: {
+					id: "tasks",
+					status: "unavailable",
+					provider: "none",
+					reason: "Install a task plugin with a native session adapter",
+				},
 	);
 	domainCapabilities.register(
 		options.analysisHostLoader
@@ -433,6 +425,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const sessions = new SessionService({
 		...options,
 		workbenchPort: workbench,
+		taskHost,
 		knowledgeFactory,
 		...(knowledgeHost?.backgroundReviewer
 			? {

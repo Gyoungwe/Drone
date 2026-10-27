@@ -23,7 +23,6 @@ import type { PermissionGate } from "../permissions/gate";
 import { canonicalProjectId } from "../project-id";
 import type { AskGate } from "../session/ask-gate";
 import type { SessionTraces } from "../session/traces";
-import { bindAcceptanceVerifierEvents } from "../tasks/acceptance";
 import { makeAskUserTool } from "../tools/ask-user";
 import { makeBioDatabaseTool } from "../tools/bio/databases";
 import { makeBioExtension } from "../tools/bio/extension";
@@ -66,6 +65,7 @@ type LiveChildControl = {
 };
 
 export interface SessionExtensionDependencies {
+	taskHost?: import("@gyoungwe/plugin-api/tasks").TaskAcceptanceHostPort;
 	/** Optional core plugin host port; absent means core tools are unavailable. */
 	coreHost?: CoreHostPort;
 	/** Host-owned runtime shared with first-party .pi extensions through a versioned event. */
@@ -187,6 +187,14 @@ export function buildSessionExtensionFactories(
 ): InlineExtension[] {
 	const harness = resolveSessionHarnessUnits(deps);
 	const factories: InlineExtension[] = [];
+	if (deps.taskHost?.createNativeSession) {
+		const create = deps.taskHost.createNativeSession.bind(deps.taskHost);
+		factories.push(async (pi) => {
+			const native = await create();
+			pi.on("session_shutdown", () => native.dispose());
+			await native.extension(pi);
+		});
+	}
 	if (capability)
 		factories.push(makeCapabilityExtension(capability, deps.desktopIntegration?.academicPiRoot));
 	factories.push((pi) => {
@@ -196,7 +204,6 @@ export function buildSessionExtensionFactories(
 		// Their tool declarations use the same request/replay handshake, so the
 		// backend collector sees registrations emitted before this factory ran.
 		bindToolManifestEvents(pi.events);
-		bindAcceptanceVerifierEvents(pi.events, deps.runtime);
 		const announceRuntime = () => pi.events.emit("drone:runtime/v1", { version: 1, runtime: deps.runtime });
 		pi.events.on("drone:runtime/request/v1", announceRuntime);
 		announceRuntime();
