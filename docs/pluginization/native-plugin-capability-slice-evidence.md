@@ -165,6 +165,7 @@
 - 2026-10-27：`4a00e695` 收窄 knowledge 无插件边界：通用 backend 不再默认选择 `defaultKnowledgeCompatibility`，未声明 host 操作统一 fail-closed；legacy worker/compat adapter 仍登记为显式迁移边界。backend typecheck、create-backend 27 项回归、`check:arch` 通过；P2/P6 仍未完成。
 - 2026-10-27：修正 fixture cwd 后重跑 backend 全量回归：`npm test -w @drone/backend -- --pool=forks --poolOptions.forks.singleFork=true --reporter=dot` 以 `259` 个文件、`2079` 项通过、`18` 项跳过退出 0；该结果与 CoreHostLoader/knowledge fail-closed 切片一致，未改变正式安装包或外部账户验收状态。
 - 2026-10-27：Desktop production build（`npm run build -w packages/desktop`）退出 0；`check:native-plugin-boundary` 诚实输出 `INCOMPLETE`，domain-runtime-import 已降至 4、domain-type-import 12、packaged-resource 21，剩余 runtime 边界集中在显式 knowledge compatibility/宿主 discovery 迁移项，未改写为 PASS。
+- 2026-10-27：knowledge worker seam 增量：`@gyoungwe/plugin-api` 的版本化 `KnowledgeHostLoader` 新增可选 `configureWorker`，仅接收 host-owned、依赖零的 worker factory/metadata 结构；backend 在已安装 loader 存在时注入经 manifest 校验的 `createBackendKnowledgeWorkerSetup`，无 loader 仍调用 legacy `configureBackendKnowledgeWorker`。`create-backend` 回归覆盖安装 loader 的惰性 seam 和无插件资源边界；plugin-api build/package gate、backend typecheck、create-backend 28 项回归、plugin `pi-knowledge` host-loader 3 项回归、`check:arch` 均通过。插件仓库 host loader 已实现可选 seam，但宿主锁定版本、完整 worker 所有权迁移与正式安装包 GUI 仍未完成。
 
 ## 未关闭项
 
