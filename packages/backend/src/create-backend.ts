@@ -40,7 +40,6 @@ import {
 	type DiscoveryServicePort,
 } from "./discovery/service";
 import { JsonStore } from "./json-store";
-import { defaultKnowledgeCompatibility } from "./knowledge/compat-adapter";
 import {
 	configureBackendKnowledgeWorker,
 	createKnowledgeDailyDiscoveryOperations,
@@ -383,9 +382,12 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const memory = new MemoryStore(join(getAgentDir(), "memory", "memory.db"));
 	runtime.registerDisposable?.({ dispose: () => memory.close() });
 	const knowledgeHost = options.knowledgeHostLoader?.load() as KnowledgeHostPort | undefined;
-	const knowledgeCompatibility = options.knowledgeHostLoader
-		? defaultKnowledgeCompatibility
-		: unavailableKnowledgeCompatibility;
+	// The generic host never imports the legacy knowledge implementation.  An
+	// installed knowledge loader must provide each operation it advertises;
+	// undeclared operations fail closed instead of silently reaching a bundled
+	// optional package.  The compatibility worker remains an explicit test/host
+	// adapter via configureBackendKnowledgeWorker, outside this composition path.
+	const knowledgeCompatibility = unavailableKnowledgeCompatibility;
 	runtime.knowledge.registerAnswerPublication ??= createKnowledgePublicationOperation(
 		knowledgeHost,
 		knowledgeCompatibility,
