@@ -109,6 +109,7 @@
 - 2026-10-27：`7980b0e8` 后宿主五项门禁再次全部通过，日志见 `/tmp/drone-host-final-gates-14.log`；shared worker lifecycle contract、插件依赖拉取、全量测试和 build 均通过，生成的 pi-core build manifest 已恢复提交态。`check:arch` 保持 architecture/host independence PASS、domain dependency `PARTIAL`；native boundary 仍 `INCOMPLETE`（runtime-import 11、type-import 12）。
 - 2026-10-27：P5 evidence host slice：宿主 `76a13d1e` 发布 `EvidenceHostLoader`/`EvidenceHostPort` 及只读工具合同，`93920be4` 按 manifest 的 `evidence` capability 发现任意已安装包并将 loader 注入 `analysisEvidenceHost`；插件 `0ea4454` 为 `pi-evidence@0.1.1` 增加 `/host`、host manifest entrypoint、双入口构建和 clean host 回归（6/6）。插件包 check、build:check、smoke 通过；宿主本轮 `npm run lint`、`typecheck`、`npm test`（backend 254/2052 passed/18 skipped，desktop 165/903 passed）、`build`、`check:arch` 均通过，lint 仍仅有既有设计稿体积 warning。正式锁文件仍 pin plugin-api 1.2.0，因 1.3.0 host 合同尚未发布，fresh clean install 暂不计 PASS。
 - 同日以候选 `@gyoungwe/plugin-api@1.3.0` tarball（SHA-256 `212881221bbfe8a5c77aa03893c254743b5e00a82d3ab62178d3a15a08dc7e56`）重跑插件 workspace `npm run check`，8 manifests、知识 487 项测试、研究 136 项测试、analysis/evidence/connectors/workbench/UI、research-suite clean install/PDF、locked/latest SDK matrix、pack checks 全部通过；该结果是候选 API 验证，不替代正式发布后的 clean install。
+- P4/P6 `de68e43a` 删除 status 兼容门面：session-engine extensions、subagent runner 及两组回归测试均直接从 `@gyoungwe/pi-core/host` 入口导入。Biome、backend typecheck、reply-language/stage-timeline 20 tests 和 host-independence 6 tests 通过；其余四个 pi-core facade 仍登记为迁移边界。
 
 ## 未关闭项
 
