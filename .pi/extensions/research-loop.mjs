@@ -17235,7 +17235,7 @@ import { pathToFileURL as pathToFileURL4 } from "node:url";
 
 // packages/extensions/src/internal/summary-write-transaction.ts
 import { randomUUID as randomUUID18 } from "node:crypto";
-import { mkdir as mkdir14, readFile as readFile14, rename as rename12, rm, writeFile as writeFile14 } from "node:fs/promises";
+import { mkdir as mkdir14, readFile as readFile14, rename as rename12, rm, unlink as unlink9, writeFile as writeFile14 } from "node:fs/promises";
 import { dirname as dirname10 } from "node:path";
 async function existingBytes(path) {
   try {
@@ -17245,20 +17245,28 @@ async function existingBytes(path) {
     throw error;
   }
 }
-async function atomicBytes(path, bytes) {
+async function assertPreimage(path, expected) {
+  const current = await existingBytes(path);
+  if (expected ? !current?.equals(expected) : current !== null)
+    throw new Error(`Summary destination changed before committing: ${path}`);
+}
+async function atomicBytes(path, bytes, expected) {
   await mkdir14(dirname10(path), { recursive: true });
   const temporary = `${path}.${randomUUID18()}.tmp`;
-  await writeFile14(temporary, bytes);
-  await rename12(temporary, path);
+  try {
+    await writeFile14(temporary, bytes);
+    await assertPreimage(path, expected);
+    await rename12(temporary, path);
+  } finally {
+    await rm(temporary, { force: true });
+  }
 }
 function createSummaryWriteTransaction() {
   const writes = [];
   return {
     async write(path, text5, expectedBefore) {
-      const before = await existingBytes(path), after = Buffer.from(text5);
-      if (expectedBefore !== void 0 && (expectedBefore ? !before?.equals(expectedBefore) : before !== null))
-        throw new Error(`Summary destination changed before writing: ${path}`);
-      await atomicBytes(path, after);
+      const before = expectedBefore === void 0 ? await existingBytes(path) : expectedBefore, after = Buffer.from(text5);
+      await atomicBytes(path, after, before);
       writes.push({ path, before, after });
       if (!(await readFile14(path)).equals(after)) throw new Error(`Summary write readback changed: ${path}`);
     },
@@ -17266,10 +17274,11 @@ function createSummaryWriteTransaction() {
       const failures = [];
       for (const { path, before, after } of writes.toReversed()) {
         try {
-          const current = await existingBytes(path);
-          if (!current?.equals(after)) throw new Error(`Concurrent edit retained: ${path}`);
-          if (before) await atomicBytes(path, before);
-          else await rm(path);
+          if (before) await atomicBytes(path, before, after);
+          else {
+            await assertPreimage(path, after);
+            await unlink9(path);
+          }
           const restored = await existingBytes(path);
           if (before ? !restored?.equals(before) : restored !== null)
             throw new Error(`Summary rollback readback failed: ${path}`);
@@ -17293,7 +17302,7 @@ import {
   realpath as realpath10,
   rename as rename13,
   stat as stat5,
-  unlink as unlink9,
+  unlink as unlink10,
   writeFile as writeFile15
 } from "node:fs/promises";
 import { basename as basename5, dirname as dirname11, isAbsolute as isAbsolute10, join as join18, relative as relative12, resolve as resolve13, sep as sep11 } from "node:path";
@@ -17408,7 +17417,7 @@ async function createOnly(path, content) {
       throw new Error(`Expected a regular Vault file: ${path}`);
     return false;
   } finally {
-    await unlink9(temporary).catch(() => {
+    await unlink10(temporary).catch(() => {
     });
   }
 }
@@ -17726,19 +17735,22 @@ ${end}`;
 ${replacement}
 `;
 }
-async function writeSummary(runDir, summary, write) {
-  const runPath2 = resolve14(runDir);
+async function writeSummary(resultsRoot, runDir, summary, write) {
+  const root = await realpath11(resultsRoot);
+  const runPath2 = await containedFile(root, await realpath11(runDir));
   const resultRoot = dirname12(runPath2);
-  const historyRoot = join20(resultRoot, "summary-history");
+  const historyRoot = await containedFile(root, join20(resultRoot, "summary-history"));
+  const stamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
+  const run2 = await containedFile(root, join20(runPath2, "SUMMARY.md"));
+  const latest = await containedFile(root, join20(resultRoot, "SUMMARY.md"));
+  const history = await containedFile(root, join20(historyRoot, `${stamp}.md`));
   await mkdir16(historyRoot, { recursive: true });
   const content = `${String(summary).trim()}
 `;
-  await write(join20(runPath2, "SUMMARY.md"), content);
-  await write(join20(resultRoot, "SUMMARY.md"), content);
-  const stamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
-  const history = join20(historyRoot, `${stamp}.md`);
+  await write(run2, content);
+  await write(latest, content);
   await write(history, content);
-  return { run: join20(runPath2, "SUMMARY.md"), latest: join20(resultRoot, "SUMMARY.md"), history };
+  return { run: run2, latest, history };
 }
 async function syncRunNote(vault, project, resultSlug, runDir, summary, write) {
   const safeProject = safeSegment(project, "project");
@@ -17897,7 +17909,7 @@ function registerResearchSummaryTool(pi, delivery) {
           const transaction = createSummaryWriteTransaction();
           try {
             _signal?.throwIfAborted();
-            const outputs = await writeSummary(runDir, prepared.body, transaction.write);
+            const outputs = await writeSummary(config.resultsRoot, runDir, prepared.body, transaction.write);
             const copies = Object.entries(outputs).map(([role, path]) => ({ role, path }));
             let note = null;
             if (config.obsidianVault) {
