@@ -194,6 +194,19 @@ export function createKnowledgePublicationOperation(host?: KnowledgeHostPort): K
 	return host?.registerAnswerPublication ?? knowledgeCompatibility.publication;
 }
 
+/** Keep foreground Wiki model review behind the discovered knowledge host seam. */
+export function createKnowledgeReviewWithModelOperation(
+	host?: Pick<KnowledgeHostPort, "reviewWikiWithModel">,
+): (input: unknown, options: unknown) => Promise<unknown> {
+	return (
+		host?.reviewWikiWithModel ??
+		(knowledgeCompatibility.reviewWikiWithModel as unknown as (
+			input: unknown,
+			options: unknown,
+		) => Promise<unknown>)
+	);
+}
+
 /** Keep WebDAV's local read/write operations behind the discovered knowledge host seam. */
 export function createKnowledgeVaultOperations(
 	host?: Pick<KnowledgeHostPort, "vault">,
@@ -604,8 +617,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["reviewKnowledgeWithModel"]>[0],
 		options: unknown,
 	): ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]> {
-		const review = (this.writeProvider?.reviewWikiWithModel ??
-			knowledgeCompatibility.reviewWikiWithModel) as (input: unknown, options: unknown) => Promise<unknown>;
+		const review = createKnowledgeReviewWithModelOperation(this.writeProvider);
 		return (await review(input, options)) as Awaited<ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]>>;
 	}
 	overview(

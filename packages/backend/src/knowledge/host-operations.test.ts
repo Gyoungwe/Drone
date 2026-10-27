@@ -4,6 +4,7 @@ import {
 	createKnowledgeExperienceOperation,
 	createKnowledgePublicationOperation,
 	createKnowledgeResearchResourceOperations,
+	createKnowledgeReviewWithModelOperation,
 	type KnowledgeHostPort,
 } from "./ui";
 
@@ -79,5 +80,24 @@ describe("knowledge host operations", () => {
 		expect(research.resolveContext({ workspaceRoot: "/workspace" })).toBe(context);
 		expect(research.ingestSnapshot({} as never)).toBe(snapshot);
 		expect(await recordExperience({} as never, {} as never)).toBe(experience);
+	});
+
+	it("routes foreground model review through the installed host", async () => {
+		const review = vi.fn(async () => ({ verdict: "needs-human" }));
+		const host: KnowledgeHostPort = {
+			contractVersion: 1,
+			overview: async () => undefined,
+			search: async () => undefined,
+			read: async () => undefined,
+			noteLinks: async () => undefined,
+			graph: async () => undefined,
+			reviewWikiWithModel: review,
+		};
+		const operation = createKnowledgeReviewWithModelOperation(host);
+
+		await expect(operation({ token: "preview" }, { signal: undefined })).resolves.toEqual({
+			verdict: "needs-human",
+		});
+		expect(review).toHaveBeenCalledWith({ token: "preview" }, { signal: undefined });
 	});
 });
