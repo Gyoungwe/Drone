@@ -143,6 +143,7 @@
 - 2026-10-27：P2 knowledge capture seam：插件 `pi-knowledge` 的版本化 host loader 新增 `researchResource.resolveContext`/`ingestSnapshot` 与 `recordTerminalJobExperience`，宿主通过既有 `KnowledgeHostPort` helper 路由到安装实现；plugin host-loader 2 项、宿主 knowledge host operations 2 项、插件 typecheck/build-check、manifest check 和 backend typecheck 通过。publication、uiState、reviewWikiWithModel、完整 worker/UI 所有权与正式安装包验收仍保持未完成。
 - 2026-10-27：P2 publication/UI state seam：插件 `56544d8` 将 `registerAnswerPublication` 与实例 UI `subscribe/notify` 从 knowledge core 暴露到版本化 host loader；宿主 `6c092919` 同步 plugin-api 合同并补 publication 安装路由回归。插件 host-loader、typecheck、build-check 与宿主 backend typecheck/Biome 通过；兼容回退仍保留，publication/UI 全面所有权、reviewWikiWithModel、worker 和正式 GUI 仍未完成。
 - 2026-10-27：P2 model-review host seam：插件 `606cc34` 将 `reviewWikiWithModel` 暴露为版本化 host loader 操作；宿主 `2e737044` 同步 plugin-api 合同、通过 discovered host 路由前台模型审阅并补安装路由回归。插件 host-loader/build/typecheck 与宿主 backend typecheck、4 项 host-operations 测试、Biome 通过；真实模型/Vault/正式安装包 GUI 仍未验收。
+- 2026-10-27：在 `df1eafca` 后运行 `npm run check:plugin-api`：生成的 host API projection、plugin-api package gate、迁移/生命周期门禁和本地 tarball install→upgrade→rollback→uninstall 均通过（API 1.3.0，绑定插件仓库 HEAD `606cc34`）。这只证明合同与本地包生命周期，不替代正式 Drone 安装包或真实模型验收。
 
 ## 未关闭项
 
