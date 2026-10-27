@@ -1,4 +1,3 @@
-import { registerTool } from "./internal/runtime/tool-manifest";
 import { describeProject, resolveWorkspaceProject, sessionEntriesOf } from "@gyoungwe/pi-knowledge/host";
 import {
 	literatureReceipt,
@@ -8,6 +7,7 @@ import {
 } from "@gyoungwe/pi-research/host";
 import { reviewResearchSummary } from "./internal/research-summary-review";
 import { bindExtensionRuntime, runExtensionExclusive } from "./internal/runtime";
+import { registerTool } from "./internal/runtime/tool-manifest";
 import { loadWorkspaceConfig, registerResearchSummaryTool } from "./workspace-config";
 
 /** Desktop composition: workspace binding and task scheduling remain host-owned. */

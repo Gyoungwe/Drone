@@ -16,7 +16,6 @@ import {
 } from "@drone/extensions/internal/obsidian-workbench";
 import { USER_QUESTION_FOCUS } from "@drone/extensions/internal/reply-focus";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
-import { registerTool } from "./internal/runtime/tool-manifest";
 import {
 	appendRelatedLinks,
 	cardLink,
@@ -31,6 +30,7 @@ import {
 	SESSION_PROJECT_ENTRY,
 	sessionEntriesOf,
 } from "@gyoungwe/pi-knowledge/host";
+import { registerTool } from "./internal/runtime/tool-manifest";
 
 // These named exports are used by offline knowledge benchmarks and packaging
 // smoke tests. Keeping them on the generated entry exercises the same

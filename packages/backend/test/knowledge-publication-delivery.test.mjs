@@ -31,7 +31,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/knowledge-publication";
 import { readSessionMessagesFromContent } from "../src/session/messages";
-import { installedTaskPluginPath, taskSdkExtensionPath } from "./fixtures/task-plugin.mjs";
+import { installedTaskPluginPath } from "./fixtures/task-plugin.mjs";
 
 let root, cwd, vault, backend, session, sid, faux, events;
 async function note(path, text) {

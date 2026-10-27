@@ -1,6 +1,5 @@
 // @ts-nocheck
 
-import { registerTool } from "./internal/runtime/tool-manifest";
 import { cardLink, flowCard, literatureCard } from "@gyoungwe/pi-knowledge/host";
 import {
 	archiveSource as archiveTyped,
@@ -18,6 +17,7 @@ import { setSourceTopic } from "./internal/obsidian-workbench";
 import { USER_QUESTION_FOCUS } from "./internal/reply-focus";
 import { archivePorts, reconcileLiteratureOperation } from "./internal/research-host";
 import { bindExtensionRuntime, runExtensionExclusive } from "./internal/runtime";
+import { registerTool } from "./internal/runtime/tool-manifest";
 import { loadWorkspaceConfig } from "./workspace-config";
 
 /** 归档来源的回执卡：来源已归档 ≠ 已阅读或已综合。 */
