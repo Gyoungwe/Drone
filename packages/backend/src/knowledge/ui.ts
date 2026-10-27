@@ -68,6 +68,9 @@ export interface KnowledgeHostPort {
 	registerAnswerPublication?: KnowledgePublicationRegistrar;
 	/** Semantic-index UI operations supplied by the installed knowledge host. */
 	semantic?: KnowledgeSemanticOperations;
+	/** Incrementally migrated UI operations supplied by the installed knowledge host. */
+	jobs?: (input: unknown) => Promise<unknown>;
+	maintenance?: (input: unknown) => Promise<unknown>;
 }
 
 export type KnowledgePublicationRegistrar = (
@@ -485,14 +488,20 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private readonly cloud: KnowledgeWebDavService;
 	private readonly readProvider: KnowledgeReadProvider;
 	private readonly writeProvider?: KnowledgeWriteProvider &
-		Pick<KnowledgeHostPort, "vault" | "uiState" | "reviewWikiWithModel" | "semantic">;
+		Pick<
+			KnowledgeHostPort,
+			"vault" | "uiState" | "reviewWikiWithModel" | "semantic" | "jobs" | "maintenance"
+		>;
 	private readonly researchHost?: ResearchHostAdapter;
 	constructor(
 		readProvider: KnowledgeReadProvider = createKnowledgeReadProvider(),
 		options: {
 			researchHostLoader?: ResearchHostLoader;
 			knowledgeHost?: KnowledgeWriteProvider &
-				Pick<KnowledgeHostPort, "vault" | "uiState" | "reviewWikiWithModel" | "semantic">;
+				Pick<
+					KnowledgeHostPort,
+					"vault" | "uiState" | "reviewWikiWithModel" | "semantic" | "jobs" | "maintenance"
+				>;
 		} = {},
 	) {
 		this.readProvider = readProvider;
@@ -556,6 +565,9 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	private async call(name: string, input: unknown): Promise<any> {
 		await this.connect();
+		if (name === "knowledgeJobs" && this.writeProvider?.jobs) return this.writeProvider.jobs(input);
+		if (name === "knowledgeMaintenance" && this.writeProvider?.maintenance)
+			return this.writeProvider.maintenance(input);
 		return knowledgeCompatibility.call(name, input);
 	}
 	specialistSettings(

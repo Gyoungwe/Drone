@@ -535,6 +535,9 @@ export interface KnowledgeReadHostPort {
 	read(input: unknown): Promise<unknown>;
 	noteLinks(input: unknown): Promise<unknown>;
 	graph(input: unknown): Promise<unknown>;
+	/** Optional UI operations supplied by the installed knowledge plugin. */
+	jobs?(input: unknown): Promise<unknown>;
+	maintenance?(input: unknown): Promise<unknown>;
 }
 
 /** Stable host entry contract for the knowledge capability. */

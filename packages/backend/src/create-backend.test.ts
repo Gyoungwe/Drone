@@ -493,6 +493,27 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
+	it("routes migrated jobs and maintenance operations through the installed host", async () => {
+		const calls: string[] = [];
+		const service = new KnowledgeUiService(undefined, {
+			knowledgeHost: {
+				jobs: async () => {
+					calls.push("jobs");
+					return { items: [], total: 0 };
+				},
+				maintenance: async () => {
+					calls.push("maintenance");
+					return { status: "complete" };
+				},
+			},
+		});
+
+		await service.jobs({ cwd: "/tmp/project", offset: 0, limit: 10, revision: 1 });
+		await service.maintain({ cwd: "/tmp/project", action: "reconcile", revision: 1 });
+		expect(calls).toEqual(["jobs", "maintenance"]);
+		service.dispose();
+	});
+
 	it("routes UI events and model review through the installed host", async () => {
 		const previousDir = process.env.DRONE_KNOWLEDGE_DIR;
 		process.env.DRONE_KNOWLEDGE_DIR = "/tmp/drone-knowledge-ui-host";
