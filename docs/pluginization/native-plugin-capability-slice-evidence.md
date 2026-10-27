@@ -154,6 +154,7 @@
 - 2026-10-27：正式包流式重载切片 `1a4c9ceb` 在隔离 loopback OpenAI-compatible 模型上启动真实 Electron 会话并保持 SSE 未结束；首次安装收到 `effect=next-session`、`reload_deferred` 和该会话的 `deferredSessionIds`，释放流后同一回执链继续完成 upgrade、rollback、remove、restore、remove，后续非流式步骤均收到 `reloaded`。零插件普通 smoke 同样通过；这关闭了正式包的 reload-deferred 缺口，不等同于销毁失败或同 tarball GUI PASS。
 - 2026-10-27：同一提交脚本的最新 arm64 重跑再次 exit 0，回执根 `/private/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-fresh-package-kroOiJ`；`reloadDeferred` 明确为 `effect=next-session`、`deferredSessionIds=[01a17bf3-54e5-770c-a1ab-b0d7598bd12d]`，后续 update/rollback/remove/restore/remove 均为 succeeded 并带 `reloadedSessionIds`，最终配置与包目录清理完成。
 - 2026-10-27：销毁失败调查回退夹具后重新执行纯零插件 smoke，实际 arm64 包在全新隔离 root `/private/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-fresh-package-Z7tHrY` exit 0；generic session 创建/关闭、空 optional UI/managed npm/auth/model 状态和未绑定 knowledge 均再次通过。该回执仍明确把安装/升级/停用/恢复/回滚/销毁失败生命周期列为 `NOT_RUN`。
+- 2026-10-27：宿主迁移切片 `315192ef` 将纯 `formatTodoList` 合同移入 `@drone/shared`，`@gyoungwe/pi-core/host` 保留兼容 re-export，backend todo reminder 改走 shared。shared/pi-core typecheck、pi-core build:check、backend todo 回归和 `check:arch` 通过；该切片减少一处运行时耦合，但 `pi-core`/`pi-knowledge` 仍有其他真实消费者，P6 继续保持 `PARTIAL`。
 - 2026-10-27：尝试在同一 arm64 正式包中运行真实销毁失败夹具时，首次运行在 `readCode` 阶段观察到 `Plugin runtime deactivated`；打开全局 UI 插件开关后进入真实 `withTransition`，但因桌面运行时权限审批/销毁屏障未得到人工确认而在 `Runtime.evaluate` 超时，未形成可复现回执。夹具代码已回退且未提交；销毁失败仍保持 `NOT_RUN`，不把该失败尝试记为 PASS。
 
 ## 未关闭项
