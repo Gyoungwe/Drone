@@ -203,6 +203,21 @@ describe("createBackend", () => {
 		services.dispose();
 	});
 
+	it("exposes an isolated task acceptance host bound to the backend runtime", () => {
+		const services = createBackend({ projectTrust: false, permissionGates: false });
+		services.taskHost.registerAcceptanceVerifier("test_acceptance", {
+			fields: ["doi"],
+			label: () => "test",
+		});
+		expect(services.taskHost.contractVersion).toBe(1);
+		expect(services.taskHost.readAcceptanceVerifier("test_acceptance")).toMatchObject({
+			kind: "test_acceptance",
+			fields: ["doi"],
+		});
+		expect(services.taskHost.readAcceptanceVerifier("missing")).toBeNull();
+		services.dispose();
+	});
+
 	it("accepts a knowledge provider without constructing the host adapter", () => {
 		const knowledge = new KnowledgeUiService();
 		let provided = false;

@@ -49,6 +49,11 @@
 			"types": "./dist/research.d.ts",
 			"import": "./dist/research.js",
 			"default": "./dist/research.js"
+		},
+		"./tasks": {
+			"types": "./dist/tasks.d.ts",
+			"import": "./dist/tasks.js",
+			"default": "./dist/tasks.js"
 		}
 	},
 	"files": [

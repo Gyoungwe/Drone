@@ -31,6 +31,7 @@ import type {
 	ResearchWriteAdapterHostLoader,
 } from "@gyoungwe/plugin-api";
 import type { ExperienceStorePort } from "@gyoungwe/plugin-api/knowledge";
+import type { TaskAcceptanceHostPort } from "@gyoungwe/plugin-api/tasks";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import {
@@ -129,6 +130,7 @@ import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
 import type { StorageRegistry } from "./storage/registry";
+import { createTaskAcceptanceHost } from "./tasks/package-runtime";
 import type { SshHostEntry } from "./tools/ssh";
 import { applyStoredZoteroLocalKey } from "./zotero/local-write";
 import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
@@ -243,6 +245,8 @@ export interface BackendServices {
 	research: ResearchResourceService;
 	/** Explicitly authorized, auditable research write adapters. */
 	researchWrites: ResearchWriteService;
+	/** Isolated acceptance registry exposed to an installed task/workbench plugin. */
+	taskHost: TaskAcceptanceHostPort;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
 	/** Durable B7 dataset, public-fetch and RO-Crate registry. */
@@ -329,6 +333,7 @@ export interface BackendOptions extends SessionServiceOptions {
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
+	const taskHost = createTaskAcceptanceHost(runtime);
 	// The packaged knowledge capability owns its runtime when installed. Keep
 	// the legacy worker only for the no-plugin compatibility path so a generic
 	// host can start without the research-workbench resource tree.
@@ -832,6 +837,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		inquiry,
 		research,
 		researchWrites,
+		taskHost,
 		discovery,
 		dataDesign,
 		analysis,

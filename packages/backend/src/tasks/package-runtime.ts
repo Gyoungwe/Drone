@@ -1,6 +1,6 @@
 import type { DroneRuntime } from "@drone/shared";
+import type { TaskAcceptanceDefinition, TaskAcceptanceHostPort } from "@gyoungwe/plugin-api/tasks";
 
-type AcceptanceDefinition = Record<string, unknown>;
 type AcceptanceVerifier = {
 	kind: string;
 	fields: readonly string[];
@@ -35,7 +35,7 @@ function acceptanceRegistry(runtime: DroneRuntime): { verifiers: Map<string, Acc
 function registerAcceptanceVerifier(
 	runtime: DroneRuntime,
 	kind: string,
-	definition: AcceptanceDefinition,
+	definition: TaskAcceptanceDefinition,
 ): AcceptanceVerifier {
 	if (!KIND.test(kind)) throw new Error(`Acceptance kind "${kind}" must match ${KIND}`);
 	if (CORE_KINDS.has(kind)) throw new Error(`Acceptance kind "${kind}" is owned by the host`);
@@ -69,11 +69,21 @@ function registerAcceptanceVerifier(
 export function registerAcceptanceVerifierInRuntime(
 	runtime: DroneRuntime,
 	kind: string,
-	definition: AcceptanceDefinition,
+	definition: TaskAcceptanceDefinition,
 ): void {
 	registerAcceptanceVerifier(runtime, kind, definition);
 }
 
 export function readAcceptanceVerifier(runtime: DroneRuntime, kind: string): unknown {
 	return acceptanceRegistry(runtime).verifiers.get(kind) ?? null;
+}
+
+/** Expose the isolated host-owned task registry to an installed workbench. */
+export function createTaskAcceptanceHost(runtime: DroneRuntime): TaskAcceptanceHostPort {
+	return {
+		contractVersion: 1,
+		registerAcceptanceVerifier: (kind, definition) =>
+			registerAcceptanceVerifierInRuntime(runtime, kind, definition),
+		readAcceptanceVerifier: (kind) => readAcceptanceVerifier(runtime, kind),
+	};
 }
