@@ -24,7 +24,12 @@ import type {
 	TrustRequest,
 } from "@drone/shared";
 import { writeMemory } from "@gyoungwe/pi-core/host";
-import type { AnalysisHostLoader, KnowledgeHostLoader } from "@gyoungwe/plugin-api";
+import type {
+	AnalysisHostLoader,
+	KnowledgeHostLoader,
+	ResearchConnectorHostLoader,
+	ResearchWriteAdapterHostLoader,
+} from "@gyoungwe/plugin-api";
 import type { ExperienceStorePort } from "@gyoungwe/plugin-api/knowledge";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
@@ -101,6 +106,10 @@ import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
 import { createDefaultResearchConnectorRegistry } from "./services/research-connector-compat";
+import {
+	createResearchConnectorRegistryFromHost,
+	createResearchWriteAdapterRegistryFromHost,
+} from "./services/research-host-adapters";
 import type { ResearchConnectorRegistryPort } from "./services/research-resource";
 import {
 	emptyCaptureLedger,
@@ -312,6 +321,10 @@ export interface BackendOptions extends SessionServiceOptions {
 	researchWriteAdapterRegistry?: () => ResearchWriteAdapterRegistryPort;
 	/** Optional host-owned research connector registry. */
 	researchConnectorRegistry?: () => ResearchConnectorRegistryPort;
+	/** Optional installed research plugin connector host; takes precedence over compatibility only when no registry is supplied. */
+	researchConnectorHostLoader?: ResearchConnectorHostLoader;
+	/** Optional installed research plugin write host; takes precedence over compatibility only when no registry is supplied. */
+	researchWriteAdapterHostLoader?: ResearchWriteAdapterHostLoader;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
@@ -373,7 +386,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				})),
 	});
 	const researchWrites = new ResearchWriteService({
-		adapters: options.researchWriteAdapterRegistry?.() ?? createDefaultResearchWriteRegistry(),
+		adapters:
+			options.researchWriteAdapterRegistry?.() ??
+			(options.researchWriteAdapterHostLoader
+				? createResearchWriteAdapterRegistryFromHost(options.researchWriteAdapterHostLoader)
+				: createDefaultResearchWriteRegistry()),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "writes.json"),
 			storageId: "agent-research-writes",
@@ -381,7 +398,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		}),
 	});
 	const research = new ResearchResourceService({
-		connectors: options.researchConnectorRegistry?.() ?? createDefaultResearchConnectorRegistry(),
+		connectors:
+			options.researchConnectorRegistry?.() ??
+			(options.researchConnectorHostLoader
+				? createResearchConnectorRegistryFromHost(options.researchConnectorHostLoader)
+				: createDefaultResearchConnectorRegistry()),
 		knowledgeOperations: createKnowledgeResearchResourceOperations(knowledgeHost),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "captures.json"),
