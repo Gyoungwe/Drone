@@ -182,6 +182,7 @@
 
 - 2026-10-27：知识插件 reviewer host seam 收口：宿主提交 `9d1218ec`/`a0731632` 将 `BackgroundReviewer` 改为已安装 `knowledgeHostLoader.backgroundReviewer` 注入，无插件默认保持 fail-closed；`deliverable-reviewer`、model-review SDK、create-backend 定向回归分别通过，backend 全量复跑为 259 files/2085 passed/18 skipped。插件提交 `042ba7b` 暴露 reviewer factory 并覆盖 host-loader 回归，`8a581c5` 让 bundled `/tmp` 入口同时从 `PWD`/`INIT_CWD` 祖先安装树解析 worker；插件 `npm run check` 全部通过。正式 host worker 资源回归在当前候选插件构建产物下 2/2 通过。
 - 2026-10-27：本轮宿主验证中 `npm run lint` 通过（仅既有 2 个 warning）、直接 workspace typecheck、`check:pi`、Desktop build 和 `check:arch` 通过；`check:native-plugin-boundary` 继续诚实输出 `INCOMPLETE`，discovery/inquiry 与 required-domain-plugin 计数仍保留。根 `npm run typecheck` 的 pretypecheck 会按历史 `plugins.lock.json` 拉取 `pi-knowledge@0.2.1`，该包没有当前 worker host exports，因此在锁定候选发布前不计作 clean-install PASS；候选插件工作树构建产物已用于上述真实 backend/worker 回归。P2–P7、正式安装包同 tarball GUI 和四项外部账户验收仍未关闭。
+- 2026-10-27：研究宿主收窄提交 `36a2569f` 删除 `research-connector-compat.ts` 与 `research-write-compat.ts` 两个生产兼容 façade；无插件注册表直接由 `research-resource.ts`/`research-write.ts` 提供并保持 fail-closed。create-backend、research-resource、research-write 共 46 项回归、backend typecheck 和 Biome 通过；真实连接器/写入及正式账户验收仍未完成。
 
 本轮仍未证明：P2–P5 宿主领域装配删除；无领域插件的正式 DMG 启动与升级/停用/回滚；同一候选 tarball 的正式安装包 GUI；真实 Zotero/用户 MCP/Protocols.io 写入及其他平台验收。`check:native-plugin-boundary` 仍按计划输出 `INCOMPLETE`，不得改写为 PASS。
 
