@@ -639,6 +639,27 @@ export interface EvidenceHostLoader {
 	load(): EvidenceHostPort;
 }
 
+/** Minimal host surface for an optional discovery implementation.
+ *
+ * The current backend still owns the B5d–B5f service while this seam is
+ * introduced. A future discovery package can provide these operations without
+ * importing backend or Electron types.
+ */
+export interface DiscoveryHostPort {
+	readonly contractVersion: 1;
+	status?(input: unknown): Promise<unknown>;
+	listKernelSessions?(input: unknown): Promise<unknown>;
+	createKernelSession?(input: unknown): Promise<unknown>;
+	executeKernel?(input: unknown): Promise<unknown>;
+	closeKernelSession?(input: unknown): Promise<unknown>;
+}
+
+/** Versioned loader contract for a future optional discovery package. */
+export interface DiscoveryHostLoader {
+	readonly contractVersion: 1;
+	load(): DiscoveryHostPort;
+}
+
 function stableContractJson(value: unknown): string {
 	if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
 	if (Array.isArray(value)) return `[${value.map(stableContractJson).join(",")}]`;

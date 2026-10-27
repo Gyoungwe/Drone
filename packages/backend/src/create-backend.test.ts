@@ -32,6 +32,21 @@ describe("createBackend", () => {
 		service.dispose();
 	});
 
+	it("exposes an explicit discovery host seam without replacing the native service", async () => {
+		const host = {
+			contractVersion: 1 as const,
+			status: async () => ({ status: "unavailable" }),
+		};
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			discoveryHostLoader: { contractVersion: 1, load: () => host },
+		});
+		expect(services.discoveryHost).toBe(host);
+		expect(services.discovery).toBeDefined();
+		await services.dispose();
+	});
+
 	it("exposes the workbench operation port through the host runtime and fails closed without handlers", async () => {
 		const unavailable = createBackend({ projectTrust: false, permissionGates: false });
 		await expect(unavailable.workbench.client.invoke("status", {})).rejects.toThrow(

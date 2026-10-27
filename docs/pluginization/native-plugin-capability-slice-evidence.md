@@ -175,6 +175,8 @@
 - 2026-10-27：P2/P6 兼容组合移出生产：删除 `packages/backend/src/knowledge/compat.ts` 与 `compat-adapter.ts`，将旧 package composition 限定到 `packages/backend/test/knowledge-compat-fixture.ts`；`configureBackendKnowledgeWorker` 现在必须由显式迁移/测试调用方注入 setup，生产 `createBackend`/UI 源码不再 static import `@gyoungwe/pi-knowledge/host`。backend 将 `@gyoungwe/pi-knowledge` 下移至 devDependency 并同步 lockfile；backend typecheck、create-backend/knowledge-host-ui-reading/worker-lifecycle 36 项、Biome、`check:arch` 通过，`check:host-domain-deps` 返回 `trackedRuntimeDependencies: []`，native boundary runtime import 从 4 降至 2（仅 discovery/inquiry）。worker 本体、完整 knowledge UI ownership 与正式 GUI 仍未完成。
 - 2026-10-27：剩余 discovery/inquiry 边界复核：`@drone/inquiry` 由 backend 无条件组合并供 compute/task/local execution 与 Desktop decisions/inquiry IPC 共用，定位为宿主证据基础设施；`@drone/discovery` 的 B5d–B5f kernel/exploration/critic/evaluation 属科研业务，后续迁入 optional plugin，但需先提供 host-owned 容器执行、授权、KernelRunner 和 Inquiry 端口。两者当前不改为 devDependency；本轮没有用静态计数掩盖这两个 runtime 边界，`check:native-plugin-boundary` 继续保持 `INCOMPLETE`。
 
+- 2026-10-27：discovery host seam contract：`@gyoungwe/plugin-api` 新增版本化 `DiscoveryHostLoader`/`DiscoveryHostPort`（status、kernel session 基础操作），backend 通过 `BackendOptions.discoveryHostLoader` 暴露显式 `discoveryHost`。现有 backend `DiscoveryService` 仍是权威实现，loader 只建立注入合同，不替换 IPC 或宣称插件行为 PASS；plugin-api build、backend typecheck、create-backend 32 项回归与 Biome 通过。
+
 ## 未关闭项
 
 本轮仍未证明：P2–P5 宿主领域装配删除；无领域插件的正式 DMG 启动与升级/停用/回滚；同一候选 tarball 的正式安装包 GUI；真实 Zotero/用户 MCP/Protocols.io 写入及其他平台验收。`check:native-plugin-boundary` 仍按计划输出 `INCOMPLETE`，不得改写为 PASS。

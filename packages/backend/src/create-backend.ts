@@ -26,6 +26,7 @@ import type {
 } from "@drone/shared";
 import type {
 	AnalysisHostLoader,
+	DiscoveryHostLoader,
 	KnowledgeHostLoader,
 	ResearchConnectorHostLoader,
 	ResearchWriteAdapterHostLoader,
@@ -258,6 +259,8 @@ export interface BackendServices {
 	workbench: WorkbenchHostPort;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
+	/** Optional package-owned discovery surface; native service remains authoritative during migration. */
+	discoveryHost?: import("@gyoungwe/plugin-api").DiscoveryHostPort;
 	/** Durable B7 dataset, public-fetch and RO-Crate registry. */
 	dataDesign: ComputeDataDesignServicePort;
 	/** Durable NGS analysis lifecycle and scientific readiness gates. */
@@ -319,6 +322,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	discoveryProjectId?: string;
 	/** Authorization gate for discovery execution and exports; omitted means fail closed. */
 	discoveryAuthorize?: DiscoveryAuthorization;
+	/** Optional installed discovery plugin loader; retained as an explicit seam during migration. */
+	discoveryHostLoader?: DiscoveryHostLoader;
 	/** Test or host supplied kernel runner; production defaults to Docker/Podman. */
 	discoveryRunner?: ControlledKernelRunner;
 	/** Durable discovery metadata root; defaults to the host agent directory. */
@@ -559,6 +564,9 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		onExecution: (event) =>
 			localExecution.recordKernelExecution({ ...event, projectId: canonicalProjectId(event.cwd) }),
 	});
+	const discoveryHost = options.discoveryHostLoader?.load();
+	if (discoveryHost && discoveryHost.contractVersion !== 1)
+		throw new Error(`Unsupported discovery host contract: ${discoveryHost.contractVersion}`);
 	const dataDesign =
 		options.computeDataDesign ??
 		createComputeDataDesignService({
@@ -892,6 +900,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		taskHost,
 		workbench,
 		discovery,
+		...(discoveryHost ? { discoveryHost } : {}),
 		dataDesign,
 		analysis,
 		analysisEvidence,
