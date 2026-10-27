@@ -20,6 +20,7 @@ export {
 	type BackendOptions,
 	type BackendServices,
 	createBackend,
+	type ResearchConnectorHostLoaderFactory,
 	type SessionServicePort,
 } from "./create-backend";
 export {

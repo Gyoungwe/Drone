@@ -10,6 +10,13 @@ export interface PluginHostLoaderDiscovery {
 	readonly entrypoint: string;
 }
 
+export interface DiscoveredPluginHostLoader<T> {
+	readonly loader: T;
+	/** The declared host module, retained for optional factory exports. */
+	readonly module: Readonly<Record<string, unknown>>;
+	readonly discovery: PluginHostLoaderDiscovery;
+}
+
 interface PluginManifest {
 	capabilities?: unknown;
 	hosts?: unknown;
@@ -26,7 +33,7 @@ export async function discoverPluginHostLoader<T>(options: {
 	packageRoots: readonly string[];
 	capability: string;
 	exportName?: string;
-}): Promise<{ loader: T; discovery: PluginHostLoaderDiscovery } | undefined> {
+}): Promise<DiscoveredPluginHostLoader<T> | undefined> {
 	const exportName = options.exportName ?? `${options.capability}HostLoader`;
 	for (const root of options.packageRoots) {
 		for (const packageRoot of await packageDirectories(root)) {
@@ -44,6 +51,7 @@ export async function discoverPluginHostLoader<T>(options: {
 			if (!loader) continue;
 			return {
 				loader,
+				module,
 				discovery: {
 					capability: options.capability,
 					exportName,

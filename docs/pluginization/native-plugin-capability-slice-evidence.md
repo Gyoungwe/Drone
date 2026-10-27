@@ -128,6 +128,7 @@
 
 - P3/P6 `28c34c50` 收窄 research 兼容边界：无插件时 connector registry 返回明确的 `Research connector plugin is unavailable` 失败回执，write registry 保持空清单；backend 删除 `@drone/research` runtime dependency 并同步锁文件。新增 create-backend 回归覆盖无插件清单、搜索失败回执以及显式 host registry 仍可注入；backend typecheck、create-backend/research-host-adapters 27 项定向测试、plugin-api migration/lifecycle gate 与 `check:host-domain-deps` 均通过。后者由原先追踪 `@drone/research`、`@gyoungwe/pi-core`、`@gyoungwe/pi-knowledge`、`@gyoungwe/pi-research` 收窄为后三项；完整领域迁移、正式 GUI 和外部验收仍未完成。
 - `f03a948d` 补齐同一 fail-closed 语义到 literature radar：无研究插件时 `recommend()` 返回 `complete: false` 和明确 unavailable failure；create-backend 回归覆盖 radar 回执。该行为与插件 host loader 注入路径分离，未改变显式插件 registry。
+- 2026-10-27：research connector host wiring：Desktop 通过通用 `research` capability discovery 读取已安装包的 `researchConnectorHostLoader`，并保留同一 host entry module 的可选 `createResearchConnectorHostLoader` 工厂；backend 组合根把 host-owned `fetchImpl` 与受工作区边界约束的 `projectStorage` 注入工厂，再通过 `researchConnectorHostLoader` 接入现有 registry。显式 `researchConnectorRegistry` 仍优先；未安装 connector 插件时继续 fail-closed。新增 discovery module/factory、transport 注入和显式 registry 优先回归；backend/desktop targeted tests、typecheck、Biome 通过。插件 `pi-research` 候选提交 `6e79ebf` 的真实 transport 仍未锁入宿主，真实账户、正式安装包和 GUI 不标记 PASS。
 
 ## 未关闭项
 

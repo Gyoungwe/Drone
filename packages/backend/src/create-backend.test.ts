@@ -229,6 +229,67 @@ describe("createBackend", () => {
 		services.dispose();
 	});
 
+	it("injects host-owned research connector transports and keeps an explicit registry first", async () => {
+		let factoryCalled = false;
+		let fetchInjected: typeof fetch | undefined;
+		let projectStorageInjected: unknown;
+		const loader = {
+			contractVersion: 1 as const,
+			load: () => ({
+				contractVersion: 1 as const,
+				status: "ready" as const,
+				list: () => [],
+				recommend: async () => ({ hits: [], failures: [] }),
+				search: async (input: { query: string }) => ({
+					query: input.query,
+					hits: [],
+					failures: [],
+					connectors: [],
+					complete: true,
+				}),
+			}),
+		};
+		const services = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			researchConnectorHostLoaderFactory: (options) => {
+				factoryCalled = true;
+				fetchInjected = options.fetchImpl;
+				projectStorageInjected = options.projectStorage;
+				return loader;
+			},
+		});
+		expect(factoryCalled).toBe(true);
+		expect(fetchInjected).toBe(globalThis.fetch);
+		expect(projectStorageInjected).toMatchObject({ search: expect.any(Function) });
+		expect(await services.research.listConnectors()).toEqual([]);
+		services.dispose();
+
+		factoryCalled = false;
+		const explicit = createBackend({
+			projectTrust: false,
+			permissionGates: false,
+			researchConnectorRegistry: () => ({
+				list: () => [],
+				recommend: async () => ({ hits: [], failures: [] }),
+				search: async (input: { query: string }) => ({
+					query: input.query,
+					hits: [],
+					failures: [],
+					connectors: [],
+					complete: true,
+				}),
+			}),
+			researchConnectorHostLoaderFactory: () => {
+				factoryCalled = true;
+				return loader;
+			},
+		});
+		expect(factoryCalled).toBe(false);
+		expect(await explicit.research.listConnectors()).toEqual([]);
+		explicit.dispose();
+	});
+
 	it("exposes an isolated task acceptance host bound to the backend runtime", () => {
 		const services = createBackend({ projectTrust: false, permissionGates: false });
 		services.taskHost.registerAcceptanceVerifier("test_acceptance", {

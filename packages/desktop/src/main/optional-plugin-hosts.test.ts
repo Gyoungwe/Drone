@@ -90,6 +90,38 @@ describe("discoverPluginHostLoader", () => {
 		expect(result?.loader.load()).toEqual({ contractVersion: 1 });
 	});
 
+	it("retains optional host module exports for transport factories", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-connector-discovery-"));
+		const packageRoot = join(root, "@example", "pi-research");
+		await mkdir(join(packageRoot, "dist"), { recursive: true });
+		await writeFile(
+			join(packageRoot, "package.json"),
+			JSON.stringify({ name: "@example/pi-research", version: "0.3.2" }),
+		);
+		await writeFile(
+			join(packageRoot, "plugin.manifest.json"),
+			JSON.stringify({
+				capabilities: ["research"],
+				hosts: ["drone-desktop"],
+				entrypoints: { host: "./dist/host.mjs" },
+			}),
+		);
+		await writeFile(
+			join(packageRoot, "dist", "host.mjs"),
+			[
+				"export const researchConnectorHostLoader = { contractVersion: 1, load: () => ({ contractVersion: 1, status: 'unavailable', list: () => [], recommend: async () => ({ hits: [], failures: [] }), search: async () => ({ query: '', hits: [], failures: [], connectors: [], complete: false }) }) };",
+				"export const createResearchConnectorHostLoader = (options) => ({ contractVersion: 1, load: () => ({ contractVersion: 1, status: options.fetchImpl ? 'ready' : 'unavailable', list: () => [], recommend: async () => ({ hits: [], failures: [] }), search: async () => ({ query: '', hits: [], failures: [], connectors: [], complete: true }) }) });",
+			].join("\n"),
+		);
+		const result = await discoverPluginHostLoader<{ load: () => unknown }>({
+			packageRoots: [root],
+			capability: "research",
+			exportName: "researchConnectorHostLoader",
+		});
+		expect(result?.module.createResearchConnectorHostLoader).toBeTypeOf("function");
+		expect(result?.loader.load()).toMatchObject({ status: "unavailable" });
+	});
+
 	it("ignores undeclared or malformed packages and returns no loader", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-plugin-host-empty-"));
 		await mkdir(join(root, "plain"), { recursive: true });
@@ -120,5 +152,7 @@ describe("discoverPluginHostLoader", () => {
 	it("passes the discovered evidence host into the backend composition root", async () => {
 		const source = await readFile(new URL("./index.ts", import.meta.url), "utf8");
 		expect(source).toContain("analysisEvidenceHost: evidenceHost.loader.load()");
+		expect(source).toContain("researchConnectorHostLoaderFactory");
+		expect(source).toContain("createResearchConnectorHostLoader");
 	});
 });

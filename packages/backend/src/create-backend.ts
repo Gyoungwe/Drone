@@ -16,6 +16,7 @@ import type {
 	PermissionMode,
 	PermissionRequest,
 	PermissionResolved,
+	ResearchProjectStoragePort,
 	ResearchWriteAdapterRegistryPort,
 	SessionEvent,
 	SessionMessage,
@@ -264,6 +265,11 @@ export interface BackendServices {
 	dispose(): Promise<void>;
 }
 
+export type ResearchConnectorHostLoaderFactory = (options: {
+	readonly fetchImpl: typeof fetch;
+	readonly projectStorage: ResearchProjectStoragePort;
+}) => ResearchConnectorHostLoader;
+
 export interface BackendOptions extends SessionServiceOptions {
 	/** false 时不启动每日发现的定时检查（测试或无知识库宿主）；服务本身仍可手动运行 */
 	dailyDiscovery?: boolean;
@@ -327,6 +333,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	researchConnectorRegistry?: () => ResearchConnectorRegistryPort;
 	/** Optional installed research plugin connector host; takes precedence over compatibility only when no registry is supplied. */
 	researchConnectorHostLoader?: ResearchConnectorHostLoader;
+	/** Optional factory exported by an installed research plugin; host transports are injected here. */
+	researchConnectorHostLoaderFactory?: ResearchConnectorHostLoaderFactory;
 	/** Optional installed research plugin write host; takes precedence over compatibility only when no registry is supplied. */
 	researchWriteAdapterHostLoader?: ResearchWriteAdapterHostLoader;
 }
@@ -390,6 +398,41 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					status: host.health.status,
 				})),
 	});
+	const researchProjectStorage: ResearchProjectStoragePort = {
+		search: async ({ cwd, query, limit, signal }) => {
+			if (signal?.aborted) return [];
+			const needle = query.normalize("NFKC").toLocaleLowerCase();
+			const paths = (await walkProjectFiles(cwd))
+				.filter((path) => !path.endsWith("/") && path.toLocaleLowerCase().includes(needle))
+				.slice(0, limit);
+			const items: Array<{
+				relativePath: string;
+				format: string;
+				size: number;
+				modifiedAt: string;
+			}> = [];
+			for (const relativePath of paths) {
+				if (signal?.aborted) break;
+				const info = await stat(join(cwd, relativePath)).catch(() => null);
+				if (!info?.isFile()) continue;
+				items.push({
+					relativePath,
+					format: extname(relativePath).replace(/^\./, "") || "binary",
+					size: info.size,
+					modifiedAt: info.mtime.toISOString(),
+				});
+			}
+			return items;
+		},
+	};
+	const explicitResearchConnectorRegistry = options.researchConnectorRegistry?.();
+	const researchConnectorHostLoader =
+		explicitResearchConnectorRegistry || options.researchConnectorHostLoader
+			? options.researchConnectorHostLoader
+			: options.researchConnectorHostLoaderFactory?.({
+					fetchImpl: globalThis.fetch,
+					projectStorage: researchProjectStorage,
+				});
 	const researchWrites = new ResearchWriteService({
 		adapters:
 			options.researchWriteAdapterRegistry?.() ??
@@ -404,9 +447,9 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	});
 	const research = new ResearchResourceService({
 		connectors:
-			options.researchConnectorRegistry?.() ??
-			(options.researchConnectorHostLoader
-				? createResearchConnectorRegistryFromHost(options.researchConnectorHostLoader)
+			explicitResearchConnectorRegistry ??
+			(researchConnectorHostLoader
+				? createResearchConnectorRegistryFromHost(researchConnectorHostLoader)
 				: createDefaultResearchConnectorRegistry()),
 		knowledgeOperations: createKnowledgeResearchResourceOperations(knowledgeHost),
 		store: new JsonStore({
@@ -441,28 +484,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					resolverUrl: process.env.DRONE_INSTITUTIONAL_RESOLVER,
 				},
 			},
-			projectStorage: {
-				search: async ({ cwd, query, limit, signal }) => {
-					if (signal?.aborted) return [];
-					const needle = query.normalize("NFKC").toLocaleLowerCase();
-					const paths = (await walkProjectFiles(cwd))
-						.filter((path) => !path.endsWith("/") && path.toLocaleLowerCase().includes(needle))
-						.slice(0, limit);
-					const items = [];
-					for (const relativePath of paths) {
-						if (signal?.aborted) break;
-						const info = await stat(join(cwd, relativePath)).catch(() => null);
-						if (!info?.isFile()) continue;
-						items.push({
-							relativePath,
-							format: extname(relativePath).replace(/^\./, "") || "binary",
-							size: info.size,
-							modifiedAt: info.mtime.toISOString(),
-						});
-					}
-					return items;
-				},
-			},
+			projectStorage: researchProjectStorage,
 		},
 	});
 	const defaultProjectId = canonicalProjectId(
