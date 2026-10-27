@@ -176,6 +176,7 @@
 - 2026-10-27：剩余 discovery/inquiry 边界复核：`@drone/inquiry` 由 backend 无条件组合并供 compute/task/local execution 与 Desktop decisions/inquiry IPC 共用，定位为宿主证据基础设施；`@drone/discovery` 的 B5d–B5f kernel/exploration/critic/evaluation 属科研业务，后续迁入 optional plugin，但需先提供 host-owned 容器执行、授权、KernelRunner 和 Inquiry 端口。两者当前不改为 devDependency；本轮没有用静态计数掩盖这两个 runtime 边界，`check:native-plugin-boundary` 继续保持 `INCOMPLETE`。
 
 - 2026-10-27：discovery host seam contract：`@gyoungwe/plugin-api` 新增版本化 `DiscoveryHostLoader`/`DiscoveryHostPort`（status、kernel session 基础操作），backend 通过 `BackendOptions.discoveryHostLoader` 暴露显式 `discoveryHost`。现有 backend `DiscoveryService` 仍是权威实现，loader 只建立注入合同，不替换 IPC 或宣称插件行为 PASS；plugin-api build、backend typecheck、create-backend 32 项回归与 Biome 通过。
+- 2026-10-27：Desktop discovery wiring：通用 `discoverPluginHostLoader` 现在按 `capability: "discovery"` 发现任意已安装包的 `discoveryHostLoader`，并把它注入 backend 的显式 seam；新增声明包 fixture 回归与 Desktop source wiring 断言。native `DiscoveryService` 仍保持权威实现，尚未迁移 B5d–B5f 行为或切换 IPC。
 
  - 2026-10-27：Desktop discovery wiring：主进程复用通用已安装包扫描，以 `capability=discovery`/`discoveryHostLoader` 发现并注入 host seam；新增 package fixture 回归，10 项 optional-plugin-hosts 测试、Desktop typecheck 与 Biome 通过。无插件仍使用 native `DiscoveryService`，未宣称 Discovery 插件行为或正式 GUI PASS。
 
