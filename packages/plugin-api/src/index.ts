@@ -566,6 +566,11 @@ export interface KnowledgeReadHostPort {
 		index(input: unknown): Promise<unknown>;
 		cancelIndex(input: unknown): Promise<unknown>;
 	};
+	/** Topic memory operations supplied by the installed knowledge plugin. */
+	topics?: {
+		list(input: unknown): Promise<unknown>;
+		archive(input: unknown): Promise<unknown>;
+	};
 	/** Optional research capture operations supplied by the installed knowledge plugin. */
 	researchResource?: {
 		resolveContext(input: unknown): unknown;

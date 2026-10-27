@@ -68,6 +68,11 @@ export interface KnowledgeHostPort {
 	registerAnswerPublication?: KnowledgePublicationRegistrar;
 	/** Semantic-index UI operations supplied by the installed knowledge host. */
 	semantic?: KnowledgeSemanticOperations;
+	/** Topic memory operations supplied by the installed knowledge host. */
+	topics?: {
+		list(input: unknown): Promise<unknown>;
+		archive(input: unknown): Promise<unknown>;
+	};
 	/** Incrementally migrated UI operations supplied by the installed knowledge host. */
 	jobs?: (input: unknown) => Promise<unknown>;
 	maintenance?: (input: unknown) => Promise<unknown>;
@@ -568,6 +573,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			| "uiState"
 			| "reviewWikiWithModel"
 			| "semantic"
+			| "topics"
 			| "jobs"
 			| "maintenance"
 			| "setupPreview"
@@ -588,6 +594,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 					| "uiState"
 					| "reviewWikiWithModel"
 					| "semantic"
+					| "topics"
 					| "jobs"
 					| "maintenance"
 					| "setupPreview"
@@ -874,11 +881,17 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]> {
+		if (this.writeProvider?.topics) {
+			return this.writeProvider.topics.list(input) as ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
+		}
 		return this.call("getKnowledgeTopics", input);
 	}
 	archiveTopic(
 		input: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>[0],
 	): ReturnType<KnowledgeApi["archiveKnowledgeTopic"]> {
+		if (this.writeProvider?.topics) {
+			return this.writeProvider.topics.archive(input) as ReturnType<KnowledgeApi["archiveKnowledgeTopic"]>;
+		}
 		return this.call("archiveKnowledgeTopic", input);
 	}
 	getCloudStatus(): ReturnType<KnowledgeApi["getKnowledgeCloudStatus"]> {
