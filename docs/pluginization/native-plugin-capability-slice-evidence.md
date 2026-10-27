@@ -142,6 +142,7 @@
 - 2026-10-27：P4 workbench backend seam：宿主新增 `createWorkbenchHostPort`，把标准 `PluginRuntimeClient`（`status`/`plan`/`todo`/`memorySave`/`persist`）同时接入 `SessionService` 与 `DroneRuntime.tasks.workbench`；未注入 handler 时操作明确 `unavailable`，输入校验、变更事件和 runtime dispose 均 fail-closed。`create-backend` 2 项及 host runtime 2 项行为测试、backend typecheck、tasks runtime artifact check 和 Biome 通过。该切片仍不是完整任务状态机迁移，也不构成正式安装包 GUI PASS。
 - 2026-10-27：P2 knowledge capture seam：插件 `pi-knowledge` 的版本化 host loader 新增 `researchResource.resolveContext`/`ingestSnapshot` 与 `recordTerminalJobExperience`，宿主通过既有 `KnowledgeHostPort` helper 路由到安装实现；plugin host-loader 2 项、宿主 knowledge host operations 2 项、插件 typecheck/build-check、manifest check 和 backend typecheck 通过。publication、uiState、reviewWikiWithModel、完整 worker/UI 所有权与正式安装包验收仍保持未完成。
 - 2026-10-27：P2 publication/UI state seam：插件 `56544d8` 将 `registerAnswerPublication` 与实例 UI `subscribe/notify` 从 knowledge core 暴露到版本化 host loader；宿主 `6c092919` 同步 plugin-api 合同并补 publication 安装路由回归。插件 host-loader、typecheck、build-check 与宿主 backend typecheck/Biome 通过；兼容回退仍保留，publication/UI 全面所有权、reviewWikiWithModel、worker 和正式 GUI 仍未完成。
+- 2026-10-27：P2 model-review host seam：插件 `606cc34` 将 `reviewWikiWithModel` 暴露为版本化 host loader 操作；宿主 `2e737044` 同步 plugin-api 合同、通过 discovered host 路由前台模型审阅并补安装路由回归。插件 host-loader/build/typecheck 与宿主 backend typecheck、4 项 host-operations 测试、Biome 通过；真实模型/Vault/正式安装包 GUI 仍未验收。
 
 ## 未关闭项
 
