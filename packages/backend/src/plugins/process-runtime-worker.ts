@@ -38,6 +38,35 @@ const resourcesLifecycle = {
 };
 const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
 let runtime;
+// Attachment-private originals; no message/proof JSON field is an authority reference.
+function retainMessages(session, value) {
+  const retain = message => {
+    if (!message || typeof message !== "object") return null;
+    let reference = session.references.get(message);
+    if (!reference) { reference = String(++session.messageSequence); session.references.set(message,reference); }
+    session.originals.set(reference,{message,fingerprint:JSON.stringify(message)});
+    return reference;
+  };
+  if (!value || typeof value !== "object") return {};
+  const message = retain(value.message);
+  return {...(message===null?{}:{message}),...(Array.isArray(value.messages)?{messages:value.messages.map(retain)}:{})};
+}
+function restoreMessages(session, value, references) {
+  const restore = (message, reference) => {
+    if (reference===null || reference===undefined) return message;
+    const original=session.originals.get(reference);
+    if (!original || original.fingerprint!==JSON.stringify(message) || original.fingerprint!==JSON.stringify(original.message))
+      throw new Error("Native message reference is no longer current");
+    return original.message;
+  };
+  if (!references) return value;
+  if (references.message!==undefined) value.message=restore(value.message,references.message);
+  if (references.messages!==undefined) {
+    if(!Array.isArray(value.messages)||value.messages.length!==references.messages.length)throw new Error("Invalid native message references");
+    value.messages=value.messages.map((message,index)=>restore(message,references.messages[index]));
+  }
+  return value;
+}
 console.log = (...args) => process.stderr.write(args.map(String).join(" ") + "\n");
 console.info = console.log;
 console.warn = console.log;
@@ -78,7 +107,10 @@ input.on("line", async (line) => {
 
     if (message.type === "native_attach") {
       const adapter = await runtime.createNativeSession();
-      if (adapter.projection) { await adapter.dispose(); throw new Error("Native publication projection is not yet supported by this adapter"); }
+      if (adapter.projection && (typeof adapter.projection.event!=="function" || typeof adapter.projection.snapshot!=="function" || (adapter.projection.finalize!==undefined && typeof adapter.projection.finalize!=="function"))) {
+        await adapter.dispose();
+        throw new Error("Invalid native publication projection");
+      }
       const tools = new Map(), commands = new Map(), hooks = [];
       const unsupported = (name) => { throw new Error("Unsupported native Pi API: " + name); };
       const pi = new Proxy({
@@ -96,11 +128,11 @@ input.on("line", async (line) => {
       }, {get(target,name){if(name in target)return target[name];return unsupported(String(name));}});
       try { await adapter.extension(pi); }
       catch(error) { await adapter.dispose(); throw error; }
-      nativeSessions.set(message.attachment, {adapter,tools,commands,hooks,pending:new Map(),closed:false});
+      nativeSessions.set(message.attachment, {adapter,tools,commands,hooks,pending:new Map(),closed:false,originals:new Map(),references:new WeakMap(),messageSequence:0});
       send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(tool=>Object.fromEntries(
         ["name","label","description","parameters","outputSchema","constrainedSampling","renderShell","promptSnippet","promptGuidelines","exposure","namespace","annotations","defaultActive","executionMode","drone"]
           .filter(key=>tool[key]!==undefined).map(key=>[key,tool[key]])
-      )),commands:[...commands.entries()].map(([name,command])=>({name,...(command.description===undefined?{}:{description:command.description})})),effects:adapter.toolEffects||{},commandEffects:adapter.commandEffects||{},eventEffects:adapter.eventEffects||{},events:hooks.map(({name},index)=>({name,index}))}});
+      )),commands:[...commands.entries()].map(([name,command])=>({name,...(command.description===undefined?{}:{description:command.description})})),effects:adapter.toolEffects||{},commandEffects:adapter.commandEffects||{},eventEffects:adapter.eventEffects||{},...(adapter.projection?{projection:{finalize:typeof adapter.projection.finalize==="function",effect:adapter.projection.finalizeEffect??"write"}}:{}),events:hooks.map(({name},index)=>({name,index}))}});
       return;
     }
     if (message.type === "native_detach") {
@@ -114,15 +146,27 @@ input.on("line", async (line) => {
       send({type:"result",id:message.id,ok:true,value:null});
       return;
     }
-    if (message.type === "native_call") {
+    if (message.type === "native_call" || message.type === "native_projection") {
       const session=nativeSessions.get(message.attachment);
       if(!session||session.closed)throw new Error("Native attachment is not active");
       const controller=new AbortController();calls.set(message.id,controller);
       const signal=AbortSignal.any([lifecycle.signal,controller.signal]);
       const unsupported=(name)=>{throw new Error("Unsupported native Pi context: "+name);};
-      const ctx=new Proxy({cwd:message.context.cwd,hasUI:false,signal,sessionManager:new Proxy({getSessionId:()=>message.context.sessionId},{get(target,name){if(name in target)return target[name];return unsupported("sessionManager."+String(name));}})},{get(target,name){if(name in target)return target[name];return unsupported(String(name));}});
+      const ctx=message.type==="native_call"?new Proxy({cwd:message.context.cwd,hasUI:false,signal,sessionManager:new Proxy({getSessionId:()=>message.context.sessionId},{get(target,name){if(name in target)return target[name];return unsupported("sessionManager."+String(name));}})},{get(target,name){if(name in target)return target[name];return unsupported(String(name));}}):undefined;
       const pending=currentCall.run(message.id,async()=>{
         signal.throwIfAborted();
+        message.input=restoreMessages(session,message.input,message.references);
+        if(message.type==="native_projection") {
+          const projection=session.adapter.projection;
+          if(!projection)throw new Error("Native publication projection is unavailable");
+          if(message.kind==="finalize") {
+            if(!projection.finalize)throw new Error("Native publication finalizer is unavailable");
+            return projection.finalize(message.input,{scope:Object.freeze(message.scope),signal,capabilities});
+          }
+          if(message.kind==="event")return projection.event(message.input);
+          if(message.kind==="snapshot")return {messages:await projection.snapshot(message.input.messages,message.input.persisted)};
+          throw new Error("Unknown native projection request");
+        }
         if(message.kind==="tool") {
           const update=message.updates?value=>{
             signal.throwIfAborted();
@@ -149,7 +193,7 @@ input.on("line", async (line) => {
         return result ?? null;
       });
       session.pending.set(message.id,pending);
-      try { const value=await pending;send({type:"result",id:message.id,ok:true,value}); }
+      try { const value=await pending;signal.throwIfAborted();const references=message.kind==="tool"||message.kind==="command"?{}:retainMessages(session,value);send({type:"result",id:message.id,ok:true,value:{value,references}}); }
       finally { session.pending.delete(message.id);calls.delete(message.id); }
       return;
     }

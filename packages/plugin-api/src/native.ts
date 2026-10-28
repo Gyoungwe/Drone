@@ -1,4 +1,5 @@
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
+import type { PluginRuntimeContext } from "./runtime.js";
 
 /** Official Pi registration owned by one real host session, sharing the application's domain owner. */
 export interface PluginNativeSession {
@@ -11,6 +12,10 @@ export interface PluginNativeSession {
 	readonly eventEffects?: Readonly<Record<string, "read" | "write">>;
 	/** Projection executes where the plugin's live proof objects were created; JSON is not a proof. */
 	readonly projection?: {
+		/** Runs once after every official SDK hook and before public delivery or append. */
+		finalize?(event: unknown, context: PluginRuntimeContext): unknown | Promise<unknown>;
+		/** Unknown finalizers require write approval; pure projection itself grants no IO. */
+		readonly finalizeEffect?: "read" | "write";
 		event(event: unknown): unknown | Promise<unknown>;
 		snapshot(messages: unknown[], persisted: unknown[]): unknown[] | Promise<unknown[]>;
 	};
