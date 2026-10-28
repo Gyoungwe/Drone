@@ -182,7 +182,7 @@ export class SessionConstructionService {
 				unsubscribeEvents();
 				diagnostics.dispose();
 			};
-			const registration = { session, unsubscribe, cwd };
+			const registration = { session, unsubscribe, cwd, questionGate: askGate };
 			this.host.registry.add(registration);
 			const notificationLifetime = this.host.registry.signalFor(registration);
 			notificationLifetime.addEventListener(
@@ -361,6 +361,7 @@ export class SessionConstructionService {
 				diagnostics.dispose();
 			};
 			const registration = {
+				questionGate: askGate,
 				session,
 				unsubscribe,
 				cwd,

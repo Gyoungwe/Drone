@@ -158,3 +158,29 @@ export interface PluginModelGenerateResult {
 export interface PluginSessionInspection {
 	readonly agentActive: boolean;
 }
+
+/** Questions return ordinary interaction data; they never grant file/model permissions. */
+export interface PluginSessionSelectInput {
+	readonly title: string;
+	readonly options: readonly string[];
+}
+export interface PluginSessionInputRequest {
+	readonly title: string;
+	readonly placeholder?: string;
+}
+export interface PluginSessionConfirmInput {
+	readonly title: string;
+	readonly message: string;
+}
+export interface PluginSessionQuestionCancelled {
+	readonly kind: "cancelled";
+}
+export type PluginSessionSelectResult =
+	| PluginSessionQuestionCancelled
+	| { readonly kind: "selected"; readonly value: string };
+export type PluginSessionInputResult =
+	| PluginSessionQuestionCancelled
+	| { readonly kind: "input"; readonly value: string };
+export type PluginSessionConfirmResult =
+	| PluginSessionQuestionCancelled
+	| { readonly kind: "confirmed"; readonly value: boolean };

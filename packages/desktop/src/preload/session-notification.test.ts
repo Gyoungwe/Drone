@@ -1,4 +1,4 @@
-import type { PiApi, SessionEventEnvelope } from "@drone/shared";
+import type { AskResolved, PiApi, SessionEventEnvelope } from "@drone/shared";
 import { IpcChannels } from "@drone/shared";
 import { expect, it, vi } from "vitest";
 
@@ -32,4 +32,16 @@ it("the real preload forwards the generic session notification envelope and unre
 	expect(received).toEqual([envelope]);
 	off();
 	expect(mocks.removeListener).toHaveBeenCalledWith(IpcChannels.Event, listener);
+});
+
+it("forwards real AskResolved events and removes the exact cancellation listener", async () => {
+	await import("./index");
+	const received: AskResolved[] = [];
+	const off = mocks.exposed.get("pi")!.onAskResolved((result) => received.push(result));
+	const listener = mocks.listeners.get(IpcChannels.AskResolved)!;
+	const result = { sessionId: "actual-session", requestId: "actual-request" };
+	listener({}, result as any);
+	expect(received).toEqual([result]);
+	off();
+	expect(mocks.removeListener).toHaveBeenCalledWith(IpcChannels.AskResolved, listener);
 });

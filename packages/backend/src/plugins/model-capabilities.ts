@@ -9,6 +9,7 @@ import { hostText } from "../reply-language";
 import type { SessionRegistry } from "../session/registry";
 import { generateStructuredModel, resolvedModelThinking } from "../session-engine/structured-model";
 import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
+import { requirePluginSession } from "./session-caller";
 
 export interface PluginModelCapabilitiesDependencies {
 	registry: SessionRegistry;
@@ -28,19 +29,10 @@ const nullableNumber = { anyOf: [{ type: "number", minimum: 0 }, { type: "null" 
 
 /** Only the caller's live session can select its model; plugin input cannot select another account/model. */
 export function modelCapabilityHandlers(deps: PluginModelCapabilitiesDependencies): {
-	"session.inspect": PluginCapabilityHandler;
 	"model.selection": PluginCapabilityHandler;
 	"model.generate": PluginCapabilityHandler;
 } {
-	function entryFor(context: PluginCapabilityContext) {
-		context.signal.throwIfAborted();
-		if (context.scope.kind !== "session")
-			throw new Error("Model capabilities require a selected live session");
-		const entry = deps.registry.get(context.scope.sessionId);
-		if (!entry || entry !== context.sessionIdentity || deps.registry.signalFor(entry).aborted)
-			throw new Error("Model capability caller is stale or belongs to another session");
-		return entry;
-	}
+	const entryFor = (context: PluginCapabilityContext) => requirePluginSession(deps.registry, context);
 	async function resolve(context: PluginCapabilityContext, profile?: string) {
 		const entry = entryFor(context);
 		if (entry.readOnly || !entry.session.settingsManager.isProjectTrusted())
@@ -81,17 +73,6 @@ export function modelCapabilityHandlers(deps: PluginModelCapabilitiesDependencie
 		return { entry, model: selectedModel, runtime, selection, parentModel, parentThinking };
 	}
 	return {
-		"session.inspect": {
-			effect: "read",
-			inputSchema: { type: "null" },
-			resultSchema: {
-				type: "object",
-				properties: { agentActive: { type: "boolean" } },
-				required: ["agentActive"],
-				additionalProperties: false,
-			},
-			execute: async (_input, context) => ({ agentActive: entryFor(context).session.isStreaming }),
-		},
 		"model.selection": {
 			effect: "read",
 			inputSchema: { type: "object", properties: { profile: text }, additionalProperties: false },

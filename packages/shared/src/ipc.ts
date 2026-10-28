@@ -1,4 +1,4 @@
-import type { AskRequest, AskResponse } from "./ask";
+import type { AskRequest, AskResolved, AskResponse } from "./ask";
 import type { DecisionsApi } from "./decisions";
 import type { DesktopCommand } from "./desktop-command";
 import type { DiagnosticsSnapshot } from "./diagnostics";
@@ -333,6 +333,7 @@ export const IpcChannels = {
 	MemoryPromote: "memory:promote",
 	MemoryPromoteToKnowledge: "memory:promoteToKnowledge",
 	AskRequest: "ask:request",
+	AskResolved: "ask:resolved",
 	AskRespond: "ask:respond",
 	PermissionRespond: "permission:respond",
 	/** 权限门控配置（enabled 解析保留，UI 无入口；chip 逃生舱禁用态感知用） */
@@ -606,6 +607,7 @@ export interface PiApi
 	memoryPromoteToKnowledge(cwd: string, id: number): Promise<{ path: string }>;
 	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
 	onAskRequest(cb: (req: AskRequest) => void): () => void;
+	onAskResolved(cb: (result: AskResolved) => void): () => void;
 	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;
 	/** 读取权限门控配置（enabled=false = 手改 permissions.json 的隐藏逃生舱态，chip 禁用提示用） */
 	getPermissionConfig(): Promise<PermissionConfigInfo>;

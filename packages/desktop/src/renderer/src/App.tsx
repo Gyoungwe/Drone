@@ -102,16 +102,24 @@ export default function App() {
 	useSessionEventBridge({ onTrustRequest: pushTrustRequest });
 	useDesktopCommands();
 
-	useEffect(
-		() =>
-			getPi().onAskRequest((request) => {
-				setAskRequests((current) =>
-					current.some((item) => item.id === request.id) ? current : [...current, request],
-				);
-				askReceivedAt.current.set(request.id, Date.now());
-			}),
-		[],
-	);
+	useEffect(() => {
+		const stopRequests = getPi().onAskRequest((request) => {
+			setAskRequests((current) =>
+				current.some((item) => item.id === request.id) ? current : [...current, request],
+			);
+			askReceivedAt.current.set(request.id, Date.now());
+		});
+		const stopResolved = getPi().onAskResolved((result) => {
+			setAskRequests((current) =>
+				current.filter((item) => item.id !== result.requestId || item.sessionId !== result.sessionId),
+			);
+			askReceivedAt.current.delete(result.requestId);
+		});
+		return () => {
+			stopRequests();
+			stopResolved();
+		};
+	}, []);
 
 	// 一次性 bootstrap：开屏就绪信号 + 更新状态 + UI 插件加载
 	useEffect(() => {
