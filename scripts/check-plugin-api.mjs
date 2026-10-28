@@ -89,10 +89,20 @@ function checkDist() {
 	assert(existsSync(join(dist, "runtime.d.ts")), "build output is missing dist/runtime.d.ts");
 	assert(existsSync(join(dist, "runtime.js")), "build output is missing dist/runtime.js");
 	assert(existsSync(join(dist, "index.js")), "build output is missing dist/index.js");
-	for (const name of readdirSync(dist)) {
+	const outputs = (directory, prefix = "") =>
+		readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
+			entry.isDirectory()
+				? outputs(join(directory, entry.name), `${prefix}${entry.name}/`)
+				: [`${prefix}${entry.name}`],
+		);
+	for (const name of outputs(dist)) {
 		const path = join(dist, name);
 		if (!name.endsWith(".js") && !name.endsWith(".d.ts")) continue;
 		const output = readFileSync(path, "utf8");
+		if (!name.startsWith("node/")) {
+			assert(!/from ["']node:/u.test(output), `Node implementation leaked into ${name}`);
+			assert(!/from ["'][^"']*\bnode\//u.test(output), `Node subpath leaked into ${name}`);
+		}
 		// Only the opt-in native declaration may reference the official SDK's type.
 		// Keep the ban on every runtime output and on all other public subpaths.
 		const dependencies =
