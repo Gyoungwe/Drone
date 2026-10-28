@@ -5502,7 +5502,9 @@ function createKnowledgeModelReview(runtime, config, wiki, io, specialistSetting
   }
   return { reviewWikiWithModel: reviewWikiWithModel2, lastWikiModelReview: lastWikiModelReview2 };
 }
-function reviewWikiWithModel(input, options) {
+async function reviewWikiWithModel(input, options) {
+  if (input?.acknowledged !== true || typeof input.autoApply !== "boolean")
+    throw new Error("Confirm model costs and choose whether successful review may apply this exact candidate");
   return compatibility4.reviewWikiWithModel(
     consumeKnowledgeReviewPreview(input.cwd, input.token),
     input,
