@@ -1,62 +1,62 @@
 {
-  "date": "2026-10-28",
-  "slice": "current-native-event-provider",
-  "status": "PASS_REAL_SDK_SLICE",
-  "base": "a3c3351c",
-  "publicTypes": "ed8758c9",
-  "source": "ec877b97",
-  "sdkTests": "8e4be5fc",
-  "fixture": "npm pack -> offline install --ignore-scripts -> production installed scanner -> Bridge -> restricted Node worker -> actual Pi 1.1.0 SDK; local faux model",
-  "checks": [
-    {
-      "command": "npx vitest run --project sdk test/plugin-provider-sdk.test.mjs",
-      "result": "19/19",
-      "log": "/tmp/provider-native-sdk-final2.log"
-    },
-    {
-      "command": "npx vitest run --project sdk test/native-tool-protocol-sdk.test.mjs test/native-command-protocol-sdk.test.mjs test/task-session-commit-sdk.test.mjs test/task-plugin-activation-sdk.test.mjs test/plugin-session-records-sdk.test.mjs",
-      "result": "53/53",
-      "log": "/tmp/provider-native-existing-sdk.log"
-    },
-    {
-      "command": "npx vitest run --project unit src/plugins/runtime.test.ts src/plugins/process-runtime.test.ts src/plugins/runtime-capabilities.test.ts src/plugins/coordinator.test.ts",
-      "result": "51/51",
-      "log": "/tmp/provider-native-unit.log"
-    },
-    {
-      "command": "npm run typecheck --workspace @drone/backend",
-      "result": "PASS",
-      "log": "/tmp/provider-native-backend-tsc.log"
-    },
-    {
-      "command": "npx tsc --noEmit -p packages/desktop/tsconfig.node.json",
-      "result": "PASS",
-      "log": "/tmp/provider-native-desktop-tsc.log"
-    },
-    {
-      "command": "npm run check --workspace @gyoungwe/plugin-api",
-      "result": "PASS",
-      "log": "/tmp/provider-native-api-check.log"
-    },
-    {
-      "command": "npm run check:arch",
-      "result": "PASS_WITH_RETAINED_P0_P7_PARTIAL_STATUS",
-      "log": "/tmp/provider-native-arch.log"
-    },
-    {
-      "command": "npx biome check <changed production and test files>",
-      "result": "PASS",
-      "log": "/tmp/provider-native-lint.log"
-    }
-  ],
-  "formalInstallerGUI": "NOT_RUN",
-  "fullHostGates": "ROOT_COHORT_REQUIRED",
-  "npmPublish": "NOT_RUN",
-  "remaining": [
-    "managed TaskApplication/TaskController consumer",
-    "one task authorization and actual queued continuation identity",
-    "domain acceptance consumer and explicit old-version adoption scrub",
-    "remove startup taskHost/coreHost assembly",
-    "unified API/plugin candidate and formal installer GUI"
-  ]
+	"date": "2026-10-28",
+	"slice": "current-native-event-provider",
+	"status": "PASS_REAL_SDK_SLICE",
+	"base": "a3c3351c",
+	"publicTypes": "ed8758c9",
+	"source": "ec877b97",
+	"sdkTests": "8e4be5fc",
+	"fixture": "npm pack -> offline install --ignore-scripts -> production installed scanner -> Bridge -> restricted Node worker -> actual Pi 1.1.0 SDK; local faux model",
+	"checks": [
+		{
+			"command": "npx vitest run --project sdk test/plugin-provider-sdk.test.mjs",
+			"result": "19/19",
+			"log": "/tmp/provider-native-sdk-final2.log"
+		},
+		{
+			"command": "npx vitest run --project sdk test/native-tool-protocol-sdk.test.mjs test/native-command-protocol-sdk.test.mjs test/task-session-commit-sdk.test.mjs test/task-plugin-activation-sdk.test.mjs test/plugin-session-records-sdk.test.mjs",
+			"result": "53/53",
+			"log": "/tmp/provider-native-existing-sdk.log"
+		},
+		{
+			"command": "npx vitest run --project unit src/plugins/runtime.test.ts src/plugins/process-runtime.test.ts src/plugins/runtime-capabilities.test.ts src/plugins/coordinator.test.ts",
+			"result": "51/51",
+			"log": "/tmp/provider-native-unit.log"
+		},
+		{
+			"command": "npm run typecheck --workspace @drone/backend",
+			"result": "PASS",
+			"log": "/tmp/provider-native-backend-tsc.log"
+		},
+		{
+			"command": "npx tsc --noEmit -p packages/desktop/tsconfig.node.json",
+			"result": "PASS",
+			"log": "/tmp/provider-native-desktop-tsc.log"
+		},
+		{
+			"command": "npm run check --workspace @gyoungwe/plugin-api",
+			"result": "PASS",
+			"log": "/tmp/provider-native-api-check.log"
+		},
+		{
+			"command": "npm run check:arch",
+			"result": "PASS_WITH_RETAINED_P0_P7_PARTIAL_STATUS",
+			"log": "/tmp/provider-native-arch.log"
+		},
+		{
+			"command": "npx biome check <changed production and test files>",
+			"result": "PASS",
+			"log": "/tmp/provider-native-lint.log"
+		}
+	],
+	"formalInstallerGUI": "NOT_RUN",
+	"fullHostGates": "ROOT_COHORT_REQUIRED",
+	"npmPublish": "NOT_RUN",
+	"remaining": [
+		"managed TaskApplication/TaskController consumer",
+		"one task authorization and actual queued continuation identity",
+		"domain acceptance consumer and explicit old-version adoption scrub",
+		"remove startup taskHost/coreHost assembly",
+		"unified API/plugin candidate and formal installer GUI"
+	]
 }

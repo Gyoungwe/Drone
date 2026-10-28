@@ -1,69 +1,66 @@
 {
-  "date": "2026-10-29",
-  "status": "PASS_REAL_SDK_BINARY_READ_SLICE",
-  "base": "41e81018",
-  "types": "637d8621",
-  "source": "a29bdb7b",
-  "tests": "32b04b8e",
-  "pluginCommits": [
-    "03c1a2d",
-    "1b932a7"
-  ],
-  "coreTarball": {
-    "path": "/tmp/drone-file-binary-core-pack/gyoungwe-pi-core-0.2.0.tgz",
-    "sha256": "73b9373316b970f422cf2256461a40b92a6e84a4d68c39d6a304c2ea83236037",
-    "release": false
-  },
-  "checks": [
-    {
-      "command": "npx vitest run --project unit src/plugins/file-capabilities.test.ts src/plugins/binary-state-capabilities.test.ts",
-      "result": "36/36 (files22 + binary-state14)",
-      "log": "/tmp/file-binary-unit2.log"
-    },
-    {
-      "command": "npx vitest run --project sdk test/plugin-provider-sdk.test.mjs",
-      "result": "28/28",
-      "log": "/tmp/file-binary-provider-sdk-full.log"
-    },
-    {
-      "command": "npm run typecheck --workspace @drone/backend",
-      "result": "PASS",
-      "log": "/tmp/file-binary-backend-tsc2.log"
-    },
-    {
-      "command": "npx tsc --noEmit -p packages/desktop/tsconfig.node.json",
-      "result": "PASS",
-      "log": "/tmp/file-binary-desktop-tsc.log"
-    },
-    {
-      "command": "npm run check --workspace @gyoungwe/plugin-api",
-      "result": "PASS",
-      "log": "/tmp/file-binary-api-check-final.log"
-    },
-    {
-      "command": "npm run check:arch",
-      "result": "PASS_WITH_P0_P7_PARTIAL_STATUS_RETAINED",
-      "log": "/tmp/file-binary-arch.log"
-    },
-    {
-      "command": "npx biome check <changed file-port source, DTO and tests>",
-      "result": "PASS",
-      "log": "/tmp/file-binary-lint.log"
-    },
-    {
-      "command": "DRONE_PLUGIN_API_TARBALL=<verified 2c4e3ecd> npm run check --workspace @gyoungwe/pi-core",
-      "result": "Node29 + runtime/UI215; typecheck/build:check/smoke PASS",
-      "log": "/tmp/file-binary-core-check.log"
-    }
-  ],
-  "limits": {
-    "decodedBytes": 8388608,
-    "base64Characters": 11184812,
-    "rootKind": "files",
-    "newPermissionFlags": false
-  },
-  "pdfDOITitle": "NOT_IMPLEMENTED_RESOURCE_MIGRATION_REQUIRED",
-  "formalInstallerGUI": "NOT_RUN",
-  "fullP4": "IN_PROGRESS",
-  "fullDualRepositoryGates": "ROOT_COHORT_REQUIRED"
+	"date": "2026-10-29",
+	"status": "PASS_REAL_SDK_BINARY_READ_SLICE",
+	"base": "41e81018",
+	"types": "637d8621",
+	"source": "a29bdb7b",
+	"tests": "32b04b8e",
+	"pluginCommits": ["03c1a2d", "1b932a7"],
+	"coreTarball": {
+		"path": "/tmp/drone-file-binary-core-pack/gyoungwe-pi-core-0.2.0.tgz",
+		"sha256": "73b9373316b970f422cf2256461a40b92a6e84a4d68c39d6a304c2ea83236037",
+		"release": false
+	},
+	"checks": [
+		{
+			"command": "npx vitest run --project unit src/plugins/file-capabilities.test.ts src/plugins/binary-state-capabilities.test.ts",
+			"result": "36/36 (files22 + binary-state14)",
+			"log": "/tmp/file-binary-unit2.log"
+		},
+		{
+			"command": "npx vitest run --project sdk test/plugin-provider-sdk.test.mjs",
+			"result": "28/28",
+			"log": "/tmp/file-binary-provider-sdk-full.log"
+		},
+		{
+			"command": "npm run typecheck --workspace @drone/backend",
+			"result": "PASS",
+			"log": "/tmp/file-binary-backend-tsc2.log"
+		},
+		{
+			"command": "npx tsc --noEmit -p packages/desktop/tsconfig.node.json",
+			"result": "PASS",
+			"log": "/tmp/file-binary-desktop-tsc.log"
+		},
+		{
+			"command": "npm run check --workspace @gyoungwe/plugin-api",
+			"result": "PASS",
+			"log": "/tmp/file-binary-api-check-final.log"
+		},
+		{
+			"command": "npm run check:arch",
+			"result": "PASS_WITH_P0_P7_PARTIAL_STATUS_RETAINED",
+			"log": "/tmp/file-binary-arch.log"
+		},
+		{
+			"command": "npx biome check <changed file-port source, DTO and tests>",
+			"result": "PASS",
+			"log": "/tmp/file-binary-lint.log"
+		},
+		{
+			"command": "DRONE_PLUGIN_API_TARBALL=<verified 2c4e3ecd> npm run check --workspace @gyoungwe/pi-core",
+			"result": "Node29 + runtime/UI215; typecheck/build:check/smoke PASS",
+			"log": "/tmp/file-binary-core-check.log"
+		}
+	],
+	"limits": {
+		"decodedBytes": 8388608,
+		"base64Characters": 11184812,
+		"rootKind": "files",
+		"newPermissionFlags": false
+	},
+	"pdfDOITitle": "NOT_IMPLEMENTED_RESOURCE_MIGRATION_REQUIRED",
+	"formalInstallerGUI": "NOT_RUN",
+	"fullP4": "IN_PROGRESS",
+	"fullDualRepositoryGates": "ROOT_COHORT_REQUIRED"
 }
