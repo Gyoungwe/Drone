@@ -40,6 +40,24 @@ export interface PluginRuntimeRootDescription extends PluginRuntimeResource {
 	readonly path: string;
 	readonly access: "read" | "read-write";
 }
+/** Stable bounded snapshot from an existing approved files root; JSON/state roots are excluded. */
+export interface PluginFileBinaryReadInput {
+	readonly root: string;
+	readonly path: string;
+}
+export interface PluginFileBinaryReadResult {
+	readonly base64: string;
+	readonly sha256: string;
+	readonly bytes: number;
+	readonly version: {
+		readonly dev: number;
+		readonly ino: number;
+		readonly size: number;
+		readonly mtimeMs: number;
+		readonly ctimeMs: number;
+	};
+}
+
 /** Exclusive JSON state writer lease, held until successful owner and resource disposal. */
 export interface PluginStateReserveInput {
 	readonly root: string;
