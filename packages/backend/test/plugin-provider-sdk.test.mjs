@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdirSync, renameSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
@@ -27,6 +28,9 @@ export default async context=>{
  const status=async(_input,ctx)=>({ownerId,value,scope:await ctx.capabilities.call('caller.scope',null)});
  return {
   operations:{
+   adoptionInspect:{effect:'write',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('session.records.adoption.inspect',input)},
+   adoptionCommit:{effect:'write',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('session.records.adoption.commit',input)},
+   ownedRecords:{effect:'read',inputSchema:{type:'null'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('session.records.read',input)},
    failClose:{effect:'write',inputSchema:{type:'null'},resultSchema:{type:'null'},execute:async()=>{closeFailure=true;return null;}},
    status:{effect:'read',inputSchema:{type:'null'},resultSchema:{type:'object'},execute:status},
    update:{effect:'write',inputSchema:{type:'object',properties:{value:{type:'number'}},required:['value'],additionalProperties:false},resultSchema:{type:'object'},execute:async(input,ctx)=>{
@@ -45,6 +49,7 @@ export default async context=>{
  };
 };`;
 const consumerSource = `export default async()=>({operations:{
+ directAdoption:{effect:'write',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('session.records.adoption.inspect',input)},
  inspect:{effect:'read',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('provider.inspect',input)},
  read:{effect:'read',inputSchema:{type:'object'},resultSchema:{},execute:async(input,ctx)=>ctx.capabilities.call('provider.read',{alias:'store',...input})},
  write:{effect:'write',inputSchema:{type:'object'},resultSchema:{},execute:async(input,ctx)=>ctx.capabilities.call('provider.write',{alias:'store',...input})},
@@ -61,10 +66,26 @@ async function setup({ native = true } = {}) {
 				provides: {
 					"checkpoint.service": {
 						version: 1,
-						operations: ["status", "update", "hold", "cycle", "failClose"],
+						operations: [
+							"status",
+							"update",
+							"hold",
+							"cycle",
+							"failClose",
+							"adoptionInspect",
+							"adoptionCommit",
+							"ownedRecords",
+						],
 					},
 				},
 				requires: { back: { service: "cycle.service", version: 1 } },
+				recordAdoptions: {
+					recovery: {
+						legacyType: "legacy-session-checkpoint",
+						fromVersions: ["0.9.0"],
+						removeBeforeVersion: "2.0.0",
+					},
+				},
 			},
 		],
 		[
@@ -153,6 +174,7 @@ async function setup({ native = true } = {}) {
 	await mkdir(agentDir);
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
+	vi.stubEnv("DRONE_REPLY_LANGUAGE", "en");
 	const modelRuntime = await ModelRuntime.create({
 		authPath: join(agentDir, "auth.json"),
 		modelsPath: null,
@@ -184,10 +206,10 @@ async function setup({ native = true } = {}) {
 				),
 			}),
 		getSessionContext: (id) => service?.getPluginCallerContext(id),
-		capabilities: () => ({
+		capabilities: (source) => ({
 			resources: [],
 			handlers: {
-				...service.getPluginSessionCapabilities(),
+				...service.getPluginSessionCapabilities(source.recordAdoptions),
 				entered: {
 					effect: "read",
 					inputSchema: { type: "null" },
@@ -407,4 +429,170 @@ it("a real short-lease provider cleanup failure rejects its receipt and retains 
 	expect(after).toBe(count);
 	expect(stopped).toBeInstanceOf(AggregateError);
 	expect(stopped.message).toBe("Plugin runtime shutdown failed");
+}, 20000);
+
+const inspectLegacy = (invoke) =>
+	invoke("write", { operation: "adoptionInspect", input: { type: "recovery" } });
+const commitLegacy = (invoke, candidate, data, requestId) =>
+	invoke(
+		"write",
+		{
+			operation: "adoptionCommit",
+			input: { type: "recovery", legacyId: candidate.id, legacyHash: candidate.hash, data },
+		},
+		requestId,
+	);
+it("verified installed legacy declarations require two write approvals, retain unknown provenance, preserve old bytes and never grant execution from JSON", async () => {
+	const { entry, invoke, converse, approve, approvals, meta, faux } = await setup();
+	await converse();
+	const modelCalls = faux.state.callCount;
+	const legacyData = {
+		scope: meta.sessionId,
+		approved: true,
+		roots: ["/"],
+		proof: "UNTRUSTED_LEGACY_JSON",
+		note: "Synthetic historical checkpoint",
+	};
+	const oldId = entry.session.sessionManager.appendCustomEntry("legacy-session-checkpoint", legacyData);
+	approve(async (_owner, _source, operation) => operation !== "capability:session.records.adoption.inspect");
+	await expect(inspectLegacy(invoke)).rejects.toThrow(/denied/);
+	approve(async () => true);
+	await expect(invoke("directAdoption", { type: "recovery" })).rejects.toThrow(
+		/Undeclared legacy checkpoint adoption/,
+	);
+	const inspection = await inspectLegacy(invoke);
+	expect(inspection).toMatchObject({
+		state: "candidate",
+		creator: "unknown",
+		packageVersion: "unknown",
+		supportedFromVersions: ["0.9.0"],
+		candidate: { id: oldId, data: legacyData },
+	});
+	const transformed = { scope: meta.sessionId, historicalNote: inspection.candidate.data.note };
+	const adopted = await commitLegacy(invoke, inspection.candidate, transformed);
+	expect(adopted).toMatchObject({
+		state: "adopted",
+		durability: "durable",
+		legacyId: oldId,
+		legacyHash: inspection.candidate.hash,
+	});
+	expect(entry.session.sessionManager.getEntry(oldId).data).toEqual(legacyData);
+	expect(entry.session.sessionManager.getEntry(adopted.id)).toMatchObject({
+		customType: "plugin-record:%40fixture%2Fprovider:recovery",
+		data: transformed,
+	});
+	expect((await invoke("read", { operation: "ownedRecords", input: null })).records).toEqual([
+		{ id: adopted.id, type: "recovery", data: transformed },
+	]);
+	expect(await inspectLegacy(invoke)).toMatchObject({ state: "already-adopted", candidate: null });
+	const inspectApprovals = approvals.filter(
+		(args) => args[2] === "capability:session.records.adoption.inspect",
+	);
+	expect(inspectApprovals.length).toBeGreaterThan(0);
+	expect(
+		inspectApprovals.every(
+			(args) =>
+				args[0].id === 71 && args[3].includes("legacy-session-checkpoint") && args[3].includes("unknown"),
+		),
+	).toBe(true);
+	expect(approvals.some((args) => args[2] === "capability:session.records.adoption.commit")).toBe(true);
+	expect(backend.approvals.getGate(meta.sessionId).isRunAllowed()).toBe(false);
+	expect(faux.state.callCount).toBe(modelCalls);
+}, 20000);
+it("legacy commit rechecks actual branch/id/hash, and an ordinary own-source checkpoint closes the temporary read path", async () => {
+	const { entry, invoke, converse } = await setup();
+	await converse();
+	const before = entry.session.sessionManager.getLeafId();
+	entry.session.sessionManager.appendCustomEntry("legacy-session-checkpoint", { version: 1, note: "first" });
+	const first = await inspectLegacy(invoke);
+	const latest = entry.session.sessionManager.appendCustomEntry("legacy-session-checkpoint", {
+		version: 1,
+		note: "changed",
+	});
+	await expect(commitLegacy(invoke, first.candidate, { note: "stale" })).rejects.toThrow(
+		/changed or is no longer/,
+	);
+	entry.session.sessionManager.branch(before);
+	await expect(commitLegacy(invoke, first.candidate, { note: "off branch" })).rejects.toThrow(
+		/changed or is no longer/,
+	);
+	entry.session.sessionManager.branch(latest);
+	expect(await invoke("read", { operation: "ownedRecords", input: null })).toMatchObject({
+		state: "durable",
+		records: [],
+	});
+	const current = await inspectLegacy(invoke);
+	await commitLegacy(invoke, current.candidate, { note: "current" });
+	await expect(commitLegacy(invoke, current.candidate, { note: "duplicate" })).rejects.toThrow(
+		/already exists/,
+	);
+	expect(await inspectLegacy(invoke)).toMatchObject({ state: "already-adopted", candidate: null });
+}, 20000);
+it("deferred legacy storage exposes no candidate or adopted receipt, and a cancelled real approval cannot append after its late answer", async () => {
+	const { entry, invoke, converse, approve, owner, binding, selection } = await setup();
+	entry.session.sessionManager.appendCustomEntry("legacy-session-checkpoint", { version: 1, note: "lazy" });
+	const file = entry.session.sessionManager.getSessionFile();
+	expect(await inspectLegacy(invoke)).toMatchObject({ state: "deferred", candidate: null });
+	await expect(
+		commitLegacy(invoke, { id: "not-a-receipt", hash: "0".repeat(64) }, { note: "not saved" }),
+	).rejects.toThrow(/requires durable/);
+	await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
+	await converse();
+	const inspection = await inspectLegacy(invoke);
+	entry.readOnly = true;
+	await expect(inspectLegacy(invoke)).rejects.toThrow(/denied/);
+	entry.readOnly = false;
+	let release;
+	approve(async (_owner, _source, operation) =>
+		operation === "capability:session.records.adoption.commit"
+			? new Promise((resolve) => {
+					release = resolve;
+				})
+			: true,
+	);
+	const pending = commitLegacy(
+		invoke,
+		inspection.candidate,
+		{ note: "never saved" },
+		"adoption-cancel",
+	).catch((error) => error);
+	await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+	const cancel = bridge.cancel(owner, binding, selection, "adoption-cancel");
+	release(true);
+	await expect(cancel).resolves.toBe(true);
+	expect(await pending).toBeInstanceOf(Error);
+	expect(await invoke("read", { operation: "ownedRecords", input: null })).toMatchObject({
+		state: "durable",
+		records: [],
+	});
+}, 20000);
+it("a real SDK adoption append failure is never an adopted receipt and fences the same entry through the ordinary record port", async () => {
+	const { entry, invoke, converse } = await setup();
+	await converse();
+	entry.session.sessionManager.appendCustomEntry("legacy-session-checkpoint", {
+		version: 1,
+		note: "keep old record",
+	});
+	const inspection = await inspectLegacy(invoke),
+		file = entry.session.sessionManager.getSessionFile(),
+		backup = `${file}.saved`;
+	const before = await readFile(file, "utf8");
+	const append = entry.session.sessionManager.appendCustomEntry.bind(entry.session.sessionManager);
+	vi.spyOn(entry.session.sessionManager, "appendCustomEntry").mockImplementationOnce((...args) => {
+		renameSync(file, backup);
+		mkdirSync(file);
+		return append(...args);
+	});
+	await expect(commitLegacy(invoke, inspection.candidate, { note: "not committed" })).rejects.toThrow(
+		/EISDIR/,
+	);
+	await rm(file, { recursive: true });
+	await rename(backup, file);
+	await expect(inspectLegacy(invoke)).rejects.toThrow(/reopen/);
+	await expect(invoke("write", { operation: "update", input: { value: 8 } })).rejects.toThrow(/reopen/);
+	expect(await invoke("read", { operation: "ownedRecords", input: null })).toMatchObject({
+		state: "needs-reopen",
+		records: [],
+	});
+	expect(await readFile(file, "utf8")).toBe(before);
 }, 20000);

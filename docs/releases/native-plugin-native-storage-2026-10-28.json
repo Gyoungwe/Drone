@@ -2,7 +2,10 @@
 	"scope": "Native raw reload append-phantom fence from actual public SDK storage",
 	"date": "2026-10-28",
 	"status": "PARTIAL_ARCHITECTURE",
-	"pluginCommits": { "source": ["876e468", "74311fb"], "officialArtifacts": ["b2fec08", "6e6212d"] },
+	"pluginCommits": {
+		"source": ["876e468", "74311fb"],
+		"officialArtifacts": ["b2fec08", "6e6212d"]
+	},
 	"hostSdkTest": "63e396e1",
 	"coreTar": {
 		"path": "/tmp/drone-native-storage-core-pack/gyoungwe-pi-core-0.2.0.tgz",
@@ -15,7 +18,11 @@
 			"base": "782e7ee",
 			"log": "/tmp/native-storage-raw-reload-red.log"
 		},
-		"actualSdkHostAndOfficial": { "status": "PASS", "tests": 9, "log": "/tmp/native-storage-sdk-final.log" },
+		"actualSdkHostAndOfficial": {
+			"status": "PASS",
+			"tests": 9,
+			"log": "/tmp/native-storage-final-with-s1-cohort.log"
+		},
 		"withS1Contracts": {
 			"status": "PASS",
 			"files": 4,

@@ -129,6 +129,48 @@ it("refuses service declarations without a managed owner", async () => {
 	]);
 });
 
+it("decodes exact temporary legacy adoption declarations from the installed source", async () => {
+	const recordAdoptions = {
+		recovery: {
+			legacyType: "legacy-recovery-v1",
+			fromVersions: ["0.2.0", "0.2.1"],
+			removeBeforeVersion: "2.0.0",
+		},
+	};
+	await manifest({ drone: { recordAdoptions } });
+	expect(await discoverInstalledPackages(modules)).toMatchObject([{ runtime: { recordAdoptions } }]);
+});
+it.each([
+	{
+		legacyType: "plugin-record:another-source:private",
+		fromVersions: ["0.2.1"],
+		removeBeforeVersion: "2.0.0",
+	},
+	{ legacyType: "legacy-recovery-v1", fromVersions: ["0.2.x"], removeBeforeVersion: "2.0.0" },
+	{ legacyType: "legacy-recovery-v1", fromVersions: ["0.2.1"], removeBeforeVersion: "1.0.0" },
+])(
+	"rejects an adoption namespace escape, unsupported version range or expired deletion version: %j",
+	async (declaration) => {
+		await manifest({ drone: { recordAdoptions: { recovery: declaration } } });
+		expect(await discoverInstalledPackages(modules)).toEqual([
+			{ packageName: "@example/native", error: expect.stringContaining("Invalid desktopRuntime:") },
+		]);
+	},
+);
+it("requires a managed owner before exposing a legacy migration declaration", async () => {
+	await manifest({
+		entrypoints: { extension: "./native.mjs" },
+		drone: {
+			recordAdoptions: {
+				recovery: { legacyType: "legacy-recovery-v1", fromVersions: ["0.2.1"], removeBeforeVersion: "2.0.0" },
+			},
+		},
+	});
+	expect(await discoverInstalledPackages(modules)).toEqual([
+		{ packageName: "@example/native", error: "drone.recordAdoptions requires a desktopRuntime owner" },
+	]);
+});
+
 it("rejects a required publisher without an actual desktop owner", async () => {
 	await manifest({ entrypoints: { extension: "./native.mjs" }, drone: { deliveryProjection: "required" } });
 	expect(await discoverInstalledPackages(modules)).toEqual([

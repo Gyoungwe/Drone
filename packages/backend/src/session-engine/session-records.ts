@@ -1,6 +1,11 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type {
+	PluginRecordAdoptionDeclaration,
 	PluginSessionRecord,
+	PluginSessionRecordAdoptionCommitInput,
+	PluginSessionRecordAdoptionCommitResult,
+	PluginSessionRecordAdoptionInspection,
 	PluginSessionRecordAppendInput,
 	PluginSessionRecordReadResult,
 } from "@gyoungwe/plugin-api/runtime";
@@ -14,6 +19,8 @@ interface RecordState {
 	fault: string | null;
 }
 const namespace = (pluginId: string) => `plugin-record:${encodeURIComponent(pluginId)}:`;
+type CustomEntry = Extract<SessionEntry, { type: "custom" }>;
+const legacyHash = (entry: CustomEntry) => createHash("sha256").update(JSON.stringify(entry)).digest("hex");
 
 /** One instance per backend. A reload retains the same registered SDK identity and its failure fence. */
 export class SessionRecordStore {
@@ -100,6 +107,86 @@ export class SessionRecordStore {
 			}
 		}
 		return structuredClone([...latest.values()]);
+	}
+
+	private adoptionStorage(entry: RegisteredSession, state: RecordState): Durability {
+		if (state.fault) throw new Error(`Session records need disk reopen: ${state.fault}`);
+		try {
+			return this.inspect(entry, state);
+		} catch (error) {
+			throw this.fault(state, error);
+		}
+	}
+	private adoptionCandidate(state: RecordState, legacyType: string): CustomEntry | undefined {
+		return state.committed.findLast(
+			(entry): entry is CustomEntry => entry.type === "custom" && entry.customType === legacyType,
+		);
+	}
+	inspectAdoption(
+		entry: RegisteredSession,
+		pluginId: string,
+		type: string,
+		declaration: PluginRecordAdoptionDeclaration,
+		check: () => void,
+	): Promise<PluginSessionRecordAdoptionInspection> {
+		return this.run(entry, async (state) => {
+			check();
+			const durability = this.adoptionStorage(entry, state);
+			const metadata = {
+				legacyType: declaration.legacyType,
+				supportedFromVersions: declaration.fromVersions,
+				creator: "unknown" as const,
+				packageVersion: "unknown" as const,
+			};
+			if (durability === "deferred") return { ...metadata, state: "deferred", candidate: null };
+			if (this.records(state.committed, pluginId).some((record) => record.type === type))
+				return { ...metadata, state: "already-adopted", candidate: null };
+			const candidate = this.adoptionCandidate(state, declaration.legacyType);
+			return {
+				...metadata,
+				state: candidate ? "candidate" : "absent",
+				candidate: candidate
+					? { id: candidate.id, hash: legacyHash(candidate), data: structuredClone(candidate.data) }
+					: null,
+			};
+		});
+	}
+
+	commitAdoption(
+		entry: RegisteredSession,
+		pluginId: string,
+		input: PluginSessionRecordAdoptionCommitInput,
+		declaration: PluginRecordAdoptionDeclaration,
+		check: () => void,
+	): Promise<PluginSessionRecordAdoptionCommitResult> {
+		return this.run(entry, async (state) => {
+			check();
+			if (this.adoptionStorage(entry, state) !== "durable")
+				throw new Error("Legacy checkpoint adoption requires durable session storage");
+			if (this.records(state.committed, pluginId).some((record) => record.type === input.type))
+				throw new Error("Own-source checkpoint already exists; adoption is not repeated");
+			const candidate = this.adoptionCandidate(state, declaration.legacyType);
+			if (!candidate || candidate.id !== input.legacyId || legacyHash(candidate) !== input.legacyHash)
+				throw new Error("Legacy checkpoint changed or is no longer on the current branch");
+			try {
+				const id = entry.session.sessionManager.appendCustomEntry(
+					namespace(pluginId) + input.type,
+					structuredClone(input.data),
+				);
+				check();
+				if (this.inspect(entry, state) !== "durable")
+					throw new Error("Legacy checkpoint adoption was deferred; disk reopen is required");
+				return {
+					state: "adopted",
+					id,
+					durability: "durable",
+					legacyId: candidate.id,
+					legacyHash: input.legacyHash,
+				};
+			} catch (error) {
+				throw this.fault(state, error);
+			}
+		});
 	}
 
 	read(
