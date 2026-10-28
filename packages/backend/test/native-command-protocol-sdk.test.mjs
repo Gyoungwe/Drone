@@ -70,10 +70,10 @@ async function setup(commandSource = source, nativeName = "command-ui") {
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
 	let backend,
 		enabled = true,
-		allowWrite = true;
+		allowWrite = () => true;
 	const entered = [],
 		writes = [],
-		approve = vi.fn(async (_owner, _source, operation) => !operation || allowWrite);
+		approve = vi.fn(async (_owner, _source, operation) => !operation || allowWrite(operation));
 	const definition = { pluginId: "managed-commands", packageRoot: pkg, entrypoint, nativeEntrypoint };
 	const bridge = new PluginRuntimeBridge({
 		source: () => definition,
@@ -140,7 +140,10 @@ async function setup(commandSource = source, nativeName = "command-ui") {
 		writes,
 		approve,
 		setAllow: (value) => {
-			allowWrite = value;
+			allowWrite = () => value;
+		},
+		setDeniedOperation: (denied) => {
+			allowWrite = (operation) => operation !== denied;
 		},
 		setEnabled: (value) => {
 			enabled = value;
@@ -445,4 +448,84 @@ it("keeps a source teardown barrier after actual SDK abort receipt failure even 
 		await Promise.allSettled([state.backend.dispose(), state.bridge.close()]);
 		await rm(state.root, { recursive: true, force: true });
 	}
+}, 20000);
+
+it("authorizes the four managed chain events with their actual SDK caller before running their handlers", async () => {
+	const state = await setup(
+		`export default async()=>{const seen=[];return {operations:{snapshot:{inputSchema:{type:"null"},resultSchema:{type:"array"},effect:"read",async execute(){return seen;}}},async dispose(){},createNativeSession(){return {async dispose(){},extension(pi){for(const name of ["input","tool_call","turn_start","turn_end"])pi.on(name,()=>{seen.push(name);return undefined;});}};}};};`,
+	);
+	const { first, faux } = state;
+	const errors = [];
+	const stop = first.extensionRunner.onError((error) => errors.push(error));
+	const responses = () => [
+		fauxAssistantMessage(fauxToolCall("read", { path: "source.txt" }), { stopReason: "toolUse" }),
+		fauxAssistantMessage("done"),
+	];
+	for (const name of ["input", "tool_call", "turn_start", "turn_end"]) {
+		errors.length = 0;
+		state.approve.mockClear();
+		const before = (await state.snapshot()).length;
+		state.setDeniedOperation(`native:event:${name}`);
+		faux.setResponses(responses());
+		await first.prompt(`Read source.txt; deny native ${name} handler`);
+		await first.waitForIdle();
+		expect((await state.snapshot()).slice(before)).not.toContain(name);
+		const deniedCalls = state.approve.mock.calls.filter((call) => call[2] === `native:event:${name}`);
+		expect(deniedCalls.length, name).toBeGreaterThan(0);
+		if (name === "tool_call") {
+			expect(errors).toEqual([]);
+			const results = first.messages.filter(
+				(message) =>
+					message.role === "toolResult" &&
+					JSON.stringify(message.content).includes("Plugin operation denied: native:event:tool_call"),
+			);
+			expect(results).toHaveLength(1);
+			expect(results[0].isError).toBe(true);
+		} else {
+			expect(errors).toHaveLength(deniedCalls.length);
+			for (const error of errors)
+				expect(error).toMatchObject({ event: name, error: `Plugin operation denied: native:event:${name}` });
+		}
+	}
+	errors.length = 0;
+	state.setAllow(true);
+	faux.setResponses(responses());
+	await first.prompt("Read source.txt; allow native chain handlers");
+	await first.waitForIdle();
+	expect((await state.snapshot()).slice(-6)).toEqual([
+		"input",
+		"turn_start",
+		"tool_call",
+		"turn_end",
+		"turn_start",
+		"turn_end",
+	]);
+	expect(errors).toEqual([]);
+	expect(first.messages.findLast((message) => message.role === "toolResult")).toMatchObject({
+		isError: false,
+		content: [{ type: "text", text: "basic read survives" }],
+	});
+	stop();
+}, 20000);
+
+it("revokes an actual Bridge idle input call and refuses its late transform before SDK prompt application", async () => {
+	const state = await setup(
+		`export default async({capabilities})=>({operations:{snapshot:{inputSchema:{type:"null"},resultSchema:{type:"array"},effect:"read",async execute(){return [];}}},async dispose(){},createNativeSession(){return {eventEffects:{input:"read"},async dispose(){},extension(pi){pi.on("input",async(event,ctx)=>{await capabilities.call("entered",event.text);await new Promise(resolve=>ctx.signal.addEventListener("abort",resolve,{once:true}));return {action:"transform",text:"revoked forbidden transform"};});}};}});`,
+	);
+	const { first, faux } = state;
+	expect(first.isStreaming).toBe(false);
+	faux.setResponses([fauxAssistantMessage("ordinary SDK answer after revoked hook")]);
+	const errors = [];
+	const stop = first.extensionRunner.onError((error) => errors.push(error));
+	const prompt = first.prompt("original idle input");
+	await vi.waitFor(() => expect(state.entered).toEqual(["original idle input"]));
+	expect(first.isStreaming).toBe(false);
+	state.setEnabled(false);
+	await state.bridge.revoke("command-ui");
+	await prompt;
+	await first.waitForIdle();
+	expect(JSON.stringify(first.messages)).not.toContain("revoked forbidden transform");
+	expect(errors).toHaveLength(1);
+	expect(errors[0]).toMatchObject({ event: "input" });
+	stop();
 }, 20000);

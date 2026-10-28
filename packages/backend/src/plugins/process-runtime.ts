@@ -201,6 +201,50 @@ const beforeAgentStartResponseSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
+const nativeToolCallResponseSchema = Type.Object(
+	{
+		input: Type.Record(Type.String(), jsonValueSchema),
+		result: Type.Union([
+			Type.Null(),
+			Type.Object(
+				{
+					block: Type.Optional(Type.Boolean()),
+					reason: Type.Optional(Type.String()),
+					terminate: Type.Optional(Type.Boolean()),
+				},
+				{ additionalProperties: false },
+			),
+		]),
+	},
+	{ additionalProperties: false },
+);
+
+const nativeInputResponseSchema = Type.Union([
+	Type.Null(),
+	Type.Object({ action: Type.Literal("continue") }, { additionalProperties: false }),
+	Type.Object({ action: Type.Literal("handled") }, { additionalProperties: false }),
+	Type.Object(
+		{
+			action: Type.Literal("transform"),
+			text: Type.String(),
+			images: Type.Optional(
+				Type.Array(
+					Type.Object(
+						{ type: Type.Literal("image"), data: Type.String(), mimeType: Type.String() },
+						{ additionalProperties: false },
+					),
+				),
+			),
+		},
+		{ additionalProperties: false },
+	),
+]);
+
+const nativeTurnEndResponseSchema = Type.Union([
+	Type.Null(),
+	Type.Object({ continue: Type.Optional(Type.Boolean()) }, { additionalProperties: false }),
+]);
+
 function staysInPackage(root: string, path: string): boolean {
 	const pathRelative = relative(root, path);
 	return pathRelative !== ".." && !pathRelative.startsWith(`..${sep}`) && !isAbsolute(pathRelative);
@@ -781,6 +825,25 @@ class RuntimeProcess {
 					if (hook.name !== "session_shutdown")
 						on(hook.name, async (event, ctx) => {
 							const value = await invoke("event", hook.name, event, ctx, ctx.signal, undefined, hook.index);
+							if (hook.name === "input") {
+								if (!Check(nativeInputResponseSchema, value))
+									throw new Error("Invalid native input response");
+								return value;
+							}
+							if (hook.name === "turn_end") {
+								if (!Check(nativeTurnEndResponseSchema, value))
+									throw new Error("Invalid native turn_end response");
+								return value;
+							}
+							if (hook.name === "tool_call") {
+								if (!Check(nativeToolCallResponseSchema, value))
+									throw new Error("Invalid native tool_call response");
+								const response = value as Static<typeof nativeToolCallResponseSchema>;
+								const input = (event as { input: Record<PropertyKey, unknown> }).input;
+								for (const key of Reflect.ownKeys(input)) delete input[key];
+								Object.defineProperties(input, Object.getOwnPropertyDescriptors(response.input));
+								return response.result;
+							}
 							if (hook.name !== "before_agent_start") return value;
 							if (!Check(beforeAgentStartResponseSchema, value))
 								throw new Error("Invalid native before_agent_start response");
