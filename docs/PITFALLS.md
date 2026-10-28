@@ -435,3 +435,7 @@ Pi 1.1.0 的 `AgentSession.dispose()` 只中止/失效内部运行时，不会�
 ### 容器 runs 根不能分别 canonicalize 后当成授权根
 
 如果 `workspace/runs` 已是指向外部的 symlink，分别对 runs 和执行子目录做 realpath 再比较包含关系，会把两个外部路径错误接受为工作区内。容器 runner 现在固定 canonical workspace，逐级创建并检查 runs 路径，拒绝任一 symlink/non-directory 并回读真实路径；不能在 realpath 失败后退回字符串路径。回归验证顶层和嵌套 symlink 都不会创建外部文件或启动容器。
+
+## 2026-10-28 · SDK append 失败后的内存 phantom 与 reload
+
+Pi 1.1.0 的 SessionManager 先把 append entry 加入内存，再写磁盘；EISDIR 后 reload 仍复用这个 manager。不要从 reload 成功推断数据已保存，也不要继续 sendMessage 以 phantom leaf 为 parent 延长磁盘链。TaskApplication 必须 fail closed、保留最后 committed 诊断，真正从磁盘重开后验证；禁止 poke SDK 私有数组做假 rollback。extension 的 events.on 监听会在 invalidate 被解除，不能靠 bus listener 伪装跨 reload 持久状态。实际双入口反证和 S2 剩余边界见[TaskSession 证据](pluginization/native-plugin-task-session-actor-evidence.md)。

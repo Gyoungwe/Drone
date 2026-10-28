@@ -11,6 +11,9 @@ managed native `registerCommand` 由 `plugins/{runtime,process-runtime,process-r
 原生迁移的[能力切片证据与当前缺口](pluginization/native-plugin-capability-slice-evidence.md)与执行计划同步；完整历史分别见[计划归档](archive/native-plugin-implementation-plan-through-2026-10-27.md)和[切片证据归档](archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。历史 PASS 只适用于原版本与范围，四项外部验收不属于本轮 P0–P7。
 锁定 SDK 的 33 API、41 事件、28 UI 成员与三条运行路径的支持/拒绝边界见[原生 API 盘点](pluginization/native-pi-api-compatibility-matrix.md)；P0 仍未完成，不能用格式兼容替代运行 API 验收。
 当前四包源码锁 `253c47e` 与宿主 `4abdae43` 的任务 owner/UI、显式命令、单请求取消/真实会话模型、Desktop RPC/状态、discovery 原生日志/真实 Docker 和独立完整根门禁见[当前回执](releases/native-plugin-ui-model-cohort-2026-10-28.json)。领域边界仍 INCOMPLETE；首个 channel-watch 超时与完整重跑均保留，未报告根因修复。旧 [fd4c5040/dd7effc](releases/native-plugin-owner-migration-2026-10-28.json)、[5e0c9aab/f4a530a](releases/native-plugin-task-owner-host-2026-10-28.json) 保留原范围；下一批隔离源码见[执行计划](pluginization/native-plugin-implementation-plan.md)。
+
+P4 从启动 taskHost 到受限同包 application owner 的具体依赖盘点、异步任务模块方案、授权/provider 依赖和最终删除点见[动态 owner 设计提案](superpowers/specs/2026-10-28-task-managed-owner-cutover-design.md)。
+P4 S1 的 canonical `pi-core/src/task-runtime/task-session.mjs` 串行事务、`TaskApplication` 与两个 native 入口、真实 SDK 磁盘失败/phantom/reopen、取消和双会话证据见[TaskSession 切片](pluginization/native-plugin-task-session-actor-evidence.md)；独立 raw CLI reload 的 generation fence 仍是 S2 已知 RED，不代表 P4 完成。
 P4 任务 UI 已移入同包 `pi-core/ui`，只读消息 hook、`chat.message` 和 `sessions.command` 由通用宿主提供；真实 SDK、renderer 与取消晚写回归及仍未完成的动态 native 启停见[任务 UI 切片](pluginization/native-plugin-task-ui-evidence.md)与[机器回执](releases/native-plugin-task-ui-2026-10-28.json)。
 版本化的通用 pi-core 宿主合同位于 `packages/plugin-api/src/core.ts`，桌面端通过 `packages/desktop/src/main/optional-plugin-hosts.ts` 按已安装包清单发现 `coreHostLoader` 并贯穿会话组合；task host 通过既有 `PluginNativeSession` 生成每会话 adapter，与标准 Pi 根入口共用 canonical owner；任务 UI 的正式安装包工作流与整个 native 包动态安装停用仍待验收。
 
