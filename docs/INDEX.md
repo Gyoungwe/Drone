@@ -578,3 +578,5 @@ P2 知识完整 native 消费者的第一条实际包工作流与明确剩余范
 P2 生产当前分支的 stream / polling / reload / export 接线与真实同 tar 回执见[当前分支交付证据](pluginization/native-knowledge-current-branch-delivery-evidence.md)；其他分支、未打开历史、child、任务组合及显式旧 bridge 删除仍未完成。
 
 P2 required owner 不可用时的基础 read、私有 provider 协议与 fail-closed 边界见[私有协议证据](pluginization/native-unavailable-provider-protocol-evidence.md)；这不是新的 publication proof 或持久化恢复授权。
+
+P2 显式旧读窗导入的版本删除条件、独立授权与同包多会话关闭回归见[迁移证据](pluginization/native-knowledge-recovery-adoption-evidence.md)；导入不生成当前 read/publication proof。

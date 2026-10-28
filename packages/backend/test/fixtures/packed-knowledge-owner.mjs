@@ -32,6 +32,7 @@ const runtimeDirectory = resolve(
 );
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
+import { sessionAdoptionCapabilityHandlers } from "../../src/plugins/session-adoption-capabilities";
 
 export async function withPackedKnowledgeOwner(work) {
 	if (!apiTarball) throw new Error("A matching clean-install API tarball is required");
@@ -46,6 +47,7 @@ export async function withPackedKnowledgeOwner(work) {
 	for (const path of [prefix, state, vault, workspace, agentDir, cache, leases]) await mkdir(path);
 	let bridge, bootstrap, session, backend, sessions, engine;
 	const records = new SessionRecordStore();
+	let approveInvocation = async () => true;
 	const approvals = [],
 		modelSteps = [],
 		calls = [],
@@ -144,7 +146,7 @@ export async function withPackedKnowledgeOwner(work) {
 			getSessionContext: (id) => getPluginSessionCaller(sessions, id),
 			approve: async (_owner, _source, operation) => {
 				approvals.push(operation);
-				return true;
+				return approveInvocation(operation);
 			},
 			factory: (value) => createProcessPluginRuntime({ ...value, runtimeDirectory }),
 			capabilities:
@@ -191,6 +193,7 @@ export async function withPackedKnowledgeOwner(work) {
 						...resources.handlers(),
 						...sessionCapabilityHandlers(sessions),
 						...sessionRecordCapabilityHandlers(sessions, records),
+						...sessionAdoptionCapabilityHandlers(sessions, records, source.recordAdoptions),
 						...modelCapabilityHandlers({
 							registry: sessions,
 							getRuntime: async () => modelRuntime,
@@ -308,6 +311,17 @@ export async function withPackedKnowledgeOwner(work) {
 			tarball,
 			apiTarball,
 			sha256,
+			async createSession() {
+				const meta = await backend.createSession({
+					cwd: workspace,
+					provider: faux.provider.id,
+					modelId: faux.getModel().id,
+				});
+				return backend.registry.get(meta.sessionId).session;
+			},
+			setApprove(handler) {
+				approveInvocation = handler;
+			},
 		});
 	} finally {
 		if (session && backend) {
