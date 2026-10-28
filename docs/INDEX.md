@@ -38,7 +38,7 @@ Inquiry 原 SQLite 保持位置/格式的独立 provider 方案见[SQLite provid
 
 Inquiry 内存/WASM SQLite 保留原格式的临时 SQL/导出回读调查见[可行性候选](pluginization/inquiry-wasm-feasibility-candidate.md)；binary CAS、provider 及完整迁移仍未实施。
 
-独立 binary-state 根、4 MiB payload、原字节 CAS/缺失条件与 commit-point 取消语义见[精确合同与生产端口候选切片](pluginization/binary-state-port-contract-candidate.md)；Inquiry provider 与原库接管仍未完成。
+独立 binary-state 根、4 MiB payload、原字节 CAS/缺失条件与 commit-point 取消语义见[精确合同与生产端口候选切片](pluginization/binary-state-port-contract-candidate.md)；同一原字节 IO/提交协议位于公开 Node 子路径 `plugin-api/src/node/binary-state.ts`，宿主权限与租约仍在 `file-capabilities.ts`；Inquiry provider 与原库接管仍未完成。
 
 P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享 Node lease 的候选范围见[共享 owner 证据](pluginization/native-plugin-discovery-owner-evidence.md)；执行/Inquiry、完整 UI 与旧 seam 删除仍未完成。
 无派生 resource 的 state/files 显式授权与宿主固有 `caller.scope(null)` 见[独立文件能力切片](pluginization/native-plugin-resource-independent-capabilities.md)；这不会授予任意路径或关闭 discovery 全功能验收。
