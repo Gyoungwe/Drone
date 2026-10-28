@@ -1,6 +1,6 @@
 # Inquiry SQLite provider 候选：保持原库，等待端口审查
 
-2026-10-28；设计调查，尚未实现。目标为独立、可卸载的 `pi-inquiry`，提供 `inquiry.runtime` v1；Discovery 只通过已实现的 `requires` alias 与 `provider.read/write` 消费。不得把新 JSON 库或旧库只读展示称为迁移完成。
+2026-10-28；设计调查，尚未实现。**后续审查已暂停 Node SQLite resource 方案**：普通 domain worker 已按官方参数关闭 Node SQLite，既有 index resource 隔离/兼容仍 NOT_RUN，见[防御说明](node-sqlite-worker-defense.md)。后继仅调查内存/WASM SQLite 保留原格式方案；本页保留最初选项对比，不作为实施批准。目标为独立、可卸载的 `pi-inquiry`，提供 `inquiry.runtime` v1；Discovery 只通过已实现的 `requires` alias 与 `provider.read/write` 消费。不得把新 JSON 库或旧库只读展示称为迁移完成。
 
 ## 选择
 
@@ -15,7 +15,7 @@
 1. UI 明确选择现有项目 `ledger.sqlite` 所在目录并绑定 actual caller.scope 的 canonical workspace；不选首个根，不复制到新用户数据根。插件读取全部 `inquiry_meta` 验证唯一 projectId；空/混合/冲突记录不能取 `LIMIT 1` 冒认。已有唯一旧 projectId 保留；新库使用插件自己的绑定元数据。
 2. 先取得现有 public Node `state-writers`/canonical-directory 租约。旧 backend SQLite writer 必须使用同一协议，在连接存在期间持有租约，真正关闭后才释放；native 与第二 Desktop 进程竞争同租约。接管前必须证明旧连接关闭、原库没有 WAL/SHM/journal 待恢复，不能只复制 main DB 而丢 WAL。
 3. resource 每次接受当前已提交 DB bytes 与领域 JSON 操作，向自己私有目录创建请求专属工作副本。真实搬迁 `@drone/inquiry` 的领域/SQL实现，保留 schema、约束与既有 migration；每次完成后 checkpoint/关闭数据库，再验证工作副本 `quick_check` 与业务回读。工作副本和辅助文件清理完才返回候选 bytes/JSON 结果。读请求不提交迁移；写请求的 schema 升级也属于需要批准的真实写入。
-4. domain owner 在活的实际 write caller 下调用 generic 二进制 CAS，保留原 `ledger.sqlite` 路径。CAS 失败、拒绝或取消则原文件不变；不保留能被下一读误认为已提交的工作副本。成功后从原位置回读 SHA 和业务记录再交完成回执。原始数据库需通过现有正式备份/回滚机制保留；不能覆盖失败后宣称回滚成功。
+4. domain owner 在活的实际 write caller 下调用 generic 二进制 CAS，保留原 `ledger.sqlite` 路径。CAS 失败、拒绝或取消则原文件不变；不保留能被下一读误认为已提交的工作副本。成功后从原位置回读 SHA 和业务记录再交完成回执。首次替换前应在同一已批准状态根创建不覆盖的原库备份并回读 SHA；恢复也须匹配当前 SHA、明确批准并回读原路径；不能覆盖失败后宣称回滚成功。
 5. 私有 cache 关闭失败保留原目录 writer lease，返回 recovery；取消后只有 resource 自身清理权，不新发原库写 capability。原库提交只归活的 actual caller，跨会话/工作区/来源不得复用。
 
 ## 最小 generic 端口候选

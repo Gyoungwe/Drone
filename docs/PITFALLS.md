@@ -459,3 +459,8 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 ## 2026-10-28：空 interception 不证明会话没有 required publisher
 
 实际 SDK 可能在 import interception 之前跳过不存在的入口，catalog 也包含未被此会话选择的包。发布策略必须消费本会话实际有效选择与 loader 错误来源的完整宿主回执；空 interception 或全 catalog 均不能替代。`NativeSessionDelivery` 只在 host-only `confirmSelection` 后允许 ordinary，实际 run 起点锁定 required attachment/source，关闭/哈希变化不能释放已参与 guard 的运行。当前真实 SDK 切片 6 项、连同 fence/command 共 30 项通过；生产全来源确认和正式安装包仍未验收。
+
+
+## Node 内置 SQLite 与普通插件 worker
+
+不要把 Node 的 FS permission 当作所有内置模块的文件访问隔离。普通 domain worker 通过官方 `--no-experimental-sqlite` 关闭该入口；实际 factory/worker 测试只验证 import 被拒绝。SQLite index resource 的兼容与更强隔离仍需独立验证，不能继承普通 worker 的通过结论。详见 [防御证据](pluginization/node-sqlite-worker-defense.md)。
