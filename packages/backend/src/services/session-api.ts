@@ -20,8 +20,10 @@ import { createLogger } from "../log";
 import { modelCapabilityHandlers } from "../plugins/model-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
 import { sessionCapabilityHandlers } from "../plugins/session-capabilities";
+import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
 import { walkProjectFiles } from "../project/files";
 import { TraceRecorder } from "../session/trace";
+import { SessionRecordStore } from "../session-engine/session-records";
 import type {
 	AskHandler,
 	EventHandler,
@@ -39,6 +41,7 @@ const log = createLogger("backend");
 import { SessionSettingsApi } from "./session-api-settings";
 
 export class SessionServiceApi extends SessionSettingsApi {
+	private readonly pluginSessionRecords = new SessionRecordStore();
 	async init(): Promise<void> {
 		await this.host.knowledge.connect();
 		await this.host.getModelRuntime();
@@ -69,6 +72,7 @@ export class SessionServiceApi extends SessionSettingsApi {
 	getPluginSessionCapabilities() {
 		return {
 			...sessionCapabilityHandlers(this.host.registry),
+			...sessionRecordCapabilityHandlers(this.host.registry, this.pluginSessionRecords),
 			...modelCapabilityHandlers({
 				registry: this.host.registry,
 				getRuntime: () => this.host.getModelRuntime(),
