@@ -138,6 +138,18 @@ const nativeDeclarationsSchema = Type.Object({
 	effects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
 	commandEffects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
 	eventEffects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
+	nativeOperations: Type.Record(
+		Type.String(),
+		Type.Object(
+			{
+				event: Type.Union([Type.Literal("message_start"), Type.Literal("tool_execution_end")]),
+				inputSchema: Type.Record(Type.String(), Type.Unknown()),
+				resultSchema: Type.Record(Type.String(), Type.Unknown()),
+				effect: Type.Union([Type.Literal("read"), Type.Literal("write")]),
+			},
+			{ additionalProperties: false },
+		),
+	),
 	projection: Type.Optional(
 		Type.Object(
 			{ finalize: Type.Boolean(), effect: Type.Union([Type.Literal("read"), Type.Literal("write")]) },
@@ -805,6 +817,34 @@ class RuntimeProcess {
 			toolEffects: declarations.effects,
 			commandEffects: declarations.commandEffects,
 			eventEffects: declarations.eventEffects,
+			nativeOperations: Object.fromEntries(
+				Object.entries(declarations.nativeOperations).map(([name, operation]) => [
+					name,
+					{
+						...operation,
+						execute: (input: unknown, event: unknown, context: PluginRuntimeContext) => {
+							const signal = AbortSignal.any([this.context.signal, lifecycle.signal, context.signal]);
+							signal.throwIfAborted();
+							return this.request(
+								"native_operation",
+								{
+									attachment,
+									name,
+									input,
+									event,
+									references: courier.encode(event),
+									scope: context.scope,
+								},
+								signal,
+								{ ...context, capabilities: { call: AsyncResource.bind(context.capabilities.call) } },
+							).then((response) => {
+								signal.throwIfAborted();
+								return unwrap(response);
+							});
+						},
+					},
+				]),
+			),
 			...(declarations.projection
 				? {
 						projection: {
@@ -910,7 +950,14 @@ class RuntimeProcess {
 	}
 
 	private request(
-		type: "invoke" | "dispose" | "native_attach" | "native_detach" | "native_call" | "native_projection",
+		type:
+			| "invoke"
+			| "dispose"
+			| "native_attach"
+			| "native_detach"
+			| "native_call"
+			| "native_projection"
+			| "native_operation",
 		payload: Record<string, unknown>,
 		signal?: AbortSignal,
 		context?: PluginRuntimeContext,

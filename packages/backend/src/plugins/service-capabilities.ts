@@ -6,7 +6,11 @@ import type {
 import { Type } from "typebox";
 import { hostText } from "../reply-language";
 import type { PluginRuntimeBridgeOptions, PluginRuntimeSource } from "./coordinator";
-import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
+import type {
+	PluginCapabilityContext,
+	PluginCapabilityHandler,
+	PluginNativeInvocation,
+} from "./runtime-capabilities";
 
 type CatalogEntry =
 	NonNullable<PluginRuntimeBridgeOptions["sources"]> extends () => readonly (infer T)[] ? T : never;
@@ -23,6 +27,13 @@ interface Dependencies {
 		target: PluginServiceTarget,
 		input: PluginProviderInvocationInput,
 		effect: "read" | "write",
+	): Promise<unknown>;
+	invokeNative(
+		context: PluginCapabilityContext,
+		target: PluginServiceTarget,
+		input: PluginProviderInvocationInput,
+		effect: "read" | "write",
+		origin: PluginNativeInvocation,
 	): Promise<unknown>;
 }
 
@@ -44,7 +55,10 @@ const json = Type.Cyclic(
 /** The sole installed source catalog selects services. Package names are informational, never a requirement. */
 export function serviceCapabilityHandlers(
 	deps: Dependencies,
-): Record<"provider.inspect" | "provider.read" | "provider.write", PluginCapabilityHandler> {
+): Record<
+	"provider.inspect" | "provider.read" | "provider.write" | "provider.native",
+	PluginCapabilityHandler
+> {
 	function resolve(alias: string): {
 		inspection: PluginProviderInspection;
 		target: PluginServiceTarget | null;
@@ -91,6 +105,25 @@ export function serviceCapabilityHandlers(
 				: null,
 		};
 	}
+	const execute = async (
+		raw: unknown,
+		context: PluginCapabilityContext,
+		effect: "read" | "write",
+		invoke: Dependencies["invoke"],
+	) => {
+		deps.check(context, effect);
+		const input = raw as PluginProviderInvocationInput;
+		const { inspection, target } = resolve(input.alias);
+		if (!target) throw new Error(`Provider ${input.alias} is ${inspection.state}`);
+		if (!target.operations.includes(input.operation))
+			throw new Error(`Provider operation is not declared: ${input.operation}`);
+		const result = await invoke(context, target, input, effect);
+		deps.check(context, effect);
+		const current = resolve(input.alias);
+		if (current.inspection.state !== "available" || current.target?.source !== target.source)
+			throw new Error("Provider source selection changed during invocation");
+		return result;
+	};
 	const invocation = (effect: "read" | "write"): PluginCapabilityHandler => ({
 		effect,
 		inputSchema: Type.Object({ alias: text, operation: text, input: json }, { additionalProperties: false }),
@@ -99,20 +132,7 @@ export function serviceCapabilityHandlers(
 			const input = raw as PluginProviderInvocationInput;
 			return `${hostText("插件服务", "Plugin service")} ${input.alias}: ${input.operation}`;
 		},
-		execute: async (raw, context) => {
-			deps.check(context, effect);
-			const input = raw as PluginProviderInvocationInput;
-			const { inspection, target } = resolve(input.alias);
-			if (!target) throw new Error(`Provider ${input.alias} is ${inspection.state}`);
-			if (!target.operations.includes(input.operation))
-				throw new Error(`Provider operation is not declared: ${input.operation}`);
-			const result = await deps.invoke(context, target, input, effect);
-			deps.check(context, effect);
-			const current = resolve(input.alias);
-			if (current.inspection.state !== "available" || current.target?.source !== target.source)
-				throw new Error("Provider source selection changed during invocation");
-			return result;
-		},
+		execute: (raw, context) => execute(raw, context, effect, deps.invoke),
 	});
 	return {
 		"provider.inspect": {
@@ -145,5 +165,22 @@ export function serviceCapabilityHandlers(
 		},
 		"provider.read": invocation("read"),
 		"provider.write": invocation("write"),
+		"provider.native": {
+			effect: "read",
+			inputSchema: Type.Object(
+				{ alias: text, operation: text, input: json },
+				{ additionalProperties: false },
+			),
+			resultSchema: json,
+			execute: (raw, context) => {
+				const origin = context.nativeInvocation,
+					effect = context.invocationEffect;
+				if (!origin || !effect || context.bootstrap || context.scope.kind !== "session")
+					throw new Error("Provider native calls require an in-flight actual SDK native event");
+				return execute(raw, context, effect, (caller, target, input, ceiling) =>
+					deps.invokeNative(caller, target, input, ceiling, origin),
+				);
+			},
+		},
 	};
 }

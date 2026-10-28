@@ -152,7 +152,7 @@ input.on("line", async (line) => {
       send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(tool=>Object.fromEntries(
         ["name","label","description","parameters","outputSchema","constrainedSampling","renderShell","promptSnippet","promptGuidelines","exposure","namespace","annotations","defaultActive","executionMode","drone"]
           .filter(key=>tool[key]!==undefined).map(key=>[key,tool[key]])
-      )),commands:[...commands.entries()].map(([name,command])=>({name,...(command.description===undefined?{}:{description:command.description})})),effects:adapter.toolEffects||{},commandEffects:adapter.commandEffects||{},eventEffects:adapter.eventEffects||{},...(adapter.projection?{projection:{finalize:typeof adapter.projection.finalize==="function",effect:adapter.projection.finalizeEffect??"write"}}:{}),events:hooks.map(({name},index)=>({name,index}))}});
+      )),commands:[...commands.entries()].map(([name,command])=>({name,...(command.description===undefined?{}:{description:command.description})})),effects:adapter.toolEffects||{},commandEffects:adapter.commandEffects||{},eventEffects:adapter.eventEffects||{},nativeOperations:Object.fromEntries(Object.entries(adapter.nativeOperations||{}).map(([name,operation])=>[name,{event:operation.event,inputSchema:operation.inputSchema,resultSchema:operation.resultSchema,effect:operation.effect}])),...(adapter.projection?{projection:{finalize:typeof adapter.projection.finalize==="function",effect:adapter.projection.finalizeEffect??"write"}}:{}),events:hooks.map(({name},index)=>({name,index}))}});
       return;
     }
     if (message.type === "native_detach") {
@@ -166,7 +166,7 @@ input.on("line", async (line) => {
       send({type:"result",id:message.id,ok:true,value:null});
       return;
     }
-    if (message.type === "native_call" || message.type === "native_projection") {
+    if (message.type === "native_call" || message.type === "native_projection" || message.type === "native_operation") {
       const session=nativeSessions.get(message.attachment);
       if(!session||session.closed)throw new Error("Native attachment is not active");
       const controller=new AbortController();calls.set(message.id,controller);
@@ -175,6 +175,7 @@ input.on("line", async (line) => {
       const ctx=message.type==="native_call"?new Proxy({cwd:message.context.cwd,hasUI:false,signal,sessionManager:new Proxy({getSessionId:()=>message.context.sessionId},{get(target,name){if(name in target)return target[name];return unsupported("sessionManager."+String(name));}})},{get(target,name){if(name in target)return target[name];return unsupported(String(name));}}):undefined;
       const pending=currentCall.run(message.id,async()=>{
         signal.throwIfAborted();
+        if(message.type==="native_operation")return session.adapter.nativeOperations[message.name].execute(message.input,restoreMessages(session,message.event,message.references),{scope:Object.freeze(message.scope),signal,capabilities});
         message.input=restoreMessages(session,message.input,message.references);
         if(message.type==="native_projection") {
           const projection=session.adapter.projection;
@@ -218,7 +219,7 @@ input.on("line", async (line) => {
         return result ?? null;
       });
       session.pending.set(message.id,pending);
-      try { const value=await pending;signal.throwIfAborted();const references=message.kind==="tool"||message.kind==="command"?{}:retainMessages(session,value);send({type:"result",id:message.id,ok:true,value:{value,references}}); }
+      try { const value=await pending;signal.throwIfAborted();const references=message.type==="native_operation"||message.kind==="tool"||message.kind==="command"?{}:retainMessages(session,value);send({type:"result",id:message.id,ok:true,value:{value,references}}); }
       finally { session.pending.delete(message.id);calls.delete(message.id); }
       return;
     }
