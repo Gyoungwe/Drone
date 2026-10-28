@@ -14,6 +14,7 @@ import {
 	noteKnowledgeSpecialist,
 	readKnowledgeBinding,
 	registerKnowledgeSpecialistHost,
+	runCanonicalKnowledgeSpecialist,
 	setSpecialistSettings,
 	shouldOrientKnowledge,
 	specialistSettings,
@@ -26,7 +27,12 @@ import { discoverAgents } from "../src/tools/subagent/agents";
 import { runSubagent } from "../src/tools/subagent/runner";
 import { withNativeSubagentSlot } from "../src/tools/subagent/slots";
 
-const model = { id: "small", provider: "fixture", api: "openai-completions" };
+const model = {
+	id: "small",
+	provider: "fixture",
+	api: "openai-completions",
+	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+};
 const source = "Library/Papers/source-a.md",
 	second = "Library/Papers/source-b.md";
 const answer = (patch = {}) => ({
@@ -47,7 +53,12 @@ function runtime(responses) {
 	});
 	return {
 		contexts,
-		instance: { completeSimple, getModel: () => undefined, getModels: () => [] },
+		instance: {
+			hasConfiguredAuth: () => true,
+			completeSimple,
+			getModel: () => undefined,
+			getModels: () => [],
+		},
 		completeSimple,
 	};
 }
@@ -63,7 +74,11 @@ function request(patch = {}) {
 		...patch,
 	};
 }
-const deps = (r) => ({ getRuntime: async () => r.instance, getModelPreference: async () => undefined });
+const deps = (r) => ({
+	runModelLoop: runCanonicalKnowledgeSpecialist,
+	getRuntime: async () => r.instance,
+	getModelPreference: async () => undefined,
+});
 
 describe("isolated capability runner", () => {
 	it("returns only a schema-checked handoff, never private reasoning or full tool history", async () => {
@@ -138,7 +153,16 @@ describe("isolated capability runner", () => {
 		expect((await runKnowledgeSpecialist(deps(r), request())).model).toBe("fixture/small");
 	});
 	it("cancels a hung provider and does not retry", async () => {
-		const r = runtime([() => new Promise(() => {})]);
+		const r = runtime([
+			(_ctx, opts) =>
+				new Promise((_resolve, reject) =>
+					opts.signal.addEventListener(
+						"abort",
+						() => reject(new Error("Actual provider timed out after abort cleanup")),
+						{ once: true },
+					),
+				),
+		]);
 		await expect(runKnowledgeSpecialist(deps(r), request({ timeoutMs: 50 }))).rejects.toThrow("timed out");
 		expect(r.completeSimple).toHaveBeenCalledOnce();
 		expect(r.completeSimple.mock.calls[0][2].signal.aborted).toBe(true);

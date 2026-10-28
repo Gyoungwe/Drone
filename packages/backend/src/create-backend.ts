@@ -422,6 +422,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		...options,
 		taskHost,
 		knowledgeFactory,
+		knowledgeSpecialistModelLoop: knowledgeHost?.runSpecialistModelLoop,
 		...(knowledgeHost?.backgroundReviewer
 			? {
 					knowledgeBackgroundReviewerFactory: (reviewerOptions) =>

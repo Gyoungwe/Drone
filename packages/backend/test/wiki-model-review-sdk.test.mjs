@@ -6,7 +6,12 @@ import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { getCurrentTools } from "@earendil-works/pi-ai/utils/transcript";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import { closeKnowledgeServices, getKnowledgeService, stageWikiProposal } from "@gyoungwe/pi-knowledge/host";
+import {
+	closeKnowledgeServices,
+	getKnowledgeService,
+	runCanonicalKnowledgeSpecialist,
+	stageWikiProposal,
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { KnowledgeUiService } from "../src/knowledge/ui";
 import { PiBackend } from "../src/pi-backend";
@@ -50,6 +55,7 @@ beforeEach(async () => {
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
 	backend = new PiBackend({
+		knowledgeSpecialistModelLoop: runCanonicalKnowledgeSpecialist,
 		projectTrust: true,
 		subagentPreferBuiltin: false,
 		webFetch: false,

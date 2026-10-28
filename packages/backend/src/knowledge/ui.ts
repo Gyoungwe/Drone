@@ -28,6 +28,7 @@ import type { KnowledgeWebDavVault } from "./webdav-sync";
 type Handler = (event: KnowledgeUiEvent) => void;
 
 export interface KnowledgeHostPort {
+	runSpecialistModelLoop?: import("@gyoungwe/plugin-api").LegacyKnowledgeSpecialistLoop;
 	readonly contractVersion: 1;
 	overview(input: unknown): Promise<unknown>;
 	search(input: unknown): Promise<unknown>;

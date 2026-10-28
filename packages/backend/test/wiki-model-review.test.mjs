@@ -12,6 +12,7 @@ import {
 	mergeWikiProposal,
 	previewWikiProposal,
 	reviewWikiWithModel,
+	runCanonicalKnowledgeSpecialist,
 	setSpecialistSettings,
 	specialistSettings,
 	stageWikiProposal,
@@ -287,19 +288,28 @@ describe("reviewer capability profile", () => {
 		expect(PROTECTED_KNOWLEDGE_AGENTS.map((p) => p.name)).toContain("knowledge-wiki-reviewer");
 		let captured;
 		const runtime = {
+			hasConfiguredAuth: () => true,
 			completeSimple: async (_model, context) => {
 				captured = context;
 				return reply([call("knowledge_submit", valid())], { stopReason: "toolUse" });
 			},
 		};
 		const result = await runKnowledgeSpecialist(
-			{ getRuntime: async () => runtime, getModelPreference: async () => undefined },
+			{
+				runModelLoop: runCanonicalKnowledgeSpecialist,
+				getRuntime: async () => runtime,
+				getModelPreference: async () => undefined,
+			},
 			{
 				role: "reviewer",
 				task: "Review",
 				packet: "assigned source data",
 				capabilities: [],
-				parentModel: { provider: "fixture", id: "model" },
+				parentModel: {
+					provider: "fixture",
+					id: "model",
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+				},
 				check: async () => {},
 				progress: () => {},
 			},
@@ -309,17 +319,26 @@ describe("reviewer capability profile", () => {
 	});
 	it("forbids forged approval tools even in a valid model response", async () => {
 		const runtime = {
+			hasConfiguredAuth: () => true,
 			completeSimple: async () => reply([call("approve", { approved: true })], { stopReason: "toolUse" }),
 		};
 		await expect(
 			runKnowledgeSpecialist(
-				{ getRuntime: async () => runtime, getModelPreference: async () => undefined },
+				{
+					runModelLoop: runCanonicalKnowledgeSpecialist,
+					getRuntime: async () => runtime,
+					getModelPreference: async () => undefined,
+				},
 				{
 					role: "reviewer",
 					task: "Review",
 					packet: "data",
 					capabilities: [],
-					parentModel: { provider: "fixture", id: "model" },
+					parentModel: {
+						provider: "fixture",
+						id: "model",
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+					},
 					check: async () => {},
 					progress: () => {},
 				},
