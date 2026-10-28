@@ -21,6 +21,7 @@ import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
 import { canonicalProjectId } from "../project-id";
 import { toolProgressSchema } from "../tool-progress";
 import { NATIVE_EVENTS, type NativeEventName } from "./native-events";
+import { NativeMessageCourier, type NativeMessageReferences } from "./native-message-courier";
 import { PROCESS_RUNTIME_WORKER } from "./process-runtime-worker";
 
 export interface ProcessPluginRuntimeOptions {
@@ -123,6 +124,12 @@ const nativeDeclarationsSchema = Type.Object({
 	effects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
 	commandEffects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
 	eventEffects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
+	projection: Type.Optional(
+		Type.Object(
+			{ finalize: Type.Boolean(), effect: Type.Union([Type.Literal("read"), Type.Literal("write")]) },
+			{ additionalProperties: false },
+		),
+	),
 	events: Type.Array(
 		Type.Object({
 			name: Type.Union(NATIVE_EVENTS.map((name) => Type.Literal(name))),
@@ -130,6 +137,25 @@ const nativeDeclarationsSchema = Type.Object({
 		}),
 	),
 });
+
+const nativeCallResponseSchema = Type.Object(
+	{
+		value: Type.Unknown(),
+		references: Type.Object(
+			{
+				message: Type.Optional(Type.String()),
+				messages: Type.Optional(Type.Array(Type.Union([Type.String(), Type.Null()]))),
+			},
+			{ additionalProperties: false },
+		),
+	},
+	{ additionalProperties: false },
+);
+
+const nativeSnapshotResponseSchema = Type.Object(
+	{ messages: Type.Array(Type.Unknown()) },
+	{ additionalProperties: false },
+);
 
 const jsonValueSchema = Type.Cyclic(
 	{
@@ -485,6 +511,14 @@ class RuntimeProcess {
 		if (!Check(nativeDeclarationsSchema, declared)) throw new Error("Invalid native plugin declarations");
 		const declarations = declared as Static<typeof nativeDeclarationsSchema>;
 		const lifecycle = new AbortController();
+		const courier = new NativeMessageCourier();
+		const unwrap = (response: unknown, original?: object): unknown => {
+			if (!Check(nativeCallResponseSchema, response)) throw new Error("Invalid native invocation response");
+			const { value, references } = response as { value: unknown; references: NativeMessageReferences };
+			if (references.message !== undefined || references.messages !== undefined)
+				courier.remember(value, references, original);
+			return value;
+		};
 		let stopping: Promise<void> | undefined;
 		const invoke = (
 			kind: "tool" | "event" | "command",
@@ -505,6 +539,7 @@ class RuntimeProcess {
 					kind,
 					name,
 					input,
+					references: kind === "event" ? courier.encode(input) : {},
 					toolCallId,
 					hookIndex,
 					updates: onUpdate !== undefined,
@@ -522,7 +557,42 @@ class RuntimeProcess {
 					capabilities: { call: AsyncResource.bind(this.context.capabilities.call) },
 				},
 				onUpdate,
-			);
+			).then((response) => {
+				combined.throwIfAborted();
+				return unwrap(
+					response,
+					kind === "event" && name === "message_end" ? (input as { message: object }).message : undefined,
+				);
+			});
+		};
+		const project = (
+			kind: "finalize" | "event" | "snapshot",
+			input: unknown,
+			context?: PluginRuntimeContext,
+		) => {
+			const signal = AbortSignal.any([
+				this.context.signal,
+				lifecycle.signal,
+				...(context ? [context.signal] : []),
+			]);
+			signal.throwIfAborted();
+			return this.request(
+				"native_projection",
+				{
+					attachment,
+					kind,
+					input,
+					references: courier.encode(input),
+					...(context ? { scope: context.scope } : {}),
+				},
+				signal,
+				context
+					? { ...context, capabilities: { call: AsyncResource.bind(context.capabilities.call) } }
+					: undefined,
+			).then((response) => {
+				signal.throwIfAborted();
+				return unwrap(response, kind === "finalize" ? (input as { message: object }).message : undefined);
+			});
 		};
 		const dispose = () => {
 			if (!stopping) {
@@ -538,6 +608,26 @@ class RuntimeProcess {
 			toolEffects: declarations.effects,
 			commandEffects: declarations.commandEffects,
 			eventEffects: declarations.eventEffects,
+			...(declarations.projection
+				? {
+						projection: {
+							...(declarations.projection.finalize
+								? {
+										finalize: (event: unknown, context: PluginRuntimeContext) =>
+											project("finalize", event, context),
+									}
+								: {}),
+							finalizeEffect: declarations.projection.effect,
+							event: (event: unknown) => project("event", event),
+							snapshot: async (messages: unknown[], persisted: unknown[]) => {
+								const response = await project("snapshot", { messages, persisted });
+								if (!Check(nativeSnapshotResponseSchema, response))
+									throw new Error("Invalid native snapshot projection");
+								return (response as { messages: unknown[] }).messages;
+							},
+						},
+					}
+				: {}),
 			extension: (pi) => {
 				for (const command of declarations.commands)
 					pi.registerCommand(command.name, {
@@ -604,7 +694,7 @@ class RuntimeProcess {
 	}
 
 	private request(
-		type: "invoke" | "dispose" | "native_attach" | "native_detach" | "native_call",
+		type: "invoke" | "dispose" | "native_attach" | "native_detach" | "native_call" | "native_projection",
 		payload: Record<string, unknown>,
 		signal?: AbortSignal,
 		context?: PluginRuntimeContext,
