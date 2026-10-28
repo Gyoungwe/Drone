@@ -405,3 +405,8 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 杀死 Docker CLI 并不保证 daemon 内的容器已停止。每次 runner 使用唯一容器名和 ownership label；取消、超时、关闭和 dispose 必须等待 CLI 退出，只删除 label 匹配的自有容器，再以成功的 daemon 查询确认精确名称不存在。inspect 非零可能是 daemon 故障，不能据此报告清理成功。`DiscoveryRunner.run` 以 `DISCOVERY_CLEANUP_FAILED` 保留无法验证清理的错误，插件 execute/close/dispose 必须继续拒绝；迟到的执行不能将 closed 恢复成 ready。
 
 真实容器首次运行暴露 `--mount type=bind,...,rw` 无效，移除末尾 `rw`（bind 默认可写）后通过。验收不得依赖隐式拉镜像；本轮仅使用已缓存的 python:3.12-slim，`--pull=never`。本机出现 tag inspect 失败而 image ID inspect 成功的情况，保留失败并使用同一已缓存镜像的完整 ID 验证，未 pull 或 retag。完整 B5 UI 与正式安装包须单独验收。
+
+
+### Optional tuple item 不等于兼容较短 IPC 参数数组
+
+TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Check 中仍拒绝原四参数调用。`PluginRuntimeContract.invoke` 的兼容合同显式使用四参数 tuple 与带 request ID 的五参数 tuple 联合；主进程 IPC 回归必须实际调用两个形状，不能只依赖 TypeScript optional 参数通过。取消传输只发送 request ID，AbortSignal 留在 renderer/main 各自的实际生命周期中。

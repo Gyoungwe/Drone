@@ -3,7 +3,8 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({
 	pluginRuntimeSelectSession: vi.fn(async (_sessionId: string | null) => "selection-token"),
-	pluginRuntimeInvoke: vi.fn(async () => "receipt"),
+	pluginRuntimeInvoke: vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => "receipt"),
+	pluginRuntimeCancel: vi.fn(async () => true),
 	onPluginRuntimeEvent: vi.fn(
 		(
 			_listener: (event: {
@@ -22,7 +23,8 @@ import { invokePluginRuntime, subscribePluginRuntime, syncPluginCaller } from ".
 
 beforeEach(() => {
 	api.pluginRuntimeSelectSession.mockReset().mockResolvedValue("selection-token");
-	api.pluginRuntimeInvoke.mockClear();
+	api.pluginRuntimeInvoke.mockReset().mockResolvedValue("receipt");
+	api.pluginRuntimeCancel.mockReset().mockResolvedValue(true);
 	useSessionsStore.setState({ activeSessionId: null });
 });
 it("uses explicit application selection for drafts and sends no caller assertions to invoke", async () => {
@@ -91,4 +93,51 @@ it("does not restore an old selection lease after A to B to A or a late synchron
 	receive({ binding: "binding", selectionToken: "lease-b", type: "changed", revision: 2 });
 	receive({ binding: "binding", selectionToken: "lease-a-new", type: "changed", revision: 3 });
 	expect(listener).toHaveBeenCalledExactlyOnceWith({ type: "changed", revision: 3 });
+});
+
+it("does not synchronize or dispatch an already-aborted invocation", async () => {
+	const controller = new AbortController();
+	controller.abort(new Error("pre-canceled"));
+	await expect(invokePluginRuntime("binding", "write", null, controller.signal)).rejects.toThrow(
+		"pre-canceled",
+	);
+	expect(api.pluginRuntimeSelectSession).not.toHaveBeenCalled();
+	expect(api.pluginRuntimeInvoke).not.toHaveBeenCalled();
+	expect(api.pluginRuntimeCancel).not.toHaveBeenCalled();
+});
+
+it("passes only an exact request ID through IPC and waits for cancellation cleanup", async () => {
+	const controller = new AbortController();
+	let reject!: (error: Error) => void;
+	let clean!: (value: boolean) => void;
+	api.pluginRuntimeInvoke.mockImplementation(
+		() =>
+			new Promise((_resolve, fail) => {
+				reject = fail;
+			}),
+	);
+	api.pluginRuntimeCancel.mockImplementation(
+		() =>
+			new Promise((resolve) => {
+				clean = resolve;
+			}),
+	);
+	const pending = invokePluginRuntime("binding", "write", null, controller.signal);
+	let completed = false;
+	const failed = expect(pending)
+		.rejects.toThrow("canceled")
+		.then(() => {
+			completed = true;
+		});
+	await vi.waitFor(() => expect(api.pluginRuntimeInvoke).toHaveBeenCalledOnce());
+	const [, , , selection, requestId] = api.pluginRuntimeInvoke.mock.calls[0]!;
+	expect(typeof requestId).toBe("string");
+	controller.abort();
+	expect(api.pluginRuntimeCancel).toHaveBeenCalledExactlyOnceWith("binding", selection, requestId);
+	reject(new Error("model canceled"));
+	await Promise.resolve();
+	expect(completed).toBe(false);
+	clean(true);
+	await failed;
+	expect(api.pluginRuntimeInvoke.mock.calls[0]).not.toContain(controller.signal);
 });

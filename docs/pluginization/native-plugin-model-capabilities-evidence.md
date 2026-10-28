@@ -23,3 +23,14 @@ The checks are at plugin/network/session trust boundaries: authenticated live ca
 ## Remaining
 
 UI single-invocation cancellation transport, canonical Wiki model-review owner integration and its same-tarball/UI acceptance are still in progress. Published legacy UI 1.x named knowledge methods retain their real behavior. This slice does not remove `knowledge.specialist-runner`, close full native hooks/publication authority, or prove any formal macOS installer behavior. Root combined gates must run after integration.
+
+
+## Invocation cancellation and real bridge identity follow-up
+
+The first 6-test SDK slice used a direct broker caller. A production bridge check found that window-selection identity and SessionRegistry identity were different host facts. The bridge keeps the selection identity for approval routing, and now supplies a separate host-only `sessionIdentity` to capability handlers. It never crosses plugin JSON or worker transport. Actual SDK coverage now includes two windows selecting the same live session: deny routes to window 202, allow and model-cost approval route only to window 101; the model executes once.
+
+The add-only UI `invoke(operation, input, signal?)` sends an optional request ID through existing invoke IPC and a separate cancel IPC. Active invocations belong to their binding, window and selection lease. Cancellation reaches the existing registry signal, pending approval's parent-window Electron dialog and actual provider request; it drains that invocation's cleanup. No process-global or cross-session ledger was added. Missing/completed IDs return false; foreign window/binding/selection is rejected. Existing two-argument UI and four-argument IPC are preserved.
+
+Observed source checks: real SDK 8/8 with provider cancellation, stale selection rejection, restored successful generation and real coordinator-native bootstrap model calls (`/tmp/model-cancel-native-sdk-final.log`); coordinator 4/4 including sibling isolation, exact window/lease enforcement and blocked-approval late allow (`/tmp/model-cancel-coordinator.log`); Desktop/preload/renderer 46/46 (`/tmp/model-cancel-desktop-final.log`), plus IPC legacy/new request schema regression (`/tmp/model-cancel-ipc-final.log`). Backend/Desktop typechecks, plugin-api build and generated projections pass. These are mechanism/real-session checks, not formal installed-app GUI acceptance.
+
+The new checks are live IPC authorization boundaries (window, binding, lease and duplicate active request ID); renderer pre-abort avoids dispatch; cancellation IPC failures remain explicit. Electron's installed `MessageBoxOptions.signal` closes the existing parent-window prompt. Promise settlement handling waits for both invocation and cancel transport and surfaces either failure instead of reporting success.

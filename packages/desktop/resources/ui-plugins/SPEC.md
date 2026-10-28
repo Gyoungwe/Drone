@@ -315,3 +315,5 @@ export function activate() {
 后台可在当前合法调用内使用 `capabilities.call("caller.scope", null)` 读取宿主解析的 `PluginRuntimeScope`；构造期为 application scope，普通调用为实际当前 scope。workspaceId 用于身份分区；workspaceDirectory 不代表文件权限。此端口既不接受插件传入的身份，也不允许保留闭包越过当前调用。详情与候选验收范围见 `docs/pluginization/native-plugin-resource-independent-capabilities.md`。
 
 `window.DroneUI.sessions.command(sessionId, name, args?)`（API 1.3）只调用该真实会话已注册的扩展命令，返回 `{kind:"command"}`。缺失/卸载的命令、只读/恢复中/取消或已替换的会话均拒绝，不转成模型输入；handler 错误沿既有 extension onError 诊断并使调用失败。普通 `sessions.prompt` 保留自然语言输入语义。领域 UI 的动作必须使用 `sessions.command`，不能以 prompt 的未知 slash 回退代替命令派发。UI 贡献停用与原生 owner 停用是两个独立生命周期。
+
+`usePluginRuntime().invoke(operation, input, signal?)` accepts an optional invocation-local AbortSignal. The renderer sends only a request ID through IPC, never a signal object. Main cancels only the active request of that same window, binding and selection lease, and waits for its running cleanup. Already-aborted calls dispatch nothing; canceling one call does not cancel its siblings. Approval dialogs use the same signal and cannot approve a canceled request. Existing two-argument clients and four-argument invoke IPC remain supported.

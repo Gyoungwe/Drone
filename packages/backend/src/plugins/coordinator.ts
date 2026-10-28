@@ -51,6 +51,7 @@ export interface PluginRuntimeBridgeOptions {
 		source: PluginRuntimeSource,
 		operation?: string,
 		detail?: string,
+		signal?: AbortSignal,
 	): Promise<boolean>;
 	getSessionContext(sessionId: string): PluginSessionCallerContext | undefined;
 }
@@ -77,6 +78,10 @@ interface Binding {
 	readonly abort: AbortController;
 	readonly pending: Set<Promise<unknown>>;
 	readonly ready: Promise<PluginRuntimeClient>;
+	readonly invocations: Map<
+		string,
+		{ selectionToken: string; abort: AbortController; pending: Promise<unknown> }
+	>;
 	unsubscribe?: () => void;
 }
 function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined): boolean {
@@ -150,6 +155,7 @@ export class PluginRuntimeBridge {
 		}
 		return {
 			identity: selected,
+			sessionIdentity: session?.identity,
 			scope: session?.scope ?? { kind: "application" },
 			signal: AbortSignal.any([
 				binding.abort.signal,
@@ -177,7 +183,13 @@ export class PluginRuntimeBridge {
 				authorizeActivation: async (_request, signal) => {
 					if (this.closing || this.transitioning || owner.isDestroyed() || !this.options.enabled(name))
 						return false;
-					const approved = await this.options.approve(owner.approvalOwner ?? owner, source);
+					const approved = await this.options.approve(
+						owner.approvalOwner ?? owner,
+						source,
+						undefined,
+						undefined,
+						signal,
+					);
 					return (
 						approved &&
 						!signal.aborted &&
@@ -211,6 +223,7 @@ export class PluginRuntimeBridge {
 							source,
 							request.operation,
 							request.approvalDetail,
+							signal,
 						)) && permitted()
 					);
 				},
@@ -259,7 +272,16 @@ export class PluginRuntimeBridge {
 		runtime ??= this.createRuntime(name, source, owner);
 		let binding: Binding;
 		const ready = runtime.registry.activate(source.pluginId, () => this.caller(binding));
-		binding = { token, name, owner, runtime, abort: new AbortController(), pending: new Set(), ready };
+		binding = {
+			token,
+			name,
+			owner,
+			runtime,
+			abort: new AbortController(),
+			pending: new Set(),
+			invocations: new Map(),
+			ready,
+		};
 		this.bindings.set(token, binding);
 		runtime.bindings.add(binding);
 		try {
@@ -399,6 +421,7 @@ export class PluginRuntimeBridge {
 		operation: string,
 		input: unknown,
 		selectionToken: string,
+		requestId?: string,
 	): Promise<unknown> {
 		const binding = this.bindings.get(token);
 		if (!binding || binding.owner !== owner || owner.isDestroyed())
@@ -413,19 +436,45 @@ export class PluginRuntimeBridge {
 		const selected = this.selections.get(owner);
 		if (!selected || selected.token !== selectionToken || selected.abort.signal.aborted)
 			throw new Error("Plugin caller selection lease is invalid");
+		if (requestId !== undefined && binding.invocations.has(requestId))
+			throw new Error("Plugin invocation request ID is already active");
+		const abort = new AbortController();
 		const invocation = binding.ready.then(() =>
 			binding.runtime.registry
 				.bind(binding.runtime.source.pluginId, () =>
 					this.selections.get(owner) === selected ? this.caller(binding) : undefined,
 				)
-				.invoke(operation, input),
+				.invoke(operation, input, abort.signal),
 		);
+		if (requestId !== undefined)
+			binding.invocations.set(requestId, { selectionToken, abort, pending: invocation });
 		binding.pending.add(invocation);
 		try {
 			return await invocation;
 		} finally {
 			binding.pending.delete(invocation);
+			if (requestId !== undefined) binding.invocations.delete(requestId);
 		}
+	}
+
+	/** Request IDs grant no authority: only the same live window, binding and selection can cancel. */
+	async cancel(
+		owner: PluginRuntimeOwner,
+		token: string,
+		selectionToken: string,
+		requestId: string,
+	): Promise<boolean> {
+		const binding = this.bindings.get(token);
+		if (!binding || binding.owner !== owner || !this.allowed(binding))
+			throw new Error("Plugin runtime binding is invalid for this window");
+		const selected = this.selections.get(owner);
+		if (!selected || selected.token !== selectionToken || selected.abort.signal.aborted)
+			throw new Error("Plugin caller selection lease is invalid");
+		const invocation = binding.invocations.get(requestId);
+		if (!invocation || invocation.selectionToken !== selectionToken) return false;
+		invocation.abort.abort(new Error("Plugin invocation canceled"));
+		await Promise.allSettled([invocation.pending]);
+		return true;
 	}
 
 	async withTransition<T>(action: () => Promise<T>): Promise<T> {

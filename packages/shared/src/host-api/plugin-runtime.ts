@@ -17,13 +17,30 @@ export const PluginRuntimeContract = defineDomain("pluginRuntime", {
 			result: Type.String({ minLength: 1 }),
 		},
 		invoke: {
+			args: Type.Union([
+				Type.Tuple([
+					Type.String({ minLength: 1 }),
+					Type.String({ minLength: 1 }),
+					Type.Unknown(),
+					Type.String({ minLength: 1 }),
+				]),
+				Type.Tuple([
+					Type.String({ minLength: 1 }),
+					Type.String({ minLength: 1 }),
+					Type.Unknown(),
+					Type.String({ minLength: 1 }),
+					Type.String({ minLength: 1, maxLength: 128 }),
+				]),
+			]),
+			result: Type.Unknown(),
+		},
+		cancel: {
 			args: Type.Tuple([
 				Type.String({ minLength: 1 }),
 				Type.String({ minLength: 1 }),
-				Type.Unknown(),
-				Type.String({ minLength: 1 }),
+				Type.String({ minLength: 1, maxLength: 128 }),
 			]),
-			result: Type.Unknown(),
+			result: Type.Boolean(),
 		},
 	},
 	events: { changed: PluginRuntimeEventSchema },

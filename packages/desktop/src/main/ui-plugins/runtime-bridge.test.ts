@@ -85,13 +85,14 @@ describe("DesktopRuntimeBridge", () => {
 		await expect(bridge.invoke(owner, token, "save", input, selection(bridge, owner))).rejects.toThrow(
 			"Plugin capability denied: save",
 		);
-		expect(approve).toHaveBeenNthCalledWith(2, owner, source, "save", undefined);
+		expect(approve).toHaveBeenNthCalledWith(2, owner, source, "save", undefined, expect.any(AbortSignal));
 		expect(approve).toHaveBeenNthCalledWith(
 			3,
 			owner,
 			source,
 			"capability:save",
 			"Host-approved root / policy.json",
+			expect.any(AbortSignal),
 		);
 		expect(execute).not.toHaveBeenCalled();
 		approve.mockResolvedValue(true);

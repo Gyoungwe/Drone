@@ -20,6 +20,7 @@ export function getPluginSessionCaller(
 	if (signal.aborted) return undefined;
 	return {
 		identity: entry,
+		sessionIdentity: entry,
 		scope: {
 			kind: "session",
 			workspaceId: canonicalProjectId(entry.cwd),

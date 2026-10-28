@@ -342,6 +342,7 @@ export async function approveDesktopRuntime(
 	source: PluginRuntimeSource,
 	operation?: string,
 	approvalDetail?: string,
+	signal?: AbortSignal,
 ): Promise<boolean> {
 	const contents = webContents.fromId(owner.id);
 	if (!contents || contents.isDestroyed()) return false;
@@ -349,6 +350,7 @@ export async function approveDesktopRuntime(
 	if (!window) return false;
 	const response = await dialog.showMessageBox(window, {
 		type: "question",
+		signal,
 		title: hostText("插件后台权限", "Plugin runtime permission"),
 		message: operation
 			? hostText(
@@ -366,7 +368,7 @@ export async function approveDesktopRuntime(
 		defaultId: 0,
 		cancelId: 0,
 	});
-	return response.response === 1 && !contents.isDestroyed();
+	return response.response === 1 && !contents.isDestroyed() && !signal?.aborted;
 }
 
 /** Native and UI discovery both select the same canonical installed package descriptor. */

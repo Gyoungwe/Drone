@@ -37,7 +37,7 @@ export function modelCapabilityHandlers(deps: PluginModelCapabilitiesDependencie
 		if (context.scope.kind !== "session")
 			throw new Error("Model capabilities require a selected live session");
 		const entry = deps.registry.get(context.scope.sessionId);
-		if (!entry || entry !== context.callerIdentity || deps.registry.signalFor(entry).aborted)
+		if (!entry || entry !== context.sessionIdentity || deps.registry.signalFor(entry).aborted)
 			throw new Error("Model capability caller is stale or belongs to another session");
 		return entry;
 	}
