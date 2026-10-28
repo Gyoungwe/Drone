@@ -583,3 +583,5 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 共享 owner/任务事务、SDK 最终边界、原窗口问答、无 UI 来源发现与通用执行的后继整合及原失败保留见[本批回执](releases/native-plugin-source-owner-integration-2026-10-28.json)。插件 e713409 完整检查与干净五包重建通过；宿主新源码冻结门禁和正式安装包尚未完成，顶部旧门禁基线不变。
 
 UI 清单 contributions 的纯 JSON 过滤位于 `desktop/src/main/ui-plugins/manifest-contributions.ts`；manager消费它，纯数据回归不再加载 Electron 二进制。
+
+P2 知识完整 native 消费者的第一条实际包工作流与明确剩余范围见[同包完整消费者证据](pluginization/native-knowledge-full-consumer-evidence.md)；尚未完成生产历史/导出、任务组合和正式安装包。
