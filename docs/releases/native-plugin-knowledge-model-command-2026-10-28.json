@@ -225,6 +225,19 @@
           "durationMs": 39
         }
       ]
+    },
+    "hostMechanisms": {
+      "status": "PASS",
+      "sdkTestsPassed": 15,
+      "sdkTestsFailed": 0,
+      "scope": "Managed command protocol 7 plus generic model capability SDK 8",
+      "backendTypecheck": true,
+      "architecture": true,
+      "logs": [
+        "/tmp/model-command-host-sdk-regressions.log",
+        "/tmp/model-command-host-tsc.log",
+        "/tmp/model-command-host-arch.log"
+      ]
     }
   },
   "logs": {
