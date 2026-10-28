@@ -68,6 +68,7 @@ interface Activation extends PluginRuntimeActivation {
 	capabilities?: PluginCapabilityBroker;
 	ports?: PluginRuntimeCapabilitiesOptions;
 	portsStopping?: Promise<void>;
+	portsReleased?: Promise<void>;
 	readonly listeners: Set<(event: PluginRuntimeChangedEvent) => void>;
 	revision: number;
 	ready: Promise<PluginNativeRuntimeInstance>;
@@ -195,7 +196,9 @@ export class PluginRuntimeRegistry {
 		} catch (error) {
 			// Failed activation is retryable. A concurrent deactivate still owns disposal.
 			if (activation.state !== "stopping") {
-				const [closed] = await Promise.allSettled([this.stopPorts(activation)]);
+				const [closed] = await Promise.allSettled([
+					this.stopPorts(activation).then(() => this.releasePorts(activation)),
+				]);
 				this.activations.delete(activationKey);
 				if (closed.status === "rejected")
 					throw new AggregateError([error, closed.reason], "Plugin activation and capability cleanup failed");
@@ -358,6 +361,10 @@ export class PluginRuntimeRegistry {
 			failures.push(created.reason);
 		const [ports] = await Promise.allSettled([this.stopPorts(activation)]);
 		if (ports.status === "rejected") failures.push(ports.reason);
+		if (failures.length === 0) {
+			const [released] = await Promise.allSettled([this.releasePorts(activation)]);
+			if (released.status === "rejected") failures.push(released.reason);
+		}
 		if (failures.length === 1) throw failures[0];
 		if (failures.length)
 			throw new AggregateError(failures, "Plugin runtime and capabilities shutdown failed");
@@ -367,6 +374,11 @@ export class PluginRuntimeRegistry {
 	private stopPorts(activation: Activation): Promise<void> {
 		activation.portsStopping ??= activation.ports?.dispose?.() ?? Promise.resolve();
 		return activation.portsStopping;
+	}
+
+	private releasePorts(activation: Activation): Promise<void> {
+		activation.portsReleased ??= activation.ports?.finalRelease?.() ?? Promise.resolve();
+		return activation.portsReleased;
 	}
 
 	private client(activation: Activation, resolveCaller: PluginRuntimeCallerResolver): PluginRuntimeClient {

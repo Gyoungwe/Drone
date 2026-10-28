@@ -423,3 +423,11 @@ TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Chec
 ### Pi 1.1.0 abort 不会自动拦截迟到的 message_end 发布
 
 真实 SDK 会 await subscriber/extension hook，所以持有 message_end 时 prompt、waitForIdle、abort 都等待；但已有 hook 迟到返回后，SDK 仍会公开并持久化它修改的正文。普通注册顺序也不能保证最后一个 hook。钉版 host-only delivery boundary 放在全部 SDK hooks 之后、公开/append 之前，再核对真实 run signal；取消/失败只保留安全 SDK envelope 与实际 toolCalls，dispose 后不再 append。源码与真实 RED→GREEN 见[机制回执](releases/native-publication-sdk-fence-2026-10-28.json)，完整 managed owner/consumer 尚未完成。
+
+### 原生 SDK 的 dispose 不会代发扩展 shutdown
+
+Pi 1.1.0 的 `AgentSession.dispose()` 只中止/失效内部运行时，不会发出 `session_shutdown`。独立 SDK 子进程若只调用它，扩展拥有的 writer lease 会留下，并正确阻止后继 writer。嵌入端必须执行公开 extensionRunner 的 shutdown 生命周期、abort、dispose，并收集 SDK onError；Drone 的 `SessionEngine.close` 已使用该顺序。不得通过 process exit 全局账本自动删除 lease，也不能把 SDK 吞下的 shutdown handler 错误记为成功。复现与真实交接见 P5 shared-owner 机器回执。
+
+### 只读旧 owner 不能在交接后用缓存覆盖新 journal
+
+旧 Discovery Domain 可先只读缓存 JSON，再等另一个 owner 完成写入并释放 lease。此时仅靠新取到的 lease 不能证明内存快照仍新鲜。迁移中的旧 journal 端口使用真正 JsonStore 的 `writeChecked`、原始字节 SHA 与回读；版本变化时明确要求关闭重开。新 UI 接管也必须保留唯一既有 projectId，混合 ID 拒绝；不能取第一条或重新生成 ID 后覆盖历史。

@@ -200,11 +200,8 @@ describe.skipIf(!available)("actual isolated resource process", () => {
 			"exited",
 		);
 		await expect(other.create(input(), context)).rejects.toThrow("already reserved");
-		await expect(owner.dispose()).rejects.toThrow("Plugin resource disposal failed");
-		const reopened = await other.create(input(), context);
-		expect(await other.invoke({ ...reopened, operation: "read", input: null }, context)).toMatchObject({
-			text: "real indexed input",
-		});
+		await expect(owner.dispose()).rejects.toThrow("Plugin resource processes could not be disposed");
+		await expect(other.create(input(), context)).rejects.toThrow("already reserved");
 	});
 	it("drains accepted resource work before closing and rejects overlapping reopen", async () => {
 		const owner = manager();
@@ -273,8 +270,9 @@ describe.skipIf(!available)("actual isolated resource process", () => {
 							confirmedWhileReserved = true;
 						},
 					},
-					dispose: async () => {
-						await resources.dispose();
+					dispose: () => resources.disposeResources(),
+					finalRelease: async () => {
+						resources.releaseReservations();
 						finalReleased = true;
 					},
 				};

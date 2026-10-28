@@ -3,7 +3,9 @@ import type { Stats } from "node:fs";
 import { constants } from "node:fs";
 import { link, lstat, mkdir, open, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import type {
+	PluginRuntimeRootDescription,
 	PluginRuntimeScope,
 	PluginStateReadResult,
 	PluginStateRemoveInput,
@@ -82,14 +84,18 @@ function kind(stat: Pick<Stats, "isFile" | "isDirectory" | "isSymbolicLink">): F
 /** File/state ports for one authorized activation. No OS path or caller identity is accepted from the plugin. */
 export class PluginFileCapabilities {
 	private mutationTail: Promise<void> = Promise.resolve();
+	private cleanupFailure: unknown;
 	private constructor(
 		private readonly roots: ReadonlyMap<string, Root>,
 		private readonly cacheRoot: { path: string; identity: Stats },
+		private readonly reservations: PluginResourceReservations,
 	) {}
 
 	static async create(
 		grants: readonly PluginRootGrant[],
 		privateCacheDirectory: string,
+		/** Internal test seam; production shares the default same-user lease namespace with native Pi. */
+		leaseDirectory?: string,
 	): Promise<PluginFileCapabilities> {
 		// This directory belongs to the host profile, not a user-selected state/Vault root.
 		// Resource children receive only individual leaves and cannot replace this parent.
@@ -109,7 +115,11 @@ export class PluginFileCapabilities {
 			}
 			roots.set(grant.handle, { ...grant, path, identity });
 		}
-		return new PluginFileCapabilities(roots, { path: cachePath, identity: cacheIdentity });
+		return new PluginFileCapabilities(
+			roots,
+			{ path: cachePath, identity: cacheIdentity },
+			new PluginResourceReservations(leaseDirectory),
+		);
 	}
 
 	private grant(input: PluginFileInput, call: PluginFileCall, expected: Root["kind"]): Root {
@@ -248,6 +258,62 @@ export class PluginFileCapabilities {
 		return result;
 	}
 
+	/** Describe this activation's approved roots only, without authorizing any new path. */
+	async describeRoots(call: PluginFileCall): Promise<readonly PluginRuntimeRootDescription[]> {
+		call.signal.throwIfAborted();
+		const descriptions: PluginRuntimeRootDescription[] = [];
+		for (const root of this.roots.values()) {
+			if (call.bootstrap && root.kind !== "state") continue;
+			if (
+				root.scope.kind === "workspace" &&
+				(call.scope.kind === "application" || root.scope.workspaceId !== call.scope.workspaceId)
+			)
+				continue;
+			await this.checkRoot(root);
+			descriptions.push({
+				handle: root.handle,
+				kind: root.kind,
+				path: root.path,
+				access: root.stateWrite || root.fileWrite ? "read-write" : "read",
+			});
+		}
+		call.signal.throwIfAborted();
+		return descriptions;
+	}
+
+	/** Reserve an already approved JSON state directory, without creating a resource process. */
+	reserveState(input: PluginFileInput, call: PluginFileCall): Promise<{ reserved: true }> {
+		return this.mutate(call, async () => {
+			const root = this.grant(input, call, "state");
+			if (call.bootstrap || !root.stateWrite) throw new Error("Plugin state writer access was not granted");
+			const directory = await this.path(root, input.path);
+			if (!(await lstat(directory)).isDirectory())
+				throw new Error("State writer requires an existing directory");
+			call.signal.throwIfAborted();
+			this.reservations.reserve("state-writers", [directory]);
+			return { reserved: true };
+		});
+	}
+
+	/** Drain accepted filesystem mutations and prove cleanup before any activation lease is released. */
+	async drain(): Promise<void> {
+		await this.mutationTail;
+		this.assertCleanupComplete();
+	}
+
+	private assertCleanupComplete(): void {
+		if (this.cleanupFailure)
+			throw new Error("Plugin file cleanup failed; writer reservations retained", {
+				cause: this.cleanupFailure,
+			});
+	}
+
+	/** Host final-release hook; call only after successful domain and resource cleanup. */
+	releaseReservations(): void {
+		this.assertCleanupComplete();
+		this.reservations.dispose();
+	}
+
 	async readText(input: PluginFileInput, call: PluginFileCall) {
 		const root = this.grant(input, call, "files");
 		const result = await this.snapshot(root, input);
@@ -324,11 +390,16 @@ export class PluginFileCapabilities {
 				else await rename(temporary, target);
 			} catch (error) {
 				const [cleanup] = await Promise.allSettled([rm(temporary, { force: true })]);
-				if (cleanup.status === "rejected")
+				if (cleanup.status === "rejected") {
+					this.cleanupFailure = cleanup.reason;
 					throw new AggregateError([error, cleanup.reason], "Text write and temporary cleanup failed");
+				}
 				throw error;
 			}
-			await rm(temporary, { force: true });
+			await rm(temporary, { force: true }).catch((error) => {
+				this.cleanupFailure = error;
+				throw error;
+			});
 			const result = await this.snapshot(root, input);
 			if (result.sha256 !== createHash("sha256").update(input.text).digest("hex"))
 				throw new Error("Plugin data changed after atomic write");
@@ -415,15 +486,20 @@ export class PluginFileCapabilities {
 			defaultValue: () => null,
 			mode: 0o600,
 		});
-		return store.writeChecked(input.value, {
-			check,
-			readBack: async () => {
-				const result = await this.readJson(input, call);
-				if (result.kind !== "value" || result.version !== expectedHash)
-					throw new Error("Plugin state changed after atomic write");
-				return result;
-			},
-		});
+		return store
+			.writeChecked(input.value, {
+				check,
+				readBack: async () => {
+					const result = await this.readJson(input, call);
+					if (result.kind !== "value" || result.version !== expectedHash)
+						throw new Error("Plugin state changed after atomic write");
+					return result;
+				},
+			})
+			.catch((error) => {
+				if (error instanceof AggregateError) this.cleanupFailure = error;
+				throw error;
+			});
 	}
 
 	removeJson(input: PluginStateRemoveInput, call: PluginFileCall): Promise<PluginStateReadResult> {
@@ -569,6 +645,29 @@ export function fileCapabilityHandlers(
 		"Json",
 	);
 	return {
+		"roots.describe": {
+			inputSchema: Type.Null(),
+			resultSchema: Type.Array(
+				Type.Object(
+					{
+						handle: Type.String(),
+						kind: Type.Union([Type.Literal("state"), Type.Literal("files")]),
+						path: Type.String(),
+						access: Type.Union([Type.Literal("read"), Type.Literal("read-write")]),
+					},
+					{ additionalProperties: false },
+				),
+			),
+			effect: "read",
+			bootstrap: true,
+			execute: (_input, call) => ports.describeRoots(call),
+		},
+		"state.reserve": {
+			inputSchema: input,
+			resultSchema: Type.Object({ reserved: Type.Literal(true) }),
+			effect: "write",
+			execute: (input, call) => ports.reserveState(input as PluginFileInput, call),
+		},
 		"state.list": {
 			inputSchema: input,
 			resultSchema: Type.Array(Type.Object({ name: Type.String(), kind: fileKind })),
