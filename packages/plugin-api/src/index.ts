@@ -11,6 +11,7 @@ export const PLUGIN_API_VERSION = 1 as const;
 export const RESULT_CONTRACT = "drone-result/v3" as const;
 
 export * from "./core.js";
+export type * from "./legacy-knowledge.js";
 export * from "./research.js";
 export * from "./tasks.js";
 
@@ -614,7 +615,10 @@ export interface KnowledgeReadHostPort {
 }
 
 /** Stable host entry contract for the knowledge capability. */
-export interface KnowledgeHostPort extends KnowledgeReadHostPort {}
+export interface KnowledgeHostPort extends KnowledgeReadHostPort {
+	/** Temporary unpublished 1.3 adapter; no host-owned domain algorithm fallback. */
+	runSpecialistModelLoop?: import("./legacy-knowledge.js").LegacyKnowledgeSpecialistLoop;
+}
 
 /** Host-owned, dependency-free worker seam for an installed knowledge loader. */
 export interface KnowledgeHostWorkerSetup {
