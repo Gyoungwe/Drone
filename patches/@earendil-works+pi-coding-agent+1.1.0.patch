@@ -260,7 +260,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loa
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
-@@ -86,6 +86,14 @@
+@@ -86,6 +86,15 @@
      _scopedModels;
      // Event subscription state
      _unsubscribeAgent;
@@ -271,11 +271,12 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 +    _hostDeliveryFailedRuns = new WeakSet();
 +    _hostProviderProtocol = new WeakMap();
 +    _hostProtocolGeneration;
++    _hostSessionEpoch = 0;
 +    _disposed = false;
      _eventListeners = [];
      _isAgentRunActive = false;
      _agentRunAbortRequested = false;
-@@ -175,6 +183,10 @@
+@@ -175,6 +184,10 @@
      _runSystemPromptOptions;
      constructor(config) {
          this.agent = config.agent;
@@ -286,7 +287,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          this.sessionManager = config.sessionManager;
          this.settingsManager = config.settingsManager;
          this._scopedModels = config.scopedModels ?? [];
-@@ -568,14 +580,50 @@
+@@ -568,14 +581,50 @@
      // =========================================================================
      // Event Subscription
      // =========================================================================
@@ -338,7 +339,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      _applyBoundaryDrafts(manager, drafts) {
          const appended = [];
          for (const draft of drafts) {
-@@ -707,7 +755,19 @@
+@@ -707,7 +756,19 @@
          this._resolveIdleWaitIfIdle();
      }
      /** Internal handler for agent events - shared by subscribe and reconnect */
@@ -359,7 +360,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          // Record the calls a tool made through ctx.executeTool() and their usage on its result message.
          if (this._nestedToolCalls) {
              if (event.type === "message_start" && event.message.role === "toolResult") {
-@@ -747,6 +807,45 @@
+@@ -747,6 +808,45 @@
          }
          // Emit to extensions first, then notify public listeners.
          await this._emitExtensionEvent(event);
@@ -405,7 +406,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          this._emit(event.type === "agent_end" ? { ...event, willRetry: this._willRetryAfterAgentEnd(event) } : event);
          // Handle session persistence
          if (event.type === "message_end") {
-@@ -809,6 +908,15 @@
+@@ -809,6 +909,15 @@
          }
          return false;
      }
@@ -421,7 +422,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      _findPersistedMessageEntryId(message) {
          const mapped = this._entryIdsByMessage.get(message);
          if (mapped)
-@@ -990,6 +1098,13 @@
+@@ -990,6 +1099,14 @@
       * Call this when completely done with the session.
       */
      dispose() {
@@ -431,36 +432,40 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 +        this._hostExportBoundary = undefined;
 +        this._hostExportIsOrdinary = undefined;
 +        this._hostDeliveryFailedRuns = new WeakSet();
++        this._hostSessionEpoch++;
 +        this._clearHostProviderProtocol();
          try {
              this.abortRetry();
              this.abortCompaction();
-@@ -1014,6 +1129,7 @@
+@@ -1014,6 +1131,8 @@
      // =========================================================================
      /** Refresh the public finalized transcript from the canonical session projection. */
      refreshContext() {
++        this._hostSessionEpoch++;
 +        this._clearHostProviderProtocol();
          this._refreshFinalizedContext();
      }
      /** Full agent state */
-@@ -2938,6 +3054,7 @@
+@@ -2938,6 +3057,8 @@
          const previousFlagValues = oldRunner.getFlagValues();
          await emitSessionShutdownEvent(oldRunner, { type: "session_shutdown", reason: "reload" });
          oldRunner.invalidate();
++        this._hostSessionEpoch++;
 +        this._clearHostProviderProtocol();
          const getDefaultTools = () => this._usesDefaultTools
              ? applyToolModifiers(this.settingsManager.getDefaultTools() ?? DEFAULT_TOOL_NAMES, this._defaultToolModifiers)
              : [];
-@@ -3314,6 +3431,8 @@
+@@ -3314,6 +3435,9 @@
                  // Non-user message: leaf = selected node
                  newLeafId = targetId;
              }
 +            // A real branch transition ends the private protocol generation, even for a shared ancestor.
++            this._hostSessionEpoch++;
 +            this._clearHostProviderProtocol();
              // Switch leaf (with or without summary)
              // Summary is attached at the navigation target position (newLeafId), not the old branch
              let summaryEntry;
-@@ -3476,7 +3595,48 @@
+@@ -3476,7 +3600,52 @@
       * @param options Optional export presentation settings
       * @returns Path to exported file
       */
@@ -472,15 +477,19 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 +        const entries = this.sessionManager.getEntries();
 +        const branch = this.sessionManager.getBranch();
 +        const leaf = this.sessionManager.getLeafId();
-+        const origins = [];
++        const epoch = this._hostSessionEpoch;
++        // Export-only history origin: these are this manager's actual stored entries,
++        // not a caller's JSON entries. This never enrolls a live message/proof.
++        const origins = entries.filter((entry) => entry.type === "message")
++            .map((entry) => ({entry, message:entry.message}));
 +        for (const message of this.messages) {
 +            const entry = this.getHostPersistedMessage(message);
-+            if (entry)
++            if (entry && !origins.some((origin) => origin.entry === entry && origin.message === message))
 +                origins.push({ entry, message });
 +        }
 +        const projection = await boundary({ entries, origins });
 +        const assertCurrent = () => {
-+            if (this._disposed || this._hostExportBoundary !== boundary || !this.isIdle || this.sessionManager.getLeafId() !== leaf)
++            if (this._disposed || this._hostExportBoundary !== boundary || this._hostSessionEpoch !== epoch || !this.isIdle || this.sessionManager.getLeafId() !== leaf)
 +                throw new Error("Host export session changed during projection");
 +            projection.assertCurrent();
 +        };
@@ -509,7 +518,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          const themeName = [options.themeName, this.settingsManager.getTheme()].find((candidate) => candidate !== undefined && getThemeByName(candidate) !== undefined);
          // Create tool renderer if we have an extension runner (for custom tool HTML rendering)
          const toolRenderer = createToolHtmlRenderer({
-@@ -3484,7 +3644,8 @@
+@@ -3484,7 +3653,8 @@
              theme,
              cwd: this.sessionManager.getCwd(),
          });
@@ -519,7 +528,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
              outputPath,
              themeName,
              toolRenderer,
-@@ -3497,8 +3658,17 @@
+@@ -3497,8 +3667,17 @@
       * @returns The resolved output file path.
       */
      exportToJsonl(outputPath) {
@@ -563,7 +572,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      agent: Agent;
      sessionManager: SessionManager;
      settingsManager: SettingsManager;
-@@ -222,6 +237,16 @@
+@@ -222,6 +237,17 @@
      readonly settingsManager: SettingsManager;
      private _scopedModels;
      private _unsubscribeAgent?;
@@ -574,13 +583,14 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 +    private _hostDeliveryFailedRuns;
 +    private _hostProviderProtocol;
 +    private _hostProtocolGeneration;
++    private _hostSessionEpoch;
 +    private _clearHostProviderProtocol;
 +    private _restoreHostProviderProtocol;
 +    private _disposed;
      private _eventListeners;
      private _isAgentRunActive;
      private _agentRunAbortRequested;
-@@ -364,6 +389,8 @@
+@@ -364,6 +390,8 @@
      /** Internal handler for agent events - shared by subscribe and reconnect */
      private _handleAgentEvent;
      private _willRetryAfterAgentEnd;
@@ -589,7 +599,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      private _findPersistedMessageEntryId;
      private _omitRecoveryAttempt;
      /** Find the last assistant message in agent state (including aborted ones) */
-@@ -888,6 +915,8 @@
+@@ -888,6 +916,8 @@
       * @returns The resolved output file path.
       */
      exportToJsonl(outputPath?: string): string;

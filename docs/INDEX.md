@@ -598,3 +598,5 @@ P2 生产当前分支的 stream / polling / reload / export 接线与真实同 t
 P2 required owner 不可用时的基础 read、私有 provider 协议与 fail-closed 边界见[私有协议证据](pluginization/native-unavailable-provider-protocol-evidence.md)；这不是新的 publication proof 或持久化恢复授权。
 
 P2 显式旧读窗导入的版本删除条件、独立授权与同包多会话关闭回归见[迁移证据](pluginization/native-knowledge-recovery-adoption-evidence.md)；导入不生成当前 read/publication proof。
+
+P2 已打开会话的全树 HTML 历史来源与导出代次修复见[全树导出证据](pluginization/native-knowledge-full-tree-export-evidence.md)；官方 JSONL 当前 branch 语义保持，未打开历史仍未完成。
