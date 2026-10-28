@@ -60,6 +60,67 @@ const scope = {
 };
 
 describe("PluginRuntimeRegistry", () => {
+	it.each(["domain", "resource", "native"] as const)(
+		"drains resources but keeps final reservations after %s cleanup fails",
+		async (failure) => {
+			const drain = vi.fn(async () => {
+				if (failure === "resource") throw new Error("resource cleanup failed");
+			});
+			const release = vi.fn(async () => {});
+			const registry = new PluginRuntimeRegistry(policy(), "application", {
+				handlers: {},
+				resources: [],
+				dispose: drain,
+				finalRelease: release,
+			});
+			registry.register("example", async () => ({
+				...runtime(),
+				createNativeSession: () => ({
+					extension: () => {},
+					dispose: async () => {
+						if (failure === "native") throw new Error("native cleanup failed");
+					},
+				}),
+				dispose: async () => {
+					if (failure === "domain") throw new Error("domain cleanup failed");
+				},
+			}));
+			await registry.activate("example", caller(scope));
+			await registry.attachNative("example", () => caller(scope)());
+			await expect(registry.deactivate("example")).rejects.toThrow(`${failure} cleanup failed`);
+			expect(drain).toHaveBeenCalledOnce();
+			expect(release).not.toHaveBeenCalled();
+			await expect(registry.deactivate("example")).rejects.toThrow(`${failure} cleanup failed`);
+			expect(release).not.toHaveBeenCalled();
+		},
+	);
+
+	it("releases reservations once after domain and host resources both finish", async () => {
+		const order: string[] = [];
+		const release = vi.fn(async () => {
+			order.push("release");
+		});
+		const registry = new PluginRuntimeRegistry(policy(), "application", {
+			handlers: {},
+			resources: [],
+			dispose: async () => {
+				order.push("resource");
+			},
+			finalRelease: release,
+		});
+		registry.register("example", async () => ({
+			...runtime(),
+			dispose: async () => {
+				order.push("domain");
+			},
+		}));
+		await registry.activate("example", caller(scope));
+		await registry.deactivate("example");
+		await registry.deactivate("example");
+		expect(order).toEqual(["domain", "resource", "release"]);
+		expect(release).toHaveBeenCalledOnce();
+	});
+
 	it("authorizes activation before executing plugin code", async () => {
 		const access = policy();
 		vi.mocked(access.authorizeActivation).mockResolvedValue(false);

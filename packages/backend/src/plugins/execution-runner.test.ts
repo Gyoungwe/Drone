@@ -1,12 +1,23 @@
-import { access, chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+	access,
+	chmod,
+	mkdir,
+	mkdtemp,
+	readdir,
+	readFile,
+	realpath,
+	rm,
+	symlink,
+	writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
+import { ContainerSandboxRunner as ContainerKernelRunner } from "@gyoungwe/plugin-api/node/execution";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ContainerKernelRunner } from "./container-runner";
 
 let root: string;
 beforeEach(async () => {
-	root = await mkdtemp(join(tmpdir(), "discovery-engine-test-"));
+	root = await realpath(await mkdtemp(join(tmpdir(), "discovery-engine-test-")));
 	const executable = join(root, "docker");
 	await writeFile(
 		executable,
@@ -73,6 +84,23 @@ const started = () =>
 	});
 
 describe("ContainerKernelRunner ownership and cleanup", () => {
+	for (const nested of [false, true]) {
+		it(`rejects ${nested ? "nested" : "top-level"} runs symlinks before creating files or starting a container`, async () => {
+			const outside = await mkdtemp(join(tmpdir(), "sandbox-outside-"));
+			try {
+				if (nested) await mkdir(join(root, "runs"));
+				await symlink(outside, join(root, "runs", ...(nested ? ["nested"] : [])));
+				const instance = await runner();
+				await expect(
+					instance.run({ ...request(), runDirectory: nested ? "runs/nested/escaped" : "runs/escaped" }),
+				).rejects.toThrow("symlink");
+				expect(await readdir(outside)).toEqual([]);
+				expect((await calls()).some((args) => args[0] === "run")).toBe(false);
+			} finally {
+				await rm(outside, { recursive: true, force: true });
+			}
+		});
+	}
 	it("successful execution verifies absence through a responsive daemon", async () => {
 		const result = await (await runner()).run(request());
 		expect(result.exitCode).toBe(0);

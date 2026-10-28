@@ -191,7 +191,23 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          this._emit(event.type === "agent_end" ? { ...event, willRetry: this._willRetryAfterAgentEnd(event) } : event);
          // Handle session persistence
          if (event.type === "message_end") {
-@@ -990,6 +1020,7 @@
+@@ -809,6 +839,15 @@
+         }
+         return false;
+     }
++    // Drone host-only provenance: never reconstruct a live association from bytes or position.
++    getHostPersistedMessage(message) {
++        if (this._disposed)
++            return undefined;
++        const entryId = this._entryIdsByMessage.get(message);
++        if (!entryId)
++            return undefined;
++        return this.sessionManager.getBranch().find((entry) => entry.type === "message" && entry.id === entryId);
++    }
+     _findPersistedMessageEntryId(message) {
+         const mapped = this._entryIdsByMessage.get(message);
+         if (mapped)
+@@ -990,6 +1029,7 @@
       * Call this when completely done with the session.
       */
      dispose() {
@@ -220,6 +236,15 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      private _eventListeners;
      private _isAgentRunActive;
      private _agentRunAbortRequested;
+@@ -364,6 +368,8 @@
+     /** Internal handler for agent events - shared by subscribe and reconnect */
+     private _handleAgentEvent;
+     private _willRetryAfterAgentEnd;
++    /** Drone host-only actual historical origin; never an association from copied bytes. */
++    getHostPersistedMessage(message: AgentMessage): Extract<SessionEntry, { type: "message" }> | undefined;
+     private _findPersistedMessageEntryId;
+     private _omitRecoveryAttempt;
+     /** Find the last assistant message in agent state (including aborted ones) */
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js

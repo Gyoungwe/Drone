@@ -81,6 +81,14 @@ export class SessionEngine {
 		return session.prompt(text, options);
 	}
 
+	/** Actual SDK provenance only; callers keep this private and never promote it to a live proof. */
+	historicalMessageOrigin(
+		session: AgentSession,
+		message: Parameters<AgentSession["getHostPersistedMessage"]>[0],
+	): ReturnType<AgentSession["getHostPersistedMessage"]> {
+		return session.getHostPersistedMessage(message);
+	}
+
 	/** Explicit extension dispatch never falls through to model input. */
 	async command(
 		session: AgentSession,

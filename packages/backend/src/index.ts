@@ -10,6 +10,14 @@ export type {
 	AnalysisSideEffect,
 } from "@gyoungwe/plugin-api";
 export {
+	buildContainerSandboxArgv as buildContainerKernelArgv,
+	type ContainerProcess,
+	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
+	ContainerSandboxRunner as ContainerKernelRunner,
+	detectContainerRuntime,
+	unavailableContainerCapabilities,
+} from "@gyoungwe/plugin-api/node/execution";
+export {
 	type ComputeCredential,
 	type ComputeCredentialProvider,
 	createDefaultComputeExecutor,
@@ -30,14 +38,6 @@ export {
 	type DiagnosticsSnapshot,
 	redactDiagnosticText,
 } from "./diagnostics";
-export {
-	buildContainerKernelArgv,
-	ContainerKernelRunner,
-	type ContainerKernelRunnerOptions,
-	type ContainerProcess,
-	detectContainerRuntime,
-	unavailableContainerCapabilities,
-} from "./discovery/container-runner";
 export {
 	createDiscoveryHostInput,
 	createDiscoveryService,

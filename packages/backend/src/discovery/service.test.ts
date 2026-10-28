@@ -7,9 +7,13 @@ import { promisify } from "node:util";
 import { SubprocessFixtureRunner } from "@drone/discovery";
 import { InquiryService, MemoryInquiryStorage } from "@drone/inquiry";
 import type { DiscoveryHostLoader } from "@gyoungwe/plugin-api";
+import {
+	buildContainerSandboxArgv as buildContainerKernelArgv,
+	detectContainerRuntime,
+} from "@gyoungwe/plugin-api/node/execution";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { StorageRegistry } from "../storage/registry";
-import { buildContainerKernelArgv, detectContainerRuntime } from "./container-runner";
 import { createDiscoveryService, type DiscoveryServiceOptions } from "./service";
 
 const tarball = process.env.DRONE_DISCOVERY_PLUGIN_TARBALL;
@@ -17,6 +21,8 @@ let loader: DiscoveryHostLoader;
 let installedRoot: string;
 beforeAll(async () => {
 	if (!tarball) return;
+	const api = process.env.DRONE_PLUGIN_API_TARBALL;
+	if (!api) throw new Error("Discovery candidate requires explicit DRONE_PLUGIN_API_TARBALL");
 	installedRoot = await mkdtemp(join(tmpdir(), "discovery-service-install-"));
 	await promisify(execFile)("npm", [
 		"install",
@@ -26,6 +32,7 @@ beforeAll(async () => {
 		"--no-audit",
 		"--no-fund",
 		tarball,
+		api,
 	]);
 	loader = (
 		await import(
@@ -39,7 +46,11 @@ afterAll(async () => {
 	if (installedRoot) await rm(installedRoot, { recursive: true, force: true });
 });
 const installedService = (options: DiscoveryServiceOptions) =>
-	createDiscoveryService(options, loader).service;
+	createDiscoveryService(
+		options,
+		loader,
+		new PluginResourceReservations(join(options.projectRoot, ".test-leases")),
+	).service;
 
 const allow = async () => {};
 
@@ -206,6 +217,54 @@ describe("DiscoveryService composition root", () => {
 		expect(runnerFactory).not.toHaveBeenCalled();
 		expect(storage.register).not.toHaveBeenCalled();
 		await service.dispose();
+	});
+
+	it.skipIf(!tarball)("retains the legacy writer lease when actual kernel cleanup fails", async () => {
+		const root = await mkdtemp(join(tmpdir(), "discovery-legacy-failed-close-"));
+		const options = {
+			projectId: "cleanup-project",
+			projectRoot: root,
+			authorize: allow,
+			runner: {
+				capabilities: {
+					kind: "fixture" as const,
+					languages: ["python" as const],
+					networkDisabled: true,
+					writesOnlyToRunDirectory: true,
+				},
+				run: async () => {
+					throw Object.assign(new Error("synthetic cleanup could not be verified"), {
+						code: "DISCOVERY_CLEANUP_FAILED",
+					});
+				},
+			},
+		};
+		const service = installedService(options),
+			other = installedService(options);
+		try {
+			await service.createKernelSession({
+				sessionId: "cleanup-session",
+				runDirectory: "runs/cleanup",
+				language: "python",
+				dataClassification: "public",
+			});
+			await expect(service.executeKernel("cleanup-session", "print(1)")).rejects.toThrow(
+				"cleanup could not be verified",
+			);
+			await expect(service.dispose()).rejects.toThrow("cleanup failed");
+			await expect(
+				other.createExplorationPlan({
+					id: "other",
+					hypothesisId: "other",
+					prior: { direction: "unknown", recordedAt: "2026-10-28T00:00:00.000Z" },
+					budget: { maxExecutions: 1, maxWallTimeMs: 100, maxOutputBytes: 100, maxCostUnits: 1 },
+					candidates: [],
+				}),
+			).rejects.toThrow("already reserved");
+		} finally {
+			await Promise.allSettled([service.dispose(), other.dispose()]);
+			await rm(root, { recursive: true, force: true });
+		}
 	});
 
 	it.skipIf(!tarball)(

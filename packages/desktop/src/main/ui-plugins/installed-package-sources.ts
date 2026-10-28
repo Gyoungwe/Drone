@@ -58,6 +58,8 @@ export function installedPackageHash(root: string): string {
 
 export interface InstalledUiRuntimeSource {
 	pluginId: string;
+	contentHash: string;
+	deliveryProjection?: "required";
 	packageRoot: string;
 	entrypoint: string;
 	nativeEntrypoint?: string;
@@ -69,8 +71,12 @@ export interface InstalledUiRuntimeSource {
 	resources?: Readonly<Record<string, string>>;
 }
 
+export type InstalledPackageDiscovery =
+	| { packageName: string; packageRoot: string; uiDir?: string; runtime?: InstalledUiRuntimeSource }
+	| { packageName: string; error: string };
+
 export type InstalledUiDiscovery =
-	| { packageName: string; packageRoot: string; uiDir: string; runtime?: InstalledUiRuntimeSource }
+	| (Exclude<InstalledPackageDiscovery, { error: string }> & { uiDir: string })
 	| { packageName: string; error: string };
 
 /** Resolve declarations without importing plugin code. All entries belong to one canonical package. */
@@ -89,9 +95,9 @@ async function installedRuntimeFile(packageRoot: string, value: unknown, field: 
 	return entrypoint;
 }
 
-export async function discoverInstalledUiPackages(root: string): Promise<InstalledUiDiscovery[]> {
+export async function discoverInstalledPackages(root: string): Promise<InstalledPackageDiscovery[]> {
 	const graph = await installedPackageGraph(root);
-	const discoveries: InstalledUiDiscovery[] = [...graph.diagnostics];
+	const discoveries: InstalledPackageDiscovery[] = [...graph.diagnostics];
 	const packageDirs = graph.packages.map((item) => item.directory);
 	const directRoots = new Set(graph.packages.filter((item) => item.direct).map((item) => item.directory));
 	const versions = new Map<string, string | undefined>();
@@ -115,6 +121,7 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 							resources?: unknown;
 						};
 						hosts?: unknown;
+						drone?: { deliveryProjection?: unknown };
 						permissions?: { filesystem?: unknown; network?: unknown };
 					},
 			)
@@ -128,35 +135,22 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 			discoveries.push({ packageName, error: "plugin.manifest.json does not declare host drone-desktop" });
 			continue;
 		}
-		if (typeof manifest.entrypoints?.ui !== "string") continue;
 		const packageRoot = await realpath(packageDir);
-		const uiManifest = resolve(packageRoot, manifest.entrypoints.ui);
-		const outside = relative(packageRoot, uiManifest);
-		if (isAbsolute(outside) || outside.startsWith("..")) {
-			discoveries.push({ packageName, error: "entrypoints.ui escapes the installed package" });
-			continue;
-		}
-		const uiDir = dirname(uiManifest);
-		if (!(await readFile(join(uiDir, "plugin.json"), "utf8").catch(() => null))) {
-			discoveries.push({
-				packageName,
-				error: `entrypoints.ui does not contain ${relative(packageDir, join(uiDir, "plugin.json"))}`,
-			});
-			continue;
-		}
-		const canonicalUiDir = await realpath(uiDir);
-		const canonicalUiRelative = relative(packageRoot, canonicalUiDir);
-		if (
-			isAbsolute(canonicalUiRelative) ||
-			canonicalUiRelative === ".." ||
-			canonicalUiRelative.startsWith(`..${sep}`)
-		) {
-			discoveries.push({ packageName, error: "entrypoints.ui resolves outside the installed package" });
-			continue;
+		let canonicalUiDir: string | undefined;
+		if (manifest.entrypoints?.ui !== undefined) {
+			try {
+				const uiManifest = await installedRuntimeFile(packageRoot, manifest.entrypoints.ui, "ui");
+				if (basename(uiManifest) !== "plugin.json")
+					throw new Error("entrypoints.ui must point to plugin.json");
+				canonicalUiDir = dirname(uiManifest);
+			} catch (error) {
+				discoveries.push({ packageName, error: `Invalid UI entrypoint: ${String(error)}` });
+				continue;
+			}
 		}
 		let runtime: InstalledUiRuntimeSource | undefined;
-		const declaredRuntime = manifest.entrypoints.desktopRuntime;
-		if (declaredRuntime === undefined && manifest.entrypoints.resources !== undefined) {
+		const declaredRuntime = manifest.entrypoints?.desktopRuntime;
+		if (declaredRuntime === undefined && manifest.entrypoints?.resources !== undefined) {
 			discoveries.push({ packageName, error: "entrypoints.resources requires a desktopRuntime owner" });
 			continue;
 		}
@@ -166,7 +160,17 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 					throw new Error("desktopRuntime requires a package.json name");
 				}
 				const entrypoint = await installedRuntimeFile(packageRoot, declaredRuntime, "desktopRuntime");
-				runtime = { pluginId: packageName, packageRoot, entrypoint };
+				runtime = {
+					pluginId: packageName,
+					packageRoot,
+					entrypoint,
+					contentHash: installedPackageHash(packageRoot),
+				};
+				if (manifest.drone?.deliveryProjection !== undefined) {
+					if (manifest.drone.deliveryProjection !== "required")
+						throw new Error("drone.deliveryProjection must be required when declared");
+					runtime.deliveryProjection = "required";
+				}
 				if (Array.isArray(manifest.permissions?.filesystem)) {
 					const filesystem = manifest.permissions.filesystem;
 					if (filesystem.includes("application-state-write")) runtime.requestsStateWrite = true;
@@ -188,14 +192,14 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 					manifest.permissions.network.includes("configured-services")
 				)
 					runtime.requestsModel = true;
-				if (manifest.entrypoints.extension !== undefined) {
+				if (manifest.entrypoints?.extension !== undefined) {
 					runtime.nativeEntrypoint = await installedRuntimeFile(
 						packageRoot,
-						manifest.entrypoints.extension,
+						manifest.entrypoints?.extension,
 						"extension",
 					);
 				}
-				const declaredResources = manifest.entrypoints.resources;
+				const declaredResources = manifest.entrypoints?.resources;
 				if (declaredResources !== undefined) {
 					if (
 						declaredResources === null ||
@@ -216,11 +220,20 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 				continue;
 			}
 		}
-		discoveries.push({ packageName, packageRoot, uiDir: canonicalUiDir, runtime });
+		if (manifest.drone?.deliveryProjection !== undefined && !runtime) {
+			discoveries.push({ packageName, error: "drone.deliveryProjection requires a desktopRuntime owner" });
+			continue;
+		}
+		discoveries.push({
+			packageName,
+			packageRoot,
+			...(canonicalUiDir ? { uiDir: canonicalUiDir } : {}),
+			runtime,
+		});
 	}
-	type Source = Extract<InstalledUiDiscovery, { uiDir: string }>;
+	type Source = Exclude<InstalledPackageDiscovery, { error: string }>;
 	const grouped = new Map<string, [Source, ...Source[]]>();
-	const output: InstalledUiDiscovery[] = discoveries.filter((item) => "error" in item);
+	const output: InstalledPackageDiscovery[] = discoveries.filter((item) => "error" in item);
 	for (const item of discoveries) {
 		if ("error" in item) continue;
 		const group = grouped.get(item.packageName);
@@ -255,4 +268,11 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 		}
 	}
 	return output;
+}
+
+/** UI contributions are a projection of the same validated package discovery. */
+export async function discoverInstalledUiPackages(root: string): Promise<InstalledUiDiscovery[]> {
+	return (await discoverInstalledPackages(root)).filter(
+		(item): item is InstalledUiDiscovery => "error" in item || item.uiDir !== undefined,
+	);
 }

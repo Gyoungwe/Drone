@@ -302,7 +302,14 @@ it.skipIf(!tarball)(
 								{ kind: "files", handle: "vault", access: grantFileWrite ? "read-write" : "read" },
 							],
 							resourcesLifecycle: { dispose: () => resources.disposeResources() },
-							dispose: () => resources.dispose(),
+							dispose: async () => {
+								await resources.disposeResources();
+								await files.drain();
+							},
+							finalRelease: async () => {
+								resources.releaseReservations();
+								files.releaseReservations();
+							},
 						};
 					},
 			});

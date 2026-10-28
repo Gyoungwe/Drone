@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	type PluginCapabilityContext,
+	PluginFileCapabilities,
+	PluginResourceManager,
 	PluginRuntimeRegistry,
 	type PluginRuntimeSource,
 	StorageRegistry,
@@ -186,6 +188,39 @@ describe("desktop activation directory grants", () => {
 		await expect(client.invoke("read", null)).rejects.toThrow("not active");
 	});
 
+	it("retains every activation lease when filesystem drain fails before final release", async () => {
+		const drain = vi
+			.spyOn(PluginFileCapabilities.prototype, "drain")
+			.mockRejectedValue(new Error("filesystem cleanup failed"));
+		const filesReleased = vi.spyOn(PluginFileCapabilities.prototype, "releaseReservations");
+		const resourcesReleased = vi.spyOn(PluginResourceManager.prototype, "releaseReservations");
+		try {
+			const provider = createDesktopResourceCapabilities(source, root, {
+				profileDirectory: profile,
+				storage: new StorageRegistry(),
+				selectDirectories: async () => [state],
+			});
+			const registry = new PluginRuntimeRegistry(
+				{ authorizeActivation: async () => true, authorizeInvocation: async () => true },
+				"application",
+				provider,
+			);
+			registry.register(source.pluginId, async () => ({ operations: {}, dispose: async () => {} }));
+			await registry.activate(source.pluginId, () => ({
+				identity: {},
+				scope: { kind: "application" },
+				signal: new AbortController().signal,
+			}));
+			await expect(registry.deactivate(source.pluginId)).rejects.toThrow("filesystem cleanup failed");
+			expect(filesReleased).not.toHaveBeenCalled();
+			expect(resourcesReleased).not.toHaveBeenCalled();
+		} finally {
+			drain.mockRestore();
+			filesReleased.mockRestore();
+			resourcesReleased.mockRestore();
+		}
+	});
+
 	for (const kind of ["state", "files"] as const) {
 		it(`uses declared ${kind} access without any resource worker`, async () => {
 			await writeFile(join(state, "journal.json"), JSON.stringify({ revision: 1 }));
@@ -215,7 +250,8 @@ describe("desktop activation directory grants", () => {
 			);
 			expect(Object.keys(ports.handlers).some((name) => name.startsWith("resource."))).toBe(false);
 			expect(ports.resourcesLifecycle).toBeUndefined();
-			expect(ports.dispose).toBeUndefined();
+			await ports.dispose?.();
+			await ports.finalRelease?.();
 		});
 	}
 

@@ -427,3 +427,22 @@ TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Chec
 ## 2026-10-28 · 原生 input 的空字符串不等于取消
 
 Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是合法回答；取消才是 undefined。Desktop 的 trim() || undefined 与必填 text 曾改变 SDK 语义。普通输入必须保留原值，领域路径等解释由调用方处理；AskDialog 的可选 text 应明确提交空 customText，能力结果 schema 不得用 minLength:1 把合法空输入拒绝。真实 SDK、受限 worker 与表单点击证据见[会话问答](pluginization/native-plugin-session-questions-evidence.md)。
+### 原生 SDK 的 dispose 不会代发扩展 shutdown
+
+Pi 1.1.0 的 `AgentSession.dispose()` 只中止/失效内部运行时，不会发出 `session_shutdown`。独立 SDK 子进程若只调用它，扩展拥有的 writer lease 会留下，并正确阻止后继 writer。嵌入端必须执行公开 extensionRunner 的 shutdown 生命周期、abort、dispose，并收集 SDK onError；Drone 的 `SessionEngine.close` 已使用该顺序。不得通过 process exit 全局账本自动删除 lease，也不能把 SDK 吞下的 shutdown handler 错误记为成功。复现与真实交接见 P5 shared-owner 机器回执。
+
+### 只读旧 owner 不能在交接后用缓存覆盖新 journal
+
+旧 Discovery Domain 可先只读缓存 JSON，再等另一个 owner 完成写入并释放 lease。此时仅靠新取到的 lease 不能证明内存快照仍新鲜。迁移中的旧 journal 端口使用真正 JsonStore 的 `writeChecked`、原始字节 SHA 与回读；版本变化时明确要求关闭重开。新 UI 接管也必须保留唯一既有 projectId，混合 ID 拒绝；不能取第一条或重新生成 ID 后覆盖历史。
+
+### 容器 runs 根不能分别 canonicalize 后当成授权根
+
+如果 `workspace/runs` 已是指向外部的 symlink，分别对 runs 和执行子目录做 realpath 再比较包含关系，会把两个外部路径错误接受为工作区内。容器 runner 现在固定 canonical workspace，逐级创建并检查 runs 路径，拒绝任一 symlink/non-directory 并回读真实路径；不能在 realpath 失败后退回字符串路径。回归验证顶层和嵌套 symlink 都不会创建外部文件或启动容器。
+
+## 2026-10-28 · SDK append 失败后的内存 phantom 与 reload
+
+Pi 1.1.0 的 SessionManager 先把 append entry 加入内存，再写磁盘；EISDIR 后 reload 仍复用这个 manager。不要从 reload 成功推断数据已保存，也不要继续 sendMessage 以 phantom leaf 为 parent 延长磁盘链。TaskApplication 必须 fail closed、保留最后 committed 诊断，真正从磁盘重开后验证；禁止 poke SDK 私有数组做假 rollback。extension 的 events.on 监听会在 invalidate 被解除，不能靠 bus listener 伪装跨 reload 持久状态。实际双入口反证和 S2 剩余边界见[TaskSession 证据](pluginization/native-plugin-task-session-actor-evidence.md)。
+
+### 已安装 UI 构建产物不能写回其原生来源树
+
+同包原生与 UI 共用完整包树 hash。把 esbuild 的 `dist/index.js` 写回已安装 UI 目录，会让宿主自己改变正在使用的原生来源，之前在 readCode 后重算 hash 的做法也不能建立稳定的代次。安装包 UI 现在按已验证 hash 编译到宿主 `ui-plugin-builds` 缓存；用户本地 UI 目录继续使用原目录 dist。回归比较编译前后完整树 hash、native/UI 描述对象身份与重新扫描后的 built 状态；这不授予新的文件权限，也不替代包级停用/卸载。

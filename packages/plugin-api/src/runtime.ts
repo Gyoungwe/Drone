@@ -34,6 +34,18 @@ export interface PluginRuntimeResource {
 	readonly access?: "read" | "read-write";
 }
 
+/** Description of a root already approved for this activation; not a new path grant. */
+export interface PluginRuntimeRootDescription extends PluginRuntimeResource {
+	readonly path: string;
+	readonly access: "read" | "read-write";
+}
+/** Exclusive JSON state writer lease, held until successful owner and resource disposal. */
+export interface PluginStateReserveInput {
+	readonly root: string;
+	/** Existing root-relative directory; an empty path reserves the selected root itself. */
+	readonly path: string;
+}
+
 /** Stops this activation's resource children, with no new file/model/caller authority.
  * Resolves after accepted resource work settles and real child processes exit.
  * Writer reservations stay held until the domain owner has also finished disposal. */

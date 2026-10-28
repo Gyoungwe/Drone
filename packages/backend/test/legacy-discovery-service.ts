@@ -39,7 +39,10 @@ import type {
 	DiscoveryKernelSession,
 	DiscoveryMultipathAssessment,
 } from "@drone/shared";
-import { ContainerKernelRunner, type ContainerKernelRunnerOptions } from "../src/discovery/container-runner";
+import {
+	ContainerSandboxRunner as ContainerKernelRunner,
+	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
+} from "@gyoungwe/plugin-api/node/execution";
 import { JsonStore } from "../src/json-store";
 import type { StorageRegistry } from "../src/storage/registry";
 
@@ -645,4 +648,7 @@ export class DiscoveryService implements DiscoveryServicePort {
 	}
 }
 
-export { ContainerKernelRunner, detectContainerRuntime } from "../src/discovery/container-runner";
+export {
+	ContainerSandboxRunner as ContainerKernelRunner,
+	detectContainerRuntime,
+} from "@gyoungwe/plugin-api/node/execution";

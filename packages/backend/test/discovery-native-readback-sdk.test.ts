@@ -29,6 +29,8 @@ it.skipIf(!tarball)(
 		const opened: Awaited<ReturnType<typeof createAgentSession>>["session"][] = [];
 		try {
 			const prefix = join(root, "installed");
+			const api = process.env.DRONE_PLUGIN_API_TARBALL;
+			if (!api) throw new Error("Discovery candidate requires explicit DRONE_PLUGIN_API_TARBALL");
 			await run("npm", [
 				"install",
 				"--prefix",
@@ -38,6 +40,7 @@ it.skipIf(!tarball)(
 				"--no-audit",
 				"--no-fund",
 				tarball as string,
+				api,
 			]);
 			const packageRoot = join(prefix, "node_modules/@gyoungwe/pi-discovery");
 			const { discoveryHostLoader } = (await import(
@@ -134,8 +137,11 @@ it.skipIf(!tarball)(
 				opened.push(session);
 				await session.bindExtensions({});
 				for (const name of manifest.tools) {
-					expect(readDroneToolMeta(session.getToolDefinition(name))).toMatchObject({
-						readOnly: true,
+					const meta = readDroneToolMeta(session.getToolDefinition(name));
+					expect(meta.readOnly === true).toBe(
+						!["discovery_bind_workspace", "discovery_create_plan"].includes(name),
+					);
+					expect(meta).toMatchObject({
 						capabilities: ["research", "analysis"],
 					});
 				}

@@ -1,4 +1,4 @@
-import { existsSync, type FSWatcher, watch } from "node:fs";
+import { existsSync, type FSWatcher, realpathSync, watch } from "node:fs";
 import {
 	cp,
 	lstat,
@@ -27,7 +27,7 @@ import { app } from "electron";
 import { buildPlugin } from "./build";
 import { defaultUiPluginsConfig, loadUiPluginsConfig, saveUiPluginsConfig } from "./config";
 import {
-	discoverInstalledUiPackages,
+	discoverInstalledPackages,
 	type InstalledUiDiscovery,
 	type InstalledUiRuntimeSource,
 	installedPackageHash,
@@ -332,6 +332,7 @@ export class UiPluginManager {
 	/** name → 插件目录绝对路径（白名单：readCode/openDir 只接受扫描到的合法名） */
 	private dirNames = new Map<string, string>();
 	/** Installed provenance is never inferred from a local UI directory or its name. */
+	private packageSources = new Map<string, InstalledUiRuntimeSource>();
 	private installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
 	/** Discovery diagnostics are host-owned metadata; an empty managed root is a valid empty list. */
 	private installedDiagnostics: Array<{ packageName: string; error: string }> = [];
@@ -372,6 +373,7 @@ export class UiPluginManager {
 		runtime?: InstalledUiRuntimeSource,
 		forceReconfirmation = false,
 		packageName?: string,
+		contentHash?: string,
 	): Promise<UiPluginInfo> {
 		const manifest = await readManifest(srcDir);
 		const invalidReason = validateManifest(name, manifest ?? {}, runtime);
@@ -390,7 +392,7 @@ export class UiPluginManager {
 			trusted: forceReconfirmation ? false : (this.config.plugins[name]?.trusted ?? false),
 			invalidReason: invalidReason ?? undefined,
 			buildError: prev?.buildError,
-			built: existsSync(join(srcDir, "dist/index.js")),
+			built: existsSync(join(this.buildDirectory(srcDir, contentHash), "index.js")),
 			builtin: this.builtinNames.has(name) || undefined, // 用户插件不落字段（保持载荷干净）
 		};
 	}
@@ -447,7 +449,14 @@ export class UiPluginManager {
 		// a diagnostic row and cannot affect the user/built-in plugin scan.
 		const installed = this.legacyInstalledPackageDir
 			? []
-			: await discoverInstalledUiPackages(this.installedPackageRoot);
+			: await discoverInstalledPackages(this.installedPackageRoot);
+		this.packageSources = new Map(
+			installed.flatMap((candidate) =>
+				"error" in candidate || !candidate.runtime
+					? []
+					: [[`package:${candidate.packageRoot}`, candidate.runtime] as const],
+			),
+		);
 		this.installedDiagnostics = installed.filter(
 			(candidate): candidate is { packageName: string; error: string } => "error" in candidate,
 		);
@@ -459,9 +468,16 @@ export class UiPluginManager {
 			});
 		}
 		const candidates = await Promise.all(
-			installed.map(async (candidate) =>
-				"error" in candidate ? candidate : { ...candidate, uiManifest: await readManifest(candidate.uiDir) },
-			),
+			installed
+				.filter(
+					(candidate): candidate is InstalledUiDiscovery =>
+						"error" in candidate || candidate.uiDir !== undefined,
+				)
+				.map(async (candidate) =>
+					"error" in candidate
+						? candidate
+						: { ...candidate, uiManifest: await readManifest(candidate.uiDir) },
+				),
 		);
 		const uiOwners = new Map<string, string[]>();
 		for (const candidate of candidates) {
@@ -527,7 +543,7 @@ export class UiPluginManager {
 				installedSources.set(installedName, candidate);
 				const identity = {
 					root: candidate.packageRoot,
-					hash: installedPackageHash(candidate.packageRoot),
+					hash: candidate.runtime?.contentHash ?? installedPackageHash(candidate.packageRoot),
 				};
 				const previous =
 					this.installedPackageHashes.get(installedName) ?? persistedInstallations[candidate.packageName];
@@ -542,6 +558,7 @@ export class UiPluginManager {
 					candidate.runtime,
 					this.reconfirmInstallations.has(installedName),
 					candidate.packageName,
+					identity.hash,
 				);
 				this.infos.set(installedName, info);
 				out.push(info);
@@ -599,8 +616,34 @@ export class UiPluginManager {
 
 	/** The source belongs to the installed package selected by the current scan. */
 	runtimeSource(name: string): InstalledUiRuntimeSource | undefined {
+		const native = this.packageSources.get(name);
+		if (native) {
+			try {
+				return installedPackageHash(native.packageRoot) === native.contentHash ? native : undefined;
+			} catch (error) {
+				log.warn("Installed native source is unavailable", native.pluginId, error);
+				return undefined;
+			}
+		}
 		if (!this.installedSourceCurrent(name)) return undefined;
 		return this.installedSources.get(name)?.runtime;
+	}
+
+	/** Called only for a path selected by the actual Pi extension loader. UI visibility grants no native authority. */
+	nativeRuntimeName(path: string): string | undefined {
+		const canonical = realpathSync(path);
+		for (const [name, source] of this.packageSources) if (source.nativeEntrypoint === canonical) return name;
+		return undefined;
+	}
+
+	isNativeSourceAvailable(name: string): boolean {
+		return this.packageSources.has(name) && this.runtimeSource(name) !== undefined;
+	}
+
+	private buildDirectory(sourceDirectory: string, contentHash?: string): string {
+		return contentHash
+			? join(app.getPath("userData"), "ui-plugin-builds", contentHash)
+			: join(sourceDirectory, "dist");
 	}
 
 	/** Runtime activation additionally requires the global switch and explicit UI trust. */
@@ -625,16 +668,18 @@ export class UiPluginManager {
 		const pluginDir = this.dirNames.get(name);
 		const manifest = await readManifest(pluginDir ?? "");
 		if (!pluginDir || !manifest || typeof manifest.main !== "string") return false;
-		const dist = join(pluginDir, "dist/index.js");
+		const contentHash = this.installedPackageHashes.get(name)?.hash;
+		const outDir = this.buildDirectory(pluginDir, contentHash);
+		const dist = join(outDir, "index.js");
 		try {
 			let needsBuild = force || !existsSync(dist);
-			if (!needsBuild) {
+			if (!needsBuild && !contentHash) {
 				const srcMtime = await newestMtime(pluginDir);
 				const distStat = await stat(dist).catch(() => null);
 				needsBuild = srcMtime === null || !distStat || srcMtime > distStat.mtimeMs;
 			}
 			if (needsBuild) {
-				const res = await buildPlugin(pluginDir, manifest.main);
+				const res = await buildPlugin(pluginDir, manifest.main, { outDir });
 				if (res.ok) {
 					this.infos.set(name, { ...info, buildError: undefined, built: true });
 				} else {
@@ -661,28 +706,18 @@ export class UiPluginManager {
 		const pluginDir = this.dirNames.get(name);
 		if (!pluginDir) return { error: `未知插件 ${name}` };
 		const ok = await this.ensureBuilt(name);
-		// Development fixtures may build a UI source into the installed package's
-		// own dist/ directory. Treat that host-generated artifact as the same
-		// generation only after the pre-build identity check above succeeded;
-		// an external in-place replacement has already returned the reload error.
-		const installedIdentity = this.installedPackageHashes.get(name);
-		if (installedIdentity) {
-			this.installedPackageHashes.set(name, {
-				root: installedIdentity.root,
-				hash: installedPackageHash(installedIdentity.root),
-			});
-		}
+		const output = join(
+			this.buildDirectory(pluginDir, this.installedPackageHashes.get(name)?.hash),
+			"index.js",
+		);
 		if (!ok) {
 			// 构建失败：旧产物存在则继续生效（spec §6，不清 dist）；buildError 已进 list 由面板展示
-			if (!existsSync(join(pluginDir, "dist/index.js"))) {
+			if (!existsSync(output)) {
 				return { error: this.infos.get(name)?.buildError ?? `构建失败：${name}` };
 			}
 		}
 		try {
-			const [manifest, code] = await Promise.all([
-				readManifest(pluginDir),
-				readFile(join(pluginDir, "dist/index.js"), "utf-8"),
-			]);
+			const [manifest, code] = await Promise.all([readManifest(pluginDir), readFile(output, "utf-8")]);
 			if (!manifest || validateManifest(name, manifest, this.runtimeSource(name)))
 				return { error: "manifest 校验失败" };
 			// 未知 region 条目已被过滤（与 scanAll 合成 info 同源），registry 只注册已知区域
