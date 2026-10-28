@@ -26,6 +26,7 @@ async function setup() {
   pi.registerCommand("record", { description:"Record exact command scope", handler:async (args,ctx) => {
    if(args === "fail") throw new Error("Synthetic command failed");
    if(args === "wait") await ctx.waitForIdle();
+   if(args === "select" && (await ctx.ui.select("Command permission", ["allow"], {signal:ctx.signal}) !== "allow" || ctx.signal?.aborted)) return;
    pi.appendEntry("command-record", {args,cwd:ctx.cwd});
   }});
  };`;
@@ -122,5 +123,24 @@ it("cancel and close revoke a command paused on the SDK idle boundary before it 
 	const closing = service.command(meta.sessionId, "record", "wait").catch((error) => error);
 	await service.closeSession(meta.sessionId);
 	expect(await closing).toMatchObject({ message: "Session caller revoked" });
+	expect(faux.state.callCount).toBe(0);
+}, 20000);
+
+it("cancel removes a pending real command question and prevents its late answer from committing", async () => {
+	const { service, session, meta, faux } = await setup();
+	let request;
+	service.onAskRequest((value) => {
+		request = value;
+	});
+	const result = service.command(meta.sessionId, "record", "select").catch((error) => error);
+	await vi.waitFor(() => expect(request).toBeTruthy());
+	await service.abort(meta.sessionId);
+	service.respondAsk(request.id, {
+		kind: "answer",
+		mode: "submit",
+		answers: { value: { values: ["allow"] } },
+	});
+	expect(await result).toMatchObject({ message: "Session command cancelled" });
+	expect(JSON.stringify(session.sessionManager.getEntries())).not.toContain('"args":"select"');
 	expect(faux.state.callCount).toBe(0);
 }, 20000);

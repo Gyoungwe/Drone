@@ -82,16 +82,31 @@ export class SessionEngine {
 	}
 
 	/** Explicit extension dispatch never falls through to model input. */
-	async command(session: AgentSession, name: string, args: string, assertCurrent: () => void): Promise<void> {
+	async command(
+		session: AgentSession,
+		name: string,
+		args: string,
+		signal: AbortSignal,
+		assertCurrent: () => void,
+	): Promise<void> {
 		assertCurrent();
 		const runner = session.extensionRunner;
 		const command = runner.getCommand(name);
 		if (!command) throw new Error(`Extension command unavailable: ${name}`);
-		const context = runner.createCommandContext();
+		const source = runner.createCommandContext();
+		const sourceSignal = source.signal;
+		const commandSignal = sourceSignal ? AbortSignal.any([signal, sourceSignal]) : signal;
 		const check = () => {
 			assertCurrent();
 			if (session.extensionRunner !== runner) throw new Error("Session commands changed during execution");
 		};
+		// Preserve the SDK lazy context getters; idle commands have no agent-run signal.
+		const context = new Proxy(source, {
+			get(target, property, receiver) {
+				check();
+				return property === "signal" ? commandSignal : Reflect.get(target, property, receiver);
+			},
+		});
 		const waitForIdle = context.waitForIdle;
 		context.waitForIdle = async () => {
 			await waitForIdle();

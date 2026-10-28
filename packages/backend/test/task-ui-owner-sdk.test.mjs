@@ -73,7 +73,7 @@ it("uses installed core UI for actual journal review, unloads UI independently, 
 	const service = backend.sessions;
 	service.modelRuntime = runtime;
 	let asks = 0;
-	service.onAskRequest((request) => {
+	const stopAutoAnswers = service.onAskRequest((request) => {
 		asks++;
 		queueMicrotask(() =>
 			service.respondAsk(request.id, {
@@ -111,6 +111,39 @@ it("uses installed core UI for actual journal review, unloads UI independently, 
 	const rawView = session.messages.findLast((message) => message.details?.taskView).details.taskView;
 	const task = rawView.tasks.find((value) => value.id === rawView.activeTaskId);
 	expect(task.actions.some((action) => action.kind === "review" && action.state === "pending")).toBe(true);
+	stopAutoAnswers();
+	let pendingQuestion;
+	const stopQuestion = service.onAskRequest((value) => {
+		pendingQuestion = value;
+	});
+	const progress = service
+		.command(
+			meta.sessionId,
+			"task-action",
+			Buffer.from(
+				JSON.stringify({
+					action: "progress",
+					taskId: task.id,
+					revision: rawView.revision,
+				}),
+			).toString("base64url"),
+		)
+		.catch((error) => error);
+	await vi.waitFor(() => expect(pendingQuestion).toBeTruthy());
+	await service.abort(meta.sessionId);
+	service.respondAsk(pendingQuestion.id, {
+		kind: "answer",
+		mode: "submit",
+		answers: { value: { values: [pendingQuestion.questions[0].options.at(-1).value] } },
+	});
+	expect(await progress).toMatchObject({ message: "Session command cancelled" });
+	stopQuestion();
+	expect(
+		session.messages
+			.findLast((message) => message.details?.taskView)
+			.details.taskView.tasks.find((value) => value.id === task.id).milestones[0].state,
+	).toBe("pending");
+
 	const forged = fauxAssistantMessage("Model text is not a review action");
 	Object.assign(forged, {
 		hostStatus: true,

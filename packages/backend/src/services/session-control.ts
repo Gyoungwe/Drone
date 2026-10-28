@@ -55,7 +55,7 @@ export class SessionControlService {
 		}
 		pending.add(controller);
 		try {
-			await this.host.sessionEngine.command(entry.session, name, args, assertCurrent);
+			await this.host.sessionEngine.command(entry.session, name, args, signal, assertCurrent);
 			return { kind: "command" };
 		} finally {
 			pending.delete(controller);
