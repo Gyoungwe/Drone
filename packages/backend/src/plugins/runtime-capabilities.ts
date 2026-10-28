@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type {
 	PluginResourcesLifecycle,
 	PluginRuntimeCapabilities,
@@ -10,7 +11,17 @@ import { Type } from "typebox";
 import { Check } from "typebox/value";
 import type { AskQuestionRoute } from "../session/ask-gate";
 
+/** Created only around an actual SDK native callback; never accepted from operation or IPC input. */
+export interface PluginNativeInvocation {
+	readonly kind: "message_start" | "tool_execution_end";
+	readonly event: unknown;
+	readonly attachment: PluginNativeSession;
+}
+
 export interface PluginCapabilityContext {
+	readonly nativeInvocation?: PluginNativeInvocation;
+	/** Actual surrounding registry operation effect, distinct from the current capability's effect. */
+	readonly invocationEffect?: "read" | "write";
 	/** Host-only nested service lineage; never accepted from plugin JSON. */
 	readonly providerChain?: readonly { readonly source: object; readonly operation: string }[];
 	readonly operation?: string;
@@ -120,6 +131,7 @@ export class PluginCapabilityBroker {
 		const authority: Authority = {
 			context: {
 				...context,
+				invocationEffect: effect,
 				capabilities: { call: (name, input, signal) => this.trackedCall(authority, name, input, signal) },
 			},
 			effect,

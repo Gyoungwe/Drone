@@ -12,10 +12,12 @@ import type {
 	PluginRuntimeScope,
 } from "@gyoungwe/plugin-api/runtime";
 import { Check } from "typebox/value";
+import { hostText } from "../reply-language";
 import type { AskQuestionRoute } from "../session/ask-gate";
 import { NATIVE_EVENTS } from "./native-events";
 import {
 	PluginCapabilityBroker,
+	type PluginNativeInvocation,
 	type PluginRuntimeCapabilitiesOptions,
 	type PluginRuntimeCapabilitiesProvider,
 } from "./runtime-capabilities";
@@ -88,6 +90,8 @@ interface Activation extends PluginRuntimeActivation {
 	stopping?: Promise<void>;
 }
 
+type RegistryOperation = PluginRuntimeOperation & { readonly approvalDetail?: string };
+
 /** UI approval can outlive its caller; cancellation revokes authority without waiting for the dialog. */
 async function authorize(approval: () => Promise<boolean>, signal: AbortSignal): Promise<boolean> {
 	signal.throwIfAborted();
@@ -111,6 +115,10 @@ async function authorize(approval: () => Promise<boolean>, signal: AbortSignal):
 export class PluginRuntimeRegistry {
 	private readonly factories = new Map<string, PluginNativeRuntimeFactory>();
 	private readonly activations = new Map<string, Activation>();
+	private readonly nativeCallers = new WeakMap<
+		PluginNativeSession,
+		{ readonly resolve: PluginRuntimeCallerResolver | undefined; readonly lifetime: AbortController }
+	>();
 
 	constructor(
 		private readonly policy: PluginRuntimePolicy,
@@ -255,27 +263,33 @@ export class PluginRuntimeRegistry {
 		if (!create) throw new Error(`Plugin has no native session adapter: ${pluginId}`);
 		const creating = Promise.resolve().then(async () => {
 			const native = await create();
+			const lifetime = new AbortController();
 			let closing: Promise<void> | undefined;
 			const owned = {
 				...native,
 				dispose: () => {
+					lifetime.abort(new Error("Native provider attachment closed"));
 					closing ??= native.dispose().then(() => {
 						activation.natives.delete(owned);
 					});
 					return closing;
 				},
 			};
+			this.nativeCallers.set(owned, { resolve: resolveProjectionCaller, lifetime });
 			activation.natives.add(owned);
-			return owned;
+			return { native: owned, lifetime };
 		});
 		activation.pending.add(creating);
-		let native: PluginNativeSession;
+		let attached: { native: PluginNativeSession; lifetime: AbortController };
 		try {
-			native = await creating;
+			attached = await creating;
 		} finally {
 			activation.pending.delete(creating);
 		}
 		activation.abort.signal.throwIfAborted();
+		const { native, lifetime } = attached;
+		const nativeSignal = (signal?: AbortSignal) =>
+			AbortSignal.any([lifetime.signal, ...(signal ? [signal] : [])]);
 		const projection = native.projection;
 		const finalizer = projection?.finalize?.bind(projection);
 		const projectionCaller = () => resolveProjectionCaller?.();
@@ -333,6 +347,7 @@ export class PluginRuntimeRegistry {
 			: undefined;
 		return {
 			...native,
+			nativeOperations: undefined,
 			projection: projected,
 			// Do not pass through a similarly named property from untyped source exports.
 			hostProjection: projected
@@ -347,12 +362,19 @@ export class PluginRuntimeRegistry {
 						// Capability authorization still uses the operation/port effects below.
 						annotations: { ...tool.annotations, readOnlyHint: native.toolEffects?.[tool.name] === "read" },
 						execute: (id, input, signal, update, context) =>
-							this.call(activation, () => resolveCaller(context), `native:tool:${tool.name}`, input, signal, {
-								inputSchema: tool.parameters,
-								resultSchema: {},
-								effect: native.toolEffects?.[tool.name] ?? "write",
-								execute: (_input, call) => tool.execute(id, input, call.signal, update, context),
-							}) as ReturnType<ToolDefinition["execute"]>,
+							this.call(
+								activation,
+								() => resolveCaller(context),
+								`native:tool:${tool.name}`,
+								input,
+								nativeSignal(signal),
+								{
+									inputSchema: tool.parameters,
+									resultSchema: {},
+									effect: native.toolEffects?.[tool.name] ?? "write",
+									execute: (_input, call) => tool.execute(id, input, call.signal, update, context),
+								},
+							) as ReturnType<ToolDefinition["execute"]>,
 					})) as ExtensionAPI["registerTool"];
 				adapted.registerCommand = (name, command) =>
 					pi.registerCommand(name, {
@@ -363,7 +385,7 @@ export class PluginRuntimeRegistry {
 								() => resolveCaller(context),
 								`native:command:${name}`,
 								args,
-								context.signal,
+								nativeSignal(context.signal),
 								{
 									inputSchema: { type: "string" },
 									resultSchema: { type: "null" },
@@ -397,13 +419,18 @@ export class PluginRuntimeRegistry {
 							() => resolveCaller(context),
 							`native:event:${name}`,
 							event,
-							context.signal,
+							nativeSignal(context.signal),
 							{
 								inputSchema: {},
 								resultSchema: {},
 								effect: native.eventEffects?.[name] ?? (name === "session_start" ? "read" : "write"),
 								execute: async () => handler(event, context),
 							},
+							false,
+							undefined,
+							name === "message_start" || name === "tool_execution_end"
+								? { kind: name, event, attachment: native }
+								: undefined,
 						);
 					});
 				}) as ExtensionAPI["on"];
@@ -417,6 +444,79 @@ export class PluginRuntimeRegistry {
 				);
 			},
 		};
+	}
+
+	/** Source capability routing rechecks the exact still-live attachment, not a serialized event claim. */
+	hasNativeInvocation(origin: PluginNativeInvocation, sessionIdentity: object | undefined): boolean {
+		const binding = this.nativeCallers.get(origin.attachment);
+		return (
+			!!sessionIdentity &&
+			!!binding &&
+			!binding.lifetime.signal.aborted &&
+			binding.resolve?.()?.sessionIdentity === sessionIdentity
+		);
+	}
+
+	/** Invoke a declared receiver callback only on its already-bound actual native session. */
+	async invokeNativeExport(
+		pluginId: string,
+		resolveCaller: PluginRuntimeCallerResolver,
+		name: string,
+		input: unknown,
+		origin: PluginNativeInvocation,
+		effectCeiling: "read" | "write",
+		signal: AbortSignal,
+	): Promise<unknown> {
+		const activation = this.activations.get(pluginId);
+		if (activation?.state !== "active") throw new Error("Provider native attachment is unavailable");
+		const caller = resolveCaller();
+		if (!caller?.sessionIdentity) throw new Error("Provider native call requires an actual live session");
+		const candidates = [...activation.natives].flatMap((native) => {
+			const binding = this.nativeCallers.get(native);
+			return binding &&
+				!binding.lifetime.signal.aborted &&
+				binding.resolve?.()?.sessionIdentity === caller.sessionIdentity
+				? [{ native, binding }]
+				: [];
+		});
+		const receiver = candidates[0];
+		if (!receiver || candidates.length !== 1)
+			throw new Error(
+				candidates.length
+					? "Provider native attachment is ambiguous"
+					: "Provider native attachment is unavailable",
+			);
+		const { native, binding } = receiver;
+		const operation =
+			native.nativeOperations && Object.hasOwn(native.nativeOperations, name)
+				? native.nativeOperations[name]
+				: undefined;
+		if (!operation) throw new Error(`Provider native operation is unavailable: ${name}`);
+		if (operation.event !== origin.kind)
+			throw new Error("Provider native operation does not accept this SDK event");
+		const currentCaller = () => {
+			binding.lifetime.signal.throwIfAborted();
+			if (!activation.natives.has(native) || binding.resolve?.()?.sessionIdentity !== caller.sessionIdentity)
+				throw new Error("Provider native attachment changed during invocation");
+			return resolveCaller();
+		};
+		return this.call(
+			activation,
+			currentCaller,
+			`native:provider:${name}`,
+			input,
+			AbortSignal.any([signal, binding.lifetime.signal]),
+			{
+				inputSchema: operation.inputSchema,
+				resultSchema: operation.resultSchema,
+				effect: operation.effect,
+				approvalDetail: `${hostText("原生事件服务", "Native event service")}: ${name}; effect=${operation.effect}`,
+				execute: (value, context) => operation.execute(value, origin.event, context),
+			},
+			false,
+			effectCeiling,
+			{ ...origin, attachment: native },
+		);
 	}
 
 	deactivate(pluginId: string): Promise<void> {
@@ -490,9 +590,10 @@ export class PluginRuntimeRegistry {
 		name: string,
 		input: unknown,
 		callerSignal?: AbortSignal,
-		operationOverride?: PluginRuntimeOperation,
+		operationOverride?: RegistryOperation,
 		withoutCapabilities = false,
 		effectCeiling?: "read" | "write",
+		nativeInvocation?: PluginNativeInvocation,
 	): Promise<unknown> {
 		if (activation.state !== "active") {
 			throw new Error(`Plugin runtime is not active: ${activation.pluginId}`);
@@ -533,6 +634,7 @@ export class PluginRuntimeRegistry {
 			withoutCapabilities,
 			effectCeiling,
 			caller.providerChain,
+			nativeInvocation,
 		);
 		activation.pending.add(pending);
 		try {
@@ -550,12 +652,13 @@ export class PluginRuntimeRegistry {
 		callerIdentity: object,
 		scope: PluginRuntimeScope,
 		checkCaller: () => void,
-		operationOverride?: PluginRuntimeOperation,
+		operationOverride?: RegistryOperation,
 		sessionIdentity?: object,
 		questions?: AskQuestionRoute,
 		withoutCapabilities = false,
 		effectCeiling?: "read" | "write",
 		providerChain?: PluginRuntimeCaller["providerChain"],
+		nativeInvocation?: PluginNativeInvocation,
 	): Promise<unknown> {
 		signal.throwIfAborted();
 		const runtime = await activation.ready;
@@ -573,6 +676,7 @@ export class PluginRuntimeRegistry {
 			operation: name,
 			effect: operation.effect,
 			input,
+			...(operationOverride?.approvalDetail ? { approvalDetail: operationOverride.approvalDetail } : {}),
 		};
 		if (!(await authorize(() => this.policy.authorizeInvocation(request, signal), signal))) {
 			throw new Error(`Plugin operation denied: ${name}`);
@@ -588,6 +692,7 @@ export class PluginRuntimeRegistry {
 						pluginId: activation.pluginId,
 						operation: name,
 						providerChain,
+						nativeInvocation,
 						applicationId: activation.applicationId,
 						scope,
 						callerIdentity,
