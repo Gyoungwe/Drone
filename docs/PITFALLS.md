@@ -500,3 +500,7 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 SDK 把同一个参数对象依次交给每个 `tool_call` 处理器，然后原样交给 `execute`；处理器按扩展加载顺序运行（先路径扩展，再内联扩展）。门控只是链中一环，排在它后面的扩展（含原生 guest 经桥接就地写回的 `input`）可以把已批准的写入改到项目外，直接调用和 `ctx.executeTool` 嵌套调用都一样。`makePermissionGateExtensions` 因此返回 `gate` 与 `finalCheck` 两个扩展：门控记录放行的参数对象及当时求值的文本，`finalCheck` 必须是会话最后一个扩展（`trust-loader` 用 `placeFinalPermissionCheckLast` 排序，子代理直接放在末尾），参数求值文本变化时对实际执行的参数重跑同一求值，门控没评估过的调用一律拒绝。只改写 `event.input` 引用（而非就地修改）不会影响执行，也不在门控的保护对象之内。回归见 `packages/backend/test/permission-final-args-sdk.test.mjs`。
 
 `desktopLoaderOptions` 返回的 `extensionFactories`（沙箱代理）曾因对象展开顺序覆盖整个内置扩展列表、连同权限门控一起丢掉；现在由 `trust-loader` 合并进列表。
+
+## native 会话创建时没有 live caller
+
+`createNativeSession` 与扩展注册发生在宿主 `bindSession` 之前，此时 broker 没有 live caller，任何能力调用（例如读本包绑定）都会以 `Plugin capability has no live caller` 失败，扩展整体加载失败、工具消失，最终交付被关闭。依赖插件状态的决定（如知识包的子会话 `subagentPolicy`）要放到工具执行或 hook 里，用当时 host 提供的 caller 读取。另：只读会话（包括子代理子会话）里，未声明 effect 的 hook、工具与 `projection.finalize` 默认按 write 处理并被 broker 拒绝；确实只读的路径要显式声明 `read`，而 `required` 交付投影的 finalize 被拒绝会让该会话每条答案都显示 `Final delivery unavailable`。未信任项目的会话 broker 拒绝一切插件操作，不要往其中加载插件。
