@@ -1,11 +1,11 @@
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
 import { createBackend } from "../src/create-backend";
-import { inboxFor } from "../src/session/durable-inbox";
+import { inboxFor, inboxPath } from "../src/session/durable-inbox";
 
 const roots = [],
 	backends = [];
@@ -23,8 +23,13 @@ async function setup() {
 		extensionPath = join(root, "commands.mjs");
 	await mkdir(cwd);
 	await mkdir(agentDir);
-	const extension = `export default pi => {
+	const extension = `import {mkdirSync} from "node:fs";
+ export default pi => {
   pi.on("input", (event) => {
+   if(event.text.startsWith("local storage-failure ")) {
+    mkdirSync(event.text.slice("local storage-failure ".length));
+    return {action:"handled"};
+   }
    if(event.text === "local summary") {
     pi.appendEntry("local-summary", {local:true});
     return {action:"handled"};
@@ -178,4 +183,39 @@ it("reports actual input interception without a model run or a durable queued re
 	release();
 	await session.waitForIdle();
 	expect(session.messages.filter((message) => message.role === "user")).toHaveLength(1);
+}, 20000);
+
+it("rejects the real handled receipt when durable queue reconciliation cannot be saved", async () => {
+	const { service, session, meta, faux } = await setup();
+	let release;
+	const held = new Promise((resolve) => {
+		release = resolve;
+	});
+	faux.setResponses([
+		async () => {
+			await held;
+			return fauxAssistantMessage("Background response");
+		},
+	]);
+	await service.prompt(meta.sessionId, "Start held background response");
+	await vi.waitFor(() => expect(session.isStreaming && faux.state.callCount === 1).toBe(true));
+	const path = inboxPath(session.sessionFile);
+	const obstruction = path + "." + process.pid + ".tmp";
+	try {
+		await expect(
+			service.prompt(
+				meta.sessionId,
+				"local storage-failure " + obstruction,
+				undefined,
+				"handled-storage-failure",
+			),
+		).rejects.toMatchObject({ code: "EISDIR" });
+		expect(JSON.parse(await readFile(path, "utf8")).queued.map((item) => item.requestId)).toContain(
+			"handled-storage-failure",
+		);
+	} finally {
+		await rm(obstruction, { recursive: true, force: true });
+		release();
+		await session.waitForIdle();
+	}
 }, 20000);

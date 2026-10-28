@@ -35,3 +35,7 @@ native task host 的发现目前由启动组合根提供，设置中的包停用
 通用 prompt receipt 读取固定 SDK 1.1.0 的 handled/queued/started disposition，input hook 本地处理不再误报 agent run。active 请求期间被 handled 的输入按实际 SDK 队列同步现有 durable inbox，避免恢复时重放；真实 held-provider 会话证明本地处理计数不增加、无 follow-up、无持久队列残留。旧 prompt-ack mock 已改用实际 SDK 类型与 disposition，删除不存在的 boolean preflight 模拟。
 
 本批 SDK/回执 25/25、core Node 29/29 与 Vitest 210/210、类型/构建校验/smoke/架构/lint 通过。core 暂存 tar SHA-256 为 `c80b35e01fda417241d7e48016dc2901f2e979a79fbc5b75063e846781f47c37`。这些结果不证明零领域插件聊天已完成：默认宿主 knowledge publication 仍可对普通无工具答案执行 fallback 并隐藏最终回答，该真实发现保留为领域迁移缺口，未靠停用检查拿通过；capability describeTurn 里的领域分类也尚在后续迁移范围。
+
+## handled 队列保存失败
+
+真实 SDK 的 active 请求期间，input hook 已 handled 的提交仍需把 durable inbox 与实际 SDK 队列同步。通过临时目录在实际 atomic-write 临时路径制造 EISDIR，复现旧 catch 吞掉保存失败并返回 command。现删除该 catch，SDK preflight 同步错误向 prompt 调用方拒绝，不再发出成功回执；实际 SDK/既有回执回归 13/13、backend 类型和 lint 通过。故障时磁盘旧 queued 记录可能仍在，不能以“持久化可选”证明不会重放；本片明确报告存储失败，不宣称跨独立 SDK 副作用与 inbox 文件具有 exactly-once 保证，也未添加超时、重试或新状态标记。日志 `/tmp/handled-inbox-sdk-{red,green}.log`。

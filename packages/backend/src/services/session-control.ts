@@ -120,14 +120,10 @@ export class SessionControlService {
 					})),
 					preflightResult: (disposition) => {
 						if (disposition === "handled" && receipt.kind === "queued" && sessionFile) {
-							try {
-								inboxFor(sessionFile).sync([
-									...entry.session.getSteeringMessages(),
-									...entry.session.getFollowUpMessages(),
-								]);
-							} catch (error) {
-								log.info("durable inbox reconciliation unavailable", sessionId, { error: String(error) });
-							}
+							inboxFor(sessionFile).sync([
+								...entry.session.getSteeringMessages(),
+								...entry.session.getFollowUpMessages(),
+							]);
 						}
 						receipt = {
 							kind: disposition === "handled" ? "command" : disposition === "queued" ? "queued" : "agent",
