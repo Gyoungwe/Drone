@@ -400,3 +400,66 @@ it("keeps ordinary official SDK chat unchanged when no host delivery policy is i
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+it("distinguishes real SDK historical origins from a new live message with copied body, timestamp and ID", async () => {
+	const root = await mkdtemp(join(tmpdir(), "drone-native-historical-origin-"));
+	let session, faux, history;
+	let round = 0;
+	try {
+		({ session, faux } = await actualSession(root, async (event) => {
+			if (++round !== 2) return;
+			// This is the genuine new agent-core message, with copied public historical data.
+			for (const key of Object.keys(event.message)) delete event.message[key];
+			Object.assign(event.message, structuredClone(history));
+			expect(session.getHostPersistedMessage(event.message)).toBeUndefined();
+		}));
+		expect(typeof session.getHostPersistedMessage).toBe("function");
+		await session.prompt("Synthetic historical answer.");
+		history = session.messages.find((message) => message.role === "assistant");
+		const entry = session.getHostPersistedMessage(history);
+		expect(entry.type).toBe("message");
+		expect(entry.message.content).toEqual(history.content);
+		const copied = { ...structuredClone(history), id: entry.id };
+		expect(session.getHostPersistedMessage(copied)).toBeUndefined();
+		faux.setResponses([fauxAssistantMessage("new live answer before historical copy")]);
+		await session.prompt("Synthetic fresh live answer.");
+		expect(round).toBe(2);
+	} finally {
+		if (session) {
+			await session.abort();
+			session.dispose();
+		}
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+it("recognizes actual SDK reload origins, rejects an old branch and invalidates disposed historical scope", async () => {
+	const root = await mkdtemp(join(tmpdir(), "drone-native-historical-branch-"));
+	let session;
+	try {
+		({ session } = await actualSession(root, undefined));
+		expect(typeof session.getHostPersistedMessage).toBe("function");
+		await session.prompt("Synthetic persisted branch.");
+		await session.reload();
+		const restored = session.messages.find((message) => message.role === "assistant");
+		const actualEntry = session.getHostPersistedMessage(restored);
+		expect(actualEntry.message.content).toEqual(restored.content);
+		expect(session.getHostPersistedMessage(structuredClone(restored))).toBeUndefined();
+		const user = session.sessionManager
+			.getBranch()
+			.find((entry) => entry.type === "message" && entry.message.role === "user");
+		session.sessionManager.branch(user.id);
+		session.refreshContext();
+		expect(session.getHostPersistedMessage(restored)).toBeUndefined();
+		const current = session.messages.find((message) => message.role === "user");
+		expect(session.getHostPersistedMessage(current).id).toBe(user.id);
+		session.dispose();
+		expect(session.getHostPersistedMessage(current)).toBeUndefined();
+	} finally {
+		if (session) {
+			await session.abort();
+			session.dispose();
+		}
+		await rm(root, { recursive: true, force: true });
+	}
+});
