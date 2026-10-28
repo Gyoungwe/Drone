@@ -403,3 +403,12 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 杀死 Docker CLI 并不保证 daemon 内的容器已停止。每次 runner 使用唯一容器名和 ownership label；取消、超时、关闭和 dispose 必须等待 CLI 退出，只删除 label 匹配的自有容器，再以成功的 daemon 查询确认精确名称不存在。inspect 非零可能是 daemon 故障，不能据此报告清理成功。`DiscoveryRunner.run` 以 `DISCOVERY_CLEANUP_FAILED` 保留无法验证清理的错误，插件 execute/close/dispose 必须继续拒绝；迟到的执行不能将 closed 恢复成 ready。
 
 真实容器首次运行暴露 `--mount type=bind,...,rw` 无效，移除末尾 `rw`（bind 默认可写）后通过。验收不得依赖隐式拉镜像；本轮仅使用已缓存的 python:3.12-slim，`--pull=never`。本机出现 tag inspect 失败而 image ID inspect 成功的情况，保留失败并使用同一已缓存镜像的完整 ID 验证，未 pull 或 retag。完整 B5 UI 与正式安装包须单独验收。
+
+
+### 原生 SDK 的 dispose 不会代发扩展 shutdown
+
+Pi 1.1.0 的 `AgentSession.dispose()` 只中止/失效内部运行时，不会发出 `session_shutdown`。独立 SDK 子进程若只调用它，扩展拥有的 writer lease 会留下，并正确阻止后继 writer。嵌入端必须执行公开 extensionRunner 的 shutdown 生命周期、abort、dispose，并收集 SDK onError；Drone 的 `SessionEngine.close` 已使用该顺序。不得通过 process exit 全局账本自动删除 lease，也不能把 SDK 吞下的 shutdown handler 错误记为成功。复现与真实交接见 P5 shared-owner 机器回执。
+
+### 只读旧 owner 不能在交接后用缓存覆盖新 journal
+
+旧 Discovery Domain 可先只读缓存 JSON，再等另一个 owner 完成写入并释放 lease。此时仅靠新取到的 lease 不能证明内存快照仍新鲜。迁移中的旧 journal 端口使用真正 JsonStore 的 `writeChecked`、原始字节 SHA 与回读；版本变化时明确要求关闭重开。新 UI 接管也必须保留唯一既有 projectId，混合 ID 拒绝；不能取第一条或重新生成 ID 后覆盖历史。

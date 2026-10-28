@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-28",
+  "status": "B_CANDIDATE_VALIDATED_P5_OPEN",
+  "sources": {
+    "host": "85b95d8d3612c4df05bd50bbbaad32c78fd85fcc",
+    "plugins": "e27926cb44881a08233f8c55c08c6cddedcc5fa9",
+    "hostBehavior": "c7770a95",
+    "hostFixtureTypes": "85b95d8d",
+    "nodeHelperStructuralPrerequisite": "5d612382"
+  },
+  "artifacts": [
+    {
+      "name": "@gyoungwe/pi-discovery",
+      "version": "0.2.0",
+      "path": "/tmp/discovery-b-candidate-20261028/gyoungwe-pi-discovery-0.2.0.tgz",
+      "sha256": "37af322c8e81ed95579efc18aa02ae7a3486e5bd3a375fb0d192cedbfbd00db6",
+      "publicRegistry": false
+    },
+    {
+      "name": "@gyoungwe/plugin-api",
+      "version": "1.3.0",
+      "path": "/tmp/discovery-state-reserve-api-20261028/gyoungwe-plugin-api-1.3.0.tgz",
+      "sha256": "eaf8a72b4b94d15a7fb9e6bc63206b61ecb01a8ef35684a49c490de8d1f67bdc",
+      "publicRegistry": false
+    }
+  ],
+  "validated": [
+    "same installed tar production UI build and PluginEntryHost",
+    "actual managed Node process with zero resource workers",
+    "UI to native to UI domain writes and rereads",
+    "actual legacy hashed-directory writer exclusion in both directions",
+    "legacy stale readonly snapshot CAS rejection and fresh-owner recovery",
+    "actual second Node SDK process writer denial and clean handoff",
+    "canonical workspace isolation",
+    "denied state-write no ghost plan",
+    "actual temporary cleanup EACCES retains writer and blocks final release",
+    "same shared Node reservation implementation in backend and standard Pi adapter"
+  ],
+  "persistence": {
+    "managedHost": "real backend JsonStore.writeChecked raw-byte SHA CAS and readback",
+    "nativePi": "separate plugin Node atomic link-or-rename CAS and readback adapter; not JsonStore",
+    "lease": "public shared Node helper; state-writers + canonical directory; same local user"
+  },
+  "logs": [
+    {
+      "path": "/tmp/discovery-b-freeze-plugin-check.log",
+      "sha256": "9fed796dc88a90d064ba1dccc75c0a54137158b006a5048f55791336443298b6",
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "plugin root npm run check"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-final-sdk-cohort.log",
+      "sha256": "0827278f79ffbe56279294be523a11425986df7f1405488d9de499c276fb3cd7",
+      "status": "PASS_WITH_EXPLICIT_SKIP",
+      "exitCode": 0,
+      "scope": "13 discovery SDK/UI/legacy tests; opt-in knowledge test not enabled"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-drain-tests.log",
+      "sha256": "6a5b9f5dcee7354f2cc342cc6f9f3d356e4f05aff239c9ae796ca82c14b13fc3",
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "47 filesystem/runtime/resource tests"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-drain-desktop-tests-2.log",
+      "sha256": "283a51f8af1405b8e21efe114aabb4bca117bd9f0187def538fb4432e3bbdb12",
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "88 Desktop runtime tests"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-drain-host-tests-3.log",
+      "sha256": "da8459bbbb163e92922396198f4fd1edba55260209974ef1f9214d853534de3e",
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "20 Desktop runtime-host tests after type fixture correction"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-drain-backend-type-2.log",
+      "sha256": "a41db65affbd78ac970623016f73fd80fd5fef5052db140fbc712d6d74a8e8df",
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "backend typecheck"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-drain-desktop-type-3.log",
+      "sha256": "b57d92d04b7db57ca102a14e2973b78ac75d1c0251342761c6f5b9b287ea905b",
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "Desktop node and web typecheck"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-api-test.log",
+      "sha256": "4154feea079efb4f1fc3826719d7b677fa5203aff648796613c5709d007d062d",
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "17 public API tests"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-final-arch.log",
+      "sha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d",
+      "status": "PASS_WITH_PARTIAL_DOMAIN_MIGRATION",
+      "exitCode": 0,
+      "scope": "architecture zero baseline; independence; domain migration remains PARTIAL"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-writer-sdk-matrix.log",
+      "sha256": "a595fa8c6ab4d5ecb921dc9dc417538317dd6e78b971936c17a95532dce3d605",
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "actual host-writer supplied locked1.1.0/latest1.4.0 SDK matrix"
+    },
+    {
+      "path": "/tmp/discovery-b-host-fetch-plugins.log",
+      "sha256": "7f61f98effb3e3a5f2eb3bbe8d8800f565fed4d2a69ca7169edf7e192c226735",
+      "status": "FAILED_PRESERVED",
+      "exitCode": 1,
+      "scope": "official locked plugin fetch transient SSL_ERROR_SYSCALL"
+    },
+    {
+      "path": "/tmp/discovery-b-host-fetch-plugins-http1.log",
+      "sha256": "1c3e4145b21baaaffdacf7f501123528280c1cf0fc748a135aebe68e8bf3cb51",
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "official locked fetch retry via HTTP/1.1 without TLS bypass"
+    },
+    {
+      "path": "/tmp/discovery-b-legacy-ui-sdk-alone.log",
+      "sha256": "d10b6409e818afc14cca5538eb5485304c30e615fe5fade58eaa7c6e5735bae0",
+      "status": "FAILED_PRESERVED",
+      "exitCode": 1,
+      "scope": "native raw SDK dispose omitted shutdown and retained writer lease"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-drain-desktop-tests.log",
+      "sha256": "0aa7b3e0ac6b9de676626664829a4ca7a2108bbab87443d0a96951566e19a52d",
+      "status": "FAILED_PRESERVED",
+      "exitCode": 1,
+      "scope": "old no-resource test incorrectly expected absence of file drain"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-drain-desktop-type-2.log",
+      "sha256": "c5d5e0bd9d54aed5ab0f332327a6d929473bd45e7ea6f6313a244ce823171149",
+      "status": "FAILED_PRESERVED",
+      "exitCode": 2,
+      "scope": "new test fixture omitted required policy and operation type fields"
+    },
+    {
+      "path": "/tmp/discovery-b-freeze-native-sdk-matrix.log",
+      "sha256": "ada6ed0ff0ad859d98ee71d046e4c538b85ac9c8a2711a6c810352fca53e8c1e",
+      "status": "FAILED_PRESERVED",
+      "exitCode": 1,
+      "scope": "direct matrix script correctly refused missing real-writer workspaces; rerun through producer test"
+    }
+  ],
+  "notCompleted": [
+    "full execution/accepted transaction durable receipts",
+    "Inquiry/model/critic/multipath/evaluation/export integration",
+    "creator SDK session kernel ownership and both close orders",
+    "complete UI and removal of legacy host seam",
+    "merged final double-repository gates",
+    "formal packaged macOS GUI and upgrade/rollback",
+    "four previously retained external account/platform acceptances"
+  ],
+  "deferredUntouched": [
+    "MinerU/GROBID",
+    "B8/B8-2"
+  ],
+  "publication": {
+    "npm": "NOT_RUN",
+    "push": "NOT_RUN"
+  },
+  "privacy": "No credentials, Vault contents or real user session bodies are included.",
+  "nativeMatrix": {
+    "status": "PASS",
+    "tarballSha256": "37af322c8e81ed95579efc18aa02ae7a3486e5bd3a375fb0d192cedbfbd00db6",
+    "writer": "host-supplied actual-writer workspaces; see companion host test",
+    "matrix": [
+      {
+        "target": "locked",
+        "version": "1.1.0",
+        "status": "PASS",
+        "dispatches": 9,
+        "nativeReadOnly": true,
+        "independentWorkspaces": 2,
+        "emptyWorkspace": "unconfigured",
+        "model": "faux offline provider; real SDK tool dispatch",
+        "execution": "NOT_PROVIDED",
+        "desktopSharedOwner": "NOT_RUN",
+        "container": "NOT_RUN",
+        "formalGui": "NOT_RUN"
+      },
+      {
+        "target": "latest",
+        "version": "1.4.0",
+        "status": "PASS",
+        "dispatches": 9,
+        "nativeReadOnly": true,
+        "independentWorkspaces": 2,
+        "emptyWorkspace": "unconfigured",
+        "model": "faux offline provider; real SDK tool dispatch",
+        "execution": "NOT_PROVIDED",
+        "desktopSharedOwner": "NOT_RUN",
+        "container": "NOT_RUN",
+        "formalGui": "NOT_RUN"
+      }
+    ]
+  }
+}
