@@ -1,7 +1,12 @@
 import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import type { PermissionMode } from "@drone/shared";
-import type { ExtensionContext, InlineExtension, ToolCallEvent } from "@earendil-works/pi-coding-agent";
+import type {
+	ExtensionContext,
+	InlineExtension,
+	ToolCallEvent,
+	ToolCallEventResult,
+} from "@earendil-works/pi-coding-agent";
 import { createLogger } from "../log";
 import { createWorkspacesLoader, suggestRootCandidate } from "../project/workspace-store";
 import {
@@ -61,12 +66,16 @@ export type PermissionModeRef = { current: PermissionMode };
  * ask 同样降级——一切放行，含自保护规则（用户明示接受的语义）。
  * 边界检查只覆盖路径工具：bash 无法用路径模式约束（cd 任意跳），符号链接逃逸不在范围。
  */
-export function makePermissionGateExtension(
+export function createPermissionGatePolicy(
 	agentDir: string,
 	options?: PermissionGateOptions,
-): InlineExtension {
+) {
 	const projectRoot = options?.projectRoot ? resolve(options.projectRoot) : null;
-	return {
+	let activeCheck: (
+		event: ToolCallEvent,
+		context: ExtensionContext,
+	) => Promise<ToolCallEventResult | undefined>;
+	const extension = {
 		name: "permission-gate",
 		factory: (pi) => {
 			const loadConfig = createPermissionConfigLoader(agentDir);
@@ -268,7 +277,7 @@ export function makePermissionGateExtension(
 					reason: `User denied this ${event.toolName} call (${title}). Do not retry the same action; ask the user or find another approach.`,
 				};
 			};
-			pi.on("tool_call", check);
+			activeCheck = check;
 			let taskContext: ExtensionContext | undefined;
 			pi.on("session_start", (_event, ctx) => {
 				taskContext = ctx;
@@ -306,6 +315,25 @@ export function makePermissionGateExtension(
 					() => complete(false),
 				);
 			});
+		},
+	} satisfies InlineExtension;
+	return {
+		extension,
+		check: (event: ToolCallEvent, context: ExtensionContext) => activeCheck(event, context),
+	};
+}
+
+/** Native Pi compatibility: the standalone extension registers the same single permission algorithm. */
+export function makePermissionGateExtension(
+	agentDir: string,
+	options?: PermissionGateOptions,
+): InlineExtension {
+	const policy = createPermissionGatePolicy(agentDir, options);
+	return {
+		name: policy.extension.name,
+		factory: (pi) => {
+			policy.extension.factory(pi);
+			pi.on("tool_call", policy.check);
 		},
 	};
 }
