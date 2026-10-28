@@ -443,3 +443,7 @@ Pi 1.1.0 的 SessionManager 先把 append entry 加入内存，再写磁盘；EI
 ### 已安装 UI 构建产物不能写回其原生来源树
 
 同包原生与 UI 共用完整包树 hash。把 esbuild 的 `dist/index.js` 写回已安装 UI 目录，会让宿主自己改变正在使用的原生来源，之前在 readCode 后重算 hash 的做法也不能建立稳定的代次。安装包 UI 现在按已验证 hash 编译到宿主 `ui-plugin-builds` 缓存；用户本地 UI 目录继续使用原目录 dist。回归比较编译前后完整树 hash、native/UI 描述对象身份与重新扫描后的 built 状态；这不授予新的文件权限，也不替代包级停用/卸载。
+
+### 失败的 native abort 与清理必须保留停止屏障
+
+停止流程并行等待真实 SDK abort 和 runtime 清理；`allSettled` 返回不等于关闭成功。必须先检查每项结果，再删除 stopping 记录。UI-only 配置变化也要等待之前失败的 UI 停止记录，不能只扫描仍然存活的 binding 后报告配置成功。原有重激活回归与新增 UI 配置回归均先实际失败；最小修复后 103 项 Desktop/IPC/preload/UI 联合通过。同包 native/UI alias 的失败屏障回归继续由后继补齐。

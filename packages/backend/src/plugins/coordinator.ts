@@ -544,9 +544,13 @@ export class PluginRuntimeBridge {
 		const transition = (async () => {
 			for (const [key, request] of this.requests)
 				if (request.owner.isSessionBound === undefined) this.requests.delete(key);
-			const stops: Promise<void>[] = [];
+			const stops = new Set(
+				[...this.stopping.values()]
+					.filter((stop) => stop.owner.isSessionBound === undefined)
+					.map((stop) => stop.promise),
+			);
 			for (const binding of this.bindings.values())
-				if (binding.owner.isSessionBound === undefined) stops.push(this.stopBinding(binding));
+				if (binding.owner.isSessionBound === undefined) stops.add(this.stopBinding(binding));
 			for (const [owner, selected] of this.selections) {
 				if (owner.isSessionBound !== undefined) continue;
 				selected.abort.abort(new Error("Plugin UI caller revoked"));
@@ -637,13 +641,13 @@ export class PluginRuntimeBridge {
 		const promise = (async () => {
 			await Promise.allSettled([...binding.pending]);
 			const results = await Promise.allSettled([nativeAborted, runtime.stopping]);
-			this.stopping.delete(key);
 			const failures = results.filter((result) => result.status === "rejected");
 			if (failures.length)
 				throw new AggregateError(
 					failures.map((result) => result.reason),
 					"Plugin native run and runtime shutdown failed",
 				);
+			this.stopping.delete(key);
 		})();
 		this.stopping.set(key, { name: binding.name, owner: binding.owner, promise });
 		return promise;

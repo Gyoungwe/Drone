@@ -471,6 +471,7 @@ describe("DesktopRuntimeBridge", () => {
 		await expect(bridge.bind("ui", owner)).rejects.toThrow("disposal failed");
 		const replace = vi.fn(async () => undefined);
 		await expect(bridge.withTransition(replace)).rejects.toThrow("disposal failed");
+		await expect(bridge.withUiTransition(replace)).rejects.toThrow("disposal failed");
 		expect(replace).not.toHaveBeenCalled();
 		expect(factory).toHaveBeenCalledOnce();
 		expect(dispose).toHaveBeenCalledOnce();
