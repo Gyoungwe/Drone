@@ -97,10 +97,15 @@ export interface PluginRuntimeOperation {
 	execute(input: unknown, context: PluginRuntimeContext): Promise<unknown>;
 }
 
+/** Host-derived initial facts, not a scope, grant or caller-provided target. */
+export type PluginNativeSessionFacts =
+	| { readonly kind: "primary"; readonly readOnly: boolean }
+	| { readonly kind: "child"; readonly readOnly: true; readonly files: "none" | "read" };
+
 export interface PluginRuntimeInstance<TNative = never> {
 	readonly operations: Readonly<Record<string, PluginRuntimeOperation>>;
 	/** Optional native Pi projection of this same owner, never a second domain instance. */
-	createNativeSession?(): TNative | Promise<TNative>;
+	createNativeSession?(facts?: PluginNativeSessionFacts): TNative | Promise<TNative>;
 	/** Release the application's resources after outstanding calls have settled. */
 	dispose(): Promise<void>;
 }
