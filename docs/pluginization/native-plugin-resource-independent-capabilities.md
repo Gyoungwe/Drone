@@ -18,9 +18,9 @@
 
 ## 验证范围
 
-- Desktop 目录授权、已安装包来源扫描和清单变化撤销的 85 个测试通过，包括 resource 缺失的真实 JSON 写入→回读、写入拒绝后目录无变更及 state/files 独立选择。
+- Desktop 目录授权、已安装包来源扫描和清单变化撤销最初 85 个测试通过；合并模型 capability 后 87 个测试通过，包括 resource 缺失的真实 JSON 写入→回读、写入拒绝后目录无变更及 state/files 独立选择。
 - Broker 单元回归验证当前 scope、更换真实 caller、伪造输入拒绝和闭包调用拒绝。
-- 真实 Pi SDK + managed process 回归使用固有 caller.scope，覆盖双会话 native/UI 同 owner、真实规范 workspace ID，以及三种关闭顺序。命令与原始日志由本轮机器回执记录。
+- 真实 Pi SDK + managed process 回归使用固有 caller.scope，覆盖双会话 native/UI 同 owner、真实规范 workspace ID，以及三种关闭顺序。与模型能力合并后，三个 backend 文件 18 个测试通过。命令范围、日志哈希与初次失败见[机器回执](../releases/native-plugin-resource-independent-capabilities-2026-10-28.json)。
 - 双仓库最终根门禁、同包 discovery 完整执行/UI、共享写者租约、正式 macOS 安装包验收尚未完成；不由此文档关闭 P5。
 
 真实 SDK 初次执行发现该隔离 checkout 尚未生成 worker runtime，补跑官方 stage 脚本；下一次发现 checkout 未运行 patch-package，执行原 postinstall；第三次是新增测试错误地把 macOS workspaceId 当作大小写敏感路径，改为核对已有 canonicalProjectId 身份合同。所有失败日志保留，未修改生产身份规则或放宽 SDK 加载断言。Desktop 首次 typecheck 使用旧 API dist，运行官方 API build 后通过。

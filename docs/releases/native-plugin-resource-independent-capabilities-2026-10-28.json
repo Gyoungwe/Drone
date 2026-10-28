@@ -1,0 +1,93 @@
+{
+	"schemaVersion": 1,
+	"date": "2026-10-28",
+	"scope": "resource-independent explicit filesystem grants and live caller.scope; not complete P5",
+	"hostSource": "9447b26a38d766e0294a21023d0514c633d094fb",
+	"sourceChange": "2d395d8a",
+	"mergedRoot": "8cc1007d",
+	"rootEquivalentTree": "8c50615d",
+	"checks": [
+		{
+			"name": "desktopTests",
+			"exitCode": 0,
+			"path": "/tmp/discovery-merged-desktop-tests.log",
+			"sha256": "49e524ee95c0959b6ac94ae9ff469ad18ccd9641534fa6a3e4869961579eef98"
+		},
+		{
+			"name": "sdkAndBrokerTests",
+			"exitCode": 0,
+			"path": "/tmp/discovery-merged-backend-tests.log",
+			"sha256": "1d351eaa7e49ad8079401648b0009a30eddf24489dd8231bb69b87d1284009f1"
+		},
+		{
+			"name": "apiBuild",
+			"exitCode": 0,
+			"path": "/tmp/discovery-merged-api-build.log",
+			"sha256": "14b11042efac347a60fe34b58b203483761943ffcb4b2085b32d23f125399d0e"
+		},
+		{
+			"name": "backendTypecheck",
+			"exitCode": 0,
+			"path": "/tmp/discovery-merged-backend-type.log",
+			"sha256": "a41db65affbd78ac970623016f73fd80fd5fef5052db140fbc712d6d74a8e8df"
+		},
+		{
+			"name": "desktopTypecheck",
+			"exitCode": 0,
+			"path": "/tmp/discovery-merged-desktop-type.log",
+			"sha256": "b57d92d04b7db57ca102a14e2973b78ac75d1c0251342761c6f5b9b287ea905b"
+		},
+		{
+			"name": "architecture",
+			"exitCode": 0,
+			"path": "/tmp/discovery-fs-arch.log",
+			"sha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d"
+		},
+		{
+			"name": "biome",
+			"exitCode": 0,
+			"path": "/tmp/discovery-fs-biome.log",
+			"sha256": "c0426bcf5a343d024102d030ea6e0f26f92277c9246c91d17032c56c4652036c"
+		}
+	],
+	"counts": {
+		"desktopTests": 87,
+		"sdkAndBrokerTests": 18
+	},
+	"failedAttempts": [
+		{
+			"reason": "missing staged Node runtime",
+			"exitCode": 1,
+			"path": "/tmp/discovery-caller-scope-tests.log",
+			"sha256": "0e5c656f4f8e31301af94f8c10a41824f867e4b817f999625a743cb40e194625"
+		},
+		{
+			"reason": "missing SDK postinstall patch",
+			"exitCode": 1,
+			"path": "/tmp/discovery-caller-scope-tests-rerun.log",
+			"sha256": "78226dc9e597f819f74988f18919c705d07daf9734f82e544c35f52274bc35e2"
+		},
+		{
+			"reason": "test incorrectly treated canonical workspace identity as case-sensitive path",
+			"exitCode": 1,
+			"path": "/tmp/discovery-caller-scope-tests-final.log",
+			"sha256": "ee1bce29efe1a0644ee078bf630561474428e515003f62064f06e9f16a117d04"
+		},
+		{
+			"reason": "stale API dist before official API build",
+			"exitCode": 1,
+			"path": "/tmp/discovery-fs-desktop-type.log",
+			"sha256": "f00f049ec786419029eaf4b68c4876939df113ec9628e841f8249ddd4c471114"
+		}
+	],
+	"remaining": [
+		"discovery full shared runtime factory and native writer",
+		"cross-process state writer reservation without a resource worker",
+		"accepted execution durable receipt and reconciliation after cancellation",
+		"full B5 UI migration",
+		"dual-repository final root gates",
+		"formal macOS package validation"
+	],
+	"externalAcceptance": "four pre-existing external account/platform items remain incomplete",
+	"deferred": ["MinerU/GROBID", "B8", "B8-2"]
+}
