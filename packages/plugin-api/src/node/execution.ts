@@ -9,7 +9,7 @@ import type {
 	SandboxRunOutput,
 	SandboxRunRequest,
 	SandboxRunResult,
-} from "./sandbox-types";
+} from "./execution-types.js";
 
 /** Process seam kept injectable for deterministic tests without replacing production execution. */
 export type ContainerProcess = (
@@ -355,3 +355,5 @@ export function unavailableContainerCapabilities(): SandboxCapabilities {
 		writesOnlyToRunDirectory: false,
 	};
 }
+
+export type * from "./execution-types.js";
