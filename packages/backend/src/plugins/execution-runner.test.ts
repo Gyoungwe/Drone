@@ -33,7 +33,8 @@ if(args[0]==='version'){console.log('synthetic-engine');process.exit(0);}
 if(args[0]==='run'){
  const name=args[args.indexOf('--name')+1], label=args[args.indexOf('--label')+1].split('=')[1];
  fs.writeFileSync(state,JSON.stringify({name,label}));
- if(mode==='success'){fs.unlinkSync(state);console.log('[summary] success');process.exit(0);}
+ if(mode==='success'||mode==='lease-release-fail'){fs.unlinkSync(state);console.log('[summary] success');process.exit(0);}
+ if(mode==='output'){fs.unlinkSync(state);process.stdout.write('😀'.repeat(20));process.stderr.write('x'.repeat(100));process.exit(0);}
  if(mode==='exit-fail'){process.exit(7);}
  setInterval(()=>{},1000);
 } else if(args[0]==='inspect') {
@@ -44,6 +45,7 @@ if(args[0]==='run'){
  if(fs.existsSync(state))fs.unlinkSync(state);
 } else if(args[0]==='container'&&args[1]==='ls') {
  if(mode==='daemon-fail')process.exit(1);
+ if(mode==='lease-release-fail')fs.chmodSync(path.join(root,'.test-execution-leases','execution-directories'),0o500);
  if(fs.existsSync(state))console.log(JSON.parse(fs.readFileSync(state)).name);
 } else process.exit(2);
 `,
@@ -69,7 +71,11 @@ const request = (signal?: AbortSignal, timeoutMs = 1000) => ({
 	signal,
 });
 async function runner() {
-	const instance = await ContainerKernelRunner.create({ projectRoot: root, runtime: "docker" });
+	const instance = await ContainerKernelRunner.create({
+		projectRoot: root,
+		runtime: "docker",
+		reservationDirectory: join(root, ".test-execution-leases"),
+	});
 	if (!instance) throw new Error("Synthetic engine did not start");
 	return instance;
 }
@@ -84,6 +90,43 @@ const started = () =>
 	});
 
 describe("ContainerKernelRunner ownership and cleanup", () => {
+	it("retains an execution-directory lease when its actual unlink fails after verified container cleanup", async () => {
+		vi.stubEnv("DISCOVERY_ENGINE_TEST_MODE", "lease-release-fail");
+		try {
+			await expect((await runner()).run(request())).rejects.toMatchObject({
+				code: "DISCOVERY_CLEANUP_FAILED",
+			});
+		} finally {
+			await chmod(join(root, ".test-execution-leases", "execution-directories"), 0o700);
+		}
+		await expect((await runner()).run(request())).rejects.toThrow("already reserved");
+	});
+	it("rejects NUL code before creating a run directory or starting a container", async () => {
+		await expect((await runner()).run({ ...request(), code: "print('x')\u0000" })).rejects.toThrow("NUL");
+		await expect(access(join(root, "runs"))).rejects.toMatchObject({ code: "ENOENT" });
+		expect((await calls()).some((args) => args[0] === "run")).toBe(false);
+	});
+	it("excludes another real runner from the same run directory until verified cancellation cleanup", async () => {
+		vi.stubEnv("DISCOVERY_ENGINE_TEST_MODE", "hold");
+		const abort = new AbortController();
+		const first = (await runner()).run(request(abort.signal));
+		const firstRejected = expect(first).rejects.toThrow("cancel first owner");
+		await started();
+		await expect((await runner()).run(request())).rejects.toThrow("already reserved");
+		abort.abort(new Error("cancel first owner"));
+		await firstRejected;
+		vi.stubEnv("DISCOVERY_ENGINE_TEST_MODE", "success");
+		expect((await (await runner()).run(request())).exitCode).toBe(0);
+	});
+	it("bounds combined stdout/stderr by UTF-8 bytes while preserving the actual produced count", async () => {
+		vi.stubEnv("DISCOVERY_ENGINE_TEST_MODE", "output");
+		const result = await (await runner()).run({ ...request(), maxOutputBytes: 65 });
+		expect(result.producedBytes).toBe(180);
+		expect(
+			result.outputs.reduce((total, output) => total + Buffer.byteLength(output.text), 0),
+		).toBeLessThanOrEqual(65);
+		expect(result.outputs.every((output) => !output.text.includes("�"))).toBe(true);
+	});
 	for (const nested of [false, true]) {
 		it(`rejects ${nested ? "nested" : "top-level"} runs symlinks before creating files or starting a container`, async () => {
 			const outside = await mkdtemp(join(tmpdir(), "sandbox-outside-"));

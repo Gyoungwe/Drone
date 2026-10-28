@@ -24,6 +24,8 @@ P4 任务 UI 已移入同包 `pi-core/ui`，只读消息 hook、`chat.message` �
 P2 后继[设置与修复后的正式安装包验收](pluginization/native-plugin-knowledge-state-gui-evidence.md)固定 `ad3cd189` DMG，覆盖状态保存拒绝/回读、真实模型工具、停用恢复和正常退出；完整知识迁移与资源关闭新合同仍待下一轮验证。
 公开 `plugin-api/src/node/execution.ts` 与相邻 `execution-types.ts` 拥有同一份通用本地容器 runner（backend Discovery → compute → public Node 子路径的真实结构迁移）；backend 与原生 Pi 均可消费，compute 不依赖 Plugin API，根/UI/runtime 合同不引入 Node。此迁移不授予执行权限。
 
+P5 C 的通用执行端口、签名 accepted/terminal receipt 与执行目录 lease 候选见[执行端口候选](pluginization/native-plugin-execution-capability-candidate.md)；native/UI 真执行、reconcile、Inquiry 与完整迁移仍未完成。
+
 P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享 Node lease 的候选范围见[共享 owner 证据](pluginization/native-plugin-discovery-owner-evidence.md)；执行/Inquiry、完整 UI 与旧 seam 删除仍未完成。
 无派生 resource 的 state/files 显式授权与宿主固有 `caller.scope(null)` 见[独立文件能力切片](pluginization/native-plugin-resource-independent-capabilities.md)；这不会授予任意路径或关闭 discovery 全功能验收。
 知识状态 broker 的 `state.ensureDirectory` 提供显式受授权的单层初始化，读取不建目录；合同与限制见[状态能力](pluginization/native-plugin-state-capabilities.md)。
@@ -32,7 +34,7 @@ P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享
 知识 canonical owner 的模型评审和 managed 官方 Pi 命令已通过同一 tarball 的真实双 worker/SDK/SQLite 验收，见[后继切片回执](releases/native-plugin-knowledge-model-command-2026-10-28.json)。这条隔离分支证据不替代合并后双仓库门禁或正式安装包 GUI；完整 hooks、CLI 文本回执和旧 facade 仍未完成。
 完整 managed native publication 的[设计](superpowers/specs/2026-10-28-managed-native-publication-design.md)已批准，完整 owner/consumer 仍待实现；[实际 Pi 1.1.0 时序观察](releases/native-publication-sdk-ordering-2026-10-28.json)证明 awaited hooks 阻塞 prompt/idle，但 SDK abort 本身不拦截迟到正文持久化。后继[SDK 机制回执](releases/native-publication-sdk-fence-2026-10-28.json)记录钉版 host-only 最终边界的真实 RED→GREEN 与七项 SDK 回归，仍不代表完整插件 publication 或正式安装包验收。
 真正历史对象的来源只由 SDK 私有 WeakMap 与当前 branch 提供，宿主入口在 `session-engine/engine.ts:historicalMessageOrigin`；[实际 SDK 来源回执](releases/native-publication-historical-origin-2026-10-28.json)覆盖新 live 复制、reload、branch 切换和 dispose，不能把这个来源当作新的 live proof。
-原生 publication 的[私有对象 courier](pluginization/native-plugin-publication-courier.md)保留同 attachment 的 owner 对象，由真实 owner WeakSet 决策；JSON proof 字段不获得权威。其实际 worker/SDK fixture 仍不替代完整知识工作流与正式包验收。
+原生 publication 的[私有对象 courier](pluginization/native-plugin-publication-courier.md)保留同 attachment 的 owner 对象，由真实 owner WeakSet 决策；JSON proof 字段不获得权威。其实际 worker/SDK fixture 仍不替代完整知识工作流与正式包验收。 后继同时记录实际 SDK source revoke→abort/drain 与 UI-only transition 保留 native owner 的边界；完整 required-source policy 与知识 consumer 仍未完成。
 
 ## 硬约束（改代码前必知）
 
@@ -563,4 +565,4 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 
 后继任务状态路由/managed command、知识模型评审的同 tarball 双进程整合切片见[回执](releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；该后继尚未统一来源锁及完整根门禁，不替代顶部4abdae43/253c47e检查点。
 
-已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。包级显式启停、UI-only 撤销及 required source 生命周期仍在后继实现。
+已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。`manager.runtimeSources()` 经 `BridgeOptions.sources` 向 native/service consumer 提供同一包描述与当前 hash 状态；它不把可见性当执行权限，激活仍需批准。UI 设置经 `withUiTransition` 只撤销真实窗口调用，原生会话 owner 保留；包级显式启停及 required source 生命周期仍在后继实现。

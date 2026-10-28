@@ -16,8 +16,8 @@ export interface PluginNativeSession {
 		finalize?(event: unknown, context: PluginRuntimeContext): unknown | Promise<unknown>;
 		/** Unknown finalizers require write approval; pure projection itself grants no IO. */
 		readonly finalizeEffect?: "read" | "write";
-		event(event: unknown): unknown | Promise<unknown>;
-		snapshot(messages: unknown[], persisted: unknown[]): unknown[] | Promise<unknown[]>;
+		event(event: unknown, signal?: AbortSignal): unknown | Promise<unknown>;
+		snapshot(messages: unknown[], persisted: unknown[], signal?: AbortSignal): unknown[] | Promise<unknown[]>;
 	};
 	dispose(): Promise<void>;
 }

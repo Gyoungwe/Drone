@@ -44,7 +44,7 @@ const source = `export default async({capabilities}) => {
   }});
  }};}};
 };`;
-async function setup(commandSource = source) {
+async function setup(commandSource = source, nativeName = "command-ui") {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-managed-command-")));
 	const pkg = join(root, "package"),
 		agentDir = join(root, "agent");
@@ -126,7 +126,7 @@ async function setup(commandSource = source) {
 			nativeRuntime: {
 				manages: (path) => path === nativeEntrypoint,
 				begin: () =>
-					bridge.beginNative(window, (path) => (path === nativeEntrypoint ? "command-ui" : undefined)),
+					bridge.beginNative(window, (path) => (path === nativeEntrypoint ? nativeName : undefined)),
 			},
 		},
 	});
@@ -329,4 +329,120 @@ it("cancels a pending command approval before a late grant and never executes it
 	await state.backend.sessions.command(state.first.sessionId, "record", "after cancel");
 	expect(state.writes).toEqual([]);
 	expect((await state.snapshot()).at(-1).input).toBe("after cancel");
+}, 20000);
+
+it("revoking a managed native source aborts its actual SDK model run before revoke finishes", async () => {
+	const state = await setup();
+	let entered, observedAbort;
+	const started = new Promise((resolve) => {
+		entered = resolve;
+	});
+	const aborted = new Promise((resolve) => {
+		observedAbort = resolve;
+	});
+	state.faux.setResponses([
+		async (_context, options) => {
+			entered();
+			await new Promise((resolve) => options.signal.addEventListener("abort", resolve, { once: true }));
+			observedAbort();
+			return fauxAssistantMessage("", { stopReason: "aborted" });
+		},
+	]);
+	const prompt = state.first.prompt("Synthetic model waiting during package disable.");
+	await started;
+	state.setEnabled(false);
+	const revoke = state.bridge.revoke("command-ui");
+	await Promise.race([
+		aborted,
+		revoke.then(() => {
+			throw new Error("Source revoke finished without aborting its actual SDK run");
+		}),
+	]);
+	await Promise.all([prompt, revoke]);
+	expect(state.first.isStreaming).toBe(false);
+	state.setEnabled(true);
+	await state.first.reload();
+	state.faux.setResponses([fauxAssistantMessage("new source run")]);
+	await state.first.prompt("Synthetic new run after completed source drain.");
+	expect(state.first.isStreaming).toBe(false);
+}, 20000);
+
+it("a UI-only transition drains window callers while the actual native SDK run and owner continue", async () => {
+	const state = await setup();
+	await state.backend.sessions.command(state.first.sessionId, "record", "before UI transition");
+	const pid = (await state.snapshot())[0].pid;
+	let entered, release;
+	const started = new Promise((resolve) => {
+		entered = resolve;
+	});
+	const held = new Promise((resolve) => {
+		release = resolve;
+	});
+	let modelAborted = false;
+	state.faux.setResponses([
+		async (_context, options) => {
+			options.signal.addEventListener(
+				"abort",
+				() => {
+					modelAborted = true;
+					release();
+				},
+				{ once: true },
+			);
+			entered();
+			await held;
+			return fauxAssistantMessage("ordinary model result after UI transition");
+		},
+	]);
+	const prompt = state.first.prompt("Synthetic active model during UI settings change.");
+	await started;
+	try {
+		await state.bridge.withUiTransition(async () => {
+			expect(state.first.isStreaming).toBe(true);
+			await state.backend.sessions.command(state.first.sessionId, "record", "during UI transition");
+		});
+		expect(modelAborted).toBe(false);
+		expect(state.first.isStreaming).toBe(true);
+		await expect(state.snapshot()).rejects.toThrow("binding is invalid");
+		state.selection = state.bridge.selectSession(state.window, state.first.sessionId);
+		state.token = await state.bridge.bind("command-ui", state.window);
+		const records = await state.snapshot();
+		expect(records.map((record) => record.input)).toEqual(["before UI transition", "during UI transition"]);
+		expect(records.every((record) => record.pid === pid)).toBe(true);
+	} finally {
+		release();
+		await prompt;
+	}
+}, 20000);
+
+it("keeps a source teardown barrier after actual SDK abort receipt failure even when domain cleanup succeeds", async () => {
+	const state = await setup(source, "package-native-alias");
+	await state.backend.sessions.command(state.first.sessionId, "record", "before failed teardown");
+	const pid = (await state.snapshot())[0].pid;
+	const actualAbort = state.first.abort.bind(state.first);
+	let aborted = false;
+	state.first.abort = async () => {
+		await actualAbort();
+		aborted = true;
+		throw new Error("Injected SDK abort receipt failure after real cleanup");
+	};
+	try {
+		state.setEnabled(false);
+		await expect(state.bridge.revoke()).rejects.toThrow("disposal failed");
+		expect(aborted).toBe(true);
+		expect(() => process.kill(pid, 0)).toThrow(); // Real domain worker cleanup completed successfully.
+		state.setEnabled(true);
+		const transition = await state.bridge.withTransition(async () => "opened").catch(() => "blocked");
+		const rebind = await state.bridge.bind("command-ui", state.window).then(
+			() => "opened",
+			() => "blocked",
+		);
+		expect({ transition, rebind }).toEqual({ transition: "blocked", rebind: "blocked" });
+	} finally {
+		state.first.abort = actualAbort;
+		fixtures.splice(fixtures.indexOf(state), 1);
+		// The deliberately failed receipt stays failed; shutdown still drains all actual resources.
+		await Promise.allSettled([state.backend.dispose(), state.bridge.close()]);
+		await rm(state.root, { recursive: true, force: true });
+	}
 }, 20000);

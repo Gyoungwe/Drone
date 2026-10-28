@@ -68,6 +68,7 @@ export interface InstalledUiRuntimeSource {
 	requestsFileRead?: boolean;
 	requestsFileWrite?: boolean;
 	requestsModel?: boolean;
+	requestsExecution?: boolean;
 	resources?: Readonly<Record<string, string>>;
 }
 
@@ -122,7 +123,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 						};
 						hosts?: unknown;
 						drone?: { deliveryProjection?: unknown };
-						permissions?: { filesystem?: unknown; network?: unknown };
+						permissions?: { filesystem?: unknown; network?: unknown; subprocess?: unknown };
 					},
 			)
 			.catch(() => null);
@@ -192,6 +193,11 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 					manifest.permissions.network.includes("configured-services")
 				)
 					runtime.requestsModel = true;
+				if (
+					Array.isArray(manifest.permissions?.subprocess) &&
+					manifest.permissions.subprocess.includes("container")
+				)
+					runtime.requestsExecution = true;
 				if (manifest.entrypoints?.extension !== undefined) {
 					runtime.nativeEntrypoint = await installedRuntimeFile(
 						packageRoot,

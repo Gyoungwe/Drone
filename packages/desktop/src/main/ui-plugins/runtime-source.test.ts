@@ -26,13 +26,14 @@ async function writeManifest(
 	entries: Record<string, unknown> = {},
 	filesystem: unknown = [],
 	network: unknown = [],
+	subprocess: unknown = [],
 ): Promise<void> {
 	await writeFile(
 		join(packageRoot, "plugin.manifest.json"),
 		JSON.stringify({
 			id: "display-id-not-authenticated",
 			hosts: ["drone-desktop"],
-			permissions: { filesystem, network },
+			permissions: { filesystem, network, subprocess },
 			entrypoints: { ui: "./ui/plugin.json", desktopRuntime, ...entries },
 		}),
 	);
@@ -149,6 +150,20 @@ describe("installed UI runtime provenance", () => {
 			expect(manager.runtimeSource("results-ui")?.requestsFileRead).toBeUndefined();
 		});
 	}
+
+	it("requests bounded execution only for the exact installed container declaration and revokes it on rescan", async () => {
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await writeManifest("./runtime.js", {}, [], [], ["python", "container-shell"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsExecution).toBeUndefined();
+		await writeManifest("./runtime.js", {}, [], [], ["container"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")).toMatchObject({ requestsExecution: true });
+		expect(manager.runtimeSource("results-ui")?.resources).toBeUndefined();
+		await writeManifest();
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsExecution).toBeUndefined();
+	});
 
 	it("requests state writes only for the explicit filesystem token and clears it on rescan", async () => {
 		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
@@ -404,12 +419,14 @@ it("keeps a selected native source available without a UI declaration or UI trus
 	expect(manager.list()).toEqual([]);
 	const name = manager.nativeRuntimeName(join(packageRoot, "native.js"))!;
 	expect(manager.isNativeSourceAvailable(name)).toBe(true);
+	expect(manager.runtimeSources()).toMatchObject([{ name, state: "enabled" }]);
 	expect(manager.runtimeSource(name)?.nativeEntrypoint).toBe(await realpath(join(packageRoot, "native.js")));
 	await manager.updateConfig({ enabled: false });
 	expect(manager.isNativeSourceAvailable(name)).toBe(true);
 	await writeFile(join(packageRoot, "runtime.js"), "export const replaced = true;\n");
 	expect(manager.isNativeSourceAvailable(name)).toBe(false);
 	expect(manager.runtimeSource(name)).toBeUndefined();
+	expect(manager.runtimeSources()).toMatchObject([{ name, state: "unavailable" }]);
 });
 
 it("builds installed UI outside its package so compilation cannot change native source authority", async () => {

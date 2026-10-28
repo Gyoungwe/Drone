@@ -381,6 +381,7 @@ describe("DesktopRuntimeBridge", () => {
 		"requestsFileRead",
 		"requestsFileWrite",
 		"requestsModel",
+		"requestsExecution",
 	] as const)("revokes old bindings when the manifest changes %s authority", async (permission) => {
 		const { bridge, options, dispose, factory } = setup();
 		const token = (await bridge.bind("ui", owner))!;
@@ -471,6 +472,7 @@ describe("DesktopRuntimeBridge", () => {
 		await expect(bridge.bind("ui", owner)).rejects.toThrow("disposal failed");
 		const replace = vi.fn(async () => undefined);
 		await expect(bridge.withTransition(replace)).rejects.toThrow("disposal failed");
+		await expect(bridge.withUiTransition(replace)).rejects.toThrow("disposal failed");
 		expect(replace).not.toHaveBeenCalled();
 		expect(factory).toHaveBeenCalledOnce();
 		expect(dispose).toHaveBeenCalledOnce();

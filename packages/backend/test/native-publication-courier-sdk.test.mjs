@@ -18,7 +18,7 @@ const runtimeDirectory = resolve(
 	import.meta.dirname,
 	`../../desktop/plugin-runtime/${process.platform}-${process.arch}`,
 );
-const source = `export default async()=>({operations:{},async dispose(){},createNativeSession(){
+const source = `export default async({events})=>({operations:{},async dispose(){},createNativeSession(){
  const proofs=new WeakSet();let disposed=false;
  const valid=message=>proofs.has(message.liveProof)&&message.content[0]?.text==='checked owner result';
  const project=message=>valid(message)?message:{...message,content:[{type:'text',text:'blocked owner result'}]};
@@ -27,14 +27,22 @@ const source = `export default async()=>({operations:{},async dispose(){},create
   if(context.scope.kind!=='session')throw new Error('actual session scope required');
   const proof={id:'visible-proof-id'};proofs.add(proof);
   return {...event,message:{...event.message,content:[{type:'text',text:'checked owner result'}],liveProof:proof}};
- },event(event){if(disposed)throw new Error('owner disposed');return {...event,message:project(event.message)};},snapshot(messages){return messages.map(project);}},async dispose(){disposed=true;}};
+ },async event(event,signal){
+  if(event.type==='held'){
+   events.changed();
+   await new Promise(resolve=>signal.addEventListener('abort',resolve,{once:true}));
+   await new Promise(resolve=>setImmediate(resolve));
+   events.changed();
+  }
+  if(disposed)throw new Error('owner disposed');return {...event,message:project(event.message)};},snapshot(messages){return messages.map(project);}},async dispose(){disposed=true;}};
 }});`;
 
 it("executes real owner WeakSet projection across a restricted worker and the actual pinned SDK fence", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-publication-courier-")));
 	const sessions = [],
 		natives = [];
-	let runtime;
+	let runtime, markProjectionEntered;
+	let changes = 0;
 	try {
 		const pkg = join(root, "package");
 		await mkdir(pkg);
@@ -54,7 +62,12 @@ it("executes real owner WeakSet projection across a restricted worker and the ac
 					throw new Error("No capability granted");
 				},
 			},
-			events: { changed() {} },
+			events: {
+				changed() {
+					changes++;
+					markProjectionEntered?.();
+				},
+			},
 		});
 		const native = await runtime.createNativeSession();
 		natives.push(native);
@@ -120,6 +133,22 @@ it("executes real owner WeakSet projection across a restricted worker and the ac
 			"checked owner result",
 		);
 		expect((await native.projection.snapshot([message], []))[0].content[0].text).toBe("checked owner result");
+		const controller = new AbortController();
+		const entered = new Promise((resolve) => {
+			markProjectionEntered = resolve;
+		});
+		const held = native.projection.event({ type: "held", message }, controller.signal);
+		const cancelled = expect(held).rejects.toThrow();
+		await entered;
+		expect((await native.projection.event({ type: "message_end", message })).message.content[0].text).toBe(
+			"checked owner result",
+		);
+		controller.abort();
+		await cancelled;
+		expect(changes).toBe(2); // The real worker's abort cleanup completed before the parent rejection.
+		expect((await native.projection.snapshot([message], []))[0].content[0].text).toBe("checked owner result");
+		expect(Object.keys(message)).not.toContain("references");
+		expect(Object.keys(message)).not.toContain("signal");
 		const copy = structuredClone(message);
 		copy.reference = "1";
 		expect(

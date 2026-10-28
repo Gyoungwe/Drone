@@ -19,7 +19,7 @@ function pushConfigEvent(): void {
 export function registerUiPluginsIpc(manager: UiPluginManager, runtime: DesktopRuntimeBridge): void {
 	const changeConfiguration = async <T>(action: () => Promise<T>): Promise<T> => {
 		try {
-			return await runtime.withTransition(action);
+			return await runtime.withUiTransition(action);
 		} finally {
 			// Failed persistence still drained old clients. Reload the configuration that actually survived.
 			pushConfigEvent();

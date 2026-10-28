@@ -163,8 +163,8 @@ input.on("line", async (line) => {
             if(!projection.finalize)throw new Error("Native publication finalizer is unavailable");
             return projection.finalize(message.input,{scope:Object.freeze(message.scope),signal,capabilities});
           }
-          if(message.kind==="event")return projection.event(message.input);
-          if(message.kind==="snapshot")return {messages:await projection.snapshot(message.input.messages,message.input.persisted)};
+          if(message.kind==="event")return projection.event(message.input,signal);
+          if(message.kind==="snapshot")return {messages:await projection.snapshot(message.input.messages,message.input.persisted,signal)};
           throw new Error("Unknown native projection request");
         }
         if(message.kind==="tool") {
