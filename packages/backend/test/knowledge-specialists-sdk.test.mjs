@@ -16,6 +16,7 @@ import {
 	closeKnowledgeServices,
 	flowFor,
 	getKnowledgeService,
+	knowledgeHostLoader,
 	listWikiProposals,
 	registerKnowledgeSpecialistHost,
 } from "@gyoungwe/pi-knowledge/host";
@@ -115,6 +116,7 @@ it.each(["reviewed", "malformed-review", "unsupported-review", "source-changed",
 					getRuntime: async () => runtime,
 					getModelPreference: async () => undefined,
 					registerKnowledgeSpecialistHost,
+					runModelLoop: knowledgeHostLoader.load().runSpecialistModelLoop,
 				}),
 			],
 		});
