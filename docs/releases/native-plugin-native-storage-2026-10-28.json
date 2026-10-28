@@ -21,7 +21,7 @@
 		"actualSdkHostAndOfficial": {
 			"status": "PASS",
 			"tests": 9,
-			"log": "/tmp/native-storage-final-with-s1-cohort.log"
+			"log": "/tmp/native-storage-sdk-final.log"
 		},
 		"withS1Contracts": {
 			"status": "PASS",

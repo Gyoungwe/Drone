@@ -12,7 +12,7 @@ Pi 1.1.0 的 appendCustomEntry 先更新 SessionManager 内存，再执行磁盘
 
 长生命周期宿主 TaskApplication 在真正 SDK reload 后仍保留故障；同一 SessionManager 仍有 phantom，不能视为恢复。实际 SessionManager.open 从磁盘只读到最后 committed entry；新的 SDK application/event bus 重开后才读回正常状态。回归不重建 fixture manager、不回滚私有 arrays，也没有 process/Symbol 全局账本。
 
-**独立 raw CLI reload 仍是 S2 缺口。** 标准 extension API 的 events.on 经 runtime.trackEventBusSubscription 包装，invalidate 会解除全部监听；纯插件 bus listener 不能跨 reload 保留 tombstone。最初“双入口 reload 应安全”的实际 SDK 回归确实失败，保留 RED 日志 `/tmp/task-session-commit-sdk-first.log`、`second.log`。当前官方入口仅证明 reload 前拒绝与真实磁盘重开恢复；没有把其 reload 后 phantom 接受标为 PASS。必须由 S2 的实际 source/application generation 接线解决。
+**历史 S1：独立 raw CLI reload 当时仍是 S2 缺口。** 标准 extension API 的 events.on 经 runtime.trackEventBusSubscription 包装，invalidate 会解除全部监听；纯插件 bus listener 不能跨 reload 保留 tombstone。最初“双入口 reload 应安全”的实际 SDK 回归确实失败，保留 RED 日志 `/tmp/task-session-commit-sdk-first.log`、`second.log`。当前官方入口仅证明 reload 前拒绝与真实磁盘重开恢复；没有把其 reload 后 phantom 接受标为 PASS。后继 [native storage fence](native-plugin-native-storage-evidence.md) 现已用公开 SDK branch/自身 JSONL 对此 append-phantom 实际 RED→GREEN；更完整的 managed 生命周期和 deferred actor 策略仍未完成。
 
 ## 已验证范围
 
