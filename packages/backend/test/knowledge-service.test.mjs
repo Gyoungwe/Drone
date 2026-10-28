@@ -125,9 +125,11 @@ describe("application-wide knowledge ownership", () => {
 			"independent from application",
 		);
 	});
-	it("gives permitted subagents the application policy, not a project-only config", async () => {
+	it("leaves the knowledge Vault policy to the knowledge package's own child sessions", async () => {
 		await setup();
-		expect(await resolveSubagentMcpAccess(b, {})).toBe("read-local");
+		// The application binding allows read-local, but the host no longer reads it: Vault access for
+		// children is decided by the knowledge package. Only the project's MCP workspace file applies here.
+		expect(await resolveSubagentMcpAccess(b, {})).toBe("none");
 		expect(await resolveSubagentMcpAccess(b, { mcpAccess: "none" })).toBe("none");
 		expect(await resolveSubagentMcpAccess(b, {}, false)).toBe("none");
 	});

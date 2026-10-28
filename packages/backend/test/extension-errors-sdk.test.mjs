@@ -194,6 +194,8 @@ it("records child hook errors while its SDK read remains usable and removes the 
 		fauxAssistantMessage("child still usable"),
 	]);
 	const events = [];
+	const childEntry = join(f.root, "child-hooks.mjs");
+	await writeFile(childEntry, "export default () => {};\n");
 	const result = await runSubagent(
 		{
 			getModelRuntime: async () => f.modelRuntime,
@@ -201,15 +203,26 @@ it("records child hook errors while its SDK read remains usable and removes the 
 			gate: { confirm: async () => true },
 			traces: new SessionTraces(),
 			onEvent: (_id, event) => events.push(event),
-			registerAnswerPublication: (pi) => {
-				pi.on("session_start", () => {
-					throw new Error("child startup failed");
-				});
-				pi.on("context", () => {
-					throw new Error("child context failed");
-				});
-				return { begin() {} };
-			},
+			// A package that declared read-only child support, whose hooks fail inside the child.
+			nativeChildren: () => ({
+				integration: {
+					manages: (path) => path === childEntry,
+					childExtensionPaths: () => [childEntry],
+					begin: () => ({
+						factoryForPath: async () => (pi) => {
+							pi.on("session_start", () => {
+								throw new Error("child startup failed");
+							});
+							pi.on("context", () => {
+								throw new Error("child context failed");
+							});
+						},
+						bindSession() {},
+						async dispose() {},
+					}),
+				},
+				register: () => () => undefined,
+			}),
 		},
 		{
 			cwd: f.cwd,
