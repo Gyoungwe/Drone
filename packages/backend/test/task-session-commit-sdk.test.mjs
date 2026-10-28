@@ -13,6 +13,7 @@ import {
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { messagesToUIMessages } from "@drone/shared";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
 	createAgentSession,
@@ -117,10 +118,29 @@ it("actual native lazy input reaches a saved conversation without deadlock; nati
 		content: expect.stringContaining("deferred"),
 	});
 	await expect(access(file)).rejects.toThrow(/ENOENT/);
+	const blocked = await session.extensionRunner.emitToolCall({
+		type: "tool_call",
+		toolName: "write",
+		toolCallId: "lazy-effect",
+		input: { path: "must-not-write.txt", content: "not allowed before disk receipt" },
+	});
+	expect(blocked).toEqual({
+		block: true,
+		reason: "Task checkpoint is not durable; wait for actual session persistence before external effects.",
+	});
+	expect(faux.state.callCount).toBe(0);
+	const lazyUi = messagesToUIMessages(await service.getSessionMessages(meta.sessionId));
+	expect(lazyUi.findLast((message) => message.kind === "assistant" && message.taskView)).toMatchObject({
+		taskView: { storage: { mode: "persistent", state: "deferred" } },
+	});
 	await plan(session);
 	await service.command(meta.sessionId, "task-status", "");
-	expect(session.messages.at(-1).details.taskStorage).toEqual({ state: "durable" });
+	expect(session.messages.at(-1).details.taskStorage).toEqual({ mode: "persistent", state: "durable" });
 	await expect(access(file)).resolves.toBeUndefined();
+	const durableUi = messagesToUIMessages(await service.getSessionMessages(meta.sessionId));
+	expect(durableUi.findLast((message) => message.kind === "assistant" && message.taskView)).toMatchObject({
+		taskView: { storage: { mode: "persistent", state: "durable" } },
+	});
 	const settingsManager = SettingsManager.inMemory({});
 	const resourceLoader = new DefaultResourceLoader({
 		cwd,
@@ -147,7 +167,12 @@ it("actual native lazy input reaches a saved conversation without deadlock; nati
 		await service.command(memory.sessionId, "task-status", "");
 		expect(memory.messages.at(-1)).toMatchObject({
 			details: { taskStorage: { state: "deferred" } },
-			content: expect.stringContaining("deferred"),
+			content: expect.stringContaining("not saved to disk"),
+		});
+		expect(memory.messages.at(-1).details.taskStorage).toEqual({ mode: "memory", state: "deferred" });
+		const memoryUi = messagesToUIMessages(await service.getSessionMessages(memory.sessionId));
+		expect(memoryUi.findLast((message) => message.kind === "assistant" && message.taskView)).toMatchObject({
+			taskView: { storage: { mode: "memory", state: "deferred" } },
 		});
 		expect(memory.sessionManager.getSessionFile()).toBeUndefined();
 	} finally {
