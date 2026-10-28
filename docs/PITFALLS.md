@@ -463,3 +463,7 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 ### 纯清单测试不应加载 Electron 二进制
 
 `filterContributions` 是纯 JSON 过滤；从 manager 导入会间接加载 Electron，在官方二进制下载失败时让纯数据测试提前退出。函数已原样提取到 `manifest-contributions.ts`，manager 与测试共用。纯测试通过不证明正式宿主可启动，Electron 安装与打包仍需独立检查。
+
+## 2026-10-28：空 interception 不证明会话没有 required publisher
+
+实际 SDK 可能在 import interception 之前跳过不存在的入口，catalog 也包含未被此会话选择的包。发布策略必须消费本会话实际有效选择与 loader 错误来源的完整宿主回执；空 interception 或全 catalog 均不能替代。`NativeSessionDelivery` 只在 host-only `confirmSelection` 后允许 ordinary，实际 run 起点锁定 required attachment/source，关闭/哈希变化不能释放已参与 guard 的运行。当前真实 SDK 切片 6 项、连同 fence/command 共 30 项通过；生产全来源确认和正式安装包仍未验收。

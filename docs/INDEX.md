@@ -35,6 +35,7 @@ P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享
 完整 managed native publication 的[设计](superpowers/specs/2026-10-28-managed-native-publication-design.md)已批准，完整 owner/consumer 仍待实现；[实际 Pi 1.1.0 时序观察](releases/native-publication-sdk-ordering-2026-10-28.json)证明 awaited hooks 阻塞 prompt/idle，但 SDK abort 本身不拦截迟到正文持久化。后继[SDK 机制回执](releases/native-publication-sdk-fence-2026-10-28.json)记录钉版 host-only 最终边界的真实 RED→GREEN 与七项 SDK 回归，仍不代表完整插件 publication 或正式安装包验收。
 真正历史对象的来源只由 SDK 私有 WeakMap 与当前 branch 提供，宿主入口在 `session-engine/engine.ts:historicalMessageOrigin`；[实际 SDK 来源回执](releases/native-publication-historical-origin-2026-10-28.json)覆盖新 live 复制、reload、branch 切换和 dispose，不能把这个来源当作新的 live proof。
 实际 run 起点和本次 delivery 是否参与 guard 由钉版 host-only callback 管理，见[起点/取消机制回执](releases/native-publication-run-start-2026-10-28.json)；普通 Pi abort 与无 callback 对照一致，实际来源选择和完整 consumer 仍待实现。
+会话实际选择与本次 run 的通用发布机制位于 `backend/src/plugins/native-delivery.ts`；[来源锁定切片](releases/native-publication-selection-2026-10-28.json)覆盖 actual SDK/registry/broker/worker owner proof 和未确认来源关闭。完整 ResourceLoader 选择回执、默认生产接线与知识 workflow 仍未完成。
 原生 publication 的[私有对象 courier](pluginization/native-plugin-publication-courier.md)保留同 attachment 的 owner 对象，由真实 owner WeakSet 决策；JSON proof 字段不获得权威。其实际 worker/SDK fixture 仍不替代完整知识工作流与正式包验收。 后继同时记录实际 SDK source revoke→abort/drain 与 UI-only transition 保留 native owner 的边界；完整 required-source policy 与知识 consumer 仍未完成。
 
 ## 硬约束（改代码前必知）
