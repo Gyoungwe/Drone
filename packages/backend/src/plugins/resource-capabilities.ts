@@ -243,22 +243,16 @@ export class PluginResourceManager {
 		return this.resourcesStopping;
 	}
 
-	/** The host calls this only after the domain owner has drained and disposed. */
+	/** Final release follows successful domain and resource cleanup; never run after a cleanup error. */
+	releaseReservations(): void {
+		this.reservations.dispose();
+		this.handles.clear();
+	}
+
+	/** Standalone callers must also prove successful resource cleanup before final release. */
 	dispose(): Promise<void> {
 		if (this.closing) return this.closing;
-		this.closing = (async () => {
-			const results = await Promise.allSettled([this.disposeResources()]);
-			results.push(
-				...(await Promise.allSettled([Promise.resolve().then(() => this.reservations.dispose())])),
-			);
-			this.handles.clear();
-			const failures = results.filter((result) => result.status === "rejected");
-			if (failures.length)
-				throw new AggregateError(
-					failures.map((result) => result.reason),
-					"Plugin resource disposal failed",
-				);
-		})();
+		this.closing = this.disposeResources().then(() => this.releaseReservations());
 		return this.closing;
 	}
 

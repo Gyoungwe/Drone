@@ -26,6 +26,7 @@ interface ResourceAccessSelection {
 }
 
 const writeOperations = [
+	"state.reserve",
 	"state.writeJson",
 	"state.removeJson",
 	"state.ensureDirectory",
@@ -55,13 +56,15 @@ function fileWriteApprovalDetail(
 	if (!grant || !(isState ? grant.stateWrite : grant.fileWrite))
 		throw new Error("Plugin write root was not granted");
 	const action =
-		operation === "state.writeJson"
-			? hostText("写入 JSON", "Write JSON")
-			: operation === "files.writeText"
-				? hostText("写入文本文件", "Write text file")
-				: operation === "state.removeJson" || operation === "files.remove"
-					? hostText("删除文件", "Remove file")
-					: hostText("创建目录（保留已有目录）", "Create directory (preserve existing directory)");
+		operation === "state.reserve"
+			? hostText("保留状态目录的独占写者租约", "Reserve the state directory for one writer")
+			: operation === "state.writeJson"
+				? hostText("写入 JSON", "Write JSON")
+				: operation === "files.writeText"
+					? hostText("写入文本文件", "Write text file")
+					: operation === "state.removeJson" || operation === "files.remove"
+						? hostText("删除文件", "Remove file")
+						: hostText("创建目录（保留已有目录）", "Create directory (preserve existing directory)");
 	const lines = [
 		hostText(`动作：${action} (${operation})`, `Action: ${action} (${operation})`),
 		hostText(
@@ -73,7 +76,18 @@ function fileWriteApprovalDetail(
 			`Root-relative path: ${JSON.stringify(request.path)}`,
 		),
 	];
-	if (operation !== "state.ensureDirectory" && operation !== "files.ensureDirectory") {
+	if (operation === "state.reserve")
+		lines.push(
+			hostText(
+				"仅保留此目录的独占写者租约，不修改日志正文。完整 owner 与资源成功关闭后释放；清理失败时保留租约并要求显式恢复。后续 JSON 写入仍需单独批准。",
+				"Reserves this directory for one writer without modifying journal contents. The lease is released after successful owner and resource cleanup; cleanup failures retain it for explicit recovery. Later JSON writes still require separate approval.",
+			),
+		);
+	if (
+		operation !== "state.reserve" &&
+		operation !== "state.ensureDirectory" &&
+		operation !== "files.ensureDirectory"
+	) {
 		const expected = isState ? request.expectedVersion : request.expectedHash;
 		lines.push(`${isState ? "expectedVersion" : "expectedHash"}: ${JSON.stringify(expected)}`);
 		if (expected === null)
@@ -227,7 +241,7 @@ export function createDesktopResourceCapabilities(
 		const fileHandlers = { ...fileCapabilityHandlers(ports) };
 		for (const operation of writeOperations) {
 			fileHandlers[operation] = {
-				// biome-ignore lint/style/noNonNullAssertion: The host factory supplies all six mutation handlers.
+				// biome-ignore lint/style/noNonNullAssertion: The host factory supplies all state/file mutation handlers.
 				...fileHandlers[operation]!,
 				approvalDetail: (input) => fileWriteApprovalDetail(grants, operation, input),
 			};
@@ -242,9 +256,16 @@ export function createDesktopResourceCapabilities(
 			...(resources
 				? {
 						resourcesLifecycle: { dispose: () => resources.disposeResources() },
-						dispose: () => resources.dispose(),
 					}
 				: {}),
+			dispose: async () => {
+				await resources?.disposeResources();
+				await ports.drain();
+			},
+			finalRelease: async () => {
+				resources?.releaseReservations();
+				ports.releaseReservations();
+			},
 		};
 	};
 }

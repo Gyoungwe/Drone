@@ -1,4 +1,5 @@
-import { lstat, mkdir, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { lstat, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type {
 	ControlledKernelRunner,
@@ -35,7 +36,9 @@ import type {
 	DiscoveryHostServices,
 	DiscoveryJournalName,
 } from "@gyoungwe/plugin-api";
-import { JsonStore } from "../json-store";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
+import { JsonStore, JsonStoreCorruptedError } from "../json-store";
+import { canonicalProjectId } from "../project-id";
 import type { StorageRegistry } from "../storage/registry";
 import { ContainerKernelRunner, type ContainerKernelRunnerOptions } from "./container-runner";
 
@@ -179,7 +182,11 @@ const journalNames: readonly DiscoveryJournalName[] = [
 ];
 
 /** Infrastructure is constructed only for an installed capability; kernels remain lazy. */
-export function createDiscoveryHostInput(options: DiscoveryServiceOptions): DiscoveryHostInput {
+export function createDiscoveryHostInput(
+	options: DiscoveryServiceOptions,
+	reserveWriter: () => Promise<void>,
+	retainWriter: (error: unknown) => void,
+): DiscoveryHostInput {
 	const projectRoot = resolve(options.projectRoot);
 	const root = resolve(options.agentDir ?? join(projectRoot, "runs", ".drone-discovery"));
 	options.storage?.registerDiscoveredRoot("discovery-root", root, "discovery/service", "private");
@@ -193,17 +200,71 @@ export function createDiscoveryHostInput(options: DiscoveryServiceOptions): Disc
 				`discovery/${name}`,
 				"private",
 			);
-			return new JsonStore<T[]>({
+			const store = new JsonStore<T[]>({
 				path: join(root, `${name}.json`),
 				storageId: entry?.id ?? `agent-discovery-${name}`,
 				defaultValue: () => [],
 			});
+			let expectedVersion: string | null | undefined;
+			const snapshot = async () => {
+				const path = join(root, `${name}.json`);
+				let text: string;
+				try {
+					if ((await lstat(root)).isSymbolicLink() || (await lstat(path)).isSymbolicLink())
+						throw new Error("Discovery journal path contains a symlink");
+					text = await readFile(path, "utf8");
+				} catch (error) {
+					if ((error as NodeJS.ErrnoException).code === "ENOENT") return { value: [] as T[], version: null };
+					throw error;
+				}
+				let value: unknown;
+				try {
+					value = JSON.parse(text);
+				} catch (error) {
+					throw new JsonStoreCorruptedError(path, error);
+				}
+				if (!Array.isArray(value))
+					throw new JsonStoreCorruptedError(path, new Error("Discovery journal must contain an array"));
+				return { value: value as T[], version: createHash("sha256").update(text).digest("hex") };
+			};
+			return {
+				read: async () => {
+					const current = await snapshot();
+					expectedVersion = current.version;
+					return current.value;
+				},
+				write: async (records: T[]) => {
+					await reserveWriter();
+					const writtenHash = createHash("sha256")
+						.update(`${JSON.stringify(records, null, 2)}\n`)
+						.digest("hex");
+					const current = await store
+						.writeChecked(records, {
+							check: async () => {
+								if (expectedVersion === undefined || (await snapshot()).version !== expectedVersion)
+									throw new Error("Discovery journal changed; close and reopen this owner before writing");
+							},
+							readBack: async () => {
+								const stored = await snapshot();
+								if (stored.version !== writtenHash)
+									throw new Error("Discovery journal did not read back after write");
+								return stored;
+							},
+						})
+						.catch((error) => {
+							if (error instanceof AggregateError) retainWriter(error);
+							throw error;
+						});
+					expectedVersion = current.version;
+				},
+			};
 		},
-		authorize: (operation) => {
+		authorize: async (operation) => {
 			if (operation.projectId !== options.projectId)
 				throw new Error("Discovery authorization belongs to another project");
 			if (!options.authorize) throw new Error("discovery operation requires task authorization");
-			return options.authorize(operation);
+			await options.authorize(operation);
+			await reserveWriter();
 		},
 		runner: async (language) => {
 			let runner: ControlledKernelRunner;
@@ -259,14 +320,128 @@ export function createDiscoveryHostInput(options: DiscoveryServiceOptions): Disc
 export function createDiscoveryService(
 	options: DiscoveryServiceOptions,
 	loader?: DiscoveryHostLoader,
+	/** Internal infrastructure seam; production uses the same local-user namespace as native adapters. */
+	reservations = new PluginResourceReservations(),
 ): { service: DiscoveryServicePort; host?: DiscoveryHostPort } {
-	const host = loader
+	const stateRoot = resolve(
+		options.agentDir ?? join(resolve(options.projectRoot), "runs", ".drone-discovery"),
+	);
+	const reserveWriter = async () => {
+		await mkdir(stateRoot, { recursive: true });
+		if ((await lstat(stateRoot)).isSymbolicLink())
+			throw new Error("Discovery state root cannot be a symlink");
+		let bindingText: string;
+		try {
+			bindingText = await readFile(join(stateRoot, "workspace-binding.json"), "utf8");
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+			reservations.reserve("state-writers", [await realpath(stateRoot)]);
+			return;
+		}
+		const binding = JSON.parse(bindingText) as {
+			schemaVersion?: unknown;
+			workspaceId?: unknown;
+			projectId?: unknown;
+		} | null;
+		if (
+			binding?.schemaVersion !== 1 ||
+			binding.workspaceId !== canonicalProjectId(options.projectRoot) ||
+			binding.projectId !== options.projectId
+		)
+			throw new Error("Discovery state root belongs to another workspace or project");
+		reservations.reserve("state-writers", [await realpath(stateRoot)]);
+	};
+	let cleanupFailure: unknown;
+	const loaded = loader
 		? loader.create
-			? loader.create(createDiscoveryHostInput(options))
+			? loader.create(
+					createDiscoveryHostInput(options, reserveWriter, (error) => {
+						cleanupFailure = error;
+					}),
+				)
 			: loader.load()
 		: undefined;
-	if (host && host.contractVersion !== 1)
-		throw new Error(`Unsupported discovery host contract: ${host.contractVersion}`);
+	if (loaded && loaded.contractVersion !== 1)
+		throw new Error(`Unsupported discovery host contract: ${loaded.contractVersion}`);
+	const pending = new Set<Promise<unknown>>();
+	let stopping: Promise<void> | undefined;
+	const dispose = () => {
+		stopping ??= Promise.resolve().then(async () => {
+			// Domain disposal aborts its kernels while accepted calls drain; do not wait for one before starting the other.
+			const [domain] = await Promise.allSettled([loaded?.dispose?.(), ...pending]);
+			if (domain.status === "rejected") throw domain.reason;
+			if (cleanupFailure)
+				throw new Error("Discovery journal cleanup failed; writer reservation retained", {
+					cause: cleanupFailure,
+				});
+			reservations.dispose();
+		});
+		return stopping;
+	};
+	const host: DiscoveryHostPort | undefined = loaded
+		? { contractVersion: 1, init: () => loaded.init?.() ?? Promise.resolve(), dispose }
+		: undefined;
+	const mutations = new Set<keyof DiscoveryHostPort>([
+		"recordDiscovery",
+		"createKernelSession",
+		"executeKernel",
+		"exportKernel",
+		"closeKernelSession",
+		"createExplorationPlan",
+		"runCritic",
+		"runMultipath",
+		"runEvaluation",
+		"putBaseline",
+	]);
+	// These existing contract-v1 methods authorize through the injected services before doing work.
+	const authorizedMethods = new Set<keyof DiscoveryHostPort>([
+		"createKernelSession",
+		"executeKernel",
+		"exportKernel",
+		"closeKernelSession",
+		"runMultipath",
+		"runEvaluation",
+	]);
+	const methods = [
+		"status",
+		"getCapabilities",
+		"getKernelSession",
+		"recordDiscovery",
+		"listKernelSessions",
+		"createKernelSession",
+		"executeKernel",
+		"exportKernel",
+		"closeKernelSession",
+		"listCriticReviews",
+		"listMultipathAssessments",
+		"listExplorationPlans",
+		"listEvaluations",
+		"createExplorationPlan",
+		"runCritic",
+		"runMultipath",
+		"runEvaluation",
+		"listBaselines",
+		"putBaseline",
+	] as const;
+	if (host && loaded)
+		for (const method of methods) {
+			const operation = loaded[method];
+			if (typeof operation !== "function") continue;
+			host[method] = (input: unknown) => {
+				if (stopping) return Promise.reject(new Error("Discovery host is stopping or disposed"));
+				const running = Promise.resolve().then(async () => {
+					if (mutations.has(method) && (!loader?.create || !authorizedMethods.has(method)))
+						await reserveWriter();
+					return operation.call(loaded, input);
+				});
+				pending.add(running);
+				void running.then(
+					() => pending.delete(running),
+					() => pending.delete(running),
+				);
+				return running;
+			};
+		}
 	const invoke = <T>(
 		method: Exclude<keyof DiscoveryHostPort, "contractVersion" | "init" | "dispose">,
 		input: unknown = {},

@@ -33,7 +33,10 @@ export interface PluginRuntimeCapabilitiesOptions {
 	readonly handlers: Readonly<Record<string, PluginCapabilityHandler>>;
 	readonly resources: readonly PluginRuntimeResource[];
 	readonly resourcesLifecycle?: PluginResourcesLifecycle;
+	/** Drain and close host-owned resources; attempted even if domain disposal fails. */
 	dispose?(): Promise<void>;
+	/** Release writer leases only after domain, native and resource cleanup all succeeded. */
+	finalRelease?(): Promise<void>;
 }
 /** Host-owned identity only: no filesystem grant is implied by the returned scope. */
 const callerScopeHandler: PluginCapabilityHandler = {

@@ -16,6 +16,8 @@ let loader: DiscoveryHostLoader;
 
 beforeAll(async () => {
 	if (!tarball) return;
+	const api = process.env.DRONE_PLUGIN_API_TARBALL;
+	if (!api) throw new Error("Discovery candidate requires explicit DRONE_PLUGIN_API_TARBALL");
 	installedRoot = await mkdtemp(join(tmpdir(), "discovery-plugin-parity-install-"));
 	await exec("npm", [
 		"install",
@@ -25,6 +27,7 @@ beforeAll(async () => {
 		"--no-audit",
 		"--no-fund",
 		tarball,
+		api,
 	]);
 	const entry = join(installedRoot, "node_modules/@gyoungwe/pi-discovery/dist/host.mjs");
 	loader = (await import(/* @vite-ignore */ pathToFileURL(entry).href)).discoveryHostLoader;
