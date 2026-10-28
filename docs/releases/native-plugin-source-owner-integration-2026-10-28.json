@@ -1,0 +1,216 @@
+{
+	"schemaVersion": 1,
+	"status": "IN_PROGRESS",
+	"hostSourceBeforeThisReceipt": "a87f547252c9866a7e7a0220707a9f58d2a49701",
+	"pluginSource": "e713409556ff8bd28fe3a5f0ea8f2fde60b90a7b",
+	"api": {
+		"sourceCommit": "6a011fc862a2bb8814eb74dd5ff9a1e90a3e57e5",
+		"tarball": "/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone/vendor/gyoungwe-plugin-api-1.3.0-6a011fc8.tgz",
+		"sha256": "a83db1c29f5c1d4d194fe11782609502cd612d4f266dee843de5d797553cb77e",
+		"integrity": "sha512-tKiqcqiqXYVXdVfAZ626Dm3vRADTOT5QlbL8SqncSh5rC7/5FYwJKUvUFQr3rFH+NCjhYmMRZ+lLkLvBPiXS2A=="
+	},
+	"packages": [
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.3.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-source-owner-api-cohort-pack-5T22nd/gyoungwe-pi-knowledge-0.3.0.tgz",
+			"sha256": "ad96b165b680eaf80f20fdfc64447a1c7a0d77411832021373fc616e2913c45f"
+		},
+		{
+			"name": "@gyoungwe/pi-analysis",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-source-owner-api-cohort-pack-5T22nd/gyoungwe-pi-analysis-0.2.0.tgz",
+			"sha256": "325b8e8214837a4d7c1d06db91cd1eb14c9c4bf7cf9eba031e44718cf95d8cdb"
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"version": "0.3.2",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-source-owner-api-cohort-pack-5T22nd/gyoungwe-pi-research-0.3.2.tgz",
+			"sha256": "4db7092d8ef47a29f987833fd577ceaa18dc21f2295e605c0ce4be6be7a15176"
+		},
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-source-owner-api-cohort-pack-5T22nd/gyoungwe-pi-core-0.2.0.tgz",
+			"sha256": "9baf31509bb5d6094f5613565accf85aad8379ebb8cce7f18c0a1d84ac83849b"
+		},
+		{
+			"name": "@gyoungwe/pi-discovery",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-source-owner-api-cohort-pack-5T22nd/gyoungwe-pi-discovery-0.2.0.tgz",
+			"sha256": "37af322c8e81ed95579efc18aa02ae7a3486e5bd3a375fb0d192cedbfbd00db6"
+		}
+	],
+	"archiveRebuild": {
+		"root": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-source-owner-api-cohort-pack-5T22nd",
+		"log": {
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-source-owner-api-cohort-pack-5T22nd/build.log",
+			"sha256": "8d743302bce15fb402ed6b9de57f5f386b67e0868266c001b9bc044f83c0eb0c",
+			"exitCode": 0,
+			"scope": "Independent git archive, fresh npm ci, official builds and five npm packs"
+		}
+	},
+	"checks": [
+		{
+			"path": "/tmp/drone-next-execution-api-plugin-ci.log",
+			"sha256": "29d86831e331613d6b3e6b82525b309d993078d4e8550d9b048dcad895bd6943",
+			"exitCode": 0,
+			"scope": "Fresh plugin npm ci for exact API 6a011fc8"
+		},
+		{
+			"path": "/tmp/drone-next-execution-api-plugin-check.log",
+			"sha256": "65dffc27cfb26860afa2387973db33b79d6f300ab15bb25a897cb831036eb2f4",
+			"exitCode": 0,
+			"scope": "Complete plugin npm run check; source predecessor 782e7ee plus only exact API lock change committed as e713409"
+		},
+		{
+			"path": "/tmp/drone-next-source-owner-api-packed-sdk.log",
+			"sha256": "8a5f02280ff1df775502b0d3d3458d1f97d40a80fe3d5aa4248688e8a959b403",
+			"exitCode": 0,
+			"scope": "Three actual SDK files, 8 passed: packed knowledge/model/rollback, packed discovery/shared UI-native owner/legacy writers, six task transaction cases; API 6a011fc8"
+		},
+		{
+			"path": "/tmp/drone-next-publication-question-merge-tests.log",
+			"sha256": "f707f14bbe8f2190d41c6fca4c0a81a0104883dbc91464b9998fffd335b03c55",
+			"exitCode": 0,
+			"scope": "Eight SDK/unit files, 69 passed before later source catalog/execution additions"
+		},
+		{
+			"path": "/tmp/drone-next-execution-cancel-merge-tests.log",
+			"sha256": "61e5ec186401fb305b8a15816d3f80d07f562f5045795fa41bb4444a0ff232d2",
+			"exitCode": 0,
+			"scope": "Three execution capability/transaction/runner files, 25 passed; synthetic engine successes are not real Docker acceptance"
+		},
+		{
+			"path": "/tmp/drone-next-ui-native-transition-tests-3.log",
+			"sha256": "0ee3ffc87c392c960cdb7c50581bb84bbf7b49f69d5ffbea24c3f869253f6e3e",
+			"exitCode": 0,
+			"scope": "Seven Desktop/IPC/preload/UI files, 103 passed after cleanup barriers; before alias follow-up"
+		},
+		{
+			"path": "/tmp/drone-next-alias-barrier-sdk.log",
+			"sha256": "bcc95b2978174d9562f6d24c290b1dd7aecea877497ab978c3207c50f803f0c7",
+			"exitCode": 0,
+			"scope": "Real SDK native command/lifecycle cohort, 10 passed including failed abort receipt and alias barrier"
+		},
+		{
+			"path": "/tmp/drone-next-install-retarget-tests.log",
+			"sha256": "9309b23f245676332668dd5d2ced816e492e99300dc4bd245a8343ff0d7b871b",
+			"exitCode": 0,
+			"scope": "Four actual filesystem source/discovery/aggregate/UI files, 66 passed/1 skipped"
+		},
+		{
+			"path": "/tmp/drone-next-install-retarget-tsc.log",
+			"sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			"exitCode": 0,
+			"scope": "Desktop Node typecheck after source provenance changes"
+		},
+		{
+			"path": "/tmp/drone-next-question-forwarding-tests.log",
+			"sha256": "36761f2043ba4a26e2c4e65457474af6141e22da1be3db896bba264c117761bd",
+			"exitCode": 0,
+			"scope": "26 existing runtime-host/IPC/preload cases after moving event forwarding to IPC composition root"
+		},
+		{
+			"path": "/tmp/drone-next-question-forwarding-tsc.log",
+			"sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			"exitCode": 0,
+			"scope": "Desktop Node typecheck after event ownership correction"
+		},
+		{
+			"path": "/tmp/drone-next-source-owner-fetch-e713.log",
+			"sha256": "f6208e3e37e62ad6a3fab905756e5ac9b81ddc0461b5c855d3188267d2bbe211",
+			"exitCode": 0,
+			"scope": "Default remote fetch without source override verifies all four migration source locks"
+		},
+		{
+			"path": "/tmp/drone-next-integrated-preflight-lint-2.log",
+			"sha256": "ed3e139b8f40b8108d956b3372dd576d8baa306e10d9a4090cb127dfafe79f73",
+			"exitCode": 0,
+			"scope": "Preflight whole-host lint passed before final source provenance and SDK run-start changes; two warnings and three infos retained"
+		}
+	],
+	"preservedInitialFailures": [
+		{
+			"path": "/tmp/drone-next-ui-native-transition-tests.log",
+			"sha256": "ea1f99699891c1452bf497b34c08c9717879f7ea4e43307fe0caebc8756f2ea6",
+			"exitCode": 1,
+			"scope": "Original failed teardown barrier regression after integrated SDK abort cleanup"
+		},
+		{
+			"path": "/tmp/drone-next-ui-failed-barrier-red.log",
+			"sha256": "dabbd46ad501caf56ba7e4fb660dc50c9bd91387ed089191c051436e37b4980d",
+			"exitCode": 1,
+			"scope": "UI-only configuration incorrectly bypassed prior failed cleanup; actual RED before minimal fix"
+		},
+		{
+			"path": "/tmp/drone-next-execution-entry-identity-red.log",
+			"sha256": "8da5b9f6a96231b0a2c09483c31187f112e125d191a8cde2e08faad055d9ee6d",
+			"exitCode": 1,
+			"scope": "Two failures distinguish caller Selection object from actual SDK session identity before fix"
+		},
+		{
+			"path": "/tmp/drone-next-source-owner-packed-sdk.log",
+			"sha256": "5313fabe628d2ec5bc761f199162efe7fcc88ad05b8ba7c5c30b36780dd6996a",
+			"exitCode": 1,
+			"scope": "First packed knowledge failed because acceptance composition omitted newly independent session.inspect; six actual task SDK cases passed in same run"
+		},
+		{
+			"path": "/tmp/drone-next-source-owner-extensions-final.log",
+			"sha256": "627433e1febd78dd071ec1ec906f12636ebeea847b3bae34ee6bc2cccb735a07",
+			"exitCode": 1,
+			"scope": "Official generator refused stale preserved knowledge dependencies before --force rebuild"
+		},
+		{
+			"path": "/tmp/drone-next-integrated-preflight-lint.log",
+			"sha256": "af5864fe8cb6ff069b19d86d44563a3000236992ebf080c4c6219f4cfa3c9f2a",
+			"exitCode": 1,
+			"scope": "Preflight found generated manifest/evidence formatting errors, then normalized without changing decoded historical JSON"
+		}
+	],
+	"nativeBoundary": {
+		"exitCode": 1,
+		"status": "INCOMPLETE",
+		"counts": {
+			"domain-build-step": 15,
+			"domain-manifest-dependency": 10,
+			"domain-type-import": 5,
+			"domain-runtime-import": 1,
+			"domain-packaged-resource": 21,
+			"required-domain-plugin": 4
+		},
+		"log": {
+			"path": "/tmp/drone-next-source-owner-boundary.log",
+			"sha256": "a66daa47c64b9bb132f8974b8abff14b04b0c095f61da47641253d733a0aa073",
+			"exitCode": 1,
+			"scope": "Full native boundary remains incomplete"
+		}
+	},
+	"newCohortWholeHostGates": "NOT_RUN_ON_FROZEN_SOURCE_YET",
+	"formalInstaller": "NOT_BUILT_OR_ACCEPTED_FOR_THIS_COHORT",
+	"remote": {
+		"pluginBranch": "codex/scientific-agent-upgrade",
+		"pluginPushedCommit": "e713409556ff8bd28fe3a5f0ea8f2fde60b90a7b",
+		"hostBranch": "codex/native-plugin-architecture-plan",
+		"hostLastPushedCommit": "2949450f9e9e9e7f14f3651db67c01e313335c8f",
+		"hostCurrentChanges": "LOCAL_PENDING_FINAL_GATES",
+		"mainMerged": false,
+		"npmPublished": false
+	},
+	"remaining": [
+		"Actual selected-source classification and complete SDK configuration/errors confirmation; cross-restart required-source expectations and real package enable/disable transitions",
+		"Full knowledge hooks/publication consumer and all history/export paths; SDK run-start mechanism alone is not P2 completion",
+		"R0 records/provider adoption, raw CLI failure/reload fence and removal of startup task/core host injection",
+		"Discovery managed/native execution, Inquiry, creator/recovery/GUI closure; current daemon has no previously verified cached Python image, so real execution success must be rerun",
+		"Research/Zotero and full analysis/evidence ownership/UI migration; old host writers and facades still remain",
+		"Remove four required domain locks and domain build/manifest/resource closure, then prove zero-domain independent host build/start/chat",
+		"Freeze final whole-source dual-repo gates and actual macOS installer GUI install/disable/restore/upgrade/rollback including failure receipts"
+	],
+	"retainedOutOfScope": [
+		"Zotero cloud/account conflicts",
+		"User-owned authenticated MCP",
+		"Protocols.io writes",
+		"Other physical desktop platforms"
+	],
+	"deferredUnchanged": ["MinerU/GROBID", "B8", "B8-2"]
+}

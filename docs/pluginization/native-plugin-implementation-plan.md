@@ -13,7 +13,7 @@
 | P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | maintenance plan/run 安装 loader 与调度回归；当前同 tarball 的真实受限双进程/SDK owner、UI 读写授权；canonical 审核/history/undo 已整合，partial→retry 仅写 Vault 一次及完整退出已验收 | 完整 hooks/publication proof、模型审核与其余 UI、宿主领域操作/IPC与旧资源删除；正式 GUI | P1 |
 | P3 | research、来源连接器、引用/Zotero 的领域 API 与页面迁移 | 安装 host fail-closed；真实生产 summary review→delivery→回读→receipt；4 个隔离 specialist 与单独摘要 reviewer、拒绝/rollback/CAS/路径回归 | 仍有迁移期宿主 FS writer；完整 Zotero/研究 owner 与页面归属；本候选连接器/写入正式 GUI；上述测试不覆盖全部 protected Wiki reviewer | P2 |
 | P4 | tasks、编排、领域记忆及 UI 迁移 | knowledge 停止隐式任务 guard；真实 SDK 无 core 的基础 read/write/bash 与权限拒绝、两种安装加载顺序及 24 项任务回归；typed core 与 milestone 规则；canonical 状态机/guard/owner 已归插件，宿主 tasks 与反向 workbench port 删除，真实多会话/registry 隔离与恢复；验收卡/任务页同包 UI、显式 command、取消后无迟到写入与 UI 移除/恢复同 owner | 动态 native 包启停、科研示例/引导与领域记忆、正式 GUI | P2 |
-| P5 | analysis/evidence 与 discovery 的可卸载实现；依赖经显式合同管理 | discovery 算法/状态归插件，宿主注入机制；无插件不构造旧实现/登记存储；同 tarball 生产日志→真实 SDK 只读工具、Docker 五种执行/清理回读已整合 | 同 Desktop hashed agentDir 的共享 native owner、执行/Inquiry 合同与 B5 GUI；完整分析/证据控制器与 UI 迁移、同候选工作流验收 | P3/P4 |
+| P5 | analysis/evidence 与 discovery 的可卸载实现；依赖经显式合同管理 | discovery 算法/状态归插件，宿主注入机制；无插件不构造旧实现/登记存储；同 tarball 生产日志→真实 SDK 只读工具、Docker 五种执行/清理历史回读已整合；本批同 tarball 共享 native/UI owner、显式状态绑定与独立/旧 writer CAS 交接通过 | 真实执行/Inquiry 合同与 B5 GUI；完整分析/证据控制器与 UI 迁移、同候选工作流验收 | P3/P4 |
 | P6 | 科研能力成为可卸载预设；删除构建/锁文件必需依赖与旧路径 | 四包同提交候选已独立重建；core 与 tasks 旧源码删除，任务不再生成宿主 runtime；discovery runtime 依赖下移；`trackedRuntimeDependencies=[]` | 4 个必需领域源码锁及 hoisted/dev/build/resource 闭包删除；旧 bundled 装配、领域 schema/IPC 与预设卸载；零领域独立构建 | P2–P5 |
 | P7 | 双仓库最终门禁、同 tarball 原生会话、正式包零插件及升级/停用/回滚 | 当前 4abdae43/253c47e 标准门禁通过，opt-in packed core/knowledge/discovery 与私有 API 1.3 tarball 已启用；真实 knowledge 审核写入与双进程完整退出 | 全领域最终候选、正式安装包 GUI、销毁失败/公开跨版本回滚、真正无领域资源宿主；本轮未新建正式安装包 | P6 |
 
@@ -26,6 +26,12 @@
 5. 当前候选的双仓库标准门禁已完成；后续迁移仍须固定来源后复验，并清理最终领域边界门禁。历史全量或直接 workspace 检查不替代未来最终候选的根命令与正式包验收。
 
 ## 后继并行工作
+
+最新本地整合已包括共享 owner、串行 TaskSession、真实 SDK 最终出口/历史来源、managed command、原窗口问答及取消、通用执行事务与配置镜像检查。插件 `e713409` 使用不可变 API 1.3 候选 `6a011fc8`（SHA-256 `a83db1c2…3cb77e`）通过完整检查，五包从干净 archive 重建，四个迁移源码锁已同步并通过默认远程 fetch。同 tarball 的知识/模型/应用撤回、discovery 共享 UI/native 与旧 writer、任务事务真实 SDK 三文件 8/8；源码来源/聚合/UI 66/1 skipped、失败关闭与 alias、原窗口问答有独立定向证据，见[本批整合回执](../releases/native-plugin-source-owner-integration-2026-10-28.json)。本批宿主整轮冻结门禁尚未完成，顶部 `4abdae43/253c47e` 标准门禁基线保持不变；没有新安装包、npm 发布或 main 合并。
+
+无 UI 包已接同一 source catalog，完整内容 hash 与安装位置/声明入口共同校验；安装 UI 编译到宿主内容寻址缓存，失效旧描述仅保留为 unavailable。UI-only 撤销保持 native owner；全包撤销必须实际取消 SDK 并排空，失败屏障也阻止同包另一个 alias 接管。实际 selected-path intake、首次 loader 失败/缺失声明、跨重启 required 期望和明确包级启停仍在接线。native boundary 当前仍 exit 1/INCOMPLETE：build15、manifest10、type5、runtime1、resource21、required locks4。
+
+通用执行能力的受理/回执/取消、限定配置镜像 ID 和目录租约已实现并有机制回归；当前没有旧缓存镜像，不能沿用此前真实 Docker 成功。Discovery 完整执行/Inquiry、R0 records/provider 与原生 CLI 故障恢复、知识完整 publication、P3/P5 控制器/UI 和 P6/P7 仍未关闭。旧四项外部验收与暂缓范围不变。
 
 后继源码 `c8f8e43f/23912fb` 已整合任务状态路由、managed command 与 canonical 模型评审。定向24+13、knowledge532、core29+210与真实受限双进程同tarball评审/取消/应用撤回通过，见[整合切片](../releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；当前源码锁仍为253，新的双仓库根门禁尚未执行，顶部标准门禁基线不变。
 
