@@ -185,6 +185,34 @@ export type PluginSessionConfirmResult =
 	| PluginSessionQuestionCancelled
 	| { readonly kind: "confirmed"; readonly value: boolean };
 
+/** Own-source custom checkpoints only. No chat messages or cross-plugin records are exposed. */
+export interface PluginSessionRecord {
+	readonly id: string;
+	readonly type: string;
+	readonly data: unknown;
+}
+export interface PluginSessionRecordAppendInput {
+	readonly type: string;
+	readonly data: unknown;
+}
+/** Deferred means the SDK has not created/flushed a conversation file; it is not a saved receipt. */
+export interface PluginSessionRecordAppendResult {
+	readonly id: string;
+	readonly durability: "durable" | "deferred";
+}
+export interface PluginSessionRecordReadResult {
+	readonly state: "durable" | "deferred" | "needs-reopen";
+	readonly error: string | null;
+	/** Latest checkpoint per logical type on the actual current branch; never silently truncated. */
+	readonly records: readonly PluginSessionRecord[];
+}
+export interface PluginSessionNotifyInput {
+	readonly content: string;
+}
+export interface PluginSessionNotifyResult {
+	readonly durability: "durable" | "deferred";
+}
+
 /** Optional bounded execution capabilities; importing this contract never loads Node. */
 export interface PluginExecutionInput {
 	readonly requestId: string;
