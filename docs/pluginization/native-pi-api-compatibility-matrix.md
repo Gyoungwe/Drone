@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | `on` | 12 种事件；见下表 | 显式不支持 |
 | `registerTool` | 标准 JSON 声明与 execute/onUpdate；不可跨进程回调明确拒绝 | 支持已验证 JSON 声明及 execute；回调限制见下文 |
-| `registerCommand` | 显式不支持 | 显式不支持 |
+| `registerCommand` | 标准 name/description 与受授权远程 handler；completion 回调明确拒绝 | 显式不支持 |
 | `registerShortcut` | 显式不支持 | 显式不支持 |
 | `registerFlag` | 显式不支持 | 显式不支持 |
 | `getFlag` | 显式不支持 | 显式不支持 |
@@ -45,6 +45,8 @@
 普通沙箱六个 getter 不再返回假的空快照；不可跨 worker 的 `prepareArguments`、`prepareLoadout`、`renderCall`、`renderResult` 在注册时明确拒绝。`outputSchema`、`constrainedSampling`、`renderShell` 和对象型 `namespace` 保留。宿主 `c7310965` 的真实包→worker→SDK 会话回归证明拒绝后基础 read 仍正常。普通沙箱的 onUpdate 已通过同一调用的进度回执转发；两种沙箱的 nested executeTool 等仍未完成，不据此宣称全兼容。
 
 managed process 工具声明现保留 outputSchema、constrainedSampling、renderShell、promptSnippet/guidelines、exposure、namespace、annotations、defaultActive 与 executionMode。prepareArguments/prepareLoadout/renderCall/renderResult 在注册时明确拒绝。进度回调绑定实际 invocation ID，只在 SDK 提供 observer 时创建；完成、取消后的回调不能进入另一个调用。`native-tool-protocol-sdk.test.mjs` 的真实受限 worker→SDK 回归覆盖并行进度、取消后另一 attachment 继续运行、迟到回调拒绝，以及四种回调导致加载错误后 builtin read 仍正常。普通第三方沙箱现也转发 onUpdate：通过网络授权后的真实 worker→SDK 并行工具事件，以及取消后同进程另一调用继续、未请求 observer 时保持 undefined 的回归通过。两条路径在子进程边界共用文本/图片进度 schema；该切片不代表支持 terminal rendering 或 nested executeTool。
+
+managed command 的真实 SDK/权限/取消与限制见[命令切片](native-plugin-managed-command-evidence.md)。`commandEffects` 默认 write；`sessions.command` 的单请求信号由真实上下文传入，关闭与停用排空 pending。标准 handler 仍为 void；没有发送文本的假回执。worker 只提供已有最小 Context，`isIdle`/`waitForIdle`/UI 等不可用方法明确拒绝，领域前台策略使用 async `session.inspect`；不能据此扩大基础 Context 的兼容数量。
 
 ## on 事件完整声明表
 

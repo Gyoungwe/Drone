@@ -1,0 +1,86 @@
+{
+	"date": "2026-10-28",
+	"status": "SOURCE_REAL_SDK_SLICE_PASS",
+	"source": "cce5d55fc78c868f48b40e10042bead7d073b14f",
+	"publicType": "b80b5537",
+	"base": "8d766ad6",
+	"implementation": {
+		"registration": "name, optional description, remote standard void handler",
+		"effect": "commandEffects; undeclared commands require write approval",
+		"context": ["cwd", "signal", "hasUI=false", "sessionManager.getSessionId"],
+		"explicitlyUnsupported": [
+			"getArgumentCompletions",
+			"duplicate command names",
+			"isIdle",
+			"waitForIdle",
+			"newSession",
+			"other unavailable context methods",
+			"sendMessage"
+		],
+		"authorization": "current real SDK context -> native registry caller -> existing effect policy -> capability broker",
+		"results": "official handler remains void; UI may read the same application owner after completion"
+	},
+	"checks": [
+		{
+			"name": "sdk",
+			"exit": 0,
+			"scope": "20/20 across managed commands7, existing native protocols and shared owner sessions, explicit commands",
+			"log": "/tmp/managed-command-sdk-final.log",
+			"logSha256": "cff10a1a09684653f1cdc193b6bda15c04431ecfb8956cf46e619033f895e711"
+		},
+		{
+			"name": "registry",
+			"exit": 0,
+			"scope": "37/37 registry,capability,coordinator,process",
+			"log": "/tmp/managed-command-registry-tests.log",
+			"logSha256": "7398aa3d4c2e797a6fee8da77df1e5c55ed8ca90fc8ef2427a7d4f420461422c"
+		},
+		{
+			"name": "backend-types",
+			"exit": 0,
+			"scope": "TypeScript",
+			"log": "/tmp/managed-command-types-final.log",
+			"logSha256": "a41db65affbd78ac970623016f73fd80fd5fef5052db140fbc712d6d74a8e8df"
+		},
+		{
+			"name": "lint",
+			"exit": 0,
+			"scope": "existing historical oversized HTML warning",
+			"log": "/tmp/managed-command-lint-final.log",
+			"logSha256": "5bf3d61ef37ea0ffa37b6ac48ca74c5f0e2ad5496ba2d139632c37cc875d0e1a"
+		},
+		{
+			"name": "architecture",
+			"exit": 0,
+			"scope": "R1-R7 plus host dependency/independence",
+			"log": "/tmp/managed-command-arch-final.log",
+			"logSha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d"
+		},
+		{
+			"name": "plugin-api",
+			"exit": 0,
+			"scope": "generated UI contract,types,pack,clean API install/upgrade/rollback/uninstall",
+			"log": "/tmp/managed-command-api-check-final.log",
+			"logSha256": "71fdddb679c7830d9ec74aaa497c8b0c972e2ad55c4d79408d6a59605797faa0"
+		}
+	],
+	"observed": [
+		"two actual SDK sessions use one restricted worker with separate scope and authenticated session.inspect",
+		"explicit sessions.command and official typed slash execute without a model request",
+		"unknown effect denied before handler; permitted write reread from capability observer; read command cannot gain write authority",
+		"explicit and SDK typed handler failures each diagnose once; unsupported context then actual read tool succeeds",
+		"abort only one command; other session survives; session close drains pending command",
+		"plugin stop drains command and rejects late capability; old worker exits; SDK reload creates a different process and actual command reads back new owner",
+		"pending approval cancellation wins before late allow and causes no write",
+		"invalid command registration fails clearly; SDK builtin read remains usable"
+	],
+	"notClaimed": [
+		"arbitrary JavaScript preemption",
+		"general synchronous cross-process SDK context support",
+		"typed ordinary prompt command cancellation parity",
+		"managed sendMessage / CLI text publication",
+		"final canonical domain packages",
+		"formal macOS installer or final full root gates",
+		"P0-P7 completion"
+	]
+}
