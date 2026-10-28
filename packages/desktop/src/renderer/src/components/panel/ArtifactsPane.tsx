@@ -7,7 +7,6 @@ import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { DeliveryCards } from "../chat/DeliveryCards";
-import { TaskArtifactLinks, taskArtifactLinks } from "../chat/TaskArtifactLinks";
 import { ObsidianIcon } from "../icons";
 import { KnowledgeFlowCard } from "../knowledge/KnowledgeFlowCard";
 import { EvidencePane } from "./EvidencePane";
@@ -24,10 +23,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 	const flow = useKnowledgeStore((s) => (sessionId ? s.flows[sessionId] : undefined));
 	const openKnowledge = useKnowledgeStore((s) => s.open);
 	const deliveries = collectDeliveries(messages);
-	const latestMessage = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
-	const view = latestMessage?.kind === "assistant" ? latestMessage.taskView : undefined;
-	const tasksWithArtifacts = (view?.tasks ?? []).filter((task) => taskArtifactLinks(task).length > 0);
-	const artifacts = mergeKnowledgeArtifacts(flow?.cards || [], view?.tasks ?? [], cwd || "");
+	const artifacts = mergeKnowledgeArtifacts(flow?.cards || [], cwd || "");
 	const cards = flow?.cards?.length ?? 0;
 	const [ledgerArtifacts, setLedgerArtifacts] = useState<InquiryArtifactRecord[]>([]);
 	const [provenanceById, setProvenanceById] = useState<Record<string, InquiryArtifactProvenance | undefined>>(
@@ -83,12 +79,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 		return unsubscribe;
 	}, [cwd]);
 
-	const empty =
-		!flow &&
-		artifacts.length === 0 &&
-		tasksWithArtifacts.length === 0 &&
-		cards === 0 &&
-		ledgerArtifacts.length === 0;
+	const empty = !flow && artifacts.length === 0 && cards === 0 && ledgerArtifacts.length === 0;
 
 	async function toggleProvenance(record: InquiryArtifactRecord): Promise<void> {
 		if (expandedId === record.id) {
@@ -160,21 +151,6 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 				<KnowledgeFlowCard sessionId={sessionId} />
 			</div>
 			<FlowCards sessionId={sessionId} />
-			{tasksWithArtifacts.length > 0 && (
-				<section className="panel-card">
-					<header className="text-[12px] font-medium text-ink">{t("panel.taskArtifacts")}</header>
-					<div className="mt-1 space-y-2">
-						{tasksWithArtifacts.map((task) => (
-							<div key={task.id}>
-								<p className="truncate text-xs text-ink-dim" title={task.goal}>
-									{task.goal}
-								</p>
-								<TaskArtifactLinks task={task} sessionId={sessionId} />
-							</div>
-						))}
-					</div>
-				</section>
-			)}
 			{empty && <p className="panel-empty">{t("panel.artifactsEmpty")}</p>}
 			<div className="grid grid-cols-1 gap-2">
 				<button

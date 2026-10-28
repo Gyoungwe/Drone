@@ -45,7 +45,7 @@ export type ChatRow =
 			showActions: boolean;
 			/** 流式正文占位（固化后同 id 进入 messages，不 remount） */
 			streaming: boolean;
-			/** Latest task snapshot stays in the transcript. Older ones are not rendered. */
+			/** @deprecated Reserved for old 1.x consumers; host row building does not emit task placement. */
 			taskPlacement?: "show";
 	  }
 	| { kind: "streamingSubagents"; key: string; runs: SubagentRunUi[] }
@@ -144,22 +144,6 @@ export function buildChatRows(
 ): ChatRow[] {
 	const { streaming } = transcript;
 	const agentWorking = isAgentWorking(transcript);
-	let latestTaskViewId: string | undefined;
-	let latestTaskMessage: Extract<UIMessage, { kind: "assistant" }> | undefined;
-	let latestTaskTurn = 0;
-	let turn = 0;
-	const routeByTurn = new Map<number, string>();
-	for (const message of transcript.messages) {
-		if (message.kind === "user") turn++;
-		if (message.kind !== "assistant") continue;
-		if (message.taskView) {
-			latestTaskViewId = message.id;
-			latestTaskMessage = message;
-			latestTaskTurn = turn;
-		}
-		if (message.route) routeByTurn.set(turn, message.id);
-	}
-	const taskRouteId = routeByTurn.get(latestTaskTurn);
 	const rows: ChatRow[] = [];
 	let metaItems: MetaItem[] = [];
 	let lastCycle: string | undefined;
@@ -220,42 +204,15 @@ export function buildChatRows(
 			});
 		}
 		if (message.thinking || message.tools.length) metaItems.push(committedMetaItem(message));
-		// Only the latest task snapshot is a card. Older ones keep their pending reviews in the
-		// ledger, but a click there would act on a stale revision.
-		if (message.taskView && !message.route) {
+		if (message.route || message.text || message.hostStatus) {
 			flushMeta();
-			if (message.id !== latestTaskViewId) return;
-			// A route card is the user-facing boundary for the turn. The latest task
-			// snapshot is attached to that card below, so it must not become a second
-			// standalone decision card in the transcript.
-			if (taskRouteId) return;
 			rows.push({
 				kind: "message",
 				key: message.id,
-				message: { ...(message.progress ? { ...message, progress: undefined } : message), text: "" },
-				metaInGroup: true,
-				showActions: false,
-				streaming: false,
-				taskPlacement: "show",
-			});
-			return;
-		}
-		if (message.route || message.text) {
-			flushMeta();
-			const routeMessage =
-				message.id === taskRouteId && latestTaskMessage?.taskView
-					? { ...message, taskView: latestTaskMessage.taskView }
-					: message;
-			rows.push({
-				kind: "message",
-				key: message.id,
-				message: routeMessage.progress ? { ...routeMessage, progress: undefined } : routeMessage,
+				message: message.progress ? { ...message, progress: undefined } : message,
 				metaInGroup: true,
 				showActions: !live && turnFinalTextIds.has(message.id) && Boolean(message.text),
 				streaming: live,
-				...(message.id === taskRouteId && latestTaskMessage?.taskView
-					? { taskPlacement: "show" as const }
-					: {}),
 			});
 		}
 	};

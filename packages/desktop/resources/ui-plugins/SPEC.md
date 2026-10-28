@@ -313,3 +313,5 @@ export function activate() {
 受管 `desktopRuntime` 的 state/files 授权只从已安装包的 `permissions.filesystem` 派生，不要求也不由 `entrypoints.resources` 授予。state 与 files 分别选择；write 声明含对应 read，但仍须写目录选择和逐操作批准。无资源声明时不会建立派生 resource 子进程。清单权限变化撤销旧绑定。
 
 后台可在当前合法调用内使用 `capabilities.call("caller.scope", null)` 读取宿主解析的 `PluginRuntimeScope`；构造期为 application scope，普通调用为实际当前 scope。workspaceId 用于身份分区；workspaceDirectory 不代表文件权限。此端口既不接受插件传入的身份，也不允许保留闭包越过当前调用。详情与候选验收范围见 `docs/pluginization/native-plugin-resource-independent-capabilities.md`。
+
+`window.DroneUI.sessions.command(sessionId, name, args?)`（API 1.3）只调用该真实会话已注册的扩展命令，返回 `{kind:"command"}`。缺失/卸载的命令、只读/恢复中/取消或已替换的会话均拒绝，不转成模型输入；handler 错误沿既有 extension onError 诊断并使调用失败。普通 `sessions.prompt` 保留自然语言输入语义。领域 UI 的动作必须使用 `sessions.command`，不能以 prompt 的未知 slash 回退代替命令派发。UI 贡献停用与原生 owner 停用是两个独立生命周期。

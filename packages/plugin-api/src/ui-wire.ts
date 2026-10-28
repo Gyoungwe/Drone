@@ -2037,6 +2037,8 @@ export type UIMessage =
 	  }
 	| {
 			kind: "assistant";
+			/** Display origin only; grants no task or publication authority. */
+			readonly hostStatus?: true;
 			taskView?: TaskView;
 			route?: TurnRoute;
 			cycleId?: string;

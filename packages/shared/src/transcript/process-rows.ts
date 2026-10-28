@@ -46,14 +46,8 @@ function isProgressRow(row: ChatRow): row is Extract<ChatRow, { kind: "message" 
 	);
 }
 
-/** Older task snapshots fold away. The latest card (taskPlacement show) stays in the transcript. */
-function isTaskViewRow(row: ChatRow): boolean {
-	if (row.kind !== "message" || row.message.kind !== "assistant" || !row.message.taskView) return false;
-	return row.taskPlacement !== "show";
-}
-
 function isProcessRow(row: ChatRow): boolean {
-	return row.kind === "metaGroup" || isProgressRow(row) || isTaskViewRow(row);
+	return row.kind === "metaGroup" || isProgressRow(row);
 }
 
 function isStoppedRow(row: ChatRow | undefined): boolean {

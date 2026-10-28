@@ -26,6 +26,13 @@ console.log(
 const repo = resolve("."),
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-ui-smoke-")));
 await mkdir(join(root, "electron-profile"));
+const installedTaskRoot =
+	process.env.DRONE_TASK_UI_PACKAGE_DIR ??
+	resolve(createRequire(import.meta.url).resolve("@gyoungwe/pi-core"), "../..");
+const taskAliases = {
+	"@installed-task-ui": join(installedTaskRoot, "ui/bundle.js"),
+	"@installed-task-ui-manifest": join(installedTaskRoot, "ui/plugin.json"),
+};
 // External Node packages must resolve from the repository while the Electron
 // fixture stays isolated from the user's profile.  Keeping these packages
 // external also preserves native/conditional exports (notably child_process)
@@ -52,7 +59,11 @@ await viteBuild({
 	plugins: [react(), tailwind()],
 	build: { outDir: join(root, "dist"), target: "esnext" },
 	resolve: {
-		alias: { react: join(repo, "node_modules/react"), "react-dom": join(repo, "node_modules/react-dom") },
+		alias: {
+			...taskAliases,
+			react: join(repo, "node_modules/react"),
+			"react-dom": join(repo, "node_modules/react-dom"),
+		},
 	},
 });
 await writeFile(

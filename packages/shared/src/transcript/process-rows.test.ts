@@ -109,7 +109,7 @@ describe("groupProcessRows", () => {
 		expect(out.map((r) => r.kind)).toEqual(["message", "process", "message", "turnDiff"]);
 	});
 
-	it("does not split a process segment on invisible task-view messages", () => {
+	it("preserves domain metadata messages for their installed UI owner between process segments", () => {
 		const taskView: ChatRow = {
 			kind: "message",
 			key: "tv1",
@@ -142,14 +142,17 @@ describe("groupProcessRows", () => {
 			meta("g2", [tool("bash", "t2")]),
 			text("a3"),
 		]);
-		expect(out.map((r) => r.kind)).toEqual(["message", "process", "message"]);
-		const seg = out[1];
-		if (seg?.kind !== "process") throw new Error("expected process segment");
-		expect(seg.rows).toHaveLength(5);
-		expect(seg.stages).toBe(2);
+		expect(out.map((row) => row.kind)).toEqual(["message", "process", "message", "process", "message"]);
+		expect(out[2]).toBe(taskView);
+		for (const index of [1, 3]) {
+			const segment = out[index];
+			if (segment?.kind !== "process") throw new Error("expected process segment");
+			expect(segment.rows).toHaveLength(2);
+			expect(segment.stages).toBe(1);
+		}
 	});
 
-	it("keeps the latest task card out of the process block", () => {
+	it("does not select domain snapshots inside host process grouping", () => {
 		const snapshot = {
 			kind: "assistant" as const,
 			id: "old",
@@ -187,6 +190,7 @@ describe("groupProcessRows", () => {
 		expect(out.map((row) => (row.kind === "message" ? row.key : row.kind))).toEqual([
 			"u1",
 			"process",
+			"old",
 			"latest",
 			"done",
 		]);

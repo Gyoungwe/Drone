@@ -116,6 +116,11 @@ describe("native SDK usage display adapters", () => {
 			{ role: "assistant", text: "", thinking: "", tools: [], images: [], timestamp: 2, usage },
 		]);
 		expect(deriveTurnUsage(messages)[0]?.total).toBe(1100);
+		expect(
+			buildChatRows({ ...emptyTranscript(), messages }, "history").filter(
+				(row) => row.kind === "message" && row.message.kind === "assistant",
+			),
+		).toHaveLength(0);
 	});
 	it("public progress appears as a message while hidden thinking remains absent", () => {
 		let s = reduceEvent(emptyTranscript(), ev("turn_start"));

@@ -347,6 +347,7 @@ declare module "@gyoungwe/plugin-api" {
 	// <drone:generated namespace="sessions">
 	export const sessions: {
 		prompt: import("@gyoungwe/plugin-api/ui").SessionUiPort["prompt"];
+		command: import("@gyoungwe/plugin-api/ui").SessionUiPort["command"];
 	};
 	// </drone:generated namespace="sessions">
 	// <drone:generated namespace="i18n">
@@ -460,6 +461,7 @@ declare module "@gyoungwe/plugin-api" {
 	export const testInstitutionalAccess: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testInstitutionalAccess"];
 	export const testKnowledgeSemanticProvider: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testKnowledgeSemanticProvider"];
 	export const updateDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["updateDailyDiscovery"];
+	export const command: import("@gyoungwe/plugin-api/ui").SessionUiPort["command"];
 	// </drone:generated namespace="topLevel">
 	declare const api: unknown;
 	export default api;

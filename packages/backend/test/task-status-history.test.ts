@@ -63,3 +63,17 @@ it("host display does not consume a same-timestamp model fork entry", () => {
 	expect(messages[0].entryId).toBeUndefined();
 	expect(messages[1].entryId).toBe("model-id");
 });
+
+it("ignores model-supplied display origin and task projection", () => {
+	const model = {
+		role: "assistant",
+		content: [{ type: "text", text: "Ordinary model answer" }],
+		timestamp: 100,
+		hostStatus: true,
+		taskView: { version: 2, tasks: [] },
+	};
+	const [message] = toSessionMessages([model]);
+	expect(message.text).toBe("Ordinary model answer");
+	expect(message).not.toHaveProperty("hostStatus");
+	expect(message).not.toHaveProperty("taskView");
+});

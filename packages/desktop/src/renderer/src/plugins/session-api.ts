@@ -3,6 +3,7 @@ import { getPi } from "../api";
 import { selectTranscript, useTranscriptStore } from "../stores/transcript";
 
 export const sessionUiPort: SessionUiPort = {
+	command: (sessionId, name, args = "") => getPi().command(sessionId, name, args),
 	prompt: (...args) => getPi().prompt(...args),
 };
 
