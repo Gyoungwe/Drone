@@ -2,7 +2,7 @@
 
 2026-10-28，状态 **INCOMPLETE**。按已安装的 `@earendil-works/pi-coding-agent@1.1.0/dist/core/extensions/types.d.ts` 逐项盘点：33 个 ExtensionAPI 成员、41 种 on 事件、18 个基础 Context 成员、28 个 UI 成员。这些数字是声明范围，不是通过数量；latest 1.4.0 的完整逐项矩阵仍未完成。
 
-标准 Pi package 格式接入、原生 CLI 使用真实 SDK、Drone 的受限进程适配必须分开。官方格式相同不能推导运行 API 全部可用。旧内置扩展直连 SDK 的路径也不能替代第三方沙箱验收；其 Desktop UI 仍有 no-op。主计划见[执行计划](native-plugin-implementation-plan.md)。
+标准 Pi package 格式接入、原生 CLI 使用真实 SDK、Drone 的受限进程适配必须分开。官方格式相同不能推导运行 API 全部可用。旧内置扩展直连 SDK 的路径也不能替代第三方沙箱验收。Desktop UI 的静默 no-op 已在 `8c498e86` 收口；这不扩大进程适配的支持范围。主计划见[执行计划](native-plugin-implementation-plan.md)。
 
 ## ExtensionAPI 完整声明表
 
@@ -98,14 +98,17 @@ managed process 工具声明现保留 outputSchema、constrainedSampling、rende
 
 基础 Context 的完整成员：`ui`、`mode`、`hasUI`、`cwd`、`sessionManager`、`modelRegistry`、`model`、`scopedModels`、`thinkingLevel`、`isIdle`、`isProjectTrusted`、`signal`、`abort`、`hasPendingMessages`、`shutdown`、`getContextUsage`、`compact`、`getSystemPrompt`。managed worker 仅投影 cwd、hasUI=false、signal 和 sessionManager.getSessionId；其余 Context、ToolContext.tools/executeTool、CommandContext 与 SessionManager API 仍有拒绝或未验收项。Registry 对 in-process factory 的真实 Context 不等于进程 worker 的能力。
 
-UI 完整成员：`select`、`confirm`、`input`、`notify`、`onTerminalInput`、`setStatus`、`setWorkingMessage`、`setWorkingVisible`、`setWorkingIndicator`、`setHiddenThinkingLabel`、`setWidget`、`setFooter`、`setHeader`、`setTitle`、`custom`、`pasteToEditor`、`setEditorText`、`getEditorText`、`editor`、`addAutocompleteProvider`、`setEditorComponent`、`getEditorComponent`、`theme`、`getAllThemes`、`getTheme`、`setTheme`、`getToolsExpanded`、`setToolsExpanded`。普通沙箱已桥接 select/confirm/input/notify；managed native 的 hasUI=false。旧直连 SDK 的 Desktop makeUiContext 仅实现基础询问/通知并提供 theme 对象，其余终端/编辑/状态方法多为 no-op。宿主 `9a5471d5` 已将 custom 改为明确拒绝、setTheme 改为 success:false；真实 SDK 的两个工具分别得到错误/失败结果，后续基础 read 正常。theme 对象存在也不等于终端渲染能出现在 Desktop。
+UI 完整成员：`select`、`confirm`、`input`、`notify`、`onTerminalInput`、`setStatus`、`setWorkingMessage`、`setWorkingVisible`、`setWorkingIndicator`、`setHiddenThinkingLabel`、`setWidget`、`setFooter`、`setHeader`、`setTitle`、`custom`、`pasteToEditor`、`setEditorText`、`getEditorText`、`editor`、`addAutocompleteProvider`、`setEditorComponent`、`getEditorComponent`、`theme`、`getAllThemes`、`getTheme`、`setTheme`、`getToolsExpanded`、`setToolsExpanded`。
+
+Desktop 直连 SDK 的 `makeUiContext` 当前明确支持 8 项：select/confirm/input/notify/setStatus/theme/getAllThemes/getTheme。19 项终端专用方法明确抛出 unsupported；setTheme 返回结构化 success:false。主/恢复/子会话的 mode 为 rpc；hasUI 由实际提供的 UI context 决定。基础询问缺少 transport 时失败，dialog timeout 明确不支持。confirm.signal 走真实 PermissionGate 逐请求取消，晚到批准不能写入 always 规则；select/input signal 走 AskGate。setStatus 经真实 SessionEvent 投影到当前会话状态栏，清除 ANSI、停用/关闭时清空，不写入会话正文。见[真实 28 成员、MCP 5.1.0 与审批回执](native-plugin-terminal-ui-evidence.md)。普通沙箱仍只桥接基础交互；managed native hasUI=false，不能以直连 UI 通过声称进程 UI 完整兼容。
+
 
 ## 必须继续处理
 
 主/子会话的持续 onError 已由 `2f9b6d16` 接入日志与 traces；真实 SDK create/reload/restore 与子会话覆盖权限门禁开关、错误后继续 read、关闭退订。日志记录非致命 hook 异常，不把 loader.errors 为空当作 hook 成功。
 
 1. 收口完整 native core+knowledge 组合中的 publication 事件投影：bridge 缺失时不能破坏 toolCall/usage/官方 metadata，provider 私有协议重放与公开 tool-only/最终 fail-closed 均须保留。SDK envelope、私有 signed replay 与诊断隐私已整合并通过真实组合；完整 managed hooks/publication proof 仍未完成，既有 onError 切片不代表全部 41 种事件已验收。
-2. 删除旧 Desktop UI 的静默 no-op/假成功，按支持能力返回真实结果或明确拒绝；核对 bind mode 与 hasUI。
+2. Desktop 静默 no-op、RPC mode、状态投影与逐请求审批取消已整合；继续在最终同候选正式安装包复验。真实 MCP 与 28 成员源码/SDK 切片不能替代该正式包。
 3. managed JSON metadata 与 onUpdate 已有真实 SDK 切片；继续补 Context/getter 完整声明矩阵与 nested executeTool，不增加同步跨进程缓存来伪装支持。
 4. 用完整 33/41/28 探针及 locked/latest 真 SDK 回归固定支持/拒绝清单，补格式相同但 API 不兼容包的实际安装诊断。
 
