@@ -374,21 +374,24 @@ describe("DesktopRuntimeBridge", () => {
 		expect(await bridge.bind("local", owner)).toBeUndefined();
 	});
 
-	it.each(["requestsStateWrite", "requestsFileWrite", "requestsModel"] as const)(
-		"revokes old bindings when the manifest changes %s authority",
-		async (permission) => {
-			const { bridge, options, dispose, factory } = setup();
-			const token = (await bridge.bind("ui", owner))!;
-			options.source.mockReturnValue({ ...source, [permission]: true });
-			await expect(bridge.invoke(owner, token, "read", "data", selection(bridge, owner))).rejects.toThrow(
-				"no longer enabled",
-			);
-			expect(dispose).toHaveBeenCalledOnce();
-			await bridge.bind("ui", owner);
-			expect(factory).toHaveBeenCalledTimes(2);
-			await bridge.close();
-		},
-	);
+	it.each([
+		"requestsStateRead",
+		"requestsStateWrite",
+		"requestsFileRead",
+		"requestsFileWrite",
+		"requestsModel",
+	] as const)("revokes old bindings when the manifest changes %s authority", async (permission) => {
+		const { bridge, options, dispose, factory } = setup();
+		const token = (await bridge.bind("ui", owner))!;
+		options.source.mockReturnValue({ ...source, [permission]: true });
+		await expect(bridge.invoke(owner, token, "read", "data", selection(bridge, owner))).rejects.toThrow(
+			"no longer enabled",
+		);
+		expect(dispose).toHaveBeenCalledOnce();
+		await bridge.bind("ui", owner);
+		expect(factory).toHaveBeenCalledTimes(2);
+		await bridge.close();
+	});
 
 	it("keeps windows independent and cancels superseded parallel loads", async () => {
 		const { bridge, factory } = setup();

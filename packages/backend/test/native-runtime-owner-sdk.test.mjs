@@ -15,6 +15,7 @@ import { CapabilityRuntime } from "../src/capabilities/runtime";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 import { getPluginSessionCaller } from "../src/plugins/session-caller";
+import { canonicalProjectId } from "../src/project-id";
 import { createDroneRuntime as createStandaloneRuntime } from "../src/runtime";
 import { SessionRegistry } from "../src/session/registry";
 import { SessionEngine } from "../src/session-engine/engine";
@@ -38,11 +39,11 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 			entrypoint,
 			`export default async ({capabilities})=>{
  let tools=0,sessions=0;const signals=[];
- const read=async()=>({pid:process.pid,tools,sessions,signals,scope:await capabilities.call("scope",null)});
+ const read=async()=>({pid:process.pid,tools,sessions,signals,scope:await capabilities.call("caller.scope",null)});
  return {operations:{overview:{inputSchema:{type:"null"},resultSchema:{type:"object"},effect:"read",execute:read}},
  createNativeSession(){sessions++;let closed=false,contexts=0;const scopes=[];return {toolEffects:{owner_read:"read"},eventEffects:{context:"read",tool_result:"read",message_end:"read"},extension(pi){
  pi.registerTool({name:"owner_read",label:"Owner read",description:"Read shared owner",drone:{readOnly:true,capabilities:["files"]},parameters:{type:"object",properties:{}},async execute(){tools++;return {content:[{type:"text",text:JSON.stringify({...await read(),contexts,scopes})}]};}});
- pi.on("session_start",async()=>{await capabilities.call("scope",null);});
+ pi.on("session_start",async()=>{await capabilities.call("caller.scope",null);});
  const remove=pi.on("context",()=>{throw new Error("Unsubscribed context callback ran");});remove();
  pi.on("context",async(event,ctx)=>{ctx.signal.throwIfAborted();
  const last=event.messages.filter(message=>message.role==='user').at(-1);
@@ -50,11 +51,11 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
  if(text.includes('hold managed hook')){
   const sessionId=ctx.sessionManager.getSessionId();await capabilities.call('entered',null);
   await new Promise(resolve=>ctx.signal.addEventListener('abort',resolve,{once:true}));
-  let lateDenied=false;try{await capabilities.call('scope',null);}catch{lateDenied=true;}
+  let lateDenied=false;try{await capabilities.call('caller.scope',null);}catch{lateDenied=true;}
   signals.push({sessionId,aborted:ctx.signal.aborted,lateDenied});
   return;
  }
- contexts++;scopes.push((await capabilities.call("scope",null)).sessionId);event.messages.push({role:"user",content:[{type:"text",text:"first managed context"}],timestamp:1});});
+ contexts++;scopes.push((await capabilities.call("caller.scope",null)).sessionId);event.messages.push({role:"user",content:[{type:"text",text:"first managed context"}],timestamp:1});});
  pi.on("context",event=>{if(event.messages.at(-1)?.content[0]?.text!=="first managed context")throw new Error("SDK context chaining lost");return {messages:event.messages.slice(0,-1)};});
  pi.on("tool_result",event=>event.toolName==="owner_read"?{details:{stage:1}}:undefined);
  pi.on("tool_result",event=>{if(event.toolName!=="owner_read")return;if(event.details?.stage!==1)throw new Error("SDK result chaining lost");return {details:{stage:2}};});
@@ -85,12 +86,6 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 							enteredHooks.push(context.scope.sessionId);
 							return null;
 						},
-					},
-					scope: {
-						inputSchema: { type: "null" },
-						resultSchema: { type: "object" },
-						effect: "read",
-						execute: async (_input, context) => context.scope,
 					},
 				},
 			}),
@@ -176,7 +171,12 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 					pid,
 					tools: i + 1,
 					sessions: i + 1,
-					scope: { kind: "session", sessionId: session.sessionId },
+					scope: {
+						kind: "session",
+						sessionId: session.sessionId,
+						workspaceId: canonicalProjectId(cwd),
+						workspaceDirectory: cwd,
+					},
 					contexts: 1,
 					scopes: [session.sessionId],
 				});
