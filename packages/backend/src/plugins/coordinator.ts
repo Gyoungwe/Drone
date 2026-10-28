@@ -130,7 +130,13 @@ export class PluginRuntimeBridge {
 	private readonly requests = new Map<string, { name: string; owner: PluginRuntimeOwner; token: string }>();
 	private readonly stopping = new Map<
 		string,
-		{ name: string; owner: PluginRuntimeOwner; promise: Promise<void> }
+		{
+			name: string;
+			owner: PluginRuntimeOwner;
+			source: PluginRuntimeSource;
+			readonly failed: boolean;
+			promise: Promise<void>;
+		}
 	>();
 
 	constructor(private readonly options: PluginRuntimeBridgeOptions) {}
@@ -270,6 +276,10 @@ export class PluginRuntimeBridge {
 		if (this.closing || this.lifecycleBlocked(owner)) throw new Error("Plugin runtime unavailable");
 		const source = this.options.source(name);
 		if (!source) return undefined;
+		const failedStop = [...this.stopping.values()].find(
+			(stop) => stop.failed && stop.source.pluginId === source.pluginId,
+		);
+		if (failedStop) await this.revoke(failedStop.name, failedStop.owner.id, false);
 		if (!this.options.enabled(name) || owner.isDestroyed()) throw new Error("Plugin runtime unavailable");
 		const stopping = this.revoke(name, owner.id, false);
 		const token = randomUUID();
@@ -638,18 +648,29 @@ export class PluginRuntimeBridge {
 				this.runtimes.delete(runtime.source.pluginId);
 			});
 		}
+		let failed = false;
 		const promise = (async () => {
 			await Promise.allSettled([...binding.pending]);
 			const results = await Promise.allSettled([nativeAborted, runtime.stopping]);
 			const failures = results.filter((result) => result.status === "rejected");
-			if (failures.length)
+			if (failures.length) {
+				failed = true;
 				throw new AggregateError(
 					failures.map((result) => result.reason),
 					"Plugin native run and runtime shutdown failed",
 				);
+			}
 			this.stopping.delete(key);
 		})();
-		this.stopping.set(key, { name: binding.name, owner: binding.owner, promise });
+		this.stopping.set(key, {
+			name: binding.name,
+			owner: binding.owner,
+			source: runtime.source,
+			get failed() {
+				return failed;
+			},
+			promise,
+		});
 		return promise;
 	}
 }

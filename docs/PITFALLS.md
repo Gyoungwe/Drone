@@ -446,4 +446,4 @@ Pi 1.1.0 的 SessionManager 先把 append entry 加入内存，再写磁盘；EI
 
 ### 失败的 native abort 与清理必须保留停止屏障
 
-停止流程并行等待真实 SDK abort 和 runtime 清理；`allSettled` 返回不等于关闭成功。必须先检查每项结果，再删除 stopping 记录。UI-only 配置变化也要等待之前失败的 UI 停止记录，不能只扫描仍然存活的 binding 后报告配置成功。原有重激活回归与新增 UI 配置回归均先实际失败；最小修复后 103 项 Desktop/IPC/preload/UI 联合通过。同包 native/UI alias 的失败屏障回归继续由后继补齐。
+停止流程并行等待真实 SDK abort 和 runtime 清理；`allSettled` 返回不等于关闭成功。必须先检查每项结果，再删除 stopping 记录。UI-only 配置变化也要等待之前失败的 UI 停止记录，不能只扫描仍然存活的 binding 后报告配置成功。原有重激活回归与新增 UI 配置回归均先实际失败；最小修复后 103 项 Desktop/IPC/preload/UI 联合通过。后继真实 SDK 会话在实际 abort 完成后注入回执失败，确认领域进程已退出；原屏障仍允许同包 UI alias 重绑。`stopping` 现在记录实际 source 身份和失败状态，`bind` 通过原失败停止 receipt 阻止同 `source.pluginId` 的所有 alias 重开，同时保持既有外层错误语义。实际 SDK 10/10、Desktop bridge/host 48/48 与 backend typecheck 通过；这项故障注入不代表完整 required-source publication 已验收。
