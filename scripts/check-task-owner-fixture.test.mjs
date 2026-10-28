@@ -11,18 +11,17 @@ test("the UI task fixture uses installed native authorization, file readback and
 		fixtures = [];
 	try {
 		const first = await createTaskFixture(cwd, {
-			persist: (data) => entries.push({ customType: "drone-task-workbench-v2", data }),
+			persist: (data) => entries.push({ customType: "drone-task-session-v1", data }),
 		});
 		fixtures.push(first);
 		const journal = first.journal;
-		journal.attach("ui-scope");
-		journal.plan({
+		await journal.plan({
 			goal: "Deliver a synthetic file",
 			summary: "Read it back",
 			writeRoots: [cwd],
 			milestones: [{ id: "file", title: "File", acceptance: { kind: "file", path: "result.txt" } }],
 		});
-		journal.command({
+		await journal.command({
 			taskId: journal.snapshot().id,
 			revision: journal.view().revision,
 			action: "authorize-task",
@@ -35,15 +34,14 @@ test("the UI task fixture uses installed native authorization, file readback and
 			content: [],
 			details: {},
 		};
-		assert.equal(journal.guard(event), null);
+		assert.equal(await journal.guard(event), null);
 		await writeFile(join(cwd, "result.txt"), "synthetic file");
 		await journal.observe(event, cwd);
 		assert.match(journal.view().tasks[0].remainingSummary, /已验收 1\/1/);
 		const taskId = journal.snapshot().id;
 		await first.dispose();
-		const restored = await createTaskFixture(cwd);
+		const restored = await createTaskFixture(cwd, { entries });
 		fixtures.push(restored);
-		restored.journal.attach("ui-scope", entries);
 		await restored.journal.reconcile(cwd);
 		assert.equal(restored.journal.snapshot().id, taskId);
 		assert.match(restored.journal.view().tasks[0].remainingSummary, /已验收 1\/1/);
