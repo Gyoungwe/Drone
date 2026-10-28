@@ -42,8 +42,9 @@ describe("createBackend", () => {
 			permissionGates: false,
 			discoveryHostLoader: { contractVersion: 1, load: () => host },
 		});
-		await expect(services.discoveryHost?.status?.()).resolves.toEqual({ status: "unavailable" });
+		await expect(services.discoveryHost?.status?.({})).resolves.toEqual({ status: "unavailable" });
 		expect(host.status).toHaveBeenCalledOnce();
+		expect(host.status).toHaveBeenCalledWith({});
 		expect(services.discovery).toBeDefined();
 		await services.dispose();
 	});
@@ -76,8 +77,9 @@ describe("createBackend", () => {
 				inquiry: { recordQuestion: expect.any(Function) },
 			},
 		});
-		await expect(services.discoveryHost?.status?.()).resolves.toEqual({ status: "plugin" });
+		await expect(services.discoveryHost?.status?.({})).resolves.toEqual({ status: "plugin" });
 		expect(host.status).toHaveBeenCalledOnce();
+		expect(host.status).toHaveBeenCalledWith({});
 		await services.dispose();
 	});
 
