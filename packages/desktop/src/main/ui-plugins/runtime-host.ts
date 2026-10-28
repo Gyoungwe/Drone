@@ -289,6 +289,7 @@ export function createDesktopRuntime(
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
 		sources: () => manager.runtimeSources(),
+		classifySelectedPath: (path) => manager.classifyNativeSelection(path),
 		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
 		questionTransport,
 		enabled: (name) => manager.isEnabled(name) || manager.isNativeSourceAvailable(name),
@@ -446,7 +447,7 @@ export function createNativeRuntimeIntegration(
 ): PluginNativeIntegration {
 	const findName = (path: string) => manager().nativeRuntimeName(path);
 	return {
-		manages: (path) => findName(path) !== undefined,
+		manages: (path) => manager().classifyNativeSelection(path).kind !== "ordinary",
 		begin: () => {
 			const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
 			if (!window || window.isDestroyed())

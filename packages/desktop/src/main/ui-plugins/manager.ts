@@ -13,7 +13,7 @@ import {
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { createLogger } from "@drone/backend";
+import { createLogger, type SelectedNativeSource } from "@drone/backend";
 import {
 	KNOWN_UI_REGIONS,
 	KNOWN_UI_SLOTS,
@@ -32,6 +32,7 @@ import {
 	installedPackageHash,
 } from "./installed-package-sources";
 import { filterContributions } from "./manifest-contributions";
+import { classifyUnmanagedNativePath } from "./native-source-classification";
 
 const log = createLogger("ui-plugins");
 
@@ -647,6 +648,19 @@ export class UiPluginManager {
 			log.warn("Selected extension path is unavailable", path, error);
 		}
 		return undefined;
+	}
+
+	/** Only paths selected by the real SDK loader enter this host-only source classification. */
+	classifyNativeSelection(path: string): SelectedNativeSource {
+		const sources = this.runtimeSources();
+		const name = this.nativeRuntimeName(path);
+		const selected = sources.find((item) => item.name === name);
+		return selected
+			? { kind: "managed", source: selected.source, state: selected.state }
+			: classifyUnmanagedNativePath(
+					path,
+					sources.map((item) => item.source),
+				);
 	}
 
 	private runtimeSourceCurrent(source: InstalledUiRuntimeSource): boolean {

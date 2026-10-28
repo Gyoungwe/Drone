@@ -1,8 +1,64 @@
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js
-index e733dc0..c6593e5 100644
+index e733dc0..f5153d8 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js
-@@ -1488,14 +1488,15 @@ export class DefaultPackageManager {
+@@ -609,6 +609,7 @@ export class DefaultPackageManager {
+     agentDir;
+     settingsManager;
+     builtinExtensions;
++    retainUnavailableExtensionPaths;
+     globalNpmRoot;
+     globalNpmRootCommandKey;
+     progressCallback;
+@@ -617,6 +618,7 @@ export class DefaultPackageManager {
+         this.agentDir = resolvePath(options.agentDir);
+         this.settingsManager = options.settingsManager;
+         this.builtinExtensions = options.builtinExtensions ?? [];
++        this.retainUnavailableExtensionPaths = options.retainUnavailableExtensionPaths ?? false;
+     }
+     setProgressCallback(callback) {
+         this.progressCallback = callback;
+@@ -1031,8 +1033,10 @@ export class DefaultPackageManager {
+                 const needsInstall = !existsSync(installedPath) || !(await this.installedNpmMatchesConfiguredVersion(parsed, installedPath));
+                 if (needsInstall) {
+                     const installed = await installMissing();
+-                    if (!installed)
++                    if (!installed) {
++                        this.recordUnavailableExtensionSource(installedPath, accumulator, filter, metadata);
+                         continue;
++                    }
+                     installedPath = this.getNpmInstallPath(parsed, resolvedScope);
+                 }
+                 metadata.baseDir = installedPath;
+@@ -1044,8 +1048,10 @@ export class DefaultPackageManager {
+                 const installedPath = this.getGitInstallPath(parsed, resolvedScope);
+                 if (!existsSync(installedPath)) {
+                     const installed = await installMissing();
+-                    if (!installed)
++                    if (!installed) {
++                        this.recordUnavailableExtensionSource(installedPath, accumulator, filter, metadata);
+                         continue;
++                    }
+                 }
+                 else if (resolvedScope === "temporary" && !parsed.pinned && !isOfflineModeEnabled()) {
+                     await this.refreshTemporaryGitSource(parsed, resolvedSource);
+@@ -1064,9 +1070,15 @@ export class DefaultPackageManager {
+             this.getPackageIdentity(this.getPackageSourceString(entry.pkg), "user") === identity);
+         return userEntry ? { source: this.getPackageSourceString(userEntry.pkg), scope: "user" } : undefined;
+     }
++    recordUnavailableExtensionSource(path, accumulator, filter, metadata) {
++        if (!this.retainUnavailableExtensionPaths || filter?.extensions?.length === 0 ||
++            (filter?.autoload === false && !filter.extensions?.some((pattern) => !pattern.startsWith("-") && !pattern.startsWith("!")))) return;
++        this.addResource(accumulator.extensions, path, metadata, true);
++    }
+     resolveLocalExtensionSource(source, accumulator, filter, metadata, baseDir) {
+         const resolved = this.resolvePathFromBase(source.path, baseDir);
+         if (!existsSync(resolved)) {
++            this.recordUnavailableExtensionSource(resolved, accumulator, filter, metadata);
+             return;
+         }
+         try {
+@@ -1488,14 +1500,15 @@ export class DefaultPackageManager {
                  return [
                      "install",
                      "--prod",
@@ -20,7 +76,7 @@ index e733dc0..c6593e5 100644
          }
      }
      runNpmCommandSync(args) {
-@@ -1509,7 +1510,7 @@ export class DefaultPackageManager {
+@@ -1509,7 +1522,7 @@ export class DefaultPackageManager {
          // equivalent bun/pnpm settings) so package managers do not install or solve host-provided
          // @earendil-works/pi-* peers. Stale auto-installed pi peers can otherwise block updates.
          if (packageManagerName === "bun") {
@@ -29,7 +85,7 @@ index e733dc0..c6593e5 100644
          }
          if (packageManagerName === "pnpm") {
              return [
-@@ -1517,12 +1518,13 @@ export class DefaultPackageManager {
+@@ -1517,12 +1530,13 @@ export class DefaultPackageManager {
                  ...specs,
                  "--prefix",
                  installRoot,
@@ -44,7 +100,7 @@ index e733dc0..c6593e5 100644
      }
      async installNpm(source, scope, temporary) {
          const installRoot = this.getNpmInstallRoot(scope, temporary);
-@@ -1536,10 +1538,10 @@ export class DefaultPackageManager {
+@@ -1536,10 +1550,10 @@ export class DefaultPackageManager {
          }
          const packageManagerName = this.getPackageManagerName();
          if (packageManagerName === "bun") {
@@ -57,40 +113,116 @@ index e733dc0..c6593e5 100644
          if (packageManagerName !== "pnpm") {
              args.push("--legacy-peer-deps");
          }
+@@ -1965,7 +1979,8 @@ export class DefaultPackageManager {
+             if (!hasGlobPattern(entry)) {
+                 return [resolve(root, entry)];
+             }
+-            return expandPackageGlob(entry, root);
++            const matches = expandPackageGlob(entry, root);
++            return matches.length || resourceType !== "extensions" || !this.retainUnavailableExtensionPaths ? matches : [resolve(root, entry)];
+         });
+         return this.collectFilesFromPaths(resolved, resourceType);
+     }
+@@ -2068,8 +2083,10 @@ export class DefaultPackageManager {
+     collectFilesFromPaths(paths, resourceType) {
+         const files = [];
+         for (const p of paths) {
+-            if (!existsSync(p))
++            if (!existsSync(p)) {
++                if (resourceType === "extensions" && this.retainUnavailableExtensionPaths) files.push(p);
+                 continue;
++            }
+             try {
+                 const stats = statSync(p);
+                 if (stats.isFile()) {
+@@ -2080,7 +2097,8 @@ export class DefaultPackageManager {
+                 }
+             }
+             catch {
+-                // Ignore errors
++                // Keep the selected unavailable path in the host receipt, never turn a read error into absence.
++                if (resourceType === "extensions" && this.retainUnavailableExtensionPaths) files.push(p);
+             }
+         }
+         return files;
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts
-index c3ee0dc..fd808c5 100644
+index c3ee0dc..e41e250 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts
-@@ -86,6 +86,8 @@ export interface DefaultResourceLoaderOptions {
+@@ -67,6 +67,8 @@ export declare function loadProjectContextFiles(options: {
+     path: string;
+     content: string;
+ }>;
++/** Drone host-only receipt for pinned Pi 1.1.0; no plugin JSON can supply this callback. */
++export type HostExtensionSelectionReceipt = { phase: "loading" } | { phase: "loaded"; paths: readonly string[] };
+ export interface DefaultResourceLoaderOptions {
+     cwd: string;
+     agentDir: string;
+@@ -86,6 +88,9 @@ export interface DefaultResourceLoaderOptions {
      noContextFiles?: boolean;
      systemPrompt?: string;
      appendSystemPrompt?: string[];
 +    /** Drone Pi 1.1.0 patch: intercept file execution before both trust-loading passes. */
 +    extensionFactoryForPath?: (path: string) => Promise<ExtensionFactory | undefined>;
++    hostExtensionSelection?: (receipt: HostExtensionSelectionReceipt) => void;
      extensionsOverride?: (base: LoadExtensionsResult) => LoadExtensionsResult;
      skillsOverride?: (base: {
          skills: Skill[];
+@@ -142,6 +147,7 @@ export declare class DefaultResourceLoader implements ResourceLoader {
+     private noContextFiles;
+     private systemPromptSource?;
+     private appendSystemPromptSource?;
++    private hostExtensionSelection?;
+     private extensionsOverride?;
+     private skillsOverride?;
+     private promptsOverride?;
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js
-index 35ba09c..0ed5a68 100644
+index 35ba09c..db40366 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js
-@@ -210,6 +210,7 @@ export class DefaultResourceLoader {
+@@ -210,6 +210,8 @@ export class DefaultResourceLoader {
      noContextFiles;
      systemPromptSource;
      appendSystemPromptSource;
 +    extensionFactoryForPath;
++    hostExtensionSelection;
      extensionsOverride;
      skillsOverride;
      promptsOverride;
-@@ -263,6 +264,7 @@ export class DefaultResourceLoader {
+@@ -250,6 +252,7 @@ export class DefaultResourceLoader {
+             agentDir: this.agentDir,
+             settingsManager: this.settingsManager,
+             builtinExtensions: [...this.builtinExtensions.keys()],
++            retainUnavailableExtensionPaths: !!options.hostExtensionSelection,
+         });
+         this.additionalExtensionPaths = options.additionalExtensionPaths ?? [];
+         this.additionalSkillPaths = options.additionalSkillPaths ?? [];
+@@ -263,6 +266,8 @@ export class DefaultResourceLoader {
          this.noContextFiles = options.noContextFiles ?? false;
          this.systemPromptSource = options.systemPrompt;
          this.appendSystemPromptSource = options.appendSystemPrompt;
 +        this.extensionFactoryForPath = options.extensionFactoryForPath;
++        this.hostExtensionSelection = options.hostExtensionSelection;
          this.extensionsOverride = options.extensionsOverride;
          this.skillsOverride = options.skillsOverride;
          this.promptsOverride = options.promptsOverride;
-@@ -504,7 +506,7 @@ export class DefaultResourceLoader {
+@@ -350,6 +355,7 @@ export class DefaultResourceLoader {
+         return this.loadCurrentExtensionSet({ includeInlineFactories: true });
+     }
+     async reload(options) {
++        this.hostExtensionSelection?.({ phase: "loading" });
+         resetTimings("extensions");
+         if (this.loaded) {
+             clearExtensionCache();
+@@ -488,6 +494,7 @@ export class DefaultResourceLoader {
+             .filter((source) => existsSync(source))
+             .map((source) => resolvePath(source));
+         this.loaded = true;
++        this.hostExtensionSelection?.({ phase: "loaded", paths: extensionPaths });
+     }
+     async loadCurrentExtensionSet(options) {
+         const resolvedPaths = await this.packageManager.resolve();
+@@ -504,7 +511,7 @@ export class DefaultResourceLoader {
              resource.metadata,
          ]));
          const packageWarnings = collectExtensionPackageWarnings(extensionPaths, metadataByPath);
@@ -99,7 +231,7 @@ index 35ba09c..0ed5a68 100644
          mergeExtensionWarnings(extensionsResult, packageWarnings);
          if (!options.includeInlineFactories) {
              return extensionsResult;
-@@ -523,7 +525,27 @@ export class DefaultResourceLoader {
+@@ -523,7 +530,27 @@ export class DefaultResourceLoader {
      /** Load extension paths: files from disk and `builtin:<name>` paths from the built-in extensions. */
      async loadExtensionPaths(paths, runtime) {
          const isBuiltinPath = (path) => path.startsWith(BUILTIN_PATH_PREFIX);
@@ -129,9 +261,10 @@ index 35ba09c..0ed5a68 100644
              const builtin = this.builtinExtensions.get(path.slice(BUILTIN_PATH_PREFIX.length));
              if (!builtin) {
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
+index c5ad719..fe53a54 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
-@@ -86,6 +86,10 @@
+@@ -86,6 +86,10 @@ export class AgentSession {
      _scopedModels;
      // Event subscription state
      _unsubscribeAgent;
@@ -142,7 +275,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      _eventListeners = [];
      _isAgentRunActive = false;
      _agentRunAbortRequested = false;
-@@ -175,6 +179,8 @@
+@@ -175,6 +179,8 @@ export class AgentSession {
      _runSystemPromptOptions;
      constructor(config) {
          this.agent = config.agent;
@@ -151,7 +284,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          this.sessionManager = config.sessionManager;
          this.settingsManager = config.settingsManager;
          this._scopedModels = config.scopedModels ?? [];
-@@ -707,7 +713,19 @@
+@@ -707,7 +713,19 @@ export class AgentSession {
          this._resolveIdleWaitIfIdle();
      }
      /** Internal handler for agent events - shared by subscribe and reconnect */
@@ -172,7 +305,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          // Record the calls a tool made through ctx.executeTool() and their usage on its result message.
          if (this._nestedToolCalls) {
              if (event.type === "message_start" && event.message.role === "toolResult") {
-@@ -747,6 +765,35 @@
+@@ -747,6 +765,35 @@ export class AgentSession {
          }
          // Emit to extensions first, then notify public listeners.
          await this._emitExtensionEvent(event);
@@ -208,7 +341,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          this._emit(event.type === "agent_end" ? { ...event, willRetry: this._willRetryAfterAgentEnd(event) } : event);
          // Handle session persistence
          if (event.type === "message_end") {
-@@ -809,6 +856,15 @@
+@@ -809,6 +856,15 @@ export class AgentSession {
          }
          return false;
      }
@@ -224,7 +357,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      _findPersistedMessageEntryId(message) {
          const mapped = this._entryIdsByMessage.get(message);
          if (mapped)
-@@ -990,6 +1046,10 @@
+@@ -990,6 +1046,10 @@ export class AgentSession {
       * Call this when completely done with the session.
       */
      dispose() {
@@ -236,9 +369,10 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
              this.abortRetry();
              this.abortCompaction();
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts
+index f8b11c9..766d4e1 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts
-@@ -110,6 +110,10 @@
+@@ -110,6 +110,10 @@ export type AgentSessionEvent = WithParentToolCallId<Exclude<AgentEvent, {
  /** Listener function for agent session events */
  export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
  export interface AgentSessionConfig {
@@ -249,7 +383,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      agent: Agent;
      sessionManager: SessionManager;
      settingsManager: SettingsManager;
-@@ -222,6 +226,10 @@
+@@ -222,6 +226,10 @@ export declare class AgentSession {
      readonly settingsManager: SettingsManager;
      private _scopedModels;
      private _unsubscribeAgent?;
@@ -260,7 +394,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      private _eventListeners;
      private _isAgentRunActive;
      private _agentRunAbortRequested;
-@@ -364,6 +372,8 @@
+@@ -364,6 +372,8 @@ export declare class AgentSession {
      /** Internal handler for agent events - shared by subscribe and reconnect */
      private _handleAgentEvent;
      private _willRetryAfterAgentEnd;
@@ -270,9 +404,10 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      private _omitRecoveryAttempt;
      /** Find the last assistant message in agent state (including aborted ones) */
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
+index b1d632f..17e21d3 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
-@@ -302,6 +302,8 @@
+@@ -302,6 +302,8 @@ export async function createAgentSession(options = {}) {
      }
      const session = new AgentSession({
          agent,
@@ -282,6 +417,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js b/nod
          settingsManager,
          cwd,
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
+index 14be55d..6bba7b6 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
 @@ -1,6 +1,6 @@
@@ -292,7 +428,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts b/n
  import type { LoadExtensionsResult, SessionStartEvent, ToolDefinition } from "./extensions/index.ts";
  import { ModelRuntime } from "./model-runtime.ts";
  import type { ResourceLoader } from "./resource-loader.ts";
-@@ -8,6 +8,9 @@
+@@ -8,6 +8,9 @@ import { SessionManager } from "./session-manager.ts";
  import { SettingsManager } from "./settings-manager.ts";
  import { createBashTool, createCodingTools, createEditTool, createFindTool, createGrepTool, createLsTool, createPowerShellTool, createReadOnlyTools, createReadTool, createWriteTool, withFileMutationQueue } from "./tools/index.ts";
  export interface CreateAgentSessionOptions {
@@ -302,3 +438,32 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts b/n
      /** Working directory for project-local discovery. Default: process.cwd() */
      cwd?: string;
      /** Global config directory. Default: ~/.pi/agent */
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.d.ts
+index 8d6620b..723ed87 100644
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.d.ts
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.d.ts
+@@ -72,6 +72,8 @@ interface PackageManagerOptions {
+     settingsManager: SettingsManager;
+     /** Names of built-in extensions, resolved as `builtin:<name>` extension resources. */
+     builtinExtensions?: string[];
++    /** Pinned Drone loader uses this only while producing a complete host selection receipt. */
++    retainUnavailableExtensionPaths?: boolean;
+ }
+ type SourceScope = "user" | "project" | "temporary";
+ export declare function getExtensionTempFolder(agentDir: string): string;
+@@ -80,6 +82,7 @@ export declare class DefaultPackageManager implements PackageManager {
+     private agentDir;
+     private settingsManager;
+     private builtinExtensions;
++    private retainUnavailableExtensionPaths;
+     private globalNpmRoot;
+     private globalNpmRootCommandKey;
+     private progressCallback;
+@@ -120,6 +123,7 @@ export declare class DefaultPackageManager implements PackageManager {
+     checkForAvailableUpdates(): Promise<PackageUpdate[]>;
+     private resolvePackageSources;
+     private findAutoloadDeltaBase;
++    private recordUnavailableExtensionSource;
+     private resolveLocalExtensionSource;
+     private installParsedSource;
+     private getPackageSourceString;
