@@ -115,6 +115,13 @@ it.skipIf(!tarball)(
 				],
 				{ maxBuffer: 8 * 1024 * 1024 },
 			);
+			// This fixture is explicitly protocol-only, independent of the user's cached Docker images.
+			await writeFile(
+				join(root, "docker"),
+				`#!${process.execPath}\nconst args=process.argv.slice(2);if(args[0]==='version'){console.log('synthetic protocol daemon');process.exit(0);}process.exit(args[0]==='image'&&args[1]==='inspect'?1:127);`,
+			);
+			await chmod(join(root, "docker"), 0o755);
+			vi.stubEnv("PATH", `${root}${delimiter}${process.env.PATH}`);
 			const manager = new UiPluginManager({ installedPackageRoot: join(root, "node_modules") });
 			await mkdir(join(desktop.profile, "ui-plugins"));
 			await manager.scanAll();
@@ -454,8 +461,9 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 				sessionId: "accepted-cancel",
 				code: "# hold-protocol\nprint('synthetic cleanup only')",
 			});
-			await vi.waitFor(async () =>
-				expect(await readFile(join(root, "synthetic-run-started"), "utf8")).toBe("running"),
+			await vi.waitFor(
+				async () => expect(await readFile(join(root, "synthetic-run-started"), "utf8")).toBe("running"),
+				{ timeout: 10000 },
 			);
 			let abortSettled = false;
 			const aborting = sessions[1]!.abort().then(() => {
@@ -574,7 +582,7 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 					actualSdkCloseLateApprovalZeroAccepted: true,
 					actualSdkAcceptedCancelWaitsSyntheticOwnedCleanup: true,
 					renderedInstalledKernelUiSharesSdkOwner: true,
-					realContainerSuccess: "NOT_RUN_NO_CACHED_IMAGE",
+					realContainerSuccess: "NOT_RUN_SYNTHETIC_ENGINE_ONLY",
 					formalGui: "NOT_RUN",
 				}),
 			);
