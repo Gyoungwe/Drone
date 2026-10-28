@@ -22,6 +22,7 @@ import { Type } from "typebox";
 import { JsonStore, JsonStoreCorruptedError } from "../json-store";
 import type { StorageRegistry } from "../storage/registry";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
+import { MAX_FILE_BINARY_BASE64, MAX_FILE_BINARY_BYTES, readStableFileBytes } from "./stable-file-bytes";
 
 export interface PluginRootGrant {
 	readonly handle: string;
@@ -375,6 +376,11 @@ export class PluginFileCapabilities {
 				};
 			},
 		});
+	}
+
+	async readFileBinary(input: PluginFileInput, call: PluginFileCall) {
+		const root = this.grant(input, call, "files");
+		return readStableFileBytes(() => this.path(root, input.path), call.signal);
 	}
 
 	async readText(input: PluginFileInput, call: PluginFileCall) {
@@ -885,6 +891,20 @@ export function fileCapabilityHandlers(
 			resultSchema: Type.Object({ created: Type.Boolean() }),
 			effect: "write",
 			execute: (input, call) => ports.ensureFileDirectory(input as PluginFileInput, call),
+		},
+		"files.readBinary": {
+			inputSchema: input,
+			resultSchema: Type.Object(
+				{
+					base64: Type.String({ maxLength: MAX_FILE_BINARY_BASE64 }),
+					sha256: Type.String({ pattern: "^[a-f0-9]{64}$" }),
+					bytes: Type.Integer({ minimum: 0, maximum: MAX_FILE_BINARY_BYTES }),
+					version: fileVersion,
+				},
+				{ additionalProperties: false },
+			),
+			effect: "read",
+			execute: (input, call) => ports.readFileBinary(input as PluginFileInput, call),
 		},
 		"files.readText": {
 			inputSchema: input,
