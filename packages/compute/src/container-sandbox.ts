@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, realpath } from "node:fs/promises";
+import { lstat, mkdir, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import type {
 	ControlledSandboxRunner,
@@ -208,7 +208,9 @@ export class ContainerSandboxRunner implements ControlledSandboxRunner {
 		if (!isAbsolute(options.projectRoot)) throw new Error("projectRoot must be absolute");
 		const processRunner = options.process ?? commandProcess();
 		const runtime = await detectContainerRuntime(options.runtime, processRunner);
-		return runtime ? new ContainerSandboxRunner(runtime, options) : undefined;
+		return runtime
+			? new ContainerSandboxRunner(runtime, { ...options, projectRoot: await realpath(options.projectRoot) })
+			: undefined;
 	}
 
 	get runtimeName(): "docker" | "podman" {
@@ -218,14 +220,23 @@ export class ContainerSandboxRunner implements ControlledSandboxRunner {
 	async run(request: SandboxRunRequest): Promise<SandboxRunResult> {
 		request.signal?.throwIfAborted();
 		const hostRunDirectory = projectRunsPath(this.projectRoot, request.runDirectory);
-		await mkdir(hostRunDirectory, { recursive: true });
-		const canonicalRoot = await realpath(resolve(this.projectRoot, "runs")).catch(() =>
-			resolve(this.projectRoot, "runs"),
-		);
-		const canonicalRun = await realpath(hostRunDirectory).catch(() => hostRunDirectory);
-		const withinRuns = relative(canonicalRoot, canonicalRun).replaceAll("\\", "/");
-		if (withinRuns.startsWith("../") || withinRuns === ".." || isAbsolute(withinRuns))
-			throw new Error("container runner path escaped project runs");
+		const canonicalProject = await realpath(this.projectRoot);
+		if (canonicalProject !== this.projectRoot)
+			throw new Error("Container workspace root changed or contains a symlink");
+		let canonicalRun = canonicalProject;
+		for (const part of relative(canonicalProject, hostRunDirectory).split(/[\\/]/)) {
+			request.signal?.throwIfAborted();
+			canonicalRun = resolve(canonicalRun, part);
+			try {
+				await mkdir(canonicalRun);
+			} catch (error) {
+				// Concurrent accepted executions may create their common runs parent first.
+				if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+			}
+			const entry = await lstat(canonicalRun);
+			if (entry.isSymbolicLink() || !entry.isDirectory() || (await realpath(canonicalRun)) !== canonicalRun)
+				throw new Error("Container run directory contains a symlink or is not a directory");
+		}
 		request.signal?.throwIfAborted();
 		const token = randomUUID();
 		const name = `drone-discovery-${token}`;
