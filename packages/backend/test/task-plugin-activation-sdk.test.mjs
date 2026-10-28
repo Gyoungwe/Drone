@@ -348,6 +348,7 @@ it("restores the installed session owner from durable SDK entries without replay
 	const before = current.session.messages.findLast((message) => message.details?.taskView).details.taskView;
 	const task = before.tasks.find((value) => value.id === before.activeTaskId);
 	expect(task.milestones[0].state).toBe("completed");
+	expect(task.executionConsent).toMatchObject({ version: 1 });
 	const file = current.session.sessionFile;
 	await current.service.closeSession(current.session.sessionId);
 	const restored = await current.service.openSession(file);
@@ -368,6 +369,7 @@ it("restores the installed session owner from durable SDK entries without replay
 		},
 	});
 	expect(recovered.milestones[1].state).not.toBe("completed");
+	expect(recovered.executionConsent).toBeUndefined();
 	expect(results(session, "write")).toHaveLength(1);
 	expect(current.asks()).toBe(1);
 	expect(await readFile(join(current.cwd, "persisted.txt"), "utf8")).toBe("durable accepted output");
