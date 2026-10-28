@@ -22,3 +22,7 @@
 真实 PDF DOI/title 解析仍需单独修复：现有 core `readPdfIdentity` 用相对 pdf-worker.mjs 的 Node Worker，但 npm tar 未包含该文件，且 core 未独立声明 pdfjs-dist；受限 guest 也不能新建 Node Worker。后继必须由本插件拥有的同一解析核心、真实依赖与实际 resource 进程提供，Native/managed 共用，不能给 guest 添加 --allow-worker 或从 host app.asar 猜依赖。本片没有证明该项通过。
 
 managed TaskSession 的完整接受文件闭环、一次真实任务授权、actual queued continuation origin、Knowledge acceptance、旧版本显式迁移、旧 startup task/core 装配删除、正式安装包 GUI 和统一双仓库最终门禁仍未完成。未更新发行锁、未发布 npm、未推送。
+
+## 后继资源请求取消（2026-10-29）
+
+`PluginResourceInstance.invoke` 追加可选第三参 `{signal}`；生产 worker 传递实际该次请求的 signal，而不是 factory 生命周期 signal。旧两参数实现直接忽略附加参数，无兼容分支。真实受限 resource 测试取消一次请求后确认该请求 signal 已 aborted、factory 生命周期仍未 aborted，后续请求成功，最终真实 dispose 写出 cache 清理回执。21/21 process-runtime 回归、API check 与 Backend TypeScript 通过。此合同为后继 PDF resource 服务提供真实取消入口，不等于 PDF 解析已通过。

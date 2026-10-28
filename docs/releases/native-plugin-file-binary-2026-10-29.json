@@ -65,5 +65,13 @@
   "pdfDOITitle": "NOT_IMPLEMENTED_RESOURCE_MIGRATION_REQUIRED",
   "formalInstallerGUI": "NOT_RUN",
   "fullP4": "IN_PROGRESS",
-  "fullDualRepositoryGates": "ROOT_COHORT_REQUIRED"
+  "fullDualRepositoryGates": "ROOT_COHORT_REQUIRED",
+  "resourceRequestSignal": {
+    "source": "5c0a7c08",
+    "command": "npx vitest run --project unit src/plugins/process-runtime.test.ts",
+    "result": "21/21; exact request aborted, lifetime live, next request and cleanup verified",
+    "log": "/tmp/resource-request-signal-test-final.log",
+    "apiCheck": "/tmp/resource-request-signal-api.log",
+    "backendTypecheck": "/tmp/resource-request-signal-backend.log"
+  }
 }
