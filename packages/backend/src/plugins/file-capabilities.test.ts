@@ -229,3 +229,76 @@ describe("authorized plugin file ports", () => {
 		);
 	});
 });
+
+describe("approved bounded binary file snapshots", () => {
+	it("preserves complete non-UTF8 bytes beyond the text limit with actual hash and version", async () => {
+		const bytes = Buffer.alloc(2 * 1024 * 1024 + 7, 255);
+		bytes.writeUInt32LE(0, 0);
+		await fs.writeFile(join(files, "artifact.bin"), bytes);
+		const observed = await ports.readFileBinary({ root: "selected-files", path: "artifact.bin" }, call);
+		expect(Buffer.from(observed.base64, "base64").equals(bytes)).toBe(true);
+		expect(observed).toMatchObject({
+			bytes: bytes.length,
+			sha256: createHash("sha256").update(bytes).digest("hex"),
+			version: { size: bytes.length },
+		});
+	});
+	it("rejects a file beyond 8 MiB without truncating or changing its original bytes", async () => {
+		const path = join(files, "too-large.bin"),
+			bytes = Buffer.alloc(8 * 1024 * 1024 + 1, 31);
+		await fs.writeFile(path, bytes);
+		await expect(
+			ports.readFileBinary({ root: "selected-files", path: "too-large.bin" }, call),
+		).rejects.toThrow("8 MiB");
+		expect((await fs.readFile(path)).equals(bytes)).toBe(true);
+	});
+	it("rejects JSON and binary state roots instead of broadening their grants", async () => {
+		await expect(
+			ports.readFileBinary({ root: "application-state", path: "state.json" }, call),
+		).rejects.toThrow("not granted");
+		const binary = await PluginFileCapabilities.create(
+			[{ handle: "binary-state", path: state, kind: "binary-state", scope: { kind: "application" } }],
+			privateCache,
+		);
+		await expect(
+			binary.readFileBinary({ root: "binary-state", path: "ledger.sqlite" }, call),
+		).rejects.toThrow("not granted");
+	});
+	it("detects actual file replacement after open rather than returning the old descriptor", async () => {
+		const path = join(files, "artifact.bin");
+		await fs.writeFile(path, "original");
+		vi.mocked(fs.open).mockImplementation(async (...args) => {
+			const handle = await actualFs.open(...args);
+			await fs.rename(path, join(files, "old-artifact.bin"));
+			await fs.writeFile(path, "replaced");
+			return handle;
+		});
+		await expect(
+			ports.readFileBinary({ root: "selected-files", path: "artifact.bin" }, call),
+		).rejects.toThrow(/changed (before|during) binary read/);
+	});
+	it("rechecks the approved directory identity after actual replacement while reading", async () => {
+		await fs.writeFile(join(files, "artifact.bin"), Buffer.alloc(2 * 1024 * 1024));
+		vi.mocked(fs.open).mockImplementation(async (...args) => {
+			const handle = await actualFs.open(...args);
+			await fs.rename(files, join(root, "old-files"));
+			await fs.mkdir(files);
+			await fs.writeFile(join(files, "artifact.bin"), "different root");
+			return handle;
+		});
+		await expect(
+			ports.readFileBinary({ root: "selected-files", path: "artifact.bin" }, call),
+		).rejects.toThrow("changed after authorization");
+	});
+	it("does not deliver a real opened snapshot after the actual call signal aborts", async () => {
+		await fs.writeFile(join(files, "artifact.bin"), Buffer.alloc(2 * 1024 * 1024));
+		vi.mocked(fs.open).mockImplementation(async (...args) => {
+			const handle = await actualFs.open(...args);
+			controller.abort(new Error("actual binary read cancelled"));
+			return handle;
+		});
+		await expect(
+			ports.readFileBinary({ root: "selected-files", path: "artifact.bin" }, call),
+		).rejects.toThrow("actual binary read cancelled");
+	});
+});
