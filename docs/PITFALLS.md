@@ -414,3 +414,8 @@ TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Chec
 ### channel-watch 恢复订阅一次性超时（原因未确认）
 
 `4abdae43/253c47e` 的独立全量门禁首次在恢复订阅后的 2000ms 内未收到文件监听唤醒，backend 其余 1987 项通过。原失败日志保留；同目录定向完整文件 20 项通过，随后该用例 4 路并行共 20 次均通过，完整同源码重跑 backend1988/17 skipped、Desktop934/1 skipped、root25/25 通过。首次压力脚本曾使用重复 config 路径，在测试前退出，不能当作产品复现证据。没有修改生产代码、超时或断言；根因仍待稳定复现，完整重跑通过不代表已经修复。见 `native-plugin-ui-model-cohort-2026-10-28.json`。
+
+
+### 直接调用 operation.execute 不能证明 IPC/运行时合同通过
+
+模型评审的只读 `modelReviewInfo` 只接受 revision/id/hash/profile；写操作另外要求 acknowledged/autoApply。直接适配器测试忽略未用字段时看似成功，真实 packed owner 的 broker 会按 additionalProperties:false 拒绝复用写 DTO。回归必须跨真实 registry/worker 调用，并分别构造读 DTO 和写 DTO；不要放宽 schema 来让 fixture 通过。详见 `native-plugin-knowledge-model-command-2026-10-28.json`。
