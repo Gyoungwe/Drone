@@ -1,0 +1,20 @@
+{
+	"date": "2026-10-28",
+	"scope": "P4 explicit native evidence file ports",
+	"status": "PARTIAL",
+	"pluginSourceCommits": ["26b766e", "f253bd3"],
+	"pluginBuildCommit": "7f1674e",
+	"coreTarSha256": "61c8b93b988b84c76a1cd3aa131e11dc030f9df3f679c55d6ba061d7476598f6",
+	"published": false,
+	"checks": {
+		"coreNodeTests": { "passed": 29, "failed": 0 },
+		"coreRuntimeUiTests": { "passed": 210, "failed": 0 },
+		"installedTarActualSdk": { "files": 4, "passed": 31, "failed": 0 },
+		"formalGui": "NOT_RUN"
+	},
+	"remaining": [
+		"Managed adapter must use actual approved broker file ports",
+		"Live/durable storage policy",
+		"Live authorization/proof and actual TaskApplication owner cutover"
+	]
+}
