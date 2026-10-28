@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, renameSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
@@ -86,13 +87,27 @@ const roleConsumerSource = (effect) => `export default async context=>({operatio
  pi.on('tool_execution_end',async(event,ctx)=>{if(event.toolName==='service_count')await invoke('tool',null,ctx);});
  pi.on('input',async(event,ctx)=>{if(event.text==='ordinary-input')await invoke('observe',null,ctx);});
 }})});`;
-async function setup({ native = true, roles = false, roleEffect = "read", providerNative = true } = {}) {
+const taskProviderSource = `import {createManagedTaskApplication} from './dist/managed-runtime.mjs';
+export default async context=>{
+ const app=createManagedTaskApplication(context);
+ return {...app,operations:{...app.operations,
+  fixturePlan:{effect:'write',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>{await app.withCurrentSession(ctx.signal,session=>session.controller.journal.plan(input));return app.operations.status.execute(null,ctx);}},
+  fixtureReport:{effect:'write',inputSchema:{type:'null'},resultSchema:{type:'object'},execute:async(_input,ctx)=>{await app.withCurrentSession(ctx.signal,session=>session.controller.journal.requestReport());return app.operations.status.execute(null,ctx);}}
+ }};
+};`;
+async function setup({
+	native = true,
+	roles = false,
+	roleEffect = "read",
+	providerNative = true,
+	taskData = false,
+} = {}) {
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-provider-packed-")));
 	const archives = [];
 	for (const [name, source, drone] of [
 		[
 			"provider",
-			roles ? roleProviderSource : providerSource,
+			taskData ? taskProviderSource : roles ? roleProviderSource : providerSource,
 			{
 				provides: {
 					"checkpoint.service": {
@@ -147,11 +162,15 @@ async function setup({ native = true, roles = false, roleEffect = "read", provid
 				name: `@fixture/${name}`,
 				version: "1.0.0",
 				type: "module",
-				files: ["runtime.mjs", "native.mjs", "plugin.manifest.json"],
+				files: ["runtime.mjs", "native.mjs", "plugin.manifest.json", ...(taskData ? ["dist"] : [])],
 				...(name === "provider" || roles ? { pi: { extensions: ["./native.mjs"] } } : {}),
 			}),
 		);
 		await writeFile(join(dir, "runtime.mjs"), source);
+		if (taskData && name === "provider")
+			await cp(dirname(createRequire(import.meta.url).resolve("@gyoungwe/pi-core")), join(dir, "dist"), {
+				recursive: true,
+			});
 		await writeFile(
 			join(dir, "native.mjs"),
 			`export default pi=>{throw new Error('Desktop must select the managed runtime owner, never execute the root extension file.');};`,
@@ -166,9 +185,32 @@ async function setup({ native = true, roles = false, roleEffect = "read", provid
 				capabilities: ["core"],
 				hosts: ["drone-desktop", "native-pi"],
 				entrypoints,
-				drone: { pluginApi: 1, resultContract: "drone-result/v3", ...drone },
+				drone: {
+					pluginApi: 1,
+					resultContract: "drone-result/v3",
+					...drone,
+					...(taskData
+						? name === "provider"
+							? {
+									provides: {
+										"task.runtime": {
+											version: 1,
+											operations: [
+												"status",
+												"pause",
+												"advanceStage",
+												"takeReport",
+												"fixturePlan",
+												"fixtureReport",
+											],
+										},
+									},
+								}
+							: { requires: { store: { service: "task.runtime", version: 1 } } }
+						: {}),
+				},
 				permissions: { filesystem: [], network: [], subprocess: [] },
-				tools: name === "provider" ? ["service_count"] : [],
+				tools: name === "provider" && !taskData ? ["service_count"] : [],
 			}),
 		);
 		const [pack] = JSON.parse(
@@ -888,4 +930,169 @@ it("revoking the actual event sender aborts a pending receiver approval without 
 			.getBranch()
 			.some((row) => row.customType === "plugin-record:%40fixture%2Fprovider:role-result"),
 	).toBe(false);
+}, 20000);
+
+const taskPlan = {
+	goal: "Preserve a real managed task checkpoint",
+	summary: "Data slice only; no execution or file authorization",
+	milestones: [
+		{
+			id: "review",
+			title: "Review the supplied result",
+			dependsOn: [],
+			acceptance: { kind: "human_review" },
+		},
+	],
+};
+it("canonical managed task state is unavailable without an actual native attachment", async () => {
+	const { invoke, owner, binding, faux } = await setup({ taskData: true, native: false });
+	await expect(invoke("read", { operation: "status", input: null })).rejects.toThrow(
+		/no native attachment for this SDK session/,
+	);
+	const applicationSelection = bridge.selectSession(owner, null);
+	await expect(
+		bridge.invoke(owner, binding, "read", { operation: "status", input: null }, applicationSelection),
+	).rejects.toThrow(/requires an actual attached SDK session/);
+	expect(faux.state.callCount).toBe(0);
+}, 20000);
+it("a real packed managed adapter owns one canonical TaskSession and serves status/actions through its actual SDK entry", async () => {
+	const { invoke, entry, converse } = await setup({ taskData: true });
+	expect(await invoke("read", { operation: "status", input: null })).toMatchObject({
+		snapshot: null,
+		storage: { mode: "persistent", state: "deferred" },
+	});
+	await converse();
+	const planned = await invoke("write", { operation: "fixturePlan", input: taskPlan });
+	expect(planned).toMatchObject({
+		snapshot: { goal: taskPlan.goal, state: "waiting_user" },
+		storage: { mode: "persistent", state: "durable" },
+	});
+	expect(JSON.stringify(planned)).not.toMatch(/executionConsent|writeRoots|planApproved|approvedAt/);
+	const record = entry.session.sessionManager
+		.getBranch()
+		.findLast((row) => row.customType === "plugin-record:%40fixture%2Fprovider:drone-task-session-v1");
+	expect(record.data.workbench.tasks[0].goal).toBe(taskPlan.goal);
+	expect(
+		await invoke("write", { operation: "pause", input: { reason: "actual-data-review" } }),
+	).toMatchObject({
+		snapshot: { id: planned.snapshot.id, reason: "actual-data-review" },
+		storage: { state: "durable" },
+	});
+	expect(await invoke("write", { operation: "advanceStage", input: null })).toMatchObject({
+		advanced: false,
+		snapshot: { id: planned.snapshot.id },
+	});
+	await invoke("write", { operation: "fixtureReport", input: null });
+	expect(await invoke("write", { operation: "takeReport", input: null })).toMatchObject({
+		report: expect.stringContaining(taskPlan.goal),
+	});
+	expect(await invoke("write", { operation: "takeReport", input: null })).toMatchObject({ report: null });
+}, 20000);
+it("two real managed TaskSessions share an application but never expose another session's task", async () => {
+	const { invoke, service, entry, faux, owner, binding, converse, meta } = await setup({ taskData: true });
+	await converse();
+	const first = await invoke("write", { operation: "fixturePlan", input: taskPlan });
+	const otherMeta = await service.createSession({
+		cwd: entry.cwd,
+		provider: faux.provider.id,
+		modelId: faux.getModel().id,
+	});
+	const other = service.registry.get(otherMeta.sessionId);
+	faux.setResponses([fauxAssistantMessage("Other managed task scope.")]);
+	await other.session.prompt("Initialize another task scope.");
+	await other.session.waitForIdle();
+	const otherSelection = bridge.selectSession(owner, otherMeta.sessionId);
+	expect(
+		await bridge.invoke(owner, binding, "read", { operation: "status", input: null }, otherSelection),
+	).toMatchObject({ snapshot: null });
+	const second = await bridge.invoke(
+		owner,
+		binding,
+		"write",
+		{ operation: "fixturePlan", input: { ...taskPlan, goal: "Independent second managed goal" } },
+		otherSelection,
+	);
+	expect(second.snapshot.id).not.toBe(first.snapshot.id);
+	const restoredSelection = bridge.selectSession(owner, meta.sessionId);
+	expect(
+		await bridge.invoke(owner, binding, "read", { operation: "status", input: null }, restoredSelection),
+	).toMatchObject({ snapshot: { id: first.snapshot.id, goal: taskPlan.goal } });
+}, 20000);
+it("an actual SDK append failure fences the managed owner through reload and status retains only its last committed task", async () => {
+	const { entry, invoke, converse } = await setup({ taskData: true });
+	await converse();
+	const planned = await invoke("write", { operation: "fixturePlan", input: taskPlan });
+	const original = entry.session.sessionManager.appendCustomEntry;
+	const failure = vi
+		.spyOn(entry.session.sessionManager, "appendCustomEntry")
+		.mockImplementationOnce(function (type, data) {
+			original.call(this, type, data);
+			throw new Error("Actual managed checkpoint append failed");
+		});
+	await expect(invoke("write", { operation: "pause", input: { reason: "must-not-commit" } })).rejects.toThrow(
+		/Actual managed checkpoint append failed/,
+	);
+	failure.mockRestore();
+	const status = await invoke("read", { operation: "status", input: null });
+	expect(status).toMatchObject({
+		snapshot: { id: planned.snapshot.id, reason: planned.snapshot.reason },
+		storage: { state: "needs-reopen" },
+	});
+	const count = entry.session.sessionManager.getBranch().length;
+	await expect(
+		invoke("write", { operation: "pause", input: { reason: "no-phantom-chain" } }),
+	).rejects.toThrow(/reopen the application from disk/);
+	expect(entry.session.sessionManager.getBranch()).toHaveLength(count);
+	await entry.session.reload();
+	expect(await invoke("read", { operation: "status", input: null })).toMatchObject({
+		storage: { state: "needs-reopen" },
+		snapshot: { id: planned.snapshot.id },
+	});
+}, 20000);
+
+it("a normal actual SDK reload restores the source-owned task checkpoint without exposing execution authority", async () => {
+	const { entry, invoke, converse } = await setup({ taskData: true });
+	await converse();
+	const planned = await invoke("write", { operation: "fixturePlan", input: taskPlan });
+	await entry.session.reload();
+	const restored = await invoke("read", { operation: "status", input: null });
+	expect(restored).toMatchObject({
+		snapshot: { id: planned.snapshot.id, goal: taskPlan.goal },
+		storage: { mode: "persistent", state: "durable" },
+	});
+	expect(JSON.stringify(restored)).not.toMatch(/executionConsent|writeRoots|planApproved|approvedAt/);
+	await expect(
+		invoke("read", { operation: "pause", input: { reason: "cannot-upgrade-status-read" } }),
+	).rejects.toThrow(/Read-only provider call/);
+}, 20000);
+it("actual UI cancellation at the managed checkpoint permission waits for cleanup and cannot turn its late answer into a save", async () => {
+	const { entry, invoke, converse, approve, owner, binding, selection } = await setup({ taskData: true });
+	await converse();
+	const planned = await invoke("write", { operation: "fixturePlan", input: taskPlan });
+	const count = entry.session.sessionManager.getBranch().length;
+	let release;
+	approve(async (_owner, source, operation) =>
+		source.pluginId === "@fixture/provider" && operation === "capability:session.records.append"
+			? new Promise((resolve) => {
+					release = resolve;
+				})
+			: true,
+	);
+	const pending = invoke(
+		"write",
+		{ operation: "pause", input: { reason: "cancel-before-append" } },
+		"managed-checkpoint-cancel",
+	).catch((error) => error);
+	await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+	const cancelling = bridge.cancel(owner, binding, selection, "managed-checkpoint-cancel");
+	release(true);
+	await expect(cancelling).resolves.toBe(true);
+	expect(await pending).toBeInstanceOf(Error);
+	expect(entry.session.sessionManager.getBranch()).toHaveLength(count);
+	approve(async () => true);
+	const status = await invoke("read", { operation: "status", input: null });
+	expect(status).toMatchObject({
+		snapshot: { id: planned.snapshot.id, reason: planned.snapshot.reason },
+		storage: { state: "needs-reopen" },
+	});
 }, 20000);
