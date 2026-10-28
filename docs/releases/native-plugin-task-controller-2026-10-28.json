@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-28",
+  "scope": "P4 canonical TaskController structural extraction",
+  "status": "PARTIAL",
+  "pluginSourceCommit": "2f3f217",
+  "pluginBuildCommit": "ed0f6f5",
+  "package": {
+    "name": "@gyoungwe/pi-core",
+    "version": "0.2.0",
+    "sha256": "ae8734afecb66a577be29e0e514d9d54b4cc976e7f5e9a080675c5bd0779fb4d",
+    "published": false
+  },
+  "checks": {
+    "corePackageCheck": "PASS",
+    "coreNodeTests": {"passed": 29, "failed": 0},
+    "coreRuntimeUiTests": {"passed": 210, "failed": 0},
+    "installedTarProductionBackendSdk": {"files": 4, "passed": 29, "failed": 0},
+    "formalGui": "NOT_RUN"
+  },
+  "remaining": [
+    "Actual managed TaskApplication/native adapter and provider cutover",
+    "Live owner courier for task consent/acceptance/continuation",
+    "Domain legacy adoption with scope validation and authorization/proof stripping",
+    "Complete deferred actor durability policy",
+    "Remove startup taskHost/coreHost and verify package stop/recovery/rollback"
+  ]
+}

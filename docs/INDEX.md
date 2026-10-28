@@ -18,6 +18,7 @@ managed native `registerCommand` 由 `plugins/{runtime,process-runtime,process-r
 
 P4 从启动 taskHost 到受限同包 application owner 的具体依赖盘点、异步任务模块方案、授权/provider 依赖和最终删除点见[动态 owner 设计提案](superpowers/specs/2026-10-28-task-managed-owner-cutover-design.md)。
 P4 S1 的 canonical `pi-core/src/task-runtime/task-session.mjs` 串行事务、`TaskApplication` 与两个 native 入口、真实 SDK 磁盘失败/phantom/reopen、取消和双会话证据见[TaskSession 切片](pluginization/native-plugin-task-session-actor-evidence.md)。后继 `native-storage.mjs` 基于公开 SDK branch/自身 JSONL 重建 raw reload fence 的[真实 RED→GREEN](pluginization/native-plugin-native-storage-evidence.md)关闭该 append-phantom 切片；deferred 的完整 actor 策略、managed cutover 与 P4 仍未完成。
+插件内 `task-runtime/task-controller.mjs` 从 Native Adapter 提取同一 actor 的 journal/evidence 转发，不持有第二份状态；结构提取、真实安装 tarball 到 SDK 的回归及后继边界见[Controller 切片](pluginization/native-plugin-task-controller-evidence.md)。
 P4 任务 UI 已移入同包 `pi-core/ui`，只读消息 hook、`chat.message` 和 `sessions.command` 由通用宿主提供；真实 SDK、renderer 与取消晚写回归及仍未完成的动态 native 启停见[任务 UI 切片](pluginization/native-plugin-task-ui-evidence.md)与[机器回执](releases/native-plugin-task-ui-2026-10-28.json)。
 版本化的通用 pi-core 宿主合同位于 `packages/plugin-api/src/core.ts`，桌面端通过 `packages/desktop/src/main/optional-plugin-hosts.ts` 按已安装包清单发现 `coreHostLoader` 并贯穿会话组合；task host 通过既有 `PluginNativeSession` 生成每会话 adapter，与标准 Pi 根入口共用 canonical owner；任务 UI 的正式安装包工作流与整个 native 包动态安装停用仍待验收。
 
