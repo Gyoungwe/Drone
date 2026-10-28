@@ -62,3 +62,27 @@
 5. 用同一 tarball 做原生 Pi、production Backend、真实安装包 GUI、两会话启停恢复与升级回滚；双仓库完整门禁。只有切断旧引用、停用确实移除真实能力，才标记 P4 完成。
 
 正式验收必须包含：未安装 core 时普通聊天/基本 read 可用；安装后任务一次授权与写后回读；UI 关闭而 native 仍运行；包停用则 native/UI 同时不可用；两个会话隔离；关闭一方不关闭另一方；卸载旧 PID 退出与 SQLite/文件租约释放；恢复与版本回滚重新加载且不继承旧批准。当前宿主 knowledge publication 对普通答案的阻断仍属独立 P2/P6 缺口，不得通过停用 guard 伪造零插件聊天通过。
+
+## TaskController 与两种实际 Adapter 的执行合同（后继审查）
+
+S1 已提取唯一 `TaskSession`；记录、问答、服务和显式旧记录导入也已有独立真实 SDK 切片。这些端口不等于 managed owner 已切换。下一块先把 `native-adapter.mjs` 的 journal/evidence 方法转发原样移到插件内 `task-controller.mjs`，仍由实际 Native Adapter 使用；不改变事件、授权或保存时序，生成产物另交提交。
+
+Controller 只委托同一 actor 的 `input/turn/observe/action/status/close`。`status` 同步读最后提交投影，其余方法返回 actor Promise，调用方必须 await。每次调用从 Adapter 的当前真实 invocation 取得 signal，不在初始化时捕获旧 signal，不构造 `pi`/`ctx` 替身。显示 deferred 的文案属于 Adapter；完整 deferred 提交策略仍须按实际 SDK 首次用户消息保存顺序补齐。
+
+| 实际依赖 | Raw Native Adapter | Managed Native Adapter 的端口/缺口 |
+| --- | --- | --- |
+| 会话身份与工作区 | 实际 SDK context 的 sessionManager/cwd | 实际 native attachment/caller 的 host scope；不接受 UI 自报 sessionId/windowId |
+| 当前记录与保存 | 公开 getBranch/getSessionFile、appendEntry 与磁盘回读 | 已有 session.records.read/append；普通 read 只自身 namespace，保存必须消费 durability 回执 |
+| 当前 idle、工具事实 | 实际 isIdle/getAllTools | session.inspect；tool metadata 仍需通用实际会话端口，不能缓存假同步 getter |
+| 交互 | 实际 ctx.ui.select/input | 已有 session.select/input；仅答案，不产生目录、模型或科学结论授权 |
+| 文件验收/证据恢复 | 当前读批准后真实文件检查 | 当前来源逐次 read broker 与实际根/文件身份；不能把导入 roots 当已批准目录 |
+| 普通状态 | 实际 SDK sendMessage | idle 普通文本可用 session.notify；活动回合 rich task view 用同 owner runtime.changed/UI 投影，不谎称 notify 能携带可信 details |
+| 自动续作 | 实际 SDK sendMessage followUp/sendUserMessage 与当前任务授权、nonce | 尚缺通用真实 continuation 合同；不能把普通 notify 或模型调用当已授权续作 |
+| 输入/工具调用/回合边界 | SDK input/tool_call/turn_start/turn_end 的真实结果合同 | 尚缺链式 hook 支持，须实际 SDK 验证 handled/block/变换/取消后再扩 managed 协议 |
+| acceptance 与任务写同意 | 当前 owner 的真实函数与对象身份 | 尚缺 opaque owner 角色，必须与 P2 同一来源/session/attachment courier 协同；普通 provider JSON 不承载权威 |
+
+数据服务拟为 `task.runtime@1`，read 只返回 committed 状态/render；write 方法为 pause、advanceStage、takeReport，均 await 实际 actor。该服务尚未声明为 available。`isAutoContinuation` 必须由拥有 nonce 的同一 owner 对实际消息身份裁决；acceptance 的 verify/observe/resolve/identify/consent/pending 也在真实 provider owner 执行。前置和返回时复核实际来源 hash、SDK session、attachment lifetime 和 caller signal。缺少所需 live 角色时明确拒绝，不用 JSON boolean、roots、签名字段或假 null 代替。
+
+旧 Core checkpoint 导入器必须先验证当前 scope 与结构，剥离 executionConsent、writeRoots、导入的 approved/proof 等授权材料，再经已批准的两阶段 adoption 写入自身 namespace；当前授权另外从真实用户与宿主权限获取。Knowledge 的恢复范围和 live publication proof 同样分开，不让旧数据恢复创建执行权限。
+
+最终删除清单：desktop main 的 core/task startup discovery 与 load；BackendOptions/BackendServices 的 taskHostLoader/coreHost 装配；SessionService 与 extensions 的 inline task factory；permissions 中函数型 task-write-consent 旧桥；subagent/memory 对 startup coreHost 的消费者（改为真实声明服务）。受支持的外部 `/host` 兼容入口只能委托同 canonical 模块，Drone 不再调用该启动路径。上述端口和真实启停/恢复/权限回归完成前，不删除功能以假造 cutover PASS。
