@@ -3,8 +3,15 @@ import type { Stats } from "node:fs";
 import { constants } from "node:fs";
 import { link, lstat, mkdir, open, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import {
+	MAX_BINARY_BASE64,
+	readBinaryStateFile,
+	writeBinaryStateFile,
+} from "@gyoungwe/plugin-api/node/binary-state";
 import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import type {
+	PluginBinaryStateReadResult,
+	PluginBinaryStateWriteInput,
 	PluginRuntimeRootDescription,
 	PluginRuntimeScope,
 	PluginStateReadResult,
@@ -20,10 +27,11 @@ export interface PluginRootGrant {
 	readonly handle: string;
 	/** Selected and authorized by the host; never supplied in a capability request. */
 	readonly path: string;
-	readonly kind: "state" | "files";
+	readonly kind: "state" | "files" | "binary-state";
 	/** A separate host-approved JSON write grant. Read-only selections omit this entirely. */
 	/** Selected independently from read-only data access; never inferred from stored paths. */
 	readonly fileWrite?: true;
+	readonly binaryStateWrite?: { readonly registry: StorageRegistry; readonly storageId: string };
 	readonly stateWrite?: { readonly registry: StorageRegistry; readonly storageId: string };
 	readonly scope:
 		| { readonly kind: "application" }
@@ -112,6 +120,11 @@ export class PluginFileCapabilities {
 				const entry = grant.stateWrite.registry.assertRegistered(grant.stateWrite.storageId);
 				if (grant.kind !== "state" || (await realpath(entry.path)) !== path)
 					throw new Error("State write grant must match its registered state root");
+			}
+			if (grant.binaryStateWrite) {
+				const entry = grant.binaryStateWrite.registry.assertRegistered(grant.binaryStateWrite.storageId);
+				if (grant.kind !== "binary-state" || (await realpath(entry.path)) !== path)
+					throw new Error("Binary state write grant must match its registered binary root");
 			}
 			roots.set(grant.handle, { ...grant, path, identity });
 		}
@@ -274,7 +287,7 @@ export class PluginFileCapabilities {
 				handle: root.handle,
 				kind: root.kind,
 				path: root.path,
-				access: root.stateWrite || root.fileWrite ? "read-write" : "read",
+				access: root.stateWrite || root.binaryStateWrite || root.fileWrite ? "read-write" : "read",
 			});
 		}
 		call.signal.throwIfAborted();
@@ -284,8 +297,12 @@ export class PluginFileCapabilities {
 	/** Reserve an already approved JSON state directory, without creating a resource process. */
 	reserveState(input: PluginFileInput, call: PluginFileCall): Promise<{ reserved: true }> {
 		return this.mutate(call, async () => {
-			const root = this.grant(input, call, "state");
-			if (call.bootstrap || !root.stateWrite) throw new Error("Plugin state writer access was not granted");
+			const registered = this.roots.get(input.root);
+			if (!registered || (registered.kind !== "state" && registered.kind !== "binary-state"))
+				throw new Error("Plugin state writer access was not granted");
+			const root = this.grant(input, call, registered.kind);
+			if (call.bootstrap || !(root.stateWrite || root.binaryStateWrite))
+				throw new Error("Plugin state writer access was not granted");
 			const directory = await this.path(root, input.path);
 			if (!(await lstat(directory)).isDirectory())
 				throw new Error("State writer requires an existing directory");
@@ -312,6 +329,52 @@ export class PluginFileCapabilities {
 	releaseReservations(): void {
 		this.assertCleanupComplete();
 		this.reservations.dispose();
+	}
+
+	async readBinary(input: PluginFileInput, call: PluginFileCall): Promise<PluginBinaryStateReadResult> {
+		const root = this.grant(input, call, "binary-state");
+		const result = await readBinaryStateFile(input.path, {
+			resolvePath: (path) => this.path(root, path),
+			checkRoot: () => this.checkRoot(root),
+		});
+		call.signal.throwIfAborted();
+		return result;
+	}
+	writeBinary(
+		input: PluginBinaryStateWriteInput,
+		call: PluginFileCall,
+	): Promise<PluginBinaryStateReadResult> {
+		return writeBinaryStateFile(input, {
+			signal: call.signal,
+			serialize: (operation) => this.mutate(call, operation),
+			prepare: () => {
+				const root = this.grant(input, call, "binary-state");
+				if (call.bootstrap || !root.binaryStateWrite)
+					throw new Error("Binary state write access was not granted");
+				const writeGrant = root.binaryStateWrite;
+				if (!input.path) throw new Error("Binary state requires a child path");
+				for (const path of input.assertAbsent) {
+					this.grant({ root: input.root, path }, call, "binary-state");
+					if (!path || path === input.path)
+						throw new Error("Binary absence conditions must name other child paths");
+				}
+				return {
+					resolvePath: (path) => this.path(root, path),
+					checkRoot: () => this.checkRoot(root),
+					checkWrite: async () => {
+						this.grant(input, call, "binary-state");
+						const entry = writeGrant.registry.assertRegistered(writeGrant.storageId);
+						if ((await realpath(entry.path)) !== root.path)
+							throw new Error("Registered binary state root changed");
+					},
+					assertReserved: (parent) => this.reservations.assertReserved("state-writers", parent),
+					conflictError: () => new PluginStateConflictError(),
+					cleanupFailed: (error) => {
+						this.cleanupFailure = error;
+					},
+				};
+			},
+		});
 	}
 
 	async readText(input: PluginFileInput, call: PluginFileCall) {
@@ -651,7 +714,7 @@ export function fileCapabilityHandlers(
 				Type.Object(
 					{
 						handle: Type.String(),
-						kind: Type.Union([Type.Literal("state"), Type.Literal("files")]),
+						kind: Type.Union([Type.Literal("state"), Type.Literal("files"), Type.Literal("binary-state")]),
 						path: Type.String(),
 						access: Type.Union([Type.Literal("read"), Type.Literal("read-write")]),
 					},
@@ -661,6 +724,56 @@ export function fileCapabilityHandlers(
 			effect: "read",
 			bootstrap: true,
 			execute: (_input, call) => ports.describeRoots(call),
+		},
+		"state.readBinary": {
+			inputSchema: Type.Object(
+				{
+					root: Type.String({ minLength: 1, maxLength: 128 }),
+					path: Type.String({ minLength: 1, maxLength: 4096 }),
+				},
+				{ additionalProperties: false },
+			),
+			resultSchema: Type.Union([
+				Type.Object({ kind: Type.Literal("missing"), version: Type.Null() }, { additionalProperties: false }),
+				Type.Object(
+					{
+						kind: Type.Literal("value"),
+						base64: Type.String({ maxLength: MAX_BINARY_BASE64 }),
+						version: Type.String({ pattern: "^[a-f0-9]{64}$" }),
+					},
+					{ additionalProperties: false },
+				),
+			]),
+			effect: "read",
+			execute: (input, call) => ports.readBinary(input as PluginFileInput, call),
+		},
+		"state.writeBinary": {
+			inputSchema: Type.Object(
+				{
+					root: Type.String({ minLength: 1, maxLength: 128 }),
+					path: Type.String({ minLength: 1, maxLength: 4096 }),
+					base64: Type.String({
+						maxLength: MAX_BINARY_BASE64,
+						pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+					}),
+					expectedVersion: stateVersion,
+					assertAbsent: Type.Array(Type.String({ minLength: 1, maxLength: 4096 }), {
+						maxItems: 8,
+						uniqueItems: true,
+					}),
+				},
+				{ additionalProperties: false },
+			),
+			resultSchema: Type.Object(
+				{
+					kind: Type.Literal("value"),
+					base64: Type.String({ maxLength: MAX_BINARY_BASE64 }),
+					version: Type.String({ pattern: "^[a-f0-9]{64}$" }),
+				},
+				{ additionalProperties: false },
+			),
+			effect: "write",
+			execute: (input, call) => ports.writeBinary(input as PluginBinaryStateWriteInput, call),
 		},
 		"state.reserve": {
 			inputSchema: input,
@@ -713,7 +826,10 @@ export function fileCapabilityHandlers(
 		},
 		"roots.resolve": {
 			inputSchema: Type.Object(
-				{ path: Type.String(), kind: Type.Union([Type.Literal("state"), Type.Literal("files")]) },
+				{
+					path: Type.String(),
+					kind: Type.Union([Type.Literal("state"), Type.Literal("files"), Type.Literal("binary-state")]),
+				},
 				{ additionalProperties: false },
 			),
 			resultSchema: Type.Object({ handle: Type.String() }),

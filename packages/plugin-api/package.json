@@ -69,6 +69,11 @@
 			"types": "./dist/node/execution.d.ts",
 			"import": "./dist/node/execution.js",
 			"default": "./dist/node/execution.js"
+		},
+		"./node/binary-state": {
+			"types": "./dist/node/binary-state.d.ts",
+			"import": "./dist/node/binary-state.js",
+			"default": "./dist/node/binary-state.js"
 		}
 	},
 	"files": [

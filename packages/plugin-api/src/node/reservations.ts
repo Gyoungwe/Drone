@@ -15,6 +15,7 @@ import { join } from "node:path";
 /** Shared local-user format; native adapters use the same namespace and canonical resource keys. */
 export class PluginResourceReservations {
 	private readonly releases = new Map<string, () => void>();
+	private readonly checks = new Map<string, () => void>();
 	constructor(private readonly directory = join(homedir(), ".drone", "runtime-leases")) {}
 
 	reserve(namespace: string, canonicalKeys: readonly string[]): void {
@@ -24,7 +25,10 @@ export class PluginResourceReservations {
 		try {
 			for (const key of canonicalKeys) {
 				const id = `${namespace}/${createHash("sha256").update(key).digest("hex")}.lock`;
-				if (this.releases.has(id)) continue;
+				if (this.releases.has(id)) {
+					this.assertReserved(namespace, key);
+					continue;
+				}
 				const path = join(this.directory, id);
 				let fd: number;
 				try {
@@ -46,7 +50,7 @@ export class PluginResourceReservations {
 				} finally {
 					closeSync(fd);
 				}
-				const release = () => {
+				const check = () => {
 					const current = lstatSync(path);
 					if (
 						!current.isFile() ||
@@ -55,8 +59,12 @@ export class PluginResourceReservations {
 						readFileSync(path, "utf8") !== token
 					)
 						throw new Error("Plugin resource reservation ownership changed");
+				};
+				const release = () => {
+					check();
 					unlinkSync(path);
 				};
+				this.checks.set(id, check);
 				this.releases.set(id, release);
 				acquired.push([id, release]);
 			}
@@ -68,12 +76,21 @@ export class PluginResourceReservations {
 		}
 	}
 
+	/** Recheck this instance's real lock identity and token before committing a durable mutation. */
+	assertReserved(namespace: string, canonicalKey: string): void {
+		const id = `${namespace}/${createHash("sha256").update(canonicalKey).digest("hex")}.lock`;
+		const check = this.checks.get(id);
+		if (!check) throw new Error("Plugin writer directory was not reserved by this owner");
+		check();
+	}
+
 	private release(entries: readonly [string, () => void][]): unknown[] {
 		const failures: unknown[] = [];
 		for (const [id, release] of entries) {
 			try {
 				release();
 				this.releases.delete(id);
+				this.checks.delete(id);
 			} catch (error) {
 				failures.push(error);
 			}

@@ -127,6 +127,88 @@ describe("desktop activation directory grants", () => {
 		await ports.dispose?.();
 	});
 
+	it("keeps binary state selection and each actual write behind independent approval", async () => {
+		let allowed = false;
+		const approvals: (string | undefined)[] = [];
+		const picker = vi.fn(async () => [state]);
+		const provider = createDesktopResourceCapabilities(
+			{
+				...source,
+				resources: undefined,
+				requestsStateRead: undefined,
+				requestsFileRead: undefined,
+				requestsBinaryStateWrite: true,
+			},
+			root,
+			{ profileDirectory: profile, storage: new StorageRegistry(), selectDirectories: picker },
+		);
+		const registry = new PluginRuntimeRegistry(
+			{
+				authorizeActivation: async () => true,
+				authorizeInvocation: async (request) => {
+					if (request.operation === "capability:state.writeBinary") {
+						approvals.push(request.approvalDetail);
+						return allowed;
+					}
+					return true;
+				},
+			},
+			"actual-app",
+			provider,
+		);
+		registry.register(source.pluginId, async (ctx) => ({
+			operations: {
+				persist: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "object" },
+					effect: "write",
+					execute: async () => {
+						const selected = ctx.resources[0]!;
+						expect(selected).toMatchObject({ kind: "binary-state", access: "read-write" });
+						await ctx.capabilities.call("state.reserve", { root: selected.handle, path: "" });
+						return ctx.capabilities.call("state.writeBinary", {
+							root: selected.handle,
+							path: "ledger.sqlite",
+							base64: Buffer.from("actual binary").toString("base64"),
+							expectedVersion: null,
+							assertAbsent: ["ledger.sqlite-wal"],
+						});
+					},
+				},
+			},
+			dispose: async () => {},
+		}));
+		const scope = {
+				kind: "session" as const,
+				sessionId: "creator-sdk",
+				workspaceId: "actual-workspace",
+				workspaceDirectory: await realpath(root),
+			},
+			identity = {};
+		const client = await registry.activate(source.pluginId, () => ({
+			scope,
+			identity,
+			signal: new AbortController().signal,
+		}));
+		try {
+			expect(picker).toHaveBeenCalledExactlyOnceWith("binary-state-write");
+			await expect(client.invoke("persist", null)).rejects.toThrow("capability denied");
+			expect(await readdir(state)).toEqual([]);
+			allowed = true;
+			expect(await client.invoke("persist", null)).toMatchObject({ kind: "value" });
+			expect(approvals).toHaveLength(2);
+			for (const detail of approvals) {
+				expect(detail).toContain("creator-sdk");
+				expect(detail).toContain("actual-workspace");
+				expect(detail).toContain(await realpath(state));
+				expect(detail).toContain("logical content/diff is not displayed");
+				expect(detail).toContain('"ledger.sqlite-wal"');
+			}
+		} finally {
+			await registry.deactivate(source.pluginId);
+		}
+	});
+
 	it("keeps no-resource JSON writes behind the broker's actual per-call approval", async () => {
 		let allowWrite = false;
 		const provider = createDesktopResourceCapabilities(

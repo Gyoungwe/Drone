@@ -166,6 +166,25 @@ describe("installed UI runtime provenance", () => {
 		expect(manager.runtimeSource("results-ui")?.requestsExecution).toBeUndefined();
 	});
 
+	it("keeps binary state declarations independent of JSON state and file authority", async () => {
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		for (const token of ["binary-state-read", "binary-state-write"]) {
+			await writeManifest("./runtime.js", {}, [token]);
+			await manager.scanAll();
+			const source = manager.runtimeSource("results-ui");
+			expect(source?.requestsBinaryStateRead).toBe(true);
+			expect(source?.requestsBinaryStateWrite).toBe(token === "binary-state-write" ? true : undefined);
+			expect(source?.requestsStateRead).toBeUndefined();
+			expect(source?.requestsStateWrite).toBeUndefined();
+			expect(source?.requestsFileRead).toBeUndefined();
+			expect(source?.requestsFileWrite).toBeUndefined();
+		}
+		await writeManifest();
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsBinaryStateRead).toBeUndefined();
+		expect(manager.runtimeSource("results-ui")?.requestsBinaryStateWrite).toBeUndefined();
+	});
+
 	it("requests state writes only for the explicit filesystem token and clears it on rescan", async () => {
 		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
 		await writeManifest("./runtime.js", {}, ["application-state"]);

@@ -35,6 +35,8 @@ export interface PluginRuntimeSource {
 	readonly recordAdoptions?: PluginRecordAdoptions;
 	readonly requestsStateRead?: boolean;
 	readonly requestsStateWrite?: boolean;
+	readonly requestsBinaryStateRead?: boolean;
+	readonly requestsBinaryStateWrite?: boolean;
 	readonly requestsFileRead?: boolean;
 	readonly requestsFileWrite?: boolean;
 	readonly requestsModel?: boolean;
@@ -131,6 +133,8 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		JSON.stringify(a.recordAdoptions) === JSON.stringify(b.recordAdoptions) &&
 		a.requestsStateRead === b.requestsStateRead &&
 		a.requestsStateWrite === b.requestsStateWrite &&
+		a.requestsBinaryStateRead === b.requestsBinaryStateRead &&
+		a.requestsBinaryStateWrite === b.requestsBinaryStateWrite &&
 		a.requestsFileRead === b.requestsFileRead &&
 		a.requestsFileWrite === b.requestsFileWrite &&
 		a.requestsModel === b.requestsModel &&

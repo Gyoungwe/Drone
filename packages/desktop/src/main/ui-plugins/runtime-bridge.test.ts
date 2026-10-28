@@ -378,6 +378,8 @@ describe("DesktopRuntimeBridge", () => {
 	it.each([
 		"requestsStateRead",
 		"requestsStateWrite",
+		"requestsBinaryStateRead",
+		"requestsBinaryStateWrite",
 		"requestsFileRead",
 		"requestsFileWrite",
 		"requestsModel",
