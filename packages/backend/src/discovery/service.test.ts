@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, symlink } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -96,7 +96,7 @@ describe("DiscoveryService composition root", () => {
 				});
 				expect(created.status).toBe("ready");
 				const execution = await service.executeKernel("session-1", 'print("service-ok")');
-				expect(execution.status).toBe("succeeded");
+				expect(execution.status, JSON.stringify(execution)).toBe("succeeded");
 				expect(execution.output).toContain("service-ok");
 				const exported = await service.exportKernel("session-1");
 				expect(exported.scriptPath).toBe("runs/task-1/run-1/exports/session-1.py");
@@ -273,6 +273,7 @@ describe("DiscoveryService composition root", () => {
 			const root = await mkdtemp(join(tmpdir(), "discovery-service-boundary-"));
 			let allowed = false;
 			const runner = new SubprocessFixtureRunner();
+			const run = vi.spyOn(runner, "run");
 			const receipts: unknown[] = [];
 			const options = {
 				projectId: "project-1",
@@ -302,13 +303,30 @@ describe("DiscoveryService composition root", () => {
 					"runs",
 				);
 				await mkdir(join(root, "runs"));
-				await symlink(tmpdir(), join(root, "runs/escape"));
-				await expect(
-					service.createKernelSession({ ...input, runDirectory: "runs/escape/private" }),
-				).rejects.toThrow("symlink");
+				const outsideRun = join(root, "not-a-run");
+				await mkdir(outsideRun);
+				await writeFile(join(outsideRun, "sentinel.txt"), "unchanged");
+				await symlink(outsideRun, join(root, "runs/escape"));
+				const logical = await service.createKernelSession({
+					...input,
+					sessionId: "symlink-session",
+					runDirectory: "runs/escape/private",
+				});
+				expect(logical.status).toBe("ready");
+				expect(run).not.toHaveBeenCalled();
+				const rejected = await service.executeKernel("symlink-session", 'print("must not start")');
+				expect(rejected).toMatchObject({ status: "failed", blockedReason: "runner-failure" });
+				expect(run).not.toHaveBeenCalled();
+				expect(await readFile(join(outsideRun, "sentinel.txt"), "utf8")).toBe("unchanged");
+				await expect(readFile(join(outsideRun, "private"))).rejects.toMatchObject({ code: "ENOENT" });
+				await service.closeKernelSession("symlink-session");
 				await service.createKernelSession(input);
-				await service.executeKernel(input.sessionId, 'print("receipt")');
-				expect(receipts).toHaveLength(1);
+				await expect(readFile(join(root, input.runDirectory))).rejects.toMatchObject({ code: "ENOENT" });
+				const execution = await service.executeKernel(input.sessionId, 'print("receipt")');
+				expect(execution.status, JSON.stringify(execution)).toBe("succeeded");
+				expect(run).toHaveBeenCalledTimes(1);
+				expect(receipts).toHaveLength(2);
+				await service.closeKernelSession(input.sessionId);
 				await service.dispose();
 				await expect(service.executeKernel(input.sessionId, "print(1)")).rejects.toThrow("disposed");
 				const reopened = installedService(options);

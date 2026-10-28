@@ -194,6 +194,7 @@ export function createDiscoveryHostInput(
 	const root = resolve(options.agentDir ?? join(projectRoot, "runs", ".drone-discovery"));
 	options.storage?.registerDiscoveredRoot("discovery-root", root, "discovery/service", "private");
 	let runnerPromise: Promise<ControlledKernelRunner> | undefined;
+	const files = new ProjectRunFileWriter(projectRoot);
 	const services: DiscoveryHostServices = {
 		journal: <T>(name: DiscoveryJournalName) => {
 			if (!journalNames.includes(name)) throw new Error("Unknown discovery journal");
@@ -294,11 +295,15 @@ export function createDiscoveryHostInput(
 			if (runner.capabilities.kind !== "fixture") return runner;
 			return {
 				capabilities: runner.capabilities,
-				run: (request) =>
-					runner.run({ ...request, runDirectory: resolve(projectRoot, request.runDirectory) }),
+				run: async (request) => {
+					// Logical creation has no filesystem effect. Legacy fixture execution prepares its real cwd
+					// only after the service's actual execute authorization, using the same confined writer.
+					await files.prepareDirectory(request.runDirectory);
+					return runner.run({ ...request, runDirectory: resolve(projectRoot, request.runDirectory) });
+				},
 			};
 		},
-		files: new ProjectRunFileWriter(projectRoot),
+		files,
 		...(options.inquiry ? { inquiry: options.inquiry } : {}),
 		...(options.criticProvider ? { criticProvider: options.criticProvider } : {}),
 		legacyJournal: async () => {
