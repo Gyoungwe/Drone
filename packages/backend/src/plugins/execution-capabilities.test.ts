@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { mkdtemp, readdir, realpath, rm } from "node:fs/promises";
+import { chmod, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { delimiter, join } from "node:path";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { canonicalProjectId } from "../project-id";
 import { StorageRegistry } from "../storage/registry";
 import { createPluginExecutionCapabilities } from "./execution-capabilities";
@@ -28,6 +28,7 @@ beforeEach(async () => {
 	};
 });
 afterEach(async () => {
+	vi.unstubAllEnvs();
 	await rm(root, { recursive: true, force: true });
 });
 const request = {
@@ -40,12 +41,20 @@ const request = {
 	maxOutputBytes: 1024,
 	dataClassification: "public",
 };
-async function capabilities() {
+async function capabilities(
+	container: {
+		pythonImage?: string;
+		rImage?: string;
+		runtime?: "docker" | "podman";
+		reservationDirectory?: string;
+	} = { pythonImage: "drone-execution-fixture-missing:never-installed" },
+) {
 	return createPluginExecutionCapabilities({
 		directory: join(root, "private-receipts"),
 		sourceIdentity: "actual-installed-content",
 		integrityKey: randomBytes(32),
 		storage: new StorageRegistry(),
+		container,
 		getSessionContext: (id) => (id === selected.scope.sessionId ? selected : undefined),
 	});
 }
@@ -122,5 +131,56 @@ it("does not accept a selection object in place of the actual session identity",
 			sessionIdentity: {},
 		}),
 	).rejects.toThrow("stale");
+	await ports.dispose();
+});
+
+it("uses the host's configured reference instead of letting a request self-declare its cached image (explicit synthetic engine fixture)", async () => {
+	const configuredImage = "configured-python-fixture:local";
+	const configuredId = `sha256:${"a".repeat(64)}`;
+	await writeFile(
+		join(root, "docker"),
+		`#!${process.execPath}
+const fs=require('node:fs'),path=require('node:path');
+const args=process.argv.slice(2);
+fs.appendFileSync(path.join(${JSON.stringify(root)},'engine-calls.jsonl'),JSON.stringify(args)+'\\n');
+if(args[0]==='version'){console.log('synthetic-engine');process.exit(0);}
+if(args[0]==='image'&&args.at(-1)===${JSON.stringify(configuredImage)}){console.log(${JSON.stringify(configuredId)});process.exit(0);}
+if(args[0]==='image')process.exit(1);
+if(args[0]==='run'){console.log('[summary] synthetic-only');process.exit(0);}
+if(args[0]==='inspect')process.exit(1);
+if(args[0]==='container'&&args[1]==='ls')process.exit(0);
+process.exit(2);
+`,
+	);
+	await chmod(join(root, "docker"), 0o755);
+	vi.stubEnv("PATH", `${root}${delimiter}${process.env.PATH}`);
+	const ports = await capabilities({
+		runtime: "docker",
+		pythonImage: configuredImage,
+		rImage: "missing-r-fixture",
+		reservationDirectory: join(root, "test-leases"),
+	});
+	expect(await ports.handlers["execution.describe"].execute(null, context())).toMatchObject({
+		images: { python: configuredId },
+	});
+	await expect(ports.handlers["execution.run"].execute(request, context())).rejects.toThrow("does not match");
+	expect(
+		await ports.handlers["execution.receipt"].execute({ requestId: request.requestId }, context()),
+	).toEqual({ kind: "missing" });
+	const matched = await ports.handlers["execution.run"].execute(
+		{ ...request, requestId: "matched-configured-id", image: configuredId },
+		context(),
+	);
+	expect(matched).toMatchObject({ receipt: { status: "succeeded", image: configuredId } });
+	const calls = (await readFile(join(root, "engine-calls.jsonl"), "utf8"))
+		.trim()
+		.split("\n")
+		.map((line) => JSON.parse(line) as string[]);
+	expect(
+		calls
+			.filter((args) => args[0] === "image")
+			.every((args) => args.at(-1) === configuredImage || args.at(-1) === "missing-r-fixture"),
+	).toBe(true);
+	expect(calls.filter((args) => args[0] === "run")).toHaveLength(1);
 	await ports.dispose();
 });
