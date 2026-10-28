@@ -70,3 +70,5 @@ The worker has direct read access only to self-contained package bytes. `capabil
 
 
 The unpublished 1.3 candidate defines JSON types for `session.select`, `session.input`, and `session.confirm` in the `./runtime` export. These write-effect capabilities return tagged ordinary answers or cancellation, require the caller's actual writable trusted SDK session and UI, and never grant file/model permissions. The host selects the session/window and cancels stale calls; callers cannot supply a target identity. See the Desktop UI SPEC for supported scope and lifecycle semantics.
+
+`session.tools(null)` returns fresh actual-session tool facts as `PluginSessionTool[]`: each item contains only `name` and `readOnlyHint` (`true`, `false`, or `null` when the SDK declares no hint). It is read-effect metadata, requires a selected live session, and does not require model-network permission. Tool names and hints grant no capability. This asynchronous port does not emulate the synchronous native `getAllTools()` API.

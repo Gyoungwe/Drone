@@ -214,6 +214,12 @@ export interface PluginSessionInspection {
 	readonly readOnly: boolean;
 }
 
+/** Fresh configured tool facts from the actual SDK session. Unknown hints stay null. */
+export interface PluginSessionTool {
+	readonly name: string;
+	readonly readOnlyHint: boolean | null;
+}
+
 /** Questions return ordinary interaction data; they never grant file/model permissions. */
 export interface PluginSessionSelectInput {
 	readonly title: string;
