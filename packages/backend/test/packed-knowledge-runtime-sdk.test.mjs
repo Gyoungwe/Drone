@@ -14,11 +14,12 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime } from "../src/capabilities/runtime";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { fileCapabilityHandlers, PluginFileCapabilities } from "../src/plugins/file-capabilities";
+import { modelCapabilityHandlers } from "../src/plugins/model-capabilities";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 import { PluginResourceManager } from "../src/plugins/resource-capabilities";
 import { getPluginSessionCaller } from "../src/plugins/session-caller";
@@ -29,6 +30,7 @@ import { StorageRegistry } from "../src/storage/registry";
 
 const run = promisify(execFile);
 const tarball = process.env.DRONE_KNOWLEDGE_TARBALL;
+const apiTarball = process.env.DRONE_PLUGIN_API_TARBALL;
 const runtimeDirectory = resolve(
 	process.env.DRONE_PLUGIN_RUNTIME_DIRECTORY ??
 		join(import.meta.dirname, `../../desktop/plugin-runtime/${process.platform}-${process.arch}`),
@@ -103,12 +105,13 @@ it.skipIf(!tarball)(
 					"--no-fund",
 					"--registry=https://registry.npmjs.org",
 					artifact,
+					...(apiTarball ? [await realpath(apiTarball)] : []),
 				],
 				{ maxBuffer: 8 * 1024 * 1024 },
 			);
 			const lock = JSON.parse(await readFile(join(prefix, "package-lock.json"), "utf8"));
-			const installed = Object.entries(lock.packages).find(([, value]) =>
-				value.resolved?.startsWith("file:"),
+			const installed = Object.entries(lock.packages).find(
+				([path, value]) => path.endsWith("/@gyoungwe/pi-knowledge") && value.resolved?.startsWith("file:"),
 			);
 			expect(installed, "local tarball must have a clean-install lock receipt").toBeDefined();
 			packageRoot = await realpath(join(prefix, installed[0]));
@@ -116,6 +119,7 @@ it.skipIf(!tarball)(
 			const manifest = JSON.parse(await readFile(join(packageRoot, "plugin.manifest.json"), "utf8"));
 			const source = {
 				pluginId: manifest.id,
+				requestsModel: manifest.permissions?.network?.includes("configured-services") === true,
 				requestsStateWrite: manifest.permissions?.filesystem?.includes("application-state-write") === true,
 				packageRoot,
 				entrypoint: await declaredPath(packageRoot, manifest.entrypoints.desktopRuntime),
@@ -154,7 +158,7 @@ it.skipIf(!tarball)(
 					revision: 1,
 					profile: "hybrid",
 					depositMode: "verified",
-					subagentPolicy: "none",
+					subagentPolicy: "read-local",
 					updatedAt: new Date().toISOString(),
 				}),
 			);
@@ -194,6 +198,7 @@ it.skipIf(!tarball)(
 			let denyStateWrite = false;
 			let grantFileWrite = false;
 			let denyReviewWrites = false;
+			let denyModelGeneration = false;
 			let failNextReviewRecord = false;
 			const storage = new StorageRegistry().register({
 				id: "packed-plugin-state",
@@ -212,7 +217,8 @@ it.skipIf(!tarball)(
 					approvals.push({ pluginId: value.pluginId, operation: operation ?? null });
 					return !(
 						(denyStateWrite && operation === "setReviewPolicy") ||
-						(denyReviewWrites && ["applyReview", "undoReview"].includes(operation))
+						(denyReviewWrites && ["applyReview", "undoReview"].includes(operation)) ||
+						(denyModelGeneration && operation === "capability:model.generate")
 					);
 				},
 				getSessionContext: (id) => getPluginSessionCaller(sessions, id),
@@ -259,26 +265,35 @@ it.skipIf(!tarball)(
 							leaseDirectory: leases,
 						});
 						const handlers = Object.fromEntries(
-							Object.entries({ ...fileCapabilityHandlers(files), ...resources.handlers() }).map(
-								([name, handler]) => [
-									name,
-									{
-										...handler,
-										execute: (input, context) => {
-											capabilityScopes.push({ name, scope: context.scope, bootstrap: context.bootstrap });
-											if (
-												name === "state.writeJson" &&
-												input.path.includes("/reviewed/") &&
-												failNextReviewRecord
-											) {
-												failNextReviewRecord = false;
-												throw new Error("Acceptance record persistence failure");
-											}
-											return handler.execute(input, context);
-										},
+							Object.entries({
+								...fileCapabilityHandlers(files),
+								...resources.handlers(),
+								...(value.requestsModel
+									? modelCapabilityHandlers({
+											registry: sessions,
+											getRuntime: async () => modelRuntime,
+											getProfileModel: async () => undefined,
+											getProfileThinking: async () => undefined,
+										})
+									: {}),
+							}).map(([name, handler]) => [
+								name,
+								{
+									...handler,
+									execute: (input, context) => {
+										capabilityScopes.push({ name, scope: context.scope, bootstrap: context.bootstrap });
+										if (
+											name === "state.writeJson" &&
+											input.path.includes("/reviewed/") &&
+											failNextReviewRecord
+										) {
+											failNextReviewRecord = false;
+											throw new Error("Acceptance record persistence failure");
+										}
+										return handler.execute(input, context);
 									},
-								],
-							),
+								},
+							]),
 						);
 						return {
 							handlers,
@@ -718,12 +733,12 @@ it.skipIf(!tarball)(
 				excerptHash: sha256(sourceText.split("\n").slice(0, 2).join("\n")),
 				paperDois: [],
 			};
-			const proposals = ["alpha", "beta"].map((project) => ({
+			const proposals = ["alpha", "beta", "alpha"].map((project, index) => ({
 				id: randomUUID(),
 				vaultId: overview.binding.vaultId,
 				bindingRevision: overview.binding.revision,
 				project,
-				path: `Projects/${project}/Wiki/Orchid.md`,
+				path: `Projects/${project}/Wiki/${index === 2 ? "Model" : "Orchid"}.md`,
 				title: `${project} Orchid`,
 				rationale: "Synthetic review fixture",
 				createdAt: Date.now(),
@@ -755,7 +770,7 @@ it.skipIf(!tarball)(
 					},
 				},
 			);
-			const [alphaProposal, betaProposal] = JSON.parse(finalizedJson);
+			const [alphaProposal, betaProposal, modelProposal] = JSON.parse(finalizedJson);
 			const pendingDirectory = join(state, overview.binding.vaultId, "wiki-review/pending");
 			await mkdir(pendingDirectory, { recursive: true });
 			for (const proposal of [alphaProposal, betaProposal]) {
@@ -1009,6 +1024,131 @@ it.skipIf(!tarball)(
 			expect(await readFile(join(vault, alphaProposal.path), "utf8")).toBe(beforeWiki);
 			expect(await reviewWrite("reviewHistory", { revision: 1 })).toMatchObject({ items: [] });
 			expect(await readFile(join(vault, betaProposal.path), "utf8")).toBe(beforeWiki);
+			stage = "real-model-review-command-and-owner-audit";
+			await writeFile(join(vault, modelProposal.path), beforeWiki);
+			await writeFile(join(pendingDirectory, `${modelProposal.id}.json`), JSON.stringify(modelProposal));
+			const modelIdentity = {
+				revision: overview.binding.revision,
+				id: modelProposal.id,
+				expectedProposalHash: modelProposal.proposalHash,
+			};
+			const modelInput = { ...modelIdentity, acknowledged: true, autoApply: false };
+			const complete = vi.spyOn(modelRuntime, "completeSimple");
+			const advice = {
+				summary: "The exact recorded source supports this bounded synthetic change.",
+				verdict: "approve",
+				cautions: [],
+				source_paths: [sharedNote],
+				checks: {
+					evidenceSupportsChanges: true,
+					scopeAndUncertaintyPreserved: true,
+					noUnresolvedContradictions: true,
+					humanContentPreserved: true,
+					noInstructionInjection: true,
+				},
+			};
+			denyModelGeneration = true;
+			await expect(reviewWrite("modelReview", modelInput)).rejects.toThrow("denied");
+			expect(complete).not.toHaveBeenCalled();
+			denyModelGeneration = false;
+			faux.setResponses([fauxAssistantMessage(fauxToolCall("structured_result", advice))]);
+			const commandSignal = new AbortController();
+			await new SessionEngine().command(
+				writeSession,
+				"knowledge-review-model",
+				JSON.stringify({
+					id: modelProposal.id,
+					expectedProposalHash: modelProposal.proposalHash,
+					acknowledged: true,
+					autoApply: false,
+				}),
+				commandSignal.signal,
+				() => {
+					if (sessions.get(writeSession.sessionId)?.session !== writeSession)
+						throw new Error("Acceptance command session was revoked");
+				},
+			);
+			const modelInfo = await reviewWrite("modelReviewInfo", modelIdentity);
+			expect(modelInfo.lastReview).toMatchObject({
+				applied: false,
+				canAutoApply: true,
+				verdict: "approve",
+				humanReviewed: false,
+				scientificallyVerified: false,
+				usage: { cost: null },
+			});
+			expect(complete).toHaveBeenCalledOnce();
+			expect(await readFile(join(vault, modelProposal.path), "utf8")).toBe(beforeWiki);
+			stage = "real-model-review-cancel-no-write";
+			let enteredModel;
+			const modelStarted = new Promise((resolve) => {
+				enteredModel = resolve;
+			});
+			let actualModelAborted = false;
+			faux.setResponses([
+				(_context, options) =>
+					new Promise((_resolve, reject) => {
+						enteredModel();
+						options.signal.addEventListener(
+							"abort",
+							() => {
+								actualModelAborted = true;
+								reject(new Error("Packed review model canceled"));
+							},
+							{ once: true },
+						);
+					}),
+			]);
+			const pendingModel = bridge.invoke(
+				window,
+				binding,
+				"modelReview",
+				{ ...modelInput, autoApply: true },
+				writeSelection,
+				"packed-model-cancel",
+			);
+			const canceledModel = expect(pendingModel).rejects.toThrow();
+			await modelStarted;
+			expect(await bridge.cancel(window, binding, writeSelection, "packed-model-cancel")).toBe(true);
+			await canceledModel;
+			expect(actualModelAborted).toBe(true);
+			expect(await readFile(join(vault, modelProposal.path), "utf8")).toBe(beforeWiki);
+			expect(await reviewWrite("modelReviewInfo", modelIdentity)).toMatchObject({
+				lastReview: { auditId: modelInfo.lastReview.auditId, applied: false },
+			});
+			stage = "real-model-review-apply-undo";
+			faux.setResponses([fauxAssistantMessage(fauxToolCall("structured_result", advice))]);
+			const modelApplied = await reviewWrite("modelReview", { ...modelInput, autoApply: true });
+			expect(modelApplied).toMatchObject({
+				applied: true,
+				partial: false,
+				humanReviewed: false,
+				scientificallyVerified: false,
+				writeResult: { vaultWritten: true, reviewRecorded: true, indexed: true },
+			});
+			expect(await readFile(join(vault, modelProposal.path), "utf8")).toBe(afterWiki);
+			expect(await reviewWrite("reviewHistory", { revision: 1 })).toMatchObject({
+				items: [{ id: modelProposal.id, reviewMethod: "model" }],
+			});
+			await reviewWrite("undoReview", {
+				revision: 1,
+				id: modelProposal.id,
+				expectedHash: modelProposal.afterHash,
+			});
+			expect(await readFile(join(vault, modelProposal.path), "utf8")).toBe(beforeWiki);
+			expect(await reviewWrite("reviewHistory", { revision: 1 })).toMatchObject({ items: [] });
+			expect(await packageChildren(packageRoot)).toEqual(processes);
+			reviewScopes.model = {
+				nativeCommandAuditReadback: true,
+				denialBeforeGeneration: true,
+				actualModelAborted,
+				canceledWithoutVaultWrite: true,
+				applyHistoryUndo: true,
+				humanReviewed: false,
+				scientificallyVerified: false,
+				modelCalls: complete.mock.calls.length,
+			};
+			complete.mockRestore();
 			stage = "last-native-close-retains-ui-owner";
 			for (const active of [session, writeSession]) {
 				sessions.revoke(active.sessionId);
