@@ -582,3 +582,5 @@ P2 required owner 不可用时的基础 read、私有 provider 协议与 fail-cl
 P2 显式旧读窗导入的版本删除条件、独立授权与同包多会话关闭回归见[迁移证据](pluginization/native-knowledge-recovery-adoption-evidence.md)；导入不生成当前 read/publication proof。
 
 P2 已打开会话的全树 HTML 历史来源与导出代次修复见[全树导出证据](pluginization/native-knowledge-full-tree-export-evidence.md)；官方 JSONL 当前 branch 语义保持，未打开历史仍未完成。
+
+旧 specialist 的宿主算法已迁为 source-owned canonical loop；显式 legacy loader port、真实旧 UI/同 tar SDK 证据与临时 bridge 删除条件见[迁出证据](pluginization/native-knowledge-legacy-loop-migration-evidence.md)。

@@ -65,6 +65,7 @@ type LiveChildControl = {
 };
 
 export interface SessionExtensionDependencies {
+	knowledgeSpecialistModelLoop?: import("@gyoungwe/plugin-api").LegacyKnowledgeSpecialistLoop;
 	taskHost?: import("@gyoungwe/plugin-api/tasks").TaskAcceptanceHostPort;
 	/** Optional core plugin host port; absent means core tools are unavailable. */
 	coreHost?: CoreHostPort;
@@ -230,6 +231,7 @@ export function buildSessionExtensionFactories(
 				getRuntime: deps.getModelRuntime,
 				getModelPreference: deps.getSubagentModel,
 				getThinkingPreference: deps.getSubagentThinking,
+				runModelLoop: deps.knowledgeSpecialistModelLoop,
 			}),
 		);
 	if (harness.context)

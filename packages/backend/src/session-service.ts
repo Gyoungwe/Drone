@@ -99,6 +99,8 @@ export interface SessionServiceOptions {
 	runtime?: DroneRuntime;
 	/** Optional knowledge domain provider; the default remains the host compatibility adapter. */
 	knowledgeFactory?: () => KnowledgeUiServicePort;
+	/** Temporary explicit 0.3 host adapter; no default optional-package import. */
+	knowledgeSpecialistModelLoop?: import("@gyoungwe/plugin-api").LegacyKnowledgeSpecialistLoop;
 	/** Optional background reviewer factory supplied by an installed knowledge plugin. */
 	knowledgeBackgroundReviewerFactory?: BackgroundReviewerFactory;
 	/** Optional project research-state root registered for the inquiry adapter. */
@@ -292,6 +294,7 @@ export class SessionService extends SessionServiceApi {
 			getModelRuntime: () => this.getModelRuntime(),
 			getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
 			getSubagentThinking: (agentName) => this.modelSettings.getSubagentThinking(agentName),
+			knowledgeSpecialistModelLoop: this.options.knowledgeSpecialistModelLoop,
 			traces: this.traces,
 			onEvent: (sessionId, event) => this.emitEvent(sessionId, event),
 			registerLiveChild: (sessionId, control) => {
@@ -437,6 +440,7 @@ export class SessionService extends SessionServiceApi {
 							getRuntime: () => this.getModelRuntime(),
 							getModelPreference: (name) => this.modelSettings.getSubagentModel(name),
 							getThinkingPreference: (name) => this.modelSettings.getSubagentThinking(name),
+							runModelLoop: this.options.knowledgeSpecialistModelLoop,
 						},
 						{
 							...request,
