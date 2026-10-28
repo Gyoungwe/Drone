@@ -25,10 +25,14 @@
 	"checks": {
 		"actualSdkAndRestrictedWorker": {
 			"status": "PASS",
-			"tests": 6,
-			"log": "/tmp/session-records-sdk-cohort.log"
+			"tests": 7,
+			"log": "/tmp/plugin-provider-sdk-cohort-final.log"
 		},
-		"sdkQuestionsModelsAndRecords": { "status": "PASS", "files": 3, "tests": 23 },
+		"sdkQuestionsModelsAndRecords": {
+			"status": "PASS",
+			"files": 3,
+			"tests": 24
+		},
 		"backendAndDesktopNodeTypecheck": "PASS",
 		"publicApiPackageCheck": "PASS",
 		"architecture": "PASS",
@@ -44,5 +48,10 @@
 		"formal installer GUI"
 	],
 	"npmPublished": false,
-	"externalAcceptanceAndB8": "unchanged"
+	"externalAcceptanceAndB8": "unchanged",
+	"followups": {
+		"currentBranch": "24f7b00c",
+		"privateJsonlDiagnostic": "b8c9026f",
+		"desktopGenericSessionGate": "5c5a7bc1"
+	}
 }

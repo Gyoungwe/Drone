@@ -2,14 +2,21 @@ import { randomUUID } from "node:crypto";
 import type { PluginRuntimeEvent } from "@drone/shared";
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type { PluginNativeRuntimeFactory, PluginNativeSession } from "@gyoungwe/plugin-api/native";
-import type { PluginRuntimeClient } from "@gyoungwe/plugin-api/runtime";
+import type {
+	PluginProviderInvocationInput,
+	PluginRuntimeClient,
+	PluginServiceProvision,
+	PluginServiceRequirement,
+} from "@gyoungwe/plugin-api/runtime";
 import type { AskQuestionRoute } from "../session/ask-gate";
 import { NativeSessionDelivery, type SelectedNativeSource } from "./native-delivery";
 import { type ManagedNativeSession, type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 import type {
+	PluginCapabilityContext,
 	PluginRuntimeCapabilitiesOptions,
 	PluginRuntimeCapabilitiesProvider,
 } from "./runtime-capabilities";
+import { type PluginServiceTarget, serviceCapabilityHandlers } from "./service-capabilities";
 import type { PluginSessionCallerContext } from "./session-caller";
 
 export interface PluginRuntimeSource {
@@ -21,6 +28,8 @@ export interface PluginRuntimeSource {
 	readonly nativeEntrypoint?: string;
 	readonly contentHash?: string;
 	readonly deliveryProjection?: "required";
+	readonly provides?: Readonly<Record<string, PluginServiceProvision>>;
+	readonly requires?: Readonly<Record<string, PluginServiceRequirement>>;
 	readonly requestsStateRead?: boolean;
 	readonly requestsStateWrite?: boolean;
 	readonly requestsFileRead?: boolean;
@@ -114,6 +123,8 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.nativeEntrypoint === b.nativeEntrypoint &&
 		a.contentHash === b.contentHash &&
 		a.deliveryProjection === b.deliveryProjection &&
+		JSON.stringify(a.provides) === JSON.stringify(b.provides) &&
+		JSON.stringify(a.requires) === JSON.stringify(b.requires) &&
 		a.requestsStateRead === b.requestsStateRead &&
 		a.requestsStateWrite === b.requestsStateWrite &&
 		a.requestsFileRead === b.requestsFileRead &&
@@ -214,7 +225,148 @@ export class PluginRuntimeBridge {
 		);
 	}
 
+	private serviceConsumer(
+		source: PluginRuntimeSource,
+		context: PluginCapabilityContext,
+		effect: "read" | "write",
+	): Selection | undefined {
+		context.signal.throwIfAborted();
+		if (
+			context.pluginId !== source.pluginId ||
+			context.applicationId !== this.applicationId ||
+			!source.contentHash ||
+			!this.options.sources?.().some((item) => item.state === "enabled" && sameSource(source, item.source))
+		)
+			throw new Error("Provider consumer source is unavailable");
+		if (context.bootstrap) return undefined;
+		const selected = [...this.selections.values()].find((value) => value === context.callerIdentity);
+		const binding =
+			selected &&
+			[...this.bindings.values()].find(
+				(value) =>
+					value.owner === selected.owner && sameSource(source, value.runtime.source) && this.allowed(value),
+			);
+		if (!binding || !selected || !this.caller(binding))
+			throw new Error("Provider consumer caller is unavailable");
+		if (selected.session) {
+			const session = this.options.getSessionContext(selected.session.scope.sessionId);
+			if (
+				!session ||
+				session.identity !== context.sessionIdentity ||
+				!session.projectTrusted ||
+				(effect === "write" && session.readOnly)
+			)
+				throw new Error("Provider consumer session is no longer permitted");
+		}
+		return selected;
+	}
+
+	private async invokeProvider(
+		consumer: PluginRuntimeSource,
+		context: PluginCapabilityContext,
+		target: PluginServiceTarget,
+		input: PluginProviderInvocationInput,
+		effect: "read" | "write",
+	): Promise<unknown> {
+		const selected = this.serviceConsumer(consumer, context, effect);
+		if (!selected || !context.operation)
+			throw new Error("Provider execution requires a live operation caller");
+		const check = () => {
+			if (this.serviceConsumer(consumer, context, effect) !== selected)
+				throw new Error("Provider consumer generation changed");
+			if (
+				!this.options
+					.sources?.()
+					.some(
+						(item) => item.name === target.name && item.state === "enabled" && item.source === target.source,
+					) ||
+				!this.options.enabled(target.name) ||
+				!sameSource(target.source, this.options.source(target.name))
+			)
+				throw new Error("Provider source is unavailable or changed");
+		};
+		check();
+		const chain = context.providerChain ?? [{ source: consumer, operation: context.operation }];
+		if (
+			chain.some(
+				(item) =>
+					sameSource(item.source as PluginRuntimeSource, target.source) && item.operation === input.operation,
+			)
+		)
+			throw new Error("Recursive provider source/operation call rejected");
+		const providerChain = [...chain, { source: target.source, operation: input.operation }];
+		const owner: PluginRuntimeOwner = {
+			id: --this.nativeSequence,
+			approvalOwner: selected.owner.approvalOwner ?? selected.owner,
+			isSessionBound: () => selected.owner.isSessionBound?.() === true,
+			isDestroyed: () =>
+				context.signal.aborted ||
+				selected.owner.isDestroyed() ||
+				this.selections.get(selected.owner) !== selected,
+		};
+		this.selectSession(owner, selected.session?.scope.sessionId ?? null);
+		let abortCleanup: Promise<PromiseSettledResult<void>> | undefined;
+		const abort = () => {
+			abortCleanup = Promise.allSettled([this.revoke(undefined, owner.id)] as const).then(
+				([result]) => result,
+			);
+		};
+		context.signal.addEventListener("abort", abort, { once: true });
+		const execution = (async () => {
+			const token = await this.bind(target.name, owner);
+			if (!token) throw new Error("Provider source is no longer installed");
+			check();
+			const binding = this.bindings.get(token);
+			if (!binding) throw new Error("Provider binding was revoked");
+			const pending = binding.runtime.registry.invokeExport(
+				target.source.pluginId,
+				() => {
+					check();
+					const caller = this.caller(binding);
+					return caller
+						? { ...caller, signal: AbortSignal.any([caller.signal, context.signal]), providerChain }
+						: undefined;
+				},
+				input.operation,
+				input.input,
+				effect,
+				context.signal,
+			);
+			binding.pending.add(pending);
+			try {
+				const result = await pending;
+				check();
+				return result;
+			} finally {
+				binding.pending.delete(pending);
+			}
+		})();
+		const [result] = await Promise.allSettled([execution] as const);
+		context.signal.removeEventListener("abort", abort);
+		const cleanup = abortCleanup
+			? [await abortCleanup]
+			: await Promise.allSettled([this.revoke(undefined, owner.id)]);
+		const failures = [result, ...cleanup].filter((value) => value.status === "rejected");
+		const [first, ...remaining] = failures;
+		if (first && !remaining.length) throw first.reason;
+		if (first)
+			throw new AggregateError(
+				failures.map((value) => value.reason),
+				"Provider execution and lease cleanup failed",
+			);
+		return (result as PromiseFulfilledResult<unknown>).value;
+	}
+
 	private createRuntime(name: string, source: PluginRuntimeSource, owner: PluginRuntimeOwner): Runtime {
+		const configuredCapabilities = this.options.capabilities?.(source, owner.approvalOwner ?? owner);
+		const services = serviceCapabilityHandlers({
+			consumer: source,
+			sources: () => this.options.sources?.() ?? [],
+			check: (context, effect) => {
+				this.serviceConsumer(source, context, effect);
+			},
+			invoke: (context, target, input, effect) => this.invokeProvider(source, context, target, input, effect),
+		});
 		const registry = new PluginRuntimeRegistry(
 			{
 				authorizeActivation: async (_request, signal) => {
@@ -271,7 +423,15 @@ export class PluginRuntimeBridge {
 				},
 			},
 			this.applicationId,
-			this.options.capabilities?.(source, owner.approvalOwner ?? owner),
+			async (activation) => {
+				const ports =
+					typeof configuredCapabilities === "function"
+						? await configuredCapabilities(activation)
+						: configuredCapabilities;
+				return ports
+					? { ...ports, handlers: { ...ports.handlers, ...services } }
+					: { handlers: services, resources: [] };
+			},
 		);
 		registry.register(source.pluginId, this.options.factory(source));
 		const runtime: Runtime = {

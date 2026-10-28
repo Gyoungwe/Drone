@@ -43,6 +43,7 @@ export interface PluginRuntimeActivation {
 /** Host-only lease; identity is an object owned by the resolved caller generation, never JSON input. */
 
 export interface PluginRuntimeCaller {
+	readonly providerChain?: readonly { readonly source: object; readonly operation: string }[];
 	readonly questions?: AskQuestionRoute;
 	readonly identity: object;
 	/** Distinct from a window selection lease; used only by host capability handlers. */
@@ -225,6 +226,20 @@ export class PluginRuntimeRegistry {
 			throw new Error(`Plugin runtime is not active: ${pluginId}`);
 		}
 		return this.client(activation, resolveCaller);
+	}
+
+	/** Host service routing borrows the actual caller but cannot escalate a read to a write export. */
+	invokeExport(
+		pluginId: string,
+		resolveCaller: PluginRuntimeCallerResolver,
+		name: string,
+		input: unknown,
+		effectCeiling: "read" | "write",
+		signal: AbortSignal,
+	): Promise<unknown> {
+		const activation = this.activations.get(pluginId);
+		if (!activation) throw new Error(`Plugin runtime is not active: ${pluginId}`);
+		return this.call(activation, resolveCaller, name, input, signal, undefined, false, effectCeiling);
 	}
 
 	/** Native callbacks use the same owner and policy as UI operations, bound from real SDK context. */
@@ -477,6 +492,7 @@ export class PluginRuntimeRegistry {
 		callerSignal?: AbortSignal,
 		operationOverride?: PluginRuntimeOperation,
 		withoutCapabilities = false,
+		effectCeiling?: "read" | "write",
 	): Promise<unknown> {
 		if (activation.state !== "active") {
 			throw new Error(`Plugin runtime is not active: ${activation.pluginId}`);
@@ -515,6 +531,8 @@ export class PluginRuntimeRegistry {
 			sessionIdentity,
 			caller.questions,
 			withoutCapabilities,
+			effectCeiling,
+			caller.providerChain,
 		);
 		activation.pending.add(pending);
 		try {
@@ -536,12 +554,16 @@ export class PluginRuntimeRegistry {
 		sessionIdentity?: object,
 		questions?: AskQuestionRoute,
 		withoutCapabilities = false,
+		effectCeiling?: "read" | "write",
+		providerChain?: PluginRuntimeCaller["providerChain"],
 	): Promise<unknown> {
 		signal.throwIfAborted();
 		const runtime = await activation.ready;
 		const operation =
 			operationOverride ?? (Object.hasOwn(runtime.operations, name) ? runtime.operations[name] : undefined);
 		if (!operation) throw new Error(`Plugin operation is not registered: ${name}`);
+		if (effectCeiling === "read" && operation.effect !== "read")
+			throw new Error(`Read-only provider call cannot invoke write export: ${name}`);
 		if (!Check(operation.inputSchema, input)) throw new Error(`Invalid plugin operation input: ${name}`);
 		const request: PluginRuntimeInvocation = {
 			pluginId: activation.pluginId,
@@ -564,6 +586,8 @@ export class PluginRuntimeRegistry {
 			: await capabilities.run(
 					{
 						pluginId: activation.pluginId,
+						operation: name,
+						providerChain,
 						applicationId: activation.applicationId,
 						scope,
 						callerIdentity,
