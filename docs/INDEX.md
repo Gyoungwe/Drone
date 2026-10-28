@@ -24,6 +24,7 @@ P2 后继[设置与修复后的正式安装包验收](pluginization/native-plugi
 插件结构化模型端口见 `backend/src/plugins/model-capabilities.ts`；真实 SDK 调用与 JSON 输出验证在 `session-engine/structured-model.ts`，模型声明来自已安装清单的 configured-services 权限，逐请求显示实际模型选择和费用边界。`session.inspect` 只返回当前真实会话是否活跃；前台业务的闲置策略由插件执行。
 知识 canonical owner 的模型评审和 managed 官方 Pi 命令已通过同一 tarball 的真实双 worker/SDK/SQLite 验收，见[后继切片回执](releases/native-plugin-knowledge-model-command-2026-10-28.json)。这条隔离分支证据不替代合并后双仓库门禁或正式安装包 GUI；完整 hooks、CLI 文本回执和旧 facade 仍未完成。
 完整 managed native publication 的[设计](superpowers/specs/2026-10-28-managed-native-publication-design.md)已批准，完整 owner/consumer 仍待实现；[实际 Pi 1.1.0 时序观察](releases/native-publication-sdk-ordering-2026-10-28.json)证明 awaited hooks 阻塞 prompt/idle，但 SDK abort 本身不拦截迟到正文持久化。后继[SDK 机制回执](releases/native-publication-sdk-fence-2026-10-28.json)记录钉版 host-only 最终边界的真实 RED→GREEN 与七项 SDK 回归，仍不代表完整插件 publication 或正式安装包验收。
+真正历史对象的来源只由 SDK 私有 WeakMap 与当前 branch 提供，宿主入口在 `session-engine/engine.ts:historicalMessageOrigin`；[实际 SDK 来源回执](releases/native-publication-historical-origin-2026-10-28.json)覆盖新 live 复制、reload、branch 切换和 dispose，不能把这个来源当作新的 live proof。
 
 ## 硬约束（改代码前必知）
 
