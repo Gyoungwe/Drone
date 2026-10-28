@@ -1,9 +1,16 @@
-import { mkdir, mkdtemp, readFile, realpath, rename, rm } from "node:fs/promises";
+import { mkdirSync, renameSync } from "node:fs";
+import { access, appendFile, mkdir, mkdtemp, readFile, realpath, rename, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
-import { ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
+import {
+	createAgentSession,
+	DefaultResourceLoader,
+	ModelRuntime,
+	SessionManager,
+	SettingsManager,
+} from "@earendil-works/pi-coding-agent";
 import { taskHostLoader } from "@gyoungwe/pi-core/host";
 import { afterEach, expect, it, vi } from "vitest";
 import { createBackend } from "../src/create-backend";
@@ -20,7 +27,7 @@ const taskRecords = (entries) => entries.filter((entry) => entry.customType === 
 const view = (session) => session.messages.findLast((message) => message.details?.taskView).details.taskView;
 const action = (service, sessionId, input) =>
 	service.command(sessionId, "task-action", Buffer.from(JSON.stringify(input)).toString("base64url"));
-async function setup(adapter) {
+async function setup(adapter, { persisted = true } = {}) {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-task-commit-")));
 	roots.push(root);
 	const cwd = join(root, "project"),
@@ -78,7 +85,7 @@ async function setup(adapter) {
 		await target.prompt("Prepare a bounded plan and retain it when consent is declined.");
 		await target.waitForIdle();
 	};
-	await plan(session);
+	if (persisted) await plan(session);
 	return {
 		root,
 		cwd,
@@ -91,7 +98,69 @@ async function setup(adapter) {
 		stopAutoConsent: backend.stopAutoConsent,
 	};
 }
+it("actual native lazy input reaches a saved conversation without deadlock; native inMemory status stays explicitly deferred", async () => {
+	const { root, cwd, service, session, meta, plan, faux } = await setup("official", { persisted: false });
+	const file = session.sessionManager.getSessionFile();
+	await service.command(meta.sessionId, "task-status", "");
+	expect(session.messages.at(-1)).toMatchObject({
+		details: { taskStorage: { state: "deferred" } },
+		content: expect.stringContaining("deferred"),
+	});
+	await expect(access(file)).rejects.toThrow(/ENOENT/);
+	await plan(session);
+	await service.command(meta.sessionId, "task-status", "");
+	expect(session.messages.at(-1).details.taskStorage).toEqual({ state: "durable" });
+	await expect(access(file)).resolves.toBeUndefined();
+	const settingsManager = SettingsManager.inMemory({});
+	const resourceLoader = new DefaultResourceLoader({
+		cwd,
+		agentDir: join(root, "agent"),
+		settingsManager,
+		noExtensions: true,
+		noSkills: true,
+		noPromptTemplates: true,
+		additionalExtensionPaths: [createRequire(import.meta.url).resolve("@gyoungwe/pi-core")],
+	});
+	await resourceLoader.reload({ resolveProjectTrust: async () => true });
+	expect(resourceLoader.getExtensions().errors).toEqual([]);
+	const { session: memory } = await createAgentSession({
+		cwd,
+		settingsManager,
+		resourceLoader,
+		modelRuntime: session.modelRuntime,
+		model: faux.getModel(),
+		sessionManager: SessionManager.inMemory(cwd),
+	});
+	service.registry.add({ session: memory, cwd, unsubscribe: () => {} });
+	try {
+		await memory.bindExtensions({});
+		await service.command(memory.sessionId, "task-status", "");
+		expect(memory.messages.at(-1)).toMatchObject({
+			details: { taskStorage: { state: "deferred" } },
+			content: expect.stringContaining("deferred"),
+		});
+		expect(memory.sessionManager.getSessionFile()).toBeUndefined();
+	} finally {
+		await service.closeSession(memory.sessionId);
+	}
+}, 20000);
 for (const adapter of ["host", "official"]) {
+	it(`${adapter}: native malformed JSONL diagnostics never quote private assistant content or extend the file`, async () => {
+		const { service, session, meta } = await setup(adapter);
+		const file = session.sessionManager.getSessionFile();
+		await appendFile(
+			file,
+			'{"type":"message","message":{"role":"assistant","content":"NATIVE_PRIVATE_ASSISTANT_FRAGMENT"}BROKEN\n',
+		);
+		const beforeDisk = await readFile(file, "utf8"),
+			beforeMessages = session.messages.length;
+		const failure = await service.command(meta.sessionId, "task-status", "").catch((error) => error);
+		expect(failure).toBeInstanceOf(Error);
+		expect(failure.message).toMatch(/needs-reopen.*SESSION_JSONL_INVALID_LINE_\d+/);
+		expect(failure.message).not.toContain("NATIVE_PRIVATE_ASSISTANT_FRAGMENT");
+		expect(session.messages).toHaveLength(beforeMessages);
+		expect(await readFile(file, "utf8")).toBe(beforeDisk);
+	}, 20000);
 	it(`${adapter}: real SDK append failure rejects; same-manager reload retains phantom while disk reopen recovers committed data`, async () => {
 		const { service, session, meta, makeBackend } = await setup(adapter);
 		const before = view(session),
@@ -100,8 +169,12 @@ for (const adapter of ["host", "official"]) {
 			backup = `${file}.saved`;
 		const beforeDisk = await readFile(file, "utf8"),
 			beforeMessages = session.messages.length;
-		await rename(file, backup);
-		await mkdir(file);
+		const append = session.sessionManager.appendCustomEntry.bind(session.sessionManager);
+		vi.spyOn(session.sessionManager, "appendCustomEntry").mockImplementationOnce((...args) => {
+			renameSync(file, backup);
+			mkdirSync(file);
+			return append(...args);
+		});
 		await expect(
 			action(service, meta.sessionId, { action: "cancel", taskId: task.id, revision: before.revision }),
 		).rejects.toThrow(/EISDIR/);
@@ -119,17 +192,14 @@ for (const adapter of ["host", "official"]) {
 		await session.reload();
 		expect(session.sessionManager).toBe(sameManager);
 		expect(taskRecords(session.sessionManager.getBranch()).at(-1).id).toBe(phantom.id);
-		// The long-lived Desktop package application supplies the persistent fence.
-		// Raw CLI reload recreates the application: its missing source/generation port
-		// remains an explicitly recorded S2 gap, demonstrated by the retained RED log.
-		if (adapter === "host") {
-			await expect(service.command(meta.sessionId, "task-status", "")).rejects.toThrow(
-				`needs-reopen; last committed revision ${before.revision}`,
-			);
-			await expect(
-				action(service, meta.sessionId, { action: "cancel", taskId: task.id, revision: before.revision }),
-			).rejects.toThrow(/reopen/);
-		}
+		// A fresh raw-CLI application must reconstruct the same fence from public
+		// branch/disk facts, while the long-lived host application retains its failure.
+		await expect(service.command(meta.sessionId, "task-status", "")).rejects.toThrow(
+			`needs-reopen; last committed revision ${before.revision}`,
+		);
+		await expect(
+			action(service, meta.sessionId, { action: "cancel", taskId: task.id, revision: before.revision }),
+		).rejects.toThrow(/reopen/);
 		expect(await readFile(file, "utf8")).toBe(beforeDisk);
 		const disk = SessionManager.open(file);
 		expect(taskRecords(disk.getBranch()).at(-1).data.workbench.revision).toBe(before.revision);
