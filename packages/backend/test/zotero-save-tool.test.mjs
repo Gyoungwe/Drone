@@ -9,7 +9,7 @@ import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { beginKnowledgeFlow, flowFor, noteKnowledgeOperation } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { detectCapabilities, isReadOnlyLibraryTool, toolCapabilities } from "../src/capabilities/runtime";
-import { createTaskWorkbench, WORKBENCH_ENTRY } from "./fixtures/task-plugin.mjs";
+import { createTaskWorkbench } from "./fixtures/task-plugin.mjs";
 
 const DOI = "10.1234/example.2024";
 const ITEM = {
@@ -17,14 +17,18 @@ const ITEM = {
 	data: { key: "ABCD1234", title: "Example", itemType: "journalArticle", DOI, collections: [] },
 };
 let cwd, runDir, saves, saved, tools;
+const taskClients = [];
 
 function fakePi() {
 	tools = new Map();
+	const hooks = new Map();
 	return {
+		hooks,
 		registerTool: (tool) => tools.set(tool.name, tool),
 		getAllTools: () => [...tools.values()],
 		registerCommand: () => {},
-		on: () => {},
+		on: (name, handler) => hooks.set(name, [...(hooks.get(name) || []), handler]),
+		sendMessage: () => {},
 		events: createEventBus(),
 	};
 }
@@ -91,12 +95,33 @@ beforeEach(async () => {
 	stubZotero();
 });
 afterEach(async () => {
+	for (const pi of taskClients.splice(0))
+		for (const hook of pi.hooks.get("session_shutdown") || []) await hook({}, ctxFor());
 	vi.unstubAllGlobals();
 	vi.unstubAllEnvs();
 	await rm(cwd, { recursive: true, force: true });
 });
 const run = (ctx, extra) =>
 	tools.get("research_zotero_save").execute("call-1", params(extra), undefined, () => {}, ctx);
+
+async function attachedTask(pi) {
+	const entries = [];
+	const journal = await createTaskWorkbench({
+		pi,
+		persist: (data) => entries.push({ customType: "drone-task-session-v1", data }),
+	});
+	taskClients.push(pi);
+	const context = {
+		...ctxFor(),
+		sessionManager: {
+			getSessionId: () => "session-z",
+			getSessionFile: () => undefined,
+			getBranch: () => entries,
+		},
+	};
+	for (const hook of pi.hooks.get("session_start") || []) await hook({}, context);
+	return journal;
+}
 
 it("registers a write tool that is neither read-only nor available to subagents", () => {
 	zoteroLiterature(fakePi());
@@ -156,20 +181,15 @@ it("an accepted card writes exactly once, reads back and journals the receipt in
 it("an authorized task plan naming the DOI as a zotero_item milestone covers the write without a second card", async () => {
 	const pi = fakePi();
 	zoteroLiterature(pi);
-	const entries = [];
-	const journal = await createTaskWorkbench({
-		pi,
-		persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }),
-	});
-	journal.attach("session-z");
-	journal.begin("把这篇论文收进 Zotero 并写笔记");
-	journal.plan({
+	const journal = await attachedTask(pi);
+	await journal.begin("把这篇论文收进 Zotero 并写笔记");
+	await journal.plan({
 		summary: "只写入这一篇文献。",
 		milestones: [{ id: "lit", title: "文献入库", acceptance: { kind: "zotero_item", doi: DOI } }],
 	});
 	const act = (action) =>
 		journal.command({ taskId: journal.snapshot().id, revision: journal.view().revision, action });
-	act("authorize-task");
+	await act("authorize-task");
 	const grant = journal.authorization(true);
 	// 通用里程碑验收清单（挂钩 2）：zotero_item 由扩展登记的验收器贡献 DOI 条目
 	expect(grant.acceptances).toEqual([
@@ -196,17 +216,13 @@ it("an authorized task plan naming the DOI as a zotero_item milestone covers the
 it("a DOI-less zotero_item milestone is a one-write slot covered by the task authorization; extra papers go back to the card", async () => {
 	const pi = fakePi();
 	zoteroLiterature(pi);
-	const journal = await createTaskWorkbench({
-		pi,
-		persist: () => {},
-	});
-	journal.attach("session-z");
-	journal.begin("精读后把文献收进 Zotero");
-	journal.plan({
+	const journal = await attachedTask(pi);
+	await journal.begin("精读后把文献收进 Zotero");
+	await journal.plan({
 		summary: "精读一篇并写入 Zotero。",
 		milestones: [{ id: "lit", title: "精读文献进入 Zotero", acceptance: { kind: "zotero_item" } }],
 	});
-	journal.command({
+	await journal.command({
 		taskId: journal.snapshot().id,
 		revision: journal.view().revision,
 		action: "authorize-task",
@@ -237,7 +253,7 @@ it("a DOI-less zotero_item milestone is a one-write slot covered by the task aut
 		toolCallId: "slot-1",
 		input: { doi: bySlot.details.doi },
 	};
-	expect(journal.guard(event)).toBeNull();
+	expect(await journal.guard(event)).toBeNull();
 	await journal.observe({ ...event, details: bySlot.details, content: [] }, cwd);
 	expect(journal.snapshot().milestones[0].bound).toMatchObject({ fields: { doi: bySlot.details.doi } });
 	expect(journal.authorization(true).acceptances).toEqual([]);
