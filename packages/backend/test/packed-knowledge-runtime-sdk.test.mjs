@@ -15,6 +15,7 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
+import { discoverInstalledPackages } from "../../desktop/src/main/ui-plugins/installed-package-sources";
 import { SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime } from "../src/capabilities/runtime";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
@@ -24,9 +25,11 @@ import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 import { PluginResourceManager } from "../src/plugins/resource-capabilities";
 import { getPluginSessionCaller } from "../src/plugins/session-caller";
 import { sessionCapabilityHandlers } from "../src/plugins/session-capabilities";
+import { sessionRecordCapabilityHandlers } from "../src/plugins/session-record-capabilities";
 import { canonicalProjectId } from "../src/project-id";
 import { SessionRegistry } from "../src/session/registry";
 import { SessionEngine } from "../src/session-engine/engine";
+import { SessionRecordStore } from "../src/session-engine/session-records";
 import { StorageRegistry } from "../src/storage/registry";
 
 const run = promisify(execFile);
@@ -93,6 +96,7 @@ it.skipIf(!tarball)(
 		const cleanup = [];
 		let stage = "clean-install";
 		const sessions = new SessionRegistry();
+		const records = new SessionRecordStore();
 		try {
 			await run(
 				"npm",
@@ -118,22 +122,12 @@ it.skipIf(!tarball)(
 			packageRoot = await realpath(join(prefix, installed[0]));
 			const pkg = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
 			const manifest = JSON.parse(await readFile(join(packageRoot, "plugin.manifest.json"), "utf8"));
-			const source = {
-				pluginId: manifest.id,
-				requestsModel: manifest.permissions?.network?.includes("configured-services") === true,
-				requestsStateWrite: manifest.permissions?.filesystem?.includes("application-state-write") === true,
-				packageRoot,
-				entrypoint: await declaredPath(packageRoot, manifest.entrypoints.desktopRuntime),
-				nativeEntrypoint: await declaredPath(packageRoot, manifest.entrypoints.extension),
-				resources: Object.fromEntries(
-					await Promise.all(
-						Object.entries(manifest.entrypoints.resources).map(async ([name, path]) => [
-							name,
-							await declaredPath(packageRoot, path),
-						]),
-					),
-				),
-			};
+			const catalog = await discoverInstalledPackages(join(prefix, "node_modules"));
+			const selected = catalog.find((item) => !("error" in item) && item.packageName === pkg.name);
+			expect(selected, JSON.stringify(catalog)).toBeDefined();
+			const source = selected.runtime;
+			expect(source.pluginId).toBe(pkg.name);
+			expect(source.packageRoot).toBe(packageRoot);
 			expect(await Promise.all(pkg.pi.extensions.map((path) => declaredPath(packageRoot, path)))).toContain(
 				source.nativeEntrypoint,
 			);
@@ -212,6 +206,7 @@ it.skipIf(!tarball)(
 			const capabilityScopes = [];
 			bridge = new PluginRuntimeBridge({
 				source: (name) => sources.get(name),
+				sources: () => [...sources].map(([name, source]) => ({ name, source, state: "enabled" })),
 				enabled: () => true,
 				factory: (value) => createProcessPluginRuntime({ ...value, runtimeDirectory }),
 				approve: async (_owner, value, operation) => {
@@ -270,6 +265,7 @@ it.skipIf(!tarball)(
 								...fileCapabilityHandlers(files),
 								...resources.handlers(),
 								...sessionCapabilityHandlers(sessions),
+								...sessionRecordCapabilityHandlers(sessions, records),
 								...(value.requestsModel
 									? modelCapabilityHandlers({
 											registry: sessions,
@@ -590,8 +586,8 @@ it.skipIf(!tarball)(
 				).toContain(name);
 			sessions.add({ session, cwd: workspace, readOnly: true, unsubscribe: () => {} });
 			bootstrap.bindSession(session.sessionId);
-			const errors = [];
-			await session.bindExtensions({ onError: (error) => errors.push(error) });
+			const readOnlyErrors = [];
+			await session.bindExtensions({ onError: (error) => readOnlyErrors.push(error) });
 			const selection = bridge.selectSession(window, session.sessionId);
 			expect(getPluginSessionCaller(sessions, session.sessionId).scope.workspaceDirectory).toBe(workspace);
 			expect(getPluginSessionCaller(sessions, session.sessionId).readOnly).toBe(true);
@@ -599,7 +595,22 @@ it.skipIf(!tarball)(
 				"Check knowledge status and search Orchid, then execute the two negative controls.",
 			);
 			await session.waitForIdle();
-			expect(errors).toEqual([]);
+			// This direct SDK probe deliberately attempts a prompt on a host read-only attachment.
+			// The host must deny write hooks while its read tools remain usable; production UI blocks the prompt.
+			const deniedWriteHooks = new Set([
+				"before_agent_start",
+				"message_start",
+				"context",
+				"tool_execution_start",
+				"tool_result",
+				"tool_execution_end",
+			]);
+			expect(readOnlyErrors.some((error) => error.event === "before_agent_start")).toBe(true);
+			for (const error of readOnlyErrors) {
+				expect(deniedWriteHooks.has(error.event)).toBe(true);
+				expect(error.error).toBe(`Plugin operation denied: native:event:${error.event}`);
+				expect(error.extensionPath).toBe(source.nativeEntrypoint);
+			}
 			const results = session.messages.filter((message) => message.role === "toolResult");
 			for (const name of ["knowledge_status", "knowledge_search"])
 				expect(results.find((result) => result.toolName === name)?.isError, name).toBe(false);
@@ -929,6 +940,7 @@ it.skipIf(!tarball)(
 			}));
 			sessions.add({ session: writeSession, cwd: workspace, unsubscribe: () => {} });
 			writeBootstrap.bindSession(writeSession.sessionId);
+			const errors = [];
 			await writeSession.bindExtensions({ onError: (error) => errors.push(error) });
 			const writeSelection = bridge.selectSession(window, writeSession.sessionId);
 			faux.setResponses([
@@ -1226,7 +1238,8 @@ it.skipIf(!tarball)(
 				pagedReadHashAndLines: true,
 				changedHashRejected: true,
 				unknownAndWriteExecuted: 0,
-				fullHooksAndPublication: "NOT_IMPLEMENTED",
+				readOnlyWriteHooksDenied: readOnlyErrors.map((error) => error.event),
+				fullHooksAndPublication: "NOT_COVERED_BY_THIS_UI_AND_READ_ONLY_BOUNDARY_PROBE",
 			};
 		} catch (error) {
 			failure = new Error(`Packed knowledge acceptance failed at ${stage}`, { cause: error });
