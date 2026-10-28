@@ -60,6 +60,7 @@ describe("installed UI runtime provenance", () => {
 		await manager.scanAll();
 		expect(manager.runtimeSource("results-ui")).toEqual({
 			pluginId: "@example/results",
+			contentHash: expect.stringMatching(/^[a-f0-9]{64}$/),
 			packageRoot: await realpath(packageRoot),
 			entrypoint: await realpath(join(packageRoot, "runtime.js")),
 		});
@@ -195,6 +196,7 @@ describe("installed UI runtime provenance", () => {
 		await manager.scanAll();
 		expect(manager.runtimeSource("results-ui")).toEqual({
 			pluginId: "@example/results",
+			contentHash: expect.stringMatching(/^[a-f0-9]{64}$/),
 			packageRoot: await realpath(packageRoot),
 			entrypoint: await realpath(join(packageRoot, "runtime.js")),
 			nativeEntrypoint: await realpath(join(packageRoot, "native.js")),
@@ -357,7 +359,7 @@ describe("installed UI runtime provenance", () => {
 		await rm(join(packageRoot, "ui"), { recursive: true });
 		await symlink(outside, join(packageRoot, "ui"));
 		const entries = await discoverInstalledUiPackages(installRoot);
-		expect(entries[0]).toMatchObject({ error: expect.stringContaining("entrypoints.ui resolves outside") });
+		expect(entries[0]).toMatchObject({ error: expect.stringContaining("entrypoints.ui escapes") });
 	});
 
 	for (const method of ["relative", "symlink"]) {

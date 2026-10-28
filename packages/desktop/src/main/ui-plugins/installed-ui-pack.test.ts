@@ -199,7 +199,7 @@ describe("installed desktop-ui-pack discovery", () => {
 			invalidReason: undefined,
 		});
 		expect(manager.list().find((item) => item.name === "package-example-broken-ui")?.invalidReason).toContain(
-			"entrypoints.ui does not contain",
+			"Invalid UI entrypoint",
 		);
 		const code = await manager.readCode("ui-fixture");
 		expect("manifest" in code).toBe(true);
