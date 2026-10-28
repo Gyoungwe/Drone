@@ -1,14 +1,15 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import { taskHostLoader } from "@gyoungwe/pi-core/host";
 import { expect, it, vi } from "vitest";
-import { createBackend } from "../src/create-backend";
+import { discoverInstalledPackages } from "../../desktop/src/main/ui-plugins/installed-package-sources";
+import { PiBackend } from "../src/pi-backend";
+import { PluginRuntimeBridge } from "../src/plugins/coordinator";
+import { getPluginSessionCaller } from "../src/plugins/session-caller";
 
-it("native core plus knowledge executes actual SDK read through fallback without exposing final draft or losing provider usage", async () => {
+it("an actually selected required but unavailable owner keeps SDK read and private next-provider protocol while final delivery stays closed", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-native-fallback-sdk-")));
 	const cwd = join(root, "project"),
 		agentDir = join(root, "agent");
@@ -26,36 +27,90 @@ it("native core plus knowledge executes actual SDK read through fallback without
 	});
 	const provider = fauxProvider({ provider: "native-fallback-sdk", tokensPerSecond: 0 });
 	modelRuntime.registerNativeProvider(provider.provider);
-	vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
-	const require = createRequire(import.meta.url);
-	const backend = createBackend({
-		taskHostLoader,
+	await modelRuntime.setRuntimeApiKey(provider.provider.id, "synthetic-offline-only");
+	const modules = join(root, "node_modules"),
+		packageRoot = join(modules, "required-owner");
+	await mkdir(packageRoot, { recursive: true });
+	await writeFile(
+		join(root, "package.json"),
+		JSON.stringify({ dependencies: { "required-owner": "1.0.0" } }),
+	);
+	await writeFile(
+		join(packageRoot, "package.json"),
+		JSON.stringify({ name: "required-owner", version: "1.0.0" }),
+	);
+	await writeFile(
+		join(packageRoot, "plugin.manifest.json"),
+		JSON.stringify({
+			hosts: ["drone-desktop"],
+			entrypoints: { extension: "./native.mjs", desktopRuntime: "./runtime.mjs" },
+			drone: { deliveryProjection: "required" },
+		}),
+	);
+	for (const name of ["native.mjs", "runtime.mjs"])
+		await writeFile(
+			join(packageRoot, name),
+			'throw new Error("UNAVAILABLE_MANAGED_ENTRY_MUST_NOT_EXECUTE");',
+		);
+	const [installed] = await discoverInstalledPackages(modules);
+	expect(installed.runtime).toMatchObject({
+		deliveryProjection: "required",
+		contentHash: expect.any(String),
+	});
+	const source = installed.runtime;
+	let activated = 0,
+		bootstrap,
+		backend;
+	const bridge = new PluginRuntimeBridge({
+		getSessionContext: (id) => getPluginSessionCaller(backend.registry, id),
+		source: () => source,
+		sources: () => [{ name: "installed", source, state: "unavailable" }],
+		classifySelectedPath: (path) =>
+			path === source.nativeEntrypoint
+				? { kind: "managed", source, state: "unavailable" }
+				: { kind: "unconfirmed" },
+		enabled: () => false,
+		approve: async () => true,
+		factory: () => {
+			activated++;
+			throw new Error("Unavailable owner must not activate");
+		},
+		capabilities: () => ({ resources: [], handlers: {} }),
+	});
+	backend = new PiBackend({
 		projectTrust: false,
+		permissionGates: false,
 		lazyCapabilities: false,
-		webFetch: false,
-		subagentPreferBuiltin: false,
+		tools: ["read"],
 		desktopIntegration: {
 			appendSystemPrompt: [],
 			additionalSkillPaths: [],
-			additionalExtensionPaths: [
-				require.resolve("@gyoungwe/pi-core"),
-				require.resolve("@gyoungwe/pi-knowledge"),
-			],
+			additionalExtensionPaths: [source.nativeEntrypoint],
+			noExtensions: true,
+			noSkills: true,
+			noPromptTemplates: true,
+			noContextFiles: true,
+			pluginRuntimeDirectory: join(root, "unused-runtime"),
+			nativeRuntime: {
+				manages: (path) => path === source.nativeEntrypoint,
+				begin: () =>
+					(bootstrap = bridge.beginNative({ id: 101, isDestroyed: () => false }, () => "installed")),
+			},
 		},
 	});
 	const observed = [];
-	backend.sessions.modelRuntime = modelRuntime;
-	const stop = backend.sessions.onEvent((_id, event) => {
+	backend.modelRuntime = modelRuntime;
+	const stop = backend.onEvent((_id, event) => {
 		if (event.type === "message_end") observed.push(structuredClone(event.message));
 	});
 	const draft = "UNPUBLISHED_FINAL_DRAFT_WITHOUT_HOST_PROOF";
 	try {
-		const meta = await backend.sessions.createSession({
+		const meta = await backend.createSession({
 			cwd,
 			provider: provider.provider.id,
 			modelId: provider.getModel().id,
 		});
-		const session = backend.sessions.registry.get(meta.sessionId).session;
+		const session = backend.registry.get(meta.sessionId).session;
 		const protocol = [
 			{ type: "text", text: "PRIVATE_PROGRESS_BEFORE_READ" },
 			{
@@ -121,13 +176,7 @@ it("native core plus knowledge executes actual SDK read through fallback without
 		expect(toolMessage.usage.input).toBeGreaterThan(0);
 		expect(providerHistory).toHaveLength(1);
 		expect(providerHistory[0].find((message) => message.role === "assistant").content).toEqual(protocol);
-		expect(toolMessage.diagnostics).toMatchObject([
-			{
-				type: "provider-warning",
-				timestamp: 123,
-				error: { message: expect.stringContaining("https://example.test/result") },
-			},
-		]);
+		expect(toolMessage.diagnostics).toBeUndefined();
 		const final = session.messages.filter((message) => message.role === "assistant").at(-1);
 		expect(final).toMatchObject({
 			responseId: "actual-provider-final",
@@ -136,7 +185,18 @@ it("native core plus knowledge executes actual SDK read through fallback without
 			model: provider.getModel().id,
 		});
 		expect(final.usage.input).toBeGreaterThan(0);
-		expect(JSON.stringify(final.content)).toContain("知识库检查未通过");
+		expect(final).toMatchObject({
+			stopReason: "aborted",
+			errorMessage: "Final delivery unavailable",
+			content: [],
+		});
+		expect(activated).toBe(0);
+		expect(session.resourceLoader.getExtensions().errors).toMatchObject([
+			{
+				path: source.nativeEntrypoint,
+				error: expect.stringContaining("Native extension source is not enabled"),
+			},
+		]);
 		const persisted = await readFile(session.sessionFile, "utf8");
 		for (const visible of [JSON.stringify(session.messages), JSON.stringify(observed), persisted]) {
 			expect(visible).not.toContain(draft);
@@ -149,6 +209,8 @@ it("native core plus knowledge executes actual SDK read through fallback without
 	} finally {
 		stop();
 		await backend.dispose();
+		await bootstrap?.dispose();
+		await bridge.close();
 		vi.restoreAllMocks();
 		vi.unstubAllEnvs();
 		await rm(root, { recursive: true, force: true });

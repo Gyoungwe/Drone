@@ -314,7 +314,8 @@ it("keeps exact tool-call protocol and usage while suppressing private blocks wh
 		({ session } = await actualSession(
 			root,
 			async (event) => {
-				beforeUsage = structuredClone(event.message.usage);
+				if (event.message.responseId === "synthetic-response-id")
+					beforeUsage = structuredClone(event.message.usage);
 				throw new Error("PRIVATE_SYNTHETIC_PROTOCOL_FAILURE");
 			},
 			[],

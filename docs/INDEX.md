@@ -576,3 +576,5 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 P2 知识完整 native 消费者的第一条实际包工作流与明确剩余范围见[同包完整消费者证据](pluginization/native-knowledge-full-consumer-evidence.md)；尚未完成生产历史/导出、任务组合和正式安装包。
 
 P2 生产当前分支的 stream / polling / reload / export 接线与真实同 tar 回执见[当前分支交付证据](pluginization/native-knowledge-current-branch-delivery-evidence.md)；其他分支、未打开历史、child、任务组合及显式旧 bridge 删除仍未完成。
+
+P2 required owner 不可用时的基础 read、私有 provider 协议与 fail-closed 边界见[私有协议证据](pluginization/native-unavailable-provider-protocol-evidence.md)；这不是新的 publication proof 或持久化恢复授权。
