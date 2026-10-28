@@ -300,12 +300,30 @@ it("disposing a task owner cancels an open native authorization without granting
 	await current.backend.taskHost.dispose();
 	await prompt;
 	await current.session.waitForIdle();
-	expect(JSON.parse(results(current.session, "task_plan").at(-1).content[0].text).authorized).toBe(false);
+	expect(results(current.session, "task_plan").at(-1)).toMatchObject({
+		isError: true,
+		content: [{ type: "text", text: "Task session is closed" }],
+	});
+	expect(
+		current.service.respondAsk(opened.id, {
+			kind: "answer",
+			mode: "submit",
+			answers: Object.fromEntries(
+				opened.questions.map((question) => [
+					question.id,
+					{ values: [question.options.find((option) => option.value === "同意本次请求").value] },
+				]),
+			),
+		}),
+	).toBe(false);
 	const checkpoints = current.session.sessionManager
 		.getBranch()
-		.filter((entry) => entry.customType === "drone-task-workbench-v2");
+		.filter((entry) => entry.customType === "drone-task-session-v1");
 	expect(checkpoints.length).toBeGreaterThan(0);
-	expect(checkpoints.some((entry) => entry.data.tasks.some((task) => task.executionConsent))).toBe(false);
+	expect(checkpoints.some((entry) => entry.data.workbench.tasks.some((task) => task.executionConsent))).toBe(
+		false,
+	);
+	expect(current.permissions).toHaveLength(0);
 	await expect(readFile(join(current.cwd, "never.txt"))).rejects.toMatchObject({ code: "ENOENT" });
 }, 30000);
 

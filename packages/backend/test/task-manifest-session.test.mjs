@@ -38,7 +38,7 @@ async function host(id) {
 	const journal = await registerTaskRuntime(pi);
 	const ctx = {
 		cwd: tmpdir(),
-		sessionManager: { getSessionId: () => id, getBranch: () => [] },
+		sessionManager: { getSessionId: () => id, getSessionFile: () => undefined, getBranch: () => [] },
 	};
 	const emit = async (name, event) => {
 		const results = [];
@@ -73,12 +73,12 @@ it("repeats declared knowledge reads across turns without replaying effects or b
 		);
 		current.pi.events.emit("drone:runtime/v1", { version: 1, runtime: current.runtime });
 		await current.emit("session_start", {});
-		current.journal.plan({
+		await current.journal.plan({
 			goal: "Read sources",
 			summary: "Read and inspect",
 			milestones: [{ id: "review", title: "Review", acceptance: { kind: "human_review" } }],
 		});
-		current.journal.command({
+		await current.journal.command({
 			action: "authorize-task",
 			taskId: current.journal.snapshot().id,
 			revision: current.journal.view().revision,
