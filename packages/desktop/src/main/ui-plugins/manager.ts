@@ -18,7 +18,6 @@ import {
 	KNOWN_UI_REGIONS,
 	KNOWN_UI_SLOTS,
 	UI_PLUGIN_ANCHORS,
-	type UiPluginContribution,
 	type UiPluginInfo,
 	type UiPluginManifest,
 	type UiPluginsConfig,
@@ -32,6 +31,7 @@ import {
 	type InstalledUiRuntimeSource,
 	installedPackageHash,
 } from "./installed-package-sources";
+import { filterContributions } from "./manifest-contributions";
 
 const log = createLogger("ui-plugins");
 
@@ -229,23 +229,6 @@ function validateManifest(
 		}
 	}
 	return null;
-}
-
-/**
- * 过滤 contributions：剔除未知 region 条目（scanAll 合成 info 与 readCode 返回的 manifest 都用这份），
- * 并把非 app.overlay 区域的 anchor 剥离（anchor 仅对 overlay 有意义）。
- * 非数组输入（坏插件可能给任意形状）一律空，防上层 for...of/条目访问抛错。
- */
-export function filterContributions(
-	contributions: UiPluginContribution[] | undefined,
-): UiPluginContribution[] {
-	if (!Array.isArray(contributions)) return [];
-	const out: UiPluginContribution[] = [];
-	for (const c of contributions) {
-		if (!c || typeof c.region !== "string" || !KNOWN_UI_REGIONS.includes(c.region)) continue;
-		out.push(c.region === "app.overlay" ? c : { ...c, anchor: undefined });
-	}
-	return out;
 }
 
 /** 读插件目录下的 plugin.json；解析失败返回 null */
