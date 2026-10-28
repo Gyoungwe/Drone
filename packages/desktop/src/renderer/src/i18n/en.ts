@@ -976,7 +976,7 @@ export const en: Messages = {
 			changed: "Switched to {mode}",
 			cacheReset: "tool changes reset the prompt cache",
 		},
-		status: { local: "Local", memoryLoaded: "{count} memories loaded" },
+		status: { extension: "Extension status", local: "Local", memoryLoaded: "{count} memories loaded" },
 		placeholder:
 			"Describe your task — / for commands or skills, @ to reference files, tasks, software and databases",
 		placeholderQueued: "Queue a message — sent when the current task finishes",

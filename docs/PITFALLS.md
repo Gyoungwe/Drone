@@ -399,3 +399,9 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 复用旧 checkout 验收任务包迁移时，`packages/tasks` 的已跟踪源码均已删除，但旧 `packages/tasks/node_modules` 空壳仍可能存在。根脚本的源目录删除检查因此会失败，而各 workspace 测试已通过。先核对该临时 checkout 的目录确实只剩旧依赖缓存，再清理这个缓存；不要修改门禁把真实源码残留当作通过。首次失败与完整重跑见 `native-plugin-owner-migration-2026-10-28.json`。这不是产品源代码修复，干净来源和缓存残留应分别记录。
 
 - 扩展 UI 动作不能用普通 prompt 的未知 slash 回退：SDK 1.1 会把未注册命令当作模型输入。API 1.3 的 `sessions.command` 直接从当前 SDK runner 取 command/context 并调用 handler，缺失明确失败；handler 异常通过同一 runner 的 onError 诊断并向调用者失败。UI 卸载不等于 native owner 卸载，包设置到 native 生命周期的动态发现仍需独立接线。
+
+### Discovery 的 closed 状态不能代替资源关闭
+
+杀死 Docker CLI 并不保证 daemon 内的容器已停止。每次 runner 使用唯一容器名和 ownership label；取消、超时、关闭和 dispose 必须等待 CLI 退出，只删除 label 匹配的自有容器，再以成功的 daemon 查询确认精确名称不存在。inspect 非零可能是 daemon 故障，不能据此报告清理成功。`DiscoveryRunner.run` 以 `DISCOVERY_CLEANUP_FAILED` 保留无法验证清理的错误，插件 execute/close/dispose 必须继续拒绝；迟到的执行不能将 closed 恢复成 ready。
+
+真实容器首次运行暴露 `--mount type=bind,...,rw` 无效，移除末尾 `rw`（bind 默认可写）后通过。验收不得依赖隐式拉镜像；本轮仅使用已缓存的 python:3.12-slim，`--pull=never`。本机出现 tag inspect 失败而 image ID inspect 成功的情况，保留失败并使用同一已缓存镜像的完整 ID 验证，未 pull 或 retag。完整 B5 UI 与正式安装包须单独验收。

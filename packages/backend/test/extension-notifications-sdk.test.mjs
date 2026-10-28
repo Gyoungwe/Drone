@@ -22,7 +22,7 @@ it("delivers official notifications from real created/restored sessions with no 
 	await writeFile(
 		extension,
 		`export default pi=>{
- pi.on("session_start",(_event,ctx)=>{ctx.ui.notify("startup notification","info");});
+ pi.on("session_start",(_event,ctx)=>{ctx.ui.notify("startup notification","info");ctx.ui.setStatus("mcp",ctx.ui.theme.fg("accent","MCP ready"));});
  pi.on("before_agent_start",(_event,ctx)=>{for(const severity of ["info","warning","error"])ctx.ui.notify("official "+severity,severity);});
  };`,
 	);
@@ -57,6 +57,7 @@ it("delivers official notifications from real created/restored sessions with no 
 		for (const phase of ["create", "restore"]) {
 			const session = backend.registry.get(meta.sessionId).session;
 			const ui = session.extensionRunner.getUIContext();
+			expect(session.extensionRunner.createContext().mode).toBe("rpc");
 			const file = session.sessionFile,
 				dir = session.sessionManager.getSessionDir();
 			const offset = events.length;
@@ -75,12 +76,25 @@ it("delivers official notifications from real created/restored sessions with no 
 			expect(session.messages.filter((message) => message.role === "toolResult")).toEqual(
 				expect.arrayContaining([expect.objectContaining({ toolName: "read", isError: false })]),
 			);
+			ui.setStatus("extra", "temporary");
+			ui.setStatus("extra", undefined);
+			expect(events.at(-1)).toEqual({
+				sessionId: meta.sessionId,
+				event: { type: "extension_status", key: "extra", text: null },
+			});
 			await backend.closeSession(meta.sessionId);
+			expect(events.at(-1)).toEqual({
+				sessionId: meta.sessionId,
+				event: { type: "extension_status", key: null, text: null },
+			});
 			const closedCount = events.length;
 			ui.notify("late closed context", "error");
+			ui.setStatus("mcp", "late closed status");
 			expect(events).toHaveLength(closedCount);
 			const trace = await readFile(join(dir, "traces", `trace-${meta.sessionId}.jsonl`), "utf8");
 			expect(trace).not.toContain('"type":"extension_notification"');
+			expect(trace).not.toContain("extension_status");
+			expect(await readFile(file, "utf8")).not.toContain("MCP ready");
 			if (phase === "create") {
 				meta = await backend.openSession(file);
 				const reopenedCount = events.length;
@@ -173,6 +187,11 @@ it("forwards real child SDK notifications with child identity through the host e
 						async execute(_id, _input, _signal, _update, ctx) {
 							for (const severity of ["info", "warning", "error"])
 								ctx.ui.notify(`child ${severity}`, severity);
+							ctx.ui.setStatus("mcp", ctx.ui.theme.fg("accent", "Child MCP ready"));
+							expect(ctx.mode).toBe("rpc");
+							await expect(ctx.ui.input("unsupported child question")).rejects.toThrow(
+								"input without a question transport",
+							);
 							return { content: [{ type: "text", text: "Notifications requested" }] };
 						},
 					}),
@@ -225,8 +244,16 @@ it("forwards real child SDK notifications with child identity through the host e
 			expect(text).not.toContain('"type":"extension_notification"');
 			expect(text).not.toContain("child warning");
 		}
+		expect(events.filter(({ event }) => event.type === "extension_status")).toEqual([
+			{
+				sessionId: result.sessionId,
+				event: { type: "extension_status", key: "mcp", text: "Child MCP ready" },
+			},
+			{ sessionId: result.sessionId, event: { type: "extension_status", key: null, text: null } },
+		]);
 		const count = events.length;
 		child.extensionRunner.getUIContext().notify("late child context", "error");
+		child.extensionRunner.getUIContext().setStatus("mcp", "late child");
 		expect(events).toHaveLength(count);
 		backend.registry
 			.get(parent.sessionId)

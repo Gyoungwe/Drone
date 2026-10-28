@@ -306,6 +306,13 @@ function commitLlmErrorCard(state: SessionTranscriptState, error: UiError): Sess
  */
 export function reduceEvent(state: SessionTranscriptState, event: SessionEvent): SessionTranscriptState {
 	switch (event.type) {
+		case "extension_status": {
+			if (event.key === null) return { ...state, extensionStatuses: {} };
+			const extensionStatuses = { ...state.extensionStatuses };
+			if (event.text === null) delete extensionStatuses[event.key];
+			else return { ...state, extensionStatuses: { ...extensionStatuses, [event.key]: event.text } };
+			return { ...state, extensionStatuses };
+		}
 		case "model_wait": {
 			if (event.status !== "timed-out")
 				return { ...state, modelWait: event.status === "resumed" ? null : event };

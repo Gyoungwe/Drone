@@ -273,7 +273,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`pi-knowledge` 的源码权威版本位于 `drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`）。公开 npm 版本仍为 0.2.1；当前宿主源码锁固定 `f4a530a` 的 0.3.0 候选，记录可复现 tarball SHA-256。插件负责 manifest、host 声明、native extension、worker 和 maintenance；`src/core/maintenance-topic.ts` 负责绑定 revision、canonical/mirror CAS 更新与回读。保留双方历史的整合已恢复同包 `ui/`、`src/native/` 和 `src/desktop/`；完整 hooks 共享 owner、undo、surfaces 与正式安装包 GUI 继续按 P2 跟踪，不因包构建通过而完成。Drone 暂保留端口、IPC、挂载/回退和旧资源装配。
+`pi-knowledge` 的源码权威版本位于 `drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`）。公开 npm 版本仍为 0.2.1；当前宿主源码锁固定 `dd7effc` 的 0.3.0 候选，记录可复现 tarball SHA-256。插件负责 manifest、host 声明、native extension、worker 和 maintenance；`src/core/maintenance-topic.ts` 负责绑定 revision、canonical/mirror CAS 更新与回读。保留双方历史的整合已恢复同包 `ui/`、`src/native/` 和 `src/desktop/`；CLI/Desktop canonical 审核算法和 scoped IO 位于 `src/core/wiki-review{,-ports,-node}.ts` 与 `src/desktop/review-storage.ts`，history/undo 已通过真实受限进程验收；完整 hooks/proof、模型审核、其余 surfaces 与正式安装包 GUI 继续按 P2 跟踪，不因包构建通过而完成。Drone 暂保留端口、IPC、挂载/回退和旧资源装配。
 
 PR-4 历史入口曾在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 
@@ -281,7 +281,7 @@ PR-4 历史入口曾在同一入口注册 `knowledge_search`、`knowledge_read`�
 
 插件仓库 `packages/pi-core/` 拥有工具、项目记忆、native runtime 和 milestone 校验；host loader 通过公开 client 合同接入。宿主旧源码和重复测试已删除，插件仓库保留原历史、同名测试及严格干净消费者 tsc。`scripts/build-pi-core.mjs` 现在只验证源码锁、fetch receipt、产物哈希与公开声明；`scripts/smoke-pi-core.mjs`、`scripts/check-pi-compat.mjs` 消费 `vendor/plugins/pi-core/`，不再构建宿主副本。`scripts/check-core-artifact.test.mjs` 验证无旧源码的锁定产物边界；backend 的真实 tarball 回归位于 `test/packed-core-host-sdk.test.ts`。公开 0.1.9 仅用于 npm-ci bootstrap，本轮源码锁候选为 0.2.0。
 
-Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain/`，宿主 `backend/src/discovery/service.ts` 仅注入授权、惰性 container runner、原子 JsonStore、runs 文件边界和项目绑定 Inquiry。无插件不登记 discovery 存储；旧共享 journal 保持字节并报告 unassigned，不自动冒认项目。候选目前只有 Desktop host 入口，原生工具、真实容器和完整 B5 GUI 仍未完成。
+Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain/`，宿主 `backend/src/discovery/service.ts` 仅注入授权、惰性 container runner、原子 JsonStore、runs 文件边界和项目绑定 Inquiry。无插件不登记 discovery 存储；旧共享 journal 保持字节并报告 unassigned，不自动冒认项目。候选同包原生工具读取当前工作区真实 journal，见 [writer→SDK 回读证据](releases/native-plugin-discovery-readback-2026-10-28.json)；取消、关闭和 dispose 等待自有容器销毁并向 daemon 回读，见 [真实资源关闭证据](releases/native-plugin-discovery-cleanup-2026-10-28.json)。Desktop/native 共享 owner、原生执行、Inquiry 和完整 B5 GUI 仍未完成。
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 
@@ -345,9 +345,9 @@ src/
 | `src/session/stream-guard.ts` | `StreamGuard` | 流式熔断（emitEvent 单点）：连续空白 >8KB 或单消息 >2MB → abort + 丢弃后续增量；双路径清理防 Map 泄漏 |
 | `src/session/rates.ts` | `EventRateTracker` | 每会话事件速率统计（60s 滑窗），心跳/崩溃快照数据源；prune 防泄漏 |
 | `src/session/naming.ts` | `autoNameSession` | 首条用户消息 message_start 即取首行做标题（skill 命令先还原 `/skill:name` 投影，有测试） |
-| `src/session/ui-context.ts` | `makeUiContext` | `ExtensionUIContext` 桥接基础询问/通知；终端 custom 明确拒绝、setTheme 返回失败，其他终端成员仍有待迁移 no-op；**theme 必须是真实 `Theme` 类实例**（假对象会让 pi-mcp-adapter 等扩展 `theme.fg()` 抛错、MCP 服务器全连不上）；SDK 接口变化时在此补新成员 |
+| `src/session/ui-context.ts` | `makeUiContext` | `ExtensionUIContext` 以 SDK `rpc` 模式桥接基础询问、通知与瞬时 keyed 状态栏；终端专属成员明确拒绝、setTheme 返回失败；对话倒计时未支持时明确拒绝、signal 经门控单请求取消；**theme 必须是真实 `Theme` 类实例**（假对象会让 pi-mcp-adapter 等扩展 `theme.fg()` 抛错、MCP 服务器全连不上）；SDK 接口变化时在此补新成员；[真实 SDK / MCP 状态证据](pluginization/native-plugin-terminal-ui-evidence.md) |
 | `src/session/extension-errors.ts` | `createSessionExtensionDiagnostics` | 主/子会话持续记录 SDK hook 错误到日志与 traces，随关闭解除监听；不依赖知识插件通知 |
-| `src/permissions/gate.ts` | `PermissionGate` | 权限确认队列：allow/deny/allowAlways/allowDir + kind/suggestDir 元数据；respond 前供 PiBackend 持久化 |
+| `src/permissions/gate.ts` | `PermissionGate` | 权限确认队列：allow/deny/allowAlways/allowDir + kind/suggestDir 元数据；signal 单请求取消并经既有审批回执撤卡，respond 前供 PiBackend 持久化 |
 | `src/permissions/index.ts`（+ bash-chain/pattern/config/tmp-zone） | `evaluateBashCommand` 等 | 逐工具权限规则引擎：allow/ask/deny × 通配模式；bash 命令链取最严段；自保护（permissions/workspaces/auth/trust 四文件）；tmp-zone = 临时区判定 + rm 豁免（纯函数）。已知天花板：xargs/find -exec/python -c 不覆盖 |
 | `src/permissions/settings.ts`（+ config.ts 的 `parseConfig`/`serializeConfig`/`validateConfig`） | `readPermissionSettings`、`writePermissionSettings`、`resetPermissionSettings`、`probePermission`、`readPermissionAuditTail` | 设置 → 权限 面板后端：快照（路径/原文/默认合并视图/mtime）、整表校验（动作枚举 / 纯数字键 / 自保护四模式存在、非 allow 且未被其后 allow 覆盖）、mtime 冲突检查 + tmp+rename 原子写（留 `.bak`，`enabled` 保留文件原值）、规则试算（同一求值链，只跑规则不模拟边界）。写后 `createPermissionConfigLoader` 下一次 tool_call 重读 = 保存即生效 |
 | `src/permissions/extension.ts` | `makePermissionGateExtension` | 权限门控内置扩展（tool_call 钩子 + 确认通道 + 会话权限模式分支）。求值链：① deny 直接 block → ② 临时区 → ③ 多根边界（projectRoot ∪ workspaces roots）读写分离（读默认放行/写默认确认）→ ④ 项目记忆 allowed[] → ⑤ ask；`getMode` 每次调用实时读，fullAccess 档下 ①⑤ 降级为审计 + 放行（spec permission-mode） |

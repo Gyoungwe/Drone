@@ -185,23 +185,42 @@ export class SessionConstructionService {
 			const registration = { session, unsubscribe, cwd };
 			this.host.registry.add(registration);
 			const notificationLifetime = this.host.registry.signalFor(registration);
+			notificationLifetime.addEventListener(
+				"abort",
+				() => {
+					this.host.emitEvent(session.sessionId, { type: "extension_status", key: null, text: null });
+				},
+				{ once: true },
+			);
 			nativeBootstrap?.bindSession(session.sessionId);
 			await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 			await session.bindExtensions({
 				onError: diagnostics.onError,
 				...(this.host.options.permissionGates !== false
 					? {
-							uiContext: makeUiContext(gate, askGate, (text, type) => {
-								// Revocation precedes asynchronous shutdown and also rejects an old
-								// context after another session restores the same persisted id.
-								if (notificationLifetime.aborted) return;
-								this.host.emitEvent(session.sessionId, {
-									type: "extension_notification",
-									severity: type,
-									message: text,
-								});
-							}),
-							mode: "tui",
+							uiContext: makeUiContext(
+								gate,
+								askGate,
+								(text, type) => {
+									// Revocation precedes asynchronous shutdown and also rejects an old
+									// context after another session restores the same persisted id.
+									if (notificationLifetime.aborted) return;
+									this.host.emitEvent(session.sessionId, {
+										type: "extension_notification",
+										severity: type,
+										message: text,
+									});
+								},
+								(key, text) => {
+									if (notificationLifetime.aborted) return;
+									this.host.emitEvent(session.sessionId, {
+										type: "extension_status",
+										key,
+										text: text ?? null,
+									});
+								},
+							),
+							mode: "rpc",
 						}
 					: {}),
 			});
@@ -349,23 +368,42 @@ export class SessionConstructionService {
 			};
 			this.host.registry.add(registration);
 			const notificationLifetime = this.host.registry.signalFor(registration);
+			notificationLifetime.addEventListener(
+				"abort",
+				() => {
+					this.host.emitEvent(session.sessionId, { type: "extension_status", key: null, text: null });
+				},
+				{ once: true },
+			);
 			nativeBootstrap?.bindSession(session.sessionId);
 			if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 			await session.bindExtensions({
 				onError: diagnostics.onError,
 				...(this.host.options.permissionGates !== false
 					? {
-							uiContext: makeUiContext(gate, askGate, (text, type) => {
-								// Revocation precedes asynchronous shutdown and also rejects an old
-								// context after another session restores the same persisted id.
-								if (notificationLifetime.aborted) return;
-								this.host.emitEvent(session.sessionId, {
-									type: "extension_notification",
-									severity: type,
-									message: text,
-								});
-							}),
-							mode: "tui",
+							uiContext: makeUiContext(
+								gate,
+								askGate,
+								(text, type) => {
+									// Revocation precedes asynchronous shutdown and also rejects an old
+									// context after another session restores the same persisted id.
+									if (notificationLifetime.aborted) return;
+									this.host.emitEvent(session.sessionId, {
+										type: "extension_notification",
+										severity: type,
+										message: text,
+									});
+								},
+								(key, text) => {
+									if (notificationLifetime.aborted) return;
+									this.host.emitEvent(session.sessionId, {
+										type: "extension_status",
+										key,
+										text: text ?? null,
+									});
+								},
+							),
+							mode: "rpc",
 						}
 					: {}),
 			});

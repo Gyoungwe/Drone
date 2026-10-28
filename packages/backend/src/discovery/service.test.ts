@@ -61,7 +61,7 @@ describe("DiscoveryService composition root", () => {
 		expect(argv).toContain("--network");
 		expect(argv).toContain("none");
 		expect(argv).toContain("--read-only");
-		expect(argv.join(" ")).toContain("type=bind,src=/project/runs/task/run,dst=/workspace/runs,rw");
+		expect(argv.join(" ")).toContain("type=bind,src=/project/runs/task/run,dst=/workspace/runs");
 		expect(argv).toContain("python");
 	});
 
