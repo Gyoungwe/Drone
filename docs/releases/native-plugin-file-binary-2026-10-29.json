@@ -5,10 +5,7 @@
 	"types": "637d8621",
 	"source": "a29bdb7b",
 	"tests": "32b04b8e",
-	"pluginCommits": [
-		"03c1a2d",
-		"1b932a7"
-	],
+	"pluginCommits": ["03c1a2d", "1b932a7"],
 	"coreTarball": {
 		"path": "/tmp/drone-file-binary-core-pack/gyoungwe-pi-core-0.2.0.tgz",
 		"sha256": "73b9373316b970f422cf2256461a40b92a6e84a4d68c39d6a304c2ea83236037",
