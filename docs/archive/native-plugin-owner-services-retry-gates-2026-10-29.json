@@ -1,0 +1,322 @@
+{
+	"schemaVersion": 1,
+	"status": "HISTORICAL_FAILED_ATTEMPTS",
+	"attempts": [
+		{
+			"source": "/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+			"commit": "ecc86cc4",
+			"base": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS",
+			"checkout": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+			"status": "FAILED",
+			"commands": [
+				{
+					"command": [
+						"git",
+						"clone",
+						"--shared",
+						"--no-hardlinks",
+						"--no-checkout",
+						"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+						"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone"
+					],
+					"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/00-clone.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null,
+					"logSha256": "241d13ad6bdb61e2b94ac8522b1044629ec55abe6b5a49354385109746d78bde"
+				},
+				{
+					"command": ["git", "checkout", "--detach", "ecc86cc4"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/01-checkout.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null,
+					"logSha256": "b72d5a8de3ed84d00aea4a3460be1295b06d9029283c4da6e104d74018f3bfc2"
+				},
+				{
+					"command": ["git", "remote", "set-url", "origin", "https://github.com/Gyoungwe/Drone.git"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/02-origin.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null,
+					"logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+				},
+				{
+					"command": ["npm", "ci", "--no-audit", "--no-fund"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/03-ci.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null,
+					"logSha256": "88990d0ab5695efd748465cea9b89a339568b6fb721888ecf4888bd3816c9ef9"
+				},
+				{
+					"command": ["node", "scripts/stage-plugin-runtime.mjs", "--check"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/03b-verify-public-runtime-cache.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null,
+					"logSha256": "ef66847d5b7ab890fe806a9eef13c03e91ab9caef849bb3851b04c0e72d54a8e"
+				},
+				{
+					"command": ["git", "status", "--porcelain"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/03c-source-status.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null,
+					"logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+				},
+				{
+					"command": ["npm", "run", "lint"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/04-lint.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null,
+					"logSha256": "31bbb8108f6f9b87ba5cd1fb6025d2c8e03b8b75b5b11502cf42662ed4844ee3"
+				},
+				{
+					"command": ["npm", "run", "typecheck"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/05-typecheck.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null,
+					"logSha256": "e1a40de2d6ed6890b766fe143a66e610485abfc9edcda25515933b24c3f2163b"
+				},
+				{
+					"command": ["npm", "test"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/06-test.log",
+					"status": "FAILED",
+					"exitCode": 1,
+					"signal": null,
+					"logSha256": "eb66cf84fb2070de080fe04a2652494e17b797ff7f3fcb3f662da0968d4d37ea"
+				}
+			],
+			"startedAt": "2026-10-28T15:16:06.220Z",
+			"error": "Error: 06-test failed: /var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/06-test.log",
+			"finishedAt": "2026-10-28T15:19:25.578Z",
+			"failureScope": "GitHub HTTPS transport failed during pretest before backend tests started; TLS verification was not disabled."
+		},
+		{
+			"source": "/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+			"commit": "ecc86cc4",
+			"base": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS",
+			"checkout": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+			"status": "FAILED",
+			"priorReceipt": "/tmp/drone-native-owner-services-final-host-gates.json",
+			"priorCommands": [
+				{
+					"command": [
+						"git",
+						"clone",
+						"--shared",
+						"--no-hardlinks",
+						"--no-checkout",
+						"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+						"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone"
+					],
+					"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/00-clone.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["git", "checkout", "--detach", "ecc86cc4"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/01-checkout.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["git", "remote", "set-url", "origin", "https://github.com/Gyoungwe/Drone.git"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/02-origin.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["npm", "ci", "--no-audit", "--no-fund"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/03-ci.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["node", "scripts/stage-plugin-runtime.mjs", "--check"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/03b-verify-public-runtime-cache.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["git", "status", "--porcelain"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/03c-source-status.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["npm", "run", "lint"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/04-lint.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["npm", "run", "typecheck"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/05-typecheck.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["npm", "test"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/06-test.log",
+					"status": "FAILED",
+					"exitCode": 1,
+					"signal": null
+				}
+			],
+			"commands": [
+				{
+					"command": ["npm", "test"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/16-test.log",
+					"status": "FAILED",
+					"pid": 536,
+					"exitCode": 1,
+					"signal": null,
+					"logSha256": "57bb6644a4ef4f332df677d28038563ea0444dd7a38fc36424c45acfec01b6e2"
+				}
+			],
+			"startedAt": "2026-10-28T15:22:04.662Z",
+			"transport": "GIT_CONFIG_COUNT=1 http.version=HTTP/1.1; TLS verification unchanged",
+			"error": "Error: 16-test failed: /var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/16-test.log",
+			"finishedAt": "2026-10-28T15:25:52.304Z",
+			"failureScope": "Docker Desktop daemon was absent; three opt-in real Docker tests failed, other backend tests passed."
+		},
+		{
+			"source": "/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+			"commit": "ecc86cc4",
+			"base": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS",
+			"checkout": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+			"status": "FAILED",
+			"priorReceipt": "/tmp/drone-native-owner-services-final-host-gates-resume.json",
+			"priorCommands": [
+				{
+					"command": [
+						"git",
+						"clone",
+						"--shared",
+						"--no-hardlinks",
+						"--no-checkout",
+						"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+						"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone"
+					],
+					"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/00-clone.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["git", "checkout", "--detach", "ecc86cc4"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/01-checkout.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["git", "remote", "set-url", "origin", "https://github.com/Gyoungwe/Drone.git"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/02-origin.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["npm", "ci", "--no-audit", "--no-fund"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/03-ci.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["node", "scripts/stage-plugin-runtime.mjs", "--check"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/03b-verify-public-runtime-cache.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["git", "status", "--porcelain"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/03c-source-status.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["npm", "run", "lint"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/04-lint.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["npm", "run", "typecheck"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/05-typecheck.log",
+					"status": "PASSED",
+					"exitCode": 0,
+					"signal": null
+				},
+				{
+					"command": ["npm", "test"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/06-test.log",
+					"status": "FAILED",
+					"exitCode": 1,
+					"signal": null
+				}
+			],
+			"commands": [
+				{
+					"command": ["npm", "test"],
+					"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/Drone",
+					"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/26-test.log",
+					"status": "FAILED",
+					"pid": 14911,
+					"exitCode": 1,
+					"signal": null,
+					"logSha256": "9e96af594e56876a89efdac10593c00e248502b290709513506140df82cb3bcd"
+				}
+			],
+			"startedAt": "2026-10-28T15:34:29.593Z",
+			"transport": "GIT_CONFIG_COUNT=1 http.version=HTTP/1.1; TLS verification unchanged",
+			"error": "Error: 26-test failed: /var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-final-host-check-UE45QS/26-test.log",
+			"finishedAt": "2026-10-28T15:38:17.451Z",
+			"failureScope": "After restarting the local Docker daemon, backend2154 and Desktop966 passed; isolated Plugin API boundary fixture omitted the newly required policy module. Fixed in bb918979 without weakening assertions."
+		}
+	]
+}
