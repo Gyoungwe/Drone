@@ -12,6 +12,7 @@ import type {
 	PluginRuntimeScope,
 } from "@gyoungwe/plugin-api/runtime";
 import { Check } from "typebox/value";
+import type { AskQuestionRoute } from "../session/ask-gate";
 import { NATIVE_EVENTS } from "./native-events";
 import {
 	PluginCapabilityBroker,
@@ -31,7 +32,9 @@ export interface PluginRuntimeActivation {
 }
 
 /** Host-only lease; identity is an object owned by the resolved caller generation, never JSON input. */
+
 export interface PluginRuntimeCaller {
+	readonly questions?: AskQuestionRoute;
 	readonly identity: object;
 	/** Distinct from a window selection lease; used only by host capability handlers. */
 	readonly sessionIdentity?: object;
@@ -424,6 +427,7 @@ export class PluginRuntimeRegistry {
 			checkCaller,
 			operationOverride,
 			caller.sessionIdentity,
+			caller.questions,
 		);
 		activation.pending.add(pending);
 		try {
@@ -443,6 +447,7 @@ export class PluginRuntimeRegistry {
 		checkCaller: () => void,
 		operationOverride?: PluginRuntimeOperation,
 		sessionIdentity?: object,
+		questions?: AskQuestionRoute,
 	): Promise<unknown> {
 		signal.throwIfAborted();
 		const runtime = await activation.ready;
@@ -472,6 +477,7 @@ export class PluginRuntimeRegistry {
 				scope,
 				callerIdentity,
 				sessionIdentity,
+				questions,
 				signal,
 				bootstrap: false,
 			},

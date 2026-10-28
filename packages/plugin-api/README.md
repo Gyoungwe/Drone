@@ -67,3 +67,6 @@ The worker has direct read access only to self-contained package bytes. `capabil
 ## Optional Node reservation implementation (1.3.0 candidate)
 
 `@gyoungwe/plugin-api/node/reservations` is an explicit Node-only subpath. It exports the existing `PluginResourceReservations` implementation shared by host and native adapters: exclusive local-user lease files, SHA-256 canonical resource keys, random owner token/PID, identity-checked release, and no automatic stale takeover. The package root, UI, runtime and native contract subpaths do not import it or Node. Importing the helper grants no filesystem permission; callers must authorize and canonicalize resource identities before reserving, drain domain and child work before release, and preserve a failed cleanup for explicit recovery.
+
+
+The unpublished 1.3 candidate defines JSON types for `session.select`, `session.input`, and `session.confirm` in the `./runtime` export. These write-effect capabilities return tagged ordinary answers or cancellation, require the caller's actual writable trusted SDK session and UI, and never grant file/model permissions. The host selects the session/window and cancels stale calls; callers cannot supply a target identity. See the Desktop UI SPEC for supported scope and lifecycle semantics.

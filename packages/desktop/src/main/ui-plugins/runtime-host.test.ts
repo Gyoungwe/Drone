@@ -14,17 +14,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const desktop = vi.hoisted(() => ({
 	showMessageBox: vi.fn(),
+	bridgeOptions: undefined as any,
 	contents: { isDestroyed: vi.fn(() => false) },
 	window: {},
 }));
 vi.mock("electron", () => ({
-	app: {},
+	app: { getPath: () => root },
 	BrowserWindow: { fromWebContents: () => desktop.window },
 	dialog: { showMessageBox: desktop.showMessageBox },
 	webContents: { fromId: () => desktop.contents },
 }));
 
-import { approveDesktopRuntime, createDesktopResourceCapabilities } from "./runtime-host";
+vi.mock("./runtime-bridge", () => ({
+	DesktopRuntimeBridge: class {
+		constructor(options: unknown) {
+			desktop.bridgeOptions = options;
+		}
+	},
+}));
+
+import {
+	approveDesktopRuntime,
+	createDesktopResourceCapabilities,
+	createDesktopRuntime,
+} from "./runtime-host";
 
 let root: string;
 let profile: string;
@@ -574,4 +587,45 @@ it("closes a pending parent-window runtime permission dialog through the actual 
 	expect(received).toBe(controller.signal);
 	controller.abort();
 	expect(await answer).toBe(false);
+});
+
+it("exposes only the four session handlers without a model declaration, then gates exactly two model handlers", async () => {
+	const handler = {
+		effect: "read",
+		inputSchema: { type: "null" },
+		resultSchema: { type: "null" },
+		execute: async () => null,
+	};
+	const handlers = Object.fromEntries(
+		[
+			"session.inspect",
+			"session.select",
+			"session.input",
+			"session.confirm",
+			"model.selection",
+			"model.generate",
+		].map((name) => [name, handler]),
+	);
+	const sessions = {
+		getPluginCallerContext: () => undefined,
+		getPluginSessionCapabilities: () => handlers,
+		getStorageRegistry: () => new StorageRegistry(),
+	};
+	createDesktopRuntime({ runtimeSource: () => source, isEnabled: () => true } as any, root, sessions as any);
+	const selected = { pluginId: "question-client", packageRoot: root, entrypoint: join(root, "question.mjs") };
+	const owner = { id: 1, isDestroyed: () => false };
+	const without = await desktop.bridgeOptions.capabilities(selected, owner)(activation());
+	expect(
+		Object.keys(without.handlers)
+			.filter((name) => name.startsWith("session."))
+			.sort(),
+	).toEqual(["session.confirm", "session.input", "session.inspect", "session.select"]);
+	expect(without.handlers["model.selection"]).toBeUndefined();
+	expect(without.handlers["model.generate"]).toBeUndefined();
+	const withModel = await desktop.bridgeOptions.capabilities(
+		{ ...selected, requestsModel: true },
+		owner,
+	)(activation());
+	expect(withModel.handlers["model.selection"]).toBe(handler);
+	expect(withModel.handlers["model.generate"]).toBe(handler);
 });

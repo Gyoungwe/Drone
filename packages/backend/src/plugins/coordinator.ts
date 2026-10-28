@@ -3,6 +3,7 @@ import type { PluginRuntimeEvent } from "@drone/shared";
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type { PluginNativeRuntimeFactory, PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type { PluginRuntimeClient } from "@gyoungwe/plugin-api/runtime";
+import type { AskQuestionRoute } from "../session/ask-gate";
 import { type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 import type {
 	PluginRuntimeCapabilitiesOptions,
@@ -39,6 +40,7 @@ export interface PluginNativeIntegration {
 }
 
 export interface PluginRuntimeBridgeOptions {
+	questionTransport?(owner: PluginRuntimeOwner): AskQuestionRoute;
 	source(name: string): PluginRuntimeSource | undefined;
 	enabled(name: string): boolean;
 	factory(source: PluginRuntimeSource): PluginNativeRuntimeFactory;
@@ -155,6 +157,7 @@ export class PluginRuntimeBridge {
 		}
 		return {
 			identity: selected,
+			questions: this.options.questionTransport?.(binding.owner.approvalOwner ?? binding.owner),
 			sessionIdentity: session?.identity,
 			scope: session?.scope ?? { kind: "application" },
 			signal: AbortSignal.any([

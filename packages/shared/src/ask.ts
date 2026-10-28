@@ -71,6 +71,11 @@ export interface AskRequest {
 	decisionProposal?: AskDecisionProposal;
 }
 
+export interface AskResolved {
+	sessionId: string;
+	requestId: string;
+}
+
 export interface AskAnswer {
 	values?: string[];
 	customText?: string;

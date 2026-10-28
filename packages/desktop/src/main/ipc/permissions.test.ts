@@ -42,3 +42,19 @@ describe("registerPermissionSettingsIpc", () => {
 		expect(sessions.getPermissionConfig).not.toHaveBeenCalled();
 	});
 });
+
+it("authenticates AskRespond with the invoking webContents rather than renderer arguments", async () => {
+	const respondAsk = vi.fn(() => false);
+	const permissions = {
+		getConfig: vi.fn(),
+		getSettings: vi.fn(),
+		saveSettings: vi.fn(),
+		resetSettings: vi.fn(),
+		probe: vi.fn(),
+		getAuditTail: vi.fn(),
+	};
+	registerPermissionSettingsIpc({ sessions: { respondAsk }, permissions } as any);
+	const handler = mocks.handlers.get(IpcChannels.AskRespond)!;
+	expect(await handler({ sender: { id: 42 } }, "question-id", { kind: "cancel" })).toBe(false);
+	expect(respondAsk).toHaveBeenCalledWith("question-id", { kind: "cancel" }, 42);
+});

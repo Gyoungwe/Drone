@@ -8,8 +8,10 @@ import type {
 } from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
 import { Check } from "typebox/value";
+import type { AskQuestionRoute } from "../session/ask-gate";
 
 export interface PluginCapabilityContext {
+	readonly questions?: AskQuestionRoute;
 	readonly pluginId: string;
 	readonly applicationId: string;
 	readonly scope: PluginRuntimeScope;

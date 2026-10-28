@@ -46,25 +46,32 @@ export function registerPermissionSettingsIpc(backendOrServices: SessionServiceP
 			if (error) throw new Error(error);
 		},
 	};
-	bindContract(PermissionsContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				load: IpcChannels.PermissionSettingsLoad,
-				save: IpcChannels.PermissionSettingsSave,
-				reset: IpcChannels.PermissionSettingsReset,
-				probe: IpcChannels.PermissionSettingsProbe,
-				auditTail: IpcChannels.PermissionSettingsAuditTail,
-				respondAsk: IpcChannels.AskRespond,
-				respondPermission: IpcChannels.PermissionRespond,
-				getConfig: IpcChannels.PermissionGetConfig,
-				getMode: IpcChannels.PermissionGetMode,
-				setMode: IpcChannels.PermissionSetMode,
-				contextManagerGetConfig: IpcChannels.ContextManagerGetConfig,
-				contextManagerSetMode: IpcChannels.ContextManagerSetMode,
-				channelWatchGetConfig: IpcChannels.ChannelWatchGetConfig,
-				channelWatchSetEnabled: IpcChannels.ChannelWatchSetEnabled,
-				respondTrust: IpcChannels.TrustRespond,
-				openLocation: IpcChannels.PermissionSettingsOpenLocation,
-			})[method as keyof typeof PermissionsContract.methods],
-	});
+	bindContract(
+		PermissionsContract,
+		(event) => ({
+			...implementation,
+			respondAsk: (requestId, response) => backend.respondAsk(requestId, response, event.sender.id),
+		}),
+		{
+			channelForMethod: (_contract, method) =>
+				({
+					load: IpcChannels.PermissionSettingsLoad,
+					save: IpcChannels.PermissionSettingsSave,
+					reset: IpcChannels.PermissionSettingsReset,
+					probe: IpcChannels.PermissionSettingsProbe,
+					auditTail: IpcChannels.PermissionSettingsAuditTail,
+					respondAsk: IpcChannels.AskRespond,
+					respondPermission: IpcChannels.PermissionRespond,
+					getConfig: IpcChannels.PermissionGetConfig,
+					getMode: IpcChannels.PermissionGetMode,
+					setMode: IpcChannels.PermissionSetMode,
+					contextManagerGetConfig: IpcChannels.ContextManagerGetConfig,
+					contextManagerSetMode: IpcChannels.ContextManagerSetMode,
+					channelWatchGetConfig: IpcChannels.ChannelWatchGetConfig,
+					channelWatchSetEnabled: IpcChannels.ChannelWatchSetEnabled,
+					respondTrust: IpcChannels.TrustRespond,
+					openLocation: IpcChannels.PermissionSettingsOpenLocation,
+				})[method as keyof typeof PermissionsContract.methods],
+		},
+	);
 }

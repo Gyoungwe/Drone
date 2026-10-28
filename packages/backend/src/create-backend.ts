@@ -167,7 +167,7 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	init(): Promise<void>;
 	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined;
 	getPluginSessionCapabilities(): ReturnType<
-		typeof import("./plugins/model-capabilities").modelCapabilityHandlers
+		import("./services/session-api").SessionServiceApi["getPluginSessionCapabilities"]
 	>;
 	getStorageRegistry(): StorageRegistry;
 	getEventRates(): Map<string, { window60s: number[]; lastEventAt: number }>;
@@ -178,7 +178,7 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	onTrustRequest(handler: (request: TrustRequest) => void): () => void;
 	onLoginEvent(handler: (payload: LoginEventPayload) => void): () => void;
 	onMcpStatus(handler: (cwd: string, status: McpStatus) => void): () => void;
-	respondAsk(requestId: string, response: AskResponse): boolean;
+	respondAsk(requestId: string, response: AskResponse, ownerId?: number): boolean;
 	respondPermission(requestId: string, answer: PermissionAnswer): void;
 	respondTrust(requestId: string, answer: TrustAnswer): void;
 	getSessionPermissionMode(sessionId: string): PermissionMode;

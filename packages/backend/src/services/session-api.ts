@@ -19,6 +19,7 @@ import type {
 import { createLogger } from "../log";
 import { modelCapabilityHandlers } from "../plugins/model-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
+import { sessionCapabilityHandlers } from "../plugins/session-capabilities";
 import { walkProjectFiles } from "../project/files";
 import { TraceRecorder } from "../session/trace";
 import type {
@@ -66,12 +67,15 @@ export class SessionServiceApi extends SessionSettingsApi {
 	}
 
 	getPluginSessionCapabilities() {
-		return modelCapabilityHandlers({
-			registry: this.host.registry,
-			getRuntime: () => this.host.getModelRuntime(),
-			getProfileModel: (name) => this.host.modelSettings.getSubagentModel(name),
-			getProfileThinking: (name) => this.host.modelSettings.getSubagentThinking(name),
-		});
+		return {
+			...sessionCapabilityHandlers(this.host.registry),
+			...modelCapabilityHandlers({
+				registry: this.host.registry,
+				getRuntime: () => this.host.getModelRuntime(),
+				getProfileModel: (name) => this.host.modelSettings.getSubagentModel(name),
+				getProfileThinking: (name) => this.host.modelSettings.getSubagentThinking(name),
+			}),
+		};
 	}
 
 	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined {
@@ -289,10 +293,10 @@ export class SessionServiceApi extends SessionSettingsApi {
 		return () => this.host.askHandlers.delete(handler);
 	}
 
-	respondAsk(requestId: string, response: AskResponse): boolean {
+	respondAsk(requestId: string, response: AskResponse, ownerId?: number): boolean {
 		for (const gates of this.host.askGates.values()) {
 			for (const gate of gates) {
-				if (gate.respond(requestId, response)) return true;
+				if (gate.respond(requestId, response, ownerId)) return true;
 			}
 		}
 		return false;
