@@ -25,7 +25,7 @@ type RunPolicy =
 
 interface DeliveryEvent {
 	readonly type: string;
-	readonly message: Record<string, unknown>;
+	readonly message: object;
 }
 const projectedEventSchema = Type.Object({
 	message: Type.Object({ role: Type.Literal("assistant"), content: Type.Array(Type.Unknown()) }),
@@ -51,11 +51,18 @@ export class NativeSessionDelivery {
 		}[],
 	) {}
 
-	/** Runs before any selected path is resolved or loaded, including paths that subsequently fail. */
-	observeSelectedPath(path: string): void {
-		if (this.closed) throw new Error("Native session delivery is closed");
+	/** A failed or incomplete actual loader reload can never reuse the previous selection receipt. */
+	invalidateSelection(): void {
 		this.selectionConfirmed = false;
-		this.selected.set(path, this.classify(path));
+	}
+
+	/** Runs before any selected path is resolved or loaded, including paths that subsequently fail. */
+	observeSelectedPath(path: string): SelectedNativeSource {
+		if (this.closed) throw new Error("Native session delivery is closed");
+		this.invalidateSelection();
+		const selected = this.classify(path);
+		this.selected.set(path, selected);
+		return selected;
 	}
 
 	/** Only the actual ResourceLoader's complete effective selection/errors receipt may call this. */
@@ -155,7 +162,8 @@ export class NativeSessionDelivery {
 		this.assertCurrent(attachment, signal);
 		if (!Check(projectedEventSchema, projected)) throw new Error("Invalid native delivery projection");
 		const output = projected as Static<typeof projectedEventSchema>;
-		for (const key of Object.keys(event.message)) delete event.message[key];
+		const message = event.message as Record<string, unknown>;
+		for (const key of Object.keys(message)) delete message[key];
 		Object.assign(event.message, output.message);
 		return undefined;
 	}

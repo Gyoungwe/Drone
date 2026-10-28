@@ -90,6 +90,7 @@ export class SessionConstructionService {
 				? undefined
 				: new CapabilityRuntime(skillVisibility);
 		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin();
+		const nativeDelivery = nativeBootstrap?.delivery;
 		let createdSession: AgentSession | undefined;
 		try {
 			const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(
@@ -128,6 +129,15 @@ export class SessionConstructionService {
 					),
 					settingsManager,
 					resourceLoader,
+					...(nativeDelivery
+						? {
+								hostDeliveryRunStart: (signal: AbortSignal) => nativeDelivery.start(signal),
+								hostDeliveryBoundary: (
+									event: Parameters<(typeof nativeDelivery)["finalize"]>[0],
+									signal: AbortSignal,
+								) => nativeDelivery.finalize(event, signal),
+							}
+						: {}),
 				},
 				runtime,
 			);
@@ -268,6 +278,7 @@ export class SessionConstructionService {
 				? undefined
 				: new CapabilityRuntime(skillVisibility);
 		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin();
+		const nativeDelivery = nativeBootstrap?.delivery;
 		let createdSession: AgentSession | undefined;
 		try {
 			const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(
@@ -296,6 +307,15 @@ export class SessionConstructionService {
 				{
 					settingsManager,
 					resourceLoader,
+					...(nativeDelivery
+						? {
+								hostDeliveryRunStart: (signal: AbortSignal) => nativeDelivery.start(signal),
+								hostDeliveryBoundary: (
+									event: Parameters<(typeof nativeDelivery)["finalize"]>[0],
+									signal: AbortSignal,
+								) => nativeDelivery.finalize(event, signal),
+							}
+						: {}),
 					excludeTools: excludedBuiltinTools(),
 					customTools: buildSessionCustomTools(
 						this.host.sessionExtensionDependencies(),

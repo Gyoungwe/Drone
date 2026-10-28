@@ -148,6 +148,7 @@ export {
 	PluginFileCapabilities,
 	type PluginRootGrant,
 } from "./plugins/file-capabilities";
+export type { SelectedNativeSource } from "./plugins/native-delivery";
 export { createProcessPluginRuntime } from "./plugins/process-runtime";
 export { PluginResourceManager, type PluginResourceManagerOptions } from "./plugins/resource-capabilities";
 export type {

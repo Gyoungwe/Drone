@@ -53,3 +53,12 @@ export {
 	AntigravityError,
 	safeAntigravityError,
 } from "./antigravity/types";
+
+/** Host-only callback type from the pinned ResourceLoader constructor, never plugin-supplied JSON. */
+export type HostExtensionSelectionReceipt = Parameters<
+	NonNullable<
+		ConstructorParameters<
+			typeof import("@earendil-works/pi-coding-agent").DefaultResourceLoader
+		>[0]["hostExtensionSelection"]
+	>
+>[0];
