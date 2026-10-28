@@ -471,3 +471,8 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 ### SDK 忽略不存在的路径时，空 interception 不能证明没有发布策略
 
 锁定 Pi 1.1.0 的资源解析会先忽略不存在的 settings/package entry，扩展导入拦截因此看不到失败来源。宿主专用 `hostExtensionSelection` 在实际 reload 开始即失效旧回执，完成时交付本次启用路径；仅该观察者存在时保留缺失 literal/glob/package 为不可解析选择。SDK 的资源排除规则仍生效，不从全安装目录推断本会话已选择什么。无观察者对照保持原 SDK 行为。未知来源在执行代码前拒绝，实际 SDK run 无法公开或持久化未验证正文；只明确排除后的后继 run 可恢复普通聊天。来源分类只在文件/清单读取边界捕获失败并记录关闭结果，内部逻辑错误继续抛出。真实 SDK 29 项与实际文件来源 52 项通过；整包动态启停、完整领域 consumer 和正式安装包继续验收。
+
+
+## Node 内置 SQLite 与普通插件 worker
+
+不要把 Node 的 FS permission 当作所有内置模块的文件访问隔离。普通 domain worker 通过官方 `--no-experimental-sqlite` 关闭该入口；实际 factory/worker 测试只验证 import 被拒绝。SQLite index resource 的兼容与更强隔离仍需独立验证，不能继承普通 worker 的通过结论。详见 [防御证据](pluginization/node-sqlite-worker-defense.md)。

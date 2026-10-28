@@ -223,6 +223,8 @@ export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions)
 			executable,
 			[
 				"--permission",
+				// Node FS permissions do not cover node:sqlite; domain code must use host capabilities.
+				...(options.resource ? [] : ["--no-experimental-sqlite"]),
 				`--allow-fs-read=${packageRoot}`,
 				...(options.resource
 					? [

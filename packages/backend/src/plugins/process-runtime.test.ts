@@ -55,6 +55,23 @@ it("denies activation without starting or resolving plugin code", async () => {
 });
 
 describe.skipIf(!hasRuntime)("packaged process desktop runtime", () => {
+	it("disables the SQLite builtin in the actual ordinary domain worker", async () => {
+		const options = await fixture(
+			`export default async()=>{let code='import-was-allowed';try{await import('node:sqlite');}catch(error){code=error.code;}return{operations:{status:{inputSchema:{type:'null'},resultSchema:{type:'object'},effect:'read',execute:async()=>({code,disabled:process.execArgv.includes('--no-experimental-sqlite')})}},dispose:async()=>{}};};`,
+		);
+		const registry = new PluginRuntimeRegistry(allow);
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		try {
+			expect(await client.invoke("status", null)).toEqual({
+				code: "ERR_UNKNOWN_BUILTIN_MODULE",
+				disabled: true,
+			});
+		} finally {
+			await registry.deactivate("example");
+		}
+	});
+
 	it("delivers the owned resource cleanup receipt without a live invocation after cancellation", async () => {
 		const options = await fixture(`export default async ({signal,resourcesLifecycle})=>({
  operations:{probe:{inputSchema:{type:"null"},resultSchema:{type:"number"},effect:"read",execute:async()=>process.pid}},
