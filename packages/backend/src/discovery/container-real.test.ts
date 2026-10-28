@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -9,12 +10,14 @@ import { expect, it, vi } from "vitest";
 import { createDiscoveryService } from "./service";
 
 const tarball = process.env.DRONE_DISCOVERY_PLUGIN_TARBALL;
+const apiTarball = process.env.DRONE_PLUGIN_API_TARBALL;
 const enabled = process.env.DRONE_DISCOVERY_REAL_CONTAINER === "1";
 const exec = promisify(execFile);
 
 it.skipIf(!enabled || !tarball)(
 	"verifies real owned-container cleanup for normal exit, failed exit, close, timeout and dispose",
 	async () => {
+		if (!apiTarball) throw new Error("Real container acceptance requires the matching API tarball");
 		const root = await mkdtemp(join(tmpdir(), "discovery-real-cleanup-"));
 		const engine = async (...args: string[]) => (await exec("docker", args)).stdout.trim();
 		try {
@@ -37,6 +40,7 @@ it.skipIf(!enabled || !tarball)(
 				"--no-audit",
 				"--no-fund",
 				tarball as string,
+				apiTarball,
 			]);
 			const { discoveryHostLoader } = (await import(
 				/* @vite-ignore */ pathToFileURL(join(prefix, "node_modules/@gyoungwe/pi-discovery/dist/host.mjs"))
@@ -119,7 +123,22 @@ it.skipIf(!enabled || !tarball)(
 					results[id] = `${execution.status}; responsive daemon readback shows no owned container`;
 				}
 				console.log(
-					`DISCOVERY_REAL_CONTAINER=${JSON.stringify({ status: "PASS", engine: version, image: { source: "python:3.12-slim (already installed; pull=never)", id: imageId }, data: "synthetic temporary workspace only", results, formalGui: "NOT_RUN" })}`,
+					`DISCOVERY_REAL_CONTAINER=${JSON.stringify({
+						status: "PASS",
+						scope:
+							"installed canonical package via legacy host adapter; managed SDK/UI requires separate acceptance",
+						engine: version,
+						packageSha256: createHash("sha256")
+							.update(await readFile(tarball as string))
+							.digest("hex"),
+						apiSha256: createHash("sha256")
+							.update(await readFile(apiTarball))
+							.digest("hex"),
+						image: { source: "python:3.12-slim (already installed; pull=never)", id: imageId },
+						data: "synthetic temporary workspace only",
+						results,
+						formalGui: "NOT_RUN",
+					})}`,
 				);
 			} finally {
 				await service.dispose();
