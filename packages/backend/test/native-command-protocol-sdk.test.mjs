@@ -44,7 +44,7 @@ const source = `export default async({capabilities}) => {
   }});
  }};}};
 };`;
-async function setup(commandSource = source) {
+async function setup(commandSource = source, nativeName = "command-ui") {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-managed-command-")));
 	const pkg = join(root, "package"),
 		agentDir = join(root, "agent");
@@ -126,7 +126,7 @@ async function setup(commandSource = source) {
 			nativeRuntime: {
 				manages: (path) => path === nativeEntrypoint,
 				begin: () =>
-					bridge.beginNative(window, (path) => (path === nativeEntrypoint ? "command-ui" : undefined)),
+					bridge.beginNative(window, (path) => (path === nativeEntrypoint ? nativeName : undefined)),
 			},
 		},
 	});
@@ -412,5 +412,37 @@ it("a UI-only transition drains window callers while the actual native SDK run a
 	} finally {
 		release();
 		await prompt;
+	}
+}, 20000);
+
+it("keeps a source teardown barrier after actual SDK abort receipt failure even when domain cleanup succeeds", async () => {
+	const state = await setup(source, "package-native-alias");
+	await state.backend.sessions.command(state.first.sessionId, "record", "before failed teardown");
+	const pid = (await state.snapshot())[0].pid;
+	const actualAbort = state.first.abort.bind(state.first);
+	let aborted = false;
+	state.first.abort = async () => {
+		await actualAbort();
+		aborted = true;
+		throw new Error("Injected SDK abort receipt failure after real cleanup");
+	};
+	try {
+		state.setEnabled(false);
+		await expect(state.bridge.revoke()).rejects.toThrow("disposal failed");
+		expect(aborted).toBe(true);
+		expect(() => process.kill(pid, 0)).toThrow(); // Real domain worker cleanup completed successfully.
+		state.setEnabled(true);
+		const transition = await state.bridge.withTransition(async () => "opened").catch(() => "blocked");
+		const rebind = await state.bridge.bind("command-ui", state.window).then(
+			() => "opened",
+			() => "blocked",
+		);
+		expect({ transition, rebind }).toEqual({ transition: "blocked", rebind: "blocked" });
+	} finally {
+		state.first.abort = actualAbort;
+		fixtures.splice(fixtures.indexOf(state), 1);
+		// The deliberately failed receipt stays failed; shutdown still drains all actual resources.
+		await Promise.allSettled([state.backend.dispose(), state.bridge.close()]);
+		await rm(state.root, { recursive: true, force: true });
 	}
 }, 20000);
