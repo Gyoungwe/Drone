@@ -1,5 +1,16 @@
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
-import type { PluginRuntimeContext } from "./runtime.js";
+import type { PluginRuntimeContext, PluginRuntimeSchema } from "./runtime.js";
+
+/** Called only by the host for the current actual SDK event and its already-bound native attachment.
+ * Event identity is private transport metadata, never an input-selected message or serialized proof.
+ */
+export interface PluginNativeOperation {
+	readonly event: "message_start" | "tool_execution_end";
+	readonly inputSchema: PluginRuntimeSchema;
+	readonly resultSchema: PluginRuntimeSchema;
+	readonly effect: "read" | "write";
+	execute(input: unknown, event: unknown, context: PluginRuntimeContext): Promise<unknown>;
+}
 
 /** Official Pi registration owned by one real host session, sharing the application's domain owner. */
 export interface PluginNativeSession {
@@ -10,6 +21,8 @@ export interface PluginNativeSession {
 	readonly commandEffects?: Readonly<Record<string, "read" | "write">>;
 	/** Session start is read-only; other hooks default to write unless declared here. */
 	readonly eventEffects?: Readonly<Record<string, "read" | "write">>;
+	/** Same-owner service callbacks for a host-proven native event; ordinary operations cannot invoke these. */
+	readonly nativeOperations?: Readonly<Record<string, PluginNativeOperation>>;
 	/** Projection executes where the plugin's live proof objects were created; JSON is not a proof. */
 	readonly projection?: {
 		/** Runs once after every official SDK hook and before public delivery or append. */
