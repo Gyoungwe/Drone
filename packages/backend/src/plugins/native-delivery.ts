@@ -1,6 +1,9 @@
 import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
+import type { RawMessage } from "../session/messages";
+import type { HostExportInput, HostExportProjection } from "../session-engine/sdk";
 import type { PluginRuntimeSource } from "./coordinator";
+import { neutralDeliveryMessage, projectDeliveryEvent } from "./delivery-projection";
 import type { ManagedNativeSession } from "./runtime";
 
 export type SelectedNativeSource =
@@ -30,6 +33,7 @@ interface DeliveryEvent {
 const projectedEventSchema = Type.Object({
 	message: Type.Object({ role: Type.Literal("assistant"), content: Type.Array(Type.Unknown()) }),
 });
+const snapshotSchema = Type.Array(Type.Object({ role: Type.String() }));
 const identity = (source: PluginRuntimeSource) => `${source.pluginId}\0${source.packageRoot}`;
 
 /** Host-only delivery authority for one actual SDK session; no input can self-report a source or run. */
@@ -40,6 +44,8 @@ export class NativeSessionDelivery {
 	private readonly finalized = new WeakSet<object>();
 	private readonly pending = new Set<Promise<unknown>>();
 	private selectionConfirmed = false;
+	private currentRun: RunPolicy | undefined;
+	private readonly delivered = new WeakMap<object, { attachment: Attachment; fingerprint: string }>();
 	private closed = false;
 
 	constructor(
@@ -87,7 +93,8 @@ export class NativeSessionDelivery {
 
 	/** Called synchronously by the SDK at the actual agent_start, before every extension hook. */
 	start(signal: AbortSignal): undefined {
-		this.runs.set(signal, this.policy());
+		this.currentRun = this.policy();
+		this.runs.set(signal, this.currentRun);
 		return undefined;
 	}
 
@@ -121,24 +128,30 @@ export class NativeSessionDelivery {
 		return { kind: "closed" };
 	}
 
-	private assertCurrent(attachment: Attachment, signal: AbortSignal): void {
-		signal.throwIfAborted();
+	private available(attachment: Attachment): boolean {
 		const source = this.currentSources().find(
 			(value) => identity(value.source) === identity(attachment.source),
 		);
-		if (
-			this.closed ||
-			!this.attachments.has(attachment) ||
-			!attachment.current() ||
-			source?.state !== "enabled" ||
-			!this.sameSource(attachment.source, source.source)
-		)
-			throw new Error("Native delivery source was revoked");
+		return (
+			!this.closed &&
+			this.attachments.has(attachment) &&
+			attachment.current() &&
+			source?.state === "enabled" &&
+			this.sameSource(attachment.source, source.source)
+		);
+	}
+
+	private assertCurrent(attachment: Attachment, signal?: AbortSignal): void {
+		signal?.throwIfAborted();
+		if (!this.available(attachment)) throw new Error("Native delivery source was revoked");
 	}
 
 	/** The SDK awaits this after all real hooks and before public delivery or durable append. */
 	finalize(event: DeliveryEvent, signal: AbortSignal): Promise<undefined | false> {
-		const pending = this.finish(event, signal);
+		return this.track(this.finish(event, signal));
+	}
+
+	private track<T>(pending: Promise<T>): Promise<T> {
 		this.pending.add(pending);
 		void pending.then(
 			() => this.pending.delete(pending),
@@ -165,7 +178,86 @@ export class NativeSessionDelivery {
 		const message = event.message as Record<string, unknown>;
 		for (const key of Object.keys(message)) delete message[key];
 		Object.assign(event.message, output.message);
+		this.delivered.set(event.message, { attachment, fingerprint: JSON.stringify(event.message) });
 		return undefined;
+	}
+
+	/** Synchronous fanout uses only the exact SDK object already judged by its live owner. */
+	projectEvent<T extends { type: string }>(event: T): T | null {
+		if (!this.closed && (this.currentRun ?? this.policy()).kind === "ordinary") return event;
+		return projectDeliveryEvent(event, (message, starting) => {
+			const receipt = this.delivered.get(message);
+			return !starting &&
+				receipt &&
+				this.available(receipt.attachment) &&
+				receipt.fingerprint === JSON.stringify(message)
+				? message
+				: neutralDeliveryMessage(message, starting);
+		});
+	}
+
+	/** Historical aliases are supplied only by the host's actual SDK current-branch origin reader. */
+	snapshot(messages: RawMessage[], historical: RawMessage[], signal?: AbortSignal): Promise<RawMessage[]> {
+		return this.track(this.projectSnapshot(messages, historical, signal));
+	}
+
+	private async projectSnapshot(
+		messages: RawMessage[],
+		historical: RawMessage[],
+		signal?: AbortSignal,
+	): Promise<RawMessage[]> {
+		const policy = this.policy();
+		if (policy.kind === "ordinary") return messages;
+		if (policy.kind !== "required") return messages.map((message) => neutralDeliveryMessage(message));
+		const { attachment } = policy;
+		this.assertCurrent(attachment, signal);
+		const result = await attachment.projection.snapshot(messages, historical, signal);
+		this.assertCurrent(attachment, signal);
+		if (
+			!Check(snapshotSchema, result) ||
+			result.length !== messages.length ||
+			result.some((message, index) => message.role !== messages[index]!.role)
+		)
+			throw new Error("Invalid native snapshot projection");
+		return result as RawMessage[];
+	}
+
+	isOrdinaryForExport(): boolean {
+		return this.policy().kind === "ordinary" && this.pending.size === 0;
+	}
+
+	/** Only the actual SDK supplies these entry objects and current-branch identity associations. */
+	exportProjection(input: HostExportInput): Promise<HostExportProjection> {
+		return this.track(this.projectExport(input));
+	}
+
+	private async projectExport({ entries, origins }: HostExportInput): Promise<HostExportProjection> {
+		const policy = this.policy();
+		if (policy.kind === "closed") throw new Error("Native export source authority is unavailable");
+		const assertCurrent = () => {
+			if (policy.kind === "required") this.assertCurrent(policy.attachment);
+			else if (this.policy().kind !== "ordinary") throw new Error("Native export selection changed");
+		};
+		assertCurrent();
+		if (policy.kind === "ordinary") return { messages: new Map(), assertCurrent };
+		const messageEntries = entries.filter(
+			(entry): entry is Extract<(typeof entries)[number], { type: "message" }> => entry.type === "message",
+		);
+		const historical: RawMessage[] = [];
+		const raw = messageEntries.map((entry) => {
+			const origin = origins.find((value) => value.entry === entry);
+			if (origin && JSON.stringify(origin.message) === JSON.stringify(entry.message)) {
+				historical.push(origin.message as RawMessage);
+				return origin.message as RawMessage;
+			}
+			return neutralDeliveryMessage(entry.message as RawMessage);
+		});
+		const output = await this.snapshot(raw, historical);
+		assertCurrent();
+		const messages: HostExportProjection["messages"] = new Map(
+			messageEntries.map((entry, index) => [entry, output[index] as (typeof entry)["message"]]),
+		);
+		return { messages, assertCurrent };
 	}
 
 	/** Call only after the actual SDK abort has settled; a failed owner is never silently reopened. */
