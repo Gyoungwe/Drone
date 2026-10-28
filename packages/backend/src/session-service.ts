@@ -46,7 +46,12 @@ import type { AskGate } from "./session/ask-gate";
 import { ModelWaitMonitor } from "./session/model-wait";
 import { EventRateTracker } from "./session/rates";
 import { SessionRecovery } from "./session/recovery";
-import { type EventForwarder, SessionRegistry } from "./session/registry";
+import {
+	combinedSessionDirectory,
+	type EventForwarder,
+	type RegisteredSession,
+	SessionRegistry,
+} from "./session/registry";
 import { StreamGuard } from "./session/stream-guard";
 import { SessionTraces } from "./session/traces";
 import { getAgentDir, type ModelRuntime, SessionEngine } from "./session-engine/engine";
@@ -153,6 +158,8 @@ export class SessionService extends SessionServiceApi {
 	/** Session-bound knowledge actions exposed through BackendServices. */
 	readonly knowledgeSession!: KnowledgeSessionService;
 	readonly registry = new SessionRegistry();
+	readonly childSessions = new SessionRegistry();
+	readonly pluginSessions = combinedSessionDirectory(this.registry, this.childSessions);
 	readonly askHandlers = new Set<AskHandler>();
 	readonly trustHandlers = new Set<TrustHandler>();
 	readonly loginHandlers = new Set<LoginHandler>();
@@ -188,8 +195,12 @@ export class SessionService extends SessionServiceApi {
 	readonly traces = new SessionTraces();
 	readonly subagentPanel = new SubagentPanelService({
 		runner: {
-			registerAnswerPublication: (...args) =>
-				this.runtime?.knowledge.registerAnswerPublication?.(...args) ?? { begin: () => undefined },
+			nativeChildren: () => {
+				const integration = this.options.desktopIntegration?.nativeRuntime;
+				return integration
+					? { integration, register: (entry) => this.registerChildSession(entry) }
+					: undefined;
+			},
 			getModelRuntime: () => this.getModelRuntime(),
 			getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
 			traces: this.traces,
@@ -277,6 +288,12 @@ export class SessionService extends SessionServiceApi {
 		return this.models;
 	}
 
+	/** Running subagent children resolve for plugin capabilities only; the returned function revokes them. */
+	registerChildSession(entry: RegisteredSession): () => void {
+		this.childSessions.add(entry);
+		return () => this.childSessions.delete(entry.session.sessionId);
+	}
+
 	sessionExtensionDependencies(): SessionExtensionDependencies {
 		return {
 			coreHost: this.options.coreHost,
@@ -303,6 +320,7 @@ export class SessionService extends SessionServiceApi {
 					if (this.liveSubagents.get(sessionId) === control) this.liveSubagents.delete(sessionId);
 				};
 			},
+			registerChildSession: (entry) => this.registerChildSession(entry),
 			setMcpStatus: (cwd, status) => this.setMcpStatus(cwd, status),
 			// Registers ssh_hosts and lets ssh/bio tools resolve registered host names; the ssh tool's
 			// prompt guideline tells the model to call ssh_hosts, so it must be present whenever the host has a registry.

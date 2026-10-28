@@ -565,6 +565,7 @@ export function createNativeRuntimeIntegration(
 	const findName = (path: string) => manager().nativeRuntimeName(path);
 	return {
 		manages: (path) => manager().classifyNativeSelection(path).kind !== "ordinary",
+		childExtensionPaths: () => manager().nativeChildExtensionPaths(),
 		begin: (facts) => {
 			const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
 			if (!window || window.isDestroyed())

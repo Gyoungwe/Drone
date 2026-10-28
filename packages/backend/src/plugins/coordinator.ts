@@ -59,6 +59,8 @@ export interface PluginNativeBootstrap {
 export interface PluginNativeIntegration {
 	begin(facts?: PluginNativeSessionFacts): PluginNativeBootstrap;
 	manages(path: string): boolean;
+	/** Native entries of packages that declared read-only child session support. */
+	childExtensionPaths(): readonly string[];
 }
 
 export interface PluginRuntimeBridgeOptions {

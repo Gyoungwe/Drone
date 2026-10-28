@@ -1,4 +1,4 @@
-import { type DroneRuntime, normalizeSubagentLaunchInputs, type SessionEvent } from "@drone/shared";
+import { normalizeSubagentLaunchInputs, type SessionEvent } from "@drone/shared";
 import type {
 	AgentToolResult,
 	ExtensionContext,
@@ -10,7 +10,7 @@ import { type Static, Type } from "typebox";
 import type { PermissionGate } from "../../permissions/gate";
 import type { SessionTraces } from "../../session/traces";
 import { discoverAgents, findAgent } from "./agents";
-import { runSubagent, type SingleResult } from "./runner";
+import { type NativeChildSessions, runSubagent, type SingleResult } from "./runner";
 
 const MAX_TASKS = 8;
 /** 未知模式（无能力运行时）时的默认并发；有模式时由 deps.maxConcurrency 决定（H1） */
@@ -66,7 +66,7 @@ export const subagentParams = Type.Object({
 export interface MakeSubagentToolDeps {
 	/** Optional installed pi-core host port; absent means core child tools are unavailable. */
 	coreHost?: CoreHostPort;
-	registerAnswerPublication?: DroneRuntime["knowledge"]["registerAnswerPublication"];
+	nativeChildren?: () => NativeChildSessions | undefined;
 	getModelRuntime: () => Promise<ModelRuntime>;
 	getSubagentModel: (agentName: string) => Promise<string | undefined>;
 	gate: PermissionGate;

@@ -1,6 +1,6 @@
 import type { PluginRuntimeScope } from "@gyoungwe/plugin-api/runtime";
 import { canonicalProjectId } from "../project-id";
-import type { SessionRegistry } from "../session/registry";
+import type { SessionDirectory } from "../session/registry";
 import type { PluginRuntimeCaller } from "./runtime";
 import type { PluginCapabilityContext } from "./runtime-capabilities";
 
@@ -14,7 +14,7 @@ export interface PluginSessionCallerContext extends PluginRuntimeCaller {
 }
 
 export function getPluginSessionCaller(
-	registry: SessionRegistry,
+	registry: SessionDirectory,
 	sessionId: string,
 ): PluginSessionCallerContext | undefined {
 	const entry = registry.get(sessionId);
@@ -39,7 +39,7 @@ export function getPluginSessionCaller(
 }
 
 /** Resolve only the host's exact live entry, never a plugin-selected target. */
-export function requirePluginSession(registry: SessionRegistry, context: PluginCapabilityContext) {
+export function requirePluginSession(registry: SessionDirectory, context: PluginCapabilityContext) {
 	context.signal.throwIfAborted();
 	if (context.scope.kind !== "session") throw new Error("Plugin capability requires a selected live session");
 	const entry = registry.get(context.scope.sessionId);

@@ -7,14 +7,14 @@ import type {
 	PluginModelToolStepInput,
 } from "@gyoungwe/plugin-api/runtime";
 import { hostText } from "../reply-language";
-import type { SessionRegistry } from "../session/registry";
+import type { SessionDirectory } from "../session/registry";
 import { completeModelToolStep } from "../session-engine/model-tool-step";
 import { generateStructuredModel, resolvedModelThinking } from "../session-engine/structured-model";
 import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
 import { requirePluginSession } from "./session-caller";
 
 export interface PluginModelCapabilitiesDependencies {
-	registry: SessionRegistry;
+	registry: SessionDirectory;
 	getRuntime(): Promise<ModelRuntime>;
 	getProfileModel(profile: string): Promise<string | undefined>;
 	getProfileThinking(profile: string): Promise<ModelThinkingLevel | undefined>;

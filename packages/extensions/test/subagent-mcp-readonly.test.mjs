@@ -18,8 +18,10 @@ test("packaged read-only MCP preserves resource paths and the tool allowlist", a
 		platform: "node",
 		logLevel: "silent",
 	});
+	// Knowledge for children comes from the knowledge package's own read-only child session: a bound
+	// knowledge directory no longer turns this bridge into an in-process knowledge interface.
 	const knowledgeDir = process.env.DRONE_KNOWLEDGE_DIR;
-	delete process.env.DRONE_KNOWLEDGE_DIR;
+	process.env.DRONE_KNOWLEDGE_DIR = join(root, "knowledge");
 	t.after(() => {
 		if (knowledgeDir === undefined) delete process.env.DRONE_KNOWLEDGE_DIR;
 		else process.env.DRONE_KNOWLEDGE_DIR = knowledgeDir;

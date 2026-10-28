@@ -144,6 +144,7 @@ export async function withPackedKnowledgeOwner(work) {
 					: { kind: "unconfirmed" },
 			enabled: () => true,
 			getSessionContext: (id) => getPluginSessionCaller(sessions, id),
+			// The same bridge serves running subagent children through the backend's child registry.
 			approve: async (_owner, _source, operation) => {
 				approvals.push(operation);
 				return approveInvocation(operation);
@@ -256,14 +257,22 @@ export async function withPackedKnowledgeOwner(work) {
 				noContextFiles: true,
 				nativeRuntime: {
 					manages: (path) => path === source.nativeEntrypoint,
-					begin: () =>
-						(bootstrap = bridge.beginNative(window, (path) =>
-							path === source.nativeEntrypoint ? "installed" : undefined,
-						)),
+					childExtensionPaths: () =>
+						source.nativeChildSessions === "read-only" ? [source.nativeEntrypoint] : [],
+					begin: (facts) => {
+						const begun = bridge.beginNative(
+							window,
+							(path) => (path === source.nativeEntrypoint ? "installed" : undefined),
+							facts,
+						);
+						if (facts?.kind !== "child") bootstrap = begun;
+						return begun;
+					},
 				},
 			},
 		});
-		sessions = backend.registry;
+		// Primary sessions and running children, exactly as the backend resolves plugin capabilities.
+		sessions = backend.pluginSessions;
 		engine = backend.sessionEngine;
 		backend.modelRuntime = modelRuntime;
 		backend.onEvent((_id, event) => {

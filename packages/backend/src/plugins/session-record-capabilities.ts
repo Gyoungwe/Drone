@@ -1,7 +1,7 @@
 import type { PluginSessionNotifyInput, PluginSessionRecordAppendInput } from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
 import { hostText } from "../reply-language";
-import type { SessionRegistry } from "../session/registry";
+import type { SessionDirectory } from "../session/registry";
 import type { SessionRecordStore } from "../session-engine/session-records";
 import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
 import { requirePluginSession } from "./session-caller";
@@ -23,7 +23,7 @@ const logicalType = Type.String({ minLength: 1, maxLength: 128 });
 const durability = Type.Union([Type.Literal("durable"), Type.Literal("deferred")]);
 
 export function sessionRecordCapabilityHandlers(
-	registry: SessionRegistry,
+	registry: SessionDirectory,
 	store: SessionRecordStore,
 ): Record<"session.records.read" | "session.records.append" | "session.notify", PluginCapabilityHandler> {
 	function entryFor(context: PluginCapabilityContext, writable: boolean) {

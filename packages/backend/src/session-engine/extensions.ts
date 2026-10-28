@@ -20,8 +20,10 @@ import {
 	type PermissionModeRef,
 } from "../permissions/extension";
 import type { PermissionGate } from "../permissions/gate";
+import type { PluginNativeIntegration } from "../plugins/coordinator";
 import { canonicalProjectId } from "../project-id";
 import type { AskGate } from "../session/ask-gate";
+import type { RegisteredSession } from "../session/registry";
 import type { SessionTraces } from "../session/traces";
 import { makeAskUserTool } from "../tools/ask-user";
 import { makeBioDatabaseTool } from "../tools/bio/databases";
@@ -81,6 +83,7 @@ export interface SessionExtensionDependencies {
 	tools?: string[];
 	customTools?: ToolDefinition[];
 	desktopIntegration?: {
+		nativeRuntime?: PluginNativeIntegration;
 		academicPiRoot?: string;
 		additionalExtensionPaths?: string[];
 		additionalPromptTemplatePaths?: string[];
@@ -93,6 +96,8 @@ export interface SessionExtensionDependencies {
 	traces: SessionTraces;
 	onEvent: (sessionId: string, event: SessionEvent) => void;
 	registerLiveChild?: (sessionId: string, control: LiveChildControl) => () => void;
+	/** Child-only registry for running subagents; never listed, reopened or reloaded. */
+	registerChildSession?: (entry: RegisteredSession) => () => void;
 	setMcpStatus: (cwd: string, status: McpStatus) => void;
 	/** 已登记的远程主机（设置 › 高级 › SSH 主机）；缺省则 ssh 只认 ~/.ssh/config 与直接主机名 */
 	listSshHosts?: () => Promise<SshHostEntry[]>;
@@ -164,7 +169,11 @@ export function buildSessionCustomTools(
 		tools.push(
 			makeSubagentTool({
 				coreHost: deps.coreHost,
-				registerAnswerPublication: deps.runtime.knowledge.registerAnswerPublication,
+				nativeChildren: () => {
+					const integration = deps.desktopIntegration?.nativeRuntime;
+					const register = deps.registerChildSession;
+					return integration && register ? { integration, register } : undefined;
+				},
 				getModelRuntime: deps.getModelRuntime,
 				getSubagentModel: deps.getSubagentModel,
 				gate,

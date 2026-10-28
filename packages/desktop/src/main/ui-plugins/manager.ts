@@ -630,6 +630,20 @@ export class UiPluginManager {
 		}));
 	}
 
+	/**
+	 * Native entries of current packages that declared read-only child session support. A child
+	 * session loads only these; the actual loader selection is still classified per path.
+	 */
+	nativeChildExtensionPaths(): string[] {
+		const paths: string[] = [];
+		for (const [name, item] of this.packageSources) {
+			if (item.source.nativeChildSessions !== "read-only" || !this.runtimeSource(name)) continue;
+			const path = item.source.nativeDeclaredPath ?? item.source.nativeEntrypoint;
+			if (path) paths.push(path);
+		}
+		return paths;
+	}
+
 	/** Called only for a path selected by the actual Pi extension loader. UI visibility grants no native authority. */
 	nativeRuntimeName(path: string): string | undefined {
 		let declared = resolve(path);

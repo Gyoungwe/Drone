@@ -73,11 +73,15 @@ export class SessionServiceApi extends SessionSettingsApi {
 
 	getPluginSessionCapabilities(recordAdoptions?: PluginRecordAdoptions) {
 		return {
-			...sessionCapabilityHandlers(this.host.registry),
-			...sessionRecordCapabilityHandlers(this.host.registry, this.pluginSessionRecords),
-			...sessionAdoptionCapabilityHandlers(this.host.registry, this.pluginSessionRecords, recordAdoptions),
+			...sessionCapabilityHandlers(this.host.pluginSessions),
+			...sessionRecordCapabilityHandlers(this.host.pluginSessions, this.pluginSessionRecords),
+			...sessionAdoptionCapabilityHandlers(
+				this.host.pluginSessions,
+				this.pluginSessionRecords,
+				recordAdoptions,
+			),
 			...modelCapabilityHandlers({
-				registry: this.host.registry,
+				registry: this.host.pluginSessions,
 				getRuntime: () => this.host.getModelRuntime(),
 				getProfileModel: (name) => this.host.modelSettings.getSubagentModel(name),
 				getProfileThinking: (name) => this.host.modelSettings.getSubagentThinking(name),
@@ -86,7 +90,7 @@ export class SessionServiceApi extends SessionSettingsApi {
 	}
 
 	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined {
-		return getPluginSessionCaller(this.host.registry, sessionId);
+		return getPluginSessionCaller(this.host.pluginSessions, sessionId);
 	}
 
 	async closeSession(sessionId: string): Promise<void> {

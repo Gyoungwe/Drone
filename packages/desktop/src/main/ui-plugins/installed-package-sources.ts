@@ -66,6 +66,8 @@ export interface InstalledUiRuntimeSource {
 	pluginId: string;
 	contentHash: string;
 	deliveryProjection?: "required";
+	/** The package's native entry may serve host subagent child sessions, read-only. */
+	nativeChildSessions?: "read-only";
 	provides?: Readonly<Record<string, PluginServiceProvision>>;
 	requires?: Readonly<Record<string, PluginServiceRequirement>>;
 	recordAdoptions?: PluginRecordAdoptions;
@@ -237,6 +239,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 						hosts?: unknown;
 						drone?: {
 							deliveryProjection?: unknown;
+							nativeChildSessions?: unknown;
 							provides?: unknown;
 							requires?: unknown;
 							recordAdoptions?: unknown;
@@ -290,6 +293,11 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 					if (manifest.drone.deliveryProjection !== "required")
 						throw new Error("drone.deliveryProjection must be required when declared");
 					runtime.deliveryProjection = "required";
+				}
+				if (manifest.drone?.nativeChildSessions !== undefined) {
+					if (manifest.drone.nativeChildSessions !== "read-only")
+						throw new Error("drone.nativeChildSessions must be read-only when declared");
+					runtime.nativeChildSessions = "read-only";
 				}
 				Object.assign(runtime, installedServices(manifest.drone ?? {}));
 				if (manifest.drone?.recordAdoptions !== undefined)
@@ -357,6 +365,10 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 		}
 		if (manifest.drone?.deliveryProjection !== undefined && !runtime) {
 			discoveries.push({ packageName, error: "drone.deliveryProjection requires a desktopRuntime owner" });
+			continue;
+		}
+		if (manifest.drone?.nativeChildSessions !== undefined && !runtime) {
+			discoveries.push({ packageName, error: "drone.nativeChildSessions requires a desktopRuntime owner" });
 			continue;
 		}
 		if ((manifest.drone?.provides !== undefined || manifest.drone?.requires !== undefined) && !runtime) {

@@ -5,7 +5,7 @@ import type {
 } from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
 import { hostText } from "../reply-language";
-import type { SessionRegistry } from "../session/registry";
+import type { SessionDirectory } from "../session/registry";
 import type { SessionRecordStore } from "../session-engine/session-records";
 import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
 import { requirePluginSession } from "./session-caller";
@@ -28,7 +28,7 @@ const json = Type.Cyclic(
 
 /** The host composition root supplies declarations from this activation's verified installed source. */
 export function sessionAdoptionCapabilityHandlers(
-	registry: SessionRegistry,
+	registry: SessionDirectory,
 	store: SessionRecordStore,
 	declarations: PluginRecordAdoptions | undefined,
 ): Record<"session.records.adoption.inspect" | "session.records.adoption.commit", PluginCapabilityHandler> {

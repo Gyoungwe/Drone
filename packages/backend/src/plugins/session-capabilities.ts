@@ -4,7 +4,7 @@ import type {
 	PluginSessionSelectInput,
 } from "@gyoungwe/plugin-api/runtime";
 import { hostText } from "../reply-language";
-import type { SessionRegistry } from "../session/registry";
+import type { SessionDirectory } from "../session/registry";
 import { withSessionQuestion } from "../session-engine/session-questions";
 import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
 import { requirePluginSession } from "./session-caller";
@@ -17,7 +17,7 @@ const cancelled = {
 	additionalProperties: false,
 };
 export function sessionCapabilityHandlers(
-	registry: SessionRegistry,
+	registry: SessionDirectory,
 ): Record<
 	"session.inspect" | "session.tools" | "session.select" | "session.input" | "session.confirm",
 	PluginCapabilityHandler

@@ -1,8 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { knowledgeDirectory } from "@gyoungwe/pi-knowledge/host";
-import { registerKnowledgeInterface } from "./knowledge-extension";
 
 export const OBSIDIAN_SUBAGENT_READ_TOOLS = [
 	"read_note",
@@ -39,18 +37,8 @@ async function loadMcpAdapter() {
 
 /** Read-only Obsidian bridge used by isolated research subagents. */
 export function makeSubagentReadonlyMcp(cwd: string, loadAdapter = loadMcpAdapter) {
+	// Knowledge Vault reads for children come from the knowledge package's own read-only child session.
 	return async function subagentReadonlyMcp(pi: any) {
-		if (knowledgeDirectory()) {
-			const knowledge = registerKnowledgeInterface(pi, { readOnly: true });
-			pi.on("before_agent_start", async (event: any, ctx: any) => {
-				const prepared: any = await knowledge.beforeStart(event, ctx);
-				return {
-					...(prepared.message ? { message: prepared.message } : {}),
-					systemPrompt: `${event.systemPrompt}\n${prepared.guidance || ""}`,
-				};
-			});
-			return;
-		}
 		const server = readProjectServer(cwd);
 		if (!server) return;
 		const { createMcpAdapter } = await loadAdapter();

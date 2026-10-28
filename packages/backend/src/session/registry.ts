@@ -17,6 +17,24 @@ export interface RegisteredSession {
 	readOnly?: boolean;
 }
 
+/** The live entries plugin capabilities may resolve: primary sessions and running read-only children. */
+export interface SessionDirectory {
+	get(sessionId: string): RegisteredSession | undefined;
+	signalFor(entry: RegisteredSession): AbortSignal;
+}
+
+/** Children stay out of the primary registry (listing, reopen, close, reload) but resolve for plugin capabilities. */
+export function combinedSessionDirectory(
+	primary: SessionRegistry,
+	children: SessionRegistry,
+): SessionDirectory {
+	return {
+		get: (sessionId) => primary.get(sessionId) ?? children.get(sessionId),
+		signalFor: (entry) =>
+			(primary.get(entry.session.sessionId) === entry ? primary : children).signalFor(entry),
+	};
+}
+
 /** 维护 sessionId → AgentSession 实例 */
 export class SessionRegistry {
 	private readonly sessions = new Map<string, RegisteredSession>();

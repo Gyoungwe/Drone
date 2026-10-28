@@ -19,7 +19,7 @@ import type { AskGate } from "../session/ask-gate";
 import type { ModelWaitMonitor } from "../session/model-wait";
 import type { EventRateTracker } from "../session/rates";
 import type { SessionRecovery } from "../session/recovery";
-import type { RegisteredSession, SessionRegistry } from "../session/registry";
+import type { RegisteredSession, SessionDirectory, SessionRegistry } from "../session/registry";
 import type { StreamGuard } from "../session/stream-guard";
 import type { SessionTraces } from "../session/traces";
 import type { ModelRuntime, SessionEngine } from "../session-engine/engine";
@@ -64,6 +64,9 @@ export interface SessionHost {
 	readonly knowledge: KnowledgeUiServicePort;
 	knowledgeSession: KnowledgeSessionService;
 	readonly registry: SessionRegistry;
+	/** Running subagent children; resolvable by plugin capabilities only, never listed or reopened. */
+	readonly childSessions: SessionRegistry;
+	readonly pluginSessions: SessionDirectory;
 	readonly askHandlers: Set<(req: AskRequest) => void>;
 	readonly trustHandlers: Set<(req: TrustRequest) => void>;
 	readonly loginHandlers: Set<(payload: LoginEventPayload) => void>;
