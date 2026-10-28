@@ -24,13 +24,14 @@ async function writeManifest(
 	desktopRuntime: unknown = "./runtime.js",
 	entries: Record<string, unknown> = {},
 	filesystem: unknown = [],
+	network: unknown = [],
 ): Promise<void> {
 	await writeFile(
 		join(packageRoot, "plugin.manifest.json"),
 		JSON.stringify({
 			id: "display-id-not-authenticated",
 			hosts: ["drone-desktop"],
-			permissions: { filesystem },
+			permissions: { filesystem, network },
 			entrypoints: { ui: "./ui/plugin.json", desktopRuntime, ...entries },
 		}),
 	);
@@ -341,4 +342,17 @@ describe("installed UI runtime provenance", () => {
 			});
 		});
 	}
+});
+
+it("derives model service access only from the installed package network declaration and revokes it on rescan", async () => {
+	const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+	await writeManifest("./runtime.js", {}, [], []);
+	await manager.scanAll();
+	expect(manager.runtimeSource("results-ui")?.requestsModel).toBeUndefined();
+	await writeManifest("./runtime.js", {}, [], ["configured-services"]);
+	await manager.scanAll();
+	expect(manager.runtimeSource("results-ui")?.requestsModel).toBe(true);
+	await writeManifest("./runtime.js", {}, [], ["example.invalid"]);
+	await manager.scanAll();
+	expect(manager.runtimeSource("results-ui")?.requestsModel).toBeUndefined();
 });

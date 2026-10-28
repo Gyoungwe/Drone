@@ -18,6 +18,8 @@
 P2 后继[设置与修复后的正式安装包验收](pluginization/native-plugin-knowledge-state-gui-evidence.md)固定 `ad3cd189` DMG，覆盖状态保存拒绝/回读、真实模型工具、停用恢复和正常退出；完整知识迁移与资源关闭新合同仍待下一轮验证。
 知识状态 broker 的 `state.ensureDirectory` 提供显式受授权的单层初始化，读取不建目录；合同与限制见[状态能力](pluginization/native-plugin-state-capabilities.md)。
 
+插件结构化模型端口见 `backend/src/plugins/model-capabilities.ts`；真实 SDK 调用与 JSON 输出验证在 `session-engine/structured-model.ts`，模型声明来自已安装清单的 configured-services 权限，逐请求显示实际模型选择和费用边界。`session.inspect` 只返回当前真实会话是否活跃；前台业务的闲置策略由插件执行。
+
 ## 硬约束（改代码前必知）
 
 - renderer 绝不 import pi 包，只经 `window.pi`（preload）通信
