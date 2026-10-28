@@ -108,8 +108,9 @@ export {
 	permissionAuditPath,
 } from "./permissions/audit";
 export {
-	makePermissionGateExtension,
+	makePermissionGateExtensions,
 	type PermissionConfirm,
+	type PermissionGateExtensions,
 	type PermissionGateOptions,
 	type PermissionModeRef,
 } from "./permissions/extension";

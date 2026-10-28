@@ -12,7 +12,7 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import type { PermissionAuditEntry } from "../src/permissions/audit";
 import { permissionAuditPath } from "../src/permissions/audit";
-import { makePermissionGateExtension, type PermissionConfirm } from "../src/permissions/extension";
+import { makePermissionGateExtensions, type PermissionConfirm } from "../src/permissions/extension";
 import { PermissionGate } from "../src/permissions/gate";
 import * as tmpZone from "../src/permissions/tmp-zone";
 import { workspaceConfigPath } from "../src/project/workspace-store";
@@ -61,11 +61,11 @@ function makeHarness(
 			}
 		: undefined;
 	const mode = options?.mode;
-	const extension = makePermissionGateExtension(agentDir, {
+	const extension = makePermissionGateExtensions(agentDir, {
 		projectRoot: options?.projectRoot,
 		confirm,
 		getMode: mode ? () => mode.current : undefined,
-	});
+	}).gate;
 	if (typeof extension === "function" || !("factory" in extension)) {
 		throw new Error("expected named inline extension");
 	}
@@ -295,7 +295,7 @@ describe("permission-gate 扩展", () => {
 			join(dir, "permissions.json"),
 			JSON.stringify({ rules: { bash: { "*": "ask", "git *": "allow" } } }),
 		);
-		const extension = makePermissionGateExtension(dir);
+		const extension = makePermissionGateExtensions(dir).gate;
 		if (typeof extension === "function" || !("factory" in extension)) throw new Error("unexpected");
 		let handler: ToolCallHandler | undefined;
 		extension.factory({

@@ -14,7 +14,7 @@ import {
 import type { Model } from "@earendil-works/pi-ai";
 import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { Type } from "typebox";
-import { makePermissionGateExtension } from "../../permissions/extension";
+import { makePermissionGateExtensions } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
 import { researchWorkbenchRoot } from "../../research-root";
 import { createSessionExtensionDiagnostics } from "../../session/extension-errors";
@@ -434,12 +434,11 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		);
 	const mcpAccess = await resolveSubagentMcpAccess(input.cwd, input.agent, input.projectTrusted);
 	const readonlyMcpExtension = join(researchWorkbenchRoot(), "extensions", "subagent-mcp-readonly.mjs");
-	const childExtensionFactories = [
-		makePermissionGateExtension(agentDir, {
-			projectRoot: input.cwd,
-			confirm: childGateConfirm,
-		}),
-	];
+	const childPermission = makePermissionGateExtensions(agentDir, {
+		projectRoot: input.cwd,
+		confirm: childGateConfirm,
+	});
+	const childExtensionFactories = [childPermission.gate];
 	if (mcpAccess === "read-local" && existsSync(readonlyMcpExtension)) {
 		const readonlyMcp = (await import(pathToFileURL(readonlyMcpExtension).href)) as {
 			makeSubagentReadonlyMcp: (cwd: string) => (pi: unknown) => void;
@@ -470,7 +469,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 			"For multi-step work, use set_status when the current activity meaningfully changes. Keep status short, concrete, present-tense, and user-visible; never include hidden reasoning, conclusions, confidence, or percentages.",
 			"You have a live supervisor channel. Use contact_supervisor(reason=progress_update) only for meaningful discoveries that change the plan. Use need_decision when blocked and interview_request when structured clarification is required. Do not wait silently when a decision is required.",
 		],
-		extensionFactories: childExtensionFactories,
+		extensionFactories: [...childExtensionFactories, childPermission.finalCheck],
 	});
 	await resourceLoader.reload();
 

@@ -1,7 +1,11 @@
 import { dirname, resolve } from "node:path";
 import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { createLogger } from "../log";
-import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
+import {
+	type PermissionConfirm,
+	type PermissionModeRef,
+	placeFinalPermissionCheckLast,
+} from "../permissions/extension";
 import { createProcessSandboxedExtension, type PluginSandboxPolicy } from "../plugin-sandbox";
 import type { PluginNativeBootstrap, PluginNativeIntegration } from "../plugins/coordinator";
 import { replyLanguagePrompt } from "../reply-language";
@@ -189,20 +193,24 @@ export class ProjectResourceLoader {
 		const settingsManager = useUtf8WindowsShell(
 			SettingsManager.create(cwd, agentDir, { projectTrusted: false }),
 		);
+		const desktop = desktopLoaderOptions(
+			this.deps.desktopIntegration,
+			cwd,
+			options?.nativeBootstrap,
+			this.deps.coreHost,
+		);
 		const resourceLoader = new DefaultResourceLoader({
 			cwd,
 			agentDir,
 			settingsManager,
-			extensionFactories: [
+			...desktop,
+			// Sandboxed proxies join the built-in list instead of replacing it, and the
+			// permission re-check stays the last tool_call handler of the session.
+			extensionFactories: placeFinalPermissionCheckLast([
 				...this.deps.buildExtensions(cwd, options?.confirm, options?.modeRef),
 				...(options?.extensionFactories ?? []),
-			],
-			...desktopLoaderOptions(
-				this.deps.desktopIntegration,
-				cwd,
-				options?.nativeBootstrap,
-				this.deps.coreHost,
-			),
+				...((desktop as { extensionFactories?: InlineExtension[] }).extensionFactories ?? []),
+			]),
 		});
 		if (this.deps.projectTrust === false) {
 			settingsManager.setProjectTrusted(true);

@@ -46,6 +46,33 @@ export interface PermissionGateOptions {
 export type PermissionModeRef = { current: PermissionMode };
 
 /**
+ * 门控与链尾复核：同一会话的两个扩展共用一份求值。
+ * finalCheck 必须是最后加载的扩展（placeFinalPermissionCheckLast 保证），见下文。
+ */
+export interface PermissionGateExtensions {
+	gate: InlineExtension;
+	finalCheck: InlineExtension;
+}
+
+const finalChecks = new WeakSet<InlineExtension>();
+
+/**
+ * 把复核扩展移到列表末尾（其余顺序不变）。SDK 先加载路径扩展，再按此顺序加载内联扩展，
+ * 所以列表末尾即整条 tool_call 链的末尾。
+ */
+export function placeFinalPermissionCheckLast(factories: InlineExtension[]): InlineExtension[] {
+	return [
+		...factories.filter((factory) => !finalChecks.has(factory)),
+		...factories.filter((factory) => finalChecks.has(factory)),
+	];
+}
+
+/** 门控求值所依据的文本：有匹配文本的工具只看它；没有的（自定义工具）用户看到的是整份输入 */
+function evaluatedText(toolName: string, input: Record<string, unknown>): string {
+	return matchTextFor(toolName, input) ?? JSON.stringify(input);
+}
+
+/**
  * 内置权限门控扩展：只用 pi 公开扩展 API（tool_call 钩子 + 确认通道）。
  * 求值顺序（设计见 .local/docs/design/phase2/permission-workspace.md、spec permission-tmp-zone）：
  *  ① 全局规则 permissions.json —— deny 直接 block
@@ -61,12 +88,21 @@ export type PermissionModeRef = { current: PermissionMode };
  * ask 同样降级——一切放行，含自保护规则（用户明示接受的语义）。
  * 边界检查只覆盖路径工具：bash 无法用路径模式约束（cd 任意跳），符号链接逃逸不在范围。
  */
-export function makePermissionGateExtension(
+export function makePermissionGateExtensions(
 	agentDir: string,
 	options?: PermissionGateOptions,
-): InlineExtension {
+): PermissionGateExtensions {
 	const projectRoot = options?.projectRoot ? resolve(options.projectRoot) : null;
-	return {
+	// 门控放行的调用：SDK 把同一个参数对象依次交给每个 tool_call 处理器、再交给 execute，
+	// 后加载的扩展可以就地改写它。记录被放行的那个对象及当时求值的文本，链尾按实际执行的参数复核。
+	const approvals = new Map<string, { input: Record<string, unknown>; evaluated: string }>();
+	let evaluate:
+		| ((
+				event: ToolCallEvent,
+				ctx: ExtensionContext,
+		  ) => Promise<{ block: boolean; reason: string } | undefined>)
+		| undefined;
+	const gate: InlineExtension = {
 		name: "permission-gate",
 		factory: (pi) => {
 			const loadConfig = createPermissionConfigLoader(agentDir);
@@ -268,7 +304,16 @@ export function makePermissionGateExtension(
 					reason: `User denied this ${event.toolName} call (${title}). Do not retry the same action; ask the user or find another approach.`,
 				};
 			};
-			pi.on("tool_call", check);
+			evaluate = check;
+			pi.on("tool_call", async (event, ctx) => {
+				const result = await check(event, ctx);
+				if (!result) {
+					const input = (event.input ?? {}) as Record<string, unknown>;
+					approvals.set(event.toolCallId, { input, evaluated: evaluatedText(event.toolName, input) });
+				}
+				return result;
+			});
+			pi.on("session_shutdown", () => approvals.clear());
 			let taskContext: ExtensionContext | undefined;
 			pi.on("session_start", (_event, ctx) => {
 				taskContext = ctx;
@@ -308,4 +353,23 @@ export function makePermissionGateExtension(
 			});
 		},
 	};
+	// 链尾复核：参数未改变时沿用门控的决定（不重复弹窗）；被后续扩展改写时，对即将执行的
+	// 参数重跑同一求值（deny/ask/越界/任务目录授权/fullAccess 审计全部适用）。普通调用与
+	// ctx.executeTool 的嵌套调用经过同一条 tool_call 链，因此都在这里复核。
+	const finalCheck: InlineExtension = {
+		name: "permission-final-check",
+		factory: (pi) => {
+			pi.on("tool_call", async (event, ctx) => {
+				const approval = approvals.get(event.toolCallId);
+				approvals.delete(event.toolCallId);
+				if (!approval || !evaluate)
+					return { block: true, reason: `Permission gate did not evaluate this ${event.toolName} call.` };
+				if (evaluatedText(event.toolName, approval.input) === approval.evaluated) return;
+				log.info("tool arguments changed after approval; re-evaluating", event.toolName);
+				return evaluate({ ...event, input: approval.input }, ctx);
+			});
+		},
+	};
+	finalChecks.add(finalCheck);
+	return { gate, finalCheck };
 }

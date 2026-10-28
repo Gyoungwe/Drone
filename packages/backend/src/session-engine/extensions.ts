@@ -15,7 +15,7 @@ import { makeKnowledgeSpecialistBridge } from "../knowledge/specialist-bridge";
 import { createLogger } from "../log";
 import type { MemoryStore } from "../memory/store";
 import {
-	makePermissionGateExtension,
+	makePermissionGateExtensions,
 	type PermissionConfirm,
 	type PermissionModeRef,
 } from "../permissions/extension";
@@ -216,15 +216,15 @@ export function buildSessionExtensionFactories(
 			deps.onDecision?.(cwd, payload);
 		});
 	});
-	if (deps.permissionGates !== false && deps.permissionExtension !== false) {
-		factories.push(
-			makePermissionGateExtension(getAgentDir(), {
-				projectRoot: cwd,
-				confirm,
-				getMode: () => modeRef?.current ?? "default",
-			}),
-		);
-	}
+	const permission =
+		deps.permissionGates !== false && deps.permissionExtension !== false
+			? makePermissionGateExtensions(getAgentDir(), {
+					projectRoot: cwd,
+					confirm,
+					getMode: () => modeRef?.current ?? "default",
+				})
+			: undefined;
+	if (permission) factories.push(permission.gate);
 	if (deps.subagentPreferBuiltin !== false)
 		factories.push(
 			makeKnowledgeSpecialistBridge({
@@ -316,6 +316,8 @@ export function buildSessionExtensionFactories(
 	factories.push(makeTodoReminderExtension());
 	factories.push(makeBioExtension());
 	factories.push(makeCloudflareAskExtension());
+	// The loader appends further factories; placeFinalPermissionCheckLast keeps this one last.
+	if (permission) factories.push(permission.finalCheck);
 	return factories;
 }
 
