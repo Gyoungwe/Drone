@@ -743,3 +743,50 @@ export default async () => ({ operations: { wait: {
 		await expect(registry.activate("example", caller(scope))).rejects.toThrow("escapes its package");
 	});
 });
+
+it.skipIf(!hasRuntime)(
+	"resource requests receive their real signal without ending the resource lifetime",
+	async () => {
+		const options = await fixture(
+			`import {writeFile} from 'node:fs/promises';export default async context=>{let cancelled=0;return {async invoke(operation,input,call){if(operation==='status')return {cancelled,lifecycleAborted:context.signal.aborted,sameLifetime:call.signal===context.signal};try{call.signal.throwIfAborted();await context.capabilities.call('entered',null);call.signal.throwIfAborted();await new Promise((resolve,reject)=>call.signal.addEventListener('abort',()=>reject(call.signal.reason),{once:true}));}finally{cancelled++;}},async dispose(){await writeFile(context.storageDirectory+'/disposed','actual resource cleanup');}};};`,
+		);
+		const storageDirectory = join(options.packageRoot, "cache");
+		await mkdir(storageDirectory);
+		let entered!: () => void;
+		const started = new Promise<void>((resolve) => {
+			entered = resolve;
+		});
+		const registry = new PluginRuntimeRegistry(allow, "resource-request", {
+			resources: [],
+			handlers: {
+				entered: {
+					effect: "read",
+					inputSchema: { type: "null" },
+					resultSchema: { type: "null" },
+					execute: async () => {
+						entered();
+						return null;
+					},
+				},
+			},
+		});
+		registry.register(
+			"example",
+			createProcessPluginRuntime({ ...options, resource: { storageDirectory, parameters: null } }),
+		);
+		const client = await registry.activate("example", caller(scope));
+		const abort = new AbortController();
+		const pending = client.invoke("request", { operation: "hold", input: null }, abort.signal);
+		const rejected = expect(pending).rejects.toThrow(/aborted|cancelled/i);
+		await started;
+		abort.abort(new Error("actual resource request cancelled"));
+		await rejected;
+		expect(await client.invoke("request", { operation: "status", input: null })).toEqual({
+			cancelled: 1,
+			lifecycleAborted: false,
+			sameLifetime: false,
+		});
+		await registry.deactivate("example");
+		expect(await readFile(join(storageDirectory, "disposed"), "utf8")).toBe("actual resource cleanup");
+	},
+);
