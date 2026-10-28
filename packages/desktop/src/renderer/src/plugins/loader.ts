@@ -47,7 +47,7 @@ async function loadPluginCode(
 ): Promise<void> {
 	const runtime = runtimeBinding
 		? createPluginRuntimeClient(
-				(operation, input) => invokePluginRuntime(runtimeBinding, operation, input),
+				(operation, input, signal) => invokePluginRuntime(runtimeBinding, operation, input, signal),
 				(listener) => subscribePluginRuntime(runtimeBinding, listener),
 			)
 		: undefined;

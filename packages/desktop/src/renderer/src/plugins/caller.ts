@@ -43,9 +43,31 @@ export async function invokePluginRuntime(
 	binding: string,
 	operation: string,
 	input: unknown,
+	signal?: AbortSignal,
 ): Promise<unknown> {
+	signal?.throwIfAborted();
 	const selected = selectedSession();
 	const selectionToken = await syncPluginCaller(selected);
 	if (selectedSession() !== selected) throw new Error("Plugin caller selection changed before invocation");
-	return getPi().pluginRuntimeInvoke(binding, operation, input, selectionToken);
+	signal?.throwIfAborted();
+	if (!signal) return getPi().pluginRuntimeInvoke(binding, operation, input, selectionToken);
+	const requestId = crypto.randomUUID();
+	let cancellation: Promise<PromiseSettledResult<boolean>[]> | undefined;
+	const cancel = () => {
+		cancellation = Promise.allSettled([getPi().pluginRuntimeCancel(binding, selectionToken, requestId)]);
+	};
+	const pending = getPi().pluginRuntimeInvoke(binding, operation, input, selectionToken, requestId);
+	signal.addEventListener("abort", cancel, { once: true });
+	if (signal.aborted) cancel();
+	const results = await Promise.allSettled([pending]);
+	signal.removeEventListener("abort", cancel);
+	if (cancellation) results.push(...(await cancellation));
+	const failures = results.filter((result) => result.status === "rejected");
+	if (failures.length > 1)
+		throw new AggregateError(
+			failures.map((result) => result.reason),
+			"Plugin invocation and cancellation failed",
+		);
+	if (failures.length === 1) throw failures[0]?.reason;
+	return (results[0] as PromiseFulfilledResult<unknown>).value;
 }

@@ -21,7 +21,9 @@ export interface PluginRuntimeChangedEvent {
 
 /** One domain owner per application activation, shared by its caller scopes. */
 export interface PluginRuntimeCapabilities {
-	/** Only host-registered methods are available, under the current invocation authority. */
+	/** Only host-registered methods are available, under the current invocation authority.
+	 * `caller.scope(null)` returns the current host-resolved PluginRuntimeScope, including
+	 * application scope during bootstrap. It grants no file access or retained caller authority. */
 	call(name: string, input: unknown): Promise<unknown>;
 }
 
@@ -108,4 +110,39 @@ export interface PluginStateRemoveInput {
 export interface PluginStateListEntry {
 	readonly name: string;
 	readonly kind: "file" | "directory" | "symlink" | "other";
+}
+
+/** Actual resolved selection. A profile names an existing host model preference, never a fallback. */
+export interface PluginModelSelection {
+	readonly provider: string;
+	readonly model: string;
+	readonly thinkingLevel: string;
+	readonly profile?: string;
+}
+export interface PluginModelSelectionInput {
+	readonly profile?: string;
+}
+/** One isolated structured result request; no parent transcript or executable tools are inherited. */
+export interface PluginModelGenerateInput {
+	readonly selection: PluginModelSelection;
+	readonly systemPrompt: string;
+	readonly prompt: string;
+	readonly resultSchema: PluginRuntimeSchema;
+	readonly maxTokens: number;
+}
+/** Missing telemetry or unknown pricing stays null, never an invented zero/free estimate. */
+export interface PluginModelUsage {
+	readonly inputTokens: number | null;
+	readonly outputTokens: number | null;
+	readonly cost: number | null;
+}
+export interface PluginModelGenerateResult {
+	readonly selection: PluginModelSelection;
+	readonly value: unknown;
+	readonly usage: PluginModelUsage;
+}
+
+/** Fresh asynchronous caller fact; never a synchronous SDK isIdle snapshot. */
+export interface PluginSessionInspection {
+	readonly agentActive: boolean;
 }

@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { lstat, realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import type { PluginRuntimeInstance } from "@gyoungwe/plugin-api/runtime";
 import { type Static, Type } from "typebox";
 import type { PluginFileCapabilities } from "./file-capabilities";
 import { createProcessPluginRuntime } from "./process-runtime";
-import { PluginResourceReservations } from "./resource-reservations";
 import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
 
 const label = Type.String({ pattern: "^[a-z0-9][a-z0-9-]{0,63}$" });

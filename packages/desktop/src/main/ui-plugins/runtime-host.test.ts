@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	type PluginCapabilityContext,
+	PluginRuntimeRegistry,
 	type PluginRuntimeSource,
 	StorageRegistry,
 	setReplyLanguage,
@@ -63,6 +64,8 @@ beforeEach(async () => {
 		pluginId: "@example/index",
 		packageRoot: root,
 		entrypoint: join(root, "runtime.js"),
+		requestsStateRead: true,
+		requestsFileRead: true,
 		resources: { index: join(root, "resource.js") },
 	};
 });
@@ -74,15 +77,169 @@ afterEach(async () => {
 describe("desktop activation directory grants", () => {
 	it("keeps ordinary runtimes at zero roots without showing a picker or creating caches", async () => {
 		const selectDirectories = vi.fn();
-		const ports = await createDesktopResourceCapabilities({ ...source, resources: undefined }, root, {
-			profileDirectory: profile,
-			storage: new StorageRegistry(),
-			selectDirectories,
-		})(activation());
+		const ports = await createDesktopResourceCapabilities(
+			{ ...source, resources: undefined, requestsStateRead: undefined, requestsFileRead: undefined },
+			root,
+			{
+				profileDirectory: profile,
+				storage: new StorageRegistry(),
+				selectDirectories,
+			},
+		)(activation());
 		expect(ports.resources).toEqual([]);
 		expect(ports.handlers).toEqual({});
 		expect(selectDirectories).not.toHaveBeenCalled();
 		expect(await readdir(profile)).toEqual([]);
+	});
+
+	it("does not infer filesystem authority from a resource declaration", async () => {
+		const selectDirectories = vi.fn();
+		const current = activation();
+		const ports = await createDesktopResourceCapabilities(
+			{ ...source, requestsStateRead: undefined, requestsFileRead: undefined },
+			root,
+			{
+				profileDirectory: profile,
+				storage: new StorageRegistry(),
+				selectDirectories,
+			},
+		)(current);
+		expect(selectDirectories).not.toHaveBeenCalled();
+		expect(ports.resources).toEqual([]);
+		await expect(
+			ports.handlers["roots.resolve"]!.execute({ path: data, kind: "files" }, context(current.signal)),
+		).rejects.toThrow("not granted");
+		await ports.dispose?.();
+	});
+
+	it("keeps no-resource JSON writes behind the broker's actual per-call approval", async () => {
+		let allowWrite = false;
+		const provider = createDesktopResourceCapabilities(
+			{ ...source, resources: undefined, requestsStateWrite: true, requestsFileRead: undefined },
+			root,
+			{
+				profileDirectory: profile,
+				storage: new StorageRegistry(),
+				selectDirectories: async () => [state],
+			},
+		);
+		const registry = new PluginRuntimeRegistry(
+			{
+				authorizeActivation: async () => true,
+				authorizeInvocation: async (request) =>
+					request.operation !== "capability:state.writeJson" || allowWrite,
+			},
+			"application",
+			provider,
+		);
+		registry.register(source.pluginId, async ({ capabilities, resources }) => {
+			const handle = resources[0]!.handle;
+			return {
+				operations: {
+					write: {
+						inputSchema: { type: "null" },
+						resultSchema: { type: "object" },
+						effect: "write",
+						execute: () =>
+							capabilities.call("state.writeJson", {
+								root: handle,
+								path: "approved.json",
+								value: { revision: 1 },
+								expectedVersion: null,
+							}),
+					},
+					read: {
+						inputSchema: { type: "null" },
+						resultSchema: { type: "object" },
+						effect: "read",
+						execute: () => capabilities.call("state.readJson", { root: handle, path: "approved.json" }),
+					},
+				},
+				dispose: async () => {},
+			};
+		});
+		const caller = {
+			identity: {},
+			scope: { kind: "application" as const },
+			signal: new AbortController().signal,
+		};
+		const client = await registry.activate(source.pluginId, () => caller);
+		await expect(client.invoke("write", null)).rejects.toThrow("Plugin capability denied");
+		expect(await readdir(state)).toEqual([]);
+		allowWrite = true;
+		const written = await client.invoke("write", null);
+		expect(await client.invoke("read", null)).toEqual(written);
+		await registry.deactivate(source.pluginId);
+		await expect(client.invoke("read", null)).rejects.toThrow("not active");
+	});
+
+	for (const kind of ["state", "files"] as const) {
+		it(`uses declared ${kind} access without any resource worker`, async () => {
+			await writeFile(join(state, "journal.json"), JSON.stringify({ revision: 1 }));
+			await writeFile(join(data, "note.md"), "read without an index");
+			const selectDirectories = vi.fn(async () => [kind === "state" ? state : data]);
+			const current = activation();
+			const ports = await createDesktopResourceCapabilities(
+				{
+					...source,
+					resources: undefined,
+					requestsStateRead: kind === "state",
+					requestsFileRead: kind === "files",
+				},
+				root,
+				{ profileDirectory: profile, storage: new StorageRegistry(), selectDirectories },
+			)(current);
+			expect(selectDirectories.mock.calls).toEqual([[kind]]);
+			expect(ports.resources).toHaveLength(1);
+			const grant = ports.resources[0]!;
+			expect(grant).toMatchObject({ kind, access: "read" });
+			const read = kind === "state" ? "state.readJson" : "files.readText";
+			const path = kind === "state" ? "journal.json" : "note.md";
+			expect(
+				await ports.handlers[read]!.execute({ root: grant.handle, path }, context(current.signal)),
+			).toMatchObject(
+				kind === "state" ? { kind: "value", value: { revision: 1 } } : { text: "read without an index" },
+			);
+			expect(Object.keys(ports.handlers).some((name) => name.startsWith("resource."))).toBe(false);
+			expect(ports.resourcesLifecycle).toBeUndefined();
+			expect(ports.dispose).toBeUndefined();
+		});
+	}
+
+	it("writes and reads back JSON without requiring a data directory or a derived resource", async () => {
+		const selectDirectories = vi.fn(async () => [state]);
+		const current = activation();
+		const ports = await createDesktopResourceCapabilities(
+			{
+				...source,
+				resources: undefined,
+				requestsStateRead: undefined,
+				requestsFileRead: undefined,
+				requestsStateWrite: true,
+			},
+			root,
+			{ profileDirectory: profile, storage: new StorageRegistry(), selectDirectories },
+		)(current);
+		expect(selectDirectories.mock.calls).toEqual([["state-write"]]);
+		const grant = ports.resources[0]!;
+		expect(grant).toMatchObject({ kind: "state", access: "read-write" });
+		const written = await ports.handlers["state.writeJson"]!.execute(
+			{
+				root: grant.handle,
+				path: "journal.json",
+				value: { revision: 2 },
+				expectedVersion: null,
+			},
+			context(current.signal),
+		);
+		expect(
+			await ports.handlers["state.readJson"]!.execute(
+				{ root: grant.handle, path: "journal.json" },
+				context(current.signal),
+			),
+		).toEqual(written);
+		expect(ports.resourcesLifecycle).toBeUndefined();
+		expect(await readdir(data)).toEqual([]);
 	});
 
 	for (const canceled of ["state", "state-write", "files", "files-write"] as const) {
@@ -396,4 +553,25 @@ describe("desktop write approval details", () => {
 		});
 		expect(await approveDesktopRuntime(owner, source, "write", "Host-resolved target")).toBe(false);
 	});
+});
+
+it("closes a pending parent-window runtime permission dialog through the actual operation signal", async () => {
+	const controller = new AbortController();
+	let received!: AbortSignal;
+	desktop.showMessageBox.mockImplementation(async (_window, options) => {
+		received = options.signal;
+		return new Promise((resolve) =>
+			received.addEventListener("abort", () => resolve({ response: 1 }), { once: true }),
+		);
+	});
+	const answer = approveDesktopRuntime(
+		{ id: 1, isDestroyed: () => false },
+		source,
+		"model.generate",
+		"actual provider/model and cost",
+		controller.signal,
+	);
+	expect(received).toBe(controller.signal);
+	controller.abort();
+	expect(await answer).toBe(false);
 });

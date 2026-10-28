@@ -55,7 +55,8 @@ export interface ChatMessageProps {
 
 /** Bound to the installed package by the desktop main process; callers cannot select another package. */
 export interface PluginUiRuntimeClient {
-	invoke(operation: string, input: unknown): Promise<unknown>;
+	/** Cancellation revokes this invocation and waits for its running cleanup; sibling calls stay live. */
+	invoke(operation: string, input: unknown, signal?: AbortSignal): Promise<unknown>;
 	/** Content-free invalidation; unsubscribe when the consumer unmounts. */
 	subscribe(listener: (event: { type: "changed"; revision: number }) => void): () => void;
 }

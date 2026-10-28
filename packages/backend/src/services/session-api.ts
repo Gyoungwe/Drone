@@ -17,6 +17,7 @@ import type {
 	WikiModelReviewResult,
 } from "@drone/shared";
 import { createLogger } from "../log";
+import { modelCapabilityHandlers } from "../plugins/model-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
 import { walkProjectFiles } from "../project/files";
 import { TraceRecorder } from "../session/trace";
@@ -62,6 +63,15 @@ export class SessionServiceApi extends SessionSettingsApi {
 	/** 跨全部项目目录枚举会话（项目管理页用，含活跃会话） */
 	async listAllSessions(): Promise<SessionMeta[]> {
 		return this.host.lifecycle.listAll();
+	}
+
+	getPluginSessionCapabilities() {
+		return modelCapabilityHandlers({
+			registry: this.host.registry,
+			getRuntime: () => this.host.getModelRuntime(),
+			getProfileModel: (name) => this.host.modelSettings.getSubagentModel(name),
+			getProfileThinking: (name) => this.host.modelSettings.getSubagentThinking(name),
+		});
 	}
 
 	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined {
