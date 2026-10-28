@@ -214,6 +214,39 @@ export interface PluginSessionNotifyResult {
 	readonly durability: "durable" | "deferred";
 }
 
+/** Temporary import declarations. Supported migrator versions never prove a legacy record's creator/version. */
+export interface PluginRecordAdoptionDeclaration {
+	readonly legacyType: string;
+	readonly fromVersions: readonly string[];
+	readonly removeBeforeVersion: string;
+}
+export type PluginRecordAdoptions = Readonly<Record<string, PluginRecordAdoptionDeclaration>>;
+export interface PluginSessionRecordAdoptionInspectionInput {
+	readonly type: string;
+}
+export interface PluginSessionRecordAdoptionInspection {
+	readonly state: "candidate" | "absent" | "already-adopted" | "deferred";
+	readonly legacyType: string;
+	readonly supportedFromVersions: readonly string[];
+	readonly creator: "unknown";
+	readonly packageVersion: "unknown";
+	readonly candidate: { readonly id: string; readonly hash: string; readonly data: unknown } | null;
+}
+export interface PluginSessionRecordAdoptionCommitInput {
+	readonly type: string;
+	readonly legacyId: string;
+	/** Optimistic concurrency only. This hash is not an authorization/provenance token. */
+	readonly legacyHash: string;
+	readonly data: unknown;
+}
+export interface PluginSessionRecordAdoptionCommitResult {
+	readonly state: "adopted";
+	readonly id: string;
+	readonly durability: "durable";
+	readonly legacyId: string;
+	readonly legacyHash: string;
+}
+
 /** Service contracts describe JSON operations, never functions or file/model authority. */
 export interface PluginServiceProvision {
 	readonly version: number;
