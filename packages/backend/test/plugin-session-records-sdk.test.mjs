@@ -164,6 +164,7 @@ it("latest checkpoints are source-owned, current-branch only and never expose me
 	await invoke("record-b", "append", { type: "checkpoint", data: { revision: 99 } });
 	const own = await invoke("record-a", "read", null);
 	expect(own).toMatchObject({
+		mode: "persistent",
 		state: "durable",
 		error: null,
 		records: [{ type: "checkpoint", data: { revision: 2 } }],
@@ -190,7 +191,7 @@ it("latest checkpoints are source-owned, current-branch only and never expose me
 it("lazy SDK storage explicitly defers without creating a file; idle notifications have no trusted details or model turn", async () => {
 	const { entry, invoke, faux } = await setup();
 	const file = entry.session.sessionManager.getSessionFile();
-	expect((await invoke("record-a", "read", null)).state).toBe("deferred");
+	expect(await invoke("record-a", "read", null)).toMatchObject({ mode: "persistent", state: "deferred" });
 	await expect(access(file)).rejects.toThrow(/ENOENT/);
 	await expect(
 		invoke("record-a", "append", { type: "checkpoint", data: { revision: 1 } }),
@@ -237,7 +238,7 @@ it("a real SDK inMemory session remains explicitly deferred", async () => {
 		expect(session.sessionManager.getSessionFile()).toBeUndefined();
 		await expect(
 			service.getPluginSessionCapabilities()["session.records.read"].execute(null, context),
-		).resolves.toMatchObject({ state: "deferred", records: [{ type: "memory", data: 1 }] });
+		).resolves.toMatchObject({ mode: "memory", state: "deferred", records: [{ type: "memory", data: 1 }] });
 	} finally {
 		await service.closeSession(session.sessionId);
 	}
@@ -269,6 +270,7 @@ it("real append EISDIR fences all sources and notifications through repeat handl
 		/reopen/,
 	);
 	expect(await invoke("record-a", "read", null)).toEqual({
+		mode: "persistent",
 		state: "needs-reopen",
 		error: expect.stringContaining("EISDIR"),
 		records: [{ id: saved.id, type: "checkpoint", data: { revision: 1 } }],
@@ -290,6 +292,7 @@ it("real append EISDIR fences all sources and notifications through repeat handl
 		signal: new AbortController().signal,
 	});
 	expect(result).toEqual({
+		mode: "persistent",
 		state: "durable",
 		error: null,
 		records: [{ id: saved.id, type: "checkpoint", data: { revision: 1 } }],
@@ -379,6 +382,7 @@ it("malformed real SDK JSONL reports only a line number, never the assistant con
 	);
 	const read = await invoke("record-a", "read", null);
 	expect(read).toEqual({
+		mode: "persistent",
 		state: "needs-reopen",
 		error: expect.stringMatching(/^Invalid SDK session JSONL at line \d+$/),
 		records: [{ id: saved.id, type: "checkpoint", data: { revision: 1 } }],

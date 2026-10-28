@@ -207,6 +207,7 @@ export class SessionRecordStore {
 			const branch = entry.session.sessionManager.getBranch();
 			const currentIds = new Set(branch.map((item) => item.id));
 			return {
+				mode: entry.session.sessionManager.getSessionFile() ? "persistent" : "memory",
 				state: state.fault ? "needs-reopen" : durability,
 				error: state.fault,
 				records: this.records(
