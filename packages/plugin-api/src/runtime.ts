@@ -207,6 +207,8 @@ export interface PluginSessionRecordAppendResult {
 	readonly durability: "durable" | "deferred";
 }
 export interface PluginSessionRecordReadResult {
+	/** Actual SDK session storage target; a persistent lazy session may still be deferred. */
+	readonly mode: "persistent" | "memory";
 	readonly state: "durable" | "deferred" | "needs-reopen";
 	readonly error: string | null;
 	/** Latest checkpoint per logical type on the actual current branch; never silently truncated. */
