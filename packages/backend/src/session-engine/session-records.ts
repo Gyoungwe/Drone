@@ -110,13 +110,15 @@ export class SessionRecordStore {
 					this.fault(state, error);
 				}
 			}
+			const branch = entry.session.sessionManager.getBranch();
+			const currentIds = new Set(branch.map((item) => item.id));
 			return {
 				state: state.fault ? "needs-reopen" : durability,
 				error: state.fault,
 				records: this.records(
 					state.fault || durability === "durable"
-						? state.committed
-						: entry.session.sessionManager.getBranch(),
+						? state.committed.filter((item) => currentIds.has(item.id))
+						: branch,
 					pluginId,
 				),
 			};

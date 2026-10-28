@@ -235,6 +235,7 @@ it("a real SDK inMemory session remains explicitly deferred", async () => {
 it("real append EISDIR fences all sources and notifications through repeat handler construction and SDK reload; only a fresh disk-backed entry recovers", async () => {
 	const { entry, service, invoke, converse, makeBackend } = await setup();
 	await converse();
+	const beforeCheckpoint = entry.session.sessionManager.getLeafId();
 	const saved = await invoke("record-a", "append", { type: "checkpoint", data: { revision: 1 } });
 	const file = entry.session.sessionManager.getSessionFile(),
 		backup = `${file}.saved`;
@@ -262,6 +263,9 @@ it("real append EISDIR fences all sources and notifications through repeat handl
 		error: expect.stringContaining("EISDIR"),
 		records: [{ id: saved.id, type: "checkpoint", data: { revision: 1 } }],
 	});
+	entry.session.sessionManager.branch(beforeCheckpoint);
+	expect(await invoke("record-a", "read", null)).toMatchObject({ state: "needs-reopen", records: [] });
+	entry.session.sessionManager.branch(saved.id);
 	expect(await readFile(file, "utf8")).toBe(disk);
 	const actualDisk = SessionManager.open(file);
 	expect(actualDisk.getBranch().at(-1).id).toBe(saved.id);
