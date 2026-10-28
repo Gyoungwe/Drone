@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-28",
+  "status": "PASS_REAL_SDK_DATA_SLICE",
+  "productionManifest": "UNCHANGED_NATIVE_ENTRY",
+  "fullP4": "IN_PROGRESS",
+  "pluginCommits": {
+    "byteSource": "9e535b1",
+    "byteArtifacts": "2c44080",
+    "pauseSignal": "8e96d4b",
+    "managedSource": "da3e4a8",
+    "managedArtifacts": "fa3903c"
+  },
+  "hostSdkTests": "d70673a3",
+  "tarball": {
+    "path": "/tmp/drone-task-managed-data-pack/gyoungwe-pi-core-0.2.0.tgz",
+    "sha256": "d012391c30c2d77b9504f7a3becdb1cb8ca8a49967884017c56d780f1de3c35a",
+    "release": false
+  },
+  "checks": [
+    {
+      "command": "DRONE_PLUGIN_API_TARBALL=<verified 2c4e3ecd API> npm run check --workspace @gyoungwe/pi-core",
+      "result": "Node29 + runtime/UI215; typecheck/build:check/smoke PASS",
+      "log": "/tmp/task-managed-data-core-check.log"
+    },
+    {
+      "command": "npx vitest run --project sdk test/plugin-provider-sdk.test.mjs",
+      "result": "25/25",
+      "log": "/tmp/task-managed-data-sdk-final.log"
+    },
+    {
+      "command": "npx vitest run --project sdk test/plugin-provider-sdk.test.mjs -t canonical-managed-task-state",
+      "result": "1/1 final application-selection assertion",
+      "log": "/tmp/task-managed-data-no-session.log"
+    },
+    {
+      "command": "npx vitest run --project sdk test/task-session-commit-sdk.test.mjs test/task-plugin-activation-sdk.test.mjs",
+      "result": "23/23 pure byte extraction candidate",
+      "log": "/tmp/task-inspection-byte-sdk.log"
+    }
+  ],
+  "authority": "No executionConsent/root/approval/proof output; ordinary questions and JSON never produce execution grant",
+  "formalInstallerGUI": "NOT_RUN",
+  "fullDualRepositoryGates": "ROOT_COHORT_REQUIRED",
+  "remaining": [
+    "managed native tools and file snapshot acceptance",
+    "one actual task scope grant",
+    "actual queued continuation origin",
+    "knowledge acceptance composition",
+    "explicit old-version adoption stripping authority",
+    "remove startup taskHost/coreHost",
+    "unified candidate and formal installer GUI"
+  ]
+}
