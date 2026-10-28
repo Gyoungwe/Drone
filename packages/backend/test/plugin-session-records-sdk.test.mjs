@@ -1,5 +1,15 @@
 import { mkdirSync, renameSync } from "node:fs";
-import { access, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import {
+	access,
+	appendFile,
+	mkdir,
+	mkdtemp,
+	readFile,
+	realpath,
+	rename,
+	rm,
+	writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
@@ -356,4 +366,25 @@ it("production restricted worker round-trips the same real SDK checkpoint and id
 	});
 	expect(entry.session.messages.at(-1).content).toBe("Actual worker result");
 	expect(faux.state.callCount).toBe(modelCalls);
+});
+
+it("malformed real SDK JSONL reports only a line number, never the assistant content quoted by JSON.parse", async () => {
+	const { entry, invoke, converse } = await setup();
+	await converse();
+	const saved = await invoke("record-a", "append", { type: "checkpoint", data: { revision: 1 } });
+	const file = entry.session.sessionManager.getSessionFile();
+	await appendFile(
+		file,
+		'{"type":"message","message":{"role":"assistant","content":"PRIVATE_ASSISTANT_SYNTAX_FRAGMENT"}BROKEN\n',
+	);
+	const read = await invoke("record-a", "read", null);
+	expect(read).toEqual({
+		state: "needs-reopen",
+		error: expect.stringMatching(/^Invalid SDK session JSONL at line \d+$/),
+		records: [{ id: saved.id, type: "checkpoint", data: { revision: 1 } }],
+	});
+	expect(JSON.stringify(read)).not.toContain("PRIVATE_ASSISTANT_SYNTAX_FRAGMENT");
+	await expect(invoke("record-a", "append", { type: "checkpoint", data: 2 })).rejects.toThrow(
+		/^Session records need disk reopen: Invalid SDK session JSONL at line \d+$/,
+	);
 });
