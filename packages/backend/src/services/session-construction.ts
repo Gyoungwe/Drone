@@ -192,7 +192,7 @@ export class SessionConstructionService {
 				},
 				{ once: true },
 			);
-			nativeBootstrap?.bindSession(session.sessionId);
+			nativeBootstrap?.bindSession(session.sessionId, () => this.host.sessionEngine.abort(session));
 			await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 			await session.bindExtensions({
 				onError: diagnostics.onError,
@@ -375,7 +375,7 @@ export class SessionConstructionService {
 				},
 				{ once: true },
 			);
-			nativeBootstrap?.bindSession(session.sessionId);
+			nativeBootstrap?.bindSession(session.sessionId, () => this.host.sessionEngine.abort(session));
 			if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 			await session.bindExtensions({
 				onError: diagnostics.onError,

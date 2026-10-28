@@ -569,11 +569,13 @@ class RuntimeProcess {
 			kind: "finalize" | "event" | "snapshot",
 			input: unknown,
 			context?: PluginRuntimeContext,
+			callerSignal?: AbortSignal,
 		) => {
 			const signal = AbortSignal.any([
 				this.context.signal,
 				lifecycle.signal,
 				...(context ? [context.signal] : []),
+				...(callerSignal ? [callerSignal] : []),
 			]);
 			signal.throwIfAborted();
 			return this.request(
@@ -618,9 +620,9 @@ class RuntimeProcess {
 									}
 								: {}),
 							finalizeEffect: declarations.projection.effect,
-							event: (event: unknown) => project("event", event),
-							snapshot: async (messages: unknown[], persisted: unknown[]) => {
-								const response = await project("snapshot", { messages, persisted });
+							event: (event: unknown, signal?: AbortSignal) => project("event", event, undefined, signal),
+							snapshot: async (messages: unknown[], persisted: unknown[], signal?: AbortSignal) => {
+								const response = await project("snapshot", { messages, persisted }, undefined, signal);
 								if (!Check(nativeSnapshotResponseSchema, response))
 									throw new Error("Invalid native snapshot projection");
 								return (response as { messages: unknown[] }).messages;

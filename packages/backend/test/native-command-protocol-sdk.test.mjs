@@ -330,3 +330,87 @@ it("cancels a pending command approval before a late grant and never executes it
 	expect(state.writes).toEqual([]);
 	expect((await state.snapshot()).at(-1).input).toBe("after cancel");
 }, 20000);
+
+it("revoking a managed native source aborts its actual SDK model run before revoke finishes", async () => {
+	const state = await setup();
+	let entered, observedAbort;
+	const started = new Promise((resolve) => {
+		entered = resolve;
+	});
+	const aborted = new Promise((resolve) => {
+		observedAbort = resolve;
+	});
+	state.faux.setResponses([
+		async (_context, options) => {
+			entered();
+			await new Promise((resolve) => options.signal.addEventListener("abort", resolve, { once: true }));
+			observedAbort();
+			return fauxAssistantMessage("", { stopReason: "aborted" });
+		},
+	]);
+	const prompt = state.first.prompt("Synthetic model waiting during package disable.");
+	await started;
+	state.setEnabled(false);
+	const revoke = state.bridge.revoke("command-ui");
+	await Promise.race([
+		aborted,
+		revoke.then(() => {
+			throw new Error("Source revoke finished without aborting its actual SDK run");
+		}),
+	]);
+	await Promise.all([prompt, revoke]);
+	expect(state.first.isStreaming).toBe(false);
+	state.setEnabled(true);
+	await state.first.reload();
+	state.faux.setResponses([fauxAssistantMessage("new source run")]);
+	await state.first.prompt("Synthetic new run after completed source drain.");
+	expect(state.first.isStreaming).toBe(false);
+}, 20000);
+
+it("a UI-only transition drains window callers while the actual native SDK run and owner continue", async () => {
+	const state = await setup();
+	await state.backend.sessions.command(state.first.sessionId, "record", "before UI transition");
+	const pid = (await state.snapshot())[0].pid;
+	let entered, release;
+	const started = new Promise((resolve) => {
+		entered = resolve;
+	});
+	const held = new Promise((resolve) => {
+		release = resolve;
+	});
+	let modelAborted = false;
+	state.faux.setResponses([
+		async (_context, options) => {
+			options.signal.addEventListener(
+				"abort",
+				() => {
+					modelAborted = true;
+					release();
+				},
+				{ once: true },
+			);
+			entered();
+			await held;
+			return fauxAssistantMessage("ordinary model result after UI transition");
+		},
+	]);
+	const prompt = state.first.prompt("Synthetic active model during UI settings change.");
+	await started;
+	try {
+		await state.bridge.withUiTransition(async () => {
+			expect(state.first.isStreaming).toBe(true);
+			await state.backend.sessions.command(state.first.sessionId, "record", "during UI transition");
+		});
+		expect(modelAborted).toBe(false);
+		expect(state.first.isStreaming).toBe(true);
+		await expect(state.snapshot()).rejects.toThrow("binding is invalid");
+		state.selection = state.bridge.selectSession(state.window, state.first.sessionId);
+		state.token = await state.bridge.bind("command-ui", state.window);
+		const records = await state.snapshot();
+		expect(records.map((record) => record.input)).toEqual(["before UI transition", "during UI transition"]);
+		expect(records.every((record) => record.pid === pid)).toBe(true);
+	} finally {
+		release();
+		await prompt;
+	}
+}, 20000);

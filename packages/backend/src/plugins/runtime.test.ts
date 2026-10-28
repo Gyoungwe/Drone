@@ -306,3 +306,105 @@ describe("PluginRuntimeRegistry", () => {
 		expect(await client.invoke("read", "still available")).toBe("still available");
 	});
 });
+
+describe("host-only native projection authority", () => {
+	it("borrows the actual bound caller for finalization and gives pure projection no ambient capability port", async () => {
+		const access = policy();
+		const read = vi.fn(
+			async (_input: unknown, context: import("./runtime-capabilities").PluginCapabilityContext) => ({
+				scope: context.scope,
+				sameEntry: context.sessionIdentity === entry,
+			}),
+		);
+		const entry = {};
+		const current = { identity: {}, sessionIdentity: entry, scope, signal: new AbortController().signal };
+		const registry = new PluginRuntimeRegistry(access, "projection-test", {
+			resources: [],
+			handlers: {
+				read: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "object" },
+					effect: "read",
+					execute: read,
+				},
+			},
+		});
+		registry.register("projector", async (context) => {
+			return {
+				operations: {},
+				async dispose() {},
+				createNativeSession() {
+					return {
+						extension() {},
+						async dispose() {},
+						projection: {
+							async finalize(event, actual) {
+								return { event, actual: await actual.capabilities.call("read", null) };
+							},
+							async event(event) {
+								await context.capabilities.call("read", null);
+								return event;
+							},
+							snapshot(messages) {
+								return messages;
+							},
+						},
+					};
+				},
+			};
+		});
+		await registry.activate("projector", () => current);
+		const native = await registry.attachNative(
+			"projector",
+			() => undefined,
+			() => current,
+		);
+		const finalized = await native.hostProjection!.finalize!(
+			{ scope: { kind: "session", sessionId: "forged" } },
+			new AbortController().signal,
+		);
+		expect(finalized).toMatchObject({ actual: { scope, sameEntry: true } });
+		expect(read).toHaveBeenCalledTimes(1);
+		expect(access.authorizeInvocation).toHaveBeenCalledWith(
+			expect.objectContaining({ operation: "native:projection:finalize", effect: "write", scope }),
+			expect.any(AbortSignal),
+		);
+		await expect(native.hostProjection!.event({})).rejects.toThrow("no live caller");
+		expect(read).toHaveBeenCalledTimes(1);
+		await registry.deactivate("projector");
+	});
+
+	it("rejects a changed actual session generation before invoking a pending finalizer", async () => {
+		const waiting = deferred<boolean>();
+		const access = policy();
+		vi.mocked(access.authorizeInvocation).mockImplementation(() => waiting.promise);
+		const finalize = vi.fn(async (event) => event);
+		const current = { identity: {}, sessionIdentity: {}, scope, signal: new AbortController().signal };
+		const registry = new PluginRuntimeRegistry(access);
+		registry.register("projector", async () => ({
+			operations: {},
+			async dispose() {},
+			createNativeSession() {
+				return {
+					async dispose() {},
+					extension() {},
+					projection: { finalize, event: (event) => event, snapshot: (messages) => messages },
+				};
+			},
+		}));
+		await registry.activate("projector", () => current);
+		const native = await registry.attachNative(
+			"projector",
+			() => undefined,
+			() => current,
+		);
+		const pending = native.hostProjection!.finalize!({}, new AbortController().signal);
+		const denied = expect(pending).rejects.toThrow("scope changed");
+		await vi.waitFor(() => expect(access.authorizeInvocation).toHaveBeenCalled());
+		current.sessionIdentity = {};
+		waiting.resolve(true);
+		await denied;
+		expect(finalize).not.toHaveBeenCalled();
+		await registry.deactivate("projector");
+	});
+});
