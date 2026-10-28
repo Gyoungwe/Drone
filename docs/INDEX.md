@@ -586,3 +586,5 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 UI 清单 contributions 的纯 JSON 过滤位于 `desktop/src/main/ui-plugins/manifest-contributions.ts`；manager消费它，纯数据回归不再加载 Electron 二进制。
 
 P2 知识完整 native 消费者的第一条实际包工作流与明确剩余范围见[同包完整消费者证据](pluginization/native-knowledge-full-consumer-evidence.md)；尚未完成生产历史/导出、任务组合和正式安装包。
+
+P2 生产当前分支的 stream / polling / reload / export 接线与真实同 tar 回执见[当前分支交付证据](pluginization/native-knowledge-current-branch-delivery-evidence.md)；其他分支、未打开历史、child、任务组合及显式旧 bridge 删除仍未完成。

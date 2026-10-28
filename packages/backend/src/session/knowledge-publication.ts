@@ -126,8 +126,12 @@ function failClosedEvent(event: SessionEvent): SessionEvent | null {
 }
 
 /** Shared delivery boundary: desktop and trace consumers receive the same projected event. */
-export function projectKnowledgeEvent(event: SessionEvent, runtime?: DroneRuntime): SessionEvent | null {
-	if (!process.env.DRONE_KNOWLEDGE_DIR) return event;
+export function projectKnowledgeEvent(
+	event: SessionEvent,
+	runtime?: DroneRuntime,
+	registeredOwnerOnly = false,
+): SessionEvent | null {
+	if (registeredOwnerOnly ? !bridge(runtime)?.projectEvent : !process.env.DRONE_KNOWLEDGE_DIR) return event;
 	try {
 		const fn = bridge(runtime)?.projectEvent;
 		if (fn) return fn(event);
@@ -142,8 +146,10 @@ export function projectKnowledgeSnapshot(
 	messages: RawMessage[],
 	persisted: RawMessage[],
 	runtime?: DroneRuntime,
+	registeredOwnerOnly = false,
 ): RawMessage[] {
-	if (!process.env.DRONE_KNOWLEDGE_DIR) return messages;
+	if (registeredOwnerOnly ? !bridge(runtime)?.projectSnapshot : !process.env.DRONE_KNOWLEDGE_DIR)
+		return messages;
 	try {
 		const fn = bridge(runtime)?.projectSnapshot;
 		if (fn) return fn(messages, persisted);

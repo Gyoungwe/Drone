@@ -481,3 +481,6 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 ## 插件调用的 guest 超时不应计算宿主等待
 
 保留 15 秒 guest 执行预算时，要在真实 parent 的 host capability 审批/执行/清理期间暂停，仅按剩余预算恢复。不能重置全额预算，也不能暂停同进程其他会话的计时；resource disposal 必须关联自己的内部 parent invocation。实际 worker/fake-clock 回归见 [执行候选证据](pluginization/native-plugin-execution-capability-candidate.md#15-秒-guest-watchdog-后继)。
+
+- required 交付不能在 event slim 后靠 JSON proof 恢复权限：先用实际 SDK 对象与已裁决来源投影，再交给 trace/UI。历史别名只来自 SDK 当前分支的真实 identity，copy/hash 不授 live proof。
+- SDK JSONL 原方法同步，不能在其中偷偷返回 Promise；required 导出走独立 async host 入口。异步投影完成后必须在 write 前复查实际 source/leaf/idle/dispose，Map 缺少真实 assistant entry 关联时明确失败，不能输出 raw。

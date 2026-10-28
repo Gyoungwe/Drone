@@ -6,15 +6,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
-import {
-	createAgentSession,
-	DefaultResourceLoader,
-	ModelRuntime,
-	SessionManager,
-	SettingsManager,
-} from "@earendil-works/pi-coding-agent";
-import { expect, it } from "vitest";
+import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { expect, it, vi } from "vitest";
 import { discoverInstalledPackages } from "../../desktop/src/main/ui-plugins/installed-package-sources";
+import { PiBackend } from "../src/pi-backend";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { fileCapabilityHandlers, PluginFileCapabilities } from "../src/plugins/file-capabilities";
 import { modelCapabilityHandlers } from "../src/plugins/model-capabilities";
@@ -24,8 +19,6 @@ import { getPluginSessionCaller } from "../src/plugins/session-caller";
 import { sessionCapabilityHandlers } from "../src/plugins/session-capabilities";
 import { sessionRecordCapabilityHandlers } from "../src/plugins/session-record-capabilities";
 import { canonicalProjectId } from "../src/project-id";
-import { SessionRegistry } from "../src/session/registry";
-import { SessionEngine } from "../src/session-engine/engine";
 import { SessionRecordStore } from "../src/session-engine/session-records";
 import { StorageRegistry } from "../src/storage/registry";
 
@@ -51,16 +44,16 @@ it.skipIf(!tarball)(
 			cache = join(root, "cache"),
 			leases = join(root, "leases");
 		for (const path of [prefix, state, vault, workspace, agentDir, cache, leases]) await mkdir(path);
-		let bridge, bootstrap, session;
-		const sessions = new SessionRegistry(),
-			records = new SessionRecordStore(),
-			engine = new SessionEngine();
+		let bridge, bootstrap, session, backend, sessions, engine;
+		const records = new SessionRecordStore();
 		const approvals = [],
 			modelSteps = [],
 			calls = [],
 			errors = [],
 			deliveries = [];
 		try {
+			vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
+			vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
 			await run(
 				"npm",
 				[
@@ -244,58 +237,72 @@ it.skipIf(!tarball)(
 					},
 			});
 			const window = { id: 101, isDestroyed: () => false };
-			bootstrap = bridge.beginNative(window, (path) =>
-				path === source.nativeEntrypoint ? "installed" : undefined,
-			);
-			const settingsManager = SettingsManager.inMemory({});
-			const resourceLoader = new DefaultResourceLoader({
-				cwd: workspace,
-				agentDir,
-				settingsManager,
-				noExtensions: true,
-				noSkills: true,
-				noPromptTemplates: true,
-				noContextFiles: true,
-				additionalExtensionPaths: [source.nativeEntrypoint],
-				extensionFactoryForPath: async (path) => {
-					bootstrap.delivery.observeSelectedPath(path);
-					return bootstrap.factoryForPath(path);
+			const publicEvents = [];
+			backend = new PiBackend({
+				projectTrust: false,
+				permissionGates: false,
+				lazyCapabilities: false,
+				desktopIntegration: {
+					appendSystemPrompt: [],
+					additionalSkillPaths: [],
+					additionalExtensionPaths: [source.nativeEntrypoint],
+					pluginRuntimeDirectory: runtimeDirectory,
+					noExtensions: true,
+					noSkills: true,
+					noPromptTemplates: true,
+					noContextFiles: true,
+					nativeRuntime: {
+						manages: (path) => path === source.nativeEntrypoint,
+						begin: () =>
+							(bootstrap = bridge.beginNative(window, (path) =>
+								path === source.nativeEntrypoint ? "installed" : undefined,
+							)),
+					},
 				},
 			});
-			await resourceLoader.reload({ resolveProjectTrust: async () => true });
-			expect(resourceLoader.getExtensions().errors).toEqual([]);
-			const actualSelectedPaths = resourceLoader
-				.getExtensions()
-				.extensions.map((extension) => extension.path);
-			expect(actualSelectedPaths).toEqual([source.nativeEntrypoint]);
-			bootstrap.delivery.confirmSelection(actualSelectedPaths);
-			({ session } = await createAgentSession({
-				cwd: workspace,
-				agentDir,
-				settingsManager,
-				resourceLoader,
-				modelRuntime,
-				model: faux.getModel(),
-				sessionManager: SessionManager.create(workspace, join(root, "history")),
-				noTools: true,
-				hostDeliveryRunStart: (signal) => bootstrap.delivery.start(signal),
-				hostDeliveryBoundary: (event, signal) => bootstrap.delivery.finalize(event, signal),
-			}));
-			settingsManager.setProjectTrusted(true);
-			sessions.add({ session, cwd: workspace, unsubscribe() {} });
-			bootstrap.bindSession(session.sessionId, () => engine.abort(session));
-			await session.bindExtensions({
-				onError: (error) => errors.push({ event: error.event, error: error.error }),
+			sessions = backend.registry;
+			engine = backend.sessionEngine;
+			backend.modelRuntime = modelRuntime;
+			backend.onEvent((_id, event) => {
+				publicEvents.push(structuredClone(event));
+				if (event.type === "extension_error") errors.push(event);
 			});
+			const meta = await backend.createSession({
+				cwd: workspace,
+				provider: faux.provider.id,
+				modelId: faux.getModel().id,
+			});
+			session = backend.registry.get(meta.sessionId).session;
 			session.subscribe((event) => {
 				if (event.type === "message_end" && event.message.role === "assistant")
 					deliveries.push(structuredClone(event.message));
 			});
 			const tool = (name, input) =>
 				fauxAssistantMessage(fauxToolCall(name, input), { stopReason: "toolUse" });
+			const signed = {
+				type: "thinking",
+				thinking: "PRIVATE_PARENT_PROTOCOL",
+				thinkingSignature: "actual-parent-signature",
+			};
+			let restoredProtocol;
 			faux.setResponses([
-				tool("research_prepare_knowledge", { query: "Orchid condition A" }),
-				tool("research_read_knowledge", { path: "Wiki/Orchid.md" }),
+				fauxAssistantMessage(
+					[
+						signed,
+						{ type: "text", text: "PRIVATE_TOOL_PREFACE" },
+						fauxToolCall("research_prepare_knowledge", { query: "Orchid condition A" }),
+					],
+					{ stopReason: "toolUse" },
+				),
+				(context) => {
+					restoredProtocol = structuredClone(
+						context.messages.find(
+							(message) =>
+								message.role === "assistant" && message.content.some((block) => block.type === "toolCall"),
+						),
+					);
+					return tool("research_read_knowledge", { path: "Wiki/Orchid.md" });
+				},
 				tool("research_search_knowledge", { query: "Orchid" }),
 				tool("research_read_knowledge", { path: sourcePath }),
 				tool("research_delegate_knowledge", {
@@ -303,7 +310,17 @@ it.skipIf(!tarball)(
 					task: "Describe only assigned method scope",
 					source_paths: [sourcePath],
 				}),
-				tool("knowledge_read", { path: sourcePath }),
+				fauxAssistantMessage(
+					[
+						{
+							type: "thinking",
+							thinking: "PRIVATE_CHILD_THINKING",
+							thinkingSignature: "actual-child-signature",
+						},
+						fauxToolCall("knowledge_read", { path: sourcePath }),
+					],
+					{ stopReason: "toolUse" },
+				),
 				tool("knowledge_submit", {
 					summary: "The assigned note only supports condition A.",
 					source_paths: [sourcePath],
@@ -315,6 +332,14 @@ it.skipIf(!tarball)(
 			await session.prompt("知识库 Orchid 方法条件 A 说明，使用本地资料，并请证据整理员核对适用范围。");
 			await session.waitForIdle();
 			expect(errors).toEqual([]);
+			expect(restoredProtocol.content[0]).toEqual(signed);
+			expect(restoredProtocol.content.some((block) => block.text === "PRIVATE_TOOL_PREFACE")).toBe(true);
+			expect(JSON.stringify(publicEvents)).not.toMatch(
+				/PRIVATE_PARENT_PROTOCOL|PRIVATE_TOOL_PREFACE|PRIVATE_CHILD_THINKING/,
+			);
+			expect(JSON.stringify(session.messages)).not.toMatch(
+				/PRIVATE_PARENT_PROTOCOL|PRIVATE_TOOL_PREFACE|PRIVATE_CHILD_THINKING/,
+			);
 			const results = session.messages.filter((message) => message.role === "toolResult");
 			for (const name of [
 				"research_prepare_knowledge",
@@ -355,6 +380,46 @@ it.skipIf(!tarball)(
 				total: 1,
 				rate: 1,
 			});
+			expect(publicEvents.some((event) => event.type === "message_update")).toBe(false);
+			expect(
+				publicEvents.findLast((event) => event.type === "message_end" && event.message.role === "assistant")
+					.message.content,
+			).toEqual(final.content);
+			const polled = await backend.getSessionMessages(session.sessionId);
+			expect(polled.at(-1).text).toContain(answer);
+			expect(JSON.stringify(polled)).not.toMatch(
+				/PRIVATE_PARENT_PROTOCOL|PRIVATE_TOOL_PREFACE|PRIVATE_CHILD_THINKING/,
+			);
+			const live = session.messages;
+			const historical = live.filter((message) => {
+				const origin = engine.historicalMessageOrigin(session, message);
+				return origin && JSON.stringify(origin.message) === JSON.stringify(message);
+			});
+			const displayed = await bootstrap.delivery.snapshot(live, historical);
+			expect(displayed.at(-1).content).toEqual(final.content);
+			const copied = structuredClone(live.at(-1));
+			expect(engine.historicalMessageOrigin(session, copied)).toBeUndefined();
+			expect((await bootstrap.delivery.snapshot([copied], [])).at(-1).content).not.toEqual(final.content);
+			await session.reload();
+			expect(errors).toEqual([]);
+			const restored = session.messages;
+			const genuine = restored.filter((message) => {
+				const origin = engine.historicalMessageOrigin(session, message);
+				return origin && JSON.stringify(origin.message) === JSON.stringify(message);
+			});
+			expect((await bootstrap.delivery.snapshot(restored, genuine)).at(-1).content).toEqual(final.content);
+			expect(
+				bootstrap.delivery.projectEvent({ type: "message_end", message: copied }).message.content,
+			).not.toEqual(final.content);
+			const realJsonlExport = session.exportToJsonlForHost.bind(session);
+			vi.spyOn(session, "exportToJsonlForHost").mockImplementation(() =>
+				realJsonlExport(join(root, "checked.jsonl")),
+			);
+			const jsonlPath = await backend.exportSession(session.sessionId, "jsonl");
+			const exported = await readFile(jsonlPath, "utf8");
+			expect(exported).toContain(answer);
+			expect(exported).not.toMatch(/PRIVATE_PARENT_PROTOCOL|PRIVATE_TOOL_PREFACE|PRIVATE_CHILD_THINKING/);
+			await rm(jsonlPath);
 			expect(approvals).toContain("capability:model.toolStep");
 			expect(
 				calls
@@ -370,13 +435,17 @@ it.skipIf(!tarball)(
 					tools: results.map((result) => ({ name: result.toolName, error: !!result.isError })),
 					finalStatus: final.knowledgePublication.status,
 					scientificVerification: false,
-					fullP2: "INCOMPLETE: historical export, service composition and formal installer remain",
+					fullP2: "INCOMPLETE: offline/full-tree history, service composition and formal installer remain",
 				}),
 			);
 		} finally {
-			if (session) await engine.dispose(session);
+			if (session && backend) await backend.closeSession(session.sessionId);
+			else if (session) await engine.dispose(session);
 			if (bootstrap) await bootstrap.dispose();
 			if (bridge) await bridge.close();
+			if (backend) await backend.dispose();
+			vi.restoreAllMocks();
+			vi.unstubAllEnvs();
 			await rm(root, { recursive: true, force: true });
 		}
 	},
