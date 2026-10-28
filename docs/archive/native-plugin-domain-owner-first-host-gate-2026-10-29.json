@@ -1,0 +1,102 @@
+{
+	"source": "/Users/gaoyangwei/.codex/worktrees/native-source-selection/Drone",
+	"commit": "6994091c",
+	"base": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC",
+	"checkout": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone",
+	"status": "FAILED",
+	"commands": [
+		{
+			"command": [
+				"git",
+				"clone",
+				"--shared",
+				"--no-hardlinks",
+				"--no-checkout",
+				"/Users/gaoyangwei/.codex/worktrees/native-source-selection/Drone",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone"
+			],
+			"cwd": "/Users/gaoyangwei/.codex/worktrees/native-source-selection/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/00-clone.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "310d10f7eef887690ab81dc06810a2d090e8d54978915468a0627eb4930414ac"
+		},
+		{
+			"command": ["git", "checkout", "--detach", "6994091c"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/01-checkout.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "5faa7a7fe049ef0cc2cbe9340fdfa5e73f6a06c27f856e81ce856bc645da7e2e"
+		},
+		{
+			"command": ["git", "remote", "set-url", "origin", "https://github.com/Gyoungwe/Drone.git"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/02-origin.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+		},
+		{
+			"command": ["npm", "ci", "--no-audit", "--no-fund"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/03-ci.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "2cd38707401b5162bb4ad00c67712916d58a1393c974e4af981bbe715b1c1c55"
+		},
+		{
+			"command": ["node", "scripts/stage-plugin-runtime.mjs", "--check"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/03b-verify-public-runtime-cache.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "fbb52aad7ccabe0cb494fcc9c78a19847f4ea5ea5b0ec52658a4a57534cf3008"
+		},
+		{
+			"command": ["git", "status", "--porcelain"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/03c-source-status.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+		},
+		{
+			"command": ["npm", "run", "lint"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/04-lint.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "0cd05ab1cb0986ff0bd724fd666dd3b0a50b64aafc2b42785b20e4c478f5485a"
+		},
+		{
+			"command": ["npm", "run", "typecheck"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/05-typecheck.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "6f6ded99c2648d5624db5be527456a66d73959b55298dc32380f5efee05fd4f1"
+		},
+		{
+			"command": ["npm", "test"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/06-test.log",
+			"status": "FAILED",
+			"exitCode": 1,
+			"signal": null,
+			"logSha256": "f113012574c6f945f03b7b9a258b7f3f6872b681d278d3a59d630a2d766faf16"
+		}
+	],
+	"startedAt": "2026-10-28T16:33:23.515Z",
+	"error": "Error: 06-test failed: /var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-domain-owner-host-check-jbcDrC/06-test.log",
+	"finishedAt": "2026-10-28T16:39:55.697Z",
+	"scope": "Historical first independent6994091c candidate gate; lint/typecheck passed, backend2205passed/2failed/17skipped, Desktop970passed/1skipped. The two stale SDK fixtures were corrected in875821d0 and36d12a0f; final complete rerun after these fixes has NOT_RUN. No security-final-boundary PASS claim."
+}

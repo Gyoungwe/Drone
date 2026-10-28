@@ -4,18 +4,18 @@
 
 当前标准门禁基线为宿主 `bb918979`、插件 `1707f6c`、私有 API `2c4e3ecd`（SHA-256 `b296da73…e4d70`，未发布 npm）：插件完整检查、固定源码干净五包重建、默认远程取包，以及宿主独立干净 checkout 的 npm ci、lint/typecheck/test/build/check:arch/check:plugin-api 全部通过。backend 2154 passed/17 skipped、Desktop 966 passed/1 skipped、Plugin API Node 17/17、根 Node 31/31；两组真实本机 Docker 验收均启用。完整命令和日志哈希见[宿主门禁回执](../releases/native-plugin-owner-services-host-gates-2026-10-29.json)，匹配包及真实 SDK 范围见[owner/services 检查点](../releases/native-plugin-owner-services-cohort-2026-10-28.json)。native boundary 仍 INCOMPLETE（build15/manifest10/type5/runtime1/resources21/required locks4），本检查点通过不关闭 P0–P7。
 
-原 `93d2ad1f` 的八处 backend 失败、`ecc86cc4` 的三次传输/Docker daemon/孤立 checker fixture 失败均保留于检查点链接的归档；原八处故障已由后继定向和独立完整门禁覆盖。ChannelWatcher 通过实际文件快照核对修复无原生 hint 时的漏报，64 个生产默认周期实测及完整门禁通过。知识只读 write hooks 仍拒绝，普通聊天不以环境变量推定 guard。下一批知识恢复/完整树/子会话、任务 native provider/持久回执与 Inquiry 迁移在独立 `codex/native-domain-owner-cutover` 分支整合，尚未完成统一 API、候选包和完整门禁；本轮没有新正式安装包。
+原 `93d2ad1f` 的八处 backend 失败、`ecc86cc4` 的三次传输/Docker daemon/孤立 checker fixture 失败均保留于检查点链接的归档；原八处故障已由后继定向和独立完整门禁覆盖。ChannelWatcher 通过实际文件快照核对修复无原生 hint 时的漏报，64 个生产默认周期实测及完整门禁通过。知识只读 write hooks 仍拒绝，普通聊天不以环境变量推定 guard。后继知识恢复/完整树、任务 native provider/持久回执和 Inquiry 标准 Pi/runtime/UI 已在两个 `codex/native-domain-owner-cutover` 分支整合，插件 `e4fbead`、私有 API `e41cf906` 已统一并完成插件完整检查、六包干净重建及默认远程 fetch。宿主 `6994091c` 首轮完整测试 backend2205 passed/2 failed/17 skipped、Desktop970 passed/1 skipped；两处旧 fixture 已修于 `875821d0`、`36d12a0f`，根定向5+2项通过，修复后的完整根门禁尚未重跑。另有最终 tool_call 参数变换后的权限绕过已在子代理真实 SDK 合成文件中复现，修复未合根；不把此开发路径问题推断为所有旧公开版本问题。详见[完整交接](../handoff-2026-10-29.md)及[新候选回执](../releases/native-plugin-domain-owner-cohort-2026-10-29.json)，本轮没有新正式安装包。
 
 ## 当前阶段状态
 
 | 阶段 | 完成条件 | 当前已证明 | 仍未完成 | 依赖 |
 | --- | --- | --- | --- | --- |
 | P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复领域扫描 | 33 API/41 事件/28 UI 声明盘点；真实 SDK 主/恢复/子会话 onError、Desktop RPC/28 UI 支持或明确拒绝、MCP/状态、沙箱诊断、managed prompt mutation、两条 process 工具 metadata/进度与真实拒绝 | managed ctx/getter；locked/latest 完整矩阵；扫描仍 `INCOMPLETE`。Desktop 28 UI 成员/RPC/status/审批取消已整合，待最终包复验 | 无 |
-| P1 | 通用 runtime 生命周期、来源绑定、权限、隔离、UI 调用与撤销 | 正式包应用 owner、会话切换、停用/拒绝/恢复/退出切片；来源变化撤销；本候选逐请求取消、实际 provider abort、双窗口同会话批准分离与真实 native 模型能力 | 正式包的销毁失败回执；后续领域包在同一候选版本上的完整生命周期复验 | P0 |
-| P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | 同 tarball 的真实受限双进程/SDK owner 与 UI 读写授权；canonical 审核/history/undo、partial→retry Vault 仅写一次及完整退出；完整 prepare/read/search/delegate/check/publication、实际 parent thinking 继承、当前 branch 事件/历史与异步导出投影 | 离线/完整树及子会话历史、任务 provider 完整协作、旧恢复状态迁移；宿主领域操作/IPC与旧资源删除；正式 GUI | P1 |
+| P1 | 通用 runtime 生命周期、来源绑定、权限、隔离、UI 调用与撤销 | 正式包应用 owner、会话切换、停用/拒绝/恢复/退出切片；来源变化撤销；本候选逐请求取消、实际 provider abort、双窗口同会话批准分离与真实 native 模型能力 | 显式整包启停（UI 开关不等于 native 停用）、最终工具参数权限门禁、正式包销毁失败回执；各领域同候选完整生命周期复验 | P0 |
+| P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | 同 tarball 的真实受限双进程/SDK owner 与 UI 读写授权；canonical 审核/history/undo、partial→retry Vault 仅写一次及完整退出；完整 prepare/read/search/delegate/check/publication、实际 parent thinking 继承、当前 branch 事件/历史与异步导出投影；新候选实际恢复两阶段导入及完整树导出 | 离线完整历史、实际 child 只读策略与任务 provider 完整协作、其余旧状态迁移；宿主领域操作/IPC与旧资源删除；正式 GUI | P1 |
 | P3 | research、来源连接器、引用/Zotero 的领域 API 与页面迁移 | 安装 host fail-closed；真实生产 summary review→delivery→回读→receipt；4 个隔离 specialist 与单独摘要 reviewer、拒绝/rollback/CAS/路径回归 | 仍有迁移期宿主 FS writer；完整 Zotero/研究 owner 与页面归属；本候选连接器/写入正式 GUI；上述测试不覆盖全部 protected Wiki reviewer | P2 |
 | P4 | tasks、编排、领域记忆及 UI 迁移 | knowledge 停止隐式任务 guard；真实 SDK 无 core 的基础 read/write/bash 与权限拒绝、两种安装加载顺序及 24 项任务回归；typed core 与 milestone 规则；canonical 状态机/guard/owner 已归插件，宿主 tasks 与反向 workbench port 删除，真实多会话/registry 隔离与恢复；验收卡/任务页同包 UI、显式 command、取消后无迟到写入与 UI 移除/恢复同 owner | 动态 native 包启停、科研示例/引导与领域记忆、正式 GUI | P2 |
-| P5 | analysis/evidence 与 discovery 的可卸载实现；依赖经显式合同管理 | discovery 算法/状态归插件，宿主注入机制；无插件不构造旧实现/登记存储；同 tarball 共享 native/UI owner、显式状态绑定与独立/旧 writer CAS 交接；实际 SDK+已安装 UI/独立 Pi→本机 Docker 执行与回执、五种容器清理 | critic/multipath/eval/export、Inquiry 持久化与服务接管、B5 正式 GUI；完整分析/证据控制器与 UI 迁移、同候选工作流验收 | P3/P4 |
+| P5 | analysis/evidence 与 discovery 的可卸载实现；依赖经显式合同管理 | discovery 算法/状态归插件，宿主注入机制；无插件不构造旧实现/登记存储；同 tarball 共享 native/UI owner、显式状态绑定与独立/旧 writer CAS 交接；实际 SDK+已安装 UI/独立 Pi→本机 Docker 执行与回执、五种容器清理；新候选 Inquiry 原格式 SQLite/WASM、标准 Pi/安装后 UI/SDK 共享与原库恢复 | critic/multipath/eval/export、Inquiry 自动事件/rerun 与旧宿主接缝删除、B5 正式 GUI；完整分析/证据控制器与 UI 迁移、同候选工作流验收 | P3/P4 |
 | P6 | 科研能力成为可卸载预设；删除构建/锁文件必需依赖与旧路径 | 四包同提交候选已独立重建；core 与 tasks 旧源码删除，任务不再生成宿主 runtime；discovery runtime 依赖下移；`trackedRuntimeDependencies=[]` | 4 个必需领域源码锁及 hoisted/dev/build/resource 闭包删除；旧 bundled 装配、领域 schema/IPC 与预设卸载；零领域独立构建 | P2–P5 |
 | P7 | 双仓库最终门禁、同 tarball 原生会话、正式包零插件及升级/停用/回滚 | 当前 bb918979/1707f6c 标准门禁通过，opt-in packed core/knowledge/discovery 与私有 API 1.3 tarball 已启用；真实 knowledge 审核写入与双进程完整退出 | 全领域最终候选、正式安装包 GUI、销毁失败/公开跨版本回滚、真正无领域资源宿主；本轮未新建正式安装包 | P6 |
 
@@ -23,15 +23,15 @@
 
 1. 完成 P2–P5 的领域实现和 UI ownership，删除对应宿主装配与临时路径；切片合同、loader 与定向测试通过不等于领域迁移完成。
 2. 完成 discovery 共享 owner/执行/Inquiry/B5 GUI 与任务界面；原生只读工具及真实 Docker 清理已整合，无 core 的隐式 guard 阻断已修复，canonical 任务 owner/UI 已整合，继续迁移科研示例/引导与整个 native 包动态启停。WebDAV/inquiry 的既有归属记录保留，不借本次状态同步扩大边界。
-3. 四包源码锁已同步为 `1707f6c`；它仍是迁移期构建必需依赖。继续删除这些领域锁与旧资源闭包，证明不下载科研插件也能独立构建，而不是仅把版本同步当作 P6 完成。
+3. 当前工作分支四包源码锁已同步为 `e4fbead`，最近完整门禁检查点仍为 `1707f6c`；这些锁仍是迁移期构建必需依赖。继续删除这些领域锁与旧资源闭包，证明不下载科研插件也能独立构建，而不是仅把版本同步当作 P6 完成。
 4. 使用同一候选 tarball 完成原生 Pi 真实会话、正式安装包的领域 GUI、Vault 写入回读/回滚与完整生命周期，包括销毁失败。既有通用宿主和公开 pi-evidence 切片保留其已证明范围。
-5. 当前候选的双仓库标准门禁已完成；后续迁移仍须固定来源后复验，并清理最终领域边界门禁。历史全量或直接 workspace 检查不替代未来最终候选的根命令与正式包验收。
+5. `bb918979/1707f6c` 冻结检查点的双仓库标准门禁已完成；后继 `e4fbead` 插件完整检查通过，宿主两处 fixture 修复后的整轮仍待复验，并须关闭最终工具参数权限问题和领域边界门禁。历史全量或直接 workspace 检查不替代未来最终候选的根命令与正式包验收。
 
 ## 后继并行工作
 
 已冻结检查点 `bb918979/1707f6c` 的源码、干净包、真实 SDK/受限 worker、实际 SDK+已安装 UI/独立 Pi→本机 Docker，以及完整宿主标准门禁已验证。Docker runner 仍使用本机已缓存镜像、`--pull=never`、无网络与仅执行目录写入；这不代替正式 Electron/DMG GUI。
 
-下一候选在两个 `codex/native-domain-owner-cutover` 分支整合：知识的恢复状态显式导入、完整树导出和可选探测 timer 清理；任务 live/last-durable 回执、host-only native provider 和受管理任务数据；Inquiry 原格式 SQLite/WASM 持久化、二进制 CAS 与旧 writer 租约。各项需统一新的私有 API、重建正式生成物，并从同一候选 tarball 复验；私有分支或单项测试不提升为阶段完成。
+后继 `e4fbead/e41cf906` 已整合知识恢复显式导入、完整树导出、可选探测 timer 清理，任务 live/last-durable 回执、host-only native provider/数据，以及 Inquiry 原格式 SQLite/WASM、二进制 CAS、旧 writer 租约和同包 Pi/UI。统一 API、插件完整检查、六包干净重建与真实 Inquiry 三路验收已通过；宿主修复后整轮仍待复验。子代理后继的 resource 请求 signal、Inquiry event projector/Discovery provider 消费已冻结待整合；实际 child 策略、持续任务授权/续作/PDF、最终工具参数权限修复仍在推进。源码、未提交工作、精确 SHA 与恢复顺序见[交接文档](../handoff-2026-10-29.md)，不把子代理切片提升为阶段完成。
 
 P3 研究/Zotero 与 P5 分析/证据完整控制器、页面和旧宿主业务删除仍是主体剩余工作。P4 继续处理实际任务授权/续作、科研示例/领域记忆和旧 startup/core/task host；P6 删除四个必需领域锁及构建/资源闭包，证明不下载科研插件也能独立构建、启动和聊天；P7 以最终同候选正式安装包验收完整 GUI、销毁失败和升级回滚。目标保持 active，既有四项外部验收和暂缓范围不变。
 
