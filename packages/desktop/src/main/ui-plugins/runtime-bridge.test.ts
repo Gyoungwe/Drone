@@ -374,7 +374,7 @@ describe("DesktopRuntimeBridge", () => {
 		expect(await bridge.bind("local", owner)).toBeUndefined();
 	});
 
-	it.each(["requestsStateWrite", "requestsFileWrite"] as const)(
+	it.each(["requestsStateRead", "requestsStateWrite", "requestsFileRead", "requestsFileWrite"] as const)(
 		"revokes old bindings when the manifest changes %s authority",
 		async (permission) => {
 			const { bridge, options, dispose, factory } = setup();

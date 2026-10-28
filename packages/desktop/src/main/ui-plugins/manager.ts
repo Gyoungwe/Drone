@@ -114,7 +114,9 @@ export interface InstalledUiRuntimeSource {
 	packageRoot: string;
 	entrypoint: string;
 	nativeEntrypoint?: string;
+	requestsStateRead?: boolean;
 	requestsStateWrite?: boolean;
+	requestsFileRead?: boolean;
 	requestsFileWrite?: boolean;
 	resources?: Readonly<Record<string, string>>;
 }
@@ -217,17 +219,22 @@ export async function discoverInstalledUiPackages(root: string): Promise<Install
 				}
 				const entrypoint = await installedRuntimeFile(packageRoot, declaredRuntime, "desktopRuntime");
 				runtime = { pluginId: packageName, packageRoot, entrypoint };
-				if (
-					Array.isArray(manifest.permissions?.filesystem) &&
-					manifest.permissions.filesystem.includes("application-state-write")
-				)
-					runtime.requestsStateWrite = true;
-				if (
-					Array.isArray(manifest.permissions?.filesystem) &&
-					(manifest.permissions.filesystem.includes("workspace-write") ||
-						manifest.permissions.filesystem.includes("configured-vault-write"))
-				)
-					runtime.requestsFileWrite = true;
+				if (Array.isArray(manifest.permissions?.filesystem)) {
+					const filesystem = manifest.permissions.filesystem;
+					if (filesystem.includes("application-state-write")) runtime.requestsStateWrite = true;
+					if (filesystem.includes("application-state") || runtime.requestsStateWrite)
+						runtime.requestsStateRead = true;
+					if (filesystem.includes("workspace-write") || filesystem.includes("configured-vault-write"))
+						runtime.requestsFileWrite = true;
+					if (
+						filesystem.includes("workspace") ||
+						filesystem.includes("workspace-read") ||
+						filesystem.includes("configured-vault") ||
+						filesystem.includes("vault-read") ||
+						runtime.requestsFileWrite
+					)
+						runtime.requestsFileRead = true;
+				}
 				if (manifest.entrypoints.extension !== undefined) {
 					runtime.nativeEntrypoint = await installedRuntimeFile(
 						packageRoot,

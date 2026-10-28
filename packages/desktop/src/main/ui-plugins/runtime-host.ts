@@ -143,35 +143,31 @@ export function createDesktopResourceCapabilities(
 	selection: ResourceAccessSelection,
 ): PluginRuntimeCapabilitiesProvider {
 	return async (activation) => {
-		if (!source.resources || Object.keys(source.resources).length === 0)
-			return { resources: [], handlers: {} };
+		const declaredResources = source.resources;
+		const hasResources = declaredResources !== undefined && Object.keys(declaredResources).length > 0;
+		const requestsState = source.requestsStateRead || source.requestsStateWrite;
+		const requestsFiles = source.requestsFileRead || source.requestsFileWrite;
+		if (!hasResources && !requestsState && !requestsFiles) return { resources: [], handlers: {} };
 		activation.signal.throwIfAborted();
-		const state = await selectWhileActive(
-			selection,
-			source.requestsStateWrite ? "state-write" : "state",
-			activation.signal,
-		);
-		activation.signal.throwIfAborted();
-		if (state.length !== 1 || state[0] === undefined)
-			throw new Error("Plugin state directory selection was canceled");
-		const files = await selectWhileActive(
-			selection,
-			source.requestsFileWrite ? "files-write" : "files",
-			activation.signal,
-		);
-		activation.signal.throwIfAborted();
-		if (files.length === 0) throw new Error("Plugin data directory selection was canceled");
-		const statePath = await realpath(state[0]);
-		const filePaths = [...new Set(await Promise.all(files.map((path) => realpath(path))))];
-		const stateEntry = selection.storage.registerDiscoveredRoot(
-			`desktop-plugin-state-${createHash("sha256").update(source.pluginId).digest("hex").slice(0, 16)}`,
-			statePath,
-			`plugin:${source.pluginId}`,
-			"private",
-			"plugin-owned",
-		);
-		const grants: PluginRootGrant[] = [
-			{
+		const grants: PluginRootGrant[] = [];
+		if (requestsState) {
+			const state = await selectWhileActive(
+				selection,
+				source.requestsStateWrite ? "state-write" : "state",
+				activation.signal,
+			);
+			activation.signal.throwIfAborted();
+			if (state.length !== 1 || state[0] === undefined)
+				throw new Error("Plugin state directory selection was canceled");
+			const statePath = await realpath(state[0]);
+			const stateEntry = selection.storage.registerDiscoveredRoot(
+				`desktop-plugin-state-${createHash("sha256").update(source.pluginId).digest("hex").slice(0, 16)}`,
+				statePath,
+				`plugin:${source.pluginId}`,
+				"private",
+				"plugin-owned",
+			);
+			grants.push({
 				handle: randomUUID(),
 				path: statePath,
 				kind: "state",
@@ -179,15 +175,27 @@ export function createDesktopResourceCapabilities(
 				...(source.requestsStateWrite
 					? { stateWrite: { registry: selection.storage, storageId: stateEntry.id } }
 					: {}),
-			},
-			...filePaths.map((path) => ({
-				handle: randomUUID(),
-				path,
-				kind: "files" as const,
-				scope: { kind: "application" as const },
-				...(source.requestsFileWrite ? { fileWrite: true as const } : {}),
-			})),
-		];
+			});
+		}
+		if (requestsFiles) {
+			const files = await selectWhileActive(
+				selection,
+				source.requestsFileWrite ? "files-write" : "files",
+				activation.signal,
+			);
+			activation.signal.throwIfAborted();
+			if (files.length === 0) throw new Error("Plugin data directory selection was canceled");
+			const filePaths = [...new Set(await Promise.all(files.map((path) => realpath(path))))];
+			grants.push(
+				...filePaths.map((path) => ({
+					handle: randomUUID(),
+					path,
+					kind: "files" as const,
+					scope: { kind: "application" as const },
+					...(source.requestsFileWrite ? { fileWrite: true as const } : {}),
+				})),
+			);
+		}
 		const profile = await realpath(selection.profileDirectory);
 		const cache = join(
 			profile,
@@ -203,16 +211,19 @@ export function createDesktopResourceCapabilities(
 		}
 		const ports = await PluginFileCapabilities.create(grants, cache);
 		activation.signal.throwIfAborted();
-		const resources = new PluginResourceManager({
-			pluginId: activation.pluginId,
-			applicationId: activation.applicationId,
-			packageRoot: source.packageRoot,
-			entries: source.resources,
-			runtimeDirectory,
-			files: ports,
-			signal: activation.signal,
-			events: activation.events,
-		});
+		const resources =
+			declaredResources && hasResources
+				? new PluginResourceManager({
+						pluginId: activation.pluginId,
+						applicationId: activation.applicationId,
+						packageRoot: source.packageRoot,
+						entries: declaredResources,
+						runtimeDirectory,
+						files: ports,
+						signal: activation.signal,
+						events: activation.events,
+					})
+				: undefined;
 		const fileHandlers = { ...fileCapabilityHandlers(ports) };
 		for (const operation of writeOperations) {
 			fileHandlers[operation] = {
@@ -227,9 +238,13 @@ export function createDesktopResourceCapabilities(
 				kind,
 				access: stateWrite || fileWrite ? ("read-write" as const) : ("read" as const),
 			})),
-			handlers: { ...fileHandlers, ...resources.handlers() },
-			resourcesLifecycle: { dispose: () => resources.disposeResources() },
-			dispose: () => resources.dispose(),
+			handlers: { ...fileHandlers, ...resources?.handlers() },
+			...(resources
+				? {
+						resourcesLifecycle: { dispose: () => resources.disposeResources() },
+						dispose: () => resources.dispose(),
+					}
+				: {}),
 		};
 	};
 }

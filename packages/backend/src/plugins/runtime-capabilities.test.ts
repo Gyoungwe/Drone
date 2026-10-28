@@ -27,6 +27,44 @@ const policy = () => ({
 });
 
 describe("plugin capability authority", () => {
+	it("reports only the host-resolved live scope and retains no caller between invocations", async () => {
+		const access = policy();
+		const registry = new PluginRuntimeRegistry(access, "app");
+		let retained!: (input?: unknown) => Promise<unknown>;
+		registry.register("plugin", async ({ capabilities }) => {
+			expect(await capabilities.call("caller.scope", null)).toEqual({ kind: "application" });
+			retained = (input = null) => capabilities.call("caller.scope", input);
+			return {
+				operations: {
+					scope: {
+						inputSchema: Type.Unknown(),
+						resultSchema: Type.Unknown(),
+						effect: "read",
+						execute: retained,
+					},
+				},
+				dispose: async () => {},
+			};
+		});
+		let selected = caller;
+		const client = await registry.activate("plugin", () => selected);
+		expect(await client.invoke("scope", null)).toEqual(caller.scope);
+		await expect(client.invoke("scope", { workspaceId: "forged" })).rejects.toThrow(
+			"Invalid plugin capability input",
+		);
+		selected = {
+			...caller,
+			identity: {},
+			scope: { ...caller.scope, workspaceId: "second-project", sessionId: "second" },
+		};
+		expect(await client.invoke("scope", null)).toEqual(selected.scope);
+		await expect(retained()).rejects.toThrow("no live caller");
+		expect(access.authorizeInvocation.mock.calls.map(([request]) => request.operation)).toContain(
+			"capability:caller.scope",
+		);
+		await registry.deactivate("plugin");
+	});
+
 	it("formats approval details only for schema-valid capability input and never trusts operation details", async () => {
 		const authorization = policy();
 		const execute = vi.fn(async () => "saved");

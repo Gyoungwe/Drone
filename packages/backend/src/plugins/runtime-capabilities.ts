@@ -6,6 +6,7 @@ import type {
 	PluginRuntimeSchema,
 	PluginRuntimeScope,
 } from "@gyoungwe/plugin-api/runtime";
+import { Type } from "typebox";
 import { Check } from "typebox/value";
 
 export interface PluginCapabilityContext {
@@ -34,6 +35,34 @@ export interface PluginRuntimeCapabilitiesOptions {
 	readonly resourcesLifecycle?: PluginResourcesLifecycle;
 	dispose?(): Promise<void>;
 }
+/** Host-owned identity only: no filesystem grant is implied by the returned scope. */
+const callerScopeHandler: PluginCapabilityHandler = {
+	inputSchema: Type.Null(),
+	resultSchema: Type.Union([
+		Type.Object({ kind: Type.Literal("application") }, { additionalProperties: false }),
+		Type.Object(
+			{
+				kind: Type.Literal("workspace"),
+				workspaceId: Type.String(),
+				workspaceDirectory: Type.String(),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				kind: Type.Literal("session"),
+				workspaceId: Type.String(),
+				workspaceDirectory: Type.String(),
+				sessionId: Type.String(),
+			},
+			{ additionalProperties: false },
+		),
+	]),
+	effect: "read",
+	bootstrap: true,
+	execute: async (_input, context) => ({ ...context.scope }),
+};
+
 interface Authority {
 	readonly context: PluginCapabilityContext;
 	readonly effect: "read" | "write";
@@ -114,7 +143,12 @@ export class PluginCapabilityBroker {
 			authority.check();
 		};
 		check();
-		const handler = Object.hasOwn(this.options.handlers, name) ? this.options.handlers[name] : undefined;
+		const handler =
+			name === "caller.scope"
+				? callerScopeHandler
+				: Object.hasOwn(this.options.handlers, name)
+					? this.options.handlers[name]
+					: undefined;
 		if (!handler) throw new Error(`Plugin capability is not registered: ${name}`);
 		if (!Check(handler.inputSchema, input)) throw new Error(`Invalid plugin capability input: ${name}`);
 		if (handler.effect === "write" && authority.effect !== "write")

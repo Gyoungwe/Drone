@@ -300,3 +300,10 @@ export function activate() {
 ### Markdown navigation ownership
 
 `Markdown` accepts optional `onLink(href: string): void`. When provided, the host renders the supplied Markdown without knowledge-link rewriting and forwards anchor clicks to the contribution after preventing default navigation. Host knowledge lookup/store and resource-preview routing do not run. The contribution must use its own runtime and approved opening capabilities; receiving a URL is not permission to open local files or launch an external application. Omitting `onLink` retains the published UI v1 behavior until its consumers migrate.
+
+
+### 候选后台文件能力与调用者身份
+
+受管 `desktopRuntime` 的 state/files 授权只从已安装包的 `permissions.filesystem` 派生，不要求也不由 `entrypoints.resources` 授予。state 与 files 分别选择；write 声明含对应 read，但仍须写目录选择和逐操作批准。无资源声明时不会建立派生 resource 子进程。清单权限变化撤销旧绑定。
+
+后台可在当前合法调用内使用 `capabilities.call("caller.scope", null)` 读取宿主解析的 `PluginRuntimeScope`；构造期为 application scope，普通调用为实际当前 scope。workspaceId 用于身份分区；workspaceDirectory 不代表文件权限。此端口既不接受插件传入的身份，也不允许保留闭包越过当前调用。详情与候选验收范围见 `docs/pluginization/native-plugin-resource-independent-capabilities.md`。

@@ -21,7 +21,9 @@ export interface PluginRuntimeChangedEvent {
 
 /** One domain owner per application activation, shared by its caller scopes. */
 export interface PluginRuntimeCapabilities {
-	/** Only host-registered methods are available, under the current invocation authority. */
+	/** Only host-registered methods are available, under the current invocation authority.
+	 * `caller.scope(null)` returns the current host-resolved PluginRuntimeScope, including
+	 * application scope during bootstrap. It grants no file access or retained caller authority. */
 	call(name: string, input: unknown): Promise<unknown>;
 }
 
