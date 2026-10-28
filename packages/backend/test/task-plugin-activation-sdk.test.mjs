@@ -4,11 +4,18 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import {
+	createAgentSession,
+	DefaultResourceLoader,
+	ModelRuntime,
+	SessionManager,
+	SettingsManager,
+} from "@earendil-works/pi-coding-agent";
 import { taskHostLoader } from "@gyoungwe/pi-core/host";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, expect, it, vi } from "vitest";
 import { createBackend } from "../src/create-backend";
+import { SessionEngine } from "../src/session-engine/engine";
 
 const knowledgeExtension = join(
 	resolve(import.meta.dirname, "../../.."),
@@ -349,6 +356,59 @@ it("restores the installed session owner from durable SDK entries without replay
 	const task = before.tasks.find((value) => value.id === before.activeTaskId);
 	expect(task.milestones[0].state).toBe("completed");
 	expect(task.executionConsent).toMatchObject({ version: 1 });
+	// The same real approved checkpoint can be read as inMemory data, but cannot
+	// restore the prior activation's authorization, including SDK reload of that manager.
+	const settingsManager = SettingsManager.inMemory({});
+	const resourceLoader = new DefaultResourceLoader({
+		cwd: current.cwd,
+		agentDir: current.cwd,
+		settingsManager,
+		noExtensions: true,
+		noSkills: true,
+		noPromptTemplates: true,
+		additionalExtensionPaths: [coreExtension],
+	});
+	await resourceLoader.reload({ resolveProjectTrust: async () => true });
+	const manager = SessionManager.inMemory(current.cwd, undefined, [
+		current.session.sessionManager.getHeader(),
+		...current.session.sessionManager.getBranch(),
+	]);
+	const { session: memory } = await createAgentSession({
+		cwd: current.cwd,
+		settingsManager,
+		resourceLoader,
+		sessionManager: manager,
+		modelRuntime: current.session.modelRuntime,
+		model: current.faux.getModel(),
+	});
+	try {
+		await memory.bindExtensions({});
+		for (let generation = 0; generation < 2; generation++) {
+			if (generation) await memory.reload();
+			await memory.prompt("/task-status");
+			const report = memory.messages.findLast((message) => message.details?.taskView);
+			expect(report.details.taskStorage).toEqual({ mode: "memory", state: "deferred" });
+			expect(
+				report.details.taskView.tasks.find((value) => value.id === task.id).executionConsent,
+			).toBeUndefined();
+		}
+		expect(memory.sessionManager).toBe(manager);
+		expect(
+			manager
+				.getBranch()
+				.findLast((entry) => entry.customType === "drone-task-session-v1")
+				.data.workbench.tasks.find((value) => value.id === task.id).executionConsent,
+		).toMatchObject({ version: 1 });
+	} finally {
+		await new SessionEngine().dispose(memory);
+	}
+	await current.session.reload();
+	await current.service.command(current.session.sessionId, "task-status", "");
+	expect(
+		current.session.messages
+			.findLast((message) => message.details?.taskView)
+			.details.taskView.tasks.find((value) => value.id === task.id).executionConsent,
+	).toBeUndefined();
 	const file = current.session.sessionFile;
 	await current.service.closeSession(current.session.sessionId);
 	const restored = await current.service.openSession(file);
