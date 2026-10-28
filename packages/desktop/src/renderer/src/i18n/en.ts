@@ -240,7 +240,6 @@ export const en: Messages = {
 		},
 		approvalPending: "An action is waiting for your decision → above the composer",
 		todoTitle: "Todo list",
-		taskViewTitle: "Task arrangement",
 		decisionsTitle: "Decisions",
 		decisionsPending: "{count} awaiting review",
 		decisionAffected: "{count} affected output(s)",
@@ -311,7 +310,6 @@ export const en: Messages = {
 			},
 		},
 		turn: "Turn {n}",
-		taskArtifacts: "Task outputs",
 		artifactsEmpty: "Nothing produced yet; knowledge notes and reports will be listed here.",
 		evidence: {
 			title: "Evidence",
@@ -1184,27 +1182,6 @@ export const en: Messages = {
 			mutex: "Detected subagent extension {path}; built-in subagent took over: {tools}",
 		},
 		contextEvaporated: "Trimmed {count} old tool results",
-	},
-	taskRow: {
-		running:
-			"The task is still running; acceptance progress updates as results come in — no need to start it again.",
-		unconfirmed:
-			"Some items are not confirmed yet; this is an older record — check the existing results before generating them again.",
-		noDeliverables: "No deliverables have been agreed yet, so there is no progress to show.",
-		steps: "{n} steps run",
-		accepted: " · {done}/{total} accepted",
-		progressLabel: "Deliverable acceptance progress",
-		progressText: "{done} of {total} accepted",
-		continue: "Continue with the rest",
-		milestones: "Acceptance items {done}/{total}",
-		operations: "Operation log {n}",
-	},
-	taskArtifacts: {
-		openSessionFirst: "Open the session this output belongs to first",
-		changed: "file changed — previews the current version",
-		notFound: "file needs to be located again",
-		preview: "preview in sidebar",
-		more: "{count} more outputs in the full record",
 	},
 	resource: {
 		backToChanges: "← Changes",

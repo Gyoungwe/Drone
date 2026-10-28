@@ -1,0 +1,66 @@
+{
+	"date": "2026-10-28",
+	"scope": "Read existing project discovery journals through standard Pi tools from the same installed tarball as the actual production writer",
+	"hostBase": "fd4c5040",
+	"hostTestCommit": "bda7be70",
+	"pluginCommit": "87588be",
+	"pluginVersion": "0.1.0",
+	"tarballSha256": "448ce6592fa82ce2e3d260c925d0e7dd65d736157b82578ae4e33c78c0a9827e",
+	"tools": ["discovery_status", "discovery_list_records", "discovery_search_records"],
+	"writer": {
+		"composition": "createDiscoveryService/createDiscoveryHostInput defaults; installed discoveryHostLoader",
+		"data": "Two isolated synthetic workspaces; explicit SubprocessFixtureRunner executes a deterministic Python print in each",
+		"authorization": "create-kernel-session, execute-kernel and close-kernel-session recorded independently for each workspace",
+		"journal": "runs/.drone-discovery/sessions.json",
+		"handAuthoredSuccessJournals": false
+	},
+	"nativeReadback": {
+		"status": "PASS",
+		"model": "Deterministic offline faux provider; real AgentSession and tool dispatch; no remote inference",
+		"hostSdkCalls": 9,
+		"cleanInstallMatrix": [
+			{ "target": "locked", "sdk": "1.1.0", "status": "PASS", "calls": 9 },
+			{ "target": "latest", "sdk": "1.4.0", "status": "PASS", "calls": 9 }
+		],
+		"independentWorkspaces": 2,
+		"emptyWorkspace": "unconfigured; no journal directory created",
+		"sourceHashesAfterReading": "unchanged"
+	},
+	"unitChecks": {
+		"discoveryServiceAndNative": "11 tests passed",
+		"scenarios": [
+			"tool/manifest parity",
+			"empty workspace",
+			"workspace isolation",
+			"unchanged bytes",
+			"symlinks",
+			"path injection",
+			"corrupt and oversized JSON",
+			"bounded listing"
+		]
+	},
+	"pluginWorkspaceCheck": {
+		"status": "passed",
+		"command": "DRONE_PLUGIN_API_TARBALL=<verified private API 1.3 candidate> npm run check"
+	},
+	"failedAttempts": [
+		{
+			"check": "SDK matrix first attempt",
+			"reason": "ECONNRESET during isolated npm install",
+			"recovery": "reran same matrix successfully; TLS verification preserved"
+		},
+		{
+			"check": "plugin workspace first attempt",
+			"reason": "private API candidate environment was omitted",
+			"recovery": "reran with verified API 1.3 tarball successfully"
+		}
+	],
+	"notProven": [
+		"Desktop hashed agentDir/native shared owner",
+		"native execution or Inquiry access",
+		"real Docker/Podman execution and cancellation",
+		"B5 UI or formal installation package",
+		"npm publication"
+	],
+	"nextPriority": "Cancellation/close/dispose must await actual runner termination and verified owned-container cleanup; state closed alone is not resource cleanup evidence"
+}

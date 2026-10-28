@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdir, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import type {
@@ -143,6 +144,7 @@ export function buildContainerKernelArgv(
 	return [
 		"run",
 		"--rm",
+		"--pull=never",
 		"--network",
 		"none",
 		"--read-only",
@@ -159,7 +161,7 @@ export function buildContainerKernelArgv(
 		"--tmpfs",
 		`/tmp:rw,noexec,nosuid,nodev,size=${options.tmpfsBytes}`,
 		"--mount",
-		`type=bind,src=${canonicalRunDirectory},dst=/workspace/runs,rw`,
+		`type=bind,src=${canonicalRunDirectory},dst=/workspace/runs`,
 		"--workdir",
 		"/workspace/runs",
 		image,
@@ -176,6 +178,7 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 	readonly capabilities: KernelRunnerCapabilities;
 	private readonly runtime: "docker" | "podman";
 	private readonly projectRoot: string;
+	private readonly processRunner: ContainerProcess;
 	private readonly options: Required<
 		Pick<ContainerKernelRunnerOptions, "maxPids" | "memoryBytes" | "cpus" | "tmpfsBytes">
 	> &
@@ -184,6 +187,7 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 	private constructor(runtime: "docker" | "podman", options: ContainerKernelRunnerOptions) {
 		this.runtime = runtime;
 		this.projectRoot = resolve(options.projectRoot);
+		this.processRunner = options.process ?? commandProcess();
 		this.options = {
 			...options,
 			maxPids: options.maxPids ?? DEFAULT_MAX_PIDS,
@@ -212,6 +216,7 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 	}
 
 	async run(request: KernelRunRequest): Promise<KernelRunResult> {
+		request.signal?.throwIfAborted();
 		const hostRunDirectory = projectRunsPath(this.projectRoot, request.runDirectory);
 		await mkdir(hostRunDirectory, { recursive: true });
 		const canonicalRoot = await realpath(resolve(this.projectRoot, "runs")).catch(() =>
@@ -221,10 +226,19 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 		const withinRuns = relative(canonicalRoot, canonicalRun).replaceAll("\\", "/");
 		if (withinRuns.startsWith("../") || withinRuns === ".." || isAbsolute(withinRuns))
 			throw new Error("container runner path escaped project runs");
-		const args = buildContainerKernelArgv(request, canonicalRun, this.options);
+		request.signal?.throwIfAborted();
+		const token = randomUUID();
+		const name = `drone-discovery-${token}`;
+		const args = [
+			"run",
+			"--name",
+			name,
+			"--label",
+			`drone.discovery.execution=${token}`,
+			...buildContainerKernelArgv(request, canonicalRun, this.options).slice(1),
+		];
 		const started = Date.now();
 		return new Promise((resolveResult, reject) => {
-			let settled = false;
 			const child = spawn(this.runtime, args, {
 				cwd: this.projectRoot,
 				shell: false,
@@ -233,6 +247,8 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 			let stdout = "";
 			let stderr = "";
 			let producedBytes = 0;
+			let stopped: Error | undefined;
+			let processError: Error | undefined;
 			const max = request.maxOutputBytes;
 			const append = (value: Buffer | string, target: "stdout" | "stderr") => {
 				const text = typeof value === "string" ? value : value.toString("utf8");
@@ -242,25 +258,24 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 			};
 			child.stdout.on("data", (value: Buffer) => append(value, "stdout"));
 			child.stderr.on("data", (value: Buffer) => append(value, "stderr"));
-			const finish = (result: KernelRunResult) => {
-				if (settled) return;
-				settled = true;
-				clearTimeout(timer);
-				resolveResult(result);
-			};
-			const timer = setTimeout(() => {
-				if (settled) return;
+			const stop = (reason: Error) => {
+				if (stopped) return;
+				stopped = reason;
 				child.kill("SIGKILL");
-				settled = true;
-				reject(new Error("container-timeout"));
-			}, request.timeoutMs);
+			};
+			const onAbort = () =>
+				stop(
+					request.signal?.reason instanceof Error ? request.signal.reason : new Error("container-aborted"),
+				);
+			const timer = setTimeout(() => stop(new Error("container-timeout")), request.timeoutMs);
+			request.signal?.addEventListener("abort", onAbort, { once: true });
+			if (request.signal?.aborted) onAbort();
 			child.once("error", (error) => {
-				if (settled) return;
-				settled = true;
-				clearTimeout(timer);
-				reject(error);
+				processError = error;
 			});
 			child.once("close", (exitCode) => {
+				clearTimeout(timer);
+				request.signal?.removeEventListener("abort", onAbort);
 				const outputs: KernelRunOutput[] = [];
 				if (stdout)
 					outputs.push({
@@ -270,9 +285,53 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 					});
 				if (stderr)
 					outputs.push({ text: stderr, contentKind: "raw", classification: request.dataClassification });
-				finish({ exitCode: exitCode ?? 1, outputs, durationMs: Date.now() - started, producedBytes });
+				void this.removeOwnedContainer(name, token).then(() => {
+					if (stopped || processError) reject(stopped ?? processError);
+					else
+						resolveResult({
+							exitCode: exitCode ?? 1,
+							outputs,
+							durationMs: Date.now() - started,
+							producedBytes,
+						});
+				}, reject);
 			});
 		});
+	}
+
+	private async removeOwnedContainer(name: string, token: string): Promise<void> {
+		try {
+			const inspected = await this.processRunner(
+				this.runtime,
+				[
+					"inspect",
+					"--type",
+					"container",
+					"--format",
+					'{{ index .Config.Labels "drone.discovery.execution" }}',
+					name,
+				],
+				{},
+			);
+			if (inspected.exitCode === 0) {
+				if (inspected.stdout.trim() !== token)
+					throw new Error("Container ownership label does not match this execution");
+				await this.processRunner(this.runtime, ["rm", "--force", name], {});
+			}
+			// A successful daemon query, rather than any nonzero inspect status, proves absence.
+			const remaining = await this.processRunner(
+				this.runtime,
+				["container", "ls", "--all", "--filter", `name=^/${name}$`, "--format", "{{.Names}}"],
+				{},
+			);
+			if (remaining.exitCode !== 0) throw new Error("Container daemon could not verify execution cleanup");
+			if (remaining.stdout.split(/\r?\n/u).includes(name))
+				throw new Error("Owned execution container is still present after cleanup");
+		} catch (cause) {
+			throw Object.assign(new Error("Discovery container cleanup could not be verified", { cause }), {
+				code: "DISCOVERY_CLEANUP_FAILED",
+			});
+		}
 	}
 }
 

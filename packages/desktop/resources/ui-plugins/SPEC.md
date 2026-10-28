@@ -308,4 +308,12 @@ export function activate() {
 
 `model.selection({profile?})` 只解析所选真实会话的当前模型，或已存在且明确配置的模型偏好；不回退到任意 provider。`model.generate({selection,systemPrompt,prompt,resultSchema,maxTokens})` 只执行一次隔离 `structured_result` 请求，无父对话、任意工具执行或正文/思考回传。每次调用仍由宿主显示模型 ID、thinking、输出预算、数据将传入模型和可能费用并请求批准；缺失用量或有效定价时返回 null，不声称免费。caller 身份、选择与取消在 SDK 请求前后核验；调用方不得把结构化模型结果当成人工批准或科学认证。
 
+### 候选后台文件能力与调用者身份
+
+受管 `desktopRuntime` 的 state/files 授权只从已安装包的 `permissions.filesystem` 派生，不要求也不由 `entrypoints.resources` 授予。state 与 files 分别选择；write 声明含对应 read，但仍须写目录选择和逐操作批准。无资源声明时不会建立派生 resource 子进程。清单权限变化撤销旧绑定。
+
+后台可在当前合法调用内使用 `capabilities.call("caller.scope", null)` 读取宿主解析的 `PluginRuntimeScope`；构造期为 application scope，普通调用为实际当前 scope。workspaceId 用于身份分区；workspaceDirectory 不代表文件权限。此端口既不接受插件传入的身份，也不允许保留闭包越过当前调用。详情与候选验收范围见 `docs/pluginization/native-plugin-resource-independent-capabilities.md`。
+
+`window.DroneUI.sessions.command(sessionId, name, args?)`（API 1.3）只调用该真实会话已注册的扩展命令，返回 `{kind:"command"}`。缺失/卸载的命令、只读/恢复中/取消或已替换的会话均拒绝，不转成模型输入；handler 错误沿既有 extension onError 诊断并使调用失败。普通 `sessions.prompt` 保留自然语言输入语义。领域 UI 的动作必须使用 `sessions.command`，不能以 prompt 的未知 slash 回退代替命令派发。UI 贡献停用与原生 owner 停用是两个独立生命周期。
+
 `usePluginRuntime().invoke(operation, input, signal?)` accepts an optional invocation-local AbortSignal. The renderer sends only a request ID through IPC, never a signal object. Main cancels only the active request of that same window, binding and selection lease, and waits for its running cleanup. Already-aborted calls dispatch nothing; canceling one call does not cancel its siblings. Approval dialogs use the same signal and cannot approve a canceled request. Existing two-argument clients and four-argument invoke IPC remain supported.

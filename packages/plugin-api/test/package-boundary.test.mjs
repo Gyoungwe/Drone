@@ -30,11 +30,23 @@ test("package gate permits only the opt-in native SDK type declaration", () => {
 			["ui.d.ts", 'import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";'],
 			["native.d.ts", 'import { ExtensionFactory } from "@earendil-works/pi-coding-agent";'],
 			["native.d.ts", 'import type { Model } from "@earendil-works/pi-ai";'],
+			["node/reservations.js", 'import { Model } from "@earendil-works/pi-ai";'],
+			["node/reservations.d.ts", 'import { BrowserWindow } from "electron";'],
 		]) {
 			const path = join(target, "dist", name);
 			const original = readFileSync(path, "utf8");
 			writeFileSync(path, `${original}\n${dependency}\n`);
 			assert.throws(check, { message: /forbidden dependency/u });
+			writeFileSync(path, original);
+		}
+		for (const dependency of [
+			'export * from "./node/reservations.js";',
+			'import { readFileSync } from "node:fs";',
+		]) {
+			const path = join(target, "dist", "index.js");
+			const original = readFileSync(path, "utf8");
+			writeFileSync(path, `${original}\n${dependency}\n`);
+			assert.throws(check, { message: /Node (?:subpath|implementation) leaked/u });
 			writeFileSync(path, original);
 		}
 	} finally {

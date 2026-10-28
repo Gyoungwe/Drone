@@ -25,9 +25,9 @@ vi.mock("./EvidencePane", () => ({ EvidencePane: () => null }));
 vi.mock("./ProcessPane", () => ({ ProcessPane: () => null }));
 vi.mock("./ReviewerCard", () => ({ ReviewerCard: () => null }));
 vi.mock("./SubagentsPane", () => ({ SubagentsPane: () => null }));
-vi.mock("./TasksPane", () => ({
+vi.mock("./SessionOverviewSections", () => ({
 	DecisionsSection: () => null,
-	TasksPane: () => <div data-testid="task-sections" />,
+	SessionOverviewSections: () => <div data-testid="overview-sections" />,
 }));
 
 vi.stubGlobal("React", React);
@@ -40,7 +40,7 @@ describe("OverviewPane", () => {
 
 		expect(html).toContain('data-testid="overview-pane"');
 		expect(html).toContain('data-testid="context-usage"');
-		expect(html).toContain('data-testid="task-sections"');
+		expect(html).toContain('data-testid="overview-sections"');
 		expect(html).not.toContain("scVI");
 		expect(html).not.toContain("Harmony");
 		expect(html).not.toContain("105");

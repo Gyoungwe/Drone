@@ -81,6 +81,50 @@ export class SessionEngine {
 		return session.prompt(text, options);
 	}
 
+	/** Explicit extension dispatch never falls through to model input. */
+	async command(
+		session: AgentSession,
+		name: string,
+		args: string,
+		signal: AbortSignal,
+		assertCurrent: () => void,
+	): Promise<void> {
+		assertCurrent();
+		const runner = session.extensionRunner;
+		const command = runner.getCommand(name);
+		if (!command) throw new Error(`Extension command unavailable: ${name}`);
+		const source = runner.createCommandContext();
+		const sourceSignal = source.signal;
+		const commandSignal = sourceSignal ? AbortSignal.any([signal, sourceSignal]) : signal;
+		const check = () => {
+			assertCurrent();
+			if (session.extensionRunner !== runner) throw new Error("Session commands changed during execution");
+		};
+		// Preserve the SDK lazy context getters; idle commands have no agent-run signal.
+		const context = new Proxy(source, {
+			get(target, property, receiver) {
+				check();
+				return property === "signal" ? commandSignal : Reflect.get(target, property, receiver);
+			},
+		});
+		const waitForIdle = context.waitForIdle;
+		context.waitForIdle = async () => {
+			await waitForIdle();
+			check();
+		};
+		try {
+			await command.handler(args, context);
+		} catch (error) {
+			runner.emitError({
+				extensionPath: `command:${name}`,
+				event: "command",
+				error: error instanceof Error ? error.message : String(error),
+			});
+			throw error;
+		}
+		check();
+	}
+
 	clearQueue(session: AgentSession): ReturnType<AgentSession["clearQueue"]> {
 		return session.clearQueue();
 	}

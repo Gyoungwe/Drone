@@ -90,3 +90,18 @@ describe("registerSessionsIpc", () => {
 		expect(createSession).toHaveBeenCalledWith({ cwd: "/tmp/project" });
 	});
 });
+
+it("dispatches explicit commands on their own validated channel and reports failures", async () => {
+	const command = vi.fn().mockRejectedValue(new Error("Extension command unavailable: removed"));
+	const prompt = vi.fn();
+	registerSessionsIpc(backendForTests({ command, prompt }));
+	const handler = mocks.handlers.get(IpcChannels.SessionCommand)!;
+	await expect(handler({}, "session", "removed", "input")).rejects.toThrow(
+		"Extension command unavailable: removed",
+	);
+	expect(command).toHaveBeenCalledExactlyOnceWith("session", "removed", "input");
+	expect(prompt).not.toHaveBeenCalled();
+	const invalid = await handler({}, "session", "/removed");
+	expect(invalid).toMatchObject({ code: "invalid_arguments" });
+	expect(command).toHaveBeenCalledOnce();
+});

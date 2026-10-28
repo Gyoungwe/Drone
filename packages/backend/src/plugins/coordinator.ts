@@ -15,7 +15,9 @@ export interface PluginRuntimeSource {
 	readonly packageRoot: string;
 	readonly entrypoint: string;
 	readonly nativeEntrypoint?: string;
+	readonly requestsStateRead?: boolean;
 	readonly requestsStateWrite?: boolean;
+	readonly requestsFileRead?: boolean;
 	readonly requestsFileWrite?: boolean;
 	readonly requestsModel?: boolean;
 	readonly resources?: Readonly<Record<string, string>>;
@@ -88,7 +90,9 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.packageRoot === b.packageRoot &&
 		a.entrypoint === b.entrypoint &&
 		a.nativeEntrypoint === b.nativeEntrypoint &&
+		a.requestsStateRead === b.requestsStateRead &&
 		a.requestsStateWrite === b.requestsStateWrite &&
+		a.requestsFileRead === b.requestsFileRead &&
 		a.requestsFileWrite === b.requestsFileWrite &&
 		a.requestsModel === b.requestsModel &&
 		JSON.stringify(a.resources) === JSON.stringify(b.resources)

@@ -3,8 +3,8 @@ import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { afterEach, beforeEach, expect, it } from "vitest";
-import { PluginResourceReservations } from "./resource-reservations";
 
 let directory: string;
 beforeEach(async () => {

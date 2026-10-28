@@ -2,6 +2,7 @@
 
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import tailwind from "@tailwindcss/vite";
@@ -13,6 +14,13 @@ import { build as viteBuild } from "vite";
 const repo = resolve("."),
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-task-delivery-smoke-")));
 await mkdir(join(root, "electron-profile"));
+const installedTaskRoot =
+	process.env.DRONE_TASK_UI_PACKAGE_DIR ??
+	resolve(createRequire(import.meta.url).resolve("@gyoungwe/pi-core"), "../..");
+const taskAliases = {
+	"@installed-task-ui": join(installedTaskRoot, "ui/bundle.js"),
+	"@installed-task-ui-manifest": join(installedTaskRoot, "ui/plugin.json"),
+};
 // Keep package resolution inside the isolated fixture.  The real host's
 // backend pulls ssh2 -> cpu-features, whose optional native binary is not part
 // of this UI-only acceptance surface; the bundle below aliases that boundary
@@ -39,7 +47,11 @@ await viteBuild({
 	plugins: [react(), tailwind()],
 	build: { outDir: join(root, "dist"), target: "esnext" },
 	resolve: {
-		alias: { react: join(repo, "node_modules/react"), "react-dom": join(repo, "node_modules/react-dom") },
+		alias: {
+			...taskAliases,
+			react: join(repo, "node_modules/react"),
+			"react-dom": join(repo, "node_modules/react-dom"),
+		},
 	},
 });
 await writeFile(

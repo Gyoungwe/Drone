@@ -10,12 +10,14 @@
 原生迁移的[能力切片证据与当前缺口](pluginization/native-plugin-capability-slice-evidence.md)与执行计划同步；完整历史分别见[计划归档](archive/native-plugin-implementation-plan-through-2026-10-27.md)和[切片证据归档](archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。历史 PASS 只适用于原版本与范围，四项外部验收不属于本轮 P0–P7。
 锁定 SDK 的 33 API、41 事件、28 UI 成员与三条运行路径的支持/拒绝边界见[原生 API 盘点](pluginization/native-pi-api-compatibility-matrix.md)；P0 仍未完成，不能用格式兼容替代运行 API 验收。
 当前四包源码锁 `dd7effc` 与宿主 `fd4c5040` 的 canonical task owner/宿主 tasks 删除、完整知识审核与私有 native 协议重放、两条进程工具进度和独立根门禁见[当前回执](releases/native-plugin-owner-migration-2026-10-28.json)。领域边界仍 INCOMPLETE；任务 UI 与通用 UI seam 的隔离分支状态见[执行计划](pluginization/native-plugin-implementation-plan.md)。旧 [5e0c9aab/f4a530a 回执](releases/native-plugin-task-owner-host-2026-10-28.json)、[6c9400c6/b1c11f3 回执](releases/native-plugin-integrated-host-2026-10-28.json)保留历史范围。
+P4 任务 UI 已移入同包 `pi-core/ui`，只读消息 hook、`chat.message` 和 `sessions.command` 由通用宿主提供；真实 SDK、renderer 与取消晚写回归及仍未完成的动态 native 启停见[任务 UI 切片](pluginization/native-plugin-task-ui-evidence.md)与[机器回执](releases/native-plugin-task-ui-2026-10-28.json)。
 版本化的通用 pi-core 宿主合同位于 `packages/plugin-api/src/core.ts`，桌面端通过 `packages/desktop/src/main/optional-plugin-hosts.ts` 按已安装包清单发现 `coreHostLoader` 并贯穿会话组合；task host 通过既有 `PluginNativeSession` 生成每会话 adapter，与标准 Pi 根入口共用 canonical owner；完整任务 UI、动态安装停用与正式安装包工作流仍待验收。
 
 
 后继 [应用 owner 安装包证据](pluginization/native-plugin-app-owner-packaged-evidence.md)基于 `561a370c` 的真实 DMG，覆盖两个真实离线会话间的身份切换、同一后台实例复用和停用恢复；不代表知识 native/UI 已共享领域 owner，也未关闭零领域插件宿主门禁。后继[关闭流程安装包证据](pluginization/native-plugin-shutdown-packaged-evidence.md)记录真实 SDK 互等/异常回归及活跃模型请求期间正常退出。
 
 P2 后继[设置与修复后的正式安装包验收](pluginization/native-plugin-knowledge-state-gui-evidence.md)固定 `ad3cd189` DMG，覆盖状态保存拒绝/回读、真实模型工具、停用恢复和正常退出；完整知识迁移与资源关闭新合同仍待下一轮验证。
+无派生 resource 的 state/files 显式授权与宿主固有 `caller.scope(null)` 见[独立文件能力切片](pluginization/native-plugin-resource-independent-capabilities.md)；这不会授予任意路径或关闭 discovery 全功能验收。
 知识状态 broker 的 `state.ensureDirectory` 提供显式受授权的单层初始化，读取不建目录；合同与限制见[状态能力](pluginization/native-plugin-state-capabilities.md)。
 
 插件结构化模型端口见 `backend/src/plugins/model-capabilities.ts`；真实 SDK 调用与 JSON 输出验证在 `session-engine/structured-model.ts`，模型声明来自已安装清单的 configured-services 权限，逐请求显示实际模型选择和费用边界。`session.inspect` 只返回当前真实会话是否活跃；前台业务的闲置策略由插件执行。
@@ -283,7 +285,7 @@ PR-4 历史入口曾在同一入口注册 `knowledge_search`、`knowledge_read`�
 
 插件仓库 `packages/pi-core/` 拥有工具、项目记忆、native runtime 和 milestone 校验；host loader 通过公开 client 合同接入。宿主旧源码和重复测试已删除，插件仓库保留原历史、同名测试及严格干净消费者 tsc。`scripts/build-pi-core.mjs` 现在只验证源码锁、fetch receipt、产物哈希与公开声明；`scripts/smoke-pi-core.mjs`、`scripts/check-pi-compat.mjs` 消费 `vendor/plugins/pi-core/`，不再构建宿主副本。`scripts/check-core-artifact.test.mjs` 验证无旧源码的锁定产物边界；backend 的真实 tarball 回归位于 `test/packed-core-host-sdk.test.ts`。公开 0.1.9 仅用于 npm-ci bootstrap，本轮源码锁候选为 0.2.0。
 
-Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain/`，宿主 `backend/src/discovery/service.ts` 仅注入授权、惰性 container runner、原子 JsonStore、runs 文件边界和项目绑定 Inquiry。无插件不登记 discovery 存储；旧共享 journal 保持字节并报告 unassigned，不自动冒认项目。候选目前只有 Desktop host 入口，原生工具、真实容器和完整 B5 GUI 仍未完成。
+Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain/`，宿主 `backend/src/discovery/service.ts` 仅注入授权、惰性 container runner、原子 JsonStore、runs 文件边界和项目绑定 Inquiry。无插件不登记 discovery 存储；旧共享 journal 保持字节并报告 unassigned，不自动冒认项目。候选同包原生工具读取当前工作区真实 journal，见 [writer→SDK 回读证据](releases/native-plugin-discovery-readback-2026-10-28.json)；取消、关闭和 dispose 等待自有容器销毁并向 daemon 回读，见 [真实资源关闭证据](releases/native-plugin-discovery-cleanup-2026-10-28.json)。Desktop/native 共享 owner、原生执行、Inquiry 和完整 B5 GUI 仍未完成。
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 
@@ -450,7 +452,7 @@ src/
 | `chat/` | **MessageList**（底部跟随 + 脱离回底；行模型 `useMemo`，轮末行定位规则在 shared chat-rows）/ **SelectionToolbar**（对话区选中文字浮出菜单：添加到对话/新会话继续）/ **MessageItem**（纯分发壳）+ `message-actions.tsx`（复制/Fork/撤回按钮）/ **UserMessage** / **SystemMessage**（compaction 分割线 + mutex 通知）/ **AssistantMessage** / **Markdown**（贡献者可用 `onLink` 接管全部链接并跳过宿主知识导航；markstream-react 流式丝滑渲染，fade 关闭避免合成层闪烁；代码块只读编辑器关闭自动 decoration，样式覆写在 globals.css `.markdown-body`，见 PITFALLS）/ **ToolCallCard** / **SubagentRunCard**（独立行，有 sessionFile 可点开子会话）/ **TodoPanel**（呼吸灯 + 展开 morph 同一容器）/ **MetaGroup**（memo 折叠组 + 圆点行/分类统计行）+ `use-sweep-highlight`（统一扫光）+ `use-shown-working`（working→worked 滞后缓冲）/ **PreviewTicker** + `activity-ticker`（工作中预览行调度）/ **StreamingMarquee**（溢出 tail-follow，位移用 shared marquee-motion）/ **ImagePreview**（全屏多图，portal 到 body）/ **ErrorNote**（统一报错卡）+ **RetryNote**（自动重试瞬态行）/ **CenterOrb** + `center-orb-draw`（中央状态动画，绘制闭式函数）/ **TurnDiffChip**（轮末计时行 + 文件变更 chip；计时器运行中 1s 心跳跳动/定格）/ **RunInspector**（轮次模型/公开阶段/工具/子代理/usage/read paths/artifacts/publication gate）/ `meta-summary-label`（i18n 胶水） |
 | `diff/` | **DiffSidebar**（右侧变更侧栏：按轮分组 unified diff + 内嵌 BranchRow git 分支行；开关在 SessionTabBar）+ DiffFileCard |
 | `panel/ProcessPane.tsx` + `ProcessLaneView.tsx` | 六泳道过程页与历史轮次选择；只投影公开 transcript 回执，节点内保留运行明细，门卡动作只打开任务面板 |
-| `panel/ContextPanel.tsx` | 右栏：任务 / 过程（内含「过程 · 变更」切换，原「变更」页签并入，`stores/ui.ts` `processView`）/ 产物 常驻；子智能体（本会话有运行）与计算（已配置主机或有作业）按需出现（`visiblePanelTabs`）；决策账本（TasksPane）与审稿卡默认折叠，有待确认项才展开 |
+| `panel/ContextPanel.tsx` | 右栏：总览 / 过程（内含「过程 · 变更」切换，`stores/ui.ts` `processView`）/ 产物；通用待办、授权与决策由 `panel/SessionOverviewSections.tsx` 展示。任务页由已安装 pi-core 的 `panel.tab` 贡献提供 |
 | `knowledge/KnowledgeView.tsx` / `KnowledgeSurface.tsx` / `KnowledgeFallback.tsx` / `KnowledgeUiRoot.tsx` | 宿主知识页边界：`knowledge.page` 挂载整页，`knowledge.surface` 挂载设置、笔记、流程回执、Zotero 和机构访问面板；缺插件、停用或渲染失败时展示绑定状态、打开文件夹与插件管理入口（流程卡回退为空）；`KnowledgeUiRoot` 只订阅事件并更新 store，审核弹层由插件 `app.overlay` 贡献呈现。完整产品组件见下行外部目录 |
 | `../drone-plugins/packages/desktop-ui-pack/ui/` | 知识 UI 权威源码：`entry.tsx` 提供整页、嵌入面板和审核弹层；`knowledge/KnowledgeView.tsx` 组合「总览 / 网络图 / 审阅 / 设置」与其他插件 `knowledge.tab`，`KnowledgeHome.tsx` / `knowledge-home-model.ts` / `KnowledgeSearch.tsx` 负责概览、分类和搜索，`KnowledgePanel.tsx` 负责维护设置；`api.ts` 只消费公开 DroneUI，文案在 `knowledge/{copy,zotero-copy}.ts`，样式在 `styles/`，组件回归同目录维护 |
 | 知识双向链接与知识网络 | worker `noteLinks`（出链 + 反链；只写笔记名的 `[[x]]` 按文件名唯一匹配）与 `graph`（旧 `nodes/edges` 字段保持兼容，并附语义关系/镜像/健康元数据；按索引 revision 缓存 `view/limit/mergeMirrors` 快照）→ ui-service `knowledgeNoteLinks` / `knowledgeGraph` → IPC `knowledge:noteLinks` / `knowledge:graph` → 公开 `window.DroneUI.knowledge`；`../drone-plugins/packages/pi-knowledge/src/core/semantic-model.ts` 负责稳定清洗、镜像合并、关系分类、社区与布局；`../drone-plugins/packages/pi-knowledge/src/core/graph-cache.ts` 负责 revision 边界缓存；插件 UI `../drone-plugins/packages/desktop-ui-pack/ui/knowledge/` 下的 `KnowledgeLinks.tsx`、`KnowledgeNetwork.tsx` + `KnowledgeGraph.tsx`（网络图页签，支持语义/全部文件、聚焦/星云/浏览、节点信息卡；拖拽更新按 animation frame 合并）+ 纯布局回退 `graph-layout.ts`；入库自动关联 `../drone-plugins/packages/pi-knowledge/src/core/related-notes.ts`（`research_deposit_knowledge` 写入前检索相关笔记，正文末尾追加「相关笔记」双链） |
@@ -488,7 +490,7 @@ src/
 | 上下文蒸发 | backend `tools/context-evaporation/`（见 backend 表）；开关 = 设置 GeneralPanel 二态（默认蒸发，写 settings.json 单 key，2s 生效免重开）；调参 `scripts/replay-evaporation.mts`；观测 = log `context-evaporation` 行 + trace_custom |
 | 上下文用量圆环 | `composer/ContextRing.tsx` + `hooks/use-context-usage.ts`（事件驱动刷新，与插件 host API 共用）→ IPC getContextUsage → SDK `session.getContextUsage()`（percent null 或无消息不渲染；<60% 灰 / 60-85% 琥珀 / >85% 红） |
 | 会话用量与输出速率 | `chat/UsageSettlement.tsx` 的 `SessionUsageSummary` 在输入框上下文环悬浮提示里显示会话累计 token（`SessionUsageFooter` 保留完整明细卡）；`chat/TurnFooter.tsx` 在每轮完成后显示输出 tok/s；累计卡位于 Composer 输入区上方，明细仍可展开 |
-| 审核卡片 | `shared/task-workbench.ts` 的 `tasksForTranscript` 仅投影 pending review；`chat/MessageItem.tsx` 与 `chat/TaskRow.tsx` 在对应回答内渲染验收动作，普通任务状态仍由右侧任务页签承载 |
+| 审核卡片 | pi-core 同包 UI 消费安全 `UIMessage.taskView`，经 `chat.message` 贡献渲染任务验收动作；任务页经 `panel.tab` 贡献，动作仅走通用 `sessions.command` → `task-action`。宿主 `MessageItem` 仅提供普通消息默认呈现 |
 | 每轮计时行 + 文件变更 chip + diff 侧栏 | 计时 shared `transcript/turn-timings.ts`（deriveTurnTimings；分量 = reducer 盖戳的 `UIToolCall.endedAt` + `runEndedAt` 定格 + 历史回放透传 toolResult timestamp）；变更 shared `transcript/turn-files.ts`（deriveTurnChanges）+ `chat-rows.ts`（行定位：每轮必有计时行，缺省不传 timings 保持旧行为）；渲染 `chat/TurnDiffChip.tsx`（timer 恒在首位）+ `diff/DiffSidebar.tsx`（含 BranchRow）；开关 = SessionTabBar 的 DiffIcon 按钮 + `stores/ui.ts` diffSidebarOpen |
 | 顶栏 tab / 拖拽排序 | `session/SessionTabBar.tsx`（dnd-kit，DragOverlay ghost 拾起时实测宽度沿用原胶囊 + 轴锁定 + drag-region 退出）+ `stores/sessions.ts` reorderSessions（draft 无 sessionFile 只参与内存序） |
 | 左侧会话轨道 | `session/SessionRail.tsx` + `stores/ui-preferences.ts`（开关持久化）+ `session-status.ts`（状态逻辑与顶栏共用）；逐帧截图 `scripts/shoot-rail.mjs` |
@@ -536,8 +538,12 @@ src/
 
 P2 原生/桌面共同 owner 最小接入：`backend/src/plugins/coordinator.ts` 管理 native bootstrap、真实 session 绑定及 UI lease；`runtime-capabilities.ts` 执行逐调用 schema/effect/生命周期授权，`process-runtime[-worker].ts` 共用隔离进程协议传递原生只读工具和派生资源调用。`backend/test/native-runtime-owner-sdk.test.mjs` 用真实 SDK 两会话证明同进程 owner 与两种关闭顺序；它不是完整知识领域或正式安装包验收。`plugin-api/src/{native,resource}.ts` 是 1.3 候选的 type-only 可选合同；完整 hooks、publication proof 跨进程投影和其余知识 UI 方法仍未完成。
 
-`backend/src/plugins/file-capabilities.ts` 读取已批准根的稳定文件快照与配置，区分文件删除、根撤销和 JSON 损坏；独立 `application-state-write` 授权允许通过 JsonStore 执行受限 JSON CAS 写入，具体合同与并发边界见[状态能力](pluginization/native-plugin-state-capabilities.md)；`resource-capabilities.ts` 复用实际隔离进程、排空在途请求并管理资源，`resource-reservations.ts` 在完整 owner 关闭后释放跨进程写者租约。`desktop/src/main/ui-plugins/runtime-host.ts` 在每次资源激活时明确选择只读数据目录及只读或独立授权的 JSON 状态目录，构造每插件私有缓存与能力 provider；其单元测试不代替正式 GUI 授权验收。UI 合同 v2 仅接受已验证的 installed desktopRuntime，旧 v1 合同保留；候选知识页目前只有总览/搜索/刷新，其余领域迁移未完成。
+`backend/src/plugins/file-capabilities.ts` 读取已批准根的稳定文件快照与配置，区分文件删除、根撤销和 JSON 损坏；独立 `application-state-write` 授权允许通过 JsonStore 执行受限 JSON CAS 写入，具体合同与并发边界见[状态能力](pluginization/native-plugin-state-capabilities.md)；`resource-capabilities.ts` 复用实际隔离进程、排空在途请求并管理资源，`@gyoungwe/plugin-api/node/reservations` 的独立 Node 实现由宿主资源管理器消费，在完整 owner 关闭后释放跨进程写者租约。`desktop/src/main/ui-plugins/runtime-host.ts` 在每次资源激活时明确选择只读数据目录及只读或独立授权的 JSON 状态目录，构造每插件私有缓存与能力 provider；其单元测试不代替正式 GUI 授权验收。UI 合同 v2 仅接受已验证的 installed desktopRuntime，旧 v1 合同保留；候选知识页目前只有总览/搜索/刷新，其余领域迁移未完成。
 
 知识候选 tarball 的独立实际 SDK 验收见 [packed knowledge runtime acceptance](pluginization/packed-knowledge-runtime-acceptance.md)：`backend/test/packed-knowledge-runtime-sdk.test.mjs` 使用真实 coordinator、只读会话条目和合成 Vault，验证 native/UI 同 owner、逐操作拒绝和双进程退出；默认门禁不设置 tarball 时明确跳过。[正式阅读 GUI 回执](pluginization/native-plugin-knowledge-reading-gui-evidence.md)保留任务守卫、恢复及退出的实际失败，不能与 SDK 通过互相替代。[原生事件适配](pluginization/native-plugin-event-adapter.md)说明逐 handler 的真实 SDK 串联与尚未支持的 publication proof 边界。
 
 P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已通过真实临时目录、撤销、冲突、符号链接和同启用实例并发回归；正式安装包尚未消费该新写端口。
+
+任务 UI 迁移兼容边界：`renderer/plugins/legacy-task-artifacts.ts` 仅保留已公开 1.x `helpers.taskArtifactLinks` 的原行为，无活跃宿主或知识 UI 消费；API 2 删除。`shared/task-workbench.ts` 保留安全投影类型与输入解码；`hostStatus` 仅标记可显示来源，不授予任务动作或发布权限。科研示例/首次引导仍在宿主，留后续插件贡献迁移。
+
+`SessionControlService.command` / `session-engine/engine.ts` 提供中立已注册扩展命令派发；`session:command` 经 SessionsContract、preload 与公开 UI `sessions.command` 同步。缺命令不转成 prompt；取消、会话替换、恢复/只读和 runner reload 均拒绝过期操作。

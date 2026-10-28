@@ -27,8 +27,10 @@ import type {
 
 export type * from "./ui-wire.js";
 
-/** Generic session actions use the existing host prompt authorization/lifecycle. */
+/** Generic session actions preserve host session authorization and lifecycle boundaries. */
 export interface SessionUiPort {
+	/** Execute an installed extension command; unavailable commands never become model prompts. */
+	command(sessionId: string, name: string, args?: string): Promise<PromptReceipt>;
 	prompt(sessionId: string, text: string, images?: ImageInput[], ids?: PromptIds): Promise<PromptReceipt>;
 }
 export interface SessionUiBindings {

@@ -3,7 +3,6 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { explainTaskReason } from "@drone/shared";
 import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { build } from "esbuild";
 import { afterEach, expect, it, vi } from "vitest";
@@ -100,19 +99,4 @@ it("repeats declared knowledge reads across turns without replaying effects or b
 				expect.objectContaining({ block: true, reason: expect.stringContaining("idempotency-check") }),
 			]);
 	}
-});
-
-it("renders installed task owner reasons with the shared task presentation copy", async () => {
-	const { journal } = await host("reason-contract");
-	journal.attach("reason-contract");
-	journal.plan({
-		goal: "Review a bounded output",
-		summary: "Human review",
-		milestones: [{ id: "review", title: "Review", acceptance: { kind: "human_review" } }],
-	});
-	expect(journal.snapshot().reason).toBe("task-authorization-required");
-	expect(journal.render()).toContain(explainTaskReason(journal.snapshot().reason));
-	journal.command({ action: "cancel", taskId: journal.snapshot().id, revision: journal.view().revision });
-	expect(journal.snapshot().reason).toBe("user-cancelled");
-	expect(journal.render()).toContain(explainTaskReason(journal.snapshot().reason));
 });

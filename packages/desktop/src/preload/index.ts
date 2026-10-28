@@ -588,6 +588,7 @@ const SESSION_CHANNELS: Record<string, string> = {
 	closeSession: IpcChannels.SessionClose,
 	deleteSession: IpcChannels.SessionDelete,
 	prompt: IpcChannels.SessionPrompt,
+	command: IpcChannels.SessionCommand,
 	abort: IpcChannels.SessionAbort,
 	retry: IpcChannels.SessionRetry,
 	setModel: IpcChannels.SessionSetModel,

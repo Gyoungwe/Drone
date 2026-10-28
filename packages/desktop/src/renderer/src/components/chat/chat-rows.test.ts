@@ -194,16 +194,21 @@ describe("buildChatRows", () => {
 		};
 		const t = {
 			...emptyTranscript(),
-			messages: [assistant("", { id: "route-1", route }), assistant("", { id: "task-1", taskView })],
+			messages: [
+				assistant("", { id: "route-1", route }),
+				assistant("", { id: "task-1", hostStatus: true, taskView }),
+			],
 		};
 		const rows = buildChatRows(t, "s1").filter((row) => row.kind === "message");
-		expect(rows).toHaveLength(1);
+		expect(rows).toHaveLength(2);
 		const row = rows[0];
 		if (row?.kind !== "message" || row.message.kind !== "assistant")
 			throw new Error("expected an embedded route message");
 		expect(row.message.route).toBe(route);
-		expect(row.message.taskView).toBe(taskView);
-		expect(row.taskPlacement).toBe("show");
+		expect(row.message.taskView).toBeUndefined();
+		expect(
+			rows[1]?.kind === "message" && rows[1].message.kind === "assistant" && rows[1].message.taskView,
+		).toBe(taskView);
 	});
 });
 

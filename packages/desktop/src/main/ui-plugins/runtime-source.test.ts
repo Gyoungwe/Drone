@@ -118,6 +118,36 @@ describe("installed UI runtime provenance", () => {
 		expect(restarted.isEnabled("results-ui")).toBe(true);
 	});
 
+	for (const token of [
+		"workspace",
+		"workspace-read",
+		"workspace-write",
+		"configured-vault",
+		"configured-vault-write",
+		"vault-read",
+		"application-state",
+		"application-state-write",
+	]) {
+		it(`derives the exact ${token} read grant without any derived resource`, async () => {
+			const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+			await writeManifest("./runtime.js", {}, [token]);
+			await manager.scanAll();
+			const source = manager.runtimeSource("results-ui")!;
+			expect(source.resources).toBeUndefined();
+			if (token.startsWith("application-state")) {
+				expect(source.requestsStateRead).toBe(true);
+				expect(source.requestsFileRead).toBeUndefined();
+			} else {
+				expect(source.requestsFileRead).toBe(true);
+				expect(source.requestsStateRead).toBeUndefined();
+			}
+			await writeManifest();
+			await manager.scanAll();
+			expect(manager.runtimeSource("results-ui")?.requestsStateRead).toBeUndefined();
+			expect(manager.runtimeSource("results-ui")?.requestsFileRead).toBeUndefined();
+		});
+	}
+
 	it("requests state writes only for the explicit filesystem token and clears it on rescan", async () => {
 		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
 		await writeManifest("./runtime.js", {}, ["application-state"]);

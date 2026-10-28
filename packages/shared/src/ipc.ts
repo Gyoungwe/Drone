@@ -239,6 +239,7 @@ export const IpcChannels = {
 	SessionClose: "session:close",
 	SessionDelete: "session:delete",
 	SessionPrompt: "session:prompt",
+	SessionCommand: "session:command",
 	SessionAbort: "session:abort",
 	SessionRetry: "session:retry",
 	SessionSetModel: "session:setModel",
