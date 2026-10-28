@@ -230,10 +230,84 @@ it.skipIf(!tarball)(
 					updatedAt: date,
 				},
 			});
+			await call("write", {
+				action: "recordComputeEvent",
+				event: {
+					id: "compute-submitted",
+					jobId: "job-1",
+					projectId: "legacy-project",
+					type: "submitted",
+					at: date,
+				},
+			});
+			await call("write", {
+				action: "recordComputeEvent",
+				event: {
+					id: "compute-collected",
+					jobId: "job-1",
+					projectId: "legacy-project",
+					type: "collected",
+					status: "succeeded",
+					runId: "run-1",
+					at: date,
+					codeFingerprint: "synthetic-code",
+					runProvenance: { workflow: "synthetic" },
+					artifacts: [
+						{ id: "compute-artifact", path: "runs/run-1/output.tsv", bytes: 8, sha256: "a".repeat(64) },
+					],
+				},
+			});
+			await call("write", {
+				action: "recordTaskTerminal",
+				event: {
+					id: "task-terminal",
+					taskId: "task-1",
+					projectId: "legacy-project",
+					status: "failed",
+					at: date,
+				},
+			});
+			await call("write", {
+				action: "recordLocalExecution",
+				event: {
+					id: "local-terminal",
+					projectId: "legacy-project",
+					toolName: "synthetic-python",
+					outcome: "succeeded",
+					startedAt: date,
+					finishedAt: date,
+					codeFingerprint: "synthetic-local-code",
+					parameters: {},
+					runProvenance: { workflow: "synthetic" },
+				},
+			});
+			const beforeNoCaller = await readFile(join(binary, "ledger.sqlite"));
+			const noCaller = bridge.selectSession(window, null);
+			await expect(
+				bridge.invoke(
+					window,
+					binding,
+					"inquiry.write",
+					{
+						action: "recordTaskTerminal",
+						event: { id: "no-caller", taskId: "must-not-run", status: "failed", at: date },
+					},
+					noCaller,
+				),
+			).rejects.toThrow(/actual|session|workspace/i);
+			expect(await readFile(join(binary, "ledger.sqlite"))).toEqual(beforeNoCaller);
 			const selection = bridge.selectSession(window, session.sessionId);
 			const direct = await bridge.invoke(window, binding, "inquiry.read", { action: "snapshot" }, selection);
 			expect(direct.value.questions).toMatchObject([{ id: "sdk-question" }]);
 			expect(direct.authority).toBe("plugin-asserted-or-imported");
+			expect(direct.value.attempts.map((record) => record.id)).toEqual([
+				"compute:run-1",
+				"local:local-terminal",
+				"task:task-1",
+			]);
+			expect(direct.value.decisions).toMatchObject([
+				{ id: "compute-submit:job-1", affectedArtifactIds: ["compute-artifact"] },
+			]);
 			expect(factories.get(provider.source.pluginId)).toBe(1);
 			const backup = await readFile(
 				join(
@@ -260,6 +334,9 @@ it.skipIf(!tarball)(
 					realHostJsonStore: true,
 					binaryRawSqlite: true,
 					sameProviderFactory: true,
+					canonicalEventProjector: true,
+					ordinaryAssertedJson: true,
+					noActualCallerRejected: true,
 					originalProjectPreserved: true,
 					originalBackupAndRestore: true,
 					legacyWriterCompetition: true,

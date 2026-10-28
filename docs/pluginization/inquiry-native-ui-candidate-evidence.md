@@ -36,3 +36,11 @@ Desktop JSON 走真正 JsonStore；原生 Node adapter 经公开 `node/binary-st
 实际 Discovery tar `/tmp/discovery-inquiry-provider-final-20261029/gyoungwe-pi-discovery-0.2.0.tgz` SHA256 `621c68937de14371de976ed44e353b5a9d9ac8f83122b5189b2cf27acb9ea646`，搭配上面的同一个 Inquiry tar 与 e41 API。`packed-discovery-inquiry-sdk.test.ts` 用生产 manager/factory、两个 SDK 和安装 Inquiry UI 完成真实跨 provider 写入、页面事件与另一个 SDK 回读。把合成安装目录中的 Inquiry 包移出并 production scanAll 后，原会话真实 reload 的调用得到 unavailable，原 DB 字节不变；移回同包/scan/reload 后读回同原库，后续新批准写入重新持有排他租约。日志 `/tmp/discovery-inquiry-recovery-sdk.log` **1/1 PASS**。同新 Discovery tar 的原生只读回归另已通过 `/tmp/discovery-inquiry-final-sdk.log` 中的对应测试；该日志的早期 lease 断言失败也保留，不将总日志报告全通过。
 
 明确区分：UI config 开关只影响页面，不等于整包停用。当前没有完成公开的包启停控制口；本切片只证明**来源撤销/恢复**，不报包开关 PASS。读 owner 本身不取得写者租约，只有实际写入前 reserve；恢复后的排他证明来自新批准写入，不能把只读恢复叫写租约恢复。标准 Pi 跨包服务 transport、无 live caller 的自动 compute/task/rerun provenance 与原宿主 seam 删除仍未完成，后继必须保留自动能力与私有来源/已批准记录范围，不能永久降为手工导入。
+
+## 后继：真实事件写入与无 caller 反证
+
+事件 provider 写操作对外部 JSON 逐字段验证，调用同一个 `InquiryEventProjector`，在原 SQLite 的单次 staged SQL/binary CAS 事务中持久化。仍只返回 `plugin-asserted-or-imported`；输入里的 session、hash、provenance 不是授权或宿主执行证明。实际 SDK provider fixture 写入 compute submitted/collected、task terminal 和 local execution，回读对应 attempt、artifact 与 decision 关联；无当前实际 caller 的写操作被拒且原 DB 字节不变，再恢复精确原始备份。
+
+最终 Inquiry tar `/tmp/inquiry-event-provider-final-20261029/gyoungwe-pi-inquiry-0.1.0.tgz` SHA256 `4c5ea333e16022797c214e9dcda1b968d0bb9030f9766252f705e31d7e35bcb8`，与 Discovery `621c6893…` / e41 API `fd122af6…` 同 cohort。四路实际 SDK（native、managed UI、generic event provider、Discovery consumer）的 `/tmp/inquiry-events-final-cohort-sdk-2.log` **4/4 PASS**，领域 **42 tests**/type/buildcheck 通过。首轮 3/4 的 `/tmp/inquiry-events-final-cohort-sdk.log` 保留：fixture 在 UI 上一次写入尚 busy 时点击了 disabled Restore；修正为等待真实按钮 ready 后点击，不改应用的成功/失败语义。
+
+上述 UI/lifecycle transition 的租约清理证明不代表包开关已实现。原自动后台订阅与 rerun 仍由旧 host 路径承担；待私有 event origin/已批准记录范围真实接好才可删除，不允许以手工导入代替自动能力后报告完成。

@@ -298,6 +298,13 @@ it.skipIf(!tarball)(
 			});
 			expect(written.isError, JSON.stringify(written)).toBe(false);
 			await screen.findByText("Question written by actual second SDK", {}, { timeout: 10000 });
+			await waitFor(
+				() =>
+					expect(
+						(screen.getByRole("button", { name: "Restore original backup" }) as HTMLButtonElement).disabled,
+					).toBe(false),
+				{ timeout: 10000 },
+			);
 			await act(async () => {
 				fireEvent.click(screen.getByRole("button", { name: "Restore original backup" }));
 			});
@@ -338,8 +345,8 @@ it.skipIf(!tarball)(
 					sdkWriteUiEvent: true,
 					exactOriginalRestore: true,
 					legacyWriterCompetition: true,
-					disableLeaseHandoff: true,
-					enableOriginalReadback: true,
+					uiTransitionLeaseHandoff: true,
+					freshBindingOriginalReadback: true,
 					formalGui: "NOT_RUN",
 				}),
 			);
