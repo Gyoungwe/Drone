@@ -1,4 +1,4 @@
-// @vitest-environment node
+// @vitest-environment jsdom
 import { execFile } from "node:child_process";
 import { chmod, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -13,7 +13,31 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import React, { createElement } from "react";
+import { buildPlugin } from "../../desktop/src/main/ui-plugins/build";
+import "../../desktop/src/renderer/src/plugins/host-api";
+import { useI18nStore } from "../../desktop/src/renderer/src/i18n";
+import { invokePluginRuntime, subscribePluginRuntime } from "../../desktop/src/renderer/src/plugins/caller";
+import { PluginEntryHost, usePluginEntries } from "../../desktop/src/renderer/src/plugins/PluginRegions";
+import { useUiPluginRegistry } from "../../desktop/src/renderer/src/plugins/registry";
+import { createPluginRuntimeClient } from "../../desktop/src/renderer/src/plugins/runtime";
+import { UI_REGIONS } from "../../desktop/src/renderer/src/plugins/slots";
+import { useSessionsStore } from "../../desktop/src/renderer/src/stores/sessions";
+import { useUiPluginsStore } from "../../desktop/src/renderer/src/stores/ui-plugins";
 
+vi.hoisted(() => {
+	window.matchMedia = () =>
+		({ matches: false, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList;
+});
+function InstalledPanel() {
+	const entries = usePluginEntries(UI_REGIONS.PanelTab);
+	return createElement(
+		React.Fragment,
+		null,
+		...entries.map((entry) => createElement(PluginEntryHost, { key: entry.id, entry })),
+	);
+}
 const desktop = vi.hoisted(() => ({
 	profile: "",
 	state: "",
@@ -69,6 +93,8 @@ it.skipIf(!tarball)(
 		let bridge: ReturnType<typeof createDesktopRuntime> | undefined;
 		try {
 			setReplyLanguage("en");
+			vi.stubGlobal("React", React);
+			vi.stubGlobal("Uint8Array", Object.getPrototypeOf(Buffer));
 			desktop.profile = join(root, "profile");
 			desktop.state = join(root, "state");
 			desktop.workspace = join(root, "workspace");
@@ -257,6 +283,49 @@ it.skipIf(!tarball)(
 				status: string;
 			}[];
 			expect(persisted.find((item) => item.sessionId === "creator-a")?.status).toBe("closed");
+			// Build and mount the installed package's real UI using the production renderer client and registry.
+			const packageRoot = join(root, "node_modules/@gyoungwe/pi-discovery");
+			const uiManifest = JSON.parse(await readFile(join(packageRoot, "ui/plugin.json"), "utf8"));
+			expect(
+				await buildPlugin(join(packageRoot, "ui"), uiManifest.main, { outDir: join(root, "built-ui") }),
+			).toEqual({ ok: true });
+			const uiCode = await readFile(join(root, "built-ui/index.js"), "utf8");
+			const module = await import(`data:text/javascript;base64,${Buffer.from(uiCode).toString("base64")}`);
+			(window as unknown as { pi: unknown }).pi = {
+				pluginRuntimeSelectSession: async (id: string | null) =>
+					(selection = bridge!.selectSession(desktop.window, id)),
+				pluginRuntimeInvoke: (
+					binding: string,
+					operation: string,
+					input: unknown,
+					lease: string,
+					requestId?: string,
+				) => bridge!.invoke(desktop.window, binding, operation, input, lease, requestId),
+				pluginRuntimeCancel: (binding: string, lease: string, requestId: string) =>
+					bridge!.cancel(desktop.window, binding, lease, requestId),
+				onPluginRuntimeEvent: (listener: Parameters<typeof subscribePluginRuntime>[1]) =>
+					bridge!.onEvent((owner, event) => {
+						if (owner === desktop.window) (listener as (event: unknown) => void)(event);
+					}),
+			};
+			useI18nStore.setState({ language: "en" });
+			useSessionsStore.setState({ activeSessionId: sessions[1]!.sessionId });
+			useUiPluginsStore.setState({ config: { enabled: true, plugins: {}, assignments: {} } });
+			const uiClient = createPluginRuntimeClient(
+				(operation, input, signal) => invokePluginRuntime(token, operation, input, signal),
+				(listener) => subscribePluginRuntime(token, listener),
+			);
+			expect(useUiPluginRegistry.getState().applyPlugin(uiManifest, module, [], uiClient)).toEqual({
+				ok: true,
+				missing: [],
+			});
+			render(createElement(InstalledPanel));
+			await screen.findByText(
+				"The configured language image is not cached. No image is pulled and no code can run.",
+			);
+			expect(
+				(screen.getByRole("button", { name: "Create logical kernel" }) as HTMLButtonElement).disabled,
+			).toBe(true);
 			// Explicit synthetic engine only: exercises acceptance/receipts and activation replay, not Docker success.
 			const syntheticId = `sha256:${"a".repeat(64)}`;
 			await writeFile(
@@ -289,7 +358,7 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 					await sdkCall(1, "discovery_create_kernel", {
 						...kernel("approval-timeout"),
 						image: syntheticId,
-						executionTimeoutMs: 50,
+						executionTimeoutMs: 1000,
 					})
 				).isError,
 			).toBe(false);
@@ -332,7 +401,9 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 				{ sessionId: "approval-close" },
 				selection,
 			);
-			expect((await awaitingClose).details).toMatchObject({
+			const closedExecution = await awaitingClose;
+			expect(closedExecution.isError, JSON.stringify(closedExecution)).toBe(false);
+			expect(closedExecution.details).toMatchObject({
 				execution: { status: "failed", blockedReason: "cancelled" },
 			});
 			closeApproval({ response: 1 });
@@ -394,6 +465,54 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 					(item) => item.status === "cancelled",
 				),
 			).toBe(true);
+			await waitFor(() =>
+				expect(
+					(screen.getByRole("button", { name: "Create logical kernel" }) as HTMLButtonElement).disabled,
+				).toBe(false),
+			);
+			await act(async () => {
+				fireEvent.click(screen.getByRole("button", { name: "Create logical kernel" }));
+			});
+			await waitFor(
+				() =>
+					expect(
+						(screen.getByRole("combobox", { name: "Select your logical kernel" }) as HTMLSelectElement).value,
+					).toMatch(/^kernel-/),
+				{ timeout: 10000 },
+			);
+			const uiKernelId = (
+				screen.getByRole("combobox", { name: "Select your logical kernel" }) as HTMLSelectElement
+			).value;
+			fireEvent.change(screen.getByRole("textbox", { name: "Code (shown in the approval)" }), {
+				target: { value: "print('[summary] UI and SDK share the owner')" },
+			});
+			await waitFor(
+				() =>
+					expect(
+						(screen.getByRole("button", { name: "Approve and run code" }) as HTMLButtonElement).disabled,
+					).toBe(false),
+				{ timeout: 10000 },
+			);
+			await act(async () => {
+				fireEvent.click(screen.getByRole("button", { name: "Approve and run code" }));
+			});
+			await screen.findByText("[summary] synthetic protocol output", {}, { timeout: 10000 });
+			const fromNative = await sdkCall(1, "discovery_list_kernels", {});
+			expect(
+				(fromNative.details as { kernels: { sessionId: string; executionCount: number }[] }).kernels.find(
+					(item) => item.sessionId === uiKernelId,
+				),
+			).toMatchObject({ executionCount: 1 });
+			await act(async () => {
+				fireEvent.click(screen.getByRole("button", { name: "Close my kernel" }));
+			});
+			await waitFor(() =>
+				expect((screen.getByRole("button", { name: "Close my kernel" }) as HTMLButtonElement).disabled).toBe(
+					true,
+				),
+			);
+			cleanup();
+			useUiPluginRegistry.getState().removePlugin(pluginName);
 			const receiptDirectory = join(desktop.profile, "plugin-execution-receipts");
 			for (const name of await readdir(receiptDirectory)) await rm(join(receiptDirectory, name));
 			await bridge.withTransition(() =>
@@ -424,7 +543,7 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 				.trim()
 				.split("\n")
 				.map((line) => JSON.parse(line) as string[]);
-			expect(engineCalls.filter((args) => args[0] === "run")).toHaveLength(2);
+			expect(engineCalls.filter((args) => args[0] === "run")).toHaveLength(3);
 			await nextBootstrap.dispose();
 			await bootstraps[1]!.dispose();
 			console.log(
@@ -446,6 +565,7 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 					actualSdkLocalTimeoutLateApprovalZeroAccepted: true,
 					actualSdkCloseLateApprovalZeroAccepted: true,
 					actualSdkAcceptedCancelWaitsSyntheticOwnedCleanup: true,
+					renderedInstalledKernelUiSharesSdkOwner: true,
 					realContainerSuccess: "NOT_RUN_NO_CACHED_IMAGE",
 					formalGui: "NOT_RUN",
 				}),
@@ -454,6 +574,8 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 			console.dir(error, { depth: 8 });
 			throw error;
 		} finally {
+			cleanup();
+			useUiPluginRegistry.getState().removePlugin("discovery-workspace");
 			await Promise.allSettled(bootstraps.map((bootstrap) => bootstrap.dispose()));
 			const [closed] = await Promise.allSettled([bridge?.close()]);
 			if (closed.status === "rejected") console.dir(closed.reason, { depth: 8 });
@@ -461,6 +583,7 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 			await rm(root, { recursive: true, force: true });
 			desktop.approval = undefined;
 			vi.unstubAllEnvs();
+			vi.unstubAllGlobals();
 			vi.restoreAllMocks();
 			setReplyLanguage("zh");
 		}
