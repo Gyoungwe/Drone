@@ -158,3 +158,52 @@ export interface PluginModelGenerateResult {
 export interface PluginSessionInspection {
 	readonly agentActive: boolean;
 }
+
+/** Optional bounded execution capabilities; importing this contract never loads Node. */
+export interface PluginExecutionInput {
+	readonly requestId: string;
+	readonly language: "python" | "r";
+	readonly code: string;
+	readonly runDirectory: string;
+	/** Exact already-cached image identity; mutable tags are not execution authority. */
+	readonly image: string;
+	readonly timeoutMs: number;
+	readonly maxOutputBytes: number;
+	readonly dataClassification: "public" | "internal" | "controlled" | "restricted";
+}
+export interface PluginExecutionDescription {
+	readonly kind: "container" | "unavailable";
+	readonly images: Readonly<Partial<Record<"python" | "r", string>>>;
+	readonly networkDisabled: true;
+	readonly writesOnlyToRunDirectory: true;
+}
+export interface PluginExecutionReceipt {
+	readonly id: string;
+	readonly requestId: string;
+	readonly language: "python" | "r";
+	readonly codeSha256: string;
+	readonly runDirectory: string;
+	readonly image: string;
+	readonly status: "accepted" | "succeeded" | "failed" | "cancelled" | "cleanup-failed";
+	readonly acceptedAt: string;
+	readonly finishedAt?: string;
+	readonly exitCode?: number;
+	readonly durationMs?: number;
+	readonly producedBytes?: number;
+}
+export type PluginExecutionReceiptResult =
+	| { readonly kind: "missing" }
+	| { readonly kind: "value"; readonly receipt: PluginExecutionReceipt };
+export interface PluginExecutionResult {
+	readonly receipt: PluginExecutionReceipt;
+	readonly result: {
+		readonly exitCode: number;
+		readonly durationMs: number;
+		readonly producedBytes: number;
+		readonly outputs: readonly {
+			readonly text: string;
+			readonly contentKind: "summary" | "plot" | "table" | "raw";
+			readonly classification: "public" | "internal" | "controlled" | "restricted";
+		}[];
+	};
+}

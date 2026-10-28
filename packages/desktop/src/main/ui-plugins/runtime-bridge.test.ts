@@ -381,6 +381,7 @@ describe("DesktopRuntimeBridge", () => {
 		"requestsFileRead",
 		"requestsFileWrite",
 		"requestsModel",
+		"requestsExecution",
 	] as const)("revokes old bindings when the manifest changes %s authority", async (permission) => {
 		const { bridge, options, dispose, factory } = setup();
 		const token = (await bridge.bind("ui", owner))!;

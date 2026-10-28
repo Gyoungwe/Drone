@@ -3,6 +3,8 @@ import { realpathSync } from "node:fs";
 import { chmod, mkdir, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import {
+	createExecutionIntegrityKey,
+	createPluginExecutionCapabilities,
 	createProcessPluginRuntime,
 	fileCapabilityHandlers,
 	hostText,
@@ -279,6 +281,7 @@ export function createDesktopRuntime(
 		"getPluginCallerContext" | "getStorageRegistry" | "getPluginSessionCapabilities"
 	>,
 ): DesktopRuntimeBridge {
+	const executionIntegrityKey = createExecutionIntegrityKey();
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
 		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
@@ -344,14 +347,44 @@ export function createDesktopRuntime(
 					return result.canceled ? [] : result.filePaths;
 				},
 			})(activation);
+			const executionSourceIdentity = source.contentHash;
+			if (source.requestsExecution && !executionSourceIdentity)
+				throw new Error("Execution requires a current installed package content identity");
+			const executionCapabilities =
+				source.requestsExecution && executionSourceIdentity
+					? await createPluginExecutionCapabilities({
+							directory: join(await realpath(app.getPath("userData")), "plugin-execution-receipts"),
+							sourceIdentity: executionSourceIdentity,
+							integrityKey: executionIntegrityKey,
+							storage: sessions.getStorageRegistry(),
+							getSessionContext: (id) => sessions.getPluginCallerContext(id),
+						})
+					: undefined;
 			const { "session.inspect": inspection, ...modelCapabilities } = sessions.getPluginSessionCapabilities();
 			return {
 				...resourceCapabilities,
 				handlers: {
 					...resourceCapabilities.handlers,
+					...executionCapabilities?.handlers,
 					"session.inspect": inspection,
 					...(source.requestsModel ? modelCapabilities : {}),
 				},
+				...(executionCapabilities
+					? {
+							dispose: async () => {
+								const results = await Promise.allSettled([
+									resourceCapabilities.dispose?.(),
+									executionCapabilities.dispose(),
+								]);
+								const failures = results.filter((result) => result.status === "rejected");
+								if (failures.length)
+									throw new AggregateError(
+										failures.map((result) => result.reason),
+										"Plugin execution or resource cleanup failed",
+									);
+							},
+						}
+					: {}),
 			};
 		},
 		approve: approveDesktopRuntime,
