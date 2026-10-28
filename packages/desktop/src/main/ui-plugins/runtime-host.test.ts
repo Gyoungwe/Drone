@@ -657,7 +657,7 @@ it("closes a pending parent-window runtime permission dialog through the actual 
 	expect(await answer).toBe(false);
 });
 
-it("exposes seven generic session handlers without a model declaration, then gates exactly two model handlers", async () => {
+it("exposes seven generic session handlers without a model declaration, then gates exactly three model handlers", async () => {
 	const handler = {
 		effect: "read",
 		inputSchema: { type: "null" },
@@ -677,6 +677,7 @@ it("exposes seven generic session handlers without a model declaration, then gat
 			"session.records.adoption.commit",
 			"model.selection",
 			"model.generate",
+			"model.toolStep",
 		].map((name) => [name, handler]),
 	);
 	const sessions = {
@@ -710,6 +711,8 @@ it("exposes seven generic session handlers without a model declaration, then gat
 		expect(without.handlers[name]).toBe(handler);
 	expect(without.handlers["model.selection"]).toBeUndefined();
 	expect(without.handlers["model.generate"]).toBeUndefined();
+	expect(without.handlers["model.toolStep"]).toBeUndefined();
+	expect(without.handlers["model.toolStep"]).toBeUndefined();
 	const withModel = await desktop.bridgeOptions.capabilities(
 		{ ...selected, requestsModel: true },
 		owner,
@@ -727,4 +730,6 @@ it("exposes seven generic session handlers without a model declaration, then gat
 	expect(withAdoption.handlers["session.records.adoption.commit"]).toBe(handler);
 	expect(withAdoption.handlers["model.generate"]).toBeUndefined();
 	expect(without.handlers["session.records.adoption.inspect"]).toBeUndefined();
+
+	expect(withModel.handlers["model.toolStep"]).toBe(handler);
 });

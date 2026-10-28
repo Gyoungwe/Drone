@@ -40,6 +40,7 @@ P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享
 无派生 resource 的 state/files 显式授权与宿主固有 `caller.scope(null)` 见[独立文件能力切片](pluginization/native-plugin-resource-independent-capabilities.md)；这不会授予任意路径或关闭 discovery 全功能验收。
 知识状态 broker 的 `state.ensureDirectory` 提供显式受授权的单层初始化，读取不建目录；合同与限制见[状态能力](pluginization/native-plugin-state-capabilities.md)。
 
+私有单次模型工具协议与 actual session facts 见[toolStep 切片](pluginization/native-plugin-model-tool-step-evidence.md)；完整 specialist 域循环仍待迁移，不把一次 SDK completion 当作完整子代理。
 插件结构化模型端口见 `backend/src/plugins/model-capabilities.ts`；真实 SDK 调用与 JSON 输出验证在 `session-engine/structured-model.ts`，模型声明来自已安装清单的 configured-services 权限，逐请求显示实际模型选择和费用边界。`session.inspect` 只返回当前真实会话是否活跃；前台业务的闲置策略由插件执行。
 知识 canonical owner 的模型评审和 managed 官方 Pi 命令已通过同一 tarball 的真实双 worker/SDK/SQLite 验收，见[后继切片回执](releases/native-plugin-knowledge-model-command-2026-10-28.json)。这条隔离分支证据不替代合并后双仓库门禁或正式安装包 GUI；完整 hooks、CLI 文本回执和旧 facade 仍未完成。
 完整 managed native publication 的[设计](superpowers/specs/2026-10-28-managed-native-publication-design.md)已批准，完整 owner/consumer 仍待实现；[实际 Pi 1.1.0 时序观察](releases/native-publication-sdk-ordering-2026-10-28.json)证明 awaited hooks 阻塞 prompt/idle，但 SDK abort 本身不拦截迟到正文持久化。后继[SDK 机制回执](releases/native-publication-sdk-fence-2026-10-28.json)记录钉版 host-only 最终边界的真实 RED→GREEN 与七项 SDK 回归，仍不代表完整插件 publication 或正式安装包验收。
