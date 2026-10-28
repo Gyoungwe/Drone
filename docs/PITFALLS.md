@@ -451,3 +451,7 @@ Pi 1.1.0 的 SessionManager 先把 append entry 加入内存，再写磁盘；EI
 ## 2026-10-28 · 原生 input 的空字符串不等于取消
 
 Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是合法回答；取消才是 undefined。Desktop 的 trim() || undefined 与必填 text 曾改变 SDK 语义。普通输入必须保留原值，领域路径等解释由调用方处理；AskDialog 的可选 text 应明确提交空 customText，能力结果 schema 不得用 minLength:1 把合法空输入拒绝。真实 SDK、受限 worker 与表单点击证据见[会话问答](pluginization/native-plugin-session-questions-evidence.md)。
+
+### 相同包内容不证明安装位置仍指向同一个来源
+
+外层安装目录被换成指向字节完全相同副本的 symlink 时，仅重新计算 packageRoot 的完整树 hash 仍可能相同。运行时现在同时复验安装位置的 canonical root 与已声明 native 路径的真实入口；原生和 UI alias 都失效。声明入口消失后，本应用内重新扫描保留旧描述为 unavailable，供实际 selected-path 失败诊断使用，绝不从该记录激活代码；跨重启 required 期望和首次 loader 失败仍在后继接线。66 项发现/来源/聚合/UI 检查通过，正式安装包另验。
