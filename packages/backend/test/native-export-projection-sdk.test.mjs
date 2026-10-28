@@ -19,7 +19,13 @@ function deferred() {
 	});
 	return { promise, resolve };
 }
-async function fixture({ guarded = true, blocked = false, ordinary = false, foreign = false } = {}) {
+async function fixture({
+	guarded = true,
+	blocked = false,
+	ordinary = false,
+	foreign = false,
+	allTree = false,
+} = {}) {
 	const root = await mkdtemp(join(tmpdir(), "drone-native-export-"));
 	const agentDir = join(root, "agent");
 	await mkdir(agentDir);
@@ -71,10 +77,12 @@ async function fixture({ guarded = true, blocked = false, ordinary = false, fore
 									origins.some(
 										(origin) =>
 											origin.entry === entry &&
-											origin.message ===
-												session.messages.find(
-													(message) => session.getHostPersistedMessage(message)?.id === entry.id,
-												),
+											(allTree
+												? origin.message === entry.message
+												: origin.message ===
+													session.messages.find(
+														(message) => session.getHostPersistedMessage(message)?.id === entry.id,
+													)),
 									),
 								).toBe(true);
 								messages.set(foreign ? structuredClone(entry) : entry, {
@@ -99,6 +107,7 @@ async function fixture({ guarded = true, blocked = false, ordinary = false, fore
 	return {
 		root,
 		session,
+		faux,
 		entered,
 		release,
 		calls: () => boundaryCalls,
@@ -198,3 +207,67 @@ it("cannot replace an actual SDK entry by copying its JSON identity", async () =
 		await f.close();
 	}
 });
+
+it("associates every actual stored branch entry inside SDK export without granting current live origins", async () => {
+	const f = await fixture({ allTree: true });
+	try {
+		const old = f.session.sessionManager
+			.getBranch()
+			.find((entry) => entry.type === "message" && entry.message.role === "assistant");
+		const user = f.session.sessionManager
+			.getBranch()
+			.find((entry) => entry.type === "message" && entry.message.role === "user");
+		await f.session.navigateTree(user.id, { summarize: false });
+		f.faux.setResponses([fauxAssistantMessage("SECOND_BRANCH_BODY")]);
+		await f.session.prompt("Actual second branch");
+		expect(f.session.messages.some((message) => f.session.getHostPersistedMessage(message) === old)).toBe(
+			false,
+		);
+		expect(f.session.getHostPersistedMessage(old.message)).toBeUndefined();
+		const output = await f.session.exportToJsonlForHost(join(f.root, "all-tree.jsonl"));
+		const rows = (await readFile(output, "utf8"))
+			.trim()
+			.split("\n")
+			.map((line) => JSON.parse(line));
+		expect(rows.filter((row) => row.type === "message" && row.message.role === "assistant")).toHaveLength(1);
+		expect(
+			rows
+				.filter((row) => row.type === "message" && row.message.role === "assistant")
+				.every((row) => row.message.content[0].text === "CHECKED_EXPORT"),
+		).toBe(true);
+		const html = await f.session.exportToHtml(join(f.root, "all-tree.html"));
+		const body = await readFile(html, "utf8");
+		const encoded = /<script id="session-data" type="application\/json">([^<]+)<\/script>/.exec(body)[1];
+		const data = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
+		expect(
+			data.entries.filter((row) => row.type === "message" && row.message.role === "assistant"),
+		).toHaveLength(2);
+		expect(JSON.stringify(data)).not.toMatch(/RAW_PRIVATE_EXPORT_BODY|SECOND_BRANCH_BODY/);
+	} finally {
+		await f.close();
+	}
+});
+for (const transition of ["refresh", "reload", "same-leaf-tree"])
+	it(`rejects awaited export after actual ${transition} generation even with the same final leaf`, async () => {
+		const f = await fixture({ blocked: true });
+		try {
+			const output = join(f.root, "old-generation.jsonl");
+			const exporting = f.session.exportToJsonlForHost(output);
+			await f.entered.promise;
+			if (transition === "refresh") f.session.refreshContext();
+			else if (transition === "reload") await f.session.reload();
+			else {
+				const old = f.session.sessionManager.getLeafId();
+				const assistant = f.session.sessionManager
+					.getBranch()
+					.find((entry) => entry.type === "message" && entry.message.role === "assistant");
+				await f.session.navigateTree(assistant.id, { summarize: false });
+				await f.session.navigateTree(old, { summarize: false });
+			}
+			f.release.resolve();
+			await expect(exporting).rejects.toThrow("session changed");
+			await expect(access(output)).rejects.toMatchObject({ code: "ENOENT" });
+		} finally {
+			await f.close();
+		}
+	});

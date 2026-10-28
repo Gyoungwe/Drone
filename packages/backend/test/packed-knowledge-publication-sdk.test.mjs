@@ -177,6 +177,33 @@ it.skipIf(!packedKnowledgeAvailable)(
 				expect(exported).toContain(answer);
 				expect(exported).not.toMatch(/PRIVATE_PARENT_PROTOCOL|PRIVATE_TOOL_PREFACE|PRIVATE_CHILD_THINKING/);
 				await rm(jsonlPath);
+				const firstUser = session.sessionManager
+					.getBranch()
+					.find((entry) => entry.type === "message" && entry.message.role === "user");
+				await session.navigateTree(firstUser.id, { summarize: false });
+				faux.setResponses([fauxAssistantMessage("A bounded ordinary greeting.")]);
+				await session.prompt("Hello");
+				const treeHtml = await session.exportToHtml(join(root, "checked-tree.html"));
+				const htmlBody = await readFile(treeHtml, "utf8");
+				const encoded = /<script id="session-data" type="application\/json">([^<]+)<\/script>/.exec(
+					htmlBody,
+				)[1];
+				const exportedTree = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
+				expect(JSON.stringify(exportedTree)).toContain(answer);
+				expect(JSON.stringify(exportedTree)).toContain("A bounded ordinary greeting.");
+				expect(JSON.stringify(exportedTree)).not.toMatch(
+					/PRIVATE_PARENT_PROTOCOL|PRIVATE_TOOL_PREFACE|PRIVATE_CHILD_THINKING/,
+				);
+				expect(
+					session.messages
+						.filter((message) => message.role === "assistant")
+						.some((message) =>
+							engine
+								.historicalMessageOrigin(session, message)
+								?.message.content?.some((block) => block.text === answer),
+						),
+				).toBe(false);
+				expect(errors).toEqual([]);
 				expect(approvals).toContain("capability:model.toolStep");
 				expect(
 					calls
@@ -192,7 +219,7 @@ it.skipIf(!packedKnowledgeAvailable)(
 						tools: results.map((result) => ({ name: result.toolName, error: !!result.isError })),
 						finalStatus: final.knowledgePublication.status,
 						scientificVerification: false,
-						fullP2: "INCOMPLETE: offline/full-tree history, service composition and formal installer remain",
+						fullP2: "INCOMPLETE: offline history, child, service composition and formal installer remain",
 					}),
 				);
 			},
