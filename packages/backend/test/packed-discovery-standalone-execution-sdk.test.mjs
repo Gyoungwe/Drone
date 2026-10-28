@@ -17,8 +17,9 @@ import { expect, it, vi } from "vitest";
 const run = promisify(execFile);
 const tarball = process.env.DRONE_DISCOVERY_PLUGIN_TARBALL;
 const api = process.env.DRONE_PLUGIN_API_TARBALL;
+const realContainer = process.env.DRONE_REAL_DISCOVERY_CONTAINER === "1";
 it.skipIf(!tarball)(
-	"executes the installed standard Pi entry through the same public Node runner with real SDK caller, approval and durable receipts (synthetic engine only)",
+	`executes the installed standard Pi entry with actual SDK and durable receipts (${realContainer ? "cached local Docker" : "synthetic engine"})`,
 	async () => {
 		const root = await realpath(await mkdtemp(join(tmpdir(), "discovery-standalone-execution-")));
 		let session;
@@ -42,12 +43,17 @@ it.skipIf(!tarball)(
 				],
 				{ maxBuffer: 8 * 1024 * 1024 },
 			);
-			const image = `sha256:${"a".repeat(64)}`;
+			const realDocker = realContainer ? (await run("which", ["docker"])).stdout.trim() : undefined;
+			const image = realContainer
+				? JSON.parse((await run(realDocker, ["image", "inspect", "python:3.12-slim"])).stdout)[0].Id
+				: `sha256:${"a".repeat(64)}`;
+			expect(image).toMatch(/^sha256:[a-f0-9]{64}$/);
 			await writeFile(
 				join(root, "docker"),
 				`#!${process.execPath}
 const fs=require('node:fs'),args=process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(join(root, "engine-calls.jsonl"))},JSON.stringify(args)+'\\n');
+if(${realContainer}){const child=require('node:child_process').spawnSync(${JSON.stringify(realDocker)},args,{stdio:'inherit'});if(child.error)throw child.error;process.exit(child.status??1);}
 if(args[0]==='version'){console.log('synthetic-engine');process.exit(0);}
 if(args[0]==='image'&&args.at(-1)==='python:3.12-slim'){console.log(${JSON.stringify(image)});process.exit(0);}
 if(args[0]==='image')process.exit(1);
@@ -125,7 +131,7 @@ process.exit(2);
 				runDirectory: "runs/native-owned",
 				image,
 				dataClassification: "public",
-				executionTimeoutMs: 1000,
+				executionTimeoutMs: 30000,
 				idleTimeoutMs: 120000,
 				maxExecutions: 2,
 				maxOutputBytes: 1024,
@@ -135,12 +141,18 @@ process.exit(2);
 				creatorSessionId: session.sessionId,
 				kernel: { status: "ready" },
 			});
-			const code = "print('[summary] standalone synthetic output')";
+			const code = realContainer
+				? "from pathlib import Path\nPath('native-proof.txt').write_text('synthetic native proof')\nprint('[summary] standalone synthetic output')"
+				: "print('[summary] standalone synthetic output')";
 			const executed = await call("discovery_execute_kernel", { sessionId: kernel.sessionId, code });
 			expect(executed).toMatchObject({
 				execution: { status: "succeeded" },
 				intents: [{ status: "succeeded" }],
 			});
+			if (realContainer)
+				expect(await readFile(join(cwd, "runs/native-owned/native-proof.txt"), "utf8")).toBe(
+					"synthetic native proof",
+				);
 			expect(approvals).toHaveLength(1);
 			expect(approvals[0].message).toContain(await realpath(cwd));
 			expect(approvals[0].message).toContain(session.sessionId);
@@ -162,6 +174,24 @@ process.exit(2);
 				.map((line) => JSON.parse(line));
 			expect(calls.filter((args) => args[0] === "run")).toHaveLength(1);
 			expect(calls.some((args) => args.includes("pull"))).toBe(false);
+			if (realContainer) {
+				const args = calls.find((args) => args[0] === "run");
+				expect(args).toContain("--pull=never");
+				const name = args[args.indexOf("--name") + 1];
+				expect(
+					(
+						await run(realDocker, [
+							"container",
+							"ls",
+							"--all",
+							"--filter",
+							`name=^/${name}$`,
+							"--format",
+							"{{.Names}}",
+						])
+					).stdout.trim(),
+				).toBe("");
+			}
 			const shutdown = [];
 			session.extensionRunner.onError((error) => shutdown.push(error));
 			await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
@@ -175,7 +205,8 @@ process.exit(2);
 					interactiveApproval: "SDK UI confirm fixture",
 					durableNativeAtomicReceipt: true,
 					closedJournalReadback: true,
-					realDocker: "NOT_RUN_SYNTHETIC_ENGINE",
+					realDocker: realContainer ? "PASS_CACHED_EXACT_IMAGE" : "NOT_RUN_SYNTHETIC_ENGINE",
+					configuredImage: image,
 					formalGui: "NOT_RUN",
 				}),
 			);

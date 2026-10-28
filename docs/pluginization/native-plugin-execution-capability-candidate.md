@@ -45,3 +45,11 @@ receipt 只保存代码 hash、目录、镜像、身份与终态元数据，不�
 实际受限 worker 回归使用父进程 fake clock：先用掉 5 秒 guest，再等待 20 秒批准、20 秒真实 host capability；返回后剩余 10 秒用完仍会终止失控 guest。另验证 A 的 20 秒 host wait 不暂停 B 的 15 秒 guest deadline，以及 disposal 的真实 resource cleanup 超过 15 秒不会提前释放 lease。没有新用户配置，也没有放宽执行、文件或来源权限。
 
 定向 42 项及实际 installed UI/native SDK 2 项通过，日志 `/tmp/inquiry-guest-budget-targeted.log`、`/tmp/inquiry-guest-budget-approval-tests.log`、`/tmp/inquiry-guest-budget-sdk.log`；SDK 执行仍为 synthetic engine，真实 Docker/正式安装包状态没有扩大。process wire 当前无全局字节预算，本后继不改变历史 projection 上限；binary payload 自身限制另行审查。
+
+## 真实 cached Docker 端到端（2026-10-28）
+
+统一候选 discovery tarball SHA-256 `378f831d75688dcc84f255a1bf06ca51ddd4be9b0467b502a5d2bc1877c7eb9e` 与 API 2c 候选，在生产 installed scanner → Desktop bridge → 普通受限 worker → execution broker → 本机 Docker 的真实 SDK 与已安装 UI 渲染链通过。实际 Python 默认镜像为已缓存的 `sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159`；没有测试内拉取或产品自动拉取，所有真实 run 仍 `--pull=never`、只读根、network none、仅合成 runs 可写。
+
+实际 SDK 和同 owner 的安装 UI 分别写合成 proof 文件、读成功 terminal receipt；另一 creator 只见 missing。观测包装器只原样执行真实 Docker 二进制并记录本测试 argv，不合成任何输出。两个本次创建的随机 containerName 在关闭/停用后逐项精确查询为空；未列举或清理用户容器。`/tmp/discovery-real-container-sdk-ui-final.log` 两项通过，其中另一项 protocol-only 使用自己的 synthetic missing-image 探针，不再依赖用户镜像缓存为空，专门超时仍 1 秒，启动观测等待改为 10 秒。正式 Electron/DMG GUI **NOT_RUN**。
+
+标准 Pi 默认入口也使用同公共 Node runner，实际 SDK 1.1.0 caller、UI confirm fixture、真实 Docker、原子本地 receipt、runs proof 与 closed journal 回读通过；日志 `/tmp/discovery-real-native-sdk.log`。`DRONE_REAL_DISCOVERY_CONTAINER=1` 才执行真实容器切片；没有该 opt-in 时标准 Pi fixture 仍明确 synthetic，Desktop real-container fixture 明确跳过。完整 Inquiry、其余领域 seam 删除与正式 GUI 不由这两项关闭。
