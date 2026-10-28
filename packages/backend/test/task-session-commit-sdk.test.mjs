@@ -1,5 +1,15 @@
 import { mkdirSync, renameSync } from "node:fs";
-import { access, appendFile, mkdir, mkdtemp, readFile, realpath, rename, rm } from "node:fs/promises";
+import {
+	access,
+	appendFile,
+	mkdir,
+	mkdtemp,
+	readFile,
+	realpath,
+	rename,
+	rm,
+	writeFile,
+} from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -286,5 +296,38 @@ for (const adapter of ["host", "official"]) {
 		expect(JSON.stringify(taskRecords(session.sessionManager.getBranch()))).not.toContain(secondTask.id);
 		expect(JSON.stringify(taskRecords(other.sessionManager.getBranch()))).not.toContain(firstTask.id);
 		expect(session.sessionManager.getCwd()).toBe(cwd);
+	}, 20000);
+}
+
+for (const adapter of ["host", "official"]) {
+	it(`${adapter}: the actual native evidence file port captures a successful read into its durable checkpoint`, async () => {
+		const { cwd, session, faux } = await setup(adapter);
+		await writeFile(join(cwd, "data.txt"), "one\ntwo\nthree");
+		const call = fauxToolCall("read", { path: "data.txt", offset: 2, limit: 1 });
+		faux.setResponses([
+			fauxAssistantMessage(call, { stopReason: "toolUse" }),
+			fauxAssistantMessage("Read the requested saved window."),
+		]);
+		await session.prompt("继续，只读取 data.txt 的第二行，不修改文件。");
+		await session.waitForIdle();
+		const result = session.messages.find(
+			(message) => message.role === "toolResult" && message.toolCallId === call.id,
+		);
+		expect(result?.isError, JSON.stringify(result)).toBe(false);
+		expect(result.content[0].text).toContain("two");
+		const checkpoint = taskRecords(
+			SessionManager.open(session.sessionManager.getSessionFile()).getBranch(),
+		).at(-1).data;
+		expect(checkpoint.evidence.records).toContainEqual(
+			expect.objectContaining({
+				id: call.id,
+				path: "data.txt",
+				offset: 2,
+				limit: 1,
+				evicted: false,
+				sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+			}),
+		);
+		expect(await readFile(join(cwd, "data.txt"), "utf8")).toBe("one\ntwo\nthree");
 	}, 20000);
 }
