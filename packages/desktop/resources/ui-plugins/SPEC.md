@@ -349,6 +349,10 @@ read 同时返回 `mode:"persistent"|"memory"`，只由实际 SDK `getSessionFil
 
 `provider.read` / `provider.write` 接收 `{alias,operation,input:JSON}`，在实际提供者 owner 中执行其已声明且真实存在的 runtime operation。read 不可调用 write，所有写入仍逐次走双方来源与实际操作授权。短 lease 沿原 host caller/同 SDK entry/原窗口与 signal；已有 native/UI binding 时复用同 application owner，无其他 binding 时该纯服务 owner 仅活本次调用，状态应显式持久化。结束必须 await drain/revoke，清理失败使回执失败并保留 teardown 屏障。嵌套调用的 host-only source/operation 链拒绝实际循环，不把函数、caller 身份或授权放进 JSON。
 
+`provider.native({alias,operation,input:JSON})` 仅在实际 SDK `message_start` / `tool_execution_end` 的在途 native hook 内可用。接收者在同一来源 owner 的 `createNativeSession()` 返回 `nativeOperations`，每项声明 event、effect、inputSchema、resultSchema 和实际 execute；宿主要求它已绑定到完全相同的 live SDK entry，不自动 attach。原始事件由宿主私有调用元数据与既有 message courier 交给接收者，不从 JSON input/event/nonce 认领。普通 operation、tool、command、bootstrap、projection 与普通 provider.read/write 都不携带这项 authority；返回值仍是普通 JSON。
+
+原 hook 的实际 effect 是接收操作的权限上限，read hook 不能因接收者声明 write 而升级；write 接收操作显示真实 operation/effect 后照常授权，来源/hash、调用链、session、signal 和 attachment 在调用前后核验，结束 await drain/revoke。调用者或接收者撤销、源码改变和迟到批准不得产生成功回执。此入口只证明当前实际事件来源，不授予文件根、模型、执行 consent、科学发布 proof 或自动续作身份；实际 host-queued continuation 尚未实现。
+
 普通服务返回值不产生文件、模型或任务写入权限，特权 acceptance/consent 角色仍需后继真实 opaque 证明与消费点验收。本片不新增 UI RPC、IPC 或 renderer surface；现有 runtime capability 管道承载这些纯 JSON 调用。
 
 ### 临时旧检查点导入（未发布 1.3 候选）
