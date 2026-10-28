@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, renameSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -10,6 +11,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { discoverInstalledPackages } from "../../desktop/src/main/ui-plugins/installed-package-sources";
 import { createBackend } from "../src/create-backend";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
+import { fileCapabilityHandlers, PluginFileCapabilities } from "../src/plugins/file-capabilities";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 
 let root, backend, bridge;
@@ -29,6 +31,8 @@ export default async context=>{
  const status=async(_input,ctx)=>({ownerId,value,scope:await ctx.capabilities.call('caller.scope',null)});
  return {
   operations:{
+   inspectBinary:{effect:'read',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>{const snapshot=await ctx.capabilities.call('files.readBinary',{root:input.root,path:input.path});const roots=await ctx.capabilities.call('roots.describe',null);const selected=roots.find(root=>root.handle===input.root);const {inspectTaskBytes}=await import('./dist/managed-runtime.mjs');return inspectTaskBytes(Buffer.from(snapshot.base64,'base64'),{path:input.path,absolutePath:selected.path+'/'+input.path,rootKind:'workspace'},input.expected);}},
+   readBinary:{effect:'read',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('files.readBinary',input)},
    adoptionInspect:{effect:'write',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('session.records.adoption.inspect',input)},
    adoptionCommit:{effect:'write',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('session.records.adoption.commit',input)},
    ownedRecords:{effect:'read',inputSchema:{type:'null'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('session.records.read',input)},
@@ -101,6 +105,7 @@ async function setup({
 	roleEffect = "read",
 	providerNative = true,
 	taskData = false,
+	binaryFiles = false,
 } = {}) {
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-provider-packed-")));
 	const archives = [];
@@ -121,6 +126,7 @@ async function setup({
 							"adoptionInspect",
 							"adoptionCommit",
 							"ownedRecords",
+							...(binaryFiles ? ["readBinary", "inspectBinary"] : []),
 							...(roles ? ["observe", "write", "tool", "ordinary", "fail"] : []),
 						],
 					},
@@ -162,12 +168,17 @@ async function setup({
 				name: `@fixture/${name}`,
 				version: "1.0.0",
 				type: "module",
-				files: ["runtime.mjs", "native.mjs", "plugin.manifest.json", ...(taskData ? ["dist"] : [])],
+				files: [
+					"runtime.mjs",
+					"native.mjs",
+					"plugin.manifest.json",
+					...(taskData || binaryFiles ? ["dist"] : []),
+				],
 				...(name === "provider" || roles ? { pi: { extensions: ["./native.mjs"] } } : {}),
 			}),
 		);
 		await writeFile(join(dir, "runtime.mjs"), source);
-		if (taskData && name === "provider")
+		if ((taskData || binaryFiles) && name === "provider")
 			await cp(dirname(createRequire(import.meta.url).resolve("@gyoungwe/pi-core")), join(dir, "dist"), {
 				recursive: true,
 			});
@@ -209,7 +220,11 @@ async function setup({
 							: { requires: { store: { service: "task.runtime", version: 1 } } }
 						: {}),
 				},
-				permissions: { filesystem: [], network: [], subprocess: [] },
+				permissions: {
+					filesystem: binaryFiles && name === "provider" ? ["workspace-read"] : [],
+					network: [],
+					subprocess: [],
+				},
 				tools: name === "provider" && !taskData ? ["service_count"] : [],
 			}),
 		);
@@ -249,6 +264,8 @@ async function setup({
 		agentDir = join(root, "agent");
 	await mkdir(cwd);
 	await mkdir(agentDir);
+	const fileCache = join(root, "file-cache");
+	await mkdir(fileCache);
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
 	vi.stubEnv("DRONE_REPLY_LANGUAGE", "en");
@@ -262,7 +279,8 @@ async function setup({
 	modelRuntime.registerNativeProvider(faux.provider);
 	vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
 	let service,
-		approve = async () => true;
+		approve = async () => true,
+		beforeBinaryRead = async () => {};
 	const approvals = [],
 		observations = [],
 		entered = [];
@@ -284,30 +302,54 @@ async function setup({
 				),
 			}),
 		getSessionContext: (id) => service?.getPluginCallerContext(id),
-		capabilities: (source) => ({
-			resources: [],
-			handlers: {
-				...service.getPluginSessionCapabilities(source.recordAdoptions),
-				observed: {
-					effect: "read",
-					inputSchema: { type: "object" },
-					resultSchema: { type: "null" },
-					execute: async (input, ctx) => {
-						observations.push({ input, scope: ctx.scope });
-						return null;
+		capabilities: (source) => async () => {
+			const files = source.requestsFileRead
+				? await PluginFileCapabilities.create(
+						[{ handle: "sdk-files", path: cwd, kind: "files", scope: { kind: "application" } }],
+						fileCache,
+					)
+				: undefined;
+			return {
+				resources: files ? [{ handle: "sdk-files", kind: "files" }] : [],
+				...(files ? { dispose: () => files.drain(), finalRelease: () => files.releaseReservations() } : {}),
+				handlers: {
+					...service.getPluginSessionCapabilities(source.recordAdoptions),
+					...(files
+						? (() => {
+								const handlers = fileCapabilityHandlers(files);
+								return {
+									...handlers,
+									"files.readBinary": {
+										...handlers["files.readBinary"],
+										execute: async (input, ctx) => {
+											await beforeBinaryRead();
+											return handlers["files.readBinary"].execute(input, ctx);
+										},
+									},
+								};
+							})()
+						: {}),
+					observed: {
+						effect: "read",
+						inputSchema: { type: "object" },
+						resultSchema: { type: "null" },
+						execute: async (input, ctx) => {
+							observations.push({ input, scope: ctx.scope });
+							return null;
+						},
+					},
+					entered: {
+						effect: "read",
+						inputSchema: { type: "null" },
+						resultSchema: { type: "null" },
+						execute: async (_input, context) => {
+							entered.push(context.scope);
+							return null;
+						},
 					},
 				},
-				entered: {
-					effect: "read",
-					inputSchema: { type: "null" },
-					resultSchema: { type: "null" },
-					execute: async (_input, context) => {
-						entered.push(context.scope);
-						return null;
-					},
-				},
-			},
-		}),
+			};
+		},
 	});
 	backend = createBackend({
 		projectTrust: false,
@@ -363,6 +405,9 @@ async function setup({
 		approvals,
 		entered,
 		observations,
+		beforeBinaryRead: (fn) => {
+			beforeBinaryRead = fn;
+		},
 		approve: (fn) => {
 			approve = fn;
 		},
@@ -1095,4 +1140,80 @@ it("actual UI cancellation at the managed checkpoint permission waits for cleanu
 		snapshot: { id: planned.snapshot.id, reason: planned.snapshot.reason },
 		storage: { state: "needs-reopen" },
 	});
+}, 20000);
+
+it("a real installed restricted worker receives complete multi-MiB binary bytes through actual approved file-root RPC", async () => {
+	const { entry, invoke, faux } = await setup({ binaryFiles: true });
+	const bytes = Buffer.alloc(2 * 1024 * 1024 + 17, 255);
+	bytes.writeUInt32LE(0, 0);
+	await writeFile(join(entry.cwd, "binary-artifact.bin"), bytes);
+	const result = await invoke("read", {
+		operation: "readBinary",
+		input: { root: "sdk-files", path: "binary-artifact.bin" },
+	});
+	expect(result).toMatchObject({
+		bytes: bytes.length,
+		sha256: createHash("sha256").update(bytes).digest("hex"),
+		version: { size: bytes.length },
+	});
+	expect(Buffer.from(result.base64, "base64").equals(bytes)).toBe(true);
+	expect(faux.state.callCount).toBe(0);
+	await expect(
+		invoke("read", { operation: "readBinary", input: { root: "not-approved", path: "binary-artifact.bin" } }),
+	).rejects.toThrow(/not granted/);
+	await writeFile(join(entry.cwd, "oversized.bin"), Buffer.alloc(8 * 1024 * 1024 + 1));
+	await expect(
+		invoke("read", { operation: "readBinary", input: { root: "sdk-files", path: "oversized.bin" } }),
+	).rejects.toThrow(/8 MiB/);
+}, 20000);
+
+it("actual binary RPC bytes feed the canonical PDF magic/hash algorithm without claiming identity extraction", async () => {
+	const { entry, invoke } = await setup({ binaryFiles: true });
+	const pdf = Buffer.from("%PDF-1.4\nSynthetic magic/hash boundary only; not a valid parsed PDF.");
+	await writeFile(join(entry.cwd, "artifact.pdf"), pdf);
+	const inspect = (expected) =>
+		invoke("read", {
+			operation: "inspectBinary",
+			input: { root: "sdk-files", path: "artifact.pdf", expected },
+		});
+	expect(await inspect({ kind: "pdf" })).toMatchObject({
+		kind: "pdf",
+		identity: "needs-review",
+		bytes: pdf.length,
+		sha256: createHash("sha256").update(pdf).digest("hex"),
+	});
+	expect(
+		await inspect({ kind: "pdf", sha256: createHash("sha256").update(pdf).digest("hex") }),
+	).toMatchObject({ identity: "hash-matched" });
+	await expect(inspect({ kind: "pdf", sha256: "0".repeat(64) })).rejects.toThrow(/hash does not match/);
+	await writeFile(join(entry.cwd, "artifact.pdf"), "<html>Not PDF bytes</html>");
+	await expect(inspect({ kind: "pdf" })).rejects.toThrow(/Not a PDF/);
+}, 20000);
+it("actual scoped cancellation drains a held binary RPC and never delivers the late snapshot", async () => {
+	const { entry, invoke, owner, binding, selection, beforeBinaryRead } = await setup({ binaryFiles: true });
+	const bytes = Buffer.alloc(2 * 1024 * 1024, 127);
+	await writeFile(join(entry.cwd, "artifact.bin"), bytes);
+	let release;
+	beforeBinaryRead(
+		() =>
+			new Promise((resolve) => {
+				release = resolve;
+			}),
+	);
+	const pending = invoke(
+		"read",
+		{ operation: "readBinary", input: { root: "sdk-files", path: "artifact.bin" } },
+		"cancel-binary-snapshot",
+	).catch((error) => error);
+	await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+	const cancelling = bridge.cancel(owner, binding, selection, "cancel-binary-snapshot");
+	release();
+	await expect(cancelling).resolves.toBe(true);
+	expect(await pending).toBeInstanceOf(Error);
+	beforeBinaryRead(async () => {});
+	const read = await invoke("read", {
+		operation: "readBinary",
+		input: { root: "sdk-files", path: "artifact.bin" },
+	});
+	expect(read.sha256).toBe(createHash("sha256").update(bytes).digest("hex"));
 }, 20000);
