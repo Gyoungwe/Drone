@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
-	"status": "IN_PROGRESS",
-	"hostSourceBeforeReceipt": "ecc86cc4",
+	"status": "CHECKPOINT_PASSED",
+	"hostSourceBeforeReceipt": "bb918979f979d909a82f39eeffc1199189729af6",
 	"pluginSource": "1707f6c346486370eacc1dfce37b403461230d17",
 	"api": {
 		"sourceCommit": "2c4e3ecd8dc20ffba64dfdc79cfa16a484f5bc7e",
@@ -144,15 +144,21 @@
 			"sha256": "8c24820e5730af0d816a2e770046e94613a4eb25fbf21d3914993cac63a4e51d",
 			"exitCode": 0,
 			"scope": "Current ecc86cc4 integrated22files/142passed with all original eight failures covered, matching five-pack cohort/API2c, full knowledge publication and UI review lifecycle, current pinned SDK private protocol/context/tree/cancel controls, actual managed SDK+rendered plugin UI→local Docker, standalone Pi→local Docker and legacy five cleanup cases. Formal Electron/DMG GUI NOT_RUN."
+		},
+		{
+			"path": "native-plugin-owner-services-host-gates-2026-10-29.json",
+			"sha256": "08323637f124b9f70264b4214057270008f5a4d7c73ecdccd8734919df3d4ac2",
+			"exitCode": 0,
+			"scope": "bb918979 fresh checkout npm ci, staged public runtime check, lint/typecheck/test/build/check:arch/check:plugin-api all passed. Both real Docker acceptance opt-ins enabled. Backend2154/17skipped, Desktop966/1skipped, Plugin API17/17, rootNode31/31. No formal DMG or whole-goal completion claim."
 		}
 	],
 	"pending": {
-		"hostCleanFullGates": "RUNNING_ECC86CC4_IN_NEW_INDEPENDENT_CHECKOUT",
+		"hostCleanFullGates": "PASSED_BB918979_IN_INDEPENDENT_CLEAN_CHECKOUT",
 		"discoveryDesktopAcceptedExecution": "PASSED_REAL_SDK_AND_RENDERED_INSTALLED_UI_LOCAL_DOCKER_FORMAL_GUI_NOT_RUN",
 		"formalInstaller": "NOT_RUN",
 		"npmPublish": "NOT_AUTHORIZED_THIS_RUN",
 		"mainMerge": "NOT_AUTHORIZED_THIS_RUN",
-		"latestGateReceipt": "/tmp/drone-native-owner-services-final-host-gates.json"
+		"latestGateReceipt": "native-plugin-owner-services-host-gates-2026-10-29.json"
 	},
 	"boundary": {
 		"status": "INCOMPLETE",
@@ -167,7 +173,7 @@
 		"runtimeAcceptance": "NOT_RUN"
 	},
 	"watcher": {
-		"status": "TARGETED_RECONCILIATION_FIXED_FULL_GATES_RUNNING",
+		"status": "RECONCILIATION_FIXED_TARGETED_AND_FULL_HOST_GATES_PASSED",
 		"logs": [
 			{
 				"path": "/tmp/drone-cw-current-watch-probe.log",
@@ -200,6 +206,17 @@
 			"commit": "93d2ad1f",
 			"status": "FAILED",
 			"archive": "../archive/native-plugin-owner-services-failed-host-2026-10-28.json"
+		},
+		{
+			"commit": "ecc86cc4",
+			"status": "FAILED",
+			"archive": "../archive/native-plugin-owner-services-retry-gates-2026-10-29.json",
+			"attempts": 3
+		},
+		{
+			"commit": "bb918979f979d909a82f39eeffc1199189729af6",
+			"status": "PASSED",
+			"receipt": "native-plugin-owner-services-host-gates-2026-10-29.json"
 		}
 	],
 	"nextCohort": {
@@ -218,6 +235,12 @@
 			"path": "../archive/native-plugin-owner-services-failed-host-2026-10-28.json",
 			"sourceCommit": "93d2ad1f",
 			"scope": "Original independent host gate attempt with eight backend failures; all command results and original log hash retained."
+		},
+		{
+			"path": "../archive/native-plugin-owner-services-retry-gates-2026-10-29.json",
+			"sourceCommit": "ecc86cc4",
+			"scope": "Three failed transport/daemon/isolated-checker-fixture attempts preserved with original commands and log hashes."
 		}
-	]
+	],
+	"goalStatus": "INCOMPLETE"
 }

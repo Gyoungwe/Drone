@@ -1,0 +1,146 @@
+{
+	"source": "/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+	"commit": "bb918979f979d909a82f39eeffc1199189729af6",
+	"base": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83",
+	"checkout": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+	"status": "PASSED",
+	"commands": [
+		{
+			"command": [
+				"git",
+				"clone",
+				"--shared",
+				"--no-hardlinks",
+				"--no-checkout",
+				"/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone"
+			],
+			"cwd": "/Users/gaoyangwei/.codex/worktrees/knowledge-research-npm-release/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/00-clone.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "7a1ddcdb64153d5fe99afbb04e0aee56677e6f0d47d1d566e2737e30b3e0797d"
+		},
+		{
+			"command": ["git", "checkout", "--detach", "bb918979f979d909a82f39eeffc1199189729af6"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/01-checkout.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "eb2a1505d8cb5d851d16ea5db1c865753f3f1f96c1d88b46b8e820b12c73f39c"
+		},
+		{
+			"command": ["git", "remote", "set-url", "origin", "https://github.com/Gyoungwe/Drone.git"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/02-origin.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+		},
+		{
+			"command": ["npm", "ci", "--no-audit", "--no-fund"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/03-ci.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "b0c918873c5482d09baea5318566c1c150b703057362eb167009c03a87c2ab71"
+		},
+		{
+			"command": ["node", "scripts/stage-plugin-runtime.mjs", "--check"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/03b-verify-public-runtime-cache.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "0e720f1d085bcce8d7575193226d52e0165f486094e7465471db2c9a7254d65e"
+		},
+		{
+			"command": ["git", "status", "--porcelain"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/03c-source-status.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+		},
+		{
+			"command": ["npm", "run", "lint"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/04-lint.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "700844e3d4280755a8953efb3e99a7b89c8f324e807fd21775ee29beed55a9aa"
+		},
+		{
+			"command": ["npm", "run", "typecheck"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/05-typecheck.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "c684125bc1b6585ed94f083c90d54140fc20782327ffe20318ebd19681fd960d"
+		},
+		{
+			"command": ["npm", "test"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/06-test.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "b32ccb95bb8adc6ff679fddd865ea6e2487f155f014f3bd3b4b05e17414eef00"
+		},
+		{
+			"command": ["npm", "run", "build"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/07-build.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "5fe00044accd0fff9ddcc4e3853ab1a647b5f7e767f04bf71f035c7fa7740ec3"
+		},
+		{
+			"command": ["npm", "run", "check:arch"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/08-arch.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d"
+		},
+		{
+			"command": ["npm", "run", "check:plugin-api"],
+			"cwd": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/Drone",
+			"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-verified-host-check-uYuy83/09-plugin-api.log",
+			"status": "PASSED",
+			"exitCode": 0,
+			"signal": null,
+			"logSha256": "4228ae970092e37d9cf7f5658bdc16eab5f7a5422fbaf0970661d5db8d0202bf"
+		}
+	],
+	"startedAt": "2026-10-28T15:43:22.326Z",
+	"finishedAt": "2026-10-28T15:51:27.511Z",
+	"scope": "Independent clean checkout standard host gates, with both real local Docker opt-ins enabled and matching1707f6c/API2c4e3ecd artifacts. Not final P0–P7 or formal macOS installer acceptance.",
+	"testCounts": {
+		"backend": {
+			"passed": 2154,
+			"skipped": 17
+		},
+		"desktop": {
+			"passed": 966,
+			"skipped": 1
+		},
+		"compute": 26,
+		"discovery": 12,
+		"extensionsNode": 19,
+		"inquiry": 19,
+		"pluginApiNode": 17,
+		"research": 25,
+		"shared": 347,
+		"rootNode": 31
+	}
+}

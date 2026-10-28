@@ -15,7 +15,7 @@ managed native `registerCommand` 由 `plugins/{runtime,process-runtime,process-r
 受限 managed process 的标准工具 JSON 字段和逐调用进度由 `backend/src/plugins/process-runtime{,-worker}.ts` 传输；不支持的注册回调明确拒绝。真实 SDK 并行、取消、迟到回调和加载失败后继续读取见 `backend/test/native-tool-protocol-sdk.test.mjs`，普通第三方沙箱经 `plugin-sandbox.ts` 与 `session-engine/sandbox-loader.ts` 转发同类进度，边界 schema 统一在 `backend/src/tool-progress.ts`；不代表完整 API 已完成。
 原生迁移的[能力切片证据与当前缺口](pluginization/native-plugin-capability-slice-evidence.md)与执行计划同步；完整历史分别见[计划归档](archive/native-plugin-implementation-plan-through-2026-10-27.md)和[切片证据归档](archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。历史 PASS 只适用于原版本与范围，四项外部验收不属于本轮 P0–P7。
 锁定 SDK 的 33 API、41 事件、28 UI 成员与三条运行路径的支持/拒绝边界见[原生 API 盘点](pluginization/native-pi-api-compatibility-matrix.md)；P0 仍未完成，不能用格式兼容替代运行 API 验收。
-当前四包源码锁 `253c47e` 与宿主 `4abdae43` 的任务 owner/UI、显式命令、单请求取消/真实会话模型、Desktop RPC/状态、discovery 原生日志/真实 Docker 和独立完整根门禁见[当前回执](releases/native-plugin-ui-model-cohort-2026-10-28.json)。领域边界仍 INCOMPLETE；首个 channel-watch 超时与完整重跑均保留，未报告根因修复。旧 [fd4c5040/dd7effc](releases/native-plugin-owner-migration-2026-10-28.json)、[5e0c9aab/f4a530a](releases/native-plugin-task-owner-host-2026-10-28.json) 保留原范围；下一批隔离源码见[执行计划](pluginization/native-plugin-implementation-plan.md)。
+当前四包源码锁 `1707f6c` 与宿主 `bb918979`、API `2c4e3ecd` 的插件完整检查、干净五包、真实 SDK/受限 owner、实际安装 UI/独立 Pi→本机 Docker 与独立完整根门禁见[检查点回执](releases/native-plugin-owner-services-cohort-2026-10-28.json)及[门禁命令与日志哈希](releases/native-plugin-owner-services-host-gates-2026-10-29.json)。领域边界仍 INCOMPLETE，P0–P7 目标未关闭；历史 [4abdae43/253c47e](releases/native-plugin-ui-model-cohort-2026-10-28.json)、[fd4c5040/dd7effc](releases/native-plugin-owner-migration-2026-10-28.json) 保留原范围，下一批独立整合见[执行计划](pluginization/native-plugin-implementation-plan.md)。
 
 P4 从启动 taskHost 到受限同包 application owner 的具体依赖盘点、异步任务模块方案、授权/provider 依赖和最终删除点见[动态 owner 设计提案](superpowers/specs/2026-10-28-task-managed-owner-cutover-design.md)。
 P4 S1 的 canonical `pi-core/src/task-runtime/task-session.mjs` 串行事务、`TaskApplication` 与两个 native 入口、真实 SDK 磁盘失败/phantom/reopen、取消和双会话证据见[TaskSession 切片](pluginization/native-plugin-task-session-actor-evidence.md)。后继 `native-storage.mjs` 基于公开 SDK branch/自身 JSONL 重建 raw reload fence 的[真实 RED→GREEN](pluginization/native-plugin-native-storage-evidence.md)关闭该 append-phantom 切片；deferred 的完整 actor 策略、managed cutover 与 P4 仍未完成。
@@ -578,7 +578,7 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 
 `SessionControlService.command` / `session-engine/engine.ts` 提供中立已注册扩展命令派发；`session:command` 经 SessionsContract、preload 与公开 UI `sessions.command` 同步。缺命令不转成 prompt；取消、会话替换、恢复/只读和 runner reload 均拒绝过期操作。
 
-后继任务状态路由/managed command、知识模型评审的同 tarball 双进程整合切片见[回执](releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；该后继尚未统一来源锁及完整根门禁，不替代顶部4abdae43/253c47e检查点。
+任务状态路由/managed command、知识模型评审的早期同 tarball 双进程整合切片见[历史回执](releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；后继统一来源与完整门禁状态以顶部 bb918979/1707f6c 检查点为准。
 
 已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。`manager.runtimeSources()` 经 `BridgeOptions.sources` 向 native/service consumer 提供同一包描述与当前 hash 状态；它不把可见性当执行权限，激活仍需批准。UI 设置经 `withUiTransition` 只撤销真实窗口调用，原生会话 owner 保留；扫描同时保留 installationPath/nativeDeclaredPath；本应用内失效后旧描述只作为 unavailable 元数据，不能激活。包级显式启停、跨重启 required 期望及实际 selected-path 生命周期仍在后继实现。
 
@@ -588,7 +588,7 @@ UI 清单 contributions 的纯 JSON 过滤位于 `desktop/src/main/ui-plugins/ma
 
 `scripts/plugin-api-dependency-policy.mjs` 是 `check:plugin-api --migration` 的依赖边界：仅允许双仓库已提交、同字节且匹配锁文件的私有 API 1.3.0 根开发候选；公开插件依赖仍禁止本地路径。正负回归见相邻 `.test.mjs`，本地候选不等于公开发布。
 
-统一 API `2c4e3ecd` 与插件 `1707f6c` 的完整插件检查、干净五包重建、默认远程取包、知识完整 publication/UI 审核、私有 SDK 协议，以及实际 SDK+已安装 UI/独立 Pi→本机 Docker 见[owner/services 候选回执](releases/native-plugin-owner-services-cohort-2026-10-28.json)。首轮独立根门禁八处失败保留并归档，后继统一22文件142项通过；第二轮独立完整门禁进行中，正式安装包尚未通过，不能替代顶部完整门禁基线。
+统一 API `2c4e3ecd`、插件 `1707f6c`、宿主 `bb918979` 的 [owner/services 检查点](releases/native-plugin-owner-services-cohort-2026-10-28.json)已通过独立完整门禁。知识 publication/UI 审核、SDK 私有协议和真实 Docker 的证据按各自范围保留；失败尝试已归档，正式安装包未运行，下一批领域迁移和最终 P6/P7 尚未完成。
 
 P2 知识完整 native 消费者的第一条实际包工作流与明确剩余范围见[同包完整消费者证据](pluginization/native-knowledge-full-consumer-evidence.md)；尚未完成生产历史/导出、任务组合和正式安装包。
 
