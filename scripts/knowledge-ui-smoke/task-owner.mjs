@@ -2,7 +2,7 @@ import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { taskHostLoader } from "@gyoungwe/pi-core/host";
 
 /** Synthetic UI fixture: all task rules and recovery still execute in the installed owner. */
-export async function createTaskFixture(cwd, { persist = () => {} } = {}) {
+export async function createTaskFixture(cwd, { persist = () => {}, entries = [] } = {}) {
 	const owner = taskHostLoader.load(),
 		native = await owner.createNativeSession();
 	const events = createEventBus(),
@@ -31,7 +31,14 @@ export async function createTaskFixture(cwd, { persist = () => {} } = {}) {
 	});
 	events.emit("drone:task-runtime/request/v1", { version: 1 });
 	unsubscribe();
-	const ctx = { cwd, sessionManager: { getSessionId: () => "isolated-ui", getBranch: () => [] } };
+	const ctx = {
+		cwd,
+		sessionManager: {
+			getSessionId: () => "isolated-ui",
+			getSessionFile: () => undefined,
+			getBranch: () => entries,
+		},
+	};
 	for (const handler of hooks.get("session_start") || []) await handler({}, ctx);
 	return { journal: registry.journal, dispose: () => owner.dispose() };
 }
