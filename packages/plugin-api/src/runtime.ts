@@ -213,6 +213,33 @@ export interface PluginSessionNotifyResult {
 	readonly durability: "durable" | "deferred";
 }
 
+/** Service contracts describe JSON operations, never functions or file/model authority. */
+export interface PluginServiceProvision {
+	readonly version: number;
+	readonly operations: readonly string[];
+}
+export interface PluginServiceRequirement {
+	readonly service: string;
+	readonly version: number;
+}
+export interface PluginProviderInspectionInput {
+	readonly alias: string;
+}
+export interface PluginProviderInvocationInput extends PluginProviderInspectionInput {
+	readonly operation: string;
+	readonly input: unknown;
+}
+export interface PluginProviderInspection {
+	readonly state: "available" | "absent" | "disabled" | "unavailable" | "incompatible" | "ambiguous";
+	readonly service: string;
+	readonly requestedVersion: number;
+	readonly provider: {
+		readonly pluginId: string;
+		readonly version: number;
+		readonly contentHash: string;
+	} | null;
+}
+
 /** Optional bounded execution capabilities; importing this contract never loads Node. */
 export interface PluginExecutionInput {
 	readonly requestId: string;
