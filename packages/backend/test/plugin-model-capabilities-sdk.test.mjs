@@ -19,7 +19,7 @@ afterEach(async () => {
 	vi.unstubAllEnvs();
 	if (root) await rm(root, { recursive: true, force: true });
 });
-async function setup(customTools = []) {
+async function setup(customTools = [], { reasoning = false } = {}) {
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-model-capability-")));
 	const agentDir = join(root, "agent"),
 		cwd = join(root, "project");
@@ -34,7 +34,11 @@ async function setup(customTools = []) {
 		allowModelNetwork: false,
 		refreshOnCreate: false,
 	});
-	faux = fauxProvider({ provider: "plugin-model-offline", tokensPerSecond: 0 });
+	faux = fauxProvider({
+		provider: "plugin-model-offline",
+		tokensPerSecond: 0,
+		...(reasoning ? { models: [{ id: "faux-reasoning", reasoning: true }] } : {}),
+	});
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
 	backend = new PiBackend({
@@ -100,7 +104,11 @@ it("uses the real current SDK model once, asks about model data and cost, and re
 	session.agent.state.messages = [{ role: "user", content: "PARENT_PRIVATE_HISTORY", timestamp: 1 }];
 	const before = JSON.stringify(session.messages);
 	const selection = await invoke("model.selection", {});
-	expect(await invoke("session.inspect", null)).toEqual({ agentActive: false });
+	expect(await invoke("session.inspect", null)).toEqual({
+		agentActive: false,
+		projectTrusted: true,
+		readOnly: false,
+	});
 	let captured;
 	faux.setResponses([
 		(context) => {
@@ -202,7 +210,11 @@ it("serves a real native SDK tool while its parent session is streaming", async 
 			parameters: { type: "object", properties: {} },
 			async execute() {
 				expect(session.isStreaming).toBe(true);
-				expect(await invoke("session.inspect", null)).toEqual({ agentActive: true });
+				expect(await invoke("session.inspect", null)).toEqual({
+					agentActive: true,
+					projectTrusted: true,
+					readOnly: false,
+				});
 				const selection = await invoke("model.selection", {});
 				const result = await invoke("model.generate", request(selection));
 				return { content: [{ type: "text", text: JSON.stringify(result.value) }] };
@@ -427,4 +439,219 @@ it("binds the real coordinator-native SDK caller before generating inside its ac
 		await backend.closeSession(nativeSession.sessionId);
 		await bridge.close();
 	}
+});
+
+it("reports current SDK trust and registry read-only facts without treating them as grants", async () => {
+	await setup();
+	session.settingsManager.setProjectTrusted(false);
+	backend.registry.get(session.sessionId).readOnly = true;
+	expect(await invoke("session.inspect", null)).toEqual({
+		agentActive: false,
+		projectTrusted: false,
+		readOnly: true,
+	});
+	await expect(invoke("model.selection", {})).rejects.toThrow("writable trusted");
+	backend.registry.revoke(session.sessionId);
+	await expect(invoke("session.inspect", null)).rejects.toThrow();
+});
+
+const stepRequest = (selection) => ({
+	selection,
+	systemPrompt: "Private isolated worker instruction",
+	messages: [{ role: "user", content: [{ type: "text", text: "Only this supplied note" }], timestamp: 1 }],
+	tools: [
+		{
+			name: "knowledge_read",
+			description: "Ask the calling package for an assigned note",
+			parameters: {
+				type: "object",
+				properties: { path: { type: "string" } },
+				required: ["path"],
+				additionalProperties: false,
+			},
+		},
+	],
+	maxTokens: 3000,
+});
+it("returns one actual private SDK tool step with exact signatures/metadata and known-zero cache counts, without running its tools or inheriting parent history", async () => {
+	await setup();
+	session.agent.state.messages = [
+		{ role: "user", content: "PARENT_SECRET_MUST_NOT_BE_INHERITED", timestamp: 1 },
+	];
+	const before = JSON.stringify(session.messages);
+	const selection = await invoke("model.selection", {});
+	let captured, capturedOptions;
+	const reply = Object.assign(
+		fauxAssistantMessage(
+			[
+				{ type: "thinking", thinking: "PRIVATE_STEP_THOUGHT", thinkingSignature: "actual-signed-thinking" },
+				fauxToolCall("knowledge_read", { path: "Library/Papers/source.md" }),
+			],
+			{ stopReason: "toolUse", responseId: "actual-step-id" },
+		),
+		{
+			providerThinkingLevel: "provider-native-effort",
+			rawStopReason: "tool_use",
+			durationMs: 12,
+			usage: {
+				input: 0,
+				output: 30,
+				cacheRead: 0,
+				cacheWrite: 0,
+				reasoning: 0,
+				totalTokens: 30,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			},
+		},
+	);
+	faux.setResponses([
+		(context, options) => {
+			captured = context;
+			capturedOptions = options;
+			return reply;
+		},
+	]);
+	const result = await invoke("model.toolStep", {
+		...stepRequest(selection),
+		systemPrompt: "s".repeat(18000),
+		maxTokens: 12000,
+	});
+	expect(result.reply.content).toEqual(reply.content);
+	expect(result.reply).toMatchObject({
+		responseId: "actual-step-id",
+		providerThinkingLevel: "provider-native-effort",
+		rawStopReason: "tool_use",
+		durationMs: 12,
+	});
+	expect(result.usage).toMatchObject({
+		inputTokens: result.reply.usage.input,
+		outputTokens: result.reply.usage.output,
+		cacheReadTokens: 0,
+		cacheWriteTokens: 0,
+		reasoningTokens: null,
+		cost: null,
+	});
+	expect(result.usage.reportedFields).toContain("inputTokens");
+	expect(result.usage.reportedFields).not.toContain("cost");
+	expect(JSON.stringify(captured)).not.toContain("PARENT_SECRET_MUST_NOT_BE_INHERITED");
+	expect(getCurrentTools(captured.messages).map((tool) => tool.name)).toEqual(["knowledge_read"]);
+	expect(JSON.stringify(session.messages)).toBe(before);
+	expect(faux.state.callCount).toBe(1);
+	expect(approvals.at(-1)).toMatchObject({ name: "model.toolStep" });
+	expect(approvals.at(-1).detail).toContain("12000");
+	expect(capturedOptions.maxTokens).toBe(12000);
+});
+it("blocks unapproved, mismatched and duplicate-schema private steps before any SDK request", async () => {
+	await setup();
+	const selection = await invoke("model.selection", {});
+	const complete = vi.spyOn(backend.modelRuntime, "completeSimple");
+	await expect(invoke("model.toolStep", stepRequest(selection), { deny: true })).rejects.toThrow("denied");
+	await expect(invoke("model.toolStep", stepRequest({ ...selection, model: "forged" }))).rejects.toThrow(
+		"selection",
+	);
+	await expect(
+		invoke("model.toolStep", {
+			...stepRequest(selection),
+			tools: [...stepRequest(selection).tools, ...stepRequest(selection).tools],
+		}),
+	).rejects.toThrow("unique");
+	await expect(
+		invoke("model.toolStep", { ...stepRequest(selection), systemPrompt: "界".repeat(12000) }),
+	).rejects.toThrow("bounded");
+	await expect(
+		invoke("model.toolStep", stepRequest(selection), { override: { sessionIdentity: {} } }),
+	).rejects.toThrow("caller");
+	await expect(
+		invoke("model.toolStep", {
+			...stepRequest(selection),
+			tools: [
+				{ ...stepRequest(selection).tools[0], parameters: { type: "object", functionCallback: () => true } },
+			],
+		}),
+	).rejects.toThrow("JSON data");
+	expect(complete).not.toHaveBeenCalled();
+});
+it("awaits actual tool-step cancellation cleanup and leaves a fresh call usable", async () => {
+	await setup();
+	const selection = await invoke("model.selection", {}),
+		controller = new AbortController();
+	let entered,
+		cleaned = false;
+	const started = new Promise((resolve) => {
+		entered = resolve;
+	});
+	faux.setResponses([
+		(_context, options) =>
+			new Promise((_resolve, reject) => {
+				entered();
+				options.signal.addEventListener(
+					"abort",
+					() =>
+						setImmediate(() => {
+							cleaned = true;
+							reject(new Error("actual synthetic cleanup"));
+						}),
+					{ once: true },
+				);
+			}),
+	]);
+	const pending = invoke("model.toolStep", stepRequest(selection), {
+		override: { signal: controller.signal },
+	});
+	const rejected = expect(pending).rejects.toThrow();
+	await started;
+	controller.abort();
+	await rejected;
+	expect(cleaned).toBe(true);
+	faux.setResponses([fauxAssistantMessage(fauxToolCall("knowledge_read", { path: "other.md" }))]);
+	expect((await invoke("model.toolStep", stepRequest(selection))).reply.content[0].name).toBe(
+		"knowledge_read",
+	);
+});
+
+it("resolves optional profiles only when truly unset and never falls back from a configured unavailable model", async () => {
+	await setup();
+	const parent = await invoke("model.selection", {});
+	const missing = await invoke("model.selection", { optionalProfile: "optional-specialist" });
+	expect(missing).toEqual({ ...parent, optionalProfile: "optional-specialist" });
+	await backend.setSubagentModel("optional-specialist", `${parent.provider}/${parent.model}`);
+	const configured = await invoke("model.selection", { optionalProfile: "optional-specialist" });
+	expect(configured).toEqual({ ...parent, profile: "optional-specialist" });
+	const complete = vi.spyOn(backend.modelRuntime, "completeSimple");
+	await expect(invoke("model.toolStep", stepRequest(missing))).rejects.toThrow("selection");
+	await backend.setSubagentModel("optional-specialist", "missing-provider/missing-model");
+	await expect(invoke("model.selection", { optionalProfile: "optional-specialist" })).rejects.toThrow(
+		"unavailable",
+	);
+	await expect(invoke("model.toolStep", stepRequest(configured))).rejects.toThrow("unavailable");
+	expect(complete).not.toHaveBeenCalled();
+	await expect(
+		invoke("model.selection", { profile: "strict", optionalProfile: "optional" }),
+	).rejects.toThrow();
+});
+
+it("uses actual reasoning parent high/off and explicitly configured role thinking in selection, approval and real tool steps", async () => {
+	await setup([], { reasoning: true });
+	backend.modelRuntime.hasConfiguredAuth.mockRestore();
+	await backend.modelRuntime.setRuntimeApiKey(faux.provider.id, "synthetic-thinking-only");
+	const complete = vi.spyOn(backend.modelRuntime, "completeSimple");
+	for (const level of ["high", "off"]) {
+		await backend.setThinkingLevel(session.sessionId, level);
+		const selection = await invoke("model.selection", { optionalProfile: "thinking-specialist" });
+		expect(selection.thinkingLevel).toBe(level);
+		expect(session.thinkingLevel).toBe(level);
+		faux.setResponses([fauxAssistantMessage(fauxToolCall("knowledge_read", { path: "bounded.md" }))]);
+		await invoke("model.toolStep", stepRequest(selection));
+		const request = complete.mock.calls.at(-1)[2];
+		if (level === "off") expect(request.reasoning).toBeUndefined();
+		else expect(request.reasoning).toBe("high");
+		expect(approvals.at(-1).detail).toContain(`thinking: ${level}`);
+	}
+	await backend.setSubagentThinking("thinking-specialist", "medium");
+	const explicit = await invoke("model.selection", { optionalProfile: "thinking-specialist" });
+	expect(explicit.thinkingLevel).toBe("medium");
+	faux.setResponses([fauxAssistantMessage(fauxToolCall("knowledge_read", { path: "bounded.md" }))]);
+	await invoke("model.toolStep", stepRequest(explicit));
+	expect(complete.mock.calls.at(-1)[2].reasoning).toBe("medium");
+	expect(approvals.at(-1).detail).toContain("thinking: medium");
 });

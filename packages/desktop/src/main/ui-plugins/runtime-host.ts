@@ -16,10 +16,14 @@ import {
 	type SessionServicePort,
 	type StorageRegistry,
 } from "@drone/backend";
-import { IpcChannels } from "@drone/shared";
+import type { ExecutionIdentity } from "@gyoungwe/plugin-api/node/execution";
 import { app, BrowserWindow, dialog, webContents } from "electron";
 import type { UiPluginManager } from "./manager";
-import { DesktopRuntimeBridge, type DesktopRuntimeOwner } from "./runtime-bridge";
+import {
+	DesktopRuntimeBridge,
+	type DesktopRuntimeBridgeOptions,
+	type DesktopRuntimeOwner,
+} from "./runtime-bridge";
 
 interface ResourceAccessSelection {
 	readonly profileDirectory: string;
@@ -280,25 +284,16 @@ export function createDesktopRuntime(
 		SessionServicePort,
 		"getPluginCallerContext" | "getStorageRegistry" | "getPluginSessionCapabilities"
 	>,
+	questionTransport: NonNullable<DesktopRuntimeBridgeOptions["questionTransport"]>,
 ): DesktopRuntimeBridge {
 	const executionIntegrityKey = createExecutionIntegrityKey();
+	const executionAcceptedFacts = new Map<string, ExecutionIdentity>();
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
 		sources: () => manager.runtimeSources(),
+		classifySelectedPath: (path) => manager.classifyNativeSelection(path),
 		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
-		questionTransport: (owner) => ({
-			ownerId: owner.id,
-			send: (request) => {
-				const contents = webContents.fromId(owner.id);
-				if (!contents || contents.isDestroyed()) return false;
-				contents.send(IpcChannels.AskRequest, request);
-				return true;
-			},
-			resolved: (result) => {
-				const contents = webContents.fromId(owner.id);
-				if (contents && !contents.isDestroyed()) contents.send(IpcChannels.AskResolved, result);
-			},
-		}),
+		questionTransport,
 		enabled: (name) => manager.isEnabled(name) || manager.isNativeSourceAvailable(name),
 		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
 		capabilities: (source, owner) => async (activation) => {
@@ -370,6 +365,7 @@ export function createDesktopRuntime(
 							directory: join(await realpath(app.getPath("userData")), "plugin-execution-receipts"),
 							sourceIdentity: executionSourceIdentity,
 							integrityKey: executionIntegrityKey,
+							acceptedFacts: executionAcceptedFacts,
 							storage: sessions.getStorageRegistry(),
 							getSessionContext: (id) => sessions.getPluginCallerContext(id),
 						})
@@ -398,6 +394,7 @@ export function createDesktopRuntime(
 						? {
 								"model.selection": capabilities["model.selection"],
 								"model.generate": capabilities["model.generate"],
+								"model.toolStep": capabilities["model.toolStep"],
 							}
 						: {}),
 				},
@@ -464,7 +461,7 @@ export function createNativeRuntimeIntegration(
 ): PluginNativeIntegration {
 	const findName = (path: string) => manager().nativeRuntimeName(path);
 	return {
-		manages: (path) => findName(path) !== undefined,
+		manages: (path) => manager().classifyNativeSelection(path).kind !== "ordinary",
 		begin: () => {
 			const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
 			if (!window || window.isDestroyed())

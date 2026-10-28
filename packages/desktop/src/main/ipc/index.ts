@@ -1,5 +1,11 @@
 import { type BackendServices, createLogger } from "@drone/backend";
-import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@drone/shared";
+import type {
+	AskRequest,
+	AskResolved,
+	PermissionRequest,
+	PermissionResolved,
+	TrustRequest,
+} from "@drone/shared";
 import { IpcChannels } from "@drone/shared";
 import { BrowserWindow, webContents } from "electron";
 import { onResearchSkillUpdateState } from "../research-skill-updater";
@@ -31,6 +37,23 @@ export function sendToRenderer(channel: string, payload: unknown): void {
 	if (window && !window.isDestroyed()) {
 		window.webContents.send(channel, payload);
 	}
+}
+
+/** Question events use the original approving window, including completion after cancellation. */
+export function createSessionQuestionTransport(ownerId: number) {
+	return {
+		ownerId,
+		send: (request: AskRequest): boolean => {
+			const contents = webContents.fromId(ownerId);
+			if (!contents || contents.isDestroyed()) return false;
+			contents.send(IpcChannels.AskRequest, request);
+			return true;
+		},
+		resolved: (result: AskResolved): void => {
+			const contents = webContents.fromId(ownerId);
+			if (contents && !contents.isDestroyed()) contents.send(IpcChannels.AskResolved, result);
+		},
+	};
 }
 
 /**

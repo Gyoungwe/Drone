@@ -37,6 +37,7 @@ async function fixture(source: string) {
 }
 
 afterEach(async () => {
+	vi.useRealTimers();
 	vi.unstubAllEnvs();
 	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
@@ -55,6 +56,196 @@ it("denies activation without starting or resolving plugin code", async () => {
 });
 
 describe.skipIf(!hasRuntime)("packaged process desktop runtime", () => {
+	it("excludes actual host waits from the 15 s watchdog and resumes only the unspent guest budget", async () => {
+		const options = await fixture(
+			`let phase='idle',enterHost;const gate=new Promise(resolve=>enterHost=resolve);let afterHost;const after=new Promise(resolve=>afterHost=resolve);export default async()=>({operations:{run:{inputSchema:{type:'null'},resultSchema:{type:'string'},effect:'read',async execute(_,{capabilities}){phase='guest';await gate;phase='host';await capabilities.call('held',null);phase='after-host';afterHost();return new Promise(()=>{});}},status:{inputSchema:{type:'null'},resultSchema:{type:'string'},effect:'read',execute:async()=>phase},go:{inputSchema:{type:'null'},resultSchema:{type:'null'},effect:'read',execute:async()=>{enterHost();return null;}},after:{inputSchema:{type:'null'},resultSchema:{type:'null'},effect:'read',execute:async()=>{await after;return null;}}},dispose:async()=>{}});`,
+		);
+		let entered!: () => void, finish!: () => void;
+		const started = new Promise<void>((resolve) => {
+			entered = resolve;
+		});
+		const held = new Promise<void>((resolve) => {
+			finish = resolve;
+		});
+		let asked!: () => void, approve!: (allowed: boolean) => void;
+		const approvalStarted = new Promise<void>((resolve) => {
+			asked = resolve;
+		});
+		const approval = new Promise<boolean>((resolve) => {
+			approve = resolve;
+		});
+		const registry = new PluginRuntimeRegistry(
+			{
+				...allow,
+				authorizeInvocation: async (request) => {
+					if (request.operation !== "capability:held") return true;
+					asked();
+					return approval;
+				},
+			},
+			"app",
+			{
+				resources: [],
+				handlers: {
+					held: {
+						inputSchema: { type: "null" },
+						resultSchema: { type: "string" },
+						effect: "read",
+						execute: async () => {
+							entered();
+							await held;
+							return "host-settled";
+						},
+					},
+				},
+			},
+		);
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+		const invocation = client.invoke("run", null);
+		const failed = expect(invocation).rejects.toThrow("invocation timed out after 15000ms");
+		try {
+			expect(await client.invoke("status", null)).toBe("guest");
+			await vi.advanceTimersByTimeAsync(5000);
+			await client.invoke("go", null);
+			await approvalStarted;
+			await vi.advanceTimersByTimeAsync(20000);
+			expect(await client.invoke("status", null)).toBe("host");
+			approve(true);
+			await started;
+			await vi.advanceTimersByTimeAsync(20000);
+			expect(await client.invoke("status", null)).toBe("host");
+			finish();
+			await client.invoke("after", null);
+			await vi.advanceTimersByTimeAsync(9999);
+			expect(await client.invoke("status", null)).toBe("after-host");
+			await vi.advanceTimersByTimeAsync(1);
+			await failed;
+		} finally {
+			approve(true);
+			finish();
+			vi.useRealTimers();
+			await Promise.allSettled([invocation, registry.deactivate("example")]);
+		}
+	});
+
+	it("keeps one session's host wait from pausing another session's guest watchdog", async () => {
+		const options = await fixture(
+			`let phase='idle';export default async()=>({operations:{wait:{inputSchema:{type:'null'},resultSchema:{type:'string'},effect:'read',execute:async(_,{capabilities})=>capabilities.call('held',null)},hang:{inputSchema:{type:'null'},resultSchema:{type:'null'},effect:'read',execute:async()=>{phase='hung';return new Promise(()=>{});}},status:{inputSchema:{type:'null'},resultSchema:{type:'string'},effect:'read',execute:async()=>phase}},dispose:async()=>{}});`,
+		);
+		let entered!: () => void, finish!: () => void;
+		const started = new Promise<void>((resolve) => {
+			entered = resolve;
+		});
+		const cleanup = new Promise<void>((resolve) => {
+			finish = resolve;
+		});
+		let hostSignal!: AbortSignal;
+		const registry = new PluginRuntimeRegistry(allow, "app", {
+			resources: [],
+			handlers: {
+				held: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "string" },
+					effect: "read",
+					execute: async (_, context) => {
+						hostSignal = context.signal;
+						entered();
+						await cleanup;
+						return "cleaned";
+					},
+				},
+			},
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const a = await registry.activate("example", caller(scope));
+		const b = await registry.activate("example", caller({ ...scope, sessionId: "other-session" }));
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+		const waiting = a.invoke("wait", null);
+		const rejectedA = expect(waiting).rejects.toThrow("invocation timed out after 15000ms");
+		let hanging: Promise<unknown> | undefined;
+		try {
+			await started;
+			await vi.advanceTimersByTimeAsync(20000);
+			expect(await b.invoke("status", null)).toBe("idle");
+			expect(hostSignal.aborted).toBe(false);
+			hanging = b.invoke("hang", null);
+			const rejectedB = expect(hanging).rejects.toThrow("invocation timed out after 15000ms");
+			expect(await b.invoke("status", null)).toBe("hung");
+			await vi.advanceTimersByTimeAsync(15000);
+			expect(hostSignal.aborted).toBe(true);
+			finish();
+			await Promise.all([rejectedA, rejectedB]);
+		} finally {
+			finish();
+			vi.useRealTimers();
+			await Promise.allSettled([waiting, hanging, registry.deactivate("example")]);
+		}
+	});
+
+	it("keeps actual owner resource cleanup outside the disposal request's guest budget", async () => {
+		const options = await fixture(
+			`export default async({resourcesLifecycle})=>({operations:{probe:{inputSchema:{type:'null'},resultSchema:{type:'number'},effect:'read',execute:async()=>process.pid}},dispose:()=>resourcesLifecycle.dispose()});`,
+		);
+		let entered!: () => void, finish!: () => void;
+		const started = new Promise<void>((resolve) => {
+			entered = resolve;
+		});
+		const cleanup = new Promise<void>((resolve) => {
+			finish = resolve;
+		});
+		let released = false;
+		const registry = new PluginRuntimeRegistry(allow, "app", {
+			resources: [],
+			handlers: {},
+			resourcesLifecycle: {
+				dispose: async () => {
+					entered();
+					await cleanup;
+				},
+			},
+			finalRelease: async () => {
+				released = true;
+			},
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		const pid = (await client.invoke("probe", null)) as number;
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+		const stopping = registry.deactivate("example");
+		try {
+			await started;
+			await vi.advanceTimersByTimeAsync(20000);
+			expect(released).toBe(false);
+			expect(() => process.kill(pid, 0)).not.toThrow();
+			finish();
+			await stopping;
+			expect(released).toBe(true);
+		} finally {
+			finish();
+			vi.useRealTimers();
+			await Promise.allSettled([stopping]);
+		}
+	});
+
+	it("disables the SQLite builtin in the actual ordinary domain worker", async () => {
+		const options = await fixture(
+			`export default async()=>{let code='import-was-allowed';try{await import('node:sqlite');}catch(error){code=error.code;}return{operations:{status:{inputSchema:{type:'null'},resultSchema:{type:'object'},effect:'read',execute:async()=>({code,disabled:process.execArgv.includes('--no-experimental-sqlite')})}},dispose:async()=>{}};};`,
+		);
+		const registry = new PluginRuntimeRegistry(allow);
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		try {
+			expect(await client.invoke("status", null)).toEqual({
+				code: "ERR_UNKNOWN_BUILTIN_MODULE",
+				disabled: true,
+			});
+		} finally {
+			await registry.deactivate("example");
+		}
+	});
+
 	it("delivers the owned resource cleanup receipt without a live invocation after cancellation", async () => {
 		const options = await fixture(`export default async ({signal,resourcesLifecycle})=>({
  operations:{probe:{inputSchema:{type:"null"},resultSchema:{type:"number"},effect:"read",execute:async()=>process.pid}},
@@ -77,6 +268,7 @@ describe.skipIf(!hasRuntime)("packaged process desktop runtime", () => {
 		const pid = (await client.invoke("probe", null)) as number;
 		const closed = registry.deactivate("example");
 		await vi.waitFor(() => expect(resourceStop).toHaveBeenCalledOnce());
+		await new Promise((resolve) => setTimeout(resolve, 650));
 		expect(releaseLeases).not.toHaveBeenCalled();
 		expect(() => process.kill(pid, 0)).not.toThrow();
 		finish();
@@ -150,6 +342,200 @@ export default async ({storageDirectory,parameters,capabilities}) => ({
 		expect(await readFile(join(storageDirectory, "cache.txt"), "utf8")).toBe("derived");
 		await registry.deactivate("example");
 		expect(() => process.kill(receipt.pid, 0)).toThrow();
+	});
+
+	it("cancels a worker-local capability during approval and never accepts a late approval", async () => {
+		const options = await fixture(
+			`export default async()=>({operations:{run:{inputSchema:{type:"null"},resultSchema:{type:"string"},effect:"write",async execute(_,{capabilities}){const abort=new AbortController();const timer=setTimeout(()=>abort.abort(new Error('local timeout')),30);try{return await capabilities.call('execute',null,abort.signal);}finally{clearTimeout(timer);}}}},dispose:async()=>{}});`,
+		);
+		let approve!: (allowed: boolean) => void;
+		const asked = vi.fn(
+			() =>
+				new Promise<boolean>((resolve) => {
+					approve = resolve;
+				}),
+		);
+		const execute = vi.fn(async () => "accepted");
+		const registry = new PluginRuntimeRegistry(
+			{
+				...allow,
+				authorizeInvocation: async (request) => (request.operation === "capability:execute" ? asked() : true),
+			},
+			"app",
+			{
+				resources: [],
+				handlers: {
+					execute: {
+						inputSchema: { type: "null" },
+						resultSchema: { type: "string" },
+						effect: "write",
+						execute,
+					},
+				},
+			},
+		);
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		await expect(client.invoke("run", null)).rejects.toThrow();
+		expect(asked).toHaveBeenCalledOnce();
+		approve(true);
+		await new Promise<void>((resolve) => setImmediate(resolve));
+		expect(execute).not.toHaveBeenCalled();
+		await registry.deactivate("example");
+	});
+
+	it("waits beyond the guest shutdown limit for an accepted host capability's actual owned cleanup", async () => {
+		const options = await fixture(
+			`export default async()=>({operations:{run:{inputSchema:{type:"null"},resultSchema:{type:"string"},effect:"write",async execute(_,{capabilities}){const abort=new AbortController();const timer=setTimeout(()=>abort.abort(new Error('local timeout')),30);try{return await capabilities.call('execute',null,abort.signal);}finally{clearTimeout(timer);}}}},dispose:async()=>{}});`,
+		);
+		let finish!: () => void;
+		const cleanup = new Promise<void>((resolve) => {
+			finish = resolve;
+		});
+		let accepted = false,
+			canceled = false,
+			released = false;
+		const registry = new PluginRuntimeRegistry(allow, "app", {
+			resources: [],
+			handlers: {
+				execute: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "string" },
+					effect: "write",
+					async execute(_, context) {
+						accepted = true;
+						await new Promise<void>((resolve) =>
+							context.signal.addEventListener(
+								"abort",
+								() => {
+									canceled = true;
+									resolve();
+								},
+								{ once: true },
+							),
+						);
+						await cleanup;
+						return "terminal-after-cleanup";
+					},
+				},
+			},
+			finalRelease: async () => {
+				released = true;
+			},
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		const call = client.invoke("run", null);
+		const rejected = expect(call).rejects.toThrow();
+		await vi.waitFor(() => expect(accepted && canceled).toBe(true));
+		let stopped = false;
+		const stopping = registry.deactivate("example").then(() => {
+			stopped = true;
+		});
+		await new Promise((resolve) => setTimeout(resolve, 650));
+		expect(stopped).toBe(false);
+		expect(released).toBe(false);
+		finish();
+		await stopping;
+		await rejected;
+		expect(released).toBe(true);
+	});
+
+	it("aborts and drains actual host cleanup after unexpected child exit before rejecting the parent or releasing leases", async () => {
+		const options = await fixture(
+			`export default async()=>({operations:{run:{inputSchema:{type:"null"},resultSchema:{type:"string"},effect:"write",async execute(_,{capabilities}){const result=capabilities.call('execute',null);setTimeout(()=>process.exit(9),50);return result;}}},dispose:async()=>{}});`,
+		);
+		let finish!: () => void;
+		const cleanup = new Promise<void>((resolve) => {
+			finish = resolve;
+		});
+		let hostAborted = false,
+			callerSettled = false;
+		const release = vi.fn(async () => {});
+		const registry = new PluginRuntimeRegistry(allow, "app", {
+			resources: [],
+			finalRelease: release,
+			handlers: {
+				execute: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "string" },
+					effect: "write",
+					async execute(_, context) {
+						await new Promise<void>((resolve) =>
+							context.signal.addEventListener(
+								"abort",
+								() => {
+									hostAborted = true;
+									resolve();
+								},
+								{ once: true },
+							),
+						);
+						await cleanup;
+						return "cleaned";
+					},
+				},
+			},
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		const invocation = client.invoke("run", null);
+		const failed = expect(invocation).rejects.toThrow("exited (9)");
+		void invocation.then(
+			() => {
+				callerSettled = true;
+			},
+			() => {
+				callerSettled = true;
+			},
+		);
+		await vi.waitFor(() => expect(hostAborted).toBe(true));
+		expect(callerSettled).toBe(false);
+		expect(release).not.toHaveBeenCalled();
+		finish();
+		await failed;
+		await expect(registry.deactivate("example")).rejects.toThrow("exited (9)");
+		expect(release).not.toHaveBeenCalled();
+	});
+
+	it("binds local cancellation to its parent invocation while another session's host capability remains live", async () => {
+		const options = await fixture(
+			`export default async()=>({operations:{run:{inputSchema:{type:"boolean"},resultSchema:{type:"string"},effect:"write",async execute(cancel,{capabilities}){const abort=new AbortController();const timer=cancel?setTimeout(()=>abort.abort(new Error('only A')),30):undefined;try{return await capabilities.call('execute',null,abort.signal);}finally{clearTimeout(timer);}}}},dispose:async()=>{}});`,
+		);
+		const active = new Map<string, { signal: AbortSignal; finish: () => void }>();
+		const registry = new PluginRuntimeRegistry(allow, "app", {
+			resources: [],
+			handlers: {
+				execute: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "string" },
+					effect: "write",
+					async execute(_, context) {
+						if (context.scope.kind !== "session") throw new Error("Expected actual session");
+						const sessionId = context.scope.sessionId;
+						await new Promise<void>((resolve) =>
+							active.set(sessionId, { signal: context.signal, finish: resolve }),
+						);
+						return "finished";
+					},
+				},
+			},
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const a = await registry.activate("example", caller(scope));
+		const b = await registry.activate("example", caller({ ...scope, sessionId: "other-session" }));
+		const first = a.invoke("run", true),
+			second = b.invoke("run", false);
+		const rejected = expect(first).rejects.toThrow("locally canceled");
+		await vi.waitFor(() => expect(active.size).toBe(2));
+		await vi.waitFor(() => expect(active.get(scope.sessionId)?.signal.aborted).toBe(true));
+		expect(active.get("other-session")?.signal.aborted).toBe(false);
+		active.get(scope.sessionId)!.finish();
+		await rejected;
+		expect(active.get("other-session")?.signal.aborted).toBe(false);
+		active.get("other-session")!.finish();
+		expect(await second).toBe("finished");
+		await registry.deactivate("example");
 	});
 
 	it("brokers bootstrap and per-call reads with actual caller authority and payload-free events", async () => {

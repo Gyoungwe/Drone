@@ -3,7 +3,6 @@ import { sanitizeProviderError } from "@drone/shared";
 import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { slimBulkyEvent, slimMessageUpdate } from "../session/event-slim";
-import { projectKnowledgeEvent } from "../session/knowledge-publication";
 import type { ModelWaitMonitor } from "../session/model-wait";
 import type { EventRateTracker } from "../session/rates";
 import type { StreamGuard } from "../session/stream-guard";
@@ -17,6 +16,7 @@ type EventHandler = (sessionId: string, event: SessionEvent) => void;
 
 export interface SessionEventServiceDeps {
 	runtime: DroneRuntime;
+	projectDelivery?: (sessionId: string, event: SessionEvent) => SessionEvent | null;
 	streamGuard: StreamGuard;
 	eventRates: EventRateTracker;
 	modelWait: ModelWaitMonitor;
@@ -39,9 +39,12 @@ export class SessionEventService {
 	constructor(private readonly deps: SessionEventServiceDeps) {}
 
 	emit(sessionId: string, input: SessionEvent): void {
-		let event = input;
+		// Activity is host metadata; hidden provider deltas must still prevent a false silence timeout.
+		this.deps.modelWait.inspect(sessionId, input);
+		const projected = this.deps.projectDelivery ? this.deps.projectDelivery(sessionId, input) : input;
+		if (!projected) return;
+		let event = projected;
 		this.deps.runtime.knowledge.reviewer?.observe?.(sessionId, event);
-		this.deps.modelWait.inspect(sessionId, event);
 		if (event.type === "auto_retry_start")
 			event = {
 				...event,
@@ -86,11 +89,6 @@ export class SessionEventService {
 					}
 					return null;
 				},
-			},
-			{
-				name: "publication-projection",
-				failMode: "closed",
-				run: (current) => projectKnowledgeEvent(current, this.deps.runtime),
 			},
 			{
 				name: "trace",

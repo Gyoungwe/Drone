@@ -6,7 +6,11 @@ import { createProcessSandboxedExtension, type PluginSandboxPolicy } from "../pl
 import type { PluginNativeBootstrap, PluginNativeIntegration } from "../plugins/coordinator";
 import { replyLanguagePrompt } from "../reply-language";
 import { sandboxExtensionFactory } from "../session-engine/sandbox-loader";
-import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
+import type {
+	HostExtensionSelectionReceipt,
+	InlineExtension,
+	ProjectTrustStore,
+} from "../session-engine/sdk";
 import { DefaultResourceLoader, getAgentDir, SettingsManager } from "../session-engine/sdk";
 import { resolveProjectTrust, type TrustOptionInternal } from "./trust";
 
@@ -58,6 +62,7 @@ export function desktopLoaderOptions(
 	coreHost?: CoreHostPort,
 ) {
 	if (!integration) return {};
+	const delivery = nativeBootstrap?.delivery;
 	const { mcpRuntimePath, sandboxedExtensions, pluginRuntimeDirectory, nativeRuntime, ...rest } = integration;
 	const sandbox =
 		pluginRuntimeDirectory && cwd
@@ -71,9 +76,22 @@ export function desktopLoaderOptions(
 	// P12: project memory index (.pi/memory/MEMORY.md) only — bodies are read on demand.
 	const options = {
 		...rest,
+		...(delivery
+			? {
+					hostExtensionSelection: (receipt: HostExtensionSelectionReceipt) => {
+						if (receipt.phase === "loading") delivery.invalidateSelection();
+						else delivery.confirmSelection(receipt.paths);
+					},
+				}
+			: {}),
 		...(pluginRuntimeDirectory && cwd
 			? {
 					extensionFactoryForPath: async (path: string) => {
+						const selected = nativeBootstrap?.delivery?.observeSelectedPath(path);
+						if (selected?.kind === "unconfirmed")
+							throw new Error("Native extension source authority is unavailable");
+						if (selected?.kind === "managed" && selected.state !== "enabled")
+							throw new Error("Native extension source is not enabled");
 						if (nativeRuntime?.manages(path))
 							return nativeBootstrap ? nativeBootstrap.factoryForPath(path) : () => {};
 						return sandbox?.(path);

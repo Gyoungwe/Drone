@@ -75,7 +75,7 @@ it.skipIf(!tarball)(
 						dataClassification: "public",
 					});
 					const execution = await service.executeKernel(id, 'print("discovery-native-writer")');
-					expect(execution.status).toBe("succeeded");
+					expect(execution.status, JSON.stringify(execution)).toBe("succeeded");
 					expect(execution.output).toContain("discovery-native-writer");
 					await service.closeKernelSession(id);
 				} finally {
@@ -139,7 +139,15 @@ it.skipIf(!tarball)(
 				for (const name of manifest.tools) {
 					const meta = readDroneToolMeta(session.getToolDefinition(name));
 					expect(meta.readOnly === true).toBe(
-						!["discovery_bind_workspace", "discovery_create_plan"].includes(name),
+						![
+							"discovery_bind_workspace",
+							"discovery_create_plan",
+							"discovery_create_kernel",
+							"discovery_execute_kernel",
+							"discovery_close_kernel",
+							"discovery_reconcile_executions",
+							"discovery_cancel_execution",
+						].includes(name),
 					);
 					expect(meta).toMatchObject({
 						capabilities: ["research", "analysis"],

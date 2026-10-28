@@ -115,11 +115,11 @@ describe("persisted history publication boundary", () => {
 		expect(JSON.stringify(messages)).not.toMatch(/HISTORY_DRAFT|DISCARDED_BRANCH/);
 	});
 
-	it.each(paths)("%s peek fails closed when the runtime projector is absent", async (path) => {
+	it.each(paths)("%s peek stays unverified without an actual SDK source projector", async (path) => {
 		makeBackend();
 		const messages = await peek(path);
 		expect(JSON.stringify(messages)).not.toContain("HISTORY_DRAFT");
-		expect(JSON.stringify(messages)).toContain("回答检查未完成");
+		expect(JSON.stringify(messages)).toContain("could not be verified for delivery");
 	});
 
 	it.each(paths)("%s peek fails closed when the runtime projector throws", async (path) => {

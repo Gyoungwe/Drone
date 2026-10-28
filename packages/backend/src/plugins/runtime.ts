@@ -607,14 +607,14 @@ export class PluginRuntimeRegistry {
 					},
 					operation.effect,
 					checkCaller,
-					(name, input, effect, approvalDetail) =>
+					(name, input, effect, approvalDetail, capabilitySignal = signal) =>
 						authorize(
 							() =>
 								this.policy.authorizeInvocation(
 									{ ...request, operation: `capability:${name}`, input, effect, approvalDetail },
-									signal,
+									capabilitySignal,
 								),
-							signal,
+							capabilitySignal,
 						),
 					execute,
 				);

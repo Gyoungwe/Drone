@@ -37,7 +37,9 @@ async function sourceCheckout(plugin) {
 	let checkout = checkouts.get(plugin.repo);
 	if (!checkout) {
 		checkout = join(workspace, `repo-${checkouts.size}`);
-		run("git", ["clone", "--filter=blob:none", "--no-checkout", plugin.repo, checkout], workspace);
+		// The lock already supplies the exact commit; repository-wide history is not a build input.
+		run("git", ["init", "--quiet", checkout], workspace);
+		run("git", ["remote", "add", "origin", plugin.repo], checkout);
 		checkouts.set(plugin.repo, checkout);
 	}
 	run("git", ["fetch", "--depth=1", "origin", plugin.commit], checkout);

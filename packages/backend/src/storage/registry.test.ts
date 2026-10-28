@@ -45,6 +45,14 @@ describe("StorageRegistry", () => {
 					sites.push(file);
 					continue;
 				}
+				if (file.endsWith("/plugins/execution-capabilities.ts")) {
+					expect(block).toContain("storageId: registered.id");
+					expect(lines.join("\n")).toMatch(
+						/const registered = options\.storage\.registerDiscoveredRoot\(\s*"plugin-execution-receipt"/,
+					);
+					sites.push(file);
+					continue;
+				}
 				const ids = [...block.matchAll(/"((?:agent|desktop)-[^"]+)"/g)]
 					.map((match) => match[1])
 					.filter((id): id is string => Boolean(id));
@@ -54,7 +62,7 @@ describe("StorageRegistry", () => {
 				sites.push(file);
 			}
 		}
-		expect(sites).toHaveLength(30);
+		expect(sites).toHaveLength(31);
 	});
 
 	it("does not register optional discovery storage in the base host", () => {

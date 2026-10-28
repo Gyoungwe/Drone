@@ -24,7 +24,8 @@ export interface PluginRuntimeCapabilities {
 	/** Only host-registered methods are available, under the current invocation authority.
 	 * `caller.scope(null)` returns the current host-resolved PluginRuntimeScope, including
 	 * application scope during bootstrap. It grants no file access or retained caller authority. */
-	call(name: string, input: unknown): Promise<unknown>;
+	/** A local signal only narrows this call; rejection waits for host cleanup to settle. */
+	call(name: string, input: unknown, signal?: AbortSignal): Promise<unknown>;
 }
 
 export interface PluginRuntimeResource {
@@ -130,9 +131,13 @@ export interface PluginModelSelection {
 	readonly model: string;
 	readonly thinkingLevel: string;
 	readonly profile?: string;
+	/** Preserve an unset optional preference's provenance for subsequent per-step checks. */
+	readonly optionalProfile?: string;
 }
 export interface PluginModelSelectionInput {
 	readonly profile?: string;
+	/** Parent is used only when this exact preference is truly unset. Configured but unavailable stays closed. */
+	readonly optionalProfile?: string;
 }
 /** One isolated structured result request; no parent transcript or executable tools are inherited. */
 export interface PluginModelGenerateInput {
@@ -154,9 +159,59 @@ export interface PluginModelGenerateResult {
 	readonly usage: PluginModelUsage;
 }
 
+/** Private tool-step protocol, confined to the calling plugin owner and never public chat output. */
+export type PluginModelJson =
+	| null
+	| boolean
+	| number
+	| string
+	| readonly PluginModelJson[]
+	| { readonly [key: string]: PluginModelJson };
+export interface PluginModelToolBlock {
+	readonly type: "text" | "thinking" | "toolCall";
+	readonly [key: string]: PluginModelJson;
+}
+export interface PluginModelToolMessage {
+	readonly role: "user" | "assistant" | "toolResult";
+	readonly content: readonly PluginModelToolBlock[];
+	readonly timestamp: number;
+	readonly [key: string]: PluginModelJson | undefined;
+}
+export interface PluginModelToolDeclaration {
+	readonly name: string;
+	readonly description: string;
+	readonly parameters: PluginRuntimeSchema;
+}
+export interface PluginModelToolStepInput {
+	readonly selection: PluginModelSelection;
+	readonly systemPrompt: string;
+	readonly messages: readonly PluginModelToolMessage[];
+	readonly tools: readonly PluginModelToolDeclaration[];
+	readonly maxTokens: number;
+}
+export interface PluginModelToolStepUsage extends PluginModelUsage {
+	readonly cacheReadTokens: number | null;
+	readonly cacheWriteTokens: number | null;
+	readonly reasoningTokens: number | null;
+	readonly totalTokens: number | null;
+	readonly reportedFields: readonly string[];
+}
+export interface PluginModelToolStepResult {
+	readonly selection: PluginModelSelection;
+	/** Actual SDK JSON protocol envelope, including private thinking/signatures and provider metadata. */
+	readonly reply: PluginModelToolMessage & {
+		readonly role: "assistant";
+		readonly stopReason: "pending" | "stop" | "length" | "toolUse" | "error" | "aborted" | "deferred";
+	};
+	readonly usage: PluginModelToolStepUsage;
+}
+
 /** Fresh asynchronous caller fact; never a synchronous SDK isIdle snapshot. */
 export interface PluginSessionInspection {
 	readonly agentActive: boolean;
+	/** Current facts only; they are never file/model grants. */
+	readonly projectTrusted: boolean;
+	readonly readOnly: boolean;
 }
 
 /** Fresh configured tool facts from the actual SDK session. Unknown hints stay null. */

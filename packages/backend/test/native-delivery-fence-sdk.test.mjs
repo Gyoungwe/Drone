@@ -9,7 +9,7 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { SessionEngine } from "../src/session-engine/engine";
 
 function deferred() {
@@ -25,6 +25,7 @@ async function actualSession(
 	hostDeliveryBoundary,
 	extensionFactories = [],
 	response = fauxAssistantMessage("UNRELEASED_SYNTHETIC_DRAFT"),
+	hostDeliveryRunStart,
 ) {
 	const settingsManager = SettingsManager.inMemory({});
 	const resourceLoader = new DefaultResourceLoader({
@@ -59,13 +60,14 @@ async function actualSession(
 		sessionManager,
 		tools: [],
 		hostDeliveryBoundary,
+		hostDeliveryRunStart,
 	});
 	await session.bindExtensions({
 		onError: (error) => {
 			throw error;
 		},
 	});
-	return { session, sessionManager, faux };
+	return { session, sessionManager, faux, modelRuntime, settingsManager, resourceLoader };
 }
 
 it("awaits the host-only boundary after dynamically registered hooks and before public emit and append", async () => {
@@ -460,6 +462,168 @@ it("recognizes actual SDK reload origins, rejects an old branch and invalidates 
 			await session.abort();
 			session.dispose();
 		}
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+async function abortAtOfficialMessageHook(boundary, start, onAgentStart) {
+	const root = await mkdtemp(join(tmpdir(), "drone-native-ordinary-abort-"));
+	const entered = deferred(),
+		release = deferred();
+	let session;
+	try {
+		({ session } = await actualSession(
+			root,
+			boundary,
+			[
+				(pi) => {
+					pi.on("agent_start", () => onAgentStart?.());
+					pi.on("message_end", async (event) => {
+						if (event.message.role !== "assistant") return;
+						entered.resolve();
+						await release.promise;
+					});
+				},
+			],
+			undefined,
+			start,
+		));
+		const prompt = session.prompt("Synthetic ordinary abort behavior.");
+		await entered.promise;
+		const aborted = session.abort();
+		release.resolve();
+		await Promise.all([prompt, aborted]);
+		const actual = session.sessionManager
+			.getBranch()
+			.find((entry) => entry.type === "message" && entry.message.role === "assistant").message;
+		return {
+			content: actual.content,
+			stopReason: actual.stopReason,
+			errorMessage: actual.errorMessage,
+			usage: actual.usage,
+		};
+	} finally {
+		release.resolve();
+		if (session) {
+			await session.abort();
+			session.dispose();
+		}
+		await rm(root, { recursive: true, force: true });
+	}
+}
+
+it("keeps ordinary SDK abort identical to callback absence when the host proves this run has no required policy", async () => {
+	const standard = await abortAtOfficialMessageHook(undefined);
+	const noPolicy = await abortAtOfficialMessageHook(
+		async () => false,
+		() => undefined,
+	);
+	expect(noPolicy).toEqual(standard);
+	expect(standard.content).toEqual([{ type: "text", text: "UNRELEASED_SYNTHETIC_DRAFT" }]);
+});
+
+it("runs the host start latch before SDK hooks and keeps a required-at-start run guarded after later source removal", async () => {
+	const runs = new WeakMap();
+	const order = [];
+	let currentlyRequired = true;
+	const actual = await abortAtOfficialMessageHook(
+		async (_event, signal) => {
+			expect(currentlyRequired).toBe(false);
+			expect(runs.has(signal)).toBe(true);
+			return runs.get(signal) ? undefined : false;
+		},
+		(signal) => {
+			order.push("host-start");
+			runs.set(signal, currentlyRequired);
+		},
+		() => {
+			order.push("SDK-hook");
+			currentlyRequired = false;
+		},
+	);
+	expect(order).toEqual(["host-start", "SDK-hook"]);
+	expect(actual).toMatchObject({
+		content: [],
+		stopReason: "aborted",
+		errorMessage: "Final delivery unavailable",
+	});
+});
+
+it.each([undefined, async () => false])(
+	"fails closed when the host start callback fails even with final callback %s",
+	async (boundary) => {
+		const root = await mkdtemp(join(tmpdir(), "drone-native-start-failed-"));
+		let session;
+		const events = [];
+		try {
+			({ session } = await actualSession(root, boundary, [], undefined, () => {
+				throw new Error("PRIVATE_START_INITIALIZATION_FAILURE");
+			}));
+			session.subscribe((event) => events.push(structuredClone(event)));
+			await session.prompt("Synthetic host start failure.");
+			const final = session.sessionManager
+				.getBranch()
+				.find((entry) => entry.type === "message" && entry.message.role === "assistant").message;
+			expect(final).toMatchObject({
+				content: [],
+				stopReason: "aborted",
+				errorMessage: "Host delivery initialization failed",
+			});
+			expect(JSON.stringify(events)).not.toMatch(
+				/PRIVATE_START_INITIALIZATION_FAILURE|UNRELEASED_SYNTHETIC_DRAFT/,
+			);
+		} finally {
+			if (session) {
+				await session.abort();
+				session.dispose();
+			}
+			await rm(root, { recursive: true, force: true });
+		}
+	},
+);
+
+it("forwards the host start/final hooks through actual SessionEngine create and open", async () => {
+	const root = await mkdtemp(join(tmpdir(), "drone-native-start-engine-"));
+	const sessions = [];
+	const signals = [];
+	let seed;
+	vi.stubEnv("PI_CODING_AGENT_DIR", join(root, "agent"));
+	const engine = new SessionEngine();
+	try {
+		seed = await actualSession(root, undefined);
+		await engine.dispose(seed.session);
+		const options = {
+			agentDir: root,
+			resourceLoader: seed.resourceLoader,
+			settingsManager: seed.settingsManager,
+			model: seed.faux.getModel(),
+			tools: [],
+			hostDeliveryRunStart: (signal) => {
+				signals.push(signal);
+			},
+			hostDeliveryBoundary: async () => undefined,
+		};
+		const { session: created } = await engine.create(root, options, seed.modelRuntime);
+		sessions.push(created);
+		await created.bindExtensions({});
+		await created.prompt("Synthetic created session with host start.");
+		const file = created.sessionFile;
+		expect(file).toContain(root);
+		await engine.dispose(created);
+		seed.faux.setResponses([fauxAssistantMessage("reopened actual SDK session")]);
+		const { session: opened } = await engine.open(file, { ...options, cwd: root }, seed.modelRuntime);
+		sessions.push(opened);
+		await opened.bindExtensions({});
+		await opened.prompt("Synthetic reopened session with host start.");
+		expect(signals).toHaveLength(2);
+		expect(signals[1]).not.toBe(signals[0]);
+		expect(opened.messages.findLast((message) => message.role === "assistant").content).toEqual([
+			{ type: "text", text: "reopened actual SDK session" },
+		]);
+	} finally {
+		for (const session of sessions) await engine.dispose(session);
+		if (seed) await engine.dispose(seed.session);
+		vi.unstubAllEnvs();
 		await rm(root, { recursive: true, force: true });
 	}
 });

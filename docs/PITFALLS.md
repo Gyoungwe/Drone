@@ -411,6 +411,10 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 
 TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Check 中仍拒绝原四参数调用。`PluginRuntimeContract.invoke` 的兼容合同显式使用四参数 tuple 与带 request ID 的五参数 tuple 联合；主进程 IPC 回归必须实际调用两个形状，不能只依赖 TypeScript optional 参数通过。取消传输只发送 request ID，AbortSignal 留在 renderer/main 各自的实际生命周期中。
 
+### 隐藏 provider delta 后误报模型沉默
+
+原生 delivery 投影会隐藏未经发布的 `message_update`。若 `ModelWaitMonitor.inspect` 位于投影之后，持续有 provider 事件的会话也会进入等待甚至被自动中止。活动计时必须在投影前读取事件类型；正文仍只经投影进入 reviewer、trace 和 UI。测试用显式 `NativeSessionDelivery` 关闭策略验证隐藏流量仍恢复等待，另验证普通会话不会因 `DRONE_KNOWLEDGE_DIR` 存在而隐藏流量。该定向 RED→GREEN 不替代真实安装包验收。
+
 ### channel-watch 恢复订阅一次性超时（原因未确认）
 
 `4abdae43/253c47e` 的独立全量门禁首次在恢复订阅后的 2000ms 内未收到文件监听唤醒，backend 其余 1987 项通过。原失败日志保留；同目录定向完整文件 20 项通过，随后该用例 4 路并行共 20 次均通过，完整同源码重跑 backend1988/17 skipped、Desktop934/1 skipped、root25/25 通过。首次压力脚本曾使用重复 config 路径，在测试前退出，不能当作产品复现证据。没有修改生产代码、超时或断言；根因仍待稳定复现，完整重跑通过不代表已经修复。见 `native-plugin-ui-model-cohort-2026-10-28.json`。
@@ -455,3 +459,32 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 ### 相同包内容不证明安装位置仍指向同一个来源
 
 外层安装目录被换成指向字节完全相同副本的 symlink 时，仅重新计算 packageRoot 的完整树 hash 仍可能相同。运行时现在同时复验安装位置的 canonical root 与已声明 native 路径的真实入口；原生和 UI alias 都失效。声明入口消失后，本应用内重新扫描保留旧描述为 unavailable，供实际 selected-path 失败诊断使用，绝不从该记录激活代码；跨重启 required 期望和首次 loader 失败仍在后继接线。66 项发现/来源/聚合/UI 检查通过，正式安装包另验。
+
+### 模型评审必须先验证同意，再消耗预览令牌
+
+`pi-knowledge@0.3.0` 候选的公开评审 wrapper 曾在确认 acknowledged/autoApply 前消耗单次 preview，用户未同意就重试会收到 expired。canonical owner 内校验不能补救 wrapper 的提前副作用。先拒绝缺失的同意，再消费令牌；公开异步 API 保持 Promise rejection，不能让 forged/reused token 同步异常逃出调用方。原宿主 25 项令牌/拒绝/重用断言全部保留，最小修复已进入本批候选，最终整轮门禁另见回执。
+
+### 纯清单测试不应加载 Electron 二进制
+
+`filterContributions` 是纯 JSON 过滤；从 manager 导入会间接加载 Electron，在官方二进制下载失败时让纯数据测试提前退出。函数已原样提取到 `manifest-contributions.ts`，manager 与测试共用。纯测试通过不证明正式宿主可启动，Electron 安装与打包仍需独立检查。
+
+## 2026-10-28：空 interception 不证明会话没有 required publisher
+
+实际 SDK 可能在 import interception 之前跳过不存在的入口，catalog 也包含未被此会话选择的包。发布策略必须消费本会话实际有效选择与 loader 错误来源的完整宿主回执；空 interception 或全 catalog 均不能替代。`NativeSessionDelivery` 只在 host-only `confirmSelection` 后允许 ordinary，实际 run 起点锁定 required attachment/source，关闭/哈希变化不能释放已参与 guard 的运行。当前真实 SDK 切片 6 项、连同 fence/command 共 30 项通过；生产全来源确认和正式安装包仍未验收。
+
+### SDK 忽略不存在的路径时，空 interception 不能证明没有发布策略
+
+锁定 Pi 1.1.0 的资源解析会先忽略不存在的 settings/package entry，扩展导入拦截因此看不到失败来源。宿主专用 `hostExtensionSelection` 在实际 reload 开始即失效旧回执，完成时交付本次启用路径；仅该观察者存在时保留缺失 literal/glob/package 为不可解析选择。SDK 的资源排除规则仍生效，不从全安装目录推断本会话已选择什么。无观察者对照保持原 SDK 行为。未知来源在执行代码前拒绝，实际 SDK run 无法公开或持久化未验证正文；只明确排除后的后继 run 可恢复普通聊天。来源分类只在文件/清单读取边界捕获失败并记录关闭结果，内部逻辑错误继续抛出。真实 SDK 29 项与实际文件来源 52 项通过；整包动态启停、完整领域 consumer 和正式安装包继续验收。
+
+
+## Node 内置 SQLite 与普通插件 worker
+
+不要把 Node 的 FS permission 当作所有内置模块的文件访问隔离。普通 domain worker 通过官方 `--no-experimental-sqlite` 关闭该入口；实际 factory/worker 测试只验证 import 被拒绝。SQLite index resource 的兼容与更强隔离仍需独立验证，不能继承普通 worker 的通过结论。详见 [防御证据](pluginization/node-sqlite-worker-defense.md)。
+
+
+## 插件调用的 guest 超时不应计算宿主等待
+
+保留 15 秒 guest 执行预算时，要在真实 parent 的 host capability 审批/执行/清理期间暂停，仅按剩余预算恢复。不能重置全额预算，也不能暂停同进程其他会话的计时；resource disposal 必须关联自己的内部 parent invocation。实际 worker/fake-clock 回归见 [执行候选证据](pluginization/native-plugin-execution-capability-candidate.md#15-秒-guest-watchdog-后继)。
+
+- required 交付不能在 event slim 后靠 JSON proof 恢复权限：先用实际 SDK 对象与已裁决来源投影，再交给 trace/UI。历史别名只来自 SDK 当前分支的真实 identity，copy/hash 不授 live proof。
+- SDK JSONL 原方法同步，不能在其中偷偷返回 Promise；required 导出走独立 async host 入口。异步投影完成后必须在 write 前复查实际 source/leaf/idle/dispose，Map 缺少真实 assistant entry 关联时明确失败，不能输出 raw。

@@ -9,6 +9,8 @@ import {
 	TODO_TOOL_NAME,
 } from "@drone/shared";
 import type { AgentSession, SessionEntry } from "@earendil-works/pi-coding-agent";
+import { neutralDeliveryMessage } from "../plugins/delivery-projection";
+import type { NativeSessionDelivery } from "../plugins/native-delivery";
 import { projectKnowledgeSnapshot } from "../session/knowledge-publication";
 import {
 	assignEntryIds,
@@ -22,25 +24,33 @@ import {
 	subagentPanelRawMessages,
 	toSessionMessages,
 } from "../session/messages";
+import type { SessionEngine } from "../session-engine/engine";
 import { isSubagentSessionPath } from "../tools/subagent";
 
 export interface SessionMessageHost {
 	runtime: DroneRuntime;
 	registry: {
-		get(id: string): { session: AgentSession; readOnly?: boolean } | undefined;
+		get(
+			id: string,
+		): { session: AgentSession; readOnly?: boolean; nativeDelivery?: NativeSessionDelivery } | undefined;
 	};
 	sessionEngine: {
+		historicalMessageOrigin: SessionEngine["historicalMessageOrigin"];
 		openManager(
 			filePath: string,
 			sessionDir?: string,
 		): { createBranchedSession(entryId: string): string | undefined };
 		exportHtml(session: AgentSession): Promise<string>;
-		exportJsonl(session: AgentSession): string;
+		exportJsonl(session: AgentSession): Promise<string>;
 	};
 	subagentPanel: { listRuns(id: string): Array<{ runId: string }> };
 	listAllSessions: () => Promise<SessionMeta[]>;
 	openSession: (path: string) => Promise<SessionMeta>;
-	requireSession: (id: string) => { session: AgentSession; readOnly?: boolean };
+	requireSession: (id: string) => {
+		session: AgentSession;
+		readOnly?: boolean;
+		nativeDelivery?: NativeSessionDelivery;
+	};
 	log: { info: (message: string, ...args: unknown[]) => void };
 }
 
@@ -54,21 +64,32 @@ export class SessionMessageService {
 		const entry = this.host.requireSession(sessionId);
 		return format === "html"
 			? await this.host.sessionEngine.exportHtml(entry.session)
-			: this.host.sessionEngine.exportJsonl(entry.session);
+			: await this.host.sessionEngine.exportJsonl(entry.session);
 	}
 
 	async getSessionMessages(sessionId: string): Promise<SessionMessage[]> {
 		const entry = this.host.requireSession(sessionId);
 		const branch = entry.session.sessionManager.getBranch();
-		const persisted = branch
-			.filter((item): item is Extract<SessionEntry, { type: "message" }> => item.type === "message")
-			.map((item) => item.message as RawMessage);
 		const panelRecords = subagentPanelRawMessages(branch);
-		const live = projectKnowledgeSnapshot(
-			entry.session.messages as RawMessage[],
-			persisted,
-			this.host.runtime,
-		);
+		const raw = entry.session.messages as RawMessage[];
+		let live = raw;
+		if (entry.nativeDelivery) {
+			const historical = raw.filter((message) => {
+				const origin = this.host.sessionEngine.historicalMessageOrigin(
+					entry.session,
+					message as Parameters<SessionEngine["historicalMessageOrigin"]>[1],
+				);
+				// Identity grants provenance; equality only invalidates a mutated association.
+				return origin !== undefined && JSON.stringify(origin.message) === JSON.stringify(message);
+			});
+			live = await entry.nativeDelivery.snapshot(raw, historical);
+		} else if (this.host.runtime.knowledge.publication?.projectSnapshot) {
+			// API 1.x compatibility, not a source of authority for the 0.3 managed owner.
+			const persisted = branch
+				.filter((item): item is Extract<SessionEntry, { type: "message" }> => item.type === "message")
+				.map((item) => item.message as RawMessage);
+			live = projectKnowledgeSnapshot(raw, persisted, this.host.runtime, true);
+		}
 		const merged = panelRecords.length > 0 ? mergeRawByTimestamp(live, panelRecords) : live;
 		const messages = toSessionMessages(merged, {
 			liveSubagentRunIds: new Set(this.host.subagentPanel.listRuns(sessionId).map((run) => run.runId)),
@@ -95,9 +116,13 @@ export class SessionMessageService {
 	}
 
 	private projectPersistedMessages(content: string): SessionMessage[] {
-		return readSessionMessagesFromContent(content, (raw) =>
-			projectKnowledgeSnapshot(raw, raw, this.host.runtime),
-		);
+		return readSessionMessagesFromContent(content, (raw) => {
+			// Published pi-knowledge 0.2.1 / API 1.x replay remains a migration
+			// comparison only; the 0.3 native owner never receives these JSON aliases.
+			return this.host.runtime.knowledge.publication?.projectSnapshot
+				? projectKnowledgeSnapshot(raw, raw, this.host.runtime, true)
+				: raw.map((message) => neutralDeliveryMessage(message));
+		});
 	}
 
 	async getTodos(sessionId: string): Promise<TodoItem[]> {

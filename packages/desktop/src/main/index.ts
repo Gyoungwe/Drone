@@ -24,7 +24,7 @@ import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./c
 import { electronDesktopHost, launchedHidden } from "./desktop-host";
 import { applyDesktopPrefs } from "./desktop-prefs";
 import { HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest } from "./html-preview-protocol";
-import { registerIpc, sendToRenderer } from "./ipc";
+import { createSessionQuestionTransport, registerIpc, sendToRenderer } from "./ipc";
 import { migrateLegacyUserDir } from "./legacy-migration";
 import { buildMenuTemplate, DESKTOP_COMMAND_CHANNEL } from "./menu";
 import { discoverCoreHostLoader, discoverPluginHostLoader } from "./optional-plugin-hosts";
@@ -487,6 +487,7 @@ app.whenReady().then(async () => {
 			? join(process.resourcesPath, "plugin-runtime")
 			: join(__dirname, `../../plugin-runtime/${process.platform}-${process.arch}`),
 		backendServices.sessions,
+		(owner) => createSessionQuestionTransport(owner.id),
 	);
 	registerIpc(backendServices, uiPluginsManager, pluginRuntime, () => latestIncidentSnapshot);
 	await initUpdater();
