@@ -1,6 +1,6 @@
 # 当前来源的真实会话记录端口
 
-父基线 `788e02f6`（含 root `8f15fe6a`），公共纯 JSON 合同 `1d057120`；[机器回执](../releases/native-plugin-session-records-2026-10-28.json)。本片是 P4/P2 共用端口，尚未切换完整任务 owner，没有新正式安装包或 npm 发布。
+父基线 `788e02f6`（含 root `8f15fe6a`），公共纯 JSON 合同 `1d057120`，后继 branch/JSONL 隐私修正 `24f7b00c` / `b8c9026f`；[机器回执](../releases/native-plugin-session-records-2026-10-28.json)。本片是 P4/P2 共用端口，尚未切换完整任务 owner，没有新正式安装包或 npm 发布。
 
 `session.records.read(null)` 只读实际 live SDK branch 中当前 verified pluginId namespace 的每 type 最后一个 checkpoint。`append({type,data})` 每次走现有 write broker 授权，宿主派生 `plugin-record:<encoded pluginId>:<logicalType>`，不能冒充别包或旧全局 tag。无任意 sessionId、路径、legacyTypes 或消息读取，普通 assistant 正文不会通过该端口旁路 publication。
 
@@ -10,9 +10,9 @@ Pi 1.1.0 的 public appendCustomEntry 先改内存后写 JSONL，lazy/inMemory �
 
 ## 真实回归
 
-`plugin-session-records-sdk.test.mjs` **6/6**：两个实际 source namespace、同 branch 每 type latest、实际 branch 切换、旧全局 task tag 冒充无效、无聊天正文；lazy 不创建文件、真实 createAgentSession+SessionManager.inMemory 明示 deferred；SDK 内真实 EISDIR（在 public append 调用内替换真实文件为目录）产生 phantom，恢复文件后同 entry/reload 继续拒绝、read 返回 last committed，fresh backend+实际 SessionManager.open 仅见旧 committed；原 coordinator 单请求取消/晚批准、只读/信任撤销、无会话拒绝；实际被持有的模型 turn 中通知拒绝且不会污染健康 entry。一个案例通过生产受限 Node worker 往返实际 SDK checkpoint/通知，验证无额外模型调用。
+`plugin-session-records-sdk.test.mjs` **7/7**：两个实际 source namespace、同 branch 每 type latest、实际 branch 切换、旧全局 task tag 冒充无效、无聊天正文；lazy 不创建文件、真实 createAgentSession+SessionManager.inMemory 明示 deferred；SDK 内真实 EISDIR（在 public append 调用内替换真实文件为目录）产生 phantom，恢复文件后同 entry/reload 继续拒绝、read 返回 last committed，fresh backend+实际 SessionManager.open 仅见旧 committed；原 coordinator 单请求取消/晚批准、只读/信任撤销、无会话拒绝；实际被持有的模型 turn 中通知拒绝且不会污染健康 entry。故障后的 last committed 仍与当前 SDK branch IDs 取交集；真实 malformed JSONL 包含私有 assistant 片段时只返回固定错误和行号，不带 SyntaxError 正文或 cause。一个案例通过生产受限 Node worker 往返实际 SDK checkpoint/通知，验证无额外模型调用。
 
-连同问答 9、模型 8，3 文件 **23/23**；backend/Desktop node TSC、public API check、架构门禁及本片定向 lint 通过。机器回执保留实际命令与日志。受限 worker fixture 不是正式第三方包/新安装包 GUI，本片不借此标记整体 P4 PASS。
+连同问答 9、模型 8，3 文件 **24/24**；backend/Desktop node TSC、public API check、架构门禁及本片定向 lint 通过。机器回执保留实际命令与日志。受限 worker fixture 不是正式第三方包/新安装包 GUI，本片不借此标记整体 P4 PASS。
 
 新增校验仅发生在 capability JSON 与 SDK-owned JSONL 边界；两个 driver catch 分别明确返回 needs-reopen 或向调用方抛出失败，文件 ENOENT 只在无 conversation 的 SDK lazy 语义下返回 deferred；队列 tail 的 rejection handler 仅排空调度，原结果仍 reject。没有空 catch、重试、SDK 私有数组修改或 process 全局状态。
 
