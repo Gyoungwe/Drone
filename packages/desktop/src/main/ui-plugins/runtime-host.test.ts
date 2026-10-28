@@ -657,7 +657,7 @@ it("closes a pending parent-window runtime permission dialog through the actual 
 	expect(await answer).toBe(false);
 });
 
-it("exposes the session and record handlers without a model declaration, then gates exactly two model handlers", async () => {
+it("exposes eight generic session handlers without a model declaration, then gates exactly three model handlers", async () => {
 	const handler = {
 		effect: "read",
 		inputSchema: { type: "null" },
@@ -667,14 +667,18 @@ it("exposes the session and record handlers without a model declaration, then ga
 	const handlers = Object.fromEntries(
 		[
 			"session.inspect",
+			"session.tools",
 			"session.select",
 			"session.input",
 			"session.confirm",
-			"session.notify",
-			"session.records.append",
 			"session.records.read",
+			"session.records.append",
+			"session.notify",
+			"session.records.adoption.inspect",
+			"session.records.adoption.commit",
 			"model.selection",
 			"model.generate",
+			"model.toolStep",
 		].map((name) => [name, handler]),
 	);
 	const sessions = {
@@ -682,7 +686,12 @@ it("exposes the session and record handlers without a model declaration, then ga
 		getPluginSessionCapabilities: () => handlers,
 		getStorageRegistry: () => new StorageRegistry(),
 	};
-	createDesktopRuntime({ runtimeSource: () => source, isEnabled: () => true } as any, root, sessions as any);
+	createDesktopRuntime(
+		{ runtimeSource: () => source, isEnabled: () => true } as any,
+		root,
+		sessions as any,
+		(owner) => ({ ownerId: owner.id, send: () => false, resolved: () => {} }),
+	);
 	const selected = { pluginId: "question-client", packageRoot: root, entrypoint: join(root, "question.mjs") };
 	const owner = { id: 1, isDestroyed: () => false };
 	const without = await desktop.bridgeOptions.capabilities(selected, owner)(activation());
@@ -698,13 +707,31 @@ it("exposes the session and record handlers without a model declaration, then ga
 		"session.records.append",
 		"session.records.read",
 		"session.select",
+		"session.tools",
 	]);
+	for (const name of ["session.records.read", "session.records.append", "session.notify"])
+		expect(without.handlers[name]).toBe(handler);
 	expect(without.handlers["model.selection"]).toBeUndefined();
 	expect(without.handlers["model.generate"]).toBeUndefined();
+	expect(without.handlers["model.toolStep"]).toBeUndefined();
+	expect(without.handlers["model.toolStep"]).toBeUndefined();
 	const withModel = await desktop.bridgeOptions.capabilities(
 		{ ...selected, requestsModel: true },
 		owner,
 	)(activation());
 	expect(withModel.handlers["model.selection"]).toBe(handler);
 	expect(withModel.handlers["model.generate"]).toBe(handler);
+	const recordAdoptions = {
+		recovery: { legacyType: "legacy-recovery-v1", fromVersions: ["0.2.1"], removeBeforeVersion: "2.0.0" },
+	};
+	const withAdoption = await desktop.bridgeOptions.capabilities(
+		{ ...selected, recordAdoptions },
+		owner,
+	)(activation());
+	expect(withAdoption.handlers["session.records.adoption.inspect"]).toBe(handler);
+	expect(withAdoption.handlers["session.records.adoption.commit"]).toBe(handler);
+	expect(withAdoption.handlers["model.generate"]).toBeUndefined();
+	expect(without.handlers["session.records.adoption.inspect"]).toBeUndefined();
+
+	expect(withModel.handlers["model.toolStep"]).toBe(handler);
 });

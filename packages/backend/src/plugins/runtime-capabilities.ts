@@ -11,6 +11,9 @@ import { Check } from "typebox/value";
 import type { AskQuestionRoute } from "../session/ask-gate";
 
 export interface PluginCapabilityContext {
+	/** Host-only nested service lineage; never accepted from plugin JSON. */
+	readonly providerChain?: readonly { readonly source: object; readonly operation: string }[];
+	readonly operation?: string;
 	readonly questions?: AskQuestionRoute;
 	readonly pluginId: string;
 	readonly applicationId: string;

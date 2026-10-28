@@ -1,0 +1,55 @@
+{
+	"scope": "Installed package JSON service contracts and actual owner routing",
+	"date": "2026-10-28",
+	"status": "PARTIAL_ARCHITECTURE",
+	"publicTypes": "e74caf23",
+	"pluginManifestSpec": "030bda3",
+	"catalog": "one actual installed-package sources callback; no second UI catalog",
+	"operations": {
+		"provider.inspect": "read, bootstrap metadata only",
+		"provider.read": "read ceiling",
+		"provider.write": "write, per-call actual provider approval"
+	},
+	"authority": {
+		"identity": "host actual caller/session/window and both source generations",
+		"nestedCycle": "private source/operation chain, never JSON",
+		"cleanup": "await drain/revoke; failures retain teardown barrier",
+		"jsonGrantsPrivileges": false
+	},
+	"checks": {
+		"packedInstalledRestrictedWorkerSdk": {
+			"status": "PASS",
+			"tests": 6,
+			"log": "/tmp/plugin-provider-sdk-cohort-final.log"
+		},
+		"sdkCohort": { "status": "PASS", "files": 5, "tests": 34 },
+		"desktopScannerAndModelGate": {
+			"status": "PASS",
+			"tests": 33,
+			"log": "/tmp/provider-desktop-cohort-final.log"
+		},
+		"manifestChecker": {
+			"status": "PASS",
+			"tests": 22,
+			"packages": 10,
+			"log": "/tmp/provider-plugin-manifests-gate-final.log"
+		},
+		"backendDesktopNodeTypecheck": "PASS",
+		"publicApiPackageCheck": "PASS",
+		"architecture": "PASS",
+		"changedFileLint": "PASS",
+		"finalPluginWorkspaceCheck": "PARENT_INTEGRATION_PENDING",
+		"formalInstallerGui": "NOT_RUN",
+		"finalCombinedRootGates": "PARENT_INTEGRATION_PENDING"
+	},
+	"fixturesAreProductPluginAcceptance": false,
+	"remaining": [
+		"exact legacy checkpoint adoption",
+		"raw native CLI disk generation fence",
+		"canonical task/provider and opaque privileged roles",
+		"managed task owner cutover and startup facade removal",
+		"formal installer GUI"
+	],
+	"npmPublished": false,
+	"externalAcceptanceAndB8": "unchanged"
+}

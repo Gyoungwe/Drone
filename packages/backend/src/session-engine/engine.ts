@@ -161,8 +161,8 @@ export class SessionEngine {
 		return session.exportToHtml();
 	}
 
-	exportJsonl(session: AgentSession): string {
-		return session.exportToJsonl();
+	exportJsonl(session: AgentSession): Promise<string> {
+		return session.exportToJsonlForHost();
 	}
 
 	async create(

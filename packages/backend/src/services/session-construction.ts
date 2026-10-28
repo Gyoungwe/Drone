@@ -90,6 +90,7 @@ export class SessionConstructionService {
 				? undefined
 				: new CapabilityRuntime(skillVisibility);
 		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin();
+		const nativeDelivery = nativeBootstrap?.delivery;
 		let createdSession: AgentSession | undefined;
 		try {
 			const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(
@@ -128,6 +129,18 @@ export class SessionConstructionService {
 					),
 					settingsManager,
 					resourceLoader,
+					...(nativeDelivery
+						? {
+								hostDeliveryRunStart: (signal: AbortSignal) => nativeDelivery.start(signal),
+								hostExportIsOrdinary: () => nativeDelivery.isOrdinaryForExport(),
+								hostExportBoundary: (input: Parameters<(typeof nativeDelivery)["exportProjection"]>[0]) =>
+									nativeDelivery.exportProjection(input),
+								hostDeliveryBoundary: (
+									event: Parameters<(typeof nativeDelivery)["finalize"]>[0],
+									signal: AbortSignal,
+								) => nativeDelivery.finalize(event, signal),
+							}
+						: {}),
 				},
 				runtime,
 			);
@@ -182,7 +195,13 @@ export class SessionConstructionService {
 				unsubscribeEvents();
 				diagnostics.dispose();
 			};
-			const registration = { session, unsubscribe, cwd, questionGate: askGate };
+			const registration = {
+				session,
+				unsubscribe,
+				cwd,
+				questionGate: askGate,
+				nativeDelivery: nativeBootstrap?.delivery,
+			};
 			this.host.registry.add(registration);
 			const notificationLifetime = this.host.registry.signalFor(registration);
 			notificationLifetime.addEventListener(
@@ -268,6 +287,7 @@ export class SessionConstructionService {
 				? undefined
 				: new CapabilityRuntime(skillVisibility);
 		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin();
+		const nativeDelivery = nativeBootstrap?.delivery;
 		let createdSession: AgentSession | undefined;
 		try {
 			const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(
@@ -296,6 +316,18 @@ export class SessionConstructionService {
 				{
 					settingsManager,
 					resourceLoader,
+					...(nativeDelivery
+						? {
+								hostDeliveryRunStart: (signal: AbortSignal) => nativeDelivery.start(signal),
+								hostExportIsOrdinary: () => nativeDelivery.isOrdinaryForExport(),
+								hostExportBoundary: (input: Parameters<(typeof nativeDelivery)["exportProjection"]>[0]) =>
+									nativeDelivery.exportProjection(input),
+								hostDeliveryBoundary: (
+									event: Parameters<(typeof nativeDelivery)["finalize"]>[0],
+									signal: AbortSignal,
+								) => nativeDelivery.finalize(event, signal),
+							}
+						: {}),
 					excludeTools: excludedBuiltinTools(),
 					customTools: buildSessionCustomTools(
 						this.host.sessionExtensionDependencies(),
@@ -361,6 +393,7 @@ export class SessionConstructionService {
 				diagnostics.dispose();
 			};
 			const registration = {
+				nativeDelivery: nativeBootstrap?.delivery,
 				questionGate: askGate,
 				session,
 				unsubscribe,

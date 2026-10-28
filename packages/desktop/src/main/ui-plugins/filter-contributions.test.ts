@@ -1,7 +1,7 @@
 // @vitest-environment node
 import type { UiPluginContribution } from "@drone/shared";
 import { describe, expect, it } from "vitest";
-import { filterContributions } from "./manager";
+import { filterContributions } from "./manifest-contributions";
 
 /** filterContributions 纯函数测试：坏 manifest 的 contributions 防御（B2 配套） */
 

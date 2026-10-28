@@ -12,9 +12,9 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React, { createElement } from "react";
+import { expect, it, vi } from "vitest";
 import { buildPlugin } from "../../desktop/src/main/ui-plugins/build";
 import "../../desktop/src/renderer/src/plugins/host-api";
 import { useI18nStore } from "../../desktop/src/renderer/src/i18n";

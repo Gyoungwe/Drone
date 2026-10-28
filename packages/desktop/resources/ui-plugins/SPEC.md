@@ -304,7 +304,7 @@ export function activate() {
 
 ### 通用模型能力（API 1.3 候选）
 
-安装包必须在真实 `plugin.manifest.json` 的 `permissions.network` 声明 `configured-services`，宿主才提供 `model.selection` / `model.generate`；UI 清单、域状态或 renderer 入参不能赋予此权限。声明变化会使已有 runtime source 绑定失效。该声明只允许申请模型出口，未授予任意网络请求。
+安装包必须在真实 `plugin.manifest.json` 的 `permissions.network` 声明 `configured-services`，宿主才提供 `model.selection` / `model.generate` / `model.toolStep`；UI 清单、域状态或 renderer 入参不能赋予此权限。声明变化会使已有 runtime source 绑定失效。该声明只允许申请模型出口，未授予任意网络请求。
 
 `model.selection({profile?})` 只解析所选真实会话的当前模型，或已存在且明确配置的模型偏好；不回退到任意 provider。`model.generate({selection,systemPrompt,prompt,resultSchema,maxTokens})` 只执行一次隔离 `structured_result` 请求，无父对话、任意工具执行或正文/思考回传。每次调用仍由宿主显示模型 ID、thinking、输出预算、数据将传入模型和可能费用并请求批准；缺失用量或有效定价时返回 null，不声称免费。caller 身份、选择与取消在 SDK 请求前后核验；调用方不得把结构化模型结果当成人工批准或科学认证。
 
@@ -323,6 +323,10 @@ export function activate() {
 
 `session.inspect(null)` 是通用只读会话能力，不要求模型网络声明。`session.select({title,options})`、`session.input({title,placeholder?})` 和 `session.confirm({title,message})` 都是 write 效果，仅能在当前真实、可信、可写 SDK 会话及真实 UI 可用时调用。输入不能指定会话、窗口或请求 ID；宿主以当前 caller 的 live entry、原窗口及代次决定身份。application/无会话或没有 UI 时明确不可用。
 
+`session.tools(null)` 同为 read，不要求模型声明；每次调用实际 SDK `getAllTools()` 后仅投影 `[{name,readOnlyHint:boolean|null}]`。SDK 未声明 hint 时必须为 null，不能按工具名推断读权限；这不是执行授权，也不提供同步 SDK getter。无当前 live session 时拒绝，输入不接收目标身份。
+
+managed native 另支持实际 SDK 的 `input`、`tool_call`、`turn_start`、`turn_end`：input 的 continue/transform(text/images)/handled 保持 SDK 顺序链与 handled 短路；tool_call 的 input 原对象就地变更和 block/reason/terminate 传入下一实际 hook；turn_end 仅支持 null、空对象或 continue 布尔结果及实际 boundary 顺序链；返回 entries 或就地修改 event.entries 都明确拒绝，不能绕过来源 namespace/持久化能力。continue 不产生任务执行授权，也不代替尚待实现的 owned boundary draft broker。所有 hook 沿用 eventEffects（除 session_start 外默认 write）及现有逐调用批准、实际信号和停用排空；取消后的变换不应用。SDK input/turn 失败按原 onError 通道报告一次，tool_call 失败保留 SDK 的单个 error tool result，不额外复制诊断。
+
 结果分别为 `{kind:"selected",value:string}`、`{kind:"input",value:string}`、`{kind:"confirmed",value:boolean}`，关闭对话框统一返回 `{kind:"cancelled"}`；调用被撤销或实际 SDK signal 取消则请求拒绝。能力调用方必须 await，不能从迟到答案继续执行。结果只表示普通交互数据，不是文件、模型或执行权限；confirm 使用 AskGate 的二选项，不会设置 PermissionGate 的 allowRun/allowAlways。模型能力仍仅由声明 `configured-services` 的包申请，问答不会借用该声明，也不会授予模型出口。
 
 问题经当前实际 SDK UI binding 到既有 AskGate pending；发给原窗口，答复由 IPC sender 校验。取消、关闭和答复使用通用 AskResolved 精确移除该窗口的对应卡片。host-only window route 不进入公共问答 JSON，不新增请求账本。原生 managed Context 的其他 UI 方法仍按既有 supported/unsupported 合同处理，不能因此声称完整 ExtensionUIContext 已可用。
@@ -334,3 +338,29 @@ export function activate() {
 `session.notify({content})` 为 write，仅在当前真实 SDK idle 时显示普通文本 custom message，host 派生类型、固定 display:true/triggerTurn:false，无 details、可信状态或授权含义。活动会话明确拒绝，不把 queued 当作已显示；调用不触发模型。两种写入都必须来自可信可写的 live entry，不能借问答结果取得权限。
 
 检查点读取返回 `{state:"durable"|"deferred"|"needs-reopen",error:string|null,records}`。Pi 1.1.0 的 lazy/inMemory 会话可能未写盘，deferred 不是已保存回执，读取不会创建文件或触发 flush。实际 SDK 写入失败后，同 backend/实际 entry 的所有后续 append/notify 均拒绝，read 仅给出最后已确认的检查点与 needs-reopen；重建 handler、UI/native 重激活或 SDK.reload 不清除故障。只能从磁盘真正重建新的 SDK entry 后恢复；不回滚或读取 SDK 私有数组，不新增 process 全局账本。
+
+### 同一 installed source catalog 的 JSON 服务（未发布 1.3 候选）
+
+真实 `plugin.manifest.json` 的 `drone.provides` 为 `{service:{version,operations}}`，`drone.requires` 为 `{alias:{service,version}}`；version 是正整数合同版本，operations 是非空唯一公开 runtime 操作名。二者均要求 `desktopRuntime`，不覆盖 `requires.hostCapabilities`，不允许写包名依赖或函数。来源、contentHash、安装路径和启停状态沿同一 installed package catalog，不从 UI 列表另建目录。
+
+`provider.inspect({alias})` 为 read，返回 `{state,service,requestedVersion,provider}`，state 为 available/absent/disabled/unavailable/incompatible/ambiguous，provider 为 available 的 `{pluginId,version,contentHash}` 或 null；它只检查已声明 alias，构造期可读取元数据，不激活目标。服务只选择精确版本唯一 enabled 来源，多提供者不能取第一个。
+
+`provider.read` / `provider.write` 接收 `{alias,operation,input:JSON}`，在实际提供者 owner 中执行其已声明且真实存在的 runtime operation。read 不可调用 write，所有写入仍逐次走双方来源与实际操作授权。短 lease 沿原 host caller/同 SDK entry/原窗口与 signal；已有 native/UI binding 时复用同 application owner，无其他 binding 时该纯服务 owner 仅活本次调用，状态应显式持久化。结束必须 await drain/revoke，清理失败使回执失败并保留 teardown 屏障。嵌套调用的 host-only source/operation 链拒绝实际循环，不把函数、caller 身份或授权放进 JSON。
+
+普通服务返回值不产生文件、模型或任务写入权限，特权 acceptance/consent 角色仍需后继真实 opaque 证明与消费点验收。本片不新增 UI RPC、IPC 或 renderer surface；现有 runtime capability 管道承载这些纯 JSON 调用。
+
+### 临时旧检查点导入（未发布 1.3 候选）
+
+`drone.recordAdoptions:{logicalType:{legacyType,fromVersions,removeBeforeVersion}}` 声明一个明确旧全局 tag。fromVersions 是迁移器支持的精确稳定版本列表，不证明旧记录的实际创建者或版本；当前包与删除版本也须为稳定版本，到删除版本后此临时声明拒绝加载。必须有同源 desktopRuntime，不能声明导入 `plugin-record:` / `plugin-notice:` 的其他来源 namespace。
+
+`session.records.adoption.inspect({type})` 与 `session.records.adoption.commit({type,legacyId,legacyHash,data})` 都是 write，分别请求批准。批准前展示精确旧 tag、目标 logical type、支持迁移器版本与“创建者/版本未知、不会授予文件/模型/执行权限或科学 proof”的说明。声明由实际 source 的 capability 工厂绑定，调用者 JSON 不能指定来源或旧 tag；普通 records.read 不提供任何 legacyTypes 参数。
+
+inspect 返回 candidate/absent/already-adopted/deferred，creator/packageVersion 固定 unknown，只有 candidate 附 `{id,hash,data}`。commit 在同 entry 串行事务内重验最新当前 branch 候选 id/hash、尚无 own-source checkpoint，再追加 own namespace 并真实 durable 回读，原记录保留；hash 仅并发核对，不是授权 token。只有成功持久化才返回 adopted。deferred 不暴露旧候选，不产生 adopted 回执；错误沿已有 needs-reopen 屏障传播。
+
+生产迁移器必须验证旧数据格式和当前实际 scope，清除或保留为纯历史的旧 approved/roots/proof，重新获取当前实际授权与 opaque 证明；通用导入端口不会代替这层领域验证。Core 0.1.9/0.2.0 与 Knowledge 0.2.0/0.2.1 的实际迁移验收仍待分别完成，不能将协议 fixture 写成整包迁移 PASS。
+
+### 私有 model.toolStep
+
+`model.toolStep({selection,systemPrompt,messages,tools,maxTokens})` 每次仅做一次真实 SDK completeSimple。宿主不执行 tools；纯 JSON tool schema 只告诉模型可请求的名字，域白名单、工具实现、结果检查与轮次预算必须仍由同包 owner 执行。systemPrompt≤32000 bytes，messages≤32条/80000 bytes，总输入≤160000 bytes，tools≤8且名唯一，maxTokens≤12000（保留既有最高角色预算）。reply 保留真实 SDK 的私有协议/签名/metadata，只返回调用 owner；不能自动出现在公开回答、UI 或日志。usage 数值为 number/null并带reportedFields，无有效定价的默认零成本保持unknown。
+
+`model.selection` 支持与严格profile互斥的`optionalProfile`：仅真实未配置时使用actual parent，并在返回选择保留optionalProfile以便逐步复查；配置存在但失效仍拒绝。`session.inspect(null)`返回`{agentActive,projectTrusted,readOnly}`当前事实，这些字段不授予能力或跳过批准。

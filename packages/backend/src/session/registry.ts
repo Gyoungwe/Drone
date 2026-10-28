@@ -1,10 +1,12 @@
 import { statSync } from "node:fs";
 import type { SessionMeta } from "@drone/shared";
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
+import type { NativeSessionDelivery } from "../plugins/native-delivery";
 import type { AskGate } from "./ask-gate";
 
 export interface RegisteredSession {
 	readonly questionGate?: AskGate;
+	readonly nativeDelivery?: NativeSessionDelivery;
 	session: AgentSession;
 	unsubscribe: () => void;
 	cwd: string;

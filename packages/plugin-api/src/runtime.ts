@@ -131,9 +131,13 @@ export interface PluginModelSelection {
 	readonly model: string;
 	readonly thinkingLevel: string;
 	readonly profile?: string;
+	/** Preserve an unset optional preference's provenance for subsequent per-step checks. */
+	readonly optionalProfile?: string;
 }
 export interface PluginModelSelectionInput {
 	readonly profile?: string;
+	/** Parent is used only when this exact preference is truly unset. Configured but unavailable stays closed. */
+	readonly optionalProfile?: string;
 }
 /** One isolated structured result request; no parent transcript or executable tools are inherited. */
 export interface PluginModelGenerateInput {
@@ -155,9 +159,65 @@ export interface PluginModelGenerateResult {
 	readonly usage: PluginModelUsage;
 }
 
+/** Private tool-step protocol, confined to the calling plugin owner and never public chat output. */
+export type PluginModelJson =
+	| null
+	| boolean
+	| number
+	| string
+	| readonly PluginModelJson[]
+	| { readonly [key: string]: PluginModelJson };
+export interface PluginModelToolBlock {
+	readonly type: "text" | "thinking" | "toolCall";
+	readonly [key: string]: PluginModelJson;
+}
+export interface PluginModelToolMessage {
+	readonly role: "user" | "assistant" | "toolResult";
+	readonly content: readonly PluginModelToolBlock[];
+	readonly timestamp: number;
+	readonly [key: string]: PluginModelJson | undefined;
+}
+export interface PluginModelToolDeclaration {
+	readonly name: string;
+	readonly description: string;
+	readonly parameters: PluginRuntimeSchema;
+}
+export interface PluginModelToolStepInput {
+	readonly selection: PluginModelSelection;
+	readonly systemPrompt: string;
+	readonly messages: readonly PluginModelToolMessage[];
+	readonly tools: readonly PluginModelToolDeclaration[];
+	readonly maxTokens: number;
+}
+export interface PluginModelToolStepUsage extends PluginModelUsage {
+	readonly cacheReadTokens: number | null;
+	readonly cacheWriteTokens: number | null;
+	readonly reasoningTokens: number | null;
+	readonly totalTokens: number | null;
+	readonly reportedFields: readonly string[];
+}
+export interface PluginModelToolStepResult {
+	readonly selection: PluginModelSelection;
+	/** Actual SDK JSON protocol envelope, including private thinking/signatures and provider metadata. */
+	readonly reply: PluginModelToolMessage & {
+		readonly role: "assistant";
+		readonly stopReason: "pending" | "stop" | "length" | "toolUse" | "error" | "aborted" | "deferred";
+	};
+	readonly usage: PluginModelToolStepUsage;
+}
+
 /** Fresh asynchronous caller fact; never a synchronous SDK isIdle snapshot. */
 export interface PluginSessionInspection {
 	readonly agentActive: boolean;
+	/** Current facts only; they are never file/model grants. */
+	readonly projectTrusted: boolean;
+	readonly readOnly: boolean;
+}
+
+/** Fresh configured tool facts from the actual SDK session. Unknown hints stay null. */
+export interface PluginSessionTool {
+	readonly name: string;
+	readonly readOnlyHint: boolean | null;
 }
 
 /** Questions return ordinary interaction data; they never grant file/model permissions. */
@@ -212,6 +272,66 @@ export interface PluginSessionNotifyInput {
 }
 export interface PluginSessionNotifyResult {
 	readonly durability: "durable" | "deferred";
+}
+
+/** Temporary import declarations. Supported migrator versions never prove a legacy record's creator/version. */
+export interface PluginRecordAdoptionDeclaration {
+	readonly legacyType: string;
+	readonly fromVersions: readonly string[];
+	readonly removeBeforeVersion: string;
+}
+export type PluginRecordAdoptions = Readonly<Record<string, PluginRecordAdoptionDeclaration>>;
+export interface PluginSessionRecordAdoptionInspectionInput {
+	readonly type: string;
+}
+export interface PluginSessionRecordAdoptionInspection {
+	readonly state: "candidate" | "absent" | "already-adopted" | "deferred";
+	readonly legacyType: string;
+	readonly supportedFromVersions: readonly string[];
+	readonly creator: "unknown";
+	readonly packageVersion: "unknown";
+	readonly candidate: { readonly id: string; readonly hash: string; readonly data: unknown } | null;
+}
+export interface PluginSessionRecordAdoptionCommitInput {
+	readonly type: string;
+	readonly legacyId: string;
+	/** Optimistic concurrency only. This hash is not an authorization/provenance token. */
+	readonly legacyHash: string;
+	readonly data: unknown;
+}
+export interface PluginSessionRecordAdoptionCommitResult {
+	readonly state: "adopted";
+	readonly id: string;
+	readonly durability: "durable";
+	readonly legacyId: string;
+	readonly legacyHash: string;
+}
+
+/** Service contracts describe JSON operations, never functions or file/model authority. */
+export interface PluginServiceProvision {
+	readonly version: number;
+	readonly operations: readonly string[];
+}
+export interface PluginServiceRequirement {
+	readonly service: string;
+	readonly version: number;
+}
+export interface PluginProviderInspectionInput {
+	readonly alias: string;
+}
+export interface PluginProviderInvocationInput extends PluginProviderInspectionInput {
+	readonly operation: string;
+	readonly input: unknown;
+}
+export interface PluginProviderInspection {
+	readonly state: "available" | "absent" | "disabled" | "unavailable" | "incompatible" | "ambiguous";
+	readonly service: string;
+	readonly requestedVersion: number;
+	readonly provider: {
+		readonly pluginId: string;
+		readonly version: number;
+		readonly contentHash: string;
+	} | null;
 }
 
 /** Optional bounded execution capabilities; importing this contract never loads Node. */

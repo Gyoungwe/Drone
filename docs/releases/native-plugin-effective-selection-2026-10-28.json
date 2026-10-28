@@ -1,0 +1,79 @@
+{
+	"schemaVersion": 1,
+	"status": "PARTIAL",
+	"sourceCommit": "3d3a912f",
+	"baseDeliveryCommit": "4f779bb6",
+	"sdk": "@earendil-works/pi-coding-agent@1.1.0 (pinned host patch)",
+	"pluginApi": "private 1.3.0 candidate 6a011fc8; not published",
+	"scope": [
+		"Actual ResourceLoader emits loading before reload, then loaded only after complete effective resource selection",
+		"A host observer retains selected unavailable settings entries, package manifest literals/globs and unavailable configured packages; explicit native exclusion remains effective",
+		"No observer preserves ordinary SDK resolution behavior",
+		"One source catalog classifies real selected paths; unknown or failed managed source is refused before plugin execution",
+		"Actual create/open feed the real run signal to NativeSessionDelivery; a required or unconfirmed run cannot release raw assistant output",
+		"File/JSON trust-boundary failures record an unconfirmed source; no source code is imported during classification"
+	],
+	"observedSdkBehavior": {
+		"model": "deterministic offline faux provider; no remote model request",
+		"emptySelectionChat": "observed ordinary answer appended",
+		"selectedUnavailableAfterReload": "raw assistant omitted from actual public/persisted branch; neutral aborted envelope",
+		"explicitNativeExclusionAfterReload": "observed ordinary answer appended",
+		"reloadFailure": "preceding confirmed receipt invalidated before failed reload",
+		"unconfirmedImport": "actual loader rejects before plugin body runs"
+	},
+	"checks": [
+		{
+			"path": "/tmp/drone-native-selection-receipt-red.log",
+			"sha256": "282655f9b799bd32297abee85da3ffcd3082799aa7fc71475474df5d012a363d",
+			"scope": "Actual pinned ResourceLoader before change: three missing receipt assertions fail; ordinary absent callback control passes",
+			"expectedOutcome": "FAILED_BEFORE_CHANGE"
+		},
+		{
+			"path": "/tmp/drone-native-selection-sdk-combined.log",
+			"sha256": "67dbfc1edf8acd71b027fb3deae4960b2ee82255903cdf3c0971f1b322a867a7",
+			"scope": "Three actual SDK files, 29 passed: complete selected-path receipt, real chat/reload/exclusion, pre-import refusal and existing delivery fence/owner tests",
+			"expectedOutcome": "PASSED"
+		},
+		{
+			"path": "/tmp/drone-native-selection-narrow-boundaries-tests.log",
+			"sha256": "7db20c125938d8e48e8354978f806c1c5cc3da15a3adc64cdc47bab6daf87d4a",
+			"scope": "Two actual filesystem/source files, 52 passed after narrowing file/JSON failure handling",
+			"expectedOutcome": "PASSED"
+		},
+		{
+			"path": "/tmp/drone-native-selection-backend-types-final.log",
+			"sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			"scope": "Backend TypeScript",
+			"expectedOutcome": "PASSED"
+		},
+		{
+			"path": "/tmp/drone-native-selection-desktop-types.log",
+			"sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			"scope": "Desktop main/preload TypeScript",
+			"expectedOutcome": "PASSED"
+		},
+		{
+			"path": "/tmp/drone-native-effective-selection-lint.log",
+			"sha256": "42190a6a14c3a43b4ebf49d1860085a7d9e68fff9a6846e754e7c69b416c1ac4",
+			"scope": "Changed code lint",
+			"expectedOutcome": "PASSED"
+		},
+		{
+			"path": "/tmp/drone-native-selection-arch.log",
+			"sha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d",
+			"scope": "R1-R7 architecture and existing host independence check",
+			"expectedOutcome": "PASSED"
+		}
+	],
+	"notCompleted": [
+		"Full locked/latest official API matrix",
+		"Full domain consumer/historical/export composition",
+		"Explicit whole-package GUI disable/drain/re-enable",
+		"Persisted package identity diagnostics across application restart",
+		"Independent full root gate for this S2 source",
+		"Fresh npm ci applying this final patch",
+		"Formal macOS installer/upgrade/rollback"
+	],
+	"isolation": "Synthetic temporary files and offline model; no production Vault/account writes",
+	"retainedExternalAcceptances": "Unchanged: four previously deferred external acceptances remain incomplete"
+}

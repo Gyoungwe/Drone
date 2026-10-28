@@ -19,7 +19,7 @@ const cancelled = {
 export function sessionCapabilityHandlers(
 	registry: SessionRegistry,
 ): Record<
-	"session.inspect" | "session.select" | "session.input" | "session.confirm",
+	"session.inspect" | "session.tools" | "session.select" | "session.input" | "session.confirm",
 	PluginCapabilityHandler
 > {
 	function questionEntry(context: PluginCapabilityContext) {
@@ -38,18 +38,47 @@ export function sessionCapabilityHandlers(
 		return result;
 	}
 	return {
+		"session.tools": {
+			effect: "read",
+			inputSchema: { type: "null" },
+			resultSchema: {
+				type: "array",
+				items: {
+					type: "object",
+					properties: { name: { type: "string" }, readOnlyHint: { type: ["boolean", "null"] } },
+					required: ["name", "readOnlyHint"],
+					additionalProperties: false,
+				},
+			},
+			execute: async (_input, context) =>
+				requirePluginSession(registry, context)
+					.session.getAllTools()
+					.map((tool) => ({
+						name: tool.name,
+						readOnlyHint: tool.annotations?.readOnlyHint ?? null,
+					})),
+		},
 		"session.inspect": {
 			effect: "read",
 			inputSchema: { type: "null" },
 			resultSchema: {
 				type: "object",
-				properties: { agentActive: { type: "boolean" } },
-				required: ["agentActive"],
+				properties: {
+					agentActive: { type: "boolean" },
+					projectTrusted: { type: "boolean" },
+					readOnly: { type: "boolean" },
+				},
+				required: ["agentActive", "projectTrusted", "readOnly"],
 				additionalProperties: false,
 			},
-			execute: async (_input, context) => ({
-				agentActive: requirePluginSession(registry, context).session.isStreaming,
-			}),
+			execute: async (_input, context) => {
+				const entry = requirePluginSession(registry, context);
+				return {
+					agentActive: entry.session.isStreaming,
+					projectTrusted: entry.session.settingsManager.isProjectTrusted(),
+					readOnly: entry.readOnly === true,
+				};
+			},
 		},
 		"session.select": {
 			effect: "write",

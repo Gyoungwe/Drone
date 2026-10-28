@@ -14,7 +14,7 @@ describe("SessionEngine lifecycle boundary", () => {
 			reload: vi.fn(async () => {}),
 			setSessionName: vi.fn(),
 			exportToHtml: vi.fn(async () => "<html />"),
-			exportToJsonl: vi.fn(() => "{}\n"),
+			exportToJsonlForHost: vi.fn(async () => "{}\n"),
 		} as unknown as AgentSession;
 		const engine = new SessionEngine();
 
@@ -28,7 +28,7 @@ describe("SessionEngine lifecycle boundary", () => {
 		await engine.reload(session);
 		engine.setSessionName(session, "Demo");
 		expect(await engine.exportHtml(session)).toBe("<html />");
-		expect(engine.exportJsonl(session)).toBe("{}\n");
+		expect(await engine.exportJsonl(session)).toBe("{}\n");
 
 		expect(session.dispose).toHaveBeenCalledOnce();
 		expect(session.abort).toHaveBeenCalledTimes(2);
@@ -39,7 +39,7 @@ describe("SessionEngine lifecycle boundary", () => {
 		expect(session.reload).toHaveBeenCalledOnce();
 		expect(session.setSessionName).toHaveBeenCalledWith("Demo");
 		expect(session.exportToHtml).toHaveBeenCalledOnce();
-		expect(session.exportToJsonl).toHaveBeenCalledOnce();
+		expect(session.exportToJsonlForHost).toHaveBeenCalledOnce();
 	});
 });
 

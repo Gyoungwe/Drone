@@ -8,14 +8,19 @@
 下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构设计](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已批准并开始实施；[P0–P7 执行计划](pluginization/native-plugin-implementation-plan.md)记录阶段状态，[SDK 运行时证据](pluginization/native-plugin-runtime-evidence.md)区分真实会话、执行适配与自动发现，[P1 正式安装包切片](pluginization/native-plugin-p1-packaged-evidence.md)记录窗口作用域后台的启停、拒绝、恢复与退出，完整领域迁移仍未完成。[P2 知识只读共享 owner](pluginization/native-plugin-knowledge-readonly-evidence.md)记录候选包、权限/资源边界、实际会话和安装包验收及完整功能缺口。
 managed native `registerCommand` 由 `plugins/{runtime,process-runtime,process-runtime-worker}.ts` 注册并按真实 SDK caller 执行 `native:command:*` 授权；声明与默认写效果在 `plugin-api/src/native.ts`，完整范围、实际 SDK 取消/停用/重建及尚不支持的 Context 见[命令证据](pluginization/native-plugin-managed-command-evidence.md)。
 真实会话问答由 `backend/src/plugins/session-capabilities.ts`、`session-engine/session-questions.ts` 与既有 AskGate 提供；原窗口答复认证、取消清卡、模型权限分流和 SDK 空字符串语义见[问答证据](pluginization/native-plugin-session-questions-evidence.md)，不代表完整 managed UI 已迁移。
+同模块的 `session.tools` 每次投影实际 SDK 工具 hint；managed input/tool_call/turn_start/turn_end 的链式结果、实际调用信号、拒绝/取消和 turn_end draft 限制位于 `plugins/{native-events,process-runtime,process-runtime-worker,runtime}.ts`，见[事件链证据](pluginization/native-plugin-chain-events-evidence.md)。
 当前来源的会话检查点与 idle 普通通知由 `backend/src/plugins/session-record-capabilities.ts`、`session-engine/session-records.ts` 提供，实例由 `SessionServiceApi` 持有；namespace、真实磁盘回执、deferred/needs-reopen 和实际受限 worker 证据见[记录端口切片](pluginization/native-plugin-session-records-evidence.md)。这不关闭旧数据 adoption、provider 或 P4 默认 owner 切换。
+可选服务由 `backend/src/plugins/service-capabilities.ts` 和 `coordinator.ts` 复用唯一 installed package catalog 与真实 runtime owner；manifest 解码在 `desktop/src/main/ui-plugins/installed-package-sources.ts`，同包版本合同、短 lease/取消/循环、实际安装 tarball 到 SDK 共享 owner 的切片见[服务端口证据](pluginization/native-plugin-services-evidence.md)。普通服务 JSON 不产生特权任务权限。
+临时旧检查点的两阶段 write 导入位于 `backend/src/plugins/session-adoption-capabilities.ts`，复用同 `SessionRecordStore`；source 精确声明、未知旧来源、当前 branch/hash/once 检查、真实回读与仍未完成的领域迁移器见[导入端口证据](pluginization/native-plugin-record-adoption-evidence.md)。
 受限 managed process 的标准工具 JSON 字段和逐调用进度由 `backend/src/plugins/process-runtime{,-worker}.ts` 传输；不支持的注册回调明确拒绝。真实 SDK 并行、取消、迟到回调和加载失败后继续读取见 `backend/test/native-tool-protocol-sdk.test.mjs`，普通第三方沙箱经 `plugin-sandbox.ts` 与 `session-engine/sandbox-loader.ts` 转发同类进度，边界 schema 统一在 `backend/src/tool-progress.ts`；不代表完整 API 已完成。
 原生迁移的[能力切片证据与当前缺口](pluginization/native-plugin-capability-slice-evidence.md)与执行计划同步；完整历史分别见[计划归档](archive/native-plugin-implementation-plan-through-2026-10-27.md)和[切片证据归档](archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。历史 PASS 只适用于原版本与范围，四项外部验收不属于本轮 P0–P7。
 锁定 SDK 的 33 API、41 事件、28 UI 成员与三条运行路径的支持/拒绝边界见[原生 API 盘点](pluginization/native-pi-api-compatibility-matrix.md)；P0 仍未完成，不能用格式兼容替代运行 API 验收。
 当前四包源码锁 `253c47e` 与宿主 `4abdae43` 的任务 owner/UI、显式命令、单请求取消/真实会话模型、Desktop RPC/状态、discovery 原生日志/真实 Docker 和独立完整根门禁见[当前回执](releases/native-plugin-ui-model-cohort-2026-10-28.json)。领域边界仍 INCOMPLETE；首个 channel-watch 超时与完整重跑均保留，未报告根因修复。旧 [fd4c5040/dd7effc](releases/native-plugin-owner-migration-2026-10-28.json)、[5e0c9aab/f4a530a](releases/native-plugin-task-owner-host-2026-10-28.json) 保留原范围；下一批隔离源码见[执行计划](pluginization/native-plugin-implementation-plan.md)。
 
 P4 从启动 taskHost 到受限同包 application owner 的具体依赖盘点、异步任务模块方案、授权/provider 依赖和最终删除点见[动态 owner 设计提案](superpowers/specs/2026-10-28-task-managed-owner-cutover-design.md)。
-P4 S1 的 canonical `pi-core/src/task-runtime/task-session.mjs` 串行事务、`TaskApplication` 与两个 native 入口、真实 SDK 磁盘失败/phantom/reopen、取消和双会话证据见[TaskSession 切片](pluginization/native-plugin-task-session-actor-evidence.md)；独立 raw CLI reload 的 generation fence 仍是 S2 已知 RED，不代表 P4 完成。
+P4 S1 的 canonical `pi-core/src/task-runtime/task-session.mjs` 串行事务、`TaskApplication` 与两个 native 入口、真实 SDK 磁盘失败/phantom/reopen、取消和双会话证据见[TaskSession 切片](pluginization/native-plugin-task-session-actor-evidence.md)。后继 `native-storage.mjs` 基于公开 SDK branch/自身 JSONL 重建 raw reload fence 的[真实 RED→GREEN](pluginization/native-plugin-native-storage-evidence.md)关闭该 append-phantom 切片；deferred 的完整 actor 策略、managed cutover 与 P4 仍未完成。
+插件内 `task-runtime/task-controller.mjs` 从 Native Adapter 提取同一 actor 的 journal/evidence 转发，不持有第二份状态；结构提取、真实安装 tarball 到 SDK 的回归及后继边界见[Controller 切片](pluginization/native-plugin-task-controller-evidence.md)。
+后继 `TaskSession.evidenceFiles` 将 evidence 的 inspect/readText 交给真实 Adapter；原生端实际 FS、恢复前后 hash/当前授权及安装 tarball 到 SDK 的保存回读见[Evidence 端口切片](pluginization/native-plugin-task-evidence-ports-evidence.md)，managed 端不得沿用原生 FS。
 P4 任务 UI 已移入同包 `pi-core/ui`，只读消息 hook、`chat.message` 和 `sessions.command` 由通用宿主提供；真实 SDK、renderer 与取消晚写回归及仍未完成的动态 native 启停见[任务 UI 切片](pluginization/native-plugin-task-ui-evidence.md)与[机器回执](releases/native-plugin-task-ui-2026-10-28.json)。
 版本化的通用 pi-core 宿主合同位于 `packages/plugin-api/src/core.ts`，桌面端通过 `packages/desktop/src/main/optional-plugin-hosts.ts` 按已安装包清单发现 `coreHostLoader` 并贯穿会话组合；task host 通过既有 `PluginNativeSession` 生成每会话 adapter，与标准 Pi 根入口共用 canonical owner；任务 UI 的正式安装包工作流与整个 native 包动态安装停用仍待验收。
 
@@ -33,18 +38,19 @@ Inquiry 原 SQLite 保持位置/格式的独立 provider 方案见[SQLite provid
 
 Inquiry 内存/WASM SQLite 保留原格式的临时 SQL/导出回读调查见[可行性候选](pluginization/inquiry-wasm-feasibility-candidate.md)；binary CAS、provider 及完整迁移仍未实施。
 
-独立 binary-state 根、4 MiB payload、原字节 CAS/缺失条件与 commit-point 取消语义见[精确合同草案](pluginization/binary-state-port-contract-candidate.md)；生产端口待确认。
+独立 binary-state 根、4 MiB payload、原字节 CAS/缺失条件与 commit-point 取消语义见[精确合同草案](pluginization/binary-state-port-contract-candidate.md)；生产端口待实施。
 
 P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享 Node lease 的候选范围见[共享 owner 证据](pluginization/native-plugin-discovery-owner-evidence.md)；执行/Inquiry、完整 UI 与旧 seam 删除仍未完成。
 无派生 resource 的 state/files 显式授权与宿主固有 `caller.scope(null)` 见[独立文件能力切片](pluginization/native-plugin-resource-independent-capabilities.md)；这不会授予任意路径或关闭 discovery 全功能验收。
 知识状态 broker 的 `state.ensureDirectory` 提供显式受授权的单层初始化，读取不建目录；合同与限制见[状态能力](pluginization/native-plugin-state-capabilities.md)。
 
+私有单次模型工具协议与 actual session facts 见[toolStep 切片](pluginization/native-plugin-model-tool-step-evidence.md)；完整 specialist 域循环仍待迁移，不把一次 SDK completion 当作完整子代理。
 插件结构化模型端口见 `backend/src/plugins/model-capabilities.ts`；真实 SDK 调用与 JSON 输出验证在 `session-engine/structured-model.ts`，模型声明来自已安装清单的 configured-services 权限，逐请求显示实际模型选择和费用边界。`session.inspect` 只返回当前真实会话是否活跃；前台业务的闲置策略由插件执行。
 知识 canonical owner 的模型评审和 managed 官方 Pi 命令已通过同一 tarball 的真实双 worker/SDK/SQLite 验收，见[后继切片回执](releases/native-plugin-knowledge-model-command-2026-10-28.json)。这条隔离分支证据不替代合并后双仓库门禁或正式安装包 GUI；完整 hooks、CLI 文本回执和旧 facade 仍未完成。
 完整 managed native publication 的[设计](superpowers/specs/2026-10-28-managed-native-publication-design.md)已批准，完整 owner/consumer 仍待实现；[实际 Pi 1.1.0 时序观察](releases/native-publication-sdk-ordering-2026-10-28.json)证明 awaited hooks 阻塞 prompt/idle，但 SDK abort 本身不拦截迟到正文持久化。后继[SDK 机制回执](releases/native-publication-sdk-fence-2026-10-28.json)记录钉版 host-only 最终边界的真实 RED→GREEN 与七项 SDK 回归，仍不代表完整插件 publication 或正式安装包验收。
 真正历史对象的来源只由 SDK 私有 WeakMap 与当前 branch 提供，宿主入口在 `session-engine/engine.ts:historicalMessageOrigin`；[实际 SDK 来源回执](releases/native-publication-historical-origin-2026-10-28.json)覆盖新 live 复制、reload、branch 切换和 dispose，不能把这个来源当作新的 live proof。
 实际 run 起点和本次 delivery 是否参与 guard 由钉版 host-only callback 管理，见[起点/取消机制回执](releases/native-publication-run-start-2026-10-28.json)；普通 Pi abort 与无 callback 对照一致，实际来源选择和完整 consumer 仍待实现。
-会话实际选择与本次 run 的通用发布机制位于 `backend/src/plugins/native-delivery.ts`；[来源锁定切片](releases/native-publication-selection-2026-10-28.json)覆盖 actual SDK/registry/broker/worker owner proof 和未确认来源关闭。完整 ResourceLoader 选择回执、默认生产接线与知识 workflow 仍未完成。
+会话实际选择与本次 run 的通用发布机制位于 `backend/src/plugins/native-delivery.ts`；[来源锁定切片](releases/native-publication-selection-2026-10-28.json)覆盖 actual SDK/registry/broker/worker owner proof 和未确认来源关闭。实际 ResourceLoader loading/loaded 回执、缺失入口保留、首次执行前来源拒绝及 create/open 的 run/finalize 接线见[实际选择证据](releases/native-plugin-effective-selection-2026-10-28.json)；分类器位于 `desktop/src/main/ui-plugins/native-source-classification.ts`。完整知识 workflow、整包设置与正式包仍未完成。
 原生 publication 的[私有对象 courier](pluginization/native-plugin-publication-courier.md)保留同 attachment 的 owner 对象，由真实 owner WeakSet 决策；JSON proof 字段不获得权威。其实际 worker/SDK fixture 仍不替代完整知识工作流与正式包验收。 后继同时记录实际 SDK source revoke→abort/drain 与 UI-only transition 保留 native owner 的边界；完整 required-source policy 与知识 consumer 仍未完成。
 
 ## 硬约束（改代码前必知）
@@ -577,3 +583,11 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 后继任务状态路由/managed command、知识模型评审的同 tarball 双进程整合切片见[回执](releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；该后继尚未统一来源锁及完整根门禁，不替代顶部4abdae43/253c47e检查点。
 
 已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。`manager.runtimeSources()` 经 `BridgeOptions.sources` 向 native/service consumer 提供同一包描述与当前 hash 状态；它不把可见性当执行权限，激活仍需批准。UI 设置经 `withUiTransition` 只撤销真实窗口调用，原生会话 owner 保留；扫描同时保留 installationPath/nativeDeclaredPath；本应用内失效后旧描述只作为 unavailable 元数据，不能激活。包级显式启停、跨重启 required 期望及实际 selected-path 生命周期仍在后继实现。
+
+共享 owner/任务事务、SDK 最终边界、原窗口问答、无 UI 来源发现与通用执行的后继整合及原失败保留见[本批回执](releases/native-plugin-source-owner-integration-2026-10-28.json)。插件 e713409 完整检查与干净五包重建通过；宿主新源码冻结门禁和正式安装包尚未完成，顶部旧门禁基线不变。
+
+UI 清单 contributions 的纯 JSON 过滤位于 `desktop/src/main/ui-plugins/manifest-contributions.ts`；manager消费它，纯数据回归不再加载 Electron 二进制。
+
+P2 知识完整 native 消费者的第一条实际包工作流与明确剩余范围见[同包完整消费者证据](pluginization/native-knowledge-full-consumer-evidence.md)；尚未完成生产历史/导出、任务组合和正式安装包。
+
+P2 生产当前分支的 stream / polling / reload / export 接线与真实同 tar 回执见[当前分支交付证据](pluginization/native-knowledge-current-branch-delivery-evidence.md)；其他分支、未打开历史、child、任务组合及显式旧 bridge 删除仍未完成。

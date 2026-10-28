@@ -1,35 +1,35 @@
 {
-  "schemaVersion": 1,
-  "date": "2026-10-28",
-  "scope": "Host-only per-session selected-source/run delivery mechanism; not full knowledge publication or packaged acceptance",
-  "source": {
-    "hostBase": "8f15fe6a",
-    "cohort": "native-delivery-selection + native-delivery-fence + native-command-protocol"
-  },
-  "tests": {
-    "actualSdkSelectedOwner": 6,
-    "actualSdkCombined": 30,
-    "backendTypecheck": "PASS",
-    "biomeChangedFiles": "PASS"
-  },
-  "behavior": [
-    "Actual SDK run signal pins the confirmed selected-source policy before official hooks",
-    "Actual SessionRegistry caller and broker authorize the source worker finalizer; pure owner event projection judges its own WeakSet proof before emit and append",
-    "Unconfirmed managed or empty interceptions remain closed",
-    "Complete host confirmation is required for ordinary SDK delivery",
-    "Required policy cannot be released by disable or hash replacement while owner work is awaited",
-    "Same-package selected paths deduplicate; distinct required packages conflict"
-  ],
-  "integration": {
-    "observe": "trust-loader observes before manages/path resolution",
-    "confirmation": "host-only bootstrap.delivery.confirmSelection(actualEffectivePaths), never plugin JSON",
-    "sdkCallbacks": "Available via bootstrap.delivery; not yet enabled by default in SessionConstruction",
-    "rootPending": "Production full ResourceLoader selection/error provenance, first missing selected entry and cross-restart expectations"
-  },
-  "notRun": [
-    "Full canonical knowledge prepare/read/check/publish/restore workflow",
-    "Production ordinary/zero-plugin source receipt",
-    "Formal installer GUI"
-  ],
-  "fullP2": "INCOMPLETE"
+	"schemaVersion": 1,
+	"date": "2026-10-28",
+	"scope": "Host-only per-session selected-source/run delivery mechanism; not full knowledge publication or packaged acceptance",
+	"source": {
+		"hostBase": "8f15fe6a",
+		"cohort": "native-delivery-selection + native-delivery-fence + native-command-protocol"
+	},
+	"tests": {
+		"actualSdkSelectedOwner": 6,
+		"actualSdkCombined": 30,
+		"backendTypecheck": "PASS",
+		"biomeChangedFiles": "PASS"
+	},
+	"behavior": [
+		"Actual SDK run signal pins the confirmed selected-source policy before official hooks",
+		"Actual SessionRegistry caller and broker authorize the source worker finalizer; pure owner event projection judges its own WeakSet proof before emit and append",
+		"Unconfirmed managed or empty interceptions remain closed",
+		"Complete host confirmation is required for ordinary SDK delivery",
+		"Required policy cannot be released by disable or hash replacement while owner work is awaited",
+		"Same-package selected paths deduplicate; distinct required packages conflict"
+	],
+	"integration": {
+		"observe": "trust-loader observes before manages/path resolution",
+		"confirmation": "host-only bootstrap.delivery.confirmSelection(actualEffectivePaths), never plugin JSON",
+		"sdkCallbacks": "Available via bootstrap.delivery; not yet enabled by default in SessionConstruction",
+		"rootPending": "Production full ResourceLoader selection/error provenance, first missing selected entry and cross-restart expectations"
+	},
+	"notRun": [
+		"Full canonical knowledge prepare/read/check/publish/restore workflow",
+		"Production ordinary/zero-plugin source receipt",
+		"Formal installer GUI"
+	],
+	"fullP2": "INCOMPLETE"
 }
