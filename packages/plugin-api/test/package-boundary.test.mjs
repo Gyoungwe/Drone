@@ -14,6 +14,10 @@ test("package gate permits only the opt-in native SDK type declaration", () => {
 	try {
 		mkdirSync(join(fixture, "scripts"));
 		cpSync(checker, join(fixture, "scripts/check-plugin-api.mjs"));
+		cpSync(
+			join(dirname(checker), "plugin-api-dependency-policy.mjs"),
+			join(fixture, "scripts/plugin-api-dependency-policy.mjs"),
+		);
 		const target = join(fixture, "packages/plugin-api");
 		mkdirSync(target, { recursive: true });
 		for (const name of ["package.json", "src", "dist"]) {
