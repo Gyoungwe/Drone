@@ -647,7 +647,12 @@ it("exposes only the four session handlers without a model declaration, then gat
 		getPluginSessionCapabilities: () => handlers,
 		getStorageRegistry: () => new StorageRegistry(),
 	};
-	createDesktopRuntime({ runtimeSource: () => source, isEnabled: () => true } as any, root, sessions as any);
+	createDesktopRuntime(
+		{ runtimeSource: () => source, isEnabled: () => true } as any,
+		root,
+		sessions as any,
+		(owner) => ({ ownerId: owner.id, send: () => false, resolved: () => {} }),
+	);
 	const selected = { pluginId: "question-client", packageRoot: root, entrypoint: join(root, "question.mjs") };
 	const owner = { id: 1, isDestroyed: () => false };
 	const without = await desktop.bridgeOptions.capabilities(selected, owner)(activation());
