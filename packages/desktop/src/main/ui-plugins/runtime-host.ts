@@ -16,6 +16,7 @@ import {
 	type SessionServicePort,
 	type StorageRegistry,
 } from "@drone/backend";
+import type { ExecutionIdentity } from "@gyoungwe/plugin-api/node/execution";
 import { app, BrowserWindow, dialog, webContents } from "electron";
 import type { UiPluginManager } from "./manager";
 import {
@@ -286,6 +287,7 @@ export function createDesktopRuntime(
 	questionTransport: NonNullable<DesktopRuntimeBridgeOptions["questionTransport"]>,
 ): DesktopRuntimeBridge {
 	const executionIntegrityKey = createExecutionIntegrityKey();
+	const executionAcceptedFacts = new Map<string, ExecutionIdentity>();
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
 		sources: () => manager.runtimeSources(),
@@ -363,6 +365,7 @@ export function createDesktopRuntime(
 							directory: join(await realpath(app.getPath("userData")), "plugin-execution-receipts"),
 							sourceIdentity: executionSourceIdentity,
 							integrityKey: executionIntegrityKey,
+							acceptedFacts: executionAcceptedFacts,
 							storage: sessions.getStorageRegistry(),
 							getSessionContext: (id) => sessions.getPluginCallerContext(id),
 						})

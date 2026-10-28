@@ -8,7 +8,7 @@
 
 `execution.run` 是 write 操作。宿主逐次展示代码原文、工作区相对 runs 目录、精确缓存镜像 ID、语言、数据分类、超时和输出上限。实际批准后重新检查真实 live/trusted/writable SDK session、规范工作区、无 symlink 的 runs 路径和镜像身份；不接受 plugin 输入的 session/workspace 身份，不拉取镜像，不回退到宿主解释器。
 
-`execution.describe` 只探测已配置 Python/R 对应镜像是否已缓存及 exact ID，不列举镜像。run 必须匹配对应语言实际配置解析出的 ID；不能把 request.image 反填为配置来证明自身有权执行。`execution.receipt` 只读取当前合法 caller 所属的 plugin/source/application/session/workspace/request，不能枚举其他回执。
+`execution.describe` 只探测已配置 Python/R 对应镜像是否已缓存及 exact ID，不列举镜像。kind 表示 daemon 是否可用；kind=container 且 images={} 明确表示配置镜像缺失，不代表已经启动容器或能完成执行。run 必须匹配对应语言实际配置解析出的 ID；不能把 request.image 反填为配置来证明自身有权执行。`execution.receipt` 只读取当前合法 caller 所属的 plugin/source/application/session/workspace/request，不能枚举其他回执。
 
 ## 受理与关闭
 
