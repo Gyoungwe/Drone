@@ -5,7 +5,6 @@
 	"hostSource": "9447b26a38d766e0294a21023d0514c633d094fb",
 	"sourceChange": "2d395d8a",
 	"mergedRoot": "8cc1007d",
-	"rootEquivalentTree": "8c50615d",
 	"checks": [
 		{
 			"name": "desktopTests",
@@ -75,7 +74,7 @@
 		},
 		{
 			"reason": "stale API dist before official API build",
-			"exitCode": 1,
+			"exitCode": 2,
 			"path": "/tmp/discovery-fs-desktop-type.log",
 			"sha256": "f00f049ec786419029eaf4b68c4876939df113ec9628e841f8249ddd4c471114"
 		}
@@ -89,5 +88,9 @@
 		"formal macOS package validation"
 	],
 	"externalAcceptance": "four pre-existing external account/platform items remain incomplete",
-	"deferred": ["MinerU/GROBID", "B8", "B8-2"]
+	"deferred": ["MinerU/GROBID", "B8", "B8-2"],
+	"rootComparison": {
+		"commit": "8c50615d",
+		"codeDiff": "none; three documentation files differ"
+	}
 }
