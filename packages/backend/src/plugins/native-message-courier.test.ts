@@ -26,3 +26,17 @@ describe("actual native message associations", () => {
 		expect(one.encode({ message: { ...result.messages[0], reference: "1" } })).toEqual({});
 	});
 });
+
+it("transports only actual historical aliases and never infers identity from copied body or visible metadata", () => {
+	const courier = new NativeMessageCourier();
+	const historical = { role: "assistant", content: [{ type: "text", text: "saved" }], timestamp: 1 };
+	const copy = structuredClone(historical);
+	expect(courier.encode({ messages: [historical, copy], persisted: [historical] })).toEqual({
+		messages: [null, null],
+		historicalAliases: [0, null],
+	});
+	expect(courier.encode({ messages: [copy], persisted: [structuredClone(copy)] })).toEqual({
+		messages: [null],
+		historicalAliases: [null],
+	});
+});
