@@ -27,7 +27,7 @@ function assertWire(messages) {
 	expect(pending.size, "incomplete tool batch sent to provider").toBe(0);
 }
 it.each(["reopen", "close-pending"])(
-	"persisted session lifecycle %s does not lose consent or run stale contexts",
+	"persisted session lifecycle %s requires fresh reopened consent and cancels stale contexts",
 	async (mode) => {
 		const root = await realpath(await mkdtemp(join(tmpdir(), "drone-auth-wire-")));
 		let backend;
@@ -68,13 +68,24 @@ it.each(["reopen", "close-pending"])(
 			});
 			backend.modelRuntime = runtime;
 			let asks = 0;
+			const choices = [];
+			let allowReopened = false;
 			backend.onAskRequest((req) => {
 				asks++;
+				const offered = req.questions[0].options.map((option) => option.value);
+				const selected =
+					asks === 1 || (mode === "reopen" && allowReopened)
+						? "同意本次请求"
+						: mode === "reopen"
+							? "暂不授权"
+							: "接着做完剩下的";
+				expect(offered).toContain(selected);
+				choices.push(selected);
 				queueMicrotask(() =>
 					backend.respondAsk(req.id, {
 						kind: "answer",
 						mode: "submit",
-						answers: { value: { values: [asks === 1 ? "同意本次请求" : "接着做完剩下的"] } },
+						answers: { value: { values: [selected] } },
 					}),
 				);
 			});
@@ -134,11 +145,21 @@ it.each(["reopen", "close-pending"])(
 			await backend.prompt(meta.sessionId, `/task-action ${command}`);
 			expect(asks).toBe(2);
 			if (mode === "reopen") {
+				// Progress first requests a new real authorization, not the old resume choice.
+				// Denying that request cannot consume the queued model responses or write a file.
+				expect(choices).toEqual(["同意本次请求", "暂不授权"]);
+				await expect(readFile(join(cwd, "result.md"))).rejects.toMatchObject({ code: "ENOENT" });
+				expect(faux.state.callCount).toBe(2);
+				allowReopened = true;
+				await backend.prompt(meta.sessionId, `/task-action ${command}`);
+				expect(asks).toBe(3);
+				expect(choices).toEqual(["同意本次请求", "暂不授权", "同意本次请求"]);
 				await vi.waitFor(
 					() => expect(JSON.stringify(session.messages)).toContain("QUICK_DELIVERY_COMPLETE"),
 					{ timeout: 5000 },
 				);
 				expect(await readFile(join(cwd, "result.md"), "utf8")).toContain("Delivered");
+				expect(faux.state.callCount).toBe(5);
 				const finalView = [...session.messages].reverse().find((m) => m.details?.taskView)?.details.taskView;
 				expect(finalView.tasks.find((t) => t.id === task.id).remainingSummary).toContain("已验收 1/1");
 			} else {
@@ -147,11 +168,11 @@ it.each(["reopen", "close-pending"])(
 				await expect(readFile(join(cwd, "result.md"))).rejects.toMatchObject({ code: "ENOENT" });
 				expect(faux.state.callCount).toBe(2);
 			}
-			expect(asks).toBe(2);
+			expect(asks).toBe(mode === "reopen" ? 3 : 2);
 			assertWire(session.messages);
 			expect(network).not.toHaveBeenCalled();
 		} finally {
-			backend?.dispose();
+			await backend?.dispose();
 			await closeKnowledgeServices();
 			vi.restoreAllMocks();
 			vi.unstubAllEnvs();
