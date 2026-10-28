@@ -423,3 +423,7 @@ TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Chec
 ### Pi 1.1.0 abort 不会自动拦截迟到的 message_end 发布
 
 真实 SDK 会 await subscriber/extension hook，所以持有 message_end 时 prompt、waitForIdle、abort 都等待；但已有 hook 迟到返回后，SDK 仍会公开并持久化它修改的正文。普通注册顺序也不能保证最后一个 hook。钉版 host-only delivery boundary 放在全部 SDK hooks 之后、公开/append 之前，再核对真实 run signal；取消/失败只保留安全 SDK envelope 与实际 toolCalls，dispose 后不再 append。源码与真实 RED→GREEN 见[机制回执](releases/native-publication-sdk-fence-2026-10-28.json)，完整 managed owner/consumer 尚未完成。
+
+## 2026-10-28 · 原生 input 的空字符串不等于取消
+
+Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是合法回答；取消才是 undefined。Desktop 的 trim() || undefined 与必填 text 曾改变 SDK 语义。普通输入必须保留原值，领域路径等解释由调用方处理；AskDialog 的可选 text 应明确提交空 customText，能力结果 schema 不得用 minLength:1 把合法空输入拒绝。真实 SDK、受限 worker 与表单点击证据见[会话问答](pluginization/native-plugin-session-questions-evidence.md)。
