@@ -62,3 +62,6 @@ type BinaryWriteResult = { kind: "value"; base64: string; version: string };
 14 项二进制回归加原文件/租约 18 项共 32 项通过，包含实际 ordinary worker 的 3 MiB write/read wire 往返（Node SQLite 仍关闭）、CAS、精确父目录租约、第二 owner 竞争、WAL/迟到 sidecar、4 MiB 超限原字节不变、提交点前取消、提交点后 unknown/新 caller 回读、临时清理失败/父目录被替换保留租约、postcommit 回读失败及 token 被替换拒绝；日志 `/tmp/inquiry-binary-worker-tests.log`。Desktop 来源/scanner/逐次真实授权/revoke 100 项通过，日志 `/tmp/inquiry-binary-desktop-tests.log`。这不是 Inquiry provider、旧用户库接管或正式安装包 PASS；超过 4 MiB 原库仍是明确缺口。
 
 新增 catch 分别只处理：missing 文件的 ENOENT；absence 条件的 ENOENT；已提交写失败转换 unknown；本次临时文件/父目录身份无法核对或清理失败保留租约（仅删除实际打开并记录 inode 的本次临时文件）。新边界检查分别约束：base64 编码/大小、实际 root/scope/path、注册存储身份、父目录 inode、真实 writer token、raw-byte CAS 与同根 sidecar。它们不为内部数据添加兼容分支或失败默认值。
+
+
+纯结构后继将上述同一 bounded read/CAS/临时文件/提交结果协议迁入 `@gyoungwe/plugin-api/node/binary-state`。Node 类型与值仅从该显式子路径导出；根/runtime/UI 不加载 Node。宿主适配保留实际 grant、scope、registry、source、write approval、串行队列和 lease 生命周期，helper 只调用当前可信 Node adapter 提供的 path/check/lease/cleanup 回调，不接受 JSON 身份。结构移动后 32 + 100 项与 API gate、backend/Desktop TSC、架构检查保持通过；日志 `/tmp/inquiry-binary-extract-*.log`。原生 adapter 行为尚待实施，不能把公共 helper 本身当成原生验收。
