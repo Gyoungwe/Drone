@@ -77,6 +77,7 @@ describe.skipIf(!hasRuntime)("packaged process desktop runtime", () => {
 		const pid = (await client.invoke("probe", null)) as number;
 		const closed = registry.deactivate("example");
 		await vi.waitFor(() => expect(resourceStop).toHaveBeenCalledOnce());
+		await new Promise((resolve) => setTimeout(resolve, 650));
 		expect(releaseLeases).not.toHaveBeenCalled();
 		expect(() => process.kill(pid, 0)).not.toThrow();
 		finish();
@@ -150,6 +151,200 @@ export default async ({storageDirectory,parameters,capabilities}) => ({
 		expect(await readFile(join(storageDirectory, "cache.txt"), "utf8")).toBe("derived");
 		await registry.deactivate("example");
 		expect(() => process.kill(receipt.pid, 0)).toThrow();
+	});
+
+	it("cancels a worker-local capability during approval and never accepts a late approval", async () => {
+		const options = await fixture(
+			`export default async()=>({operations:{run:{inputSchema:{type:"null"},resultSchema:{type:"string"},effect:"write",async execute(_,{capabilities}){const abort=new AbortController();const timer=setTimeout(()=>abort.abort(new Error('local timeout')),30);try{return await capabilities.call('execute',null,abort.signal);}finally{clearTimeout(timer);}}}},dispose:async()=>{}});`,
+		);
+		let approve!: (allowed: boolean) => void;
+		const asked = vi.fn(
+			() =>
+				new Promise<boolean>((resolve) => {
+					approve = resolve;
+				}),
+		);
+		const execute = vi.fn(async () => "accepted");
+		const registry = new PluginRuntimeRegistry(
+			{
+				...allow,
+				authorizeInvocation: async (request) => (request.operation === "capability:execute" ? asked() : true),
+			},
+			"app",
+			{
+				resources: [],
+				handlers: {
+					execute: {
+						inputSchema: { type: "null" },
+						resultSchema: { type: "string" },
+						effect: "write",
+						execute,
+					},
+				},
+			},
+		);
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		await expect(client.invoke("run", null)).rejects.toThrow();
+		expect(asked).toHaveBeenCalledOnce();
+		approve(true);
+		await new Promise<void>((resolve) => setImmediate(resolve));
+		expect(execute).not.toHaveBeenCalled();
+		await registry.deactivate("example");
+	});
+
+	it("waits beyond the guest shutdown limit for an accepted host capability's actual owned cleanup", async () => {
+		const options = await fixture(
+			`export default async()=>({operations:{run:{inputSchema:{type:"null"},resultSchema:{type:"string"},effect:"write",async execute(_,{capabilities}){const abort=new AbortController();const timer=setTimeout(()=>abort.abort(new Error('local timeout')),30);try{return await capabilities.call('execute',null,abort.signal);}finally{clearTimeout(timer);}}}},dispose:async()=>{}});`,
+		);
+		let finish!: () => void;
+		const cleanup = new Promise<void>((resolve) => {
+			finish = resolve;
+		});
+		let accepted = false,
+			canceled = false,
+			released = false;
+		const registry = new PluginRuntimeRegistry(allow, "app", {
+			resources: [],
+			handlers: {
+				execute: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "string" },
+					effect: "write",
+					async execute(_, context) {
+						accepted = true;
+						await new Promise<void>((resolve) =>
+							context.signal.addEventListener(
+								"abort",
+								() => {
+									canceled = true;
+									resolve();
+								},
+								{ once: true },
+							),
+						);
+						await cleanup;
+						return "terminal-after-cleanup";
+					},
+				},
+			},
+			finalRelease: async () => {
+				released = true;
+			},
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		const call = client.invoke("run", null);
+		const rejected = expect(call).rejects.toThrow();
+		await vi.waitFor(() => expect(accepted && canceled).toBe(true));
+		let stopped = false;
+		const stopping = registry.deactivate("example").then(() => {
+			stopped = true;
+		});
+		await new Promise((resolve) => setTimeout(resolve, 650));
+		expect(stopped).toBe(false);
+		expect(released).toBe(false);
+		finish();
+		await stopping;
+		await rejected;
+		expect(released).toBe(true);
+	});
+
+	it("aborts and drains actual host cleanup after unexpected child exit before rejecting the parent or releasing leases", async () => {
+		const options = await fixture(
+			`export default async()=>({operations:{run:{inputSchema:{type:"null"},resultSchema:{type:"string"},effect:"write",async execute(_,{capabilities}){const result=capabilities.call('execute',null);setTimeout(()=>process.exit(9),50);return result;}}},dispose:async()=>{}});`,
+		);
+		let finish!: () => void;
+		const cleanup = new Promise<void>((resolve) => {
+			finish = resolve;
+		});
+		let hostAborted = false,
+			callerSettled = false;
+		const release = vi.fn(async () => {});
+		const registry = new PluginRuntimeRegistry(allow, "app", {
+			resources: [],
+			finalRelease: release,
+			handlers: {
+				execute: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "string" },
+					effect: "write",
+					async execute(_, context) {
+						await new Promise<void>((resolve) =>
+							context.signal.addEventListener(
+								"abort",
+								() => {
+									hostAborted = true;
+									resolve();
+								},
+								{ once: true },
+							),
+						);
+						await cleanup;
+						return "cleaned";
+					},
+				},
+			},
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const client = await registry.activate("example", caller(scope));
+		const invocation = client.invoke("run", null);
+		const failed = expect(invocation).rejects.toThrow("exited (9)");
+		void invocation.then(
+			() => {
+				callerSettled = true;
+			},
+			() => {
+				callerSettled = true;
+			},
+		);
+		await vi.waitFor(() => expect(hostAborted).toBe(true));
+		expect(callerSettled).toBe(false);
+		expect(release).not.toHaveBeenCalled();
+		finish();
+		await failed;
+		await expect(registry.deactivate("example")).rejects.toThrow("exited (9)");
+		expect(release).not.toHaveBeenCalled();
+	});
+
+	it("binds local cancellation to its parent invocation while another session's host capability remains live", async () => {
+		const options = await fixture(
+			`export default async()=>({operations:{run:{inputSchema:{type:"boolean"},resultSchema:{type:"string"},effect:"write",async execute(cancel,{capabilities}){const abort=new AbortController();const timer=cancel?setTimeout(()=>abort.abort(new Error('only A')),30):undefined;try{return await capabilities.call('execute',null,abort.signal);}finally{clearTimeout(timer);}}}},dispose:async()=>{}});`,
+		);
+		const active = new Map<string, { signal: AbortSignal; finish: () => void }>();
+		const registry = new PluginRuntimeRegistry(allow, "app", {
+			resources: [],
+			handlers: {
+				execute: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "string" },
+					effect: "write",
+					async execute(_, context) {
+						if (context.scope.kind !== "session") throw new Error("Expected actual session");
+						const sessionId = context.scope.sessionId;
+						await new Promise<void>((resolve) =>
+							active.set(sessionId, { signal: context.signal, finish: resolve }),
+						);
+						return "finished";
+					},
+				},
+			},
+		});
+		registry.register("example", createProcessPluginRuntime(options));
+		const a = await registry.activate("example", caller(scope));
+		const b = await registry.activate("example", caller({ ...scope, sessionId: "other-session" }));
+		const first = a.invoke("run", true),
+			second = b.invoke("run", false);
+		const rejected = expect(first).rejects.toThrow("locally canceled");
+		await vi.waitFor(() => expect(active.size).toBe(2));
+		await vi.waitFor(() => expect(active.get(scope.sessionId)?.signal.aborted).toBe(true));
+		expect(active.get("other-session")?.signal.aborted).toBe(false);
+		active.get(scope.sessionId)!.finish();
+		await rejected;
+		expect(active.get("other-session")?.signal.aborted).toBe(false);
+		active.get("other-session")!.finish();
+		expect(await second).toBe("finished");
+		await registry.deactivate("example");
 	});
 
 	it("brokers bootstrap and per-call reads with actual caller authority and payload-free events", async () => {

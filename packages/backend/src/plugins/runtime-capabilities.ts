@@ -33,7 +33,10 @@ export interface PluginCapabilityHandler {
 	/** Only pre-approved application state reads may run while constructing an owner. */
 	readonly bootstrap?: true;
 	/** Host-owned formatter, called only after capability input schema validation. */
-	approvalDetail?(input: unknown): string;
+	approvalDetail?(
+		input: unknown,
+		facts: Pick<PluginCapabilityContext, "pluginId" | "applicationId" | "scope">,
+	): string;
 	execute(input: unknown, context: PluginCapabilityContext): Promise<unknown>;
 }
 export interface PluginRuntimeCapabilitiesOptions {
@@ -81,6 +84,7 @@ interface Authority {
 		input: unknown,
 		effect: "read" | "write",
 		detail?: string,
+		signal?: AbortSignal,
 	) => Promise<boolean>;
 	readonly check: () => void;
 	readonly pending: Set<Promise<unknown>>;
@@ -91,11 +95,11 @@ interface Authority {
 export class PluginCapabilityBroker {
 	private readonly calls = new AsyncLocalStorage<Authority | undefined>();
 	readonly port: PluginRuntimeCapabilities = {
-		call: (name, input) => {
+		call: (name, input, signal) => {
 			const authority = this.calls.getStore();
 			if (!authority || authority.closed)
 				return Promise.reject(new Error("Plugin capability has no live caller"));
-			return this.trackedCall(authority, name, input);
+			return this.trackedCall(authority, name, input, signal);
 		},
 	};
 
@@ -116,7 +120,7 @@ export class PluginCapabilityBroker {
 		const authority: Authority = {
 			context: {
 				...context,
-				capabilities: { call: (name, input) => this.trackedCall(authority, name, input) },
+				capabilities: { call: (name, input, signal) => this.trackedCall(authority, name, input, signal) },
 			},
 			effect,
 			check,
@@ -141,8 +145,28 @@ export class PluginCapabilityBroker {
 		return execution.value;
 	}
 
-	private trackedCall(authority: Authority, name: string, input: unknown): Promise<unknown> {
-		const pending = this.call(authority, name, input);
+	private trackedCall(
+		authority: Authority,
+		name: string,
+		input: unknown,
+		signal?: AbortSignal,
+	): Promise<unknown> {
+		let current = authority;
+		if (signal) {
+			current = {
+				...authority,
+				context: {
+					...authority.context,
+					signal: AbortSignal.any([authority.context.signal, signal]),
+					capabilities: { call: (name, input, signal) => this.trackedCall(current, name, input, signal) },
+				},
+				check: () => {
+					if (authority.closed) throw new Error("Plugin capability caller completed");
+					authority.check();
+				},
+			};
+		}
+		const pending = this.call(current, name, input);
 		authority.pending.add(pending);
 		void pending.then(
 			() => authority.pending.delete(pending),
@@ -171,11 +195,23 @@ export class PluginCapabilityBroker {
 		if (authority.context.bootstrap) {
 			if (!handler.bootstrap || handler.effect !== "read")
 				throw new Error(`Plugin capability is unavailable during bootstrap: ${name}`);
-		} else if (!(await authority.authorize(name, input, handler.effect, handler.approvalDetail?.(input)))) {
+		} else if (
+			!(await authority.authorize(
+				name,
+				input,
+				handler.effect,
+				handler.approvalDetail?.(input, {
+					pluginId: authority.context.pluginId,
+					applicationId: authority.context.applicationId,
+					scope: authority.context.scope,
+				}),
+				authority.context.signal,
+			))
+		) {
 			throw new Error(`Plugin capability denied: ${name}`);
 		}
 		check();
-		const result = await handler.execute(input, authority.context);
+		const result = await this.calls.run(authority, () => handler.execute(input, authority.context));
 		check();
 		if (!Check(handler.resultSchema, result)) throw new Error(`Invalid plugin capability result: ${name}`);
 		return result;

@@ -5,6 +5,7 @@ export const PROCESS_RUNTIME_WORKER = String.raw`
 import { createInterface } from "node:readline";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { pathToFileURL } from "node:url";
+import { randomUUID } from "node:crypto";
 
 const send = (message) => process.stdout.write(JSON.stringify(message) + "\n");
 const messageError = (error) => error instanceof Error ? error.message : String(error);
@@ -16,13 +17,17 @@ const currentCall = new AsyncLocalStorage();
 const capabilityCalls = new Map();
 let capabilitySequence = 0;
 const capabilities = {
-  call(name, input) {
+  call(name, input, signal) {
     const callId = currentCall.getStore();
     if (!callId) return Promise.reject(new Error("Plugin capability has no live caller"));
+    if (signal?.aborted) return Promise.reject(signal.reason);
     const id = String(++capabilitySequence);
+    const cancelKey = randomUUID();
     return new Promise((resolve, reject) => {
-      capabilityCalls.set(id, {resolve, reject});
-      send({type:"capability", id, callId, name, input});
+      const cancel = () => send({type:"cancel_capability",id,callId,cancelKey});
+      capabilityCalls.set(id, {resolve,reject,signal,cleanup:()=>signal?.removeEventListener("abort",cancel)});
+      signal?.addEventListener("abort",cancel,{once:true});
+      send({type:"capability",id,callId,cancelKey,name,input});
     });
   }
 };
@@ -88,7 +93,11 @@ input.on("line", async (line) => {
     const pending = capabilityCalls.get(message.id);
     if (!pending) throw new Error("Unknown capability result");
     capabilityCalls.delete(message.id);
-    if (message.ok) pending.resolve(message.value);
+    pending.cleanup?.();
+    if (message.ok) {
+      if (pending.signal?.aborted) pending.reject(pending.signal.reason);
+      else pending.resolve(message.value);
+    }
     else { const error = new Error(message.error); if (typeof message.code === "string") error.code = message.code; pending.reject(error); }
     return;
   }

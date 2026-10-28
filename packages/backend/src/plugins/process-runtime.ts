@@ -68,11 +68,21 @@ const messageSchema = Type.Union([
 	Type.Object({ type: Type.Literal("changed") }),
 	Type.Object({
 		type: Type.Literal("capability"),
+		cancelKey: Type.String({ minLength: 1 }),
 		id: Type.String({ minLength: 1 }),
 		callId: Type.String({ minLength: 1 }),
 		name: Type.String({ minLength: 1 }),
 		input: Type.Unknown(),
 	}),
+	Type.Object(
+		{
+			type: Type.Literal("cancel_capability"),
+			id: Type.String({ minLength: 1 }),
+			callId: Type.String({ minLength: 1 }),
+			cancelKey: Type.String({ minLength: 1 }),
+		},
+		{ additionalProperties: false },
+	),
 ]);
 type Message = Static<typeof messageSchema>;
 type Declarations = { operations: Static<typeof declarationSchema>; native: boolean };
@@ -248,6 +258,19 @@ class RuntimeProcess {
 	private readonly nativeDisposers = new Set<() => Promise<void>>();
 	private shutdownTimer: ReturnType<typeof setTimeout> | undefined;
 	private readonly closed: Promise<void>;
+	private childClosed = false;
+	private shutdownPending: Promise<void> | undefined;
+	private readonly capabilityIds = new Set<string>();
+	private readonly resourceCleanups = new Set<Promise<void>>();
+	private readonly hostCapabilities = new Map<
+		string,
+		{
+			callId: string;
+			cancelKey: string;
+			abort: AbortController;
+			settled: Promise<void>;
+		}
+	>();
 	private readonly pending = new Map<
 		string,
 		{
@@ -299,7 +322,8 @@ class RuntimeProcess {
 		child.once("error", (error) => this.fail(error));
 		child.stdin.on("error", (error) => this.fail(error));
 		this.closed = new Promise((resolve) =>
-			child.once("close", (code) => {
+			child.once("close", async (code) => {
+				this.childClosed = true;
 				clearTimeout(this.shutdownTimer);
 				context.signal.removeEventListener("abort", this.stop);
 				lines.close();
@@ -307,6 +331,7 @@ class RuntimeProcess {
 					this.failure ??= new Error(`Plugin runtime ${pluginId} exited (${code}): ${this.stderr.trim()}`);
 				}
 				const error = this.failure ?? new Error(`Plugin runtime ${pluginId} is closed`);
+				await this.drainCapabilities(error);
 				this.rejectReady(error);
 				for (const pending of this.pending.values()) {
 					pending.cleanup();
@@ -326,15 +351,29 @@ class RuntimeProcess {
 	};
 
 	private boundShutdown(): void {
-		if (this.shutdownTimer) return;
-		this.shutdownTimer = setTimeout(
-			() => this.fail(new Error(`Plugin runtime ${this.pluginId} did not settle shutdown within 500ms`)),
-			500,
-		);
+		if (this.shutdownPending) return;
+		const waiting = this.drainCapabilities();
+		this.shutdownPending = waiting;
+		void waiting.then(() => {
+			if (this.childClosed || this.shutdownPending !== waiting) return;
+			this.shutdownTimer = setTimeout(
+				() => this.fail(new Error(`Plugin runtime ${this.pluginId} did not settle shutdown within 500ms`)),
+				500,
+			);
+		});
+	}
+
+	private async drainCapabilities(reason?: Error): Promise<void> {
+		while (this.hostCapabilities.size || this.resourceCleanups.size) {
+			const active = [...this.hostCapabilities.values()];
+			if (reason) for (const call of active) call.abort.abort(reason);
+			await Promise.allSettled([...active.map((call) => call.settled), ...this.resourceCleanups]);
+		}
 	}
 
 	private fail(error: Error): void {
 		this.failure ??= error;
+		for (const call of this.hostCapabilities.values()) call.abort.abort(this.failure);
 		this.child.kill("SIGKILL");
 	}
 
@@ -353,11 +392,28 @@ class RuntimeProcess {
 			return;
 		}
 		if (message.type === "dispose_resources") {
-			void this.disposeResources(message.id);
+			const cleanup = this.disposeResources(message.id);
+			this.resourceCleanups.add(cleanup);
+			void cleanup.then(
+				() => this.resourceCleanups.delete(cleanup),
+				() => this.resourceCleanups.delete(cleanup),
+			);
+			if (this.shutdownPending) {
+				clearTimeout(this.shutdownTimer);
+				this.shutdownTimer = undefined;
+				this.shutdownPending = undefined;
+				this.boundShutdown();
+			}
+			return;
+		}
+		if (message.type === "cancel_capability") {
+			const call = this.hostCapabilities.get(message.id);
+			if (call?.callId === message.callId && call.cancelKey === message.cancelKey)
+				call.abort.abort(new Error("Plugin capability locally canceled"));
 			return;
 		}
 		if (message.type === "capability") {
-			void this.capability(message);
+			this.capability(message);
 			return;
 		}
 		if (message.type === "changed") {
@@ -414,16 +470,36 @@ class RuntimeProcess {
 		}
 	}
 
-	private async capability(message: Extract<Message, { type: "capability" }>): Promise<void> {
+	private capability(message: Extract<Message, { type: "capability" }>): void {
 		const context =
 			message.callId === "bootstrap" ? this.bootstrapContext : this.pending.get(message.callId)?.context;
-		if (!context) {
-			this.fail(new Error("Plugin capability requested without a live host invocation"));
+		if (!context || this.capabilityIds.has(message.id)) {
+			this.fail(new Error("Plugin capability requested without a unique live host invocation"));
 			return;
 		}
+		this.capabilityIds.add(message.id);
+		const abort = new AbortController();
+		const settled = Promise.resolve().then(() => this.executeCapability(message, context, abort));
+		this.hostCapabilities.set(message.id, {
+			callId: message.callId,
+			cancelKey: message.cancelKey,
+			abort,
+			settled,
+		});
+		void settled.then(
+			() => this.hostCapabilities.delete(message.id),
+			() => this.hostCapabilities.delete(message.id),
+		);
+	}
+
+	private async executeCapability(
+		message: Extract<Message, { type: "capability" }>,
+		context: PluginRuntimeFactoryContext | PluginRuntimeContext,
+		abort: AbortController,
+	): Promise<void> {
 		try {
 			context.signal.throwIfAborted();
-			const value = await context.capabilities.call(message.name, message.input);
+			const value = await context.capabilities.call(message.name, message.input, abort.signal);
 			context.signal.throwIfAborted();
 			this.send({ type: "capability_result", id: message.id, ok: true, value });
 		} catch (error) {
