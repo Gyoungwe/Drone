@@ -23,6 +23,7 @@ export interface PluginRuntimeSource {
 	readonly requestsFileRead?: boolean;
 	readonly requestsFileWrite?: boolean;
 	readonly requestsModel?: boolean;
+	readonly requestsExecution?: boolean;
 	readonly resources?: Readonly<Record<string, string>>;
 }
 export interface PluginRuntimeOwner {
@@ -106,6 +107,7 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.requestsFileRead === b.requestsFileRead &&
 		a.requestsFileWrite === b.requestsFileWrite &&
 		a.requestsModel === b.requestsModel &&
+		a.requestsExecution === b.requestsExecution &&
 		JSON.stringify(a.resources) === JSON.stringify(b.resources)
 	);
 }

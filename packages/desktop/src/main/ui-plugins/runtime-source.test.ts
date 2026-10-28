@@ -26,13 +26,14 @@ async function writeManifest(
 	entries: Record<string, unknown> = {},
 	filesystem: unknown = [],
 	network: unknown = [],
+	subprocess: unknown = [],
 ): Promise<void> {
 	await writeFile(
 		join(packageRoot, "plugin.manifest.json"),
 		JSON.stringify({
 			id: "display-id-not-authenticated",
 			hosts: ["drone-desktop"],
-			permissions: { filesystem, network },
+			permissions: { filesystem, network, subprocess },
 			entrypoints: { ui: "./ui/plugin.json", desktopRuntime, ...entries },
 		}),
 	);
@@ -149,6 +150,20 @@ describe("installed UI runtime provenance", () => {
 			expect(manager.runtimeSource("results-ui")?.requestsFileRead).toBeUndefined();
 		});
 	}
+
+	it("requests bounded execution only for the exact installed container declaration and revokes it on rescan", async () => {
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await writeManifest("./runtime.js", {}, [], [], ["python", "container-shell"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsExecution).toBeUndefined();
+		await writeManifest("./runtime.js", {}, [], [], ["container"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")).toMatchObject({ requestsExecution: true });
+		expect(manager.runtimeSource("results-ui")?.resources).toBeUndefined();
+		await writeManifest();
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsExecution).toBeUndefined();
+	});
 
 	it("requests state writes only for the explicit filesystem token and clears it on rescan", async () => {
 		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
