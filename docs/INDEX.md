@@ -28,6 +28,8 @@ P2 后继[设置与修复后的正式安装包验收](pluginization/native-plugi
 
 P5 C 的通用执行端口、签名 accepted/terminal receipt 与执行目录 lease 候选见[执行端口候选](pluginization/native-plugin-execution-capability-candidate.md)；实际 SDK/受限 worker 的取消、恢复与 CAS 协议已验证；真实容器执行、完整 UI、Inquiry 与完整迁移仍未完成。
 
+Inquiry 原 SQLite 保持位置/格式的独立 provider 方案见[SQLite provider 设计候选](pluginization/inquiry-sqlite-provider-design-candidate.md)；generic 二进制端口尚待审查，未实施或关闭迁移。
+
 P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享 Node lease 的候选范围见[共享 owner 证据](pluginization/native-plugin-discovery-owner-evidence.md)；执行/Inquiry、完整 UI 与旧 seam 删除仍未完成。
 无派生 resource 的 state/files 显式授权与宿主固有 `caller.scope(null)` 见[独立文件能力切片](pluginization/native-plugin-resource-independent-capabilities.md)；这不会授予任意路径或关闭 discovery 全功能验收。
 知识状态 broker 的 `state.ensureDirectory` 提供显式受授权的单层初始化，读取不建目录；合同与限制见[状态能力](pluginization/native-plugin-state-capabilities.md)。
