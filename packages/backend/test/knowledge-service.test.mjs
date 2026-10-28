@@ -342,7 +342,8 @@ describe("Show Me presentation layer", () => {
 describe("navigation delivery and bounded maintenance", () => {
 	function harness(readOnly = false) {
 		const tools = new Map(),
-			events = new Map(), sessionManager = SessionManager.inMemory(a);
+			events = new Map(),
+			sessionManager = SessionManager.inMemory(a);
 		const api = {
 			events: createEventBus(),
 			appendEntry: (type, data) => sessionManager.appendCustomEntry(type, data),
