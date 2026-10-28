@@ -1,58 +1,58 @@
 {
-  "sdk": "@earendil-works/pi-coding-agent@1.1.0",
-  "usesModelNetwork": false,
-  "observations": [
-    {
-      "abortWhileHeld": false,
-      "pending": {
-        "promptDone": false,
-        "idleDone": false,
-        "abortDone": false,
-        "publicAssistant": false,
-        "persistedAssistant": false,
-        "rawLiveAssistant": true
-      },
-      "timeline": [
-        "first-hook-enter",
-        "first-hook-return",
-        "late-hook",
-        "public-message-end",
-        "idle-settled",
-        "prompt-settled"
-      ],
-      "publicUsedOriginalObject": true,
-      "lateHandlerReceivedReplacementObject": true,
-      "persistedAtPublic": false,
-      "finalPublicHasLateMutation": true,
-      "finalPersistedHasLateMutation": true,
-      "actualModelCalls": 1
-    },
-    {
-      "abortWhileHeld": true,
-      "pending": {
-        "promptDone": false,
-        "idleDone": false,
-        "abortDone": false,
-        "publicAssistant": false,
-        "persistedAssistant": false,
-        "rawLiveAssistant": true
-      },
-      "timeline": [
-        "first-hook-enter",
-        "first-hook-return",
-        "late-hook",
-        "public-message-end",
-        "idle-settled",
-        "abort-settled",
-        "prompt-settled"
-      ],
-      "publicUsedOriginalObject": true,
-      "lateHandlerReceivedReplacementObject": true,
-      "persistedAtPublic": false,
-      "finalPublicHasLateMutation": true,
-      "finalPersistedHasLateMutation": true,
-      "actualModelCalls": 1
-    }
-  ],
-  "scope": "Existing official hook ordering only; proposed host-only delivery boundary is not implemented or accepted."
+	"sdk": "@earendil-works/pi-coding-agent@1.1.0",
+	"usesModelNetwork": false,
+	"observations": [
+		{
+			"abortWhileHeld": false,
+			"pending": {
+				"promptDone": false,
+				"idleDone": false,
+				"abortDone": false,
+				"publicAssistant": false,
+				"persistedAssistant": false,
+				"rawLiveAssistant": true
+			},
+			"timeline": [
+				"first-hook-enter",
+				"first-hook-return",
+				"late-hook",
+				"public-message-end",
+				"idle-settled",
+				"prompt-settled"
+			],
+			"publicUsedOriginalObject": true,
+			"lateHandlerReceivedReplacementObject": true,
+			"persistedAtPublic": false,
+			"finalPublicHasLateMutation": true,
+			"finalPersistedHasLateMutation": true,
+			"actualModelCalls": 1
+		},
+		{
+			"abortWhileHeld": true,
+			"pending": {
+				"promptDone": false,
+				"idleDone": false,
+				"abortDone": false,
+				"publicAssistant": false,
+				"persistedAssistant": false,
+				"rawLiveAssistant": true
+			},
+			"timeline": [
+				"first-hook-enter",
+				"first-hook-return",
+				"late-hook",
+				"public-message-end",
+				"idle-settled",
+				"abort-settled",
+				"prompt-settled"
+			],
+			"publicUsedOriginalObject": true,
+			"lateHandlerReceivedReplacementObject": true,
+			"persistedAtPublic": false,
+			"finalPublicHasLateMutation": true,
+			"finalPersistedHasLateMutation": true,
+			"actualModelCalls": 1
+		}
+	],
+	"scope": "Existing official hook ordering only; proposed host-only delivery boundary is not implemented or accepted."
 }
