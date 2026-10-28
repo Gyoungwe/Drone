@@ -26,7 +26,9 @@
 		"./provenance": "./src/provenance.ts",
 		"./repair": "./src/repair.ts",
 		"./authorization": "./src/authorization.ts",
-		"./dataset": "./src/dataset.ts"
+		"./dataset": "./src/dataset.ts",
+		"./container-sandbox": "./src/container-sandbox.ts",
+		"./sandbox-types": "./src/sandbox-types.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

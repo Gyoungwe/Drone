@@ -2,7 +2,7 @@ import { access, chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ContainerKernelRunner } from "./container-runner";
+import { ContainerSandboxRunner as ContainerKernelRunner } from "../src/container-sandbox";
 
 let root: string;
 beforeEach(async () => {
