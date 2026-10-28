@@ -14,6 +14,8 @@ import type { PluginSessionCallerContext } from "./session-caller";
 export interface PluginRuntimeSource {
 	readonly pluginId: string;
 	readonly packageRoot: string;
+	readonly installationPath?: string;
+	readonly nativeDeclaredPath?: string;
 	readonly entrypoint: string;
 	readonly nativeEntrypoint?: string;
 	readonly contentHash?: string;
@@ -103,6 +105,8 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 	return (
 		a.pluginId === b?.pluginId &&
 		a.packageRoot === b.packageRoot &&
+		a.installationPath === b.installationPath &&
+		a.nativeDeclaredPath === b.nativeDeclaredPath &&
 		a.entrypoint === b.entrypoint &&
 		a.nativeEntrypoint === b.nativeEntrypoint &&
 		a.contentHash === b.contentHash &&

@@ -61,6 +61,8 @@ export interface InstalledUiRuntimeSource {
 	contentHash: string;
 	deliveryProjection?: "required";
 	packageRoot: string;
+	installationPath: string;
+	nativeDeclaredPath?: string;
 	entrypoint: string;
 	nativeEntrypoint?: string;
 	requestsStateRead?: boolean;
@@ -164,6 +166,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 				runtime = {
 					pluginId: packageName,
 					packageRoot,
+					installationPath: resolve(packageDir),
 					entrypoint,
 					contentHash: installedPackageHash(packageRoot),
 				};
@@ -204,6 +207,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 						manifest.entrypoints?.extension,
 						"extension",
 					);
+					runtime.nativeDeclaredPath = resolve(packageDir, manifest.entrypoints.extension as string);
 				}
 				const declaredResources = manifest.entrypoints?.resources;
 				if (declaredResources !== undefined) {

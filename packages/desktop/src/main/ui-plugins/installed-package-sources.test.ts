@@ -55,8 +55,10 @@ it("discovers a native owner without inventing a UI contribution or executing pa
 			runtime: {
 				pluginId: "@example/native",
 				packageRoot: await realpath(directory),
+				installationPath: await realpath(directory),
 				entrypoint: await realpath(join(directory, "runtime.mjs")),
 				nativeEntrypoint: await realpath(join(directory, "native.mjs")),
+				nativeDeclaredPath: await realpath(join(directory, "native.mjs")),
 				contentHash: installedPackageHash(directory),
 			},
 		},
