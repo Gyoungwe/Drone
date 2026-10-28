@@ -53,6 +53,7 @@ async function capabilities(
 		directory: join(root, "private-receipts"),
 		sourceIdentity: "actual-installed-content",
 		integrityKey: randomBytes(32),
+		acceptedFacts: new Map(),
 		storage: new StorageRegistry(),
 		container,
 		getSessionContext: (id) => (id === selected.scope.sessionId ? selected : undefined),

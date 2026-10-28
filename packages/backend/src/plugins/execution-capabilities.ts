@@ -23,6 +23,8 @@ export interface PluginExecutionCapabilitiesOptions {
 	readonly directory: string;
 	readonly sourceIdentity: string;
 	readonly integrityKey: Uint8Array;
+	/** Application-bridge lifetime, not activation lifetime; actual identity values only. */
+	readonly acceptedFacts: Map<string, ExecutionIdentity>;
 	readonly storage: StorageRegistry;
 	getSessionContext(sessionId: string): PluginSessionCallerContext | undefined;
 	/** Host-configured images only; acceptance supplies an already-cached exact identity. */
@@ -105,7 +107,7 @@ export async function createPluginExecutionCapabilities(
 			}).writeChecked(value, boundary);
 		},
 	);
-	const transactions = new ExecutionTransactions(storage);
+	const transactions = new ExecutionTransactions(storage, options.acceptedFacts);
 	function caller(context: PluginCapabilityContext): PluginSessionCallerContext {
 		context.signal.throwIfAborted();
 		if (context.scope.kind !== "session") throw new Error("Execution requires a selected live session");
@@ -154,7 +156,7 @@ export async function createPluginExecutionCapabilities(
 					const available = await describeContainerExecution(options.container);
 					caller(context);
 					return {
-						kind: Object.keys(available.images).length ? "container" : "unavailable",
+						kind: available.runtime ? "container" : "unavailable",
 						images: available.images,
 						networkDisabled: true,
 						writesOnlyToRunDirectory: true,
@@ -231,9 +233,15 @@ export async function createPluginExecutionCapabilities(
 						throw new Error("Execution workspace identity changed");
 					const available = await describeContainerExecution(options.container);
 					if (!available.runtime || !available.images[request.language])
-						throw new Error("Configured language container image is not cached; no image was pulled");
+						throw Object.assign(
+							new Error("Configured language container image is not cached; no image was pulled"),
+							{ code: "EXECUTION_IMAGE_NOT_CACHED" },
+						);
 					if (available.images[request.language] !== request.image)
-						throw new Error("Requested image does not match the configured cached language image");
+						throw Object.assign(
+							new Error("Requested image does not match the configured cached language image"),
+							{ code: "EXECUTION_IMAGE_MISMATCH" },
+						);
 					await prepareSandboxRunDirectory(workspace, request.runDirectory, context.signal);
 					const runner = await ContainerSandboxRunner.create({
 						...options.container,

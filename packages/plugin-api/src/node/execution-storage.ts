@@ -69,7 +69,9 @@ export class NodeExecutionReceiptStorage implements ExecutionReceiptStorage {
 		try {
 			value = JSON.parse(text) as SignedExecutionReceipt;
 		} catch (cause) {
-			throw new Error("Execution receipt needs recovery: JSON is corrupt", { cause });
+			throw Object.assign(new Error("Execution receipt needs recovery: JSON is corrupt", { cause }), {
+				code: "EXECUTION_RECEIPT_NEEDS_RECOVERY",
+			});
 		}
 		if (
 			!value ||
@@ -78,7 +80,10 @@ export class NodeExecutionReceiptStorage implements ExecutionReceiptStorage {
 			!/^[a-f0-9]{64}$/.test(value.signature) ||
 			!timingSafeEqual(Buffer.from(value.signature, "hex"), Buffer.from(this.signature(value.record), "hex"))
 		)
-			throw new Error("Execution receipt needs recovery: integrity or application key does not match");
+			throw Object.assign(
+				new Error("Execution receipt needs recovery: integrity or application key does not match"),
+				{ code: "EXECUTION_RECEIPT_NEEDS_RECOVERY" },
+			);
 		return { record: value.record, version: hash(text) };
 	}
 	async read(key: string): Promise<ExecutionPrivateReceipt | null> {

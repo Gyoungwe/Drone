@@ -15,6 +15,7 @@ export const DiscoveryKernelStatusSchema = Type.Union([
 	Type.Literal("closed"),
 	Type.Literal("idle-timeout"),
 	Type.Literal("needs-container"),
+	Type.Literal("cleanup-failed"),
 ]);
 export type DiscoveryKernelStatus = Static<typeof DiscoveryKernelStatusSchema>;
 export const DiscoveryRunnerKindSchema = Type.Union([

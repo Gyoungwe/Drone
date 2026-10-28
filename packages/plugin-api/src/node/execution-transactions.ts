@@ -50,17 +50,29 @@ export class ExecutionTransactions {
 	>();
 	private failure: unknown;
 	private stopping = false;
-	constructor(private readonly storage: ExecutionReceiptStorage) {}
+	constructor(
+		private readonly storage: ExecutionReceiptStorage,
+		private readonly knownAccepted: Map<string, ExecutionIdentity> = new Map(),
+	) {}
 
 	async receipt(identity: ExecutionIdentity, requestId: string): Promise<PluginExecutionReceiptResult> {
 		const stored = await this.storage.read(executionOwnerKey(identity, requestId));
-		if (!stored) return { kind: "missing" };
+		if (!stored) {
+			if (this.knownAccepted.has(executionOwnerKey(identity, requestId)))
+				throw Object.assign(new Error("Execution receipt needs recovery: an accepted record is missing"), {
+					code: "EXECUTION_RECEIPT_NEEDS_RECOVERY",
+				});
+			return { kind: "missing" };
+		}
 		if (
 			stored.schemaVersion !== 1 ||
 			!sameIdentity(stored.identity, identity) ||
 			stored.receipt.requestId !== requestId
 		)
-			throw new Error("Execution receipt needs recovery: source, application or caller ownership changed");
+			throw Object.assign(
+				new Error("Execution receipt needs recovery: source, application or caller ownership changed"),
+				{ code: "EXECUTION_RECEIPT_NEEDS_RECOVERY" },
+			);
 		return { kind: "value", receipt: stored.receipt };
 	}
 
@@ -95,14 +107,22 @@ export class ExecutionTransactions {
 		const active = this.active.get(key);
 		if (active && !sameIdentity(active.identity, identity))
 			throw new Error("Execution cancellation belongs to another owner");
-		const current = await this.receipt(identity, requestId);
-		if (current.kind === "missing" || current.receipt.status !== "accepted") return current;
-		if (!active) throw new Error("Execution receipt needs recovery: accepted transaction has no live runner");
+		if (!active || !this.knownAccepted.has(key)) {
+			const current = await this.receipt(identity, requestId);
+			if (current.kind === "missing" || current.receipt.status !== "accepted") return current;
+		}
+		if (!active)
+			throw Object.assign(
+				new Error("Execution receipt needs recovery: accepted transaction has no live runner"),
+				{ code: "EXECUTION_RECEIPT_NEEDS_RECOVERY" },
+			);
 		active.abort.abort(new Error("Execution cancelled by its creator"));
 		await Promise.allSettled([active.result]);
 		const terminal = await this.receipt(identity, requestId);
 		if (terminal.kind === "missing" || terminal.receipt.status === "accepted")
-			throw new Error("Execution receipt needs recovery: no confirmed terminal outcome");
+			throw Object.assign(new Error("Execution receipt needs recovery: no confirmed terminal outcome"), {
+				code: "EXECUTION_RECEIPT_NEEDS_RECOVERY",
+			});
 		return terminal;
 	}
 
@@ -114,7 +134,7 @@ export class ExecutionTransactions {
 		signal: AbortSignal,
 	): Promise<PluginExecutionResult> {
 		try {
-			if (await this.storage.read(key))
+			if (this.knownAccepted.has(key) || (await this.storage.read(key)))
 				throw new Error(
 					"Execution request already has a durable receipt; reconcile it before submitting a new request",
 				);
@@ -140,6 +160,7 @@ export class ExecutionTransactions {
 				throw error;
 			}
 
+			this.knownAccepted.set(key, { ...identity });
 			const [execution] = await Promise.allSettled([
 				Promise.resolve().then(() => {
 					signal.throwIfAborted();
