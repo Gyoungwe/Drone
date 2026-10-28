@@ -263,6 +263,34 @@ export class PluginRuntimeRegistry {
 								execute: (_input, call) => tool.execute(id, input, call.signal, update, context),
 							}) as ReturnType<ToolDefinition["execute"]>,
 					})) as ExtensionAPI["registerTool"];
+				adapted.registerCommand = (name, command) =>
+					pi.registerCommand(name, {
+						...command,
+						handler: async (args, context) => {
+							await this.call(
+								activation,
+								() => resolveCaller(context),
+								`native:command:${name}`,
+								args,
+								context.signal,
+								{
+									inputSchema: { type: "string" },
+									resultSchema: { type: "null" },
+									effect: native.commandEffects?.[name] ?? "write",
+									execute: async (_input, call) => {
+										const scopedContext = new Proxy(context, {
+											get(target, property, receiver) {
+												call.signal.throwIfAborted();
+												return property === "signal" ? call.signal : Reflect.get(target, property, receiver);
+											},
+										});
+										await command.handler(args, scopedContext);
+										return null;
+									},
+								},
+							);
+						},
+					});
 				const on = pi.on.bind(pi) as (
 					name: string,
 					handler: (event: unknown, context: ExtensionContext) => Promise<unknown>,
@@ -291,7 +319,7 @@ export class PluginRuntimeRegistry {
 				return native.extension(
 					new Proxy(adapted, {
 						get: (target, name) => {
-							if (name === "registerTool" || name === "on") return target[name];
+							if (name === "registerTool" || name === "registerCommand" || name === "on") return target[name];
 							throw new Error(`Unsupported native Pi API: ${String(name)}`);
 						},
 					}),
