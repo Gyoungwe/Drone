@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { KnowledgeUiEvent } from "@drone/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createBackend } from "./create-backend";
 import {
 	createBackendKnowledgeWorkerSetup,
@@ -35,21 +35,22 @@ describe("createBackend", () => {
 	it("exposes an installed discovery host through the sole backend adapter", async () => {
 		const host = {
 			contractVersion: 1 as const,
-			status: async () => ({ status: "unavailable" }),
+			status: vi.fn(async () => ({ status: "unavailable" })),
 		};
 		const services = createBackend({
 			projectTrust: false,
 			permissionGates: false,
 			discoveryHostLoader: { contractVersion: 1, load: () => host },
 		});
-		expect(services.discoveryHost).toBe(host);
+		await expect(services.discoveryHost?.status?.()).resolves.toEqual({ status: "unavailable" });
+		expect(host.status).toHaveBeenCalledOnce();
 		expect(services.discovery).toBeDefined();
 		await services.dispose();
 	});
 
 	it("passes host-owned project context to a discovery plugin factory", async () => {
 		let received: unknown;
-		const host = { contractVersion: 1 as const, status: async () => ({ status: "plugin" }) };
+		const host = { contractVersion: 1 as const, status: vi.fn(async () => ({ status: "plugin" })) };
 		const services = createBackend({
 			projectTrust: false,
 			permissionGates: false,
@@ -75,7 +76,8 @@ describe("createBackend", () => {
 				inquiry: { recordQuestion: expect.any(Function) },
 			},
 		});
-		expect(services.discoveryHost).toBe(host);
+		await expect(services.discoveryHost?.status?.()).resolves.toEqual({ status: "plugin" });
+		expect(host.status).toHaveBeenCalledOnce();
 		await services.dispose();
 	});
 
