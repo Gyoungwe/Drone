@@ -199,7 +199,10 @@ export interface PluginModelToolStepUsage extends PluginModelUsage {
 export interface PluginModelToolStepResult {
 	readonly selection: PluginModelSelection;
 	/** Actual SDK JSON protocol envelope, including private thinking/signatures and provider metadata. */
-	readonly reply: PluginModelToolMessage & { readonly role: "assistant" };
+	readonly reply: PluginModelToolMessage & {
+		readonly role: "assistant";
+		readonly stopReason: "pending" | "stop" | "length" | "toolUse" | "error" | "aborted" | "deferred";
+	};
 	readonly usage: PluginModelToolStepUsage;
 }
 

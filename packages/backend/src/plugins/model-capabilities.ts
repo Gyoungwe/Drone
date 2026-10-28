@@ -227,7 +227,12 @@ export function modelCapabilityHandlers(deps: PluginModelCapabilitiesDependencie
 					selection: selectionSchema,
 					reply: {
 						...privateMessage,
-						properties: { ...privateMessage.properties, role: { const: "assistant" } },
+						properties: {
+							...privateMessage.properties,
+							role: { const: "assistant" },
+							stopReason: { enum: ["pending", "stop", "length", "toolUse", "error", "aborted", "deferred"] },
+						},
+						required: [...privateMessage.required, "stopReason"],
 					},
 					usage: {
 						type: "object",
