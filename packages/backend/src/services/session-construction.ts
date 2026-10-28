@@ -89,7 +89,10 @@ export class SessionConstructionService {
 			this.host.options.lazyCapabilities === false && !this.host.options.desktopIntegration?.academicPiRoot
 				? undefined
 				: new CapabilityRuntime(skillVisibility);
-		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin();
+		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin({
+			kind: "primary",
+			readOnly: false,
+		});
 		const nativeDelivery = nativeBootstrap?.delivery;
 		let createdSession: AgentSession | undefined;
 		try {
@@ -286,7 +289,11 @@ export class SessionConstructionService {
 			this.host.options.lazyCapabilities === false && !this.host.options.desktopIntegration?.academicPiRoot
 				? undefined
 				: new CapabilityRuntime(skillVisibility);
-		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin();
+		const readOnly = isSubagentSessionPath(filePath);
+		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin({
+			kind: "primary",
+			readOnly,
+		});
 		const nativeDelivery = nativeBootstrap?.delivery;
 		let createdSession: AgentSession | undefined;
 		try {
@@ -387,7 +394,7 @@ export class SessionConstructionService {
 			});
 			// 子代理产物目录下的会话文件 = 只读检视（spec §8.1：防能力静默漂移/递归绕过）。
 			// 其运行 trace 由 runner 管理，检视页不可写，故不另建 recorder（避免覆盖运行中的 recorder）。
-			const readOnly = isSubagentSessionPath(filePath);
+
 			const unsubscribe = () => {
 				unsubscribeEvents();
 				diagnostics.dispose();

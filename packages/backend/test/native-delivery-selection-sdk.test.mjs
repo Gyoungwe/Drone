@@ -21,13 +21,13 @@ const runtimeDirectory = resolve(
 	import.meta.dirname,
 	`../../desktop/plugin-runtime/${process.platform}-${process.arch}`,
 );
-const source = `export default async({capabilities})=>({operations:{},async dispose(){},createNativeSession(){
+const source = `export default async({capabilities})=>({operations:{},async dispose(){},createNativeSession(facts){
  const proof=new WeakSet();
  return {extension(){},async dispose(){},projection:{finalizeEffect:'read',async finalize(event,context){
   if(context.scope.kind!=='session')throw new Error('real session required');
   await capabilities.call('check',null);context.signal.throwIfAborted();
   const receipt={};proof.add(receipt);
-  return {...event,message:{...event.message,content:[{type:'text',text:'owner checked'}],receipt}};
+  return {...event,message:{...event.message,content:[{type:'text',text:'owner checked'}],receipt,factoryFacts:facts??null}};
  },event(event){return proof.has(event.message.receipt)?event:{...event,message:{...event.message,content:[{type:'text',text:'owner rejected'}]}};},snapshot(messages){return messages;}}};
 }});`;
 function deferred() {
@@ -37,7 +37,7 @@ function deferred() {
 	});
 	return { promise, resolve };
 }
-async function fixture({ confirmed = true, managed = true, blockCheck = false } = {}) {
+async function fixture({ confirmed = true, managed = true, blockCheck = false, facts } = {}) {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-native-selected-")));
 	const pkg = join(root, "package");
 	await mkdir(pkg);
@@ -84,8 +84,10 @@ async function fixture({ confirmed = true, managed = true, blockCheck = false } 
 			},
 		}),
 	});
-	const bootstrap = bridge.beginNative({ id: 101, isDestroyed: () => false }, (path) =>
-		path === nativeEntrypoint ? "selected" : undefined,
+	const bootstrap = bridge.beginNative(
+		{ id: 101, isDestroyed: () => false },
+		(path) => (path === nativeEntrypoint ? "selected" : undefined),
+		facts,
 	);
 	const factories = [];
 	if (managed) {
@@ -129,7 +131,15 @@ async function fixture({ confirmed = true, managed = true, blockCheck = false } 
 		hostDeliveryBoundary: (event, signal) => bootstrap.delivery.finalize(event, signal),
 	});
 	registry.add({ session, cwd: root, unsubscribe() {} });
-	bootstrap.bindSession(session.sessionId, () => session.abort());
+	try {
+		bootstrap.bindSession(session.sessionId, () => session.abort());
+	} catch (error) {
+		await new SessionEngine().dispose(session);
+		await bootstrap.dispose();
+		await bridge.close();
+		await rm(root, { recursive: true, force: true });
+		throw error;
+	}
 	await session.bindExtensions({});
 	return {
 		root,
@@ -278,4 +288,22 @@ it("deduplicates one package's selected paths and closes conflicting required pa
 	}
 	expect(calls).toBe(1);
 	await delivery.dispose();
+});
+
+it("transports only host initial native facts before binding the actual SDK identity", async () => {
+	const f = await fixture({ facts: { kind: "primary", readOnly: false } });
+	try {
+		await f.session.prompt("Actual primary facts");
+		expect(f.session.messages.findLast((message) => message.role === "assistant").factoryFacts).toEqual({
+			kind: "primary",
+			readOnly: false,
+		});
+	} finally {
+		await f.close();
+	}
+});
+it("rejects child/read-only initial facts when actual registered SDK session is primary/writable", async () => {
+	await expect(fixture({ facts: { kind: "child", readOnly: true, files: "none" } })).rejects.toThrow(
+		"initial facts do not match",
+	);
 });

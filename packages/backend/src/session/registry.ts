@@ -6,6 +6,9 @@ import type { AskGate } from "./ask-gate";
 
 export interface RegisteredSession {
 	readonly questionGate?: AskGate;
+	readonly nativeKind?: "primary" | "child";
+	/** Host-only child policy fact; this is not a filesystem grant. */
+	readonly nativeChildFiles?: "none" | "read";
 	readonly nativeDelivery?: NativeSessionDelivery;
 	session: AgentSession;
 	unsubscribe: () => void;
