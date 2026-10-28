@@ -27,3 +27,9 @@ The source descriptor adds `contentHash` and `deliveryProjection: "required"` co
 Combined follow-up validation passed 35 actual SDK-cohort tests (9 delivery/history, 1 owner courier, 4 native owner, 4 tools, 9 commands/lifecycle, 8 model capabilities), plus 27 registry/broker/coordinator unit tests. Backend typecheck, plugin API build and architecture (0 findings) passed. The two unit authority cases are contract tests with zero model calls, not full production publication acceptance. Logs: `/tmp/native-coordinator-final-sdk.log`, `/tmp/native-projection-authority-unit-final.log`, `/tmp/native-source-revoke-red.log`, `/tmp/native-source-revoke-green.log`.
 
 Failed native abort receipts remain a source-wide rebind barrier across native/UI aliases. The actual SDK abort is awaited before an injected receipt error, and the real domain process exits successfully; the pre-fix test still reopened the UI alias. Failed stopping records now retain the actual source identity, and a same-package bind reuses the original failure receipt before any new activation. SDK lifecycle 10/10, Desktop bridge/host 48/48, backend typecheck and architecture passed. The initial missing staged runtime failure is kept separately and is not counted as RED; the genuine alias RED is `/tmp/native-abort-failed-barrier-red.log`, GREEN is `/tmp/native-abort-failed-barrier-green.log`.
+
+## 后继：真实 SDK 历史身份（2026-10-28）
+
+`historicalAliases` 仅在 parent JSON 编码之前从实际 `messages[i] === persisted[j]` 产生，存于 attachment 私有 RPC 元数据。只有真实 `SessionEngine.historicalMessageOrigin` 确认当前 branch 的对象才可由宿主加入历史列表；worker 恢复两数组的 identity，不能凭正文、时间或 proof 字段制造它。真实 SDK reload 会撤销旧 attachment，本回归明确创建新的 worker attachment 后恢复历史；历史 alias 不进入它的 live WeakSet，旧 branch 与陌生副本仍被拒绝。
+
+真实 worker/SDK courier 1 项通过，历史 origin/fence 14 项通过，courier unit 3 项通过。该 fixture 只证明传输身份机制；完整知识 0.3 consumer、恢复/导出与正式安装包仍 INCOMPLETE。

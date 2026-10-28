@@ -65,6 +65,17 @@ function restoreMessages(session, value, references) {
     if(!Array.isArray(value.messages)||value.messages.length!==references.messages.length)throw new Error("Invalid native message references");
     value.messages=value.messages.map((message,index)=>restore(message,references.messages[index]));
   }
+  if (references.historicalAliases!==undefined) {
+    if(!Array.isArray(value.messages)||!Array.isArray(value.persisted)||value.messages.length!==references.historicalAliases.length)
+      throw new Error("Invalid native historical aliases");
+    for(const [index,persistedIndex] of references.historicalAliases.entries()) {
+      if(persistedIndex===null)continue;
+      if(!Number.isSafeInteger(persistedIndex)||persistedIndex<0||persistedIndex>=value.persisted.length||
+        JSON.stringify(value.messages[index])!==JSON.stringify(value.persisted[persistedIndex]))
+        throw new Error("Native historical alias is no longer current");
+      value.messages[index]=value.persisted[persistedIndex];
+    }
+  }
   return value;
 }
 console.log = (...args) => process.stderr.write(args.map(String).join(" ") + "\n");

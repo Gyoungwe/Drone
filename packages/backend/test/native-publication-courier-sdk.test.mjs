@@ -34,7 +34,7 @@ const source = `export default async({events})=>({operations:{},async dispose(){
    await new Promise(resolve=>setImmediate(resolve));
    events.changed();
   }
-  if(disposed)throw new Error('owner disposed');return {...event,message:project(event.message)};},snapshot(messages){return messages.map(project);}},async dispose(){disposed=true;}};
+  if(disposed)throw new Error('owner disposed');return {...event,message:project(event.message)};},snapshot(messages,persisted){return messages.map(message=>persisted.includes(message)?message:project(message));}},async dispose(){disposed=true;}};
 }});`;
 
 it("executes real owner WeakSet projection across a restricted worker and the actual pinned SDK fence", async () => {
@@ -159,10 +159,41 @@ it("executes real owner WeakSet projection across a restricted worker and the ac
 		expect((await other.projection.event({ type: "message_end", message })).message.content[0].text).toBe(
 			"blocked owner result",
 		);
+		const originalContent = message.content;
 		message.content = [{ type: "text", text: "tampered same actual SDK object" }];
 		expect((await native.projection.event({ type: "message_end", message })).message.content[0].text).toBe(
 			"blocked owner result",
 		);
+		message.content = originalContent;
+		await session.reload();
+		const historyNative = await runtime.createNativeSession();
+		natives.push(historyNative);
+		const restored = session.messages.find((value) => value.role === "assistant");
+		const engine = new SessionEngine();
+		expect(engine.historicalMessageOrigin(session, restored)).toBeDefined();
+		const stranger = structuredClone(restored);
+		expect(engine.historicalMessageOrigin(session, stranger)).toBeUndefined();
+		const trustedPersisted = [restored].filter((value) => engine.historicalMessageOrigin(session, value));
+		expect(
+			(await historyNative.projection.snapshot([restored, stranger], trustedPersisted)).map(
+				(value) => value.content[0].text,
+			),
+		).toEqual(["checked owner result", "blocked owner result"]);
+		// A genuine historical alias grants display only, never this attachment's live WeakSet proof.
+		expect(
+			(await historyNative.projection.event({ type: "message_end", message: restored })).message.content[0]
+				.text,
+		).toBe("blocked owner result");
+		const user = session.sessionManager
+			.getBranch()
+			.find((entry) => entry.type === "message" && entry.message.role === "user");
+		session.sessionManager.branch(user.id);
+		session.refreshContext();
+		expect(engine.historicalMessageOrigin(session, restored)).toBeUndefined();
+		expect((await historyNative.projection.snapshot([restored], [])).at(0).content[0].text).toBe(
+			"blocked owner result",
+		);
+
 		await native.dispose();
 		await expect(
 			Promise.resolve().then(() => native.projection.event({ type: "message_end", message })),

@@ -2,6 +2,8 @@
 export interface NativeMessageReferences {
 	readonly message?: string;
 	readonly messages?: readonly (string | null)[];
+	/** Actual host-proven historical object aliases; never read from message JSON. */
+	readonly historicalAliases?: readonly (number | null)[];
 }
 interface Association {
 	readonly reference: string;
@@ -21,12 +23,22 @@ export class NativeMessageCourier {
 
 	encode(value: unknown): NativeMessageReferences {
 		if (value === null || typeof value !== "object") return {};
-		const carrier = value as { message?: unknown; messages?: unknown };
+		const carrier = value as { message?: unknown; messages?: unknown; persisted?: unknown };
 		const reference = this.reference(carrier.message);
 		return {
 			...(reference === null ? {} : { message: reference }),
 			...(Array.isArray(carrier.messages)
-				? { messages: carrier.messages.map((message) => this.reference(message)) }
+				? {
+						messages: carrier.messages.map((message) => this.reference(message)),
+						...(Array.isArray(carrier.persisted)
+							? {
+									historicalAliases: carrier.messages.map((message) => {
+										const index = (carrier.persisted as unknown[]).indexOf(message);
+										return index < 0 ? null : index;
+									}),
+								}
+							: {}),
+					}
 				: {}),
 		};
 	}
