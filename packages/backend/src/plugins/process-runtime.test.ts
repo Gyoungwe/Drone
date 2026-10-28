@@ -748,7 +748,7 @@ it.skipIf(!hasRuntime)(
 	"resource requests receive their real signal without ending the resource lifetime",
 	async () => {
 		const options = await fixture(
-			`import {writeFile} from 'node:fs/promises';export default async context=>{let cancelled=0;return {async invoke(operation,input,call){if(operation==='status')return {cancelled,lifecycleAborted:context.signal.aborted,sameLifetime:call.signal===context.signal};try{call.signal.throwIfAborted();await context.capabilities.call('entered',null);call.signal.throwIfAborted();await new Promise((resolve,reject)=>call.signal.addEventListener('abort',()=>reject(call.signal.reason),{once:true}));}finally{cancelled++;}},async dispose(){await writeFile(context.storageDirectory+'/disposed','actual resource cleanup');}};};`,
+			`import {writeFile} from 'node:fs/promises';export default async context=>{let cancelled=0,lastRequestAborted=false;return {async invoke(operation,input,call){if(operation==='status')return {cancelled,lifecycleAborted:context.signal.aborted,sameLifetime:call.signal===context.signal,lastRequestAborted};try{call.signal.throwIfAborted();await context.capabilities.call('entered',null);call.signal.throwIfAborted();await new Promise((resolve,reject)=>call.signal.addEventListener('abort',()=>reject(call.signal.reason),{once:true}));}finally{cancelled++;lastRequestAborted=call.signal.aborted;}},async dispose(){await writeFile(context.storageDirectory+'/disposed','actual resource cleanup');}};};`,
 		);
 		const storageDirectory = join(options.packageRoot, "cache");
 		await mkdir(storageDirectory);
@@ -785,6 +785,7 @@ it.skipIf(!hasRuntime)(
 			cancelled: 1,
 			lifecycleAborted: false,
 			sameLifetime: false,
+			lastRequestAborted: true,
 		});
 		await registry.deactivate("example");
 		expect(await readFile(join(storageDirectory, "disposed"), "utf8")).toBe("actual resource cleanup");
