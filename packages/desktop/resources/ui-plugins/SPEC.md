@@ -335,6 +335,8 @@ managed native 另支持实际 SDK 的 `input`、`tool_call`、`turn_start`、`t
 
 `session.records.read(null)` 为 read，仅返回当前真实 SDK branch 中当前插件每个 logical type 的最后一个自定义检查点，不含聊天消息、其他插件记录或旧全局 tag；不静默截断。`session.records.append({type,data})` 为 write，JSON data 经逐调用授权后保存到宿主派生的 `plugin-record:<encoded verified pluginId>:<logicalType>`，返回 `{id,durability:"durable"|"deferred"}`。输入不能指定来源、会话或存储路径。跨包读取须走受管理的 provider，普通读取没有 legacyTypes 逃逸口。
 
+read 同时返回 `mode:"persistent"|"memory"`，只由实际 SDK `getSessionFile()` 决定。persistent 的 lazy 会话仍可能 deferred；memory 始终是明确未落盘的 live-only 会话，不能猜成 durable。检查点里的旧批准字段不是当前 owner/source/session 的授权。插件自身的任务 storage 展示扩展由包自己的 decoder/components 解释，不新增宿主领域字段或授权来源。
+
 `session.notify({content})` 为 write，仅在当前真实 SDK idle 时显示普通文本 custom message，host 派生类型、固定 display:true/triggerTurn:false，无 details、可信状态或授权含义。活动会话明确拒绝，不把 queued 当作已显示；调用不触发模型。两种写入都必须来自可信可写的 live entry，不能借问答结果取得权限。
 
 检查点读取返回 `{state:"durable"|"deferred"|"needs-reopen",error:string|null,records}`。Pi 1.1.0 的 lazy/inMemory 会话可能未写盘，deferred 不是已保存回执，读取不会创建文件或触发 flush。实际 SDK 写入失败后，同 backend/实际 entry 的所有后续 append/notify 均拒绝，read 仅给出最后已确认的检查点与 needs-reopen；重建 handler、UI/native 重激活或 SDK.reload 不清除故障。只能从磁盘真正重建新的 SDK entry 后恢复；不回滚或读取 SDK 私有数组，不新增 process 全局账本。
