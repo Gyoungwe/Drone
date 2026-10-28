@@ -384,6 +384,9 @@ export function createDesktopRuntime(
 					"session.select": capabilities["session.select"],
 					"session.input": capabilities["session.input"],
 					"session.confirm": capabilities["session.confirm"],
+					"session.records.read": capabilities["session.records.read"],
+					"session.records.append": capabilities["session.records.append"],
+					"session.notify": capabilities["session.notify"],
 					...(source.requestsModel
 						? {
 								"model.selection": capabilities["model.selection"],
