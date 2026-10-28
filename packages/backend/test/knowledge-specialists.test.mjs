@@ -152,6 +152,24 @@ describe("isolated capability runner", () => {
 		const r = runtime([submit()]);
 		expect((await runKnowledgeSpecialist(deps(r), request())).model).toBe("fixture/small");
 	});
+	it("rejects a configured reasoning model that disables every SDK thinking level before spending", async () => {
+		const r = runtime([submit()]);
+		await expect(
+			runKnowledgeSpecialist(
+				deps(r),
+				request({
+					parentModel: {
+						...model,
+						reasoning: true,
+						thinkingLevelMap: Object.fromEntries(
+							["off", "minimal", "low", "medium", "high", "xhigh", "max"].map((level) => [level, null]),
+						),
+					},
+				}),
+			),
+		).rejects.toThrow("no supported thinking level");
+		expect(r.completeSimple).not.toHaveBeenCalled();
+	});
 	it("cancels a hung provider and does not retry", async () => {
 		const r = runtime([
 			(_ctx, opts) =>
