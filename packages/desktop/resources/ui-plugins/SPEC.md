@@ -350,3 +350,12 @@ export function activate() {
 `model.toolStep({selection,systemPrompt,messages,tools,maxTokens})` 每次仅做一次真实 SDK completeSimple。宿主不执行 tools；纯 JSON tool schema 只告诉模型可请求的名字，域白名单、工具实现、结果检查与轮次预算必须仍由同包 owner 执行。systemPrompt≤32000 bytes，messages≤32条/80000 bytes，总输入≤160000 bytes，tools≤8且名唯一，maxTokens≤12000（保留既有最高角色预算）。reply 保留真实 SDK 的私有协议/签名/metadata，只返回调用 owner；不能自动出现在公开回答、UI 或日志。usage 数值为 number/null并带reportedFields，无有效定价的默认零成本保持unknown。
 
 `model.selection` 支持与严格profile互斥的`optionalProfile`：仅真实未配置时使用actual parent，并在返回选择保留optionalProfile以便逐步复查；配置存在但失效仍拒绝。`session.inspect(null)`返回`{agentActive,projectTrusted,readOnly}`当前事实，这些字段不授予能力或跳过批准。
+### 临时旧检查点导入（未发布 1.3 候选）
+
+`drone.recordAdoptions:{logicalType:{legacyType,fromVersions,removeBeforeVersion}}` 声明一个明确旧全局 tag。fromVersions 是迁移器支持的精确稳定版本列表，不证明旧记录的实际创建者或版本；当前包与删除版本也须为稳定版本，到删除版本后此临时声明拒绝加载。必须有同源 desktopRuntime，不能声明导入 `plugin-record:` / `plugin-notice:` 的其他来源 namespace。
+
+`session.records.adoption.inspect({type})` 与 `session.records.adoption.commit({type,legacyId,legacyHash,data})` 都是 write，分别请求批准。批准前展示精确旧 tag、目标 logical type、支持迁移器版本与“创建者/版本未知、不会授予文件/模型/执行权限或科学 proof”的说明。声明由实际 source 的 capability 工厂绑定，调用者 JSON 不能指定来源或旧 tag；普通 records.read 不提供任何 legacyTypes 参数。
+
+inspect 返回 candidate/absent/already-adopted/deferred，creator/packageVersion 固定 unknown，只有 candidate 附 `{id,hash,data}`。commit 在同 entry 串行事务内重验最新当前 branch 候选 id/hash、尚无 own-source checkpoint，再追加 own namespace 并真实 durable 回读，原记录保留；hash 仅并发核对，不是授权 token。只有成功持久化才返回 adopted。deferred 不暴露旧候选，不产生 adopted 回执；错误沿已有 needs-reopen 屏障传播。
+
+生产迁移器必须验证旧数据格式和当前实际 scope，清除或保留为纯历史的旧 approved/roots/proof，重新获取当前实际授权与 opaque 证明；通用导入端口不会代替这层领域验证。Core 0.1.9/0.2.0 与 Knowledge 0.2.0/0.2.1 的实际迁移验收仍待分别完成，不能将协议 fixture 写成整包迁移 PASS。

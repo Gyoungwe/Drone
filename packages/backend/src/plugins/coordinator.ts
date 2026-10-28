@@ -4,6 +4,7 @@ import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type { PluginNativeRuntimeFactory, PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type {
 	PluginProviderInvocationInput,
+	PluginRecordAdoptions,
 	PluginRuntimeClient,
 	PluginServiceProvision,
 	PluginServiceRequirement,
@@ -30,6 +31,7 @@ export interface PluginRuntimeSource {
 	readonly deliveryProjection?: "required";
 	readonly provides?: Readonly<Record<string, PluginServiceProvision>>;
 	readonly requires?: Readonly<Record<string, PluginServiceRequirement>>;
+	readonly recordAdoptions?: PluginRecordAdoptions;
 	readonly requestsStateRead?: boolean;
 	readonly requestsStateWrite?: boolean;
 	readonly requestsFileRead?: boolean;
@@ -125,6 +127,7 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.deliveryProjection === b.deliveryProjection &&
 		JSON.stringify(a.provides) === JSON.stringify(b.provides) &&
 		JSON.stringify(a.requires) === JSON.stringify(b.requires) &&
+		JSON.stringify(a.recordAdoptions) === JSON.stringify(b.recordAdoptions) &&
 		a.requestsStateRead === b.requestsStateRead &&
 		a.requestsStateWrite === b.requestsStateWrite &&
 		a.requestsFileRead === b.requestsFileRead &&

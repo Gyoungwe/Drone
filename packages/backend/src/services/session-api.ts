@@ -16,8 +16,10 @@ import type {
 	WikiModelReviewInput,
 	WikiModelReviewResult,
 } from "@drone/shared";
+import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
 import { modelCapabilityHandlers } from "../plugins/model-capabilities";
+import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
 import { sessionCapabilityHandlers } from "../plugins/session-capabilities";
 import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
@@ -69,10 +71,11 @@ export class SessionServiceApi extends SessionSettingsApi {
 		return this.host.lifecycle.listAll();
 	}
 
-	getPluginSessionCapabilities() {
+	getPluginSessionCapabilities(recordAdoptions?: PluginRecordAdoptions) {
 		return {
 			...sessionCapabilityHandlers(this.host.registry),
 			...sessionRecordCapabilityHandlers(this.host.registry, this.pluginSessionRecords),
+			...sessionAdoptionCapabilityHandlers(this.host.registry, this.pluginSessionRecords, recordAdoptions),
 			...modelCapabilityHandlers({
 				registry: this.host.registry,
 				getRuntime: () => this.host.getModelRuntime(),

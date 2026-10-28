@@ -673,6 +673,8 @@ it("exposes seven generic session handlers without a model declaration, then gat
 			"session.records.read",
 			"session.records.append",
 			"session.notify",
+			"session.records.adoption.inspect",
+			"session.records.adoption.commit",
 			"model.selection",
 			"model.generate",
 			"model.toolStep",
@@ -712,4 +714,15 @@ it("exposes seven generic session handlers without a model declaration, then gat
 	expect(withModel.handlers["model.selection"]).toBe(handler);
 	expect(withModel.handlers["model.generate"]).toBe(handler);
 	expect(withModel.handlers["model.toolStep"]).toBe(handler);
+	const recordAdoptions = {
+		recovery: { legacyType: "legacy-recovery-v1", fromVersions: ["0.2.1"], removeBeforeVersion: "2.0.0" },
+	};
+	const withAdoption = await desktop.bridgeOptions.capabilities(
+		{ ...selected, recordAdoptions },
+		owner,
+	)(activation());
+	expect(withAdoption.handlers["session.records.adoption.inspect"]).toBe(handler);
+	expect(withAdoption.handlers["session.records.adoption.commit"]).toBe(handler);
+	expect(withAdoption.handlers["model.generate"]).toBeUndefined();
+	expect(without.handlers["session.records.adoption.inspect"]).toBeUndefined();
 });
