@@ -97,7 +97,7 @@ for (const adapter of ["host", "official"]) {
 		const before = view(session),
 			task = before.tasks.find((value) => value.id === before.activeTaskId);
 		const file = session.sessionManager.getSessionFile(),
-			backup = file + ".saved";
+			backup = `${file}.saved`;
 		const beforeDisk = await readFile(file, "utf8"),
 			beforeMessages = session.messages.length;
 		await rename(file, backup);

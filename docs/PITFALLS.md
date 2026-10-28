@@ -410,3 +410,7 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 ### Optional tuple item 不等于兼容较短 IPC 参数数组
 
 TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Check 中仍拒绝原四参数调用。`PluginRuntimeContract.invoke` 的兼容合同显式使用四参数 tuple 与带 request ID 的五参数 tuple 联合；主进程 IPC 回归必须实际调用两个形状，不能只依赖 TypeScript optional 参数通过。取消传输只发送 request ID，AbortSignal 留在 renderer/main 各自的实际生命周期中。
+
+## 2026-10-28 · SDK append 失败后的内存 phantom 与 reload
+
+Pi 1.1.0 的 SessionManager 先把 append entry 加入内存，再写磁盘；EISDIR 后 reload 仍复用这个 manager。不要从 reload 成功推断数据已保存，也不要继续 sendMessage 以 phantom leaf 为 parent 延长磁盘链。TaskApplication 必须 fail closed、保留最后 committed 诊断，真正从磁盘重开后验证；禁止 poke SDK 私有数组做假 rollback。extension 的 events.on 监听会在 invalidate 被解除，不能靠 bus listener 伪装跨 reload 持久状态。实际双入口反证和 S2 剩余边界见[TaskSession 证据](pluginization/native-plugin-task-session-actor-evidence.md)。
