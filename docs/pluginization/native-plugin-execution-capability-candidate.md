@@ -33,6 +33,6 @@ receipt 只保存代码 hash、目录、镜像、身份与终态元数据，不�
 - 当前 Docker `desktop-linux` 和 root 复核的 `default` 中，旧缓存 `a0f57064…` 与 `python:3.12-slim` 均不存在。真实缺镜像端口返回 unavailable/not-cached，未生成 accepted receipt 或 runs 目录。未 pull/retag，未沿用旧执行成功证据。
 - 当前实际安装 tar → 生产 Desktop factory/scanner → restricted worker → 两个真实 SDK 1.1.0 session 的回归通过：canonical caller/creator 隔离、缺配置镜像零 accepted/runs、native 只关闭自己的 logical kernel、新合法 caller 保存关闭记录、单次 timeout/close 在审批中取消后迟到允许仍零 accepted/run。明确的 synthetic engine 另证明 accepted→SDK cancel→等待 owned cleanup→新合法 caller reconcile，以及同一 bridge 停用重启后缺回执拒绝重放。**合成引擎执行不是 Docker 成功，直接 UI runtime 调用不是整页 GUI 验收。**
 - 取消/运行时/事务/runner targeted 50 项以及新增 child-exit 用例通过；真实 SDK 协议日志 `/tmp/discovery-c-actual-cancel-real-sdk-3.log`；受限 worker 清理日志 `/tmp/discovery-c-child-exit-tests.log`。插件自身 19 项与 clean-install smoke 通过；smoke 仍为 fixture，不是最终 PASS。
-- **未完成**：标准 Pi adapter 完整业务实测、真实已缓存镜像下的 native/UI 同 owner 执行成功、完整插件页面交互、Inquiry 独立 provider 迁移、旧 seam 删除、合并后完整双仓库门禁和正式安装包 GUI。真实容器成功还需取得正式授权的可用镜像。
+- **未完成**：真实已缓存镜像下的 native/UI 同 owner 执行成功、完整科研插件页面（critic/multipath/evaluation/export）、Inquiry 独立 provider 迁移、旧 seam 删除、合并后完整双仓库门禁和正式安装包 GUI。真实容器成功还需取得正式授权的可用镜像。
 
 主要日志：`/tmp/discovery-c-receipt-nofollow-tests.log`、`/tmp/discovery-c-cap-final-desktop-tests.log`、`/tmp/discovery-c-host-endpoint-*-final.log`。新增边界 catch/guard 分别用于：OS 路径与 NUL 参数；缺失可执行文件和并发目录 EEXIST；私有 JSON 的 ENOENT/解析/大小/no-follow；签名与 ownership；CAS 与 readback；临时文件/lease 清理；受理/终态持久化失败导致 owner 保持 failed。没有静默默认值或空 catch。
