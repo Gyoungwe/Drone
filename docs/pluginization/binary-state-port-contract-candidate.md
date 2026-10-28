@@ -54,3 +54,11 @@ type BinaryWriteResult = { kind: "value"; base64: string; version: string };
 ## 必交门禁
 
 实际 scanner/picker 拒绝隐式 JSON→binary 扩权；scope/source撤销、晚批准、unknown handle、path/inode/symlink、未持 exact lease、原 bytes CAS/sidecar变化与实际 writer 竞争；原子失败/取消前后 commit point/cleanup failure；接近 4 MiB 的 canonical SQLite 合成 DB 经真实 worker 读/写/回读，4 MiB+拒绝且原库不变；真实旧库 producer→WASM SQL→原路径回读、schema v1/v2/备份恢复与 Node 对照；最后实际 provider/consumer、SDK、UI和正式安装包复验。此文不把规划中的检查标为已通过。
+
+## 实现切片（2026-10-28）
+
+此精确合同已批准并实现为未发布候选：公开 runtime 类型、installed scanner 的两独立 flags、sameSource 撤销、单独 picker/registry/grant、生产 file-capabilities/broker 及实际 lock token 复验。`PluginResourceReservations.assertReserved` 复用同一个 Node 协议的 dev/ino/token，不创建第二套锁。
+
+14 项二进制回归加原文件/租约 18 项共 32 项通过，包含实际 ordinary worker 的 3 MiB write/read wire 往返（Node SQLite 仍关闭）、CAS、精确父目录租约、第二 owner 竞争、WAL/迟到 sidecar、4 MiB 超限原字节不变、提交点前取消、提交点后 unknown/新 caller 回读、临时清理失败/父目录被替换保留租约、postcommit 回读失败及 token 被替换拒绝；日志 `/tmp/inquiry-binary-worker-tests.log`。Desktop 来源/scanner/逐次真实授权/revoke 100 项通过，日志 `/tmp/inquiry-binary-desktop-tests.log`。这不是 Inquiry provider、旧用户库接管或正式安装包 PASS；超过 4 MiB 原库仍是明确缺口。
+
+新增 catch 分别只处理：missing 文件的 ENOENT；absence 条件的 ENOENT；已提交写失败转换 unknown；本次临时文件/父目录身份无法核对或清理失败保留租约（仅删除实际打开并记录 inode 的本次临时文件）。新边界检查分别约束：base64 编码/大小、实际 root/scope/path、注册存储身份、父目录 inode、真实 writer token、raw-byte CAS 与同根 sidecar。它们不为内部数据添加兼容分支或失败默认值。

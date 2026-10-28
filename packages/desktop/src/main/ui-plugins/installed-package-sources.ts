@@ -76,6 +76,8 @@ export interface InstalledUiRuntimeSource {
 	nativeEntrypoint?: string;
 	requestsStateRead?: boolean;
 	requestsStateWrite?: boolean;
+	requestsBinaryStateRead?: boolean;
+	requestsBinaryStateWrite?: boolean;
 	requestsFileRead?: boolean;
 	requestsFileWrite?: boolean;
 	requestsModel?: boolean;
@@ -297,6 +299,9 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 					);
 				if (Array.isArray(manifest.permissions?.filesystem)) {
 					const filesystem = manifest.permissions.filesystem;
+					if (filesystem.includes("binary-state-write")) runtime.requestsBinaryStateWrite = true;
+					if (filesystem.includes("binary-state-read") || runtime.requestsBinaryStateWrite)
+						runtime.requestsBinaryStateRead = true;
 					if (filesystem.includes("application-state-write")) runtime.requestsStateWrite = true;
 					if (filesystem.includes("application-state") || runtime.requestsStateWrite)
 						runtime.requestsStateRead = true;
