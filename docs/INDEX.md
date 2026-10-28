@@ -9,9 +9,9 @@
 受限 managed process 的标准工具 JSON 字段和逐调用进度由 `backend/src/plugins/process-runtime{,-worker}.ts` 传输；不支持的注册回调明确拒绝。真实 SDK 并行、取消、迟到回调和加载失败后继续读取见 `backend/test/native-tool-protocol-sdk.test.mjs`，普通第三方沙箱经 `plugin-sandbox.ts` 与 `session-engine/sandbox-loader.ts` 转发同类进度，边界 schema 统一在 `backend/src/tool-progress.ts`；不代表完整 API 已完成。
 原生迁移的[能力切片证据与当前缺口](pluginization/native-plugin-capability-slice-evidence.md)与执行计划同步；完整历史分别见[计划归档](archive/native-plugin-implementation-plan-through-2026-10-27.md)和[切片证据归档](archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。历史 PASS 只适用于原版本与范围，四项外部验收不属于本轮 P0–P7。
 锁定 SDK 的 33 API、41 事件、28 UI 成员与三条运行路径的支持/拒绝边界见[原生 API 盘点](pluginization/native-pi-api-compatibility-matrix.md)；P0 仍未完成，不能用格式兼容替代运行 API 验收。
-当前四包源码锁 `dd7effc` 与宿主 `fd4c5040` 的 canonical task owner/宿主 tasks 删除、完整知识审核与私有 native 协议重放、两条进程工具进度和独立根门禁见[当前回执](releases/native-plugin-owner-migration-2026-10-28.json)。领域边界仍 INCOMPLETE；任务 UI 与通用 UI seam 的隔离分支状态见[执行计划](pluginization/native-plugin-implementation-plan.md)。旧 [5e0c9aab/f4a530a 回执](releases/native-plugin-task-owner-host-2026-10-28.json)、[6c9400c6/b1c11f3 回执](releases/native-plugin-integrated-host-2026-10-28.json)保留历史范围。
+当前四包源码锁 `253c47e` 与宿主 `4abdae43` 的任务 owner/UI、显式命令、单请求取消/真实会话模型、Desktop RPC/状态、discovery 原生日志/真实 Docker 和独立完整根门禁见[当前回执](releases/native-plugin-ui-model-cohort-2026-10-28.json)。领域边界仍 INCOMPLETE；首个 channel-watch 超时与完整重跑均保留，未报告根因修复。旧 [fd4c5040/dd7effc](releases/native-plugin-owner-migration-2026-10-28.json)、[5e0c9aab/f4a530a](releases/native-plugin-task-owner-host-2026-10-28.json) 保留原范围；下一批隔离源码见[执行计划](pluginization/native-plugin-implementation-plan.md)。
 P4 任务 UI 已移入同包 `pi-core/ui`，只读消息 hook、`chat.message` 和 `sessions.command` 由通用宿主提供；真实 SDK、renderer 与取消晚写回归及仍未完成的动态 native 启停见[任务 UI 切片](pluginization/native-plugin-task-ui-evidence.md)与[机器回执](releases/native-plugin-task-ui-2026-10-28.json)。
-版本化的通用 pi-core 宿主合同位于 `packages/plugin-api/src/core.ts`，桌面端通过 `packages/desktop/src/main/optional-plugin-hosts.ts` 按已安装包清单发现 `coreHostLoader` 并贯穿会话组合；task host 通过既有 `PluginNativeSession` 生成每会话 adapter，与标准 Pi 根入口共用 canonical owner；完整任务 UI、动态安装停用与正式安装包工作流仍待验收。
+版本化的通用 pi-core 宿主合同位于 `packages/plugin-api/src/core.ts`，桌面端通过 `packages/desktop/src/main/optional-plugin-hosts.ts` 按已安装包清单发现 `coreHostLoader` 并贯穿会话组合；task host 通过既有 `PluginNativeSession` 生成每会话 adapter，与标准 Pi 根入口共用 canonical owner；任务 UI 的正式安装包工作流与整个 native 包动态安装停用仍待验收。
 
 
 后继 [应用 owner 安装包证据](pluginization/native-plugin-app-owner-packaged-evidence.md)基于 `561a370c` 的真实 DMG，覆盖两个真实离线会话间的身份切换、同一后台实例复用和停用恢复；不代表知识 native/UI 已共享领域 owner，也未关闭零领域插件宿主门禁。后继[关闭流程安装包证据](pluginization/native-plugin-shutdown-packaged-evidence.md)记录真实 SDK 互等/异常回归及活跃模型请求期间正常退出。
@@ -246,7 +246,7 @@ packages/
 
 宿主 `packages/backend/src/session-engine/extensions.ts` 实际消费已安装 task host 的 `createNativeSession`；缺少 adapter 时能力 unavailable，无本地引擎回退。`packages/extensions/src/internal/runtime/` 仅保留旧扩展仍使用的通用 scheduler/slot/tool 声明机制；`packages/tasks`、compiled runtime、反向 workbench handler 和 acceptance collector 已删除。已发布 `plugin-api/tasks` 的旧 helpers/字段保留 1.x 类型兼容，不作为生产 owner。
 
-规则回归位于插件 `packages/pi-core/test/task-runtime/`，宿主的 `test/task-plugin-activation-sdk.test.mjs` 与 `test/packed-core-host-sdk.test.ts` 检查实际安装包、生产 SessionService、独立会话和停用后的基础权限；`scripts/knowledge-ui-smoke/task-owner.mjs` 从安装包读取 UI fixture 的 journal，不复制算法。完整任务 UI/可选资源生命周期和正式安装包验收仍未完成。
+规则回归位于插件 `packages/pi-core/test/task-runtime/`，宿主的 `test/task-plugin-activation-sdk.test.mjs` 与 `test/packed-core-host-sdk.test.ts` 检查实际安装包、生产 SessionService、独立会话和停用后的基础权限；`scripts/knowledge-ui-smoke/task-owner.mjs` 从安装包读取 UI fixture 的 journal，不复制算法。任务 UI 已同包，整个可选 native 包生命周期和正式安装包验收仍未完成。
 
 ## packages/research — 宿主研究合同与知识桥
 
@@ -538,7 +538,7 @@ src/
 
 P2 原生/桌面共同 owner 最小接入：`backend/src/plugins/coordinator.ts` 管理 native bootstrap、真实 session 绑定及 UI lease；`runtime-capabilities.ts` 执行逐调用 schema/effect/生命周期授权，`process-runtime[-worker].ts` 共用隔离进程协议传递原生只读工具和派生资源调用。`backend/test/native-runtime-owner-sdk.test.mjs` 用真实 SDK 两会话证明同进程 owner 与两种关闭顺序；它不是完整知识领域或正式安装包验收。`plugin-api/src/{native,resource}.ts` 是 1.3 候选的 type-only 可选合同；完整 hooks、publication proof 跨进程投影和其余知识 UI 方法仍未完成。
 
-`backend/src/plugins/file-capabilities.ts` 读取已批准根的稳定文件快照与配置，区分文件删除、根撤销和 JSON 损坏；独立 `application-state-write` 授权允许通过 JsonStore 执行受限 JSON CAS 写入，具体合同与并发边界见[状态能力](pluginization/native-plugin-state-capabilities.md)；`resource-capabilities.ts` 复用实际隔离进程、排空在途请求并管理资源，`@gyoungwe/plugin-api/node/reservations` 的独立 Node 实现由宿主资源管理器消费，在完整 owner 关闭后释放跨进程写者租约。`desktop/src/main/ui-plugins/runtime-host.ts` 在每次资源激活时明确选择只读数据目录及只读或独立授权的 JSON 状态目录，构造每插件私有缓存与能力 provider；其单元测试不代替正式 GUI 授权验收。UI 合同 v2 仅接受已验证的 installed desktopRuntime，旧 v1 合同保留；候选知识页目前只有总览/搜索/刷新，其余领域迁移未完成。
+`backend/src/plugins/file-capabilities.ts` 读取已批准根的稳定文件快照与配置，区分文件删除、根撤销和 JSON 损坏；独立 `application-state-write` 授权允许通过 JsonStore 执行受限 JSON CAS 写入，具体合同与并发边界见[状态能力](pluginization/native-plugin-state-capabilities.md)；`resource-capabilities.ts` 复用实际隔离进程、排空在途请求并管理资源，`@gyoungwe/plugin-api/node/reservations` 的独立 Node 实现由宿主资源管理器消费，在完整 owner 关闭后释放跨进程写者租约。`desktop/src/main/ui-plugins/runtime-host.ts` 在每次资源激活时明确选择只读数据目录及只读或独立授权的 JSON 状态目录，构造每插件私有缓存与能力 provider；其单元测试不代替正式 GUI 授权验收。UI 合同 v2 仅接受已验证的 installed desktopRuntime，旧 v1 合同保留；候选知识页已提供总览/搜索/刷新、阅读与审核迁移切片，其余领域迁移仍未完成。
 
 知识候选 tarball 的独立实际 SDK 验收见 [packed knowledge runtime acceptance](pluginization/packed-knowledge-runtime-acceptance.md)：`backend/test/packed-knowledge-runtime-sdk.test.mjs` 使用真实 coordinator、只读会话条目和合成 Vault，验证 native/UI 同 owner、逐操作拒绝和双进程退出；默认门禁不设置 tarball 时明确跳过。[正式阅读 GUI 回执](pluginization/native-plugin-knowledge-reading-gui-evidence.md)保留任务守卫、恢复及退出的实际失败，不能与 SDK 通过互相替代。[原生事件适配](pluginization/native-plugin-event-adapter.md)说明逐 handler 的真实 SDK 串联与尚未支持的 publication proof 边界。
 

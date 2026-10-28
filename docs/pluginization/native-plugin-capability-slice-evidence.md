@@ -1,6 +1,6 @@
 # 原生插件能力发现与 clean-prefix 包验收
 
-日期：2026-10-28。当前基线：宿主 `fd4c5040`、插件 `dd7effc`。完整知识审核与 canonical task owner 已整合；插件完整检查、固定源码 archive/clean ci 重建、默认远程取包与宿主六项标准门禁通过，完整命令与首次缓存残留失败/重跑见[本轮回执](../releases/native-plugin-owner-migration-2026-10-28.json)。旧 `5e0c9aab/f4a530a` [回执](../releases/native-plugin-task-owner-host-2026-10-28.json)保留历史范围。领域边界仍 INCOMPLETE，未执行的新正式包 GUI 不补写 PASS。更早历史已[归档](../archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。
+日期：2026-10-28。当前门禁基线：宿主 `4abdae43`、插件 `253c47e`。任务 UI/显式命令、逐调用取消与真实模型身份、Desktop RPC/状态、discovery 原生日志与容器清理已整合。插件完整检查、固定源码重建、默认远程取包与宿主独立根门禁通过；backend 1988/17 skipped、Desktop 934/1 skipped、shared347、根Node25/25。首次 channel-watch 一次性失败、20次定向通过和完整同源码重跑见[本轮回执](../releases/native-plugin-ui-model-cohort-2026-10-28.json)；未确认根因或报告修复。新私有 API SHA `03d91629…c2d185`。领域边界仍 INCOMPLETE，未执行的新正式包 GUI 不补写 PASS。旧[owner迁移回执](../releases/native-plugin-owner-migration-2026-10-28.json)及[历史归档](../archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)保留原范围。
 
 本轮 P0–P7 仍未全部完成；阶段清单以[执行计划](native-plugin-implementation-plan.md)为准。历史 PASS 继续有效，但只证明其记录的版本、数据与路径，不能外推到当前候选或整个领域。
 
@@ -12,15 +12,15 @@
 | 原生 Pi / 包独立性 | research-suite clean-prefix tarball：4 extensions、22 tools；锁定 1.1.0/latest 1.4.0 部分真实会话；pi-core 独立 check | 所有 API、所有候选 tarball 的最终兼容与发布后干净安装 |
 | 正式包通用宿主 | 隔离 profile、空 optional UI/npm roots 的 generic session create/close；应用 owner、会话切换、停用/恢复和退出切片 | 最新领域候选包的完整 UI / Vault 写入工作流 |
 | 正式包生命周期 | 临时 registry 1.0.0→1.1.0→1.0.0→remove→restore→remove；真实活跃会话 reload 与 reload-deferred；公开 pi-evidence 0.1.1 install/update/remove | 公开包跨版本回滚、销毁失败、同一候选 tarball 的完整 GUI |
-| knowledge 迁移 | 安装 maintenance plan/run；dd7 真实 tarball/受限双进程/SDK 验证 owner、UI 读写授权；审核 apply→partial→retry→history→undo、仅写一次、进程/SQLite/租约清理通过 | 完整 hooks/publication proof、模型审核、其它 UI/IPC 与正式 GUI |
-| research/tasks/discovery | 无 core 时基础读写/权限拒绝、显式加载顺序与 24 SDK 回归；生产 research review/delivery/receipt、4 specialist 与单独摘要 reviewer、拒绝/回滚；discovery 73 项真实包定向测试 | 完整研究/分析 owner 与 UI；任务 UI、native discovery、容器、B5 GUI；任务 canonical owner 已整合 |
-| 当前门禁 | 宿主独立根命令与 plugin-api lifecycle 全过；backend 1957/17 skipped、Desktop 912/1 skipped；根 Node 25/25；插件完整 check、SDK/clean-install/suite/PDF | native boundary exit 1/INCOMPLETE；后续完整迁移与最终正式包仍未验收 |
+| knowledge 迁移 | 安装 maintenance plan/run；当前 6266f31c…edd83 tarball/受限双进程/SDK 验证 owner、UI 读写授权；审核 apply→partial→retry→history→undo、仅写一次、进程/SQLite/租约清理通过 | 完整 hooks/publication proof、模型审核、其它 UI/IPC 与正式 GUI |
+| research/tasks/discovery | 无 core 时基础读写/权限拒绝、显式加载顺序与 24 SDK 回归；生产 research review/delivery/receipt、4 specialist 与单独摘要 reviewer、拒绝/回滚；任务 canonical owner/同包 UI、显式命令与取消晚写；discovery 同包生产日志→native SDK 读回和真实 Docker 五场景清理 | 完整研究/分析 owner 与 UI；任务整个 native 包动态启停；discovery 共享 owner、执行/Inquiry、B5 GUI |
+| 当前门禁 | 宿主独立根命令与 plugin-api lifecycle 全过；backend1988/17 skipped、Desktop934/1 skipped、shared347；根Node25/25；插件完整check、SDK/clean-install/suite/PDF | native boundary exit 1/INCOMPLETE；后续完整迁移与最终正式包仍未验收 |
 
-历史 pi-knowledge 0.2.1 锁缺 exports 已修复。当前四包固定 `dd7effc`，独立 archive/clean ci 可重建，宿主默认远程 fetch 校验 SHA-256。完整检查曾因 isolated npm ECONNRESET、旧 event bus fixture、生成清单格式/端口参数及旧任务/摘要 fixture 失败；真实生产缺口（提前读取不支持的 native events、未消费 delivery handle、知识依赖通知和摘要路径/提交保护）已修复，全部失败保留于回执。HTTP/1.1 保留 HTTPS/TLS 校验，未设置开发源码覆盖。不同提交的计数不合并为一次运行。
+历史 pi-knowledge 0.2.1 锁缺 exports 已修复。当前四包固定 `253c47e`，独立 archive/clean ci 可重建，宿主默认远程 fetch 校验 SHA-256。完整检查曾因 isolated npm ECONNRESET、旧 event bus fixture、生成清单格式/端口参数及旧任务/摘要 fixture 失败；真实生产缺口（提前读取不支持的 native events、未消费 delivery handle、知识依赖通知和摘要路径/提交保护）已修复，全部失败保留于回执。HTTP/1.1 保留 HTTPS/TLS 校验，未设置开发源码覆盖。不同提交的计数不合并为一次运行。
 
 ## 未关闭项
 
-1. P2–P5 完整领域实现/UI ownership 及宿主装配删除，包含任务 UI、知识完整审核以外的剩余功能、discovery B5d–B5f 和旧知识资源生成/打包链。
+1. P2–P5 完整领域实现/UI ownership 及宿主装配删除，包含其余任务入口/引导、知识完整审核以外的剩余功能、discovery B5d–B5f 和旧知识资源生成/打包链。
 2. 删除 4 个必需领域锁和旧 build/resource 闭包；当前版本/锁/标准门禁已同步，不能据此宣称零领域独立宿主。
 3. 同候选 tarball 的原生真实会话和正式包领域 GUI、Vault apply/rollback、销毁失败与公开包跨版本回滚。通用零插件正式包和临时 registry 生命周期切片已取得真实证据，不在此重复列为“完全未验收”。
 4. 最终领域边界扫描仍为 `INCOMPLETE`。WebDAV/inquiry 的既有归属记录不在本次文档整理中重新决策。

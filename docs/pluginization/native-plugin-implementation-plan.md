@@ -2,37 +2,37 @@
 
 2026-10-28 更新。用户已批准「通用宿主 + 可卸载功能插件」并要求 P0–P7 并行实现。依据：[架构设计](../superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)。目标仍是完整功能与 UI 同包迁移，当前没有关闭整个目标。
 
-当前门禁基线为宿主 `fd4c5040`、插件 `dd7effc`：完整 Wiki 审核/history/undo 与 canonical task owner 已整合，插件完整检查、固定源码 archive/clean ci 重建、默认远程取包与宿主独立 checkout 的六项标准门禁通过；backend 1957 passed/17 skipped、Desktop 912 passed/1 skipped、根 Node 25/25。首次根脚本的旧任务包依赖缓存残留及完整重跑均保存在[本轮回执](../releases/native-plugin-owner-migration-2026-10-28.json)。旧 `5e0c9aab/f4a530a` [回执](../releases/native-plugin-task-owner-host-2026-10-28.json)保留历史范围。native boundary 仍 exit 1/INCOMPLETE，整个目标未关闭。更早历史已[归档](../archive/native-plugin-implementation-plan-through-2026-10-27.md)。
+当前门禁基线为宿主 `4abdae43`、插件 `253c47e`：任务 owner/UI、通用显式命令与逐调用取消、真实会话模型能力、Desktop RPC/状态、discovery 原生日志与真实容器清理已整合。插件完整检查、固定源码 archive/clean ci 重建、默认远程取包与宿主独立 checkout 的六项标准门禁通过；backend 1988 passed/17 skipped、Desktop 934 passed/1 skipped、shared 347、根 Node 25/25。首次 channel-watch 恢复订阅一次性超时、定向20次通过及同源码完整重跑均保存在[本轮回执](../releases/native-plugin-ui-model-cohort-2026-10-28.json)，原因尚未确认，未声称已修复。私有 API 1.3 SHA-256 `03d91629…c2d185` 已统一 vendor，未发布 npm。native boundary 仍 exit 1/INCOMPLETE（15/10/6/1/21/4），目标未关闭。旧 `fd4c5040/dd7effc` [回执](../releases/native-plugin-owner-migration-2026-10-28.json)保留原范围。
 
 ## 当前阶段状态
 
 | 阶段 | 完成条件 | 当前已证明 | 仍未完成 | 依赖 |
 | --- | --- | --- | --- | --- |
-| P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复领域扫描 | 33 API/41 事件/28 UI 声明盘点；真实 SDK 主/恢复/子会话 onError 与通用通知、custom/theme 明确失败、沙箱诊断、managed prompt mutation、两条 process 路径的工具 metadata/进度与真实拒绝 | managed ctx/getter；locked/latest 完整矩阵；扫描仍 `INCOMPLETE`。Desktop 28 UI 成员/RPC/status/审批取消已整合，待最终包复验 | 无 |
-| P1 | 通用 runtime 生命周期、来源绑定、权限、隔离、UI 调用与撤销 | 正式包应用 owner、会话切换、停用/拒绝/恢复/退出切片；来源内容变化使旧授权失效 | 正式包的销毁失败回执；后续领域包在同一候选版本上的完整生命周期复验 | P0 |
-| P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | maintenance plan/run 安装 loader 与调度回归；dd7 同 tarball 的真实受限双进程/SDK owner、UI 读写授权；canonical 审核/history/undo 已整合，partial→retry 仅写 Vault 一次及完整退出已验收 | 完整 hooks/publication proof、模型审核与其余 UI、宿主领域操作/IPC与旧资源删除；正式 GUI | P1 |
+| P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复领域扫描 | 33 API/41 事件/28 UI 声明盘点；真实 SDK 主/恢复/子会话 onError、Desktop RPC/28 UI 支持或明确拒绝、MCP/状态、沙箱诊断、managed prompt mutation、两条 process 工具 metadata/进度与真实拒绝 | managed ctx/getter；locked/latest 完整矩阵；扫描仍 `INCOMPLETE`。Desktop 28 UI 成员/RPC/status/审批取消已整合，待最终包复验 | 无 |
+| P1 | 通用 runtime 生命周期、来源绑定、权限、隔离、UI 调用与撤销 | 正式包应用 owner、会话切换、停用/拒绝/恢复/退出切片；来源变化撤销；本候选逐请求取消、实际 provider abort、双窗口同会话批准分离与真实 native 模型能力 | 正式包的销毁失败回执；后续领域包在同一候选版本上的完整生命周期复验 | P0 |
+| P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | maintenance plan/run 安装 loader 与调度回归；当前同 tarball 的真实受限双进程/SDK owner、UI 读写授权；canonical 审核/history/undo 已整合，partial→retry 仅写 Vault 一次及完整退出已验收 | 完整 hooks/publication proof、模型审核与其余 UI、宿主领域操作/IPC与旧资源删除；正式 GUI | P1 |
 | P3 | research、来源连接器、引用/Zotero 的领域 API 与页面迁移 | 安装 host fail-closed；真实生产 summary review→delivery→回读→receipt；4 个隔离 specialist 与单独摘要 reviewer、拒绝/rollback/CAS/路径回归 | 仍有迁移期宿主 FS writer；完整 Zotero/研究 owner 与页面归属；本候选连接器/写入正式 GUI；上述测试不覆盖全部 protected Wiki reviewer | P2 |
-| P4 | tasks、编排、领域记忆及 UI 迁移 | knowledge 停止隐式任务 guard；真实 SDK 无 core 的基础 read/write/bash 与权限拒绝、两种安装加载顺序及 24 项任务回归；typed core 与 milestone 规则；canonical 状态机/guard/owner 已归插件，宿主 tasks 与反向 workbench port 删除，真实多会话/registry 隔离与恢复通过 | 任务 UI ownership、动态启停与正式 GUI；通用 UI seam 和 core UI 迁移仍在隔离分支 | P2 |
+| P4 | tasks、编排、领域记忆及 UI 迁移 | knowledge 停止隐式任务 guard；真实 SDK 无 core 的基础 read/write/bash 与权限拒绝、两种安装加载顺序及 24 项任务回归；typed core 与 milestone 规则；canonical 状态机/guard/owner 已归插件，宿主 tasks 与反向 workbench port 删除，真实多会话/registry 隔离与恢复；验收卡/任务页同包 UI、显式 command、取消后无迟到写入与 UI 移除/恢复同 owner | 动态 native 包启停、科研示例/引导与领域记忆、正式 GUI | P2 |
 | P5 | analysis/evidence 与 discovery 的可卸载实现；依赖经显式合同管理 | discovery 算法/状态归插件，宿主注入机制；无插件不构造旧实现/登记存储；同 tarball 生产日志→真实 SDK 只读工具、Docker 五种执行/清理回读已整合 | 同 Desktop hashed agentDir 的共享 native owner、执行/Inquiry 合同与 B5 GUI；完整分析/证据控制器与 UI 迁移、同候选工作流验收 | P3/P4 |
 | P6 | 科研能力成为可卸载预设；删除构建/锁文件必需依赖与旧路径 | 四包同提交候选已独立重建；core 与 tasks 旧源码删除，任务不再生成宿主 runtime；discovery runtime 依赖下移；`trackedRuntimeDependencies=[]` | 4 个必需领域源码锁及 hoisted/dev/build/resource 闭包删除；旧 bundled 装配、领域 schema/IPC 与预设卸载；零领域独立构建 | P2–P5 |
-| P7 | 双仓库最终门禁、同 tarball 原生会话、正式包零插件及升级/停用/回滚 | 当前 fd4c5040/dd7effc 标准门禁通过，opt-in packed core/knowledge/discovery 与私有 API 1.3 tarball 已启用；真实 knowledge 审核写入与双进程完整退出 | 全领域最终候选、正式安装包 GUI、销毁失败/公开跨版本回滚、真正无领域资源宿主；本轮未新建正式安装包 | P6 |
+| P7 | 双仓库最终门禁、同 tarball 原生会话、正式包零插件及升级/停用/回滚 | 当前 4abdae43/253c47e 标准门禁通过，opt-in packed core/knowledge/discovery 与私有 API 1.3 tarball 已启用；真实 knowledge 审核写入与双进程完整退出 | 全领域最终候选、正式安装包 GUI、销毁失败/公开跨版本回滚、真正无领域资源宿主；本轮未新建正式安装包 | P6 |
 
 ## 当前未完成项
 
 1. 完成 P2–P5 的领域实现和 UI ownership，删除对应宿主装配与临时路径；切片合同、loader 与定向测试通过不等于领域迁移完成。
-2. 完成 discovery 共享 owner/执行/Inquiry/B5 GUI 与任务界面；原生只读工具及真实 Docker 清理已整合，无 core 的隐式 guard 阻断已修复，canonical 任务 owner 已整合，继续迁移任务 UI。WebDAV/inquiry 的既有归属记录保留，不借本次状态同步扩大边界。
-3. 四包源码锁已同步为 `dd7effc`；它仍是迁移期构建必需依赖。继续删除这些领域锁与旧资源闭包，证明不下载科研插件也能独立构建，而不是仅把版本同步当作 P6 完成。
+2. 完成 discovery 共享 owner/执行/Inquiry/B5 GUI 与任务界面；原生只读工具及真实 Docker 清理已整合，无 core 的隐式 guard 阻断已修复，canonical 任务 owner/UI 已整合，继续迁移科研示例/引导与整个 native 包动态启停。WebDAV/inquiry 的既有归属记录保留，不借本次状态同步扩大边界。
+3. 四包源码锁已同步为 `253c47e`；它仍是迁移期构建必需依赖。继续删除这些领域锁与旧资源闭包，证明不下载科研插件也能独立构建，而不是仅把版本同步当作 P6 完成。
 4. 使用同一候选 tarball 完成原生 Pi 真实会话、正式安装包的领域 GUI、Vault 写入回读/回滚与完整生命周期，包括销毁失败。既有通用宿主和公开 pi-evidence 切片保留其已证明范围。
 5. 当前候选的双仓库标准门禁已完成；后续迁移仍须固定来源后复验，并清理最终领域边界门禁。历史全量或直接 workspace 检查不替代未来最终候选的根命令与正式包验收。
 
 ## 后继并行工作
 
-- P2 完整审核与 native SDK envelope/private replay 已整合到 `dd7effc/fd4c5040`。公开 tool-only、私有 signed thinking 和最终 fail-closed 保留；完整 managed hooks/proof、模型审核、其它 UI 与旧宿主 IPC 仍未迁完。
-- P4 canonical task owner、170 项规则与 29 项基础测试已归插件，宿主 `packages/tasks`、隐式 singleton 与反向 workbench port 已删除。新增 native 合同使用私有 API 1.3 候选，SHA-256 `a05e593f…472fed`；它不含尚未整合的 UI seam。
-- 通用 UI seam `codex/core-ui-seam@6ebf7c6` 已独立验证：sessions.prompt、稳定 useSessionMessages、chat.message 与异常/禁用/移除默认回退。桌面 911 passed/7 skipped、32 定向测试及 API/类型/build/arch/lint 通过；**不属于当前 fd4c5040 的根门禁**。core TaskRow/验收卡/任务页迁移正消费该 seam，待合并、重打统一 API/vendor/源码锁并复验。
-- P0 Desktop 28 UI 成员的支持/拒绝、RPC/status、真实 MCP 与审批取消已合入 `8c498e86`；P5 journal/native 与真实容器清理已合入 `47fa8d84`。主集成补跑真实 Docker 五场景与同包 SDK 读回通过；完整共享 owner 与 B5 GUI 未完成。
-- 通用模型能力已合入 `8cc1007d`，直接 broker→真实 SDK 6 项及类型通过；production UI bridge 的会话身份传递和单请求取消仍在修复，不能由直连测试推导 UI 已可用。新合同尚未重打统一 API/vendor/锁，`fd4c5040` 的完整根门禁不覆盖这些后继源码。
-- 顺序：保留本轮已验证来源 → 整合通用 UI seam 与任务 UI → 统一 API/候选包及双仓库门禁 → 同候选正式 GUI；P2/P3/P5 和 P6 真实零领域独立构建继续执行，目标保持 active。
+- 当前 `4abdae43/253c47e` 只关闭本轮源码与真实 SDK 切片；新私有 API 1.3 同时包含 UI seam、command、模型/取消、caller.scope 与独立 Node lease 子路径，根/UI/runtime 合同不依赖 Node。完整 managed hooks/proof 与正式包仍未完成。
+- P2 模型评审 owner/UI `1399b33` 已在隔离插件分支通过 531 项回归与真实 SQLite/SDK 切片；尚未纳入当前来源锁。后继 managed command consumer 正在验证，旧公共 UI 1.x 路径保留真实行为；不能用无 worker 的 adapter 验证宣称 managed 端完整可用。
+- P4 自然语言任务状态路由 `8a596bfa/58d5902` 与 managed command `368b63ed` 已冻结，待下一批整合。后者只支持已证明的最小 context，void command 不伪造文本返回；动态 native 包启停和 startup taskHost 删除仍需继续迁移。
+- P5 正在接通真实共享 owner、显式历史状态目录绑定、同进程/跨进程写者竞争和清理失败保留租约；执行持久回执/Inquiry 与完整 B5 UI 继续实施。不把只读原生工具或容器清理切片当作完整 P5。
+- P3 研究/Zotero 与 P5 分析/证据完整控制器、页面和旧宿主业务删除尚未完成。P6 继续删除四个必需领域锁及构建/资源闭包，并以真实零领域安装包验证普通聊天；默认知识 publication 对无领域会话的干预仍需处理。
+- 顺序：整合已冻结业务与 managed command → 统一下一 API/候选包及双仓库门禁 → 同候选正式 GUI；同步完成剩余领域迁移和真实零领域独立构建，目标保持 active。
 
 ## 检查与证据规则
 
