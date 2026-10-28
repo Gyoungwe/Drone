@@ -187,10 +187,10 @@ export async function createPluginExecutionCapabilities(
 					Type.Object({ kind: Type.Literal("missing") }, { additionalProperties: false }),
 					Type.Object({ kind: Type.Literal("value"), receipt }, { additionalProperties: false }),
 				]),
-				approvalDetail: (input) =>
+				approvalDetail: (input, facts) =>
 					hostText(
-						`取消本会话已受理的执行：${(input as { requestId: string }).requestId}。等待自有容器清理和终态回执；不存在的请求不会报告已关闭。`,
-						`Cancel this session's accepted execution: ${(input as { requestId: string }).requestId}. Wait for owned-container cleanup and its terminal receipt; a missing request is never reported closed.`,
+						`工作区：${facts.scope.kind === "application" ? "application" : facts.scope.workspaceDirectory}；创建者 SDK 会话：${facts.scope.kind === "session" ? facts.scope.sessionId : "none"}。取消本会话已受理的执行：${(input as { requestId: string }).requestId}。等待自有容器清理和终态回执；不存在的请求不会报告已关闭。`,
+						`Workspace: ${facts.scope.kind === "application" ? "application" : facts.scope.workspaceDirectory}; creator SDK session: ${facts.scope.kind === "session" ? facts.scope.sessionId : "none"}. Cancel this session's accepted execution: ${(input as { requestId: string }).requestId}. Wait for owned-container cleanup and its terminal receipt; a missing request is never reported closed.`,
 					),
 				execute: async (input, context) => {
 					const selected = caller(context);
@@ -218,11 +218,11 @@ export async function createPluginExecutionCapabilities(
 					{ additionalProperties: false },
 				),
 				resultSchema: Type.Object({ receipt, result }, { additionalProperties: false }),
-				approvalDetail: (input) => {
+				approvalDetail: (input, facts) => {
 					const request = input as PluginExecutionInput;
 					return hostText(
-						`受限容器执行\n请求：${request.requestId}\n语言：${request.language}\n工作区相对目录：${request.runDirectory}\n精确缓存镜像：${request.image}\n数据分类：${request.dataClassification}\n超时毫秒：${request.timeoutMs}\n输出字节上限：${request.maxOutputBytes}\n禁用网络；唯一可写挂载为该 runs 子目录；不拉取镜像。\n代码：\n${request.code}`,
-						`Bounded container execution\nrequestId: ${request.requestId}\nlanguage: ${request.language}\nworkspace-relative directory: ${request.runDirectory}\nexact cached image: ${request.image}\ndata classification: ${request.dataClassification}\ntimeoutMs: ${request.timeoutMs}\nmaxOutputBytes: ${request.maxOutputBytes}\nnetwork: disabled; writable mount: this runs directory only; pull: never\nCode:\n${request.code}`,
+						`受限容器执行\n工作区：${facts.scope.kind === "application" ? "application" : facts.scope.workspaceDirectory}\n创建者 SDK 会话：${facts.scope.kind === "session" ? facts.scope.sessionId : "none"}\n请求：${request.requestId}\n语言：${request.language}\n工作区相对目录：${request.runDirectory}\n精确缓存镜像：${request.image}\n数据分类：${request.dataClassification}\n超时毫秒：${request.timeoutMs}\n输出字节上限：${request.maxOutputBytes}\n禁用网络；唯一可写挂载为该 runs 子目录；不拉取镜像。\n代码：\n${request.code}`,
+						`Bounded container execution\nworkspace: ${facts.scope.kind === "application" ? "application" : facts.scope.workspaceDirectory}\ncreator SDK session: ${facts.scope.kind === "session" ? facts.scope.sessionId : "none"}\nrequestId: ${request.requestId}\nlanguage: ${request.language}\nworkspace-relative directory: ${request.runDirectory}\nexact cached image: ${request.image}\ndata classification: ${request.dataClassification}\ntimeoutMs: ${request.timeoutMs}\nmaxOutputBytes: ${request.maxOutputBytes}\nnetwork: disabled; writable mount: this runs directory only; pull: never\nCode:\n${request.code}`,
 					);
 				},
 				execute: async (input, context) => {

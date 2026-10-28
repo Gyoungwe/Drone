@@ -134,7 +134,7 @@ export class ExecutionTransactions {
 		signal: AbortSignal,
 	): Promise<PluginExecutionResult> {
 		try {
-			if (this.knownAccepted.has(key) || (await this.storage.read(key)))
+			if ((await this.receipt(identity, input.requestId)).kind === "value")
 				throw new Error(
 					"Execution request already has a durable receipt; reconcile it before submitting a new request",
 				);

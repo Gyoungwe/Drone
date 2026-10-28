@@ -448,7 +448,10 @@ describe("desktop activation directory grants", () => {
 		expect(stateRoot.access).toBe("read");
 		expect(fileRoot.access).toBe("read-write");
 		const input = { root: fileRoot.handle, path: "proposal.md", text: "# Proposed note", expectedHash: null };
-		const detail = ports.handlers["files.writeText"]!.approvalDetail!(input);
+		const detail = ports.handlers["files.writeText"]!.approvalDetail!(
+			input,
+			context(new AbortController().signal),
+		);
 		expect(detail).toContain(`Authorized directory: ${JSON.stringify(await realpath(data))}`);
 		expect(detail).toContain('Root-relative path: "proposal.md"');
 		expect(detail).toContain("expectedHash: null");
@@ -459,26 +462,38 @@ describe("desktop activation directory grants", () => {
 			text: input.text,
 			sha256: createHash("sha256").update(input.text).digest("hex"),
 		});
-		const remove = ports.handlers["files.remove"]!.approvalDetail!({
-			root: fileRoot.handle,
-			path: input.path,
-			expectedHash: createHash("sha256").update(input.text).digest("hex"),
-		});
+		const remove = ports.handlers["files.remove"]!.approvalDetail!(
+			{
+				root: fileRoot.handle,
+				path: input.path,
+				expectedHash: createHash("sha256").update(input.text).digest("hex"),
+			},
+			context(new AbortController().signal),
+		);
 		expect(remove).toContain("Remove file");
 		expect(remove).toContain(`expectedHash: "${createHash("sha256").update(input.text).digest("hex")}"`);
 		expect(
-			ports.handlers["files.ensureDirectory"]!.approvalDetail!({ root: fileRoot.handle, path: "nested" }),
+			ports.handlers["files.ensureDirectory"]!.approvalDetail!(
+				{ root: fileRoot.handle, path: "nested" },
+				context(new AbortController().signal),
+			),
 		).toContain("Create directory");
 		expect(() =>
-			ports.handlers["state.writeJson"]!.approvalDetail!({
-				root: stateRoot.handle,
-				path: "policy.json",
-				expectedVersion: null,
-				value: {},
-			}),
+			ports.handlers["state.writeJson"]!.approvalDetail!(
+				{
+					root: stateRoot.handle,
+					path: "policy.json",
+					expectedVersion: null,
+					value: {},
+				},
+				context(new AbortController().signal),
+			),
 		).toThrow("not granted");
 		expect(() =>
-			ports.handlers["files.writeText"]!.approvalDetail!({ ...input, root: stateRoot.handle }),
+			ports.handlers["files.writeText"]!.approvalDetail!(
+				{ ...input, root: stateRoot.handle },
+				context(new AbortController().signal),
+			),
 		).toThrow("not granted");
 		await ports.dispose?.();
 	});
@@ -516,7 +531,10 @@ describe("desktop write approval details", () => {
 			expectedVersion: "a".repeat(64),
 			value: { mode: "strict", claimedDirectory: "/unselected/path" },
 		};
-		const detail = ports.handlers["state.writeJson"]!.approvalDetail!(input);
+		const detail = ports.handlers["state.writeJson"]!.approvalDetail!(
+			input,
+			context(new AbortController().signal),
+		);
 		expect(detail).toContain(`Authorized directory: ${JSON.stringify(await realpath(state))}`);
 		expect(detail).toContain('Root-relative path: "policy.json"');
 		expect(detail).toContain(`expectedVersion: "${"a".repeat(64)}"`);
@@ -550,14 +568,19 @@ describe("desktop write approval details", () => {
 			expectedVersion: null,
 			value: { text: `${"x".repeat(5000)}HIDDEN-END` },
 		};
-		const detail = ports.handlers["state.writeJson"]!.approvalDetail!(input);
+		const detail = ports.handlers["state.writeJson"]!.approvalDetail!(
+			input,
+			context(new AbortController().signal),
+		);
 		expect(detail).toContain("first 4000");
 		expect(detail).toContain("full content is not displayed");
 		expect(detail).toContain("Deny if this is insufficient");
 		expect(detail).not.toContain("HIDDEN-END");
 		expect(detail).not.toContain("complete proposed content");
 		expect(detail).toContain("target must be absent");
-		expect(() => other.handlers["state.writeJson"]!.approvalDetail!(input)).toThrow("not granted");
+		expect(() =>
+			other.handlers["state.writeJson"]!.approvalDetail!(input, context(new AbortController().signal)),
+		).toThrow("not granted");
 		await ports.dispose?.();
 		await other.dispose?.();
 	});
@@ -565,29 +588,38 @@ describe("desktop write approval details", () => {
 	it("distinguishes deletion from directory creation without pretending their contents were displayed", async () => {
 		const ports = await writablePorts();
 		const handle = ports.resources.find((entry) => entry.kind === "state")!.handle;
-		const remove = ports.handlers["state.removeJson"]!.approvalDetail!({
-			root: handle,
-			path: "pending.json",
-			expectedVersion: "b".repeat(64),
-		});
+		const remove = ports.handlers["state.removeJson"]!.approvalDetail!(
+			{
+				root: handle,
+				path: "pending.json",
+				expectedVersion: "b".repeat(64),
+			},
+			context(new AbortController().signal),
+		);
 		expect(remove).toContain("Remove file");
 		expect(remove).toContain(`expectedVersion: "${"b".repeat(64)}"`);
 		expect(remove).toContain("does not display the file's contents");
-		const directory = ports.handlers["state.ensureDirectory"]!.approvalDetail!({
-			root: handle,
-			path: "nested/state",
-		});
+		const directory = ports.handlers["state.ensureDirectory"]!.approvalDetail!(
+			{
+				root: handle,
+				path: "nested/state",
+			},
+			context(new AbortController().signal),
+		);
 		expect(directory).toContain("Create directory (preserve existing directory)");
 		expect(directory).toContain('Root-relative path: "nested/state"');
 		expect(directory).not.toContain("expectedVersion");
 		setReplyLanguage("zh");
 		expect(
-			ports.handlers["state.writeJson"]!.approvalDetail!({
-				root: handle,
-				path: "policy.json",
-				expectedVersion: null,
-				value: {},
-			}),
+			ports.handlers["state.writeJson"]!.approvalDetail!(
+				{
+					root: handle,
+					path: "policy.json",
+					expectedVersion: null,
+					value: {},
+				},
+				context(new AbortController().signal),
+			),
 		).toContain("以上为拟写入内容全文");
 		await ports.dispose?.();
 	});
@@ -625,7 +657,7 @@ it("closes a pending parent-window runtime permission dialog through the actual 
 	expect(await answer).toBe(false);
 });
 
-it("exposes only the four session handlers without a model declaration, then gates exactly two model handlers", async () => {
+it("exposes the session and record handlers without a model declaration, then gates exactly two model handlers", async () => {
 	const handler = {
 		effect: "read",
 		inputSchema: { type: "null" },
@@ -638,6 +670,9 @@ it("exposes only the four session handlers without a model declaration, then gat
 			"session.select",
 			"session.input",
 			"session.confirm",
+			"session.notify",
+			"session.records.append",
+			"session.records.read",
 			"model.selection",
 			"model.generate",
 		].map((name) => [name, handler]),
@@ -655,7 +690,15 @@ it("exposes only the four session handlers without a model declaration, then gat
 		Object.keys(without.handlers)
 			.filter((name) => name.startsWith("session."))
 			.sort(),
-	).toEqual(["session.confirm", "session.input", "session.inspect", "session.select"]);
+	).toEqual([
+		"session.confirm",
+		"session.input",
+		"session.inspect",
+		"session.notify",
+		"session.records.append",
+		"session.records.read",
+		"session.select",
+	]);
 	expect(without.handlers["model.selection"]).toBeUndefined();
 	expect(without.handlers["model.generate"]).toBeUndefined();
 	const withModel = await desktop.bridgeOptions.capabilities(

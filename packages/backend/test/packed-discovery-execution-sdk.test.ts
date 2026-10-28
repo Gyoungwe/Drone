@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readdir, readFile, realpath, rm } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { delimiter, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
@@ -19,6 +19,9 @@ const desktop = vi.hoisted(() => ({
 	state: "",
 	workspace: "",
 	dialogs: 0,
+	approval: undefined as
+		| undefined
+		| ((options: { message: string; detail: string }) => Promise<{ response: number }>),
 	window: { id: 17, isDestroyed: () => false },
 	contents: { isDestroyed: () => false, send() {} },
 }));
@@ -27,9 +30,9 @@ vi.mock("electron", () => ({
 	BrowserWindow: { fromWebContents: () => desktop.window },
 	webContents: { fromId: () => desktop.contents },
 	dialog: {
-		showMessageBox: async () => {
+		showMessageBox: async (_window: unknown, options: { message: string; detail: string }) => {
 			desktop.dialogs++;
-			return { response: 1 };
+			return desktop.approval ? desktop.approval(options) : { response: 1 };
 		},
 		showOpenDialog: async (_window: unknown, options: { title: string }) => ({
 			canceled: false,
@@ -62,6 +65,7 @@ it.skipIf(!tarball)(
 		const root = await realpath(await mkdtemp(join(tmpdir(), "discovery-execution-sdk-")));
 		const sessions: Awaited<ReturnType<typeof createAgentSession>>["session"][] = [];
 		const bootstraps: ReturnType<ReturnType<typeof createDesktopRuntime>["beginNative"]>[] = [];
+		const holders: { bootstrap: ReturnType<ReturnType<typeof createDesktopRuntime>["beginNative"]> }[] = [];
 		let bridge: ReturnType<typeof createDesktopRuntime> | undefined;
 		try {
 			setReplyLanguage("en");
@@ -87,12 +91,12 @@ it.skipIf(!tarball)(
 			);
 			const manager = new UiPluginManager({ installedPackageRoot: join(root, "node_modules") });
 			await mkdir(join(desktop.profile, "ui-plugins"));
-		await manager.scanAll();
+			await manager.scanAll();
 			const pluginName = "discovery-workspace";
 			const source = manager.runtimeSource(pluginName);
 			if (!source?.contentHash || !source.requestsExecution || !source.nativeEntrypoint)
 				throw new Error("Actual installed scanner did not derive the execution source");
-				expect(source.resources).toBeUndefined();
+			expect(source.resources).toBeUndefined();
 			await manager.updateConfig({
 				enabled: true,
 				plugins: { [pluginName]: { enabled: true, trusted: true } },
@@ -126,6 +130,8 @@ it.skipIf(!tarball)(
 					path === source.nativeEntrypoint ? pluginName : undefined,
 				);
 				bootstraps.push(bootstrap);
+				const holder = { bootstrap };
+				holders.push(holder);
 				const settingsManager = SettingsManager.inMemory({});
 				settingsManager.setProjectTrusted(true);
 				const loader = new DefaultResourceLoader({
@@ -136,7 +142,7 @@ it.skipIf(!tarball)(
 					noSkills: true,
 					noPromptTemplates: true,
 					additionalExtensionPaths: [source.nativeEntrypoint],
-					extensionFactoryForPath: bootstrap.factoryForPath,
+					extensionFactoryForPath: (path) => holder.bootstrap.factoryForPath(path),
 				});
 				await loader.reload({ resolveProjectTrust: async () => true });
 				expect(loader.getExtensions().errors).toEqual([]);
@@ -251,6 +257,175 @@ it.skipIf(!tarball)(
 				status: string;
 			}[];
 			expect(persisted.find((item) => item.sessionId === "creator-a")?.status).toBe("closed");
+			// Explicit synthetic engine only: exercises acceptance/receipts and activation replay, not Docker success.
+			const syntheticId = `sha256:${"a".repeat(64)}`;
+			await writeFile(
+				join(root, "docker"),
+				`#!${process.execPath}
+const fs=require('node:fs');const args=process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(join(root, "synthetic-engine-calls.jsonl"))},JSON.stringify(args)+'\\n');
+if(args[0]==='version'){console.log('synthetic-engine');process.exit(0);}
+if(args[0]==='image'&&args.at(-1)==='python:3.12-slim'){console.log(${JSON.stringify(syntheticId)});process.exit(0);}
+if(args[0]==='image')process.exit(1);
+if(args[0]==='run'){if(args.some(value=>value.includes('hold-protocol'))){fs.writeFileSync(${JSON.stringify(join(root, "synthetic-run-started"))},'running');setInterval(()=>{},1000);}else{console.log('[summary] synthetic protocol output');process.exit(0);}}
+if(args[0]==='inspect')process.exit(1);
+if(args[0]==='container'&&args[1]==='ls'){if(fs.existsSync(${JSON.stringify(join(root, "synthetic-run-started"))})){const wait=setInterval(()=>{if(fs.existsSync(${JSON.stringify(join(root, "synthetic-cleanup-allowed"))})){clearInterval(wait);fs.unlinkSync(${JSON.stringify(join(root, "synthetic-run-started"))});process.exit(0);}},10);}else process.exit(0);}
+if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
+`,
+			);
+			await chmod(join(root, "docker"), 0o755);
+			vi.stubEnv("PATH", `${root}${delimiter}${process.env.PATH}`);
+			let lateApproval!: (value: { response: number }) => void;
+			let approvalDetail = "";
+			desktop.approval = async (options) => {
+				if (!options.message.includes("capability:execution.run")) return { response: 1 };
+				approvalDetail = options.detail;
+				return new Promise((resolve) => {
+					lateApproval = resolve;
+				});
+			};
+			expect(
+				(
+					await sdkCall(1, "discovery_create_kernel", {
+						...kernel("approval-timeout"),
+						image: syntheticId,
+						executionTimeoutMs: 50,
+					})
+				).isError,
+			).toBe(false);
+			const timedOut = await sdkCall(1, "discovery_execute_kernel", {
+				sessionId: "approval-timeout",
+				code: "print('late approval must not execute')",
+			});
+			expect(timedOut.isError, JSON.stringify(timedOut)).toBe(false);
+			expect(timedOut.details).toMatchObject({ execution: { status: "failed", blockedReason: "timeout" } });
+			expect(approvalDetail).toContain(desktop.workspace);
+			expect(approvalDetail).toContain(sessions[1]!.sessionId);
+			lateApproval({ response: 1 });
+			let closeApproval!: (value: { response: number }) => void;
+			let closeApprovalAsked = false;
+			desktop.approval = async (options) => {
+				if (!options.message.includes("capability:execution.run")) return { response: 1 };
+				closeApprovalAsked = true;
+				return new Promise((resolve) => {
+					closeApproval = resolve;
+				});
+			};
+			expect(
+				(
+					await sdkCall(1, "discovery_create_kernel", {
+						...kernel("approval-close"),
+						image: syntheticId,
+						executionTimeoutMs: 30000,
+					})
+				).isError,
+			).toBe(false);
+			const awaitingClose = sdkCall(1, "discovery_execute_kernel", {
+				sessionId: "approval-close",
+				code: "print('closed approval must not execute')",
+			});
+			await vi.waitFor(() => expect(closeApprovalAsked).toBe(true));
+			await bridge.invoke(
+				desktop.window,
+				token,
+				"closeKernelSession",
+				{ sessionId: "approval-close" },
+				selection,
+			);
+			expect((await awaitingClose).details).toMatchObject({
+				execution: { status: "failed", blockedReason: "cancelled" },
+			});
+			closeApproval({ response: 1 });
+			desktop.approval = undefined;
+			await new Promise<void>((resolve) => setImmediate(resolve));
+			expect(await readdir(join(desktop.profile, "plugin-execution-receipts"))).toEqual([]);
+			const beforeAcceptedCalls = (await readFile(join(root, "synthetic-engine-calls.jsonl"), "utf8"))
+				.trim()
+				.split("\n")
+				.map((line) => JSON.parse(line) as string[]);
+			expect(beforeAcceptedCalls.filter((args) => args[0] === "run")).toEqual([]);
+
+			expect(
+				(await sdkCall(1, "discovery_create_kernel", { ...kernel("synthetic-accepted"), image: syntheticId }))
+					.isError,
+			).toBe(false);
+			const accepted = await sdkCall(1, "discovery_execute_kernel", {
+				sessionId: "synthetic-accepted",
+				code: "print('[summary] synthetic protocol only')",
+			});
+			expect(accepted.isError, JSON.stringify(accepted)).toBe(false);
+			const acceptedIntent = (
+				accepted.details as { intents: { requestId: string; status: string }[] }
+			).intents.find((item) => item.status === "succeeded");
+			if (!acceptedIntent) throw new Error("Synthetic accepted transaction did not complete");
+			expect(
+				(await sdkCall(1, "discovery_execution_receipt", { requestId: acceptedIntent.requestId })).details,
+			).toMatchObject({ kind: "value", receipt: { status: "succeeded" } });
+			// Actual SDK tool cancellation remains pending until the synthetic owned-cleanup probe settles.
+			expect(
+				(
+					await sdkCall(1, "discovery_create_kernel", {
+						...kernel("accepted-cancel"),
+						image: syntheticId,
+						executionTimeoutMs: 30000,
+					})
+				).isError,
+			).toBe(false);
+			const pendingCall = sdkCall(1, "discovery_execute_kernel", {
+				sessionId: "accepted-cancel",
+				code: "# hold-protocol\nprint('synthetic cleanup only')",
+			});
+			await vi.waitFor(async () =>
+				expect(await readFile(join(root, "synthetic-run-started"), "utf8")).toBe("running"),
+			);
+			let abortSettled = false;
+			const aborting = sessions[1]!.abort().then(() => {
+				abortSettled = true;
+			});
+			await new Promise((resolve) => setTimeout(resolve, 650));
+			expect(abortSettled).toBe(false);
+			await writeFile(join(root, "synthetic-cleanup-allowed"), "allow only synthetic owned cleanup");
+			await aborting;
+			await pendingCall;
+			const freshReconcile = await sdkCall(1, "discovery_reconcile_executions", {});
+			expect(freshReconcile.isError, JSON.stringify(freshReconcile)).toBe(false);
+			expect(
+				(freshReconcile.details as { intents: { status: string }[] }).intents.some(
+					(item) => item.status === "cancelled",
+				),
+			).toBe(true);
+			const receiptDirectory = join(desktop.profile, "plugin-execution-receipts");
+			for (const name of await readdir(receiptDirectory)) await rm(join(receiptDirectory, name));
+			await bridge.withTransition(() =>
+				manager.updateConfig({
+					enabled: false,
+					plugins: { [pluginName]: { enabled: false, trusted: true } },
+				}),
+			);
+			await bridge.withTransition(() =>
+				manager.updateConfig({ enabled: true, plugins: { [pluginName]: { enabled: true, trusted: true } } }),
+			);
+			const nextBootstrap = bridge.beginNative(desktop.window, (path) =>
+				path === source.nativeEntrypoint ? pluginName : undefined,
+			);
+			bootstraps.push(nextBootstrap);
+			holders[1]!.bootstrap = nextBootstrap;
+			nextBootstrap.bindSession(sessions[1]!.sessionId);
+			await sessions[1]!.reload();
+			const orphan = await sdkCall(1, "discovery_execution_receipt", { requestId: acceptedIntent.requestId });
+			expect(orphan.isError).toBe(true);
+			expect(JSON.stringify(orphan)).toContain("needs recovery");
+			const oldKernel = await sdkCall(1, "discovery_execute_kernel", {
+				sessionId: "synthetic-accepted",
+				code: "print('must not replay')",
+			});
+			expect(oldKernel.isError).toBe(true);
+			const engineCalls = (await readFile(join(root, "synthetic-engine-calls.jsonl"), "utf8"))
+				.trim()
+				.split("\n")
+				.map((line) => JSON.parse(line) as string[]);
+			expect(engineCalls.filter((args) => args[0] === "run")).toHaveLength(2);
+			await nextBootstrap.dispose();
 			await bootstraps[1]!.dispose();
 			console.log(
 				JSON.stringify({
@@ -267,15 +442,25 @@ it.skipIf(!tarball)(
 					missingCancelNotClosed: true,
 					nativeCreatorResourceOnlyClose: true,
 					nextLegalCallerClosureReconcile: true,
+					syntheticAcceptedAcrossActivationMissingReceiptRejected: true,
+					actualSdkLocalTimeoutLateApprovalZeroAccepted: true,
+					actualSdkCloseLateApprovalZeroAccepted: true,
+					actualSdkAcceptedCancelWaitsSyntheticOwnedCleanup: true,
 					realContainerSuccess: "NOT_RUN_NO_CACHED_IMAGE",
 					formalGui: "NOT_RUN",
 				}),
 			);
+		} catch (error) {
+			console.dir(error, { depth: 8 });
+			throw error;
 		} finally {
 			await Promise.allSettled(bootstraps.map((bootstrap) => bootstrap.dispose()));
-			await bridge?.close();
+			const [closed] = await Promise.allSettled([bridge?.close()]);
+			if (closed.status === "rejected") console.dir(closed.reason, { depth: 8 });
 			await Promise.allSettled(sessions.map((session) => session.dispose()));
 			await rm(root, { recursive: true, force: true });
+			desktop.approval = undefined;
+			vi.unstubAllEnvs();
 			vi.restoreAllMocks();
 			setReplyLanguage("zh");
 		}

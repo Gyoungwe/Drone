@@ -107,7 +107,10 @@ describe("plugin capability authority", () => {
 			operation: "capability:save",
 			approvalDetail: "Host-selected configuration file",
 		});
-		expect(approvalDetail).toHaveBeenCalledWith(forged);
+		expect(approvalDetail).toHaveBeenCalledWith(
+			forged,
+			expect.objectContaining({ pluginId: "plugin", scope: expect.any(Object) }),
+		);
 		await registry.deactivate("plugin");
 	});
 
