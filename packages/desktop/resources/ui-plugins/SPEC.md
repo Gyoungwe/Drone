@@ -304,7 +304,7 @@ export function activate() {
 
 ### 通用模型能力（API 1.3 候选）
 
-安装包必须在真实 `plugin.manifest.json` 的 `permissions.network` 声明 `configured-services`，宿主才提供 `model.selection` / `model.generate`；UI 清单、域状态或 renderer 入参不能赋予此权限。声明变化会使已有 runtime source 绑定失效。该声明只允许申请模型出口，未授予任意网络请求。
+安装包必须在真实 `plugin.manifest.json` 的 `permissions.network` 声明 `configured-services`，宿主才提供 `model.selection` / `model.generate` / `model.toolStep`；UI 清单、域状态或 renderer 入参不能赋予此权限。声明变化会使已有 runtime source 绑定失效。该声明只允许申请模型出口，未授予任意网络请求。
 
 `model.selection({profile?})` 只解析所选真实会话的当前模型，或已存在且明确配置的模型偏好；不回退到任意 provider。`model.generate({selection,systemPrompt,prompt,resultSchema,maxTokens})` 只执行一次隔离 `structured_result` 请求，无父对话、任意工具执行或正文/思考回传。每次调用仍由宿主显示模型 ID、thinking、输出预算、数据将传入模型和可能费用并请求批准；缺失用量或有效定价时返回 null，不声称免费。caller 身份、选择与取消在 SDK 请求前后核验；调用方不得把结构化模型结果当成人工批准或科学认证。
 
@@ -344,3 +344,9 @@ export function activate() {
 `provider.read` / `provider.write` 接收 `{alias,operation,input:JSON}`，在实际提供者 owner 中执行其已声明且真实存在的 runtime operation。read 不可调用 write，所有写入仍逐次走双方来源与实际操作授权。短 lease 沿原 host caller/同 SDK entry/原窗口与 signal；已有 native/UI binding 时复用同 application owner，无其他 binding 时该纯服务 owner 仅活本次调用，状态应显式持久化。结束必须 await drain/revoke，清理失败使回执失败并保留 teardown 屏障。嵌套调用的 host-only source/operation 链拒绝实际循环，不把函数、caller 身份或授权放进 JSON。
 
 普通服务返回值不产生文件、模型或任务写入权限，特权 acceptance/consent 角色仍需后继真实 opaque 证明与消费点验收。本片不新增 UI RPC、IPC 或 renderer surface；现有 runtime capability 管道承载这些纯 JSON 调用。
+
+### 私有 model.toolStep
+
+`model.toolStep({selection,systemPrompt,messages,tools,maxTokens})` 每次仅做一次真实 SDK completeSimple。宿主不执行 tools；纯 JSON tool schema 只告诉模型可请求的名字，域白名单、工具实现、结果检查与轮次预算必须仍由同包 owner 执行。systemPrompt≤32000 bytes，messages≤32条/80000 bytes，总输入≤160000 bytes，tools≤8且名唯一，maxTokens≤12000（保留既有最高角色预算）。reply 保留真实 SDK 的私有协议/签名/metadata，只返回调用 owner；不能自动出现在公开回答、UI 或日志。usage 数值为 number/null并带reportedFields，无有效定价的默认零成本保持unknown。
+
+`model.selection` 支持与严格profile互斥的`optionalProfile`：仅真实未配置时使用actual parent，并在返回选择保留optionalProfile以便逐步复查；配置存在但失效仍拒绝。`session.inspect(null)`返回`{agentActive,projectTrusted,readOnly}`当前事实，这些字段不授予能力或跳过批准。

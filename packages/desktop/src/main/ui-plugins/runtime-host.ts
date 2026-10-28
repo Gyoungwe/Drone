@@ -391,6 +391,7 @@ export function createDesktopRuntime(
 						? {
 								"model.selection": capabilities["model.selection"],
 								"model.generate": capabilities["model.generate"],
+								"model.toolStep": capabilities["model.toolStep"],
 							}
 						: {}),
 				},

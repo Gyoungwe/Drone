@@ -43,13 +43,22 @@ export function sessionCapabilityHandlers(
 			inputSchema: { type: "null" },
 			resultSchema: {
 				type: "object",
-				properties: { agentActive: { type: "boolean" } },
-				required: ["agentActive"],
+				properties: {
+					agentActive: { type: "boolean" },
+					projectTrusted: { type: "boolean" },
+					readOnly: { type: "boolean" },
+				},
+				required: ["agentActive", "projectTrusted", "readOnly"],
 				additionalProperties: false,
 			},
-			execute: async (_input, context) => ({
-				agentActive: requirePluginSession(registry, context).session.isStreaming,
-			}),
+			execute: async (_input, context) => {
+				const entry = requirePluginSession(registry, context);
+				return {
+					agentActive: entry.session.isStreaming,
+					projectTrusted: entry.session.settingsManager.isProjectTrusted(),
+					readOnly: entry.readOnly === true,
+				};
+			},
 		},
 		"session.select": {
 			effect: "write",
