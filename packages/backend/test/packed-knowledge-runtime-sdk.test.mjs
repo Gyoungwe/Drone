@@ -23,6 +23,7 @@ import { modelCapabilityHandlers } from "../src/plugins/model-capabilities";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 import { PluginResourceManager } from "../src/plugins/resource-capabilities";
 import { getPluginSessionCaller } from "../src/plugins/session-caller";
+import { sessionCapabilityHandlers } from "../src/plugins/session-capabilities";
 import { canonicalProjectId } from "../src/project-id";
 import { SessionRegistry } from "../src/session/registry";
 import { SessionEngine } from "../src/session-engine/engine";
@@ -268,6 +269,7 @@ it.skipIf(!tarball)(
 							Object.entries({
 								...fileCapabilityHandlers(files),
 								...resources.handlers(),
+								...sessionCapabilityHandlers(sessions),
 								...(value.requestsModel
 									? modelCapabilityHandlers({
 											registry: sessions,
