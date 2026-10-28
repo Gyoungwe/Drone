@@ -62,3 +62,13 @@ export type HostExtensionSelectionReceipt = Parameters<
 		>[0]["hostExtensionSelection"]
 	>
 >[0];
+
+/** Pinned host-only export association; never accepted through plugin JSON. */
+export type HostExportInput = Parameters<
+	NonNullable<import("@earendil-works/pi-coding-agent").CreateAgentSessionOptions["hostExportBoundary"]>
+>[0];
+export type HostExportProjection = Awaited<
+	ReturnType<
+		NonNullable<import("@earendil-works/pi-coding-agent").CreateAgentSessionOptions["hostExportBoundary"]>
+	>
+>;
