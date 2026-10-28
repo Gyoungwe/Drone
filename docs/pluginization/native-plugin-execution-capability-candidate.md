@@ -1,6 +1,6 @@
-# P5 C 执行端口候选：尚未完成真实插件执行闭环
+# P5 C 执行端口候选：实际 SDK 协议已验证，完整迁移未完成
 
-2026-10-28。本切片只交付可审查的通用宿主端口与共享 Node 基础设施；不关闭 P5 或整体目标。
+2026-10-28。本切片交付通用宿主端口、共享 Node 基础设施和实际 SDK/受限 worker 协议回归；不关闭 P5 或整体目标。
 
 ## 权限与真实调用者
 
@@ -12,7 +12,7 @@
 
 ## 受理与关闭
 
-同一公开 `@gyoungwe/plugin-api/node/execution` runner 被宿主消费；标准 Pi adapter 的接入是本轮下一步，不能仅凭这个 helper 标记原生执行通过。runner 对 canonical runDir 持有固定 `execution-directories` namespace 的同用户 lease。每次实际执行都禁止网络、只读根、禁用权限提升、限制资源、`--pull=never`，只挂载本次 runs 子目录。正常、错误或取消均须向 daemon 回读 owned container 已不存在后释放 execution-directory lease；清理或实际 lease unlink 失败保留 lease 并报告 cleanup failure。stdout/stderr 共用 UTF-8 字节上限，另保留实际 producedBytes。
+同一公开 `@gyoungwe/plugin-api/node/execution` runner 被宿主消费；标准 Pi adapter 源码已消费同一公开实现；仅 helper 或合成引擎不能标记真实容器执行通过。runner 对 canonical runDir 持有固定 `execution-directories` namespace 的同用户 lease。每次实际执行都禁止网络、只读根、禁用权限提升、限制资源、`--pull=never`，只挂载本次 runs 子目录。正常、错误或取消均须向 daemon 回读 owned container 已不存在后释放 execution-directory lease；清理或实际 lease unlink 失败保留 lease 并报告 cleanup failure。stdout/stderr 共用 UTF-8 字节上限，另保留实际 producedBytes。
 
 真正批准、校验后先生成宿主 UUID 并通过真实 backend JsonStore 原子写入 accepted receipt，才调用 runner。受理后只保留本次 runner 清理和这份终态回执的写入权限，完全不持有 Vault/model/plugin-state capability。取消后终态写入不借用新 caller。清理或回执 finalize 失败会让 provider drain 失败，从而阻止 activation 的最终 lease 释放；同一失败 execution owner 拒绝新 run，仍允许读取 own receipt。
 
@@ -22,11 +22,17 @@ receipt 只保存代码 hash、目录、镜像、身份与终态元数据，不�
 
 `execution.cancel(write,{requestId})` 仅取消 actual 同 source/application/creator SDK session/workspace 的已 accepted 事务，等待本次 terminal/owned cleanup 后返回 own receipt。missing 保持 missing；重复取消只读既有 terminal，不重新执行；无 live runner 的 accepted 记录保持 needs-recovery，不冒报 closed。
 
+`capabilities.call(name,input,signal?)` 的第三参数只收窄当前真实调用的取消范围。worker 的取消消息绑定原始 parent invocation、单次 ID 和私有随机标识；未知、迟到或错误归属取消不会建立调用。promise 等待宿主真实 settlement/owned cleanup，不做本地 race 提前关闭；失败回执保留宿主错误，尤其不能被本地 AbortError 覆盖清理失败。guest 原有 500ms 关闭计时在实际 host capability/resource cleanup 完成后开始；意外 child exit 也先 abort 并等待实际宿主清理，再拒绝 parent 和结束进程关闭屏障。
+
+同一个 Desktop application bridge 的 accepted facts 与签名 key 跨 activation 保留；按实际 plugin/source/application/creator SDK session/workspace 隔离，没有 process 全局表。已 accepted 文件删除后，停用重启仍返回 needs-recovery，阻止同 requestId 重放。新的合法 caller 才能用 state.write + CAS 保存领域观察，不允许旧取消调用续借写权限。
+
 ## 当前证据与缺口
 
 - 41 项 targeted tests 通过：执行/回执/运行时单元与可执行 synthetic engine fixture，涵盖 accepted-before-run、两种真实原子写入适配、取消终态、MAC 篡改/换 key、source/session/workspace 隔离、旧 request 防重放、UTF-8 输出总上限、目录 writer 竞争、实际 unlink EACCES 后保留 lease。
 - Desktop source/host/bridge 91 项通过，覆盖精确声明派生、清单撤销与现有通道；API 17 项、backend/Desktop typecheck、架构门禁另有本地日志。它们不是正式安装包验收。
 - 当前 Docker `desktop-linux` 和 root 复核的 `default` 中，旧缓存 `a0f57064…` 与 `python:3.12-slim` 均不存在。真实缺镜像端口返回 unavailable/not-cached，未生成 accepted receipt 或 runs 目录。未 pull/retag，未沿用旧执行成功证据。
-- **未完成**：标准 Pi adapter 接入、受限 worker 的真实 native/UI 同 owner 执行与取消、后续合法 caller 的领域 journal CAS reconcile、creator SDK session kernel 生命周期、Inquiry 独立 provider 迁移、完整 UI、旧 seam 删除、合并后完整双仓库门禁和正式安装包 GUI。真实容器成功还需取得正式授权的可用镜像。
+- 当前实际安装 tar → 生产 Desktop factory/scanner → restricted worker → 两个真实 SDK 1.1.0 session 的回归通过：canonical caller/creator 隔离、缺配置镜像零 accepted/runs、native 只关闭自己的 logical kernel、新合法 caller 保存关闭记录、单次 timeout/close 在审批中取消后迟到允许仍零 accepted/run。明确的 synthetic engine 另证明 accepted→SDK cancel→等待 owned cleanup→新合法 caller reconcile，以及同一 bridge 停用重启后缺回执拒绝重放。**合成引擎执行不是 Docker 成功，直接 UI runtime 调用不是整页 GUI 验收。**
+- 取消/运行时/事务/runner targeted 50 项以及新增 child-exit 用例通过；真实 SDK 协议日志 `/tmp/discovery-c-actual-cancel-real-sdk-3.log`；受限 worker 清理日志 `/tmp/discovery-c-child-exit-tests.log`。插件自身 19 项与 clean-install smoke 通过；smoke 仍为 fixture，不是最终 PASS。
+- **未完成**：标准 Pi adapter 完整业务实测、真实已缓存镜像下的 native/UI 同 owner 执行成功、完整插件页面交互、Inquiry 独立 provider 迁移、旧 seam 删除、合并后完整双仓库门禁和正式安装包 GUI。真实容器成功还需取得正式授权的可用镜像。
 
 主要日志：`/tmp/discovery-c-receipt-nofollow-tests.log`、`/tmp/discovery-c-cap-final-desktop-tests.log`、`/tmp/discovery-c-host-endpoint-*-final.log`。新增边界 catch/guard 分别用于：OS 路径与 NUL 参数；缺失可执行文件和并发目录 EEXIST；私有 JSON 的 ENOENT/解析/大小/no-follow；签名与 ownership；CAS 与 readback；临时文件/lease 清理；受理/终态持久化失败导致 owner 保持 failed。没有静默默认值或空 catch。

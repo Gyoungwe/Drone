@@ -24,7 +24,8 @@ export interface PluginRuntimeCapabilities {
 	/** Only host-registered methods are available, under the current invocation authority.
 	 * `caller.scope(null)` returns the current host-resolved PluginRuntimeScope, including
 	 * application scope during bootstrap. It grants no file access or retained caller authority. */
-	call(name: string, input: unknown): Promise<unknown>;
+	/** A local signal only narrows this call; rejection waits for host cleanup to settle. */
+	call(name: string, input: unknown, signal?: AbortSignal): Promise<unknown>;
 }
 
 export interface PluginRuntimeResource {

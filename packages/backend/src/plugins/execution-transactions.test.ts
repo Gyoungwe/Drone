@@ -252,3 +252,33 @@ it("cancels only the creator's accepted transaction, waits for cleanup/finalizat
 	expect(await transactions.cancel(owner, "never-accepted")).toEqual({ kind: "missing" });
 	await transactions.drain();
 });
+
+for (const host of [true, false]) {
+	it(`keeps application accepted facts across provider recreation and blocks missing-receipt replay (${host ? "JsonStore" : "native Node"})`, async () => {
+		const acceptedFacts = new Map<string, ExecutionIdentity>();
+		const first = new ExecutionTransactions(await storage(host), acceptedFacts);
+		let runs = 0;
+		const engine = runner(async () => {
+			runs++;
+			return result;
+		});
+		await first.run(input, owner, engine, new AbortController().signal);
+		await first.drain();
+		await rm(join(directory, `${executionOwnerKey(owner, input.requestId)}.json`));
+		const next = new ExecutionTransactions(await storage(host), acceptedFacts);
+		await expect(next.receipt(owner, input.requestId)).rejects.toMatchObject({
+			code: "EXECUTION_RECEIPT_NEEDS_RECOVERY",
+		});
+		await expect(next.cancel(owner, input.requestId)).rejects.toMatchObject({
+			code: "EXECUTION_RECEIPT_NEEDS_RECOVERY",
+		});
+		await expect(next.run(input, owner, engine, new AbortController().signal)).rejects.toMatchObject({
+			code: "EXECUTION_RECEIPT_NEEDS_RECOVERY",
+		});
+		expect(await next.receipt({ ...owner, sessionId: "unrelated-session" }, input.requestId)).toEqual({
+			kind: "missing",
+		});
+		expect(runs).toBe(1);
+		await next.drain();
+	});
+}
