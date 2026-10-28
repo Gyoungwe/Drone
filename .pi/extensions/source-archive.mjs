@@ -2117,18 +2117,24 @@ function classifyTopic(existing, incoming) {
     return "conflict-candidate";
   return "additional";
 }
-function createTopicMemoryWithHost(runtime, config, { binding, project, directory = config.knowledgeDirectory() } = {}) {
+function createTopicMemoryWithHost(runtime, config, { binding, project, directory = config?.knowledgeDirectory() } = {}, storageFactory) {
   if (!binding?.vaultId) throw new Error("Topic memory requires a bound Vault");
   const scope = { vaultId: binding.vaultId, project: projectKey(project) };
-  const path = memoryPath(directory, scope.vaultId, scope.project);
-  const check = async () => ensureWithin(directory, path);
+  const storage = storageFactory?.(binding, scope.project);
+  const path = storage ? storage.key : memoryPath(directory, scope.vaultId, scope.project);
   const read = async () => {
-    await check();
+    if (storage) {
+      const value = await storage.read();
+      if (value === null) return blank(scope.vaultId, scope.project);
+      if (Buffer.byteLength(JSON.stringify(value)) > TOPIC_MEMORY_LIMITS.maxFileBytes)
+        throw new Error("Topic memory file exceeds size limit");
+      return validateDocument(value, scope.vaultId, scope.project);
+    }
+    await ensureWithin(directory, path);
     return readDocument(path, scope.vaultId, scope.project);
   };
   const mutate = async (expectedRevision, updater) => runtime.runRuntimeExclusive("topic-memory", path, async () => {
-    await check();
-    const current = await readDocument(path, scope.vaultId, scope.project);
+    const current = await read();
     if (expectedRevision !== void 0 && expectedRevision !== null && current.revision !== expectedRevision)
       throw new Error("Topic memory revision changed");
     const next = updater(structuredClone(current));
@@ -2153,7 +2159,8 @@ function createTopicMemoryWithHost(runtime, config, { binding, project, director
       const evict = new Set(archived.slice(-remove).map((topic) => topic.id));
       value.topics = value.topics.filter((topic) => !evict.has(topic.id));
     }
-    await atomicWrite(path, value);
+    if (storage) await storage.write(value, current.revision);
+    else await atomicWrite(path, value);
     return value;
   });
   const compact = (topic) => ({
@@ -2250,7 +2257,7 @@ function createTopicMemoryWithHost(runtime, config, { binding, project, director
             stale.push({ path: source.path, reason: "out-of-scope" });
             continue;
           }
-          const current = await readNoteFile(binding.vault, source.path);
+          const current = storage ? await storage.readSource(source.path) : await readNoteFile(binding.vault, source.path);
           if (current.hash !== source.hash) stale.push({ path: source.path, reason: "changed" });
         } catch {
           stale.push({ path: source.path, reason: "missing-or-invalid" });
@@ -2464,8 +2471,8 @@ function topicRunHash(summary, sources = []) {
     })
   );
 }
-function createTopicMemoryApi(runtime, config) {
-  const createTopicMemory2 = (options = {}) => createTopicMemoryWithHost(runtime, config, options);
+function createTopicMemoryApi(runtime, config, storageFactory) {
+  const createTopicMemory2 = (options = {}) => createTopicMemoryWithHost(runtime, config, options, storageFactory);
   async function listTopics2(options = {}) {
     return (await createTopicMemory2(options).list(options.query || "")).topics;
   }
@@ -3108,9 +3115,9 @@ function createKnowledgeWorkerTransportFactory(runtime, config, invalidateKnowle
     create: ({ binding, workerVersion }) => new KnowledgeWorkerTransport(binding, directory(), { workerVersion })
   };
 }
-function createKnowledgeUi(runtime, config) {
+function createKnowledgeUi(runtime, config, metrics) {
   const { runtimeSlot: runtimeSlot22, emitProcessEvent: emitProcessEvent22, flowCardBuilder: flowCardBuilder22, toolMeta: toolMeta22 } = runtime;
-  const { knowledgeDirectory: knowledgeDirectory2 } = config;
+  const knowledgeDirectory2 = () => config?.knowledgeDirectory() ?? null;
   const state = runtimeSlot22("knowledge", "ui", () => ({
     listeners: /* @__PURE__ */ new Set(),
     flows: /* @__PURE__ */ new Map(),
@@ -3252,22 +3259,35 @@ function createKnowledgeUi(runtime, config) {
     const reads = [...old.reads.filter((x) => x.path !== row.path), row].slice(-MAX_RECORDS);
     updateKnowledgeFlow2(ctx, { reads, phase: row.kind === "wiki" ? "reading-wiki" : "reading-evidence" });
   }
-  function publicationKnowledgeFlow2(ctx, proof) {
+  async function updatePublicationFlow(ctx, proof) {
     const id2 = sessionId(ctx);
     if (!state.flows.has(id2)) return;
     const current = state.flows.get(id2);
     const completed = ["released", "no-hits"].includes(proof.status);
     if (completed && !current.localAnswerRecorded) {
-      loadAnswerStats();
+      let version = null;
+      if (metrics) {
+        const saved = await metrics.read();
+        version = saved?.version ?? null;
+        if (saved === null) state.localAnswerStats = { answered: 0, total: 0, rate: null, updatedAt: null };
+        else {
+          const value = saved.value;
+          if (!value || typeof value !== "object" || !Number.isSafeInteger(value.answered) || !Number.isSafeInteger(value.total) || value.answered < 0 || value.total < value.answered)
+            throw new Error("Invalid knowledge answer metrics");
+          state.localAnswerStats = { ...value, rate: value.total ? value.answered / value.total : null };
+        }
+      } else loadAnswerStats();
       const answered = Boolean(current.search && current.search.hits > 0);
-      state.localAnswerStats = {
+      const nextStats = {
         answered: state.localAnswerStats.answered + (answered ? 1 : 0),
         total: state.localAnswerStats.total + 1,
         rate: (state.localAnswerStats.answered + (answered ? 1 : 0)) / (state.localAnswerStats.total + 1),
         updatedAt: Date.now()
       };
+      if (metrics) await metrics.write(nextStats, version);
+      state.localAnswerStats = nextStats;
+      if (!metrics) saveAnswerStats();
       current.localAnswerRecorded = true;
-      saveAnswerStats();
     }
     const phase = proof.status === "setup-complete" ? "setup-complete" : proof.status === "released" ? "released" : proof.status === "no-hits" ? "no-hits" : proof.status === "blocked" ? "blocked" : proof.status === "evidence-only" ? "evidence-only" : proof.status === "unconfigured" ? "unconfigured" : "checking";
     updateKnowledgeFlow2(ctx, {
@@ -3447,6 +3467,9 @@ function createKnowledgeUi(runtime, config) {
     if (at < 0) specialists.push(safe);
     else specialists[at] = safe;
     updateKnowledgeFlow2(ctx, { specialists: specialists.slice(-8) });
+  }
+  function publicationKnowledgeFlow2(ctx, proof) {
+    return metrics ? runtime.runRuntimeExclusive("knowledge-ui", "answer-metrics", () => updatePublicationFlow(ctx, proof)) : updatePublicationFlow(ctx, proof);
   }
   return { dispose: () => {
     state.listeners.clear();
@@ -5050,7 +5073,7 @@ Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
     renameWithRetry
   };
 }
-function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEvent) {
+function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEvent, storage) {
   const { runtimeSlot: runtimeSlot22 } = runtime;
   const { knowledgeDirectory: knowledgeDirectory2, readKnowledgeBinding: readKnowledgeBinding2, withKnowledgeBinding: withKnowledgeBinding2 } = config;
   const { invalidateKnowledgeUi: invalidateKnowledgeUi2 } = ui;
@@ -5106,13 +5129,18 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
     return state.hosts.get(id2);
   }
   async function specialistSettings3() {
-    const dir = knowledgeDirectory2();
-    if (!dir) return { mode: "off", revision: 0, ...SPECIALIST_LIMITS2 };
     let data = { mode: "automatic", revision: 0 };
-    try {
-      data = JSON.parse(await readFile8(join12(dir, "specialists.json"), "utf8"));
-    } catch (e) {
-      if (e.code !== "ENOENT") throw new Error("Knowledge specialist settings cannot be read");
+    if (storage) {
+      const saved = await storage.read();
+      if (saved !== null) data = saved;
+    } else {
+      const dir = knowledgeDirectory2();
+      if (!dir) return { mode: "off", revision: 0, ...SPECIALIST_LIMITS2 };
+      try {
+        data = JSON.parse(await readFile8(join12(dir, "specialists.json"), "utf8"));
+      } catch (e) {
+        if (e.code !== "ENOENT") throw new Error("Knowledge specialist settings cannot be read");
+      }
     }
     if (!["automatic", "manual", "off"].includes(data.mode) || !Number.isSafeInteger(data.revision) || data.revision < 0)
       throw new Error("Invalid knowledge specialist settings");
@@ -5203,16 +5231,19 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
           data[key] = Math.min(data[key] ?? SPECIALIST_LIMITS2[key], SPECIALIST_LIMITS2[key]);
         data.mode = mode;
         data.revision = revision + 1;
-        const dir = knowledgeDirectory2(), temp = join12(dir, `specialists.${randomUUID12()}.tmp`);
-        await mkdir8(dir, { recursive: true, mode: 448 });
-        try {
-          await writeFile8(temp, `${JSON.stringify(data)}
+        if (storage) await storage.write(data, revision);
+        else {
+          const dir = knowledgeDirectory2(), temp = join12(dir, `specialists.${randomUUID12()}.tmp`);
+          await mkdir8(dir, { recursive: true, mode: 448 });
+          try {
+            await writeFile8(temp, `${JSON.stringify(data)}
 `, { flag: "wx", mode: 384 });
-          await rename8(temp, join12(dir, "specialists.json"));
-        } finally {
-          await unlink6(temp).catch((e) => {
-            if (e.code !== "ENOENT") throw e;
-          });
+            await rename8(temp, join12(dir, "specialists.json"));
+          } finally {
+            await unlink6(temp).catch((e) => {
+              if (e.code !== "ENOENT") throw e;
+            });
+          }
         }
         invalidateKnowledgeUi2();
         return { ...SPECIALIST_LIMITS2, ...data };
@@ -5287,8 +5318,8 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
   }
   return { dispose: () => state.dispose(), SPECIALIST_LIMITS: SPECIALIST_LIMITS2, contextSessionId: contextSessionId2, specialistQueueSnapshot: specialistQueueSnapshot2, registerKnowledgeSpecialistHost: registerKnowledgeSpecialistHost2, knowledgeSpecialistHost: knowledgeSpecialistHost2, specialistSettings: specialistSettings3, setSpecialistSettings: setSpecialistSettings2, withSpecialistSlot: withSpecialistSlot2, receiveCompatibilityEvent };
 }
-function createKnowledgeSpecialistHost(runtime, config, ui) {
-  return createKnowledgeSpecialistHostApi(runtime, config, ui, null);
+function createKnowledgeSpecialistHost(runtime, config, ui, storage) {
+  return createKnowledgeSpecialistHostApi(runtime, config, ui, null, storage);
 }
 function validateReview(data, paths) {
   if (!data || typeof data.summary !== "string" || !data.summary.trim() || data.summary.length > 1600 || !["approve", "needs-human", "reject"].includes(data.verdict) || !Array.isArray(data.cautions) || data.cautions.length > 4 || data.cautions.some((s) => typeof s !== "string" || s.length > 300) || !Array.isArray(data.source_paths) || data.source_paths.length !== paths.length || new Set(data.source_paths).size !== paths.length || paths.some((p) => !data.source_paths.includes(p)) || !data.checks || WIKI_MODEL_REVIEW_CHECKS.some((k) => typeof data.checks[k] !== "boolean"))
@@ -7596,8 +7627,7 @@ function createSemanticModel(input, options = {}) {
   });
   return { nodes, edges: linkRelations.map(({ source, target }) => ({ source, target })), relations, duplicates, communities, layout };
 }
-function createPublicationApi(ui, reviewPolicy, config, createState, signal = null) {
-  const { knowledgeDirectory: knowledgeDirectory2 } = config;
+function createPublicationApi(ui, reviewPolicy, ports, createState, signal = null) {
   const { publicationKnowledgeFlow: publicationKnowledgeFlow2, updateKnowledgeFlow: updateKnowledgeFlow2 } = ui;
   const { readReviewMode: readReviewMode2 } = reviewPolicy;
   const state = createState(
@@ -7702,7 +7732,7 @@ function createPublicationApi(ui, reviewPolicy, config, createState, signal = nu
   }
   function projectKnowledgeEvent2(event) {
     signal?.throwIfAborted();
-    if (!knowledgeDirectory2()) return event;
+    if (!ports.available()) return event;
     if (event.type === "message_update") return null;
     if (event.type === "message_start" && event.message?.role === "assistant")
       return { ...event, message: base2(event.message, []) };
@@ -7721,13 +7751,10 @@ function createPublicationApi(ui, reviewPolicy, config, createState, signal = nu
   }
   function projectKnowledgeSnapshot2(messages, persisted = []) {
     signal?.throwIfAborted();
-    if (!knowledgeDirectory2()) return messages;
-    const known = new Set(
-      persisted.filter((m) => m.role === "assistant").map((m) => `${m.timestamp}:${hash52(m.content)}`)
-    );
+    if (!ports.available()) return messages;
     return messages.map((m) => {
       if (m.role !== "assistant" || isSealed(m)) return m;
-      const saved = known.has(`${m.timestamp}:${hash52(m.content)}`);
+      const saved = ports.persisted(m, persisted);
       if (saved && (!m[FIELD] || isSealed(m, true))) return m;
       return projectUnsealed(m);
     });
@@ -7839,9 +7866,9 @@ ${String(footer).slice(0, 2e3)}` }] : [];
       const cwd = ctx?.cwd;
       const signal2 = ctx?.signal;
       const flowCtx = { sessionId };
-      const report = (message2) => {
+      const report = async (message2) => {
         if (message2[FIELD]?.status !== "tool-only" && message2[FIELD]?.reason !== "model-error")
-          publicationKnowledgeFlow2(flowCtx, message2[FIELD]);
+          await publicationKnowledgeFlow2(flowCtx, message2[FIELD]);
         return { message: message2 };
       };
       const blocks = Array.isArray(message.content) ? message.content : [];
@@ -8065,7 +8092,7 @@ ${String(footer).slice(0, 2e3)}` }] : published;
         return report(failure2(message, error));
       }
     };
-    pi.on("message_end", (event, ctx) => handleMessageEnd(event, ctx));
+    ports.registerFinalizer(pi, handleMessageEnd);
     return {
       attachRuntime,
       attachReviewer,
@@ -8186,8 +8213,53 @@ ${String(footer).slice(0, 2e3)}` }] : published;
   }
   return { projectKnowledgeEvent: projectKnowledgeEvent2, projectKnowledgeSnapshot: projectKnowledgeSnapshot2, registerAnswerPublication: registerAnswerPublication2 };
 }
+function localPublicationPorts(config) {
+  return {
+    available: () => Boolean(config.knowledgeDirectory()),
+    registerFinalizer: (pi, handler) => pi.on("message_end", handler),
+    persisted: (message, saved) => saved.includes(message)
+  };
+}
+function createManagedKnowledgePublication(ui, reviewPolicy, signal) {
+  let finalizer;
+  const publication = createPublicationApi(ui, reviewPolicy, {
+    available: () => true,
+    registerFinalizer(_pi, handler) {
+      if (finalizer) throw new Error("Knowledge publication is already registered");
+      finalizer = handler;
+    },
+    // Only the host's private SDK-origin courier can preserve this identity across IPC.
+    // History display never enrolls a recovered proof in the live WeakSet.
+    persisted: (message, saved) => saved.includes(message)
+  }, (create) => create(), signal);
+  return {
+    ...publication,
+    projection: {
+      async finalize(event, context) {
+        if (!finalizer) throw new Error("Knowledge publication has not been registered");
+        if (context.scope.kind !== "session") throw new Error("Knowledge publication requires its live session");
+        context.signal.throwIfAborted();
+        const result2 = await finalizer(event, {
+          cwd: context.scope.workspaceDirectory,
+          sessionManager: { getSessionId: () => context.scope.sessionId },
+          signal: context.signal
+        });
+        context.signal.throwIfAborted();
+        return result2?.message ? { ...event, message: result2.message } : event;
+      },
+      event: (event, signal2) => {
+        signal2?.throwIfAborted();
+        return publication.projectKnowledgeEvent(event);
+      },
+      snapshot: (messages, persisted, signal2) => {
+        signal2?.throwIfAborted();
+        return publication.projectKnowledgeSnapshot(messages, persisted);
+      }
+    }
+  };
+}
 function createKnowledgePublication(ui, reviewPolicy, config, signal) {
-  return createPublicationApi(ui, reviewPolicy, config, (create) => create(), signal);
+  return createPublicationApi(ui, reviewPolicy, localPublicationPorts(config), (create) => create(), signal);
 }
 function canonicalize(value) {
   if (Array.isArray(value))
@@ -10319,7 +10391,7 @@ function createKnowledgeReadTool({ ensureTurn, toolBudget, observer }) {
           maxChars: p.max_chars
         });
         observer?.noteRead?.(ctx, page);
-        observer?.recordRead?.(_id, ctx, c, page, p);
+        await observer?.recordRead?.(_id, ctx, c, page, p);
         let links;
         if (page.hash && !page.missing && (p.start_line ?? 1) === 1) {
           const nl = await c.service.request("noteLinks", {
@@ -10416,7 +10488,9 @@ function createKnowledgeAnswerCheckTool({ ensureTurn, preflight }) {
 }
 function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHandshake) {
   const { publishExplainer: publishExplainer22, deliveryContract: deliveryContract22 } = dependencies.host;
-  const { knowledgeDirectory: knowledgeDirectory2, readKnowledgeBinding: readKnowledgeBinding2, withKnowledgeBinding: withKnowledgeBinding2 } = dependencies.config;
+  const { readKnowledgeBinding: readKnowledgeBinding2, withKnowledgeBinding: withKnowledgeBinding2 } = dependencies.config;
+  const knowledgeAvailable = dependencies.available ?? (() => Boolean(dependencies.config.knowledgeDirectory()));
+  const currentProject2 = dependencies.project ?? currentProject;
   const { getKnowledgeService: getKnowledgeService2 } = dependencies.services;
   const { registerAnswerPublication: registerAnswerPublication2 } = dependencies.publication;
   const { saveSpecialistExplainer: saveSpecialistExplainer2 } = dependencies.delivery;
@@ -10468,7 +10542,7 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
       resolve: async (review, { cwd }) => {
         try {
           const service = await getKnowledgeService2();
-          const p = await previewWikiProposal2(service, review.id, review.project || await currentProject(cwd));
+          const p = await previewWikiProposal2(service, review.id, review.project || await currentProject2(cwd));
           const stale = p.sources.some((s) => s.changed);
           return {
             status: p.status,
@@ -10516,14 +10590,18 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
     let removeAcceptance;
     if (!readOnly) {
       const declaration = { version: 1, kind: "wiki_review", definition: registerWikiReviewAcceptance2() };
-      const publishAcceptance = () => pi.events.emit("drone:acceptance-verifier/v1", declaration);
-      removeAcceptance = pi.events.on("drone:acceptance-verifier/request/v1", (payload) => {
-        if (payload?.version === 1) publishAcceptance();
-      });
+      if (dependencies.session) removeAcceptance = dependencies.session.registerAcceptance(declaration.definition);
+      else {
+        const publishAcceptance = () => pi.events.emit("drone:acceptance-verifier/v1", declaration);
+        removeAcceptance = pi.events.on("drone:acceptance-verifier/request/v1", (payload) => {
+          if (payload?.version === 1) publishAcceptance();
+        });
+        publishAcceptance();
+      }
       pi.on("session_shutdown", () => removeAcceptance?.());
-      publishAcceptance();
     }
     const getTaskRuntime = () => {
+      if (dependencies.session) return dependencies.session.taskRuntime();
       if (readOnly || !pi.events) return null;
       let taskRuntime = null;
       const unsubscribe = pi.events.on("drone:task-runtime/v1", (payload) => {
@@ -10537,24 +10615,31 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
       taskRuntime?.configure?.({ readKnowledgeBinding: readKnowledgeBinding2 });
       return taskRuntime;
     };
-    getTaskRuntime();
-    pi.on("session_start", getTaskRuntime);
+    if (!dependencies.session) getTaskRuntime();
+    pi.on("session_start", async (_event, context) => {
+      if (dependencies.session) await dependencies.session.initialize(context);
+      getTaskRuntime();
+    });
     pi.on("session_tree", getTaskRuntime);
     const recovery = /* @__PURE__ */ new Map();
     let recoveryScope = null;
-    const saveRecovery = () => {
-      if (recoveryScope)
-        pi.appendEntry?.("drone-knowledge-recovery-v1", {
-          scope: recoveryScope,
-          records: [...recovery.values()].slice(-8)
-        });
+    const saveRecovery = async (ctx) => {
+      if (!recoveryScope) return;
+      const data = { scope: recoveryScope, records: [...recovery.values()].slice(-8) };
+      if (dependencies.session) {
+        const receipt2 = await dependencies.session.appendRecord("drone-knowledge-recovery-v1", data, ctx);
+        if (receipt2.durability !== "durable") throw new Error("Knowledge recovery checkpoint is deferred; no durable recovery was recorded");
+      } else pi.appendEntry("drone-knowledge-recovery-v1", data);
     };
-    const attachRecovery = (ctx) => {
+    const attachRecovery = async (ctx) => {
       const scope = `${sessionIdentity(ctx)}:${resolve12(ctx.cwd)}`;
       if (scope === recoveryScope) return;
+      const result2 = dependencies.session ? await dependencies.session.readRecords(ctx) : null;
+      if (result2?.state === "needs-reopen") throw new Error("Session records need reopening before knowledge recovery");
+      const entries = result2 ? result2.records.map((record22) => ({ customType: record22.type, data: record22.data })) : ctx.sessionManager.getBranch();
       recoveryScope = scope;
       recovery.clear();
-      for (const e of ctx.sessionManager?.getBranch?.() || [])
+      for (const e of entries)
         if (e.customType === "drone-knowledge-recovery-v1" && e.data?.scope === scope && Array.isArray(e.data.records) && e.data.records.length <= 8) {
           recovery.clear();
           for (const r of e.data.records)
@@ -10562,20 +10647,20 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
               recovery.set(r.id, r);
         }
     };
-    pi.events?.on?.("drone:context-evicted", (e) => {
+    if (!dependencies.session) pi.events.on("drone:context-evicted", async (e) => {
       let changed = false;
       for (const r of recovery.values())
         if (r.sessionId === e.sessionId && e.toolCallIds?.includes(r.id)) {
           r.evicted = true;
           changed = true;
         }
-      if (changed) saveRecovery();
+      if (changed) await saveRecovery();
     });
-    pi.on("session_tree", (_e, ctx) => {
+    pi.on("session_tree", async (_e, ctx) => {
       recoveryScope = null;
-      attachRecovery(ctx);
+      await attachRecovery(ctx);
     });
-    if (!knowledgeDirectory2())
+    if (!knowledgeAvailable())
       return {
         setupCompleted: () => {
         },
@@ -10608,7 +10693,7 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
       if (!binding || !String(prompt || "").trim()) return null;
       try {
         const service = await getKnowledgeService2(binding);
-        const project = await currentProject(ctx.cwd, ctx);
+        const project = await currentProject2(ctx.cwd, ctx);
         return await Promise.race([
           service.probeTopic({ query: prompt, project }),
           new Promise((resolveProbe) => setTimeout(() => resolveProbe(null), 600))
@@ -10935,7 +11020,7 @@ Host delivery status: ${message}` };
       publication.begin(true, false);
       const binding = await readKnowledgeBinding2();
       if (!binding) throw new Error("Run /obsidian-setup to bind the application knowledge Vault");
-      const service = await getKnowledgeService2(binding), project = await currentProject(ctx.cwd, ctx);
+      const service = await getKnowledgeService2(binding), project = await currentProject2(ctx.cwd, ctx);
       updateKnowledgeFlow2(ctx, { phase: "preparing" });
       const prepared = await service.prepare({ cwd: ctx.cwd, project, query });
       assertSessionActive();
@@ -11067,8 +11152,8 @@ ${JSON.stringify(visible)}`
       observer: {
         updateFlow: updateKnowledgeFlow2,
         noteRead: noteKnowledgeRead2,
-        recordRead: (_id, ctx, c, page, p) => {
-          attachRecovery(ctx);
+        recordRead: async (_id, ctx, c, page, p) => {
+          await attachRecovery(ctx);
           if (page.hash && page.text) {
             recovery.set(_id, {
               id: _id,
@@ -11084,7 +11169,7 @@ ${JSON.stringify(visible)}`
               used: false
             });
             while (recovery.size > 8) recovery.delete(recovery.keys().next().value);
-            saveRecovery();
+            await saveRecovery(ctx);
           }
         }
       }
@@ -11101,7 +11186,7 @@ ${JSON.stringify(visible)}`
         additionalProperties: false
       },
       execute: async (_id, input, _s, _u, ctx) => {
-        attachRecovery(ctx);
+        await attachRecovery(ctx);
         const r = recovery.get(input.receipt_id), c = await ensureTurn(ctx);
         if (!r?.evicted || r.used || r.taskId !== (getTaskRuntime()?.snapshot()?.id || null) || r.vaultId !== c.binding.vaultId || r.bindingRevision !== c.binding.revision)
           throw new Error(
@@ -11119,7 +11204,7 @@ ${JSON.stringify(visible)}`
         });
         r.used = true;
         r.evicted = false;
-        saveRecovery();
+        await saveRecovery(ctx);
         noteKnowledgeRead2(ctx, page);
         return result(page);
       }
@@ -11196,7 +11281,7 @@ ${JSON.stringify(visible)}`
           bound: true,
           scope: "application",
           vault: binding.vault,
-          ...await service.request("jobs", { project: await currentProject(ctx.cwd, ctx) })
+          ...await service.request("jobs", { project: await currentProject2(ctx.cwd, ctx) })
         });
       }
     });
@@ -11489,9 +11574,9 @@ ${JSON.stringify(visible)}`
       pi.registerCommand("obsidian-review", {
         description: "Obsidian MCP \xB7 \u5BA1\u6838 Wiki \u4FEE\u6539\u5019\u9009\uFF08research-vault skill\uFF09",
         handler: async (args, ctx) => {
-          if (!ctx.hasUI) throw new Error("Wiki review requires an interactive UI");
-          if (requestWikiReviewUi2(ctx, args.trim())) return;
-          if (ctx.sessionManager?.getSessionId?.() && knowledgeDirectory2()) {
+          if (!dependencies.session && !ctx.hasUI) throw new Error("Wiki review requires an interactive UI");
+          if (!dependencies.session && requestWikiReviewUi2(ctx, args.trim())) return;
+          if (!dependencies.session && ctx.sessionManager?.getSessionId?.() && knowledgeAvailable()) {
             notifyKnowledgeUi2(
               "\u8BF7\u5728 Wiki \u5BA1\u6838\u5F39\u7A97\u4E2D\u786E\u8BA4\u6216\u62D2\u7EDD\u5019\u9009\u3002\u5BF9\u8BDD\u53EF\u4EE5\u7EE7\u7EED\u3002",
               "info",
@@ -11501,20 +11586,21 @@ ${JSON.stringify(visible)}`
           }
           const binding = await readKnowledgeBinding2();
           if (!binding) throw new Error("No application Vault is bound");
-          const service = await getKnowledgeService2(binding), project = await currentProject(ctx.cwd, ctx);
+          const service = await getKnowledgeService2(binding), project = await currentProject2(ctx.cwd, ctx);
           let id2 = args.trim();
           if (!id2) {
             const pending = await listWikiProposals2(service, project);
             if (!pending.items.length) {
-              pi.sendMessage({
+              if (dependencies.session) await dependencies.session.notify(JSON.stringify(pending), ctx);
+              else pi.sendMessage({
                 customType: "obsidian-review",
                 display: true,
                 content: JSON.stringify(pending)
               });
               return;
             }
-            const options = pending.items.map((item) => `${item.id} \xB7 ${item.title}`);
-            const selected = await ctx.ui.select("Obsidian \xB7 \u9009\u62E9\u5F85\u5BA1\u6838 Wiki", options);
+            const options2 = pending.items.map((item) => `${item.id} \xB7 ${item.title}`);
+            const selected = dependencies.session ? await dependencies.session.select("Obsidian \xB7 \u9009\u62E9\u5F85\u5BA1\u6838 Wiki", options2, ctx) : await ctx.ui.select("Obsidian \xB7 \u9009\u62E9\u5F85\u5BA1\u6838 Wiki", options2);
             if (!selected) return;
             id2 = selected.split(" \xB7 ")[0];
           }
@@ -11530,13 +11616,12 @@ ${JSON.stringify(visible)}`
             preview.after,
             "\u4EBA\u5DE5\u6B63\u6587\u4E0E\u6279\u6CE8\u4FDD\u7559\uFF1B\u6765\u6E90\u6216\u76EE\u6807\u53D8\u5316\u4F1A\u62D2\u7EDD\u5199\u5165\u3002"
           ].join("\n\n");
-          const choice = await ctx.ui.select(`Obsidian \xB7 \u5BA1\u6838\u5177\u4F53 Wiki \u4FEE\u6539
+          const options = ["\u786E\u8BA4\u5E94\u7528\u6B64\u5019\u9009", "\u62D2\u7EDD\u6B64\u5019\u9009", "\u53D6\u6D88"];
+          const choice = dependencies.session ? await dependencies.session.select(`Obsidian \xB7 \u5BA1\u6838\u5177\u4F53 Wiki \u4FEE\u6539
 
-${text33}`, [
-            "\u786E\u8BA4\u5E94\u7528\u6B64\u5019\u9009",
-            "\u62D2\u7EDD\u6B64\u5019\u9009",
-            "\u53D6\u6D88"
-          ]);
+${text33}`, options, ctx) : await ctx.ui.select(`Obsidian \xB7 \u5BA1\u6838\u5177\u4F53 Wiki \u4FEE\u6539
+
+${text33}`, options);
           if (!choice || choice === "\u53D6\u6D88") return;
           const output = await decideWikiProposal2(
             service,
@@ -11545,7 +11630,8 @@ ${text33}`, [
             preview.proposalHash,
             choice === "\u786E\u8BA4\u5E94\u7528\u6B64\u5019\u9009" ? "apply" : "reject"
           );
-          pi.sendMessage({
+          if (dependencies.session) await dependencies.session.notify(JSON.stringify(output, null, 2), ctx);
+          else pi.sendMessage({
             customType: "obsidian-review",
             display: true,
             content: JSON.stringify(output, null, 2)
@@ -11610,7 +11696,7 @@ ${text33}`, [
     }
     pi.on("session_shutdown", dispose);
     pi.on("context", async (event, ctx) => {
-      if (!knowledgeDirectory2() || !bootstrap) return;
+      if (!knowledgeAvailable() || !bootstrap) return;
       try {
         const binding = await readKnowledgeBinding2({ fresh: true });
         if (current && (binding?.vaultId !== current.binding.vaultId || binding?.revision !== current.binding.revision)) {
@@ -11677,6 +11763,7 @@ ${text33}`, [
     return {
       dispose,
       async beforeStart(event, ctx) {
+        if (dependencies.session) await dependencies.session.initialize(ctx);
         const nextSessionId = sessionIdentity(ctx);
         const newSession = sessionScopeId !== nextSessionId;
         sessionScopeId = nextSessionId;
@@ -11696,7 +11783,7 @@ ${text33}`, [
         explainerArchived = false;
         specialists.begin(event.prompt || "");
         feedback.begin();
-        if (!knowledgeDirectory2()) {
+        if (!knowledgeAvailable()) {
           publication.begin(false);
           return {};
         }
@@ -11755,7 +11842,7 @@ ${text33}`, [
         });
       },
       async withTurnBinding(ctx, operation) {
-        if (!knowledgeDirectory2()) return operation();
+        if (!knowledgeAvailable()) return operation();
         const c = requireTurn(ctx);
         return withKnowledgeBinding2(c.binding, operation);
       }
@@ -11937,18 +12024,18 @@ function createKnowledgeSessionServices(pool, signal) {
   }
   return { getKnowledgeService: getKnowledgeService2, dispose };
 }
-async function localService(owner, ctx, query = "") {
+async function localService(owner, ctx, query = "", projectFor = currentProject) {
   const { readKnowledgeBinding: readKnowledgeBinding2 } = owner.config;
   const { getKnowledgeService: getKnowledgeService2 } = owner.services;
   const binding = await readKnowledgeBinding2();
   if (!binding) return null;
   const cwd = String(ctx?.cwd || process.cwd());
-  const project = await currentProject(cwd, ctx);
+  const project = await projectFor(cwd, ctx);
   const service = await getKnowledgeService2(binding);
   return { binding, cwd, project, service, query };
 }
-function registerNativeStatusTools(pi, owner) {
-  const { knowledgeDirectory: knowledgeDirectory2, readKnowledgeBinding: readKnowledgeBinding2 } = owner.config;
+function registerNativeStatusTools(pi, owner, projectFor = currentProject, session2) {
+  const { readKnowledgeBinding: readKnowledgeBinding2 } = owner.config;
   pi.registerTool({
     name: "knowledge_status",
     label: "Knowledge status",
@@ -11956,9 +12043,9 @@ function registerNativeStatusTools(pi, owner) {
     description: "Report whether the application knowledge Vault is configured.",
     parameters: { type: "object", properties: {} },
     async execute(_id, _params, _signal, _update, ctx) {
-      const binding = knowledgeDirectory2() ? await readKnowledgeBinding2() : null;
+      const binding = await readKnowledgeBinding2();
       if (!binding) return result({ status: "unconfigured", next: "/drone-init", revision: 0 });
-      const local = await localService(owner, ctx);
+      const local = await localService(owner, ctx, "", projectFor);
       if (!local) return result({ status: "unconfigured", next: "/drone-init", revision: binding.revision });
       const index = await local.service.request("status");
       return result({ status: "configured", vault: binding.vault, project: local.project, revision: Number(index?.revision ?? binding.revision ?? 0), index });
@@ -11977,7 +12064,7 @@ function registerNativeStatusTools(pi, owner) {
     async execute(_id, params, _signal, _update, ctx) {
       const query = String(params?.query || "").trim().slice(0, 2e3);
       if (!query) throw new Error("query is required");
-      const local = await localService(owner, ctx, query);
+      const local = await localService(owner, ctx, query, projectFor);
       if (!local) return result({ query, hits: [], local: { status: "unconfigured", hitCount: 0 }, remoteFallback: { status: "blocked" } });
       const limit = Math.max(1, Math.min(12, Number(params?.limit) || 6));
       const found = await local.service.request("search", { query, project: local.project, limit });
@@ -11987,15 +12074,47 @@ function registerNativeStatusTools(pi, owner) {
   pi.registerCommand?.("drone-init", {
     description: "Initialize the Drone knowledge Vault",
     handler: async (_args, ctx) => {
+      if (session2) {
+        await session2.notify("Open knowledge settings or run /obsidian-setup to initialize the application knowledge Vault.", ctx);
+        return;
+      }
       if (typeof pi.sendUserMessage === "function") await pi.sendUserMessage("/obsidian-setup", { deliverAs: "followUp" });
       else ctx?.ui?.notify?.("Run /obsidian-setup to initialize the knowledge Vault", "info");
     }
   });
 }
-function createNativeSession(owner) {
+function managedDomainPi(pi, session2) {
+  const contextFor = async (context) => {
+    const facts = await session2.inspect(context);
+    return {
+      cwd: context.cwd,
+      signal: context.signal,
+      hasUI: false,
+      sessionManager: { getSessionId: () => context.sessionManager.getSessionId() },
+      isProjectTrusted: () => facts.projectTrusted
+    };
+  };
+  return new Proxy(pi, { get(target, property) {
+    if (property === "registerTool") return (definition) => target.registerTool({
+      ...definition,
+      execute: async (id2, input, signal, update, context) => definition.execute(id2, input, signal, update, await contextFor(context))
+    });
+    if (property === "registerCommand") return (name, definition) => target.registerCommand(name, {
+      ...definition,
+      handler: async (args, context) => definition.handler(args, await contextFor(context))
+    });
+    if (property === "on") return (name, handler) => target.on(
+      name,
+      name === "session_shutdown" ? handler : async (event, context) => handler(event, await contextFor(context))
+    );
+    return Reflect.get(target, property, target);
+  } });
+}
+function composeNativeSession(owner, managed) {
   owner.assertActive();
   const controller = new AbortController();
-  const publication = createKnowledgePublication(owner.ui, owner.reviewPolicy, owner.config, controller.signal);
+  const managedPublication = managed ? createManagedKnowledgePublication(owner.ui, owner.reviewPolicy, controller.signal) : void 0;
+  const publication = managedPublication ?? createKnowledgePublication(owner.ui, owner.reviewPolicy, owner.config, controller.signal);
   const services = createKnowledgeSessionServices(owner.services, controller.signal);
   const knowledge = createKnowledgeInterface({
     host: owner.host,
@@ -12006,18 +12125,31 @@ function createNativeSession(owner) {
     specialists: owner.specialistTools,
     topics: owner.topics,
     ui: owner.ui,
-    wiki: owner.wiki
+    wiki: owner.wiki,
+    ...managed ? { available: () => true, project: managed.project, session: managed.session } : {}
   }, owner.extensionHost);
   let cleanup = null;
-  const adapter = createKnowledgeNativeAdapter(owner, controller, (pi) => {
-    registerNativeStatusTools(pi, { ...owner, services });
-    cleanup = knowledge.registerKnowledgeInterface(pi).dispose;
+  const adapter = createKnowledgeNativeAdapter(owner, controller, (nativePi) => {
+    const pi = managed ? managedDomainPi(nativePi, managed.session) : nativePi;
+    if (managed) managed.registerReadTools(nativePi);
+    else registerNativeStatusTools(nativePi, { ...owner, services });
+    const session2 = knowledge.registerKnowledgeInterface(pi);
+    cleanup = session2.dispose;
+    pi.on("before_agent_start", (event, context) => session2.beforeStart(event, context));
   }, async () => {
     const results = await Promise.allSettled([services.dispose(), cleanup?.()]);
     const failures = results.filter((result2) => result2.status === "rejected");
     if (failures.length) throw new AggregateError(failures.map((result2) => result2.reason), "Knowledge session cleanup failed");
   });
-  return { ...adapter, publication, services };
+  return {
+    ...adapter,
+    publication,
+    services,
+    ...managedPublication ? { projection: managedPublication.projection } : {}
+  };
+}
+function createNativeSession(owner) {
+  return composeNativeSession(owner);
 }
 function createNativeExtension(owner) {
   return (pi) => createNativeSession(owner).extension(pi);
@@ -13127,6 +13259,7 @@ var init_host = __esm({
       advisoryLine: () => advisoryLine,
       advisoryNotice: () => advisoryNotice,
       createKnowledgePublication: () => createKnowledgePublication,
+      createManagedKnowledgePublication: () => createManagedKnowledgePublication,
       knowledgeFailure: () => knowledgeFailure,
       projectKnowledgeEvent: () => projectKnowledgeEvent,
       projectKnowledgeSnapshot: () => projectKnowledgeSnapshot,
@@ -13138,7 +13271,7 @@ var init_host = __esm({
     init_review_policy();
     init_review_policy();
     init_ui_state();
-    compatibility = createPublicationApi(ui_state_exports, review_policy_exports, config_exports, (create) => runtimeSlot("knowledge", "publication", create));
+    compatibility = createPublicationApi(ui_state_exports, review_policy_exports, localPublicationPorts(config_exports), (create) => runtimeSlot("knowledge", "publication", create));
     ({ projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication } = compatibility);
     init_service();
     RESEARCH_CONTRACT_SCHEMA_VERSION = 1;
