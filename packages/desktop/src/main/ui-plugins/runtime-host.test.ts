@@ -657,7 +657,7 @@ it("closes a pending parent-window runtime permission dialog through the actual 
 	expect(await answer).toBe(false);
 });
 
-it("exposes seven generic session handlers without a model declaration, then gates exactly three model handlers", async () => {
+it("exposes eight generic session handlers without a model declaration, then gates exactly three model handlers", async () => {
 	const handler = {
 		effect: "read",
 		inputSchema: { type: "null" },
@@ -667,6 +667,7 @@ it("exposes seven generic session handlers without a model declaration, then gat
 	const handlers = Object.fromEntries(
 		[
 			"session.inspect",
+			"session.tools",
 			"session.select",
 			"session.input",
 			"session.confirm",
@@ -706,6 +707,7 @@ it("exposes seven generic session handlers without a model declaration, then gat
 		"session.records.append",
 		"session.records.read",
 		"session.select",
+		"session.tools",
 	]);
 	for (const name of ["session.records.read", "session.records.append", "session.notify"])
 		expect(without.handlers[name]).toBe(handler);

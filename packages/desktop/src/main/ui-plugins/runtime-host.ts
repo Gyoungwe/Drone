@@ -377,6 +377,7 @@ export function createDesktopRuntime(
 					...resourceCapabilities.handlers,
 					...executionCapabilities?.handlers,
 					"session.inspect": capabilities["session.inspect"],
+					"session.tools": capabilities["session.tools"],
 					"session.select": capabilities["session.select"],
 					"session.input": capabilities["session.input"],
 					"session.confirm": capabilities["session.confirm"],
