@@ -66,7 +66,11 @@ export async function runKnowledgeSpecialist(
 					thinkingLevel = explicitThinking;
 				} else if (model.reasoning && parentThinkingLevel && supported.includes(parentThinkingLevel))
 					thinkingLevel = parentThinkingLevel;
-				else if (model.reasoning) thinkingLevel = supported.includes("medium") ? "medium" : supported[0]!;
+				else if (model.reasoning) {
+					const first = supported[0];
+					if (!first) throw new Error("Configured model exposes no supported thinking level");
+					thinkingLevel = supported.includes("medium") ? "medium" : first;
+				}
 				selected = { model, thinkingLevel };
 				return { provider: model.provider, model: model.id, thinkingLevel };
 			},
