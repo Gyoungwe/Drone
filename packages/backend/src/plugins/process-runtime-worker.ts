@@ -184,8 +184,13 @@ input.on("line", async (line) => {
         if(!hook.active&&message.name!=="before_agent_start")return null;
         // The SDK retains this object even if a handler reassigns the event property.
         const systemPromptOptions=message.input.systemPromptOptions;
+        const toolInput=message.name==="tool_call"?message.input.input:undefined;
+        const boundaryEntries=message.name==="turn_end"?message.input.entries:undefined;
+        const boundaryBefore=message.name==="turn_end"?JSON.stringify(boundaryEntries):undefined;
         const result=hook.active?await hook.handler(message.input,ctx):undefined;
         if(message.name==="before_agent_start")return {systemPromptOptions,result:result??null};
+        if(message.name==="tool_call")return {input:toolInput,result:result??null};
+        if(message.name==="turn_end"&&(result?.entries!==undefined||JSON.stringify(boundaryEntries)!==boundaryBefore))throw new Error("Unsupported native turn_end boundary drafts");
         // Official context handlers may mutate their message list instead of returning it.
         if(message.name==="context")return {messages:result?.messages??message.input.messages};
         // Preserve final-message mutation before the SDK persists its replacement.

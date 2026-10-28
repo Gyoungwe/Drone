@@ -402,7 +402,16 @@ export class PluginRuntimeRegistry {
 								inputSchema: {},
 								resultSchema: {},
 								effect: native.eventEffects?.[name] ?? (name === "session_start" ? "read" : "write"),
-								execute: async () => handler(event, context),
+								execute: async (_input, call) =>
+									handler(
+										event,
+										new Proxy(context, {
+											get(target, property, receiver) {
+												call.signal.throwIfAborted();
+												return property === "signal" ? call.signal : Reflect.get(target, property, receiver);
+											},
+										}),
+									),
 							},
 						);
 					});
