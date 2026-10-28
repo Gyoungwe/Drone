@@ -4,13 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import {
-	buildContainerSandboxArgv as buildContainerKernelArgv,
-	detectContainerRuntime,
-} from "@drone/compute/container-sandbox";
 import { SubprocessFixtureRunner } from "@drone/discovery";
 import { InquiryService, MemoryInquiryStorage } from "@drone/inquiry";
 import type { DiscoveryHostLoader } from "@gyoungwe/plugin-api";
+import {
+	buildContainerSandboxArgv as buildContainerKernelArgv,
+	detectContainerRuntime,
+} from "@gyoungwe/plugin-api/node/execution";
 import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { StorageRegistry } from "../storage/registry";

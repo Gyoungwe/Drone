@@ -1,11 +1,3 @@
-export {
-	buildContainerSandboxArgv as buildContainerKernelArgv,
-	type ContainerProcess,
-	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
-	ContainerSandboxRunner as ContainerKernelRunner,
-	detectContainerRuntime,
-	unavailableContainerCapabilities,
-} from "@drone/compute/container-sandbox";
 export type { DiscoveryExplorationPlan } from "@drone/shared";
 export type {
 	AnalysisAdapter,
@@ -17,6 +9,14 @@ export type {
 	AnalysisSchemaField,
 	AnalysisSideEffect,
 } from "@gyoungwe/plugin-api";
+export {
+	buildContainerSandboxArgv as buildContainerKernelArgv,
+	type ContainerProcess,
+	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
+	ContainerSandboxRunner as ContainerKernelRunner,
+	detectContainerRuntime,
+	unavailableContainerCapabilities,
+} from "@gyoungwe/plugin-api/node/execution";
 export {
 	type ComputeCredential,
 	type ComputeCredentialProvider,

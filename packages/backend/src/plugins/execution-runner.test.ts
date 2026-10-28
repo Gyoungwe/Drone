@@ -12,8 +12,8 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
+import { ContainerSandboxRunner as ContainerKernelRunner } from "@gyoungwe/plugin-api/node/execution";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ContainerSandboxRunner as ContainerKernelRunner } from "../src/container-sandbox";
 
 let root: string;
 beforeEach(async () => {

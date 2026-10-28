@@ -64,6 +64,11 @@
 			"types": "./dist/node/reservations.d.ts",
 			"import": "./dist/node/reservations.js",
 			"default": "./dist/node/reservations.js"
+		},
+		"./node/execution": {
+			"types": "./dist/node/execution.d.ts",
+			"import": "./dist/node/execution.js",
+			"default": "./dist/node/execution.js"
 		}
 	},
 	"files": [

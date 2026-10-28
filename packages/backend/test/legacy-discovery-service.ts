@@ -1,9 +1,5 @@
 import { lstat, mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import {
-	ContainerSandboxRunner as ContainerKernelRunner,
-	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
-} from "@drone/compute/container-sandbox";
 import type { InquiryDiscoveryPort } from "@drone/discovery";
 import {
 	type ControlledKernelRunner,
@@ -43,6 +39,10 @@ import type {
 	DiscoveryKernelSession,
 	DiscoveryMultipathAssessment,
 } from "@drone/shared";
+import {
+	ContainerSandboxRunner as ContainerKernelRunner,
+	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
+} from "@gyoungwe/plugin-api/node/execution";
 import { JsonStore } from "../src/json-store";
 import type { StorageRegistry } from "../src/storage/registry";
 
@@ -651,4 +651,4 @@ export class DiscoveryService implements DiscoveryServicePort {
 export {
 	ContainerSandboxRunner as ContainerKernelRunner,
 	detectContainerRuntime,
-} from "@drone/compute/container-sandbox";
+} from "@gyoungwe/plugin-api/node/execution";

@@ -1,6 +1,5 @@
 export * from "./artifacts";
 export * from "./authorization";
-export * from "./container-sandbox";
 export * from "./dataset";
 export * from "./executor";
 export * from "./jobs";
@@ -10,7 +9,6 @@ export * from "./qc";
 export * from "./repair";
 export * from "./rnaseq";
 export * from "./runner";
-export * from "./sandbox-types";
 export * from "./schedulers/direct";
 export * from "./transport";
 export * from "./types";
