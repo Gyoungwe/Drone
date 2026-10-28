@@ -19,7 +19,7 @@ afterEach(async () => {
 	vi.unstubAllEnvs();
 	if (root) await rm(root, { recursive: true, force: true });
 });
-async function setup(customTools = []) {
+async function setup(customTools = [], { reasoning = false } = {}) {
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-model-capability-")));
 	const agentDir = join(root, "agent"),
 		cwd = join(root, "project");
@@ -34,7 +34,11 @@ async function setup(customTools = []) {
 		allowModelNetwork: false,
 		refreshOnCreate: false,
 	});
-	faux = fauxProvider({ provider: "plugin-model-offline", tokensPerSecond: 0 });
+	faux = fauxProvider({
+		provider: "plugin-model-offline",
+		tokensPerSecond: 0,
+		...(reasoning ? { models: [{ id: "faux-reasoning", reasoning: true }] } : {}),
+	});
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
 	backend = new PiBackend({
@@ -624,4 +628,30 @@ it("resolves optional profiles only when truly unset and never falls back from a
 	await expect(
 		invoke("model.selection", { profile: "strict", optionalProfile: "optional" }),
 	).rejects.toThrow();
+});
+
+it("uses actual reasoning parent high/off and explicitly configured role thinking in selection, approval and real tool steps", async () => {
+	await setup([], { reasoning: true });
+	backend.modelRuntime.hasConfiguredAuth.mockRestore();
+	await backend.modelRuntime.setRuntimeApiKey(faux.provider.id, "synthetic-thinking-only");
+	const complete = vi.spyOn(backend.modelRuntime, "completeSimple");
+	for (const level of ["high", "off"]) {
+		await backend.setThinkingLevel(session.sessionId, level);
+		const selection = await invoke("model.selection", { optionalProfile: "thinking-specialist" });
+		expect(selection.thinkingLevel).toBe(level);
+		expect(session.thinkingLevel).toBe(level);
+		faux.setResponses([fauxAssistantMessage(fauxToolCall("knowledge_read", { path: "bounded.md" }))]);
+		await invoke("model.toolStep", stepRequest(selection));
+		const request = complete.mock.calls.at(-1)[2];
+		if (level === "off") expect(request.reasoning).toBeUndefined();
+		else expect(request.reasoning).toBe("high");
+		expect(approvals.at(-1).detail).toContain(`thinking: ${level}`);
+	}
+	await backend.setSubagentThinking("thinking-specialist", "medium");
+	const explicit = await invoke("model.selection", { optionalProfile: "thinking-specialist" });
+	expect(explicit.thinkingLevel).toBe("medium");
+	faux.setResponses([fauxAssistantMessage(fauxToolCall("knowledge_read", { path: "bounded.md" }))]);
+	await invoke("model.toolStep", stepRequest(explicit));
+	expect(complete.mock.calls.at(-1)[2].reasoning).toBe("medium");
+	expect(approvals.at(-1).detail).toContain("thinking: medium");
 });

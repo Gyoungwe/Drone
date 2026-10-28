@@ -17,3 +17,5 @@
 仍未完成：生产 event / polling / history / export 切换与旧默认领域 guard 删除；任务服务和 function-rich acceptance / auto-continuation 的真实 owner 组合；真实 legacy adoption、context eviction 恢复；explainer skill 与归档 broker；旧宿主 specialist 算法删除；完整多 owner / 撤销 / 回滚及正式安装包 GUI。已安装任务服务当前明确拒绝未接通的组合，不能当 standalone absent 使用。
 
 新增校验仅在文件 / JSON / model / state CAS / SDK 边界：设置持久格式、计数格式、主题 CAS 与来源读取、纯 JSON tool schema 和真实 reported usage。未增加重试、第二套领域状态机或跨会话账本。
+
+思考级别升级差异（明确采用）：旧 0.2.1 specialist 调用未传 parentThinkingLevel 时，reasoning model 隐式默认 medium。0.3 使用已批准的 model.selection 语义：无显式 role thinking 偏好时继承实际 parent thinking（包含 high / off）；已配置 role thinking 优先，即使 role model 未单独设置，失效仍关闭。没有新增 requestedThinking 配置。角色 token / 轮次预算不变；不得声称 thinking 与旧默认完全等价。真实 reasoning SDK 测试逐个验证 high / off、批准详情和实际 completeSimple 选项，再验证独立 role medium 配置覆盖实际 parent off。

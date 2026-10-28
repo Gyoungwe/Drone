@@ -64,8 +64,9 @@ export function modelCapabilityHandlers(deps: PluginModelCapabilitiesDependencie
 			if (matches.length !== 1 || !matches[0])
 				throw new Error("Configured model preference is unavailable; no provider fallback was used");
 			model = matches[0];
-			thinking = (await deps.getProfileThinking(requestedProfile)) ?? parentThinking;
 		}
+		if (requestedProfile !== undefined)
+			thinking = (await deps.getProfileThinking(requestedProfile)) ?? parentThinking;
 		if (!model || !runtime.hasConfiguredAuth(model.provider))
 			throw new Error("Selected model is unavailable or has no configured credentials");
 		const selectedModel: Model<any> = model;
