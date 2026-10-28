@@ -33,6 +33,8 @@ P2 后继[设置与修复后的正式安装包验收](pluginization/native-plugi
 
 P5 C 的通用执行端口、签名 accepted/terminal receipt 与执行目录 lease 候选见[执行端口候选](pluginization/native-plugin-execution-capability-candidate.md)；实际 SDK/受限 worker 的取消、恢复与 CAS 协议已验证；真实容器执行、完整 UI、Inquiry 与完整迁移仍未完成。
 
+Inquiry 原生 Pi 根入口、同包面板和 generic provider 复用 canonical SQLite owner；真实安装 tarball → 两个 SDK/受限 worker/生产 renderer 的写入、事件、原字节恢复与停用 handoff 见[候选运行证据](pluginization/inquiry-native-ui-candidate-evidence.md)。旧宿主事件/重跑组合、workspace promotion 与正式 GUI 仍未完成。
+
 Inquiry 原 SQLite 保持位置/格式的独立 provider 方案见[SQLite provider 设计候选](pluginization/inquiry-sqlite-provider-design-candidate.md)；generic 二进制端口尚待审查，未实施或关闭迁移。
 
 普通 domain worker 禁用 Node SQLite 的纯防御回归与 index resource 的 NOT_RUN 范围见[防御说明](pluginization/node-sqlite-worker-defense.md)。

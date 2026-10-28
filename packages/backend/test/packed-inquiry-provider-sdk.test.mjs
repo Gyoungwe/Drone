@@ -263,8 +263,8 @@ it.skipIf(!tarball)(
 					originalProjectPreserved: true,
 					originalBackupAndRestore: true,
 					legacyWriterCompetition: true,
-					nativeEntry: "NOT_IMPLEMENTED",
-					renderedUi: "NOT_IMPLEMENTED",
+					nativeEntry: "NOT_EXERCISED_BY_THIS_FIXTURE",
+					renderedUi: "NOT_EXERCISED_BY_THIS_FIXTURE",
 					formalGui: "NOT_RUN",
 				}),
 			);
