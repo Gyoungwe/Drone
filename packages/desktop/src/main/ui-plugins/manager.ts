@@ -629,6 +629,19 @@ export class UiPluginManager {
 		return this.installedSources.get(name)?.runtime;
 	}
 
+	/** Native and service consumers see the same package descriptors and current content identities. */
+	runtimeSources(): readonly {
+		name: string;
+		source: InstalledUiRuntimeSource;
+		state: "enabled" | "unavailable";
+	}[] {
+		return [...this.packageSources].map(([name, source]) => ({
+			name,
+			source,
+			state: this.runtimeSource(name) ? "enabled" : "unavailable",
+		}));
+	}
+
 	/** Called only for a path selected by the actual Pi extension loader. UI visibility grants no native authority. */
 	nativeRuntimeName(path: string): string | undefined {
 		const canonical = realpathSync(path);

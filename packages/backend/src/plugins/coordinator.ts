@@ -45,6 +45,11 @@ export interface PluginNativeIntegration {
 export interface PluginRuntimeBridgeOptions {
 	questionTransport?(owner: PluginRuntimeOwner): AskQuestionRoute;
 	source(name: string): PluginRuntimeSource | undefined;
+	sources?(): readonly {
+		readonly name: string;
+		readonly source: PluginRuntimeSource;
+		readonly state: "enabled" | "unavailable" | "disabled";
+	}[];
 	requiredSources?(): readonly {
 		readonly source: PluginRuntimeSource;
 		readonly state: "enabled" | "unavailable" | "disabled";

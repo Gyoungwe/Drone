@@ -419,12 +419,14 @@ it("keeps a selected native source available without a UI declaration or UI trus
 	expect(manager.list()).toEqual([]);
 	const name = manager.nativeRuntimeName(join(packageRoot, "native.js"))!;
 	expect(manager.isNativeSourceAvailable(name)).toBe(true);
+	expect(manager.runtimeSources()).toMatchObject([{ name, state: "enabled" }]);
 	expect(manager.runtimeSource(name)?.nativeEntrypoint).toBe(await realpath(join(packageRoot, "native.js")));
 	await manager.updateConfig({ enabled: false });
 	expect(manager.isNativeSourceAvailable(name)).toBe(true);
 	await writeFile(join(packageRoot, "runtime.js"), "export const replaced = true;\n");
 	expect(manager.isNativeSourceAvailable(name)).toBe(false);
 	expect(manager.runtimeSource(name)).toBeUndefined();
+	expect(manager.runtimeSources()).toMatchObject([{ name, state: "unavailable" }]);
 });
 
 it("builds installed UI outside its package so compilation cannot change native source authority", async () => {

@@ -284,6 +284,7 @@ export function createDesktopRuntime(
 	const executionIntegrityKey = createExecutionIntegrityKey();
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
+		sources: () => manager.runtimeSources(),
 		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
 		questionTransport: (owner) => ({
 			ownerId: owner.id,
