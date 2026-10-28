@@ -455,3 +455,7 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 ### 相同包内容不证明安装位置仍指向同一个来源
 
 外层安装目录被换成指向字节完全相同副本的 symlink 时，仅重新计算 packageRoot 的完整树 hash 仍可能相同。运行时现在同时复验安装位置的 canonical root 与已声明 native 路径的真实入口；原生和 UI alias 都失效。声明入口消失后，本应用内重新扫描保留旧描述为 unavailable，供实际 selected-path 失败诊断使用，绝不从该记录激活代码；跨重启 required 期望和首次 loader 失败仍在后继接线。66 项发现/来源/聚合/UI 检查通过，正式安装包另验。
+
+## 2026-10-28：空 interception 不证明会话没有 required publisher
+
+实际 SDK 可能在 import interception 之前跳过不存在的入口，catalog 也包含未被此会话选择的包。发布策略必须消费本会话实际有效选择与 loader 错误来源的完整宿主回执；空 interception 或全 catalog 均不能替代。`NativeSessionDelivery` 只在 host-only `confirmSelection` 后允许 ordinary，实际 run 起点锁定 required attachment/source，关闭/哈希变化不能释放已参与 guard 的运行。当前真实 SDK 切片 6 项、连同 fence/command 共 30 项通过；生产全来源确认和正式安装包仍未验收。
