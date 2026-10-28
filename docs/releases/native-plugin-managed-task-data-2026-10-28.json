@@ -28,14 +28,19 @@
       "log": "/tmp/task-managed-data-sdk-final.log"
     },
     {
-      "command": "npx vitest run --project sdk test/plugin-provider-sdk.test.mjs -t canonical-managed-task-state",
+      "command": "npx vitest run --project sdk test/plugin-provider-sdk.test.mjs -t 'canonical managed task state'",
       "result": "1/1 final application-selection assertion",
       "log": "/tmp/task-managed-data-no-session.log"
     },
     {
-      "command": "npx vitest run --project sdk test/task-session-commit-sdk.test.mjs test/task-plugin-activation-sdk.test.mjs",
+      "command": "npx vitest run --project sdk test/task-session-commit-sdk.test.mjs test/task-plugin-activation-sdk.test.mjs test/task-manifest-session.test.mjs test/zotero-save-tool.test.mjs",
       "result": "23/23 pure byte extraction candidate",
       "log": "/tmp/task-inspection-byte-sdk.log"
+    },
+    {
+      "command": "npx vitest run --project sdk test/native-tool-protocol-sdk.test.mjs test/native-command-protocol-sdk.test.mjs test/task-session-commit-sdk.test.mjs test/task-plugin-activation-sdk.test.mjs test/plugin-session-records-sdk.test.mjs",
+      "result": "53/53 with managed data candidate tar",
+      "log": "/tmp/task-managed-data-existing-sdk.log"
     }
   ],
   "authority": "No executionConsent/root/approval/proof output; ordinary questions and JSON never produce execution grant",
