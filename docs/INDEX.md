@@ -281,7 +281,7 @@ PR-4 历史入口曾在同一入口注册 `knowledge_search`、`knowledge_read`�
 
 插件仓库 `packages/pi-core/` 拥有工具、项目记忆、native runtime 和 milestone 校验；host loader 通过公开 client 合同接入。宿主旧源码和重复测试已删除，插件仓库保留原历史、同名测试及严格干净消费者 tsc。`scripts/build-pi-core.mjs` 现在只验证源码锁、fetch receipt、产物哈希与公开声明；`scripts/smoke-pi-core.mjs`、`scripts/check-pi-compat.mjs` 消费 `vendor/plugins/pi-core/`，不再构建宿主副本。`scripts/check-core-artifact.test.mjs` 验证无旧源码的锁定产物边界；backend 的真实 tarball 回归位于 `test/packed-core-host-sdk.test.ts`。公开 0.1.9 仅用于 npm-ci bootstrap，本轮源码锁候选为 0.2.0。
 
-Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain/`，宿主 `backend/src/discovery/service.ts` 仅注入授权、惰性 container runner、原子 JsonStore、runs 文件边界和项目绑定 Inquiry。无插件不登记 discovery 存储；旧共享 journal 保持字节并报告 unassigned，不自动冒认项目。候选目前只有 Desktop host 入口，原生工具、真实容器和完整 B5 GUI 仍未完成。
+Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain/`，宿主 `backend/src/discovery/service.ts` 仅注入授权、惰性 container runner、原子 JsonStore、runs 文件边界和项目绑定 Inquiry。无插件不登记 discovery 存储；旧共享 journal 保持字节并报告 unassigned，不自动冒认项目。候选同包原生工具读取当前工作区真实 journal，见 [writer→SDK 回读证据](releases/native-plugin-discovery-readback-2026-10-28.json)；取消、关闭和 dispose 等待自有容器销毁并向 daemon 回读，见 [真实资源关闭证据](releases/native-plugin-discovery-cleanup-2026-10-28.json)。Desktop/native 共享 owner、原生执行、Inquiry 和完整 B5 GUI 仍未完成。
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 

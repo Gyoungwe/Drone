@@ -24,6 +24,8 @@ export interface KernelRunnerCapabilities {
 }
 
 export interface KernelRunRequest {
+	/** Additive host-runner cancellation contract; legacy fixture runners may ignore it. */
+	readonly signal?: AbortSignal;
 	readonly requestId: string;
 	readonly language: KernelLanguage;
 	readonly code: string;
