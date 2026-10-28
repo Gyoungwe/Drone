@@ -25,6 +25,7 @@ frame 只含 `{snapshot,render,storage}`。snapshot 以允许清单投影 id/goa
 
 - provider SDK 文件 25/25（原 19 项保持，新增 6 项）：有实际 native attachment 才能读取状态；source-owned durable 检查点及状态/暂停/未推进/报告一次消费；两个会话各自任务；正常真实 SDK reload 恢复 own record；实际 append 先改内存后 throw 后保留 last committed、拒绝 phantom chain，实际 reload 后仍 needs-reopen；真实 UI 取消等待 host checkpoint 权限后，迟到答案不追加记录。
 - 无会话案例随后补测实际 application selection，1/1 通过、零模型调用，不猜测焦点会话。
+- 新候选包再跑原生工具/命令、任务提交/激活、records 五文件实际 SDK 53/53 通过，日志 `/tmp/task-managed-data-existing-sdk.log`。
 - core check：Node 29 与 runtime/UI 215、typecheck、build:check、smoke 均通过。已有任务 actor/raw native 的 memory/deferred/durable 语义保持，不宣称这里另跑了 managed inMemory GUI。
 - 纯字节算法单独实际 tar 在安装后跑 canonical task commit/activation SDK 23/23；仍由 Native adapter 执行真实路径、8 MiB、open 与作用域检查。抽取只共享原 PDF magic/DOI/title/hash 算法，未新增格式验证承诺。
 
