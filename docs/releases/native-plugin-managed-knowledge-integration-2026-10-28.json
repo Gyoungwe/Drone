@@ -1,0 +1,409 @@
+{
+	"date": "2026-10-28",
+	"status": "TARGETED_INTEGRATION_PASS_FINAL_GATES_PENDING",
+	"hostSource": "c8f8e43fd1e7740655875e000ae433b3266139df",
+	"pluginSource": "23912fb0388fd009944c53221e0ff20e5af1e3f6",
+	"lastFullStandardGate": "4abdae43/253c47e",
+	"newSourceLockUpdated": false,
+	"privateApi": {
+		"version": "1.3.0",
+		"vendor": "vendor/gyoungwe-plugin-api-1.3.0-c8f8e43f.tgz",
+		"sha256": "c4631cbfb190562eaf092e6be68ecdd0f8843f82560fef7b18f376c3720bf90c",
+		"published": false
+	},
+	"pack": {
+		"commit": "23912fb0388fd009944c53221e0ff20e5af1e3f6",
+		"root": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq",
+		"checkout": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/plugins",
+		"log": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/build.log",
+		"commands": [
+			{
+				"command": [
+					"git",
+					"archive",
+					"--format=tar",
+					"--output",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/source.tar",
+					"23912fb0388fd009944c53221e0ff20e5af1e3f6"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"tar",
+					"-xf",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/source.tar",
+					"-C",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/plugins"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-knowledge"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-analysis"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-research"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-core"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq"
+				],
+				"exitCode": 0
+			},
+			{
+				"command": ["npm", "run", "build", "--workspace", "@gyoungwe/pi-discovery"],
+				"exitCode": 0
+			},
+			{
+				"command": [
+					"npm",
+					"pack",
+					"--json",
+					"--ignore-scripts",
+					"--pack-destination",
+					"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq"
+				],
+				"exitCode": 0
+			}
+		],
+		"packages": [
+			{
+				"name": "@gyoungwe/pi-knowledge",
+				"version": "0.3.0",
+				"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/gyoungwe-pi-knowledge-0.3.0.tgz",
+				"sha256": "2c63be5091b04cf4041a6fc7b58e129ecfd55a57ff608032c5c2c126a8ae53ec"
+			},
+			{
+				"name": "@gyoungwe/pi-analysis",
+				"version": "0.2.0",
+				"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/gyoungwe-pi-analysis-0.2.0.tgz",
+				"sha256": "325b8e8214837a4d7c1d06db91cd1eb14c9c4bf7cf9eba031e44718cf95d8cdb"
+			},
+			{
+				"name": "@gyoungwe/pi-research",
+				"version": "0.3.2",
+				"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/gyoungwe-pi-research-0.3.2.tgz",
+				"sha256": "4db7092d8ef47a29f987833fd577ceaa18dc21f2295e605c0ce4be6be7a15176"
+			},
+			{
+				"name": "@gyoungwe/pi-core",
+				"version": "0.2.0",
+				"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/gyoungwe-pi-core-0.2.0.tgz",
+				"sha256": "c80b35e01fda417241d7e48016dc2901f2e979a79fbc5b75063e846781f47c37"
+			},
+			{
+				"name": "@gyoungwe/pi-discovery",
+				"version": "0.1.0",
+				"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-next-cohort-pack-3BfdIq/gyoungwe-pi-discovery-0.1.0.tgz",
+				"sha256": "11a71f9f8167a21f36a8053709948b461345c0dab8e6e8ff5f90190767c8fd17"
+			}
+		]
+	},
+	"sameTarballKnowledge": {
+		"status": "PASS",
+		"tarballSha256": "2c63be5091b04cf4041a6fc7b58e129ecfd55a57ff608032c5c2c126a8ae53ec",
+		"package": "@gyoungwe/pi-knowledge",
+		"version": "0.3.0",
+		"manifestId": "drone-pi-knowledge",
+		"sdk": "1.1.0",
+		"model": "faux-offline",
+		"actualReadOnlySession": true,
+		"actualWritableSdkSession": true,
+		"productionCapabilityRouting": true,
+		"tools": [
+			{
+				"name": "knowledge_status",
+				"error": false
+			},
+			{
+				"name": "knowledge_search",
+				"error": false
+			},
+			{
+				"name": "effect_probe_unknown",
+				"error": true
+			},
+			{
+				"name": "effect_probe_write",
+				"error": true
+			}
+		],
+		"sameOwnerProcesses": [
+			{
+				"pid": 53175,
+				"ppid": 52845,
+				"resource": false
+			},
+			{
+				"pid": 53177,
+				"ppid": 52845,
+				"resource": true
+			}
+		],
+		"uiOverviewNotes": 3,
+		"searchMatchesNative": true,
+		"refresh": true,
+		"readingOperations": ["readNote", "links", "graph", "jobs", "recentByCategory"],
+		"readingScopes": [
+			{
+				"project": null,
+				"visibleNotes": 1,
+				"jobs": 2,
+				"hiddenProjectDenied": true
+			},
+			{
+				"project": "alpha",
+				"visibleNotes": 2,
+				"jobs": 4,
+				"hiddenProjectDenied": true
+			},
+			{
+				"project": null,
+				"visibleNotes": 1,
+				"jobs": 2,
+				"hiddenProjectDenied": true
+			}
+		],
+		"statePolicy": {
+			"status": "PASS",
+			"readOnlyGrantRejected": true,
+			"deniedApprovalNoWrite": true,
+			"atomicReadback": true,
+			"staleVersionRejected": true,
+			"malformedStrictDiagnostic": true,
+			"savedVersion": "c4f5271a63c41cb60059d30d08e9d80238ce5426890b3659b40632bc5f71d4fc",
+			"revokedBindingRejected": true,
+			"reloadedPersistedValue": true,
+			"readOnlySessionRejected": true
+		},
+		"reviews": {
+			"application": 0,
+			"alpha": 1,
+			"betaHidden": true,
+			"readOnlySession": true,
+			"proposalHash": "03364d80afbd03354c59fa93683310b680f62c790faad5b974157a8ff0336093",
+			"beforeAfterProtectedExact": true,
+			"sourceLineHashes": true,
+			"sourceChangeDetected": true,
+			"targetChangeDetected": true,
+			"staleAndTamperedProposalRejected": true,
+			"readOnlyPreviewStagesDidNotWrite": true,
+			"model": {
+				"nativeCommandAuditReadback": true,
+				"denialBeforeGeneration": true,
+				"actualModelAborted": true,
+				"canceledWithoutVaultWrite": true,
+				"applyHistoryUndo": true,
+				"humanReviewed": false,
+				"scientificallyVerified": false,
+				"modelCalls": 3
+			},
+			"writes": {
+				"fileGrantRequired": true,
+				"approvalDeniedWithoutWrite": true,
+				"crossProjectRejected": true,
+				"staleProposalRejected": true,
+				"humanEditRetained": true,
+				"partial": {
+					"id": "202c5fbc-e27c-41bb-a61a-9fb7e7d9c75f",
+					"status": "applied",
+					"path": "Projects/alpha/Wiki/Orchid.md",
+					"vaultWritten": true,
+					"reviewRecorded": false,
+					"indexed": true,
+					"recovered": false,
+					"recordError": "Acceptance record persistence failure",
+					"indexError": null
+				},
+				"applied": {
+					"id": "202c5fbc-e27c-41bb-a61a-9fb7e7d9c75f",
+					"status": "applied",
+					"path": "Projects/alpha/Wiki/Orchid.md",
+					"vaultWritten": true,
+					"reviewRecorded": true,
+					"indexed": true,
+					"recovered": true,
+					"recordError": null,
+					"indexError": null
+				},
+				"partialRetryVaultWrites": 1,
+				"historyAfterApply": 1,
+				"undoRestoredProtectedText": true,
+				"historyAfterUndo": 0,
+				"nativeCloseRetainsUi": true
+			}
+		},
+		"readingInputSchemas": true,
+		"pagedReadHashAndLines": true,
+		"changedHashRejected": true,
+		"unknownAndWriteExecuted": 0,
+		"fullHooksAndPublication": "NOT_IMPLEMENTED",
+		"childrenExited": true,
+		"reservationsReleased": true,
+		"sqliteExclusiveReopenAfterExit": 1,
+		"cleanup": [
+			{
+				"phase": "native-bootstrap-dispose",
+				"status": "fulfilled",
+				"durationMs": 0
+			},
+			{
+				"phase": "writable-native-bootstrap-dispose",
+				"status": "fulfilled",
+				"durationMs": 0
+			},
+			{
+				"phase": "coordinator-close",
+				"status": "fulfilled",
+				"durationMs": 9
+			},
+			{
+				"phase": "knowledge-child-census",
+				"status": "fulfilled",
+				"durationMs": 49
+			},
+			{
+				"phase": "control-child-census",
+				"status": "fulfilled",
+				"durationMs": 51
+			},
+			{
+				"phase": "sqlite-reopen-after-owner-close",
+				"status": "fulfilled",
+				"durationMs": 1
+			},
+			{
+				"phase": "reservation-census",
+				"status": "fulfilled",
+				"durationMs": 0
+			},
+			{
+				"phase": "fixture-remove",
+				"status": "fulfilled",
+				"durationMs": 39
+			}
+		]
+	},
+	"checks": {
+		"managedSdkAndRegistry": {
+			"log": "/tmp/drone-next-managed-root-sdk.log",
+			"sha256": "ee3a9c17d3239f7ff43957d01a523badc23e890a5ae42671b4e800e413d7e17d",
+			"exitCode": 0,
+			"tests": 24
+		},
+		"commandAndDurableQueueFault": {
+			"log": "/tmp/drone-next-prompt-reconciliation-sdk.log",
+			"sha256": "02f0d8c1100f072fdae3caa0a2ce3068424ad785fbdc617a83672f42943b7520",
+			"exitCode": 0,
+			"tests": 13
+		},
+		"knowledgePackage": {
+			"log": "/tmp/drone-next-knowledge-root-check.log",
+			"sha256": "56ab6089215771990c65f7dbd6cce2688b98c46ed74151b149427754a17eed3f",
+			"exitCode": 0,
+			"tests": 532,
+			"cleanUiSmoke": true
+		},
+		"corePackage": {
+			"log": "/tmp/drone-next-core-status-root-check-2.log",
+			"sha256": "d1bc8798abd820e0c95d38e3744ebcd58314ad10648d073f770901552f454bbd",
+			"exitCode": 0,
+			"nodeTests": 29,
+			"vitestTests": 210
+		},
+		"packedKnowledge": {
+			"log": "/tmp/drone-next-knowledge-root-packed.log",
+			"sha256": "150bee39c232c21dc6c6e304fa6d97f2788a44e9c14459fdc15802b567172acc",
+			"exitCode": 0,
+			"tests": 1
+		}
+	},
+	"retainedFailures": [
+		{
+			"stage": "Merged knowledge build",
+			"reason": "Primary node_modules held old private API without model types/commandEffects; generated merge was completed before build success",
+			"log": {
+				"log": "/tmp/drone-next-knowledge-merged-build.log",
+				"sha256": "9ab903428b04a29db076b21f368c634c934809f4515a452c023940a9f1313fc7",
+				"exitCode": 1
+			},
+			"resolution": "Repacked independent API, updated vendor and lock, fresh npm ci and official rebuild; targeted package and installed tarball checks then passed"
+		},
+		{
+			"stage": "Core package check",
+			"reason": "DRONE_PLUGIN_API_TARBALL was omitted; packed-types test refused an unspecified unpublished API candidate",
+			"log": {
+				"log": "/tmp/drone-next-core-status-root-check.log",
+				"sha256": "9b60a4b2d01118b2716c58de999dd0d4aab399e5a74eb7940db96cb512ff677f",
+				"exitCode": 1
+			},
+			"resolution": "Repeated exact check with verified private tarball; all tests passed"
+		}
+	],
+	"durableQueueFault": {
+		"status": "RECEIPT_FAILURE_PROPAGATED",
+		"observedFault": "Actual EISDIR during handled-input inbox sync",
+		"diskOldQueuedRecordMayRemain": true,
+		"exactlyOnceClaim": false
+	},
+	"formalGui": "NOT_RUN",
+	"fullHooksAndPublication": "NOT_IMPLEMENTED",
+	"next": [
+		"Integrate discovery shared owner/leases with real legacy-writer competition",
+		"Unify next API/package lock and fresh dual-repository full gates",
+		"Complete task dynamic owner and knowledge publication migration",
+		"Complete research/analysis migration and zero-domain host cleanup"
+	]
+}

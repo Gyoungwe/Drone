@@ -549,3 +549,5 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 任务 UI 迁移兼容边界：`renderer/plugins/legacy-task-artifacts.ts` 仅保留已公开 1.x `helpers.taskArtifactLinks` 的原行为，无活跃宿主或知识 UI 消费；API 2 删除。`shared/task-workbench.ts` 保留安全投影类型与输入解码；`hostStatus` 仅标记可显示来源，不授予任务动作或发布权限。科研示例/首次引导仍在宿主，留后续插件贡献迁移。
 
 `SessionControlService.command` / `session-engine/engine.ts` 提供中立已注册扩展命令派发；`session:command` 经 SessionsContract、preload 与公开 UI `sessions.command` 同步。缺命令不转成 prompt；取消、会话替换、恢复/只读和 runner reload 均拒绝过期操作。
+
+后继任务状态路由/managed command、知识模型评审的同 tarball 双进程整合切片见[回执](releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；该后继尚未统一来源锁及完整根门禁，不替代顶部4abdae43/253c47e检查点。

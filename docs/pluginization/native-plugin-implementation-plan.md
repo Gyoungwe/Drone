@@ -27,9 +27,11 @@
 
 ## 后继并行工作
 
+后继源码 `c8f8e43f/23912fb` 已整合任务状态路由、managed command 与 canonical 模型评审。定向24+13、knowledge532、core29+210与真实受限双进程同tarball评审/取消/应用撤回通过，见[整合切片](../releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；当前源码锁仍为253，新的双仓库根门禁尚未执行，顶部标准门禁基线不变。
+
 - 当前 `4abdae43/253c47e` 只关闭本轮源码与真实 SDK 切片；新私有 API 1.3 同时包含 UI seam、command、模型/取消、caller.scope 与独立 Node lease 子路径，根/UI/runtime 合同不依赖 Node。完整 managed hooks/proof 与正式包仍未完成。
-- P2 模型评审 owner/UI `1399b33` 已在隔离插件分支通过 531 项回归与真实 SQLite/SDK 切片；尚未纳入当前来源锁。后继 managed command consumer 正在验证，旧公共 UI 1.x 路径保留真实行为；不能用无 worker 的 adapter 验证宣称 managed 端完整可用。
-- P4 自然语言任务状态路由 `8a596bfa/58d5902` 与 managed command `368b63ed` 已冻结，待下一批整合。后者只支持已证明的最小 context，void command 不伪造文本返回；动态 native 包启停和 startup taskHost 删除仍需继续迁移。
+- P2 模型评审 owner/UI `1399b33` 已在隔离插件分支通过 531 项回归与真实 SQLite/SDK 切片；已合入后继源码但尚未纳入当前来源锁。后继 managed command consumer 已通过真实受限进程同包验证，旧公共 UI 1.x 路径保留真实行为；不能用无 worker 的 adapter 验证宣称 managed 端完整可用。
+- P4 自然语言任务状态路由 `8a596bfa/58d5902` 与 managed command `368b63ed` 已整合后继源码，待统一来源锁与完整门禁。后者只支持已证明的最小 context，void command 不伪造文本返回；动态 native 包启停和 startup taskHost 删除仍需继续迁移。
 - P5 正在接通真实共享 owner、显式历史状态目录绑定、同进程/跨进程写者竞争和清理失败保留租约；执行持久回执/Inquiry 与完整 B5 UI 继续实施。不把只读原生工具或容器清理切片当作完整 P5。
 - P3 研究/Zotero 与 P5 分析/证据完整控制器、页面和旧宿主业务删除尚未完成。P6 继续删除四个必需领域锁及构建/资源闭包，并以真实零领域安装包验证普通聊天；默认知识 publication 对无领域会话的干预仍需处理。
 - 顺序：整合已冻结业务与 managed command → 统一下一 API/候选包及双仓库门禁 → 同候选正式 GUI；同步完成剩余领域迁移和真实零领域独立构建，目标保持 active。
