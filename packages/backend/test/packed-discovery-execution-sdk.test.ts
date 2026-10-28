@@ -417,8 +417,13 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 			expect(beforeAcceptedCalls.filter((args) => args[0] === "run")).toEqual([]);
 
 			expect(
-				(await sdkCall(1, "discovery_create_kernel", { ...kernel("synthetic-accepted"), image: syntheticId }))
-					.isError,
+				(
+					await sdkCall(1, "discovery_create_kernel", {
+						...kernel("synthetic-accepted"),
+						image: syntheticId,
+						executionTimeoutMs: 30000,
+					})
+				).isError,
 			).toBe(false);
 			const accepted = await sdkCall(1, "discovery_execute_kernel", {
 				sessionId: "synthetic-accepted",
@@ -428,7 +433,10 @@ if(args[0]!=='run'&&args[0]!=='container')process.exit(2);
 			const acceptedIntent = (
 				accepted.details as { intents: { requestId: string; status: string }[] }
 			).intents.find((item) => item.status === "succeeded");
-			if (!acceptedIntent) throw new Error("Synthetic accepted transaction did not complete");
+			if (!acceptedIntent)
+				throw new Error(
+					`Synthetic accepted transaction did not complete: ${JSON.stringify(accepted.details)}`,
+				);
 			expect(
 				(await sdkCall(1, "discovery_execution_receipt", { requestId: acceptedIntent.requestId })).details,
 			).toMatchObject({ kind: "value", receipt: { status: "succeeded" } });
