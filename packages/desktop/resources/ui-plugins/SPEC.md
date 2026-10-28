@@ -323,6 +323,10 @@ export function activate() {
 
 `session.inspect(null)` 是通用只读会话能力，不要求模型网络声明。`session.select({title,options})`、`session.input({title,placeholder?})` 和 `session.confirm({title,message})` 都是 write 效果，仅能在当前真实、可信、可写 SDK 会话及真实 UI 可用时调用。输入不能指定会话、窗口或请求 ID；宿主以当前 caller 的 live entry、原窗口及代次决定身份。application/无会话或没有 UI 时明确不可用。
 
+`session.tools(null)` 同为 read，不要求模型声明；每次调用实际 SDK `getAllTools()` 后仅投影 `[{name,readOnlyHint:boolean|null}]`。SDK 未声明 hint 时必须为 null，不能按工具名推断读权限；这不是执行授权，也不提供同步 SDK getter。无当前 live session 时拒绝，输入不接收目标身份。
+
+managed native 另支持实际 SDK 的 `input`、`tool_call`、`turn_start`、`turn_end`：input 的 continue/transform(text/images)/handled 保持 SDK 顺序链与 handled 短路；tool_call 的 input 原对象就地变更和 block/reason/terminate 传入下一实际 hook；turn_end 仅支持 null、空对象或 continue 布尔结果及实际 boundary 顺序链；返回 entries 或就地修改 event.entries 都明确拒绝，不能绕过来源 namespace/持久化能力。continue 不产生任务执行授权，也不代替尚待实现的 owned boundary draft broker。所有 hook 沿用 eventEffects（除 session_start 外默认 write）及现有逐调用批准、实际信号和停用排空；取消后的变换不应用。SDK input/turn 失败按原 onError 通道报告一次，tool_call 失败保留 SDK 的单个 error tool result，不额外复制诊断。
+
 结果分别为 `{kind:"selected",value:string}`、`{kind:"input",value:string}`、`{kind:"confirmed",value:boolean}`，关闭对话框统一返回 `{kind:"cancelled"}`；调用被撤销或实际 SDK signal 取消则请求拒绝。能力调用方必须 await，不能从迟到答案继续执行。结果只表示普通交互数据，不是文件、模型或执行权限；confirm 使用 AskGate 的二选项，不会设置 PermissionGate 的 allowRun/allowAlways。模型能力仍仅由声明 `configured-services` 的包申请，问答不会借用该声明，也不会授予模型出口。
 
 问题经当前实际 SDK UI binding 到既有 AskGate pending；发给原窗口，答复由 IPC sender 校验。取消、关闭和答复使用通用 AskResolved 精确移除该窗口的对应卡片。host-only window route 不进入公共问答 JSON，不新增请求账本。原生 managed Context 的其他 UI 方法仍按既有 supported/unsupported 合同处理，不能因此声称完整 ExtensionUIContext 已可用。

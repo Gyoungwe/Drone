@@ -1,0 +1,31 @@
+{
+	"date": "2026-10-28",
+	"scope": "P4 fresh session tools and managed native input/tool/turn chain",
+	"status": "PARTIAL",
+	"publicTypeCommit": "743198e4",
+	"toolBrokerCommit": "02fd1f8d",
+	"checks": {
+		"actualSdkRestrictedWorker": {
+			"files": 5,
+			"passed": 38,
+			"failed": 0
+		},
+		"desktopRuntimeHost": {
+			"passed": 22,
+			"failed": 0
+		},
+		"backendTypecheck": "PASS",
+		"desktopNodeTypecheck": "PASS",
+		"pluginApiPackageCheck": "PASS",
+		"architecture": "PASS",
+		"formalPackageGui": "NOT_RUN"
+	},
+	"limits": [
+		"turn_end accepts null/empty/continue only; returned and in-place boundary drafts are rejected",
+		"Tool hints are fresh metadata, not grants; missing hints remain null",
+		"No task consent/proof or automatic continuation authority is recovered from JSON",
+		"Managed TaskApplication cutover and old startup host removal remain incomplete"
+	],
+	"nativeHooksCommit": "06fa5176",
+	"pluginSpecCommit": "f1ad816"
+}

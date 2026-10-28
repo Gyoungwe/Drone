@@ -8,7 +8,7 @@
 
 | 成员 | managed native | 普通第三方 process sandbox |
 | --- | --- | --- |
-| `on` | 12 种事件；见下表 | 显式不支持 |
+| `on` | 16 种事件；见下表 | 显式不支持 |
 | `registerTool` | 标准 JSON 声明与 execute/onUpdate；不可跨进程回调明确拒绝 | 支持已验证 JSON 声明及 execute；回调限制见下文 |
 | `registerCommand` | 标准 name/description 与受授权远程 handler；completion 回调明确拒绝 | 显式不支持 |
 | `registerShortcut` | 显式不支持 | 显式不支持 |
@@ -48,6 +48,8 @@ managed process 工具声明现保留 outputSchema、constrainedSampling、rende
 
 managed command 的真实 SDK/权限/取消与限制见[命令切片](native-plugin-managed-command-evidence.md)。`commandEffects` 默认 write；`sessions.command` 的单请求信号由真实上下文传入，关闭与停用排空 pending。标准 handler 仍为 void；没有发送文本的假回执。worker 只提供已有最小 Context，`isIdle`/`waitForIdle`/UI 等不可用方法明确拒绝，领域前台策略使用 async `session.inspect`；不能据此扩大基础 Context 的兼容数量。
 
+后继 managed input/tool_call/turn_start/turn_end 与异步 session.tools 的实际 SDK 语义、信号和权限回归见[事件链切片](native-plugin-chain-events-evidence.md)。session.tools 是 fresh 的实际工具元数据投影，缺 hint 为 null；不等于支持同步原生 getAllTools，也不按名字授予读权限。
+
 ## on 事件完整声明表
 
 | 事件 | managed native | 普通第三方沙箱 |
@@ -84,15 +86,15 @@ managed command 的真实 SDK/权限/取消与限制见[命令切片](native-plu
 | `agent_settled` | 显式拒绝 | 显式拒绝 |
 | `ui_prompt_start` | 显式拒绝 | 显式拒绝 |
 | `ui_prompt_end` | 显式拒绝 | 显式拒绝 |
-| `turn_start` | 显式拒绝 | 显式拒绝 |
-| `turn_end` | 显式拒绝 | 显式拒绝 |
+| `turn_start` | 实际 SDK 链式语义切片通过（见事件链证据） | 显式拒绝 |
+| `turn_end` | 部分：null/空对象/continue；draft 返回和就地变更明确拒绝 | 显式拒绝 |
 | `message_update` | 显式拒绝 | 显式拒绝 |
 | `tool_execution_update` | 显式拒绝 | 显式拒绝 |
 | `model_select` | 显式拒绝 | 显式拒绝 |
 | `thinking_level_select` | 显式拒绝 | 显式拒绝 |
-| `tool_call` | 显式拒绝 | 显式拒绝 |
+| `tool_call` | 实际 SDK 链式语义切片通过（见事件链证据） | 显式拒绝 |
 | `user_bash` | 显式拒绝 | 显式拒绝 |
-| `input` | 显式拒绝 | 显式拒绝 |
+| `input` | 实际 SDK 链式语义切片通过（见事件链证据） | 显式拒绝 |
 
 `context`、`message_end`、`tool_result` 已有真实 SDK 链式回归。`89570262` 补齐 `before_agent_start.systemPromptOptions` 原对象修改、删除和返回值链，覆盖 SDK 对象身份、重赋值无效、模型实际提示词与 SessionManager 持久化；IPC 字段写入不触发原型 setter。同一 worker handler 内的 `event.systemPrompt` 仍是 JSON snapshot，实时 getter 未实现。
 
