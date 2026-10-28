@@ -15,3 +15,5 @@
 验证：实际模型/会话 SDK 13 项，问答 SDK 9 项联合 22/22；Desktop 明确来源门禁 22/22；API build、backend typecheck、architecture 均通过。覆盖实际一轮 SDK 请求/签名与元数据、父历史隔离、真实 12000-token 预算、取消 cleanup 后才拒绝、拒绝/伪造选择/重复声明/非 JSON callback 零模型请求，以及 optional profile 的未配置/有效/失效三态。完整 source-worker specialist 工具循环还未运行，不标为其 PASS。
 
 新增边界检查仅针对外部 JSON/model/provider 数据：纯 JSON/有限数值、输入 bytes、唯一 tool 名与 schema 编译，以及实际 provider usage 的可报告数值；没有新增重试、超时、缓存或领域全局账本。
+
+后继消费者与真实思考配置差异见[完整消费者证据](native-knowledge-full-consumer-evidence.md)。0.3 无显式 role thinking 时采用实际 parent thinking，替代旧调用省略 parentThinkingLevel 时的隐式 medium；独立配置的 role thinking 仍优先。reasoning high / off 与真实批准 / SDK 参数单独回归，未新增 requestedThinking 参数。
