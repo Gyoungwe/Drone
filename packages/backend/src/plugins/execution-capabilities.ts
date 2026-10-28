@@ -109,7 +109,7 @@ export async function createPluginExecutionCapabilities(
 		const selected = options.getSessionContext(context.scope.sessionId);
 		if (
 			!selected ||
-			selected.identity !== context.callerIdentity ||
+			selected.identity !== context.sessionIdentity ||
 			selected.signal.aborted ||
 			selected.readOnly ||
 			!selected.projectTrusted ||

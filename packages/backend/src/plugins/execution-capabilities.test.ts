@@ -54,7 +54,8 @@ const context = (): PluginCapabilityContext => ({
 	applicationId: "application",
 	scope: selected.scope,
 	signal: selected.signal,
-	callerIdentity: selected.identity,
+	callerIdentity: {},
+	sessionIdentity: selected.identity,
 	bootstrap: false,
 	capabilities: {
 		call: async () => {
@@ -109,5 +110,17 @@ it("rejects stale, read-only and untrusted callers before any execution infrastr
 	selected = { ...selected, readOnly: false, projectTrusted: false };
 	await expect(ports.handlers["execution.run"].execute(request, context())).rejects.toThrow("untrusted");
 	expect(await readdir(join(root, "private-receipts"))).toEqual([]);
+	await ports.dispose();
+});
+
+it("does not accept a selection object in place of the actual session identity", async () => {
+	const ports = await capabilities();
+	await expect(
+		ports.handlers["execution.describe"].execute(null, {
+			...context(),
+			callerIdentity: selected.identity,
+			sessionIdentity: {},
+		}),
+	).rejects.toThrow("stale");
 	await ports.dispose();
 });
