@@ -188,11 +188,11 @@ describe("desktop activation directory grants", () => {
 				selectDirectories: async () => [state],
 			});
 			const registry = new PluginRuntimeRegistry(
-				{ authorizeActivation: async () => true },
+				{ authorizeActivation: async () => true, authorizeInvocation: async () => true },
 				"application",
 				provider,
 			);
-			registry.register(source.pluginId, async () => ({ dispose: async () => {} }));
+			registry.register(source.pluginId, async () => ({ operations: {}, dispose: async () => {} }));
 			await registry.activate(source.pluginId, () => ({
 				identity: {},
 				scope: { kind: "application" },
