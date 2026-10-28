@@ -1,0 +1,83 @@
+{
+	"scope": "Generic session question broker SDK slice",
+	"date": "2026-10-28",
+	"status": "PARTIAL_ARCHITECTURE",
+	"base": "e299a5f968c7a9d64a3a742be7a4427cf474a836",
+	"commits": {
+		"publicTypes": "df1339f6",
+		"implementation": "1709ae4d",
+		"emptyInputAndWorker": "1398c0e6"
+	},
+	"operations": {
+		"session.inspect": "read",
+		"session.select": "write",
+		"session.input": "write",
+		"session.confirm": "write"
+	},
+	"authority": {
+		"session": "actual host registry entry only",
+		"window": "host-only question route; authenticated IPC sender",
+		"inputCannotSelectIdentity": true,
+		"answersGrantFileOrModelPermissions": false,
+		"newRequestLedger": false,
+		"fakeSdkContext": false
+	},
+	"checks": {
+		"actualSdkQuestions": {
+			"status": "PASS",
+			"tests": 9,
+			"restrictedWorkerRoundTripAndCancel": true,
+			"actualSdkActiveSignal": true,
+			"sameSessionTwoOwnerLeases": true
+		},
+		"backendCohort": {
+			"status": "PASS",
+			"files": 5,
+			"tests": 35,
+			"log": "/tmp/session-question-final-sdk-cohort.log"
+		},
+		"desktopIpcPreloadAndModelGate": {
+			"status": "PASS",
+			"files": 5,
+			"tests": 31,
+			"log": "/tmp/session-question-desktop-frozen.log"
+		},
+		"actualAskDialogAndSsr": {
+			"status": "PASS",
+			"files": 2,
+			"tests": 5,
+			"log": "/tmp/session-question-empty-ui-green.log"
+		},
+		"backendTypecheck": "PASS",
+		"desktopNodeAndWebTypecheck": "PASS",
+		"publicApiPackageCheck": "PASS",
+		"apiGeneration": "PASS",
+		"architecture": "PASS",
+		"changedFileLint": "PASS",
+		"baseRootLint": {
+			"status": "FAIL_BASELINE_JSON_FORMAT",
+			"paths": [
+				"docs/releases/native-plugin-knowledge-model-command-2026-10-28.json",
+				"docs/releases/native-publication-sdk-ordering-2026-10-28.json"
+			]
+		},
+		"formalElectronTwoWindowGui": "NOT_RUN",
+		"newInstaller": "NOT_RUN",
+		"finalCombinedRootGates": "PARENT_INTEGRATION_PENDING"
+	},
+	"sdkInputSemantics": {
+		"version": "1.1.0",
+		"emptyString": "valid ordinary input",
+		"whitespace": "preserved",
+		"cancel": "undefined in native binding; tagged cancelled in capability"
+	},
+	"remaining": [
+		"generic records/provider ports shared with knowledge",
+		"managed task/native UI ownership and real package stop",
+		"remove startup task/coreHost assembly",
+		"raw CLI reload generation fence",
+		"formal package GUI and final root gates"
+	],
+	"npmPublished": false,
+	"externalAcceptanceAndB8": "unchanged"
+}

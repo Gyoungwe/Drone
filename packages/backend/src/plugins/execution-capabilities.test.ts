@@ -122,6 +122,18 @@ it("rejects stale, read-only and untrusted callers before any execution infrastr
 	await ports.dispose();
 });
 
+it("does not accept a selection object in place of the actual session identity", async () => {
+	const ports = await capabilities();
+	await expect(
+		ports.handlers["execution.describe"].execute(null, {
+			...context(),
+			callerIdentity: selected.identity,
+			sessionIdentity: {},
+		}),
+	).rejects.toThrow("stale");
+	await ports.dispose();
+});
+
 it("uses the host's configured reference instead of letting a request self-declare its cached image (explicit synthetic engine fixture)", async () => {
 	const configuredImage = "configured-python-fixture:local";
 	const configuredId = `sha256:${"a".repeat(64)}`;
@@ -170,17 +182,5 @@ process.exit(2);
 			.every((args) => args.at(-1) === configuredImage || args.at(-1) === "missing-r-fixture"),
 	).toBe(true);
 	expect(calls.filter((args) => args[0] === "run")).toHaveLength(1);
-	await ports.dispose();
-});
-
-it("does not accept a selection object in place of the actual session identity", async () => {
-	const ports = await capabilities();
-	await expect(
-		ports.handlers["execution.describe"].execute(null, {
-			...context(),
-			callerIdentity: selected.identity,
-			sessionIdentity: {},
-		}),
-	).rejects.toThrow("stale");
 	await ports.dispose();
 });
