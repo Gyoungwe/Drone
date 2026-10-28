@@ -63,6 +63,7 @@ async function setup({ ui = true, isolated = false } = {}) {
   const accepted=[];
   return {operations:{
    input:{effect:"write",inputSchema:{type:"object"},resultSchema:{type:"object"},execute:async(input,context)=>{const value=await context.capabilities.call("session.input",input);accepted.push(value);return value;}},
+   tools:{effect:"read",inputSchema:{type:"null"},resultSchema:{type:"array"},execute:async(_input,context)=>context.capabilities.call("session.tools",null)},
    snapshot:{effect:"read",inputSchema:{type:"null"},resultSchema:{type:"array"},execute:async()=>accepted}
   },dispose:async()=>{}};
  };`,
@@ -94,12 +95,12 @@ async function setup({ ui = true, isolated = false } = {}) {
 					})
 				: async () => ({
 						operations: Object.fromEntries(
-							["select", "input", "confirm"].map((kind) => [
+							["select", "input", "confirm", "tools"].map((kind) => [
 								kind,
 								{
-									effect: "write",
-									inputSchema: { type: "object" },
-									resultSchema: { type: "object" },
+									effect: kind === "tools" ? "read" : "write",
+									inputSchema: { type: kind === "tools" ? "null" : "object" },
+									resultSchema: { type: kind === "tools" ? "array" : "object" },
 									execute: async (input, ctx) => {
 										const result = await ctx.capabilities.call(`session.${kind}`, input);
 										accepted.push(kind);
@@ -348,3 +349,29 @@ it("round-trips real answers and cancellation through the restricted production 
 		bridge.invoke(client.owner, client.binding, "snapshot", null, client.selection),
 	).resolves.toEqual([{ kind: "input", value: "" }]);
 }, 20000);
+
+it("reads fresh actual SDK tool hints through the restricted worker without deriving authority from names", async () => {
+	const { entry, requests, invoke, clients } = await setup({ isolated: true });
+	const definition = entry.session.getToolDefinition("read");
+	definition.annotations = { ...definition.annotations, readOnlyHint: false };
+	expect((await invoke(0, "tools", null)).find((tool) => tool.name === "read")).toEqual({
+		name: "read",
+		readOnlyHint: false,
+	});
+	definition.annotations = { readOnlyHint: true };
+	expect((await invoke(1, "tools", null)).find((tool) => tool.name === "read")).toEqual({
+		name: "read",
+		readOnlyHint: true,
+	});
+	definition.annotations = {};
+	expect((await invoke(0, "tools", null)).find((tool) => tool.name === "read")).toEqual({
+		name: "read",
+		readOnlyHint: null,
+	});
+	expect(requests).toEqual([]);
+	const client = clients[0];
+	const application = bridge.selectSession(client.owner, null);
+	await expect(bridge.invoke(client.owner, client.binding, "tools", null, application)).rejects.toThrow(
+		"selected live session",
+	);
+});
