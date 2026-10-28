@@ -78,7 +78,10 @@ export async function createPluginExecutionCapabilities(
 	options: PluginExecutionCapabilitiesOptions,
 ): Promise<{
 	handlers: Readonly<
-		Record<"execution.run" | "execution.describe" | "execution.receipt", PluginCapabilityHandler>
+		Record<
+			"execution.run" | "execution.describe" | "execution.receipt" | "execution.cancel",
+			PluginCapabilityHandler
+		>
 	>;
 	dispose(): Promise<void>;
 }> {
@@ -175,6 +178,28 @@ export async function createPluginExecutionCapabilities(
 					return value;
 				},
 			},
+			"execution.cancel": {
+				effect: "write",
+				inputSchema: Type.Object({ requestId: id }, { additionalProperties: false }),
+				resultSchema: Type.Union([
+					Type.Object({ kind: Type.Literal("missing") }, { additionalProperties: false }),
+					Type.Object({ kind: Type.Literal("value"), receipt }, { additionalProperties: false }),
+				]),
+				approvalDetail: (input) =>
+					hostText(
+						`取消本会话已受理的执行：${(input as { requestId: string }).requestId}。等待自有容器清理和终态回执；不存在的请求不会报告已关闭。`,
+						`Cancel this session's accepted execution: ${(input as { requestId: string }).requestId}. Wait for owned-container cleanup and its terminal receipt; a missing request is never reported closed.`,
+					),
+				execute: async (input, context) => {
+					const selected = caller(context);
+					const value = await transactions.cancel(
+						identity(context, selected),
+						(input as { requestId: string }).requestId,
+					);
+					caller(context);
+					return value;
+				},
+			},
 			"execution.run": {
 				effect: "write",
 				inputSchema: Type.Object(
@@ -204,13 +229,11 @@ export async function createPluginExecutionCapabilities(
 					const workspace = await realpath(selected.scope.workspaceDirectory);
 					if (canonicalProjectId(workspace) !== selected.scope.workspaceId)
 						throw new Error("Execution workspace identity changed");
-					const available = await describeContainerExecution({
-						...options.container,
-						pythonImage: request.image,
-						rImage: request.image,
-					});
-					if (!available.runtime || available.images[request.language] !== request.image)
-						throw new Error("Requested exact container image is not cached; no image was pulled");
+					const available = await describeContainerExecution(options.container);
+					if (!available.runtime || !available.images[request.language])
+						throw new Error("Configured language container image is not cached; no image was pulled");
+					if (available.images[request.language] !== request.image)
+						throw new Error("Requested image does not match the configured cached language image");
 					await prepareSandboxRunDirectory(workspace, request.runDirectory, context.signal);
 					const runner = await ContainerSandboxRunner.create({
 						...options.container,

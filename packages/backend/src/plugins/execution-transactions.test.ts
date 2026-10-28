@@ -211,3 +211,44 @@ it("keeps receipts scoped to source, session and canonical workspace", async () 
 		kind: "missing",
 	});
 });
+
+it("cancels only the creator's accepted transaction, waits for cleanup/finalization and returns existing terminal on repeat", async () => {
+	const transactions = new ExecutionTransactions(await storage(true));
+	let entered!: () => void;
+	const started = new Promise<void>((resolve) => {
+		entered = resolve;
+	});
+	let cleaned = false;
+	const pending = transactions.run(
+		input,
+		owner,
+		runner(async (request) => {
+			entered();
+			await new Promise<void>((_resolve, reject) =>
+				request.signal!.addEventListener(
+					"abort",
+					() => {
+						cleaned = true;
+						reject(request.signal!.reason);
+					},
+					{ once: true },
+				),
+			);
+			return result;
+		}),
+		new AbortController().signal,
+	);
+	const rejected = expect(pending).rejects.toThrow("cancelled by its creator");
+	await started;
+	expect(await transactions.cancel({ ...owner, sessionId: "another-creator" }, input.requestId)).toEqual({
+		kind: "missing",
+	});
+	expect(cleaned).toBe(false);
+	const terminal = await transactions.cancel(owner, input.requestId);
+	expect(terminal).toMatchObject({ kind: "value", receipt: { status: "cancelled" } });
+	expect(cleaned).toBe(true);
+	await rejected;
+	expect(await transactions.cancel(owner, input.requestId)).toEqual(terminal);
+	expect(await transactions.cancel(owner, "never-accepted")).toEqual({ kind: "missing" });
+	await transactions.drain();
+});

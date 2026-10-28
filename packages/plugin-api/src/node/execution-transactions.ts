@@ -44,6 +44,10 @@ function sameIdentity(a: ExecutionIdentity, b: ExecutionIdentity): boolean {
 export class ExecutionTransactions {
 	private readonly pending = new Set<Promise<PluginExecutionResult>>();
 	private readonly accepting = new Set<string>();
+	private readonly active = new Map<
+		string,
+		{ identity: ExecutionIdentity; abort: AbortController; result: Promise<PluginExecutionResult> }
+	>();
 	private failure: unknown;
 	private stopping = false;
 	constructor(private readonly storage: ExecutionReceiptStorage) {}
@@ -74,13 +78,32 @@ export class ExecutionTransactions {
 		const key = executionOwnerKey(identity, input.requestId);
 		if (this.accepting.has(key)) return Promise.reject(new Error("Execution request is already accepted"));
 		this.accepting.add(key);
-		const pending = this.execute(key, input, identity, runner, signal);
+		const abort = new AbortController();
+		const pending = this.execute(key, input, identity, runner, AbortSignal.any([signal, abort.signal]));
+		this.active.set(key, { identity: { ...identity }, abort, result: pending });
 		this.pending.add(pending);
-		void pending.then(
-			() => this.pending.delete(pending),
-			() => this.pending.delete(pending),
-		);
+		const settled = () => {
+			this.pending.delete(pending);
+			this.active.delete(key);
+		};
+		void pending.then(settled, settled);
 		return pending;
+	}
+
+	async cancel(identity: ExecutionIdentity, requestId: string): Promise<PluginExecutionReceiptResult> {
+		const key = executionOwnerKey(identity, requestId);
+		const active = this.active.get(key);
+		if (active && !sameIdentity(active.identity, identity))
+			throw new Error("Execution cancellation belongs to another owner");
+		const current = await this.receipt(identity, requestId);
+		if (current.kind === "missing" || current.receipt.status !== "accepted") return current;
+		if (!active) throw new Error("Execution receipt needs recovery: accepted transaction has no live runner");
+		active.abort.abort(new Error("Execution cancelled by its creator"));
+		await Promise.allSettled([active.result]);
+		const terminal = await this.receipt(identity, requestId);
+		if (terminal.kind === "missing" || terminal.receipt.status === "accepted")
+			throw new Error("Execution receipt needs recovery: no confirmed terminal outcome");
+		return terminal;
 	}
 
 	private async execute(
