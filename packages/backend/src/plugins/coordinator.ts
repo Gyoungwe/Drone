@@ -14,6 +14,7 @@ import { NativeSessionDelivery, type SelectedNativeSource } from "./native-deliv
 import { type ManagedNativeSession, type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 import type {
 	PluginCapabilityContext,
+	PluginNativeInvocation,
 	PluginRuntimeCapabilitiesOptions,
 	PluginRuntimeCapabilitiesProvider,
 } from "./runtime-capabilities";
@@ -251,6 +252,11 @@ export class PluginRuntimeBridge {
 			);
 		if (!binding || !selected || !this.caller(binding))
 			throw new Error("Provider consumer caller is unavailable");
+		if (
+			context.nativeInvocation &&
+			!binding.runtime.registry.hasNativeInvocation(context.nativeInvocation, context.sessionIdentity)
+		)
+			throw new Error("Provider native caller attachment is no longer active");
 		if (selected.session) {
 			const session = this.options.getSessionContext(selected.session.scope.sessionId);
 			if (
@@ -270,6 +276,7 @@ export class PluginRuntimeBridge {
 		target: PluginServiceTarget,
 		input: PluginProviderInvocationInput,
 		effect: "read" | "write",
+		nativeInvocation?: PluginNativeInvocation,
 	): Promise<unknown> {
 		const selected = this.serviceConsumer(consumer, context, effect);
 		if (!selected || !context.operation)
@@ -321,20 +328,31 @@ export class PluginRuntimeBridge {
 			check();
 			const binding = this.bindings.get(token);
 			if (!binding) throw new Error("Provider binding was revoked");
-			const pending = binding.runtime.registry.invokeExport(
-				target.source.pluginId,
-				() => {
-					check();
-					const caller = this.caller(binding);
-					return caller
-						? { ...caller, signal: AbortSignal.any([caller.signal, context.signal]), providerChain }
-						: undefined;
-				},
-				input.operation,
-				input.input,
-				effect,
-				context.signal,
-			);
+			const resolveCaller = () => {
+				check();
+				const caller = this.caller(binding);
+				return caller
+					? { ...caller, signal: AbortSignal.any([caller.signal, context.signal]), providerChain }
+					: undefined;
+			};
+			const pending = nativeInvocation
+				? binding.runtime.registry.invokeNativeExport(
+						target.source.pluginId,
+						resolveCaller,
+						input.operation,
+						input.input,
+						nativeInvocation,
+						effect,
+						context.signal,
+					)
+				: binding.runtime.registry.invokeExport(
+						target.source.pluginId,
+						resolveCaller,
+						input.operation,
+						input.input,
+						effect,
+						context.signal,
+					);
 			binding.pending.add(pending);
 			try {
 				const result = await pending;
@@ -369,6 +387,8 @@ export class PluginRuntimeBridge {
 				this.serviceConsumer(source, context, effect);
 			},
 			invoke: (context, target, input, effect) => this.invokeProvider(source, context, target, input, effect),
+			invokeNative: (context, target, input, effect, origin) =>
+				this.invokeProvider(source, context, target, input, effect, origin),
 		});
 		const registry = new PluginRuntimeRegistry(
 			{
