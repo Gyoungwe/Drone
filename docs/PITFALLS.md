@@ -411,6 +411,10 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 
 TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Check 中仍拒绝原四参数调用。`PluginRuntimeContract.invoke` 的兼容合同显式使用四参数 tuple 与带 request ID 的五参数 tuple 联合；主进程 IPC 回归必须实际调用两个形状，不能只依赖 TypeScript optional 参数通过。取消传输只发送 request ID，AbortSignal 留在 renderer/main 各自的实际生命周期中。
 
+### 隐藏 provider delta 后误报模型沉默
+
+原生 delivery 投影会隐藏未经发布的 `message_update`。若 `ModelWaitMonitor.inspect` 位于投影之后，持续有 provider 事件的会话也会进入等待甚至被自动中止。活动计时必须在投影前读取事件类型；正文仍只经投影进入 reviewer、trace 和 UI。测试用显式 `NativeSessionDelivery` 关闭策略验证隐藏流量仍恢复等待，另验证普通会话不会因 `DRONE_KNOWLEDGE_DIR` 存在而隐藏流量。该定向 RED→GREEN 不替代真实安装包验收。
+
 ### channel-watch 恢复订阅一次性超时（原因未确认）
 
 `4abdae43/253c47e` 的独立全量门禁首次在恢复订阅后的 2000ms 内未收到文件监听唤醒，backend 其余 1987 项通过。原失败日志保留；同目录定向完整文件 20 项通过，随后该用例 4 路并行共 20 次均通过，完整同源码重跑 backend1988/17 skipped、Desktop934/1 skipped、root25/25 通过。首次压力脚本曾使用重复 config 路径，在测试前退出，不能当作产品复现证据。没有修改生产代码、超时或断言；根因仍待稳定复现，完整重跑通过不代表已经修复。见 `native-plugin-ui-model-cohort-2026-10-28.json`。
