@@ -23,23 +23,24 @@ export class NativeMessageCourier {
 
 	encode(value: unknown): NativeMessageReferences {
 		if (value === null || typeof value !== "object") return {};
-		const carrier = value as { message?: unknown; messages?: unknown; persisted?: unknown };
+		const carrier = value as { message?: unknown; messages?: unknown };
 		const reference = this.reference(carrier.message);
 		return {
 			...(reference === null ? {} : { message: reference }),
 			...(Array.isArray(carrier.messages)
-				? {
-						messages: carrier.messages.map((message) => this.reference(message)),
-						...(Array.isArray(carrier.persisted)
-							? {
-									historicalAliases: carrier.messages.map((message) => {
-										const index = (carrier.persisted as unknown[]).indexOf(message);
-										return index < 0 ? null : index;
-									}),
-								}
-							: {}),
-					}
+				? { messages: carrier.messages.map((message) => this.reference(message)) }
 				: {}),
+		};
+	}
+
+	/** Snapshot callers supply only SDK-origin-confirmed historical objects; event fields cannot request aliases. */
+	encodeSnapshot(messages: unknown[], persisted: unknown[]): NativeMessageReferences {
+		return {
+			...this.encode({ messages }),
+			historicalAliases: messages.map((message) => {
+				const index = persisted.indexOf(message);
+				return index < 0 ? null : index;
+			}),
 		};
 	}
 
