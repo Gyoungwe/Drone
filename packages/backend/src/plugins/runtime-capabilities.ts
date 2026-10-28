@@ -86,7 +86,7 @@ interface Authority {
 
 /** Factory-held ports borrow the current call's authority; retaining a port never retains a caller. */
 export class PluginCapabilityBroker {
-	private readonly calls = new AsyncLocalStorage<Authority>();
+	private readonly calls = new AsyncLocalStorage<Authority | undefined>();
 	readonly port: PluginRuntimeCapabilities = {
 		call: (name, input) => {
 			const authority = this.calls.getStore();
@@ -97,6 +97,11 @@ export class PluginCapabilityBroker {
 	};
 
 	constructor(private readonly options: PluginRuntimeCapabilitiesOptions) {}
+
+	/** Pure projection gets no borrowed factory port, including an ambient parent invocation. */
+	withoutCaller<T>(execute: () => Promise<T>): Promise<T> {
+		return this.calls.run(undefined, execute);
+	}
 
 	async run<T>(
 		context: Omit<PluginCapabilityContext, "capabilities">,
