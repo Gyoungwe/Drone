@@ -300,3 +300,10 @@ export function activate() {
 ### Markdown navigation ownership
 
 `Markdown` accepts optional `onLink(href: string): void`. When provided, the host renders the supplied Markdown without knowledge-link rewriting and forwards anchor clicks to the contribution after preventing default navigation. Host knowledge lookup/store and resource-preview routing do not run. The contribution must use its own runtime and approved opening capabilities; receiving a URL is not permission to open local files or launch an external application. Omitting `onLink` retains the published UI v1 behavior until its consumers migrate.
+
+
+### 通用模型能力（API 1.3 候选）
+
+安装包必须在真实 `plugin.manifest.json` 的 `permissions.network` 声明 `configured-services`，宿主才提供 `model.selection` / `model.generate`；UI 清单、域状态或 renderer 入参不能赋予此权限。声明变化会使已有 runtime source 绑定失效。该声明只允许申请模型出口，未授予任意网络请求。
+
+`model.selection({profile?})` 只解析所选真实会话的当前模型，或已存在且明确配置的模型偏好；不回退到任意 provider。`model.generate({selection,systemPrompt,prompt,resultSchema,maxTokens})` 只执行一次隔离 `structured_result` 请求，无父对话、任意工具执行或正文/思考回传。每次调用仍由宿主显示模型 ID、thinking、输出预算、数据将传入模型和可能费用并请求批准；缺失用量或有效定价时返回 null，不声称免费。caller 身份、选择与取消在 SDK 请求前后核验；调用方不得把结构化模型结果当成人工批准或科学认证。

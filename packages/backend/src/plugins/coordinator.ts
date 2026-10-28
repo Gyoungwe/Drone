@@ -17,6 +17,7 @@ export interface PluginRuntimeSource {
 	readonly nativeEntrypoint?: string;
 	readonly requestsStateWrite?: boolean;
 	readonly requestsFileWrite?: boolean;
+	readonly requestsModel?: boolean;
 	readonly resources?: Readonly<Record<string, string>>;
 }
 export interface PluginRuntimeOwner {
@@ -84,6 +85,7 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.nativeEntrypoint === b.nativeEntrypoint &&
 		a.requestsStateWrite === b.requestsStateWrite &&
 		a.requestsFileWrite === b.requestsFileWrite &&
+		a.requestsModel === b.requestsModel &&
 		JSON.stringify(a.resources) === JSON.stringify(b.resources)
 	);
 }

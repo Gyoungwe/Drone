@@ -238,15 +238,18 @@ export function createDesktopResourceCapabilities(
 export function createDesktopRuntime(
 	manager: UiPluginManager,
 	runtimeDirectory: string,
-	sessions: Pick<SessionServicePort, "getPluginCallerContext" | "getStorageRegistry">,
+	sessions: Pick<
+		SessionServicePort,
+		"getPluginCallerContext" | "getStorageRegistry" | "getPluginSessionCapabilities"
+	>,
 ): DesktopRuntimeBridge {
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
 		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
 		enabled: (name) => manager.isEnabled(name),
 		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
-		capabilities: (source, owner) =>
-			createDesktopResourceCapabilities(source, runtimeDirectory, {
+		capabilities: (source, owner) => async (activation) => {
+			const resourceCapabilities = await createDesktopResourceCapabilities(source, runtimeDirectory, {
 				profileDirectory: app.getPath("userData"),
 				storage: sessions.getStorageRegistry(),
 				selectDirectories: async (kind) => {
@@ -304,7 +307,17 @@ export function createDesktopRuntime(
 						throw new Error("Plugin approving window closed during directory selection");
 					return result.canceled ? [] : result.filePaths;
 				},
-			}),
+			})(activation);
+			const { "session.inspect": inspection, ...modelCapabilities } = sessions.getPluginSessionCapabilities();
+			return {
+				...resourceCapabilities,
+				handlers: {
+					...resourceCapabilities.handlers,
+					"session.inspect": inspection,
+					...(source.requestsModel ? modelCapabilities : {}),
+				},
+			};
+		},
 		approve: approveDesktopRuntime,
 	});
 }
