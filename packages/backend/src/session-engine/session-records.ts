@@ -62,8 +62,15 @@ export class SessionRecordStore {
 			throw error;
 		}
 		const rows: Map<string, unknown> = new Map();
-		for (const line of content.split("\n").filter((value) => value.length)) {
-			const row: unknown = JSON.parse(line);
+		for (const [index, line] of content.split("\n").entries()) {
+			if (!line.length) continue;
+			let row: unknown;
+			try {
+				row = JSON.parse(line);
+			} catch {
+				// Node's SyntaxError can quote private chat content. Only the line number crosses this boundary.
+				throw new Error(`Invalid SDK session JSONL at line ${index + 1}`);
+			}
 			if (!row || typeof row !== "object" || !("id" in row) || typeof row.id !== "string")
 				throw new Error("Invalid SDK session JSONL entry");
 			rows.set(row.id, row);
@@ -77,7 +84,7 @@ export class SessionRecordStore {
 				state.committed = structuredClone(committed);
 				throw new Error(`SDK branch entry is not persisted: ${item.id}`);
 			}
-			if (item.type === "custom") committed.push(item);
+			if (item.type === "custom") committed.push(rows.get(item.id) as SessionEntry);
 		}
 		state.committed = structuredClone(committed);
 		return "durable";
