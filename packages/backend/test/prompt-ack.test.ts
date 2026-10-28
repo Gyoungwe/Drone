@@ -50,7 +50,7 @@ describe("PiBackend.prompt 受理回执", () => {
 	});
 
 	it("preflight 前抛错：reject 传真实错误（非泛化 preflight 文案）", async () => {
-		const backend = makeBackend("s1", async (_text, options) => {
+		const backend = makeBackend("s1", async () => {
 			throw new Error("Authentication failed for provider");
 		});
 

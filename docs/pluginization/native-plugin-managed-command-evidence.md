@@ -6,7 +6,7 @@
 
 新增可选 `PluginNativeSession.commandEffects`；没有声明的命令按 write 授权。调用 `native:command:<name>` 由当前实际 SDK Context 解析会话身份，沿用 registry 的作用域、信任、只读、代次、取消和 capability broker。声明 read 的命令仍不能调用 write 能力，renderer 或命令参数不能声称另一个会话的身份。
 
-`session.command` 的真实 command signal 经 Proxy 保留 SDK 动态 getter，传入 registry 与隔离进程；pending 命令归 attachment 管理。abort、会话关闭和插件停用等待在途请求排空；迟到的 capability 请求不能重新获得权限。关掉旧 owner 后真实 SDK reload 可创建不同 PID，再读回新 owner；不是 UI toggle 状态演示。
+`sessions.command` 的真实 command signal 经 Proxy 保留 SDK 动态 getter，传入 registry 与隔离进程；pending 命令归 attachment 管理。abort、会话关闭和插件停用等待在途请求排空；迟到的 capability 请求不能重新获得权限。关掉旧 owner 后真实 SDK reload 可创建不同 PID，再读回新 owner；不是 UI toggle 状态演示。
 
 worker 的 Context 只支持 `cwd`、`signal`、`sessionManager.getSessionId()` 与真实能力范围下的 `hasUI:false`。`isIdle`、`waitForIdle`、`newSession` 和其他未实现 Context/UI 方法明确失败；没有用快照或立即成功冒充同步跨进程 API。前台领域操作通过通用 async `session.inspect` 自行实施 idle 策略。
 
