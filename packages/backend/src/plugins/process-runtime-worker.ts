@@ -37,7 +37,7 @@ const resourcesLifecycle = {
     return resourcesStopping ??= new Promise((resolve, reject) => {
       const id = String(++capabilitySequence);
       capabilityCalls.set(id, {resolve, reject});
-      send({type:"dispose_resources", id});
+      send({type:"dispose_resources", id, callId:currentCall.getStore()});
     });
   }
 };
@@ -161,7 +161,7 @@ input.on("line", async (line) => {
       session.closed=true;
       for(const id of session.pending.keys()) calls.get(id)?.abort();
       await Promise.allSettled([...session.pending.values()]);
-      await session.adapter.dispose();
+      await currentCall.run(message.id,()=>session.adapter.dispose());
       nativeSessions.delete(message.attachment);
       send({type:"result",id:message.id,ok:true,value:null});
       return;
@@ -218,9 +218,11 @@ input.on("line", async (line) => {
       return;
     }
     if (message.type === "dispose") {
-      for(const session of nativeSessions.values()) await session.adapter.dispose();
-      nativeSessions.clear();
-      await runtime.dispose();
+      await currentCall.run(message.id,async()=>{
+        for(const session of nativeSessions.values()) await session.adapter.dispose();
+        nativeSessions.clear();
+        await runtime.dispose();
+      });
       send({ type: "result", id: message.id, ok: true, value: null });
       input.close();
       process.stdin.destroy();

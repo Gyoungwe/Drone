@@ -464,3 +464,8 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 ## Node 内置 SQLite 与普通插件 worker
 
 不要把 Node 的 FS permission 当作所有内置模块的文件访问隔离。普通 domain worker 通过官方 `--no-experimental-sqlite` 关闭该入口；实际 factory/worker 测试只验证 import 被拒绝。SQLite index resource 的兼容与更强隔离仍需独立验证，不能继承普通 worker 的通过结论。详见 [防御证据](pluginization/node-sqlite-worker-defense.md)。
+
+
+## 插件调用的 guest 超时不应计算宿主等待
+
+保留 15 秒 guest 执行预算时，要在真实 parent 的 host capability 审批/执行/清理期间暂停，仅按剩余预算恢复。不能重置全额预算，也不能暂停同进程其他会话的计时；resource disposal 必须关联自己的内部 parent invocation。实际 worker/fake-clock 回归见 [执行候选证据](pluginization/native-plugin-execution-capability-candidate.md#15-秒-guest-watchdog-后继)。

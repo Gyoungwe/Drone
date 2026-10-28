@@ -47,7 +47,11 @@ type NativeToolUpdate = NonNullable<Parameters<ToolDefinition["execute"]>[3]>;
 const messageSchema = Type.Union([
 	Type.Object({ type: Type.Literal("native_update"), id: Type.String(), value: toolProgressSchema }),
 	Type.Object(
-		{ type: Type.Literal("dispose_resources"), id: Type.String({ minLength: 1 }) },
+		{
+			type: Type.Literal("dispose_resources"),
+			id: Type.String({ minLength: 1 }),
+			callId: Type.String({ minLength: 1 }),
+		},
 		{ additionalProperties: false },
 	),
 	Type.Object({ type: Type.Literal("ready"), operations: declarationSchema, native: Type.Boolean() }),
@@ -252,6 +256,40 @@ export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions)
 	};
 }
 
+/** The existing 15 s watchdog counts guest time, excluding actual host capability settlement. */
+class GuestTimeBudget {
+	private remaining = 15000;
+	private startedAt = performance.now();
+	private waiting = 0;
+	private finished = false;
+	private timer: ReturnType<typeof setTimeout> | undefined;
+	constructor(private readonly expire: () => void) {
+		this.arm();
+	}
+	private arm(): void {
+		this.startedAt = performance.now();
+		this.timer = setTimeout(() => {
+			this.finished = true;
+			this.expire();
+		}, this.remaining);
+	}
+	pause(): void {
+		if (this.finished) return;
+		if (this.waiting++ === 0) {
+			this.remaining = Math.max(0, this.remaining - (performance.now() - this.startedAt));
+			clearTimeout(this.timer);
+		}
+	}
+	resume(): void {
+		if (this.finished) return;
+		if (--this.waiting === 0) this.arm();
+	}
+	dispose(): void {
+		this.finished = true;
+		clearTimeout(this.timer);
+	}
+}
+
 class RuntimeProcess {
 	private sequence = 0;
 	private failure: Error | undefined;
@@ -260,6 +298,7 @@ class RuntimeProcess {
 	private readonly nativeDisposers = new Set<() => Promise<void>>();
 	private shutdownTimer: ReturnType<typeof setTimeout> | undefined;
 	private readonly closed: Promise<void>;
+	private bootstrapBudget: GuestTimeBudget | undefined;
 	private childClosed = false;
 	private shutdownPending: Promise<void> | undefined;
 	private readonly capabilityIds = new Set<string>();
@@ -279,6 +318,7 @@ class RuntimeProcess {
 			resolve: (value: unknown) => void;
 			reject: (error: Error) => void;
 			cleanup: () => void;
+			budget: GuestTimeBudget;
 			context?: PluginRuntimeContext;
 			onUpdate?: NativeToolUpdate;
 			signal?: AbortSignal;
@@ -333,6 +373,8 @@ class RuntimeProcess {
 					this.failure ??= new Error(`Plugin runtime ${pluginId} exited (${code}): ${this.stderr.trim()}`);
 				}
 				const error = this.failure ?? new Error(`Plugin runtime ${pluginId} is closed`);
+				this.bootstrapBudget?.dispose();
+				for (const pending of this.pending.values()) pending.budget.dispose();
 				await this.drainCapabilities(error);
 				this.rejectReady(error);
 				for (const pending of this.pending.values()) {
@@ -375,6 +417,8 @@ class RuntimeProcess {
 
 	private fail(error: Error): void {
 		this.failure ??= error;
+		this.bootstrapBudget?.dispose();
+		for (const pending of this.pending.values()) pending.budget.dispose();
 		for (const call of this.hostCapabilities.values()) call.abort.abort(this.failure);
 		this.child.kill("SIGKILL");
 	}
@@ -394,11 +438,24 @@ class RuntimeProcess {
 			return;
 		}
 		if (message.type === "dispose_resources") {
+			const budget =
+				message.callId === "bootstrap" ? this.bootstrapBudget : this.pending.get(message.callId)?.budget;
+			if (!budget) {
+				this.fail(new Error("Plugin resource cleanup requires its actual parent invocation"));
+				return;
+			}
+			budget.pause();
 			const cleanup = this.disposeResources(message.id);
 			this.resourceCleanups.add(cleanup);
 			void cleanup.then(
-				() => this.resourceCleanups.delete(cleanup),
-				() => this.resourceCleanups.delete(cleanup),
+				() => {
+					this.resourceCleanups.delete(cleanup);
+					budget.resume();
+				},
+				() => {
+					this.resourceCleanups.delete(cleanup);
+					budget.resume();
+				},
 			);
 			if (this.shutdownPending) {
 				clearTimeout(this.shutdownTimer);
@@ -480,6 +537,9 @@ class RuntimeProcess {
 			return;
 		}
 		this.capabilityIds.add(message.id);
+		const budget =
+			message.callId === "bootstrap" ? this.bootstrapBudget : this.pending.get(message.callId)?.budget;
+		budget?.pause();
 		const abort = new AbortController();
 		const settled = Promise.resolve().then(() => this.executeCapability(message, context, abort));
 		this.hostCapabilities.set(message.id, {
@@ -489,8 +549,14 @@ class RuntimeProcess {
 			settled,
 		});
 		void settled.then(
-			() => this.hostCapabilities.delete(message.id),
-			() => this.hostCapabilities.delete(message.id),
+			() => {
+				this.hostCapabilities.delete(message.id);
+				budget?.resume();
+			},
+			() => {
+				this.hostCapabilities.delete(message.id);
+				budget?.resume();
+			},
 		);
 	}
 
@@ -520,10 +586,10 @@ class RuntimeProcess {
 	}
 
 	async start(): Promise<PluginNativeRuntimeInstance> {
-		const timer = setTimeout(
-			() => this.fail(new Error(`Plugin runtime ${this.pluginId} startup timed out after 15000ms`)),
-			15000,
+		const budget = new GuestTimeBudget(() =>
+			this.fail(new Error(`Plugin runtime ${this.pluginId} startup timed out after 15000ms`)),
 		);
+		this.bootstrapBudget = budget;
 		this.send({
 			type: "start",
 			applicationId: this.context.applicationId,
@@ -579,7 +645,8 @@ class RuntimeProcess {
 			await this.closed;
 			throw this.failure;
 		} finally {
-			clearTimeout(timer);
+			budget.dispose();
+			this.bootstrapBudget = undefined;
 		}
 	}
 
@@ -791,19 +858,19 @@ class RuntimeProcess {
 		// Serialization is a trust boundary; fail before registering a pending request.
 		const encoded = `${JSON.stringify({ type, id, ...payload })}\n`;
 		return new Promise((resolve, reject) => {
-			const timer = setTimeout(
-				() => this.fail(new Error(`Plugin runtime ${this.pluginId} invocation timed out after 15000ms`)),
-				15000,
+			const budget = new GuestTimeBudget(() =>
+				this.fail(new Error(`Plugin runtime ${this.pluginId} invocation timed out after 15000ms`)),
 			);
 			const cancel = () => this.send({ type: "cancel", id });
 			this.pending.set(id, {
+				budget,
 				context,
 				onUpdate,
 				signal,
 				resolve,
 				reject,
 				cleanup: () => {
-					clearTimeout(timer);
+					budget.dispose();
 					signal?.removeEventListener("abort", cancel);
 				},
 			});

@@ -36,3 +36,12 @@ receipt 只保存代码 hash、目录、镜像、身份与终态元数据，不�
 - **未完成**：真实已缓存镜像下的 native/UI 同 owner 执行成功、完整科研插件页面（critic/multipath/evaluation/export）、Inquiry 独立 provider 迁移、旧 seam 删除、合并后完整双仓库门禁和正式安装包 GUI。真实容器成功还需取得正式授权的可用镜像。
 
 主要日志：`/tmp/discovery-c-receipt-nofollow-tests.log`、`/tmp/discovery-c-cap-final-desktop-tests.log`、`/tmp/discovery-c-host-endpoint-*-final.log`。新增边界 catch/guard 分别用于：OS 路径与 NUL 参数；缺失可执行文件和并发目录 EEXIST；私有 JSON 的 ENOENT/解析/大小/no-follow；签名与 ownership；CAS 与 readback；临时文件/lease 清理；受理/终态持久化失败导致 owner 保持 failed。没有静默默认值或空 catch。
+
+
+## 15 秒 guest watchdog 后继
+
+普通请求与 factory 的原 15 秒上限现在只扣除 guest 自身执行时间。只有同一真实 parent invocation 已登记的 capability（包括等待批准）才暂停自己的预算；多个在途能力全部 settle 后沿剩余预算恢复，不重置 15 秒。实际 owner resource cleanup 也携带内部 parent callId，只暂停对应 disposal 的预算。取消、child exit 与停用仍等待真实 host cleanup，停止后不会重新启动已结束预算。
+
+实际受限 worker 回归使用父进程 fake clock：先用掉 5 秒 guest，再等待 20 秒批准、20 秒真实 host capability；返回后剩余 10 秒用完仍会终止失控 guest。另验证 A 的 20 秒 host wait 不暂停 B 的 15 秒 guest deadline，以及 disposal 的真实 resource cleanup 超过 15 秒不会提前释放 lease。没有新用户配置，也没有放宽执行、文件或来源权限。
+
+定向 42 项及实际 installed UI/native SDK 2 项通过，日志 `/tmp/inquiry-guest-budget-targeted.log`、`/tmp/inquiry-guest-budget-approval-tests.log`、`/tmp/inquiry-guest-budget-sdk.log`；SDK 执行仍为 synthetic engine，真实 Docker/正式安装包状态没有扩大。process wire 当前无全局字节预算，本后继不改变历史 projection 上限；binary payload 自身限制另行审查。
