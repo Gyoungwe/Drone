@@ -326,3 +326,11 @@ export function activate() {
 结果分别为 `{kind:"selected",value:string}`、`{kind:"input",value:string}`、`{kind:"confirmed",value:boolean}`，关闭对话框统一返回 `{kind:"cancelled"}`；调用被撤销或实际 SDK signal 取消则请求拒绝。能力调用方必须 await，不能从迟到答案继续执行。结果只表示普通交互数据，不是文件、模型或执行权限；confirm 使用 AskGate 的二选项，不会设置 PermissionGate 的 allowRun/allowAlways。模型能力仍仅由声明 `configured-services` 的包申请，问答不会借用该声明，也不会授予模型出口。
 
 问题经当前实际 SDK UI binding 到既有 AskGate pending；发给原窗口，答复由 IPC sender 校验。取消、关闭和答复使用通用 AskResolved 精确移除该窗口的对应卡片。host-only window route 不进入公共问答 JSON，不新增请求账本。原生 managed Context 的其他 UI 方法仍按既有 supported/unsupported 合同处理，不能因此声称完整 ExtensionUIContext 已可用。
+
+### 当前来源的会话检查点与普通通知（未发布 1.3 候选）
+
+`session.records.read(null)` 为 read，仅返回当前真实 SDK branch 中当前插件每个 logical type 的最后一个自定义检查点，不含聊天消息、其他插件记录或旧全局 tag；不静默截断。`session.records.append({type,data})` 为 write，JSON data 经逐调用授权后保存到宿主派生的 `plugin-record:<encoded verified pluginId>:<logicalType>`，返回 `{id,durability:"durable"|"deferred"}`。输入不能指定来源、会话或存储路径。跨包读取须走受管理的 provider，普通读取没有 legacyTypes 逃逸口。
+
+`session.notify({content})` 为 write，仅在当前真实 SDK idle 时显示普通文本 custom message，host 派生类型、固定 display:true/triggerTurn:false，无 details、可信状态或授权含义。活动会话明确拒绝，不把 queued 当作已显示；调用不触发模型。两种写入都必须来自可信可写的 live entry，不能借问答结果取得权限。
+
+检查点读取返回 `{state:"durable"|"deferred"|"needs-reopen",error:string|null,records}`。Pi 1.1.0 的 lazy/inMemory 会话可能未写盘，deferred 不是已保存回执，读取不会创建文件或触发 flush。实际 SDK 写入失败后，同 backend/实际 entry 的所有后续 append/notify 均拒绝，read 仅给出最后已确认的检查点与 needs-reopen；重建 handler、UI/native 重激活或 SDK.reload 不清除故障。只能从磁盘真正重建新的 SDK entry 后恢复；不回滚或读取 SDK 私有数组，不新增 process 全局账本。
