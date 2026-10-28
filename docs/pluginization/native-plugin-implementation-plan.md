@@ -11,7 +11,7 @@
 | 阶段 | 完成条件 | 当前已证明 | 仍未完成 | 依赖 |
 | --- | --- | --- | --- | --- |
 | P0 | 依赖/数据归属清单、原生 Pi 兼容矩阵、可重复领域扫描 | 33 API/41 事件/28 UI 声明盘点；真实 SDK 主/恢复/子会话 onError、Desktop RPC/28 UI 支持或明确拒绝、MCP/状态、沙箱诊断、managed prompt mutation、两条 process 工具 metadata/进度与真实拒绝 | managed ctx/getter；locked/latest 完整矩阵；扫描仍 `INCOMPLETE`。Desktop 28 UI 成员/RPC/status/审批取消已整合，待最终包复验 | 无 |
-| P1 | 通用 runtime 生命周期、来源绑定、权限、隔离、UI 调用与撤销 | 正式包应用 owner、会话切换、停用/拒绝/恢复/退出切片；来源变化撤销；本候选逐请求取消、实际 provider abort、双窗口同会话批准分离与真实 native 模型能力 | 显式整包启停（UI 开关不等于 native 停用）、最终工具参数权限门禁、正式包销毁失败回执；各领域同候选完整生命周期复验 | P0 |
+| P1 | 通用 runtime 生命周期、来源绑定、权限、隔离、UI 调用与撤销 | 正式包应用 owner、会话切换、停用/拒绝/恢复/退出切片；来源变化撤销；本候选逐请求取消、实际 provider abort、双窗口同会话批准分离与真实 native 模型能力 | 显式整包启停（UI 开关不等于 native 停用）、正式包销毁失败回执；各领域同候选完整生命周期复验 | P0 |
 | P2 | knowledge 服务、worker、schema 和 UI 同包；删除宿主领域装配与专用路径 | 同 tarball 的真实受限双进程/SDK owner 与 UI 读写授权；canonical 审核/history/undo、partial→retry Vault 仅写一次及完整退出；完整 prepare/read/search/delegate/check/publication、实际 parent thinking 继承、当前 branch 事件/历史与异步导出投影；新候选实际恢复两阶段导入及完整树导出 | 离线完整历史、实际 child 只读策略与任务 provider 完整协作、其余旧状态迁移；宿主领域操作/IPC与旧资源删除；正式 GUI | P1 |
 | P3 | research、来源连接器、引用/Zotero 的领域 API 与页面迁移 | 安装 host fail-closed；真实生产 summary review→delivery→回读→receipt；4 个隔离 specialist 与单独摘要 reviewer、拒绝/rollback/CAS/路径回归 | 仍有迁移期宿主 FS writer；完整 Zotero/研究 owner 与页面归属；本候选连接器/写入正式 GUI；上述测试不覆盖全部 protected Wiki reviewer | P2 |
 | P4 | tasks、编排、领域记忆及 UI 迁移 | knowledge 停止隐式任务 guard；真实 SDK 无 core 的基础 read/write/bash 与权限拒绝、两种安装加载顺序及 24 项任务回归；typed core 与 milestone 规则；canonical 状态机/guard/owner 已归插件，宿主 tasks 与反向 workbench port 删除，真实多会话/registry 隔离与恢复；验收卡/任务页同包 UI、显式 command、取消后无迟到写入与 UI 移除/恢复同 owner | 动态 native 包启停、科研示例/引导与领域记忆、正式 GUI | P2 |
@@ -25,7 +25,7 @@
 2. 完成 discovery 共享 owner/执行/Inquiry/B5 GUI 与任务界面；原生只读工具及真实 Docker 清理已整合，无 core 的隐式 guard 阻断已修复，canonical 任务 owner/UI 已整合，继续迁移科研示例/引导与整个 native 包动态启停。WebDAV/inquiry 的既有归属记录保留，不借本次状态同步扩大边界。
 3. 当前工作分支四包源码锁已同步为 `e4fbead`，最近完整门禁检查点仍为 `1707f6c`；这些锁仍是迁移期构建必需依赖。继续删除这些领域锁与旧资源闭包，证明不下载科研插件也能独立构建，而不是仅把版本同步当作 P6 完成。
 4. 使用同一候选 tarball 完成原生 Pi 真实会话、正式安装包的领域 GUI、Vault 写入回读/回滚与完整生命周期，包括销毁失败。既有通用宿主和公开 pi-evidence 切片保留其已证明范围。
-5. `bb918979/1707f6c` 冻结检查点的双仓库标准门禁已完成；后继 `e4fbead` 插件完整检查通过，宿主两处 fixture 修复后的整轮仍待复验，并须关闭最终工具参数权限问题和领域边界门禁。历史全量或直接 workspace 检查不替代未来最终候选的根命令与正式包验收。
+5. `bb918979/1707f6c` 冻结检查点的双仓库标准门禁已完成；后继 `e4fbead` 插件完整检查通过；宿主 `888ebebc`（`a3c03643` + 最终工具参数权限复核）从全新 worktree 的 npm ci 起完整重跑：lint/typecheck/check:arch/build/check:plugin-api 通过，backend 2187 passed/43 skipped、Desktop 970 passed/1 skipped、根 Node 31/31；backend 两项 chmod 故障注入在 root 下无法生效而失败，以非 root 用户单独重跑 17/17 通过（环境限制，不改写为 root 下通过）。最终参数权限：后续扩展就地改写已批准参数的直接与嵌套 `executeTool` 两个真实 SDK RED 已复现（越界文件实际写出）并转绿，见 [PITFALLS](../PITFALLS.md#权限门控之后的-tool_call-参数改写)。仍须关闭领域边界门禁。历史全量或直接 workspace 检查不替代未来最终候选的根命令与正式包验收。
 
 ## 后继并行工作
 
