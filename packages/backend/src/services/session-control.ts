@@ -7,7 +7,6 @@ import type {
 } from "@drone/shared";
 import type { ThinkingLevel } from "@earendil-works/pi-ai";
 import type { CapabilityRuntime } from "../capabilities/runtime";
-import { isTaskStatusQuery } from "../capabilities/runtime";
 import { createLogger } from "../log";
 import { inboxFor } from "../session/durable-inbox";
 import type { ModelWaitMonitor } from "../session/model-wait";
@@ -73,8 +72,6 @@ export class SessionControlService {
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
 		if (this.host.recovery.isRecovering(sessionId))
 			throw new Error("Wait for answer recovery to finish or stop it before sending a new task");
-		if (!images?.length && isTaskStatusQuery(text) && entry.session.extensionRunner.getCommand("task-status"))
-			text = "/task-status";
 		log.info("prompt", sessionId, {
 			text: text.slice(0, 120),
 			images: images?.length ?? 0,
@@ -87,7 +84,7 @@ export class SessionControlService {
 		const spaceIndex = text.indexOf(" ");
 		const commandName = text.startsWith("/") ? text.slice(1, spaceIndex === -1 ? undefined : spaceIndex) : "";
 		const isExtensionCommand = !!commandName && !!entry.session.extensionRunner.getCommand(commandName);
-		const receipt: PromptReceipt = isExtensionCommand
+		let receipt: PromptReceipt = isExtensionCommand
 			? { kind: "command" }
 			: entry.session.isStreaming
 				? { kind: "queued" }
@@ -110,7 +107,6 @@ export class SessionControlService {
 		// sending 状态被占住，运行中的 followUp 排队发送被防重发守卫静默拦截。
 		// preflight 前抛错（无模型/无 key/compaction 中）照常 reject 传给渲染端；
 		// ack 之后 run 期错误不再回传（走事件流呈现），then 的 reject 在已 resolve 后为 no-op。
-		// preflightResult(false) 只在 SDK catch 里紧随 throw 触发，不据此 reject，真实错误经 throw 传递。
 		await new Promise<void>((resolve, reject) => {
 			this.host.sessionEngine
 				.prompt(entry.session, text, {
@@ -122,8 +118,21 @@ export class SessionControlService {
 						data: image.data,
 						mimeType: image.mimeType,
 					})),
-					preflightResult: (ok) => {
-						if (ok) resolve();
+					preflightResult: (disposition) => {
+						if (disposition === "handled" && receipt.kind === "queued" && sessionFile) {
+							try {
+								inboxFor(sessionFile).sync([
+									...entry.session.getSteeringMessages(),
+									...entry.session.getFollowUpMessages(),
+								]);
+							} catch (error) {
+								log.info("durable inbox reconciliation unavailable", sessionId, { error: String(error) });
+							}
+						}
+						receipt = {
+							kind: disposition === "handled" ? "command" : disposition === "queued" ? "queued" : "agent",
+						};
+						resolve();
 					},
 				})
 				.then(

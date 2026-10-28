@@ -3,9 +3,7 @@ import { describe, expect, it } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 import type { SessionRegistry } from "../src/session/registry";
 
-interface PromptOptions {
-	preflightResult?: (ok: boolean) => void;
-}
+type PromptOptions = Pick<NonNullable<Parameters<AgentSession["prompt"]>[1]>, "preflightResult">;
 type PromptFn = (text: string, options?: PromptOptions) => Promise<void>;
 
 interface StubSessionOptions {
@@ -38,7 +36,7 @@ describe("PiBackend.prompt 受理回执", () => {
 			releaseRun = r;
 		});
 		const backend = makeBackend("s1", (_text, options) => {
-			options?.preflightResult?.(true);
+			options?.preflightResult?.("started");
 			return runGate; // run 永不结束也不影响返回
 		});
 
@@ -53,7 +51,6 @@ describe("PiBackend.prompt 受理回执", () => {
 
 	it("preflight 前抛错：reject 传真实错误（非泛化 preflight 文案）", async () => {
 		const backend = makeBackend("s1", async (_text, options) => {
-			options?.preflightResult?.(false); // SDK 顺序：先 preflight(false) 再 throw
 			throw new Error("Authentication failed for provider");
 		});
 
@@ -62,7 +59,7 @@ describe("PiBackend.prompt 受理回执", () => {
 
 	it("ack 之后 run 期失败不回传、无 unhandled rejection", async () => {
 		const backend = makeBackend("s1", (_text, options) => {
-			options?.preflightResult?.(true);
+			options?.preflightResult?.("started");
 			return Promise.reject(new Error("run failed"));
 		});
 
@@ -73,7 +70,7 @@ describe("PiBackend.prompt 受理回执", () => {
 		const backend = makeBackend(
 			"s1",
 			async (_text, options) => {
-				options?.preflightResult?.(true);
+				options?.preflightResult?.("handled");
 			},
 			{ extensionCommands: ["obsidian-review"] },
 		);
@@ -85,7 +82,7 @@ describe("PiBackend.prompt 受理回执", () => {
 		const backend = makeBackend(
 			"s1",
 			async (_text, options) => {
-				options?.preflightResult?.(true);
+				options?.preflightResult?.("queued");
 			},
 			{ isStreaming: true },
 		);

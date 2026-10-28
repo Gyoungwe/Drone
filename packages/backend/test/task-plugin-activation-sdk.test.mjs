@@ -395,3 +395,35 @@ it("ordinary native core and knowledge keep a real unreviewed Wiki proposal outs
 	await expect(readFile(join(vault, "Wiki/topic.md"))).rejects.toMatchObject({ code: "ENOENT" });
 	expect(current.asks()).toBe(1);
 }, 30000);
+
+it.each(["adapter-only", "core-first"])(
+	"routes task-status intent inside the installed Pi package (%s) without starting a model",
+	async (order) => {
+		const { service, session, faux } = await setup(true, order);
+		const before = faux.state.callCount;
+		for (const text of ["完成到哪了", "What is the status?"]) {
+			expect(await service.prompt(session.sessionId, text)).toEqual({ kind: "command" });
+			expect(faux.state.callCount).toBe(before);
+			expect(
+				session.messages.findLast(
+					(message) => message.role === "custom" && message.customType === "drone-task-status",
+				).details.command,
+			).toBe("task-status");
+		}
+		faux.setResponses([fauxAssistantMessage("Image context remains a model request")]);
+		expect(
+			await service.prompt(session.sessionId, "任务状态", [{ data: "aW1hZ2U=", mimeType: "image/png" }]),
+		).toEqual({ kind: "agent" });
+		await session.waitForIdle();
+		expect(faux.state.callCount).toBeGreaterThan(before);
+	},
+	20000,
+);
+it("keeps task-status phrases as ordinary model input when the task package is absent", async () => {
+	const { service, session, faux } = await setup(false);
+	faux.setResponses([fauxAssistantMessage("Ordinary response without task capabilities")]);
+	expect(await service.prompt(session.sessionId, "完成到哪了")).toEqual({ kind: "agent" });
+	await session.waitForIdle();
+	expect(faux.state.callCount).toBeGreaterThan(0);
+	expect(session.extensionRunner.getCommand("task-status")).toBeUndefined();
+}, 20000);

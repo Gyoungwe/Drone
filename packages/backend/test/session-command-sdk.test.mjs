@@ -1,10 +1,11 @@
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fauxProvider } from "@earendil-works/pi-ai";
+import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
 import { createBackend } from "../src/create-backend";
+import { inboxFor } from "../src/session/durable-inbox";
 
 const roots = [],
 	backends = [];
@@ -23,6 +24,13 @@ async function setup() {
 	await mkdir(cwd);
 	await mkdir(agentDir);
 	const extension = `export default pi => {
+  pi.on("input", (event) => {
+   if(event.text === "local summary") {
+    pi.appendEntry("local-summary", {local:true});
+    return {action:"handled"};
+   }
+   return {action:"continue"};
+  });
   pi.registerCommand("record", { description:"Record exact command scope", handler:async (args,ctx) => {
    if(args === "fail") throw new Error("Synthetic command failed");
    if(args === "wait") await ctx.waitForIdle();
@@ -143,4 +151,31 @@ it("cancel removes a pending real command question and prevents its late answer 
 	expect(await result).toMatchObject({ message: "Session command cancelled" });
 	expect(JSON.stringify(session.sessionManager.getEntries())).not.toContain('"args":"select"');
 	expect(faux.state.callCount).toBe(0);
+}, 20000);
+
+it("reports actual input interception without a model run or a durable queued replay", async () => {
+	const { service, session, meta, faux } = await setup();
+	expect(await service.prompt(meta.sessionId, "local summary")).toEqual({ kind: "command" });
+	expect(faux.state.callCount).toBe(0);
+	let release;
+	const held = new Promise((resolve) => {
+		release = resolve;
+	});
+	faux.setResponses([
+		async () => {
+			await held;
+			return fauxAssistantMessage("Finished background answer");
+		},
+	]);
+	expect(await service.prompt(meta.sessionId, "Start background answer")).toEqual({ kind: "agent" });
+	await vi.waitFor(() => expect(session.isStreaming && faux.state.callCount === 1).toBe(true));
+	expect(await service.prompt(meta.sessionId, "local summary", undefined, "intercepted-summary")).toEqual({
+		kind: "command",
+	});
+	expect(faux.state.callCount).toBe(1);
+	expect(inboxFor(session.sessionFile).pending()).toEqual([]);
+	expect(session.getFollowUpMessages()).toEqual([]);
+	release();
+	await session.waitForIdle();
+	expect(session.messages.filter((message) => message.role === "user")).toHaveLength(1);
 }, 20000);
