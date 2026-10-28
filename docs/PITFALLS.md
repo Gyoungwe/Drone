@@ -410,3 +410,8 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 ### Optional tuple item 不等于兼容较短 IPC 参数数组
 
 TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Check 中仍拒绝原四参数调用。`PluginRuntimeContract.invoke` 的兼容合同显式使用四参数 tuple 与带 request ID 的五参数 tuple 联合；主进程 IPC 回归必须实际调用两个形状，不能只依赖 TypeScript optional 参数通过。取消传输只发送 request ID，AbortSignal 留在 renderer/main 各自的实际生命周期中。
+
+
+### 直接调用 operation.execute 不能证明 IPC/运行时合同通过
+
+模型评审的只读 `modelReviewInfo` 只接受 revision/id/hash/profile；写操作另外要求 acknowledged/autoApply。直接适配器测试忽略未用字段时看似成功，真实 packed owner 的 broker 会按 additionalProperties:false 拒绝复用写 DTO。回归必须跨真实 registry/worker 调用，并分别构造读 DTO 和写 DTO；不要放宽 schema 来让 fixture 通过。详见 `native-plugin-knowledge-model-command-2026-10-28.json`。
