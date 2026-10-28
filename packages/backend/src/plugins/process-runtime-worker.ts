@@ -79,7 +79,7 @@ input.on("line", async (line) => {
     if (message.type === "native_attach") {
       const adapter = await runtime.createNativeSession();
       if (adapter.projection) { await adapter.dispose(); throw new Error("Native publication projection is not yet supported by this adapter"); }
-      const tools = new Map(), hooks = [];
+      const tools = new Map(), commands = new Map(), hooks = [];
       const unsupported = (name) => { throw new Error("Unsupported native Pi API: " + name); };
       const pi = new Proxy({
         registerTool(tool) {
@@ -87,15 +87,20 @@ input.on("line", async (line) => {
             if(tool[field]!==undefined) unsupported("tool "+tool.name+"."+field);
           if(tools.has(tool.name)) throw new Error("Duplicate native tool"); tools.set(tool.name,tool);
         },
+        registerCommand(name,options) {
+          if(options.getArgumentCompletions!==undefined) unsupported("command "+name+".getArgumentCompletions");
+          if(commands.has(name)) throw new Error("Duplicate native command");
+          commands.set(name,options);
+        },
         on(name,handler) { if(!supportedEvents.has(name)) unsupported("on("+name+")"); const hook={name,handler,active:true};hooks.push(hook);return ()=>{hook.active=false;}; }
       }, {get(target,name){if(name in target)return target[name];return unsupported(String(name));}});
       try { await adapter.extension(pi); }
       catch(error) { await adapter.dispose(); throw error; }
-      nativeSessions.set(message.attachment, {adapter,tools,hooks,pending:new Map(),closed:false});
+      nativeSessions.set(message.attachment, {adapter,tools,commands,hooks,pending:new Map(),closed:false});
       send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(tool=>Object.fromEntries(
         ["name","label","description","parameters","outputSchema","constrainedSampling","renderShell","promptSnippet","promptGuidelines","exposure","namespace","annotations","defaultActive","executionMode","drone"]
           .filter(key=>tool[key]!==undefined).map(key=>[key,tool[key]])
-      )),effects:adapter.toolEffects||{},eventEffects:adapter.eventEffects||{},events:hooks.map(({name},index)=>({name,index}))}});
+      )),commands:[...commands.entries()].map(([name,command])=>({name,...(command.description===undefined?{}:{description:command.description})})),effects:adapter.toolEffects||{},commandEffects:adapter.commandEffects||{},eventEffects:adapter.eventEffects||{},events:hooks.map(({name},index)=>({name,index}))}});
       return;
     }
     if (message.type === "native_detach") {
@@ -125,6 +130,10 @@ input.on("line", async (line) => {
             send({type:"native_update",id:message.id,value});
           }:undefined;
           return session.tools.get(message.name).execute(message.toolCallId,message.input,signal,update,ctx);
+        }
+        if(message.kind==="command") {
+          await session.commands.get(message.name).handler(message.input,ctx);
+          return null;
         }
         const hook=session.hooks[message.hookIndex];
         if(!hook||hook.name!==message.name)throw new Error("Unknown native event handler");

@@ -114,7 +114,14 @@ const nativeDeclarationsSchema = Type.Object({
 			drone: Type.Optional(Type.Unknown()),
 		}),
 	),
+	commands: Type.Array(
+		Type.Object(
+			{ name: Type.String({ minLength: 1 }), description: Type.Optional(Type.String()) },
+			{ additionalProperties: false },
+		),
+	),
 	effects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
+	commandEffects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
 	eventEffects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
 	events: Type.Array(
 		Type.Object({
@@ -480,7 +487,7 @@ class RuntimeProcess {
 		const lifecycle = new AbortController();
 		let stopping: Promise<void> | undefined;
 		const invoke = (
-			kind: "tool" | "event",
+			kind: "tool" | "event" | "command",
 			name: string,
 			input: unknown,
 			ctx: ExtensionContext,
@@ -529,8 +536,16 @@ class RuntimeProcess {
 		this.nativeDisposers.add(dispose);
 		return {
 			toolEffects: declarations.effects,
+			commandEffects: declarations.commandEffects,
 			eventEffects: declarations.eventEffects,
 			extension: (pi) => {
+				for (const command of declarations.commands)
+					pi.registerCommand(command.name, {
+						...(command.description === undefined ? {} : { description: command.description }),
+						handler: async (args, ctx) => {
+							await invoke("command", command.name, args, ctx, ctx.signal);
+						},
+					});
 				for (const tool of declarations.tools)
 					pi.registerTool({
 						...tool,
