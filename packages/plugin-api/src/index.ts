@@ -261,7 +261,9 @@ export type PluginFilesystemPermission =
 	| "configured-vault-write"
 	| "vault-read"
 	/** Declares explicit state/lease roots; requires a scoped storage broker, not arbitrary file access. */
-	| "application-state";
+	| "application-state"
+	| "binary-state-read"
+	| "binary-state-write";
 
 export interface PluginPermissionDeclaration {
 	readonly filesystem: readonly PluginFilesystemPermission[];

@@ -30,7 +30,7 @@ export interface PluginRuntimeCapabilities {
 
 export interface PluginRuntimeResource {
 	readonly handle: string;
-	readonly kind: "state" | "files";
+	readonly kind: "state" | "files" | "binary-state";
 	/** Informational; the host still checks the actual root grant on every call. Omission means read-only. */
 	readonly access?: "read" | "read-write";
 }
@@ -107,6 +107,19 @@ export interface PluginRuntimeClient {
 export type PluginStateReadResult =
 	| { readonly kind: "missing"; readonly version: null }
 	| { readonly kind: "value"; readonly value: unknown; readonly version: string };
+/** Raw binary versions are SHA-256 of the actual bytes, never a domain revision. */
+export type PluginBinaryStateReadResult =
+	| { readonly kind: "missing"; readonly version: null }
+	| { readonly kind: "value"; readonly base64: string; readonly version: string };
+export interface PluginBinaryStateWriteInput {
+	readonly root: string;
+	readonly path: string;
+	/** Canonical standard base64, decoded length at most 4 MiB. */
+	readonly base64: string;
+	readonly expectedVersion: string | null;
+	/** Same-root relative paths that must remain absent through the commit check. */
+	readonly assertAbsent: readonly string[];
+}
 export interface PluginStateWriteInput {
 	readonly root: string;
 	readonly path: string;

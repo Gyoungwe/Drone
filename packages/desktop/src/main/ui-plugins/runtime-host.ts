@@ -28,7 +28,9 @@ import {
 interface ResourceAccessSelection {
 	readonly profileDirectory: string;
 	readonly storage: StorageRegistry;
-	selectDirectories(kind: "state" | "state-write" | "files" | "files-write"): Promise<readonly string[]>;
+	selectDirectories(
+		kind: "state" | "state-write" | "files" | "files-write" | "binary-state" | "binary-state-write",
+	): Promise<readonly string[]>;
 }
 
 const writeOperations = [
@@ -57,9 +59,20 @@ function fileWriteApprovalDetail(
 	};
 	const isState = operation.startsWith("state.");
 	const grant = grants.find(
-		(entry) => entry.handle === request.root && entry.kind === (isState ? "state" : "files"),
+		(entry) =>
+			entry.handle === request.root &&
+			(operation === "state.reserve"
+				? entry.kind === "state" || entry.kind === "binary-state"
+				: entry.kind === (isState ? "state" : "files")),
 	);
-	if (!grant || !(isState ? grant.stateWrite : grant.fileWrite))
+	if (
+		!grant ||
+		!(operation === "state.reserve"
+			? grant.stateWrite || grant.binaryStateWrite
+			: isState
+				? grant.stateWrite
+				: grant.fileWrite)
+	)
 		throw new Error("Plugin write root was not granted");
 	const action =
 		operation === "state.reserve"
@@ -85,8 +98,8 @@ function fileWriteApprovalDetail(
 	if (operation === "state.reserve")
 		lines.push(
 			hostText(
-				"仅保留此目录的独占写者租约，不修改日志正文。完整 owner 与资源成功关闭后释放；清理失败时保留租约并要求显式恢复。后续 JSON 写入仍需单独批准。",
-				"Reserves this directory for one writer without modifying journal contents. The lease is released after successful owner and resource cleanup; cleanup failures retain it for explicit recovery. Later JSON writes still require separate approval.",
+				"仅保留此目录的独占写者租约，不修改日志正文。完整 owner 与资源成功关闭后释放；清理失败时保留租约并要求显式恢复。后续持久化写入仍需单独批准。",
+				"Reserves this directory for one writer without modifying journal contents. The lease is released after successful owner and resource cleanup; cleanup failures retain it for explicit recovery. Later durable writes still require separate approval.",
 			),
 		);
 	if (
@@ -131,7 +144,7 @@ function fileWriteApprovalDetail(
 /** A native picker may remain open after cancellation; its late answer grants nothing. */
 function selectWhileActive(
 	selection: ResourceAccessSelection,
-	kind: "state" | "state-write" | "files" | "files-write",
+	kind: "state" | "state-write" | "files" | "files-write" | "binary-state" | "binary-state-write",
 	signal: AbortSignal,
 ): Promise<readonly string[]> {
 	signal.throwIfAborted();
@@ -167,7 +180,9 @@ export function createDesktopResourceCapabilities(
 		const hasResources = declaredResources !== undefined && Object.keys(declaredResources).length > 0;
 		const requestsState = source.requestsStateRead || source.requestsStateWrite;
 		const requestsFiles = source.requestsFileRead || source.requestsFileWrite;
-		if (!hasResources && !requestsState && !requestsFiles) return { resources: [], handlers: {} };
+		const requestsBinary = source.requestsBinaryStateRead || source.requestsBinaryStateWrite;
+		if (!hasResources && !requestsState && !requestsFiles && !requestsBinary)
+			return { resources: [], handlers: {} };
 		activation.signal.throwIfAborted();
 		const grants: PluginRootGrant[] = [];
 		if (requestsState) {
@@ -194,6 +209,33 @@ export function createDesktopResourceCapabilities(
 				scope: { kind: "application" },
 				...(source.requestsStateWrite
 					? { stateWrite: { registry: selection.storage, storageId: stateEntry.id } }
+					: {}),
+			});
+		}
+		if (requestsBinary) {
+			const selected = await selectWhileActive(
+				selection,
+				source.requestsBinaryStateWrite ? "binary-state-write" : "binary-state",
+				activation.signal,
+			);
+			activation.signal.throwIfAborted();
+			if (selected.length !== 1 || selected[0] === undefined)
+				throw new Error("Plugin binary state directory selection was canceled");
+			const path = await realpath(selected[0]);
+			const entry = selection.storage.registerDiscoveredRoot(
+				`desktop-plugin-binary-state-${createHash("sha256").update(source.pluginId).digest("hex").slice(0, 16)}`,
+				path,
+				`plugin:${source.pluginId}`,
+				"private",
+				"plugin-owned-binary",
+			);
+			grants.push({
+				handle: randomUUID(),
+				path,
+				kind: "binary-state",
+				scope: { kind: "application" },
+				...(source.requestsBinaryStateWrite
+					? { binaryStateWrite: { registry: selection.storage, storageId: entry.id } }
 					: {}),
 			});
 		}
@@ -252,11 +294,48 @@ export function createDesktopResourceCapabilities(
 				approvalDetail: (input) => fileWriteApprovalDetail(grants, operation, input),
 			};
 		}
+		fileHandlers["state.writeBinary"] = {
+			// biome-ignore lint/style/noNonNullAssertion: fileCapabilityHandlers always supplies this exact binary handler.
+			...fileHandlers["state.writeBinary"]!,
+			approvalDetail: (input, facts) => {
+				const request = input as {
+					root: string;
+					path: string;
+					base64: string;
+					expectedVersion: string | null;
+					assertAbsent: string[];
+				};
+				const grant = grants.find(
+					(entry) => entry.handle === request.root && entry.kind === "binary-state" && entry.binaryStateWrite,
+				);
+				if (!grant) throw new Error("Binary state write root was not granted");
+				const bytes = Buffer.from(request.base64, "base64");
+				return [
+					hostText(
+						"替换原始二进制状态；内容不透明，未展示逻辑差异。若信息不足请拒绝。",
+						"Replace raw binary state; logical content/diff is not displayed. Deny if insufficient.",
+					),
+					`plugin: ${facts.pluginId}`,
+					`application: ${facts.applicationId}`,
+					`actual scope: ${JSON.stringify(facts.scope)}`,
+					`root: ${JSON.stringify(grant.path)}`,
+					`path: ${JSON.stringify(request.path)}`,
+					`expectedVersion: ${JSON.stringify(request.expectedVersion)}`,
+					`new SHA-256: ${createHash("sha256").update(bytes).digest("hex")}`,
+					`bytes: ${bytes.length}`,
+					`assertAbsent: ${JSON.stringify(request.assertAbsent)}`,
+					hostText(
+						"提交点之后取消可能已写入；须由新的合法调用者回读 SHA-256 核对。",
+						"Cancellation after the commit point may leave committed bytes; a fresh authorized caller must reconcile SHA-256.",
+					),
+				].join("\n\n");
+			},
+		};
 		return {
-			resources: grants.map(({ handle, kind, stateWrite, fileWrite }) => ({
+			resources: grants.map(({ handle, kind, stateWrite, binaryStateWrite, fileWrite }) => ({
 				handle,
 				kind,
-				access: stateWrite || fileWrite ? ("read-write" as const) : ("read" as const),
+				access: stateWrite || binaryStateWrite || fileWrite ? ("read-write" as const) : ("read" as const),
 			})),
 			handlers: { ...fileHandlers, ...resources?.handlers() },
 			...(resources
@@ -305,6 +384,30 @@ export function createDesktopRuntime(
 					if (!contents || contents.isDestroyed()) throw new Error("Plugin approving window is unavailable");
 					const window = BrowserWindow.fromWebContents(contents);
 					if (!window) throw new Error("Plugin directory selection requires its approving window");
+					if (kind === "binary-state" || kind === "binary-state-write") {
+						const writable = kind === "binary-state-write";
+						const result = await dialog.showOpenDialog(window, {
+							title: writable
+								? hostText("授权插件二进制状态读写目录", "Authorize plugin binary state writes")
+								: hostText("选择插件只读二进制状态目录", "Select read-only binary state directory"),
+							message: writable
+								? hostText(
+										`${source.pluginId} 申请读取和原子替换所选目录内最多 4 MiB 的原始二进制状态文件。此授权独立于 JSON/笔记权限；每次替换仍需独占写者租约、版本校验和批准。取消将终止启用。`,
+										`${source.pluginId} requests raw binary state reads and atomic replacements up to 4 MiB under this directory. This is independent of JSON/notes permissions; each replacement still needs an exclusive writer lease, version checks and approval. Cancel to stop activation.`,
+									)
+								: hostText(
+										`${source.pluginId} 只能通过宿主读取所选目录内最多 4 MiB 的原始二进制状态文件。取消将终止启用。`,
+										`${source.pluginId} may only read raw binary state files up to 4 MiB through the host under this directory. Cancel to stop activation.`,
+									),
+							properties: ["openDirectory"],
+							buttonLabel: writable
+								? hostText("授权二进制状态读写", "Allow binary state writes")
+								: hostText("授权只读访问", "Allow read-only access"),
+						});
+						if (contents.isDestroyed())
+							throw new Error("Plugin approving window closed during directory selection");
+						return result.canceled ? [] : result.filePaths;
+					}
 					const result = await dialog.showOpenDialog(window, {
 						title:
 							kind === "files-write"

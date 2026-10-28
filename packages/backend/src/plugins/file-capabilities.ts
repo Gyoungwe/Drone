@@ -5,6 +5,8 @@ import { link, lstat, mkdir, open, readdir, realpath, rename, rm, writeFile } fr
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import type {
+	PluginBinaryStateReadResult,
+	PluginBinaryStateWriteInput,
 	PluginRuntimeRootDescription,
 	PluginRuntimeScope,
 	PluginStateReadResult,
@@ -20,10 +22,11 @@ export interface PluginRootGrant {
 	readonly handle: string;
 	/** Selected and authorized by the host; never supplied in a capability request. */
 	readonly path: string;
-	readonly kind: "state" | "files";
+	readonly kind: "state" | "files" | "binary-state";
 	/** A separate host-approved JSON write grant. Read-only selections omit this entirely. */
 	/** Selected independently from read-only data access; never inferred from stored paths. */
 	readonly fileWrite?: true;
+	readonly binaryStateWrite?: { readonly registry: StorageRegistry; readonly storageId: string };
 	readonly stateWrite?: { readonly registry: StorageRegistry; readonly storageId: string };
 	readonly scope:
 		| { readonly kind: "application" }
@@ -59,6 +62,8 @@ export class PluginStateConflictError extends Error {
 type FileKind = "file" | "directory" | "symlink" | "other";
 type Root = PluginRootGrant & { readonly identity: Stats };
 const MAX_TEXT_BYTES = 1024 * 1024;
+const MAX_BINARY_BYTES = 4 * 1024 * 1024;
+const MAX_BINARY_BASE64 = 4 * Math.ceil(MAX_BINARY_BYTES / 3);
 
 function version(stat: Stats): PluginFileVersion {
 	return { dev: stat.dev, ino: stat.ino, size: stat.size, mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs };
@@ -112,6 +117,11 @@ export class PluginFileCapabilities {
 				const entry = grant.stateWrite.registry.assertRegistered(grant.stateWrite.storageId);
 				if (grant.kind !== "state" || (await realpath(entry.path)) !== path)
 					throw new Error("State write grant must match its registered state root");
+			}
+			if (grant.binaryStateWrite) {
+				const entry = grant.binaryStateWrite.registry.assertRegistered(grant.binaryStateWrite.storageId);
+				if (grant.kind !== "binary-state" || (await realpath(entry.path)) !== path)
+					throw new Error("Binary state write grant must match its registered binary root");
 			}
 			roots.set(grant.handle, { ...grant, path, identity });
 		}
@@ -274,7 +284,7 @@ export class PluginFileCapabilities {
 				handle: root.handle,
 				kind: root.kind,
 				path: root.path,
-				access: root.stateWrite || root.fileWrite ? "read-write" : "read",
+				access: root.stateWrite || root.binaryStateWrite || root.fileWrite ? "read-write" : "read",
 			});
 		}
 		call.signal.throwIfAborted();
@@ -284,8 +294,12 @@ export class PluginFileCapabilities {
 	/** Reserve an already approved JSON state directory, without creating a resource process. */
 	reserveState(input: PluginFileInput, call: PluginFileCall): Promise<{ reserved: true }> {
 		return this.mutate(call, async () => {
-			const root = this.grant(input, call, "state");
-			if (call.bootstrap || !root.stateWrite) throw new Error("Plugin state writer access was not granted");
+			const registered = this.roots.get(input.root);
+			if (!registered || (registered.kind !== "state" && registered.kind !== "binary-state"))
+				throw new Error("Plugin state writer access was not granted");
+			const root = this.grant(input, call, registered.kind);
+			if (call.bootstrap || !(root.stateWrite || root.binaryStateWrite))
+				throw new Error("Plugin state writer access was not granted");
 			const directory = await this.path(root, input.path);
 			if (!(await lstat(directory)).isDirectory())
 				throw new Error("State writer requires an existing directory");
@@ -312,6 +326,194 @@ export class PluginFileCapabilities {
 	releaseReservations(): void {
 		this.assertCleanupComplete();
 		this.reservations.dispose();
+	}
+
+	/** Bounded raw bytes only; SQLite parsing/schema belong to the owning plugin. */
+	private async binarySnapshot(root: Root, input: PluginFileInput) {
+		const path = await this.path(root, input.path);
+		const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+		try {
+			const before = await file.stat();
+			if (!before.isFile()) throw new Error("Binary state requires a regular file");
+			if (before.size > MAX_BINARY_BYTES) throw new Error("Binary state exceeds the 4 MiB limit");
+			const bytes = Buffer.alloc(before.size + 1);
+			let offset = 0;
+			while (offset < bytes.length) {
+				const result = await file.read(bytes, offset, bytes.length - offset, offset);
+				if (!result.bytesRead) break;
+				offset += result.bytesRead;
+			}
+			const after = await file.stat(),
+				current = await lstat(await this.path(root, input.path));
+			if (!sameFile(before, after) || !sameFile(after, current) || offset !== before.size)
+				throw new Error("Binary state changed during read");
+			const value = bytes.subarray(0, offset);
+			return {
+				kind: "value" as const,
+				base64: value.toString("base64"),
+				version: createHash("sha256").update(value).digest("hex"),
+			};
+		} finally {
+			await file.close();
+		}
+	}
+	private async currentBinary(root: Root, input: PluginFileInput): Promise<PluginBinaryStateReadResult> {
+		try {
+			return await this.binarySnapshot(root, input);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+			await this.checkRoot(root);
+			return { kind: "missing", version: null };
+		}
+	}
+	async readBinary(input: PluginFileInput, call: PluginFileCall): Promise<PluginBinaryStateReadResult> {
+		const root = this.grant(input, call, "binary-state");
+		const result = await this.currentBinary(root, input);
+		call.signal.throwIfAborted();
+		return result;
+	}
+	writeBinary(
+		input: PluginBinaryStateWriteInput,
+		call: PluginFileCall,
+	): Promise<PluginBinaryStateReadResult> {
+		// Input is plugin JSON: bound before decoding and reject Buffer's permissive noncanonical forms.
+		if (input.base64.length > MAX_BINARY_BASE64) throw new Error("Binary state exceeds the 4 MiB limit");
+		const bytes = Buffer.from(input.base64, "base64");
+		if (bytes.length > MAX_BINARY_BYTES || bytes.toString("base64") !== input.base64)
+			throw new Error("Binary state requires canonical base64 within 4 MiB");
+		return this.mutate(call, async () => {
+			const root = this.grant(input, call, "binary-state");
+			if (call.bootstrap || !root.binaryStateWrite)
+				throw new Error("Binary state write access was not granted");
+			const writeGrant = root.binaryStateWrite;
+			if (!input.path) throw new Error("Binary state requires a child path");
+			for (const path of input.assertAbsent) {
+				this.grant({ root: input.root, path }, call, "binary-state");
+				if (!path || path === input.path)
+					throw new Error("Binary absence conditions must name other child paths");
+			}
+			const parentRelative = dirname(input.path) === "." ? "" : dirname(input.path);
+			const parent = await this.path(root, parentRelative),
+				identity = await lstat(parent);
+			if (!identity.isDirectory()) throw new Error("Binary state parent must be an existing directory");
+			const target = join(parent, basename(input.path));
+			const check = async () => {
+				this.grant(input, call, "binary-state");
+				const entry = writeGrant.registry.assertRegistered(writeGrant.storageId);
+				if ((await realpath(entry.path)) !== root.path)
+					throw new Error("Registered binary state root changed");
+				const actualParent = await this.path(root, parentRelative),
+					currentParent = await lstat(actualParent);
+				if (
+					actualParent !== parent ||
+					currentParent.dev !== identity.dev ||
+					currentParent.ino !== identity.ino
+				)
+					throw new Error("Binary state parent changed after authorization");
+				this.reservations.assertReserved("state-writers", parent);
+				if ((await this.currentBinary(root, input)).version !== input.expectedVersion)
+					throw new PluginStateConflictError();
+				for (const path of input.assertAbsent) {
+					const absentParent = dirname(path) === "." ? "" : dirname(path);
+					const directory = await this.path(root, absentParent);
+					try {
+						await lstat(join(directory, basename(path)));
+					} catch (error) {
+						if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+						throw error;
+					}
+					throw new Error(`Binary write requires an absent sidecar: ${path}`);
+				}
+				call.signal.throwIfAborted();
+			};
+			await check();
+			const temporary = join(parent, `.${basename(target)}.${randomUUID()}.tmp`);
+			let committed = false;
+			let temporaryIdentity: Stats | undefined;
+			let outcome: { ok: true; result: PluginBinaryStateReadResult } | { ok: false; error: unknown };
+			try {
+				const file = await open(
+					temporary,
+					constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW,
+					0o600,
+				);
+				const [written] = await Promise.allSettled([
+					(async () => {
+						temporaryIdentity = await file.stat();
+						await file.writeFile(bytes);
+					})(),
+				]);
+				const [closed] = await Promise.allSettled([file.close()]);
+				if (closed.status === "rejected") {
+					this.cleanupFailure = closed.reason;
+					throw new AggregateError(
+						written.status === "rejected" ? [written.reason, closed.reason] : [closed.reason],
+						"Binary temporary file could not be closed",
+					);
+				}
+				if (written.status === "rejected") {
+					if (!temporaryIdentity) this.cleanupFailure = written.reason;
+					throw written.reason;
+				}
+				await check();
+				if (input.expectedVersion === null) await link(temporary, target);
+				else await rename(temporary, target);
+				committed = true;
+				// Finalization only reads this accepted operation's own target, even after cancellation.
+				const result = await this.binarySnapshot(root, input);
+				if (result.version !== createHash("sha256").update(bytes).digest("hex"))
+					throw new Error("Binary state changed after atomic replacement");
+				call.signal.throwIfAborted();
+				outcome = { ok: true, result };
+			} catch (error) {
+				outcome = { ok: false, error };
+			}
+			try {
+				if (temporaryIdentity) {
+					const currentParent = await lstat(parent);
+					if (
+						currentParent.dev !== identity.dev ||
+						currentParent.ino !== identity.ino ||
+						!currentParent.isDirectory()
+					)
+						throw new Error("Binary temporary parent changed; explicit cleanup recovery is required");
+					let current: Stats | undefined;
+					try {
+						current = await lstat(temporary);
+					} catch (error) {
+						if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+					}
+					if (current) {
+						if (
+							!current.isFile() ||
+							current.dev !== temporaryIdentity.dev ||
+							current.ino !== temporaryIdentity.ino
+						)
+							throw new Error("Binary temporary ownership changed; explicit cleanup recovery is required");
+						await rm(temporary);
+					}
+				}
+			} catch (error) {
+				this.cleanupFailure = error;
+				outcome = {
+					ok: false,
+					error: new AggregateError(
+						outcome.ok ? [error] : [outcome.error, error],
+						"Binary temporary cleanup failed; writer lease retained",
+					),
+				};
+			}
+			if (outcome.ok) return outcome.result;
+			if (committed) {
+				const error = new Error(
+					"Binary write may have committed; a fresh approved caller must reconcile the stored SHA-256",
+					{ cause: outcome.error },
+				);
+				Object.assign(error, { code: "EBINARYWRITEOUTCOMEUNKNOWN" });
+				throw error;
+			}
+			throw outcome.error;
+		});
 	}
 
 	async readText(input: PluginFileInput, call: PluginFileCall) {
@@ -651,7 +853,7 @@ export function fileCapabilityHandlers(
 				Type.Object(
 					{
 						handle: Type.String(),
-						kind: Type.Union([Type.Literal("state"), Type.Literal("files")]),
+						kind: Type.Union([Type.Literal("state"), Type.Literal("files"), Type.Literal("binary-state")]),
 						path: Type.String(),
 						access: Type.Union([Type.Literal("read"), Type.Literal("read-write")]),
 					},
@@ -661,6 +863,56 @@ export function fileCapabilityHandlers(
 			effect: "read",
 			bootstrap: true,
 			execute: (_input, call) => ports.describeRoots(call),
+		},
+		"state.readBinary": {
+			inputSchema: Type.Object(
+				{
+					root: Type.String({ minLength: 1, maxLength: 128 }),
+					path: Type.String({ minLength: 1, maxLength: 4096 }),
+				},
+				{ additionalProperties: false },
+			),
+			resultSchema: Type.Union([
+				Type.Object({ kind: Type.Literal("missing"), version: Type.Null() }, { additionalProperties: false }),
+				Type.Object(
+					{
+						kind: Type.Literal("value"),
+						base64: Type.String({ maxLength: MAX_BINARY_BASE64 }),
+						version: Type.String({ pattern: "^[a-f0-9]{64}$" }),
+					},
+					{ additionalProperties: false },
+				),
+			]),
+			effect: "read",
+			execute: (input, call) => ports.readBinary(input as PluginFileInput, call),
+		},
+		"state.writeBinary": {
+			inputSchema: Type.Object(
+				{
+					root: Type.String({ minLength: 1, maxLength: 128 }),
+					path: Type.String({ minLength: 1, maxLength: 4096 }),
+					base64: Type.String({
+						maxLength: MAX_BINARY_BASE64,
+						pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+					}),
+					expectedVersion: stateVersion,
+					assertAbsent: Type.Array(Type.String({ minLength: 1, maxLength: 4096 }), {
+						maxItems: 8,
+						uniqueItems: true,
+					}),
+				},
+				{ additionalProperties: false },
+			),
+			resultSchema: Type.Object(
+				{
+					kind: Type.Literal("value"),
+					base64: Type.String({ maxLength: MAX_BINARY_BASE64 }),
+					version: Type.String({ pattern: "^[a-f0-9]{64}$" }),
+				},
+				{ additionalProperties: false },
+			),
+			effect: "write",
+			execute: (input, call) => ports.writeBinary(input as PluginBinaryStateWriteInput, call),
 		},
 		"state.reserve": {
 			inputSchema: input,
@@ -713,7 +965,10 @@ export function fileCapabilityHandlers(
 		},
 		"roots.resolve": {
 			inputSchema: Type.Object(
-				{ path: Type.String(), kind: Type.Union([Type.Literal("state"), Type.Literal("files")]) },
+				{
+					path: Type.String(),
+					kind: Type.Union([Type.Literal("state"), Type.Literal("files"), Type.Literal("binary-state")]),
+				},
 				{ additionalProperties: false },
 			),
 			resultSchema: Type.Object({ handle: Type.String() }),
