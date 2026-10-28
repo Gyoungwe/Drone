@@ -1,5 +1,4 @@
 import { createHash, randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
 import { chmod, mkdir, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -17,6 +16,7 @@ import {
 	type SessionServicePort,
 	type StorageRegistry,
 } from "@drone/backend";
+import { IpcChannels } from "@drone/shared";
 import { app, BrowserWindow, dialog, webContents } from "electron";
 import type { UiPluginManager } from "./manager";
 import { DesktopRuntimeBridge, type DesktopRuntimeOwner } from "./runtime-bridge";
@@ -285,7 +285,20 @@ export function createDesktopRuntime(
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
 		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
-		enabled: (name) => manager.isEnabled(name),
+		questionTransport: (owner) => ({
+			ownerId: owner.id,
+			send: (request) => {
+				const contents = webContents.fromId(owner.id);
+				if (!contents || contents.isDestroyed()) return false;
+				contents.send(IpcChannels.AskRequest, request);
+				return true;
+			},
+			resolved: (result) => {
+				const contents = webContents.fromId(owner.id);
+				if (contents && !contents.isDestroyed()) contents.send(IpcChannels.AskResolved, result);
+			},
+		}),
+		enabled: (name) => manager.isEnabled(name) || manager.isNativeSourceAvailable(name),
 		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
 		capabilities: (source, owner) => async (activation) => {
 			const resourceCapabilities = await createDesktopResourceCapabilities(source, runtimeDirectory, {
@@ -360,14 +373,22 @@ export function createDesktopRuntime(
 							getSessionContext: (id) => sessions.getPluginCallerContext(id),
 						})
 					: undefined;
-			const { "session.inspect": inspection, ...modelCapabilities } = sessions.getPluginSessionCapabilities();
+			const capabilities = sessions.getPluginSessionCapabilities();
 			return {
 				...resourceCapabilities,
 				handlers: {
 					...resourceCapabilities.handlers,
 					...executionCapabilities?.handlers,
-					"session.inspect": inspection,
-					...(source.requestsModel ? modelCapabilities : {}),
+					"session.inspect": capabilities["session.inspect"],
+					"session.select": capabilities["session.select"],
+					"session.input": capabilities["session.input"],
+					"session.confirm": capabilities["session.confirm"],
+					...(source.requestsModel
+						? {
+								"model.selection": capabilities["model.selection"],
+								"model.generate": capabilities["model.generate"],
+							}
+						: {}),
 				},
 				...(executionCapabilities
 					? {
@@ -430,12 +451,7 @@ export function createNativeRuntimeIntegration(
 	manager: () => UiPluginManager,
 	runtime: () => DesktopRuntimeBridge,
 ): PluginNativeIntegration {
-	const findName = (path: string) => {
-		const canonical = realpathSync(path);
-		return manager()
-			.list()
-			.find((plugin) => manager().runtimeSource(plugin.name)?.nativeEntrypoint === canonical)?.name;
-	};
+	const findName = (path: string) => manager().nativeRuntimeName(path);
 	return {
 		manages: (path) => findName(path) !== undefined,
 		begin: () => {

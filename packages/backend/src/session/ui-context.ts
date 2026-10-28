@@ -137,7 +137,7 @@ export function makeUiContext(
 							label: title,
 							prompt: placeholder || title,
 							type: "text",
-							required: true,
+							required: false,
 							options: [],
 						},
 					],
@@ -145,7 +145,7 @@ export function makeUiContext(
 				dialogOptions?.signal,
 			);
 			if (response.kind !== "answer" || response.mode === "elaborate") return undefined;
-			return response.answers.value?.customText?.trim() || undefined;
+			return response.answers.value?.customText;
 		},
 		notify: (message, type) => {
 			if (!notify) unsupported("notify without a notification transport");

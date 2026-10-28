@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const environment = vi.hoisted(() => ({ userData: "" }));
 vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => environment.userData } }));
 
-import { discoverInstalledUiPackages } from "./installed-package-sources";
+import { discoverInstalledUiPackages, installedPackageHash } from "./installed-package-sources";
 import { UiPluginManager } from "./manager";
 
 let root: string;
@@ -61,6 +61,7 @@ describe("installed UI runtime provenance", () => {
 		await manager.scanAll();
 		expect(manager.runtimeSource("results-ui")).toEqual({
 			pluginId: "@example/results",
+			contentHash: expect.stringMatching(/^[a-f0-9]{64}$/),
 			packageRoot: await realpath(packageRoot),
 			entrypoint: await realpath(join(packageRoot, "runtime.js")),
 		});
@@ -210,6 +211,7 @@ describe("installed UI runtime provenance", () => {
 		await manager.scanAll();
 		expect(manager.runtimeSource("results-ui")).toEqual({
 			pluginId: "@example/results",
+			contentHash: expect.stringMatching(/^[a-f0-9]{64}$/),
 			packageRoot: await realpath(packageRoot),
 			entrypoint: await realpath(join(packageRoot, "runtime.js")),
 			nativeEntrypoint: await realpath(join(packageRoot, "native.js")),
@@ -372,7 +374,7 @@ describe("installed UI runtime provenance", () => {
 		await rm(join(packageRoot, "ui"), { recursive: true });
 		await symlink(outside, join(packageRoot, "ui"));
 		const entries = await discoverInstalledUiPackages(installRoot);
-		expect(entries[0]).toMatchObject({ error: expect.stringContaining("entrypoints.ui resolves outside") });
+		expect(entries[0]).toMatchObject({ error: expect.stringContaining("entrypoints.ui escapes") });
 	});
 
 	for (const method of ["relative", "symlink"]) {
@@ -401,4 +403,43 @@ it("derives model service access only from the installed package network declara
 	await writeManifest("./runtime.js", {}, [], ["example.invalid"]);
 	await manager.scanAll();
 	expect(manager.runtimeSource("results-ui")?.requestsModel).toBeUndefined();
+});
+
+it("keeps a selected native source available without a UI declaration or UI trust", async () => {
+	await writeFile(join(packageRoot, "native.js"), 'throw new Error("must not execute during discovery");');
+	await writeFile(
+		join(packageRoot, "plugin.manifest.json"),
+		JSON.stringify({
+			hosts: ["drone-desktop"],
+			entrypoints: { desktopRuntime: "./runtime.js", extension: "./native.js" },
+		}),
+	);
+	const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+	await manager.scanAll();
+	expect(manager.list()).toEqual([]);
+	const name = manager.nativeRuntimeName(join(packageRoot, "native.js"))!;
+	expect(manager.isNativeSourceAvailable(name)).toBe(true);
+	expect(manager.runtimeSource(name)?.nativeEntrypoint).toBe(await realpath(join(packageRoot, "native.js")));
+	await manager.updateConfig({ enabled: false });
+	expect(manager.isNativeSourceAvailable(name)).toBe(true);
+	await writeFile(join(packageRoot, "runtime.js"), "export const replaced = true;\n");
+	expect(manager.isNativeSourceAvailable(name)).toBe(false);
+	expect(manager.runtimeSource(name)).toBeUndefined();
+});
+
+it("builds installed UI outside its package so compilation cannot change native source authority", async () => {
+	await writeFile(join(packageRoot, "native.js"), "export default function () {}\n");
+	await writeFile(join(packageRoot, "ui", "src", "index.ts"), "export const Results = () => null;\n");
+	await writeManifest("./runtime.js", { extension: "./native.js" });
+	const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+	await manager.scanAll();
+	const name = manager.nativeRuntimeName(join(packageRoot, "native.js"))!;
+	const source = manager.runtimeSource(name);
+	const before = installedPackageHash(packageRoot);
+	expect(await manager.readCode("results-ui")).toMatchObject({ code: expect.stringContaining("Results") });
+	expect(installedPackageHash(packageRoot)).toBe(before);
+	expect(manager.runtimeSource(name)).toBe(source);
+	expect(manager.runtimeSource("results-ui")).toBe(source);
+	await manager.scanAll();
+	expect(manager.info("results-ui")).toMatchObject({ built: true });
 });

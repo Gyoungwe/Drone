@@ -63,7 +63,8 @@ const context = (): PluginCapabilityContext => ({
 	applicationId: "application",
 	scope: selected.scope,
 	signal: selected.signal,
-	callerIdentity: selected.identity,
+	callerIdentity: {},
+	sessionIdentity: selected.identity,
 	bootstrap: false,
 	capabilities: {
 		call: async () => {
@@ -169,5 +170,17 @@ process.exit(2);
 			.every((args) => args.at(-1) === configuredImage || args.at(-1) === "missing-r-fixture"),
 	).toBe(true);
 	expect(calls.filter((args) => args[0] === "run")).toHaveLength(1);
+	await ports.dispose();
+});
+
+it("does not accept a selection object in place of the actual session identity", async () => {
+	const ports = await capabilities();
+	await expect(
+		ports.handlers["execution.describe"].execute(null, {
+			...context(),
+			callerIdentity: selected.identity,
+			sessionIdentity: {},
+		}),
+	).rejects.toThrow("stale");
 	await ports.dispose();
 });

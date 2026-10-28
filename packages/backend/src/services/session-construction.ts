@@ -182,7 +182,7 @@ export class SessionConstructionService {
 				unsubscribeEvents();
 				diagnostics.dispose();
 			};
-			const registration = { session, unsubscribe, cwd };
+			const registration = { session, unsubscribe, cwd, questionGate: askGate };
 			this.host.registry.add(registration);
 			const notificationLifetime = this.host.registry.signalFor(registration);
 			notificationLifetime.addEventListener(
@@ -192,7 +192,7 @@ export class SessionConstructionService {
 				},
 				{ once: true },
 			);
-			nativeBootstrap?.bindSession(session.sessionId);
+			nativeBootstrap?.bindSession(session.sessionId, () => this.host.sessionEngine.abort(session));
 			await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 			await session.bindExtensions({
 				onError: diagnostics.onError,
@@ -361,6 +361,7 @@ export class SessionConstructionService {
 				diagnostics.dispose();
 			};
 			const registration = {
+				questionGate: askGate,
 				session,
 				unsubscribe,
 				cwd,
@@ -375,7 +376,7 @@ export class SessionConstructionService {
 				},
 				{ once: true },
 			);
-			nativeBootstrap?.bindSession(session.sessionId);
+			nativeBootstrap?.bindSession(session.sessionId, () => this.host.sessionEngine.abort(session));
 			if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 			await session.bindExtensions({
 				onError: diagnostics.onError,

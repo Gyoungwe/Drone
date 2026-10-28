@@ -12,6 +12,7 @@ import type {
 	PluginRuntimeScope,
 } from "@gyoungwe/plugin-api/runtime";
 import { Check } from "typebox/value";
+import type { AskQuestionRoute } from "../session/ask-gate";
 import { NATIVE_EVENTS } from "./native-events";
 import {
 	PluginCapabilityBroker,
@@ -25,13 +26,24 @@ export type {
 	PluginRuntimeCapabilitiesOptions,
 } from "./runtime-capabilities";
 
+/** Host-only facade; only the registry can borrow a real caller for the source projector. */
+export interface ManagedNativeSession extends PluginNativeSession {
+	readonly hostProjection?: {
+		finalize?(event: unknown, signal: AbortSignal): Promise<unknown>;
+		event(event: unknown, signal?: AbortSignal): Promise<unknown>;
+		snapshot(messages: unknown[], persisted: unknown[], signal?: AbortSignal): Promise<unknown[]>;
+	};
+}
+
 export interface PluginRuntimeActivation {
 	readonly pluginId: string;
 	readonly applicationId: string;
 }
 
 /** Host-only lease; identity is an object owned by the resolved caller generation, never JSON input. */
+
 export interface PluginRuntimeCaller {
+	readonly questions?: AskQuestionRoute;
 	readonly identity: object;
 	/** Distinct from a window selection lease; used only by host capability handlers. */
 	readonly sessionIdentity?: object;
@@ -219,7 +231,8 @@ export class PluginRuntimeRegistry {
 	async attachNative(
 		pluginId: string,
 		resolveCaller: (context: ExtensionContext) => PluginRuntimeCaller | undefined,
-	): Promise<PluginNativeSession> {
+		resolveProjectionCaller?: PluginRuntimeCallerResolver,
+	): Promise<ManagedNativeSession> {
 		const activation = this.activations.get(pluginId);
 		if (activation?.state !== "active") throw new Error(`Plugin runtime is not active: ${pluginId}`);
 		const instance = await activation.ready;
@@ -248,8 +261,68 @@ export class PluginRuntimeRegistry {
 			activation.pending.delete(creating);
 		}
 		activation.abort.signal.throwIfAborted();
+		const projection = native.projection;
+		const finalizer = projection?.finalize?.bind(projection);
+		const projectionCaller = () => resolveProjectionCaller?.();
+		const finalize = finalizer
+			? (event: unknown, signal: AbortSignal) =>
+					this.call(activation, projectionCaller, "native:projection:finalize", event, signal, {
+						inputSchema: {},
+						resultSchema: {},
+						effect: projection?.finalizeEffect ?? "write",
+						execute: async (_input, call) => finalizer(event, call),
+					})
+			: undefined;
+		const projected = projection
+			? {
+					...projection,
+					...(finalize
+						? {
+								finalize: (
+									event: unknown,
+									context: import("@gyoungwe/plugin-api/runtime").PluginRuntimeContext,
+								) => finalize(event, context.signal),
+							}
+						: {}),
+					event: (event: unknown, signal?: AbortSignal) =>
+						this.call(
+							activation,
+							projectionCaller,
+							"native:projection:event",
+							event,
+							signal,
+							{
+								inputSchema: {},
+								resultSchema: {},
+								effect: "read",
+								execute: async (_input, call) => projection.event(event, call.signal),
+							},
+							true,
+						),
+					snapshot: (messages: unknown[], persisted: unknown[], signal?: AbortSignal) =>
+						this.call(
+							activation,
+							projectionCaller,
+							"native:projection:snapshot",
+							{ messages, persisted },
+							signal,
+							{
+								inputSchema: {},
+								resultSchema: { type: "array" },
+								effect: "read",
+								execute: async (_input, call) => projection.snapshot(messages, persisted, call.signal),
+							},
+							true,
+						) as Promise<unknown[]>,
+				}
+			: undefined;
 		return {
 			...native,
+			projection: projected,
+			// Do not pass through a similarly named property from untyped source exports.
+			hostProjection: projected
+				? { ...(finalize ? { finalize } : {}), event: projected.event, snapshot: projected.snapshot }
+				: undefined,
 			extension: (pi) => {
 				const adapted = {} as ExtensionAPI;
 				adapted.registerTool = ((tool: ToolDefinition) =>
@@ -403,12 +476,15 @@ export class PluginRuntimeRegistry {
 		input: unknown,
 		callerSignal?: AbortSignal,
 		operationOverride?: PluginRuntimeOperation,
+		withoutCapabilities = false,
 	): Promise<unknown> {
 		if (activation.state !== "active") {
 			throw new Error(`Plugin runtime is not active: ${activation.pluginId}`);
 		}
 		const caller = resolveCaller();
 		if (!caller) throw new Error("Plugin caller is no longer available");
+		const callerIdentity = caller.identity;
+		const sessionIdentity = caller.sessionIdentity;
 		const scope = Object.freeze({ ...caller.scope });
 		const signal = AbortSignal.any([
 			activation.abort.signal,
@@ -420,7 +496,8 @@ export class PluginRuntimeRegistry {
 			const current = resolveCaller();
 			if (
 				!current ||
-				current.identity !== caller.identity ||
+				current.identity !== callerIdentity ||
+				current.sessionIdentity !== sessionIdentity ||
 				JSON.stringify(current.scope) !== JSON.stringify(scope)
 			) {
 				throw new Error("Plugin caller scope changed during invocation");
@@ -431,11 +508,13 @@ export class PluginRuntimeRegistry {
 			name,
 			input,
 			signal,
-			caller.identity,
+			callerIdentity,
 			scope,
 			checkCaller,
 			operationOverride,
-			caller.sessionIdentity,
+			sessionIdentity,
+			caller.questions,
+			withoutCapabilities,
 		);
 		activation.pending.add(pending);
 		try {
@@ -455,6 +534,8 @@ export class PluginRuntimeRegistry {
 		checkCaller: () => void,
 		operationOverride?: PluginRuntimeOperation,
 		sessionIdentity?: object,
+		questions?: AskQuestionRoute,
+		withoutCapabilities = false,
 	): Promise<unknown> {
 		signal.throwIfAborted();
 		const runtime = await activation.ready;
@@ -477,29 +558,33 @@ export class PluginRuntimeRegistry {
 		checkCaller();
 		const capabilities = activation.capabilities;
 		if (!capabilities) throw new Error("Plugin capability owner is not initialized");
-		const result = await capabilities.run(
-			{
-				pluginId: activation.pluginId,
-				applicationId: activation.applicationId,
-				scope,
-				callerIdentity,
-				sessionIdentity,
-				signal,
-				bootstrap: false,
-			},
-			operation.effect,
-			checkCaller,
-			(name, input, effect, approvalDetail) =>
-				authorize(
-					() =>
-						this.policy.authorizeInvocation(
-							{ ...request, operation: `capability:${name}`, input, effect, approvalDetail },
+		const execute = () => operation.execute(input, { scope, signal, capabilities: capabilities.port });
+		const result = withoutCapabilities
+			? await capabilities.withoutCaller(execute)
+			: await capabilities.run(
+					{
+						pluginId: activation.pluginId,
+						applicationId: activation.applicationId,
+						scope,
+						callerIdentity,
+						sessionIdentity,
+						questions,
+						signal,
+						bootstrap: false,
+					},
+					operation.effect,
+					checkCaller,
+					(name, input, effect, approvalDetail) =>
+						authorize(
+							() =>
+								this.policy.authorizeInvocation(
+									{ ...request, operation: `capability:${name}`, input, effect, approvalDetail },
+									signal,
+								),
 							signal,
 						),
-					signal,
-				),
-			() => operation.execute(input, { scope, signal, capabilities: capabilities.port }),
-		);
+					execute,
+				);
 		checkCaller();
 		if (!Check(operation.resultSchema, result)) throw new Error(`Invalid plugin operation result: ${name}`);
 		return result;
