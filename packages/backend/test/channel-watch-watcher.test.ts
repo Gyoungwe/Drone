@@ -42,6 +42,7 @@ describe("ChannelWatcher（fs.watch 模式）", () => {
 			channelRoot: root,
 			onEvent: (e) => events.push(e),
 			debounceMs: 150,
+			pollIntervalMs: 120,
 		});
 		const mode = await w.start();
 		expect(mode).toBe("watch");
@@ -73,6 +74,7 @@ describe("ChannelWatcher（fs.watch 模式）", () => {
 			channelRoot: root,
 			onEvent: (e) => events.push(e.relPath),
 			debounceMs: 150,
+			pollIntervalMs: 120,
 		});
 		await w.start();
 		// Let the native watcher finish attaching before the first file mutation.
