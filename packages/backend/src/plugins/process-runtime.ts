@@ -584,7 +584,13 @@ class RuntimeProcess {
 					attachment,
 					kind,
 					input,
-					references: courier.encode(input),
+					references:
+						kind === "snapshot"
+							? courier.encodeSnapshot(
+									(input as { messages: unknown[] }).messages,
+									(input as { persisted: unknown[] }).persisted,
+								)
+							: courier.encode(input),
 					...(context ? { scope: context.scope } : {}),
 				},
 				signal,

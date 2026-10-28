@@ -31,11 +31,12 @@ it("transports only actual historical aliases and never infers identity from cop
 	const courier = new NativeMessageCourier();
 	const historical = { role: "assistant", content: [{ type: "text", text: "saved" }], timestamp: 1 };
 	const copy = structuredClone(historical);
-	expect(courier.encode({ messages: [historical, copy], persisted: [historical] })).toEqual({
+	expect(courier.encode({ messages: [historical], persisted: [historical] })).toEqual({ messages: [null] });
+	expect(courier.encodeSnapshot([historical, copy], [historical])).toEqual({
 		messages: [null, null],
 		historicalAliases: [0, null],
 	});
-	expect(courier.encode({ messages: [copy], persisted: [structuredClone(copy)] })).toEqual({
+	expect(courier.encodeSnapshot([copy], [structuredClone(copy)])).toEqual({
 		messages: [null],
 		historicalAliases: [null],
 	});
