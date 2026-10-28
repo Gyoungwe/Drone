@@ -344,3 +344,13 @@ export function activate() {
 `provider.read` / `provider.write` 接收 `{alias,operation,input:JSON}`，在实际提供者 owner 中执行其已声明且真实存在的 runtime operation。read 不可调用 write，所有写入仍逐次走双方来源与实际操作授权。短 lease 沿原 host caller/同 SDK entry/原窗口与 signal；已有 native/UI binding 时复用同 application owner，无其他 binding 时该纯服务 owner 仅活本次调用，状态应显式持久化。结束必须 await drain/revoke，清理失败使回执失败并保留 teardown 屏障。嵌套调用的 host-only source/operation 链拒绝实际循环，不把函数、caller 身份或授权放进 JSON。
 
 普通服务返回值不产生文件、模型或任务写入权限，特权 acceptance/consent 角色仍需后继真实 opaque 证明与消费点验收。本片不新增 UI RPC、IPC 或 renderer surface；现有 runtime capability 管道承载这些纯 JSON 调用。
+
+### 临时旧检查点导入（未发布 1.3 候选）
+
+`drone.recordAdoptions:{logicalType:{legacyType,fromVersions,removeBeforeVersion}}` 声明一个明确旧全局 tag。fromVersions 是迁移器支持的精确稳定版本列表，不证明旧记录的实际创建者或版本；当前包与删除版本也须为稳定版本，到删除版本后此临时声明拒绝加载。必须有同源 desktopRuntime，不能声明导入 `plugin-record:` / `plugin-notice:` 的其他来源 namespace。
+
+`session.records.adoption.inspect({type})` 与 `session.records.adoption.commit({type,legacyId,legacyHash,data})` 都是 write，分别请求批准。批准前展示精确旧 tag、目标 logical type、支持迁移器版本与“创建者/版本未知、不会授予文件/模型/执行权限或科学 proof”的说明。声明由实际 source 的 capability 工厂绑定，调用者 JSON 不能指定来源或旧 tag；普通 records.read 不提供任何 legacyTypes 参数。
+
+inspect 返回 candidate/absent/already-adopted/deferred，creator/packageVersion 固定 unknown，只有 candidate 附 `{id,hash,data}`。commit 在同 entry 串行事务内重验最新当前 branch 候选 id/hash、尚无 own-source checkpoint，再追加 own namespace 并真实 durable 回读，原记录保留；hash 仅并发核对，不是授权 token。只有成功持久化才返回 adopted。deferred 不暴露旧候选，不产生 adopted 回执；错误沿已有 needs-reopen 屏障传播。
+
+生产迁移器必须验证旧数据格式和当前实际 scope，清除或保留为纯历史的旧 approved/roots/proof，重新获取当前实际授权与 opaque 证明；通用导入端口不会代替这层领域验证。Core 0.1.9/0.2.0 与 Knowledge 0.2.0/0.2.1 的实际迁移验收仍待分别完成，不能将协议 fixture 写成整包迁移 PASS。

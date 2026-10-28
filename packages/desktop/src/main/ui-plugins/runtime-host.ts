@@ -370,7 +370,7 @@ export function createDesktopRuntime(
 							getSessionContext: (id) => sessions.getPluginCallerContext(id),
 						})
 					: undefined;
-			const capabilities = sessions.getPluginSessionCapabilities();
+			const capabilities = sessions.getPluginSessionCapabilities(source.recordAdoptions);
 			return {
 				...resourceCapabilities,
 				handlers: {
@@ -383,6 +383,12 @@ export function createDesktopRuntime(
 					"session.records.read": capabilities["session.records.read"],
 					"session.records.append": capabilities["session.records.append"],
 					"session.notify": capabilities["session.notify"],
+					...(source.recordAdoptions
+						? {
+								"session.records.adoption.inspect": capabilities["session.records.adoption.inspect"],
+								"session.records.adoption.commit": capabilities["session.records.adoption.commit"],
+							}
+						: {}),
 					...(source.requestsModel
 						? {
 								"model.selection": capabilities["model.selection"],
