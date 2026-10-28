@@ -15,7 +15,8 @@ vi.mock("electron", () => ({
 	shell: { openPath: vi.fn() },
 }));
 
-import { discoverInstalledUiPackages, UiPluginManager } from "./manager";
+import { discoverInstalledUiPackages } from "./installed-package-sources";
+import { UiPluginManager } from "./manager";
 
 // The public-package gate supplies a clean installed tarball. Ordinary host
 // tests must also run without a sibling optional-plugin source checkout.

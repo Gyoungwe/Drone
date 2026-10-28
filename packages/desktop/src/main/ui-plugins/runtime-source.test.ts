@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const environment = vi.hoisted(() => ({ userData: "" }));
 vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => environment.userData } }));
 
-import { discoverInstalledUiPackages, UiPluginManager } from "./manager";
+import { discoverInstalledUiPackages } from "./installed-package-sources";
+import { UiPluginManager } from "./manager";
 
 let root: string;
 let installRoot: string;

@@ -551,3 +551,5 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 `SessionControlService.command` / `session-engine/engine.ts` 提供中立已注册扩展命令派发；`session:command` 经 SessionsContract、preload 与公开 UI `sessions.command` 同步。缺命令不转成 prompt；取消、会话替换、恢复/只读和 runner reload 均拒绝过期操作。
 
 后继任务状态路由/managed command、知识模型评审的同 tarball 双进程整合切片见[回执](releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；该后继尚未统一来源锁及完整根门禁，不替代顶部4abdae43/253c47e检查点。
+
+已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。当前步骤仅结构提取，runtime无UI发现与包/UI启停分离仍在后继实现。
