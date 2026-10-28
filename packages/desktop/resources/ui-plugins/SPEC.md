@@ -334,3 +334,13 @@ export function activate() {
 `session.notify({content})` 为 write，仅在当前真实 SDK idle 时显示普通文本 custom message，host 派生类型、固定 display:true/triggerTurn:false，无 details、可信状态或授权含义。活动会话明确拒绝，不把 queued 当作已显示；调用不触发模型。两种写入都必须来自可信可写的 live entry，不能借问答结果取得权限。
 
 检查点读取返回 `{state:"durable"|"deferred"|"needs-reopen",error:string|null,records}`。Pi 1.1.0 的 lazy/inMemory 会话可能未写盘，deferred 不是已保存回执，读取不会创建文件或触发 flush。实际 SDK 写入失败后，同 backend/实际 entry 的所有后续 append/notify 均拒绝，read 仅给出最后已确认的检查点与 needs-reopen；重建 handler、UI/native 重激活或 SDK.reload 不清除故障。只能从磁盘真正重建新的 SDK entry 后恢复；不回滚或读取 SDK 私有数组，不新增 process 全局账本。
+
+### 同一 installed source catalog 的 JSON 服务（未发布 1.3 候选）
+
+真实 `plugin.manifest.json` 的 `drone.provides` 为 `{service:{version,operations}}`，`drone.requires` 为 `{alias:{service,version}}`；version 是正整数合同版本，operations 是非空唯一公开 runtime 操作名。二者均要求 `desktopRuntime`，不覆盖 `requires.hostCapabilities`，不允许写包名依赖或函数。来源、contentHash、安装路径和启停状态沿同一 installed package catalog，不从 UI 列表另建目录。
+
+`provider.inspect({alias})` 为 read，返回 `{state,service,requestedVersion,provider}`，state 为 available/absent/disabled/unavailable/incompatible/ambiguous，provider 为 available 的 `{pluginId,version,contentHash}` 或 null；它只检查已声明 alias，构造期可读取元数据，不激活目标。服务只选择精确版本唯一 enabled 来源，多提供者不能取第一个。
+
+`provider.read` / `provider.write` 接收 `{alias,operation,input:JSON}`，在实际提供者 owner 中执行其已声明且真实存在的 runtime operation。read 不可调用 write，所有写入仍逐次走双方来源与实际操作授权。短 lease 沿原 host caller/同 SDK entry/原窗口与 signal；已有 native/UI binding 时复用同 application owner，无其他 binding 时该纯服务 owner 仅活本次调用，状态应显式持久化。结束必须 await drain/revoke，清理失败使回执失败并保留 teardown 屏障。嵌套调用的 host-only source/operation 链拒绝实际循环，不把函数、caller 身份或授权放进 JSON。
+
+普通服务返回值不产生文件、模型或任务写入权限，特权 acceptance/consent 角色仍需后继真实 opaque 证明与消费点验收。本片不新增 UI RPC、IPC 或 renderer surface；现有 runtime capability 管道承载这些纯 JSON 调用。
