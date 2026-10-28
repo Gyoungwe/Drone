@@ -286,6 +286,7 @@ export function createDesktopRuntime(
 	const executionAcceptedFacts = new Map<string, ExecutionIdentity>();
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
+		sources: () => manager.runtimeSources(),
 		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
 		questionTransport: (owner) => ({
 			ownerId: owner.id,
@@ -386,6 +387,9 @@ export function createDesktopRuntime(
 					"session.select": capabilities["session.select"],
 					"session.input": capabilities["session.input"],
 					"session.confirm": capabilities["session.confirm"],
+					"session.records.read": capabilities["session.records.read"],
+					"session.records.append": capabilities["session.records.append"],
+					"session.notify": capabilities["session.notify"],
 					...(source.requestsModel
 						? {
 								"model.selection": capabilities["model.selection"],

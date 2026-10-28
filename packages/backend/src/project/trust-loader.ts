@@ -74,6 +74,7 @@ export function desktopLoaderOptions(
 		...(pluginRuntimeDirectory && cwd
 			? {
 					extensionFactoryForPath: async (path: string) => {
+						nativeBootstrap?.delivery?.observeSelectedPath(path);
 						if (nativeRuntime?.manages(path))
 							return nativeBootstrap ? nativeBootstrap.factoryForPath(path) : () => {};
 						return sandbox?.(path);

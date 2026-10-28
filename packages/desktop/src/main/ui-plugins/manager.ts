@@ -12,7 +12,7 @@ import {
 	writeFile,
 } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { createLogger } from "@drone/backend";
 import {
 	KNOWN_UI_REGIONS,
@@ -332,7 +332,7 @@ export class UiPluginManager {
 	/** name → 插件目录绝对路径（白名单：readCode/openDir 只接受扫描到的合法名） */
 	private dirNames = new Map<string, string>();
 	/** Installed provenance is never inferred from a local UI directory or its name. */
-	private packageSources = new Map<string, InstalledUiRuntimeSource>();
+	private packageSources = new Map<string, { source: InstalledUiRuntimeSource; current: boolean }>();
 	private installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
 	/** Discovery diagnostics are host-owned metadata; an empty managed root is a valid empty list. */
 	private installedDiagnostics: Array<{ packageName: string; error: string }> = [];
@@ -450,13 +450,13 @@ export class UiPluginManager {
 		const installed = this.legacyInstalledPackageDir
 			? []
 			: await discoverInstalledPackages(this.installedPackageRoot);
-		this.packageSources = new Map(
-			installed.flatMap((candidate) =>
-				"error" in candidate || !candidate.runtime
-					? []
-					: [[`package:${candidate.packageRoot}`, candidate.runtime] as const],
-			),
+		const packageSources = new Map(
+			[...this.packageSources].map(([name, item]) => [name, { source: item.source, current: false }]),
 		);
+		for (const candidate of installed)
+			if (!("error" in candidate) && candidate.runtime)
+				packageSources.set(`package:${candidate.packageRoot}`, { source: candidate.runtime, current: true });
+		this.packageSources = packageSources;
 		this.installedDiagnostics = installed.filter(
 			(candidate): candidate is { packageName: string; error: string } => "error" in candidate,
 		);
@@ -593,7 +593,10 @@ export class UiPluginManager {
 		const identity = this.installedPackageHashes.get(name);
 		if (!identity) return true;
 		try {
-			return installedPackageHash(identity.root) === identity.hash;
+			const runtime = this.installedSources.get(name)?.runtime;
+			return runtime
+				? this.runtimeSourceCurrent(runtime)
+				: installedPackageHash(identity.root) === identity.hash;
 		} catch {
 			return false;
 		}
@@ -618,10 +621,11 @@ export class UiPluginManager {
 	runtimeSource(name: string): InstalledUiRuntimeSource | undefined {
 		const native = this.packageSources.get(name);
 		if (native) {
+			if (!native.current) return undefined;
 			try {
-				return installedPackageHash(native.packageRoot) === native.contentHash ? native : undefined;
+				return this.runtimeSourceCurrent(native.source) ? native.source : undefined;
 			} catch (error) {
-				log.warn("Installed native source is unavailable", native.pluginId, error);
+				log.warn("Installed native source is unavailable", native.source.pluginId, error);
 				return undefined;
 			}
 		}
@@ -629,11 +633,45 @@ export class UiPluginManager {
 		return this.installedSources.get(name)?.runtime;
 	}
 
+	/** Native and service consumers see the same package descriptors and current content identities. */
+	runtimeSources(): readonly {
+		name: string;
+		source: InstalledUiRuntimeSource;
+		state: "enabled" | "unavailable";
+	}[] {
+		return [...this.packageSources].map(([name, item]) => ({
+			name,
+			source: item.source,
+			state: this.runtimeSource(name) ? "enabled" : "unavailable",
+		}));
+	}
+
 	/** Called only for a path selected by the actual Pi extension loader. UI visibility grants no native authority. */
 	nativeRuntimeName(path: string): string | undefined {
-		const canonical = realpathSync(path);
-		for (const [name, source] of this.packageSources) if (source.nativeEntrypoint === canonical) return name;
+		let declared = resolve(path);
+		try {
+			declared = join(realpathSync(dirname(declared)), basename(declared));
+		} catch (error) {
+			log.warn("Selected extension directory is unavailable", path, error);
+		}
+		for (const [name, item] of this.packageSources)
+			if (item.source.nativeDeclaredPath === declared) return name;
+		try {
+			const canonical = realpathSync(path);
+			for (const [name, item] of this.packageSources)
+				if (item.source.nativeEntrypoint === canonical) return name;
+		} catch (error) {
+			log.warn("Selected extension path is unavailable", path, error);
+		}
 		return undefined;
+	}
+
+	private runtimeSourceCurrent(source: InstalledUiRuntimeSource): boolean {
+		return (
+			realpathSync(source.installationPath) === source.packageRoot &&
+			(!source.nativeDeclaredPath || realpathSync(source.nativeDeclaredPath) === source.nativeEntrypoint) &&
+			installedPackageHash(source.packageRoot) === source.contentHash
+		);
 	}
 
 	isNativeSourceAvailable(name: string): boolean {

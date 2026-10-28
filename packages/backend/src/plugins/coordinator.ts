@@ -4,6 +4,7 @@ import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type { PluginNativeRuntimeFactory, PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type { PluginRuntimeClient } from "@gyoungwe/plugin-api/runtime";
 import type { AskQuestionRoute } from "../session/ask-gate";
+import { NativeSessionDelivery, type SelectedNativeSource } from "./native-delivery";
 import { type ManagedNativeSession, type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 import type {
 	PluginRuntimeCapabilitiesOptions,
@@ -14,6 +15,8 @@ import type { PluginSessionCallerContext } from "./session-caller";
 export interface PluginRuntimeSource {
 	readonly pluginId: string;
 	readonly packageRoot: string;
+	readonly installationPath?: string;
+	readonly nativeDeclaredPath?: string;
 	readonly entrypoint: string;
 	readonly nativeEntrypoint?: string;
 	readonly contentHash?: string;
@@ -33,6 +36,7 @@ export interface PluginRuntimeOwner {
 	isDestroyed(): boolean;
 }
 export interface PluginNativeBootstrap {
+	readonly delivery?: NativeSessionDelivery;
 	factoryForPath(path: string): Promise<ExtensionFactory | undefined>;
 	bindSession(sessionId: string, abort?: () => Promise<void>): void;
 	dispose(): Promise<void>;
@@ -43,8 +47,14 @@ export interface PluginNativeIntegration {
 }
 
 export interface PluginRuntimeBridgeOptions {
+	classifySelectedPath?(path: string): SelectedNativeSource;
 	questionTransport?(owner: PluginRuntimeOwner): AskQuestionRoute;
 	source(name: string): PluginRuntimeSource | undefined;
+	sources?(): readonly {
+		readonly name: string;
+		readonly source: PluginRuntimeSource;
+		readonly state: "enabled" | "unavailable" | "disabled";
+	}[];
 	requiredSources?(): readonly {
 		readonly source: PluginRuntimeSource;
 		readonly state: "enabled" | "unavailable" | "disabled";
@@ -98,6 +108,8 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 	return (
 		a.pluginId === b?.pluginId &&
 		a.packageRoot === b.packageRoot &&
+		a.installationPath === b.installationPath &&
+		a.nativeDeclaredPath === b.nativeDeclaredPath &&
 		a.entrypoint === b.entrypoint &&
 		a.nativeEntrypoint === b.nativeEntrypoint &&
 		a.contentHash === b.contentHash &&
@@ -132,7 +144,13 @@ export class PluginRuntimeBridge {
 	private readonly requests = new Map<string, { name: string; owner: PluginRuntimeOwner; token: string }>();
 	private readonly stopping = new Map<
 		string,
-		{ name: string; owner: PluginRuntimeOwner; promise: Promise<void> }
+		{
+			name: string;
+			owner: PluginRuntimeOwner;
+			source: PluginRuntimeSource;
+			readonly failed: boolean;
+			promise: Promise<void>;
+		}
 	>();
 
 	constructor(private readonly options: PluginRuntimeBridgeOptions) {}
@@ -272,6 +290,10 @@ export class PluginRuntimeBridge {
 		if (this.closing || this.lifecycleBlocked(owner)) throw new Error("Plugin runtime unavailable");
 		const source = this.options.source(name);
 		if (!source) return undefined;
+		const failedStop = [...this.stopping.values()].find(
+			(stop) => stop.failed && stop.source.pluginId === source.pluginId,
+		);
+		if (failedStop) await this.revoke(failedStop.name, failedStop.owner.id, false);
 		if (!this.options.enabled(name) || owner.isDestroyed()) throw new Error("Plugin runtime unavailable");
 		const stopping = this.revoke(name, owner.id, false);
 		const token = randomUUID();
@@ -331,6 +353,19 @@ export class PluginRuntimeBridge {
 		findName: (path: string) => string | undefined,
 	): PluginNativeBootstrap {
 		const attachments = new Set<PluginNativeSession>();
+		const delivery = new NativeSessionDelivery(
+			(path) => {
+				if (this.options.classifySelectedPath) return this.options.classifySelectedPath(path);
+				const name = findName(path);
+				if (!name) return { kind: "unconfirmed" };
+				const source = this.options.source(name);
+				return source
+					? { kind: "managed", source, state: this.options.enabled(name) ? "enabled" : "disabled" }
+					: { kind: "unconfirmed" };
+			},
+			sameSource,
+			() => this.options.sources?.() ?? this.options.requiredSources?.() ?? [],
+		);
 		const owners = new Set<PluginRuntimeOwner>();
 		const pending = new Set<Promise<ExtensionFactory | undefined>>();
 		const binders = new Set<(session: PluginSessionCallerContext) => void>();
@@ -338,6 +373,7 @@ export class PluginRuntimeBridge {
 		let abortBound: (() => Promise<void>) | undefined;
 		let closed = false;
 		return {
+			delivery,
 			bindSession: (sessionId, abort) => {
 				const session = this.options.getSessionContext(sessionId);
 				if (!session || closed || (bound && bound.identity !== session.identity))
@@ -395,9 +431,11 @@ export class PluginRuntimeBridge {
 						await this.stopBinding(binding);
 						throw error;
 					}
+					const detachDelivery = delivery.attach(binding.runtime.source, native, () => this.allowed(binding));
 					let stopping: Promise<void> | undefined;
 					const dispose = () => {
 						stopping ??= (async () => {
+							detachDelivery?.();
 							binding.abort.abort(new Error("Native plugin session closed"));
 							const [released] = await Promise.allSettled([native.dispose()]);
 							const [stopped] = await Promise.allSettled([this.stopBinding(binding)]);
@@ -444,6 +482,7 @@ export class PluginRuntimeBridge {
 				await Promise.allSettled([...pending]);
 				const results = [
 					...revoked,
+					...(await Promise.allSettled([delivery.dispose()])),
 					...(await Promise.allSettled([...attachments].map((native) => native.dispose()))),
 				];
 				const failures = results.filter((result) => result.status === "rejected");
@@ -640,18 +679,29 @@ export class PluginRuntimeBridge {
 				this.runtimes.delete(runtime.source.pluginId);
 			});
 		}
+		let failed = false;
 		const promise = (async () => {
 			await Promise.allSettled([...binding.pending]);
 			const results = await Promise.allSettled([nativeAborted, runtime.stopping]);
 			const failures = results.filter((result) => result.status === "rejected");
-			if (failures.length)
+			if (failures.length) {
+				failed = true;
 				throw new AggregateError(
 					failures.map((result) => result.reason),
 					"Plugin native run and runtime shutdown failed",
 				);
+			}
 			this.stopping.delete(key);
 		})();
-		this.stopping.set(key, { name: binding.name, owner: binding.owner, promise });
+		this.stopping.set(key, {
+			name: binding.name,
+			owner: binding.owner,
+			source: runtime.source,
+			get failed() {
+				return failed;
+			},
+			promise,
+		});
 		return promise;
 	}
 }

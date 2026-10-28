@@ -2,6 +2,8 @@
 export interface NativeMessageReferences {
 	readonly message?: string;
 	readonly messages?: readonly (string | null)[];
+	/** Actual host-proven historical object aliases; never read from message JSON. */
+	readonly historicalAliases?: readonly (number | null)[];
 }
 interface Association {
 	readonly reference: string;
@@ -28,6 +30,17 @@ export class NativeMessageCourier {
 			...(Array.isArray(carrier.messages)
 				? { messages: carrier.messages.map((message) => this.reference(message)) }
 				: {}),
+		};
+	}
+
+	/** Snapshot callers supply only SDK-origin-confirmed historical objects; event fields cannot request aliases. */
+	encodeSnapshot(messages: unknown[], persisted: unknown[]): NativeMessageReferences {
+		return {
+			...this.encode({ messages }),
+			historicalAliases: messages.map((message) => {
+				const index = persisted.indexOf(message);
+				return index < 0 ? null : index;
+			}),
 		};
 	}
 

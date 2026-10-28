@@ -1,0 +1,51 @@
+{
+	"scope": "Pinned SDK host-only run-start and per-delivery guard participation; source-selection consumer remains pending",
+	"sdk": "@earendil-works/pi-coding-agent@1.1.0",
+	"patchSha256": "c6d15561790225131f24b80ef55b42e2b5eb4541c415466ea3ee2fadb22197ec",
+	"privateInterfaces": {
+		"hostDeliveryRunStart": "Synchronous actual agent_start signal before every official extension hook; return type undefined prevents an async callback in typed host configuration",
+		"hostDeliveryBoundary": "Promise<void | false>; false means the host proved this actual run never required a policy; plugin event JSON cannot provide it",
+		"dispose": "Marks the SDK disposed, clears both callbacks and failed-start signal records, then aborts/disconnects"
+	},
+	"red": {
+		"result": "4 expected real-SDK failures",
+		"log": "/tmp/native-delivery-run-start-red.log",
+		"reasons": [
+			"False callback incorrectly changed ordinary SDK abort behavior",
+			"No actual host start latch before extension hooks",
+			"Start failure with no final callback published the original body",
+			"Start failure with false final callback published the original body"
+		]
+	},
+	"green": {
+		"result": "PASS",
+		"fenceHistoryStartTests": 14,
+		"log": "/tmp/native-delivery-run-start-sdk-final.log",
+		"cases": [
+			"Absent final callback versus verified false callback yields identical ordinary SDK abort message/usage",
+			"Actual run start precedes dynamically executed official hooks",
+			"Required-at-start run stays guarded after later fixture source removal",
+			"Failed start aborts and neutralizes with a fixed diagnostic, even if final callback is absent or returns false",
+			"Actual SessionEngine create and open forward both private callbacks using isolated temporary agent state",
+			"Prior finalizer, cancellation, cleanup, history-origin and dispose regressions remain passing"
+		]
+	},
+	"checks": {
+		"backendTypecheck": "PASS",
+		"architecture": "PASS, 0 findings",
+		"targetBiome": "PASS",
+		"patchApplicability": "PASS: full patch applies to upstream state; all 7 patched files match the tested isolated SDK"
+	},
+	"pending": [
+		"Actual SDK selected-source observation and epoch policy consumer",
+		"Unknown/failed selected package provenance and cross-restart expectations",
+		"Full knowledge native owner and generic delivery event/poll/export consumers",
+		"Same-tarball complete workflow and formal installer"
+	],
+	"claims": {
+		"fullP2": "INCOMPLETE",
+		"actualPackageDisable": "NOT_RUN in this mechanism fixture; only the host run latch is exercised",
+		"formalInstaller": "NOT_RUN",
+		"npmPublication": "NOT_RUN"
+	}
+}
