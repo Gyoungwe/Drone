@@ -562,4 +562,4 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 
 后继任务状态路由/managed command、知识模型评审的同 tarball 双进程整合切片见[回执](releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；该后继尚未统一来源锁及完整根门禁，不替代顶部4abdae43/253c47e检查点。
 
-已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已有扫描回归。包/UI启停分离与 required source 生命周期仍在后继实现。
+已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。包级显式启停、UI-only 撤销及 required source 生命周期仍在后继实现。

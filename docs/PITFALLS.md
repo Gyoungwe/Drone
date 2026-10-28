@@ -439,3 +439,7 @@ Pi 1.1.0 的 `AgentSession.dispose()` 只中止/失效内部运行时，不会�
 ## 2026-10-28 · SDK append 失败后的内存 phantom 与 reload
 
 Pi 1.1.0 的 SessionManager 先把 append entry 加入内存，再写磁盘；EISDIR 后 reload 仍复用这个 manager。不要从 reload 成功推断数据已保存，也不要继续 sendMessage 以 phantom leaf 为 parent 延长磁盘链。TaskApplication 必须 fail closed、保留最后 committed 诊断，真正从磁盘重开后验证；禁止 poke SDK 私有数组做假 rollback。extension 的 events.on 监听会在 invalidate 被解除，不能靠 bus listener 伪装跨 reload 持久状态。实际双入口反证和 S2 剩余边界见[TaskSession 证据](pluginization/native-plugin-task-session-actor-evidence.md)。
+
+### 已安装 UI 构建产物不能写回其原生来源树
+
+同包原生与 UI 共用完整包树 hash。把 esbuild 的 `dist/index.js` 写回已安装 UI 目录，会让宿主自己改变正在使用的原生来源，之前在 readCode 后重算 hash 的做法也不能建立稳定的代次。安装包 UI 现在按已验证 hash 编译到宿主 `ui-plugin-builds` 缓存；用户本地 UI 目录继续使用原目录 dist。回归比较编译前后完整树 hash、native/UI 描述对象身份与重新扫描后的 built 状态；这不授予新的文件权限，也不替代包级停用/卸载。
