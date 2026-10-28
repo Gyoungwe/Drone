@@ -1,0 +1,154 @@
+{
+	"schemaVersion": 1,
+	"status": "IN_PROGRESS",
+	"hostSourceBeforeReceipt": "8b79200ab4d1cab532f7bfab44086d94d72e5409",
+	"pluginSource": "1707f6c346486370eacc1dfce37b403461230d17",
+	"api": {
+		"sourceCommit": "2c4e3ecd8dc20ffba64dfdc79cfa16a484f5bc7e",
+		"filename": "gyoungwe-plugin-api-1.3.0-2c4e3ecd.tgz",
+		"sha256": "b296da73a05628b21e6f7cf6da2816b9c95ee8dbca27d053ac3237d292de4d70",
+		"integrity": "sha512-h/WtcK5iBuNz+puN7AhC8TDINYq4xvQH9npBcYqcwM3P3ALyVeVb2vy+5fol7UBi+geB/8D0HknaHLEYwm8myA==",
+		"published": false
+	},
+	"packages": [
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.3.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-knowledge-0.3.0.tgz",
+			"sha256": "d02d32bf9f461208b77166d5c31c97bd5e45c4f2d646d9a74bfc9076da8cf139"
+		},
+		{
+			"name": "@gyoungwe/pi-analysis",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-analysis-0.2.0.tgz",
+			"sha256": "325b8e8214837a4d7c1d06db91cd1eb14c9c4bf7cf9eba031e44718cf95d8cdb"
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"version": "0.3.2",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-research-0.3.2.tgz",
+			"sha256": "4db7092d8ef47a29f987833fd577ceaa18dc21f2295e605c0ce4be6be7a15176"
+		},
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-core-0.2.0.tgz",
+			"sha256": "61c8b93b988b84c76a1cd3aa131e11dc030f9df3f679c55d6ba061d7476598f6"
+		},
+		{
+			"name": "@gyoungwe/pi-discovery",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-discovery-0.2.0.tgz",
+			"sha256": "378f831d75688dcc84f255a1bf06ca51ddd4be9b0467b502a5d2bc1877c7eb9e"
+		}
+	],
+	"checks": [
+		{
+			"path": "/tmp/drone-native-owner-services-plugin-check.log",
+			"sha256": "bb0823e513b674896fa2dc3bdd4882a475042e2b4237a845f404fa740fd0f167",
+			"exitCode": 0,
+			"scope": "Complete plugin workspace npm run check; predecessor239b76d plus only officially generated aggregate manifest committed as1707f6c. Knowledge539, core210, research164; real research SDK1.1.0/latest1.4.0. Not final architecture acceptance."
+		},
+		{
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/build.log",
+			"sha256": "dfd00bfd62b297e30c18a4eb1cc63ac27067f1976dd9cb9cbee0d1260eba107b",
+			"exitCode": 0,
+			"scope": "Independent fixed git archive, fresh npm ci and five official builds/packs."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-host-fetch.log",
+			"sha256": "d84ea8aa6d7b1f6f5b6928679a6bb8b07567138cddf454905e3e8669c0ea3d15",
+			"exitCode": 0,
+			"scope": "Default remote fetch of exact pushed1707f6c; all four locked tarball hashes verified, no DRONE_PLUGINS_DIR."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-host-types.log",
+			"sha256": "fc96b45e6dbbfc87ac8eacd60c95f697866eff86a9b94d607f3247de32140f03",
+			"exitCode": 0,
+			"scope": "Root npm run typecheck including fresh default remote fetch; before test-only source identity correction."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-generic-sdk.log",
+			"sha256": "c1114f2588289bba4b0151b6fb2f5f8c982d173e52f35b86b2f011a2c47a0ce5",
+			"exitCode": 0,
+			"scope": "Five real SDK files,36passed: actual selected-source receipts, run policy/delivery fence, owner courier and export projection."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-ports-sdk.log",
+			"sha256": "42e965fde92aa26ffc17b438cb81a2dbe079876edb927a1108f9a943b8515a18",
+			"exitCode": 0,
+			"scope": "Four real SDK files,42passed: actual records/provider/adoption/model/tool ports."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-host-arch.log",
+			"sha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d",
+			"exitCode": 0,
+			"scope": "Architecture0baseline; host dependency reportPARTIAL, trackedRuntimeDependencies[]; not full native boundary closure."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-packed-sdk.log",
+			"sha256": "15973f6d6140814916da81a2052ff69bd31a9b14f6371b7ddff6dce891b98940",
+			"exitCode": 1,
+			"scope": "First six actual installed-candidate SDK files:4passed/2failed. Full production knowledge publication, core, discovery shared-owner and standalone synthetic execution passed. Old knowledge fixture source/hook expectations and Desktop synthetic accepted execution failed; preserved."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-knowledge-ui-readonly.log",
+			"sha256": "dd35bc92a662e053253cdf6d4a9a3a8306fd42ad77e0f01dd95e91589d929197",
+			"exitCode": 1,
+			"scope": "Own test wiring mistake: asserted manifest UI id instead of canonical package source id. Preserved; corrected source identity in8b79200a."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-knowledge-ui-readonly-2.log",
+			"sha256": "a6f50817b6e07350861c6ab3e429f166afa927bae39e25aae68cc0e1bb497f66",
+			"exitCode": 0,
+			"scope": "Same frozen knowledge/API tarballs: actual read-only tools succeed, real write hooks/negative controls deny; separate writable SDK hooks error-free. UI read/write/review/model denial/cancel/partial retry/history/undo, both processes and SQLite/lease release pass."
+		}
+	],
+	"pending": {
+		"hostCleanFullGates": "NOT_RUN_FOR_THIS_COHORT",
+		"discoveryDesktopAcceptedExecution": "FAILED_UNDER_DIAGNOSIS",
+		"formalInstaller": "NOT_RUN",
+		"npmPublish": "NOT_AUTHORIZED_THIS_RUN",
+		"mainMerge": "NOT_AUTHORIZED_THIS_RUN"
+	},
+	"boundary": {
+		"status": "INCOMPLETE",
+		"counts": {
+			"domain-build-step": 15,
+			"domain-manifest-dependency": 10,
+			"domain-type-import": 5,
+			"domain-runtime-import": 1,
+			"domain-packaged-resource": 21,
+			"required-domain-plugin": 4
+		},
+		"runtimeAcceptance": "NOT_RUN"
+	},
+	"watcher": {
+		"status": "REPRODUCED_NOT_FIXED",
+		"logs": [
+			{
+				"path": "/tmp/drone-cw-current-watch-probe.log",
+				"sha256": "c08c3993dd3505601d5f9091cd5500e5eea17ce2d4789f56036878f6454f7586",
+				"exitCode": 1,
+				"scope": "64fresh roots with actual ChannelWatcher and independent raw fs.watch:62passed/2missed; both streams empty for the two failures."
+			},
+			{
+				"path": "/tmp/drone-cw-native-watch-matrix.log",
+				"sha256": "d00266282aaca8e5d5b622fd8cfba01f8058b6fdbb3f0f14da785b7d518f2510",
+				"exitCode": 0,
+				"scope": "Native fs.watch differential diagnostic only; multiple cells missed file events or delivered directory-only events. No product fix or final root-cause claim."
+			}
+		]
+	},
+	"remaining": [
+		"P0 full compatibility matrix and context boundaries",
+		"P1 whole package controls and final lifecycle evidence",
+		"P2 offline/full-tree/child history, task composition, legacy host deletion and formal GUI",
+		"P3 complete research/Zotero owner, writers and UI migration",
+		"P4 task durable actor/privileged role and remaining host startup deletion",
+		"P5 full analysis/evidence controller/UI, Discovery execution and Inquiry storage migration",
+		"P6 four required source locks and domain build/resource closure removal; genuine zero-domain build/start/chat",
+		"P7 final matching dual-repository gates and formal macOS install/disable/restore/upgrade/rollback"
+	],
+	"excludedUnchanged": ["Four retained external account/platform acceptances", "MinerU/GROBID", "B8/B8-2"]
+}
