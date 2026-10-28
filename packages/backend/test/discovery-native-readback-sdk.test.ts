@@ -147,6 +147,7 @@ it.skipIf(!tarball)(
 							"discovery_close_kernel",
 							"discovery_reconcile_executions",
 							"discovery_cancel_execution",
+							"discovery_record_inquiry",
 						].includes(name),
 					);
 					expect(meta).toMatchObject({

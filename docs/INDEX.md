@@ -37,11 +37,11 @@ P5 C 的通用执行端口、签名 accepted/terminal receipt 与执行目录 le
 
 Inquiry 原生 Pi 根入口、同包面板和 generic provider 复用 canonical SQLite owner；真实安装 tarball → 两个 SDK/受限 worker/生产 renderer 的写入、事件、原字节恢复与停用 handoff 见[候选运行证据](pluginization/inquiry-native-ui-candidate-evidence.md)。旧宿主事件/重跑组合、workspace promotion 与正式 GUI 仍未完成。
 
-Inquiry 原 SQLite 保持位置/格式的独立 provider 方案见[SQLite provider 设计候选](pluginization/inquiry-sqlite-provider-design-candidate.md)；generic 二进制端口尚待审查，未实施或关闭迁移。
+Inquiry 原 SQLite 保持位置/格式的独立 provider 方案见[SQLite provider 设计候选](pluginization/inquiry-sqlite-provider-design-candidate.md)；binary-state 生产端口和原生/UI/provider 候选已落地，见下述候选运行证据，完整旧组合删除仍未完成。
 
 普通 domain worker 禁用 Node SQLite 的纯防御回归与 index resource 的 NOT_RUN 范围见[防御说明](pluginization/node-sqlite-worker-defense.md)。
 
-Inquiry 内存/WASM SQLite 保留原格式的临时 SQL/导出回读调查见[可行性候选](pluginization/inquiry-wasm-feasibility-candidate.md)；binary CAS、provider 及完整迁移仍未实施。
+Inquiry 内存/WASM SQLite 保留原格式的临时 SQL/导出回读调查见[可行性候选](pluginization/inquiry-wasm-feasibility-candidate.md)；后继 binary CAS、provider 与原生/UI 切片见候选运行证据，完整迁移仍未完成。
 
 独立 binary-state 根、4 MiB payload、原字节 CAS/缺失条件与 commit-point 取消语义见[精确合同与生产端口候选切片](pluginization/binary-state-port-contract-candidate.md)；同一原字节 IO/提交协议位于公开 Node 子路径 `plugin-api/src/node/binary-state.ts`，宿主权限与租约仍在 `file-capabilities.ts`；Inquiry provider 与原库接管仍未完成。
 
