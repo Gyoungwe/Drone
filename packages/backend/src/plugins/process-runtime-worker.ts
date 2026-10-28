@@ -113,7 +113,7 @@ input.on("line", async (line) => {
         runtime = {operations:{request:{
           inputSchema:{type:"object",required:["operation","input"],properties:{operation:{type:"string"},input:{}},additionalProperties:false},
           resultSchema:{},effect:"read",
-          execute:({operation,input})=>resource.invoke(operation,input)
+          execute:({operation,input},context)=>resource.invoke(operation,input,{signal:context.signal})
         }},dispose:()=>resource.dispose()};
       } else {
         runtime = await currentCall.run("bootstrap", () => module.default({ applicationId: message.applicationId, signal: lifecycle.signal, resources: message.resources, ...(message.resourcesLifecycle ? {resourcesLifecycle} : {}), capabilities, events }));
