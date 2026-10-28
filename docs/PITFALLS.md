@@ -431,3 +431,7 @@ Pi 1.1.0 的 `AgentSession.dispose()` 只中止/失效内部运行时，不会�
 ### 只读旧 owner 不能在交接后用缓存覆盖新 journal
 
 旧 Discovery Domain 可先只读缓存 JSON，再等另一个 owner 完成写入并释放 lease。此时仅靠新取到的 lease 不能证明内存快照仍新鲜。迁移中的旧 journal 端口使用真正 JsonStore 的 `writeChecked`、原始字节 SHA 与回读；版本变化时明确要求关闭重开。新 UI 接管也必须保留唯一既有 projectId，混合 ID 拒绝；不能取第一条或重新生成 ID 后覆盖历史。
+
+### 容器 runs 根不能分别 canonicalize 后当成授权根
+
+如果 `workspace/runs` 已是指向外部的 symlink，分别对 runs 和执行子目录做 realpath 再比较包含关系，会把两个外部路径错误接受为工作区内。容器 runner 现在固定 canonical workspace，逐级创建并检查 runs 路径，拒绝任一 symlink/non-directory 并回读真实路径；不能在 realpath 失败后退回字符串路径。回归验证顶层和嵌套 symlink 都不会创建外部文件或启动容器。

@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { lstat, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import {
+	ContainerSandboxRunner as ContainerKernelRunner,
+	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
+} from "@drone/compute/container-sandbox";
 import type {
 	ControlledKernelRunner,
 	CriticProvider,
@@ -40,7 +44,6 @@ import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservatio
 import { JsonStore, JsonStoreCorruptedError } from "../json-store";
 import { canonicalProjectId } from "../project-id";
 import type { StorageRegistry } from "../storage/registry";
-import { ContainerKernelRunner, type ContainerKernelRunnerOptions } from "./container-runner";
 
 export type DiscoveryAuthorizationOperation =
 	| { readonly kind: "create-kernel-session"; readonly projectId: string }
@@ -477,4 +480,7 @@ export function createDiscoveryService(
 	};
 	return { service, ...(host ? { host } : {}) };
 }
-export { ContainerKernelRunner, detectContainerRuntime } from "./container-runner";
+export {
+	ContainerSandboxRunner as ContainerKernelRunner,
+	detectContainerRuntime,
+} from "@drone/compute/container-sandbox";

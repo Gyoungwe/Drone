@@ -1,3 +1,11 @@
+export {
+	buildContainerSandboxArgv as buildContainerKernelArgv,
+	type ContainerProcess,
+	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
+	ContainerSandboxRunner as ContainerKernelRunner,
+	detectContainerRuntime,
+	unavailableContainerCapabilities,
+} from "@drone/compute/container-sandbox";
 export type { DiscoveryExplorationPlan } from "@drone/shared";
 export type {
 	AnalysisAdapter,
@@ -30,14 +38,6 @@ export {
 	type DiagnosticsSnapshot,
 	redactDiagnosticText,
 } from "./diagnostics";
-export {
-	buildContainerKernelArgv,
-	ContainerKernelRunner,
-	type ContainerKernelRunnerOptions,
-	type ContainerProcess,
-	detectContainerRuntime,
-	unavailableContainerCapabilities,
-} from "./discovery/container-runner";
 export {
 	createDiscoveryHostInput,
 	createDiscoveryService,

@@ -1,15 +1,15 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, realpath } from "node:fs/promises";
+import { lstat, mkdir, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import type {
-	ControlledKernelRunner,
-	KernelLanguage,
-	KernelRunnerCapabilities,
-	KernelRunOutput,
-	KernelRunRequest,
-	KernelRunResult,
-} from "@drone/discovery";
+	ControlledSandboxRunner,
+	SandboxCapabilities,
+	SandboxLanguage,
+	SandboxRunOutput,
+	SandboxRunRequest,
+	SandboxRunResult,
+} from "./sandbox-types";
 
 /** Process seam kept injectable for deterministic tests without replacing production execution. */
 export type ContainerProcess = (
@@ -18,7 +18,7 @@ export type ContainerProcess = (
 	options: { cwd?: string },
 ) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
 
-export interface ContainerKernelRunnerOptions {
+export interface ContainerSandboxOptions {
 	/** Project root used to resolve the project-relative runs directory. */
 	readonly projectRoot: string;
 	/** Runtime executable. When omitted, Docker then Podman are probed. */
@@ -33,7 +33,7 @@ export interface ContainerKernelRunnerOptions {
 	readonly process?: ContainerProcess;
 }
 
-const DEFAULT_IMAGES: Record<KernelLanguage, string> = {
+const DEFAULT_IMAGES: Record<SandboxLanguage, string> = {
 	python: "python:3.12-slim",
 	r: "r-base:4.4.2",
 };
@@ -42,7 +42,7 @@ const DEFAULT_MEMORY_BYTES = 1_073_741_824;
 const DEFAULT_CPUS = 2;
 const DEFAULT_TMPFS_BYTES = 134_217_728;
 
-function outputKind(text: string): KernelRunOutput["contentKind"] {
+function outputKind(text: string): SandboxRunOutput["contentKind"] {
 	const lines = text.split(/\r?\n/);
 	if (lines.every((line) => !line || line.startsWith("[summary]"))) return "summary";
 	if (lines.every((line) => !line || line.startsWith("[plot]"))) return "plot";
@@ -83,7 +83,7 @@ async function commandExists(runtime: string, processRunner: ContainerProcess): 
 
 /** Probe Docker/Podman without treating a missing daemon as a working kernel. */
 export async function detectContainerRuntime(
-	requested: ContainerKernelRunnerOptions["runtime"],
+	requested: ContainerSandboxOptions["runtime"],
 	processRunner: ContainerProcess = commandProcess(),
 ): Promise<"docker" | "podman" | undefined> {
 	if (requested) return (await commandExists(requested, processRunner)) ? requested : undefined;
@@ -109,7 +109,7 @@ function projectRunsPath(projectRoot: string, runDirectory: string): string {
 	return candidate;
 }
 
-function imageFor(options: ContainerKernelRunnerOptions, language: KernelLanguage): string {
+function imageFor(options: ContainerSandboxOptions, language: SandboxLanguage): string {
 	const image =
 		language === "python"
 			? (options.pythonImage ?? DEFAULT_IMAGES.python)
@@ -126,10 +126,10 @@ function imageFor(options: ContainerKernelRunnerOptions, language: KernelLanguag
 }
 
 /** Build the exact argv passed to Docker/Podman for host-side contract tests. */
-export function buildContainerKernelArgv(
-	request: KernelRunRequest,
+export function buildContainerSandboxArgv(
+	request: SandboxRunRequest,
 	canonicalRunDirectory: string,
-	options: ContainerKernelRunnerOptions & {
+	options: ContainerSandboxOptions & {
 		readonly maxPids: number;
 		readonly memoryBytes: number;
 		readonly cpus: number;
@@ -174,17 +174,17 @@ export function buildContainerKernelArgv(
  * the sole writable volume, disables networking, drops capabilities, and uses
  * argv-only execution. It never falls back to a host interpreter.
  */
-export class ContainerKernelRunner implements ControlledKernelRunner {
-	readonly capabilities: KernelRunnerCapabilities;
+export class ContainerSandboxRunner implements ControlledSandboxRunner {
+	readonly capabilities: SandboxCapabilities;
 	private readonly runtime: "docker" | "podman";
 	private readonly projectRoot: string;
 	private readonly processRunner: ContainerProcess;
 	private readonly options: Required<
-		Pick<ContainerKernelRunnerOptions, "maxPids" | "memoryBytes" | "cpus" | "tmpfsBytes">
+		Pick<ContainerSandboxOptions, "maxPids" | "memoryBytes" | "cpus" | "tmpfsBytes">
 	> &
-		ContainerKernelRunnerOptions;
+		ContainerSandboxOptions;
 
-	private constructor(runtime: "docker" | "podman", options: ContainerKernelRunnerOptions) {
+	private constructor(runtime: "docker" | "podman", options: ContainerSandboxOptions) {
 		this.runtime = runtime;
 		this.projectRoot = resolve(options.projectRoot);
 		this.processRunner = options.process ?? commandProcess();
@@ -204,28 +204,39 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 	}
 
 	/** Returns undefined if Docker/Podman is absent or its daemon cannot be reached. */
-	static async create(options: ContainerKernelRunnerOptions): Promise<ContainerKernelRunner | undefined> {
+	static async create(options: ContainerSandboxOptions): Promise<ContainerSandboxRunner | undefined> {
 		if (!isAbsolute(options.projectRoot)) throw new Error("projectRoot must be absolute");
 		const processRunner = options.process ?? commandProcess();
 		const runtime = await detectContainerRuntime(options.runtime, processRunner);
-		return runtime ? new ContainerKernelRunner(runtime, options) : undefined;
+		return runtime
+			? new ContainerSandboxRunner(runtime, { ...options, projectRoot: await realpath(options.projectRoot) })
+			: undefined;
 	}
 
 	get runtimeName(): "docker" | "podman" {
 		return this.runtime;
 	}
 
-	async run(request: KernelRunRequest): Promise<KernelRunResult> {
+	async run(request: SandboxRunRequest): Promise<SandboxRunResult> {
 		request.signal?.throwIfAborted();
 		const hostRunDirectory = projectRunsPath(this.projectRoot, request.runDirectory);
-		await mkdir(hostRunDirectory, { recursive: true });
-		const canonicalRoot = await realpath(resolve(this.projectRoot, "runs")).catch(() =>
-			resolve(this.projectRoot, "runs"),
-		);
-		const canonicalRun = await realpath(hostRunDirectory).catch(() => hostRunDirectory);
-		const withinRuns = relative(canonicalRoot, canonicalRun).replaceAll("\\", "/");
-		if (withinRuns.startsWith("../") || withinRuns === ".." || isAbsolute(withinRuns))
-			throw new Error("container runner path escaped project runs");
+		const canonicalProject = await realpath(this.projectRoot);
+		if (canonicalProject !== this.projectRoot)
+			throw new Error("Container workspace root changed or contains a symlink");
+		let canonicalRun = canonicalProject;
+		for (const part of relative(canonicalProject, hostRunDirectory).split(/[\\/]/)) {
+			request.signal?.throwIfAborted();
+			canonicalRun = resolve(canonicalRun, part);
+			try {
+				await mkdir(canonicalRun);
+			} catch (error) {
+				// Concurrent accepted executions may create their common runs parent first.
+				if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+			}
+			const entry = await lstat(canonicalRun);
+			if (entry.isSymbolicLink() || !entry.isDirectory() || (await realpath(canonicalRun)) !== canonicalRun)
+				throw new Error("Container run directory contains a symlink or is not a directory");
+		}
 		request.signal?.throwIfAborted();
 		const token = randomUUID();
 		const name = `drone-discovery-${token}`;
@@ -235,7 +246,7 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 			name,
 			"--label",
 			`drone.discovery.execution=${token}`,
-			...buildContainerKernelArgv(request, canonicalRun, this.options).slice(1),
+			...buildContainerSandboxArgv(request, canonicalRun, this.options).slice(1),
 		];
 		const started = Date.now();
 		return new Promise((resolveResult, reject) => {
@@ -276,7 +287,7 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 			child.once("close", (exitCode) => {
 				clearTimeout(timer);
 				request.signal?.removeEventListener("abort", onAbort);
-				const outputs: KernelRunOutput[] = [];
+				const outputs: SandboxRunOutput[] = [];
 				if (stdout)
 					outputs.push({
 						text: stdout,
@@ -336,7 +347,7 @@ export class ContainerKernelRunner implements ControlledKernelRunner {
 }
 
 /** A capability object used by the service while Docker/Podman is unavailable. */
-export function unavailableContainerCapabilities(): KernelRunnerCapabilities {
+export function unavailableContainerCapabilities(): SandboxCapabilities {
 	return {
 		kind: "unavailable",
 		languages: ["python", "r"],
