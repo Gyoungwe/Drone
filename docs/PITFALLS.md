@@ -415,6 +415,10 @@ TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Chec
 
 原生 delivery 投影会隐藏未经发布的 `message_update`。若 `ModelWaitMonitor.inspect` 位于投影之后，持续有 provider 事件的会话也会进入等待甚至被自动中止。活动计时必须在投影前读取事件类型；正文仍只经投影进入 reviewer、trace 和 UI。测试用显式 `NativeSessionDelivery` 关闭策略验证隐藏流量仍恢复等待，另验证普通会话不会因 `DRONE_KNOWLEDGE_DIR` 存在而隐藏流量。该定向 RED→GREEN 不替代真实安装包验收。
 
+### 未发布 API 候选与 file: 依赖门禁
+
+私有 API 1.3.0 在两仓库必须使用同一候选产物，不能指向另一个源码 checkout，也不能借此放行插件运行依赖。`scripts/plugin-api-dependency-policy.mjs` 只接受私有插件工作区根的 `devDependencies.@gyoungwe/plugin-api`，路径必须为本仓库 `vendor/gyoungwe-plugin-api-1.3.0-<8位源码前缀>.tgz`。双仓库 HEAD 已提交的普通文件须逐字节一致，归档内部包身份、宿主合同版本与 package-lock 的 resolved/version/SHA-512 均须吻合；符号链接、未提交或修改的产物不通过。其他 `file:`、`workspace:`、绝对/相对源码依赖继续失败。1.3.0 公开后改回公开版本并删除此迁移例外；本地候选门禁不代表 npm 已发布。
+
 ### channel-watch 恢复订阅一次性超时（原因未确认）
 
 `4abdae43/253c47e` 的独立全量门禁首次在恢复订阅后的 2000ms 内未收到文件监听唤醒，backend 其余 1987 项通过。原失败日志保留；同目录定向完整文件 20 项通过，随后该用例 4 路并行共 20 次均通过，完整同源码重跑 backend1988/17 skipped、Desktop934/1 skipped、root25/25 通过。首次压力脚本曾使用重复 config 路径，在测试前退出，不能当作产品复现证据。没有修改生产代码、超时或断言；根因仍待稳定复现，完整重跑通过不代表已经修复。见 `native-plugin-ui-model-cohort-2026-10-28.json`。

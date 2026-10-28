@@ -586,6 +586,8 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 
 UI 清单 contributions 的纯 JSON 过滤位于 `desktop/src/main/ui-plugins/manifest-contributions.ts`；manager消费它，纯数据回归不再加载 Electron 二进制。
 
+`scripts/plugin-api-dependency-policy.mjs` 是 `check:plugin-api --migration` 的依赖边界：仅允许双仓库已提交、同字节且匹配锁文件的私有 API 1.3.0 根开发候选；公开插件依赖仍禁止本地路径。正负回归见相邻 `.test.mjs`，本地候选不等于公开发布。
+
 统一 API `2c4e3ecd` 与插件 `1707f6c` 的完整插件检查、干净五包重建、默认远程取包、实际 SDK records/provider/model/tools、知识完整 publication 及 UI 审核清理见[owner/services 候选回执](releases/native-plugin-owner-services-cohort-2026-10-28.json)。首轮失败与修复保留；Discovery Desktop 受理执行、本批独立宿主完整门禁和正式安装包尚未通过，不能替代顶部完整门禁基线。
 
 P2 知识完整 native 消费者的第一条实际包工作流与明确剩余范围见[同包完整消费者证据](pluginization/native-knowledge-full-consumer-evidence.md)；尚未完成生产历史/导出、任务组合和正式安装包。

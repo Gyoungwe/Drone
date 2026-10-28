@@ -21,6 +21,7 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkPluginDependency } from "./plugin-api-dependency-policy.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKAGE_DIR = join(ROOT, "packages", "plugin-api");
@@ -312,14 +313,6 @@ function walkPackageJson(dir, out = []) {
 	return out;
 }
 
-function checkDependencyValue(value, path) {
-	if (typeof value !== "string") return;
-	assert(!/^file:/u.test(value), `${path} uses a file: dependency (${value})`);
-	assert(!/^workspace:/u.test(value), `${path} uses a workspace: dependency (${value})`);
-	assert(!value.startsWith("/") && !value.startsWith("~/"), `${path} uses an absolute dependency (${value})`);
-	assert(!/(^|\/)\.\.?\//u.test(value), `${path} uses a relative dependency (${value})`);
-}
-
 function checkPluginWorkspace(repo) {
 	const rootManifestPath = join(repo, "package.json");
 	const rootManifest = readJson(rootManifestPath);
@@ -327,6 +320,7 @@ function checkPluginWorkspace(repo) {
 		Array.isArray(rootManifest.workspaces) && rootManifest.workspaces.includes("packages/*"),
 		"drone-plugins must remain one workspace",
 	);
+	let apiCandidate;
 	for (const path of walkPackageJson(repo)) {
 		const manifest = readJson(path);
 		for (const section of [
@@ -336,13 +330,21 @@ function checkPluginWorkspace(repo) {
 			"peerDependencies",
 			"overrides",
 		]) {
-			for (const [name, value] of Object.entries(manifest[section] ?? {}))
-				checkDependencyValue(value, `${path}:${section}.${name}`);
+			for (const [name, value] of Object.entries(manifest[section] ?? {})) {
+				const candidate = checkPluginDependency(value, {
+					hostRoot: ROOT,
+					pluginRoot: repo,
+					manifestPath: path,
+					section,
+					name,
+				});
+				if (candidate) apiCandidate = candidate;
+			}
 		}
 	}
 	const head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 	assert(/^[0-9a-f]{7,40}$/u.test(head), `unable to resolve drone-plugins HEAD: ${head}`);
-	return { repo, head, packageJsonFiles: walkPackageJson(repo).length };
+	return { repo, head, packageJsonFiles: walkPackageJson(repo).length, apiCandidate };
 }
 
 function checkTarballInstall() {
@@ -394,6 +396,8 @@ if (migration) {
 	console.log(
 		`plugin-api package gate passed; tarball=${tarball}; pluginRepo=${plugin.repo}; head=${plugin.head}; manifests=${plugin.packageJsonFiles}`,
 	);
+	if (plugin.apiCandidate)
+		console.log(JSON.stringify({ mode: "private-vendored-dev-api", ...plugin.apiCandidate }));
 } else {
 	console.log("plugin-api package gate passed");
 }
