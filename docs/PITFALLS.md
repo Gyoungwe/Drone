@@ -455,3 +455,11 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 ### 相同包内容不证明安装位置仍指向同一个来源
 
 外层安装目录被换成指向字节完全相同副本的 symlink 时，仅重新计算 packageRoot 的完整树 hash 仍可能相同。运行时现在同时复验安装位置的 canonical root 与已声明 native 路径的真实入口；原生和 UI alias 都失效。声明入口消失后，本应用内重新扫描保留旧描述为 unavailable，供实际 selected-path 失败诊断使用，绝不从该记录激活代码；跨重启 required 期望和首次 loader 失败仍在后继接线。66 项发现/来源/聚合/UI 检查通过，正式安装包另验。
+
+### 模型评审必须先验证同意，再消耗预览令牌
+
+`pi-knowledge@0.3.0` 候选的公开评审 wrapper 曾在确认 acknowledged/autoApply 前消耗单次 preview，用户未同意就重试会收到 expired。canonical owner 内校验不能补救 wrapper 的提前副作用。先拒绝缺失的同意，再消费令牌；公开异步 API 保持 Promise rejection，不能让 forged/reused token 同步异常逃出调用方。原宿主 25 项令牌/拒绝/重用断言全部保留，最小修复已进入本批候选，最终整轮门禁另见回执。
+
+### 纯清单测试不应加载 Electron 二进制
+
+`filterContributions` 是纯 JSON 过滤；从 manager 导入会间接加载 Electron，在官方二进制下载失败时让纯数据测试提前退出。函数已原样提取到 `manifest-contributions.ts`，manager 与测试共用。纯测试通过不证明正式宿主可启动，Electron 安装与打包仍需独立检查。
