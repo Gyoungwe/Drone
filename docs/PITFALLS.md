@@ -463,3 +463,6 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 ### SDK 忽略不存在的路径时，空 interception 不能证明没有发布策略
 
 锁定 Pi 1.1.0 的资源解析会先忽略不存在的 settings/package entry，扩展导入拦截因此看不到失败来源。宿主专用 `hostExtensionSelection` 在实际 reload 开始即失效旧回执，完成时交付本次启用路径；仅该观察者存在时保留缺失 literal/glob/package 为不可解析选择。SDK 的资源排除规则仍生效，不从全安装目录推断本会话已选择什么。无观察者对照保持原 SDK 行为。未知来源在执行代码前拒绝，实际 SDK run 无法公开或持久化未验证正文；只明确排除后的后继 run 可恢复普通聊天。来源分类只在文件/清单读取边界捕获失败并记录关闭结果，内部逻辑错误继续抛出。真实 SDK 29 项与实际文件来源 52 项通过；整包动态启停、完整领域 consumer 和正式安装包继续验收。
+
+- required 交付不能在 event slim 后靠 JSON proof 恢复权限：先用实际 SDK 对象与已裁决来源投影，再交给 trace/UI。历史别名只来自 SDK 当前分支的真实 identity，copy/hash 不授 live proof。
+- SDK JSONL 原方法同步，不能在其中偷偷返回 Promise；required 导出走独立 async host 入口。异步投影完成后必须在 write 前复查实际 source/leaf/idle/dispose，Map 缺少真实 assistant entry 关联时明确失败，不能输出 raw。

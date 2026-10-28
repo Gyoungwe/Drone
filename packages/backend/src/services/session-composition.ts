@@ -9,6 +9,7 @@ import { McpService } from "../mcp/service";
 import { PackageAdmin } from "../packages/admin";
 import { ProjectResourceLoader } from "../project/trust-loader";
 import { createDroneRuntime } from "../runtime";
+import { projectKnowledgeEvent } from "../session/knowledge-publication";
 import { getAgentDir } from "../session-engine/engine";
 import { buildSessionExtensionFactories } from "../session-engine/extensions";
 import type { SessionServiceOptions } from "../session-service";
@@ -160,6 +161,15 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 	});
 	service.setEventService(
 		new SessionEventService({
+			projectDelivery: (sessionId, event) => {
+				const delivery = service.registry.get(sessionId)?.nativeDelivery;
+				if (delivery) return delivery.projectEvent(event);
+				// API 1.x / pi-knowledge 0.2.1 compatibility: only an explicitly registered
+				// legacy owner participates. Remove after its consumers use nativeDelivery.
+				return service.runtime.knowledge.publication?.projectEvent
+					? projectKnowledgeEvent(event, service.runtime, true)
+					: event;
+			},
 			runtime: service.runtime,
 			streamGuard: service.streamGuard,
 			eventRates: service.eventRates,

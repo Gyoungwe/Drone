@@ -573,3 +573,5 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。`manager.runtimeSources()` 经 `BridgeOptions.sources` 向 native/service consumer 提供同一包描述与当前 hash 状态；它不把可见性当执行权限，激活仍需批准。UI 设置经 `withUiTransition` 只撤销真实窗口调用，原生会话 owner 保留；扫描同时保留 installationPath/nativeDeclaredPath；本应用内失效后旧描述只作为 unavailable 元数据，不能激活。包级显式启停、跨重启 required 期望及实际 selected-path 生命周期仍在后继实现。
 
 P2 知识完整 native 消费者的第一条实际包工作流与明确剩余范围见[同包完整消费者证据](pluginization/native-knowledge-full-consumer-evidence.md)；尚未完成生产历史/导出、任务组合和正式安装包。
+
+P2 生产当前分支的 stream / polling / reload / export 接线与真实同 tar 回执见[当前分支交付证据](pluginization/native-knowledge-current-branch-delivery-evidence.md)；其他分支、未打开历史、child、任务组合及显式旧 bridge 删除仍未完成。
