@@ -1,0 +1,52 @@
+{
+	"scope": "Native raw reload append-phantom fence from actual public SDK storage",
+	"date": "2026-10-28",
+	"status": "PARTIAL_ARCHITECTURE",
+	"pluginCommits": { "source": ["876e468", "74311fb"], "officialArtifacts": ["b2fec08", "6e6212d"] },
+	"hostSdkTest": "63e396e1",
+	"coreTar": {
+		"path": "/tmp/drone-native-storage-core-pack/gyoungwe-pi-core-0.2.0.tgz",
+		"sha256": "03d2de2b1926695f785eb910e02a85b5769d86801a23481b904d9bf0881b1d27",
+		"installedInto": "existing isolated backend dependency directory; not a new clean prefix"
+	},
+	"checks": {
+		"originalRawReload": {
+			"status": "RED_RETAINED",
+			"base": "782e7ee",
+			"log": "/tmp/native-storage-raw-reload-red.log"
+		},
+		"actualSdkHostAndOfficial": { "status": "PASS", "tests": 9, "log": "/tmp/native-storage-sdk-final.log" },
+		"withS1Contracts": {
+			"status": "PASS",
+			"files": 4,
+			"tests": 29,
+			"log": "/tmp/native-storage-final-with-s1-cohort.log"
+		},
+		"coreOfficialCheck": {
+			"status": "PASS",
+			"nodeTests": 29,
+			"runtimeUiTests": 210,
+			"packedTypeConsumer": true,
+			"log": "/tmp/native-storage-core-check-final-scope.log"
+		},
+		"formalInstallerGui": "NOT_RUN",
+		"finalCombinedGates": "PARENT_INTEGRATION_PENDING"
+	},
+	"constraints": {
+		"onlyPublicSdkAndReadonlyOwnJsonl": true,
+		"noPrivateSdkMutation": true,
+		"noGlobalKeeper": true,
+		"malformedDiagnostics": "fixed code and line only",
+		"deferred": "explicit, not a saved receipt",
+		"firstInputDeadlock": false
+	},
+	"remaining": [
+		"full deferred actor revision/broadcast policy",
+		"legacy checkpoint adoption",
+		"canonical provider and managed owner cutover",
+		"startup facade removal",
+		"formal GUI and final combined gates"
+	],
+	"npmPublished": false,
+	"externalAcceptanceAndB8": "unchanged"
+}
