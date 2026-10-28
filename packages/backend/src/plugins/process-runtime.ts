@@ -11,6 +11,7 @@ import type {
 	PluginNativeSession,
 } from "@gyoungwe/plugin-api/native";
 import type {
+	PluginNativeSessionFacts,
 	PluginRuntimeContext,
 	PluginRuntimeFactory,
 	PluginRuntimeFactoryContext,
@@ -557,7 +558,9 @@ class RuntimeProcess {
 						},
 					]),
 				),
-				...(declarations.native ? { createNativeSession: () => this.attachNative() } : {}),
+				...(declarations.native
+					? { createNativeSession: (facts?: PluginNativeSessionFacts) => this.attachNative(facts) }
+					: {}),
 				dispose: async () => {
 					if (this.failure) {
 						await this.closed;
@@ -593,9 +596,9 @@ class RuntimeProcess {
 		}
 	}
 
-	private async attachNative(): Promise<PluginNativeSession> {
+	private async attachNative(facts?: PluginNativeSessionFacts): Promise<PluginNativeSession> {
 		const attachment = randomUUID();
-		const declared = await this.request("native_attach", { attachment });
+		const declared = await this.request("native_attach", { attachment, ...(facts ? { facts } : {}) });
 		if (!Check(nativeDeclarationsSchema, declared)) throw new Error("Invalid native plugin declarations");
 		const declarations = declared as Static<typeof nativeDeclarationsSchema>;
 		const lifecycle = new AbortController();

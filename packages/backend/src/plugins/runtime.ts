@@ -6,6 +6,7 @@ import type {
 	PluginNativeSession,
 } from "@gyoungwe/plugin-api/native";
 import type {
+	PluginNativeSessionFacts,
 	PluginRuntimeChangedEvent,
 	PluginRuntimeClient,
 	PluginRuntimeOperation,
@@ -255,6 +256,7 @@ export class PluginRuntimeRegistry {
 		pluginId: string,
 		resolveCaller: (context: ExtensionContext) => PluginRuntimeCaller | undefined,
 		resolveProjectionCaller?: PluginRuntimeCallerResolver,
+		facts?: PluginNativeSessionFacts,
 	): Promise<ManagedNativeSession> {
 		const activation = this.activations.get(pluginId);
 		if (activation?.state !== "active") throw new Error(`Plugin runtime is not active: ${pluginId}`);
@@ -262,7 +264,7 @@ export class PluginRuntimeRegistry {
 		const create = instance.createNativeSession?.bind(instance);
 		if (!create) throw new Error(`Plugin has no native session adapter: ${pluginId}`);
 		const creating = Promise.resolve().then(async () => {
-			const native = await create();
+			const native = await create(facts);
 			const lifetime = new AbortController();
 			let closing: Promise<void> | undefined;
 			const owned = {

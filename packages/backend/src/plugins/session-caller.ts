@@ -8,6 +8,8 @@ import type { PluginCapabilityContext } from "./runtime-capabilities";
 export interface PluginSessionCallerContext extends PluginRuntimeCaller {
 	readonly scope: Extract<PluginRuntimeScope, { kind: "session" }>;
 	readonly readOnly: boolean;
+	readonly nativeKind?: "primary" | "child";
+	readonly nativeChildFiles?: "none" | "read";
 	readonly projectTrusted: boolean;
 }
 
@@ -30,6 +32,8 @@ export function getPluginSessionCaller(
 		},
 		signal,
 		readOnly: entry.readOnly === true,
+		nativeKind: entry.nativeKind ?? "primary",
+		nativeChildFiles: entry.nativeChildFiles,
 		projectTrusted: entry.session.settingsManager.isProjectTrusted(),
 	};
 }

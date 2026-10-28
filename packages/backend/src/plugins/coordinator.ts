@@ -3,6 +3,7 @@ import type { PluginRuntimeEvent } from "@drone/shared";
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type { PluginNativeRuntimeFactory, PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type {
+	PluginNativeSessionFacts,
 	PluginProviderInvocationInput,
 	PluginRecordAdoptions,
 	PluginRuntimeClient,
@@ -54,7 +55,7 @@ export interface PluginNativeBootstrap {
 	dispose(): Promise<void>;
 }
 export interface PluginNativeIntegration {
-	begin(): PluginNativeBootstrap;
+	begin(facts?: PluginNativeSessionFacts): PluginNativeBootstrap;
 	manages(path: string): boolean;
 }
 
@@ -534,6 +535,7 @@ export class PluginRuntimeBridge {
 	beginNative(
 		owner: PluginRuntimeOwner,
 		findName: (path: string) => string | undefined,
+		facts?: PluginNativeSessionFacts,
 	): PluginNativeBootstrap {
 		const attachments = new Set<PluginNativeSession>();
 		const delivery = new NativeSessionDelivery(
@@ -559,6 +561,14 @@ export class PluginRuntimeBridge {
 			delivery,
 			bindSession: (sessionId, abort) => {
 				const session = this.options.getSessionContext(sessionId);
+				if (
+					facts &&
+					(!session ||
+						session.readOnly !== facts.readOnly ||
+						session.nativeKind !== facts.kind ||
+						(facts.kind === "child" && session.nativeChildFiles !== facts.files))
+				)
+					throw new Error("Native initial facts do not match the actual registered session");
 				if (!session || closed || (bound && bound.identity !== session.identity))
 					throw new Error("Native bootstrap requires its actual live session entry");
 				bound = session;
@@ -609,6 +619,7 @@ export class PluginRuntimeBridge {
 								return resolveNativeCaller();
 							},
 							resolveNativeCaller,
+							facts,
 						);
 					} catch (error) {
 						await this.stopBinding(binding);

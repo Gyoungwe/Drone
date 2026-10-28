@@ -469,11 +469,11 @@ export function createNativeRuntimeIntegration(
 	const findName = (path: string) => manager().nativeRuntimeName(path);
 	return {
 		manages: (path) => manager().classifyNativeSelection(path).kind !== "ordinary",
-		begin: () => {
+		begin: (facts) => {
 			const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
 			if (!window || window.isDestroyed())
 				throw new Error("Native plugin activation requires an available host window");
-			return runtime().beginNative(window.webContents, findName);
+			return runtime().beginNative(window.webContents, findName, facts);
 		},
 	};
 }

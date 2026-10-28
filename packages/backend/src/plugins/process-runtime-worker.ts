@@ -126,7 +126,7 @@ input.on("line", async (line) => {
     }
 
     if (message.type === "native_attach") {
-      const adapter = await runtime.createNativeSession();
+      const adapter = await runtime.createNativeSession(message.facts);
       if (adapter.projection && (typeof adapter.projection.event!=="function" || typeof adapter.projection.snapshot!=="function" || (adapter.projection.finalize!==undefined && typeof adapter.projection.finalize!=="function"))) {
         await adapter.dispose();
         throw new Error("Invalid native publication projection");
