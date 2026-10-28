@@ -260,7 +260,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loa
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
-@@ -86,6 +86,12 @@
+@@ -86,6 +86,14 @@
      _scopedModels;
      // Event subscription state
      _unsubscribeAgent;
@@ -269,11 +269,13 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 +    _hostExportBoundary;
 +    _hostExportIsOrdinary;
 +    _hostDeliveryFailedRuns = new WeakSet();
++    _hostProviderProtocol = new WeakMap();
++    _hostProtocolGeneration;
 +    _disposed = false;
      _eventListeners = [];
      _isAgentRunActive = false;
      _agentRunAbortRequested = false;
-@@ -175,6 +181,10 @@
+@@ -175,6 +183,10 @@
      _runSystemPromptOptions;
      constructor(config) {
          this.agent = config.agent;
@@ -284,7 +286,59 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          this.sessionManager = config.sessionManager;
          this.settingsManager = config.settingsManager;
          this._scopedModels = config.scopedModels ?? [];
-@@ -707,7 +717,19 @@
+@@ -568,14 +580,50 @@
+     // =========================================================================
+     // Event Subscription
+     // =========================================================================
++    _clearHostProviderProtocol() {
++        this._hostProviderProtocol = new WeakMap();
++        this._hostProtocolGeneration = undefined;
++    }
++    _restoreHostProviderProtocol(messages, originalFor) {
++        const generation = this._hostProtocolGeneration;
++        if (this._disposed || !this._hostDeliveryBoundary || !generation || generation.manager !== this.sessionManager || generation.sessionId !== this.sessionId)
++            return messages;
++        return messages.map((message) => {
++            const original = originalFor(message);
++            const protocol = original && this._hostProviderProtocol.get(original);
++            if (!protocol || JSON.stringify(original) !== protocol.fingerprint || JSON.stringify(message) !== protocol.fingerprint)
++                return message;
++            return { ...message, content: structuredClone(protocol.content) };
++        });
++    }
+     _refreshFinalizedContext() {
++        // Only this actual SDK projection producer can transfer a private protocol association.
++        // Entry objects and fingerprints invalidate aliases; JSON ids/hashes never mint them.
++        const protocols = new Map();
++        const generation = this._hostProtocolGeneration;
++        if (this._hostDeliveryBoundary && generation?.manager === this.sessionManager && generation.sessionId === this.sessionId) {
++            for (const message of this.messages) {
++                const protocol = this._hostProviderProtocol.get(message);
++                const origin = protocol && this.getHostPersistedMessage(message);
++                if (origin && JSON.stringify(message) === protocol.fingerprint)
++                    protocols.set(origin, protocol);
++            }
++        }
++        const nextProtocols = new WeakMap();
+         const projection = this.sessionManager.buildSessionProjection();
+         for (const entry of projection.entries) {
+-            for (const message of entry.messages)
++            for (const message of entry.messages) {
+                 this._entryIdsByMessage.set(message, entry.sourceEntry.id);
++                const protocol = protocols.get(entry.sourceEntry);
++                if (protocol && JSON.stringify(message) === protocol.fingerprint)
++                    nextProtocols.set(message, protocol);
++            }
+         }
++        this._hostProviderProtocol = nextProtocols;
++        this._hostProtocolGeneration = this._hostDeliveryBoundary ? { manager: this.sessionManager, sessionId: this.sessionId } : undefined;
+         this.agent.state.messages = projection.messages;
+     }
++
+     _applyBoundaryDrafts(manager, drafts) {
+         const appended = [];
+         for (const draft of drafts) {
+@@ -707,7 +755,19 @@
          this._resolveIdleWaitIfIdle();
      }
      /** Internal handler for agent events - shared by subscribe and reconnect */
@@ -305,7 +359,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          // Record the calls a tool made through ctx.executeTool() and their usage on its result message.
          if (this._nestedToolCalls) {
              if (event.type === "message_start" && event.message.role === "toolResult") {
-@@ -747,6 +769,35 @@
+@@ -747,6 +807,45 @@
          }
          // Emit to extensions first, then notify public listeners.
          await this._emitExtensionEvent(event);
@@ -319,8 +373,10 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 +                if (Object.hasOwn(event.message, key))
 +                    metadata[key] = event.message[key];
 +            }
++            const originalProtocol = structuredClone(event.message.content);
 +            const toolCalls = structuredClone(event.message.content.filter((block) => block.type === "toolCall"));
-+            const unavailable = () => ({ ...metadata, role: "assistant", content: toolCalls, stopReason: signal.aborted ? "aborted" : "error", errorMessage: this._hostDeliveryFailedRuns.has(signal) ? "Host delivery initialization failed" : "Final delivery unavailable" });
++            this._hostProviderProtocol.delete(event.message);
++            const unavailable = () => ({ ...metadata, role: "assistant", content: toolCalls, stopReason: signal.aborted ? "aborted" : toolCalls.length ? "toolUse" : "error", errorMessage: this._hostDeliveryFailedRuns.has(signal) ? "Host delivery initialization failed" : "Final delivery unavailable" });
 +            let participating = true;
 +            try {
 +                if (!this._hostDeliveryFailedRuns.has(signal))
@@ -328,9 +384,17 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 +            }
 +            catch {
 +                // Fail once at the host delivery boundary. Never expose a callback's private error.
-+                this._agentRunAbortRequested = true;
-+                this.agent.abort();
++                if (!toolCalls.length || signal.aborted) {
++                    this._agentRunAbortRequested = true;
++                    this.agent.abort();
++                }
 +                this._replaceMessageInPlace(event.message, unavailable());
++                if (toolCalls.length && !signal.aborted) {
++                    if (this._hostProtocolGeneration?.manager !== this.sessionManager || this._hostProtocolGeneration.sessionId !== this.sessionId)
++                        this._clearHostProviderProtocol();
++                    this._hostProtocolGeneration = { manager: this.sessionManager, sessionId: this.sessionId };
++                    this._hostProviderProtocol.set(event.message, { content: originalProtocol, fingerprint: JSON.stringify(event.message) });
++                }
 +                console.error("Host final delivery failed; assistant output suppressed.");
 +            }
 +            if (this._hostDeliveryFailedRuns.has(signal) || (participating && signal.aborted))
@@ -341,7 +405,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          this._emit(event.type === "agent_end" ? { ...event, willRetry: this._willRetryAfterAgentEnd(event) } : event);
          // Handle session persistence
          if (event.type === "message_end") {
-@@ -809,6 +860,15 @@
+@@ -809,6 +908,15 @@
          }
          return false;
      }
@@ -357,7 +421,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      _findPersistedMessageEntryId(message) {
          const mapped = this._entryIdsByMessage.get(message);
          if (mapped)
-@@ -990,6 +1050,12 @@
+@@ -990,6 +1098,13 @@
       * Call this when completely done with the session.
       */
      dispose() {
@@ -367,10 +431,36 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 +        this._hostExportBoundary = undefined;
 +        this._hostExportIsOrdinary = undefined;
 +        this._hostDeliveryFailedRuns = new WeakSet();
++        this._clearHostProviderProtocol();
          try {
              this.abortRetry();
              this.abortCompaction();
-@@ -3476,7 +3542,48 @@
+@@ -1014,6 +1129,7 @@
+     // =========================================================================
+     /** Refresh the public finalized transcript from the canonical session projection. */
+     refreshContext() {
++        this._clearHostProviderProtocol();
+         this._refreshFinalizedContext();
+     }
+     /** Full agent state */
+@@ -2938,6 +3054,7 @@
+         const previousFlagValues = oldRunner.getFlagValues();
+         await emitSessionShutdownEvent(oldRunner, { type: "session_shutdown", reason: "reload" });
+         oldRunner.invalidate();
++        this._clearHostProviderProtocol();
+         const getDefaultTools = () => this._usesDefaultTools
+             ? applyToolModifiers(this.settingsManager.getDefaultTools() ?? DEFAULT_TOOL_NAMES, this._defaultToolModifiers)
+             : [];
+@@ -3314,6 +3431,8 @@
+                 // Non-user message: leaf = selected node
+                 newLeafId = targetId;
+             }
++            // A real branch transition ends the private protocol generation, even for a shared ancestor.
++            this._clearHostProviderProtocol();
+             // Switch leaf (with or without summary)
+             // Summary is attached at the navigation target position (newLeafId), not the old branch
+             let summaryEntry;
+@@ -3476,7 +3595,48 @@
       * @param options Optional export presentation settings
       * @returns Path to exported file
       */
@@ -419,7 +509,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
          const themeName = [options.themeName, this.settingsManager.getTheme()].find((candidate) => candidate !== undefined && getThemeByName(candidate) !== undefined);
          // Create tool renderer if we have an extension runner (for custom tool HTML rendering)
          const toolRenderer = createToolHtmlRenderer({
-@@ -3484,7 +3591,8 @@
+@@ -3484,7 +3644,8 @@
              theme,
              cwd: this.sessionManager.getCwd(),
          });
@@ -429,7 +519,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
              outputPath,
              themeName,
              toolRenderer,
-@@ -3497,8 +3605,17 @@
+@@ -3497,8 +3658,17 @@
       * @returns The resolved output file path.
       */
      exportToJsonl(outputPath) {
@@ -473,7 +563,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      agent: Agent;
      sessionManager: SessionManager;
      settingsManager: SettingsManager;
-@@ -222,6 +237,12 @@
+@@ -222,6 +237,16 @@
      readonly settingsManager: SettingsManager;
      private _scopedModels;
      private _unsubscribeAgent?;
@@ -482,11 +572,15 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 +    private _hostExportBoundary;
 +    private _hostExportIsOrdinary;
 +    private _hostDeliveryFailedRuns;
++    private _hostProviderProtocol;
++    private _hostProtocolGeneration;
++    private _clearHostProviderProtocol;
++    private _restoreHostProviderProtocol;
 +    private _disposed;
      private _eventListeners;
      private _isAgentRunActive;
      private _agentRunAbortRequested;
-@@ -364,6 +385,8 @@
+@@ -364,6 +389,8 @@
      /** Internal handler for agent events - shared by subscribe and reconnect */
      private _handleAgentEvent;
      private _willRetryAfterAgentEnd;
@@ -495,7 +589,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
      private _findPersistedMessageEntryId;
      private _omitRecoveryAttempt;
      /** Find the last assistant message in agent state (including aborted ones) */
-@@ -888,6 +911,8 @@
+@@ -888,6 +915,8 @@
       * @returns The resolved output file path.
       */
      exportToJsonl(outputPath?: string): string;
@@ -507,7 +601,30 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-sessio
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
-@@ -302,6 +302,10 @@
+@@ -188,6 +188,7 @@
+             return msg;
+         });
+     };
++    let hostSession;
+     const extensionRunnerRef = {};
+     const cacheWarmer = new CacheWarmer(modelRuntime, sessionManager, () => settingsManager.getCacheWarmingMode(), async (event) => extensionRunnerRef.current?.emitCacheWarmingDecision(event) ?? event.action);
+     const buildRequestOptions = (requestModel, options = {}) => {
+@@ -277,9 +278,12 @@
+         sessionId: sessionManager.getSessionId(),
+         transformContext: async (messages) => {
+             const runner = extensionRunnerRef.current;
++            const project = options.hostDeliveryBoundary
++                ? (current, originalFor) => hostSession?._restoreHostProviderProtocol(current, originalFor) ?? current
++                : undefined;
+             if (!runner)
+-                return messages;
+-            return runner.emitContext(messages);
++                return project ? project(messages, (message) => message) : messages;
++            return runner.emitContext(messages, project);
+         },
+         steeringMode: settingsManager.getSteeringMode(),
+         followUpMode: settingsManager.getFollowUpMode(),
+@@ -302,6 +306,10 @@
      }
      const session = new AgentSession({
          agent,
@@ -518,6 +635,14 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js b/nod
          sessionManager,
          settingsManager,
          cwd,
+@@ -319,6 +327,7 @@
+         sessionStartEvent: options.sessionStartEvent,
+     });
+     const extensionsResult = resourceLoader.getExtensions();
++    hostSession = session;
+     return {
+         session,
+         extensionsResult,
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
@@ -569,3 +694,39 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-mana
      private resolveLocalExtensionSource;
      private installParsedSource;
      private getPackageSourceString;
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.js
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.js
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.js
+@@ -1003,9 +1003,10 @@
+      * only and Pi restores the prompt and tool state after each; `context_with_system`
+      * handlers then see the full transcript and their output is used as returned.
+      */
+-    async emitContext(messages) {
++    async emitContext(messages, hostProjection) {
+         const ctx = this.createContext();
+         let currentMessages = structuredClone(messages);
++        const origins = hostProjection ? new WeakMap(currentMessages.map((message, index) => [message, messages[index]])) : undefined;
+         for (const { ext, handlers } of snapshotEventHandlers(this.extensions, "context")) {
+             for (const handler of handlers) {
+                 try {
+@@ -1061,7 +1062,7 @@
+                 }
+             }
+         }
+-        return currentMessages;
++        return hostProjection ? hostProjection(currentMessages, (message) => origins.get(message)) : currentMessages;
+     }
+     async emitBeforeProviderRequest(payload) {
+         const ctx = this.createContext();
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.d.ts
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.d.ts
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.d.ts
+@@ -188,7 +188,7 @@
+      * only and Pi restores the prompt and tool state after each; `context_with_system`
+      * handlers then see the full transcript and their output is used as returned.
+      */
+-    emitContext(messages: AgentMessage[]): Promise<AgentMessage[]>;
++    emitContext(messages: AgentMessage[], hostProjection?: (messages: AgentMessage[], originalFor: (message: AgentMessage) => AgentMessage | undefined) => AgentMessage[]): Promise<AgentMessage[]>;
+     emitBeforeProviderRequest(payload: unknown): Promise<unknown>;
+     emitBeforeProviderHeaders(headers: ProviderHeaders): Promise<ProviderHeaders>;
+     emitBeforeAgentStart(prompt: string, images: ImageContent[] | undefined, systemPromptOptions: BuildSystemPromptOptions): Promise<BeforeAgentStartCombinedResult>;
