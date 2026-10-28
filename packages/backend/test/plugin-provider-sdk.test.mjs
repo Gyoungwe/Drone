@@ -55,13 +55,44 @@ const consumerSource = `export default async()=>({operations:{
  write:{effect:'write',inputSchema:{type:'object'},resultSchema:{},execute:async(input,ctx)=>ctx.capabilities.call('provider.write',{alias:'store',...input})},
  cycle:{effect:'read',inputSchema:{type:'null'},resultSchema:{type:'null'},execute:async(_input,ctx)=>ctx.capabilities.call('provider.read',{alias:'store',operation:'cycle',input:null})}
 },dispose:async()=>{}});`;
-async function setup({ native = true } = {}) {
+const roleProviderSource = `export default async()=>({operations:{
+ ordinary:{effect:'read',inputSchema:{type:'null'},resultSchema:{},execute:async(_input,ctx)=>ctx.capabilities.call('provider.native',{alias:'self',operation:'observe',input:null})}
+},dispose:async()=>{},createNativeSession:async()=>{
+ let seen=0;
+ const operation=(event,effect='read')=>({event,effect,inputSchema:{},resultSchema:{type:'object'},execute:async(input,actual,ctx)=>{
+  if(input?.hold)await ctx.capabilities.call('entered',null);
+  ctx.signal.throwIfAborted();
+  if(effect==='write')await ctx.capabilities.call('session.records.append',{type:'role-result',data:{message:actual.message?.content,toolCallId:actual.toolCallId}});
+  return {seen:++seen,kind:actual.type,message:actual.message?.content??null,toolCallId:actual.toolCallId??null,scope:ctx.scope};
+ }});
+ return {nativeOperations:{fail:{...operation('message_start'),execute:async()=>{throw new Error('Actual native receiver failed');}},observe:operation('message_start'),write:operation('message_start','write'),tool:operation('tool_execution_end')},
+  toolEffects:{service_count:'read'},dispose:async()=>{},extension:pi=>pi.registerTool({name:'service_count',label:'count',description:'Actual native event fixture',parameters:{type:'object',properties:{}},execute:async()=>({content:[{type:'text',text:'Actual native tool result'}]})})};
+}});`;
+const roleConsumerSource = (effect) => `export default async context=>({operations:{
+ spoof:{effect:'write',inputSchema:{},resultSchema:{},execute:async(input,ctx)=>ctx.capabilities.call('provider.native',{alias:'store',operation:'observe',input})},
+ ordinary:{effect:'read',inputSchema:{type:'null'},resultSchema:{},execute:async(_input,ctx)=>ctx.capabilities.call('provider.read',{alias:'store',operation:'ordinary',input:null})}
+},dispose:async()=>{},createNativeSession:async()=>({dispose:async()=>{},eventEffects:{message_start:'${effect}',tool_execution_end:'read',input:'read'},extension:pi=>{
+ const invoke=async(operation,input,ctx)=>{
+  let result;
+  try{result={ok:true,value:await context.capabilities.call('provider.native',{alias:'store',operation,input})};}
+  catch(error){if(operation==='fail')throw error;result={ok:false,error:error.message};}
+  await context.capabilities.call('observed',result);
+ };
+ pi.on('message_start',async(event,ctx)=>{
+  if(event.message?.role!=='user')return;
+  const text=event.message.content.find(part=>part.type==='text')?.text;
+  if(text?.startsWith('native:'))await invoke(text.slice(7),{copiedEvent:{type:'message_start',message:{role:'assistant',content:'FORGED'}},nonce:'FORGED'},ctx);
+ });
+ pi.on('tool_execution_end',async(event,ctx)=>{if(event.toolName==='service_count')await invoke('tool',null,ctx);});
+ pi.on('input',async(event,ctx)=>{if(event.text==='ordinary-input')await invoke('observe',null,ctx);});
+}})});`;
+async function setup({ native = true, roles = false, roleEffect = "read", providerNative = true } = {}) {
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-provider-packed-")));
 	const archives = [];
 	for (const [name, source, drone] of [
 		[
 			"provider",
-			providerSource,
+			roles ? roleProviderSource : providerSource,
 			{
 				provides: {
 					"checkpoint.service": {
@@ -75,10 +106,14 @@ async function setup({ native = true } = {}) {
 							"adoptionInspect",
 							"adoptionCommit",
 							"ownedRecords",
+							...(roles ? ["observe", "write", "tool", "ordinary", "fail"] : []),
 						],
 					},
 				},
-				requires: { back: { service: "cycle.service", version: 1 } },
+				requires: {
+					back: { service: "cycle.service", version: 1 },
+					...(roles ? { self: { service: "checkpoint.service", version: 1 } } : {}),
+				},
 				recordAdoptions: {
 					recovery: {
 						legacyType: "legacy-session-checkpoint",
@@ -90,7 +125,7 @@ async function setup({ native = true } = {}) {
 		],
 		[
 			"consumer",
-			consumerSource,
+			roles ? roleConsumerSource(roleEffect) : consumerSource,
 			{
 				provides: { "cycle.service": { version: 1, operations: ["cycle"] } },
 				requires: {
@@ -104,7 +139,7 @@ async function setup({ native = true } = {}) {
 		await mkdir(dir);
 		const entrypoints = {
 			desktopRuntime: "./runtime.mjs",
-			...(name === "provider" ? { extension: "./native.mjs" } : {}),
+			...(name === "provider" || roles ? { extension: "./native.mjs" } : {}),
 		};
 		await writeFile(
 			join(dir, "package.json"),
@@ -113,7 +148,7 @@ async function setup({ native = true } = {}) {
 				version: "1.0.0",
 				type: "module",
 				files: ["runtime.mjs", "native.mjs", "plugin.manifest.json"],
-				...(name === "provider" ? { pi: { extensions: ["./native.mjs"] } } : {}),
+				...(name === "provider" || roles ? { pi: { extensions: ["./native.mjs"] } } : {}),
 			}),
 		);
 		await writeFile(join(dir, "runtime.mjs"), source);
@@ -187,6 +222,7 @@ async function setup({ native = true } = {}) {
 	let service,
 		approve = async () => true;
 	const approvals = [],
+		observations = [],
 		entered = [];
 	const owner = { id: 71, isDestroyed: () => false };
 	bridge = new PluginRuntimeBridge({
@@ -210,6 +246,15 @@ async function setup({ native = true } = {}) {
 			resources: [],
 			handlers: {
 				...service.getPluginSessionCapabilities(source.recordAdoptions),
+				observed: {
+					effect: "read",
+					inputSchema: { type: "object" },
+					resultSchema: { type: "null" },
+					execute: async (input, ctx) => {
+						observations.push({ input, scope: ctx.scope });
+						return null;
+					},
+				},
 				entered: {
 					effect: "read",
 					inputSchema: { type: "null" },
@@ -228,17 +273,23 @@ async function setup({ native = true } = {}) {
 		desktopIntegration: {
 			appendSystemPrompt: [],
 			additionalSkillPaths: [],
-			additionalExtensionPaths: native ? [provider.source.nativeEntrypoint] : [],
+			additionalExtensionPaths: native
+				? [
+						...(providerNative ? [provider.source.nativeEntrypoint] : []),
+						...(roles ? [consumer.source.nativeEntrypoint] : []),
+					]
+				: [],
 			pluginRuntimeDirectory: resolve(
 				import.meta.dirname,
 				`../../desktop/plugin-runtime/${process.platform}-${process.arch}`,
 			),
 			nativeRuntime: {
 				begin: () =>
-					bridge.beginNative(owner, (path) =>
-						path === provider.source.nativeEntrypoint ? provider.name : undefined,
+					bridge.beginNative(
+						owner,
+						(path) => catalog.find((item) => item.source.nativeEntrypoint === path)?.name,
 					),
-				manages: (path) => path === provider.source.nativeEntrypoint,
+				manages: (path) => catalog.some((item) => item.source.nativeEntrypoint === path),
 			},
 		},
 	});
@@ -269,6 +320,7 @@ async function setup({ native = true } = {}) {
 		converse,
 		approvals,
 		entered,
+		observations,
 		approve: (fn) => {
 			approve = fn;
 		},
@@ -595,4 +647,245 @@ it("a real SDK adoption append failure is never an adopted receipt and fences th
 		records: [],
 	});
 	expect(await readFile(file, "utf8")).toBe(before);
+}, 20000);
+
+it("actual packed native providers receive only the current SDK event on the exact receiver session", async () => {
+	const { entry, observations, faux, invoke, service, meta } = await setup({ roles: true });
+	faux.setResponses([fauxAssistantMessage("Observed actual source.")]);
+	await entry.session.prompt("native:observe");
+	await entry.session.waitForIdle();
+	expect(observations).toHaveLength(1);
+	expect(observations[0]).toMatchObject({
+		scope: { sessionId: meta.sessionId },
+		input: {
+			ok: true,
+			value: {
+				seen: 1,
+				kind: "message_start",
+				message: [{ type: "text", text: "native:observe" }],
+				scope: { sessionId: meta.sessionId },
+			},
+		},
+	});
+	await expect(
+		invoke("spoof", { type: "message_start", event: { message: { role: "assistant" } }, nonce: "FORGED" }),
+	).rejects.toThrow(/in-flight actual SDK native event/);
+	await expect(invoke("ordinary", null)).rejects.toThrow(/in-flight actual SDK native event/);
+	const second = await service.createSession({
+		cwd: entry.cwd,
+		provider: faux.provider.id,
+		modelId: faux.getModel().id,
+	});
+	const other = service.registry.get(second.sessionId);
+	faux.setResponses([fauxAssistantMessage("Second actual owner.")]);
+	await other.session.prompt("native:observe");
+	await other.session.waitForIdle();
+	expect(observations[1]).toMatchObject({
+		scope: { sessionId: second.sessionId },
+		input: { ok: true, value: { seen: 1, scope: { sessionId: second.sessionId } } },
+	});
+	faux.setResponses([
+		fauxAssistantMessage(fauxToolCall("service_count", {}), { stopReason: "toolUse" }),
+		fauxAssistantMessage("Actual tool observed."),
+	]);
+	await entry.session.prompt("Run the actual tool.");
+	await entry.session.waitForIdle();
+	const result = entry.session.messages.findLast(
+		(message) => message.role === "toolResult" && message.toolName === "service_count",
+	);
+	expect(observations[2]).toMatchObject({
+		input: {
+			ok: true,
+			value: {
+				seen: 2,
+				kind: "tool_execution_end",
+				toolCallId: result.toolCallId,
+				scope: { sessionId: meta.sessionId },
+			},
+		},
+	});
+	faux.setResponses([fauxAssistantMessage("No authority from input.")]);
+	await entry.session.prompt("ordinary-input");
+	await entry.session.waitForIdle();
+	expect(observations[3].input).toMatchObject({
+		ok: false,
+		error: expect.stringMatching(/in-flight actual SDK native event/),
+	});
+}, 30000);
+it("read native events cannot upgrade to receiver writes and wrong event kinds remain unavailable", async () => {
+	const { entry, faux, observations } = await setup({ roles: true });
+	for (const operation of ["write", "tool"]) {
+		faux.setResponses([fauxAssistantMessage("Rejected source event.")]);
+		await entry.session.prompt("native:" + operation);
+		await entry.session.waitForIdle();
+	}
+	expect(observations.map((item) => item.input)).toEqual([
+		{ ok: false, error: expect.stringMatching(/Read-only provider call/) },
+		{ ok: false, error: expect.stringMatching(/does not accept this SDK event/) },
+	]);
+	expect(
+		entry.session.sessionManager
+			.getBranch()
+			.some((row) => row.customType === "plugin-record:%40fixture%2Fprovider:role-result"),
+	).toBe(false);
+}, 20000);
+it("write native events await actual receiver approval with operation and effect before durable namespaced output", async () => {
+	const { entry, faux, observations, approvals } = await setup({ roles: true, roleEffect: "write" });
+	faux.setResponses([fauxAssistantMessage("Write observed.")]);
+	await entry.session.prompt("native:write");
+	await entry.session.waitForIdle();
+	expect(observations[0].input).toMatchObject({ ok: true });
+	expect(
+		approvals.some(
+			(args) =>
+				args[2] === "native:provider:write" && args[3].includes("write") && args[3].includes("effect=write"),
+		),
+	).toBe(true);
+	expect(
+		entry.session.sessionManager
+			.getBranch()
+			.filter((row) => row.customType === "plugin-record:%40fixture%2Fprovider:role-result"),
+	).toHaveLength(1);
+}, 20000);
+it("a service declaration never auto-attaches a missing native receiver", async () => {
+	const { entry, faux, observations } = await setup({ roles: true, providerNative: false });
+	faux.setResponses([fauxAssistantMessage("Receiver absent.")]);
+	await entry.session.prompt("native:observe");
+	await entry.session.waitForIdle();
+	expect(observations[0].input).toMatchObject({
+		ok: false,
+		error: expect.stringMatching(/native attachment is unavailable/),
+	});
+}, 20000);
+
+it("revoking the actual provider while its write approval waits rejects the late answer and commits no record", async () => {
+	const { entry, faux, observations, approve, provider, setState } = await setup({
+		roles: true,
+		roleEffect: "write",
+	});
+	let release;
+	approve(async (_owner, source, operation) =>
+		source.pluginId === "@fixture/provider" && operation === "native:provider:write"
+			? new Promise((resolve) => {
+					release = resolve;
+				})
+			: true,
+	);
+	faux.setResponses([fauxAssistantMessage("Provider stopped without a write.")]);
+	const prompt = entry.session.prompt("native:write");
+	await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+	setState("disabled");
+	const stopping = bridge.revoke(provider.name);
+	release(true);
+	await stopping;
+	await prompt;
+	await entry.session.waitForIdle();
+	expect(observations.every((item) => item.input.ok === false)).toBe(true);
+	expect(
+		entry.session.sessionManager
+			.getBranch()
+			.some((row) => row.customType === "plugin-record:%40fixture%2Fprovider:role-result"),
+	).toBe(false);
+}, 20000);
+it("changing installed provider bytes during native approval cannot publish a late successful receipt", async () => {
+	const { entry, faux, observations, approve, provider, rescan } = await setup({
+		roles: true,
+		roleEffect: "write",
+	});
+	let release;
+	approve(async (_owner, source, operation) =>
+		source.pluginId === "@fixture/provider" && operation === "native:provider:write"
+			? new Promise((resolve) => {
+					release = resolve;
+				})
+			: true,
+	);
+	faux.setResponses([fauxAssistantMessage("Changed source rejected.")]);
+	const prompt = entry.session.prompt("native:write");
+	await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+	await writeFile(
+		provider.source.entrypoint,
+		(await readFile(provider.source.entrypoint, "utf8")) + "\n// Changed real installed generation\n",
+	);
+	await rescan();
+	release(true);
+	await prompt;
+	await entry.session.waitForIdle();
+	expect(observations.every((item) => item.input.ok === false)).toBe(true);
+	expect(
+		entry.session.sessionManager
+			.getBranch()
+			.some((row) => row.customType === "plugin-record:%40fixture%2Fprovider:role-result"),
+	).toBe(false);
+}, 20000);
+it("concurrent actual sessions preserve separate receiver attachments without sending caller-selected session ids", async () => {
+	const { entry, service, faux, observations, meta } = await setup({ roles: true });
+	const second = await service.createSession({
+		cwd: entry.cwd,
+		provider: faux.provider.id,
+		modelId: faux.getModel().id,
+	});
+	const other = service.registry.get(second.sessionId);
+	faux.setResponses([fauxAssistantMessage("Concurrent A."), fauxAssistantMessage("Concurrent B.")]);
+	await Promise.all([entry.session.prompt("native:observe"), other.session.prompt("native:observe")]);
+	await Promise.all([entry.session.waitForIdle(), other.session.waitForIdle()]);
+	expect(observations).toHaveLength(2);
+	expect(observations.map((item) => item.scope.sessionId).sort()).toEqual(
+		[meta.sessionId, second.sessionId].sort(),
+	);
+	for (const row of observations)
+		expect(row.input).toMatchObject({
+			ok: true,
+			value: { seen: 1, scope: { sessionId: row.scope.sessionId } },
+		});
+}, 20000);
+
+it("a receiver failure reaches the actual SDK error channel exactly once", async () => {
+	const { entry, faux, observations } = await setup({ roles: true });
+	const errors = [];
+	const stop = entry.session.extensionRunner.onError((error) => errors.push(error));
+	faux.setResponses([fauxAssistantMessage("Failed operation remains visible.")]);
+	await entry.session.prompt("native:fail");
+	await entry.session.waitForIdle();
+	stop();
+	expect(errors).toHaveLength(1);
+	expect(errors[0]).toMatchObject({ event: "message_start", error: "Actual native receiver failed" });
+	expect(observations).toEqual([]);
+}, 20000);
+it("revoking the actual event sender aborts a pending receiver approval without duplicate failures per SDK event", async () => {
+	const { entry, faux, observations, approve, consumer } = await setup({ roles: true, roleEffect: "write" });
+	let release;
+	approve(async (_owner, source, operation) =>
+		source.pluginId === "@fixture/provider" && operation === "native:provider:write"
+			? new Promise((resolve) => {
+					release = resolve;
+				})
+			: true,
+	);
+	const errors = [],
+		starts = [];
+	const unsubscribe = entry.session.subscribe((event) => {
+		if (event.type === "message_start") starts.push(event.message.role);
+	});
+	const stop = entry.session.extensionRunner.onError((error) => errors.push(error));
+	faux.setResponses([fauxAssistantMessage("Sender stopped without writing.")]);
+	const prompt = entry.session.prompt("native:write");
+	await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+	const stopping = bridge.revoke(consumer.name);
+	release(true);
+	await stopping;
+	await prompt;
+	await entry.session.waitForIdle();
+	stop();
+	unsubscribe();
+	expect(starts).toEqual(["system", "user", "assistant"]);
+	// The initial system event precedes revocation. Each subsequent SDK event fails once.
+	expect(errors).toHaveLength(2);
+	expect(errors[0]).toMatchObject({ event: "message_start" });
+	expect(observations).toEqual([]);
+	expect(
+		entry.session.sessionManager
+			.getBranch()
+			.some((row) => row.customType === "plugin-record:%40fixture%2Fprovider:role-result"),
+	).toBe(false);
 }, 20000);
