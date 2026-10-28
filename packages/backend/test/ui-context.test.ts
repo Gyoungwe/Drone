@@ -125,14 +125,14 @@ describe("makeUiContext — native setup questions", () => {
 		expect(send).not.toHaveBeenCalled();
 	});
 
-	it("input uses a text-only question and returns the custom answer", async () => {
+	it("input uses a text-only question and preserves the exact custom answer", async () => {
 		const { ui, gate, send } = bridge();
 		const pending = ui.input("Vault path", "/path/to/Vault");
 		const request = send.mock.calls[0][0];
 		expect(request.sessionId).toBe("setup-session");
 		expect(request.questions[0]).toMatchObject({ type: "text", options: [], prompt: "/path/to/Vault" });
 		gate.respond(request.id, { kind: "answer", answers: { value: { customText: "  /my/Vault  " } } });
-		await expect(pending).resolves.toBe("/my/Vault");
+		await expect(pending).resolves.toBe("  /my/Vault  ");
 	});
 
 	it("multiline selection keeps a short heading and the full proposal in the prompt", async () => {
