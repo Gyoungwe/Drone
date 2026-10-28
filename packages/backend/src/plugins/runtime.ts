@@ -33,6 +33,8 @@ export interface PluginRuntimeActivation {
 /** Host-only lease; identity is an object owned by the resolved caller generation, never JSON input. */
 export interface PluginRuntimeCaller {
 	readonly identity: object;
+	/** Distinct from a window selection lease; used only by host capability handlers. */
+	readonly sessionIdentity?: object;
 	readonly scope: PluginRuntimeScope;
 	readonly signal: AbortSignal;
 }
@@ -393,6 +395,7 @@ export class PluginRuntimeRegistry {
 			scope,
 			checkCaller,
 			operationOverride,
+			caller.sessionIdentity,
 		);
 		activation.pending.add(pending);
 		try {
@@ -411,6 +414,7 @@ export class PluginRuntimeRegistry {
 		scope: PluginRuntimeScope,
 		checkCaller: () => void,
 		operationOverride?: PluginRuntimeOperation,
+		sessionIdentity?: object,
 	): Promise<unknown> {
 		signal.throwIfAborted();
 		const runtime = await activation.ready;
@@ -439,6 +443,7 @@ export class PluginRuntimeRegistry {
 				applicationId: activation.applicationId,
 				scope,
 				callerIdentity,
+				sessionIdentity,
 				signal,
 				bootstrap: false,
 			},

@@ -416,6 +416,7 @@ export const IpcChannels = {
 	/** UI 插件：读构建产物代码 */
 	UiPluginsReadCode: "uiPlugins:readCode",
 	PluginRuntimeInvoke: "pluginRuntime:invoke",
+	PluginRuntimeCancel: "pluginRuntime:cancel",
 	PluginRuntimeSelectSession: "pluginRuntime:selectSession",
 	PluginRuntimeEvent: "pluginRuntime:event",
 	/** UI 插件：启用/停用单个插件（启用=信任） */
@@ -708,7 +709,9 @@ export interface PiApi
 		operation: string,
 		input: unknown,
 		selectionToken: string,
+		requestId?: string,
 	): Promise<unknown>;
+	pluginRuntimeCancel(binding: string, selectionToken: string, requestId: string): Promise<boolean>;
 	/** 启用/停用单个插件（启用=信任，同步落盘） */
 	uiPluginsSetPluginEnabled(name: string, enabled: boolean): Promise<void>;
 	/** 槽位指派（pluginName=null 取消指派） */

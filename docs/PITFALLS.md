@@ -397,3 +397,8 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 ### npm ci 不会清掉已从 workspace 删除的包内缓存目录
 
 复用旧 checkout 验收任务包迁移时，`packages/tasks` 的已跟踪源码均已删除，但旧 `packages/tasks/node_modules` 空壳仍可能存在。根脚本的源目录删除检查因此会失败，而各 workspace 测试已通过。先核对该临时 checkout 的目录确实只剩旧依赖缓存，再清理这个缓存；不要修改门禁把真实源码残留当作通过。首次失败与完整重跑见 `native-plugin-owner-migration-2026-10-28.json`。这不是产品源代码修复，干净来源和缓存残留应分别记录。
+
+
+### Optional tuple item 不等于兼容较短 IPC 参数数组
+
+TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Check 中仍拒绝原四参数调用。`PluginRuntimeContract.invoke` 的兼容合同显式使用四参数 tuple 与带 request ID 的五参数 tuple 联合；主进程 IPC 回归必须实际调用两个形状，不能只依赖 TypeScript optional 参数通过。取消传输只发送 request ID，AbortSignal 留在 renderer/main 各自的实际生命周期中。

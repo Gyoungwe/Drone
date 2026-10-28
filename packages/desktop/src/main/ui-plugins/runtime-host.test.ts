@@ -397,3 +397,24 @@ describe("desktop write approval details", () => {
 		expect(await approveDesktopRuntime(owner, source, "write", "Host-resolved target")).toBe(false);
 	});
 });
+
+it("closes a pending parent-window runtime permission dialog through the actual operation signal", async () => {
+	const controller = new AbortController();
+	let received!: AbortSignal;
+	desktop.showMessageBox.mockImplementation(async (_window, options) => {
+		received = options.signal;
+		return new Promise((resolve) =>
+			received.addEventListener("abort", () => resolve({ response: 1 }), { once: true }),
+		);
+	});
+	const answer = approveDesktopRuntime(
+		{ id: 1, isDestroyed: () => false },
+		source,
+		"model.generate",
+		"actual provider/model and cost",
+		controller.signal,
+	);
+	expect(received).toBe(controller.signal);
+	controller.abort();
+	expect(await answer).toBe(false);
+});

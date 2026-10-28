@@ -81,3 +81,89 @@ describe("native bootstrap ownership", () => {
 		await bridge.close();
 	});
 });
+
+it("cancels only a same-window, binding and selection invocation and waits for its cleanup", async () => {
+	let release!: () => void;
+	const cleanup = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	let started = false;
+	const execute = async (
+		_input: unknown,
+		context: import("@gyoungwe/plugin-api/runtime").PluginRuntimeContext,
+	) => {
+		started = true;
+		await new Promise<void>((_resolve, reject) => {
+			context.signal.addEventListener("abort", () => reject(context.signal.reason), { once: true });
+		}).finally(() => cleanup);
+		return null;
+	};
+	const bridge = new PluginRuntimeBridge({
+		source: () => source,
+		enabled: () => true,
+		approve: async () => true,
+		getSessionContext: () => undefined,
+		factory: () => async () => ({
+			operations: { long: { ...operations.read, execute }, read: operations.read },
+			dispose: async () => {},
+		}),
+	});
+	const token = (await bridge.bind("ui", owner))!;
+	const selected = bridge.selectSession(owner, null);
+	const pending = bridge.invoke(owner, token, "long", null, selected, "long-request");
+	const rejected = expect(pending).rejects.toThrow("canceled");
+	await vi.waitFor(() => expect(started).toBe(true));
+	await expect(
+		bridge.cancel({ id: 2, isDestroyed: () => false }, token, selected, "long-request"),
+	).rejects.toThrow("window");
+	await expect(bridge.cancel(owner, token, "other-selection", "long-request")).rejects.toThrow("lease");
+	await expect(bridge.invoke(owner, token, "read", null, selected, "long-request")).rejects.toThrow(
+		"already active",
+	);
+	let canceled = false;
+	const stopping = bridge.cancel(owner, token, selected, "long-request").then((value) => {
+		canceled = value;
+	});
+	await Promise.resolve();
+	expect(canceled).toBe(false);
+	expect(await bridge.invoke(owner, token, "read", null, selected, "sibling-request")).toBeNull();
+	release();
+	await stopping;
+	await rejected;
+	expect(canceled).toBe(true);
+	expect(await bridge.cancel(owner, token, selected, "long-request")).toBe(false);
+	await bridge.close();
+});
+
+it("cancels an outstanding approval and ignores its late allow without running the operation", async () => {
+	let answer!: (value: boolean) => void;
+	let approvalSignal!: AbortSignal;
+	const execute = vi.fn(async () => null);
+	const bridge = new PluginRuntimeBridge({
+		source: () => source,
+		enabled: () => true,
+		getSessionContext: () => undefined,
+		approve: async (_owner, _source, operation, _detail, signal) => {
+			if (!operation) return true;
+			approvalSignal = signal!;
+			return new Promise<boolean>((resolve) => {
+				answer = resolve;
+			});
+		},
+		factory: () => async () => ({
+			operations: { write: { ...operations.read, effect: "write", execute } },
+			dispose: async () => {},
+		}),
+	});
+	const token = (await bridge.bind("ui", owner))!;
+	const selected = bridge.selectSession(owner, null);
+	const pending = bridge.invoke(owner, token, "write", null, selected, "pending-approval");
+	const rejected = expect(pending).rejects.toThrow("canceled");
+	await vi.waitFor(() => expect(answer).toBeDefined());
+	expect(await bridge.cancel(owner, token, selected, "pending-approval")).toBe(true);
+	expect(approvalSignal.aborted).toBe(true);
+	answer(true);
+	await rejected;
+	expect(execute).not.toHaveBeenCalled();
+	await bridge.close();
+});

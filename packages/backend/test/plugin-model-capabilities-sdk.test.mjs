@@ -63,6 +63,7 @@ async function invoke(operation, input, { deny = false, override = {} } = {}) {
 		applicationId: "test-app",
 		scope: caller.scope,
 		callerIdentity: caller.identity,
+		sessionIdentity: caller.identity,
 		signal: caller.signal,
 		bootstrap: false,
 		...override,
@@ -143,7 +144,7 @@ it("denies unapproved or mismatched requests and stale, cross-session, applicati
 		"selection",
 	);
 	await expect(
-		invoke("model.generate", request(selection), { override: { callerIdentity: {} } }),
+		invoke("model.generate", request(selection), { override: { sessionIdentity: {} } }),
 	).rejects.toThrow("caller");
 	await expect(
 		invoke("model.generate", request(selection), { override: { scope: { kind: "application" } } }),
@@ -246,4 +247,184 @@ it("cancels a real SDK completion without returning a result and keeps the calle
 	await rejected;
 	faux.setResponses([fauxAssistantMessage(fauxToolCall("structured_result", { decision: "reject" }))]);
 	expect(await invoke("model.generate", request(selection))).toMatchObject({ value: { decision: "reject" } });
+});
+
+it("routes two same-session window approvals independently while capabilities receive the real session identity", async () => {
+	await setup();
+	const { PluginRuntimeBridge } = await import("../src/plugins/coordinator");
+	const source = { pluginId: "model-probe", packageRoot: root, entrypoint: join(root, "probe.mjs") };
+	const approvedOwners = [];
+	const bridge = new PluginRuntimeBridge({
+		source: () => source,
+		enabled: () => true,
+		getSessionContext: (id) => backend.getPluginCallerContext(id),
+		capabilities: () => ({ resources: [], handlers: backend.getPluginSessionCapabilities() }),
+		approve: async (owner, _source, operation) => {
+			if (!operation) return true;
+			approvedOwners.push(owner.id);
+			return owner.id === 101;
+		},
+		factory: () => async () => ({
+			operations: {
+				generate: {
+					inputSchema: { type: "null" },
+					resultSchema: { type: "object" },
+					effect: "write",
+					async execute(_input, context) {
+						const selection = await context.capabilities.call("model.selection", {});
+						return context.capabilities.call("model.generate", request(selection));
+					},
+				},
+			},
+			dispose: async () => {},
+		}),
+	});
+	const first = { id: 101, isDestroyed: () => false },
+		second = { id: 202, isDestroyed: () => false };
+	const a = await bridge.bind("ui", first),
+		b = await bridge.bind("ui", second);
+	const aSelection = bridge.selectSession(first, session.sessionId),
+		bSelection = bridge.selectSession(second, session.sessionId);
+	const complete = vi.spyOn(backend.modelRuntime, "completeSimple");
+	await expect(bridge.invoke(second, b, "generate", null, bSelection)).rejects.toThrow("denied");
+	expect(complete).not.toHaveBeenCalled();
+	faux.setResponses([fauxAssistantMessage(fauxToolCall("structured_result", { decision: "approve" }))]);
+	expect(await bridge.invoke(first, a, "generate", null, aSelection)).toMatchObject({
+		value: { decision: "approve" },
+	});
+	expect(approvedOwners).toEqual([202, 101, 101]);
+	expect(complete).toHaveBeenCalledOnce();
+	let entered;
+	const started = new Promise((resolve) => {
+		entered = resolve;
+	});
+	let modelAborted = false;
+	faux.setResponses([
+		(_context, options) =>
+			new Promise((_resolve, reject) => {
+				entered();
+				options.signal.addEventListener(
+					"abort",
+					() => {
+						modelAborted = true;
+						reject(new Error("actual provider canceled"));
+					},
+					{ once: true },
+				);
+			}),
+	]);
+	const pending = bridge.invoke(first, a, "generate", null, aSelection, "running-model");
+	const rejected = expect(pending).rejects.toThrow();
+	await started;
+	expect(await bridge.cancel(first, a, aSelection, "running-model")).toBe(true);
+	await rejected;
+	expect(modelAborted).toBe(true);
+	expect(await bridge.cancel(first, a, aSelection, "running-model")).toBe(false);
+	bridge.selectSession(first, null);
+	const restored = bridge.selectSession(first, session.sessionId);
+	expect(restored).not.toBe(aSelection);
+	await expect(bridge.cancel(first, a, aSelection, "running-model")).rejects.toThrow("lease");
+	faux.setResponses([fauxAssistantMessage(fauxToolCall("structured_result", { decision: "reject" }))]);
+	expect(await bridge.invoke(first, a, "generate", null, restored, "restored-model")).toMatchObject({
+		value: { decision: "reject" },
+	});
+	expect(complete).toHaveBeenCalledTimes(3);
+	await bridge.close();
+});
+
+it("binds the real coordinator-native SDK caller before generating inside its active tool", async () => {
+	await setup();
+	const { createAgentSession, DefaultResourceLoader, SessionManager, SettingsManager } = await import(
+		"@earendil-works/pi-coding-agent"
+	);
+	const { PluginRuntimeBridge } = await import("../src/plugins/coordinator");
+	const nativeEntrypoint = join(root, "model-native.mjs");
+	await writeFile(nativeEntrypoint, 'throw new Error("Managed entry must be replaced by its owner");');
+	const source = {
+		pluginId: "native-model-probe",
+		packageRoot: root,
+		entrypoint: join(root, "owner.mjs"),
+		nativeEntrypoint,
+	};
+	const approve = vi.fn(async () => true);
+	const bridge = new PluginRuntimeBridge({
+		source: () => source,
+		enabled: () => true,
+		approve,
+		getSessionContext: (id) => backend.getPluginCallerContext(id),
+		capabilities: () => ({ resources: [], handlers: backend.getPluginSessionCapabilities() }),
+		factory:
+			() =>
+			async ({ capabilities }) => ({
+				operations: {},
+				createNativeSession: async () => ({
+					toolEffects: { model_bridge_probe: "write" },
+					extension(pi) {
+						pi.registerTool({
+							name: "model_bridge_probe",
+							label: "Model bridge probe",
+							description: "Use scoped structured model",
+							parameters: { type: "object", properties: {} },
+							async execute() {
+								const selection = await capabilities.call("model.selection", {});
+								const result = await capabilities.call("model.generate", request(selection));
+								return { content: [{ type: "text", text: JSON.stringify(result.value) }] };
+							},
+						});
+					},
+					dispose: async () => {},
+				}),
+				dispose: async () => {},
+			}),
+	});
+	const window = { id: 303, isDestroyed: () => false };
+	const bootstrap = bridge.beginNative(window, (path) =>
+		path === nativeEntrypoint ? "native-ui" : undefined,
+	);
+	const cwd = join(root, "project"),
+		agentDir = join(root, "agent");
+	const settingsManager = SettingsManager.inMemory();
+	const resourceLoader = new DefaultResourceLoader({
+		cwd,
+		agentDir,
+		settingsManager,
+		noExtensions: true,
+		noSkills: true,
+		noPromptTemplates: true,
+		additionalExtensionPaths: [nativeEntrypoint],
+		extensionFactoryForPath: bootstrap.factoryForPath,
+	});
+	await resourceLoader.reload({ resolveProjectTrust: async () => true });
+	expect(resourceLoader.getExtensions().errors).toEqual([]);
+	const { session: nativeSession } = await createAgentSession({
+		cwd,
+		agentDir,
+		settingsManager,
+		resourceLoader,
+		modelRuntime: backend.modelRuntime,
+		sessionManager: SessionManager.inMemory(cwd),
+		model: faux.getModel(),
+	});
+	backend.registry.add({ session: nativeSession, cwd, unsubscribe: () => {} });
+	bootstrap.bindSession(nativeSession.sessionId);
+	await nativeSession.bindExtensions({});
+	try {
+		faux.setResponses([
+			fauxAssistantMessage(fauxToolCall("model_bridge_probe", {})),
+			fauxAssistantMessage(fauxToolCall("structured_result", { decision: "approve" })),
+			fauxAssistantMessage("Native completed"),
+		]);
+		await nativeSession.prompt("Run the model bridge probe");
+		await nativeSession.waitForIdle();
+		const result = nativeSession.messages.find(
+			(message) => message.role === "toolResult" && message.toolName === "model_bridge_probe",
+		);
+		expect(result?.isError, JSON.stringify(result)).toBe(false);
+		expect(result.content[0].text).toBe('{"decision":"approve"}');
+		expect(approve.mock.calls.filter((call) => call[2] === "capability:model.generate")[0][0]).toBe(window);
+	} finally {
+		await bootstrap.dispose();
+		await backend.closeSession(nativeSession.sessionId);
+		await bridge.close();
+	}
 });

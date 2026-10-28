@@ -6,13 +6,18 @@ export function registerPluginRuntimeIpc(runtime: DesktopRuntimeBridge): void {
 	bindContract(
 		PluginRuntimeContract,
 		(event) => ({
-			invoke: (binding, operation, input, selectionToken) =>
-				runtime.invoke(event.sender, binding, operation, input, selectionToken),
+			invoke: (...args) => runtime.invoke(event.sender, args[0], args[1], args[2], args[3], args[4]),
+			cancel: (binding, selectionToken, requestId) =>
+				runtime.cancel(event.sender, binding, selectionToken, requestId),
 			selectSession: (sessionId) => runtime.selectSession(event.sender, sessionId),
 		}),
 		{
 			channelForMethod: (_contract, method) =>
-				method === "selectSession" ? IpcChannels.PluginRuntimeSelectSession : IpcChannels.PluginRuntimeInvoke,
+				({
+					selectSession: IpcChannels.PluginRuntimeSelectSession,
+					invoke: IpcChannels.PluginRuntimeInvoke,
+					cancel: IpcChannels.PluginRuntimeCancel,
+				})[method as keyof typeof PluginRuntimeContract.methods],
 		},
 	);
 }

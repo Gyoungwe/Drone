@@ -307,3 +307,5 @@ export function activate() {
 安装包必须在真实 `plugin.manifest.json` 的 `permissions.network` 声明 `configured-services`，宿主才提供 `model.selection` / `model.generate`；UI 清单、域状态或 renderer 入参不能赋予此权限。声明变化会使已有 runtime source 绑定失效。该声明只允许申请模型出口，未授予任意网络请求。
 
 `model.selection({profile?})` 只解析所选真实会话的当前模型，或已存在且明确配置的模型偏好；不回退到任意 provider。`model.generate({selection,systemPrompt,prompt,resultSchema,maxTokens})` 只执行一次隔离 `structured_result` 请求，无父对话、任意工具执行或正文/思考回传。每次调用仍由宿主显示模型 ID、thinking、输出预算、数据将传入模型和可能费用并请求批准；缺失用量或有效定价时返回 null，不声称免费。caller 身份、选择与取消在 SDK 请求前后核验；调用方不得把结构化模型结果当成人工批准或科学认证。
+
+`usePluginRuntime().invoke(operation, input, signal?)` accepts an optional invocation-local AbortSignal. The renderer sends only a request ID through IPC, never a signal object. Main cancels only the active request of that same window, binding and selection lease, and waits for its running cleanup. Already-aborted calls dispatch nothing; canceling one call does not cancel its siblings. Approval dialogs use the same signal and cannot approve a canceled request. Existing two-argument clients and four-argument invoke IPC remain supported.

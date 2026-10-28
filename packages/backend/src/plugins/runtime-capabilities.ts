@@ -13,6 +13,8 @@ export interface PluginCapabilityContext {
 	readonly applicationId: string;
 	readonly scope: PluginRuntimeScope;
 	readonly callerIdentity: object | undefined;
+	/** Host-only live SessionRegistry identity; never supplied by plugin JSON. */
+	readonly sessionIdentity?: object;
 	readonly signal: AbortSignal;
 	readonly bootstrap: boolean;
 	/** This call only; resource children must receive a fresh port for every subsequent invocation. */
