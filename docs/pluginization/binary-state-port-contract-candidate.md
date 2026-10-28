@@ -65,3 +65,5 @@ type BinaryWriteResult = { kind: "value"; base64: string; version: string };
 
 
 纯结构后继将上述同一 bounded read/CAS/临时文件/提交结果协议迁入 `@gyoungwe/plugin-api/node/binary-state`。Node 类型与值仅从该显式子路径导出；根/runtime/UI 不加载 Node。宿主适配保留实际 grant、scope、registry、source、write approval、串行队列和 lease 生命周期，helper 只调用当前可信 Node adapter 提供的 path/check/lease/cleanup 回调，不接受 JSON 身份。结构移动后 32 + 100 项与 API gate、backend/Desktop TSC、架构检查保持通过；日志 `/tmp/inquiry-binary-extract-*.log`。原生 adapter 行为尚待实施，不能把公共 helper 本身当成原生验收。
+
+旧 `backend/services/inquiry.ts` 在打开原 SQLite 连接前也持有同一个 canonical 目录的 `state-writers` lease；停止先断开订阅、drain 实际队列并 await 子项目与连接关闭，再释放。关闭失败保留租约；原位置、SQLite 格式、项目分区未更改。实际旧 writer 与生产 binary owner 双向竞争及失败关闭两项，连同原 14 项 Inquiry 回归共 16 项通过，日志 `/tmp/inquiry-legacy-lease-tests.log`；backend TSC/arch 通过。旧 seam 尚未删除，这段只守住接管前的单 writer 边界，不能当完整 provider 迁移。

@@ -996,7 +996,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			await sessions.dispose();
 			await compute.dispose();
 			await computeAdapter.dispose?.();
-			inquiry.dispose();
+			await inquiry.dispose();
 			await discovery.dispose();
 			await runtime.dispose();
 		},

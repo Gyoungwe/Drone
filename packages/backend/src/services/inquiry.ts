@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -20,6 +20,7 @@ import {
 	type RunProvenanceSummary,
 	SqliteInquiryStorage,
 } from "@drone/inquiry";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { canonicalProjectId } from "../project-id";
 import type { StorageRegistry } from "../storage/registry";
 
@@ -172,7 +173,7 @@ export interface InquiryServicePort {
 	readOnlySnapshot(projectId?: string): Promise<InquiryReadOnlySnapshot | undefined>;
 	drainEvents(): Promise<void>;
 	attachEventSource(source: InquiryEventSource): () => void;
-	dispose(): void;
+	dispose(): Promise<void>;
 }
 
 const TERMINAL_COMPUTE_STATUSES = new Set(["succeeded", "failed", "cancelled", "blocked", "partial"]);
@@ -220,10 +221,14 @@ export class InquiryService implements InquiryServicePort {
 	private readonly activeReruns = new Set<string>();
 	private eventTail: Promise<void> = Promise.resolve();
 	private disposed = false;
+	private closing: Promise<void> | undefined;
 	private readonly projects = new Map<string, InquiryService>();
 	private readonly options: InquiryServiceOptions;
 
-	constructor(options: InquiryServiceOptions = {}) {
+	constructor(
+		options: InquiryServiceOptions = {},
+		private readonly reservations = new PluginResourceReservations(),
+	) {
 		this.options = {
 			...options,
 			...(options.projectId ? { projectId: canonicalProjectId(options.projectId) } : {}),
@@ -241,6 +246,10 @@ export class InquiryService implements InquiryServicePort {
 		}
 		const projectId = this.options.projectId?.trim();
 		if (!projectId) throw new Error("inquiryProjectId is required when inquiryDir is configured");
+		// This is the existing host-configured private ledger root. Reserve before opening SQLite,
+		// so a new binary owner cannot compete with the legacy connection's WAL/transactions.
+		mkdirSync(options.inquiryDir, { recursive: true });
+		this.reservations.reserve("state-writers", [realpathSync(options.inquiryDir)]);
 		this.storage = new SqliteInquiryStorage(projectId, join(options.inquiryDir, "ledger.sqlite"));
 		this.domain = new DomainInquiryService(this.storage, {
 			...(this.rerunHandler ? { rerunHandler: this.rerunHandler } : {}),
@@ -653,6 +662,7 @@ export class InquiryService implements InquiryServicePort {
 	}
 
 	private project(projectId?: string): InquiryService {
+		if (this.disposed) throw new Error("Inquiry service is disposed");
 		const normalized = canonicalProjectId(projectId);
 		if (!normalized || !this.options.projectsDir) throw new Error("A project identity is required");
 		const key = this.projectKey(normalized);
@@ -725,12 +735,28 @@ export class InquiryService implements InquiryServicePort {
 		await Promise.all([...this.projects.values()].map((project) => project.drainEvents()));
 	}
 
-	dispose(): void {
-		if (this.disposed) return;
+	dispose(): Promise<void> {
+		if (this.closing) return this.closing;
 		this.disposed = true;
-		for (const unsubscribe of [...this.unsubscribers]) unsubscribe();
-		for (const project of this.projects.values()) project.dispose();
-		if (this.storage) void this.storage.close();
+		this.closing = (async () => {
+			for (const unsubscribe of [...this.unsubscribers]) unsubscribe();
+			await this.eventTail;
+			const results = await Promise.allSettled(
+				[...this.projects.values()].map((project) => project.dispose()),
+			);
+			const failures = results
+				.filter((result) => result.status === "rejected")
+				.map((result) => result.reason);
+			try {
+				await this.storage?.close();
+			} catch (error) {
+				failures.push(error);
+			}
+			if (failures.length)
+				throw new AggregateError(failures, "Inquiry connections could not close; writer leases retained");
+			this.reservations.dispose();
+		})();
+		return this.closing;
 	}
 
 	private enqueue(work: () => Promise<void>): void {
