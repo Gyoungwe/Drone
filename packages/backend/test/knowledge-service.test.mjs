@@ -12,7 +12,7 @@ import {
 } from "@drone/extensions/internal/obsidian-workbench";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import { loadWorkspaceConfig, saveWorkspaceConfig } from "@drone/extensions/workspace-config";
-import { createEventBus } from "@earendil-works/pi-coding-agent";
+import { createEventBus, SessionManager } from "@earendil-works/pi-coding-agent";
 import {
 	buildKnowledgeSearchExpression,
 	closeKnowledgeServices,
@@ -342,19 +342,20 @@ describe("Show Me presentation layer", () => {
 describe("navigation delivery and bounded maintenance", () => {
 	function harness(readOnly = false) {
 		const tools = new Map(),
-			events = new Map();
+			events = new Map(), sessionManager = SessionManager.inMemory(a);
 		const api = {
 			events: createEventBus(),
+			appendEntry: (type, data) => sessionManager.appendCustomEntry(type, data),
 			registerCommand: () => {},
 			registerTool: (t) => tools.set(t.name, t),
 			on: (name, fn) => events.set(name, fn),
 		};
-		return { tools, events, interface: registerKnowledgeInterface(api, { readOnly }) };
+		return { tools, events, sessionManager, interface: registerKnowledgeInterface(api, { readOnly }) };
 	}
 	it("auto-stages one shared topic candidate after a successful evidence-gated run summary", async () => {
 		await prepared({ wiki: false });
 		const h = harness();
-		const ctx = { cwd: a, sessionId: "auto-topic" };
+		const ctx = { cwd: a, sessionId: "auto-topic", sessionManager: h.sessionManager };
 		const start = await h.interface.beforeStart({ prompt: "介绍这组研究文献并沉淀可复用主题" }, ctx);
 		expect(start.message?.customType).toBe("drone-knowledge-navigation");
 		await h.tools
@@ -505,7 +506,7 @@ describe("navigation delivery and bounded maintenance", () => {
 	it("promotes a bound ordinary turn when the model actually reads knowledge", async () => {
 		await prepared({ wiki: false });
 		const h = harness();
-		const ctx = { cwd: a, sessionId: "lazy-knowledge" };
+		const ctx = { cwd: a, sessionId: "lazy-knowledge", sessionManager: h.sessionManager };
 		await h.interface.beforeStart({ prompt: "请直接回答这个问题" }, ctx);
 		await h.events.get("tool_execution_start")(
 			{ toolCallId: "read", toolName: "research_read_knowledge", args: {} },
