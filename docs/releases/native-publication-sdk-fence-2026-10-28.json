@@ -1,0 +1,48 @@
+{
+	"scope": "Pinned SDK host-only final delivery mechanism; not complete plugin publication acceptance",
+	"sdk": "@earendil-works/pi-coding-agent@1.1.0",
+	"design": "85e77b75",
+	"patchSha256": "39e51ddf871654693273b99a6a29b5a5707bacac30ac2e508925a52b1cca69da",
+	"dependencies": "Read-only retained clean-checkout dependencies plus a private copy of the pinned SDK; shared SDK was not changed",
+	"red": {
+		"result": "FAIL as intended",
+		"test": "awaits the host-only boundary after dynamically registered hooks and before public emit and append",
+		"reason": "Unpatched real SDK skips the supplied host-only callback",
+		"log": "/tmp/native-delivery-fence-red.log"
+	},
+	"green": {
+		"result": "PASS",
+		"sdkTests": 7,
+		"log": "/tmp/native-delivery-fence-sdk-final.log",
+		"cases": [
+			"Dynamically registered official hooks precede the actual host callback; public emit precedes append only after callback completes",
+			"Held callback keeps actual prompt/waitForIdle pending and prevents final public delivery/persistence",
+			"Actual run abort rejects late callback success; sibling session and next genuine run remain independent",
+			"Unexpected callback error produces neutral interrupted output and a constant diagnostic, without private error/draft",
+			"Exact tool-call IDs/arguments, response metadata and usage survive neutral failure; thinking/signatures/preface stay private",
+			"Synchronous SDK dispose prevents later final emit and append",
+			"Actual SessionEngine close awaits callback abort cleanup before SDK dispose",
+			"Ordinary official SDK chat is unchanged when no host callback is installed"
+		]
+	},
+	"checks": {
+		"backendTypecheck": "PASS",
+		"architecture": "PASS, 0 findings",
+		"targetBiome": "PASS",
+		"patchApplicability": "PASS: reversed prior patch in independent SDK copy, reapplied full candidate to upstream state, verified tested files match",
+		"whitespace": "PASS"
+	},
+	"pending": [
+		"Installed-source required publication policy and epoch binding",
+		"Owner-local reference courier and actual worker projection",
+		"Complete same-package native knowledge workflow and task acceptance provider",
+		"Actual event/poll/history/export generic consumers and historical-copy regression",
+		"Merged dual-repository gates and formal macOS installer workflow"
+	],
+	"claims": {
+		"fullP2": "INCOMPLETE",
+		"formalInstaller": "NOT_RUN",
+		"npmPublication": "NOT_RUN",
+		"zeroPluginHost": "NOT_RUN; only ordinary raw SDK session without callback covered"
+	}
+}

@@ -419,3 +419,7 @@ TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Chec
 ### 直接调用 operation.execute 不能证明 IPC/运行时合同通过
 
 模型评审的只读 `modelReviewInfo` 只接受 revision/id/hash/profile；写操作另外要求 acknowledged/autoApply。直接适配器测试忽略未用字段时看似成功，真实 packed owner 的 broker 会按 additionalProperties:false 拒绝复用写 DTO。回归必须跨真实 registry/worker 调用，并分别构造读 DTO 和写 DTO；不要放宽 schema 来让 fixture 通过。详见 `native-plugin-knowledge-model-command-2026-10-28.json`。
+
+### Pi 1.1.0 abort 不会自动拦截迟到的 message_end 发布
+
+真实 SDK 会 await subscriber/extension hook，所以持有 message_end 时 prompt、waitForIdle、abort 都等待；但已有 hook 迟到返回后，SDK 仍会公开并持久化它修改的正文。普通注册顺序也不能保证最后一个 hook。钉版 host-only delivery boundary 放在全部 SDK hooks 之后、公开/append 之前，再核对真实 run signal；取消/失败只保留安全 SDK envelope 与实际 toolCalls，dispose 后不再 append。源码与真实 RED→GREEN 见[机制回执](releases/native-publication-sdk-fence-2026-10-28.json)，完整 managed owner/consumer 尚未完成。

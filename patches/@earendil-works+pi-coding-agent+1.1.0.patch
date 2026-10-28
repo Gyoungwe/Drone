@@ -128,3 +128,126 @@ index 35ba09c..0ed5a68 100644
          for (const path of paths.filter(isBuiltinPath)) {
              const builtin = this.builtinExtensions.get(path.slice(BUILTIN_PATH_PREFIX.length));
              if (!builtin) {
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
+@@ -86,6 +86,8 @@
+     _scopedModels;
+     // Event subscription state
+     _unsubscribeAgent;
++    _hostDeliveryBoundary;
++    _disposed = false;
+     _eventListeners = [];
+     _isAgentRunActive = false;
+     _agentRunAbortRequested = false;
+@@ -175,6 +177,7 @@
+     _runSystemPromptOptions;
+     constructor(config) {
+         this.agent = config.agent;
++        this._hostDeliveryBoundary = config.hostDeliveryBoundary;
+         this.sessionManager = config.sessionManager;
+         this.settingsManager = config.settingsManager;
+         this._scopedModels = config.scopedModels ?? [];
+@@ -707,7 +710,7 @@
+         this._resolveIdleWaitIfIdle();
+     }
+     /** Internal handler for agent events - shared by subscribe and reconnect */
+-    _handleAgentEvent = async (event) => {
++    _handleAgentEvent = async (event, signal) => {
+         // Record the calls a tool made through ctx.executeTool() and their usage on its result message.
+         if (this._nestedToolCalls) {
+             if (event.type === "message_start" && event.message.role === "toolResult") {
+@@ -747,6 +750,33 @@
+         }
+         // Emit to extensions first, then notify public listeners.
+         await this._emitExtensionEvent(event);
++        if (this._disposed)
++            return;
++        // Drone pinned-runtime mechanism: extensions cannot install or reorder this callback.
++        // The agent awaits this subscriber before public delivery and session persistence.
++        if (this._hostDeliveryBoundary && event.type === "message_end" && event.message.role === "assistant") {
++            const metadata = {};
++            for (const key of ["api", "provider", "model", "responseModel", "responseId", "providerThinkingLevel", "thinkingLevel", "usage", "deferred", "rawStopReason", "endTurn", "timestamp", "durationMs"]) {
++                if (Object.hasOwn(event.message, key))
++                    metadata[key] = event.message[key];
++            }
++            const toolCalls = structuredClone(event.message.content.filter((block) => block.type === "toolCall"));
++            const unavailable = () => ({ ...metadata, role: "assistant", content: toolCalls, stopReason: signal.aborted ? "aborted" : "error", errorMessage: "Final delivery unavailable" });
++            try {
++                await this._hostDeliveryBoundary(event, signal);
++            }
++            catch {
++                // Fail once at the host delivery boundary. Never expose a callback's private error.
++                this._agentRunAbortRequested = true;
++                this.agent.abort();
++                this._replaceMessageInPlace(event.message, unavailable());
++                console.error("Host final delivery failed; assistant output suppressed.");
++            }
++            if (signal.aborted)
++                this._replaceMessageInPlace(event.message, unavailable());
++        }
++        if (this._disposed)
++            return;
+         this._emit(event.type === "agent_end" ? { ...event, willRetry: this._willRetryAfterAgentEnd(event) } : event);
+         // Handle session persistence
+         if (event.type === "message_end") {
+@@ -990,6 +1020,7 @@
+      * Call this when completely done with the session.
+      */
+     dispose() {
++        this._disposed = true;
+         try {
+             this.abortRetry();
+             this.abortCompaction();
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts
+@@ -110,6 +110,8 @@
+ /** Listener function for agent session events */
+ export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
+ export interface AgentSessionConfig {
++    /** Drone pinned-runtime host-only fence, after all SDK hooks and before public emit/append. */
++    hostDeliveryBoundary?: (event: Extract<AgentEvent, { type: "message_end" }>, signal: AbortSignal) => Promise<void>;
+     agent: Agent;
+     sessionManager: SessionManager;
+     settingsManager: SettingsManager;
+@@ -222,6 +224,8 @@
+     readonly settingsManager: SettingsManager;
+     private _scopedModels;
+     private _unsubscribeAgent?;
++    private _hostDeliveryBoundary;
++    private _disposed;
+     private _eventListeners;
+     private _isAgentRunActive;
+     private _agentRunAbortRequested;
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
+@@ -302,6 +302,7 @@
+     }
+     const session = new AgentSession({
+         agent,
++        hostDeliveryBoundary: options.hostDeliveryBoundary,
+         sessionManager,
+         settingsManager,
+         cwd,
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
+@@ -1,6 +1,6 @@
+ import { type ThinkingLevel } from "@earendil-works/pi-agent-core";
+ import { type Model } from "@earendil-works/pi-ai/compat";
+-import { AgentSession } from "./agent-session.ts";
++import { AgentSession, type AgentSessionConfig } from "./agent-session.ts";
+ import type { LoadExtensionsResult, SessionStartEvent, ToolDefinition } from "./extensions/index.ts";
+ import { ModelRuntime } from "./model-runtime.ts";
+ import type { ResourceLoader } from "./resource-loader.ts";
+@@ -8,6 +8,8 @@
+ import { SettingsManager } from "./settings-manager.ts";
+ import { createBashTool, createCodingTools, createEditTool, createFindTool, createGrepTool, createLsTool, createPowerShellTool, createReadOnlyTools, createReadTool, createWriteTool, withFileMutationQueue } from "./tools/index.ts";
+ export interface CreateAgentSessionOptions {
++    /** Drone pinned-runtime mechanism; not an extension event or serialized option. */
++    hostDeliveryBoundary?: AgentSessionConfig["hostDeliveryBoundary"];
+     /** Working directory for project-local discovery. Default: process.cwd() */
+     cwd?: string;
+     /** Global config directory. Default: ~/.pi/agent */
