@@ -447,3 +447,11 @@ Pi 1.1.0 的 SessionManager 先把 append entry 加入内存，再写磁盘；EI
 ### 失败的 native abort 与清理必须保留停止屏障
 
 停止流程并行等待真实 SDK abort 和 runtime 清理；`allSettled` 返回不等于关闭成功。必须先检查每项结果，再删除 stopping 记录。UI-only 配置变化也要等待之前失败的 UI 停止记录，不能只扫描仍然存活的 binding 后报告配置成功。原有重激活回归与新增 UI 配置回归均先实际失败；最小修复后 103 项 Desktop/IPC/preload/UI 联合通过。后继真实 SDK 会话在实际 abort 完成后注入回执失败，确认领域进程已退出；原屏障仍允许同包 UI alias 重绑。`stopping` 现在记录实际 source 身份和失败状态，`bind` 通过原失败停止 receipt 阻止同 `source.pluginId` 的所有 alias 重开，同时保持既有外层错误语义。实际 SDK 10/10、Desktop bridge/host 48/48 与 backend typecheck 通过；这项故障注入不代表完整 required-source publication 已验收。
+
+## 2026-10-28 · 原生 input 的空字符串不等于取消
+
+Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是合法回答；取消才是 undefined。Desktop 的 trim() || undefined 与必填 text 曾改变 SDK 语义。普通输入必须保留原值，领域路径等解释由调用方处理；AskDialog 的可选 text 应明确提交空 customText，能力结果 schema 不得用 minLength:1 把合法空输入拒绝。真实 SDK、受限 worker 与表单点击证据见[会话问答](pluginization/native-plugin-session-questions-evidence.md)。
+
+### 相同包内容不证明安装位置仍指向同一个来源
+
+外层安装目录被换成指向字节完全相同副本的 symlink 时，仅重新计算 packageRoot 的完整树 hash 仍可能相同。运行时现在同时复验安装位置的 canonical root 与已声明 native 路径的真实入口；原生和 UI alias 都失效。声明入口消失后，本应用内重新扫描保留旧描述为 unavailable，供实际 selected-path 失败诊断使用，绝不从该记录激活代码；跨重启 required 期望和首次 loader 失败仍在后继接线。66 项发现/来源/聚合/UI 检查通过，正式安装包另验。

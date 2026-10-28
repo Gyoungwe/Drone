@@ -61,6 +61,8 @@ export interface InstalledUiRuntimeSource {
 	contentHash: string;
 	deliveryProjection?: "required";
 	packageRoot: string;
+	installationPath: string;
+	nativeDeclaredPath?: string;
 	entrypoint: string;
 	nativeEntrypoint?: string;
 	requestsStateRead?: boolean;
@@ -68,6 +70,7 @@ export interface InstalledUiRuntimeSource {
 	requestsFileRead?: boolean;
 	requestsFileWrite?: boolean;
 	requestsModel?: boolean;
+	requestsExecution?: boolean;
 	resources?: Readonly<Record<string, string>>;
 }
 
@@ -122,7 +125,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 						};
 						hosts?: unknown;
 						drone?: { deliveryProjection?: unknown };
-						permissions?: { filesystem?: unknown; network?: unknown };
+						permissions?: { filesystem?: unknown; network?: unknown; subprocess?: unknown };
 					},
 			)
 			.catch(() => null);
@@ -163,6 +166,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 				runtime = {
 					pluginId: packageName,
 					packageRoot,
+					installationPath: resolve(packageDir),
 					entrypoint,
 					contentHash: installedPackageHash(packageRoot),
 				};
@@ -192,12 +196,18 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 					manifest.permissions.network.includes("configured-services")
 				)
 					runtime.requestsModel = true;
+				if (
+					Array.isArray(manifest.permissions?.subprocess) &&
+					manifest.permissions.subprocess.includes("container")
+				)
+					runtime.requestsExecution = true;
 				if (manifest.entrypoints?.extension !== undefined) {
 					runtime.nativeEntrypoint = await installedRuntimeFile(
 						packageRoot,
 						manifest.entrypoints?.extension,
 						"extension",
 					);
+					runtime.nativeDeclaredPath = resolve(packageDir, manifest.entrypoints.extension as string);
 				}
 				const declaredResources = manifest.entrypoints?.resources;
 				if (declaredResources !== undefined) {

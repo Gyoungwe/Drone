@@ -139,6 +139,11 @@ export {
 	type DomainCapabilityStatus,
 } from "./plugins/domain-capabilities";
 export {
+	createExecutionIntegrityKey,
+	createPluginExecutionCapabilities,
+	type PluginExecutionCapabilitiesOptions,
+} from "./plugins/execution-capabilities";
+export {
 	fileCapabilityHandlers,
 	PluginFileCapabilities,
 	type PluginRootGrant,

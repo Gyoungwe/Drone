@@ -7,6 +7,7 @@
 当前计划最终状态、九个 npm 公开版本及四项未完成验收的恢复配置，统一见[阶段状态汇总](plan-final-status-2026-10-26.md)。
 下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构设计](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已批准并开始实施；[P0–P7 执行计划](pluginization/native-plugin-implementation-plan.md)记录阶段状态，[SDK 运行时证据](pluginization/native-plugin-runtime-evidence.md)区分真实会话、执行适配与自动发现，[P1 正式安装包切片](pluginization/native-plugin-p1-packaged-evidence.md)记录窗口作用域后台的启停、拒绝、恢复与退出，完整领域迁移仍未完成。[P2 知识只读共享 owner](pluginization/native-plugin-knowledge-readonly-evidence.md)记录候选包、权限/资源边界、实际会话和安装包验收及完整功能缺口。
 managed native `registerCommand` 由 `plugins/{runtime,process-runtime,process-runtime-worker}.ts` 注册并按真实 SDK caller 执行 `native:command:*` 授权；声明与默认写效果在 `plugin-api/src/native.ts`，完整范围、实际 SDK 取消/停用/重建及尚不支持的 Context 见[命令证据](pluginization/native-plugin-managed-command-evidence.md)。
+真实会话问答由 `backend/src/plugins/session-capabilities.ts`、`session-engine/session-questions.ts` 与既有 AskGate 提供；原窗口答复认证、取消清卡、模型权限分流和 SDK 空字符串语义见[问答证据](pluginization/native-plugin-session-questions-evidence.md)，不代表完整 managed UI 已迁移。
 受限 managed process 的标准工具 JSON 字段和逐调用进度由 `backend/src/plugins/process-runtime{,-worker}.ts` 传输；不支持的注册回调明确拒绝。真实 SDK 并行、取消、迟到回调和加载失败后继续读取见 `backend/test/native-tool-protocol-sdk.test.mjs`，普通第三方沙箱经 `plugin-sandbox.ts` 与 `session-engine/sandbox-loader.ts` 转发同类进度，边界 schema 统一在 `backend/src/tool-progress.ts`；不代表完整 API 已完成。
 原生迁移的[能力切片证据与当前缺口](pluginization/native-plugin-capability-slice-evidence.md)与执行计划同步；完整历史分别见[计划归档](archive/native-plugin-implementation-plan-through-2026-10-27.md)和[切片证据归档](archive/native-plugin-capability-slice-evidence-through-2026-10-27.md)。历史 PASS 只适用于原版本与范围，四项外部验收不属于本轮 P0–P7。
 锁定 SDK 的 33 API、41 事件、28 UI 成员与三条运行路径的支持/拒绝边界见[原生 API 盘点](pluginization/native-pi-api-compatibility-matrix.md)；P0 仍未完成，不能用格式兼容替代运行 API 验收。
@@ -22,6 +23,8 @@ P4 任务 UI 已移入同包 `pi-core/ui`，只读消息 hook、`chat.message` �
 
 P2 后继[设置与修复后的正式安装包验收](pluginization/native-plugin-knowledge-state-gui-evidence.md)固定 `ad3cd189` DMG，覆盖状态保存拒绝/回读、真实模型工具、停用恢复和正常退出；完整知识迁移与资源关闭新合同仍待下一轮验证。
 公开 `plugin-api/src/node/execution.ts` 与相邻 `execution-types.ts` 拥有同一份通用本地容器 runner（backend Discovery → compute → public Node 子路径的真实结构迁移）；backend 与原生 Pi 均可消费，compute 不依赖 Plugin API，根/UI/runtime 合同不引入 Node。此迁移不授予执行权限。
+
+P5 C 的通用执行端口、签名 accepted/terminal receipt 与执行目录 lease 候选见[执行端口候选](pluginization/native-plugin-execution-capability-candidate.md)；native/UI 真执行、reconcile、Inquiry 与完整迁移仍未完成。
 
 P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享 Node lease 的候选范围见[共享 owner 证据](pluginization/native-plugin-discovery-owner-evidence.md)；执行/Inquiry、完整 UI 与旧 seam 删除仍未完成。
 无派生 resource 的 state/files 显式授权与宿主固有 `caller.scope(null)` 见[独立文件能力切片](pluginization/native-plugin-resource-independent-capabilities.md)；这不会授予任意路径或关闭 discovery 全功能验收。
@@ -563,4 +566,4 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 
 后继任务状态路由/managed command、知识模型评审的同 tarball 双进程整合切片见[回执](releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；该后继尚未统一来源锁及完整根门禁，不替代顶部4abdae43/253c47e检查点。
 
-已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。UI 设置经 `withUiTransition` 只撤销真实窗口调用，原生会话 owner 保留；包级显式启停及 required source 生命周期仍在后继实现。
+已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。`manager.runtimeSources()` 经 `BridgeOptions.sources` 向 native/service consumer 提供同一包描述与当前 hash 状态；它不把可见性当执行权限，激活仍需批准。UI 设置经 `withUiTransition` 只撤销真实窗口调用，原生会话 owner 保留；扫描同时保留 installationPath/nativeDeclaredPath；本应用内失效后旧描述只作为 unavailable 元数据，不能激活。包级显式启停、跨重启 required 期望及实际 selected-path 生命周期仍在后继实现。

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -26,13 +26,14 @@ async function writeManifest(
 	entries: Record<string, unknown> = {},
 	filesystem: unknown = [],
 	network: unknown = [],
+	subprocess: unknown = [],
 ): Promise<void> {
 	await writeFile(
 		join(packageRoot, "plugin.manifest.json"),
 		JSON.stringify({
 			id: "display-id-not-authenticated",
 			hosts: ["drone-desktop"],
-			permissions: { filesystem, network },
+			permissions: { filesystem, network, subprocess },
 			entrypoints: { ui: "./ui/plugin.json", desktopRuntime, ...entries },
 		}),
 	);
@@ -62,6 +63,7 @@ describe("installed UI runtime provenance", () => {
 			pluginId: "@example/results",
 			contentHash: expect.stringMatching(/^[a-f0-9]{64}$/),
 			packageRoot: await realpath(packageRoot),
+			installationPath: await realpath(packageRoot),
 			entrypoint: await realpath(join(packageRoot, "runtime.js")),
 		});
 		expect(manager.isEnabled("results-ui")).toBe(false);
@@ -150,6 +152,20 @@ describe("installed UI runtime provenance", () => {
 		});
 	}
 
+	it("requests bounded execution only for the exact installed container declaration and revokes it on rescan", async () => {
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await writeManifest("./runtime.js", {}, [], [], ["python", "container-shell"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsExecution).toBeUndefined();
+		await writeManifest("./runtime.js", {}, [], [], ["container"]);
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")).toMatchObject({ requestsExecution: true });
+		expect(manager.runtimeSource("results-ui")?.resources).toBeUndefined();
+		await writeManifest();
+		await manager.scanAll();
+		expect(manager.runtimeSource("results-ui")?.requestsExecution).toBeUndefined();
+	});
+
 	it("requests state writes only for the explicit filesystem token and clears it on rescan", async () => {
 		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
 		await writeManifest("./runtime.js", {}, ["application-state"]);
@@ -198,8 +214,10 @@ describe("installed UI runtime provenance", () => {
 			pluginId: "@example/results",
 			contentHash: expect.stringMatching(/^[a-f0-9]{64}$/),
 			packageRoot: await realpath(packageRoot),
+			installationPath: await realpath(packageRoot),
 			entrypoint: await realpath(join(packageRoot, "runtime.js")),
 			nativeEntrypoint: await realpath(join(packageRoot, "native.js")),
+			nativeDeclaredPath: await realpath(join(packageRoot, "native.js")),
 			resources: { index: await realpath(join(packageRoot, "resource.js")) },
 		});
 		await writeManifest("./runtime.js", { resources: { replacement: "./native.js" } });
@@ -404,12 +422,14 @@ it("keeps a selected native source available without a UI declaration or UI trus
 	expect(manager.list()).toEqual([]);
 	const name = manager.nativeRuntimeName(join(packageRoot, "native.js"))!;
 	expect(manager.isNativeSourceAvailable(name)).toBe(true);
+	expect(manager.runtimeSources()).toMatchObject([{ name, state: "enabled" }]);
 	expect(manager.runtimeSource(name)?.nativeEntrypoint).toBe(await realpath(join(packageRoot, "native.js")));
 	await manager.updateConfig({ enabled: false });
 	expect(manager.isNativeSourceAvailable(name)).toBe(true);
 	await writeFile(join(packageRoot, "runtime.js"), "export const replaced = true;\n");
 	expect(manager.isNativeSourceAvailable(name)).toBe(false);
 	expect(manager.runtimeSource(name)).toBeUndefined();
+	expect(manager.runtimeSources()).toMatchObject([{ name, state: "unavailable" }]);
 });
 
 it("builds installed UI outside its package so compilation cannot change native source authority", async () => {
@@ -427,4 +447,39 @@ it("builds installed UI outside its package so compilation cannot change native 
 	expect(manager.runtimeSource("results-ui")).toBe(source);
 	await manager.scanAll();
 	expect(manager.info("results-ui")).toMatchObject({ built: true });
+});
+
+it("retains an unavailable selected package descriptor when its declared native file disappears", async () => {
+	await writeFile(join(packageRoot, "native.js"), "export default function () {}\n");
+	await writeManifest("./runtime.js", { extension: "./native.js" });
+	const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+	await manager.scanAll();
+	const path = join(packageRoot, "native.js");
+	const name = manager.nativeRuntimeName(path)!;
+	await rm(path);
+	expect(manager.nativeRuntimeName(path)).toBe(name);
+	expect(manager.runtimeSource(name)).toBeUndefined();
+	await manager.scanAll();
+	expect(manager.nativeRuntimeName(path)).toBe(name);
+	expect(manager.runtimeSource(name)).toBeUndefined();
+	expect(manager.runtimeSources()).toMatchObject([{ name, state: "unavailable" }]);
+});
+
+it("revokes every alias when the installation location is retargeted to an identical package tree", async () => {
+	await writeFile(join(packageRoot, "native.js"), "export default function () {}\n");
+	await writeManifest("./runtime.js", { extension: "./native.js" });
+	const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+	await manager.scanAll();
+	await manager.updateConfig({ enabled: true, plugins: { "results-ui": { enabled: true, trusted: true } } });
+	const name = manager.nativeRuntimeName(join(packageRoot, "native.js"))!;
+	const hash = installedPackageHash(packageRoot);
+	const replacement = join(root, "replacement");
+	await cp(packageRoot, replacement, { recursive: true });
+	await rename(packageRoot, join(root, "original"));
+	await symlink(replacement, packageRoot);
+	expect(installedPackageHash(packageRoot)).toBe(hash);
+	expect(manager.runtimeSource(name)).toBeUndefined();
+	expect(manager.runtimeSource("results-ui")).toBeUndefined();
+	expect(manager.isEnabled("results-ui")).toBe(false);
+	expect(manager.runtimeSources()).toMatchObject([{ name, state: "unavailable" }]);
 });

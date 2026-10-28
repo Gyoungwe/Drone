@@ -10,6 +10,7 @@ import type {
 	SandboxRunRequest,
 	SandboxRunResult,
 } from "./execution-types.js";
+import { PluginResourceReservations } from "./reservations.js";
 
 /** Process seam kept injectable for deterministic tests without replacing production execution. */
 export type ContainerProcess = (
@@ -31,6 +32,8 @@ export interface ContainerSandboxOptions {
 	readonly tmpfsBytes?: number;
 	/** Optional process seam for runtime probing tests; production uses child_process.spawn. */
 	readonly process?: ContainerProcess;
+	/** Isolated test seam only; production uses the fixed same-user reservation directory. */
+	readonly reservationDirectory?: string;
 }
 
 const DEFAULT_IMAGES: Record<SandboxLanguage, string> = {
@@ -47,6 +50,14 @@ function outputKind(text: string): SandboxRunOutput["contentKind"] {
 	if (lines.every((line) => !line || line.startsWith("[summary]"))) return "summary";
 	if (lines.every((line) => !line || line.startsWith("[plot]"))) return "plot";
 	return "raw";
+}
+
+function boundedUtf8(text: string, maximum: number): string {
+	const bytes = Buffer.from(text);
+	if (bytes.length <= maximum) return text;
+	let end = maximum;
+	while (end > 0 && (bytes.readUInt8(end) & 0xc0) === 0x80) end -= 1;
+	return bytes.subarray(0, end).toString("utf8");
 }
 
 function commandProcess(): ContainerProcess {
@@ -76,8 +87,9 @@ async function commandExists(runtime: string, processRunner: ContainerProcess): 
 	try {
 		const result = await processRunner(runtime, ["version", "--format", "{{.Server.Version}}"], {});
 		return result.exitCode === 0;
-	} catch {
-		return false;
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+		throw error;
 	}
 }
 
@@ -94,7 +106,12 @@ export async function detectContainerRuntime(
 }
 
 function projectRunsPath(projectRoot: string, runDirectory: string): string {
-	if (isAbsolute(runDirectory) || runDirectory.includes("\u0000"))
+	if (
+		isAbsolute(runDirectory) ||
+		runDirectory.includes("\u0000") ||
+		runDirectory.includes("\\") ||
+		runDirectory.split("/").some((part) => !part || part === "." || part === "..")
+	)
 		throw new Error("run directory must be relative");
 	const root = resolve(projectRoot);
 	const candidate = resolve(root, runDirectory);
@@ -169,6 +186,33 @@ export function buildContainerSandboxArgv(
 	];
 }
 
+/** Validate/create only the canonical workspace's runs descendants, before accepting execution. */
+export async function prepareSandboxRunDirectory(
+	projectRoot: string,
+	runDirectory: string,
+	signal?: AbortSignal,
+): Promise<string> {
+	const hostRunDirectory = projectRunsPath(projectRoot, runDirectory);
+	const canonicalProject = await realpath(projectRoot);
+	if (canonicalProject !== projectRoot)
+		throw new Error("Container workspace root changed or contains a symlink");
+	let canonicalRun = canonicalProject;
+	for (const part of relative(canonicalProject, hostRunDirectory).split(/[\\/]/)) {
+		signal?.throwIfAborted();
+		canonicalRun = resolve(canonicalRun, part);
+		try {
+			await mkdir(canonicalRun);
+		} catch (error) {
+			// Concurrent accepted executions may create their common runs parent first.
+			if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+		}
+		const entry = await lstat(canonicalRun);
+		if (entry.isSymbolicLink() || !entry.isDirectory() || (await realpath(canonicalRun)) !== canonicalRun)
+			throw new Error("Container run directory contains a symlink or is not a directory");
+	}
+	return canonicalRun;
+}
+
 /**
  * Real container-only runner. It mounts the selected project runs directory as
  * the sole writable volume, disables networking, drops capabilities, and uses
@@ -219,25 +263,15 @@ export class ContainerSandboxRunner implements ControlledSandboxRunner {
 
 	async run(request: SandboxRunRequest): Promise<SandboxRunResult> {
 		request.signal?.throwIfAborted();
-		const hostRunDirectory = projectRunsPath(this.projectRoot, request.runDirectory);
-		const canonicalProject = await realpath(this.projectRoot);
-		if (canonicalProject !== this.projectRoot)
-			throw new Error("Container workspace root changed or contains a symlink");
-		let canonicalRun = canonicalProject;
-		for (const part of relative(canonicalProject, hostRunDirectory).split(/[\\/]/)) {
-			request.signal?.throwIfAborted();
-			canonicalRun = resolve(canonicalRun, part);
-			try {
-				await mkdir(canonicalRun);
-			} catch (error) {
-				// Concurrent accepted executions may create their common runs parent first.
-				if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-			}
-			const entry = await lstat(canonicalRun);
-			if (entry.isSymbolicLink() || !entry.isDirectory() || (await realpath(canonicalRun)) !== canonicalRun)
-				throw new Error("Container run directory contains a symlink or is not a directory");
-		}
+		if (request.code.includes("\u0000")) throw new Error("Container code cannot contain a NUL byte");
+		const canonicalRun = await prepareSandboxRunDirectory(
+			this.projectRoot,
+			request.runDirectory,
+			request.signal,
+		);
 		request.signal?.throwIfAborted();
+		const reservations = new PluginResourceReservations(this.options.reservationDirectory);
+		reservations.reserve("execution-directories", [canonicalRun]);
 		const token = randomUUID();
 		const name = `drone-discovery-${token}`;
 		const args = [
@@ -258,14 +292,17 @@ export class ContainerSandboxRunner implements ControlledSandboxRunner {
 			let stdout = "";
 			let stderr = "";
 			let producedBytes = 0;
+			let retainedBytes = 0;
 			let stopped: Error | undefined;
 			let processError: Error | undefined;
 			const max = request.maxOutputBytes;
 			const append = (value: Buffer | string, target: "stdout" | "stderr") => {
 				const text = typeof value === "string" ? value : value.toString("utf8");
 				producedBytes += Buffer.byteLength(text);
-				if (target === "stdout") stdout = `${stdout}${text}`.slice(0, max);
-				else stderr = `${stderr}${text}`.slice(0, max);
+				const retained = boundedUtf8(text, max - retainedBytes);
+				retainedBytes += Buffer.byteLength(retained);
+				if (target === "stdout") stdout += retained;
+				else stderr += retained;
 			};
 			child.stdout.on("data", (value: Buffer) => append(value, "stdout"));
 			child.stderr.on("data", (value: Buffer) => append(value, "stderr"));
@@ -296,16 +333,27 @@ export class ContainerSandboxRunner implements ControlledSandboxRunner {
 					});
 				if (stderr)
 					outputs.push({ text: stderr, contentKind: "raw", classification: request.dataClassification });
-				void this.removeOwnedContainer(name, token).then(() => {
-					if (stopped || processError) reject(stopped ?? processError);
-					else
-						resolveResult({
-							exitCode: exitCode ?? 1,
-							outputs,
-							durationMs: Date.now() - started,
-							producedBytes,
-						});
-				}, reject);
+				void this.removeOwnedContainer(name, token)
+					.then(() => {
+						try {
+							reservations.dispose();
+						} catch (cause) {
+							throw Object.assign(
+								new Error("Execution directory writer lease could not be released", { cause }),
+								{ code: "DISCOVERY_CLEANUP_FAILED" },
+							);
+						}
+					})
+					.then(() => {
+						if (stopped || processError) reject(stopped ?? processError);
+						else
+							resolveResult({
+								exitCode: exitCode ?? 1,
+								outputs,
+								durationMs: Date.now() - started,
+								producedBytes,
+							});
+					}, reject);
 			});
 		});
 	}
@@ -357,3 +405,35 @@ export function unavailableContainerCapabilities(): SandboxCapabilities {
 }
 
 export type * from "./execution-types.js";
+
+/** Resolve only configured language defaults that are already cached; never pull or enumerate images. */
+export async function describeContainerExecution(
+	options: Pick<ContainerSandboxOptions, "runtime" | "process" | "pythonImage" | "rImage"> = {},
+): Promise<{ runtime?: "docker" | "podman"; images: Partial<Record<SandboxLanguage, string>> }> {
+	const processRunner = options.process ?? commandProcess();
+	const runtime = await detectContainerRuntime(options.runtime, processRunner);
+	const images: Partial<Record<SandboxLanguage, string>> = {};
+	if (!runtime) return { images };
+	for (const language of ["python", "r"] as const) {
+		const image = imageFor({ projectRoot: "/", ...options }, language);
+		const result = await processRunner(runtime, ["image", "inspect", "--format", "{{.Id}}", image], {});
+		if (result.exitCode !== 0) continue;
+		const id = result.stdout.trim();
+		if (!/^sha256:[a-f0-9]{64}$/.test(id))
+			throw new Error("Container engine returned an invalid cached image identity");
+		images[language] = id;
+	}
+	return { runtime, images };
+}
+export type {
+	ExecutionReceiptAtomicWrite,
+	ExecutionReceiptWriteBoundary,
+	SignedExecutionReceipt,
+} from "./execution-storage.js";
+export { NodeExecutionReceiptStorage } from "./execution-storage.js";
+export type {
+	ExecutionIdentity,
+	ExecutionPrivateReceipt,
+	ExecutionReceiptStorage,
+} from "./execution-transactions.js";
+export { ExecutionTransactions, executionOwnerKey } from "./execution-transactions.js";

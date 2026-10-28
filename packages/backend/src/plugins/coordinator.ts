@@ -14,6 +14,8 @@ import type { PluginSessionCallerContext } from "./session-caller";
 export interface PluginRuntimeSource {
 	readonly pluginId: string;
 	readonly packageRoot: string;
+	readonly installationPath?: string;
+	readonly nativeDeclaredPath?: string;
 	readonly entrypoint: string;
 	readonly nativeEntrypoint?: string;
 	readonly contentHash?: string;
@@ -23,6 +25,7 @@ export interface PluginRuntimeSource {
 	readonly requestsFileRead?: boolean;
 	readonly requestsFileWrite?: boolean;
 	readonly requestsModel?: boolean;
+	readonly requestsExecution?: boolean;
 	readonly resources?: Readonly<Record<string, string>>;
 }
 export interface PluginRuntimeOwner {
@@ -44,6 +47,11 @@ export interface PluginNativeIntegration {
 export interface PluginRuntimeBridgeOptions {
 	questionTransport?(owner: PluginRuntimeOwner): AskQuestionRoute;
 	source(name: string): PluginRuntimeSource | undefined;
+	sources?(): readonly {
+		readonly name: string;
+		readonly source: PluginRuntimeSource;
+		readonly state: "enabled" | "unavailable" | "disabled";
+	}[];
 	requiredSources?(): readonly {
 		readonly source: PluginRuntimeSource;
 		readonly state: "enabled" | "unavailable" | "disabled";
@@ -97,6 +105,8 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 	return (
 		a.pluginId === b?.pluginId &&
 		a.packageRoot === b.packageRoot &&
+		a.installationPath === b.installationPath &&
+		a.nativeDeclaredPath === b.nativeDeclaredPath &&
 		a.entrypoint === b.entrypoint &&
 		a.nativeEntrypoint === b.nativeEntrypoint &&
 		a.contentHash === b.contentHash &&
@@ -106,6 +116,7 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.requestsFileRead === b.requestsFileRead &&
 		a.requestsFileWrite === b.requestsFileWrite &&
 		a.requestsModel === b.requestsModel &&
+		a.requestsExecution === b.requestsExecution &&
 		JSON.stringify(a.resources) === JSON.stringify(b.resources)
 	);
 }
