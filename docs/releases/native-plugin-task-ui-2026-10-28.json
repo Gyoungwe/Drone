@@ -288,5 +288,61 @@
 		"scientific example task/home/workflow host ownership",
 		"host task status natural-language routing",
 		"whole P0-P7 clean root gates and final no-domain-plugin acceptance"
-	]
+	],
+	"statusIntentFollowup": {
+		"hostSource": "d2e41826",
+		"pluginSource": "c11a948",
+		"packageSha256": "c80b35e01fda417241d7e48016dc2901f2e979a79fbc5b75063e846781f47c37",
+		"checks": [
+			{
+				"name": "sdk25",
+				"exit": 0,
+				"log": "/tmp/task-status-final-sdk.log",
+				"logSha256": "4ecbc4cae04e6ca35024c63a85cdb7a340b3a932bf1c136d043b4f94c3beaef6"
+			},
+			{
+				"name": "core29node210vitest",
+				"exit": 0,
+				"log": "/tmp/task-status-core-tests-final.log",
+				"logSha256": "b211a207ca1fd44c8efedc6e477cd6e79a56e5144403b4cbf11f0bda476ad9b1"
+			},
+			{
+				"name": "backend-types",
+				"exit": 0,
+				"log": "/tmp/task-status-final-host-types.log",
+				"logSha256": "a41db65affbd78ac970623016f73fd80fd5fef5052db140fbc712d6d74a8e8df"
+			},
+			{
+				"name": "core-types",
+				"exit": 0,
+				"log": "/tmp/task-status-final-core-types.log",
+				"logSha256": "4c71a23bd66c8e6c7de9407390862ea952c1507cc8dbce8bbee56cb4dda9ee82"
+			},
+			{
+				"name": "core-build-check",
+				"exit": 0,
+				"log": "/tmp/task-status-final-core-buildcheck.log",
+				"logSha256": "d1f6db9741f87fc2304fc14ceb23a98542fea93bb8f7b0ec7217b4d05b09b285"
+			},
+			{
+				"name": "core-smoke",
+				"exit": 0,
+				"log": "/tmp/task-status-final-core-smoke.log",
+				"logSha256": "f46053056e5562dcf0bd46b86c3e244fcb2c78931360bee7b2dba142eea9abeb"
+			},
+			{
+				"name": "lint",
+				"exit": 0,
+				"log": "/tmp/task-status-final-lint.log",
+				"logSha256": "abc51c9105f240b57405bdc635f72d2052f012d48df6d44f86315fbc3718b9f4"
+			},
+			{
+				"name": "architecture",
+				"exit": 0,
+				"log": "/tmp/task-status-final-arch.log",
+				"logSha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d"
+			}
+		],
+		"scope": "Actual installed core Pi input hook; generic SDK handled receipt and no durable queued replay; no-core phrases and image prompts still reach model. Full default knowledge publication remains an explicit host domain migration gap."
+	}
 }
