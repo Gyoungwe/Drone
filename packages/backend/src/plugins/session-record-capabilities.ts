@@ -38,6 +38,7 @@ export function sessionRecordCapabilityHandlers(
 			inputSchema: Type.Null(),
 			resultSchema: Type.Object(
 				{
+					mode: Type.Union([Type.Literal("persistent"), Type.Literal("memory")]),
 					state: Type.Union([durability, Type.Literal("needs-reopen")]),
 					error: Type.Union([Type.Null(), Type.String()]),
 					records: Type.Array(
