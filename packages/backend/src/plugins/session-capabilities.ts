@@ -96,7 +96,7 @@ export function sessionCapabilityHandlers(
 						type: "object",
 						properties: {
 							kind: { const: "input" },
-							value: { type: "string", minLength: 1, maxLength: 16000 },
+							value: { type: "string", maxLength: 16000 },
 						},
 						required: ["kind", "value"],
 						additionalProperties: false,

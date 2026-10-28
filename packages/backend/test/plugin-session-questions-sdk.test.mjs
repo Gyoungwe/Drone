@@ -1,11 +1,12 @@
-import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
 import { createBackend } from "../src/create-backend";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
+import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 
 let root, backend, bridge;
 afterEach(async () => {
@@ -18,7 +19,7 @@ afterEach(async () => {
 	if (root) await rm(root, { recursive: true, force: true });
 });
 const answer = (value) => ({ kind: "answer", mode: "submit", answers: { value: { values: [value] } } });
-async function setup({ ui = true } = {}) {
+async function setup({ ui = true, isolated = false } = {}) {
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-session-question-")));
 	const cwd = join(root, "project"),
 		agentDir = join(root, "agent");
@@ -55,6 +56,18 @@ async function setup({ ui = true } = {}) {
 		resolved = [],
 		accepted = [];
 	const source = { pluginId: "question-client", packageRoot: root, entrypoint: join(root, "client.mjs") };
+	if (isolated)
+		await writeFile(
+			source.entrypoint,
+			`export default async()=>{
+  const accepted=[];
+  return {operations:{
+   input:{effect:"write",inputSchema:{type:"object"},resultSchema:{type:"object"},execute:async(input,context)=>{const value=await context.capabilities.call("session.input",input);accepted.push(value);return value;}},
+   snapshot:{effect:"read",inputSchema:{type:"null"},resultSchema:{type:"array"},execute:async()=>accepted}
+  },dispose:async()=>{}};
+ };`,
+		);
+
 	const owners = [1, 2].map((id) => ({ id, isDestroyed: () => false }));
 	bridge = new PluginRuntimeBridge({
 		source: () => source,
@@ -70,24 +83,33 @@ async function setup({ ui = true } = {}) {
 			resolved: (result) => resolved.push({ owner: owner.id, ...result }),
 		}),
 		capabilities: () => ({ handlers: service.getPluginSessionCapabilities(), resources: [] }),
-		factory: () => async () => ({
-			operations: Object.fromEntries(
-				["select", "input", "confirm"].map((kind) => [
-					kind,
-					{
-						effect: "write",
-						inputSchema: { type: "object" },
-						resultSchema: { type: "object" },
-						execute: async (input, ctx) => {
-							const result = await ctx.capabilities.call(`session.${kind}`, input);
-							accepted.push(kind);
-							return result;
-						},
-					},
-				]),
-			),
-			dispose: async () => {},
-		}),
+		factory: () =>
+			isolated
+				? createProcessPluginRuntime({
+						...source,
+						runtimeDirectory: resolve(
+							import.meta.dirname,
+							`../../desktop/plugin-runtime/${process.platform}-${process.arch}`,
+						),
+					})
+				: async () => ({
+						operations: Object.fromEntries(
+							["select", "input", "confirm"].map((kind) => [
+								kind,
+								{
+									effect: "write",
+									inputSchema: { type: "object" },
+									resultSchema: { type: "object" },
+									execute: async (input, ctx) => {
+										const result = await ctx.capabilities.call(`session.${kind}`, input);
+										accepted.push(kind);
+										return result;
+									},
+								},
+							]),
+						),
+						dispose: async () => {},
+					}),
 	});
 	const clients = await Promise.all(
 		owners.map(async (owner) => ({
@@ -285,3 +307,44 @@ it("uses the actual active SDK signal to cancel its existing AskGate pending", a
 		await entry.session.waitForIdle();
 	}
 });
+
+it("preserves legitimate empty and whitespace input through the real SDK binding and AskGate", async () => {
+	const { service, requests, invoke } = await setup();
+	for (const value of ["", "  exact user input  "]) {
+		const pending = invoke(0, "input", { title: "Native input permits empty text" });
+		await vi.waitFor(() => expect(requests).toHaveLength(value === "" ? 1 : 2));
+		const request = requests.at(-1).request;
+		expect(request.questions[0]).toMatchObject({ type: "text", required: false });
+		service.respondAsk(request.id, { kind: "answer", answers: { value: { customText: value } } }, 1);
+		await expect(pending).resolves.toEqual({ kind: "input", value });
+	}
+	const cancelled = invoke(0, "input", { title: "Actual cancellation" });
+	await vi.waitFor(() => expect(requests).toHaveLength(3));
+	service.respondAsk(requests[2].request.id, { kind: "cancel" }, 1);
+	await expect(cancelled).resolves.toEqual({ kind: "cancelled" });
+});
+
+it("round-trips real answers and cancellation through the restricted production worker without a second question ledger", async () => {
+	const { service, requests, clients, invoke } = await setup({ isolated: true });
+	const pending = invoke(0, "input", { title: "Restricted worker asks" });
+	await vi.waitFor(() => expect(requests).toHaveLength(1));
+	service.respondAsk(requests[0].request.id, { kind: "answer", answers: { value: { customText: "" } } }, 1);
+	await expect(pending).resolves.toEqual({ kind: "input", value: "" });
+	const stopped = invoke(1, "input", { title: "Restricted worker cancelled" }, "worker-question").catch(
+		(error) => error,
+	);
+	await vi.waitFor(() => expect(requests).toHaveLength(2));
+	await bridge.cancel(clients[1].owner, clients[1].binding, clients[1].selection, "worker-question");
+	expect(await stopped).toBeInstanceOf(Error);
+	expect(
+		service.respondAsk(
+			requests[1].request.id,
+			{ kind: "answer", answers: { value: { customText: "late" } } },
+			2,
+		),
+	).toBe(false);
+	const client = clients[0];
+	await expect(
+		bridge.invoke(client.owner, client.binding, "snapshot", null, client.selection),
+	).resolves.toEqual([{ kind: "input", value: "" }]);
+}, 20000);
