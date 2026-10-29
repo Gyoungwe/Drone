@@ -26,6 +26,8 @@ jobs:
         with:
           name: locked-plugin-tarballs
           path: vendor/plugins/.tarballs/
+          # upload-artifact v4 skips dot-directories unless asked.
+          include-hidden-files: true
           if-no-files-found: error
 
   static:
