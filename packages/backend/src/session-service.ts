@@ -163,6 +163,8 @@ export class SessionService extends SessionServiceApi {
 	readonly pluginSessions = combinedSessionDirectory(this.registry, this.childSessions);
 	/** Host-issued task authorizations, keyed by live primary session entries. */
 	readonly taskGrants = new TaskGrantStore(this.pluginSessions);
+	/** Read decisions of live sessions' permission gates, by session id. */
+	readonly readChecks = new Map<string, (path: string) => Promise<boolean>>();
 	readonly askHandlers = new Set<AskHandler>();
 	readonly trustHandlers = new Set<TrustHandler>();
 	readonly loginHandlers = new Set<LoginHandler>();
@@ -325,6 +327,12 @@ export class SessionService extends SessionServiceApi {
 			},
 			registerChildSession: (entry) => this.registerChildSession(entry),
 			taskWriteRoots: (sessionId) => (sessionId ? this.taskGrants.writeRoots(sessionId) : undefined),
+			registerReadCheck: (sessionId, check) => {
+				this.readChecks.set(sessionId, check);
+				return () => {
+					if (this.readChecks.get(sessionId) === check) this.readChecks.delete(sessionId);
+				};
+			},
 			setMcpStatus: (cwd, status) => this.setMcpStatus(cwd, status),
 			// Registers ssh_hosts and lets ssh/bio tools resolve registered host names; the ssh tool's
 			// prompt guideline tells the model to call ssh_hosts, so it must be present whenever the host has a registry.

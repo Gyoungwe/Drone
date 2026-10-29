@@ -100,6 +100,8 @@ export interface SessionExtensionDependencies {
 	registerChildSession?: (entry: RegisteredSession) => () => void;
 	/** Host task grants: approved write directories of a session's current task. */
 	taskWriteRoots?: (sessionId: string | undefined) => readonly string[] | undefined;
+	/** Per-session read decision published by the permission gate (see PermissionGateOptions). */
+	registerReadCheck?: (sessionId: string, check: (path: string) => Promise<boolean>) => () => void;
 	setMcpStatus: (cwd: string, status: McpStatus) => void;
 	/** 已登记的远程主机（设置 › 高级 › SSH 主机）；缺省则 ssh 只认 ~/.ssh/config 与直接主机名 */
 	listSshHosts?: () => Promise<SshHostEntry[]>;
@@ -234,6 +236,7 @@ export function buildSessionExtensionFactories(
 					confirm,
 					getMode: () => modeRef?.current ?? "default",
 					taskWriteRoots: deps.taskWriteRoots,
+					registerReadCheck: deps.registerReadCheck,
 				})
 			: undefined;
 	if (permission) factories.push(permission.gate);

@@ -41,7 +41,15 @@ afterEach(() => {
 
 const entryFor = (sessionId: string, cwd: string, extra: Partial<RegisteredSession> = {}, trusted = true) =>
 	({
-		session: { sessionId, settingsManager: { isProjectTrusted: () => trusted } },
+		session: {
+			sessionId,
+			isStreaming: false,
+			sent: [] as unknown[],
+			async sendCustomMessage(message: unknown, options: unknown) {
+				this.sent.push({ message, options });
+			},
+			settingsManager: { isProjectTrusted: () => trusted },
+		},
 		unsubscribe: () => {},
 		cwd,
 		...extra,
@@ -297,6 +305,64 @@ describe("task grant policy through the plugin bridge", () => {
 		);
 		expect(h.store.writeRoots("s1")).toBeUndefined();
 		await h.bridge.close();
+	});
+});
+
+describe("automatic continuation", () => {
+	const source: PluginRuntimeSource = {
+		pluginId: "tasks",
+		packageRoot: "/t",
+		entrypoint: "/t/r.mjs",
+		contentHash: "h1",
+	};
+	const context = (entry: RegisteredSession) =>
+		({
+			pluginId: "tasks",
+			scope: { kind: "session", sessionId: "s1", workspaceDirectory: project, workspaceId: "w" },
+			sessionIdentity: entry,
+			signal: new AbortController().signal,
+		}) as never;
+	it("starts a hidden host message only under this plugin's grant, for its task, idle, within budget", async () => {
+		const registry = new SessionRegistry();
+		const store = new TaskGrantStore(registry);
+		store.bindSourceValidator(() => true);
+		const entry = entryFor("s1", project);
+		registry.add(entry);
+		const handlers = taskGrantCapabilityHandlers(store, registry, source);
+		const proceed = (taskId = "t") =>
+			handlers["task.continue"].execute({ taskId, prompt: "continue" }, context(entry));
+		await expect(proceed()).rejects.toThrow("current task authorization");
+		const grant = {
+			taskId: "t",
+			contractHash: "0".repeat(64),
+			writeRoots: [],
+			maxCalls: 5,
+			maxAutoResumes: 2,
+		};
+		store.issue(entry, { ...grant, source: { ...source, contentHash: "other" } });
+		await expect(proceed()).rejects.toThrow("current task authorization");
+		store.issue(entry, { ...grant, source });
+		await expect(proceed("other")).rejects.toThrow("authorized task");
+		(entry.session as { isStreaming: boolean }).isStreaming = true;
+		await expect(proceed()).rejects.toThrow("idle");
+		(entry.session as { isStreaming: boolean }).isStreaming = false;
+		expect(await proceed()).toMatchObject({ remaining: 1 });
+		expect(await proceed()).toMatchObject({ remaining: 0 });
+		await expect(proceed()).rejects.toThrow("used up");
+		const sent = (entry.session as unknown as { sent: { message: any; options: any }[] }).sent;
+		expect(sent).toHaveLength(2);
+		expect(sent[0]).toMatchObject({
+			message: {
+				customType: "plugin-continue:tasks",
+				display: false,
+				content: "continue",
+				details: { taskId: "t" },
+			},
+			options: { triggerTurn: true, deliverAs: "followUp" },
+		});
+		// A new authorization starts a fresh budget.
+		store.issue(entry, { ...grant, source });
+		expect(await proceed()).toMatchObject({ remaining: 1 });
 	});
 });
 

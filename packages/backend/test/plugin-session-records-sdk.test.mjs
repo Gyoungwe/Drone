@@ -208,7 +208,10 @@ it("lazy SDK storage explicitly defers without creating a file; idle notificatio
 		content: "Ordinary plugin result",
 		display: true,
 	});
-	expect(message.details).toBeUndefined();
+	// Only the host-generated transcript id; a plugin cannot attach its own details (only a
+	// host-validated task view, which is presentation).
+	expect(message.details).toEqual({ reportId: expect.stringMatching(/^[0-9a-f-]{36}$/) });
+	await expect(invoke("record-a", "notify", { content: "x", details: { trusted: true } })).rejects.toThrow();
 	expect(faux.state.callCount).toBe(0);
 });
 it("a real SDK inMemory session remains explicitly deferred", async () => {

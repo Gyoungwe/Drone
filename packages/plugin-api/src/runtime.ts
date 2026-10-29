@@ -307,6 +307,8 @@ export interface PluginSessionRecordReadResult {
 }
 export interface PluginSessionNotifyInput {
 	readonly content: string;
+	/** Optional task view rendered by the host as a status card; presentation only. */
+	readonly view?: unknown;
 }
 export interface PluginSessionNotifyResult {
 	readonly durability: "durable" | "deferred";

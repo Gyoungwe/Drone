@@ -366,6 +366,7 @@ export function createDesktopRuntime(
 		| "getPluginSessionCapabilities"
 		| "getPluginTaskGrantCapabilities"
 		| "getTaskGrants"
+		| "getPluginWorkspaceCapabilities"
 	>,
 	questionTransport: NonNullable<DesktopRuntimeBridgeOptions["questionTransport"]>,
 ): DesktopRuntimeBridge {
@@ -485,6 +486,7 @@ export function createDesktopRuntime(
 					...resourceCapabilities.handlers,
 					...executionCapabilities?.handlers,
 					...(source.requestsTaskGrant ? sessions.getPluginTaskGrantCapabilities(source) : {}),
+					...(source.requestsWorkspaceRead ? sessions.getPluginWorkspaceCapabilities() : {}),
 					"session.inspect": capabilities["session.inspect"],
 					"session.tools": capabilities["session.tools"],
 					"session.select": capabilities["session.select"],

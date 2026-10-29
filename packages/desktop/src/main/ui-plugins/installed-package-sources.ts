@@ -85,6 +85,7 @@ export interface InstalledUiRuntimeSource {
 	requestsModel?: boolean;
 	requestsExecution?: boolean;
 	requestsTaskGrant?: boolean;
+	requestsWorkspaceRead?: boolean;
 	resources?: Readonly<Record<string, string>>;
 }
 
@@ -242,6 +243,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 							deliveryProjection?: unknown;
 							nativeChildSessions?: unknown;
 							taskGrants?: unknown;
+							workspaceRead?: unknown;
 							provides?: unknown;
 							requires?: unknown;
 							recordAdoptions?: unknown;
@@ -305,6 +307,11 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 					if (manifest.drone.taskGrants !== "request")
 						throw new Error("drone.taskGrants must be request when declared");
 					runtime.requestsTaskGrant = true;
+				}
+				if (manifest.drone?.workspaceRead !== undefined) {
+					if (manifest.drone.workspaceRead !== "session")
+						throw new Error("drone.workspaceRead must be session when declared");
+					runtime.requestsWorkspaceRead = true;
 				}
 				Object.assign(runtime, installedServices(manifest.drone ?? {}));
 				if (manifest.drone?.recordAdoptions !== undefined)
@@ -376,6 +383,10 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 		}
 		if (manifest.drone?.nativeChildSessions !== undefined && !runtime) {
 			discoveries.push({ packageName, error: "drone.nativeChildSessions requires a desktopRuntime owner" });
+			continue;
+		}
+		if (manifest.drone?.workspaceRead !== undefined && !runtime) {
+			discoveries.push({ packageName, error: "drone.workspaceRead requires a desktopRuntime owner" });
 			continue;
 		}
 		if (manifest.drone?.taskGrants !== undefined && !runtime) {

@@ -25,6 +25,7 @@ import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plug
 import { sessionCapabilityHandlers } from "../plugins/session-capabilities";
 import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
 import { type TaskGrantStore, taskGrantCapabilityHandlers } from "../plugins/task-grants";
+import { workspaceCapabilityHandlers } from "../plugins/workspace-capabilities";
 import { walkProjectFiles } from "../project/files";
 import { TraceRecorder } from "../session/trace";
 import { SessionRecordStore } from "../session-engine/session-records";
@@ -94,6 +95,11 @@ export class SessionServiceApi extends SessionSettingsApi {
 	/** Task authorization capabilities bound to one installed plugin source. */
 	getPluginTaskGrantCapabilities(source: PluginRuntimeSource) {
 		return taskGrantCapabilityHandlers(this.host.taskGrants, this.host.pluginSessions, source);
+	}
+
+	/** Workspace reads under the calling session's current read permissions. */
+	getPluginWorkspaceCapabilities() {
+		return workspaceCapabilityHandlers(this.host.pluginSessions, this.host.readChecks);
 	}
 
 	getTaskGrants(): TaskGrantStore {

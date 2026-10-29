@@ -86,7 +86,13 @@ export function checkpointFromBranch(
 		["todo-reminder", "todo"],
 		["drone-subagent-result", "subagent"],
 	] as const) {
-		const message = [...messages].reverse().find((message) => message.customType === customType);
+		const message = [...messages]
+			.reverse()
+			.find(
+				(message) =>
+					message.customType === customType ||
+					(kind === "task" && String(message.customType).startsWith("plugin-notice:")),
+			);
 		if (!message) continue;
 		const content = contentText(message.content);
 		if (content) findings.push(`${customType}: ${content}`);

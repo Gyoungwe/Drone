@@ -768,6 +768,7 @@ it("exposes eight generic session handlers without a model declaration, then gat
 		getPluginSessionCapabilities: () => handlers,
 		getPluginTaskGrantCapabilities: () => ({ "task.grant.request": handler }),
 		getTaskGrants: () => taskGrants,
+		getPluginWorkspaceCapabilities: () => ({ "workspace.readFile": handler }),
 		getStorageRegistry: () => new StorageRegistry(),
 	};
 	const taskGrants = { bindSourceValidator: vi.fn() };
@@ -826,5 +827,11 @@ it("exposes eight generic session handlers without a model declaration, then gat
 		owner,
 	)(activation());
 	expect(withTask.handlers["task.grant.request"]).toBe(handler);
+	expect(withTask.handlers["workspace.readFile"]).toBeUndefined();
+	const withRead = await desktop.bridgeOptions.capabilities(
+		{ ...selected, requestsWorkspaceRead: true },
+		owner,
+	)(activation());
+	expect(withRead.handlers["workspace.readFile"]).toBe(handler);
 	expect(desktop.bridgeOptions.taskGrants).toBe(taskGrants);
 });

@@ -100,6 +100,17 @@ it("decodes a task authorization request and rejects other values or a missing o
 	]);
 });
 
+it("decodes a session workspace read declaration", async () => {
+	await manifest({ drone: { workspaceRead: "session" } });
+	expect(await discoverInstalledPackages(modules)).toMatchObject([
+		{ runtime: { requestsWorkspaceRead: true } },
+	]);
+	await manifest({ drone: { workspaceRead: "all" } });
+	expect(await discoverInstalledPackages(modules)).toEqual([
+		{ packageName: "@example/native", error: expect.stringContaining("drone.workspaceRead must be session") },
+	]);
+});
+
 it("decodes service-only declarations from the same native source without loading plugin code", async () => {
 	await manifest({
 		requires: { hostCapabilities: ["vault-read"] },
