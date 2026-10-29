@@ -361,7 +361,11 @@ export function createDesktopRuntime(
 	runtimeDirectory: string,
 	sessions: Pick<
 		SessionServicePort,
-		"getPluginCallerContext" | "getStorageRegistry" | "getPluginSessionCapabilities"
+		| "getPluginCallerContext"
+		| "getStorageRegistry"
+		| "getPluginSessionCapabilities"
+		| "getPluginTaskGrantCapabilities"
+		| "getTaskGrants"
 	>,
 	questionTransport: NonNullable<DesktopRuntimeBridgeOptions["questionTransport"]>,
 ): DesktopRuntimeBridge {
@@ -372,6 +376,7 @@ export function createDesktopRuntime(
 		sources: () => manager.runtimeSources(),
 		classifySelectedPath: (path) => manager.classifyNativeSelection(path),
 		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
+		taskGrants: sessions.getTaskGrants(),
 		questionTransport,
 		enabled: (name) => manager.isEnabled(name) || manager.isNativeSourceAvailable(name),
 		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
@@ -479,6 +484,7 @@ export function createDesktopRuntime(
 				handlers: {
 					...resourceCapabilities.handlers,
 					...executionCapabilities?.handlers,
+					...(source.requestsTaskGrant ? sessions.getPluginTaskGrantCapabilities(source) : {}),
 					"session.inspect": capabilities["session.inspect"],
 					"session.tools": capabilities["session.tools"],
 					"session.select": capabilities["session.select"],
@@ -538,12 +544,18 @@ export async function approveDesktopRuntime(
 		type: "question",
 		signal,
 		title: hostText("插件后台权限", "Plugin runtime permission"),
-		message: operation
-			? hostText(
-					`允许 ${source.pluginId} 执行 ${operation}？`,
-					`Allow ${source.pluginId} to execute ${operation}?`,
-				)
-			: hostText(`启动 ${source.pluginId} 的桌面后台？`, `Start the desktop runtime for ${source.pluginId}?`),
+		message:
+			operation === "capability:task.grant.request"
+				? hostText("开始执行这个任务？", "Start this task?")
+				: operation
+					? hostText(
+							`允许 ${source.pluginId} 执行 ${operation}？`,
+							`Allow ${source.pluginId} to execute ${operation}?`,
+						)
+					: hostText(
+							`启动 ${source.pluginId} 的桌面后台？`,
+							`Start the desktop runtime for ${source.pluginId}?`,
+						),
 		detail:
 			approvalDetail ??
 			hostText(

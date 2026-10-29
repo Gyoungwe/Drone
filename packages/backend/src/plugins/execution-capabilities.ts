@@ -204,6 +204,7 @@ export async function createPluginExecutionCapabilities(
 			},
 			"execution.run": {
 				effect: "write",
+				approval: "always",
 				inputSchema: Type.Object(
 					{
 						requestId: id,

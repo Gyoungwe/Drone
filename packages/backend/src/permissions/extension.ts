@@ -40,6 +40,8 @@ export interface PermissionGateOptions {
 	confirm?: PermissionConfirm;
 	/** 会话权限模式实时读取（每次 tool_call 调，切换即时生效）；缺省恒 default（与现状行为一致） */
 	getMode?: () => PermissionMode;
+	/** Host task grant (task-grants.ts): directories the user approved for this session's task. */
+	taskWriteRoots?: (sessionId: string | undefined) => readonly string[] | undefined;
 }
 
 /** 按会话权限模式的可变引用（PiBackend 持有 map，随扩展工厂闭包注入求值链） */
@@ -238,14 +240,18 @@ export function makePermissionGateExtensions(
 					patternText &&
 					config.rules[event.toolName] === "ask"
 				) {
-					let roots: unknown;
-					await pi.events?.emit?.("drone:task-write-consent", {
-						cwd: ctx.cwd,
-						sessionId: ctx.sessionManager?.getSessionId(),
-						respond: (grant: { writeRoots?: unknown } | null) => {
-							roots = grant?.writeRoots;
-						},
-					});
+					const sessionId = ctx.sessionManager?.getSessionId();
+					// Host-issued grant first; the event bridge only serves the in-process startup taskHost
+					// and is removed with it at the P4 cutover.
+					let roots: unknown = options?.taskWriteRoots?.(sessionId);
+					if (roots === undefined)
+						await pi.events?.emit?.("drone:task-write-consent", {
+							cwd: ctx.cwd,
+							sessionId: ctx.sessionManager?.getSessionId(),
+							respond: (grant: { writeRoots?: unknown } | null) => {
+								roots = grant?.writeRoots;
+							},
+						});
 					if (await taskWriteAllowed(roots, patternText)) {
 						audit.record({
 							t: new Date().toISOString(),

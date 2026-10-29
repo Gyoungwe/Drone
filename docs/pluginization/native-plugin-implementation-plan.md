@@ -9,7 +9,7 @@
 3. **CI 即证据。** 回执记录 CI 运行链接、测试文件与提交；不再登记只存在于本机的 `/tmp` 日志路径与哈希。环境受限（root 下 chmod 注入、本机 Docker、正式安装包 GUI）的项照实标注。
 4. **零领域宿主改为递减基线。** P6 的“无科研插件构建 + 启动 + 聊天冒烟”提前做成 CI 检查，记录当前领域依赖基线，只允许减少（同 `check:arch` 模式），各阶段把它往绿推。
 5. **私有 API 候选改用 npm 预发布版**（如 `1.3.0-rc.N` 发到 `next` 标签），停止向两个仓库提交新的 vendored tarball。正式版仍按既有发布红线。
-6. **P4 先做宿主签发的任务授权**，替换 `drone:task-write-consent` 的插件回调授权桥，再迁任务状态机与删除启动期 taskHost/coreHost。
+6. **P4 先做宿主签发的任务授权**，替换 `drone:task-write-consent` 的插件回调授权桥，再迁任务状态机与删除启动期 taskHost/coreHost。宿主侧已实现（[设计与实现](../superpowers/specs/2026-10-29-host-task-grant-design.md)）；插件 consumer 随任务状态机迁移接入。
 
 
 当前标准门禁基线为宿主 `bb918979`、插件 `1707f6c`、私有 API `2c4e3ecd`（SHA-256 `b296da73…e4d70`，未发布 npm）：插件完整检查、固定源码干净五包重建、默认远程取包，以及宿主独立干净 checkout 的 npm ci、lint/typecheck/test/build/check:arch/check:plugin-api 全部通过。backend 2154 passed/17 skipped、Desktop 966 passed/1 skipped、Plugin API Node 17/17、根 Node 31/31；两组真实本机 Docker 验收均启用。完整命令和日志哈希见[宿主门禁回执](../releases/native-plugin-owner-services-host-gates-2026-10-29.json)，匹配包及真实 SDK 范围见[owner/services 检查点](../releases/native-plugin-owner-services-cohort-2026-10-28.json)。native boundary 仍 INCOMPLETE（build15/manifest10/type5/runtime1/resources21/required locks4），本检查点通过不关闭 P0–P7。

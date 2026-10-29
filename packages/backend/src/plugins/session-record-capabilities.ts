@@ -57,6 +57,7 @@ export function sessionRecordCapabilityHandlers(
 		},
 		"session.records.append": {
 			effect: "write",
+			approval: "own",
 			inputSchema: Type.Object({ type: logicalType, data: json }, { additionalProperties: false }),
 			resultSchema: Type.Object({ id: Type.String(), durability }, { additionalProperties: false }),
 			approvalDetail: (input) =>

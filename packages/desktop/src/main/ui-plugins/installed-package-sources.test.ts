@@ -87,6 +87,19 @@ it("retains a required publisher declaration for a native package without UI", a
 	]);
 });
 
+it("decodes a task authorization request and rejects other values or a missing owner", async () => {
+	await manifest({ drone: { taskGrants: "request" } });
+	expect(await discoverInstalledPackages(modules)).toMatchObject([{ runtime: { requestsTaskGrant: true } }]);
+	await manifest({ drone: { taskGrants: "always" } });
+	expect(await discoverInstalledPackages(modules)).toEqual([
+		{ packageName: "@example/native", error: expect.stringContaining("drone.taskGrants must be request") },
+	]);
+	await manifest({ entrypoints: { extension: "./native.mjs" }, drone: { taskGrants: "request" } });
+	expect(await discoverInstalledPackages(modules)).toEqual([
+		{ packageName: "@example/native", error: "drone.taskGrants requires a desktopRuntime owner" },
+	]);
+});
+
 it("decodes service-only declarations from the same native source without loading plugin code", async () => {
 	await manifest({
 		requires: { hostCapabilities: ["vault-read"] },

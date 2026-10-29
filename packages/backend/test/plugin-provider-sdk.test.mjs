@@ -1110,14 +1110,15 @@ it("a normal actual SDK reload restores the source-owned task checkpoint without
 		invoke("read", { operation: "pause", input: { reason: "cannot-upgrade-status-read" } }),
 	).rejects.toThrow(/Read-only provider call/);
 }, 20000);
-it("actual UI cancellation at the managed checkpoint permission waits for cleanup and cannot turn its late answer into a save", async () => {
+it("actual UI cancellation at the managed checkpoint's operation permission waits for cleanup and cannot turn its late answer into a save", async () => {
 	const { entry, invoke, converse, approve, owner, binding, selection } = await setup({ taskData: true });
 	await converse();
 	const planned = await invoke("write", { operation: "fixturePlan", input: taskPlan });
 	const count = entry.session.sessionManager.getBranch().length;
 	let release;
 	approve(async (_owner, source, operation) =>
-		source.pluginId === "@fixture/provider" && operation === "capability:session.records.append"
+		// The checkpoint append itself no longer prompts; hold the surrounding write's approval.
+		source.pluginId === "@fixture/provider" && operation === "pause"
 			? new Promise((resolve) => {
 					release = resolve;
 				})
@@ -1138,7 +1139,8 @@ it("actual UI cancellation at the managed checkpoint permission waits for cleanu
 	const status = await invoke("read", { operation: "status", input: null });
 	expect(status).toMatchObject({
 		snapshot: { id: planned.snapshot.id, reason: planned.snapshot.reason },
-		storage: { state: "needs-reopen" },
+		// Canceled before the operation ran: no append was attempted, so storage stays durable.
+		storage: { state: "durable" },
 	});
 }, 20000);
 

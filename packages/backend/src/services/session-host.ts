@@ -67,6 +67,7 @@ export interface SessionHost {
 	/** Running subagent children; resolvable by plugin capabilities only, never listed or reopened. */
 	readonly childSessions: SessionRegistry;
 	readonly pluginSessions: SessionDirectory;
+	readonly taskGrants: import("../plugins/task-grants").TaskGrantStore;
 	readonly askHandlers: Set<(req: AskRequest) => void>;
 	readonly trustHandlers: Set<(req: TrustRequest) => void>;
 	readonly loginHandlers: Set<(payload: LoginEventPayload) => void>;

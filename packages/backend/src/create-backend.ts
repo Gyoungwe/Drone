@@ -169,6 +169,10 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	getPluginSessionCapabilities(
 		recordAdoptions?: import("@gyoungwe/plugin-api/runtime").PluginRecordAdoptions,
 	): ReturnType<import("./services/session-api").SessionServiceApi["getPluginSessionCapabilities"]>;
+	getPluginTaskGrantCapabilities(
+		source: import("./plugins/coordinator").PluginRuntimeSource,
+	): ReturnType<import("./services/session-api").SessionServiceApi["getPluginTaskGrantCapabilities"]>;
+	getTaskGrants(): import("./plugins/task-grants").TaskGrantStore;
 	getStorageRegistry(): StorageRegistry;
 	getEventRates(): Map<string, { window60s: number[]; lastEventAt: number }>;
 	onEvent(handler: (sessionId: string, event: SessionEvent) => void): () => void;

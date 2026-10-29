@@ -98,6 +98,8 @@ export interface SessionExtensionDependencies {
 	registerLiveChild?: (sessionId: string, control: LiveChildControl) => () => void;
 	/** Child-only registry for running subagents; never listed, reopened or reloaded. */
 	registerChildSession?: (entry: RegisteredSession) => () => void;
+	/** Host task grants: approved write directories of a session's current task. */
+	taskWriteRoots?: (sessionId: string | undefined) => readonly string[] | undefined;
 	setMcpStatus: (cwd: string, status: McpStatus) => void;
 	/** 已登记的远程主机（设置 › 高级 › SSH 主机）；缺省则 ssh 只认 ~/.ssh/config 与直接主机名 */
 	listSshHosts?: () => Promise<SshHostEntry[]>;
@@ -231,6 +233,7 @@ export function buildSessionExtensionFactories(
 					projectRoot: cwd,
 					confirm,
 					getMode: () => modeRef?.current ?? "default",
+					taskWriteRoots: deps.taskWriteRoots,
 				})
 			: undefined;
 	if (permission) factories.push(permission.gate);

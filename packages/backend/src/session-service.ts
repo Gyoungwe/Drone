@@ -20,6 +20,7 @@ import { createLogger } from "./log";
 import type { McpService } from "./mcp/service";
 import type { PluginSandboxPolicy } from "./plugin-sandbox";
 import type { PluginNativeIntegration } from "./plugins/coordinator";
+import { TaskGrantStore } from "./plugins/task-grants";
 import type { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import type { ApprovalDecision, ApprovalService } from "./services/approvals";
@@ -160,6 +161,8 @@ export class SessionService extends SessionServiceApi {
 	readonly registry = new SessionRegistry();
 	readonly childSessions = new SessionRegistry();
 	readonly pluginSessions = combinedSessionDirectory(this.registry, this.childSessions);
+	/** Host-issued task authorizations, keyed by live primary session entries. */
+	readonly taskGrants = new TaskGrantStore(this.pluginSessions);
 	readonly askHandlers = new Set<AskHandler>();
 	readonly trustHandlers = new Set<TrustHandler>();
 	readonly loginHandlers = new Set<LoginHandler>();
@@ -321,6 +324,7 @@ export class SessionService extends SessionServiceApi {
 				};
 			},
 			registerChildSession: (entry) => this.registerChildSession(entry),
+			taskWriteRoots: (sessionId) => (sessionId ? this.taskGrants.writeRoots(sessionId) : undefined),
 			setMcpStatus: (cwd, status) => this.setMcpStatus(cwd, status),
 			// Registers ssh_hosts and lets ssh/bio tools resolve registered host names; the ssh tool's
 			// prompt guideline tells the model to call ssh_hosts, so it must be present whenever the host has a registry.

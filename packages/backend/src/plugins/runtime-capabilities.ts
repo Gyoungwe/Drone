@@ -41,6 +41,14 @@ export interface PluginCapabilityHandler {
 	readonly inputSchema: PluginRuntimeSchema;
 	readonly resultSchema: PluginRuntimeSchema;
 	readonly effect: "read" | "write";
+	/**
+	 * Write approval policy (host task grant design): "own" is the plugin's own bookkeeping and
+	 * never prompts; "always" prompts even under an active task grant; absent writes are covered by
+	 * the session's current task grant and otherwise prompt.
+	 */
+	readonly approval?: "own" | "always";
+	/** A write whose own host dialog is the user's decision may be requested from a read invocation. */
+	readonly readCallable?: true;
 	/** Only pre-approved application state reads may run while constructing an owner. */
 	readonly bootstrap?: true;
 	/** Host-owned formatter, called only after capability input schema validation. */
@@ -96,6 +104,7 @@ interface Authority {
 		effect: "read" | "write",
 		detail?: string,
 		signal?: AbortSignal,
+		approval?: PluginCapabilityHandler["approval"],
 	) => Promise<boolean>;
 	readonly check: () => void;
 	readonly pending: Set<Promise<unknown>>;
@@ -202,7 +211,7 @@ export class PluginCapabilityBroker {
 					: undefined;
 		if (!handler) throw new Error(`Plugin capability is not registered: ${name}`);
 		if (!Check(handler.inputSchema, input)) throw new Error(`Invalid plugin capability input: ${name}`);
-		if (handler.effect === "write" && authority.effect !== "write")
+		if (handler.effect === "write" && authority.effect !== "write" && !handler.readCallable)
 			throw new Error(`Read-only plugin invocation cannot use write capability: ${name}`);
 		if (authority.context.bootstrap) {
 			if (!handler.bootstrap || handler.effect !== "read")
@@ -218,6 +227,7 @@ export class PluginCapabilityBroker {
 					scope: authority.context.scope,
 				}),
 				authority.context.signal,
+				handler.approval,
 			))
 		) {
 			throw new Error(`Plugin capability denied: ${name}`);

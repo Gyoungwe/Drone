@@ -99,3 +99,32 @@ it("does not automatically approve overwriting an externally hard-linked file", 
 	await link(source, target);
 	expect(await taskWriteAllowed([root], target)).toBe(false);
 });
+
+it("prefers the host task grant and never consults the event bus when it applies", async () => {
+	const root = await fixture(),
+		agent = await fixture(),
+		other = await fixture();
+	const hooks: Record<string, (...args: any[]) => any> = {};
+	const confirm = vi.fn(async () => false);
+	const emit = vi.fn(async (n: string, request: any) => {
+		// A third party on the bus tries to widen the grant; the host grant wins.
+		if (n === "drone:task-write-consent") request.respond({ writeRoots: [other] });
+	});
+	const pi: any = {
+		on: (n: string, fn: any) => {
+			hooks[n] = fn;
+		},
+		events: { on: vi.fn(), emit },
+	};
+	const taskWriteRoots = vi.fn((sessionId: string | undefined) => (sessionId === "s" ? [root] : undefined));
+	await makePermissionGateExtensions(agent, { projectRoot: root, confirm, taskWriteRoots }).gate.factory(pi);
+	const write = (path: string, session = "s") =>
+		hooks.tool_call(
+			{ type: "tool_call", toolName: "write", toolCallId: path, input: { path, content: "x" } },
+			{ cwd: root, sessionManager: { getSessionId: () => session } },
+		);
+	expect(await write(join(root, "result.csv"))).toBeUndefined();
+	expect(await write(join(other, "result.csv"))).toMatchObject({ block: true });
+	expect(emit).not.toHaveBeenCalledWith("drone:task-write-consent", expect.anything());
+	expect(confirm).toHaveBeenCalledOnce();
+});

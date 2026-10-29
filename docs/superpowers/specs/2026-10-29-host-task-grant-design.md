@@ -1,6 +1,6 @@
 # 宿主签发的任务授权（P4 第一步）
 
-日期：2026-10-29。状态：**待用户确认审批模型**。依据：[P4 动态 owner 设计](2026-10-28-task-managed-owner-cutover-design.md)“两个授权问题需要在 cutover 前明确实现”、[执行修订](../../pluginization/native-plugin-implementation-plan.md#2026-10-29-执行方式修订用户确认) 第 6 条。
+日期：2026-10-29。状态：审批模型已由用户确认（2026-10-29）；宿主侧已实现（`claude/p4-task-grant`），插件侧 consumer 随任务状态机迁移接入。依据：[P4 动态 owner 设计](2026-10-28-task-managed-owner-cutover-design.md)“两个授权问题需要在 cutover 前明确实现”、[执行修订](../../pluginization/native-plugin-implementation-plan.md#2026-10-29-执行方式修订用户确认) 第 6 条。
 
 ## 现状
 
@@ -28,3 +28,11 @@
 
 - 单元：目录解析拒绝盘符根/家目录/不存在目录；授权与会话、来源、任务绑定；释放、会话撤销、来源变化后失效；只读/子会话/未信任项目拒绝。
 - 真实 SDK + 受管 fixture 插件：一次宿主对话框后，目录内 write 免确认、目录外仍确认；插件 records 追加不弹窗；会话关闭或来源变化后同一 write 重新确认；第三方无法通过事件总线授予目录。
+
+## 实现（宿主侧）
+
+- `packages/backend/src/plugins/task-grants.ts`：`TaskGrantStore`（按 live 会话条目保存，一会话一份；会话撤销/替换、来源不再是已启用的当前安装来源时立即失效，未绑定来源校验器前一律无效）、`resolveTaskWriteRoots`、宿主渲染的对话框文本，以及 `task.grant.request` / `task.grant.release` / `task.grant.current` 三个能力。请求在对话框前解析目录，同意后重新解析，两次结果不一致（对话框期间目录被替换为链接等）则拒绝签发。
+- 能力审批策略：`PluginCapabilityHandler.approval`。`"own"`：`session.records.append` 与 `state.*` 写不弹窗；`"always"`：`files.writeText/remove/ensureDirectory`、`execution.run`、`session.records.adoption.*` 与 `task.grant.request` 本身始终弹窗；其余写（插件写工具/命令/hook 与 `model.*`、`session.select/input/confirm/notify`、`execution.cancel` 等）在当前授权下免弹窗。`readCallable` 允许只读调用发起 `task.grant.request`（它自带宿主对话框）。只读会话、子会话与未信任项目在 `permitted()` 处仍一律拒绝。
+- 只有清单声明 `drone.taskGrants: "request"`（必须同时有 `desktopRuntime`）的包会拿到这三个能力；该声明进入来源比较，变更即视为新来源。
+- 权限门：`PermissionGateOptions.taskWriteRoots` 优先读取宿主授权，命中时不再广播 `drone:task-write-consent`；旧桥只在没有宿主授权时为启动期进程内 taskHost 保留，P4 cutover 时删除。
+- 验收：`src/plugins/task-grants.test.ts`（目录规则、绑定与失效、桥上策略、拒绝、只读/子会话/未信任、对话框期间目录替换）；`test/task-write-consent.test.ts`（宿主授权优先、事件总线无法扩大目录）；`test/task-grant-sdk.test.mjs`（真实 SDK 会话：一次宿主对话框后目录内 write 免确认、目录外仍确认、自身 checkpoint 不弹窗，来源停用或会话关闭后失效）。
