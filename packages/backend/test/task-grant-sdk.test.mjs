@@ -253,7 +253,11 @@ it("workspace reads follow the session's current read permissions, including thr
 	await writeFile(join(t.cwd, "secret.txt"), "token");
 	await symlink(join(t.cwd, "secret.txt"), join(t.cwd, "outputs", "innocent.txt"));
 	const read = await t.invoke("readFile", { path: "outputs/table.csv" });
-	expect(read).toMatchObject({ path: join(t.cwd, "outputs", "table.csv"), bytes: 4 });
+	expect(read).toMatchObject({
+		path: join(t.cwd, "outputs", "table.csv"),
+		workspacePath: "outputs/table.csv",
+		bytes: 4,
+	});
 	expect(Buffer.from(read.base64, "base64").toString()).toBe("a,b\n");
 	await expect(t.invoke("readFile", { path: "secret.txt" })).rejects.toThrow("denied");
 	await expect(t.invoke("readFile", { path: "outputs/innocent.txt" })).rejects.toThrow("denied");

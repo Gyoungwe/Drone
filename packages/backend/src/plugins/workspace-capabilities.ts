@@ -1,5 +1,5 @@
 import { realpath } from "node:fs/promises";
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { Type } from "typebox";
 import type { SessionDirectory } from "../session/registry";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
@@ -25,6 +25,8 @@ export function workspaceCapabilityHandlers(
 			resultSchema: Type.Object(
 				{
 					path: Type.String(),
+					/** Path relative to the session's canonical workspace ("/"-separated), or null outside it. */
+					workspacePath: Type.Union([Type.String(), Type.Null()]),
 					base64: Type.String({ maxLength: MAX_FILE_BINARY_BASE64 }),
 					sha256: Type.String({ pattern: "^[a-f0-9]{64}$" }),
 					bytes: Type.Integer({ minimum: 0, maximum: MAX_FILE_BINARY_BYTES }),
@@ -53,7 +55,9 @@ export function workspaceCapabilityHandlers(
 					if ((await realpath(requested)) !== real) throw new Error("Workspace file changed during read");
 					return real;
 				}, context.signal);
-				return { path: real, ...result };
+				const rel = relative(await realpath(entry.cwd), real);
+				const inside = !!rel && !isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`);
+				return { path: real, workspacePath: inside ? rel.split(sep).join("/") : null, ...result };
 			},
 		},
 	};
