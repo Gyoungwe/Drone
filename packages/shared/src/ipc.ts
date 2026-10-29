@@ -1,4 +1,4 @@
-import type { AskRequest, AskResponse } from "./ask";
+import type { AskRequest, AskResolved, AskResponse } from "./ask";
 import type { DecisionsApi } from "./decisions";
 import type { DesktopCommand } from "./desktop-command";
 import type { DiagnosticsSnapshot } from "./diagnostics";
@@ -9,6 +9,7 @@ import type { DiscoveryApi } from "./host-api/discovery";
 import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
+import type { PluginRuntimeEvent } from "./host-api/plugin-runtime";
 import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
@@ -238,6 +239,7 @@ export const IpcChannels = {
 	SessionClose: "session:close",
 	SessionDelete: "session:delete",
 	SessionPrompt: "session:prompt",
+	SessionCommand: "session:command",
 	SessionAbort: "session:abort",
 	SessionRetry: "session:retry",
 	SessionSetModel: "session:setModel",
@@ -274,6 +276,7 @@ export const IpcChannels = {
 	PackagesSearchCatalog: "packages:searchCatalog",
 	PackagesInstall: "packages:install",
 	PackagesUpdate: "packages:update",
+	PackagesRollback: "packages:rollback",
 	PackagesRemove: "packages:remove",
 	PackagesListConfigured: "packages:listConfigured",
 	PackagesLatestVersions: "packages:latestVersions",
@@ -330,6 +333,7 @@ export const IpcChannels = {
 	MemoryPromote: "memory:promote",
 	MemoryPromoteToKnowledge: "memory:promoteToKnowledge",
 	AskRequest: "ask:request",
+	AskResolved: "ask:resolved",
 	AskRespond: "ask:respond",
 	PermissionRespond: "permission:respond",
 	/** 权限门控配置（enabled 解析保留，UI 无入口；chip 逃生舱禁用态感知用） */
@@ -413,6 +417,10 @@ export const IpcChannels = {
 	UiPluginsList: "uiPlugins:list",
 	/** UI 插件：读构建产物代码 */
 	UiPluginsReadCode: "uiPlugins:readCode",
+	PluginRuntimeInvoke: "pluginRuntime:invoke",
+	PluginRuntimeCancel: "pluginRuntime:cancel",
+	PluginRuntimeSelectSession: "pluginRuntime:selectSession",
+	PluginRuntimeEvent: "pluginRuntime:event",
 	/** UI 插件：启用/停用单个插件（启用=信任） */
 	UiPluginsSetPluginEnabled: "uiPlugins:setPluginEnabled",
 	/** UI 插件：槽位指派（pluginName=null 取消指派） */
@@ -473,6 +481,7 @@ export interface PiApi
 	installPackage(name: string): Promise<PackageLifecycleReceipt>;
 	/** 更新已配置社区包到 registry 最新版本；返回可审计的生命周期回执 */
 	updatePackage(name: string): Promise<PackageLifecycleReceipt>;
+	rollbackPackage(name: string, version: string): Promise<PackageLifecycleReceipt>;
 	/** 卸载已配置的包（按 source + scope 移除并持久化）；返回可审计的生命周期回执 */
 	removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt>;
 	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
@@ -598,6 +607,7 @@ export interface PiApi
 	memoryPromoteToKnowledge(cwd: string, id: number): Promise<{ path: string }>;
 	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
 	onAskRequest(cb: (req: AskRequest) => void): () => void;
+	onAskResolved(cb: (result: AskResolved) => void): () => void;
 	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;
 	/** 读取权限门控配置（enabled=false = 手改 permissions.json 的隐藏逃生舱态，chip 禁用提示用） */
 	getPermissionConfig(): Promise<PermissionConfigInfo>;
@@ -691,7 +701,20 @@ export interface PiApi
 	/** 列 UI 插件（含 enabled/trusted/buildError/invalidReason） */
 	uiPluginsList(): Promise<UiPluginInfo[]>;
 	/** 读插件构建产物（name 必须是扫描到的合法插件名，禁路径）；{ manifest, code } 或 { error } */
-	uiPluginsReadCode(name: string): Promise<{ manifest: UiPluginManifest; code: string } | { error: string }>;
+	uiPluginsReadCode(
+		name: string,
+	): Promise<{ manifest: UiPluginManifest; code: string; runtimeBinding?: string } | { error: string }>;
+	/** Opaque main-issued binding; caller cannot select plugin identity or scope. */
+	onPluginRuntimeEvent(cb: (event: PluginRuntimeEvent) => void): () => void;
+	pluginRuntimeSelectSession(sessionId: string | null): Promise<string>;
+	pluginRuntimeInvoke(
+		binding: string,
+		operation: string,
+		input: unknown,
+		selectionToken: string,
+		requestId?: string,
+	): Promise<unknown>;
+	pluginRuntimeCancel(binding: string, selectionToken: string, requestId: string): Promise<boolean>;
 	/** 启用/停用单个插件（启用=信任，同步落盘） */
 	uiPluginsSetPluginEnabled(name: string, enabled: boolean): Promise<void>;
 	/** 槽位指派（pluginName=null 取消指派） */

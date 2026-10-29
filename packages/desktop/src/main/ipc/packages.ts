@@ -8,6 +8,7 @@ export function registerPackagesIpc(
 	backendOrServices: BackendServices | SessionServicePort,
 	services?: Pick<BackendServices, "packages">,
 	onPackagesChanged?: () => Promise<void> | void,
+	withMutation: <T>(action: () => Promise<T>) => Promise<T> = (action) => action(),
 ): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
 	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
@@ -15,6 +16,7 @@ export function registerPackagesIpc(
 		searchPackages?: BackendServices["packages"]["searchPackages"];
 		installPackage?: BackendServices["packages"]["installPackage"];
 		updatePackage?: BackendServices["packages"]["updatePackage"];
+		rollbackPackage?: BackendServices["packages"]["rollbackPackage"];
 		removePackage?: BackendServices["packages"]["removePackage"];
 		listConfiguredPackages?: BackendServices["packages"]["listConfiguredPackages"];
 	};
@@ -31,6 +33,7 @@ export function registerPackagesIpc(
 						searchPackages: legacy.searchPackages.bind(backend),
 						installPackage: legacy.installPackage.bind(backend),
 						updatePackage: legacy.updatePackage.bind(backend),
+						rollbackPackage: legacy.rollbackPackage?.bind(backend),
 						removePackage: legacy.removePackage.bind(backend),
 						listConfiguredPackages: legacy.listConfiguredPackages.bind(backend),
 					}
@@ -41,21 +44,31 @@ export function registerPackagesIpc(
 			const [query, type, page] = args;
 			return packages.searchPackages(query, type, page);
 		},
-		installPackage: async (name) => {
-			const receipt = await packages.installPackage(name);
-			if (receipt.status === "succeeded") await onPackagesChanged?.();
-			return receipt;
-		},
-		updatePackage: async (name) => {
-			const receipt = await packages.updatePackage(name);
-			if (receipt.status === "succeeded") await onPackagesChanged?.();
-			return receipt;
-		},
-		removePackage: async (source, scope) => {
-			const receipt = await packages.removePackage(source, scope);
-			if (receipt.status === "succeeded") await onPackagesChanged?.();
-			return receipt;
-		},
+		installPackage: (name) =>
+			withMutation(async () => {
+				const receipt = await packages.installPackage(name);
+				if (receipt.status === "succeeded") await onPackagesChanged?.();
+				return receipt;
+			}),
+		updatePackage: (name) =>
+			withMutation(async () => {
+				const receipt = await packages.updatePackage(name);
+				if (receipt.status === "succeeded") await onPackagesChanged?.();
+				return receipt;
+			}),
+		rollbackPackage: (name, version) =>
+			withMutation(async () => {
+				if (!packages.rollbackPackage) throw new Error("Package rollback is unavailable in this host");
+				const receipt = await packages.rollbackPackage(name, version);
+				if (receipt.status === "succeeded") await onPackagesChanged?.();
+				return receipt;
+			}),
+		removePackage: (source, scope) =>
+			withMutation(async () => {
+				const receipt = await packages.removePackage(source, scope);
+				if (receipt.status === "succeeded") await onPackagesChanged?.();
+				return receipt;
+			}),
 		listConfiguredPackages: () => packages.listConfiguredPackages(),
 		latestPackageVersions: (names) => latestPackageVersions(names),
 		pluginPackageMetadata: (names) => registryPluginMetadata(names),
@@ -66,6 +79,7 @@ export function registerPackagesIpc(
 				searchCatalog: IpcChannels.PackagesSearchCatalog,
 				installPackage: IpcChannels.PackagesInstall,
 				updatePackage: IpcChannels.PackagesUpdate,
+				rollbackPackage: IpcChannels.PackagesRollback,
 				removePackage: IpcChannels.PackagesRemove,
 				listConfiguredPackages: IpcChannels.PackagesListConfigured,
 				latestPackageVersions: IpcChannels.PackagesLatestVersions,

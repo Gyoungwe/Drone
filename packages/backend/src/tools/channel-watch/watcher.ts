@@ -1,5 +1,5 @@
-import { type FSWatcher, watch } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import { type Dirent, type FSWatcher, watch } from "node:fs";
+import { lstat, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { createLogger } from "../../log";
 
@@ -9,7 +9,7 @@ const log = createLogger("channel-watch-watcher");
  * 频道子树 watcher（spec D4）：仅监听 `<cwd>/.local/agent-work/channel/` 子树。
  *
  * - 首选 `fs.watch(root, {recursive: true})`（macOS 原生支持，V4 冒烟实证 10 连写零丢）
- * - 失败降级：5s 轮询 mtime+size 快照对比（Linux/受限环境）；降级总成功，无 failed 终态
+ * - 原生事件触发快速快照对账；同时以 5s 轮询补齐漏事件，失败时保留快照并记录错误
  * - 事件解析：filename 第一段 = topic；以 `.` 开头的条目（.DS_Store / 编辑器临时文件）忽略
  * - 3s 防抖：同一文件多次变更合并为一次 onEvent（spec D5 层 3）
  * - hash 计算与投递判定不在此层（guard + extension 投递管道负责）
@@ -29,7 +29,7 @@ export interface ChannelWatcherOptions {
 	onEvent: (event: ChannelWatchEvent) => void;
 	/** 防抖窗口（默认 3000ms） */
 	debounceMs?: number;
-	/** 降级轮询间隔（默认 5000ms） */
+	/** 快照对账间隔（默认 5000ms）；原生监听模式也用它补齐漏事件。 */
 	pollIntervalMs?: number;
 }
 
@@ -56,6 +56,7 @@ export class ChannelWatcher {
 	private fsWatcher: FSWatcher | null = null;
 	private pollTimer: NodeJS.Timeout | null = null;
 	private pollSnapshot: Map<string, string> | null = null;
+	private generation = 0;
 	private readonly debounceTimers = new Map<string, NodeJS.Timeout>();
 	private _mode: WatcherMode = "idle";
 
@@ -70,30 +71,30 @@ export class ChannelWatcher {
 		return this._mode;
 	}
 
-	/** 启动：优先 recursive fs.watch，同步 throw/异步 error 即降级轮询（降级总成功） */
+	/** 启动原生监听与快照对账；原生失败时仅保留轮询，初始快照失败则关闭并抛错。 */
 	async start(): Promise<WatcherMode> {
 		if (this._mode !== "idle") return this._mode;
+		const generation = ++this.generation;
 		try {
 			// channelRoot 可能尚不存在（init 失败/竞态）：watch 会 throw → 降级轮询里建快照
-			this.fsWatcher = watch(this.root, { recursive: true }, (_eventType, filename) => {
-				const parsed = parseWatchFilename(filename);
-				if (parsed) this.scheduleDebounced(parsed);
-			});
-			this.fsWatcher.on("error", (err) => {
-				log.warn("fs.watch 错误，转降级轮询", { error: err instanceof Error ? err.message : String(err) });
-				this.stopFswatch();
-				void this.startPolling();
-			});
-			this._mode = "watch";
-			log.info("channel watcher 启动（fs.watch recursive）", { root: this.root });
-			return this._mode;
+			this.fsWatcher = watch(this.root, { recursive: true }, () => this.reconcile());
 		} catch (err) {
 			log.warn("fs.watch 不可用，降级轮询", {
 				root: this.root,
 				error: err instanceof Error ? err.message : String(err),
 			});
-			return this.startPolling();
 		}
+		const watcher = this.fsWatcher;
+		if (watcher) {
+			watcher.on("error", (err) => {
+				if (this.fsWatcher !== watcher) return;
+				log.warn("fs.watch 错误，转降级轮询", { error: err instanceof Error ? err.message : String(err) });
+				this.stopFswatch();
+				this._mode = "poll";
+			});
+		}
+		this._mode = this.fsWatcher ? "watch" : "poll";
+		return this.startPolling(generation);
 	}
 
 	private stopFswatch(): void {
@@ -103,53 +104,77 @@ export class ChannelWatcher {
 		}
 	}
 
-	private async startPolling(): Promise<WatcherMode> {
+	private async startPolling(generation: number): Promise<WatcherMode> {
 		if (this.pollTimer) return this._mode;
-		this.pollSnapshot = await this.scanSnapshot();
-		this.pollTimer = setInterval(() => {
-			void this.pollTick();
-		}, this.pollIntervalMs);
+		let snapshot: Map<string, string>;
+		try {
+			snapshot = await this.scanSnapshot();
+		} catch (error) {
+			if (generation === this.generation) this.stop();
+			throw error;
+		}
+		if (generation !== this.generation) return this._mode;
+		this.pollSnapshot = snapshot;
+		this.pollTimer = setInterval(() => this.reconcile(), this.pollIntervalMs);
 		// unref：不阻止进程退出（会话关闭时即便 stop 漏调也不悬挂进程）
 		this.pollTimer.unref?.();
-		this._mode = "poll";
-		log.info("channel watcher 启动（降级轮询）", { root: this.root, interval: this.pollIntervalMs });
+		log.info("channel watcher 启动（快照对账）", {
+			root: this.root,
+			mode: this._mode,
+			interval: this.pollIntervalMs,
+		});
 		return this._mode;
 	}
 
-	/** 扫描 channelRoot 两层（topic 目录 → 文件），返回 mtimeMs:size 快照 */
+	/** 扫描实际频道文件；目录级事件和漏事件不再被解释成不存在文件变化。 */
 	private async scanSnapshot(): Promise<Map<string, string>> {
 		const snapshot = new Map<string, string>();
-		try {
-			const topics = await readdir(this.root, { withFileTypes: true });
-			for (const topicEntry of topics) {
-				if (!topicEntry.isDirectory() || topicEntry.name.startsWith(".")) continue;
-				const files = await readdir(join(this.root, topicEntry.name), { withFileTypes: true });
-				for (const file of files) {
-					if (!file.isFile() || file.name.startsWith(".")) continue;
-					const relPath = `${topicEntry.name}/${file.name}`;
+		const scan = async (directory: string, prefix: string): Promise<void> => {
+			let entries: Dirent[];
+			try {
+				entries = await readdir(directory, { withFileTypes: true });
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+				throw error;
+			}
+			for (const entry of entries) {
+				if (entry.name.startsWith(".")) continue;
+				const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+				if (entry.isDirectory()) await scan(join(directory, entry.name), relPath);
+				else if (prefix && entry.isFile()) {
 					try {
-						const st = await stat(join(this.root, relPath));
-						snapshot.set(relPath, `${st.mtimeMs}:${st.size}`);
-					} catch {
-						// 扫描中消失：跳过
+						const st = await lstat(join(this.root, relPath));
+						if (st.isFile()) snapshot.set(relPath, `${st.mtimeMs}:${st.size}`);
+					} catch (error) {
+						if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
 					}
 				}
 			}
-		} catch {
-			// root 不存在等：返回空快照，下轮再试
-		}
+		};
+		await scan(this.root, "");
 		return snapshot;
+	}
+
+	private reconcile(): void {
+		void this.pollTick().catch((error: unknown) => {
+			// Keep the last good snapshot; the next native hint or periodic scan can reconcile it.
+			log.warn("channel watcher 快照扫描失败，保留上次快照", {
+				error: error instanceof Error ? error.message : String(error),
+			});
+		});
 	}
 
 	private async pollTick(): Promise<void> {
 		const prev = this.pollSnapshot;
 		if (!prev) return;
 		const next = await this.scanSnapshot();
+		// A concurrent scan or stop/restart may have replaced this exact baseline while filesystem IO awaited.
+		if (this.pollSnapshot !== prev) return;
 		this.pollSnapshot = next;
 		for (const [relPath, sig] of next) {
 			if (prev.get(relPath) !== sig) {
 				const parsed = parseWatchFilename(relPath);
-				if (parsed) this.onEvent(parsed);
+				if (parsed) this.scheduleDebounced(parsed);
 			}
 		}
 	}
@@ -167,6 +192,7 @@ export class ChannelWatcher {
 
 	/** 停止并清理（幂等；session_shutdown 调用） */
 	stop(): void {
+		this.generation++;
 		this.stopFswatch();
 		if (this.pollTimer) {
 			clearInterval(this.pollTimer);

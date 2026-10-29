@@ -1,24 +1,330 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
-import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
-import * as knowledgeUiService from "@gyoungwe/pi-knowledge/host";
-import * as knowledgeUiState from "@gyoungwe/pi-knowledge/host";
-import * as knowledgeWikiModelReview from "@gyoungwe/pi-knowledge/host";
 import {
-	configureKnowledgeHost,
-	configureKnowledgeRuntime,
-	configureKnowledgeWorker,
 	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
+	type KnowledgeApi,
+	type KnowledgeUiEvent,
 	type KnowledgeWorkerLifecycleEvent,
 	type KnowledgeWorkerMetadata,
-} from "@gyoungwe/pi-knowledge/host";
-import { getResearchRun, listResearchRuns } from "@gyoungwe/pi-research/host";
+	type ResearchKnowledgeOperations,
+} from "@drone/shared";
+import type { KnowledgeHostWorkerSetup } from "@gyoungwe/plugin-api";
+import type {
+	DailyIdea,
+	ExperienceStorePort,
+	MemoryNoteInput,
+	TerminalJobExperienceInput,
+} from "@gyoungwe/plugin-api/knowledge";
+import { createResearchHostPort, type ResearchHostAdapter, type ResearchHostLoader } from "../research-host";
+import type { DailyDiscoveryOperations } from "../services/daily-discovery";
+import type { BackgroundReviewerFactory, BackgroundReviewerPort } from "../services/deliverable-reviewer";
+import type { KnowledgeMaintenanceOperations } from "../services/knowledge-maintenance";
 import { KnowledgeWebDavService } from "./webdav";
+import type { KnowledgeWebDavVault } from "./webdav-sync";
 
 type Handler = (event: KnowledgeUiEvent) => void;
+
+export interface KnowledgeHostPort {
+	runSpecialistModelLoop?: import("@gyoungwe/plugin-api").LegacyKnowledgeSpecialistLoop;
+	readonly contractVersion: 1;
+	overview(input: unknown): Promise<unknown>;
+	search(input: unknown): Promise<unknown>;
+	read(input: unknown): Promise<unknown>;
+	noteLinks(input: unknown): Promise<unknown>;
+	graph(input: unknown): Promise<unknown>;
+	/** Optional write-side operations supplied by an installed knowledge host. */
+	reviews?(input: unknown): Promise<unknown>;
+	preview?(input: unknown): Promise<unknown>;
+	decide?(input: unknown): Promise<unknown>;
+	setupPreview?(input: unknown): Promise<unknown>;
+	specialistSettings?(input: unknown): Promise<unknown>;
+	openTarget?(input: unknown): Promise<unknown>;
+	/** Optional maintenance implementation supplied by the installed package. */
+	planMaintenance?: KnowledgeMaintenanceOperations["planMaintenance"];
+	runMaintenance?: KnowledgeMaintenanceOperations["runMaintenance"];
+	/** Optional daily-discovery prompt/parser implementation supplied by the installed package. */
+	dailyDiscovery?: DailyDiscoveryOperations;
+	/** Optional research capture implementation supplied by the installed package. */
+	researchResource?: ResearchKnowledgeOperations;
+	/** Optional terminal compute observation writer supplied by the installed package. */
+	recordTerminalJobExperience?: (
+		store: ExperienceStorePort,
+		input: TerminalJobExperienceInput,
+	) => Promise<unknown>;
+	/** Optional Vault boundary used by explicit WebDAV sync. */
+	vault?: KnowledgeWebDavVault;
+	/** Optional UI event port supplied by an installed knowledge host. */
+	uiState?: {
+		subscribe(listener: (event: KnowledgeUiEvent) => void): () => void;
+		notify(text: string, severity?: "info" | "warning" | "error", sessionId?: string | null): void;
+	};
+	/** Optional foreground Wiki review operation supplied by an installed knowledge host. */
+	reviewWikiWithModel?: (input: unknown, options: unknown) => Promise<unknown>;
+	/** Optional background deliverable reviewer factory supplied by an installed knowledge host. */
+	backgroundReviewer?: (options: unknown) => unknown;
+	/** Optional publication registration supplied by an installed knowledge host. */
+	registerAnswerPublication?: KnowledgePublicationRegistrar;
+	/** Semantic-index UI operations supplied by the installed knowledge host. */
+	semantic?: KnowledgeSemanticOperations;
+	/** Topic memory operations supplied by the installed knowledge host. */
+	topics?: {
+		list(input: unknown): Promise<unknown>;
+		archive(input: unknown): Promise<unknown>;
+	};
+	/** Memory and daily-discovery operations supplied by the installed knowledge host. */
+	memory?: {
+		dailyContext(input: unknown): Promise<unknown>;
+		saveIdea(input: unknown): Promise<unknown>;
+		relatedForMemory(input: unknown): Promise<unknown>;
+		saveMemory(input: unknown): Promise<unknown>;
+	};
+	/** Maintenance topic/wiki operations supplied by the installed knowledge host. */
+	maintenanceTopic?: {
+		setTopic(input: unknown): Promise<unknown>;
+		proposeWiki(input: unknown): Promise<unknown>;
+	};
+	/** Incrementally migrated UI operations supplied by the installed knowledge host. */
+	jobs?: (input: unknown) => Promise<unknown>;
+	maintenance?: (input: unknown) => Promise<unknown>;
+}
+
+export type KnowledgePublicationRegistrar = (
+	pi: unknown,
+	options: { getCurrent: () => unknown; evidenceOnly: boolean },
+) => { begin(required: boolean): unknown };
+
+/**
+ * Read-only knowledge vertical supplied by the installable provider.
+ * The desktop service owns lifecycle and host wiring; the provider owns
+ * overview/search/note/graph behavior and can be replaced by a plugin runtime.
+ */
+export interface KnowledgeReadProvider {
+	overview(
+		input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeOverview"]>;
+	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]>;
+	read(
+		input: Parameters<KnowledgeApi["readKnowledgeNote"]>[0],
+	): ReturnType<KnowledgeApi["readKnowledgeNote"]>;
+	noteLinks(
+		input: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeNoteLinks"]>;
+	graph(
+		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
+}
+
+export type KnowledgeWriteProvider = Pick<KnowledgeHostPort, "reviews" | "preview" | "decide">;
+
+/**
+ * Transitional compatibility implementation injected by the composition
+ * root.  Keeping this port structural means the UI service never reaches into
+ * the optional package directly; an absent provider is represented by the
+ * fail-closed implementation exported below.
+ */
+export interface KnowledgeCompatibilityPort {
+	readonly read: Pick<KnowledgeReadProvider, "overview" | "search" | "read" | "noteLinks" | "graph">;
+	readonly maintenance: {
+		plan: KnowledgeMaintenanceOperations["planMaintenance"];
+		run: KnowledgeMaintenanceOperations["runMaintenance"];
+	};
+	readonly dailyDiscovery: DailyDiscoveryOperations;
+	readonly researchResource: ResearchKnowledgeOperations;
+	readonly experience: NonNullable<KnowledgeHostPort["recordTerminalJobExperience"]>;
+	readonly publication: KnowledgePublicationRegistrar;
+	readonly vault: KnowledgeWebDavVault;
+	readonly uiState: NonNullable<KnowledgeHostPort["uiState"]>;
+	readonly reviewWikiWithModel: NonNullable<KnowledgeHostPort["reviewWikiWithModel"]>;
+	readonly call: (name: string, input: unknown) => unknown;
+	readonly backgroundReviewer: (options: unknown) => BackgroundReviewerPort;
+}
+
+const unavailable = (operation: string): never => {
+	throw new Error(`Knowledge ${operation} is unavailable: install the knowledge plugin`);
+};
+
+/**
+ * Session composition is present even when the optional knowledge package is
+ * absent. Keep the reviewer lifecycle inert until an installed host provides
+ * the implementation; review observations must never load the legacy package
+ * as a side effect of constructing a generic backend.
+ */
+const unavailableBackgroundReviewer = (): BackgroundReviewerPort => ({
+	schedule: () => undefined,
+	getCached: () => undefined,
+	getFindings: () => [],
+	clearSession: () => undefined,
+	dispose: () => undefined,
+});
+
+/** Explicit no-plugin behavior. Never silently reaches the legacy package. */
+export const unavailableKnowledgeCompatibility: KnowledgeCompatibilityPort = {
+	read: {
+		overview: async () => unavailable("overview"),
+		search: async () => unavailable("search"),
+		read: async () => unavailable("read"),
+		noteLinks: async () => unavailable("note links"),
+		graph: async () => unavailable("graph"),
+	},
+	maintenance: {
+		plan: () => unavailable("maintenance"),
+		run: async () => unavailable("maintenance"),
+	},
+	dailyDiscovery: {
+		systemPrompt: "",
+		buildMessage: () => unavailable("daily discovery"),
+		parseIdeas: () => unavailable("daily discovery"),
+	},
+	researchResource: {
+		resolveContext: () => unavailable("research capture"),
+		ingestSnapshot: () => unavailable("research capture"),
+	},
+	experience: async () => unavailable("terminal experience"),
+	publication: () => unavailable("answer publication"),
+	vault: {
+		readBinding: async () => unavailable("Vault"),
+		readNote: async () => unavailable("Vault"),
+		containedFile: async () => unavailable("Vault"),
+		createFileOnly: async () => unavailable("Vault"),
+		replaceFile: async () => unavailable("Vault"),
+		isConflict: () => false,
+	},
+	uiState: {
+		subscribe: () => unavailable("UI events"),
+		notify: () => unavailable("UI events"),
+	},
+	reviewWikiWithModel: async () => unavailable("Wiki review"),
+	call: (name) => unavailable(name),
+	backgroundReviewer: unavailableBackgroundReviewer,
+};
+
+/**
+ * Semantic settings and indexing are owned by the knowledge plugin.  Keeping
+ * this port explicit prevents the host from silently reaching back into the
+ * compatibility package when no plugin is installed.
+ */
+export interface KnowledgeSemanticOperations {
+	status(
+		input: Parameters<KnowledgeApi["getKnowledgeSemanticStatus"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeSemanticStatus"]>;
+	saveSettings(
+		input: Parameters<KnowledgeApi["saveKnowledgeSemanticSettings"]>[0],
+	): ReturnType<KnowledgeApi["saveKnowledgeSemanticSettings"]>;
+	testProvider(
+		input: Parameters<KnowledgeApi["testKnowledgeSemanticProvider"]>[0],
+	): ReturnType<KnowledgeApi["testKnowledgeSemanticProvider"]>;
+	index(
+		input: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>[0],
+	): ReturnType<KnowledgeApi["indexKnowledgeSemantic"]>;
+	cancelIndex(
+		input: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>[0],
+	): ReturnType<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
+}
+
+/** Default provider delegates the read vertical to the packaged knowledge host entry. */
+export function createKnowledgeReadProvider(
+	host?: KnowledgeHostPort,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
+): KnowledgeReadProvider {
+	const source = host ?? {
+		overview: compatibility.read.overview,
+		search: compatibility.read.search,
+		read: compatibility.read.read,
+		noteLinks: compatibility.read.noteLinks,
+		graph: compatibility.read.graph,
+	};
+	const overview = source.overview as unknown as KnowledgeReadProvider["overview"];
+	const search = source.search as unknown as KnowledgeReadProvider["search"];
+	const read = source.read as unknown as KnowledgeReadProvider["read"];
+	const noteLinks = source.noteLinks as unknown as KnowledgeReadProvider["noteLinks"];
+	const graph = source.graph as unknown as KnowledgeReadProvider["graph"];
+	return {
+		overview,
+		search,
+		read,
+		noteLinks,
+		graph,
+	};
+}
+
+/** Keep maintenance domain code behind the same discovered host seam as reads/writes. */
+export function createKnowledgeMaintenanceOperations(
+	host?: Pick<KnowledgeHostPort, "planMaintenance" | "runMaintenance">,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
+): KnowledgeMaintenanceOperations {
+	return {
+		planMaintenance: host?.planMaintenance ?? compatibility.maintenance.plan,
+		runMaintenance: host?.runMaintenance ?? compatibility.maintenance.run,
+	};
+}
+
+/** Keep daily-discovery prompt/parser logic behind the discovered host seam. */
+export function createKnowledgeDailyDiscoveryOperations(
+	host?: KnowledgeHostPort,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
+): DailyDiscoveryOperations {
+	const source = host?.dailyDiscovery;
+	if (source) return source;
+	return {
+		systemPrompt: compatibility.dailyDiscovery.systemPrompt,
+		buildMessage: compatibility.dailyDiscovery.buildMessage,
+		parseIdeas: compatibility.dailyDiscovery.parseIdeas,
+	};
+}
+
+/** Keep research capture snapshot semantics behind the discovered knowledge host seam. */
+export function createKnowledgeResearchResourceOperations(
+	host?: Pick<KnowledgeHostPort, "researchResource">,
+	compatibility?: KnowledgeCompatibilityPort,
+): ResearchKnowledgeOperations {
+	const source = host?.researchResource;
+	if (source) return source;
+	if (compatibility) return compatibility.researchResource;
+	return unavailableKnowledgeCompatibility.researchResource;
+}
+
+/** Keep compute experience persistence behind the discovered knowledge host seam. */
+export function createKnowledgeExperienceOperation(
+	host?: KnowledgeHostPort,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
+) {
+	return host?.recordTerminalJobExperience ?? compatibility.experience;
+}
+
+/** Keep child-session publication registration behind the discovered host seam. */
+export function createKnowledgePublicationOperation(
+	host?: KnowledgeHostPort,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
+): KnowledgePublicationRegistrar {
+	return host?.registerAnswerPublication ?? compatibility.publication;
+}
+
+/** Keep foreground Wiki model review behind the discovered knowledge host seam. */
+export function createKnowledgeReviewWithModelOperation(
+	host?: Pick<KnowledgeHostPort, "reviewWikiWithModel">,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
+): (input: unknown, options: unknown) => Promise<unknown> {
+	return (
+		host?.reviewWikiWithModel ??
+		(compatibility.reviewWikiWithModel as unknown as (input: unknown, options: unknown) => Promise<unknown>)
+	);
+}
+
+/** Keep WebDAV's local read/write operations behind the discovered knowledge host seam. */
+export function createKnowledgeVaultOperations(
+	host?: Pick<KnowledgeHostPort, "vault">,
+	compatibility: KnowledgeCompatibilityPort = unavailableKnowledgeCompatibility,
+): KnowledgeWebDavVault {
+	if (host?.vault) return host.vault;
+	return compatibility.vault;
+}
+
+/** Construct the domain reviewer only at the compatibility/plugin composition root. */
+export const createKnowledgeBackgroundReviewer: BackgroundReviewerFactory = (options) =>
+	unavailableKnowledgeCompatibility.backgroundReviewer(options) as unknown as BackgroundReviewerPort;
 
 export interface KnowledgeWorkerLifecycleSnapshot {
 	readonly currentVersion: string | null;
@@ -96,18 +402,14 @@ export function getKnowledgeWorkerLifecycle(): KnowledgeWorkerLifecycleSnapshot 
 }
 
 /**
- * Backend UI calls can construct KnowledgeService before a Pi extension is
- * loaded. Install the same generated worker seam used by the extension entry
- * so review and graph IPC work in both development and packaged hosts.
+ * Host-owned worker seam passed to an installed KnowledgeHostLoader. The
+ * package chooses when to install this factory; the host remains responsible
+ * for resolving and verifying its own worker resource.
  */
-export function configureBackendKnowledgeWorker(): void {
-	// The backend and each bundled Pi extension have separate plugin module
-	// instances. UI reads need their own host port, even after extension setup.
-	configureKnowledgeHost({ loadWorkspaceConfig: loadBackendWorkspaceConfig });
-	configureKnowledgeRuntime({ emitProcessEvent: (event, payload) => (process as any).emit(event, payload) });
-	configureKnowledgeWorker(
-		(_url, options) => {
-			const resource = resolveBackendKnowledgeWorkerResource();
+export function createBackendKnowledgeWorkerSetup(): KnowledgeHostWorkerSetup {
+	return {
+		createWorker: (url, options) => {
+			const resource = resolveKnowledgeWorkerResource(url);
 			const workerData =
 				options && typeof options === "object" && options.workerData && typeof options.workerData === "object"
 					? options.workerData
@@ -117,45 +419,23 @@ export function configureBackendKnowledgeWorker(): void {
 				workerData: { ...workerData, workerResource: resource.metadata },
 			} as any);
 		},
-		() => resolveBackendKnowledgeWorkerResource().metadata,
-	);
+	};
 }
 
-async function loadBackendWorkspaceConfig(cwd: string) {
-	const root =
-		process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
-	const mod = await import(
-		/* @vite-ignore */ pathToFileURL(join(root, "extensions", "workspace-config.mjs")).href
-	);
-	return mod.loadWorkspaceConfig(cwd);
-}
-
-export function resolveBackendKnowledgeWorkerPath(root = process.env.DRONE_RESEARCH_WORKBENCH_ROOT): string {
-	const workbenchRoot = root ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
-	const workerPath = join(workbenchRoot, "extensions", "knowledge-worker.mjs");
-	if (!existsSync(workerPath))
-		throw new Error(`Knowledge worker resource is missing from the host: ${workerPath}`);
-	return workerPath;
-}
-
-export interface BackendKnowledgeWorkerResource {
+interface BackendKnowledgeWorkerResource {
 	readonly path: string;
 	readonly manifestPath: string;
 	readonly metadata: KnowledgeWorkerMetadata;
 }
 
-/**
- * Resolve and verify the generated worker and its checked-in build manifest.
- * A file that merely exists is insufficient: packaged resources can be stale
- * or partially copied, so the host refuses to start a worker whose bytes do
- * not match the manifest hash.
- */
-export function resolveBackendKnowledgeWorkerResource(
-	root = process.env.DRONE_RESEARCH_WORKBENCH_ROOT,
-): BackendKnowledgeWorkerResource {
-	const workbenchRoot = root ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
-	const path = join(workbenchRoot, "extensions", "knowledge-worker.mjs");
-	const manifestPath = join(workbenchRoot, "extensions", ".knowledge-worker-manifest.json");
+/** Resolve a package-selected worker URL and verify its adjacent manifest. */
+function resolveKnowledgeWorkerResource(url: URL): BackendKnowledgeWorkerResource {
+	if (url.protocol !== "file:") throw new Error(`Knowledge worker URL must use file: protocol: ${url.href}`);
+	const path = fileURLToPath(url);
+	return verifyKnowledgeWorkerResource(path, join(dirname(path), ".knowledge-worker-manifest.json"));
+}
+
+function verifyKnowledgeWorkerResource(path: string, manifestPath: string): BackendKnowledgeWorkerResource {
 	if (!existsSync(path)) throw new Error(`Knowledge worker resource is missing from the host: ${path}`);
 	if (!existsSync(manifestPath))
 		throw new Error(`Knowledge worker manifest is missing from the host: ${manifestPath}`);
@@ -177,12 +457,6 @@ export function resolveBackendKnowledgeWorkerResource(
 		metadata: { version, source: path, integrity: expected },
 	};
 }
-
-// Session/UI services are imported before the host loads its extension list.
-// Configure lazily through the path above; the environment root is resolved
-// when the first worker is created, after Electron has selected dev/packaged
-// resources.
-configureBackendKnowledgeWorker();
 
 /** Host-facing knowledge management boundary; keeps IPC adapters independent of implementation state. */
 export interface KnowledgeUiServicePort {
@@ -264,7 +538,7 @@ export interface KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
-	saveIdea(idea: import("@gyoungwe/pi-knowledge/host").DailyIdea): Promise<{ path: string }>;
+	saveIdea(idea: DailyIdea): Promise<{ path: string }>;
 	/** 记忆注入用的相关知识条目（复用知识库索引与语义向量）。 */
 	relatedForMemory(
 		cwd: string,
@@ -272,10 +546,7 @@ export interface KnowledgeUiServicePort {
 		limit?: number,
 	): Promise<Array<{ path: string; title: string; text: string }>>;
 	/** 观察记忆沉淀为本项目知识库「记忆」笔记。 */
-	saveMemory(
-		cwd: string,
-		memory: import("@gyoungwe/pi-knowledge/host").MemoryNoteInput,
-	): Promise<{ path: string }>;
+	saveMemory(cwd: string, memory: MemoryNoteInput): Promise<{ path: string }>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -299,17 +570,62 @@ export interface KnowledgeUiServicePort {
 	): ReturnType<KnowledgeApi["syncKnowledgeCloud"]>;
 	dispose(): void;
 }
-/** Dynamic resource boundary works in source and electron-builder layouts. */
+/** Host-facing knowledge adapter; domain operations come from an installed provider. */
 export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private listeners = new Set<Handler>();
 	private unsubscribe: (() => void) | null = null;
 	private disposed = false;
 	private loading: Promise<void> | null = null;
-	private readonly cloud = new KnowledgeWebDavService();
-	private root() {
-		return (
-			process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url))
-		);
+	private readonly cloud: KnowledgeWebDavService;
+	private readonly readProvider: KnowledgeReadProvider;
+	private readonly writeProvider?: KnowledgeWriteProvider &
+		Pick<
+			KnowledgeHostPort,
+			| "vault"
+			| "uiState"
+			| "reviewWikiWithModel"
+			| "semantic"
+			| "topics"
+			| "maintenanceTopic"
+			| "memory"
+			| "jobs"
+			| "maintenance"
+			| "setupPreview"
+			| "specialistSettings"
+			| "openTarget"
+		>;
+	private readonly researchHost?: ResearchHostAdapter;
+	private readonly compatibility: KnowledgeCompatibilityPort;
+	constructor(
+		readProvider?: KnowledgeReadProvider,
+		options: {
+			researchHostLoader?: ResearchHostLoader;
+			compatibility?: KnowledgeCompatibilityPort;
+			knowledgeHost?: KnowledgeWriteProvider &
+				Pick<
+					KnowledgeHostPort,
+					| "vault"
+					| "uiState"
+					| "reviewWikiWithModel"
+					| "semantic"
+					| "topics"
+					| "maintenanceTopic"
+					| "memory"
+					| "jobs"
+					| "maintenance"
+					| "setupPreview"
+					| "specialistSettings"
+					| "openTarget"
+				>;
+		} = {},
+	) {
+		this.compatibility = options.compatibility ?? unavailableKnowledgeCompatibility;
+		this.readProvider = readProvider ?? createKnowledgeReadProvider(undefined, this.compatibility);
+		this.writeProvider = options.knowledgeHost;
+		this.researchHost = options.researchHostLoader?.load(createResearchHostPort());
+		this.cloud = new KnowledgeWebDavService({
+			vault: createKnowledgeVaultOperations(options.knowledgeHost, this.compatibility),
+		});
 	}
 	async connect(): Promise<void> {
 		if (!process.env.DRONE_KNOWLEDGE_DIR || this.unsubscribe || this.disposed) return;
@@ -317,15 +633,26 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			this.loading = Promise.resolve()
 				.then(() => {
 					if (!this.disposed)
-						this.unsubscribe = knowledgeUiState.subscribeKnowledgeUi((event: KnowledgeUiEvent) => {
-							for (const listener of this.listeners) {
-								try {
-									listener(event);
-								} catch {
-									/* closed renderer */
-								}
-							}
-						});
+						this.unsubscribe =
+							this.writeProvider && "uiState" in this.writeProvider && this.writeProvider.uiState
+								? this.writeProvider.uiState.subscribe((event) => {
+										for (const listener of this.listeners) {
+											try {
+												listener(event);
+											} catch {
+												/* closed renderer */
+											}
+										}
+									})
+								: this.compatibility.uiState.subscribe((event: KnowledgeUiEvent) => {
+										for (const listener of this.listeners) {
+											try {
+												listener(event);
+											} catch {
+												/* closed renderer */
+											}
+										}
+									});
 				})
 				.finally(() => {
 					this.loading = null;
@@ -337,15 +664,30 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		void this.connect().catch(() => {});
 		return () => this.listeners.delete(listener);
 	}
-	async notify(text: string, severity = "info", sessionId: string | null = null): Promise<void> {
+	async notify(
+		text: string,
+		severity: "info" | "warning" | "error" = "info",
+		sessionId: string | null = null,
+	): Promise<void> {
 		await this.connect();
-		knowledgeUiState.notifyKnowledgeUi(text, severity, sessionId ?? undefined);
+		if (this.writeProvider && "uiState" in this.writeProvider && this.writeProvider.uiState) {
+			this.writeProvider.uiState.notify(text, severity, sessionId);
+			return;
+		}
+		this.compatibility.uiState.notify(text, severity, sessionId ?? undefined);
 	}
 	private async call(name: string, input: unknown): Promise<any> {
 		await this.connect();
-		const fn = (knowledgeUiService as unknown as Record<string, (value: unknown) => unknown>)[name];
-		if (!fn) throw new Error(`Unknown knowledge UI operation: ${name}`);
-		return fn(input);
+		if (name === "knowledgeJobs" && this.writeProvider?.jobs) return this.writeProvider.jobs(input);
+		if (name === "knowledgeMaintenance" && this.writeProvider?.maintenance)
+			return this.writeProvider.maintenance(input);
+		if (name === "knowledgeSetupPreview" && this.writeProvider?.setupPreview)
+			return this.writeProvider.setupPreview(input);
+		if (name === "knowledgeSpecialistSettings" && this.writeProvider?.specialistSettings)
+			return this.writeProvider.specialistSettings(input);
+		if (name === "knowledgeOpenTarget" && this.writeProvider?.openTarget)
+			return this.writeProvider.openTarget(input);
+		return this.compatibility.call(name, input);
 	}
 	specialistSettings(
 		input: Parameters<KnowledgeApi["setKnowledgeSpecialistSettings"]>[0],
@@ -356,29 +698,60 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["reviewKnowledgeWithModel"]>[0],
 		options: unknown,
 	): ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]> {
-		return (await knowledgeWikiModelReview.reviewWikiWithModel(
-			input,
-			options as Parameters<typeof knowledgeWikiModelReview.reviewWikiWithModel>[1],
-		)) as Awaited<ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]>>;
+		const review = createKnowledgeReviewWithModelOperation(this.writeProvider, this.compatibility);
+		return (await review(input, options)) as Awaited<ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]>>;
 	}
 	overview(
 		input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeOverview"]> {
-		return this.call("knowledgeOverview", input);
+		return this.readProvider.overview(input);
 	}
 	async researchRuns(
 		input: Parameters<KnowledgeApi["getResearchRuns"]>[0] = {},
 	): ReturnType<KnowledgeApi["getResearchRuns"]> {
-		const cwd = input?.cwd || process.cwd();
-		const config = await loadBackendWorkspaceConfig(cwd);
-		return listResearchRuns({ ...input, resultsRoot: config.resultsRoot });
+		if (!this.researchHost) throw new Error("Research plugin is not installed");
+		return this.researchHost.operations
+			.listRuns({
+				workspace: input?.cwd || process.cwd(),
+				project: input?.project,
+				limit: input?.limit,
+			})
+			.then((result) => ({
+				items: result.items.map((item) => ({ ...item, scientificallyVerified: false as const })),
+				total: result.total,
+			}));
 	}
 	async researchRun(
 		input: Parameters<KnowledgeApi["getResearchRun"]>[0],
 	): ReturnType<KnowledgeApi["getResearchRun"]> {
-		const cwd = input?.cwd || process.cwd();
-		const config = await loadBackendWorkspaceConfig(cwd);
-		return getResearchRun({ ...input, resultsRoot: config.resultsRoot, vaultRoot: config.obsidianVault });
+		if (!this.researchHost) throw new Error("Research plugin is not installed");
+		if (this.researchHost.operations.detail) {
+			const detail = (await this.researchHost.operations.detail({
+				workspace: input?.cwd || process.cwd(),
+				runDir: input?.runDir,
+				runId: input?.runId,
+			})) as Record<string, unknown>;
+			return { ...detail, scientificallyVerified: false } as Awaited<
+				ReturnType<KnowledgeApi["getResearchRun"]>
+			>;
+		}
+		const result = await this.researchHost.operations.status({
+			workspace: input?.cwd || process.cwd(),
+			runDir: input?.runDir,
+		});
+		if (!("item" in result)) throw new Error("Research plugin did not return a run detail");
+		return {
+			...result.item,
+			scientificallyVerified: false,
+			route: [],
+			sources: [],
+			claims: [],
+			warnings: [
+				"The installed research plugin exposes run metadata only; detailed evidence is unavailable.",
+			],
+			coverage: null,
+			archive: { count: 0, reused: 0, verified: false },
+		} as Awaited<ReturnType<KnowledgeApi["getResearchRun"]>>;
 	}
 	setupPreview(
 		input: Parameters<KnowledgeApi["previewKnowledgeSetup"]>[0],
@@ -391,27 +764,31 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	reviews(
 		input: Parameters<KnowledgeApi["getKnowledgeReviews"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeReviews"]> {
+		if (this.writeProvider?.reviews) {
+			return this.writeProvider.reviews(input) as ReturnType<KnowledgeApi["getKnowledgeReviews"]>;
+		}
 		return this.call("knowledgeReviews", input);
 	}
 	preview(
 		input: Parameters<KnowledgeApi["previewKnowledgeReview"]>[0],
 	): ReturnType<KnowledgeApi["previewKnowledgeReview"]> {
+		if (this.writeProvider?.preview) {
+			return this.writeProvider.preview(input) as ReturnType<KnowledgeApi["previewKnowledgeReview"]>;
+		}
 		return this.call("knowledgePreviewReview", input);
 	}
 	decide(
 		input: Parameters<KnowledgeApi["decideKnowledgeReview"]>[0],
 	): ReturnType<KnowledgeApi["decideKnowledgeReview"]> {
+		if (this.writeProvider?.decide) {
+			return this.writeProvider.decide(input) as ReturnType<KnowledgeApi["decideKnowledgeReview"]>;
+		}
 		return this.call("knowledgeDecideReview", input);
 	}
 	read(
 		input: Parameters<KnowledgeApi["readKnowledgeNote"]>[0],
 	): ReturnType<KnowledgeApi["readKnowledgeNote"]> {
-		return this.call("knowledgeReadNote", input);
-	}
-	private async workbenchModule(): Promise<Record<string, (...args: any[]) => unknown>> {
-		return (await import(
-			/* @vite-ignore */ pathToFileURL(join(this.root(), "extensions", "obsidian-workbench.mjs")).href
-		)) as Record<string, (...args: any[]) => unknown>;
+		return this.readProvider.read(input);
 	}
 	async setMaintenanceTopic(input: {
 		cwd: string;
@@ -419,9 +796,9 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		topic: string;
 		revision: number;
 	}): Promise<unknown> {
-		const fn = (await this.workbenchModule()).runKnowledgeMaintenanceTopic;
-		if (!fn) throw new Error("Knowledge maintenance topic port is unavailable");
-		return fn(input);
+		const operations = this.writeProvider?.maintenanceTopic;
+		if (!operations) return unavailable("maintenance topic");
+		return operations.setTopic(input);
 	}
 	async proposeMaintenanceWiki(input: {
 		cwd: string;
@@ -431,9 +808,9 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		rationale: string;
 		revision: number;
 	}): Promise<unknown> {
-		const fn = (await this.workbenchModule()).runKnowledgeMaintenanceWiki;
-		if (!fn) throw new Error("Knowledge maintenance Wiki port is unavailable");
-		return fn(input);
+		const operations = this.writeProvider?.maintenanceTopic;
+		if (!operations) return unavailable("maintenance Wiki");
+		return operations.proposeWiki(input);
 	}
 	maintain(
 		input: Parameters<KnowledgeApi["maintainKnowledge"]>[0],
@@ -448,45 +825,60 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	semanticStatus(
 		input: Parameters<KnowledgeApi["getKnowledgeSemanticStatus"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeSemanticStatus"]> {
-		return this.call("knowledgeSemanticStatus", input);
+		const operation = this.writeProvider?.semantic?.status;
+		return operation ? operation(input) : this.semanticUnavailable();
 	}
 	saveSemanticSettings(
 		input: Parameters<KnowledgeApi["saveKnowledgeSemanticSettings"]>[0],
 	): ReturnType<KnowledgeApi["saveKnowledgeSemanticSettings"]> {
-		return this.call("saveKnowledgeSemanticSettings", input);
+		const operation = this.writeProvider?.semantic?.saveSettings;
+		return operation ? operation(input) : this.semanticUnavailable();
 	}
 	testSemanticProvider(
 		input: Parameters<KnowledgeApi["testKnowledgeSemanticProvider"]>[0],
 	): ReturnType<KnowledgeApi["testKnowledgeSemanticProvider"]> {
-		return this.call("testKnowledgeSemanticProvider", input);
+		const operation = this.writeProvider?.semantic?.testProvider;
+		return operation ? operation(input) : this.semanticUnavailable();
 	}
 	indexSemantic(
 		input: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>[0],
 	): ReturnType<KnowledgeApi["indexKnowledgeSemantic"]> {
-		return this.call("indexKnowledgeSemantic", input);
+		const operation = this.writeProvider?.semantic?.index;
+		return operation ? operation(input) : this.semanticUnavailable();
 	}
 	cancelSemanticIndex(
 		input: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>[0],
 	): ReturnType<KnowledgeApi["cancelKnowledgeSemanticIndex"]> {
-		return this.call("cancelKnowledgeSemanticIndex", input);
+		const operation = this.writeProvider?.semantic?.cancelIndex;
+		return operation ? operation(input) : this.semanticUnavailable();
+	}
+	private semanticUnavailable(): Promise<never> {
+		return Promise.reject(new Error("Knowledge semantic UI is unavailable: install the knowledge plugin"));
 	}
 	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]> {
-		return this.call("searchKnowledge", input);
+		return this.readProvider.search(input);
 	}
 	noteLinks(
 		input: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeNoteLinks"]> {
-		return this.call("knowledgeNoteLinks", input);
+		return this.readProvider.noteLinks(input);
 	}
 	graph(
 		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]> {
-		return this.call("knowledgeGraph", input);
+		return this.readProvider.graph(input);
 	}
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext> {
+		if (this.writeProvider?.memory) {
+			return this.writeProvider.memory.dailyContext({ sinceMs }) as ReturnType<
+				KnowledgeUiServicePort["dailyContext"]
+			>;
+		}
 		return this.call("dailyDiscoveryContext", { sinceMs });
 	}
-	saveIdea(idea: import("@gyoungwe/pi-knowledge/host").DailyIdea): Promise<{ path: string }> {
+	saveIdea(idea: DailyIdea): Promise<{ path: string }> {
+		if (this.writeProvider?.memory)
+			return this.writeProvider.memory.saveIdea({ idea }) as Promise<{ path: string }>;
 		return this.call("saveDiscoveryIdea", { idea });
 	}
 	relatedForMemory(
@@ -494,22 +886,32 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		query: string,
 		limit = 4,
 	): Promise<Array<{ path: string; title: string; text: string }>> {
+		if (this.writeProvider?.memory) {
+			return this.writeProvider.memory.relatedForMemory({ cwd, query, limit }) as Promise<
+				Array<{ path: string; title: string; text: string }>
+			>;
+		}
 		return this.call("memoryRelatedKnowledge", { cwd, query, limit });
 	}
-	saveMemory(
-		cwd: string,
-		memory: import("@gyoungwe/pi-knowledge/host").MemoryNoteInput,
-	): Promise<{ path: string }> {
+	saveMemory(cwd: string, memory: MemoryNoteInput): Promise<{ path: string }> {
+		if (this.writeProvider?.memory)
+			return this.writeProvider.memory.saveMemory({ cwd, memory }) as Promise<{ path: string }>;
 		return this.call("saveMemoryNote", { cwd, memory });
 	}
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]> {
+		if (this.writeProvider?.topics) {
+			return this.writeProvider.topics.list(input) as ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
+		}
 		return this.call("getKnowledgeTopics", input);
 	}
 	archiveTopic(
 		input: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>[0],
 	): ReturnType<KnowledgeApi["archiveKnowledgeTopic"]> {
+		if (this.writeProvider?.topics) {
+			return this.writeProvider.topics.archive(input) as ReturnType<KnowledgeApi["archiveKnowledgeTopic"]>;
+		}
 		return this.call("archiveKnowledgeTopic", input);
 	}
 	getCloudStatus(): ReturnType<KnowledgeApi["getKnowledgeCloudStatus"]> {

@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /** Fresh macOS package smoke with an isolated HOME/profile and no inherited credentials. */
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { closeSync, openSync } from "node:fs";
-import { access, mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
-import { createServer } from "node:net";
+import { access, mkdir, mkdtemp, readdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { createServer as createHttpServer } from "node:http";
+import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 if (process.argv.includes("--help")) {
 	console.log(
-		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used.",
+		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app [--lifecycle-package=@scope/name|--lifecycle-fixture]\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used. With --lifecycle-package, installs, updates and removes that explicitly selected public fixture. With --lifecycle-fixture, a temporary local registry serves 1.0.0/1.1.0 and a loopback OpenAI-compatible model keeps one real packaged session streaming while the first install is attempted, so the host must return reload_deferred before the stream is released.",
 	);
 	process.exit(0);
 }
@@ -20,6 +21,15 @@ if (!process.argv[2]) throw new Error("A built Drone.app path is required");
 const bundle = await realpath(resolve(process.argv[2]));
 const executable = join(bundle, "Contents/MacOS/Drone");
 await access(executable);
+const lifecyclePackageArg = process.argv.find((value) => value.startsWith("--lifecycle-package="));
+const lifecycleFixture = process.argv.includes("--lifecycle-fixture");
+if (lifecycleFixture && lifecyclePackageArg)
+	throw new Error("Choose --lifecycle-package or --lifecycle-fixture, not both");
+const lifecyclePackage = lifecycleFixture
+	? "drone-packaged-lifecycle-fixture"
+	: lifecyclePackageArg?.slice("--lifecycle-package=".length) || undefined;
+if (lifecyclePackage && !/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/iu.test(lifecyclePackage))
+	throw new Error(`Invalid lifecycle package name: ${lifecyclePackage}`);
 const root = await realpath(await mkdtemp(join(tmpdir(), "drone-fresh-package-")));
 const home = join(root, "home"),
 	profile = join(root, "profile"),
@@ -28,7 +38,164 @@ const home = join(root, "home"),
 	cwd = join(root, "project");
 for (const path of [home, profile, agent, knowledge, cwd, join(root, "tmp")])
 	await mkdir(path, { recursive: true });
-const server = createServer();
+let registryServer;
+let registryUrl;
+let modelServer;
+let modelUrl;
+let releaseStreamingResponse;
+let streamingRequestResolve;
+let streamingResponseReadyResolve;
+const streamingRequestSeen = new Promise((resolve) => {
+	streamingRequestResolve = resolve;
+});
+const streamingResponseReady = new Promise((resolve) => {
+	streamingResponseReadyResolve = resolve;
+});
+let fixtureLatest = "1.0.0";
+let fixtureHasUpgraded = false;
+const fixtureTarballs = new Map();
+if (lifecycleFixture) {
+	for (const version of ["1.0.0", "1.1.0"]) {
+		const fixtureDir = join(root, `fixture-${version}`);
+		const destination = join(root, "tarballs");
+		await mkdir(join(fixtureDir, "dist"), { recursive: true });
+		await mkdir(destination, { recursive: true });
+		await writeFile(
+			join(fixtureDir, "package.json"),
+			`${JSON.stringify(
+				{
+					name: lifecyclePackage,
+					version,
+					private: false,
+					files: ["dist", "plugin.manifest.json"],
+					pi: { extensions: ["./dist/index.mjs"] },
+				},
+				null,
+			)}\n`,
+		);
+		await writeFile(
+			join(fixtureDir, "plugin.manifest.json"),
+			`${JSON.stringify({ schemaVersion: 1, version, entrypoints: { extension: "./dist/index.mjs" } }, null, 2)}\n`,
+		);
+		await writeFile(
+			join(fixtureDir, "dist/index.mjs"),
+			`export const fixtureVersion = ${JSON.stringify(version)};\n`,
+		);
+		execFileSync("npm", ["pack", "--ignore-scripts", "--pack-destination", destination], {
+			cwd: fixtureDir,
+			stdio: "ignore",
+			env: {
+				...process.env,
+				npm_config_audit: "false",
+				npm_config_fund: "false",
+				npm_config_update_notifier: "false",
+			},
+		});
+		fixtureTarballs.set(version, await readFile(join(destination, `${lifecyclePackage}-${version}.tgz`)));
+	}
+	registryServer = createHttpServer((request, response) => {
+		if (request.url === `/${lifecyclePackage}`) {
+			const availableVersions =
+				fixtureLatest === "1.0.0" && !fixtureHasUpgraded ? ["1.0.0"] : ["1.0.0", "1.1.0"];
+			const versions = Object.fromEntries(
+				availableVersions.map((version) => [
+					version,
+					{
+						name: lifecyclePackage,
+						version,
+						dist: {
+							tarball: `http://127.0.0.1:${registryServer.address().port}/${lifecyclePackage}/-/${lifecyclePackage}-${version}.tgz`,
+						},
+					},
+				]),
+			);
+			response.setHeader("content-type", "application/json");
+			response.end(
+				JSON.stringify({ name: lifecyclePackage, versions, "dist-tags": { latest: fixtureLatest } }),
+			);
+			return;
+		}
+		const match = request.url?.match(
+			new RegExp(`^/${lifecyclePackage}/-/${lifecyclePackage}-(1\\.0\\.0|1\\.1\\.0)\\.tgz$`),
+		);
+		if (!match) {
+			response.statusCode = 404;
+			response.end("not found");
+			return;
+		}
+		response.setHeader("content-type", "application/octet-stream");
+		response.end(fixtureTarballs.get(match[1]));
+	});
+	registryServer.listen(0, "127.0.0.1");
+	await once(registryServer, "listening");
+	registryUrl = `http://127.0.0.1:${registryServer.address().port}/`;
+	modelServer = createHttpServer(async (request, response) => {
+		if (request.method !== "POST" || request.url !== "/v1/chat/completions") {
+			response.statusCode = 404;
+			response.end("not found");
+			return;
+		}
+		request.resume();
+		streamingRequestResolve?.();
+		response.writeHead(200, {
+			"content-type": "text/event-stream",
+			"cache-control": "no-cache",
+			connection: "keep-alive",
+		});
+		response.write(
+			`data: ${JSON.stringify({
+				id: "drone-packaged-stream",
+				object: "chat.completion.chunk",
+				created: Math.floor(Date.now() / 1000),
+				model: "drone-packaged-stream",
+				choices: [{ index: 0, delta: { role: "assistant", content: "streaming" }, finish_reason: null }],
+			})}\n\n`,
+		);
+		await new Promise((resolve) => {
+			releaseStreamingResponse = resolve;
+			streamingResponseReadyResolve?.();
+		});
+		response.write(
+			`data: ${JSON.stringify({
+				id: "drone-packaged-stream",
+				object: "chat.completion.chunk",
+				created: Math.floor(Date.now() / 1000),
+				model: "drone-packaged-stream",
+				choices: [{ index: 0, delta: { content: " complete" }, finish_reason: "stop" }],
+			})}\n\n`,
+		);
+		response.end("data: [DONE]\n\n");
+	});
+	modelServer.listen(0, "127.0.0.1");
+	await once(modelServer, "listening");
+	modelUrl = `http://127.0.0.1:${modelServer.address().port}/v1`;
+	await mkdir(agent, { recursive: true });
+	await writeFile(
+		join(agent, "models.json"),
+		`${JSON.stringify(
+			{
+				providers: {
+					openai: {
+						name: "Drone packaged streaming fixture",
+						baseUrl: modelUrl,
+						apiKey: "drone-packaged-stream-fixture",
+						models: [
+							{
+								id: "drone-packaged-stream",
+								name: "Drone packaged streaming fixture",
+								api: "openai-completions",
+								contextWindow: 16_384,
+								maxTokens: 256,
+							},
+						],
+					},
+				},
+			},
+			null,
+		)}\n`,
+	);
+}
+const server = createNetServer();
 server.listen(0, "127.0.0.1");
 await once(server, "listening");
 const port = server.address().port;
@@ -49,8 +216,11 @@ const child = spawn(
 			TMPDIR: join(root, "tmp"),
 			XDG_CONFIG_HOME: join(home, ".config"),
 			XDG_CACHE_HOME: join(home, ".cache"),
+			NPM_CONFIG_CACHE: join(root, "npm-cache"),
+			npm_config_cache: join(root, "npm-cache"),
 			PI_CODING_AGENT_DIR: agent,
 			DRONE_KNOWLEDGE_DIR: knowledge,
+			...(registryUrl ? { NPM_CONFIG_REGISTRY: registryUrl, npm_config_registry: registryUrl } : {}),
 		},
 	},
 );
@@ -61,6 +231,15 @@ const report = {
 	root,
 	checks: [],
 	liveModel: false,
+	// This smoke intentionally starts with no optional package source.  Keep the
+	// lifecycle acceptance state explicit so a zero-plugin PASS cannot be read as
+	// proof of install/disable/upgrade/rollback behavior.
+	lifecycleAcceptance: {
+		status: "NOT_RUN",
+		operations: ["install", "upgrade", "disable", "restore", "rollback", "destroy-failure"],
+		reason:
+			"A packaged lifecycle run needs an explicitly selected package source and authorized upgrade/rollback fixture; this zero-plugin smoke does not mutate package state.",
+	},
 	startedAt: new Date().toISOString(),
 };
 let socket;
@@ -123,6 +302,194 @@ try {
 	}
 	assert(ready, "Fresh workbench failed to become visible after splash");
 	report.checks.push("actual packaged workbench visible after splash and CJS preload mounted");
+	const managedUiRoot = join(profile, "ui-plugins");
+	const builtInUiFiles = new Set([".builtin-seed.json", "SPEC.md", "drone-ui.d.ts", "_examples"]);
+	const optionalUiEntries = (
+		await readdir(managedUiRoot).catch((error) => {
+			if (error.code === "ENOENT") return [];
+			throw error;
+		})
+	).filter((entry) => !builtInUiFiles.has(entry));
+	assert.deepEqual(
+		optionalUiEntries,
+		[],
+		`fresh profile contains optional UI plugins: ${optionalUiEntries.join(", ")}`,
+	);
+	report.checks.push("fresh packaged profile contains no optional UI plugins (only host seed files)");
+	const managedPackageRoot = join(agent, "npm", "node_modules");
+	const managedPackageEntries = (
+		await readdir(managedPackageRoot).catch((error) => {
+			if (error.code === "ENOENT") return [];
+			throw error;
+		})
+	).filter((entry) => entry !== ".package-lock.json");
+	assert.deepEqual(
+		managedPackageEntries,
+		[],
+		`fresh Pi managed npm root contains optional packages: ${managedPackageEntries.join(", ")}`,
+	);
+	report.checks.push("fresh Pi managed npm root contains no optional packages");
+	if (lifecyclePackage) {
+		const packagePath = join(managedPackageRoot, ...lifecyclePackage.split("/"));
+		const source = `npm:${lifecyclePackage}`;
+		let lifecycleSessionId;
+		const lifecycle = {
+			package: lifecyclePackage,
+			operations: lifecycleFixture
+				? ["install", "reload-deferred", "upgrade", "rollback", "remove", "restore", "remove"]
+				: ["install", "update", "remove"],
+		};
+		let lifecycleStage = "install";
+		const installedVersion = async () =>
+			JSON.parse(await readFile(join(packagePath, "package.json"), "utf8")).version;
+		try {
+			if (lifecycleFixture) {
+				const lifecycleSession = await evaluate(
+					`window.pi.createSession({cwd:${JSON.stringify(cwd)},provider:"openai",modelId:"drone-packaged-stream"})`,
+				);
+				assert(typeof lifecycleSession?.sessionId === "string" && lifecycleSession.sessionId.length > 0);
+				lifecycleSessionId = lifecycleSession.sessionId;
+				await evaluate(
+					`window.__droneStreamingPromptDone=false; window.__droneStreamingPromptError=null; window.pi.prompt(${JSON.stringify(lifecycleSessionId)}, "streaming lifecycle fixture").then(()=>window.__droneStreamingPromptDone=true, error=>{window.__droneStreamingPromptError=String(error); window.__droneStreamingPromptDone=true;}); undefined`,
+				);
+				await Promise.race([
+					streamingRequestSeen,
+					new Promise((_, reject) =>
+						setTimeout(() => reject(new Error("streaming model request timed out")), 30_000),
+					),
+				]);
+				await streamingResponseReady;
+			}
+			if (lifecycleFixture) fixtureLatest = "1.0.0";
+			const installed = await evaluate(`window.pi.installPackage(${JSON.stringify(lifecyclePackage)})`);
+			assert(installed?.status === "succeeded", `package install failed: ${JSON.stringify(installed)}`);
+			assert(
+				await access(packagePath).then(
+					() => true,
+					() => false,
+				),
+				"installed package directory is missing",
+			);
+			const configured = await evaluate("window.pi.listConfiguredPackages()");
+			assert(configured.some((entry) => entry.source === source && entry.scope === "user"));
+			if (lifecycleFixture) {
+				const version = await installedVersion();
+				assert.equal(version, "1.0.0");
+				assert.equal(installed.effect, "next-session");
+				assert(installed.events.some((event) => event.type === "reload_deferred"));
+				assert.deepEqual(installed.deferredSessionIds, [lifecycleSessionId]);
+				lifecycle.reloadDeferred = installed;
+				releaseStreamingResponse?.();
+				for (let i = 0; i < 300; i++) {
+					if (await evaluate("Boolean(window.__droneStreamingPromptDone)")) break;
+					await delay(100);
+				}
+				assert.equal(await evaluate("Boolean(window.__droneStreamingPromptDone)"), true);
+				assert.equal(await evaluate("window.__droneStreamingPromptError ?? null"), null);
+			}
+			lifecycle.install = installed;
+
+			lifecycleStage = "upgrade";
+			if (lifecycleFixture) {
+				fixtureLatest = "1.1.0";
+				fixtureHasUpgraded = true;
+			}
+			const updated = await evaluate(`window.pi.updatePackage(${JSON.stringify(lifecyclePackage)})`);
+			assert(updated?.status === "succeeded", `package update failed: ${JSON.stringify(updated)}`);
+			assert(
+				await access(packagePath).then(
+					() => true,
+					() => false,
+				),
+				"updated package directory is missing",
+			);
+			const afterUpdate = await evaluate("window.pi.listConfiguredPackages()");
+			assert(afterUpdate.some((entry) => entry.source === source && entry.scope === "user"));
+			if (lifecycleFixture) assert.equal(await installedVersion(), "1.1.0");
+			lifecycle.update = updated;
+
+			lifecycleStage = "rollback";
+			if (lifecycleFixture) {
+				fixtureLatest = "1.0.0";
+				const rollback = await evaluate(
+					`window.pi.rollbackPackage(${JSON.stringify(lifecyclePackage)}, "1.0.0")`,
+				);
+				assert(rollback?.status === "succeeded", `package rollback failed: ${JSON.stringify(rollback)}`);
+				assert.equal(await installedVersion(), "1.0.0");
+				lifecycle.rollback = rollback;
+			}
+
+			lifecycleStage = "remove";
+			const removed = await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`);
+			assert(removed?.status === "succeeded", `package remove failed: ${JSON.stringify(removed)}`);
+			assert(
+				!(await access(packagePath).then(
+					() => true,
+					() => false,
+				)),
+				"removed package directory remains",
+			);
+			const remaining = await evaluate("window.pi.listConfiguredPackages()");
+			assert(!remaining.some((entry) => entry.source === source && entry.scope === "user"));
+			lifecycle.remove = removed;
+			if (lifecycleFixture) {
+				const restored = await evaluate(`window.pi.installPackage(${JSON.stringify(lifecyclePackage)})`);
+				assert(restored?.status === "succeeded", `package restore failed: ${JSON.stringify(restored)}`);
+				assert.equal(await installedVersion(), "1.0.0");
+				const restoredConfigured = await evaluate("window.pi.listConfiguredPackages()");
+				assert(restoredConfigured.some((entry) => entry.source === source && entry.scope === "user"));
+				lifecycle.restore = restored;
+				const removedAgain = await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`);
+				assert(
+					removedAgain?.status === "succeeded",
+					`package final remove failed: ${JSON.stringify(removedAgain)}`,
+				);
+				assert(
+					!(await access(packagePath).then(
+						() => true,
+						() => false,
+					)),
+					"restored package directory remains after final remove",
+				);
+				lifecycle.removeFinal = removedAgain;
+			}
+			report.lifecycleAcceptance = {
+				status: "PASS",
+				operations: lifecycle.operations,
+				package: lifecyclePackage,
+				receipts: lifecycle,
+			};
+			report.checks.push(
+				lifecycleFixture
+					? `isolated packaged host installed, upgraded, rolled back, removed, restored and removed ${lifecyclePackage}`
+					: `isolated packaged host installed and removed ${lifecyclePackage}`,
+			);
+			if (lifecycleSessionId) await evaluate(`window.pi.closeSession(${JSON.stringify(lifecycleSessionId)})`);
+		} catch (error) {
+			const message = String(error);
+			if (lifecycleFixture || /network|registry|npm|fetch|timeout|unavailable|not found/iu.test(message)) {
+				if (lifecycleFixture) {
+					await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`).catch(() => undefined);
+				}
+				if (lifecycleSessionId)
+					await evaluate(`window.pi.closeSession(${JSON.stringify(lifecycleSessionId)})`).catch(
+						() => undefined,
+					);
+				report.lifecycleAcceptance = {
+					status: "BLOCKED",
+					operations: lifecycle.operations,
+					package: lifecyclePackage,
+					reason: lifecycleFixture
+						? `${lifecycleStage} did not complete; cross-version rollback is unavailable through the host API: ${message}`
+						: message,
+					receipts: lifecycle,
+				};
+				report.checks.push(`packaged lifecycle blocked for ${lifecyclePackage}: ${message}`);
+			} else {
+				throw error;
+			}
+		}
+	}
 	const overview = await evaluate(`window.pi.getKnowledgeOverview({cwd:${JSON.stringify(cwd)}})`);
 	assert.equal(overview.enabled, true);
 	assert.equal(overview.bound, false);
@@ -140,14 +507,30 @@ try {
 	report.checks.push(
 		"packaged first-party research/Obsidian commands available in an unrelated empty project",
 	);
-	for (const name of ["auth.json", "models.json"]) {
-		const data = await readFile(join(agent, name), "utf8").catch((error) => {
-			if (error.code === "ENOENT") return "{}";
-			throw error;
-		});
-		assert.deepEqual(JSON.parse(data), {});
+	const session = await evaluate(`window.pi.createSession({cwd:${JSON.stringify(cwd)}})`);
+	assert(typeof session?.sessionId === "string" && session.sessionId.length > 0);
+	await evaluate(`window.pi.closeSession(${JSON.stringify(session.sessionId)})`);
+	report.genericSession = { sessionId: session.sessionId, cwd };
+	report.checks.push("packaged host can create and close a generic Pi session with no optional plugin");
+	const authData = await readFile(join(agent, "auth.json"), "utf8").catch((error) => {
+		if (error.code === "ENOENT") return "{}";
+		throw error;
+	});
+	assert.deepEqual(JSON.parse(authData), {});
+	const modelsData = await readFile(join(agent, "models.json"), "utf8").catch((error) => {
+		if (error.code === "ENOENT") return "{}";
+		throw error;
+	});
+	const models = JSON.parse(modelsData);
+	if (lifecycleFixture) {
+		assert.equal(models.providers?.openai?.models?.[0]?.id, "drone-packaged-stream");
+		report.checks.push(
+			"fresh auth store is empty; isolated loopback model config is test-only and contains no credential",
+		);
+	} else {
+		assert.deepEqual(models, {});
+		report.checks.push("fresh auth/model stores are empty; no inherited model credentials");
 	}
-	report.checks.push("fresh auth/model stores are empty; no inherited model credentials");
 	const capture = await call("Page.captureScreenshot", { format: "png" });
 	await writeFile(join(root, "fresh-install.png"), Buffer.from(capture.data, "base64"));
 	report.screenshot = join(root, "fresh-install.png");
@@ -156,11 +539,20 @@ try {
 	report.error = String(error);
 	process.exitCode = 1;
 } finally {
+	releaseStreamingResponse?.();
 	socket?.close();
 	if (child.exitCode === null) {
 		child.kill("SIGTERM");
 		await Promise.race([once(child, "exit"), delay(5000)]);
 		if (child.exitCode === null) child.kill("SIGKILL");
+	}
+	if (registryServer) {
+		registryServer.close();
+		await once(registryServer, "close").catch(() => undefined);
+	}
+	if (modelServer) {
+		modelServer.close();
+		await once(modelServer, "close").catch(() => undefined);
 	}
 	closeSync(logFd);
 	report.completedAt = new Date().toISOString();

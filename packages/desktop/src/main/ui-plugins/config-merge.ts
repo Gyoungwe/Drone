@@ -23,10 +23,20 @@ export function normalizeUiPluginsConfig(parsed: Partial<UiPluginsConfig>): UiPl
 			if (typeof name === "string") assignments[slot] = name;
 		}
 	}
+	const installations: UiPluginsConfig["installations"] = {};
+	if (parsed.installations && typeof parsed.installations === "object") {
+		for (const [name, installation] of Object.entries(parsed.installations)) {
+			if (!installation || typeof installation !== "object") continue;
+			if (typeof installation.root !== "string" || installation.root.length === 0) continue;
+			if (typeof installation.hash !== "string" || installation.hash.length === 0) continue;
+			installations[name] = { root: installation.root, hash: installation.hash };
+		}
+	}
 	return {
 		enabled: typeof parsed.enabled === "boolean" ? parsed.enabled : false,
 		plugins,
 		assignments,
+		...(Object.keys(installations).length > 0 ? { installations } : {}),
 	};
 }
 

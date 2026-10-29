@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 
 const extensionPath = resolve(import.meta.dirname, "../../../.pi/extensions/workspace-config.mjs");
 
@@ -23,34 +24,32 @@ function register(extension, cwd) {
 	const tools = new Map();
 	const commands = new Map();
 	const events = [];
-	extension.registerWorkspaceConfig(
-		{
-			events: { emit: (name, payload) => events.push({ name, payload }) },
-			registerTool: (tool) => tools.set(tool.name, tool),
-			registerCommand: (name, command) => commands.set(name, command),
-		},
-		{ cwd },
-	);
-	return { tools, commands, events };
+	const bus = createEventBus();
+	bus.on("drone:tool-manifest/v1", (payload) => events.push({ name: "drone:tool-manifest/v1", payload }));
+	const pi = {
+		events: bus,
+		on() {},
+		getAllTools: () => [...tools.values()],
+		registerTool: (tool) => tools.set(tool.name, tool),
+		registerCommand: (name, command) => commands.set(name, command),
+	};
+	extension.registerWorkspaceConfig(pi, { cwd });
+	return { tools, commands, events, pi };
 }
 
-test("workspace extension registers status, vault and summary tools", async (t) => {
+test("workspace extension leaves summary unavailable without the research delivery owner", async (t) => {
 	const extension = await loadExtension();
 	const { cwd } = await makeWorkspace(t);
 	const registered = register(extension, cwd);
-	assert.deepEqual(
-		[...registered.tools.keys()],
-		["research_workspace_status", "research_init_vault", "research_summarize_run"],
-	);
+	assert.deepEqual([...registered.tools.keys()], ["research_workspace_status", "research_init_vault"]);
 	assert.equal(registered.commands.has("research-workspace"), true);
 	assert.equal(registered.tools.get("research_workspace_status").drone.readOnly, true);
-	assert.equal(registered.tools.get("research_summarize_run").drone.flow, "summary");
+	assert.equal(registered.tools.has("research_summarize_run"), false);
 	assert.deepEqual(
 		registered.events.map(({ name, payload }) => [name, payload.name]),
 		[
 			["drone:tool-manifest/v1", "research_workspace_status"],
 			["drone:tool-manifest/v1", "research_init_vault"],
-			["drone:tool-manifest/v1", "research_summarize_run"],
 		],
 	);
 });
@@ -76,7 +75,7 @@ test("workspace configuration keeps paths project-local and saves atomically", a
 	assert.equal((await extension.loadWorkspaceConfig(cwd)).resultsRoot, join(cwd, "artifacts"));
 });
 
-test("vault initialization and evidence-gated summary stay inside configured roots", async (t) => {
+test("research summary rejects a hand-written answerable gate and linked paths before writing", async (t) => {
 	const extension = await loadExtension();
 	const { cwd, vault } = await makeWorkspace(t);
 	const initialized = await extension.initializeVault(vault, "project-a", "hybrid");
@@ -100,16 +99,20 @@ test("vault initialization and evidence-gated summary stay inside configured roo
 			},
 		}),
 	);
-	const tools = register(extension, cwd).tools;
-	const summary = await tools
-		.get("research_summarize_run")
-		.execute("summary", { run_dir: runDir, summary_markdown: "# Fixture summary" }, undefined, undefined, {
-			cwd,
-		});
-	assert.equal(summary.details.summary_saved, true);
-	assert.match(await readFile(summary.details.run, "utf8"), /Fixture summary/);
-	assert.match(await readFile(summary.details.obsidian_note, "utf8"), /Fixture summary/);
-	assert.match(await readFile(join(initialized.vault, "Projects/Index.md"), "utf8"), /project-a/);
+	const { tools, pi } = register(extension, cwd);
+	const research = await import(
+		pathToFileURL(resolve(import.meta.dirname, "../../../.pi/extensions/research-loop.mjs")).href
+	);
+	research.default(pi);
+	await assert.rejects(
+		tools
+			.get("research_summarize_run")
+			.execute("summary", { run_dir: runDir, summary_markdown: "# Fixture summary" }, undefined, undefined, {
+				cwd,
+			}),
+		/fresh completion/,
+	);
+	await assert.rejects(readFile(join(runDir, "SUMMARY.md")), { code: "ENOENT" });
 
 	const outside = join(cwd, "outside");
 	await mkdir(outside);

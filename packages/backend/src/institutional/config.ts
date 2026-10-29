@@ -3,8 +3,8 @@ import {
 	emptyInstitutionalConfig,
 	type InstitutionalConfig,
 	type InstitutionalSaveInput,
+	inferEzproxyTemplateFromUrl,
 } from "@drone/shared";
-import { inferEzproxyTemplateFromUrl } from "@gyoungwe/pi-research/host";
 import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
 import { getAgentDir } from "../session-engine/sdk";
@@ -150,7 +150,7 @@ export async function touchInstitutionalLogin(url?: string): Promise<Institution
 	return next;
 }
 
-export { buildProxiedUrl, inferEzproxyTemplateFromUrl } from "@gyoungwe/pi-research/host";
+export { buildProxiedUrl, inferEzproxyTemplateFromUrl } from "@drone/shared";
 
 export async function detectAndSaveTemplateFromUrl(
 	navigatedUrl: string,

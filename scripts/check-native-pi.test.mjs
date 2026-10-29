@@ -14,9 +14,10 @@ import {
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixture = JSON.parse(fs.readFileSync(DEFAULT_FIXTURE, "utf8"));
 
-test("native Pi scan maps direct, task-helper, and factory registrations", () => {
+test("native Pi scan maps host registrations while installed task tools remain delegated", () => {
 	const records = scanNativePiRegistrations(rootDir);
-	assert.ok(records.some((record) => record.name === "task_plan" && record.registration === "task-helper"));
+	assert.ok(!records.some((record) => record.name === "task_plan"));
+	assert.equal(fixture.tools.task_plan.delegated, true);
 	assert.ok(
 		records.some(
 			(record) =>
@@ -43,14 +44,13 @@ test("checked-in fixture covers every discovered registration", () => {
 		"pi-core",
 		"pi-knowledge",
 		"pi-research",
-		"pi-tasks",
 	]);
 });
 
 test("fixture validation catches missing and stale mappings", () => {
 	const records = scanNativePiRegistrations(rootDir);
 	const broken = structuredClone(fixture);
-	delete broken.tools.task_plan;
+	delete broken.tools.research_workspace_status;
 	broken.tools.research_loop.source = "packages/extensions/src/moved.ts";
 	broken.tools.stale = {
 		source: "packages/extensions/src/stale.ts",
@@ -59,7 +59,7 @@ test("fixture validation catches missing and stale mappings", () => {
 		targetPackage: "pi-research",
 	};
 	const errors = validateNativePiFixture(records, broken);
-	assert.ok(errors.some((error) => error.includes("missing fixture mapping for task_plan")));
+	assert.ok(errors.some((error) => error.includes("missing fixture mapping for research_workspace_status")));
 	assert.ok(errors.some((error) => error.includes("delegated fixture source is missing for research_loop")));
 	assert.ok(errors.some((error) => error.includes("fixture mapping has no source registration: stale")));
 });
@@ -67,12 +67,12 @@ test("fixture validation catches missing and stale mappings", () => {
 test("report exposes migration fields for humans and automation", () => {
 	const report = formatReport(
 		applyFixture(scanNativePiRegistrations(rootDir), fixture).filter((entry) =>
-			["task_plan", "channel_subscribe"].includes(entry.toolName),
+			["research_workspace_status", "channel_subscribe"].includes(entry.toolName),
 		),
 	);
 	assert.match(report, /tool\tlocation\tnative Pi\ttarget package/);
-	assert.match(report, /task_plan\tpackages\/tasks\/src\/runtime\/register\.ts:/);
+	assert.match(report, /research_workspace_status\tpackages\/extensions\/src\/workspace-config\.ts:/);
 	assert.match(report, /channel_subscribe\tpackages\/backend\/src\/tools\/channel-watch\/tools\.ts:/);
-	assert.match(report, /pi-tasks/);
+	assert.match(report, /pi-knowledge/);
 	assert.match(report, /pi-core/);
 });

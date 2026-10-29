@@ -1,8 +1,17 @@
+import "../../packages/desktop/src/renderer/src/plugins/host-api";
+import * as taskUi from "@installed-task-ui";
+import taskUiManifest from "@installed-task-ui-manifest";
 import { createRoot } from "react-dom/client";
 import { getPi } from "../../packages/desktop/src/renderer/src/api";
 import { MessageItem } from "../../packages/desktop/src/renderer/src/components/chat/MessageItem";
 import { ChangesPane } from "../../packages/desktop/src/renderer/src/components/panel/ChangesPane";
-import { TasksPane } from "../../packages/desktop/src/renderer/src/components/panel/TasksPane";
+import {
+	PluginEntryHost,
+	usePluginEntries,
+} from "../../packages/desktop/src/renderer/src/plugins/PluginRegions";
+
+import { useUiPluginRegistry } from "../../packages/desktop/src/renderer/src/plugins/registry";
+import { UI_REGIONS, UI_SLOTS } from "../../packages/desktop/src/renderer/src/plugins/slots";
 import { useSessionsStore } from "../../packages/desktop/src/renderer/src/stores/sessions";
 import { useThemeStore } from "../../packages/desktop/src/renderer/src/stores/theme";
 import {
@@ -10,7 +19,12 @@ import {
 	useTranscriptStore,
 } from "../../packages/desktop/src/renderer/src/stores/transcript";
 import { useUiStore } from "../../packages/desktop/src/renderer/src/stores/ui";
+import { useUiPluginsStore } from "../../packages/desktop/src/renderer/src/stores/ui-plugins";
 import { localResourceHref } from "../../packages/shared/src/resource-links";
+
+const applied = useUiPluginRegistry.getState().applyPlugin(taskUiManifest, taskUi, [UI_SLOTS.Message]);
+if (!applied.ok) throw new Error(`Installed task UI registration failed: ${applied.missing.join(", ")}`);
+useUiPluginsStore.setState({ config: { enabled: true, plugins: {}, assignments: {} } });
 
 document.documentElement.dataset.theme = "light";
 useThemeStore.setState({ resolved: "light" });
@@ -40,6 +54,7 @@ useThemeStore.setState({ resolved: "light" });
 			...views.map((taskView, i) => ({
 				kind: "assistant",
 				id: `task-${i}`,
+				hostStatus: true,
 				taskView,
 				text: "宿主状态",
 				thinking: "",
@@ -66,10 +81,23 @@ function Fixture() {
 					<ChangesPane sessionId="fixture" />
 				</section>
 			)}
-			<TasksPane sessionId="fixture" />
+			<TaskPanelFixture />
 		</div>
 	);
 }
 const root = document.getElementById("root");
 if (!root) throw new Error("Fixture root missing");
 createRoot(root).render(<Fixture />);
+
+function TaskPanelFixture() {
+	const entries = usePluginEntries(UI_REGIONS.PanelTab);
+	return (
+		<aside className="context-pane">
+			{entries
+				.filter((entry) => entry.pluginName === taskUiManifest.name)
+				.map((entry) => (
+					<PluginEntryHost key={entry.id} entry={entry} />
+				))}
+		</aside>
+	);
+}

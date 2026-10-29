@@ -34,7 +34,7 @@ const UiPluginContributionSchema = Type.Object(
 const UiPluginManifestSchema = Type.Object(
 	{
 		name: Type.String({ minLength: 1 }),
-		droneUi: Type.Integer({ minimum: 1 }),
+		droneUi: Type.Union([Type.Literal(1), Type.Literal(2)]),
 		main: Type.String({ minLength: 1 }),
 		slots: Type.Optional(Type.Record(Type.String(), Type.String())),
 		contributions: Type.Optional(Type.Array(UiPluginContributionSchema)),
@@ -49,6 +49,7 @@ const UiPluginManifestSchema = Type.Object(
 const UiPluginInfoSchema = Type.Object(
 	{
 		name: Type.String({ minLength: 1 }),
+		packageName: Type.Optional(Type.String({ minLength: 1 })),
 		displayName: Type.Optional(Type.String()),
 		description: Type.Optional(Type.String()),
 		version: Type.Optional(Type.String()),
@@ -80,6 +81,17 @@ const UiPluginsConfigSchema = Type.Object(
 			),
 		),
 		assignments: Type.Record(Type.String(), Type.String()),
+		installations: Type.Optional(
+			Type.Record(
+				Type.String(),
+				Type.Object(
+					{ root: Type.String({ minLength: 1 }), hash: Type.String({ minLength: 1 }) },
+					{
+						additionalProperties: false,
+					},
+				),
+			),
+		),
 	},
 	{ additionalProperties: false },
 );
@@ -114,6 +126,7 @@ export const UiPluginsContract = defineDomain("uiPlugins", {
 					{
 						manifest: Type.Unsafe<UiPluginManifest>(UiPluginManifestSchema),
 						code: Type.String(),
+						runtimeBinding: Type.Optional(Type.String({ minLength: 1 })),
 					},
 					{ additionalProperties: false },
 				),

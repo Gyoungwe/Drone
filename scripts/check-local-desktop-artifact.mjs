@@ -14,6 +14,8 @@ import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { verifyCoreMemoryArtifact } from "./build-pi-core.mjs";
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const getArg = (name) => {
@@ -261,8 +263,14 @@ async function run() {
 
 	const workbenchManifestPath = ".pi/extensions/workbench-manifest.json";
 	const workbenchManifest = JSON.parse(await readText(sourcePath(repoRoot, workbenchManifestPath)));
-	const knowledgeWorkerPath = sourcePath(repoRoot, ".pi/extensions/knowledge-worker.mjs");
-	const knowledgeWorkerManifestPath = sourcePath(repoRoot, ".pi/extensions/.knowledge-worker-manifest.json");
+	const knowledgeWorkerPath = sourcePath(
+		repoRoot,
+		"vendor/plugins/pi-knowledge/lib/knowledge/runtime/worker.mjs",
+	);
+	const knowledgeWorkerManifestPath = sourcePath(
+		repoRoot,
+		"vendor/plugins/pi-knowledge/lib/knowledge/runtime/.knowledge-worker-manifest.json",
+	);
 	let knowledgeWorkerOk = false;
 	let knowledgeWorkerEvidence = {};
 	try {
@@ -271,13 +279,14 @@ async function run() {
 			readText(knowledgeWorkerManifestPath).then(JSON.parse),
 		]);
 		const actualHash = createHash("sha256").update(workerBytes).digest("hex");
-		knowledgeWorkerOk =
-			actualHash === workerManifest.outputSha256 && compiledText.includes("knowledge-worker.mjs");
+		knowledgeWorkerOk = actualHash === workerManifest.outputSha256;
 		knowledgeWorkerEvidence = {
-			paths: [".pi/extensions/knowledge-worker.mjs", ".pi/extensions/.knowledge-worker-manifest.json"],
+			paths: [
+				"vendor/plugins/pi-knowledge/lib/knowledge/runtime/worker.mjs",
+				"vendor/plugins/pi-knowledge/lib/knowledge/runtime/.knowledge-worker-manifest.json",
+			],
 			outputSha256: workerManifest.outputSha256,
 			actualSha256: actualHash,
-			compiledResourceMarker: compiledText.includes("knowledge-worker.mjs"),
 		};
 	} catch (error) {
 		knowledgeWorkerEvidence = { error: String(error?.message || error) };
@@ -286,7 +295,7 @@ async function run() {
 		"knowledge-worker-resource",
 		knowledgeWorkerOk ? "PASS" : "FAIL",
 		knowledgeWorkerOk
-			? "generated knowledge worker and hash manifest are present and referenced by the desktop build"
+			? "installed pi-knowledge worker and hash manifest are present for the desktop build"
 			: "generated knowledge worker resource, manifest or desktop reference is missing",
 		knowledgeWorkerEvidence,
 	);
@@ -382,8 +391,9 @@ async function run() {
 	const memorySourcePaths = [
 		"packages/desktop/src/renderer/src/components/settings/MemorySettingsRow.tsx",
 		"packages/desktop/src/renderer/src/components/chat/MemoryCitationRow.tsx",
-		"packages/backend/src/project/memory.ts",
-		"packages/pi-core/src/tools/memory-save.ts",
+		"packages/backend/src/memory/store.ts",
+		"packages/backend/src/memory/promote.ts",
+		"packages/desktop/src/main/ipc/memory.ts",
 	];
 	const memorySource = (await Promise.all(memorySourcePaths.map(sourceText))).join("\n");
 	const memoryOk =
@@ -391,14 +401,19 @@ async function run() {
 		["memoryGetStatus", "memoryList", "memoryPromote", "memory-settings", "memory-citations"].every(
 			(marker) => memorySource.includes(marker) || compiledText.includes(marker),
 		);
-	addCheck(
-		"memory-resource-contract",
-		memoryOk ? "PASS" : "FAIL",
-		memoryOk
-			? "memory settings, citations, backend store and pi-core save tool are represented in the build"
-			: "memory UI/backend/plugin contract is incomplete",
-		{ sourcePaths: memorySourcePaths },
-	);
+	try {
+		const core = await verifyCoreMemoryArtifact(repoRoot);
+		addCheck(
+			"memory-resource-contract",
+			memoryOk ? "PASS" : "FAIL",
+			memoryOk
+				? "memory settings, citations, backend store and verified pi-core save tool are represented in the build"
+				: "memory UI/backend contract is incomplete",
+			{ sourcePaths: memorySourcePaths, ...core },
+		);
+	} catch (error) {
+		addCheck("memory-resource-contract", "FAIL", error.message, { sourcePaths: memorySourcePaths });
+	}
 
 	const redlineSourcePaths = [
 		"packages/desktop/src/renderer/src/components/chat/RunInspector.tsx",

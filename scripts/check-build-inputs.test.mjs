@@ -53,10 +53,8 @@ test("extension build check detects transitive dependency drift", async () => {
 	}
 });
 
-test("tasks checks detect dependency drift", async () => {
-	await failsAfterDependencyEdit(join(root, "packages/tasks/src/runtime/acceptance.ts"), () =>
-		runNode("packages/tasks/scripts/build-runtime.mjs", ["--check"]),
-	);
+test("task resources have no host source or compiled runtime to rebuild", () => {
+	assert.equal(existsSync(join(root, "packages/tasks")), false);
 });
 
 test("research runtime guard rejects a stale compatibility tree", async () => {
@@ -71,9 +69,10 @@ test("research runtime guard rejects a stale compatibility tree", async () => {
 	}
 });
 
-test("research run UI uses the typed package instead of a deleted runtime artifact", async () => {
+test("research run UI uses the injected host adapter instead of a deleted runtime artifact", async () => {
 	const backendUi = await readFile(join(root, "packages/backend/src/knowledge/ui.ts"), "utf8");
-	assert.match(backendUi, /@gyoungwe\/pi-research\/host/);
+	assert.match(backendUi, /ResearchHostLoader/);
+	assert.match(backendUi, /\.\.\/research-host/);
 	assert.doesNotMatch(backendUi, /researchModule\(["']research-run-ui/);
 	assert.equal(existsSync(join(root, ".pi/lib/research-run-ui.mjs")), false);
 	assert.equal(existsSync(join(root, ".pi/lib/research-run-summary.mjs")), false);

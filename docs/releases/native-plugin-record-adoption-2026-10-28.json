@@ -1,0 +1,61 @@
+{
+	"scope": "Explicit two-phase temporary legacy checkpoint import",
+	"date": "2026-10-28",
+	"status": "PARTIAL_ARCHITECTURE",
+	"publicTypes": "e059e11f",
+	"pluginSpecAndChecker": "1642a07",
+	"operations": {
+		"session.records.adoption.inspect": "write, explicit legacy read approval",
+		"session.records.adoption.commit": "write, real durable readback only"
+	},
+	"authority": {
+		"source": "verified per-source static handler closure",
+		"legacyCreatorAndVersion": "unknown",
+		"hash": "optimistic concurrency only",
+		"jsonGrantsPermissions": false,
+		"ordinaryLegacyReadEscape": false,
+		"newLedger": false
+	},
+	"checks": {
+		"actualInstalledProviderAndAdoption": {
+			"status": "PASS",
+			"tests": 10,
+			"log": "/tmp/plugin-adoption-sdk-first.log"
+		},
+		"sdkCohort": { "status": "PASS", "files": 5, "tests": 38, "log": "/tmp/adoption-sdk-cohort-final.log" },
+		"desktopScannerAndCapabilityGate": {
+			"status": "PASS",
+			"tests": 38,
+			"log": "/tmp/adoption-desktop-tests.log"
+		},
+		"pluginManifestChecker": {
+			"status": "PASS",
+			"tests": 28,
+			"packages": 10,
+			"log": "/tmp/adoption-plugin-manifests-tests.log"
+		},
+		"cleanApiTypeConsumer": {
+			"status": "PASS",
+			"receipt": "/tmp/adoption-api-clean-receipt.json",
+			"archive": "/tmp/drone-adoption-api-pack-20261028/gyoungwe-plugin-api-1.3.0.tgz",
+			"sha256": "ed6121a22c9400a1a88b691b9852989db4b36659b1257d3895e836e753a72b2d",
+			"sdkInstalled": false
+		},
+		"backendAndDesktopNodeTypecheck": "PASS",
+		"apiPackageCheck": "PASS",
+		"architecture": "PASS",
+		"changedLintAndDiff": "PASS",
+		"productionCoreKnowledgeMigrators": "NOT_RUN",
+		"formalInstallerGui": "NOT_RUN",
+		"combinedRootGates": "PARENT_INTEGRATION_PENDING"
+	},
+	"remaining": [
+		"exact Core/Knowledge migration and permission scrub",
+		"canonical provider and full managed owner cutover",
+		"deferred actor durability strategy",
+		"startup facade removal",
+		"formal GUI and combined gates"
+	],
+	"npmPublished": false,
+	"externalAcceptanceAndB8": "unchanged"
+}

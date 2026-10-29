@@ -8,21 +8,23 @@ import {
 import type { ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { InlineExtension, ModelRuntime, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { makeCapabilityExtension } from "../capabilities/extension";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { makeKnowledgeSpecialistBridge } from "../knowledge/specialist-bridge";
 import { createLogger } from "../log";
 import type { MemoryStore } from "../memory/store";
 import {
-	makePermissionGateExtension,
+	makePermissionGateExtensions,
 	type PermissionConfirm,
 	type PermissionModeRef,
 } from "../permissions/extension";
 import type { PermissionGate } from "../permissions/gate";
+import type { PluginNativeIntegration } from "../plugins/coordinator";
 import { canonicalProjectId } from "../project-id";
 import type { AskGate } from "../session/ask-gate";
+import type { RegisteredSession } from "../session/registry";
 import type { SessionTraces } from "../session/traces";
-import { bindAcceptanceVerifierEvents } from "../tasks/acceptance";
 import { makeAskUserTool } from "../tools/ask-user";
 import { makeBioDatabaseTool } from "../tools/bio/databases";
 import { makeBioExtension } from "../tools/bio/extension";
@@ -32,14 +34,10 @@ import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
 import { makeComputeRouteTool } from "../tools/compute-route";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
-import { makeDeliverFilesTool } from "../tools/deliver-files";
 import { bindToolManifestEvents } from "../tools/manifest";
-import { makeMemorySaveTool } from "../tools/memory-save";
 import { makeShowImageTool } from "../tools/show-image";
 import { makeSshHostsTool, makeSshTool, type SshHostEntry } from "../tools/ssh";
-import { makeStatusTool } from "../tools/status";
 import { makeSubagentTool } from "../tools/subagent";
-import { makeTodoTool } from "../tools/todo";
 import { makeTodoReminderExtension } from "../tools/todo-reminder";
 import { makeWebFetchTool } from "../tools/webfetch";
 import { makeCloudflareAskExtension } from "./cloudflare-ask";
@@ -69,6 +67,10 @@ type LiveChildControl = {
 };
 
 export interface SessionExtensionDependencies {
+	knowledgeSpecialistModelLoop?: import("@gyoungwe/plugin-api").LegacyKnowledgeSpecialistLoop;
+	taskHost?: import("@gyoungwe/plugin-api/tasks").TaskAcceptanceHostPort;
+	/** Optional core plugin host port; absent means core tools are unavailable. */
+	coreHost?: CoreHostPort;
 	/** Host-owned runtime shared with first-party .pi extensions through a versioned event. */
 	runtime: DroneRuntime;
 	permissionGates?: boolean;
@@ -81,6 +83,7 @@ export interface SessionExtensionDependencies {
 	tools?: string[];
 	customTools?: ToolDefinition[];
 	desktopIntegration?: {
+		nativeRuntime?: PluginNativeIntegration;
 		academicPiRoot?: string;
 		additionalExtensionPaths?: string[];
 		additionalPromptTemplatePaths?: string[];
@@ -93,6 +96,8 @@ export interface SessionExtensionDependencies {
 	traces: SessionTraces;
 	onEvent: (sessionId: string, event: SessionEvent) => void;
 	registerLiveChild?: (sessionId: string, control: LiveChildControl) => () => void;
+	/** Child-only registry for running subagents; never listed, reopened or reloaded. */
+	registerChildSession?: (entry: RegisteredSession) => () => void;
 	setMcpStatus: (cwd: string, status: McpStatus) => void;
 	/** 已登记的远程主机（设置 › 高级 › SSH 主机）；缺省则 ssh 只认 ~/.ssh/config 与直接主机名 */
 	listSshHosts?: () => Promise<SshHostEntry[]>;
@@ -122,7 +127,9 @@ export function buildSessionCustomTools(
 	// submission remains behind the desktop approval and compute preflight gates.
 	tools.push(makeComputeRouteTool());
 	tools.push(makeShowImageTool());
-	tools.push(makeDeliverFilesTool());
+	if (deps.coreHost) {
+		tools.push(deps.coreHost.makeDeliverFilesTool() as ToolDefinition);
+	}
 	tools.push(
 		makeSshTool({
 			confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
@@ -145,9 +152,11 @@ export function buildSessionCustomTools(
 		}) as ToolDefinition,
 	);
 	tools.push(makeBioDatabaseTool() as ToolDefinition);
-	tools.push(makeStatusTool());
-	tools.push(makeTodoTool());
-	tools.push(makeMemorySaveTool() as ToolDefinition);
+	if (deps.coreHost) {
+		tools.push(deps.coreHost.makeStatusTool() as ToolDefinition);
+		tools.push(deps.coreHost.makeTodoTool() as ToolDefinition);
+		tools.push(deps.coreHost.makeMemorySaveTool() as ToolDefinition);
+	}
 	if (harness.recall) {
 		tools.push(
 			makeHarnessRecallTool({
@@ -159,6 +168,12 @@ export function buildSessionCustomTools(
 	if (deps.subagentPreferBuiltin !== false) {
 		tools.push(
 			makeSubagentTool({
+				coreHost: deps.coreHost,
+				nativeChildren: () => {
+					const integration = deps.desktopIntegration?.nativeRuntime;
+					const register = deps.registerChildSession;
+					return integration && register ? { integration, register } : undefined;
+				},
 				getModelRuntime: deps.getModelRuntime,
 				getSubagentModel: deps.getSubagentModel,
 				gate,
@@ -182,6 +197,14 @@ export function buildSessionExtensionFactories(
 ): InlineExtension[] {
 	const harness = resolveSessionHarnessUnits(deps);
 	const factories: InlineExtension[] = [];
+	if (deps.taskHost?.createNativeSession) {
+		const create = deps.taskHost.createNativeSession.bind(deps.taskHost);
+		factories.push(async (pi) => {
+			const native = await create();
+			pi.on("session_shutdown", () => native.dispose());
+			await native.extension(pi);
+		});
+	}
 	if (capability)
 		factories.push(makeCapabilityExtension(capability, deps.desktopIntegration?.academicPiRoot));
 	factories.push((pi) => {
@@ -191,7 +214,6 @@ export function buildSessionExtensionFactories(
 		// Their tool declarations use the same request/replay handshake, so the
 		// backend collector sees registrations emitted before this factory ran.
 		bindToolManifestEvents(pi.events);
-		bindAcceptanceVerifierEvents(pi.events, deps.runtime);
 		const announceRuntime = () => pi.events.emit("drone:runtime/v1", { version: 1, runtime: deps.runtime });
 		pi.events.on("drone:runtime/request/v1", announceRuntime);
 		announceRuntime();
@@ -203,21 +225,22 @@ export function buildSessionExtensionFactories(
 			deps.onDecision?.(cwd, payload);
 		});
 	});
-	if (deps.permissionGates !== false && deps.permissionExtension !== false) {
-		factories.push(
-			makePermissionGateExtension(getAgentDir(), {
-				projectRoot: cwd,
-				confirm,
-				getMode: () => modeRef?.current ?? "default",
-			}),
-		);
-	}
+	const permission =
+		deps.permissionGates !== false && deps.permissionExtension !== false
+			? makePermissionGateExtensions(getAgentDir(), {
+					projectRoot: cwd,
+					confirm,
+					getMode: () => modeRef?.current ?? "default",
+				})
+			: undefined;
+	if (permission) factories.push(permission.gate);
 	if (deps.subagentPreferBuiltin !== false)
 		factories.push(
 			makeKnowledgeSpecialistBridge({
 				getRuntime: deps.getModelRuntime,
 				getModelPreference: deps.getSubagentModel,
 				getThinkingPreference: deps.getSubagentThinking,
+				runModelLoop: deps.knowledgeSpecialistModelLoop,
 			}),
 		);
 	if (harness.context)
@@ -302,6 +325,8 @@ export function buildSessionExtensionFactories(
 	factories.push(makeTodoReminderExtension());
 	factories.push(makeBioExtension());
 	factories.push(makeCloudflareAskExtension());
+	// The loader appends further factories; placeFinalPermissionCheckLast keeps this one last.
+	if (permission) factories.push(permission.finalCheck);
 	return factories;
 }
 

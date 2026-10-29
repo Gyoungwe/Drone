@@ -1,12 +1,17 @@
 ﻿import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { getCurrentSystemPrompt } from "@earendil-works/pi-ai/utils/transcript";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
+import {
+	createInstalledTaskRuntime,
+	installedTaskPluginPath,
+	taskSdkExtensionPath,
+} from "./fixtures/task-plugin.mjs";
 
 // Actual SDK/provider/tool-result transport, but an in-memory fake model: no paid model or user credentials.
 it("real SDK failure → task_status → natural handoff keeps pairing and does not replace the final answer", async () => {
@@ -34,12 +39,13 @@ it("real SDK failure → task_status → natural handoff keeps pairing and does 
 		runtime.registerNativeProvider(faux.provider);
 		vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
 		backend = new PiBackend({
+			runtime: createInstalledTaskRuntime(),
 			projectTrust: true,
 			subagentPreferBuiltin: false,
 			webFetch: false,
 			desktopIntegration: {
 				appendSystemPrompt: [],
-				additionalExtensionPaths: [resolve("../../.pi/extensions/obsidian-workbench.mjs")],
+				additionalExtensionPaths: [installedTaskPluginPath(), taskSdkExtensionPath("obsidian-workbench.mjs")],
 				additionalSkillPaths: [],
 			},
 		});

@@ -11,6 +11,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
+import { installedTaskPluginPath, taskSdkExtensionPath } from "./fixtures/task-plugin.mjs";
 
 it("real SDK delivers global navigation before model invocation in an unrelated project", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-sdk-")));
@@ -29,7 +30,7 @@ it("real SDK delivers global navigation before model invocation in an unrelated 
 			cwd: b,
 			agentDir,
 			settingsManager,
-			additionalExtensionPaths: [resolve("../../.pi/extensions/obsidian-workbench.mjs")],
+			additionalExtensionPaths: [installedTaskPluginPath(), taskSdkExtensionPath("obsidian-workbench.mjs")],
 			additionalSkillPaths: [resolve("../../.pi/skills/research-vault/SKILL.md")],
 		});
 		await resourceLoader.reload();

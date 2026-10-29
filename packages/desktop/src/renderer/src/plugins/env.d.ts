@@ -3,10 +3,9 @@ import type {
 	PROTECTED_KNOWLEDGE_AGENTS,
 	SUBAGENT_THINKING_LEVELS,
 } from "@drone/shared";
-import type { KnowledgeUiPort } from "@gyoungwe/plugin-api/ui";
+import type { KnowledgeUiPort, SessionUiPort } from "@gyoungwe/plugin-api/ui";
 import type { ImagePreviewOverlay } from "../components/chat/ImagePreview";
 import type { Markdown } from "../components/chat/Markdown";
-import type { taskArtifactLinks } from "../components/chat/TaskArtifactLinks";
 import type { displayName, summarizeArgs } from "../components/chat/ToolCallCard";
 import type { ChevronDownIcon, ObsidianIcon } from "../components/icons";
 import type { RoadmapLane, roadmapStatus } from "../components/route/Roadmap";
@@ -31,7 +30,10 @@ import type { pushToast } from "../stores/toasts";
 import type { selectTranscript, useTranscriptStore } from "../stores/transcript";
 import type { useUiStore } from "../stores/ui";
 import type { useUiPreferencesStore } from "../stores/ui-preferences";
+import type { taskArtifactLinks } from "./legacy-task-artifacts";
 import type { PluginEntryHost, usePluginEntries } from "./PluginRegions";
+import type { usePluginRuntime } from "./runtime";
+import type { useSessionMessages } from "./session-api";
 import type { UI_REGIONS } from "./slots";
 
 /** window.DroneUI 的类型（插件与宿主自身代码共用；与 host-api.ts 的挂载内容一一对应） */
@@ -84,6 +86,8 @@ export interface DroneUiApi {
 		useLanguage: typeof useLanguage;
 		useAgentActive: typeof useAgentActive;
 		usePluginEntries: typeof usePluginEntries;
+		usePluginRuntime: typeof usePluginRuntime;
+		useSessionMessages: typeof useSessionMessages;
 	};
 	// </drone:generated namespace="hooks">
 	// <drone:generated namespace="stores">
@@ -158,6 +162,12 @@ export interface DroneUiApi {
 		updateDailyDiscovery: KnowledgeUiPort["updateDailyDiscovery"];
 	};
 	// </drone:generated namespace="knowledge">
+	// <drone:generated namespace="sessions">
+	sessions: {
+		prompt: SessionUiPort["prompt"];
+		command: SessionUiPort["command"];
+	};
+	// </drone:generated namespace="sessions">
 	// <drone:generated namespace="i18n">
 	i18n: {
 		registerMessages: typeof registerPluginMessages;

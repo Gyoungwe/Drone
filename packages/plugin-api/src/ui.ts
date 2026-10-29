@@ -15,13 +15,56 @@ import type {
 	KnowledgeUiEvent,
 	KnowledgeUiPort,
 	ModelPrefs,
+	PromptIds,
+	PromptReceipt,
 	SessionMeta,
 	SubagentThinkingLevel,
+	TurnTiming,
+	UIMessage,
 	UiPluginAnchor,
 	WorkbenchTask,
 } from "./ui-wire.js";
 
 export type * from "./ui-wire.js";
+
+/** Generic session actions preserve host session authorization and lifecycle boundaries. */
+export interface SessionUiPort {
+	/** Execute an installed extension command; unavailable commands never become model prompts. */
+	command(sessionId: string, name: string, args?: string): Promise<PromptReceipt>;
+	prompt(sessionId: string, text: string, images?: ImageInput[], ids?: PromptIds): Promise<PromptReceipt>;
+}
+export interface SessionUiBindings {
+	sessions: SessionUiPort;
+}
+export type SessionMessagesHook = (sessionId: string | null) => readonly UIMessage[];
+
+/** Safe renderer projection only; never a native SDK/RawMessage object. */
+export interface ChatMessageProps {
+	message: UIMessage;
+	sessionId: string | null;
+	agentActive: boolean;
+	readOnly: boolean;
+	streaming?: boolean;
+	metaInGroup?: boolean;
+	showActions?: boolean;
+	turnTiming?: TurnTiming;
+	turnStepCount?: number;
+	/** Renders the host component directly, without entering this slot again. */
+	renderDefault(): ReactNode;
+}
+
+/** Bound to the installed package by the desktop main process; callers cannot select another package. */
+export interface PluginUiRuntimeClient {
+	/** Cancellation revokes this invocation and waits for its running cleanup; sibling calls stay live. */
+	invoke(operation: string, input: unknown, signal?: AbortSignal): Promise<unknown>;
+	/** Content-free invalidation; unsubscribe when the consumer unmounts. */
+	subscribe(listener: (event: { type: "changed"; revision: number }) => void): () => void;
+}
+
+/** Headless UI modules receive the same bound client as their React contributions. */
+export interface PluginUiActivationContext {
+	runtime: PluginUiRuntimeClient | undefined;
+}
 
 export type KnowledgeTab = "overview" | "network" | "reviews" | "settings";
 export type KnowledgeSurfaceProps =
@@ -195,7 +238,7 @@ export interface KnowledgeUiBindings {
 			actions?: ReactNode;
 			tabs?: ReactNode;
 		}>;
-		Markdown: ComponentType<{ text: string; streaming?: boolean }>;
+		Markdown: ComponentType<{ text: string; streaming?: boolean; onLink?: (href: string) => void }>;
 		ChevronDownIcon: ComponentType<{ size?: number; className?: string }>;
 		ObsidianIcon: ComponentType<{ size?: number; className?: string }>;
 		RoadmapLane: ComponentType<{ nodes: KnowledgeRoadmapNode[]; testId?: string; ariaLabel?: string }>;
@@ -206,6 +249,8 @@ export interface KnowledgeUiBindings {
 		}>;
 	};
 	hooks: {
+		useSessionMessages: SessionMessagesHook;
+		usePluginRuntime(): PluginUiRuntimeClient;
 		useAgentActive(sessionId: string | null): boolean;
 		usePluginEntries(region: KnowledgeUiRegion): KnowledgePluginEntry[];
 		useLanguage(): "zh" | "en";
@@ -221,6 +266,8 @@ export interface KnowledgeUiBindings {
 		) => string;
 	};
 	helpers: {
+		openExternal(url: string): Promise<void>;
+		openResourceExternal(target: string, cwd?: string): Promise<void>;
 		isDraftSessionId(sessionId: string | null | undefined): boolean;
 		selectTranscript(state: KnowledgeTranscriptState, sessionId: string | null): KnowledgeTranscript;
 		pushToast(
@@ -254,7 +301,7 @@ export interface KnowledgeUiBindings {
 		useDraftStore: UiStoreBinding<KnowledgeDraftState>;
 	};
 }
-export interface DroneUiRuntime extends KnowledgeUiBindings {
+export interface DroneUiRuntime extends KnowledgeUiBindings, SessionUiBindings {
 	version: 1;
 	knowledge: KnowledgeUiPort;
 }

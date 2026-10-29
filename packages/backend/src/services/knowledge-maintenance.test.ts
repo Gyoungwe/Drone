@@ -2,7 +2,9 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { setImmediate as waitImmediate } from "node:timers/promises";
+import { knowledgeHostLoader } from "@gyoungwe/pi-knowledge/host";
 import { describe, expect, it, vi } from "vitest";
+import { createKnowledgeMaintenanceOperations } from "../knowledge/ui";
 import { KnowledgeMaintenanceService } from "./knowledge-maintenance";
 
 const HOUR = 60 * 60 * 1000;
@@ -21,8 +23,10 @@ async function fixture(problems: Array<{ path: string; kind?: string; message?: 
 	const cwd = join(root, "workspace");
 	await mkdir(cwd);
 	const calls: string[] = [];
+	const maintenance = createKnowledgeMaintenanceOperations(knowledgeHostLoader.load());
 	const service = new KnowledgeMaintenanceService({
 		path: join(root, "state.json"),
+		maintenance,
 		readOverview: async () => ({ binding: { revision: 1 }, index: { revision: 1, problems: [] } }),
 		readGraph: async () => ({
 			nodes: problems.map((problem, index) => ({
@@ -99,6 +103,7 @@ describe("KnowledgeMaintenanceService scheduling", () => {
 			}
 			const service = new KnowledgeMaintenanceService({
 				path: join(root, "state.json"),
+				maintenance: createKnowledgeMaintenanceOperations(knowledgeHostLoader.load()),
 				readOverview: async () => ({ binding: { revision: 1 }, index: { revision: 1, problems: [] } }),
 				readGraph: async () => ({
 					nodes: problems.map((problem, index) => ({

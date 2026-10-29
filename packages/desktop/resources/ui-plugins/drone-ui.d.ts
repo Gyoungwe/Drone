@@ -209,6 +209,8 @@ declare module "@gyoungwe/plugin-api" {
 	export interface PluginMarkdownProps {
 		text: string;
 		streaming?: boolean;
+		/** Own all link clicks and render without legacy knowledge-link rewriting. */
+		onLink?: (href: string) => void;
 	}
 	export interface PluginImagePreviewProps {
 		image: { data: string; mimeType: string };
@@ -263,6 +265,8 @@ declare module "@gyoungwe/plugin-api" {
 		useLanguage: () => "zh" | "en";
 		useAgentActive: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["useAgentActive"];
 		usePluginEntries: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["usePluginEntries"];
+		usePluginRuntime: () => import("@gyoungwe/plugin-api/ui").PluginUiRuntimeClient;
+		useSessionMessages: import("@gyoungwe/plugin-api/ui").SessionMessagesHook;
 	};
 	// </drone:generated namespace="hooks">
 	/** 应用级 UI 偏好（ui-state.json 持久化）：centerOrbEnabled 等 */
@@ -340,6 +344,12 @@ declare module "@gyoungwe/plugin-api" {
 		updateDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["updateDailyDiscovery"];
 	};
 	// </drone:generated namespace="knowledge">
+	// <drone:generated namespace="sessions">
+	export const sessions: {
+		prompt: import("@gyoungwe/plugin-api/ui").SessionUiPort["prompt"];
+		command: import("@gyoungwe/plugin-api/ui").SessionUiPort["command"];
+	};
+	// </drone:generated namespace="sessions">
 	// <drone:generated namespace="i18n">
 	export const i18n: {
 		registerMessages: (
@@ -382,6 +392,8 @@ declare module "@gyoungwe/plugin-api" {
 	export const useLanguage: () => "zh" | "en";
 	export const useAgentActive: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["useAgentActive"];
 	export const usePluginEntries: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["usePluginEntries"];
+	export const usePluginRuntime: () => import("@gyoungwe/plugin-api/ui").PluginUiRuntimeClient;
+	export const useSessionMessages: import("@gyoungwe/plugin-api/ui").SessionMessagesHook;
 	export const useTranscriptStore: unknown;
 	export const useSessionsStore: unknown;
 	export const useUiStore: unknown;
@@ -449,6 +461,7 @@ declare module "@gyoungwe/plugin-api" {
 	export const testInstitutionalAccess: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testInstitutionalAccess"];
 	export const testKnowledgeSemanticProvider: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testKnowledgeSemanticProvider"];
 	export const updateDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["updateDailyDiscovery"];
+	export const command: import("@gyoungwe/plugin-api/ui").SessionUiPort["command"];
 	// </drone:generated namespace="topLevel">
 	declare const api: unknown;
 	export default api;

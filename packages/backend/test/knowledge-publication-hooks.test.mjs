@@ -72,8 +72,17 @@ it("force-stops a runaway tool-loop turn well before the byte cap, with an actio
 });
 it("a timeout publishes a host notice and never retries", async () => {
 	vi.useFakeTimers();
-	const h = harness(() => new Promise(() => {})),
+	let started;
+	const validationStarted = new Promise((resolve) => {
+		started = resolve;
+	});
+	const h = harness(() => {
+			started();
+			return new Promise(() => {});
+		}),
 		pending = h.end(message());
+	// Policy storage is asynchronous; start the timeout clock after validation enters.
+	await validationStarted;
 	await vi.advanceTimersByTimeAsync(5001);
 	const result = await pending;
 	expect(result.message.knowledgePublication.reason).toBe("check-timeout");

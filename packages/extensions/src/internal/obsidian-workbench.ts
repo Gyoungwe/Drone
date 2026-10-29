@@ -17,7 +17,7 @@ import { getKnowledgeService, notifyKnowledgeChange } from "@gyoungwe/pi-knowled
 import { normalizeSourceLinks, onlineSourceLink } from "@gyoungwe/pi-knowledge/host";
 import { looksLikeFileName } from "@gyoungwe/pi-knowledge/host";
 import { resolveWorkspaceProject, runProject } from "@gyoungwe/pi-knowledge/host";
-import { runtimeSlot } from "@drone/tasks/runtime-bridge";
+import { runtimeSlot } from "./runtime/runtime-bridge";
 import { LAYOUT, renderTemplate } from "./vault-layout";
 import { getVaultProfile, listVaultProfiles } from "./vault-profiles";
 export const SERVER_NAME = "research-obsidian";

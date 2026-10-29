@@ -1,3 +1,4 @@
+import { stripVTControlCharacters } from "node:util";
 import type { PermissionGate } from "../permissions/gate";
 import type { ExtensionUIContext } from "../session-engine/sdk";
 import { Theme } from "../session-engine/sdk";
@@ -7,7 +8,7 @@ import type { AskGate } from "./ask-gate";
  * 提供给扩展的契约 Theme 实例（中性暗色盘，truecolor）。
  *
  * pi 扩展契约要求 ctx.ui.theme 是带 fg()/bg()/bold() 等方法的 Theme 对象（extensions.md
- * 标准用法）；桌面端 GUI 无 TUI 状态栏，样式输出全部落到 no-op sink，但对象本身必须真
+ * 标准用法）；桌面状态栏消费清理过 ANSI 的文本，但对象本身必须真
  * （issue #28：pi-mcp-adapter 在 updateStatusBar 里 ui.theme.fg("accent", ...) 空对象/字符串
  * 直接抛 TypeError，全部 MCP 服务器连接失败）。用真实 Theme 类实例保证全部 12+ 方法存在，
  * 而非手写 pass-through 对象（进了一支扩展调用 italic()/getFgAnsi() 还是会崩）。
@@ -75,19 +76,27 @@ const EXTENSION_THEME = new Theme(
 	{ name: "drone-desktop" },
 );
 
+function unsupported(capability: string): never {
+	throw new Error(`Drone Desktop does not support terminal UI capability: ${capability}`);
+}
+
 /**
  * ExtensionUIContext：select/input 通过 AskGate 桥接原生问答，confirm 通过权限门控。
- * 其余终端专用 UI 方法保持 no-op。
+ * Terminal custom components are rejected; theme changes report failure.
+ * Terminal-only capabilities without a Desktop consumer reject explicitly.
  * SDK 接口变化时在这里补齐新成员，别在 PiBackend 里重写。
  */
 export function makeUiContext(
 	gate: PermissionGate,
 	askGate?: AskGate,
 	notify?: (message: string, type: "info" | "warning" | "error") => void,
+	status?: (key: string, text: string | undefined) => void,
 ): ExtensionUIContext {
 	return {
 		select: async (title, options, dialogOptions) => {
-			if (!askGate || options.length === 0) return undefined;
+			if (!askGate) unsupported("select without a question transport");
+			if (dialogOptions?.timeout !== undefined) unsupported("select timeout countdown");
+			if (options.length === 0) return undefined;
 			const [heading = title, ...description] = title.split("\n\n");
 			const response = await askGate.ask(
 				{
@@ -111,9 +120,13 @@ export function makeUiContext(
 			const selected = values?.length === 1 ? values[0] : undefined;
 			return typeof selected === "string" && options.includes(selected) ? selected : undefined;
 		},
-		confirm: (title, message) => gate.confirm(title, message),
+		confirm: (title, message, dialogOptions) => {
+			if (dialogOptions?.timeout !== undefined) unsupported("confirm timeout countdown");
+			return gate.confirm(title, message, undefined, dialogOptions?.signal);
+		},
 		input: async (title, placeholder, dialogOptions) => {
-			if (!askGate) return undefined;
+			if (!askGate) unsupported("input without a question transport");
+			if (dialogOptions?.timeout !== undefined) unsupported("input timeout countdown");
 			const response = await askGate.ask(
 				{
 					toolCallId: `extension-ui-input:${title}`,
@@ -124,7 +137,7 @@ export function makeUiContext(
 							label: title,
 							prompt: placeholder || title,
 							type: "text",
-							required: true,
+							required: false,
 							options: [],
 						},
 					],
@@ -132,32 +145,43 @@ export function makeUiContext(
 				dialogOptions?.signal,
 			);
 			if (response.kind !== "answer" || response.mode === "elaborate") return undefined;
-			return response.answers.value?.customText?.trim() || undefined;
+			return response.answers.value?.customText;
 		},
-		notify: (message, type) => notify?.(message, type ?? "info"),
-		onTerminalInput: () => () => {},
-		setStatus: () => {},
-		setWorkingMessage: () => {},
-		setWorkingVisible: () => {},
-		setWorkingIndicator: () => {},
-		setHiddenThinkingLabel: () => {},
-		setWidget: () => {},
-		setFooter: () => {},
-		setHeader: () => {},
-		setTitle: () => {},
-		custom: (async () => undefined) as ExtensionUIContext["custom"],
-		pasteToEditor: () => {},
-		setEditorText: () => {},
-		getEditorText: () => "",
-		editor: async () => undefined,
-		addAutocompleteProvider: () => {},
-		setEditorComponent: () => {},
-		getEditorComponent: () => undefined,
+		notify: (message, type) => {
+			if (!notify) unsupported("notify without a notification transport");
+			notify(message, type ?? "info");
+		},
+		onTerminalInput: () => unsupported("onTerminalInput"),
+		setStatus: (key, text) => {
+			if (!status) unsupported("setStatus without a status transport");
+			status(key, text === undefined ? undefined : stripVTControlCharacters(text));
+		},
+		setWorkingMessage: () => unsupported("setWorkingMessage"),
+		setWorkingVisible: () => unsupported("setWorkingVisible"),
+		setWorkingIndicator: () => unsupported("setWorkingIndicator"),
+		setHiddenThinkingLabel: () => unsupported("setHiddenThinkingLabel"),
+		setWidget: () => unsupported("setWidget"),
+		setFooter: () => unsupported("setFooter"),
+		setHeader: () => unsupported("setHeader"),
+		setTitle: () => unsupported("setTitle"),
+		custom: async () => {
+			throw new Error("Drone Desktop does not support terminal custom UI");
+		},
+		pasteToEditor: () => unsupported("pasteToEditor"),
+		setEditorText: () => unsupported("setEditorText"),
+		getEditorText: () => unsupported("getEditorText"),
+		editor: () => unsupported("editor"),
+		addAutocompleteProvider: () => unsupported("addAutocompleteProvider"),
+		setEditorComponent: () => unsupported("setEditorComponent"),
+		getEditorComponent: () => unsupported("getEditorComponent"),
 		theme: EXTENSION_THEME,
-		getAllThemes: () => [],
-		getTheme: () => undefined,
-		setTheme: () => ({ success: true }),
-		getToolsExpanded: () => false,
-		setToolsExpanded: () => {},
+		getAllThemes: () => [{ name: "drone-desktop", path: undefined }],
+		getTheme: (name) => (name === "drone-desktop" ? EXTENSION_THEME : undefined),
+		setTheme: () => ({
+			success: false,
+			error: "Drone Desktop does not support terminal UI themes",
+		}),
+		getToolsExpanded: () => unsupported("getToolsExpanded"),
+		setToolsExpanded: () => unsupported("setToolsExpanded"),
 	};
 }

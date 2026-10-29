@@ -2,6 +2,7 @@ import { IpcChannels, KNOWN_UI_SLOTS, type UiPluginsConfig, UiPluginsContract } 
 import { shell } from "electron";
 import { loadUiPluginsConfig } from "../ui-plugins/config";
 import type { UiPluginManager } from "../ui-plugins/manager";
+import type { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 import { sendToRenderer } from "./index";
 
@@ -15,21 +16,37 @@ function pushConfigEvent(): void {
  * 安全细则（spec §9）：readCode/openDir 只接受 manager 白名单内的合法插件名（禁路径）；
  * 所有参数做类型检查，非法直接 return。
  */
-export function registerUiPluginsIpc(manager: UiPluginManager): void {
-	const implementation: ContractImplementation<typeof UiPluginsContract> = {
+export function registerUiPluginsIpc(manager: UiPluginManager, runtime: DesktopRuntimeBridge): void {
+	const changeConfiguration = async <T>(action: () => Promise<T>): Promise<T> => {
+		try {
+			return await runtime.withUiTransition(action);
+		} finally {
+			// Failed persistence still drained old clients. Reload the configuration that actually survived.
+			pushConfigEvent();
+		}
+	};
+	const implementation = (
+		event: import("electron").IpcMainInvokeEvent,
+	): ContractImplementation<typeof UiPluginsContract> => ({
 		getConfig: () => loadUiPluginsConfig(),
 		setEnabled: async (enabled) => {
-			// await 落盘后才返回：renderer 的 invoke → loadAll 读到的是写入后的最新配置
-			await manager.updateConfig({ enabled });
-			pushConfigEvent();
+			await changeConfiguration(() => manager.updateConfig({ enabled }));
 		},
 		list: () => manager.list(),
-		readCode: (name) => manager.readCode(name),
+		readCode: async (name) => {
+			if (!manager.isEnabled(name)) return { error: "UI plugin is not enabled and trusted" };
+			const directory = manager.pluginDirOf(name);
+			const source = manager.runtimeSource(name);
+			const code = await manager.readCode(name);
+			if ("error" in code) return code;
+			if (directory !== manager.pluginDirOf(name) || source !== manager.runtimeSource(name)) {
+				return { error: "UI plugin installation changed while loading; reload required" };
+			}
+			const runtimeBinding = await runtime.bind(name, event.sender);
+			return { ...code, ...(runtimeBinding === undefined ? {} : { runtimeBinding }) };
+		},
 		// 启用=信任：enabled=true 时 trusted 一并落盘
 		setPluginEnabled: async (name, enabled) => {
-			if (typeof name !== "string" || typeof enabled !== "boolean") {
-				throw new Error("invalid plugin enable arguments");
-			}
 			if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
 				throw new Error(`invalid plugin name: ${name}`);
 			}
@@ -37,34 +54,34 @@ export function registerUiPluginsIpc(manager: UiPluginManager): void {
 			if (enabled && info?.invalidReason) {
 				throw new Error(info.invalidReason);
 			}
-			const config = await loadUiPluginsConfig();
-			const prev = config.plugins[name];
-			const patch: Partial<UiPluginsConfig> = {
-				plugins: {
-					...config.plugins,
-					[name]: { enabled, trusted: enabled ? true : (prev?.trusted ?? false) },
-				},
-			};
-			await manager.updateConfig(patch);
-			pushConfigEvent();
+			await changeConfiguration(async () => {
+				const config = await loadUiPluginsConfig();
+				const prev = config.plugins[name];
+				const patch: Partial<UiPluginsConfig> = {
+					plugins: {
+						...config.plugins,
+						[name]: { enabled, trusted: enabled ? true : (prev?.trusted ?? false) },
+					},
+				};
+				await manager.updateConfig(patch);
+			});
 		},
 		assignSlot: async (slot, pluginName) => {
 			if (!KNOWN_UI_SLOTS.includes(slot)) return;
-			const config = await loadUiPluginsConfig();
-			const assignments = { ...config.assignments };
-			if (pluginName === null) delete assignments[slot];
-			else assignments[slot] = pluginName;
-			await manager.updateConfig({ assignments });
-			pushConfigEvent();
+			await changeConfiguration(async () => {
+				const config = await loadUiPluginsConfig();
+				const assignments = { ...config.assignments };
+				if (pluginName === null) delete assignments[slot];
+				else assignments[slot] = pluginName;
+				await manager.updateConfig({ assignments });
+			});
 		},
 		rebuild: async (name) => {
-			const ok = await manager.ensureBuilt(name, true);
+			const ok = await changeConfiguration(() => manager.ensureBuilt(name, true));
 			if (!ok) {
 				const info = manager.info(name);
 				return { ok: false as const, error: info?.buildError ?? "构建失败" };
 			}
-			// 重建成功 → 通知 renderer 重载该插件（旧代码立即替换）
-			sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "changed", name });
 			return { ok: true as const };
 		},
 		openDir: (...args) => {
@@ -73,7 +90,7 @@ export function registerUiPluginsIpc(manager: UiPluginManager): void {
 			if (!dir) return;
 			void shell.openPath(dir);
 		},
-	};
+	});
 	bindContract(UiPluginsContract, implementation, {
 		channelForMethod: (_contract, method) =>
 			({

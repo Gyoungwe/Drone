@@ -6,7 +6,9 @@ import {
 } from "@drone/shared";
 import { getPi } from "../api";
 import { useUiPluginsStore } from "../stores/ui-plugins";
+import { invokePluginRuntime, subscribePluginRuntime } from "./caller";
 import { useUiPluginRegistry } from "./registry";
+import { createPluginRuntimeClient } from "./runtime";
 import type { SlotName } from "./slots";
 
 /**
@@ -41,7 +43,14 @@ async function loadPluginCode(
 	manifest: UiPluginManifest,
 	code: string,
 	assignedSlots: SlotName[],
+	runtimeBinding?: string,
 ): Promise<void> {
+	const runtime = runtimeBinding
+		? createPluginRuntimeClient(
+				(operation, input, signal) => invokePluginRuntime(runtimeBinding, operation, input, signal),
+				(listener) => subscribePluginRuntime(runtimeBinding, listener),
+			)
+		: undefined;
 	const blob = new Blob([code], { type: "text/javascript" });
 	const url = URL.createObjectURL(blob);
 	try {
@@ -50,7 +59,7 @@ async function loadPluginCode(
 		useUiPluginRegistry.getState().removePlugin(manifest.name);
 		const res = useUiPluginRegistry
 			.getState()
-			.applyPlugin(manifest, module as Record<string, unknown>, assignedSlots);
+			.applyPlugin(manifest, module as Record<string, unknown>, assignedSlots, runtime);
 		if (!res.ok) {
 			console.warn(`[ui-plugins] ${manifest.name} 部分槽位导出缺失:`, res.missing);
 		}
@@ -64,32 +73,39 @@ async function loadPluginCode(
 	}
 }
 
+/** Runtime approval/startup rejects IPC; keep that failure local to its plugin. */
+async function readPluginCode(name: string) {
+	try {
+		return await getPi().uiPluginsReadCode(name);
+	} catch (error) {
+		return { error: String(error) };
+	}
+}
+
 /** 卸载全部 override 后重新加载所有启用插件（config 事件的全量对齐，简单粗暴不错序） */
 async function reloadAll(): Promise<void> {
 	const store = useUiPluginsStore.getState();
 	await store.loadAll();
 	const { config, plugins } = useUiPluginsStore.getState();
-	// 收集全部已注册插件名（槽位 override + 区域贡献，纯贡献插件也要先卸再重载）
-	const registeredNames = new Set<string>();
-	const registered = useUiPluginRegistry.getState().overrides;
-	for (const slot of Object.keys(registered) as SlotName[]) {
-		const name = registered[slot]?.pluginName;
-		if (name) registeredNames.add(name);
+	// loadNonces also records headless modules with no contributions or cleanup function.
+	for (const name of Object.keys(useUiPluginRegistry.getState().loadNonces)) {
+		useUiPluginRegistry.getState().removePlugin(name);
 	}
-	const registeredContributions = useUiPluginRegistry.getState().contributions;
-	for (const region of Object.keys(registeredContributions)) {
-		for (const c of registeredContributions[region] ?? []) registeredNames.add(c.pluginName);
-	}
-	for (const name of registeredNames) useUiPluginRegistry.getState().removePlugin(name);
+	if (!config.enabled) return;
 	for (const p of plugins) {
 		if (!p.enabled || !p.trusted || p.invalidReason || p.buildError) continue;
-		const res = await getPi().uiPluginsReadCode(p.name);
+		const res = await readPluginCode(p.name);
 		if ("error" in res) {
 			console.warn(`[ui-plugins] ${p.name} 读代码失败:`, res.error);
 			store.setLoadError(p.name, res.error);
 			continue;
 		}
-		await loadPluginCode(res.manifest, res.code, computeAssignedSlots(res.manifest, plugins, config));
+		await loadPluginCode(
+			res.manifest,
+			res.code,
+			computeAssignedSlots(res.manifest, plugins, config),
+			res.runtimeBinding,
+		);
 	}
 }
 
@@ -99,13 +115,18 @@ async function reloadPlugin(name: string): Promise<void> {
 	const { config, plugins } = useUiPluginsStore.getState();
 	const p = plugins.find((x) => x.name === name);
 	if (!p?.enabled || !p.trusted || p.invalidReason || p.buildError) return;
-	const res = await getPi().uiPluginsReadCode(name);
+	const res = await readPluginCode(name);
 	if ("error" in res) {
 		console.warn(`[ui-plugins] ${name} 读代码失败:`, res.error);
 		useUiPluginsStore.getState().setLoadError(name, res.error);
 		return;
 	}
-	await loadPluginCode(res.manifest, res.code, computeAssignedSlots(res.manifest, plugins, config));
+	await loadPluginCode(
+		res.manifest,
+		res.code,
+		computeAssignedSlots(res.manifest, plugins, config),
+		res.runtimeBinding,
+	);
 }
 
 let subscribed = false;

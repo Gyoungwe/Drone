@@ -42,14 +42,14 @@ afterEach(() => {
 });
 
 describe("SessionRegistry disposeAll（B8：与 closeSession 对称）", () => {
-	it("逐会话 unsubscribe + session.dispose 并清空", () => {
+	it("逐会话 unsubscribe + session.dispose 并清空", async () => {
 		const registry = new SessionRegistry();
 		const a = makeEntry("a", join(dir, "a.jsonl"));
 		const b = makeEntry("b", join(dir, "b.jsonl"));
 		registry.add(a.entry);
 		registry.add(b.entry);
 
-		registry.disposeAll();
+		await registry.disposeAll(async (session) => session.dispose());
 
 		expect(a.dispose).toHaveBeenCalledOnce();
 		expect(a.unsubscribe).toHaveBeenCalledOnce();
@@ -60,13 +60,13 @@ describe("SessionRegistry disposeAll（B8：与 closeSession 对称）", () => {
 		expect(registry.list()).toEqual([]);
 	});
 
-	it("delete（closeSession 路径）已移除的会话不会被 disposeAll 双重释放", () => {
+	it("delete（closeSession 路径）已移除的会话不会被 disposeAll 双重释放", async () => {
 		const registry = new SessionRegistry();
 		const a = makeEntry("a", join(dir, "a.jsonl"));
 		registry.add(a.entry);
 		registry.delete("a");
 
-		registry.disposeAll();
+		await registry.disposeAll(async (session) => session.dispose());
 
 		expect(a.dispose).not.toHaveBeenCalled();
 	});

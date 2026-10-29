@@ -1,0 +1,67 @@
+{
+	"date": "2026-10-28",
+	"scope": "Discovery runner cancellation and asynchronous close/dispose verified against owned real Docker containers; standard Pi read-only journal tools remain a separate validated slice",
+	"hostCodeCommit": "51303614f40dfb0ddc374278a54bf3cf5d537633",
+	"pluginCodeCommit": "da66e5c76d061c3d0e2998d303e9c7fafe8e6a49",
+	"predecessor": "native-plugin-discovery-readback-2026-10-28.json",
+	"candidate": {
+		"package": "@gyoungwe/pi-discovery@0.1.0",
+		"published": false,
+		"tarballSha256": "11a71f9f8167a21f36a8053709948b461345c0dab8e6e8ff5f90190767c8fd17",
+		"apiChange": "Add-only optional DiscoveryRunRequest.signal; no API version or source-lock change",
+		"cleanupErrorContract": "DiscoveryRunner rejects with Error.code=DISCOVERY_CLEANUP_FAILED when owned resource cleanup cannot be verified; execute/close/dispose propagate this error"
+	},
+	"realContainer": {
+		"status": "PASS",
+		"engine": "Docker 29.3.0; existing Docker.app started once after initial missing daemon socket",
+		"image": "existing python:3.12-slim",
+		"imageId": "sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704",
+		"pullPolicy": "never; no pull, retag or installation",
+		"data": "Temporary synthetic workspace/runs only; no network and no user volume",
+		"ownership": "Unique execution name and label; cleanup limited to matching owned container",
+		"scenarios": [
+			"Python summary print succeeds",
+			"SystemExit(7) remains failed",
+			"close interrupts a sleeping kernel and waits for cleanup",
+			"execution timeout interrupts a sleeping kernel and waits for cleanup",
+			"dispose interrupts a sleeping kernel and waits for cleanup"
+		],
+		"readback": "After each scenario, successful daemon query confirms no container labelled for this temporary run remains; close stays closed after execution settles",
+		"formalGui": "NOT_RUN"
+	},
+	"nativeReadback": {
+		"status": "PASS",
+		"writer": "Same installed candidate host loader with actual backend default journal writer; explicit test-only SubprocessFixtureRunner",
+		"sdk": [
+			{ "version": "1.1.0", "calls": 9, "status": "PASS" },
+			{ "version": "1.4.0", "calls": 9, "status": "PASS" }
+		],
+		"model": "Offline faux provider; real SDK AgentSession tool dispatch",
+		"metadata": "Actual installed SDK tool definitions normalize to existing host capabilities research/analysis and readOnly=true",
+		"isolation": "Independent current-workspace journals, empty workspace unconfigured, unchanged journal bytes"
+	},
+	"checks": {
+		"targetedHost": "5 files, 19 tests passed; includes real Docker, default writer/native SDK and deterministic runner cleanup failures",
+		"pluginDiscovery": "16 tests passed; lifecycle suite 5 tests includes concurrent close, cleanup failure, timeout, execution failure and pending publication",
+		"hostLint": "PASS",
+		"hostArchitecture": "PASS; broader domain seam status remains PARTIAL",
+		"backendTypecheck": "PASS",
+		"pluginApiCheck": "PASS",
+		"fullPluginWorkspace": "PASS: DRONE_PLUGIN_API_TARBALL=<verified API 1.3 candidate> npm run check; discovery package and concurrent-close lifecycle suite additionally rechecked",
+		"rootHostGates": "Parent integration required after candidate source-lock and API artifact refresh"
+	},
+	"failedAttempts": [
+		"Initial Docker daemon socket absent; started existing local Docker.app, then verified daemon readiness",
+		"Real run rejected invalid --mount trailing rw; removed it and reran successfully",
+		"Cached image tag inspect later failed while list and complete image ID inspect proved the same authorized cached image exists; retained failure and used exact existing image ID, without pull or retag",
+		"Initial host lint exposed predecessor evidence JSON formatting; formatted and reran successfully",
+		"First final typecheck caught a noUncheckedIndexedAccess assertion in opt-in test; fixed and reran successfully"
+	],
+	"remaining": [
+		"Native execution/Inquiry contract and shared Desktop hashed agentDir owner",
+		"B5 plugin UI using that same owner and removal of dedicated read IPC after parity",
+		"Formal installation-package GUI acceptance",
+		"Podman real execution",
+		"Publication and final parent integration gates"
+	]
+}

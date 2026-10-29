@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
-import { type ResearchWriteAdapter, ResearchWriteAdapterRegistry } from "@drone/research";
 import type {
 	ResearchWriteAdapterDescriptor,
+	ResearchWriteAdapterPort,
+	ResearchWriteAdapterRegistryPort,
 	ResearchWriteAuditRecord,
 	ResearchWriteExecuteRequest,
 	ResearchWritePlan,
@@ -35,7 +36,16 @@ export const emptyResearchWriteLedger: ResearchWriteLedger = createEmptyResearch
 
 export interface ResearchWriteServiceOptions {
 	readonly store: JsonStore<ResearchWriteLedger>;
-	readonly adapters?: ResearchWriteAdapterRegistry;
+	/** Adapters are supplied by the host composition root or an installed connector. */
+	readonly adapters: ResearchWriteAdapterRegistryPort;
+}
+
+/** Empty host-owned registry used when no external write plugin is installed. */
+export function createUnavailableResearchWriteRegistry(): ResearchWriteAdapterRegistryPort {
+	return {
+		descriptors: () => [],
+		get: () => undefined,
+	};
 }
 
 function auditId(planId: string, status: string): string {
@@ -51,16 +61,16 @@ function payloadHash(plan: ResearchWritePlan): string {
  * adapters perform external work after a fresh, per-call user approval.
  */
 export class ResearchWriteService {
-	private readonly adapters: ResearchWriteAdapterRegistry;
+	private readonly adapters: ResearchWriteAdapterRegistryPort;
 
 	constructor(private readonly options: ResearchWriteServiceOptions) {
-		this.adapters = options.adapters ?? new ResearchWriteAdapterRegistry();
+		this.adapters = options.adapters;
 	}
 
 	listAdapters(): readonly ResearchWriteAdapterDescriptor[] {
 		return this.adapters.descriptors().map((descriptor) => {
 			const adapter = this.adapters.get(descriptor.id) as
-				| (ResearchWriteAdapter & { readonly supportsDelete?: boolean })
+				| (ResearchWriteAdapterPort & { readonly supportsDelete?: boolean })
 				| undefined;
 			return adapter?.supportsDelete === true
 				? ({ ...descriptor, supportsDelete: true } as ResearchWriteAdapterDescriptor)
@@ -208,7 +218,7 @@ export class ResearchWriteService {
 		return [...state.audit].slice(-Math.max(1, Math.min(500, Math.trunc(limit)))).reverse();
 	}
 
-	private requireAdapter(id: string): ResearchWriteAdapter {
+	private requireAdapter(id: string): ResearchWriteAdapterPort {
 		const adapter = this.adapters.get(id);
 		if (!adapter) throw new Error(`Research write adapter not found: ${id}`);
 		return adapter;

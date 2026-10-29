@@ -1,0 +1,264 @@
+{
+	"schemaVersion": 1,
+	"date": "2026-10-28",
+	"status": "PARTIAL",
+	"scope": "Canonical Wiki foreground model review, managed Pi command and UI audit through one installed package owner",
+	"source": {
+		"host": "5da9b5b1",
+		"hostBaseline": "4abdae43",
+		"managedCommandProtocol": "cce5d55f",
+		"plugin": "238a346",
+		"apiCommandEffects": "b80b5537"
+	},
+	"artifacts": {
+		"knowledge": {
+			"version": "0.3.0",
+			"sha256": "31ded49a6a3477f34597436910acfdbbd6e233b85e3a9adc0face01f4a0370de"
+		},
+		"pluginApi": {
+			"version": "1.3.0",
+			"sha256": "c4631cbfb190562eaf092e6be68ecdd0f8843f82560fef7b18f376c3720bf90c"
+		},
+		"published": false,
+		"cleanArchiveRebuild": "NOT_RUN",
+		"installedPackageSymlinks": false,
+		"runtimeDirectory": "Read-only reference to previously verified Node runtime; executable/runtime.json verified by production loader; not formal installer evidence"
+	},
+	"checks": {
+		"knowledgePackage": {
+			"status": "PASS",
+			"testsPassed": 533,
+			"testsFailed": 0,
+			"buildCheck": true,
+			"typecheck": true,
+			"packedNativeRealSdkSmoke": true,
+			"cleanUiInstallation": true,
+			"log": "/tmp/model-command-plugin-check-final.log"
+		},
+		"packedOwner": {
+			"status": "PASS",
+			"tarballSha256": "31ded49a6a3477f34597436910acfdbbd6e233b85e3a9adc0face01f4a0370de",
+			"package": "@gyoungwe/pi-knowledge",
+			"version": "0.3.0",
+			"manifestId": "drone-pi-knowledge",
+			"sdk": "1.1.0",
+			"model": "faux-offline",
+			"actualReadOnlySession": true,
+			"actualWritableSdkSession": true,
+			"productionCapabilityRouting": true,
+			"tools": [
+				{
+					"name": "knowledge_status",
+					"error": false
+				},
+				{
+					"name": "knowledge_search",
+					"error": false
+				},
+				{
+					"name": "effect_probe_unknown",
+					"error": true
+				},
+				{
+					"name": "effect_probe_write",
+					"error": true
+				}
+			],
+			"sameOwnerProcesses": [
+				{
+					"pid": 45096,
+					"ppid": 44980,
+					"resource": false
+				},
+				{
+					"pid": 45099,
+					"ppid": 44980,
+					"resource": true
+				}
+			],
+			"uiOverviewNotes": 3,
+			"searchMatchesNative": true,
+			"refresh": true,
+			"readingOperations": ["readNote", "links", "graph", "jobs", "recentByCategory"],
+			"readingScopes": [
+				{
+					"project": null,
+					"visibleNotes": 1,
+					"jobs": 2,
+					"hiddenProjectDenied": true
+				},
+				{
+					"project": "alpha",
+					"visibleNotes": 2,
+					"jobs": 4,
+					"hiddenProjectDenied": true
+				},
+				{
+					"project": null,
+					"visibleNotes": 1,
+					"jobs": 2,
+					"hiddenProjectDenied": true
+				}
+			],
+			"statePolicy": {
+				"status": "PASS",
+				"readOnlyGrantRejected": true,
+				"deniedApprovalNoWrite": true,
+				"atomicReadback": true,
+				"staleVersionRejected": true,
+				"malformedStrictDiagnostic": true,
+				"savedVersion": "c4f5271a63c41cb60059d30d08e9d80238ce5426890b3659b40632bc5f71d4fc",
+				"revokedBindingRejected": true,
+				"reloadedPersistedValue": true,
+				"readOnlySessionRejected": true
+			},
+			"reviews": {
+				"application": 0,
+				"alpha": 1,
+				"betaHidden": true,
+				"readOnlySession": true,
+				"proposalHash": "f447d0fed49db31df90d43e45f6fbd9219b22157e53f88f0b6ae4eca5d8cb393",
+				"beforeAfterProtectedExact": true,
+				"sourceLineHashes": true,
+				"sourceChangeDetected": true,
+				"targetChangeDetected": true,
+				"staleAndTamperedProposalRejected": true,
+				"readOnlyPreviewStagesDidNotWrite": true,
+				"model": {
+					"nativeCommandAuditReadback": true,
+					"denialBeforeGeneration": true,
+					"actualModelAborted": true,
+					"canceledWithoutVaultWrite": true,
+					"applyHistoryUndo": true,
+					"humanReviewed": false,
+					"scientificallyVerified": false,
+					"modelCalls": 3
+				},
+				"writes": {
+					"fileGrantRequired": true,
+					"approvalDeniedWithoutWrite": true,
+					"crossProjectRejected": true,
+					"staleProposalRejected": true,
+					"humanEditRetained": true,
+					"partial": {
+						"id": "aad60517-7a77-4cd9-a939-6cab73a920fb",
+						"status": "applied",
+						"path": "Projects/alpha/Wiki/Orchid.md",
+						"vaultWritten": true,
+						"reviewRecorded": false,
+						"indexed": true,
+						"recovered": false,
+						"recordError": "Acceptance record persistence failure",
+						"indexError": null
+					},
+					"applied": {
+						"id": "aad60517-7a77-4cd9-a939-6cab73a920fb",
+						"status": "applied",
+						"path": "Projects/alpha/Wiki/Orchid.md",
+						"vaultWritten": true,
+						"reviewRecorded": true,
+						"indexed": true,
+						"recovered": true,
+						"recordError": null,
+						"indexError": null
+					},
+					"partialRetryVaultWrites": 1,
+					"historyAfterApply": 1,
+					"undoRestoredProtectedText": true,
+					"historyAfterUndo": 0,
+					"nativeCloseRetainsUi": true
+				}
+			},
+			"readingInputSchemas": true,
+			"pagedReadHashAndLines": true,
+			"changedHashRejected": true,
+			"unknownAndWriteExecuted": 0,
+			"fullHooksAndPublication": "NOT_IMPLEMENTED",
+			"childrenExited": true,
+			"reservationsReleased": true,
+			"sqliteExclusiveReopenAfterExit": 1,
+			"cleanup": [
+				{
+					"phase": "native-bootstrap-dispose",
+					"status": "fulfilled",
+					"durationMs": 0
+				},
+				{
+					"phase": "writable-native-bootstrap-dispose",
+					"status": "fulfilled",
+					"durationMs": 0
+				},
+				{
+					"phase": "coordinator-close",
+					"status": "fulfilled",
+					"durationMs": 10
+				},
+				{
+					"phase": "knowledge-child-census",
+					"status": "fulfilled",
+					"durationMs": 55
+				},
+				{
+					"phase": "control-child-census",
+					"status": "fulfilled",
+					"durationMs": 57
+				},
+				{
+					"phase": "sqlite-reopen-after-owner-close",
+					"status": "fulfilled",
+					"durationMs": 1
+				},
+				{
+					"phase": "reservation-census",
+					"status": "fulfilled",
+					"durationMs": 0
+				},
+				{
+					"phase": "fixture-remove",
+					"status": "fulfilled",
+					"durationMs": 39
+				}
+			]
+		},
+		"hostMechanisms": {
+			"status": "PASS",
+			"sdkTestsPassed": 15,
+			"sdkTestsFailed": 0,
+			"scope": "Managed command protocol 7 plus generic model capability SDK 8",
+			"backendTypecheck": true,
+			"architecture": true,
+			"logs": [
+				"/tmp/model-command-host-sdk-regressions.log",
+				"/tmp/model-command-host-tsc.log",
+				"/tmp/model-command-host-arch.log"
+			]
+		}
+	},
+	"logs": {
+		"packedSdk": "/tmp/model-command-packed-sdk-final.log",
+		"firstPackedFailure": "/tmp/model-command-packed-sdk.log",
+		"receiptSha256": "2f3a8a20c3ea27c0391e54524cce43ad9d2c3adfd16ad2512c588179817bcb32"
+	},
+	"failuresPreserved": [
+		{
+			"scope": "First expanded packed test",
+			"cause": "Fixture reused write-only acknowledgement/autoApply fields in the read-only modelReviewInfo input; real broker correctly rejected extra fields",
+			"resolution": "Separate modelIdentity read DTO from modelInput write DTO; did not relax any production schema"
+		}
+	],
+	"remaining": [
+		"Full native hooks and publication authority",
+		"Default CLI foreground model-review integration and native text receipt",
+		"Legacy published UI1.x named method consumers and specialist-runner migration",
+		"Combined clean-source rebuild, dual-repository final gates and final source locks",
+		"Formal macOS installer GUI enable/disable, upgrade/rollback and zero-domain final verification"
+	],
+	"excludedUnchanged": [
+		"Zotero cloud account acceptance",
+		"User-authenticated MCP service",
+		"Protocols.io account write acceptance",
+		"Other physical desktop platforms",
+		"Deferred MinerU/GROBID",
+		"Deferred B8/B8-2"
+	]
+}

@@ -1,12 +1,21 @@
 import { dirname, resolve } from "node:path";
+import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { createLogger } from "../log";
-import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
+import {
+	type PermissionConfirm,
+	type PermissionModeRef,
+	placeFinalPermissionCheckLast,
+} from "../permissions/extension";
 import { createProcessSandboxedExtension, type PluginSandboxPolicy } from "../plugin-sandbox";
+import type { PluginNativeBootstrap, PluginNativeIntegration } from "../plugins/coordinator";
 import { replyLanguagePrompt } from "../reply-language";
 import { sandboxExtensionFactory } from "../session-engine/sandbox-loader";
-import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
+import type {
+	HostExtensionSelectionReceipt,
+	InlineExtension,
+	ProjectTrustStore,
+} from "../session-engine/sdk";
 import { DefaultResourceLoader, getAgentDir, SettingsManager } from "../session-engine/sdk";
-import { memoryIndexPrompt } from "./memory";
 import { resolveProjectTrust, type TrustOptionInternal } from "./trust";
 
 const log = createLogger("backend");
@@ -50,20 +59,47 @@ export function preferBundledMcpRuntime(bundledPath: string) {
 	};
 }
 
-export function desktopLoaderOptions(integration: DesktopIntegration | undefined, cwd?: string) {
+export function desktopLoaderOptions(
+	integration: DesktopIntegration | undefined,
+	cwd?: string,
+	nativeBootstrap?: PluginNativeBootstrap,
+	coreHost?: CoreHostPort,
+) {
 	if (!integration) return {};
-	const { mcpRuntimePath, sandboxedExtensions, pluginRuntimeDirectory, ...rest } = integration;
+	const delivery = nativeBootstrap?.delivery;
+	const { mcpRuntimePath, sandboxedExtensions, pluginRuntimeDirectory, nativeRuntime, ...rest } = integration;
+	const sandbox =
+		pluginRuntimeDirectory && cwd
+			? sandboxExtensionFactory(
+					pluginRuntimeDirectory,
+					[...(rest.additionalExtensionPaths ?? []), ...(mcpRuntimePath ? [mcpRuntimePath] : [])],
+					cwd,
+				)
+			: undefined;
 	// The UI language can change between sessions; read it on every (re)load.
 	// P12: project memory index (.pi/memory/MEMORY.md) only — bodies are read on demand.
 	const options = {
 		...rest,
+		...(delivery
+			? {
+					hostExtensionSelection: (receipt: HostExtensionSelectionReceipt) => {
+						if (receipt.phase === "loading") delivery.invalidateSelection();
+						else delivery.confirmSelection(receipt.paths);
+					},
+				}
+			: {}),
 		...(pluginRuntimeDirectory && cwd
 			? {
-					extensionFactoryForPath: sandboxExtensionFactory(
-						pluginRuntimeDirectory,
-						[...(rest.additionalExtensionPaths ?? []), ...(mcpRuntimePath ? [mcpRuntimePath] : [])],
-						cwd,
-					),
+					extensionFactoryForPath: async (path: string) => {
+						const selected = nativeBootstrap?.delivery?.observeSelectedPath(path);
+						if (selected?.kind === "unconfirmed")
+							throw new Error("Native extension source authority is unavailable");
+						if (selected?.kind === "managed" && selected.state !== "enabled")
+							throw new Error("Native extension source is not enabled");
+						if (nativeRuntime?.manages(path))
+							return nativeBootstrap ? nativeBootstrap.factoryForPath(path) : () => {};
+						return sandbox?.(path);
+					},
 				}
 			: {}),
 		...(sandboxedExtensions?.length
@@ -74,7 +110,7 @@ export function desktopLoaderOptions(integration: DesktopIntegration | undefined
 		appendSystemPrompt: [
 			...rest.appendSystemPrompt,
 			...replyLanguagePrompt(),
-			...(cwd ? memoryIndexPrompt(cwd) : []),
+			...(cwd && coreHost ? coreHost.memoryIndexPrompt(cwd) : []),
 		],
 	};
 	if (!mcpRuntimePath) return options;
@@ -110,6 +146,7 @@ export function useUtf8WindowsShell<T extends Pick<SettingsManager, "getShellCom
 export class ProjectResourceLoader {
 	constructor(
 		private readonly deps: {
+			coreHost?: CoreHostPort;
 			trustStore: ProjectTrustStore;
 			/** 信任未决时弹窗询问（TrustGate.ask） */
 			ask: (cwd: string, options: TrustOptionInternal[]) => Promise<number | undefined>;
@@ -127,6 +164,7 @@ export class ProjectResourceLoader {
 				/** Optional third-party extensions loaded through the process sandbox proxy. */
 				sandboxedExtensions?: PluginSandboxPolicy[];
 				pluginRuntimeDirectory?: string;
+				nativeRuntime?: PluginNativeIntegration;
 				additionalPromptTemplatePaths?: string[];
 				academicPiRoot?: string;
 				mcpRuntimePath?: string;
@@ -142,6 +180,7 @@ export class ProjectResourceLoader {
 		cwd: string,
 		options?: {
 			askTrust?: boolean;
+			nativeBootstrap?: PluginNativeBootstrap;
 			confirm?: PermissionConfirm;
 			modeRef?: PermissionModeRef;
 			extensionFactories?: InlineExtension[];
@@ -154,15 +193,24 @@ export class ProjectResourceLoader {
 		const settingsManager = useUtf8WindowsShell(
 			SettingsManager.create(cwd, agentDir, { projectTrusted: false }),
 		);
+		const desktop = desktopLoaderOptions(
+			this.deps.desktopIntegration,
+			cwd,
+			options?.nativeBootstrap,
+			this.deps.coreHost,
+		);
 		const resourceLoader = new DefaultResourceLoader({
 			cwd,
 			agentDir,
 			settingsManager,
-			extensionFactories: [
+			...desktop,
+			// Sandboxed proxies join the built-in list instead of replacing it, and the
+			// permission re-check stays the last tool_call handler of the session.
+			extensionFactories: placeFinalPermissionCheckLast([
 				...this.deps.buildExtensions(cwd, options?.confirm, options?.modeRef),
 				...(options?.extensionFactories ?? []),
-			],
-			...desktopLoaderOptions(this.deps.desktopIntegration, cwd),
+				...((desktop as { extensionFactories?: InlineExtension[] }).extensionFactories ?? []),
+			]),
 		});
 		if (this.deps.projectTrust === false) {
 			settingsManager.setProjectTrusted(true);

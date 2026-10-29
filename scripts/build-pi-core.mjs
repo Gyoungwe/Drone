@@ -1,74 +1,70 @@
 #!/usr/bin/env node
-
-// Build pi-core as a self-contained native Pi extension. Runtime dependencies
-// are bundled; the Pi host itself remains a peer dependency and is never
-// duplicated inside the package.
+// pi-core is built in drone-plugins. The host only verifies the source-locked artifact.
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { build } from "esbuild";
+import { readFile } from "node:fs/promises";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const root = resolve(import.meta.dirname, "..");
-const packageRoot = join(root, "packages/pi-core");
-const distRoot = join(packageRoot, "dist");
-const check = process.argv.includes("--check");
+const requiredOutputs = [
+	"dist/index.mjs",
+	"dist/host.mjs",
+	"dist/index.d.ts",
+	"dist/host.d.ts",
+	"dist/memory.mjs",
+	"dist/memory.d.ts",
+	"dist/tools/memory-save.mjs",
+	"dist/tools/memory-save.d.ts",
+];
 
-const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
-
-async function checkOutput() {
-	const outputPath = join(distRoot, "index.mjs");
-	if (!existsSync(outputPath)) throw new Error("pi-core dist/index.mjs is missing");
-	const output = await readFile(outputPath, "utf8");
-	for (const pattern of [
-		/(?:from|import\s*\(|require\s*\()["']electron["']/u,
-		/(?:from|import\s*\(|require\s*\()["']@drone\/(?:backend|desktop)["']/u,
-		/(?:from\s+|import\s*\(\s*|require\s*\(\s*)["']\.\.\/\.\./u,
-	]) {
-		if (pattern.test(output)) throw new Error(`pi-core bundle contains forbidden import: ${pattern}`);
+export async function verifyPinnedCoreArtifact(repoRoot = root) {
+	const packageRoot = join(repoRoot, "vendor/plugins/pi-core");
+	const lock = JSON.parse(await readFile(join(repoRoot, "plugins.lock.json"), "utf8"));
+	const pinned = lock.plugins.find((entry) => entry.name === "@gyoungwe/pi-core");
+	if (!pinned) throw new Error("Core package is missing from plugins.lock.json");
+	const pkg = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
+	const manifest = JSON.parse(await readFile(join(packageRoot, "plugin.manifest.json"), "utf8"));
+	if (pkg.name !== pinned.name || pkg.version !== pinned.version || manifest.version !== pinned.version)
+		throw new Error("Core package identity/version differs from plugins.lock.json");
+	const fetched = JSON.parse(await readFile(join(packageRoot, ".drone-fetch.json"), "utf8"));
+	if (fetched.commit !== pinned.commit || fetched.sha256 !== pinned.tarballSha256)
+		throw new Error("Core package source receipt differs from plugins.lock.json");
+	const build = JSON.parse(await readFile(join(packageRoot, "build-manifest.json"), "utf8"));
+	for (const path of requiredOutputs)
+		if (!Object.hasOwn(build.outputs, path))
+			throw new Error(`Core build manifest omits public output: ${path}`);
+	for (const [path, expected] of Object.entries(build.outputs)) {
+		const target = resolve(packageRoot, path);
+		const rel = relative(packageRoot, target);
+		if (isAbsolute(path) || !rel || rel === ".." || rel.startsWith(`..${sep}`))
+			throw new Error(`Core output escapes package: ${path}`);
+		const actual = createHash("sha256")
+			.update(await readFile(target))
+			.digest("hex");
+		if (actual !== expected) throw new Error(`Core artifact hash differs: ${path}`);
 	}
-	for (const name of [
-		"ask_user",
-		"set_status",
-		"todo",
-		"deliver_files",
-		"memory_save",
-		"task_plan",
-		"drone-doctor",
-		"drone-example",
-	])
-		if (!output.includes(JSON.stringify(name))) throw new Error(`pi-core bundle is missing ${name}`);
+	return { packageRoot, version: pkg.version, outputs: Object.keys(build.outputs) };
 }
 
-if (!check) {
-	await rm(distRoot, { recursive: true, force: true });
-	await mkdir(distRoot, { recursive: true });
-	const result = await build({
-		entryPoints: [join(packageRoot, "src/index.ts")],
-		outfile: join(distRoot, "index.mjs"),
-		bundle: true,
-		format: "esm",
-		platform: "node",
-		packages: "bundle",
-		metafile: true,
-		sourcemap: false,
-		logLevel: "silent",
-	});
-	const output = await readFile(join(distRoot, "index.mjs"), "utf8");
-	if (!output.startsWith("// @ts-nocheck"))
-		await writeFile(join(distRoot, "index.mjs"), `// @ts-nocheck\n${output}`);
-	const inputHash = createHash("sha256");
-	for (const input of Object.keys(result.metafile?.inputs || {}).sort()) {
-		inputHash.update(input.replaceAll("\\", "/"));
-		inputHash.update("\0");
-		const candidate = resolve(root, input);
-		if (existsSync(candidate)) inputHash.update(await readFile(candidate));
-		inputHash.update("\0");
-	}
-	await writeFile(
-		join(packageRoot, "build-manifest.json"),
-		`${JSON.stringify({ version: 1, generator: "scripts/build-pi-core.mjs", inputsSha256: inputHash.digest("hex"), outputs: { "dist/index.mjs": sha256(await readFile(join(distRoot, "index.mjs"))) } }, null, "\t")}\n`,
+/** Verify the installed plugin still owns memory writes and ships their public contract. */
+export async function verifyCoreMemoryArtifact(repoRoot = root) {
+	const artifact = await verifyPinnedCoreArtifact(repoRoot);
+	const paths = ["dist/index.mjs", "dist/host.mjs", "dist/memory.mjs", "dist/tools/memory-save.mjs"];
+	const [extension, host, memory, tool] = await Promise.all(
+		paths.map((path) => readFile(join(artifact.packageRoot, path), "utf8")),
 	);
+	if (
+		!extension.includes('"memory_save"') ||
+		!host.includes("makeMemorySaveTool") ||
+		!memory.includes("writeMemory") ||
+		!memory.includes("MEMORY_INDEX") ||
+		!tool.includes("makeMemorySaveTool")
+	)
+		throw new Error("Core memory save implementation or public tool contract is missing");
+	return { version: artifact.version, packagePaths: paths.map((path) => `vendor/plugins/pi-core/${path}`) };
 }
-await checkOutput();
-console.log(`pi-core package artifacts ${check ? "are up to date" : "built"}`);
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+	const artifact = await verifyPinnedCoreArtifact();
+	console.log(`Pinned pi-core ${artifact.version} artifacts verified (${artifact.outputs.length} outputs)`);
+}

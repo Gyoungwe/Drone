@@ -34,6 +34,25 @@ describe("StorageRegistry", () => {
 				if (!/\bnew JsonStore(?:<|\s*\()/.test(lines[index] ?? "")) continue;
 				const block = lines.slice(Math.max(0, index - 2), index + 32).join("\n");
 				expect(block, `${file}:${index + 1} must declare storageId`).toMatch(/storageId\s*:/);
+				if (file.endsWith("/plugins/file-capabilities.ts")) {
+					expect(block).toContain("registry.assertRegistered(root.stateWrite.storageId).id");
+					sites.push(file);
+					continue;
+				}
+				if (file.endsWith("/discovery/service.ts")) {
+					expect(block).toContain("storageId: entry?.id");
+					expect(lines.join("\n")).toContain("registerDiscoveredRoot");
+					sites.push(file);
+					continue;
+				}
+				if (file.endsWith("/plugins/execution-capabilities.ts")) {
+					expect(block).toContain("storageId: registered.id");
+					expect(lines.join("\n")).toMatch(
+						/const registered = options\.storage\.registerDiscoveredRoot\(\s*"plugin-execution-receipt"/,
+					);
+					sites.push(file);
+					continue;
+				}
 				const ids = [...block.matchAll(/"((?:agent|desktop)-[^"]+)"/g)]
 					.map((match) => match[1])
 					.filter((id): id is string => Boolean(id));
@@ -43,7 +62,12 @@ describe("StorageRegistry", () => {
 				sites.push(file);
 			}
 		}
-		expect(sites).toHaveLength(33);
+		expect(sites).toHaveLength(31);
+	});
+
+	it("does not register optional discovery storage in the base host", () => {
+		const registry = createDefaultStorageRegistry({ agentDir: "/tmp/agent-without-discovery" });
+		expect(registry.list().filter((entry) => entry.owner.startsWith("discovery/"))).toEqual([]);
 	});
 
 	it("rejects duplicate entries and inventories file state", async () => {

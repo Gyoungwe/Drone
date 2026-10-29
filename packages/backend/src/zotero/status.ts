@@ -2,8 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { ZoteroStatus } from "@drone/shared";
-import { readZoteroMcpConfig, ZOTERO_SETUP_BINDING } from "@gyoungwe/pi-research/host";
+import { readZoteroMcpConfig, ZOTERO_SETUP_BINDING, type ZoteroStatus } from "@drone/shared";
 import { getAgentDir } from "../session-engine/sdk";
 
 /**

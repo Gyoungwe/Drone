@@ -8,6 +8,7 @@ import {
 } from "@drone/extensions/internal/obsidian-setup";
 import { resolveObsidianRuntime } from "@drone/extensions/internal/obsidian-workbench";
 import obsidianWorkbench from "@drone/extensions/obsidian-workbench";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, cwd, vault;
@@ -30,6 +31,7 @@ function harness({ input = vault, confirmed = true, hasUI = true } = {}) {
 		commands = new Map(),
 		events = new Map();
 	const pi = {
+		events: createEventBus(),
 		registerTool: (tool) => tools.set(tool.name, tool),
 		registerCommand: (name, command) => commands.set(name, command),
 		on: (name, handler) => events.set(name, handler),
@@ -159,8 +161,6 @@ describe("slash command to current-model handoff", () => {
 			"project",
 			"research-setup",
 			"setup",
-			"task-action",
-			"task-status",
 			"发现",
 			"项目",
 		]);

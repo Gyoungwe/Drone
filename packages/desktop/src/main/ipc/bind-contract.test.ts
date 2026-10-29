@@ -60,3 +60,22 @@ describe("bindContract", () => {
 		expect(invalid).toMatchObject({ code: "invalid_result", severity: "error" });
 	});
 });
+
+it("uses an independent caller context for overlapping requests", async () => {
+	let release!: () => void;
+	const waiting = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	bindContract(Contract, (event) => ({
+		echo: async (value) => {
+			await waiting;
+			return `${event.sender.id}:${value}`;
+		},
+		bad: () => "ok",
+	}));
+	const handler = mocks.handlers.get("test:echo")!;
+	const a = handler({ sender: { id: 1 } }, "a");
+	const b = handler({ sender: { id: 2 } }, "b");
+	release();
+	expect(await Promise.all([a, b])).toEqual(["1:a", "2:b"]);
+});

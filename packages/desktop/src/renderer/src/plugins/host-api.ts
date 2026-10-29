@@ -6,7 +6,6 @@ import * as ReactDOM from "react-dom";
 import { getPi } from "../api";
 import { ImagePreviewOverlay } from "../components/chat/ImagePreview";
 import { Markdown } from "../components/chat/Markdown";
-import { taskArtifactLinks } from "../components/chat/TaskArtifactLinks";
 import { displayName, summarizeArgs } from "../components/chat/ToolCallCard";
 import { ChevronDownIcon, ObsidianIcon } from "../components/icons";
 import { RoadmapLane, roadmapStatus } from "../components/route/Roadmap";
@@ -34,7 +33,10 @@ import { useUiPreferencesStore } from "../stores/ui-preferences";
 import type { DroneUiApi } from "./env";
 import { PLUGIN_HOST_API_MANIFEST } from "./host-api.manifest";
 import { knowledgeUiPort } from "./knowledge-api";
+import { taskArtifactLinks } from "./legacy-task-artifacts";
 import { PluginEntryHost, usePluginEntries } from "./PluginRegions";
+import { usePluginRuntime } from "./runtime";
+import { sessionUiPort, useSessionMessages } from "./session-api";
 import { UI_REGIONS } from "./slots";
 
 /**
@@ -93,6 +95,8 @@ window.DroneUI = {
 		useLanguage: useLanguage,
 		useAgentActive: useAgentActive,
 		usePluginEntries: usePluginEntries,
+		usePluginRuntime: usePluginRuntime,
+		useSessionMessages: useSessionMessages,
 	},
 	// </drone:generated namespace="hooks">
 	// <drone:generated namespace="stores">
@@ -168,6 +172,12 @@ window.DroneUI = {
 		updateDailyDiscovery: knowledgeUiPort.updateDailyDiscovery,
 	},
 	// </drone:generated namespace="knowledge">
+	// <drone:generated namespace="sessions">
+	sessions: {
+		prompt: sessionUiPort.prompt,
+		command: sessionUiPort.command,
+	},
+	// </drone:generated namespace="sessions">
 	// <drone:generated namespace="i18n">
 	i18n: {
 		registerMessages: registerPluginMessages,

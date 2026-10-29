@@ -10,6 +10,11 @@
 export const PLUGIN_API_VERSION = 1 as const;
 export const RESULT_CONTRACT = "drone-result/v3" as const;
 
+export * from "./core.js";
+export type * from "./legacy-knowledge.js";
+export * from "./research.js";
+export * from "./tasks.js";
+
 export type PluginApiVersion = typeof PLUGIN_API_VERSION;
 export type ResultContractVersion = typeof RESULT_CONTRACT;
 export type PluginHost = "native-pi" | "drone-desktop";
@@ -249,7 +254,16 @@ export interface AuthorizationReceipt {
 }
 
 /** Permission scopes that a Drone manifest may declare for host-mediated work. */
-export type PluginFilesystemPermission = "workspace-read" | "workspace" | "configured-vault" | "vault-read";
+export type PluginFilesystemPermission =
+	| "workspace-read"
+	| "workspace"
+	| "configured-vault"
+	| "configured-vault-write"
+	| "vault-read"
+	/** Declares explicit state/lease roots; requires a scoped storage broker, not arbitrary file access. */
+	| "application-state"
+	| "binary-state-read"
+	| "binary-state-write";
 
 export interface PluginPermissionDeclaration {
 	readonly filesystem: readonly PluginFilesystemPermission[];
@@ -323,10 +337,18 @@ export function createPermissionedHostPort(
 		switch (operation) {
 			case "filesystem-read":
 				return options.permissions.filesystem.some((scope) =>
-					["workspace-read", "workspace", "configured-vault", "vault-read"].includes(scope),
+					[
+						"workspace-read",
+						"workspace",
+						"configured-vault",
+						"configured-vault-write",
+						"vault-read",
+					].includes(scope),
 				);
 			case "filesystem-write":
-				return options.permissions.filesystem.includes("workspace");
+				return options.permissions.filesystem.some((scope) =>
+					["workspace", "configured-vault-write"].includes(scope),
+				);
 			case "network":
 				return options.permissions.network.length > 0;
 			case "subprocess":
@@ -508,6 +530,141 @@ export interface AnalysisHostLoader {
 	readonly contractVersion: 1;
 	load(): AnalysisHostPort;
 }
+
+/** Read-only knowledge surface exposed by an installed knowledge plugin. */
+export interface KnowledgeReadHostPort {
+	readonly contractVersion: 1;
+	overview(input: unknown): Promise<unknown>;
+	search(input: unknown): Promise<unknown>;
+	read(input: unknown): Promise<unknown>;
+	noteLinks(input: unknown): Promise<unknown>;
+	graph(input: unknown): Promise<unknown>;
+	/** Optional knowledge review UI operations supplied by the installed plugin. */
+	reviews?(input: unknown): Promise<unknown>;
+	preview?(input: unknown): Promise<unknown>;
+	decide?(input: unknown): Promise<unknown>;
+	setupPreview?(input: unknown): Promise<unknown>;
+	specialistSettings?(input: unknown): Promise<unknown>;
+	openTarget?(input: unknown): Promise<unknown>;
+	dailyDiscovery?: {
+		systemPrompt: string;
+		buildMessage(
+			fresh: readonly { path: string; title: string; text: string; mtime: number }[],
+			related: readonly { path: string; title: string; text: string; mtime: number }[],
+		): string;
+		parseIdeas(text: string, allowedPaths: Iterable<string>, freshPaths: Iterable<string>): unknown;
+	};
+	vault?: {
+		readBinding(options?: { fresh?: boolean }): Promise<unknown>;
+		readNote(vault: string, path: string): Promise<unknown>;
+		containedFile(vault: string, path: string): Promise<string>;
+		createFileOnly(path: string, content: string): Promise<boolean>;
+		replaceFile(path: string, content: string, options: { expectedHash?: string }): Promise<void>;
+		isConflict(error: unknown): boolean;
+	};
+	semantic?: {
+		status(input: unknown): Promise<unknown>;
+		saveSettings(input: unknown): Promise<unknown>;
+		testProvider(input: unknown): Promise<unknown>;
+		index(input: unknown): Promise<unknown>;
+		cancelIndex(input: unknown): Promise<unknown>;
+	};
+	/** Topic memory operations supplied by the installed knowledge plugin. */
+	topics?: {
+		list(input: unknown): Promise<unknown>;
+		archive(input: unknown): Promise<unknown>;
+	};
+	/** Memory and daily-discovery operations supplied by the installed knowledge plugin. */
+	memory?: {
+		dailyContext(input: unknown): Promise<unknown>;
+		saveIdea(input: unknown): Promise<unknown>;
+		relatedForMemory(input: unknown): Promise<unknown>;
+		saveMemory(input: unknown): Promise<unknown>;
+	};
+	/** Maintenance topic/wiki operations supplied by the installed knowledge plugin. */
+	maintenanceTopic?: {
+		setTopic(input: unknown): Promise<unknown>;
+		proposeWiki(input: unknown): Promise<unknown>;
+	};
+	/** Optional research capture operations supplied by the installed knowledge plugin. */
+	researchResource?: {
+		resolveContext(input: unknown): unknown;
+		ingestSnapshot(input: unknown): unknown;
+	};
+	/** Optional terminal-job experience writer supplied by the installed knowledge plugin. */
+	recordTerminalJobExperience?: (
+		store: unknown,
+		input: unknown,
+		expectedRevision?: number,
+	) => Promise<unknown>;
+	/** Optional instance-scoped UI event bridge supplied by the installed plugin. */
+	uiState?: {
+		subscribe(listener: (event: unknown) => void): () => void;
+		notify(text: string, severity?: "info" | "warning" | "error", sessionId?: string | null): void;
+	};
+	/** Optional answer-publication registrar supplied by the installed plugin. */
+	registerAnswerPublication?: (
+		pi: unknown,
+		options: { getCurrent: () => unknown; evidenceOnly: boolean },
+	) => { begin(required: boolean): unknown };
+	/** Optional foreground model review operation supplied by the installed knowledge plugin. */
+	reviewWikiWithModel?: (input: unknown, options: unknown) => Promise<unknown>;
+	/** Optional background deliverable reviewer factory supplied by the installed plugin. */
+	backgroundReviewer?: (options: unknown) => unknown;
+	/** Optional UI operations supplied by the installed knowledge plugin. */
+	jobs?(input: unknown): Promise<unknown>;
+	maintenance?(input: unknown): Promise<unknown>;
+}
+
+/** Stable host entry contract for the knowledge capability. */
+export interface KnowledgeHostPort extends KnowledgeReadHostPort {
+	/** Temporary unpublished 1.3 adapter; no host-owned domain algorithm fallback. */
+	runSpecialistModelLoop?: import("./legacy-knowledge.js").LegacyKnowledgeSpecialistLoop;
+}
+
+/** Host-owned, dependency-free worker seam for an installed knowledge loader. */
+export interface KnowledgeHostWorkerSetup {
+	createWorker(url: URL, options: Record<string, unknown>): unknown;
+	workerMetadata?(): unknown;
+}
+
+/** Loader contract keeps the host independent of the knowledge implementation. */
+export interface KnowledgeHostLoader {
+	readonly contractVersion: 1;
+	/** Optional process-bound worker setup for the installed knowledge package. */
+	configureWorker?(setup: KnowledgeHostWorkerSetup): void;
+	load(): KnowledgeHostPort;
+}
+
+/** Read-only tool surface exposed by an installed evidence plugin. */
+export interface EvidenceHostTool {
+	execute(input: unknown): Promise<unknown> | unknown;
+}
+
+export type EvidenceHostToolName =
+	| "analysis_prepare_evidence"
+	| "evidence_validate_manifest"
+	| "evidence_verify_replay";
+
+export interface EvidenceHostManifest {
+	readonly tools: readonly string[];
+}
+
+/** Stable host entry contract for the optional evidence capability. */
+export interface EvidenceHostPort {
+	/** Optional for compatibility with pre-loader host fixtures; loaders return version 1. */
+	readonly contractVersion?: 1;
+	readonly manifest: EvidenceHostManifest;
+	readonly tools: Readonly<Partial<Record<EvidenceHostToolName, EvidenceHostTool>>>;
+}
+
+/** Loader contract keeps the host independent of evidence implementation details. */
+export interface EvidenceHostLoader {
+	readonly contractVersion: 1;
+	load(): EvidenceHostPort;
+}
+
+export type * from "./discovery.js";
 
 function stableContractJson(value: unknown): string {
 	if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";

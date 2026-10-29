@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import type { ExtensionContext, ExtensionFactory, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { createLogger } from "../log";
 import { type PluginSandboxPolicy, PluginSandboxSession } from "../plugin-sandbox";
+import { awaitSandboxDialog } from "../plugin-sandbox-ui";
 import { hostText } from "../reply-language";
 
 const log = createLogger("plugin-sandbox");
@@ -40,25 +41,32 @@ export function sandboxExtensionFactory(
 			} finally {
 				await discovery.close();
 			}
+			const lifecycle = new AbortController();
 			let active: PluginSandboxSession | undefined;
 			let opening: Promise<PluginSandboxSession> | undefined;
-			const open = async (ctx: ExtensionContext): Promise<PluginSandboxSession> => {
+			const open = async (ctx: ExtensionContext, signal: AbortSignal): Promise<PluginSandboxSession> => {
 				const granted =
 					ctx.hasUI &&
-					(await ctx.ui.confirm(
-						hostText(
-							`允许 ${pluginId} 在本次会话中联网？`,
-							`Allow ${pluginId} network access for this session?`,
-						),
-						hostText(
-							"此扩展将在独立进程中运行。允许后可访问所有网络地址；只读取扩展包与依赖，不继承宿主凭据，不能创建子进程。停用扩展或结束会话会关闭进程。",
-							"This extension runs in a separate process. Allowing grants all network addresses; file reads are limited to its package and dependencies, without host credentials or child processes. Disabling it or ending the session closes the process.",
-						),
+					(await awaitSandboxDialog(
+						() =>
+							ctx.ui.confirm(
+								hostText(
+									`允许 ${pluginId} 在本次会话中联网？`,
+									`Allow ${pluginId} network access for this session?`,
+								),
+								hostText(
+									"此扩展将在独立进程中运行。允许后可访问所有网络地址；只读取扩展包与依赖，不继承宿主凭据，不能创建子进程。停用扩展或结束会话会关闭进程。",
+									"This extension runs in a separate process. Allowing grants all network addresses; file reads are limited to its package and dependencies, without host credentials or child processes. Disabling it or ending the session closes the process.",
+								),
+								{ signal },
+							),
+						signal,
 					));
 				if (!granted) throw new Error("Plugin network permission denied");
 				const session = new PluginSandboxSession({ ...policy, network: ["*"] });
 				try {
 					const started = await session.start();
+					signal.throwIfAborted();
 					log.info("plugin worker started", {
 						pluginId,
 						pid: started.pid,
@@ -76,23 +84,33 @@ export function sandboxExtensionFactory(
 				pi.registerTool({
 					...declaration,
 					parameters: declaration.parameters as ToolDefinition["parameters"],
-					async execute(toolCallId, params, signal, _update, ctx) {
+					async execute(toolCallId, params, signal, update, ctx) {
+						const invocationSignal = signal ? AbortSignal.any([signal, lifecycle.signal]) : lifecycle.signal;
+						invocationSignal.throwIfAborted();
 						let session = active;
 						if (!session) {
-							opening ??= open(ctx);
+							opening ??= open(ctx, invocationSignal);
 							try {
 								session = await opening;
 							} finally {
 								opening = undefined;
 							}
 						}
-						return session.invoke(declaration.name, toolCallId, params, signal) as ReturnType<
-							ToolDefinition["execute"]
-						>;
+						invocationSignal.throwIfAborted();
+						return session.invoke(
+							declaration.name,
+							toolCallId,
+							params,
+							invocationSignal,
+							ctx,
+							update,
+						) as ReturnType<ToolDefinition["execute"]>;
 					},
 				} as ToolDefinition);
 			}
 			pi.on("session_shutdown", async () => {
+				lifecycle.abort();
+				if (opening) await Promise.allSettled([opening]);
 				if (active) await active.close();
 			});
 		};

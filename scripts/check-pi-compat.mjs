@@ -37,7 +37,7 @@ const PLUGIN_PACKAGES = [
 	"pi-connectors",
 ];
 const PLUGIN_DIST = {
-	"pi-core": resolve(ROOT, "packages/pi-core/dist/index.mjs"),
+	"pi-core": resolve(ROOT, "vendor/plugins/pi-core/dist/index.mjs"),
 	"pi-knowledge": resolve(ROOT, "node_modules/@gyoungwe/pi-knowledge/dist/index.mjs"),
 	"pi-research": resolve(ROOT, "vendor/plugins/pi-research/dist/index.mjs"),
 	"pi-analysis": resolve(ROOT, "node_modules/@gyoungwe/pi-analysis/dist/index.mjs"),

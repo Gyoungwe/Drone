@@ -17,6 +17,12 @@ import {
 } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import {
+	makeDeliverFilesTool,
+	makeMemorySaveTool,
+	makeStatusTool,
+	makeTodoTool,
+} from "@gyoungwe/pi-core/host";
+import {
 	closeKnowledgeServices,
 	getKnowledgeService,
 	subscribeKnowledgeUi,
@@ -25,6 +31,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/knowledge-publication";
 import { readSessionMessagesFromContent } from "../src/session/messages";
+import { installedTaskPluginPath } from "./fixtures/task-plugin.mjs";
 
 let root, cwd, vault, backend, session, sid, faux, events;
 async function note(path, text) {
@@ -63,10 +70,22 @@ beforeEach(async () => {
 		projectTrust: false,
 		webFetch: false,
 		subagentPreferBuiltin: false,
+		coreHost: {
+			contractVersion: 1,
+			makeDeliverFilesTool,
+			makeMemorySaveTool,
+			makeStatusTool,
+			makeTodoTool,
+			memoryIndexPrompt: () => [],
+			writeMemory: () => "",
+		},
 		desktopIntegration: {
 			appendSystemPrompt: [],
-			additionalExtensionPaths: [resolve("../../.pi/extensions/obsidian-workbench.mjs")],
-			additionalSkillPaths: [resolve("../../.pi/skills/research-vault/SKILL.md")],
+			additionalExtensionPaths: [
+				installedTaskPluginPath(),
+				resolve(import.meta.dirname, "../../../.pi/extensions/obsidian-workbench.mjs"),
+			],
+			additionalSkillPaths: [resolve(import.meta.dirname, "../../../.pi/skills/research-vault/SKILL.md")],
 		},
 	});
 	backend.modelRuntime = runtime;

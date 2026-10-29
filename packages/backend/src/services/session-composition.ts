@@ -2,12 +2,14 @@ import type {
 	DeliverableReviewFinding,
 	DeliverableReviewSnapshot,
 	ReviewerProviderSelection,
-} from "@gyoungwe/pi-knowledge/host";
+} from "@gyoungwe/plugin-api/knowledge";
+import { createKnowledgeBackgroundReviewer, createKnowledgePublicationOperation } from "../knowledge/ui";
 import { createLogger } from "../log";
 import { McpService } from "../mcp/service";
 import { PackageAdmin } from "../packages/admin";
 import { ProjectResourceLoader } from "../project/trust-loader";
 import { createDroneRuntime } from "../runtime";
+import { projectKnowledgeEvent } from "../session/knowledge-publication";
 import { getAgentDir } from "../session-engine/engine";
 import { buildSessionExtensionFactories } from "../session-engine/extensions";
 import type { SessionServiceOptions } from "../session-service";
@@ -118,6 +120,7 @@ async function runModelReview(
 /** Composition-root initialization kept outside the compatibility façade. */
 export function initializeSessionComposition(service: SessionHost, options: SessionServiceOptions): void {
 	service.runtime = options.runtime ?? createDroneRuntime();
+	service.runtime.knowledge.registerAnswerPublication ??= createKnowledgePublicationOperation();
 	service.lifecycle = new SessionLifecycleService(
 		service.registry,
 		service.sessionEngine,
@@ -158,6 +161,15 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 	});
 	service.setEventService(
 		new SessionEventService({
+			projectDelivery: (sessionId, event) => {
+				const delivery = service.registry.get(sessionId)?.nativeDelivery;
+				if (delivery) return delivery.projectEvent(event);
+				// API 1.x / pi-knowledge 0.2.1 compatibility: only an explicitly registered
+				// legacy owner participates. Remove after its consumers use nativeDelivery.
+				return service.runtime.knowledge.publication?.projectEvent
+					? projectKnowledgeEvent(event, service.runtime, true)
+					: event;
+			},
 			runtime: service.runtime,
 			streamGuard: service.streamGuard,
 			eventRates: service.eventRates,
@@ -172,6 +184,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		}),
 	);
 	const reviewer = new DeliverableReviewerService({
+		reviewerFactory: options.knowledgeBackgroundReviewerFactory ?? createKnowledgeBackgroundReviewer,
 		getCwd: (sessionId) => service.registry.get(sessionId)?.cwd,
 		getProviders: async () =>
 			(await service.settings.listProviders())
@@ -261,6 +274,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		onSessionReloaded: (sessionId) => service.reapplyCapabilities(sessionId),
 	});
 	service.projectLoader = new ProjectResourceLoader({
+		coreHost: options.coreHost,
 		trustStore: service.projectTrust.store,
 		ask: (dir, opts) => service.projectTrust.ask(dir, opts),
 		canAsk: () => service.trustHandlers.size > 0,
@@ -280,7 +294,6 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		traces: service.traces,
 		storage: service.storage,
 		projectLoader: service.projectLoader,
-		knowledge: service.knowledge,
 		getModelRuntime: () => service.getModelRuntime(),
 		sessionExtensionDependencies: () => service.sessionExtensionDependencies(),
 		registerAskGate: (id, gate) => service.registerAskGate(id, gate),

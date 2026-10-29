@@ -1,59 +1,25 @@
-import type { WorkbenchTask } from "@drone/shared";
-import { describe, expect, it, vi } from "vitest";
+import type { KnowledgeFlowCard } from "@drone/shared";
+import { expect, it } from "vitest";
 import { mergeKnowledgeArtifacts } from "./knowledge-artifacts";
 
-vi.mock("../i18n", () => ({ useT: () => (key: string) => key, useI18nStore: () => "zh" }));
-
-function task(path: string, state = "completed"): WorkbenchTask {
-	return {
-		id: "t",
-		goal: "g",
-		state: "partial",
-		updatedAt: "now",
-		reason: null,
-		stage: 0,
-		budget: { calls: 0, stageCalls: 0 },
-		waitMs: 0,
-		capabilities: [],
-		actions: [],
-		operations: [],
-		milestones: [
-			{
-				id: "m",
-				title: "output",
-				dependsOn: [],
-				acceptance: { kind: "file", path },
-				state,
-				evidence: state === "completed" ? { kind: "file-observed", path } : null,
-			},
-		],
+it("keeps knowledge receipts independent of task journal records", () => {
+	expect(mergeKnowledgeArtifacts([])).toEqual([]);
+});
+it("deduplicates only actual receipt paths within the session workspace", () => {
+	const card: KnowledgeFlowCard = {
+		key: "one",
+		kind: "artifact",
+		title: "Report",
+		path: "results/report.md",
+		status: "saved",
+		detail: "Receipt",
+		at: 1,
 	};
-}
-describe("session output list", () => {
-	it("includes a file observed by the workbench even if knowledge artifacts are empty", () => {
-		expect(mergeKnowledgeArtifacts([], [task("C:/repo/results/plan.md")])).toHaveLength(1);
-	});
-	it("does not count merely planned paths", () => {
-		expect(mergeKnowledgeArtifacts([], [task("C:/repo/results/plan.md", "pending")])).toEqual([]);
-	});
-	it("deduplicates Windows paths and relative flow paths against the session cwd", () => {
-		const flow = [
-			{
-				key: "a",
-				kind: "artifact",
-				title: "plan",
-				path: "results/plan.md",
-				status: "saved",
-				detail: "",
-				at: 1,
-			},
-		];
-		expect(
-			mergeKnowledgeArtifacts(
-				flow,
-				[task("C:/REPO/results/plan.md"), task("C:/repo/results/plan.md")],
-				"C:/repo",
-			),
-		).toHaveLength(1);
-	});
+	expect(
+		mergeKnowledgeArtifacts(
+			[card, { ...card, key: "two", path: "C:/PROJECT/results/report.md" }],
+			"C:/project",
+		),
+	).toHaveLength(1);
+	expect(mergeKnowledgeArtifacts([{ ...card, path: undefined }])).toEqual([]);
 });

@@ -33,6 +33,21 @@
 | Google Antigravity 登录后返回 400 `INVALID_ARGUMENT` 或 403 `UNSUPPORTED_CLIENT` | 二 · Cloud Code Assist ClientMetadata 枚举 |
 | 生信任务 trace 显示 `skills: []`，模型退回临时脚本 | 二 · 研究 skill 路由与开发态资源同步 |
 | 未选项目时知识 PDF 预览报 `Invalid arguments for host method file:preview` | 2026-10-26 · 可选 IPC 参数与显式 undefined |
+| 读取型 native 工具注册即报 Unsupported native Pi API: events | 2026-10-28 · 原生适配器提前读取未支持 API |
+| 摘要写过但缺 reviewed receipt、specialist 不继续 | 2026-10-28 · 研究摘要必须消费真实 delivery handle |
+| 不装知识插件后扩展通知丢失、旧 context 继续通知 | 2026-10-28 · SDK 退订与通用通知 |
+
+## 2026-10-28：原生适配器提前读取未支持 API
+
+managed Pi proxy 的属性读取本身会明确拒绝未支持 API。`createKnowledgeNativeAdapter` 曾在注册前读取 `pi.events`，让只用 registerTool/on 的两个读取工具也加载失败。按扩展实际请求再读取，保留真正请求时的拒绝；不要用 optional chaining 探测会抛错的 API，也不要静默伪造 event bus。真实 tarball→权限受限进程→SDK 回归需启用，默认跳过的 fixture 不能证明包可加载。
+
+## 2026-10-28：研究摘要必须消费真实 delivery handle
+
+只注册工具却丢弃 `registerResearchExtension` 返回值，会让旧 writer 只写 summary 而缺少 reviewed receipt；手写 answerable metadata 的成功测试因此是假前提。生产链必须经过当前 read ledger/revision、真实模型隔离审阅和写后回读。首次写入前逐一检查 summary/history/Vault 的真实路径，run_dir 校验不能保护其兄弟 symlink 目录；临时文件完成后再检查 preimage，失败清理本次临时文件。这里是乐观路径 CAS，不宣称跨进程原子 compare-and-replace；回滚遇到人工更改须保留并报告 partial。
+
+## 2026-10-28：SDK 退订与通用通知
+
+官方 `events.on()` 返回退订函数，测试替身应使用 `createEventBus`。Pi 1.1.0 的 session.dispose 不会移除 extension onError 监听，`session/extension-errors.ts` 用同 callback 的公共 runner.onError 退订，并覆盖 reload；升级 SDK 后需重新验证删除条件。notify 沿通用 SessionEvent 发送到 toast，主/子会话结束后旧 context 不能继续发，消息不落 trace，不能依赖知识插件。生成 `.pi` 后对 manifest 运行 Biome formatter，并验证 source/output 哈希；不手工修改 bundle。
 
 ## 2026-10-26：可选 IPC 参数与显式 undefined
 
@@ -348,3 +363,148 @@ Zotero Connector 会规范化英文标题大小写（本轮 `NOT A PUBLICATION` 
 聚合研究包只遍历 dependencies 时会漏掉 pdfjs 的 optionalDependencies，工作区提升的 Canvas 依赖掩盖干净安装问题。suite 顶层声明可选 Canvas，由消费者安装平台原生二进制；test:pdf 必须只安装 suite 和 SDK，并捕获 stdout/stderr、真实读取和渲染。源码加载或文本提取成功不能推导 GUI 已通过。
 
 PDF Canvas 设置 max-width 时不可同时固定 CSS height；否则窄侧栏只压缩宽度。保留像素 width/height，CSS height 用 auto，让浏览器按固有比例缩放。
+
+## 2026-10-26：插件关闭回执与 Node 读权限
+
+锁定 Pi 1.1.0 的 `AgentSession.dispose()` 不发送 `session_shutdown`。SessionEngine 必须先启动扩展关闭通知，同时启动 SDK abort，等待两者结束后才 dispose：关闭 hook 可能等待工具收到 AbortSignal，工具也可能等待关闭 hook 释放 UI 请求，串行等待任一方都会互等。即使某一步失败，也要完成其他清理并聚合错误；官方 ExtensionRunner 会把 hook 异常转为 onError，需在关闭期间订阅 session_shutdown 错误，不能仅检查 emit() 是否拒绝。会话关闭和应用退出都要等待整条链路；并发关闭共用同一次销毁。`packages/backend/test/session-shutdown-sdk.test.mjs` 用真实 SDK 工具回归两种依赖方向；worker 回收还须核对真实 PID，不能以 dispose 被调用替代退出回执。
+
+Node permission 的目录读取授权会跟随包内数据符号链接。只校验入口 realpath 不够：新的 desktopRuntime 在启动前检查整个包的链接目标，拒绝包外链接。该检查仍依赖启动期间安装目录不被其他宿主流程改写；完整包不可变快照/安装代次属于 P6，不能将预扫描描述为解决任意并发文件替换。
+
+UI 授权等待、配置落盘和进程清理都是异步阶段。停用/关闭先撤销调用资格，安装/配置变更维持转换屏障；替换实例要等待旧清理回执，不能因旧 token 已删就越过在途清理。失败仍向上报错并刷新真实存留配置；一个插件拒绝加载不能阻断其他插件。
+
+## 2026-10-26：原生工具注册成功但生产能力筛选隐藏工具
+
+P2 的打包知识 runtime 在实际 SDK 直接调度时通过，但正式 DMG 聊天的模型工具清单缺少两项知识工具。独立进程 native 注册只传 name/label/description/parameters，丢失了插件声明的 `drone` 元数据；生产 `CapabilityRuntime` 将未分类工具视为 external，知识能力激活时不会曝光它们。通用进程协议必须保留可选 JSON 元数据，让现有 `ToolManifest` 边界解析分类，不能靠硬编码工具名或关闭 lazy capabilities 修复。
+
+artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读会话：断言知识分类工具实际进入 active tools，并令控制工具即使自报 `drone.readOnly=true`、仍因未知/write toolEffects 被 broker 拒绝。分类是曝光信息，不是文件或副作用授权。真实安装包仍必须在重建后复验。
+# 受管工具可见不等于任务守卫允许执行
+
+原生工具的 `drone` 分类元数据进入模型清单后，旧 task guard 仍只查领域 runtime 的工具登记表，可能把实际只读工具误判为需要 task_plan。守卫应读取当前真实 SDK 会话的官方 `ToolInfo.annotations.readOnlyHint`；受管 native 由 toolEffects 投影此值，unknown/write 明确覆盖为 false，不能被同名旧元数据或另一个会话污染。此提示只用于任务编排，实际能力授权仍经过 broker。回归需加载真实任务守卫并检查 toolResult.isError，不能只数工具卡或模型请求。
+
+应用开始异步退出后，macOS `activate` 仍可能到达；如果再次创建窗口，会恢复已清理后端上的会话并出现空白/失效页面。退出、失败和已完成状态都必须禁止新建窗口，失败保留错误并允许明确重试退出。日志中的 `backend disposed` 仅指 session service，不能代替整个 Desktop cleanup、will-quit 和实际进程退出证据。
+
+## 2026-10-27：候选插件与干净宿主检查
+
+根 `pretypecheck/pretest/prebuild` 会从 `plugins.lock.json` 重建并覆盖已安装插件。本地候选包的定向测试通过后，若锁仍指向旧版，下一次根命令会丢失新 host exports。必须先提交插件源码、从干净依赖构建并记录 tarball SHA-256，再更新源码锁并验证默认 fetch；开发目录 override 不能证明锁定安装通过。源码候选版本与公开 npm 版本分别记录。
+
+独立宿主 checkout 没有 sibling `drone-plugins` 或已忽略的沙箱二进制。默认 `npm test` 在 pretest 按既有 checksum lock 准备 Node runtime；公开 UI 包集成测试只接受 `check:public-plugin-host` 提供的真实安装目录，默认宿主测试保留空安装根与自包含 fixture 覆盖，不回退读取另一仓库源码。缺少外部包时该集成用例明确跳过，不能算公开包验收通过。
+
+
+### Managed native 工具不能只传 name/description/schema
+
+现象：包加载成功，但 outputSchema、namespace、executionMode 等标准字段消失，execute 的 onUpdate 永远是 undefined。原因：受限 worker 注册回执只提取基础四项，调用协议也没有 progress 消息。处理：显式传输标准 JSON 字段；不能序列化的 prepareArguments/prepareLoadout/renderCall/renderResult 在加载时报错；进度绑定尚未结束且未撤销的调用 ID，取消和迟到回调不得串给其他 attachment。`native-tool-protocol-sdk.test.mjs` 用真实 SDK/受限进程回归。普通第三方沙箱也需从两条 SDK 注册路径传入 observer，不能仅修改 worker；共享 `tool-progress.ts` 的进度边界 schema。不能借此切片宣布全 API 兼容。
+
+### npm ci 不会清掉已从 workspace 删除的包内缓存目录
+
+复用旧 checkout 验收任务包迁移时，`packages/tasks` 的已跟踪源码均已删除，但旧 `packages/tasks/node_modules` 空壳仍可能存在。根脚本的源目录删除检查因此会失败，而各 workspace 测试已通过。先核对该临时 checkout 的目录确实只剩旧依赖缓存，再清理这个缓存；不要修改门禁把真实源码残留当作通过。首次失败与完整重跑见 `native-plugin-owner-migration-2026-10-28.json`。这不是产品源代码修复，干净来源和缓存残留应分别记录。
+
+- 扩展 UI 动作不能用普通 prompt 的未知 slash 回退：SDK 1.1 会把未注册命令当作模型输入。API 1.3 的 `sessions.command` 直接从当前 SDK runner 取 command/context 并调用 handler，缺失明确失败；handler 异常通过同一 runner 的 onError 诊断并向调用者失败。UI 卸载不等于 native owner 卸载，包设置到 native 生命周期的动态发现仍需独立接线。
+
+### Discovery 的 closed 状态不能代替资源关闭
+
+杀死 Docker CLI 并不保证 daemon 内的容器已停止。每次 runner 使用唯一容器名和 ownership label；取消、超时、关闭和 dispose 必须等待 CLI 退出，只删除 label 匹配的自有容器，再以成功的 daemon 查询确认精确名称不存在。inspect 非零可能是 daemon 故障，不能据此报告清理成功。`DiscoveryRunner.run` 以 `DISCOVERY_CLEANUP_FAILED` 保留无法验证清理的错误，插件 execute/close/dispose 必须继续拒绝；迟到的执行不能将 closed 恢复成 ready。
+
+真实容器首次运行暴露 `--mount type=bind,...,rw` 无效，移除末尾 `rw`（bind 默认可写）后通过。验收不得依赖隐式拉镜像；本轮仅使用已缓存的 python:3.12-slim，`--pull=never`。本机出现 tag inspect 失败而 image ID inspect 成功的情况，保留失败并使用同一已缓存镜像的完整 ID 验证，未 pull 或 retag。完整 B5 UI 与正式安装包须单独验收。
+
+
+### Optional tuple item 不等于兼容较短 IPC 参数数组
+
+TypeBox 的 `Type.Tuple([... Type.Optional(...)])` 在此项目的运行时 Check 中仍拒绝原四参数调用。`PluginRuntimeContract.invoke` 的兼容合同显式使用四参数 tuple 与带 request ID 的五参数 tuple 联合；主进程 IPC 回归必须实际调用两个形状，不能只依赖 TypeScript optional 参数通过。取消传输只发送 request ID，AbortSignal 留在 renderer/main 各自的实际生命周期中。
+
+### 隐藏 provider delta 后误报模型沉默
+
+原生 delivery 投影会隐藏未经发布的 `message_update`。若 `ModelWaitMonitor.inspect` 位于投影之后，持续有 provider 事件的会话也会进入等待甚至被自动中止。活动计时必须在投影前读取事件类型；正文仍只经投影进入 reviewer、trace 和 UI。测试用显式 `NativeSessionDelivery` 关闭策略验证隐藏流量仍恢复等待，另验证普通会话不会因 `DRONE_KNOWLEDGE_DIR` 存在而隐藏流量。该定向 RED→GREEN 不替代真实安装包验收。
+
+### 未发布 API 候选与 file: 依赖门禁
+
+私有 API 1.3.0 在两仓库必须使用同一候选产物，不能指向另一个源码 checkout，也不能借此放行插件运行依赖。`scripts/plugin-api-dependency-policy.mjs` 只接受私有插件工作区根的 `devDependencies.@gyoungwe/plugin-api`，路径必须为本仓库 `vendor/gyoungwe-plugin-api-1.3.0-<8位源码前缀>.tgz`。双仓库 HEAD 已提交的普通文件须逐字节一致，归档内部包身份、宿主合同版本与 package-lock 的 resolved/version/SHA-512 均须吻合；符号链接、未提交或修改的产物不通过。其他 `file:`、`workspace:`、绝对/相对源码依赖继续失败。1.3.0 公开后改回公开版本并删除此迁移例外；本地候选门禁不代表 npm 已发布。
+
+### channel-watch 恢复订阅一次性超时（原因未确认）
+
+`4abdae43/253c47e` 的独立全量门禁首次在恢复订阅后的 2000ms 内未收到文件监听唤醒，backend 其余 1987 项通过。原失败日志保留；同目录定向完整文件 20 项通过，随后该用例 4 路并行共 20 次均通过，完整同源码重跑 backend1988/17 skipped、Desktop934/1 skipped、root25/25 通过。首次压力脚本曾使用重复 config 路径，在测试前退出，不能当作产品复现证据。没有修改生产代码、超时或断言；根因仍待稳定复现，完整重跑通过不代表已经修复。见 `native-plugin-ui-model-cohort-2026-10-28.json`。
+
+后继 `93d2ad1f` 独立全测再次在此处失败。实际 watcher 与独立原生监听的 64 目录诊断复现了漏事件；原生差分探针还观察到只有目录名的事件。`ChannelWatcher` 后继改用共享 mtime/size 快照识别实际变化，原生提示触发快速扫描，现有 5 秒轮询在 watch 模式也运行；只报告变化文件，保留逐文件防抖与 stop/代次检查。扫描只忽略实际消失项，其他 IO 错误不被当作空目录。四项确定性回归覆盖目录提示、完全无提示、去重/停止、嵌套与符号链接忽略；生产默认对账间隔的 64 目录实测全部收到变化，独立原生监听静默的 11 例也被恢复。扩展集成测试等待窗口据此覆盖真实 5 秒对账与防抖，不再假设每次都有即时原生事件；原始失败仍保留，最终根门禁与安装包需另验。
+
+
+### 直接调用 operation.execute 不能证明 IPC/运行时合同通过
+
+模型评审的只读 `modelReviewInfo` 只接受 revision/id/hash/profile；写操作另外要求 acknowledged/autoApply。直接适配器测试忽略未用字段时看似成功，真实 packed owner 的 broker 会按 additionalProperties:false 拒绝复用写 DTO。回归必须跨真实 registry/worker 调用，并分别构造读 DTO 和写 DTO；不要放宽 schema 来让 fixture 通过。详见 `native-plugin-knowledge-model-command-2026-10-28.json`。
+
+### Pi 1.1.0 abort 不会自动拦截迟到的 message_end 发布
+
+真实 SDK 会 await subscriber/extension hook，所以持有 message_end 时 prompt、waitForIdle、abort 都等待；但已有 hook 迟到返回后，SDK 仍会公开并持久化它修改的正文。普通注册顺序也不能保证最后一个 hook。钉版 host-only delivery boundary 放在全部 SDK hooks 之后、公开/append 之前，再核对真实 run signal；取消/失败只保留安全 SDK envelope 与实际 toolCalls，dispose 后不再 append。源码与真实 RED→GREEN 见[机制回执](releases/native-publication-sdk-fence-2026-10-28.json)，完整 managed owner/consumer 尚未完成。
+
+### 原生 SDK 的 dispose 不会代发扩展 shutdown
+
+Pi 1.1.0 的 `AgentSession.dispose()` 只中止/失效内部运行时，不会发出 `session_shutdown`。独立 SDK 子进程若只调用它，扩展拥有的 writer lease 会留下，并正确阻止后继 writer。嵌入端必须执行公开 extensionRunner 的 shutdown 生命周期、abort、dispose，并收集 SDK onError；Drone 的 `SessionEngine.close` 已使用该顺序。不得通过 process exit 全局账本自动删除 lease，也不能把 SDK 吞下的 shutdown handler 错误记为成功。复现与真实交接见 P5 shared-owner 机器回执。
+
+### 只读旧 owner 不能在交接后用缓存覆盖新 journal
+
+旧 Discovery Domain 可先只读缓存 JSON，再等另一个 owner 完成写入并释放 lease。此时仅靠新取到的 lease 不能证明内存快照仍新鲜。迁移中的旧 journal 端口使用真正 JsonStore 的 `writeChecked`、原始字节 SHA 与回读；版本变化时明确要求关闭重开。新 UI 接管也必须保留唯一既有 projectId，混合 ID 拒绝；不能取第一条或重新生成 ID 后覆盖历史。
+
+### 容器 runs 根不能分别 canonicalize 后当成授权根
+
+如果 `workspace/runs` 已是指向外部的 symlink，分别对 runs 和执行子目录做 realpath 再比较包含关系，会把两个外部路径错误接受为工作区内。容器 runner 现在固定 canonical workspace，逐级创建并检查 runs 路径，拒绝任一 symlink/non-directory 并回读真实路径；不能在 realpath 失败后退回字符串路径。回归验证顶层和嵌套 symlink 都不会创建外部文件或启动容器。
+
+## 2026-10-28 · SDK append 失败后的内存 phantom 与 reload
+
+Pi 1.1.0 的 SessionManager 先把 append entry 加入内存，再写磁盘；EISDIR 后 reload 仍复用这个 manager。不要从 reload 成功推断数据已保存，也不要继续 sendMessage 以 phantom leaf 为 parent 延长磁盘链。TaskApplication 必须 fail closed、保留最后 committed 诊断，真正从磁盘重开后验证；禁止 poke SDK 私有数组做假 rollback。extension 的 events.on 监听会在 invalidate 被解除，不能靠 bus listener 伪装跨 reload 持久状态。实际双入口反证和 S2 剩余边界见[TaskSession 证据](pluginization/native-plugin-task-session-actor-evidence.md)。
+
+### 已安装 UI 构建产物不能写回其原生来源树
+
+同包原生与 UI 共用完整包树 hash。把 esbuild 的 `dist/index.js` 写回已安装 UI 目录，会让宿主自己改变正在使用的原生来源，之前在 readCode 后重算 hash 的做法也不能建立稳定的代次。安装包 UI 现在按已验证 hash 编译到宿主 `ui-plugin-builds` 缓存；用户本地 UI 目录继续使用原目录 dist。回归比较编译前后完整树 hash、native/UI 描述对象身份与重新扫描后的 built 状态；这不授予新的文件权限，也不替代包级停用/卸载。
+
+### 失败的 native abort 与清理必须保留停止屏障
+
+停止流程并行等待真实 SDK abort 和 runtime 清理；`allSettled` 返回不等于关闭成功。必须先检查每项结果，再删除 stopping 记录。UI-only 配置变化也要等待之前失败的 UI 停止记录，不能只扫描仍然存活的 binding 后报告配置成功。原有重激活回归与新增 UI 配置回归均先实际失败；最小修复后 103 项 Desktop/IPC/preload/UI 联合通过。后继真实 SDK 会话在实际 abort 完成后注入回执失败，确认领域进程已退出；原屏障仍允许同包 UI alias 重绑。`stopping` 现在记录实际 source 身份和失败状态，`bind` 通过原失败停止 receipt 阻止同 `source.pluginId` 的所有 alias 重开，同时保持既有外层错误语义。实际 SDK 10/10、Desktop bridge/host 48/48 与 backend typecheck 通过；这项故障注入不代表完整 required-source publication 已验收。
+
+## 2026-10-28 · 原生 input 的空字符串不等于取消
+
+Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是合法回答；取消才是 undefined。Desktop 的 trim() || undefined 与必填 text 曾改变 SDK 语义。普通输入必须保留原值，领域路径等解释由调用方处理；AskDialog 的可选 text 应明确提交空 customText，能力结果 schema 不得用 minLength:1 把合法空输入拒绝。真实 SDK、受限 worker 与表单点击证据见[会话问答](pluginization/native-plugin-session-questions-evidence.md)。
+
+### 相同包内容不证明安装位置仍指向同一个来源
+
+外层安装目录被换成指向字节完全相同副本的 symlink 时，仅重新计算 packageRoot 的完整树 hash 仍可能相同。运行时现在同时复验安装位置的 canonical root 与已声明 native 路径的真实入口；原生和 UI alias 都失效。声明入口消失后，本应用内重新扫描保留旧描述为 unavailable，供实际 selected-path 失败诊断使用，绝不从该记录激活代码；跨重启 required 期望和首次 loader 失败仍在后继接线。66 项发现/来源/聚合/UI 检查通过，正式安装包另验。
+
+### 模型评审必须先验证同意，再消耗预览令牌
+
+`pi-knowledge@0.3.0` 候选的公开评审 wrapper 曾在确认 acknowledged/autoApply 前消耗单次 preview，用户未同意就重试会收到 expired。canonical owner 内校验不能补救 wrapper 的提前副作用。先拒绝缺失的同意，再消费令牌；公开异步 API 保持 Promise rejection，不能让 forged/reused token 同步异常逃出调用方。原宿主 25 项令牌/拒绝/重用断言全部保留，最小修复已进入本批候选，最终整轮门禁另见回执。
+
+### 纯清单测试不应加载 Electron 二进制
+
+`filterContributions` 是纯 JSON 过滤；从 manager 导入会间接加载 Electron，在官方二进制下载失败时让纯数据测试提前退出。函数已原样提取到 `manifest-contributions.ts`，manager 与测试共用。纯测试通过不证明正式宿主可启动，Electron 安装与打包仍需独立检查。
+
+## 2026-10-28：空 interception 不证明会话没有 required publisher
+
+实际 SDK 可能在 import interception 之前跳过不存在的入口，catalog 也包含未被此会话选择的包。发布策略必须消费本会话实际有效选择与 loader 错误来源的完整宿主回执；空 interception 或全 catalog 均不能替代。`NativeSessionDelivery` 只在 host-only `confirmSelection` 后允许 ordinary，实际 run 起点锁定 required attachment/source，关闭/哈希变化不能释放已参与 guard 的运行。当前真实 SDK 切片 6 项、连同 fence/command 共 30 项通过；生产全来源确认和正式安装包仍未验收。
+
+### SDK 忽略不存在的路径时，空 interception 不能证明没有发布策略
+
+锁定 Pi 1.1.0 的资源解析会先忽略不存在的 settings/package entry，扩展导入拦截因此看不到失败来源。宿主专用 `hostExtensionSelection` 在实际 reload 开始即失效旧回执，完成时交付本次启用路径；仅该观察者存在时保留缺失 literal/glob/package 为不可解析选择。SDK 的资源排除规则仍生效，不从全安装目录推断本会话已选择什么。无观察者对照保持原 SDK 行为。未知来源在执行代码前拒绝，实际 SDK run 无法公开或持久化未验证正文；只明确排除后的后继 run 可恢复普通聊天。来源分类只在文件/清单读取边界捕获失败并记录关闭结果，内部逻辑错误继续抛出。真实 SDK 29 项与实际文件来源 52 项通过；整包动态启停、完整领域 consumer 和正式安装包继续验收。
+
+
+## Node 内置 SQLite 与普通插件 worker
+
+不要把 Node 的 FS permission 当作所有内置模块的文件访问隔离。普通 domain worker 通过官方 `--no-experimental-sqlite` 关闭该入口；实际 factory/worker 测试只验证 import 被拒绝。SQLite index resource 的兼容与更强隔离仍需独立验证，不能继承普通 worker 的通过结论。详见 [防御证据](pluginization/node-sqlite-worker-defense.md)。
+
+
+## 插件调用的 guest 超时不应计算宿主等待
+
+保留 15 秒 guest 执行预算时，要在真实 parent 的 host capability 审批/执行/清理期间暂停，仅按剩余预算恢复。不能重置全额预算，也不能暂停同进程其他会话的计时；resource disposal 必须关联自己的内部 parent invocation。实际 worker/fake-clock 回归见 [执行候选证据](pluginization/native-plugin-execution-capability-candidate.md#15-秒-guest-watchdog-后继)。
+
+- required 交付不能在 event slim 后靠 JSON proof 恢复权限：先用实际 SDK 对象与已裁决来源投影，再交给 trace/UI。历史别名只来自 SDK 当前分支的真实 identity，copy/hash 不授 live proof。
+- SDK JSONL 原方法同步，不能在其中偷偷返回 Promise；required 导出走独立 async host 入口。异步投影完成后必须在 write 前复查实际 source/leaf/idle/dispose，Map 缺少真实 assistant entry 关联时明确失败，不能输出 raw。
+
+## 权限门控之后的 tool_call 参数改写
+
+SDK 把同一个参数对象依次交给每个 `tool_call` 处理器，然后原样交给 `execute`；处理器按扩展加载顺序运行（先路径扩展，再内联扩展）。门控只是链中一环，排在它后面的扩展（含原生 guest 经桥接就地写回的 `input`）可以把已批准的写入改到项目外，直接调用和 `ctx.executeTool` 嵌套调用都一样。`makePermissionGateExtensions` 因此返回 `gate` 与 `finalCheck` 两个扩展：门控记录放行的参数对象及当时求值的文本，`finalCheck` 必须是会话最后一个扩展（`trust-loader` 用 `placeFinalPermissionCheckLast` 排序，子代理直接放在末尾），参数求值文本变化时对实际执行的参数重跑同一求值，门控没评估过的调用一律拒绝。只改写 `event.input` 引用（而非就地修改）不会影响执行，也不在门控的保护对象之内。回归见 `packages/backend/test/permission-final-args-sdk.test.mjs`。
+
+`desktopLoaderOptions` 返回的 `extensionFactories`（沙箱代理）曾因对象展开顺序覆盖整个内置扩展列表、连同权限门控一起丢掉；现在由 `trust-loader` 合并进列表。
+
+## native 会话创建时没有 live caller
+
+`createNativeSession` 与扩展注册发生在宿主 `bindSession` 之前，此时 broker 没有 live caller，任何能力调用（例如读本包绑定）都会以 `Plugin capability has no live caller` 失败，扩展整体加载失败、工具消失，最终交付被关闭。依赖插件状态的决定（如知识包的子会话 `subagentPolicy`）要放到工具执行或 hook 里，用当时 host 提供的 caller 读取。另：只读会话（包括子代理子会话）里，未声明 effect 的 hook、工具与 `projection.finalize` 默认按 write 处理并被 broker 拒绝；确实只读的路径要显式声明 `read`，而 `required` 交付投影的 finalize 被拒绝会让该会话每条答案都显示 `Final delivery unavailable`。未信任项目的会话 broker 拒绝一切插件操作，不要往其中加载插件。
+
+## Windows CI 从未真正跑通（2026-10-29 记录）
+
+宿主 CI 的 Windows 矩阵此前在取包/typecheck 阶段就失败，测试从未执行；发行版只有 macOS。修到能执行后暴露：插件构建脚本直接 spawn `node_modules/.bin/tsc`（Windows 需 `.cmd`），Windows checkout 的换行转换使从源码重建的插件 tarball 无法匹配锁哈希，以及 desktop `ui-plugins` 测试对路径别名（`RUNNER~1`）、文件权限位（0o666 vs 0o700）和符号链接的假设。现在锁定插件只在 Linux 从源码重建并校验，其他平台复验同一 tarball；Windows 的 static/unit/sdk/desktop job 设为 `continue-on-error` 仅作可见信号。要支持 Windows 发行，先修复这些测试与插件构建脚本，再去掉 `continue-on-error`。

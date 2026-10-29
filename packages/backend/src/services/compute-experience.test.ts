@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { JobRecord } from "@drone/compute";
-import { createExperienceStore } from "@gyoungwe/pi-knowledge/host";
+import { createExperienceStore, recordTerminalJobExperience } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ComputeEvent } from "./compute";
 import { createComputeExperienceRecorder } from "./compute-experience";
@@ -39,7 +39,11 @@ describe("compute experience bridge", () => {
 			hostId: "local",
 			directory: root,
 		});
-		const recorder = createComputeExperienceRecorder({ store, topicId: "topic-a" });
+		const recorder = createComputeExperienceRecorder({
+			store,
+			recordTerminalJobExperience,
+			topicId: "topic-a",
+		});
 		const event: ComputeEvent = {
 			id: "observation-1",
 			jobId: "compute-1",
@@ -72,7 +76,7 @@ describe("compute experience bridge", () => {
 			hostId: "local",
 			directory: root,
 		});
-		const recorder = createComputeExperienceRecorder({ store });
+		const recorder = createComputeExperienceRecorder({ store, recordTerminalJobExperience });
 		await recorder.record(
 			{
 				id: "observation-2",

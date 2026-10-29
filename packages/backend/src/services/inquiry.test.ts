@@ -7,11 +7,11 @@ import type { InquiryComputeEvent, InquiryTaskTerminalEvent } from "./inquiry";
 import { InquiryService } from "./inquiry";
 
 describe("backend inquiry composition adapter", () => {
-	it("stays disabled without a configured root", () => {
+	it("stays disabled without a configured root", async () => {
 		const service = new InquiryService();
 		expect(service.enabled).toBe(false);
 		expect(service.storage).toBeUndefined();
-		service.dispose();
+		await service.dispose();
 	});
 
 	it("instantiates the SQLite domain service only when configured", async () => {
@@ -21,7 +21,7 @@ describe("backend inquiry composition adapter", () => {
 			expect(service.enabled).toBe(true);
 			expect(service.storage?.path).toBe(join(root, "ledger.sqlite"));
 			expect(service.domain?.storage.projectId).toBe("project-1");
-			service.dispose();
+			await service.dispose();
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
@@ -108,7 +108,7 @@ describe("backend inquiry composition adapter", () => {
 					expect.objectContaining({ id: "task:task-run-1", outcome: "failed", artifactIds: [] }),
 				]),
 			);
-			service.dispose();
+			await service.dispose();
 			expect(detachCalls).toEqual(["compute", "task", "decision"]);
 		} finally {
 			await rm(root, { recursive: true, force: true });
@@ -143,7 +143,7 @@ describe("backend inquiry composition adapter", () => {
 				}),
 			]);
 			expect(snapshot?.artifacts[0]).toMatchObject({ location: "local", path: "results/plot.png" });
-			service.dispose();
+			await service.dispose();
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
@@ -175,7 +175,7 @@ describe("backend inquiry composition adapter", () => {
 			expect(errors).toHaveLength(1);
 			expect(String(errors[0])).toContain("another project");
 			expect((await service.readOnlySnapshot())?.attempts).toHaveLength(0);
-			service.dispose();
+			await service.dispose();
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
@@ -192,7 +192,7 @@ describe("backend inquiry composition adapter", () => {
 			at: 1,
 		});
 		await service.drainEvents();
-		service.dispose();
+		await service.dispose();
 	});
 
 	it("keeps the default host ledger isolated by project id", async () => {
@@ -222,7 +222,7 @@ describe("backend inquiry composition adapter", () => {
 			if (!projectADecision || !projectBDecision) throw new Error("decision isolation fixture failed");
 			await service.revokeDecision(projectADecision.id, "Review");
 			expect(projectBDecision.status).toBe("active");
-			service.dispose();
+			await service.dispose();
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
@@ -246,7 +246,7 @@ describe("backend inquiry composition adapter", () => {
 			if (process.platform !== "darwin")
 				await symlink(workspace, alias, process.platform === "win32" ? "junction" : "dir");
 			expect(await service.listDecisions(alias)).toHaveLength(1);
-			service.dispose();
+			await service.dispose();
 		} finally {
 			await rm(workspace, { recursive: true, force: true });
 			await rm(root, { recursive: true, force: true });
@@ -269,7 +269,7 @@ describe("backend inquiry composition adapter", () => {
 				summary: "Legacy decision",
 				projectId: "desktop",
 			});
-			old.dispose();
+			await old.dispose();
 			const before = await import("node:fs/promises").then(({ readFile }) => readFile(ledger));
 			expect(registry.get("inquiry-legacy-ledger")).toMatchObject({ schema: "preserve", path: ledger });
 			const after = await import("node:fs/promises").then(({ readFile }) => readFile(ledger));
@@ -304,7 +304,7 @@ describe("backend inquiry composition adapter", () => {
 			expect(decision.affectedArtifactIds).toHaveLength(1);
 			await service.revokeDecision(decision.id, "Review");
 			expect((await service.readOnlySnapshot())?.artifacts[0]?.status).toBe("pending-review");
-			service.dispose();
+			await service.dispose();
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
@@ -348,7 +348,7 @@ describe("backend inquiry composition adapter", () => {
 			});
 			expect(zotero.write).not.toHaveBeenCalled();
 			expect(compute.submit).not.toHaveBeenCalled();
-			service.dispose();
+			await service.dispose();
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
@@ -383,8 +383,53 @@ describe("backend inquiry composition adapter", () => {
 			);
 			expect(zotero.write).not.toHaveBeenCalled();
 			expect(compute.submit).not.toHaveBeenCalled();
-			service.dispose();
+			await service.dispose();
 		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+	it("binds discovery writes to canonical project closures across real SQLite ledgers", async () => {
+		const root = await mkdtemp(join(tmpdir(), "inquiry-discovery-isolation-"));
+		const service = new InquiryService({ projectsDir: join(root, "ledgers") });
+		try {
+			const a = join(root, "workspace-a");
+			const b = join(root, "workspace-b");
+			const portA = service.discoveryPort(a, "discovery-a");
+			const portB = service.discoveryPort(b, "discovery-b");
+			const question = {
+				id: "shared-id",
+				schemaVersion: 1 as const,
+				projectId: "discovery-a",
+				kind: "question" as const,
+				statement: "Workspace A question",
+				competingExplanations: [],
+				testsDone: [],
+				testsPlanned: [],
+				status: "open" as const,
+				proposer: "agent" as const,
+				priority: 0.5,
+				createdAt: "2026-01-01T00:00:00.000Z",
+				updatedAt: "2026-01-01T00:00:00.000Z",
+			};
+			await portA.recordQuestion(question);
+			await portB.recordQuestion({
+				...question,
+				projectId: "discovery-b",
+				statement: "Workspace B question",
+			});
+			await expect(portA.recordQuestion({ ...question, projectId: "discovery-b" })).rejects.toThrow(
+				"another project",
+			);
+			const snapshotA = await service.readOnlySnapshot(a);
+			const snapshotB = await service.readOnlySnapshot(b);
+			expect(snapshotA?.questions.map((record) => record.statement)).toEqual(["Workspace A question"]);
+			expect(snapshotB?.questions.map((record) => record.statement)).toEqual(["Workspace B question"]);
+			expect(snapshotA?.questions[0]?.projectId).not.toBe(snapshotB?.questions[0]?.projectId);
+			expect(service.domain).toBeUndefined();
+			await service.dispose();
+			await expect(portA.recordQuestion(question)).rejects.toThrow("disposed");
+		} finally {
+			await service.dispose();
 			await rm(root, { recursive: true, force: true });
 		}
 	});

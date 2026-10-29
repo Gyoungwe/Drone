@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import type {
+	ResearchConnector,
+	ResearchConnectorContext,
 	ResearchConnectorFailure,
 	ResearchConnectorHit,
 	ResearchConnectorKind,
@@ -9,76 +11,16 @@ import type {
 } from "@drone/shared";
 import { buildProxiedUrl, normalizeDoi } from "@gyoungwe/pi-research/host";
 
-export interface ResearchZoteroConnectorConfig {
-	readonly apiBase?: string;
-	readonly apiKey?: string;
-	readonly libraryType?: "users" | "groups";
-	readonly libraryId?: string;
-}
-
-export interface ResearchProtocolsConnectorConfig {
-	readonly apiBase?: string;
-	readonly apiToken?: string;
-}
-
-export interface ResearchSemanticScholarConnectorConfig {
-	readonly apiBase?: string;
-	readonly apiKey?: string;
-}
-
-export interface ResearchInstitutionalConnectorConfig {
-	/** Optional resolver that receives a free-text query as `q`. */
-	readonly resolverUrl?: string;
-	/** Optional EZproxy template. `%s` is replaced with the encoded target URL. */
-	readonly ezproxyTemplate?: string;
-}
-
-export interface ResearchProjectStorageItem {
-	readonly relativePath: string;
-	readonly title?: string;
-	readonly summary?: string;
-	readonly format?: string;
-	readonly size?: number;
-	readonly modifiedAt?: string;
-	readonly contentHash?: string;
-}
-
-export interface ResearchProjectStoragePort {
-	search(input: {
-		readonly cwd: string;
-		readonly query: string;
-		readonly limit: number;
-		readonly signal?: AbortSignal;
-	}): Promise<readonly ResearchProjectStorageItem[]>;
-}
-
-export interface ResearchConnectorContext {
-	readonly fetchImpl?: typeof fetch;
-	readonly signal?: AbortSignal;
-	readonly cwd?: string;
-	readonly config?: {
-		readonly zotero?: ResearchZoteroConnectorConfig;
-		readonly protocols?: ResearchProtocolsConnectorConfig;
-		readonly semanticScholar?: ResearchSemanticScholarConnectorConfig;
-		readonly institutional?: ResearchInstitutionalConnectorConfig;
-	};
-	readonly projectStorage?: ResearchProjectStoragePort;
-}
-
-export interface ResearchConnector {
-	readonly id: string;
-	readonly kind: ResearchConnectorKind;
-	readonly label: string;
-	search(
-		query: string,
-		options?: ResearchConnectorContext & { readonly limit?: number },
-	): Promise<readonly ResearchConnectorHit[]>;
-	/** Optional recommendation lookup for connectors that support seed papers. */
-	recommend?(
-		seed: string,
-		options?: ResearchConnectorContext & { readonly limit?: number },
-	): Promise<readonly ResearchConnectorHit[]>;
-}
+export type {
+	ResearchConnector,
+	ResearchConnectorContext,
+	ResearchInstitutionalConnectorConfig,
+	ResearchProjectStorageItem,
+	ResearchProjectStoragePort,
+	ResearchProtocolsConnectorConfig,
+	ResearchSemanticScholarConnectorConfig,
+	ResearchZoteroConnectorConfig,
+} from "@drone/shared";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 

@@ -1,4 +1,4 @@
-import { cloudflareAskCopy, looksLikeCloudflare } from "@gyoungwe/pi-research/host";
+import { cloudflareAskCopy, looksLikeCloudflare } from "@drone/shared";
 import type { ExtensionContext, InlineExtension } from "./sdk";
 
 const BROWSER_TOOL = /playwright|browser/i;
@@ -38,7 +38,7 @@ export async function cloudflareToolResult(
 	if (!BROWSER_TOOL.test(event.toolName || "")) return undefined;
 	if (!looksLikeCloudflare(null, resultText(event.content))) return undefined;
 	if (!ask) return undefined;
-	const copy = cloudflareAskCopy();
+	const copy = cloudflareAskCopy(process.env.DRONE_REPLY_LANGUAGE);
 	let choice: "continue" | "skip" | undefined;
 	try {
 		choice = await ask();
@@ -57,7 +57,7 @@ export function makeCloudflareAskExtension(): InlineExtension {
 				const select = ctx.ui?.select;
 				if (typeof select !== "function") return undefined;
 				return cloudflareToolResult(event, async () => {
-					const copy = cloudflareAskCopy();
+					const copy = cloudflareAskCopy(process.env.DRONE_REPLY_LANGUAGE);
 					const choice = await select(
 						`${copy.title}\n\n${copy.body}`,
 						[copy.continueLabel, copy.skipLabel],

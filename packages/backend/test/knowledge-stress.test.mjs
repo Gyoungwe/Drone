@@ -1,4 +1,9 @@
-import { createSpecialistBudget, decideSpecialistRun, withSpecialistSlot } from "@gyoungwe/pi-knowledge/host";
+import {
+	createSpecialistBudget,
+	decideSpecialistRun,
+	runCanonicalKnowledgeSpecialist,
+	withSpecialistSlot,
+} from "@gyoungwe/pi-knowledge/host";
 import { describe, expect, it } from "vitest";
 import { runKnowledgeSpecialist } from "../src/knowledge/specialist-runner";
 
@@ -53,7 +58,9 @@ describe("synthetic long-session specialist stress", () => {
 	it("charges reported provider usage before a later SDK call", async () => {
 		const calls = [];
 		const deps = {
+			runModelLoop: runCanonicalKnowledgeSpecialist,
 			getRuntime: async () => ({
+				hasConfiguredAuth: () => true,
 				getModels: () => [],
 				getModel: () => undefined,
 				completeSimple: async () => {
@@ -73,7 +80,12 @@ describe("synthetic long-session specialist stress", () => {
 				role: "evidence",
 				task: "x",
 				packet: "{}",
-				parentModel: { id: "m", provider: "p", reasoning: false },
+				parentModel: {
+					id: "m",
+					provider: "p",
+					reasoning: false,
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+				},
 				capabilities: [],
 				check: async () => {},
 				progress: () => {},

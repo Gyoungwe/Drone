@@ -2,6 +2,11 @@ import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
+	pluginRuntime: {
+		title: "Plugin runtime permission",
+		detail:
+			"The runtime runs in a separate process with read access to its own package only. Network, file writes, child processes and host credentials are unavailable. Disabling the plugin or closing the window revokes access.",
+	},
 	knowledgeFallback: {
 		title: "Knowledge",
 		hint: "Enable the knowledge UI plugin to browse, search, explore the graph, review and configure your library.",
@@ -235,7 +240,6 @@ export const en: Messages = {
 		},
 		approvalPending: "An action is waiting for your decision → above the composer",
 		todoTitle: "Todo list",
-		taskViewTitle: "Task arrangement",
 		decisionsTitle: "Decisions",
 		decisionsPending: "{count} awaiting review",
 		decisionAffected: "{count} affected output(s)",
@@ -306,7 +310,6 @@ export const en: Messages = {
 			},
 		},
 		turn: "Turn {n}",
-		taskArtifacts: "Task outputs",
 		artifactsEmpty: "Nothing produced yet; knowledge notes and reports will be listed here.",
 		evidence: {
 			title: "Evidence",
@@ -973,7 +976,7 @@ export const en: Messages = {
 			changed: "Switched to {mode}",
 			cacheReset: "tool changes reset the prompt cache",
 		},
-		status: { local: "Local", memoryLoaded: "{count} memories loaded" },
+		status: { extension: "Extension status", local: "Local", memoryLoaded: "{count} memories loaded" },
 		placeholder:
 			"Describe your task — / for commands or skills, @ to reference files, tasks, software and databases",
 		placeholderQueued: "Queue a message — sent when the current task finishes",
@@ -1179,27 +1182,6 @@ export const en: Messages = {
 			mutex: "Detected subagent extension {path}; built-in subagent took over: {tools}",
 		},
 		contextEvaporated: "Trimmed {count} old tool results",
-	},
-	taskRow: {
-		running:
-			"The task is still running; acceptance progress updates as results come in — no need to start it again.",
-		unconfirmed:
-			"Some items are not confirmed yet; this is an older record — check the existing results before generating them again.",
-		noDeliverables: "No deliverables have been agreed yet, so there is no progress to show.",
-		steps: "{n} steps run",
-		accepted: " · {done}/{total} accepted",
-		progressLabel: "Deliverable acceptance progress",
-		progressText: "{done} of {total} accepted",
-		continue: "Continue with the rest",
-		milestones: "Acceptance items {done}/{total}",
-		operations: "Operation log {n}",
-	},
-	taskArtifacts: {
-		openSessionFirst: "Open the session this output belongs to first",
-		changed: "file changed — previews the current version",
-		notFound: "file needs to be located again",
-		preview: "preview in sidebar",
-		more: "{count} more outputs in the full record",
 	},
 	resource: {
 		backToChanges: "← Changes",
@@ -1981,6 +1963,7 @@ export const en: Messages = {
 		},
 	},
 	toast: {
+		extensionNotification: "Extension notification",
 		tabsSaveFailed: "Failed to save tabs",
 		uiStateSaveFailed: "Failed to save UI state",
 		trustFailed: "Failed to check project trust",

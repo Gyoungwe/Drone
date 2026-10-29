@@ -14,9 +14,20 @@ const baseDeps = {
 
 const gate = { confirm: async () => true } as any;
 const askGate = { ask: async () => "" } as any;
+const coreHost = {
+	contractVersion: 1,
+	makeDeliverFilesTool: () => ({ name: "deliver_files" }),
+	makeMemorySaveTool: () => ({ name: "memory_save" }),
+	makeStatusTool: () => ({ name: "set_status" }),
+	makeTodoTool: () => ({ name: "todo" }),
+	memoryIndexPrompt: () => [],
+	writeMemory: () => "",
+};
 
 function toolNames(harness?: Record<string, boolean>) {
-	return buildSessionCustomTools({ ...baseDeps, harness } as any, gate, askGate).map((tool) => tool.name);
+	return buildSessionCustomTools({ ...baseDeps, coreHost, harness } as any, gate, askGate).map(
+		(tool) => tool.name,
+	);
 }
 
 function extensionNames(harness?: Record<string, boolean>) {

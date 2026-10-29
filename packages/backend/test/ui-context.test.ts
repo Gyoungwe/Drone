@@ -10,6 +10,28 @@ function fakeGate(): PermissionGate {
 }
 
 describe("makeUiContext — ui.theme 契约", () => {
+	it("rejects UI output with no transport instead of silently dropping it", () => {
+		const ui = makeUiContext(fakeGate());
+		expect(() => ui.notify("message")).toThrow("notify without a notification transport");
+		expect(() => ui.setStatus("status", "message")).toThrow("setStatus without a status transport");
+	});
+	it("does not report a terminal theme change as successful", () => {
+		const ui = makeUiContext(fakeGate());
+		const original = ui.theme;
+		expect(ui.setTheme("solarized")).toEqual({
+			success: false,
+			error: "Drone Desktop does not support terminal UI themes",
+		});
+		expect(ui.theme).toBe(original);
+	});
+
+	it("rejects a terminal custom component instead of inventing cancellation", async () => {
+		const ui = makeUiContext(fakeGate());
+		const factory = vi.fn();
+		await expect(ui.custom(factory)).rejects.toThrow("Drone Desktop does not support terminal custom UI");
+		expect(factory).not.toHaveBeenCalled();
+	});
+
 	it("theme 是对象且 fg/bg/bold 等样式方法全部可调用并返回字符串", () => {
 		const ui = makeUiContext(fakeGate());
 		// pi-mcp-adapter init.ts updateStatusBar 的实际用法：ui.theme ? theme.fg(...) : ...
@@ -94,14 +116,23 @@ describe("makeUiContext — native setup questions", () => {
 		return { gate, send, ui: makeUiContext(fakeGate(), gate) };
 	}
 
-	it("input uses a text-only question and returns the custom answer", async () => {
+	it("rejects unsupported dialog options without opening a request", async () => {
+		const { ui, send } = bridge();
+		await expect(ui.select("Choice", ["A"], { timeout: 100 })).rejects.toThrow("select timeout countdown");
+		await expect(ui.input("Input", "", { timeout: 100 })).rejects.toThrow("input timeout countdown");
+
+		expect(() => ui.confirm("Confirm", "Message", { timeout: 100 })).toThrow("confirm timeout countdown");
+		expect(send).not.toHaveBeenCalled();
+	});
+
+	it("input uses a text-only question and preserves the exact custom answer", async () => {
 		const { ui, gate, send } = bridge();
 		const pending = ui.input("Vault path", "/path/to/Vault");
 		const request = send.mock.calls[0][0];
 		expect(request.sessionId).toBe("setup-session");
 		expect(request.questions[0]).toMatchObject({ type: "text", options: [], prompt: "/path/to/Vault" });
 		gate.respond(request.id, { kind: "answer", answers: { value: { customText: "  /my/Vault  " } } });
-		await expect(pending).resolves.toBe("/my/Vault");
+		await expect(pending).resolves.toBe("  /my/Vault  ");
 	});
 
 	it("multiline selection keeps a short heading and the full proposal in the prompt", async () => {
@@ -138,10 +169,11 @@ describe("makeUiContext — native setup questions", () => {
 		expect(send).not.toHaveBeenCalled();
 	});
 
-	it("no question transport or no choices returns cancellation", async () => {
+	it("missing question transport is unsupported, while an empty selection cancels", async () => {
 		const ui = makeUiContext(fakeGate());
-		await expect(ui.input("Vault")).resolves.toBeUndefined();
-		await expect(ui.select("Profile", [])).resolves.toBeUndefined();
+		await expect(ui.input("Vault")).rejects.toThrow("input without a question transport");
+		await expect(ui.select("Profile", ["A"])).rejects.toThrow("select without a question transport");
+		await expect(bridge().ui.select("Profile", [])).resolves.toBeUndefined();
 	});
 });
 

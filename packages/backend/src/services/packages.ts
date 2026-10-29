@@ -69,6 +69,7 @@ export interface PackageServicePort {
 	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
 	installPackage(name: string): Promise<PackageLifecycleReceipt>;
 	updatePackage(name: string): Promise<PackageLifecycleReceipt>;
+	rollbackPackage(name: string, version: string): Promise<PackageLifecycleReceipt>;
 	removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt>;
 }
 
@@ -142,6 +143,31 @@ export class PackageService implements PackageServicePort {
 		});
 	}
 
+	/** Roll back an installed npm package to an explicitly authorized exact version. */
+	async rollbackPackage(name: string, version: string): Promise<PackageLifecycleReceipt> {
+		const source = `npm:${name}@${version}`;
+		return this.runOperation(
+			"rollback",
+			name,
+			source,
+			this.configuredScope(`npm:${name}`) ?? "user",
+			async (receipt, manager) => {
+				this.assertInstallableName(name);
+				this.assertRollbackVersion(version);
+				this.assertNotBuiltin(name);
+				const previousVersion = this.installedVersion(manager, `npm:${name}`, receipt.scope);
+				if (!previousVersion) {
+					const error = new Error(`Package not installed: npm:${name}`);
+					(error as Error & { code?: string }).code = "not-installed";
+					throw error;
+				}
+				receipt.previousVersion = previousVersion;
+				await manager.installAndPersist(source);
+				receipt.events.push(event("rolled_back", undefined, version));
+			},
+		);
+	}
+
 	/** 卸载已配置的包（按 source + scope 移除并持久化）；内置包永远不可卸载。 */
 	async removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt> {
 		const packageName = packageNameFromSource(source);
@@ -176,6 +202,13 @@ export class PackageService implements PackageServicePort {
 			return;
 		const error = new Error(`Built-in package cannot be changed: ${name}`);
 		(error as Error & { code?: string }).code = "builtin";
+		throw error;
+	}
+
+	private assertRollbackVersion(version: string): void {
+		if (/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(version)) return;
+		const error = new Error(`Invalid package version: ${version}`);
+		(error as Error & { code?: string }).code = "invalid-source";
 		throw error;
 	}
 
@@ -236,7 +269,7 @@ export class PackageService implements PackageServicePort {
 			if (!reload.reloaded.length && !reload.deferred.length) receipt.effect = "current-session";
 			receipt.version = this.installedVersion(manager, source, scope);
 			log.info(
-				`package ${operation === "remove" ? "removed" : operation === "update" ? "updated" : "installed"}`,
+				`package ${operation === "remove" ? "removed" : operation === "update" ? "updated" : operation === "rollback" ? "rolled back" : "installed"}`,
 				packageName,
 				{ scope },
 			);

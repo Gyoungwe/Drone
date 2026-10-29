@@ -1,8 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { listMemories, writeMemory } from "@gyoungwe/pi-core/host";
 import { afterEach, expect, it } from "vitest";
-import { listMemories } from "../project/memory";
 import { promoteObservation } from "./promote";
 import { MemoryStore } from "./store";
 
@@ -21,7 +21,7 @@ it("promotes an observation into .pi/memory and removes it from observations", (
 	dir = mkdtempSync(join(tmpdir(), "mem-promote-"));
 	add("p1", "c1", "Rscript deseq2.R");
 	const [hit] = store.list("p1");
-	const file = promoteObservation(store, dir, "p1", hit!.id);
+	const file = promoteObservation(store, dir, "p1", hit!.id, writeMemory);
 	const [entry] = listMemories(dir);
 	expect(entry).toMatchObject({ type: "project", description: "Rscript deseq2.R", file });
 	expect(entry!.body).toContain("样本数不足");
@@ -35,7 +35,7 @@ it("refuses ids from another project and remove only touches this project", () =
 	dir = mkdtempSync(join(tmpdir(), "mem-promote-"));
 	add("p2", "c1", "other");
 	const other = store.list("p2")[0]!;
-	expect(() => promoteObservation(store, dir, "p1", other.id)).toThrow();
+	expect(() => promoteObservation(store, dir, "p1", other.id, writeMemory)).toThrow();
 	expect(store.remove("p1", other.id)).toBe(false);
 	expect(store.remove("p2", other.id)).toBe(true);
 	expect(store.status("p2").count).toBe(0);

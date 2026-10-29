@@ -38,3 +38,31 @@ describe("createDroneRuntime", () => {
 		expect(disposed).toBe(0);
 	});
 });
+
+describe("runtime event bus", () => {
+	it("isolates event delivery between backend runtimes", async () => {
+		const first = createDroneRuntime();
+		const second = createDroneRuntime();
+		const firstEvents: unknown[] = [];
+		const secondEvents: unknown[] = [];
+		first.events.on("knowledge-deposited", (payload) => firstEvents.push(payload));
+		second.events.on("knowledge-deposited", (payload) => secondEvents.push(payload));
+
+		first.events.emit("knowledge-deposited", { cwd: "/first" });
+		second.events.emit("knowledge-deposited", { cwd: "/second" });
+
+		expect(firstEvents).toEqual([{ cwd: "/first" }]);
+		expect(secondEvents).toEqual([{ cwd: "/second" }]);
+		await first.dispose();
+		await second.dispose();
+	});
+
+	it("detaches listeners when a runtime is disposed", async () => {
+		const runtime = createDroneRuntime();
+		const received: unknown[] = [];
+		runtime.events.on("changed", (payload) => received.push(payload));
+		await runtime.dispose();
+		runtime.events.emit("changed", { value: 1 });
+		expect(received).toEqual([]);
+	});
+});

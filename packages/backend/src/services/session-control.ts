@@ -6,15 +6,13 @@ import type {
 	SessionStats,
 } from "@drone/shared";
 import type { ThinkingLevel } from "@earendil-works/pi-ai";
-import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { CapabilityRuntime } from "../capabilities/runtime";
-import { isTaskStatusQuery } from "../capabilities/runtime";
 import { createLogger } from "../log";
 import { inboxFor } from "../session/durable-inbox";
 import type { ModelWaitMonitor } from "../session/model-wait";
 import type { EventRateTracker } from "../session/rates";
 import type { SessionRecovery } from "../session/recovery";
-import type { SessionRegistry } from "../session/registry";
+import type { RegisteredSession, SessionRegistry } from "../session/registry";
 import type { ModelRuntime, SessionEngine } from "../session-engine/engine";
 import type { ApprovalService } from "./approvals";
 
@@ -29,12 +27,40 @@ export interface SessionControlHost {
 	readonly capabilityRuntimes: Map<string, CapabilityRuntime>;
 	readonly approvals: ApprovalService;
 	getModelRuntime(): Promise<ModelRuntime>;
-	requireSession(id: string): { session: AgentSession; readOnly?: boolean };
+	requireSession(id: string): RegisteredSession;
 	log: { info: (message: string, ...args: unknown[]) => void };
 }
 
 export class SessionControlService {
 	constructor(private readonly host: SessionControlHost) {}
+	private readonly commands = new Map<string, Set<AbortController>>();
+
+	async command(sessionId: string, name: string, args = ""): Promise<PromptReceipt> {
+		const entry = this.host.requireSession(sessionId);
+		const controller = new AbortController();
+		const signal = AbortSignal.any([this.host.registry.signalFor(entry), controller.signal]);
+		const assertCurrent = () => {
+			signal.throwIfAborted();
+			if (this.host.registry.get(sessionId) !== entry)
+				throw new Error("Session changed during command execution");
+			if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
+			if (this.host.recovery.isRecovering(sessionId))
+				throw new Error("Wait for answer recovery to finish or stop it before sending a command");
+		};
+		let pending = this.commands.get(sessionId);
+		if (!pending) {
+			pending = new Set();
+			this.commands.set(sessionId, pending);
+		}
+		pending.add(controller);
+		try {
+			await this.host.sessionEngine.command(entry.session, name, args, signal, assertCurrent);
+			return { kind: "command" };
+		} finally {
+			pending.delete(controller);
+			if (!pending.size) this.commands.delete(sessionId);
+		}
+	}
 
 	async prompt(
 		sessionId: string,
@@ -46,8 +72,6 @@ export class SessionControlService {
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
 		if (this.host.recovery.isRecovering(sessionId))
 			throw new Error("Wait for answer recovery to finish or stop it before sending a new task");
-		if (!images?.length && isTaskStatusQuery(text) && entry.session.extensionRunner.getCommand("task-status"))
-			text = "/task-status";
 		log.info("prompt", sessionId, {
 			text: text.slice(0, 120),
 			images: images?.length ?? 0,
@@ -60,7 +84,7 @@ export class SessionControlService {
 		const spaceIndex = text.indexOf(" ");
 		const commandName = text.startsWith("/") ? text.slice(1, spaceIndex === -1 ? undefined : spaceIndex) : "";
 		const isExtensionCommand = !!commandName && !!entry.session.extensionRunner.getCommand(commandName);
-		const receipt: PromptReceipt = isExtensionCommand
+		let receipt: PromptReceipt = isExtensionCommand
 			? { kind: "command" }
 			: entry.session.isStreaming
 				? { kind: "queued" }
@@ -83,7 +107,6 @@ export class SessionControlService {
 		// sending 状态被占住，运行中的 followUp 排队发送被防重发守卫静默拦截。
 		// preflight 前抛错（无模型/无 key/compaction 中）照常 reject 传给渲染端；
 		// ack 之后 run 期错误不再回传（走事件流呈现），then 的 reject 在已 resolve 后为 no-op。
-		// preflightResult(false) 只在 SDK catch 里紧随 throw 触发，不据此 reject，真实错误经 throw 传递。
 		await new Promise<void>((resolve, reject) => {
 			this.host.sessionEngine
 				.prompt(entry.session, text, {
@@ -95,8 +118,17 @@ export class SessionControlService {
 						data: image.data,
 						mimeType: image.mimeType,
 					})),
-					preflightResult: (ok) => {
-						if (ok) resolve();
+					preflightResult: (disposition) => {
+						if (disposition === "handled" && receipt.kind === "queued" && sessionFile) {
+							inboxFor(sessionFile).sync([
+								...entry.session.getSteeringMessages(),
+								...entry.session.getFollowUpMessages(),
+							]);
+						}
+						receipt = {
+							kind: disposition === "handled" ? "command" : disposition === "queued" ? "queued" : "agent",
+						};
+						resolve();
 					},
 				})
 				.then(
@@ -114,6 +146,8 @@ export class SessionControlService {
 	}
 
 	async abort(sessionId: string): Promise<void> {
+		for (const command of this.commands.get(sessionId) ?? [])
+			command.abort(new Error("Session command cancelled"));
 		this.host.modelWait.cleanup(sessionId);
 		const entry = this.host.registry.get(sessionId);
 		if (!entry) return;

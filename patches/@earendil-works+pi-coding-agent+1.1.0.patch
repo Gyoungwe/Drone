@@ -1,8 +1,63 @@
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js
-index e733dc0..c6593e5 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.js
-@@ -1488,14 +1488,15 @@ export class DefaultPackageManager {
+@@ -609,6 +609,7 @@
+     agentDir;
+     settingsManager;
+     builtinExtensions;
++    retainUnavailableExtensionPaths;
+     globalNpmRoot;
+     globalNpmRootCommandKey;
+     progressCallback;
+@@ -617,6 +618,7 @@
+         this.agentDir = resolvePath(options.agentDir);
+         this.settingsManager = options.settingsManager;
+         this.builtinExtensions = options.builtinExtensions ?? [];
++        this.retainUnavailableExtensionPaths = options.retainUnavailableExtensionPaths ?? false;
+     }
+     setProgressCallback(callback) {
+         this.progressCallback = callback;
+@@ -1031,8 +1033,10 @@
+                 const needsInstall = !existsSync(installedPath) || !(await this.installedNpmMatchesConfiguredVersion(parsed, installedPath));
+                 if (needsInstall) {
+                     const installed = await installMissing();
+-                    if (!installed)
++                    if (!installed) {
++                        this.recordUnavailableExtensionSource(installedPath, accumulator, filter, metadata);
+                         continue;
++                    }
+                     installedPath = this.getNpmInstallPath(parsed, resolvedScope);
+                 }
+                 metadata.baseDir = installedPath;
+@@ -1044,8 +1048,10 @@
+                 const installedPath = this.getGitInstallPath(parsed, resolvedScope);
+                 if (!existsSync(installedPath)) {
+                     const installed = await installMissing();
+-                    if (!installed)
++                    if (!installed) {
++                        this.recordUnavailableExtensionSource(installedPath, accumulator, filter, metadata);
+                         continue;
++                    }
+                 }
+                 else if (resolvedScope === "temporary" && !parsed.pinned && !isOfflineModeEnabled()) {
+                     await this.refreshTemporaryGitSource(parsed, resolvedSource);
+@@ -1064,9 +1070,15 @@
+             this.getPackageIdentity(this.getPackageSourceString(entry.pkg), "user") === identity);
+         return userEntry ? { source: this.getPackageSourceString(userEntry.pkg), scope: "user" } : undefined;
+     }
++    recordUnavailableExtensionSource(path, accumulator, filter, metadata) {
++        if (!this.retainUnavailableExtensionPaths || filter?.extensions?.length === 0 ||
++            (filter?.autoload === false && !filter.extensions?.some((pattern) => !pattern.startsWith("-") && !pattern.startsWith("!")))) return;
++        this.addResource(accumulator.extensions, path, metadata, true);
++    }
+     resolveLocalExtensionSource(source, accumulator, filter, metadata, baseDir) {
+         const resolved = this.resolvePathFromBase(source.path, baseDir);
+         if (!existsSync(resolved)) {
++            this.recordUnavailableExtensionSource(resolved, accumulator, filter, metadata);
+             return;
+         }
+         try {
+@@ -1488,14 +1500,15 @@
                  return [
                      "install",
                      "--prod",
@@ -20,7 +75,7 @@ index e733dc0..c6593e5 100644
          }
      }
      runNpmCommandSync(args) {
-@@ -1509,7 +1510,7 @@ export class DefaultPackageManager {
+@@ -1509,7 +1522,7 @@
          // equivalent bun/pnpm settings) so package managers do not install or solve host-provided
          // @earendil-works/pi-* peers. Stale auto-installed pi peers can otherwise block updates.
          if (packageManagerName === "bun") {
@@ -29,7 +84,7 @@ index e733dc0..c6593e5 100644
          }
          if (packageManagerName === "pnpm") {
              return [
-@@ -1517,12 +1518,13 @@ export class DefaultPackageManager {
+@@ -1517,12 +1530,13 @@
                  ...specs,
                  "--prefix",
                  installRoot,
@@ -44,7 +99,7 @@ index e733dc0..c6593e5 100644
      }
      async installNpm(source, scope, temporary) {
          const installRoot = this.getNpmInstallRoot(scope, temporary);
-@@ -1536,10 +1538,10 @@ export class DefaultPackageManager {
+@@ -1536,10 +1550,10 @@
          }
          const packageManagerName = this.getPackageManagerName();
          if (packageManagerName === "bun") {
@@ -57,40 +112,114 @@ index e733dc0..c6593e5 100644
          if (packageManagerName !== "pnpm") {
              args.push("--legacy-peer-deps");
          }
+@@ -1965,7 +1979,8 @@
+             if (!hasGlobPattern(entry)) {
+                 return [resolve(root, entry)];
+             }
+-            return expandPackageGlob(entry, root);
++            const matches = expandPackageGlob(entry, root);
++            return matches.length || resourceType !== "extensions" || !this.retainUnavailableExtensionPaths ? matches : [resolve(root, entry)];
+         });
+         return this.collectFilesFromPaths(resolved, resourceType);
+     }
+@@ -2068,8 +2083,10 @@
+     collectFilesFromPaths(paths, resourceType) {
+         const files = [];
+         for (const p of paths) {
+-            if (!existsSync(p))
++            if (!existsSync(p)) {
++                if (resourceType === "extensions" && this.retainUnavailableExtensionPaths) files.push(p);
+                 continue;
++            }
+             try {
+                 const stats = statSync(p);
+                 if (stats.isFile()) {
+@@ -2080,7 +2097,8 @@
+                 }
+             }
+             catch {
+-                // Ignore errors
++                // Keep the selected unavailable path in the host receipt, never turn a read error into absence.
++                if (resourceType === "extensions" && this.retainUnavailableExtensionPaths) files.push(p);
+             }
+         }
+         return files;
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts
-index c3ee0dc..fd808c5 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.d.ts
-@@ -86,6 +86,8 @@ export interface DefaultResourceLoaderOptions {
+@@ -67,6 +67,8 @@
+     path: string;
+     content: string;
+ }>;
++/** Drone host-only receipt for pinned Pi 1.1.0; no plugin JSON can supply this callback. */
++export type HostExtensionSelectionReceipt = { phase: "loading" } | { phase: "loaded"; paths: readonly string[] };
+ export interface DefaultResourceLoaderOptions {
+     cwd: string;
+     agentDir: string;
+@@ -86,6 +88,9 @@
      noContextFiles?: boolean;
      systemPrompt?: string;
      appendSystemPrompt?: string[];
 +    /** Drone Pi 1.1.0 patch: intercept file execution before both trust-loading passes. */
 +    extensionFactoryForPath?: (path: string) => Promise<ExtensionFactory | undefined>;
++    hostExtensionSelection?: (receipt: HostExtensionSelectionReceipt) => void;
      extensionsOverride?: (base: LoadExtensionsResult) => LoadExtensionsResult;
      skillsOverride?: (base: {
          skills: Skill[];
+@@ -142,6 +147,7 @@
+     private noContextFiles;
+     private systemPromptSource?;
+     private appendSystemPromptSource?;
++    private hostExtensionSelection?;
+     private extensionsOverride?;
+     private skillsOverride?;
+     private promptsOverride?;
 diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js
-index 35ba09c..0ed5a68 100644
 --- a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js
 +++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loader.js
-@@ -210,6 +210,7 @@ export class DefaultResourceLoader {
+@@ -210,6 +210,8 @@
      noContextFiles;
      systemPromptSource;
      appendSystemPromptSource;
 +    extensionFactoryForPath;
++    hostExtensionSelection;
      extensionsOverride;
      skillsOverride;
      promptsOverride;
-@@ -263,6 +264,7 @@ export class DefaultResourceLoader {
+@@ -250,6 +252,7 @@
+             agentDir: this.agentDir,
+             settingsManager: this.settingsManager,
+             builtinExtensions: [...this.builtinExtensions.keys()],
++            retainUnavailableExtensionPaths: !!options.hostExtensionSelection,
+         });
+         this.additionalExtensionPaths = options.additionalExtensionPaths ?? [];
+         this.additionalSkillPaths = options.additionalSkillPaths ?? [];
+@@ -263,6 +266,8 @@
          this.noContextFiles = options.noContextFiles ?? false;
          this.systemPromptSource = options.systemPrompt;
          this.appendSystemPromptSource = options.appendSystemPrompt;
 +        this.extensionFactoryForPath = options.extensionFactoryForPath;
++        this.hostExtensionSelection = options.hostExtensionSelection;
          this.extensionsOverride = options.extensionsOverride;
          this.skillsOverride = options.skillsOverride;
          this.promptsOverride = options.promptsOverride;
-@@ -504,7 +506,7 @@ export class DefaultResourceLoader {
+@@ -350,6 +355,7 @@
+         return this.loadCurrentExtensionSet({ includeInlineFactories: true });
+     }
+     async reload(options) {
++        this.hostExtensionSelection?.({ phase: "loading" });
+         resetTimings("extensions");
+         if (this.loaded) {
+             clearExtensionCache();
+@@ -488,6 +494,7 @@
+             .filter((source) => existsSync(source))
+             .map((source) => resolvePath(source));
+         this.loaded = true;
++        this.hostExtensionSelection?.({ phase: "loaded", paths: extensionPaths });
+     }
+     async loadCurrentExtensionSet(options) {
+         const resolvedPaths = await this.packageManager.resolve();
+@@ -504,7 +511,7 @@
              resource.metadata,
          ]));
          const packageWarnings = collectExtensionPackageWarnings(extensionPaths, metadataByPath);
@@ -99,7 +228,7 @@ index 35ba09c..0ed5a68 100644
          mergeExtensionWarnings(extensionsResult, packageWarnings);
          if (!options.includeInlineFactories) {
              return extensionsResult;
-@@ -523,7 +525,27 @@ export class DefaultResourceLoader {
+@@ -523,7 +530,27 @@
      /** Load extension paths: files from disk and `builtin:<name>` paths from the built-in extensions. */
      async loadExtensionPaths(paths, runtime) {
          const isBuiltinPath = (path) => path.startsWith(BUILTIN_PATH_PREFIX);
@@ -128,3 +257,486 @@ index 35ba09c..0ed5a68 100644
          for (const path of paths.filter(isBuiltinPath)) {
              const builtin = this.builtinExtensions.get(path.slice(BUILTIN_PATH_PREFIX.length));
              if (!builtin) {
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.js
+@@ -86,6 +86,15 @@
+     _scopedModels;
+     // Event subscription state
+     _unsubscribeAgent;
++    _hostDeliveryBoundary;
++    _hostDeliveryRunStart;
++    _hostExportBoundary;
++    _hostExportIsOrdinary;
++    _hostDeliveryFailedRuns = new WeakSet();
++    _hostProviderProtocol = new WeakMap();
++    _hostProtocolGeneration;
++    _hostSessionEpoch = 0;
++    _disposed = false;
+     _eventListeners = [];
+     _isAgentRunActive = false;
+     _agentRunAbortRequested = false;
+@@ -175,6 +184,10 @@
+     _runSystemPromptOptions;
+     constructor(config) {
+         this.agent = config.agent;
++        this._hostDeliveryBoundary = config.hostDeliveryBoundary;
++        this._hostDeliveryRunStart = config.hostDeliveryRunStart;
++        this._hostExportBoundary = config.hostExportBoundary;
++        this._hostExportIsOrdinary = config.hostExportIsOrdinary;
+         this.sessionManager = config.sessionManager;
+         this.settingsManager = config.settingsManager;
+         this._scopedModels = config.scopedModels ?? [];
+@@ -568,14 +581,50 @@
+     // =========================================================================
+     // Event Subscription
+     // =========================================================================
++    _clearHostProviderProtocol() {
++        this._hostProviderProtocol = new WeakMap();
++        this._hostProtocolGeneration = undefined;
++    }
++    _restoreHostProviderProtocol(messages, originalFor) {
++        const generation = this._hostProtocolGeneration;
++        if (this._disposed || !this._hostDeliveryBoundary || !generation || generation.manager !== this.sessionManager || generation.sessionId !== this.sessionId)
++            return messages;
++        return messages.map((message) => {
++            const original = originalFor(message);
++            const protocol = original && this._hostProviderProtocol.get(original);
++            if (!protocol || JSON.stringify(original) !== protocol.fingerprint || JSON.stringify(message) !== protocol.fingerprint)
++                return message;
++            return { ...message, content: structuredClone(protocol.content) };
++        });
++    }
+     _refreshFinalizedContext() {
++        // Only this actual SDK projection producer can transfer a private protocol association.
++        // Entry objects and fingerprints invalidate aliases; JSON ids/hashes never mint them.
++        const protocols = new Map();
++        const generation = this._hostProtocolGeneration;
++        if (this._hostDeliveryBoundary && generation?.manager === this.sessionManager && generation.sessionId === this.sessionId) {
++            for (const message of this.messages) {
++                const protocol = this._hostProviderProtocol.get(message);
++                const origin = protocol && this.getHostPersistedMessage(message);
++                if (origin && JSON.stringify(message) === protocol.fingerprint)
++                    protocols.set(origin, protocol);
++            }
++        }
++        const nextProtocols = new WeakMap();
+         const projection = this.sessionManager.buildSessionProjection();
+         for (const entry of projection.entries) {
+-            for (const message of entry.messages)
++            for (const message of entry.messages) {
+                 this._entryIdsByMessage.set(message, entry.sourceEntry.id);
++                const protocol = protocols.get(entry.sourceEntry);
++                if (protocol && JSON.stringify(message) === protocol.fingerprint)
++                    nextProtocols.set(message, protocol);
++            }
+         }
++        this._hostProviderProtocol = nextProtocols;
++        this._hostProtocolGeneration = this._hostDeliveryBoundary ? { manager: this.sessionManager, sessionId: this.sessionId } : undefined;
+         this.agent.state.messages = projection.messages;
+     }
++
+     _applyBoundaryDrafts(manager, drafts) {
+         const appended = [];
+         for (const draft of drafts) {
+@@ -707,7 +756,19 @@
+         this._resolveIdleWaitIfIdle();
+     }
+     /** Internal handler for agent events - shared by subscribe and reconnect */
+-    _handleAgentEvent = async (event) => {
++    _handleAgentEvent = async (event, signal) => {
++        if (event.type === "agent_start" && this._hostDeliveryRunStart) {
++            try {
++                this._hostDeliveryRunStart(signal);
++            }
++            catch {
++                // Start failure is a host mechanism failure, never an extension hook failure.
++                this._hostDeliveryFailedRuns.add(signal);
++                this._agentRunAbortRequested = true;
++                this.agent.abort();
++                console.error("Host delivery initialization failed; assistant output suppressed.");
++            }
++        }
+         // Record the calls a tool made through ctx.executeTool() and their usage on its result message.
+         if (this._nestedToolCalls) {
+             if (event.type === "message_start" && event.message.role === "toolResult") {
+@@ -747,6 +808,45 @@
+         }
+         // Emit to extensions first, then notify public listeners.
+         await this._emitExtensionEvent(event);
++        if (this._disposed)
++            return;
++        // Drone pinned-runtime mechanism: extensions cannot install or reorder this callback.
++        // The agent awaits this subscriber before public delivery and session persistence.
++        if ((this._hostDeliveryBoundary || this._hostDeliveryFailedRuns.has(signal)) && event.type === "message_end" && event.message.role === "assistant") {
++            const metadata = {};
++            for (const key of ["api", "provider", "model", "responseModel", "responseId", "providerThinkingLevel", "thinkingLevel", "usage", "deferred", "rawStopReason", "endTurn", "timestamp", "durationMs"]) {
++                if (Object.hasOwn(event.message, key))
++                    metadata[key] = event.message[key];
++            }
++            const originalProtocol = structuredClone(event.message.content);
++            const toolCalls = structuredClone(event.message.content.filter((block) => block.type === "toolCall"));
++            this._hostProviderProtocol.delete(event.message);
++            const unavailable = () => ({ ...metadata, role: "assistant", content: toolCalls, stopReason: signal.aborted ? "aborted" : toolCalls.length ? "toolUse" : "error", errorMessage: this._hostDeliveryFailedRuns.has(signal) ? "Host delivery initialization failed" : "Final delivery unavailable" });
++            let participating = true;
++            try {
++                if (!this._hostDeliveryFailedRuns.has(signal))
++                    participating = (await this._hostDeliveryBoundary(event, signal)) !== false;
++            }
++            catch {
++                // Fail once at the host delivery boundary. Never expose a callback's private error.
++                if (!toolCalls.length || signal.aborted) {
++                    this._agentRunAbortRequested = true;
++                    this.agent.abort();
++                }
++                this._replaceMessageInPlace(event.message, unavailable());
++                if (toolCalls.length && !signal.aborted) {
++                    if (this._hostProtocolGeneration?.manager !== this.sessionManager || this._hostProtocolGeneration.sessionId !== this.sessionId)
++                        this._clearHostProviderProtocol();
++                    this._hostProtocolGeneration = { manager: this.sessionManager, sessionId: this.sessionId };
++                    this._hostProviderProtocol.set(event.message, { content: originalProtocol, fingerprint: JSON.stringify(event.message) });
++                }
++                console.error("Host final delivery failed; assistant output suppressed.");
++            }
++            if (this._hostDeliveryFailedRuns.has(signal) || (participating && signal.aborted))
++                this._replaceMessageInPlace(event.message, unavailable());
++        }
++        if (this._disposed)
++            return;
+         this._emit(event.type === "agent_end" ? { ...event, willRetry: this._willRetryAfterAgentEnd(event) } : event);
+         // Handle session persistence
+         if (event.type === "message_end") {
+@@ -809,6 +909,15 @@
+         }
+         return false;
+     }
++    // Drone host-only provenance: never reconstruct a live association from bytes or position.
++    getHostPersistedMessage(message) {
++        if (this._disposed)
++            return undefined;
++        const entryId = this._entryIdsByMessage.get(message);
++        if (!entryId)
++            return undefined;
++        return this.sessionManager.getBranch().find((entry) => entry.type === "message" && entry.id === entryId);
++    }
+     _findPersistedMessageEntryId(message) {
+         const mapped = this._entryIdsByMessage.get(message);
+         if (mapped)
+@@ -990,6 +1099,14 @@
+      * Call this when completely done with the session.
+      */
+     dispose() {
++        this._disposed = true;
++        this._hostDeliveryBoundary = undefined;
++        this._hostDeliveryRunStart = undefined;
++        this._hostExportBoundary = undefined;
++        this._hostExportIsOrdinary = undefined;
++        this._hostDeliveryFailedRuns = new WeakSet();
++        this._hostSessionEpoch++;
++        this._clearHostProviderProtocol();
+         try {
+             this.abortRetry();
+             this.abortCompaction();
+@@ -1014,6 +1131,8 @@
+     // =========================================================================
+     /** Refresh the public finalized transcript from the canonical session projection. */
+     refreshContext() {
++        this._hostSessionEpoch++;
++        this._clearHostProviderProtocol();
+         this._refreshFinalizedContext();
+     }
+     /** Full agent state */
+@@ -2938,6 +3057,8 @@
+         const previousFlagValues = oldRunner.getFlagValues();
+         await emitSessionShutdownEvent(oldRunner, { type: "session_shutdown", reason: "reload" });
+         oldRunner.invalidate();
++        this._hostSessionEpoch++;
++        this._clearHostProviderProtocol();
+         const getDefaultTools = () => this._usesDefaultTools
+             ? applyToolModifiers(this.settingsManager.getDefaultTools() ?? DEFAULT_TOOL_NAMES, this._defaultToolModifiers)
+             : [];
+@@ -3314,6 +3435,9 @@
+                 // Non-user message: leaf = selected node
+                 newLeafId = targetId;
+             }
++            // A real branch transition ends the private protocol generation, even for a shared ancestor.
++            this._hostSessionEpoch++;
++            this._clearHostProviderProtocol();
+             // Switch leaf (with or without summary)
+             // Summary is attached at the navigation target position (newLeafId), not the old branch
+             let summaryEntry;
+@@ -3476,7 +3600,52 @@
+      * @param options Optional export presentation settings
+      * @returns Path to exported file
+      */
++    async _createHostExportView() {
++        await this.waitForIdle();
++        if (this._disposed || !this._hostExportBoundary)
++            throw new Error("Host export session is unavailable");
++        const boundary = this._hostExportBoundary;
++        const entries = this.sessionManager.getEntries();
++        const branch = this.sessionManager.getBranch();
++        const leaf = this.sessionManager.getLeafId();
++        const epoch = this._hostSessionEpoch;
++        // Export-only history origin: these are this manager's actual stored entries,
++        // not a caller's JSON entries. This never enrolls a live message/proof.
++        const origins = entries.filter((entry) => entry.type === "message")
++            .map((entry) => ({entry, message:entry.message}));
++        for (const message of this.messages) {
++            const entry = this.getHostPersistedMessage(message);
++            if (entry && !origins.some((origin) => origin.entry === entry && origin.message === message))
++                origins.push({ entry, message });
++        }
++        const projection = await boundary({ entries, origins });
++        const assertCurrent = () => {
++            if (this._disposed || this._hostExportBoundary !== boundary || this._hostSessionEpoch !== epoch || !this.isIdle || this.sessionManager.getLeafId() !== leaf)
++                throw new Error("Host export session changed during projection");
++            projection.assertCurrent();
++        };
++        assertCurrent();
++        for (const entry of entries) {
++            if (entry.type === "message" && entry.message.role === "assistant" && !projection.messages.has(entry))
++                throw new Error("Host export projection omitted an assistant entry");
++        }
++        const replace = (entry) => entry.type === "message" && projection.messages.has(entry)
++            ? { ...entry, message: projection.messages.get(entry) } : entry;
++        const projectedEntries = entries.map(replace);
++        const projectedBranch = branch.map(replace);
++        const manager = new Proxy(this.sessionManager, {
++            get(target, key) {
++                if (key === "getEntries") return () => projectedEntries;
++                if (key === "getBranch") return () => projectedBranch;
++                const value = Reflect.get(target, key, target);
++                return typeof value === "function" ? value.bind(target) : value;
++            },
++        });
++        return { manager, assertCurrent };
++    }
+     async exportToHtml(outputPath, options = {}) {
++        const projection = this._hostExportBoundary && !this._hostExportIsOrdinary?.()
++            ? await this._createHostExportView() : undefined;
+         const themeName = [options.themeName, this.settingsManager.getTheme()].find((candidate) => candidate !== undefined && getThemeByName(candidate) !== undefined);
+         // Create tool renderer if we have an extension runner (for custom tool HTML rendering)
+         const toolRenderer = createToolHtmlRenderer({
+@@ -3484,7 +3653,8 @@
+             theme,
+             cwd: this.sessionManager.getCwd(),
+         });
+-        return await exportSessionToHtml(this.sessionManager, this.state, {
++        projection?.assertCurrent();
++        return await exportSessionToHtml(projection?.manager ?? this.sessionManager, this.state, {
+             outputPath,
+             themeName,
+             toolRenderer,
+@@ -3497,8 +3667,17 @@
+      * @returns The resolved output file path.
+      */
+     exportToJsonl(outputPath) {
++        if (this._hostExportBoundary && !this._hostExportIsOrdinary?.())
++            throw new Error("This session requires asynchronous host export");
+         return exportSessionToJsonl(this.sessionManager, outputPath);
+     }
++    async exportToJsonlForHost(outputPath) {
++        if (!this._hostExportBoundary || this._hostExportIsOrdinary?.())
++            return this.exportToJsonl(outputPath);
++        const projection = await this._createHostExportView();
++        projection.assertCurrent();
++        return exportSessionToJsonl(projection.manager, outputPath);
++    }
+     /**
+      * Ask the current model to describe what went wrong in this session for a bug report.
+      * Used when the user declines to share the transcript itself.
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts
+@@ -109,7 +109,22 @@
+ };
+ /** Listener function for agent session events */
+ export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
++/** Pinned Drone host only. Historical entry identity is never a live publication proof. */
++export interface HostExportInput {
++    readonly entries: readonly SessionEntry[];
++    readonly origins: readonly { readonly entry: Extract<SessionEntry, { type: "message" }>; readonly message: AgentMessage }[];
++}
++export interface HostExportProjection {
++    readonly messages: ReadonlyMap<Extract<SessionEntry, { type: "message" }>, AgentMessage>;
++    assertCurrent(): void;
++}
+ export interface AgentSessionConfig {
++    /** Drone pinned-runtime host-only fence, after all SDK hooks and before public emit/append. */
++    hostDeliveryBoundary?: (event: Extract<AgentEvent, { type: "message_end" }>, signal: AbortSignal) => Promise<void | false>;
++    /** Synchronous host-only run latch, before every extension agent_start hook. */
++    hostDeliveryRunStart?: (signal: AbortSignal) => undefined;
++    hostExportBoundary?: (input: HostExportInput) => Promise<HostExportProjection>;
++    hostExportIsOrdinary?: () => boolean;
+     agent: Agent;
+     sessionManager: SessionManager;
+     settingsManager: SettingsManager;
+@@ -222,6 +237,17 @@
+     readonly settingsManager: SettingsManager;
+     private _scopedModels;
+     private _unsubscribeAgent?;
++    private _hostDeliveryBoundary;
++    private _hostDeliveryRunStart;
++    private _hostExportBoundary;
++    private _hostExportIsOrdinary;
++    private _hostDeliveryFailedRuns;
++    private _hostProviderProtocol;
++    private _hostProtocolGeneration;
++    private _hostSessionEpoch;
++    private _clearHostProviderProtocol;
++    private _restoreHostProviderProtocol;
++    private _disposed;
+     private _eventListeners;
+     private _isAgentRunActive;
+     private _agentRunAbortRequested;
+@@ -364,6 +390,8 @@
+     /** Internal handler for agent events - shared by subscribe and reconnect */
+     private _handleAgentEvent;
+     private _willRetryAfterAgentEnd;
++    /** Drone host-only actual historical origin; never an association from copied bytes. */
++    getHostPersistedMessage(message: AgentMessage): Extract<SessionEntry, { type: "message" }> | undefined;
+     private _findPersistedMessageEntryId;
+     private _omitRecoveryAttempt;
+     /** Find the last assistant message in agent state (including aborted ones) */
+@@ -888,6 +916,8 @@
+      * @returns The resolved output file path.
+      */
+     exportToJsonl(outputPath?: string): string;
++    exportToJsonlForHost(outputPath?: string): Promise<string>;
++    private _createHostExportView;
+     /**
+      * Ask the current model to describe what went wrong in this session for a bug report.
+      * Used when the user declines to share the transcript itself.
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.js
+@@ -188,6 +188,7 @@
+             return msg;
+         });
+     };
++    let hostSession;
+     const extensionRunnerRef = {};
+     const cacheWarmer = new CacheWarmer(modelRuntime, sessionManager, () => settingsManager.getCacheWarmingMode(), async (event) => extensionRunnerRef.current?.emitCacheWarmingDecision(event) ?? event.action);
+     const buildRequestOptions = (requestModel, options = {}) => {
+@@ -277,9 +278,12 @@
+         sessionId: sessionManager.getSessionId(),
+         transformContext: async (messages) => {
+             const runner = extensionRunnerRef.current;
++            const project = options.hostDeliveryBoundary
++                ? (current, originalFor) => hostSession?._restoreHostProviderProtocol(current, originalFor) ?? current
++                : undefined;
+             if (!runner)
+-                return messages;
+-            return runner.emitContext(messages);
++                return project ? project(messages, (message) => message) : messages;
++            return runner.emitContext(messages, project);
+         },
+         steeringMode: settingsManager.getSteeringMode(),
+         followUpMode: settingsManager.getFollowUpMode(),
+@@ -302,6 +306,10 @@
+     }
+     const session = new AgentSession({
+         agent,
++        hostDeliveryBoundary: options.hostDeliveryBoundary,
++        hostDeliveryRunStart: options.hostDeliveryRunStart,
++        hostExportBoundary: options.hostExportBoundary,
++        hostExportIsOrdinary: options.hostExportIsOrdinary,
+         sessionManager,
+         settingsManager,
+         cwd,
+@@ -319,6 +327,7 @@
+         sessionStartEvent: options.sessionStartEvent,
+     });
+     const extensionsResult = resourceLoader.getExtensions();
++    hostSession = session;
+     return {
+         session,
+         extensionsResult,
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/sdk.d.ts
+@@ -1,6 +1,6 @@
+ import { type ThinkingLevel } from "@earendil-works/pi-agent-core";
+ import { type Model } from "@earendil-works/pi-ai/compat";
+-import { AgentSession } from "./agent-session.ts";
++import { AgentSession, type AgentSessionConfig } from "./agent-session.ts";
+ import type { LoadExtensionsResult, SessionStartEvent, ToolDefinition } from "./extensions/index.ts";
+ import { ModelRuntime } from "./model-runtime.ts";
+ import type { ResourceLoader } from "./resource-loader.ts";
+@@ -8,6 +8,11 @@
+ import { SettingsManager } from "./settings-manager.ts";
+ import { createBashTool, createCodingTools, createEditTool, createFindTool, createGrepTool, createLsTool, createPowerShellTool, createReadOnlyTools, createReadTool, createWriteTool, withFileMutationQueue } from "./tools/index.ts";
+ export interface CreateAgentSessionOptions {
++    /** Drone pinned-runtime mechanism; not an extension event or serialized option. */
++    hostDeliveryBoundary?: AgentSessionConfig["hostDeliveryBoundary"];
++    hostDeliveryRunStart?: AgentSessionConfig["hostDeliveryRunStart"];
++    hostExportBoundary?: AgentSessionConfig["hostExportBoundary"];
++    hostExportIsOrdinary?: AgentSessionConfig["hostExportIsOrdinary"];
+     /** Working directory for project-local discovery. Default: process.cwd() */
+     cwd?: string;
+     /** Global config directory. Default: ~/.pi/agent */
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.d.ts
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.d.ts
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/package-manager.d.ts
+@@ -72,6 +72,8 @@
+     settingsManager: SettingsManager;
+     /** Names of built-in extensions, resolved as `builtin:<name>` extension resources. */
+     builtinExtensions?: string[];
++    /** Pinned Drone loader uses this only while producing a complete host selection receipt. */
++    retainUnavailableExtensionPaths?: boolean;
+ }
+ type SourceScope = "user" | "project" | "temporary";
+ export declare function getExtensionTempFolder(agentDir: string): string;
+@@ -80,6 +82,7 @@
+     private agentDir;
+     private settingsManager;
+     private builtinExtensions;
++    private retainUnavailableExtensionPaths;
+     private globalNpmRoot;
+     private globalNpmRootCommandKey;
+     private progressCallback;
+@@ -120,6 +123,7 @@
+     checkForAvailableUpdates(): Promise<PackageUpdate[]>;
+     private resolvePackageSources;
+     private findAutoloadDeltaBase;
++    private recordUnavailableExtensionSource;
+     private resolveLocalExtensionSource;
+     private installParsedSource;
+     private getPackageSourceString;
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.js b/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.js
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.js
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.js
+@@ -1003,9 +1003,10 @@
+      * only and Pi restores the prompt and tool state after each; `context_with_system`
+      * handlers then see the full transcript and their output is used as returned.
+      */
+-    async emitContext(messages) {
++    async emitContext(messages, hostProjection) {
+         const ctx = this.createContext();
+         let currentMessages = structuredClone(messages);
++        const origins = hostProjection ? new WeakMap(currentMessages.map((message, index) => [message, messages[index]])) : undefined;
+         for (const { ext, handlers } of snapshotEventHandlers(this.extensions, "context")) {
+             for (const handler of handlers) {
+                 try {
+@@ -1061,7 +1062,7 @@
+                 }
+             }
+         }
+-        return currentMessages;
++        return hostProjection ? hostProjection(currentMessages, (message) => origins.get(message)) : currentMessages;
+     }
+     async emitBeforeProviderRequest(payload) {
+         const ctx = this.createContext();
+diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.d.ts b/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.d.ts
+--- a/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.d.ts
++++ b/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/runner.d.ts
+@@ -188,7 +188,7 @@
+      * only and Pi restores the prompt and tool state after each; `context_with_system`
+      * handlers then see the full transcript and their output is used as returned.
+      */
+-    emitContext(messages: AgentMessage[]): Promise<AgentMessage[]>;
++    emitContext(messages: AgentMessage[], hostProjection?: (messages: AgentMessage[], originalFor: (message: AgentMessage) => AgentMessage | undefined) => AgentMessage[]): Promise<AgentMessage[]>;
+     emitBeforeProviderRequest(payload: unknown): Promise<unknown>;
+     emitBeforeProviderHeaders(headers: ProviderHeaders): Promise<ProviderHeaders>;
+     emitBeforeAgentStart(prompt: string, images: ImageContent[] | undefined, systemPromptOptions: BuildSystemPromptOptions): Promise<BeforeAgentStartCombinedResult>;

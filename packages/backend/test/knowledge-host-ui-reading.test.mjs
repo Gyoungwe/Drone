@@ -7,6 +7,17 @@ import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { build } from "esbuild";
 import { expect, it, vi } from "vitest";
 import { KnowledgeUiService } from "../src/knowledge/ui";
+import { configureBackendKnowledgeWorker, defaultKnowledgeCompatibility } from "./knowledge-compat-fixture";
+
+it("keeps the UI service free of the package compatibility import", async () => {
+	const uiSource = await readFile(new URL("../src/knowledge/ui.ts", import.meta.url), "utf8");
+	const compatibilitySource = await readFile(
+		new URL("./knowledge-compat-fixture.ts", import.meta.url),
+		"utf8",
+	);
+	expect(uiSource).not.toContain("@gyoungwe/pi-knowledge/host");
+	expect(compatibilitySource).toContain('from "@gyoungwe/pi-knowledge/host"');
+});
 
 it("reads a project-owned note through the backend after setup in an independently bundled extension", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-host-note-")));
@@ -26,10 +37,11 @@ it("reads a project-owned note through the backend after setup in an independent
 		depositKnowledge,
 		closeKnowledgeServices: closeExtensionServices,
 	} = await import(/* @vite-ignore */ pathToFileURL(bundle).href);
-	const ui = new KnowledgeUiService();
+	const ui = new KnowledgeUiService(undefined, { compatibility: defaultKnowledgeCompatibility });
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "knowledge"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	try {
+		configureBackendKnowledgeWorker();
 		await mkdir(cwd);
 		const setup = await configureObsidian({ cwd, vault, project: "reading-test" });
 		const saved = await depositKnowledge({

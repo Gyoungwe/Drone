@@ -1,6 +1,6 @@
 {
 	"name": "@gyoungwe/plugin-api",
-	"version": "1.2.0",
+	"version": "1.3.0",
 	"description": "Stable host contracts for Drone capability plugins",
 	"license": "MIT",
 	"publishConfig": {
@@ -29,6 +29,51 @@
 			"types": "./dist/ui.d.ts",
 			"import": "./dist/ui.js",
 			"default": "./dist/ui.js"
+		},
+		"./runtime": {
+			"types": "./dist/runtime.d.ts",
+			"import": "./dist/runtime.js",
+			"default": "./dist/runtime.js"
+		},
+		"./native": {
+			"types": "./dist/native.d.ts",
+			"import": "./dist/native.js",
+			"default": "./dist/native.js"
+		},
+		"./resource": {
+			"types": "./dist/resource.d.ts",
+			"import": "./dist/resource.js",
+			"default": "./dist/resource.js"
+		},
+		"./research": {
+			"types": "./dist/research.d.ts",
+			"import": "./dist/research.js",
+			"default": "./dist/research.js"
+		},
+		"./tasks": {
+			"types": "./dist/tasks.d.ts",
+			"import": "./dist/tasks.js",
+			"default": "./dist/tasks.js"
+		},
+		"./core": {
+			"types": "./dist/core.d.ts",
+			"import": "./dist/core.js",
+			"default": "./dist/core.js"
+		},
+		"./node/reservations": {
+			"types": "./dist/node/reservations.d.ts",
+			"import": "./dist/node/reservations.js",
+			"default": "./dist/node/reservations.js"
+		},
+		"./node/execution": {
+			"types": "./dist/node/execution.d.ts",
+			"import": "./dist/node/execution.js",
+			"default": "./dist/node/execution.js"
+		},
+		"./node/binary-state": {
+			"types": "./dist/node/binary-state.d.ts",
+			"import": "./dist/node/binary-state.js",
+			"default": "./dist/node/binary-state.js"
 		}
 	},
 	"files": [
@@ -37,16 +82,20 @@
 		"package.json"
 	],
 	"scripts": {
-		"build": "node ../../scripts/generate-knowledge-ui-contract.mjs --check && tsc -p tsconfig.build.json",
-		"typecheck": "node ../../scripts/generate-knowledge-ui-contract.mjs --check && tsc -p tsconfig.json --noEmit",
+		"build": "node ../../scripts/generate-knowledge-ui-contract.mjs --check && tsc -p tsconfig.build.json && tsc -p tsconfig.node.json",
+		"typecheck": "node ../../scripts/generate-knowledge-ui-contract.mjs --check && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
 		"check": "npm run typecheck && npm run build && node ../../scripts/check-plugin-api.mjs --package-only",
 		"test": "npm run check && node --test test/*.test.mjs"
 	},
 	"peerDependencies": {
-		"@types/react": ">=19"
+		"@types/react": ">=19",
+		"@earendil-works/pi-coding-agent": ">=1.1.0 <2.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@types/react": {
+			"optional": true
+		},
+		"@earendil-works/pi-coding-agent": {
 			"optional": true
 		}
 	}

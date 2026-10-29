@@ -10,6 +10,7 @@ const methodNames = [
 	"closeSession",
 	"deleteSession",
 	"prompt",
+	"command",
 	"abort",
 	"retry",
 	"setModel",
@@ -76,4 +77,10 @@ describe("SessionsContract", () => {
 		).toBe(false);
 		expect(Check(SessionsContract.methods.prompt.result, { kind: "agent", ...ids })).toBe(true);
 	});
+});
+
+it("validates explicit command names separately from model prompt text", () => {
+	expect(Check(SessionsContract.methods.command.args, ["session", "task-action", "encoded"])).toBe(true);
+	expect(Check(SessionsContract.methods.command.args, ["session", "/task-action"])).toBe(false);
+	expect(Check(SessionsContract.methods.command.args, ["session", "task action"])).toBe(false);
 });

@@ -16,9 +16,16 @@ import type {
 	WikiModelReviewInput,
 	WikiModelReviewResult,
 } from "@drone/shared";
+import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
+import { modelCapabilityHandlers } from "../plugins/model-capabilities";
+import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-capabilities";
+import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
+import { sessionCapabilityHandlers } from "../plugins/session-capabilities";
+import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
 import { walkProjectFiles } from "../project/files";
 import { TraceRecorder } from "../session/trace";
+import { SessionRecordStore } from "../session-engine/session-records";
 import type {
 	AskHandler,
 	EventHandler,
@@ -36,6 +43,7 @@ const log = createLogger("backend");
 import { SessionSettingsApi } from "./session-api-settings";
 
 export class SessionServiceApi extends SessionSettingsApi {
+	private readonly pluginSessionRecords = new SessionRecordStore();
 	async init(): Promise<void> {
 		await this.host.knowledge.connect();
 		await this.host.getModelRuntime();
@@ -63,7 +71,30 @@ export class SessionServiceApi extends SessionSettingsApi {
 		return this.host.lifecycle.listAll();
 	}
 
+	getPluginSessionCapabilities(recordAdoptions?: PluginRecordAdoptions) {
+		return {
+			...sessionCapabilityHandlers(this.host.pluginSessions),
+			...sessionRecordCapabilityHandlers(this.host.pluginSessions, this.pluginSessionRecords),
+			...sessionAdoptionCapabilityHandlers(
+				this.host.pluginSessions,
+				this.pluginSessionRecords,
+				recordAdoptions,
+			),
+			...modelCapabilityHandlers({
+				registry: this.host.pluginSessions,
+				getRuntime: () => this.host.getModelRuntime(),
+				getProfileModel: (name) => this.host.modelSettings.getSubagentModel(name),
+				getProfileThinking: (name) => this.host.modelSettings.getSubagentThinking(name),
+			}),
+		};
+	}
+
+	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined {
+		return getPluginSessionCaller(this.host.pluginSessions, sessionId);
+	}
+
 	async closeSession(sessionId: string): Promise<void> {
+		this.host.registry.revoke(sessionId);
 		this.host.modelWait.cleanup(sessionId);
 		this.host.knowledgeSession.disposeSession(sessionId);
 		await this.host.lifecycle.close(sessionId, {
@@ -142,6 +173,9 @@ export class SessionServiceApi extends SessionSettingsApi {
 			return { ...receipt, ...requestIdOrIds };
 		}
 		return this.host.control.prompt(sessionId, text, images, requestIdOrIds);
+	}
+	async command(sessionId: string, name: string, args?: string): Promise<PromptReceipt> {
+		return this.host.control.command(sessionId, name, args);
 	}
 	async retry(sessionId: string, requestId: string, expectedUserTimestamp?: number): Promise<PromptReceipt> {
 		return this.host.control.retry(sessionId, requestId, expectedUserTimestamp);
@@ -270,10 +304,10 @@ export class SessionServiceApi extends SessionSettingsApi {
 		return () => this.host.askHandlers.delete(handler);
 	}
 
-	respondAsk(requestId: string, response: AskResponse): boolean {
+	respondAsk(requestId: string, response: AskResponse, ownerId?: number): boolean {
 		for (const gates of this.host.askGates.values()) {
 			for (const gate of gates) {
-				if (gate.respond(requestId, response)) return true;
+				if (gate.respond(requestId, response, ownerId)) return true;
 			}
 		}
 		return false;
@@ -310,19 +344,19 @@ export class SessionServiceApi extends SessionSettingsApi {
 		this.host.projectTrust.respond(requestId, answer);
 	}
 
-	dispose(): void {
+	async dispose(): Promise<void> {
 		this.host.modelWait.dispose();
 		for (const sessionId of this.host.registry.list().map((entry) => entry.session.sessionId))
 			this.host.knowledgeSession.disposeSession(sessionId);
+		await this.host.registry.disposeAll((session) => this.host.sessionEngine.dispose(session));
 		this.host.knowledge.dispose();
-		this.host.registry.disposeAll();
 		this.host.getEventService().clear();
 		this.host.approvals.dispose();
 		this.host.sessionPermissions.dispose();
 		this.host.trustHandlers.clear();
 		this.host.projectTrust.dispose();
 		this.host.traces.disposeAll();
-		void this.host.runtime.dispose();
+		await this.host.runtime.dispose();
 		log.info("backend disposed");
 	}
 }

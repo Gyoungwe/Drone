@@ -12,15 +12,18 @@ import type {
 } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
 import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import type { CapabilityRuntime } from "./capabilities/runtime";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
-import { KnowledgeUiService } from "./knowledge/ui";
+import { KnowledgeUiService, type KnowledgeUiServicePort } from "./knowledge/ui";
 import { createLogger } from "./log";
 import type { McpService } from "./mcp/service";
 import type { PluginSandboxPolicy } from "./plugin-sandbox";
+import type { PluginNativeIntegration } from "./plugins/coordinator";
 import type { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import type { ApprovalDecision, ApprovalService } from "./services/approvals";
+import type { BackgroundReviewerFactory } from "./services/deliverable-reviewer";
 import { InstitutionalService } from "./services/institutional";
 import type { KnowledgeReviewControl, KnowledgeSessionService } from "./services/knowledge-session";
 import type { PackageService } from "./services/packages";
@@ -43,7 +46,12 @@ import type { AskGate } from "./session/ask-gate";
 import { ModelWaitMonitor } from "./session/model-wait";
 import { EventRateTracker } from "./session/rates";
 import { SessionRecovery } from "./session/recovery";
-import { type EventForwarder, SessionRegistry } from "./session/registry";
+import {
+	combinedSessionDirectory,
+	type EventForwarder,
+	type RegisteredSession,
+	SessionRegistry,
+} from "./session/registry";
 import { StreamGuard } from "./session/stream-guard";
 import { SessionTraces } from "./session/traces";
 import { getAgentDir, type ModelRuntime, SessionEngine } from "./session-engine/engine";
@@ -58,6 +66,10 @@ import { withNativeSubagentSlot } from "./tools/subagent/slots";
 const _log = createLogger("backend");
 
 export interface SessionServiceOptions {
+	/** Optional installed task owner. No host task implementation is substituted. */
+	taskHost?: import("@gyoungwe/plugin-api/tasks").TaskAcceptanceHostPort;
+	/** Optional installed pi-core host port; absent means core plugin tools are unavailable. */
+	coreHost?: CoreHostPort;
 	/** 已登记的远程主机目录（由组合根接到计算主机登记表），供 ssh / ssh_hosts 工具使用 */
 	listSshHosts?: () => Promise<import("./tools/ssh").SshHostEntry[]>;
 	/** 观察记忆库；缺省不捕获、不注入。 */
@@ -90,6 +102,12 @@ export interface SessionServiceOptions {
 	userDataDir?: string;
 	/** Host-owned runtime container; omitted only for direct compatibility construction. */
 	runtime?: DroneRuntime;
+	/** Optional knowledge domain provider; the default remains the host compatibility adapter. */
+	knowledgeFactory?: () => KnowledgeUiServicePort;
+	/** Temporary explicit 0.3 host adapter; no default optional-package import. */
+	knowledgeSpecialistModelLoop?: import("@gyoungwe/plugin-api").LegacyKnowledgeSpecialistLoop;
+	/** Optional background reviewer factory supplied by an installed knowledge plugin. */
+	knowledgeBackgroundReviewerFactory?: BackgroundReviewerFactory;
 	/** Optional project research-state root registered for the inquiry adapter. */
 	inquiryDir?: string;
 	/** Host-wide root for per-project inquiry ledgers. */
@@ -110,6 +128,7 @@ export interface SessionServiceOptions {
 		/** Optional third-party extensions loaded through the process sandbox proxy. */
 		sandboxedExtensions?: PluginSandboxPolicy[];
 		pluginRuntimeDirectory?: string;
+		nativeRuntime?: PluginNativeIntegration;
 		additionalPromptTemplatePaths?: string[];
 		academicPiRoot?: string;
 		/** Entry file of the bundled MCP runtime (pi-mcp-adapter/index.ts); loaded as an extension. */
@@ -135,10 +154,12 @@ type DecisionHandler = (event: unknown) => void;
  */
 export class SessionService extends SessionServiceApi {
 	readonly runtime!: DroneRuntime;
-	readonly knowledge = new KnowledgeUiService();
+	readonly knowledge: KnowledgeUiServicePort;
 	/** Session-bound knowledge actions exposed through BackendServices. */
 	readonly knowledgeSession!: KnowledgeSessionService;
 	readonly registry = new SessionRegistry();
+	readonly childSessions = new SessionRegistry();
+	readonly pluginSessions = combinedSessionDirectory(this.registry, this.childSessions);
 	readonly askHandlers = new Set<AskHandler>();
 	readonly trustHandlers = new Set<TrustHandler>();
 	readonly loginHandlers = new Set<LoginHandler>();
@@ -174,6 +195,12 @@ export class SessionService extends SessionServiceApi {
 	readonly traces = new SessionTraces();
 	readonly subagentPanel = new SubagentPanelService({
 		runner: {
+			nativeChildren: () => {
+				const integration = this.options.desktopIntegration?.nativeRuntime;
+				return integration
+					? { integration, register: (entry) => this.registerChildSession(entry) }
+					: undefined;
+			},
 			getModelRuntime: () => this.getModelRuntime(),
 			getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
 			traces: this.traces,
@@ -248,6 +275,7 @@ export class SessionService extends SessionServiceApi {
 
 	constructor(readonly options: SessionServiceOptions = {}) {
 		super();
+		this.knowledge = options.knowledgeFactory?.() ?? new KnowledgeUiService();
 		this.bindHost(this);
 		initializeSessionComposition(this, options);
 	}
@@ -260,8 +288,16 @@ export class SessionService extends SessionServiceApi {
 		return this.models;
 	}
 
+	/** Running subagent children resolve for plugin capabilities only; the returned function revokes them. */
+	registerChildSession(entry: RegisteredSession): () => void {
+		this.childSessions.add(entry);
+		return () => this.childSessions.delete(entry.session.sessionId);
+	}
+
 	sessionExtensionDependencies(): SessionExtensionDependencies {
 		return {
+			coreHost: this.options.coreHost,
+			taskHost: this.options.taskHost,
 			runtime: this.runtime,
 			permissionGates: this.options.permissionGates,
 			permissionExtension: this.options.permissionExtension,
@@ -275,6 +311,7 @@ export class SessionService extends SessionServiceApi {
 			getModelRuntime: () => this.getModelRuntime(),
 			getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
 			getSubagentThinking: (agentName) => this.modelSettings.getSubagentThinking(agentName),
+			knowledgeSpecialistModelLoop: this.options.knowledgeSpecialistModelLoop,
 			traces: this.traces,
 			onEvent: (sessionId, event) => this.emitEvent(sessionId, event),
 			registerLiveChild: (sessionId, control) => {
@@ -283,6 +320,7 @@ export class SessionService extends SessionServiceApi {
 					if (this.liveSubagents.get(sessionId) === control) this.liveSubagents.delete(sessionId);
 				};
 			},
+			registerChildSession: (entry) => this.registerChildSession(entry),
 			setMcpStatus: (cwd, status) => this.setMcpStatus(cwd, status),
 			// Registers ssh_hosts and lets ssh/bio tools resolve registered host names; the ssh tool's
 			// prompt guideline tells the model to call ssh_hosts, so it must be present whenever the host has a registry.
@@ -420,6 +458,7 @@ export class SessionService extends SessionServiceApi {
 							getRuntime: () => this.getModelRuntime(),
 							getModelPreference: (name) => this.modelSettings.getSubagentModel(name),
 							getThinkingPreference: (name) => this.modelSettings.getSubagentThinking(name),
+							runModelLoop: this.options.knowledgeSpecialistModelLoop,
 						},
 						{
 							...request,

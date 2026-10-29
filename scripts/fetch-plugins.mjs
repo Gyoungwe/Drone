@@ -22,7 +22,14 @@ const override = process.env.DRONE_PLUGINS_DIR ? resolve(process.env.DRONE_PLUGI
 const workspace = await mkdtemp(join(tmpdir(), "drone-plugin-fetch-"));
 const checkouts = new Map();
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const cacheDir = join(root, "vendor/plugins/.tarballs");
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: "inherit" });
+// Run npm through the npm that invoked this script (npm_execpath), so Windows needs no shell
+// or npm.cmd shim; a direct `node scripts/fetch-plugins.mjs` falls back to npm on PATH.
+const npm = (args, options) =>
+	process.env.npm_execpath
+		? execFileSync(process.execPath, [process.env.npm_execpath, ...args], options)
+		: execFileSync("npm", args, options);
 
 async function sourceCheckout(plugin) {
 	if (override) {
@@ -37,7 +44,9 @@ async function sourceCheckout(plugin) {
 	let checkout = checkouts.get(plugin.repo);
 	if (!checkout) {
 		checkout = join(workspace, `repo-${checkouts.size}`);
-		run("git", ["clone", "--filter=blob:none", "--no-checkout", plugin.repo, checkout], workspace);
+		// The lock already supplies the exact commit; repository-wide history is not a build input.
+		run("git", ["init", "--quiet", checkout], workspace);
+		run("git", ["remote", "add", "origin", plugin.repo], checkout);
 		checkouts.set(plugin.repo, checkout);
 	}
 	run("git", ["fetch", "--depth=1", "origin", plugin.commit], checkout);
@@ -47,23 +56,38 @@ async function sourceCheckout(plugin) {
 
 try {
 	for (const plugin of lock.plugins) {
-		const source = await sourceCheckout(plugin);
-		const sourceRoot = resolve(source, "..");
-		run("npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"], sourceRoot);
-		run("npm", ["run", "build", "--workspace", plugin.name], sourceRoot);
-		const metadata = JSON.parse(
-			execFileSync("npm", ["pack", "--json", "--ignore-scripts", "--pack-destination", workspace], {
-				cwd: source,
-				encoding: "utf8",
-			}),
-		)[0];
-		const tarball = join(workspace, metadata.filename);
-		const bytes = await readFile(tarball);
-		const digest = sha256(bytes);
-		if (!override && digest !== plugin.tarballSha256)
-			throw new Error(
-				`${plugin.name} tarball hash mismatch: expected ${plugin.tarballSha256}, got ${digest}`,
-			);
+		// A tarball this script already verified against the lock is reused after re-hashing it.
+		// CI rebuilds from source once on Linux and hands the tarballs to the other platforms,
+		// whose checkouts (CRLF line endings, .cmd shims) cannot reproduce the locked bytes.
+		const cached = join(cacheDir, `${plugin.name.split("/").at(-1)}-${plugin.tarballSha256}.tgz`);
+		let tarball;
+		let digest;
+		if (!override && existsSync(cached) && sha256(await readFile(cached)) === plugin.tarballSha256) {
+			tarball = cached;
+			digest = plugin.tarballSha256;
+			console.log(`[fetch-plugins] ${plugin.name}: verified cached tarball ${digest}`);
+		} else {
+			const source = await sourceCheckout(plugin);
+			const sourceRoot = resolve(source, "..");
+			npm(["ci", "--ignore-scripts", "--no-audit", "--no-fund"], { cwd: sourceRoot, stdio: "inherit" });
+			npm(["run", "build", "--workspace", plugin.name], { cwd: sourceRoot, stdio: "inherit" });
+			const metadata = JSON.parse(
+				npm(["pack", "--json", "--ignore-scripts", "--pack-destination", workspace], {
+					cwd: source,
+					encoding: "utf8",
+				}),
+			)[0];
+			tarball = join(workspace, metadata.filename);
+			digest = sha256(await readFile(tarball));
+			if (!override && digest !== plugin.tarballSha256)
+				throw new Error(
+					`${plugin.name} tarball hash mismatch: expected ${plugin.tarballSha256}, got ${digest}`,
+				);
+			if (!override) {
+				await mkdir(cacheDir, { recursive: true });
+				await cp(tarball, cached);
+			}
+		}
 		const target = join(root, "vendor/plugins", plugin.name.split("/").at(-1));
 		await rm(target, { recursive: true, force: true });
 		await mkdir(target, { recursive: true });

@@ -43,6 +43,7 @@ export function ComposerStatusBar({ pendingAsks = 0 }: { pendingAsks?: number })
 	const cwd = useSessionsStore((s) => s.cwd);
 	const sessionId = useSessionsStore((s) => s.activeSessionId);
 	const active = useTranscriptStore((s) => selectTranscript(s, sessionId)?.agentActive ?? false);
+	const extensionStatuses = useTranscriptStore((s) => selectTranscript(s, sessionId).extensionStatuses);
 	const [loaded, setLoaded] = useState(0);
 	// 记忆在每个会话首轮开始时载入：工作目录切换或一轮开始/结束时刷新。
 	// biome-ignore lint/correctness/useExhaustiveDependencies: active 只用作刷新触发
@@ -67,6 +68,11 @@ export function ComposerStatusBar({ pendingAsks = 0 }: { pendingAsks?: number })
 				dir={shortenPath(cwd)}
 				memory={loaded > 0 ? t("composer.status.memoryLoaded", { count: loaded }) : null}
 			/>
+			{Object.entries(extensionStatuses).map(([key, text]) => (
+				<span key={key} role="status" aria-label={t("composer.status.extension")} title={key}>
+					{text}
+				</span>
+			))}
 			<RunStatusStrip sessionId={sessionId} pendingAsks={pendingAsks} embedded />
 		</div>
 	);

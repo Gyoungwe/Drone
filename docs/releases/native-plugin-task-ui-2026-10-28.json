@@ -1,0 +1,348 @@
+{
+	"root": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4",
+	"hostCommit": "d2330292ab0c24c02a2b7a3f42b9c96b37b18f42",
+	"pluginCommit": "00e29c71c59ef333f919603ee4aa26b5c6e7f7fe",
+	"steps": [
+		{
+			"name": "host-archive",
+			"command": [
+				"git",
+				"archive",
+				"--format=tar",
+				"--output",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/host.tar",
+				"d2330292ab0c24c02a2b7a3f42b9c96b37b18f42"
+			],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-host-archive.log"
+		},
+		{
+			"name": "host-extract",
+			"command": [
+				"tar",
+				"-xf",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/host.tar",
+				"-C",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/host"
+			],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-host-extract.log"
+		},
+		{
+			"name": "host-ci",
+			"command": ["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-host-ci.log"
+		},
+		{
+			"name": "plugins-archive",
+			"command": [
+				"git",
+				"archive",
+				"--format=tar",
+				"--output",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/plugins.tar",
+				"00e29c71c59ef333f919603ee4aa26b5c6e7f7fe"
+			],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-plugins-archive.log"
+		},
+		{
+			"name": "plugins-extract",
+			"command": [
+				"tar",
+				"-xf",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/plugins.tar",
+				"-C",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/plugins"
+			],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-plugins-extract.log"
+		},
+		{
+			"name": "plugins-ci",
+			"command": ["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-plugins-ci.log"
+		},
+		{
+			"name": "api-build",
+			"command": ["npm", "run", "--workspace", "@gyoungwe/plugin-api", "build"],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-api-build.log"
+		},
+		{
+			"name": "api-pack",
+			"command": [
+				"npm",
+				"pack",
+				"--workspace",
+				"@gyoungwe/plugin-api",
+				"--pack-destination",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4"
+			],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-api-pack.log"
+		},
+		{
+			"name": "plugin-api-install",
+			"command": [
+				"npm",
+				"install",
+				"--no-save",
+				"--package-lock=false",
+				"--workspaces=false",
+				"--ignore-scripts",
+				"--no-audit",
+				"--no-fund",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/gyoungwe-plugin-api-1.3.0.tgz"
+			],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-plugin-api-install.log"
+		},
+		{
+			"name": "plugin-check",
+			"command": ["npm", "run", "check"],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-plugin-check.log"
+		},
+		{
+			"name": "pi-core-pack",
+			"command": [
+				"npm",
+				"pack",
+				"--workspace",
+				"@gyoungwe/pi-core",
+				"--pack-destination",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4"
+			],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-pi-core-pack.log"
+		},
+		{
+			"name": "pi-knowledge-pack",
+			"command": [
+				"npm",
+				"pack",
+				"--workspace",
+				"@gyoungwe/pi-knowledge",
+				"--pack-destination",
+				"/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4"
+			],
+			"exit": 0,
+			"log": "/tmp/task-ui-clean-pi-knowledge-pack.log"
+		}
+	],
+	"packages": [
+		{
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/gyoungwe-pi-knowledge-0.3.0.tgz",
+			"sha256": "6266f31c64597682626eacff943d0b663a9b33b1953211a7f5dc99d02caedd83"
+		},
+		{
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/gyoungwe-pi-core-0.2.0.tgz",
+			"sha256": "6126b68420f14a7f46ff8ac02dd41bffeb277009d4f80a836dd4a167f8ca9a86"
+		},
+		{
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-task-ui-clean-bl6zp5q4/gyoungwe-plugin-api-1.3.0.tgz",
+			"sha256": "7685502a613c24e1aa050c866a13b645292e5d13ddb535caf73de7fad6f2a5d8"
+		}
+	],
+	"exactCoreTypebox": "1.3.7",
+	"scope": "P4 installed core task UI + explicit generic command source slice; NOT formal macOS installer or dynamic native package toggle acceptance",
+	"verifiedHostSource": "626f12533cef6259a29fb8960b3c8e2ed38c4615",
+	"frozenPluginArtifactCommit": "0680d8f",
+	"cleanArchiveSourceNote": "The clean plugin archive was source 00e29c7. Its four generated core/UI outputs match the official local build committed as 0680d8f byte-for-byte. Subsequent host cancellation changes do not alter plugin sources.",
+	"checks": [
+		{
+			"name": "actual-sdk",
+			"exit": 0,
+			"scope": "14/14: explicit command4, installed task UI1, lifecycle9",
+			"log": "/tmp/task-ui-command-cancel-final.log",
+			"logSha256": "8f75177aa69d7382dd8f9c07309b2eb3beabfea966d65ebd9a5cb7b326b451b5"
+		},
+		{
+			"name": "desktop",
+			"exit": 0,
+			"scope": "913 pass, 1 skip; current merged source before test fixture typing only",
+			"log": "/tmp/task-ui-merged-desktop-tests.log",
+			"logSha256": "041aefc700ab067594ae7ff229104437fd1b2118398cf93464acdf93a94c0d2e"
+		},
+		{
+			"name": "shared",
+			"exit": 0,
+			"scope": "347/347; current merged source before test fixture typing only",
+			"log": "/tmp/task-ui-merged-shared-tests.log",
+			"logSha256": "d2deba4b46becebf0151e37b78fae4e3da198426920719040c2a8bf9810ae873"
+		},
+		{
+			"name": "host-status-typed",
+			"exit": 0,
+			"scope": "2/2; fixture uses complete SDK message structure",
+			"log": "/tmp/task-ui-host-status-typed-test.log",
+			"logSha256": "5526efb07e8eff56e1e58fe5ae5ea8b88574483b329f0407a450382dc4ec49f4"
+		},
+		{
+			"name": "backend-types",
+			"exit": 0,
+			"scope": "tsc",
+			"log": "/tmp/task-ui-merged-backend-types.log",
+			"logSha256": "a41db65affbd78ac970623016f73fd80fd5fef5052db140fbc712d6d74a8e8df"
+		},
+		{
+			"name": "shared-types",
+			"exit": 0,
+			"scope": "tsc",
+			"log": "/tmp/task-ui-final-shared-types.log",
+			"logSha256": "88e7548ac8b8e7a3ebcca8d11a0ee3d1b3b5647a9437c3c0223660ca70b9a863"
+		},
+		{
+			"name": "desktop-types",
+			"exit": 0,
+			"scope": "node and web tsc",
+			"log": "/tmp/task-ui-final-desktop-types.log",
+			"logSha256": "b57d92d04b7db57ca102a14e2973b78ac75d1c0251342761c6f5b9b287ea905b"
+		},
+		{
+			"name": "ui-generator",
+			"exit": 0,
+			"scope": "all five surfaces",
+			"log": "/tmp/task-ui-merged-generator.log",
+			"logSha256": "795ab618040745ca0098638c31f655a61146e7be7a2535c259f5f827c4d69e67"
+		},
+		{
+			"name": "wire-generator",
+			"exit": 0,
+			"scope": "56 methods,151 wire types",
+			"log": "/tmp/task-ui-merged-wire.log",
+			"logSha256": "14539789e0432fef5a4cff48eedbaac339d92c773177c8925ed00d705c4370e3"
+		},
+		{
+			"name": "arch",
+			"exit": 0,
+			"scope": "architecture,host domain dependencies,host independence",
+			"log": "/tmp/task-ui-final-arch.log",
+			"logSha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d"
+		},
+		{
+			"name": "lint",
+			"exit": 0,
+			"scope": "one existing oversized historical HTML warning",
+			"log": "/tmp/task-ui-final-lint.log",
+			"logSha256": "aa8d562b8b560a726addccddf701fca926e3369866149f38550c60aa61b9bd27"
+		},
+		{
+			"name": "core-build-check",
+			"exit": 0,
+			"scope": "generated build matches clean archive",
+			"log": "/tmp/task-ui-freeze-build-check.log",
+			"logSha256": "2b2295b9dc401191c019cfcdf716a65857409a76abb212eda6df4258c55d3a54"
+		},
+		{
+			"name": "core-types",
+			"exit": 0,
+			"scope": "native and UI TypeScript",
+			"log": "/tmp/task-ui-freeze-types.log",
+			"logSha256": "4c71a23bd66c8e6c7de9407390862ea952c1507cc8dbce8bbee56cb4dda9ee82"
+		},
+		{
+			"name": "core-smoke",
+			"exit": 0,
+			"scope": "registered native tool/command shape",
+			"log": "/tmp/task-ui-freeze-smoke.log",
+			"logSha256": "f46053056e5562dcf0bd46b86c3e244fcb2c78931360bee7b2dba142eea9abeb"
+		},
+		{
+			"name": "core-ui-tests",
+			"exit": 0,
+			"scope": "30/30",
+			"log": "/tmp/task-ui-command-core-ui-tests.log",
+			"logSha256": "044d95153694e051264d24c559cd96cb85b6860160c5a71f6dad6c7fe2aa8d1c"
+		},
+		{
+			"name": "electron-source-preview",
+			"exit": 0,
+			"scope": "22 observations; development-source Electron harness, NOT formal installer",
+			"log": "/tmp/task-ui-command-electron-smoke.log",
+			"logSha256": "d6444c7df7b47672ec3a0e1468b7d48ec7bb0ddbd5c9393704ac434f54b06862"
+		}
+	],
+	"cancelRegression": {
+		"redLog": "/tmp/task-ui-command-cancel-question-red.log",
+		"redLogSha256": "5f21923fa94923c4f57991e8078ef9d540ae9eb245c9374918ab4c595081cd55",
+		"observed": "abort rejected IPC but late question approval appended an SDK journal entry",
+		"fix": "SDK context Proxy preserves lazy getters; combines live command cancellation with existing SDK signal; question cancellation prevents late authorization and task progress writes",
+		"limit": "Not a preemptive interrupt for arbitrary JavaScript handlers ignoring cancellation."
+	},
+	"cleanHostExperiment": {
+		"status": "FAILED_EXPERIMENT_NOT_USED_FOR_PASS",
+		"logs": [
+			"/tmp/task-ui-clean-host-install.log",
+			"/tmp/task-ui-clean-host-locked-install.log",
+			"/tmp/task-ui-clean-host-sdk.log"
+		],
+		"reason": "npm no-save --workspaces=false re-resolved SDK peer/transitive graph; latest 1.4 then explicit root1.1 left mixed transitive codemode declarations. Existing root lock source fetch must be used for final clean-host gates. Targeted accepted SDK runs above use pinned coherent1.1.0 graph."
+	},
+	"remaining": [
+		"formal macOS installer GUI",
+		"dynamic package enable/disable to actual native task owner",
+		"scientific example task/home/workflow host ownership",
+		"host task status natural-language routing",
+		"whole P0-P7 clean root gates and final no-domain-plugin acceptance"
+	],
+	"statusIntentFollowup": {
+		"hostSource": "d2e41826",
+		"pluginSource": "c11a948",
+		"packageSha256": "c80b35e01fda417241d7e48016dc2901f2e979a79fbc5b75063e846781f47c37",
+		"checks": [
+			{
+				"name": "sdk25",
+				"exit": 0,
+				"log": "/tmp/task-status-final-sdk.log",
+				"logSha256": "4ecbc4cae04e6ca35024c63a85cdb7a340b3a932bf1c136d043b4f94c3beaef6"
+			},
+			{
+				"name": "core29node210vitest",
+				"exit": 0,
+				"log": "/tmp/task-status-core-tests-final.log",
+				"logSha256": "b211a207ca1fd44c8efedc6e477cd6e79a56e5144403b4cbf11f0bda476ad9b1"
+			},
+			{
+				"name": "backend-types",
+				"exit": 0,
+				"log": "/tmp/task-status-final-host-types.log",
+				"logSha256": "a41db65affbd78ac970623016f73fd80fd5fef5052db140fbc712d6d74a8e8df"
+			},
+			{
+				"name": "core-types",
+				"exit": 0,
+				"log": "/tmp/task-status-final-core-types.log",
+				"logSha256": "4c71a23bd66c8e6c7de9407390862ea952c1507cc8dbce8bbee56cb4dda9ee82"
+			},
+			{
+				"name": "core-build-check",
+				"exit": 0,
+				"log": "/tmp/task-status-final-core-buildcheck.log",
+				"logSha256": "d1f6db9741f87fc2304fc14ceb23a98542fea93bb8f7b0ec7217b4d05b09b285"
+			},
+			{
+				"name": "core-smoke",
+				"exit": 0,
+				"log": "/tmp/task-status-final-core-smoke.log",
+				"logSha256": "f46053056e5562dcf0bd46b86c3e244fcb2c78931360bee7b2dba142eea9abeb"
+			},
+			{
+				"name": "lint",
+				"exit": 0,
+				"log": "/tmp/task-status-final-lint.log",
+				"logSha256": "abc51c9105f240b57405bdc635f72d2052f012d48df6d44f86315fbc3718b9f4"
+			},
+			{
+				"name": "architecture",
+				"exit": 0,
+				"log": "/tmp/task-status-final-arch.log",
+				"logSha256": "23d848eb85ab9a16c9874c9a6ae4f671080513f9f47ba4d2c0bf2ffd3105c36d"
+			}
+		],
+		"scope": "Actual installed core Pi input hook; generic SDK handled receipt and no durable queued replay; no-core phrases and image prompts still reach model. Full default knowledge publication remains an explicit host domain migration gap."
+	}
+}

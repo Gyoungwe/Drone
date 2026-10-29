@@ -1,13 +1,23 @@
-import { type ChildProcessWithoutNullStreams, execFileSync, spawn } from "node:child_process";
-import { createHash } from "node:crypto";
-import { readFileSync, realpathSync } from "node:fs";
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface, type Interface } from "node:readline";
 import { pathToFileURL } from "node:url";
+import { Check } from "typebox/value";
+import { pluginRuntimeExecutable } from "./plugin-runtime-executable";
+import {
+	awaitSandboxDialog,
+	type PluginSandboxUiContext,
+	type SandboxUiMessage,
+	sandboxUiMessageSchema,
+} from "./plugin-sandbox-ui";
 import type { InlineExtension, ToolDefinition } from "./session-engine/sdk";
+import { toolProgressSchema } from "./tool-progress";
+
+type ToolProgress = NonNullable<Parameters<ToolDefinition["execute"]>[3]>;
 
 /**
  * A process boundary for optional Pi extensions.
@@ -42,10 +52,13 @@ export interface PluginSandboxToolDeclaration {
 	readonly label: string;
 	readonly description: string;
 	readonly parameters: unknown;
+	readonly outputSchema?: ToolDefinition["outputSchema"];
+	readonly constrainedSampling?: ToolDefinition["constrainedSampling"];
+	readonly renderShell?: ToolDefinition["renderShell"];
 	readonly promptSnippet?: string;
 	readonly promptGuidelines?: readonly string[];
 	readonly exposure?: string;
-	readonly namespace?: string;
+	readonly namespace?: ToolDefinition["namespace"];
 	readonly annotations?: unknown;
 	readonly defaultActive?: boolean;
 	readonly executionMode?: string;
@@ -87,15 +100,23 @@ import { pathToFileURL } from "node:url";
 const entrypoint = process.argv[1];
 const tools = new Map();
 const controllers = new Map();
+const uiPending = new Map();
+let uiSequence = 0;
 const protocol = (message) => process.stdout.write(JSON.stringify(message) + "\n");
 const unsupported = (name) => () => { throw new Error("Process-sandbox extension API is not supported: " + name); };
 const pi = {
-  registerTool(tool) { tools.set(tool.name, tool); },
+  registerTool(tool) {
+    for (const field of ["prepareArguments", "prepareLoadout", "renderCall", "renderResult"]) {
+      if (tool[field] !== undefined) throw new Error("Process-sandbox tool feature is not supported: " + tool.name + "." + field);
+    }
+    tools.set(tool.name, tool);
+  },
   on: unsupported("on"),
   events: { on: unsupported("events.on"), emit: unsupported("events.emit") },
   registerCommand: unsupported("registerCommand"),
   registerShortcut: unsupported("registerShortcut"),
   registerFlag: unsupported("registerFlag"),
+  getFlag: unsupported("getFlag"),
   registerMessageRenderer: unsupported("registerMessageRenderer"),
   registerMarkdownTransformer: unsupported("registerMarkdownTransformer"),
   registerEntryRenderer: unsupported("registerEntryRenderer"),
@@ -104,13 +125,14 @@ const pi = {
   sendUserMessage: unsupported("sendUserMessage"),
   appendEntry: unsupported("appendEntry"),
   setSessionName: unsupported("setSessionName"),
+  getSessionName: unsupported("getSessionName"),
   setLabel: unsupported("setLabel"),
   exec: unsupported("exec"),
-  getActiveTools() { return []; },
-  getAllTools() { return []; },
+  getActiveTools: unsupported("getActiveTools"),
+  getAllTools: unsupported("getAllTools"),
   getSettings: unsupported("getSettings"),
   setActiveTools: unsupported("setActiveTools"),
-  getCommands() { return []; },
+  getCommands: unsupported("getCommands"),
   setModel: unsupported("setModel"),
   getThinkingLevel: unsupported("getThinkingLevel"),
   setThinkingLevel: unsupported("setThinkingLevel"),
@@ -118,9 +140,34 @@ const pi = {
   unregisterProvider: unsupported("unregisterProvider"),
   registerMcpServer: unsupported("registerMcpServer"),
   unregisterMcpServer: unsupported("unregisterMcpServer"),
-  getMcpServers() { return []; },
+  getMcpServers: unsupported("getMcpServers"),
   registerVirtualModel: unsupported("registerVirtualModel"),
   unregisterVirtualModel: unsupported("unregisterVirtualModel")
+};
+
+const toolContext = (callId, controller, hasUI) => {
+  const request = (method, fields, opts = {}) => {
+    const signal = opts.signal ? AbortSignal.any([controller.signal, opts.signal]) : controller.signal;
+    signal.throwIfAborted();
+    const requestId = String(++uiSequence);
+    return new Promise((resolve, reject) => {
+      const abort = () => {
+        uiPending.delete(requestId);
+        protocol({ type:"ui_cancel", id:callId, requestId });
+        reject(signal.reason);
+      };
+      uiPending.set(requestId, { callId, method, resolve, reject, cleanup:()=>signal.removeEventListener("abort",abort) });
+      signal.addEventListener("abort", abort, { once:true });
+      protocol({ type:"ui_request", id:callId, requestId, method, ...fields, ...(opts.timeout === undefined ? {} : {timeout:opts.timeout}) });
+    });
+  };
+  const ui = new Proxy({
+    confirm: (title,message,opts) => request("confirm",{title,message},opts),
+    select: (title,options,opts) => request("select",{title,options},opts),
+    input: (title,placeholder,opts) => request("input",{title,placeholder},opts),
+    notify: (message,severity) => { controller.signal.throwIfAborted(); protocol({type:"ui_notify",id:callId,message,severity}); },
+  }, { get(target, name) { if (Object.hasOwn(target,name)) return target[name]; return unsupported("ctx.ui."+String(name)); } });
+  return new Proxy({ hasUI, ui }, { get(target,name) { if(Object.hasOwn(target,name))return target[name]; throw new Error("Process-sandbox extension context is not supported: " + String(name)); } });
 };
 
 const sanitizeTool = (tool) => {
@@ -129,6 +176,9 @@ const sanitizeTool = (tool) => {
     label: tool.label,
     description: tool.description,
     parameters: tool.parameters,
+    ...(tool.outputSchema === undefined ? {} : { outputSchema: tool.outputSchema }),
+    ...(tool.constrainedSampling === undefined ? {} : { constrainedSampling: tool.constrainedSampling }),
+    ...(tool.renderShell === undefined ? {} : { renderShell: tool.renderShell }),
     ...(tool.promptSnippet === undefined ? {} : { promptSnippet: tool.promptSnippet }),
     ...(tool.promptGuidelines === undefined ? {} : { promptGuidelines: tool.promptGuidelines }),
     ...(tool.exposure === undefined ? {} : { exposure: tool.exposure }),
@@ -160,6 +210,16 @@ const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
 input.on("line", async (line) => {
   let message;
   try { message = JSON.parse(line); } catch { return; }
+  if (message.type === "ui_response") {
+    const pending = uiPending.get(message.requestId);
+    if (!pending) return;
+    uiPending.delete(message.requestId);
+    pending.cleanup();
+    if (message.ok === false && typeof message.error === "string") pending.reject(new Error(message.error));
+    else if (message.ok === true && (pending.method === "confirm" ? typeof message.value === "boolean" : message.value === null || typeof message.value === "string")) pending.resolve(message.value === null ? undefined : message.value);
+    else pending.reject(new Error("Invalid sandbox UI response"));
+    return;
+  }
   if (message.type === "close") { input.close(); process.exit(0); return; }
   if (message.type === "cancel") { controllers.get(message.id)?.abort(); return; }
   if (message.type !== "invoke") return;
@@ -168,11 +228,16 @@ input.on("line", async (line) => {
   const controller = new AbortController();
   controllers.set(message.id, controller);
   try {
-    const value = await tool.execute(message.toolCallId, message.params, controller.signal, undefined, {});
+    const update = message.updates ? value => {
+      controller.signal.throwIfAborted();
+      protocol({type:"update",id:message.id,value});
+    } : undefined;
+    const value = await tool.execute(message.toolCallId, message.params, controller.signal, update, toolContext(message.id, controller, message.hasUI));
     protocol({ type: "result", id: message.id, ok: true, value });
   } catch (error) {
     protocol({ type: "result", id: message.id, ok: false, error: error instanceof Error ? error.message : String(error) });
   } finally {
+    controller.abort();
     controllers.delete(message.id);
   }
 });
@@ -251,12 +316,17 @@ export class PluginSandboxSession {
 			timer: ReturnType<typeof setTimeout>;
 			signal?: AbortSignal;
 			onAbort?: () => void;
+			uiContext?: PluginSandboxUiContext;
+			uiAbort: AbortController;
+			onUpdate?: ToolProgress;
 		}
 	>();
+	private readonly uiDialogs = new Map<string, AbortController>();
 	private sequence = 0;
 	private stderr = "";
 	private readyPromise: Promise<PluginSandboxReady> | undefined;
 	private closed = false;
+	private protocolFailure: Error | undefined;
 
 	constructor(private readonly policy: PluginSandboxPolicy) {}
 
@@ -274,26 +344,7 @@ export class PluginSandboxSession {
 				"Plugin sandbox cannot enforce hostname-scoped network permissions; only an explicit ['*'] grants all network access",
 			);
 		}
-		// Node before v25 leaves network unrestricted under its permission model.
-		// Refuse before loading plugin code instead of silently weakening isolation.
-		let executable = process.execPath;
-		if (this.policy.runtimeDirectory) {
-			const directory = this.policy.runtimeDirectory;
-			executable = join(directory, process.platform === "win32" ? "node.exe" : "node");
-			const receipt = JSON.parse(readFileSync(join(directory, "runtime.json"), "utf8"));
-			const digest = createHash("sha256").update(readFileSync(executable)).digest("hex");
-			if (digest !== receipt.binarySha256) throw new Error("Plugin runtime checksum mismatch");
-			const supported = execFileSync(
-				executable,
-				["--permission", "-p", "process.allowedNodeEnvironmentFlags.has('--allow-net')"],
-				{ env: {}, encoding: "utf8" },
-			).trim();
-			if (supported !== "true") throw new Error("Plugin runtime has no network permission enforcement");
-		} else if (!process.allowedNodeEnvironmentFlags.has("--allow-net")) {
-			throw new Error(
-				`Plugin sandbox is unavailable: Node ${process.versions.node} has no network permission enforcement (--allow-net)`,
-			);
-		}
+		const executable = pluginRuntimeExecutable(this.policy.runtimeDirectory);
 		let entrypoint = canonicalPath(this.policy.entrypoint);
 		const sandboxDir = canonicalPath(
 			await mkdtemp(join(tmpdir(), `drone-plugin-${safeId(this.policy.pluginId)}-`)),
@@ -373,10 +424,29 @@ export class PluginSandboxSession {
 			};
 			this.lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
 			this.lines.on("line", (line) => {
-				let message: SandboxMessage;
+				if (this.protocolFailure) return;
+				let message: SandboxMessage | SandboxUiMessage;
 				try {
-					message = JSON.parse(line) as SandboxMessage;
-				} catch {
+					message = JSON.parse(line) as SandboxMessage | SandboxUiMessage;
+					if (!message || typeof message !== "object" || typeof message.type !== "string")
+						throw new Error("Invalid sandbox protocol envelope");
+				} catch (error) {
+					const failure = new Error("Invalid plugin sandbox protocol message", { cause: error });
+					this.protocolFailure = failure;
+					this.stderr = failure.message;
+					child.kill("SIGKILL");
+					finish(() => rejectReady(failure));
+					return;
+				}
+				if (message.type === "ui_request" || message.type === "ui_cancel" || message.type === "ui_notify") {
+					if (!Check(sandboxUiMessageSchema, message)) {
+						// A compromised child cannot send unchecked dialog arguments into the host UI.
+						this.protocolFailure = new Error("Invalid plugin sandbox UI request");
+						this.stderr = this.protocolFailure.message;
+						child.kill("SIGKILL");
+						return;
+					}
+					void this.handleUiMessage(message);
 					return;
 				}
 				if (message.type === "ready") {
@@ -396,6 +466,7 @@ export class PluginSandboxSession {
 				if (!settled) finish(() => rejectReady(childError(child, this.stderr)));
 				for (const pending of this.pending.values()) {
 					clearTimeout(pending.timer);
+					pending.uiAbort.abort();
 					if (pending.signal && pending.onAbort) pending.signal.removeEventListener("abort", pending.onAbort);
 					pending.reject(childError(child, this.stderr));
 				}
@@ -404,24 +475,112 @@ export class PluginSandboxSession {
 		});
 	}
 
+	private async handleUiMessage(message: SandboxUiMessage): Promise<void> {
+		const pending = this.pending.get(message.id);
+		if (!pending || this.closed) return;
+		const key = `${message.id}/${"requestId" in message ? message.requestId : "notify"}`;
+		if (message.type === "ui_cancel") {
+			this.uiDialogs.get(key)?.abort();
+			return;
+		}
+		const dialog = new AbortController();
+		this.uiDialogs.set(key, dialog);
+		try {
+			if (!pending.uiContext?.hasUI) throw new Error("Plugin UI is unavailable in this session");
+			const ui = pending.uiContext.ui;
+			if (message.type === "ui_notify") {
+				ui.notify(message.message, message.severity);
+				return;
+			}
+			const options = {
+				signal: AbortSignal.any([pending.uiAbort.signal, dialog.signal]),
+				timeout: message.timeout,
+			};
+			let value: string | boolean | undefined;
+			switch (message.method) {
+				case "confirm":
+					value = await awaitSandboxDialog(
+						() => ui.confirm(message.title, message.message, options),
+						options.signal,
+					);
+					break;
+				case "select":
+					value = await awaitSandboxDialog(
+						() => ui.select(message.title, message.options, options),
+						options.signal,
+					);
+					break;
+				case "input":
+					value = await awaitSandboxDialog(
+						() => ui.input(message.title, message.placeholder, options),
+						options.signal,
+					);
+					break;
+			}
+			if (!this.pending.has(message.id) || this.closed || options.signal.aborted) return;
+			this.child?.stdin.write(
+				`${JSON.stringify({ type: "ui_response", requestId: message.requestId, ok: true, value: value ?? null })}\n`,
+			);
+		} catch (error) {
+			// The originating tool receives UI failures; canceled calls have already lost their authority.
+			if (!this.pending.has(message.id) || this.closed || pending.uiAbort.signal.aborted) return;
+			const detail = error instanceof Error ? error.message : String(error);
+			if (message.type === "ui_notify") {
+				pending.reject(new Error(detail));
+				pending.onAbort?.();
+			} else {
+				this.child?.stdin.write(
+					`${JSON.stringify({ type: "ui_response", requestId: message.requestId, ok: false, error: detail })}\n`,
+				);
+			}
+		} finally {
+			this.uiDialogs.delete(key);
+		}
+	}
+
 	private handleMessage(message: ResultMessage | UpdateMessage): void {
-		if (message.type === "update") return;
 		const pending = this.pending.get(message.id);
 		if (!pending) return;
+		if (message.type === "update") {
+			if (!pending.onUpdate || !Check(toolProgressSchema, message.value)) {
+				this.protocolFailure = new Error("Invalid plugin sandbox tool progress");
+				this.stderr = this.protocolFailure.message;
+				this.child?.kill("SIGKILL");
+				return;
+			}
+			try {
+				pending.onUpdate(message.value as Parameters<ToolProgress>[0]);
+			} catch (error) {
+				// Observer failures belong to this tool call, including its cancellation cleanup.
+				pending.reject(error as Error);
+				pending.onAbort?.();
+			}
+			return;
+		}
 		this.pending.delete(message.id);
 		clearTimeout(pending.timer);
+		pending.uiAbort.abort();
 		if (pending.signal && pending.onAbort) pending.signal.removeEventListener("abort", pending.onAbort);
 		if (message.ok) pending.resolve(message.value);
 		else pending.reject(new Error(message.error ?? "Plugin sandbox invocation failed"));
 	}
 
-	async invoke(tool: string, toolCallId: string, params: unknown, signal?: AbortSignal): Promise<unknown> {
+	async invoke(
+		tool: string,
+		toolCallId: string,
+		params: unknown,
+		signal?: AbortSignal,
+		uiContext?: PluginSandboxUiContext,
+		onUpdate?: ToolProgress,
+	): Promise<unknown> {
 		await this.start();
 		if (!this.child || this.closed) throw new Error("Plugin sandbox is closed");
 		const id = `${this.policy.pluginId}:${++this.sequence}`;
+		const uiAbort = new AbortController();
 		return await new Promise<unknown>((resolveResult, rejectResult) => {
 			const timer = setTimeout(() => {
 				this.pending.delete(id);
+				uiAbort.abort();
 				this.child?.kill("SIGKILL");
 				rejectResult(
 					new Error(`Plugin sandbox invocation timed out after ${this.policy.timeoutMs ?? 15_000}ms`),
@@ -430,19 +589,32 @@ export class PluginSandboxSession {
 			const abort = () => {
 				clearTimeout(timer);
 				this.pending.delete(id);
+				uiAbort.abort();
 				this.child?.stdin.write(`${JSON.stringify({ type: "cancel", id })}\n`);
 				rejectResult(new Error("Plugin sandbox invocation aborted"));
 			};
 			if (signal?.aborted) return abort();
-			this.pending.set(id, { resolve: resolveResult, reject: rejectResult, timer, signal, onAbort: abort });
+			this.pending.set(id, {
+				resolve: resolveResult,
+				reject: rejectResult,
+				timer,
+				signal,
+				onAbort: abort,
+				uiContext,
+				uiAbort,
+				onUpdate,
+			});
 			signal?.addEventListener("abort", abort, { once: true });
-			this.child?.stdin.write(`${JSON.stringify({ type: "invoke", id, tool, toolCallId, params })}\n`);
+			this.child?.stdin.write(
+				`${JSON.stringify({ type: "invoke", id, tool, toolCallId, params, updates: onUpdate !== undefined, hasUI: uiContext?.hasUI === true })}\n`,
+			);
 		});
 	}
 
 	async close(): Promise<void> {
 		if (this.closed) return;
 		this.closed = true;
+		for (const pending of this.pending.values()) pending.uiAbort.abort();
 		this.lines?.close();
 		if (this.child && !this.child.killed) {
 			this.child.stdin.write('{"type":"close"}\n');
@@ -458,7 +630,10 @@ export class PluginSandboxSession {
 				});
 			});
 		}
-		for (const pending of this.pending.values()) pending.reject(new Error("Plugin sandbox closed"));
+		for (const pending of this.pending.values()) {
+			pending.uiAbort.abort();
+			pending.reject(new Error("Plugin sandbox closed"));
+		}
 		this.pending.clear();
 		if (this.sandboxDir) await rm(this.sandboxDir, { recursive: true, force: true });
 	}
@@ -476,8 +651,8 @@ export function createProcessSandboxedExtension(policy: PluginSandboxPolicy): In
 				pi.registerTool({
 					...declaration,
 					parameters: declaration.parameters as ToolDefinition["parameters"],
-					execute: (toolCallId, params, signal) =>
-						session.invoke(declaration.name, toolCallId, params, signal) as ReturnType<
+					execute: (toolCallId, params, signal, update, ctx) =>
+						session.invoke(declaration.name, toolCallId, params, signal, ctx, update) as ReturnType<
 							ToolDefinition["execute"]
 						>,
 				} as ToolDefinition);

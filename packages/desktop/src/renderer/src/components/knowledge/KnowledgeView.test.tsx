@@ -22,7 +22,7 @@ vi.mock("../../i18n", () => ({ useT: () => (key: string) => key }));
 vi.stubGlobal("React", React);
 const manifest = {
 	name: "knowledge-test",
-	droneUi: 1,
+	droneUi: 1 as const,
 	main: "index.tsx",
 	contributions: [
 		{ id: "page", region: "knowledge.page", export: "Page" },

@@ -336,55 +336,6 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
-			id: "agent-discovery-root",
-			path: `${agentDir}/discovery`,
-			owner: "discovery/service",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
-			id: "agent-discovery-sessions",
-			path: `${agentDir}/discovery/sessions.json`,
-			owner: "discovery/sessions",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
-			id: "agent-discovery-critics",
-			path: `${agentDir}/discovery/critics.json`,
-			owner: "discovery/critics",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
-			id: "agent-discovery-multipath",
-			path: `${agentDir}/discovery/multipath.json`,
-			owner: "discovery/multipath",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
-			id: "agent-discovery-plans",
-			path: `${agentDir}/discovery/plans.json`,
-			owner: "discovery/plans",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
-			id: "agent-discovery-evaluations",
-			path: `${agentDir}/discovery/evaluations.json`,
-			owner: "discovery/evaluations",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
-			id: "agent-discovery-baselines",
-			path: `${agentDir}/discovery/baselines.json`,
-			owner: "discovery/baselines",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
 			id: "agent-memory",
 			path: `${agentDir}/memory/memory.db`,
 			owner: "memory",

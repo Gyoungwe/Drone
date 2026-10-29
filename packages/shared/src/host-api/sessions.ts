@@ -131,6 +131,13 @@ export const SessionsContract = defineDomain("sessions", {
 			]),
 			result: Type.Unsafe<PromptReceipt>(PromptReceiptSchema),
 		},
+		command: {
+			args: Type.Union([
+				Type.Tuple([Id, Type.String({ minLength: 1, pattern: "^[^\\s/]+$" })]),
+				Type.Tuple([Id, Type.String({ minLength: 1, pattern: "^[^\\s/]+$" }), Type.String()]),
+			]),
+			result: Type.Unsafe<PromptReceipt>(PromptReceiptSchema),
+		},
 		abort: { args: Type.Tuple([Id]), result: Type.Void() },
 		retry: {
 			args: Type.Union([Type.Tuple([Id, Id]), Type.Tuple([Id, Id, Type.Number()])]),
@@ -246,6 +253,7 @@ export type SessionsSchemaTypes = {
 		| [sessionId: string, text: string]
 		| [sessionId: string, text: string, images: ImageInput[]]
 		| [sessionId: string, text: string, images: ImageInput[], ids: PromptIds];
+	command: [sessionId: string, name: string] | [sessionId: string, name: string, args: string];
 	abort: [sessionId: string];
 	retry:
 		| [sessionId: string, requestId: string]

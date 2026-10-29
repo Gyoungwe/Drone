@@ -3,12 +3,12 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { registerTaskRuntime } from "@drone/tasks/runtime";
-import { createStandaloneRuntime, withRuntime } from "@drone/tasks/runtime-bridge";
-import { isReadOnlyTool } from "@drone/tasks/tool-manifest-runtime";
 import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { build } from "esbuild";
 import { afterEach, expect, it, vi } from "vitest";
+import { createStandaloneRuntime, withRuntime } from "../../extensions/src/internal/runtime/runtime-bridge";
+import { isReadOnlyTool } from "../../extensions/src/internal/runtime/tool-manifest";
+import { registerTaskRuntime } from "./fixtures/task-plugin.mjs";
 
 const runtimes = [];
 const directories = [];
@@ -18,7 +18,7 @@ afterEach(async () => {
 	await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
 
-function host(id) {
+async function host(id) {
 	const hooks = new Map();
 	const runtime = createStandaloneRuntime();
 	runtimes.push(runtime);
@@ -26,6 +26,7 @@ function host(id) {
 	const pi = {
 		events,
 		registerTool() {},
+		getAllTools: () => [],
 		registerCommand() {},
 		getCommands: () => [],
 		appendEntry() {},
@@ -34,10 +35,10 @@ function host(id) {
 			hooks.set(name, [...(hooks.get(name) || []), handler]);
 		},
 	};
-	const journal = registerTaskRuntime(pi);
+	const journal = await registerTaskRuntime(pi);
 	const ctx = {
 		cwd: tmpdir(),
-		sessionManager: { getSessionId: () => id, getBranch: () => [] },
+		sessionManager: { getSessionId: () => id, getSessionFile: () => undefined, getBranch: () => [] },
 	};
 	const emit = async (name, event) => {
 		const results = [];
@@ -61,8 +62,8 @@ it("repeats declared knowledge reads across turns without replaying effects or b
 		logLevel: "silent",
 	});
 	const { registerKnowledgeInterface } = await import(/* @vite-ignore */ pathToFileURL(bundle).href);
-	const first = host("knowledge-session");
-	const other = host("unrelated-session");
+	const first = await host("knowledge-session");
+	const other = await host("unrelated-session");
 	// Load the real independently bundled knowledge extension before the inline
 	// host announces its runtime, matching Desktop's extension initialization.
 	registerKnowledgeInterface({ ...first.pi, on() {} }, { readOnly: true });
@@ -72,12 +73,12 @@ it("repeats declared knowledge reads across turns without replaying effects or b
 		);
 		current.pi.events.emit("drone:runtime/v1", { version: 1, runtime: current.runtime });
 		await current.emit("session_start", {});
-		current.journal.plan({
+		await current.journal.plan({
 			goal: "Read sources",
 			summary: "Read and inspect",
 			milestones: [{ id: "review", title: "Review", acceptance: { kind: "human_review" } }],
 		});
-		current.journal.command({
+		await current.journal.command({
 			action: "authorize-task",
 			taskId: current.journal.snapshot().id,
 			revision: current.journal.view().revision,

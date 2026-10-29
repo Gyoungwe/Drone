@@ -3,7 +3,15 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { KnowledgeCloudNote } from "@drone/shared";
-import { saveKnowledgeBinding } from "@gyoungwe/pi-knowledge/host";
+import {
+	containedVaultFile,
+	createVaultFileOnly,
+	readKnowledgeBinding,
+	readNoteFile,
+	replaceVaultFile,
+	saveKnowledgeBinding,
+	VaultFileConflictError,
+} from "@gyoungwe/pi-knowledge/host";
 import { afterEach, describe, expect, it } from "vitest";
 import { syncCloudNotes } from "./webdav-sync";
 import { KnowledgeWebDavError } from "./webdav-transport";
@@ -27,12 +35,23 @@ async function fixture() {
 		depositMode: "verified",
 		subagentPolicy: "none",
 	});
-	return { vault, binding };
+	return {
+		vault,
+		binding,
+		vaultOps: {
+			readBinding: readKnowledgeBinding,
+			readNote: readNoteFile,
+			containedFile: containedVaultFile,
+			createFileOnly: createVaultFileOnly,
+			replaceFile: replaceVaultFile,
+			isConflict: (error: unknown) => error instanceof VaultFileConflictError,
+		},
+	};
 }
 
 describe("syncCloudNotes", () => {
 	it("pushes only a missing note and reports the explicit boundary", async () => {
-		const { vault, binding } = await fixture();
+		const { vault, binding, vaultOps } = await fixture();
 		await writeFile(join(vault, "Home.md"), "# local\n");
 		const cloud = {
 			read: async () => {
@@ -46,19 +65,23 @@ describe("syncCloudNotes", () => {
 				message: null,
 			}),
 		};
-		const result = await syncCloudNotes(cloud, {
-			mode: "push",
-			bindingRevision: binding.revision,
-			paths: ["Home.md"],
-			previews: [{ path: "Home.md", localHash: hash("# local\n"), remoteHash: null, remoteVersion: null }],
-		});
+		const result = await syncCloudNotes(
+			cloud,
+			{
+				mode: "push",
+				bindingRevision: binding.revision,
+				paths: ["Home.md"],
+				previews: [{ path: "Home.md", localHash: hash("# local\n"), remoteHash: null, remoteVersion: null }],
+			},
+			vaultOps,
+		);
 		expect(result.completed).toBe(true);
 		expect(result.items[0]?.status).toBe("pushed");
 		expect(result.warnings[0]).toContain("不代表整个知识库已同步");
 	});
 
 	it("keeps a divergent remote copy as a conflict", async () => {
-		const { vault, binding } = await fixture();
+		const { vault, binding, vaultOps } = await fixture();
 		await writeFile(join(vault, "Home.md"), "# local\n");
 		const remote: KnowledgeCloudNote = {
 			path: "Home.md",
@@ -74,25 +97,29 @@ describe("syncCloudNotes", () => {
 				throw new Error("must not write");
 			},
 		};
-		const result = await syncCloudNotes(cloud, {
-			mode: "push",
-			bindingRevision: binding.revision,
-			paths: ["Home.md"],
-			previews: [
-				{
-					path: "Home.md",
-					localHash: hash("# local\n"),
-					remoteHash: remote.hash,
-					remoteVersion: remote.version,
-				},
-			],
-		});
+		const result = await syncCloudNotes(
+			cloud,
+			{
+				mode: "push",
+				bindingRevision: binding.revision,
+				paths: ["Home.md"],
+				previews: [
+					{
+						path: "Home.md",
+						localHash: hash("# local\n"),
+						remoteHash: remote.hash,
+						remoteVersion: remote.version,
+					},
+				],
+			},
+			vaultOps,
+		);
 		expect(result.completed).toBe(false);
 		expect(result.items[0]?.status).toBe("conflict");
 	});
 
 	it("requires a fresh strong remote version before resolving locally", async () => {
-		const { vault, binding } = await fixture();
+		const { vault, binding, vaultOps } = await fixture();
 		await writeFile(join(vault, "Home.md"), "# local\n");
 		const remote: KnowledgeCloudNote = {
 			path: "Home.md",
@@ -116,26 +143,30 @@ describe("syncCloudNotes", () => {
 				};
 			},
 		};
-		const result = await syncCloudNotes(cloud, {
-			mode: "push",
-			resolution: "local",
-			bindingRevision: binding.revision,
-			paths: ["Home.md"],
-			previews: [
-				{
-					path: "Home.md",
-					localHash: hash("# local\n"),
-					remoteHash: remote.hash,
-					remoteVersion: remote.version,
-				},
-			],
-		});
+		const result = await syncCloudNotes(
+			cloud,
+			{
+				mode: "push",
+				resolution: "local",
+				bindingRevision: binding.revision,
+				paths: ["Home.md"],
+				previews: [
+					{
+						path: "Home.md",
+						localHash: hash("# local\n"),
+						remoteHash: remote.hash,
+						remoteVersion: remote.version,
+					},
+				],
+			},
+			vaultOps,
+		);
 		expect(written).toBe(true);
 		expect(result.items[0]?.status).toBe("pushed");
 	});
 
 	it("can explicitly replace a local conflict with the remote copy", async () => {
-		const { vault, binding } = await fixture();
+		const { vault, binding, vaultOps } = await fixture();
 		await writeFile(join(vault, "Home.md"), "# local\n");
 		const cloud = {
 			read: async () =>
@@ -151,20 +182,24 @@ describe("syncCloudNotes", () => {
 				throw new Error("must not write");
 			},
 		};
-		const result = await syncCloudNotes(cloud, {
-			mode: "pull",
-			resolution: "remote",
-			bindingRevision: binding.revision,
-			paths: ["Home.md"],
-			previews: [
-				{
-					path: "Home.md",
-					localHash: hash("# local\n"),
-					remoteHash: "remote-hash",
-					remoteVersion: '"v2"',
-				},
-			],
-		});
+		const result = await syncCloudNotes(
+			cloud,
+			{
+				mode: "pull",
+				resolution: "remote",
+				bindingRevision: binding.revision,
+				paths: ["Home.md"],
+				previews: [
+					{
+						path: "Home.md",
+						localHash: hash("# local\n"),
+						remoteHash: "remote-hash",
+						remoteVersion: '"v2"',
+					},
+				],
+			},
+			vaultOps,
+		);
 		expect(result.items[0]?.status).toBe("pulled");
 		expect(
 			await import("node:fs/promises").then(({ readFile: read }) => read(join(vault, "Home.md"), "utf8")),
@@ -172,7 +207,7 @@ describe("syncCloudNotes", () => {
 	});
 
 	it("returns a conflict when the local note changed after its preview", async () => {
-		const { vault, binding } = await fixture();
+		const { vault, binding, vaultOps } = await fixture();
 		await writeFile(join(vault, "Home.md"), "# edited after preview\n");
 		const remote: KnowledgeCloudNote = {
 			path: "Home.md",
@@ -203,6 +238,7 @@ describe("syncCloudNotes", () => {
 					},
 				],
 			},
+			vaultOps,
 		);
 		expect(result.items[0]).toMatchObject({ status: "conflict" });
 		expect(
@@ -211,7 +247,7 @@ describe("syncCloudNotes", () => {
 	});
 
 	it("returns a conflict when the remote version changed after its preview", async () => {
-		const { vault, binding } = await fixture();
+		const { vault, binding, vaultOps } = await fixture();
 		await writeFile(join(vault, "Home.md"), "# local\n");
 		const newerRemote: KnowledgeCloudNote = {
 			path: "Home.md",
@@ -242,6 +278,7 @@ describe("syncCloudNotes", () => {
 					},
 				],
 			},
+			vaultOps,
 		);
 		expect(result.items[0]).toMatchObject({ status: "conflict" });
 	});

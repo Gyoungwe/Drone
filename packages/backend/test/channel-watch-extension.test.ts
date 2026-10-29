@@ -76,7 +76,8 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function waitForWakeCount(pi: ReturnType<typeof makeFakePi>, count: number): Promise<void> {
-	await vi.waitFor(() => expect(pi.wakes).toHaveLength(count), { timeout: 2_000, interval: 25 });
+	// Exercise the production 5s reconciliation path when native events are missing, plus the debounce/IO margin.
+	await vi.waitFor(() => expect(pi.wakes).toHaveLength(count), { timeout: 7_000, interval: 25 });
 }
 
 async function wire(opts: { cwd: string; trusted?: boolean; entries?: unknown[]; enabled?: boolean }) {

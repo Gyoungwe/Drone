@@ -1,5 +1,4 @@
-import type { DiagnosticsSnapshot } from "@drone/shared";
-import { diagnosticText } from "@drone/tasks";
+import { type DiagnosticsSnapshot, diagnosticText } from "@drone/shared";
 import type { StorageRegistry } from "./storage/registry";
 
 export type { DiagnosticsSnapshot } from "@drone/shared";

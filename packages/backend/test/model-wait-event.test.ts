@@ -2,10 +2,11 @@ import type { SessionEvent } from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
+import { NativeSessionDelivery } from "../src/plugins/native-delivery";
 import type { SessionRegistry } from "../src/session/registry";
 
 const backends: PiBackend[] = [];
-function harness() {
+function harness(nativeDelivery?: NativeSessionDelivery) {
 	const backend = new PiBackend({ defaultCwd: "/tmp", projectTrust: false, permissionGates: false });
 	backends.push(backend);
 	const abort = vi.fn(async () => {});
@@ -15,6 +16,7 @@ function harness() {
 	};
 	internal.registry.add({
 		session: { sessionId: "s1", dispose: () => {}, abort } as unknown as AgentSession,
+		nativeDelivery,
 		unsubscribe: () => {},
 		cwd: "/tmp",
 	});
@@ -28,8 +30,8 @@ function harness() {
 	};
 }
 beforeEach(() => vi.useFakeTimers());
-afterEach(() => {
-	for (const backend of backends.splice(0)) backend.dispose();
+afterEach(async () => {
+	for (const backend of backends.splice(0)) await backend.dispose();
 	vi.useRealTimers();
 	vi.unstubAllEnvs();
 });
@@ -50,7 +52,7 @@ describe("model response silence at the backend delivery boundary", () => {
 	it("does not claim stopped before abort resolves", async () => {
 		const h = harness();
 		let finish!: () => void;
-		h.abort.mockImplementation(
+		h.abort.mockImplementationOnce(
 			() =>
 				new Promise<void>((resolve) => {
 					finish = resolve;
@@ -66,7 +68,7 @@ describe("model response silence at the backend delivery boundary", () => {
 	});
 	it("reports a sanitized stop failure instead of claiming termination", async () => {
 		const h = harness();
-		h.abort.mockRejectedValue(new Error("abort failed token=private-value"));
+		h.abort.mockRejectedValueOnce(new Error("abort failed token=private-value"));
 		h.emit({ type: "turn_start" });
 		await vi.advanceTimersByTimeAsync(300_000);
 		expect(h.received.at(-1)).toMatchObject({
@@ -76,8 +78,12 @@ describe("model response silence at the backend delivery boundary", () => {
 		expect(h.received.some((e) => e.status === "timed-out")).toBe(false);
 	});
 	it("counts hidden provider deltas as activity and clears the warning on recovery", async () => {
-		vi.stubEnv("DRONE_KNOWLEDGE_DIR", "/fixture/vault");
-		const h = harness();
+		const delivery = new NativeSessionDelivery(
+			() => ({ kind: "unconfirmed" }),
+			(left, right) => left === right,
+			() => [],
+		);
+		const h = harness(delivery);
 		h.emit({ type: "turn_start" });
 		await vi.advanceTimersByTimeAsync(60_000);
 		for (let i = 0; i < 12; i++) {
@@ -90,6 +96,16 @@ describe("model response silence at the backend delivery boundary", () => {
 		expect(h.received).toContainEqual(expect.objectContaining({ type: "model_wait", status: "resumed" }));
 		expect(h.received.some((e) => e.type === "message_update")).toBe(false);
 		expect(h.abort).not.toHaveBeenCalled();
+	});
+	it("keeps ordinary provider deltas visible without a selected native delivery policy", async () => {
+		vi.stubEnv("DRONE_KNOWLEDGE_DIR", "/fixture/vault");
+		const h = harness();
+		h.emit({ type: "turn_start" });
+		h.emit({
+			type: "message_update",
+			assistantMessageEvent: { type: "thinking_delta", delta: "ordinary", contentIndex: 0 },
+		});
+		expect(h.received.some((event) => event.type === "message_update")).toBe(true);
 	});
 	it.each(["tool_execution_start", "compaction_start", "auto_retry_start", "agent_end", "agent_settled"])(
 		"does not time out %s",
@@ -106,8 +122,9 @@ describe("model response silence at the backend delivery boundary", () => {
 		const h = harness();
 		h.emit({ type: "turn_start" });
 		await h.backend.closeSession("s1");
+		expect(h.abort).toHaveBeenCalledOnce();
 		await vi.advanceTimersByTimeAsync(600_000);
-		expect(h.abort).not.toHaveBeenCalled();
+		expect(h.abort).toHaveBeenCalledOnce();
 	});
 	it("excludes tool approval time and starts a new deadline for the next model turn", async () => {
 		const h = harness();
@@ -133,9 +150,10 @@ describe("model response silence at the backend delivery boundary", () => {
 	it("disposing the backend releases all response deadlines", async () => {
 		const h = harness();
 		h.emit({ type: "turn_start" });
-		h.backend.dispose();
+		await h.backend.dispose();
+		expect(h.abort).toHaveBeenCalledOnce();
 		await vi.advanceTimersByTimeAsync(600_000);
-		expect(h.abort).not.toHaveBeenCalled();
+		expect(h.abort).toHaveBeenCalledOnce();
 		expect(h.received.some((e) => e.type === "model_wait")).toBe(false);
 	});
 });

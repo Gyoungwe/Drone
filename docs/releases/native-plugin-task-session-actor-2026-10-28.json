@@ -1,0 +1,67 @@
+{
+	"date": "2026-10-28",
+	"scope": "P4 S1 canonical TaskSession/TaskApplication actual SDK slice; not final P4 or installer PASS",
+	"status": "PARTIAL",
+	"pluginCommits": {
+		"structure": "6e30876",
+		"structureBuild": "b365dd8",
+		"behavior": "46b74fe",
+		"build": "ed660fc"
+	},
+	"hostRegressionCommit": "004c994e",
+	"candidateArtifacts": [
+		{
+			"name": "@gyoungwe/plugin-api",
+			"version": "1.3.0",
+			"sha256": "c4631cbfb190562eaf092e6be68ecdd0f8843f82560fef7b18f376c3720bf90c"
+		},
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.2.0",
+			"sha256": "9baf31509bb5d6094f5613565accf85aad8379ebb8cce7f18c0a1d84ac83849b"
+		},
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.3.0",
+			"sha256": "a18df88e493d9021f2880403ec164f9104feca2ffd52b4e40b58ccbbe439e466"
+		}
+	],
+	"checks": {
+		"coreOfficialCheck": {
+			"status": "PASS",
+			"node": 29,
+			"runtimeRules": 180,
+			"ui": 30,
+			"log": "/tmp/task-session-core-check-final.log"
+		},
+		"actualInstalledSdkRenderer": {
+			"status": "PASS",
+			"files": 4,
+			"tests": 15,
+			"log": "/tmp/task-session-frozen-sdk.log"
+		},
+		"backendTypecheck": "PASS",
+		"targetedLint": "PASS",
+		"architecture": "PASS",
+		"finalCombinedRootGates": "NOT_RUN_IN_THIS_SLICE",
+		"newMacInstallerGui": "NOT_RUN_IN_THIS_SLICE"
+	},
+	"storageProof": {
+		"actualFailure": "EISDIR from actual SDK append after a real existing conversation",
+		"hostApplicationReloadFence": "PASS",
+		"sameManagerReloadRetainsPhantom": "OBSERVED",
+		"actualDiskReopenOnlyCommittedEntries": "PASS",
+		"rawCliReloadGenerationFence": "INCOMPLETE_KNOWN_RED",
+		"rawCliRedLogs": ["/tmp/task-session-commit-sdk-first.log", "/tmp/task-session-commit-sdk-second.log"],
+		"privateSdkRollback": false,
+		"processGlobalLedger": false
+	},
+	"remaining": [
+		"S2 actual source/application generation for standalone reload",
+		"generic package source index and managed provider/records/question ports",
+		"remove startup taskHost assembly and prove actual native package stop",
+		"final combined root gates and formal installer GUI"
+	],
+	"externalAcceptanceAndB8": "unchanged",
+	"npmPublished": false
+}

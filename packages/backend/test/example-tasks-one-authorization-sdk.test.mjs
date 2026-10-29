@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { activeExampleTaskMilestones, composeExampleTaskPrompt, exampleTask } from "@drone/shared";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { getCurrentTools } from "@earendil-works/pi-ai/utils/transcript";
@@ -8,6 +8,11 @@ import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
+import {
+	createInstalledTaskRuntime,
+	installedTaskPluginPath,
+	taskSdkExtensionPath,
+} from "./fixtures/task-plugin.mjs";
 
 /**
  * 六方向示例任务 · 一次授权闭环（真实 SDK 端到端模拟）。
@@ -317,14 +322,16 @@ it.each(SCENARIOS.map((s) => ({ ...s, label: s.label || s.id })))(
 			runtime.registerNativeProvider(faux.provider);
 			vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
 			backend = new PiBackend({
+				runtime: createInstalledTaskRuntime(),
 				projectTrust: true,
 				webFetch: false,
 				subagentPreferBuiltin: false,
 				desktopIntegration: {
 					appendSystemPrompt: [],
 					additionalExtensionPaths: [
-						resolve("../../.pi/extensions/obsidian-workbench.mjs"),
-						...(scenario.zotero ? [resolve("../../.pi/extensions/zotero-literature.mjs")] : []),
+						installedTaskPluginPath(),
+						taskSdkExtensionPath("obsidian-workbench.mjs"),
+						...(scenario.zotero ? [taskSdkExtensionPath("zotero-literature.mjs")] : []),
 					],
 					additionalSkillPaths: [],
 				},

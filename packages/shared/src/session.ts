@@ -433,6 +433,20 @@ export interface StreamGuardTrippedEvent {
 
 /** pi 事件 + Drone UI 事件，跨 IPC 统一转发。 */
 export type { PiAgentSessionEvent as AgentSessionEvent };
+/** Official extension UI notifications are transient and use the generic session transport. */
+export interface ExtensionNotificationEvent {
+	type: "extension_notification";
+	severity: "info" | "warning" | "error";
+	message: string;
+}
+
+/** Keyed transient extension status. A null key clears the revoked session UI. */
+export interface ExtensionStatusEvent {
+	type: "extension_status";
+	key: string | null;
+	text: string | null;
+}
+
 export interface ModelWaitEvent {
 	type: "model_wait";
 	status: "waiting" | "resumed" | "stopping" | "stop-failed" | "timed-out";
@@ -495,6 +509,8 @@ export type SessionEvent =
 	| ContextEvaporatedEvent
 	| StreamGuardTrippedEvent
 	| ModelWaitEvent
+	| ExtensionNotificationEvent
+	| ExtensionStatusEvent
 	| SubagentRunEvent
 	| ReviewerFindingEvent;
 

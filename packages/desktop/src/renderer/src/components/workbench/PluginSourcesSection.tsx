@@ -29,18 +29,14 @@ function packageEntry(
 		version: host?.version ?? registry?.version ?? metadata?.version,
 		description: host?.description ?? registry?.description ?? metadata?.description,
 		sources: ["drone"],
-		packageKind:
-			host?.packageKind ??
-			registry?.packageKind ??
-			metadata?.packageKind ??
-			(packageName === "@gyoungwe/desktop-ui-pack" ? "desktop-ui" : "pi"),
+		packageKind: host?.packageKind ?? registry?.packageKind ?? metadata?.packageKind ?? "pi",
 		capabilities: declared?.capabilities ?? [],
 		tools: declared?.tools ?? [],
 		permissions: declared?.permissions,
 		piExtensions: [],
 		piSkills: [],
 		piPrompts: [],
-		uiContribution: packageName === "@gyoungwe/desktop-ui-pack",
+		uiContribution: (host?.packageKind ?? registry?.packageKind ?? metadata?.packageKind) === "desktop-ui",
 		pluginApi: host?.pluginApi,
 		piApiVersion: host?.piApiVersion,
 		minHostVersion: host?.minHostVersion,
@@ -77,16 +73,13 @@ function packageState(
 	entry: PiPluginSourceEntry,
 	configured: readonly { source: string; scope: "user" | "project" }[],
 	host?: HostPluginPackage,
-	uiPlugins: readonly { name: string; builtin?: boolean }[] = [],
+	uiPlugins: readonly { name: string; packageName?: string; builtin?: boolean }[] = [],
 ): { installed: boolean; builtin: boolean; configured?: { source: string; scope: "user" | "project" } } {
 	const configuredItem = configured.find(
 		(item) =>
 			item.source === `npm:${entry.packageName}` || item.source.startsWith(`npm:${entry.packageName}@`),
 	);
-	const ui =
-		entry.packageName === "@gyoungwe/desktop-ui-pack"
-			? uiPlugins.find((item) => item.name === "drone-research-ui")
-			: undefined;
+	const ui = uiPlugins.find((item) => item.packageName === entry.packageName);
 	return {
 		installed: Boolean(
 			isBuiltinDronePackage(entry.packageName) || configuredItem || host?.status === "available" || ui,
@@ -125,10 +118,7 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 	const lifecycle = useCatalogStore(
 		(state) => state.lifecycleReceipts[current.configured?.source ?? entry.packageName],
 	);
-	const uiPlugin =
-		entry.packageName === "@gyoungwe/desktop-ui-pack"
-			? uiPlugins.find((item) => item.name === "drone-research-ui")
-			: undefined;
+	const uiPlugin = uiPlugins.find((item) => item.packageName === entry.packageName);
 	return (
 		<li className="py-3">
 			<div className="flex items-start gap-3">

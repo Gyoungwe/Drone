@@ -14,11 +14,11 @@ describe("SessionEngine lifecycle boundary", () => {
 			reload: vi.fn(async () => {}),
 			setSessionName: vi.fn(),
 			exportToHtml: vi.fn(async () => "<html />"),
-			exportToJsonl: vi.fn(() => "{}\n"),
+			exportToJsonlForHost: vi.fn(async () => "{}\n"),
 		} as unknown as AgentSession;
 		const engine = new SessionEngine();
 
-		engine.dispose(session);
+		await engine.dispose(session);
 		await engine.abort(session);
 		await engine.prompt(session, "hello");
 		expect(engine.clearQueue(session)).toEqual({ steering: ["s"], followUp: ["f"] });
@@ -28,10 +28,10 @@ describe("SessionEngine lifecycle boundary", () => {
 		await engine.reload(session);
 		engine.setSessionName(session, "Demo");
 		expect(await engine.exportHtml(session)).toBe("<html />");
-		expect(engine.exportJsonl(session)).toBe("{}\n");
+		expect(await engine.exportJsonl(session)).toBe("{}\n");
 
 		expect(session.dispose).toHaveBeenCalledOnce();
-		expect(session.abort).toHaveBeenCalledOnce();
+		expect(session.abort).toHaveBeenCalledTimes(2);
 		expect(session.prompt).toHaveBeenCalledWith("hello", undefined);
 		expect(session.setModel).toHaveBeenCalledOnce();
 		expect(session.setThinkingLevel).toHaveBeenCalledWith("off");
@@ -39,6 +39,68 @@ describe("SessionEngine lifecycle boundary", () => {
 		expect(session.reload).toHaveBeenCalledOnce();
 		expect(session.setSessionName).toHaveBeenCalledWith("Demo");
 		expect(session.exportToHtml).toHaveBeenCalledOnce();
-		expect(session.exportToJsonl).toHaveBeenCalledOnce();
+		expect(session.exportToJsonlForHost).toHaveBeenCalledOnce();
 	});
+});
+
+it("starts shutdown and abort together, waits before dispose and coalesces concurrent closes", async () => {
+	let release!: () => void;
+	const gate = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const events: string[] = [];
+	const session = {
+		extensionRunner: {
+			onError: vi.fn(() => () => {}),
+			emit: vi.fn(async (event) => {
+				expect(event).toEqual({ type: "session_shutdown", reason: "quit" });
+				events.push("shutdown");
+				await gate;
+			}),
+		},
+		abort: vi.fn(async () => {
+			events.push("abort");
+		}),
+		dispose: vi.fn(() => {
+			events.push("dispose");
+		}),
+	} as unknown as AgentSession;
+	const engine = new SessionEngine();
+	const a = engine.dispose(session);
+	const b = engine.dispose(session);
+	expect(a).toBe(b);
+	await vi.waitFor(() => expect(events).toEqual(["shutdown", "abort"]));
+	release();
+	await Promise.all([a, b]);
+	expect(events).toEqual(["shutdown", "abort", "dispose"]);
+});
+
+it("finishes every cleanup step and reports shutdown, abort and disposal failures together", async () => {
+	const shutdownFailure = new Error("hook failed");
+	const abortFailure = new Error("abort failed");
+	const disposeFailure = new Error("dispose failed");
+	const dispose = vi.fn(() => {
+		throw disposeFailure;
+	});
+	const session = {
+		extensionRunner: {
+			onError: vi.fn(() => () => {}),
+			emit: () => {
+				throw shutdownFailure;
+			},
+		},
+		abort: vi.fn(async () => {
+			throw abortFailure;
+		}),
+		dispose,
+	} as unknown as AgentSession;
+	const engine = new SessionEngine();
+	await expect(engine.dispose(session)).rejects.toMatchObject({
+		message: "Session shutdown failed",
+		errors: [shutdownFailure, abortFailure, disposeFailure],
+	});
+	expect(session.abort).toHaveBeenCalledOnce();
+	expect(dispose).toHaveBeenCalledOnce();
+	await expect(engine.dispose(session)).rejects.toThrow("Session shutdown failed");
+	expect(dispose).toHaveBeenCalledOnce();
 });

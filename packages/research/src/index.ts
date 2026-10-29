@@ -25,6 +25,7 @@ export {
 	type ResearchProjectStorageItem,
 	type ResearchProjectStoragePort,
 	type ResearchProtocolsConnectorConfig,
+	type ResearchSemanticScholarConnectorConfig,
 	type ResearchZoteroConnectorConfig,
 } from "./connectors";
 export {

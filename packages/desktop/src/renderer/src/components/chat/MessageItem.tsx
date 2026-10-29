@@ -1,27 +1,59 @@
-import { type TurnTiming, tasksForDecision } from "@drone/shared";
+import type { TurnTiming } from "@drone/shared";
+import type { ChatMessageProps } from "@gyoungwe/plugin-api/ui";
 import { memo, useState } from "react";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import { useAgentModeStore } from "../../stores/agent-mode";
+import { useSessionsStore } from "../../stores/sessions";
 import type { UIMessage } from "../../stores/transcript";
 import { useAgentActive } from "../session/session-status";
 import { AssistantMessage } from "./AssistantMessage";
 import { ErrorNote } from "./ErrorNote";
 import { ImagePreviewOverlay, imageSrc } from "./ImagePreview";
 import { CopyButton, ForkButton } from "./message-actions";
+import { ProgressNote } from "./ProgressNote";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { SystemMessage } from "./SystemMessage";
-import { TaskDecisionCard } from "./TaskDecisionCard";
 import { UserMessage } from "./UserMessage";
 
-/** 单条消息：按类型分发（用户气泡 / 图片块 / 子代理卡 / 错误卡 / 系统分割线 / 助手消息体） */
-export const MessageItem = memo(function MessageItem({
+function DefaultChatMessage({ renderDefault }: ChatMessageProps) {
+	return renderDefault();
+}
+
+/** Plugins receive the existing safe projection; fallback never enters this slot recursively. */
+export const MessageItem = memo(function MessageItem(props: Parameters<typeof DefaultMessageItem>[0]) {
+	const sessionId = props.sessionId ?? null;
+	const agentActive = useAgentActive(sessionId);
+	const readOnly = useSessionsStore((state) =>
+		state.sessions.some((session) => session.sessionId === sessionId && session.readOnly === true),
+	);
+	return (
+		<Slot
+			name={UI_SLOTS.Message}
+			props={{
+				message: props.message,
+				sessionId,
+				agentActive,
+				readOnly,
+				streaming: props.streaming,
+				metaInGroup: props.metaInGroup,
+				showActions: props.showActions ?? true,
+				turnTiming: props.turnTiming,
+				turnStepCount: props.turnStepCount,
+				renderDefault: () => <DefaultMessageItem {...props} />,
+			}}
+			fallback={DefaultChatMessage}
+		/>
+	);
+});
+
+/** 单条消息默认呈现：用户气泡 / 图片 / 子代理 / 错误 / 系统 / 助手正文。 */
+function DefaultMessageItem({
 	message,
 	streaming,
 	metaInGroup,
 	showActions = true,
-	showTaskCard = false,
 	sessionId = null,
 	turnTiming,
 	turnStepCount,
@@ -32,8 +64,6 @@ export const MessageItem = memo(function MessageItem({
 	metaInGroup?: boolean;
 	/** 是否渲染操作行：仅轮次最后一段正文为 true（中间自言自语不挂复制/fork，减少噪音） */
 	showActions?: boolean;
-	/** 只有最新一条任务快照渲染决定卡。 */
-	showTaskCard?: boolean;
 	/** 当前会话（错误卡重试/压缩动作需要） */
 	sessionId?: string | null;
 	/** 轮次起止，由 MessageList 从真实 transcript 时间戳派生。 */
@@ -43,7 +73,6 @@ export const MessageItem = memo(function MessageItem({
 }) {
 	const t = useT();
 	const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-	const agentActive = useAgentActive(sessionId ?? null);
 	const mode = useAgentModeStore((state) => (sessionId ? (state.bySession[sessionId] ?? "lead") : "lead"));
 
 	if (message.kind === "user") {
@@ -100,40 +129,11 @@ export const MessageItem = memo(function MessageItem({
 	if (message.kind === "system") {
 		return <SystemMessage message={message} />;
 	}
-
-	if (message.kind === "assistant" && (message.route || (message.taskView && showTaskCard))) {
-		const view = message.taskView;
-		const tasks = view && showTaskCard ? tasksForDecision(view) : [];
-		const pending = tasks.some((task) =>
-			task.actions.some((action) => action.kind === "review" && action.state === "pending"),
-		);
-		if (!message.text && tasks.length === 0) return null;
-		return (
-			<div className="group msg-enter" data-testid={pending ? "chat-task-review" : undefined}>
-				{view &&
-					tasks.map((task) => (
-						<TaskDecisionCard
-							key={task.id}
-							task={task}
-							view={view}
-							sessionId={sessionId ?? null}
-							agentActive={agentActive}
-						/>
-					))}
-				{message.text && (
-					<AssistantMessage
-						text={message.text}
-						thinking=""
-						tools={[]}
-						mode={mode}
-						turnTiming={turnTiming}
-						turnStepCount={turnStepCount}
-					/>
-				)}
-			</div>
-		);
+	if (message.kind === "assistant" && message.progress && !message.text) {
+		return <ProgressNote progress={message.progress} />;
 	}
-	if (message.kind === "assistant" && message.taskView) return null;
+
+	if (!message.text && !message.thinking && !message.tools.length) return null;
 	return (
 		<div className="group msg-enter">
 			<AssistantMessage
@@ -155,4 +155,4 @@ export const MessageItem = memo(function MessageItem({
 			)}
 		</div>
 	);
-});
+}

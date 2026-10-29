@@ -21,6 +21,7 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkPluginDependency } from "./plugin-api-dependency-policy.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKAGE_DIR = join(ROOT, "packages", "plugin-api");
@@ -57,8 +58,12 @@ function checkPackageManifest() {
 	const manifest = packageJson();
 	assert(manifest.name === "@gyoungwe/plugin-api", `unexpected package name: ${manifest.name}`);
 	assert(
-		manifest.version === "1.2.0",
-		`public API package must match the 1.2.0 additive UI contract: ${manifest.version}`,
+		manifest.version === "1.3.0",
+		`public API package must match the 1.3.0 additive runtime contract: ${manifest.version}`,
+	);
+	assert(
+		manifest.exports?.["./runtime"]?.types === "./dist/runtime.d.ts",
+		"runtime types subpath must be published",
 	);
 	assert(!manifest.private, "public plugin-api package must not be private");
 	assert(manifest.types === "./dist/index.d.ts", "types must point at dist/index.d.ts");
@@ -82,18 +87,39 @@ function checkPackageSource() {
 function checkDist() {
 	const dist = join(PACKAGE_DIR, "dist");
 	assert(existsSync(join(dist, "index.d.ts")), "build output is missing dist/index.d.ts");
+	assert(existsSync(join(dist, "runtime.d.ts")), "build output is missing dist/runtime.d.ts");
+	assert(existsSync(join(dist, "runtime.js")), "build output is missing dist/runtime.js");
 	assert(existsSync(join(dist, "index.js")), "build output is missing dist/index.js");
-	for (const name of readdirSync(dist)) {
+	const outputs = (directory, prefix = "") =>
+		readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
+			entry.isDirectory()
+				? outputs(join(directory, entry.name), `${prefix}${entry.name}/`)
+				: [`${prefix}${entry.name}`],
+		);
+	for (const name of outputs(dist)) {
 		const path = join(dist, name);
 		if (!name.endsWith(".js") && !name.endsWith(".d.ts")) continue;
 		const output = readFileSync(path, "utf8");
+		if (!name.startsWith("node/")) {
+			assert(!/from ["']node:/u.test(output), `Node implementation leaked into ${name}`);
+			assert(!/from ["'][^"']*\bnode\//u.test(output), `Node subpath leaked into ${name}`);
+		}
+		// Only the opt-in native declaration may reference the official SDK's type.
+		// Keep the ban on every runtime output and on all other public subpaths.
+		const dependencies =
+			name === "native.d.ts"
+				? output.replace(
+						/^import type \{ ExtensionFactory \} from "@earendil-works\/pi-coding-agent";$/mu,
+						"",
+					)
+				: output;
 		for (const pattern of [
 			/from ["']electron["']/u,
 			/@earendil-works\/pi-/u,
 			/@drone\/(?:backend|desktop)/u,
 			/(?:from|import\s*\()["']\.\.\/\.\./u,
 		]) {
-			assert(!pattern.test(output), `forbidden dependency in ${name}: ${pattern}`);
+			assert(!pattern.test(dependencies), `forbidden dependency in ${name}: ${pattern}`);
 		}
 	}
 }
@@ -150,6 +176,7 @@ function writeContractProbe(fixture) {
 		join(fixture, "contract-probe.mjs"),
 		`import assert from "node:assert/strict";
 import { PLUGIN_API_VERSION, RESULT_CONTRACT, negotiateCapabilities } from "@gyoungwe/plugin-api";
+await import("@gyoungwe/plugin-api/runtime");
 assert.equal(PLUGIN_API_VERSION, 1);
 assert.equal(RESULT_CONTRACT, "drone-result/v3");
 const result = negotiateCapabilities(
@@ -286,14 +313,6 @@ function walkPackageJson(dir, out = []) {
 	return out;
 }
 
-function checkDependencyValue(value, path) {
-	if (typeof value !== "string") return;
-	assert(!/^file:/u.test(value), `${path} uses a file: dependency (${value})`);
-	assert(!/^workspace:/u.test(value), `${path} uses a workspace: dependency (${value})`);
-	assert(!value.startsWith("/") && !value.startsWith("~/"), `${path} uses an absolute dependency (${value})`);
-	assert(!/(^|\/)\.\.?\//u.test(value), `${path} uses a relative dependency (${value})`);
-}
-
 function checkPluginWorkspace(repo) {
 	const rootManifestPath = join(repo, "package.json");
 	const rootManifest = readJson(rootManifestPath);
@@ -301,6 +320,7 @@ function checkPluginWorkspace(repo) {
 		Array.isArray(rootManifest.workspaces) && rootManifest.workspaces.includes("packages/*"),
 		"drone-plugins must remain one workspace",
 	);
+	let apiCandidate;
 	for (const path of walkPackageJson(repo)) {
 		const manifest = readJson(path);
 		for (const section of [
@@ -310,13 +330,21 @@ function checkPluginWorkspace(repo) {
 			"peerDependencies",
 			"overrides",
 		]) {
-			for (const [name, value] of Object.entries(manifest[section] ?? {}))
-				checkDependencyValue(value, `${path}:${section}.${name}`);
+			for (const [name, value] of Object.entries(manifest[section] ?? {})) {
+				const candidate = checkPluginDependency(value, {
+					hostRoot: ROOT,
+					pluginRoot: repo,
+					manifestPath: path,
+					section,
+					name,
+				});
+				if (candidate) apiCandidate = candidate;
+			}
 		}
 	}
 	const head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 	assert(/^[0-9a-f]{7,40}$/u.test(head), `unable to resolve drone-plugins HEAD: ${head}`);
-	return { repo, head, packageJsonFiles: walkPackageJson(repo).length };
+	return { repo, head, packageJsonFiles: walkPackageJson(repo).length, apiCandidate };
 }
 
 function checkTarballInstall() {
@@ -368,6 +396,8 @@ if (migration) {
 	console.log(
 		`plugin-api package gate passed; tarball=${tarball}; pluginRepo=${plugin.repo}; head=${plugin.head}; manifests=${plugin.packageJsonFiles}`,
 	);
+	if (plugin.apiCandidate)
+		console.log(JSON.stringify({ mode: "private-vendored-dev-api", ...plugin.apiCandidate }));
 } else {
 	console.log("plugin-api package gate passed");
 }

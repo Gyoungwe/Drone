@@ -15,7 +15,7 @@ vi.mock("electron", () => ({
 import { IpcChannels } from "@drone/shared";
 import { registerPackagesIpc } from "./packages";
 
-const receipt = (operation: "install" | "update" | "remove") => ({
+const receipt = (operation: "install" | "update" | "rollback" | "remove") => ({
 	operation,
 	packageName: "@gyoungwe/desktop-ui-pack",
 	source: "npm:@gyoungwe/desktop-ui-pack",
@@ -33,6 +33,7 @@ describe("registerPackagesIpc", () => {
 			searchPackages: vi.fn(async () => ({ packages: [], total: 0, page: 1, pageSize: 50 })),
 			installPackage: vi.fn(async () => receipt("install")),
 			updatePackage: vi.fn(async () => receipt("update")),
+			rollbackPackage: vi.fn(async () => receipt("rollback")),
 			removePackage: vi.fn(async () => receipt("remove")),
 			listConfiguredPackages: vi.fn(async () => []),
 		};
@@ -50,6 +51,7 @@ describe("registerPackagesIpc", () => {
 			searchPackages: vi.fn(async () => ({ packages: [], total: 0, page: 1, pageSize: 50 })),
 			installPackage: vi.fn(async () => receipt("install")),
 			updatePackage: vi.fn(async () => receipt("update")),
+			rollbackPackage: vi.fn(async () => receipt("rollback")),
 			removePackage: vi.fn(async () => receipt("remove")),
 			listConfiguredPackages: vi.fn(async () => []),
 		};
@@ -61,7 +63,8 @@ describe("registerPackagesIpc", () => {
 		);
 		await mocks.handlers.get(IpcChannels.PackagesInstall)!({}, "@gyoungwe/desktop-ui-pack");
 		await mocks.handlers.get(IpcChannels.PackagesUpdate)!({}, "@gyoungwe/desktop-ui-pack");
+		await mocks.handlers.get(IpcChannels.PackagesRollback)!({}, "@gyoungwe/desktop-ui-pack", "0.1.0");
 		await mocks.handlers.get(IpcChannels.PackagesRemove)!({}, "npm:@gyoungwe/desktop-ui-pack", "user");
-		expect(changed).toHaveBeenCalledTimes(3);
+		expect(changed).toHaveBeenCalledTimes(4);
 	});
 });

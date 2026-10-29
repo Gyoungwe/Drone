@@ -1,9 +1,4 @@
 export type { DiscoveryExplorationPlan } from "@drone/shared";
-export {
-	analysisHostLoader,
-	createAnalysisAdapterRegistry,
-	createAnalysisHost,
-} from "@gyoungwe/pi-analysis/host";
 export type {
 	AnalysisAdapter,
 	AnalysisAdapterContract,
@@ -15,6 +10,14 @@ export type {
 	AnalysisSideEffect,
 } from "@gyoungwe/plugin-api";
 export {
+	buildContainerSandboxArgv as buildContainerKernelArgv,
+	type ContainerProcess,
+	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
+	ContainerSandboxRunner as ContainerKernelRunner,
+	detectContainerRuntime,
+	unavailableContainerCapabilities,
+} from "@gyoungwe/plugin-api/node/execution";
+export {
 	type ComputeCredential,
 	type ComputeCredentialProvider,
 	createDefaultComputeExecutor,
@@ -25,6 +28,7 @@ export {
 	type BackendOptions,
 	type BackendServices,
 	createBackend,
+	type ResearchConnectorHostLoaderFactory,
 	type SessionServicePort,
 } from "./create-backend";
 export {
@@ -35,18 +39,11 @@ export {
 	redactDiagnosticText,
 } from "./diagnostics";
 export {
-	buildContainerKernelArgv,
-	ContainerKernelRunner,
-	type ContainerKernelRunnerOptions,
-	type ContainerProcess,
-	detectContainerRuntime,
-	unavailableContainerCapabilities,
-} from "./discovery/container-runner";
-export {
+	createDiscoveryHostInput,
+	createDiscoveryService,
 	type DiscoveryAuthorization,
 	type DiscoveryAuthorizationOperation,
 	type DiscoveryKernelSessionInput,
-	DiscoveryService,
 	type DiscoveryServiceOptions,
 	type DiscoveryServicePort,
 } from "./discovery/service";
@@ -58,14 +55,10 @@ export {
 	type ReadResult,
 } from "./json-store";
 export {
-	type BackendKnowledgeWorkerResource,
-	configureBackendKnowledgeWorker,
 	getKnowledgeWorkerLifecycle,
 	KnowledgeUiService,
 	type KnowledgeUiServicePort,
 	type KnowledgeWorkerLifecycleSnapshot,
-	resolveBackendKnowledgeWorkerPath,
-	resolveBackendKnowledgeWorkerResource,
 } from "./knowledge/ui";
 export {
 	DEFAULT_WEBDAV_ENDPOINT,
@@ -115,8 +108,9 @@ export {
 	permissionAuditPath,
 } from "./permissions/audit";
 export {
-	makePermissionGateExtension,
+	makePermissionGateExtensions,
 	type PermissionConfirm,
+	type PermissionGateExtensions,
 	type PermissionGateOptions,
 	type PermissionModeRef,
 } from "./permissions/extension";
@@ -130,6 +124,47 @@ export {
 	type PluginSandboxToolDeclaration,
 	sandboxEntrypointUrl,
 } from "./plugin-sandbox";
+export type {
+	PluginNativeBootstrap,
+	PluginNativeIntegration,
+	PluginRuntimeBridgeOptions,
+	PluginRuntimeOwner,
+	PluginRuntimeSource,
+} from "./plugins/coordinator";
+export { PluginRuntimeBridge } from "./plugins/coordinator";
+export {
+	type DomainCapability,
+	type DomainCapabilityRegistration,
+	DomainCapabilityRegistry,
+	type DomainCapabilityRegistryPort,
+	type DomainCapabilityStatus,
+} from "./plugins/domain-capabilities";
+export {
+	createExecutionIntegrityKey,
+	createPluginExecutionCapabilities,
+	type PluginExecutionCapabilitiesOptions,
+} from "./plugins/execution-capabilities";
+export {
+	fileCapabilityHandlers,
+	PluginFileCapabilities,
+	type PluginRootGrant,
+} from "./plugins/file-capabilities";
+export type { SelectedNativeSource } from "./plugins/native-delivery";
+export { createProcessPluginRuntime } from "./plugins/process-runtime";
+export { PluginResourceManager, type PluginResourceManagerOptions } from "./plugins/resource-capabilities";
+export type {
+	PluginRuntimeCaller,
+	PluginRuntimeCallerResolver,
+	PluginRuntimePolicy,
+} from "./plugins/runtime";
+export { PluginRuntimeRegistry } from "./plugins/runtime";
+export type {
+	PluginCapabilityContext,
+	PluginCapabilityHandler,
+	PluginRuntimeCapabilitiesOptions,
+	PluginRuntimeCapabilitiesProvider,
+} from "./plugins/runtime-capabilities";
+export type { PluginSessionCallerContext } from "./plugins/session-caller";
 export {
 	buildTrustOptions,
 	type ResolveTrustOptions,
@@ -159,6 +194,19 @@ export {
 	replyLanguagePrompt,
 	setReplyLanguage,
 } from "./reply-language";
+export {
+	createResearchHostPort,
+	type ResearchFileEntry,
+	type ResearchHostAdapter,
+	type ResearchHostLoader,
+	type ResearchHostOperations,
+	type ResearchHostPort,
+	type ResearchRunDetailInput,
+	type ResearchRunListInput,
+	type ResearchRunListResult,
+	type ResearchRunStatusInput,
+	type ResearchRunSummary,
+} from "./research-host";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export {
 	AnalysisEvidenceService,
@@ -170,6 +218,17 @@ export {
 	type EvidenceReplayRunner,
 	type FrozenFile,
 } from "./services/analysis-evidence";
+export {
+	ANALYSIS_PREPARE_EVIDENCE_TOOL,
+	type AnalysisEvidencePluginHost,
+	type AnalysisEvidencePluginManifest,
+	type AnalysisEvidencePreparationInput,
+	type AnalysisEvidenceReceipt,
+	type AnalysisEvidenceReceiptStatus,
+	EVIDENCE_VALIDATE_MANIFEST_TOOL,
+	prepareAnalysisEvidence,
+	type ReadOnlyPluginTool,
+} from "./services/analysis-evidence-host";
 export {
 	type AnalysisComputeBinding,
 	type AnalysisLedger,
@@ -341,7 +400,6 @@ export {
 	type SshToolOptions,
 	type SshToolParams,
 } from "./tools/ssh";
-export { formatTodoList, makeTodoTool, normalizeTodos } from "./tools/todo";
 export { makeTodoReminderExtension } from "./tools/todo-reminder";
 export {
 	assertPublicUrl,

@@ -1,5 +1,9 @@
 import type { PermissionAnswer, PermissionRequest, PermissionResolved } from "@drone/shared";
+import { sanitizeProviderError } from "@drone/shared";
+import { createLogger } from "../log";
 import { PermissionGate, type PermissionRequestMeta } from "../permissions/gate";
+
+const log = createLogger("approvals");
 
 /** A permission decision that may be persisted by the host after the gate opens. */
 export interface ApprovalDecision {
@@ -35,7 +39,10 @@ export class ApprovalService {
 
 	/** Create a gate whose requests are published through this service. */
 	createGate(): PermissionGate {
-		return new PermissionGate((request) => this.dispatchRequest(request));
+		return new PermissionGate(
+			(request) => this.dispatchRequest(request),
+			(result) => this.dispatchResolved(result),
+		);
 	}
 
 	/** Register the gate after the SDK session has received its definitive id. */
@@ -125,8 +132,12 @@ export class ApprovalService {
 		for (const handler of this.requestHandlers) {
 			try {
 				handler(request);
-			} catch {
-				// One host observer must not block the permission gate.
+			} catch (error) {
+				// Other observers must still receive this request.
+				log.error(
+					"permission request observer failed",
+					sanitizeProviderError(error instanceof Error ? error.message : String(error)),
+				);
 			}
 		}
 	}
@@ -135,8 +146,12 @@ export class ApprovalService {
 		for (const handler of this.resolvedHandlers) {
 			try {
 				handler(result);
-			} catch {
-				// One host observer must not block other observers.
+			} catch (error) {
+				// Other observers must still remove the resolved request.
+				log.error(
+					"permission resolution observer failed",
+					sanitizeProviderError(error instanceof Error ? error.message : String(error)),
+				);
 			}
 		}
 	}

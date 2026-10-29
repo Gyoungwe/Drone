@@ -72,7 +72,7 @@ export class SessionLifecycleService implements SessionLifecycleServicePort {
 		const entry = this.registry.get(sessionId);
 		if (!entry) return false;
 		await hooks.beforeDispose?.(sessionId, entry);
-		this.engine.dispose(entry.session);
+		await this.engine.dispose(entry.session);
 		await hooks.afterEngineDispose?.(sessionId);
 		this.registry.delete(sessionId);
 		await hooks.afterDispose?.(sessionId);

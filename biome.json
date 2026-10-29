@@ -108,22 +108,6 @@
 			}
 		},
 		{
-			"includes": ["packages/tasks/src/runtime-compiled/*.mjs"],
-			"formatter": {
-				"enabled": false
-			},
-			"linter": {
-				"enabled": false
-			},
-			"assist": {
-				"actions": {
-					"source": {
-						"organizeImports": "off"
-					}
-				}
-			}
-		},
-		{
 			"includes": ["scripts/ui-parity/harness/**"],
 			"linter": {
 				"enabled": false

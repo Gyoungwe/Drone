@@ -7,12 +7,6 @@ import type {
 	ResearchConnectorHit,
 	ResearchSearchResponse,
 } from "@drone/shared";
-import type { DailyIdea, DiscoveryNote } from "@gyoungwe/pi-knowledge/host";
-import {
-	buildDailyDiscoveryMessage,
-	DAILY_DISCOVERY_SYSTEM,
-	parseDailyIdeas,
-} from "@gyoungwe/pi-knowledge/host";
 import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
 
@@ -21,6 +15,28 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const FIRST_LOOKBACK_MS = 7 * DAY_MS;
 const MAX_STORED_IDEAS = 30;
+
+export interface DiscoveryNote {
+	path: string;
+	title: string;
+	text: string;
+	mtime: number;
+}
+
+export interface DailyIdea {
+	title: string;
+	idea: string;
+	basis: string[];
+	test: string;
+	whyOverlooked: string;
+}
+
+/** Prompt/parser operations are supplied by the installed knowledge host. */
+export interface DailyDiscoveryOperations {
+	systemPrompt: string;
+	buildMessage(fresh: readonly DiscoveryNote[], related: readonly DiscoveryNote[]): string;
+	parseIdeas(text: string, allowedPaths: Iterable<string>, freshPaths: Iterable<string>): DailyIdea[];
+}
 
 interface StoredState {
 	version: 1;
@@ -74,6 +90,7 @@ export interface DailyDiscoveryContext {
 
 export interface DailyDiscoveryOptions {
 	path: string;
+	operations: DailyDiscoveryOperations;
 	/** 读知识库：上次运行后更新的笔记 + 相关旧笔记（knowledge ui-service） */
 	context(sinceMs: number): Promise<DailyDiscoveryContext>;
 	/** 把认可的想法存为 Library/Ideas 笔记 */
@@ -186,8 +203,8 @@ export class DailyDiscoveryService {
 		let reply: string | null;
 		try {
 			reply = await this.options.complete(
-				DAILY_DISCOVERY_SYSTEM,
-				buildDailyDiscoveryMessage(context.fresh, context.related),
+				this.options.operations.systemPrompt,
+				this.options.operations.buildMessage(context.fresh, context.related),
 			);
 		} catch (error) {
 			this.lastError = error instanceof Error ? error.message : String(error);
@@ -199,7 +216,7 @@ export class DailyDiscoveryService {
 			return this.getState();
 		}
 		this.lastError = null;
-		const ideas = parseDailyIdeas(
+		const ideas = this.options.operations.parseIdeas(
 			reply,
 			[...context.fresh, ...context.related].map((note) => note.path),
 			context.fresh.map((note) => note.path),

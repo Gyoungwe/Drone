@@ -103,8 +103,9 @@ try {
 	const child = await import(pathToFileURL(join(resources, "extensions/subagent-mcp-readonly.mjs")));
 	const tools = [];
 	await child.makeSubagentReadonlyMcp(b)({ registerTool: (tool) => tools.push(tool.name), on: () => {} });
-	assert(tools.includes("research_search_knowledge"));
-	assert(!tools.includes("research_maintain_knowledge"));
+	// Children read the Vault through the knowledge package's own read-only native child session;
+	// the packaged MCP bridge no longer registers an in-process knowledge interface.
+	assert.deepEqual(tools, [], "the read-only MCP bridge must not register knowledge tools");
 	const lifecycleEvents = [];
 	const lifecycleEventName = "drone:knowledge-worker-lifecycle/v1";
 	const onLifecycle = (event) => lifecycleEvents.push(event);

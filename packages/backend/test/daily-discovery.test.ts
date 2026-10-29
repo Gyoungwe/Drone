@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { completionText, DailyDiscoveryService } from "../src/services/daily-discovery";
+import { completionText, DailyDiscoveryService, type DailyIdea } from "../src/services/daily-discovery";
 
 const DAY = 24 * 60 * 60 * 1000;
 let dir = "";
@@ -15,6 +15,11 @@ async function setup(reply = "[]", fresh = [{ path: "Library/new.md", title: "Ne
 	let now = 10 * DAY;
 	const options = {
 		path: join(dir, "daily-discovery.json"),
+		operations: {
+			systemPrompt: "system",
+			buildMessage: () => "message",
+			parseIdeas: (text: string) => JSON.parse(text) as DailyIdea[],
+		},
 		context: vi.fn(async () => ({ bound: true, fresh, related: [] })),
 		saveIdea: vi.fn(async () => ({ path: "Library/Ideas/a.md" })),
 		complete: vi.fn(async () => reply),

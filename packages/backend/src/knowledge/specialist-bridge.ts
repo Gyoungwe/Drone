@@ -1,13 +1,21 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { registerKnowledgeSpecialistHost } from "@gyoungwe/pi-knowledge/host";
 import { withNativeSubagentSlot } from "../tools/subagent/slots";
 import {
 	runKnowledgeSpecialist,
 	type SpecialistRequest,
+	type SpecialistResult,
 	type SpecialistRunnerDeps,
 } from "./specialist-runner";
+
+export type KnowledgeSpecialistHostRegistrar = (
+	sessionId: string,
+	run: (input: SpecialistRequest) => Promise<SpecialistResult>,
+) => (() => void) | undefined;
+
 /** Registered per parent session, not as a globally invokable model tool. */
-export function makeKnowledgeSpecialistBridge(deps: SpecialistRunnerDeps) {
+export function makeKnowledgeSpecialistBridge(
+	deps: SpecialistRunnerDeps & { registerKnowledgeSpecialistHost?: KnowledgeSpecialistHostRegistrar },
+) {
 	return (pi: ExtensionAPI) => {
 		let unregister: (() => void) | undefined;
 		const active = new Set<AbortController>();
@@ -30,10 +38,10 @@ export function makeKnowledgeSpecialistBridge(deps: SpecialistRunnerDeps) {
 					input.signal?.removeEventListener("abort", abort);
 				}
 			};
-			// The typed knowledge package owns the host registry. Its process event
-			// bridge keeps this backend module and the bundled Pi extension graph
-			// connected without reaching through a legacy runtime tree.
-			unregister = registerKnowledgeSpecialistHost(sessionId, run);
+			// The installed knowledge package owns its registry. The host only receives
+			// an optional local registrar for compatibility/test module graphs; the
+			// standard process event below is the production cross-graph contract.
+			unregister = deps.registerKnowledgeSpecialistHost?.(sessionId, run);
 			// The generated runtime may be loaded through a separate ESM graph from the
 			// host adapter. Re-announce over the stable process event so both graphs see
 			// the same per-session callback without relying on module-local slot identity.

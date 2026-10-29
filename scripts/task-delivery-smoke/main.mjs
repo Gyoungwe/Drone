@@ -101,12 +101,11 @@ async function run() {
 		const views = Array.from({ length: 12 }, (_, i) => ({ ...view, revision: i + 1 }));
 		await js(`window.deliveryFixture.show(${JSON.stringify(views)},${JSON.stringify(cwd)});true`);
 		await wait("!!document.querySelector('[data-testid=task-artifacts] a')");
-		// The task surface is now the Tasks pane's single task-contract card;
-		// `task-workbench` was removed when the overview layout was consolidated.
-		assert.equal(await js("document.querySelectorAll('.context-pane section.panel-card').length"), 1);
+		// The installed core contributes one current journal task panel.
+		assert.equal(await js("document.querySelectorAll('.context-pane [data-testid=task-panel]').length"), 1);
 		assert(
 			await js(
-				"document.querySelector('.context-pane section.panel-card').getBoundingClientRect().height<260",
+				"document.querySelector('.context-pane [data-testid=task-panel]').getBoundingClientRect().height<260",
 			),
 		);
 		assert(await js("document.querySelector('.context-pane').innerText.includes('生成文件并交付')"));

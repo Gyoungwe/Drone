@@ -1,4 +1,4 @@
-import { existsSync, type FSWatcher, watch } from "node:fs";
+import { existsSync, type FSWatcher, realpathSync, watch } from "node:fs";
 import {
 	cp,
 	lstat,
@@ -12,13 +12,12 @@ import {
 	writeFile,
 } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { createLogger } from "@drone/backend";
+import { basename, dirname, join, resolve } from "node:path";
+import { createLogger, type SelectedNativeSource } from "@drone/backend";
 import {
 	KNOWN_UI_REGIONS,
 	KNOWN_UI_SLOTS,
 	UI_PLUGIN_ANCHORS,
-	type UiPluginContribution,
 	type UiPluginInfo,
 	type UiPluginManifest,
 	type UiPluginsConfig,
@@ -26,6 +25,14 @@ import {
 import { app } from "electron";
 import { buildPlugin } from "./build";
 import { defaultUiPluginsConfig, loadUiPluginsConfig, saveUiPluginsConfig } from "./config";
+import {
+	discoverInstalledPackages,
+	type InstalledUiDiscovery,
+	type InstalledUiRuntimeSource,
+	installedPackageHash,
+} from "./installed-package-sources";
+import { filterContributions } from "./manifest-contributions";
+import { classifyUnmanagedNativePath } from "./native-source-classification";
 
 const log = createLogger("ui-plugins");
 
@@ -45,62 +52,6 @@ function pluginsDir(): string {
 function installedUiPackageRoot(): string {
 	const agentDir = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
 	return join(agentDir, "npm", "node_modules");
-}
-
-export type InstalledUiDiscovery =
-	| { packageName: string; uiDir: string }
-	| { packageName: string; error: string };
-
-export async function discoverInstalledUiPackages(root: string): Promise<InstalledUiDiscovery[]> {
-	const discoveries: InstalledUiDiscovery[] = [];
-	const packageDirs: string[] = [];
-	const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
-	for (const entry of entries) {
-		if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-		const path = join(root, entry.name);
-		if (entry.name.startsWith("@")) {
-			const scoped = await readdir(path, { withFileTypes: true }).catch(() => []);
-			for (const child of scoped) if (child.isDirectory()) packageDirs.push(join(path, child.name));
-		} else packageDirs.push(path);
-	}
-	for (const packageDir of packageDirs) {
-		const packageJsonPath = join(packageDir, "package.json");
-		const manifestPath = join(packageDir, "plugin.manifest.json");
-		const packageJson = await readFile(packageJsonPath, "utf8")
-			.then((value) => JSON.parse(value) as { name?: string })
-			.catch(() => null);
-		const packageName = typeof packageJson?.name === "string" ? packageJson.name : basename(packageDir);
-		const manifest = await readFile(manifestPath, "utf8")
-			.then((value) => JSON.parse(value) as { entrypoints?: { ui?: unknown }; hosts?: unknown })
-			.catch(() => null);
-		if (!manifest && existsSync(manifestPath)) {
-			discoveries.push({ packageName, error: "plugin.manifest.json is not valid JSON" });
-			continue;
-		}
-		if (!manifest) continue;
-		if (!Array.isArray(manifest.hosts) || !manifest.hosts.includes("drone-desktop")) {
-			discoveries.push({ packageName, error: "plugin.manifest.json does not declare host drone-desktop" });
-			continue;
-		}
-		if (typeof manifest.entrypoints?.ui !== "string") continue;
-		const packageRoot = resolve(packageDir);
-		const uiManifest = resolve(packageDir, manifest.entrypoints.ui);
-		const outside = relative(packageRoot, uiManifest);
-		if (isAbsolute(outside) || outside.startsWith("..")) {
-			discoveries.push({ packageName, error: "entrypoints.ui escapes the installed package" });
-			continue;
-		}
-		const uiDir = dirname(uiManifest);
-		if (!(await readFile(join(uiDir, "plugin.json"), "utf8").catch(() => null))) {
-			discoveries.push({
-				packageName,
-				error: `entrypoints.ui does not contain ${relative(packageDir, join(uiDir, "plugin.json"))}`,
-			});
-			continue;
-		}
-		discoveries.push({ packageName, uiDir });
-	}
-	return discoveries;
 }
 
 function packageDiagnosticName(packageName: string): string {
@@ -226,12 +177,18 @@ async function seedDocs(): Promise<void> {
 }
 
 /** manifest 校验（spec §5 + §16）：任一不满足 → 返回原因，插件标记 invalid 不参与加载 */
-function validateManifest(dirName: string, m: Partial<UiPluginManifest>): string | null {
+function validateManifest(
+	dirName: string,
+	m: Partial<UiPluginManifest>,
+	runtime?: InstalledUiRuntimeSource,
+): string | null {
 	if (!m || typeof m !== "object") return "plugin.json 缺失或损坏";
 	if (typeof m.name !== "string" || !NAME_RE.test(m.name) || m.name !== dirName) {
 		return `name 非法（须匹配 ${NAME_RE.source} 且与目录名一致）`;
 	}
-	if (m.droneUi !== 1) return "droneUi 版本不匹配（当前只接受 1）";
+	if (m.droneUi !== 1 && m.droneUi !== 2) return "droneUi 版本不匹配（当前支持 1 和 2）";
+	if (m.droneUi === 2 && !runtime)
+		return "droneUi 2 不兼容当前来源：必须使用声明 desktopRuntime 的已验证安装包，本地 UI 目录不能取得后台身份";
 	if (typeof m.main !== "string" || m.main.includes("..") || !MAIN_RE.test(m.main)) {
 		return "main 非法（须为目录内相对路径，禁止 .. 穿越，后缀 .ts/.tsx/.js/.jsx）";
 	}
@@ -273,23 +230,6 @@ function validateManifest(dirName: string, m: Partial<UiPluginManifest>): string
 		}
 	}
 	return null;
-}
-
-/**
- * 过滤 contributions：剔除未知 region 条目（scanAll 合成 info 与 readCode 返回的 manifest 都用这份），
- * 并把非 app.overlay 区域的 anchor 剥离（anchor 仅对 overlay 有意义）。
- * 非数组输入（坏插件可能给任意形状）一律空，防上层 for...of/条目访问抛错。
- */
-export function filterContributions(
-	contributions: UiPluginContribution[] | undefined,
-): UiPluginContribution[] {
-	if (!Array.isArray(contributions)) return [];
-	const out: UiPluginContribution[] = [];
-	for (const c of contributions) {
-		if (!c || typeof c.region !== "string" || !KNOWN_UI_REGIONS.includes(c.region)) continue;
-		out.push(c.region === "app.overlay" ? c : { ...c, anchor: undefined });
-	}
-	return out;
 }
 
 /** 读插件目录下的 plugin.json；解析失败返回 null */
@@ -375,6 +315,15 @@ export class UiPluginManager {
 	private infos = new Map<string, UiPluginInfo>();
 	/** name → 插件目录绝对路径（白名单：readCode/openDir 只接受扫描到的合法名） */
 	private dirNames = new Map<string, string>();
+	/** Installed provenance is never inferred from a local UI directory or its name. */
+	private packageSources = new Map<string, { source: InstalledUiRuntimeSource; current: boolean }>();
+	private installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
+	/** Discovery diagnostics are host-owned metadata; an empty managed root is a valid empty list. */
+	private installedDiagnostics: Array<{ packageName: string; error: string }> = [];
+	/** Name → package generation hash. Local user UI plugins intentionally have no entry here. */
+	private installedPackageHashes = new Map<string, { root: string; hash: string }>();
+	/** Installed package generations observed as changed during this scan; trust must be renewed. */
+	private readonly reconfirmInstallations = new Set<string>();
 	/** 随包内置插件名集合（init 时导出到用户目录；此处仅用于合成 builtin 标志 → 面板 badge/启用免确认） */
 	private builtinNames = new Set<string>();
 	/** 持久化配置缓存（updateConfig 后刷新；scanAll 时叠加） */
@@ -402,12 +351,20 @@ export class UiPluginManager {
 	}
 
 	/** 合成单个插件的 UiPluginInfo（统一从用户插件目录扫描；builtin 标志来自随包名单） */
-	private async scanOne(name: string, srcDir: string): Promise<UiPluginInfo> {
+	private async scanOne(
+		name: string,
+		srcDir: string,
+		runtime?: InstalledUiRuntimeSource,
+		forceReconfirmation = false,
+		packageName?: string,
+		contentHash?: string,
+	): Promise<UiPluginInfo> {
 		const manifest = await readManifest(srcDir);
-		const invalidReason = validateManifest(name, manifest ?? {});
+		const invalidReason = validateManifest(name, manifest ?? {}, runtime);
 		const prev = this.infos.get(name);
 		return {
 			name,
+			...(packageName ? { packageName } : {}),
 			displayName: typeof manifest?.displayName === "string" ? manifest.displayName : undefined,
 			description: typeof manifest?.description === "string" ? manifest.description : undefined,
 			version: typeof manifest?.version === "string" ? manifest.version : undefined,
@@ -415,11 +372,11 @@ export class UiPluginManager {
 			slots: manifest?.slots ?? {},
 			contributions: filterContributions(manifest?.contributions),
 			headless: manifest?.headless === true ? true : undefined,
-			enabled: this.config.plugins[name]?.enabled ?? false,
-			trusted: this.config.plugins[name]?.trusted ?? false,
+			enabled: forceReconfirmation ? false : (this.config.plugins[name]?.enabled ?? false),
+			trusted: forceReconfirmation ? false : (this.config.plugins[name]?.trusted ?? false),
 			invalidReason: invalidReason ?? undefined,
 			buildError: prev?.buildError,
-			built: existsSync(join(srcDir, "dist/index.js")),
+			built: existsSync(join(this.buildDirectory(srcDir, contentHash), "index.js")),
 			builtin: this.builtinNames.has(name) || undefined, // 用户插件不落字段（保持载荷干净）
 		};
 	}
@@ -427,6 +384,7 @@ export class UiPluginManager {
 	/** 扫描 userData/ui-plugins/ 每个子目录：校验 manifest 并合成 UiPluginInfo（叠加 config/产物状态） */
 	async scanAll(): Promise<UiPluginInfo[]> {
 		this.config = await loadUiPluginsConfig();
+		this.reconfirmInstallations.clear();
 		// 随包内置名单（每次扫描现取，目录静态几乎零开销）
 		const builtinEntries = await readdir(builtinPluginsDir(), { withFileTypes: true }).catch(() => []);
 		this.builtinNames = new Set(
@@ -435,6 +393,10 @@ export class UiPluginManager {
 		const dir = pluginsDir();
 		const out: UiPluginInfo[] = [];
 		const seen = new Set<string>();
+		const installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
+		const installedPackageHashes = new Map<string, { root: string; hash: string }>();
+		const persistedInstallations = this.config.installations ?? {};
+		const nextInstallations: NonNullable<UiPluginsConfig["installations"]> = { ...persistedInstallations };
 		const entries = await readdir(dir, { withFileTypes: true }).catch((err) => {
 			log.error("scanAll readdir failed", err);
 			return [];
@@ -471,11 +433,57 @@ export class UiPluginManager {
 		// a diagnostic row and cannot affect the user/built-in plugin scan.
 		const installed = this.legacyInstalledPackageDir
 			? []
-			: await discoverInstalledUiPackages(this.installedPackageRoot);
+			: await discoverInstalledPackages(this.installedPackageRoot);
+		const packageSources = new Map(
+			[...this.packageSources].map(([name, item]) => [name, { source: item.source, current: false }]),
+		);
+		for (const candidate of installed)
+			if (!("error" in candidate) && candidate.runtime)
+				packageSources.set(`package:${candidate.packageRoot}`, { source: candidate.runtime, current: true });
+		this.packageSources = packageSources;
+		this.installedDiagnostics = installed.filter(
+			(candidate): candidate is { packageName: string; error: string } => "error" in candidate,
+		);
 		if (this.legacyInstalledPackageDir) {
-			installed.push({ packageName: "legacy-ui-fixture", uiDir: this.legacyInstalledPackageDir });
+			installed.push({
+				packageName: "legacy-ui-fixture",
+				packageRoot: this.legacyInstalledPackageDir,
+				uiDir: this.legacyInstalledPackageDir,
+			});
 		}
-		for (const candidate of installed) {
+		const candidates = await Promise.all(
+			installed
+				.filter(
+					(candidate): candidate is InstalledUiDiscovery =>
+						"error" in candidate || candidate.uiDir !== undefined,
+				)
+				.map(async (candidate) =>
+					"error" in candidate
+						? candidate
+						: { ...candidate, uiManifest: await readManifest(candidate.uiDir) },
+				),
+		);
+		const uiOwners = new Map<string, string[]>();
+		for (const candidate of candidates) {
+			if ("error" in candidate) continue;
+			const name = candidate.uiManifest?.name;
+			if (typeof name !== "string") continue;
+			const owners = uiOwners.get(name);
+			if (owners) owners.push(candidate.packageName);
+			else uiOwners.set(name, [candidate.packageName]);
+		}
+		const resolvedCandidates = candidates.map((candidate) => {
+			if ("error" in candidate) return candidate;
+			const name = candidate.uiManifest?.name;
+			const owners = typeof name === "string" ? uiOwners.get(name) : undefined;
+			return owners && owners.length > 1
+				? {
+						packageName: candidate.packageName,
+						error: `UI name ${name} is claimed by multiple installed packages: ${owners.join(", ")}`,
+					}
+				: candidate;
+		});
+		for (const candidate of resolvedCandidates) {
 			if ("error" in candidate) {
 				const name = packageDiagnosticName(candidate.packageName);
 				if (seen.has(name)) continue;
@@ -493,11 +501,11 @@ export class UiPluginManager {
 				out.push(info);
 				continue;
 			}
-			const installedManifest = await readManifest(candidate.uiDir);
+			const installedManifest = candidate.uiManifest;
 			const installedName = installedManifest?.name;
 			if (typeof installedName !== "string" || !NAME_RE.test(installedName) || seen.has(installedName))
 				continue;
-			const invalidReason = validateManifest(installedName, installedManifest ?? {});
+			const invalidReason = validateManifest(installedName, installedManifest ?? {}, candidate.runtime);
 			if (invalidReason) {
 				const info: UiPluginInfo = {
 					name: installedName,
@@ -516,7 +524,26 @@ export class UiPluginManager {
 			try {
 				seen.add(installedName);
 				this.dirNames.set(installedName, candidate.uiDir);
-				const info = await this.scanOne(installedName, candidate.uiDir);
+				installedSources.set(installedName, candidate);
+				const identity = {
+					root: candidate.packageRoot,
+					hash: candidate.runtime?.contentHash ?? installedPackageHash(candidate.packageRoot),
+				};
+				const previous =
+					this.installedPackageHashes.get(installedName) ?? persistedInstallations[candidate.packageName];
+				if (previous && (previous.root !== identity.root || previous.hash !== identity.hash)) {
+					this.reconfirmInstallations.add(installedName);
+				}
+				nextInstallations[candidate.packageName] = identity;
+				installedPackageHashes.set(installedName, identity);
+				const info = await this.scanOne(
+					installedName,
+					candidate.uiDir,
+					candidate.runtime,
+					this.reconfirmInstallations.has(installedName),
+					candidate.packageName,
+					identity.hash,
+				);
 				this.infos.set(installedName, info);
 				out.push(info);
 			} catch (err) {
@@ -530,7 +557,33 @@ export class UiPluginManager {
 		for (const stale of [...this.dirNames.keys()]) {
 			if (!seen.has(stale)) this.dirNames.delete(stale);
 		}
+		this.installedSources = installedSources;
+		this.installedPackageHashes = installedPackageHashes;
+		if (this.reconfirmInstallations.size > 0) {
+			const plugins = { ...this.config.plugins };
+			for (const name of this.reconfirmInstallations) {
+				plugins[name] = { enabled: false, trusted: false };
+			}
+			await saveUiPluginsConfig({ plugins, installations: nextInstallations });
+			this.config = await loadUiPluginsConfig();
+		} else if (Object.keys(nextInstallations).length > 0) {
+			await saveUiPluginsConfig({ installations: nextInstallations });
+			this.config = await loadUiPluginsConfig();
+		}
 		return out;
+	}
+
+	private installedSourceCurrent(name: string): boolean {
+		const identity = this.installedPackageHashes.get(name);
+		if (!identity) return true;
+		try {
+			const runtime = this.installedSources.get(name)?.runtime;
+			return runtime
+				? this.runtimeSourceCurrent(runtime)
+				: installedPackageHash(identity.root) === identity.hash;
+		} catch {
+			return false;
+		}
 	}
 
 	/** 列表（设置面板/加载器用）：读扫描缓存 */
@@ -538,9 +591,120 @@ export class UiPluginManager {
 		return Array.from(this.infos.values());
 	}
 
+	/** Metadata-only diagnostics from the managed package scan. */
+	diagnostics(): readonly { packageName: string; error: string }[] {
+		return this.installedDiagnostics.map((diagnostic) => ({ ...diagnostic }));
+	}
+
 	/** 按名取单个插件信息（无效名/未知插件返回 null） */
 	info(name: string): UiPluginInfo | null {
 		return this.infos.get(name) ?? null;
+	}
+
+	/** The source belongs to the installed package selected by the current scan. */
+	runtimeSource(name: string): InstalledUiRuntimeSource | undefined {
+		const native = this.packageSources.get(name);
+		if (native) {
+			if (!native.current) return undefined;
+			try {
+				return this.runtimeSourceCurrent(native.source) ? native.source : undefined;
+			} catch (error) {
+				log.warn("Installed native source is unavailable", native.source.pluginId, error);
+				return undefined;
+			}
+		}
+		if (!this.installedSourceCurrent(name)) return undefined;
+		return this.installedSources.get(name)?.runtime;
+	}
+
+	/** Native and service consumers see the same package descriptors and current content identities. */
+	runtimeSources(): readonly {
+		name: string;
+		source: InstalledUiRuntimeSource;
+		state: "enabled" | "unavailable";
+	}[] {
+		return [...this.packageSources].map(([name, item]) => ({
+			name,
+			source: item.source,
+			state: this.runtimeSource(name) ? "enabled" : "unavailable",
+		}));
+	}
+
+	/**
+	 * Native entries of current packages that declared read-only child session support. A child
+	 * session loads only these; the actual loader selection is still classified per path.
+	 */
+	nativeChildExtensionPaths(): string[] {
+		const paths: string[] = [];
+		for (const [name, item] of this.packageSources) {
+			if (item.source.nativeChildSessions !== "read-only" || !this.runtimeSource(name)) continue;
+			const path = item.source.nativeDeclaredPath ?? item.source.nativeEntrypoint;
+			if (path) paths.push(path);
+		}
+		return paths;
+	}
+
+	/** Called only for a path selected by the actual Pi extension loader. UI visibility grants no native authority. */
+	nativeRuntimeName(path: string): string | undefined {
+		let declared = resolve(path);
+		try {
+			declared = join(realpathSync(dirname(declared)), basename(declared));
+		} catch (error) {
+			log.warn("Selected extension directory is unavailable", path, error);
+		}
+		for (const [name, item] of this.packageSources)
+			if (item.source.nativeDeclaredPath === declared) return name;
+		try {
+			const canonical = realpathSync(path);
+			for (const [name, item] of this.packageSources)
+				if (item.source.nativeEntrypoint === canonical) return name;
+		} catch (error) {
+			log.warn("Selected extension path is unavailable", path, error);
+		}
+		return undefined;
+	}
+
+	/** Only paths selected by the real SDK loader enter this host-only source classification. */
+	classifyNativeSelection(path: string): SelectedNativeSource {
+		const sources = this.runtimeSources();
+		const name = this.nativeRuntimeName(path);
+		const selected = sources.find((item) => item.name === name);
+		return selected
+			? { kind: "managed", source: selected.source, state: selected.state }
+			: classifyUnmanagedNativePath(
+					path,
+					sources.map((item) => item.source),
+				);
+	}
+
+	private runtimeSourceCurrent(source: InstalledUiRuntimeSource): boolean {
+		return (
+			realpathSync(source.installationPath) === source.packageRoot &&
+			(!source.nativeDeclaredPath || realpathSync(source.nativeDeclaredPath) === source.nativeEntrypoint) &&
+			installedPackageHash(source.packageRoot) === source.contentHash
+		);
+	}
+
+	isNativeSourceAvailable(name: string): boolean {
+		return this.packageSources.has(name) && this.runtimeSource(name) !== undefined;
+	}
+
+	private buildDirectory(sourceDirectory: string, contentHash?: string): string {
+		return contentHash
+			? join(app.getPath("userData"), "ui-plugin-builds", contentHash)
+			: join(sourceDirectory, "dist");
+	}
+
+	/** Runtime activation additionally requires the global switch and explicit UI trust. */
+	isEnabled(name: string): boolean {
+		const info = this.infos.get(name);
+		return Boolean(
+			this.config.enabled &&
+				info?.enabled &&
+				info.trusted &&
+				!info.invalidReason &&
+				this.installedSourceCurrent(name),
+		);
 	}
 
 	/**
@@ -553,16 +717,18 @@ export class UiPluginManager {
 		const pluginDir = this.dirNames.get(name);
 		const manifest = await readManifest(pluginDir ?? "");
 		if (!pluginDir || !manifest || typeof manifest.main !== "string") return false;
-		const dist = join(pluginDir, "dist/index.js");
+		const contentHash = this.installedPackageHashes.get(name)?.hash;
+		const outDir = this.buildDirectory(pluginDir, contentHash);
+		const dist = join(outDir, "index.js");
 		try {
 			let needsBuild = force || !existsSync(dist);
-			if (!needsBuild) {
+			if (!needsBuild && !contentHash) {
 				const srcMtime = await newestMtime(pluginDir);
 				const distStat = await stat(dist).catch(() => null);
 				needsBuild = srcMtime === null || !distStat || srcMtime > distStat.mtimeMs;
 			}
 			if (needsBuild) {
-				const res = await buildPlugin(pluginDir, manifest.main);
+				const res = await buildPlugin(pluginDir, manifest.main, { outDir });
 				if (res.ok) {
 					this.infos.set(name, { ...info, buildError: undefined, built: true });
 				} else {
@@ -582,23 +748,27 @@ export class UiPluginManager {
 	 * 返回 { manifest, code } 或 { error }。
 	 */
 	async readCode(name: string): Promise<{ manifest: UiPluginManifest; code: string } | { error: string }> {
+		if (!this.installedSourceCurrent(name))
+			return { error: "UI plugin installation changed; reload required" };
 		const info = this.infos.get(name);
 		if (!info || info.invalidReason) return { error: `未知插件 ${name}` };
 		const pluginDir = this.dirNames.get(name);
 		if (!pluginDir) return { error: `未知插件 ${name}` };
 		const ok = await this.ensureBuilt(name);
+		const output = join(
+			this.buildDirectory(pluginDir, this.installedPackageHashes.get(name)?.hash),
+			"index.js",
+		);
 		if (!ok) {
 			// 构建失败：旧产物存在则继续生效（spec §6，不清 dist）；buildError 已进 list 由面板展示
-			if (!existsSync(join(pluginDir, "dist/index.js"))) {
+			if (!existsSync(output)) {
 				return { error: this.infos.get(name)?.buildError ?? `构建失败：${name}` };
 			}
 		}
 		try {
-			const [manifest, code] = await Promise.all([
-				readManifest(pluginDir),
-				readFile(join(pluginDir, "dist/index.js"), "utf-8"),
-			]);
-			if (!manifest || validateManifest(name, manifest)) return { error: "manifest 校验失败" };
+			const [manifest, code] = await Promise.all([readManifest(pluginDir), readFile(output, "utf-8")]);
+			if (!manifest || validateManifest(name, manifest, this.runtimeSource(name)))
+				return { error: "manifest 校验失败" };
 			// 未知 region 条目已被过滤（与 scanAll 合成 info 同源），registry 只注册已知区域
 			const cleanManifest: UiPluginManifest = {
 				...(manifest as UiPluginManifest),

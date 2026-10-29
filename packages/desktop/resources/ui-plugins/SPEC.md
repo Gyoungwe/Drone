@@ -19,6 +19,7 @@ my-plugin/
 
 | 槽位名 | props | 默认组件 |
 |---|---|---|
+| `chat.message` | `ChatMessageProps`（见下） | 一条安全 UI 消息的宿主默认呈现；插件可选择接管或调用 `renderDefault()` |
 | `chat.tool-call-card` | `{ tool: UIToolCall }` | 工具调用卡（折叠行：工具名 + 参数摘要 + 输出） |
 | `chat.subagent-card` | `{ runs: SubagentRunUi[] }` | 子代理独立行（状态点 + 名称 + 点击打开子会话） |
 | `chat.todo-panel` | `{}` | 任务列表面板（右上角胶囊，内部自行取数） |
@@ -58,6 +59,10 @@ interface KnowledgeFlowCard {
 }
 ```
 
+`chat.message` 使用 `@gyoungwe/plugin-api/ui` 的 `ChatMessageProps`：`message: UIMessage`、`sessionId: string | null`、`agentActive`、`readOnly`、可选 `streaming/metaInGroup/showActions/turnTiming/turnStepCount` 和 `renderDefault(): ReactNode`。这里只传 renderer 已有的安全消息投影，不能取得原生 SDK `RawMessage` 或私有协议 thinking。`readOnly` 来自这一行所属会话，而非当前活动会话。`renderDefault()` 直接渲染宿主默认组件，不重新进入槽位；插件不处理的消息应调用它。停用、卸载或渲染异常都会恢复默认呈现。消息内 `sourceText` 仅供既有匹配逻辑，绝不能渲染、复制或放入可访问文本。
+
+消息槽位不提供领域去重或任务状态机。插件可用 `useSessionMessages(sessionId)`（亦可用 `hooks.useSessionMessages`）读取完整的安全 `readonly UIMessage[]`，自行选择需要呈现的领域快照；空会话和未加载会话返回稳定空数组。右栏页面继续使用已有 `panel.tab`，无需新增领域槽位。
+
 `manifest.slots` 的 value 是入口 bundle 的**具名导出名**（一个插件可覆盖多个槽位）：
 
 ```json
@@ -74,7 +79,7 @@ interface KnowledgeFlowCard {
 
 字段规则（任一不满足 → 插件标记「清单无效」，不加载）：
 - `name`：必填，`/^[a-z0-9][a-z0-9-]*$/`，**必须与目录名一致**；
-- `droneUi`：必填，宿主契约版本，当前只接受 `1`；
+- `droneUi`：必填，宿主契约版本。`1` 保留已发布 UI 合同；`2` 用于依赖绑定 runtime、订阅和资源能力的新 UI。宿主支持 `1` 和 `2`，未知版本拒绝加载。`2` 必须来自具有有效 `entrypoints.desktopRuntime` 的已验证安装包；本地 UI 目录不能冒用包身份。旧宿主只接受 `1`，会在清单校验时拒绝 `2`，不会执行不兼容代码；
 - `main`：必填，插件目录内相对路径，**禁止 `..` 穿越**；后缀 `.ts/.tsx/.js/.jsx`；
 - `slots`：必填非空对象，key 必须是上表槽位名，value 是具名导出名；
 - `version` / `displayName` / `description`：可选展示字段。
@@ -119,11 +124,15 @@ export const helpers: {
 };
 export const hooks: {
 	useT(): (key: string, params?) => string; // i18n（key 用宿主既有字典，如 "message.working"）
+	useSessionMessages(sessionId: string | null): readonly UIMessage[];
 };
 export const stores: {                      // 宿主 zustand store（与宿主同一实例）
 	useTranscriptStore; useSessionsStore; useUiStore; useProjectsStore; useSettingsStore;
 	useUiPreferencesStore;                   // 应用级 UI 偏好（ui-state.json 持久化：轨道/中央动画等开关）
 	useKnowledgeStore;                       // 知识流（flows[sessionId].cards 等）
+};
+export const sessions: {
+	prompt(sessionId: string, text: string, images?: ImageInput[], ids?: PromptIds): Promise<PromptReceipt>;
 };
 export const i18n: {
 	// 插件自带文案：注册后 useT()(key) 在核心字典找不到时回落到这里（如 flow.status.<自定义记号>）；返回注销函数
@@ -131,7 +140,36 @@ export const i18n: {
 };
 ```
 
+`sessions.prompt` 复用现有会话 prompt IPC、权限与生命周期检查；只读或已关闭会话仍由宿主拒绝，错误和 `PromptReceipt` 原样返回。它不依赖知识插件。旧 `knowledge.prompt` 与既有具名 `prompt` 保留原绑定；新代码使用 `sessions.prompt`。会话身份与 cwd 可从既有 `stores.useSessionsStore` 取得，资源打开沿既有 `useUiStore.openResourcePreview`。
+
 `react` 的完整导出（`Children`/`Component`/`memo`/`useEffect` 等全部 hooks）也可用，见 `drone-ui.d.ts`。
+
+### 插件自己的后台操作
+
+声明 `droneUi: 2`、带有已批准 Desktop runtime 的安装包可在槽位或贡献组件内调用 `usePluginRuntime()`（也可用 `hooks.usePluginRuntime`）：
+
+`runtime.subscribe(listener)` 接收无正文的 `{ type: "changed", revision }` 失效通知，并返回取消订阅函数。组件卸载时必须取消订阅。主进程校验包、窗口和运行代次；renderer 再过滤绑定和当前会话的选择回执。切换会话后的旧通知不会转发给插件。插件据此重新调用自身只读 operation，不连接宿主领域事件。
+
+```tsx
+import { usePluginRuntime } from "@gyoungwe/plugin-api";
+
+export function ResultsPanel() {
+	const runtime = usePluginRuntime();
+	return <button onClick={() => runtime.invoke("results.refresh", {})}>Refresh</button>;
+}
+```
+
+客户端只接受操作名和输入。包身份由主进程根据安装来源绑定，UI 不能传入包名来选择别的插件。主进程在每次调用时检查绑定所属窗口、激活状态与操作声明；停用或替换后旧绑定失效。结果为 `unknown`，由插件按自己的操作协议解析。
+
+`droneUi: 1` 且无 Desktop runtime 的 UI 包仍可使用既有 UI API，但调用此 hook 会明确抛出不可用错误。每个贡献都拥有独立上下文，嵌套渲染不会继承另一插件的客户端。无头模块接收 `activate({ runtime })`，其中 `runtime` 在没有绑定时为 `undefined`；既有不接参数的 `activate()` 无需修改。
+
+这些 UI 模块仍与宿主共享 React 和 renderer，是经过信任确认的代码。绑定提供来源识别和生命周期撤销，**不构成恶意 UI 代码之间的安全隔离**。
+
+### 聚合 Pi 包中的 UI 发现
+
+宿主保留已安装顶层 UI 包的发现。对于聚合包，managed npm prefix 的 `package.json.dependencies` 与 `optionalDependencies`（含 `npm --save-optional`）确定被选中的安装根；宿主只沿该包 `dependencies` / `optionalDependencies` 中声明、且在 `pi.extensions` / `skills` / `prompts` / `themes` 中通过 `node_modules/<包名>/...` 明确引用的资源边发现子包 UI。路径按 npm 就近依赖解析（包括提升到父级的依赖），真实路径必须仍位于该 managed 安装目录。普通库依赖、peer/dev 依赖和未引用子树不会被递归扫描。
+
+相同真实目录只登记一次。不同目录的同名包，即使版本相同也不假定内容相同：只有明确选中的直接安装来源可以优先，其他来源在诊断中标记为 shadowed；不同版本或没有明确直接来源的冲突不会加载任意一方的 UI。两个不同 npm 包声明同一 UI 名称时也会诊断冲突并阻止加载。子包始终使用自身 npm 包身份、UI 清单和 runtime 入口，独立取得启用/信任；聚合根不传递运行授权。取消根选择或移除聚合包后，只由它提供的嵌套 UI 从扫描结果消失。这里的“发现”不等于原生 Pi 扩展执行或安全隔离已经验收。
 
 ## 5. 样式纪律（强制）
 
@@ -258,3 +296,91 @@ export function activate() {
 `window.DroneUI.knowledge` 仅公开 `@gyoungwe/plugin-api/ui` 的 `KnowledgeUiPort` 方法，宿主通过既有 preload/IPC 执行，保留授权和路径边界。插件不得访问 `window.pi`。`KnowledgeUiBindings` 定义组件、hooks、stores 与辅助函数的类型投影；声明、shim 与挂载对象由 host-api.manifest.json 同步生成。
 
 整页与嵌入区的产品界面由插件拥有；宿主只维护数据事件桥、上下文和轻量回退。全局审核/通知用既有 `app.overlay`，停用时卸载，重新启用读取当前 store。插件必须提供自己的 CSS 与知识文案，不能依赖宿主保留产品样式。
+
+### Markdown navigation ownership
+
+`Markdown` accepts optional `onLink(href: string): void`. When provided, the host renders the supplied Markdown without knowledge-link rewriting and forwards anchor clicks to the contribution after preventing default navigation. Host knowledge lookup/store and resource-preview routing do not run. The contribution must use its own runtime and approved opening capabilities; receiving a URL is not permission to open local files or launch an external application. Omitting `onLink` retains the published UI v1 behavior until its consumers migrate.
+
+
+### 通用模型能力（API 1.3 候选）
+
+安装包必须在真实 `plugin.manifest.json` 的 `permissions.network` 声明 `configured-services`，宿主才提供 `model.selection` / `model.generate` / `model.toolStep`；UI 清单、域状态或 renderer 入参不能赋予此权限。声明变化会使已有 runtime source 绑定失效。该声明只允许申请模型出口，未授予任意网络请求。
+
+`model.selection({profile?})` 只解析所选真实会话的当前模型，或已存在且明确配置的模型偏好；不回退到任意 provider。`model.generate({selection,systemPrompt,prompt,resultSchema,maxTokens})` 只执行一次隔离 `structured_result` 请求，无父对话、任意工具执行或正文/思考回传。每次调用仍由宿主显示模型 ID、thinking、输出预算、数据将传入模型和可能费用并请求批准；缺失用量或有效定价时返回 null，不声称免费。caller 身份、选择与取消在 SDK 请求前后核验；调用方不得把结构化模型结果当成人工批准或科学认证。
+
+### 候选后台文件能力与调用者身份
+
+受管 `desktopRuntime` 的 state/files 授权只从已安装包的 `permissions.filesystem` 派生，不要求也不由 `entrypoints.resources` 授予。state 与 files 分别选择；write 声明含对应 read，但仍须写目录选择和逐操作批准。无资源声明时不会建立派生 resource 子进程。清单权限变化撤销旧绑定。
+
+后台可在当前合法调用内使用 `capabilities.call("caller.scope", null)` 读取宿主解析的 `PluginRuntimeScope`；构造期为 application scope，普通调用为实际当前 scope。workspaceId 用于身份分区；workspaceDirectory 不代表文件权限。此端口既不接受插件传入的身份，也不允许保留闭包越过当前调用。详情与候选验收范围见 `docs/pluginization/native-plugin-resource-independent-capabilities.md`。
+
+`window.DroneUI.sessions.command(sessionId, name, args?)`（API 1.3）只调用该真实会话已注册的扩展命令，返回 `{kind:"command"}`。缺失/卸载的命令、只读/恢复中/取消或已替换的会话均拒绝，不转成模型输入；handler 错误沿既有 extension onError 诊断并使调用失败。普通 `sessions.prompt` 保留自然语言输入语义。领域 UI 的动作必须使用 `sessions.command`，不能以 prompt 的未知 slash 回退代替命令派发。UI 贡献停用与原生 owner 停用是两个独立生命周期。
+
+`usePluginRuntime().invoke(operation, input, signal?)` accepts an optional invocation-local AbortSignal. The renderer sends only a request ID through IPC, never a signal object. Main cancels only the active request of that same window, binding and selection lease, and waits for its running cleanup. Already-aborted calls dispatch nothing; canceling one call does not cancel its siblings. Approval dialogs use the same signal and cannot approve a canceled request. Existing two-argument clients and four-argument invoke IPC remain supported.
+
+
+### 真实会话问答能力（未发布 1.3 候选）
+
+`session.inspect(null)` 是通用只读会话能力，不要求模型网络声明。`session.select({title,options})`、`session.input({title,placeholder?})` 和 `session.confirm({title,message})` 都是 write 效果，仅能在当前真实、可信、可写 SDK 会话及真实 UI 可用时调用。输入不能指定会话、窗口或请求 ID；宿主以当前 caller 的 live entry、原窗口及代次决定身份。application/无会话或没有 UI 时明确不可用。
+
+`session.tools(null)` 同为 read，不要求模型声明；每次调用实际 SDK `getAllTools()` 后仅投影 `[{name,readOnlyHint:boolean|null}]`。SDK 未声明 hint 时必须为 null，不能按工具名推断读权限；这不是执行授权，也不提供同步 SDK getter。无当前 live session 时拒绝，输入不接收目标身份。
+
+managed native 另支持实际 SDK 的 `input`、`tool_call`、`turn_start`、`turn_end`：input 的 continue/transform(text/images)/handled 保持 SDK 顺序链与 handled 短路；tool_call 的 input 原对象就地变更和 block/reason/terminate 传入下一实际 hook；turn_end 仅支持 null、空对象或 continue 布尔结果及实际 boundary 顺序链；返回 entries 或就地修改 event.entries 都明确拒绝，不能绕过来源 namespace/持久化能力。continue 不产生任务执行授权，也不代替尚待实现的 owned boundary draft broker。所有 hook 沿用 eventEffects（除 session_start 外默认 write）及现有逐调用批准、实际信号和停用排空；取消后的变换不应用。SDK input/turn 失败按原 onError 通道报告一次，tool_call 失败保留 SDK 的单个 error tool result，不额外复制诊断。
+
+结果分别为 `{kind:"selected",value:string}`、`{kind:"input",value:string}`、`{kind:"confirmed",value:boolean}`，关闭对话框统一返回 `{kind:"cancelled"}`；调用被撤销或实际 SDK signal 取消则请求拒绝。能力调用方必须 await，不能从迟到答案继续执行。结果只表示普通交互数据，不是文件、模型或执行权限；confirm 使用 AskGate 的二选项，不会设置 PermissionGate 的 allowRun/allowAlways。模型能力仍仅由声明 `configured-services` 的包申请，问答不会借用该声明，也不会授予模型出口。
+
+问题经当前实际 SDK UI binding 到既有 AskGate pending；发给原窗口，答复由 IPC sender 校验。取消、关闭和答复使用通用 AskResolved 精确移除该窗口的对应卡片。host-only window route 不进入公共问答 JSON，不新增请求账本。原生 managed Context 的其他 UI 方法仍按既有 supported/unsupported 合同处理，不能因此声称完整 ExtensionUIContext 已可用。
+
+### 当前来源的会话检查点与普通通知（未发布 1.3 候选）
+
+`session.records.read(null)` 为 read，仅返回当前真实 SDK branch 中当前插件每个 logical type 的最后一个自定义检查点，不含聊天消息、其他插件记录或旧全局 tag；不静默截断。`session.records.append({type,data})` 为 write，JSON data 经逐调用授权后保存到宿主派生的 `plugin-record:<encoded verified pluginId>:<logicalType>`，返回 `{id,durability:"durable"|"deferred"}`。输入不能指定来源、会话或存储路径。跨包读取须走受管理的 provider，普通读取没有 legacyTypes 逃逸口。
+
+read 同时返回 `mode:"persistent"|"memory"`，只由实际 SDK `getSessionFile()` 决定。persistent 的 lazy 会话仍可能 deferred；memory 始终是明确未落盘的 live-only 会话，不能猜成 durable。检查点里的旧批准字段不是当前 owner/source/session 的授权。插件自身的任务 storage 展示扩展由包自己的 decoder/components 解释，不新增宿主领域字段或授权来源。
+
+`session.notify({content})` 为 write，仅在当前真实 SDK idle 时显示普通文本 custom message，host 派生类型、固定 display:true/triggerTurn:false，无 details、可信状态或授权含义。活动会话明确拒绝，不把 queued 当作已显示；调用不触发模型。两种写入都必须来自可信可写的 live entry，不能借问答结果取得权限。
+
+检查点读取返回 `{state:"durable"|"deferred"|"needs-reopen",error:string|null,records}`。Pi 1.1.0 的 lazy/inMemory 会话可能未写盘，deferred 不是已保存回执，读取不会创建文件或触发 flush。实际 SDK 写入失败后，同 backend/实际 entry 的所有后续 append/notify 均拒绝，read 仅给出最后已确认的检查点与 needs-reopen；重建 handler、UI/native 重激活或 SDK.reload 不清除故障。只能从磁盘真正重建新的 SDK entry 后恢复；不回滚或读取 SDK 私有数组，不新增 process 全局账本。
+
+### 同一 installed source catalog 的 JSON 服务（未发布 1.3 候选）
+
+真实 `plugin.manifest.json` 的 `drone.provides` 为 `{service:{version,operations}}`，`drone.requires` 为 `{alias:{service,version}}`；version 是正整数合同版本，operations 是非空唯一公开 runtime 操作名。二者均要求 `desktopRuntime`，不覆盖 `requires.hostCapabilities`，不允许写包名依赖或函数。来源、contentHash、安装路径和启停状态沿同一 installed package catalog，不从 UI 列表另建目录。
+
+`provider.inspect({alias})` 为 read，返回 `{state,service,requestedVersion,provider}`，state 为 available/absent/disabled/unavailable/incompatible/ambiguous，provider 为 available 的 `{pluginId,version,contentHash}` 或 null；它只检查已声明 alias，构造期可读取元数据，不激活目标。服务只选择精确版本唯一 enabled 来源，多提供者不能取第一个。
+
+`provider.read` / `provider.write` 接收 `{alias,operation,input:JSON}`，在实际提供者 owner 中执行其已声明且真实存在的 runtime operation。read 不可调用 write，所有写入仍逐次走双方来源与实际操作授权。短 lease 沿原 host caller/同 SDK entry/原窗口与 signal；已有 native/UI binding 时复用同 application owner，无其他 binding 时该纯服务 owner 仅活本次调用，状态应显式持久化。结束必须 await drain/revoke，清理失败使回执失败并保留 teardown 屏障。嵌套调用的 host-only source/operation 链拒绝实际循环，不把函数、caller 身份或授权放进 JSON。
+
+`provider.native({alias,operation,input:JSON})` 仅在实际 SDK `message_start` / `tool_execution_end` 的在途 native hook 内可用。接收者在同一来源 owner 的 `createNativeSession()` 返回 `nativeOperations`，每项声明 event、effect、inputSchema、resultSchema 和实际 execute；宿主要求它已绑定到完全相同的 live SDK entry，不自动 attach。原始事件由宿主私有调用元数据与既有 message courier 交给接收者，不从 JSON input/event/nonce 认领。普通 operation、tool、command、bootstrap、projection 与普通 provider.read/write 都不携带这项 authority；返回值仍是普通 JSON。
+
+原 hook 的实际 effect 是接收操作的权限上限，read hook 不能因接收者声明 write 而升级；write 接收操作显示真实 operation/effect 后照常授权，来源/hash、调用链、session、signal 和 attachment 在调用前后核验，结束 await drain/revoke。调用者或接收者撤销、源码改变和迟到批准不得产生成功回执。此入口只证明当前实际事件来源，不授予文件根、模型、执行 consent、科学发布 proof 或自动续作身份；实际 host-queued continuation 尚未实现。
+
+普通服务返回值不产生文件、模型或任务写入权限，特权 acceptance/consent 角色仍需后继真实 opaque 证明与消费点验收。本片不新增 UI RPC、IPC 或 renderer surface；现有 runtime capability 管道承载这些纯 JSON 调用。
+
+### 临时旧检查点导入（未发布 1.3 候选）
+
+`drone.recordAdoptions:{logicalType:{legacyType,fromVersions,removeBeforeVersion}}` 声明一个明确旧全局 tag。fromVersions 是迁移器支持的精确稳定版本列表，不证明旧记录的实际创建者或版本；当前包与删除版本也须为稳定版本，到删除版本后此临时声明拒绝加载。必须有同源 desktopRuntime，不能声明导入 `plugin-record:` / `plugin-notice:` 的其他来源 namespace。
+
+`session.records.adoption.inspect({type})` 与 `session.records.adoption.commit({type,legacyId,legacyHash,data})` 都是 write，分别请求批准。批准前展示精确旧 tag、目标 logical type、支持迁移器版本与“创建者/版本未知、不会授予文件/模型/执行权限或科学 proof”的说明。声明由实际 source 的 capability 工厂绑定，调用者 JSON 不能指定来源或旧 tag；普通 records.read 不提供任何 legacyTypes 参数。
+
+inspect 返回 candidate/absent/already-adopted/deferred，creator/packageVersion 固定 unknown，只有 candidate 附 `{id,hash,data}`。commit 在同 entry 串行事务内重验最新当前 branch 候选 id/hash、尚无 own-source checkpoint，再追加 own namespace 并真实 durable 回读，原记录保留；hash 仅并发核对，不是授权 token。只有成功持久化才返回 adopted。deferred 不暴露旧候选，不产生 adopted 回执；错误沿已有 needs-reopen 屏障传播。
+
+生产迁移器必须验证旧数据格式和当前实际 scope，清除或保留为纯历史的旧 approved/roots/proof，重新获取当前实际授权与 opaque 证明；通用导入端口不会代替这层领域验证。Core 0.1.9/0.2.0 与 Knowledge 0.2.0/0.2.1 的实际迁移验收仍待分别完成，不能将协议 fixture 写成整包迁移 PASS。
+
+### 私有 model.toolStep
+
+`model.toolStep({selection,systemPrompt,messages,tools,maxTokens})` 每次仅做一次真实 SDK completeSimple。宿主不执行 tools；纯 JSON tool schema 只告诉模型可请求的名字，域白名单、工具实现、结果检查与轮次预算必须仍由同包 owner 执行。systemPrompt≤32000 bytes，messages≤32条/80000 bytes，总输入≤160000 bytes，tools≤8且名唯一，maxTokens≤12000（保留既有最高角色预算）。reply 保留真实 SDK 的私有协议/签名/metadata，只返回调用 owner；不能自动出现在公开回答、UI 或日志。usage 数值为 number/null并带reportedFields，无有效定价的默认零成本保持unknown。
+
+`model.selection` 支持与严格profile互斥的`optionalProfile`：仅真实未配置时使用actual parent，并在返回选择保留optionalProfile以便逐步复查；配置存在但失效仍拒绝。`session.inspect(null)`返回`{agentActive,projectTrusted,readOnly}`当前事实，这些字段不授予能力或跳过批准。
+
+### Independent binary state (unpublished 1.3 candidate)
+
+The exact installed filesystem declarations `binary-state-read` / `binary-state-write` request an independent activation-local directory picker and `binary-state` root. Binary write implies only binary read; existing JSON/file grants neither grant nor accept binary operations. `state.readBinary` returns missing/version:null or canonical base64 and raw SHA-256; `state.writeBinary` accepts root/path/base64/expectedVersion/assertAbsent (at most 8 unique same-root paths). Decoded bytes are limited to 4 MiB before mutation, with a corresponding bounded base64 schema. Larger original databases remain unsupported and unchanged.
+
+Writes require the exact canonical parent directory's real `state-writers` lease, registered binary-write root, current caller authorization, raw-byte CAS, absent sidecars, atomic replacement and readback. Approval uses actual host scope/creator facts plus selected path, old/new SHA, byte count and absence conditions; binary logical content is opaque. Cancellation before commit preserves the original; cancellation/readback failure after commit yields `EBINARYWRITEOUTCOMEUNKNOWN` for fresh-caller SHA reconciliation. Temporary cleanup failure retains the writer lease. No capability accepts caller/session/application authority in JSON. SQLite schema, original backup/WAL handling and provider recovery remain domain responsibilities.
+
+### Stable binary files (unpublished 1.3 candidate)
+
+`files.readBinary({root,path})` is read-only and accepts only an existing approved `files` root handle plus root-relative path. It does not accept JSON or binary-state roots and adds no permission flag. The result is `{base64,sha256,bytes,version}` with complete bytes at most 8 MiB (base64 at most 11184812), a raw-byte SHA-256 and actual dev/ino/size/mtimeMs/ctimeMs. Oversized reads fail instead of truncating.
+
+The host rechecks approved root/path identities and a real regular file before/after open and bounded complete reading. Replacement, root revocation, cancellation and close failure cannot yield a successful snapshot. The existing source/caller/effect policy and drain still apply. Hash/version JSON never grants file writes, execution or scientific publication authority. Domain PDF/hash acceptance stays in the plugin; the real PDF DOI/title resource parser remains a separate incomplete migration.
+
+Resource `invoke(operation,input,context?)` 的可选第三参只含实际请求 `signal`；受限 worker 总是从该次真实 request context 传入，不使用 factory 生命周期 signal 代替。取消请求不会自动结束 resource 生命周期，最终 dispose 必须仍排空并提供真实清理回执。旧两参数实现自然忽略附加参数。

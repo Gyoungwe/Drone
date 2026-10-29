@@ -31,6 +31,7 @@ import { useT } from "./i18n";
 import { notifyCompletion } from "./lib/completion-notify";
 import { initDailyDir } from "./lib/daily";
 import { onTurnSettled } from "./lib/turn-settled";
+import { syncPluginCaller } from "./plugins/caller";
 import { initUiPlugins } from "./plugins/loader";
 import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "./plugins/PluginRegions";
 import { RegionHost } from "./plugins/RegionHost";
@@ -54,6 +55,11 @@ import { initUpdateStore } from "./stores/update";
 
 export default function App() {
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
+	useEffect(() => {
+		void syncPluginCaller(activeSessionId).catch((error) =>
+			console.error("Plugin caller selection failed", error),
+		);
+	}, [activeSessionId]);
 	const view = useUiStore((s) => s.view);
 	// 插件全屏视图（rail.view，挂钩 4）：插件被禁用/卸载后若仍处于该视图，回到聊天
 	const pluginViews = usePluginEntries(UI_REGIONS.RailView);
@@ -96,16 +102,24 @@ export default function App() {
 	useSessionEventBridge({ onTrustRequest: pushTrustRequest });
 	useDesktopCommands();
 
-	useEffect(
-		() =>
-			getPi().onAskRequest((request) => {
-				setAskRequests((current) =>
-					current.some((item) => item.id === request.id) ? current : [...current, request],
-				);
-				askReceivedAt.current.set(request.id, Date.now());
-			}),
-		[],
-	);
+	useEffect(() => {
+		const stopRequests = getPi().onAskRequest((request) => {
+			setAskRequests((current) =>
+				current.some((item) => item.id === request.id) ? current : [...current, request],
+			);
+			askReceivedAt.current.set(request.id, Date.now());
+		});
+		const stopResolved = getPi().onAskResolved((result) => {
+			setAskRequests((current) =>
+				current.filter((item) => item.id !== result.requestId || item.sessionId !== result.sessionId),
+			);
+			askReceivedAt.current.delete(result.requestId);
+		});
+		return () => {
+			stopRequests();
+			stopResolved();
+		};
+	}, []);
 
 	// 一次性 bootstrap：开屏就绪信号 + 更新状态 + UI 插件加载
 	useEffect(() => {

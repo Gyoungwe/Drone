@@ -20,10 +20,11 @@
 		"build": "npm run build:pi-core && npm run build:pi-research && npm run build -w packages/desktop",
 		"prebuild": "npm run build -w @gyoungwe/plugin-api && npm run fetch:plugins",
 		"pretypecheck": "npm run build -w @gyoungwe/plugin-api && npm run fetch:plugins",
-		"pretest": "npm run fetch:plugins",
+		"prepare:test": "npm run build -w @gyoungwe/plugin-api && npm run fetch:plugins && node scripts/stage-plugin-runtime.mjs",
+		"pretest": "npm run prepare:test",
 		"fetch:plugins": "node scripts/fetch-plugins.mjs",
 		"typecheck": "npm run typecheck --workspaces && npm run check:pi",
-		"test": "npm run build:pi-core && npm run build:pi-research && npm run test --workspaces --if-present && node --test scripts/check-build-inputs.test.mjs scripts/academic-eval/score.test.mjs scripts/check-native-pi.test.mjs scripts/b3-pipeline/rnaseq-smoke.test.mjs scripts/check-task-runtime-build.test.mjs",
+		"test": "npm run build:pi-core && npm run build:pi-research && npm run test --workspaces --if-present && node --test scripts/check-build-inputs.test.mjs scripts/academic-eval/score.test.mjs scripts/check-native-pi.test.mjs scripts/b3-pipeline/rnaseq-smoke.test.mjs scripts/check-task-runtime-build.test.mjs scripts/check-task-owner-fixture.test.mjs scripts/check-native-plugin-boundary.test.mjs scripts/check-host-domain-dependencies.test.mjs scripts/check-core-artifact.test.mjs scripts/plugin-api-dependency-policy.test.mjs",
 		"test:unit": "npm run test:unit -w @drone/backend",
 		"test:sdk": "npm run test:sdk -w @drone/backend",
 		"check:redline": "npm run test -w @drone/backend -- test/redline-acceptance.test.mjs",
@@ -36,14 +37,15 @@
 		"test:research-packaging": "python scripts/test-research-release.py",
 		"test:upgrade": "node scripts/check-upgrade-release.mjs --fixtures-only",
 		"validate:upgrade": "node scripts/check-upgrade-release.mjs --ui",
-		"check:arch": "node scripts/check-architecture.mjs && node scripts/check-host-independence.mjs",
+		"check:arch": "node scripts/check-architecture.mjs && node scripts/check-host-domain-dependencies.mjs && node scripts/check-host-independence.mjs",
+		"check:host-domain-deps": "node scripts/check-host-domain-dependencies.mjs",
 		"test:arch": "node --test scripts/check-architecture.test.mjs",
 		"check:pi": "tsc -p .pi --pretty false",
 		"build:extensions": "node scripts/build-extensions.mjs",
 		"stage:pi-packages": "node scripts/stage-pi-packages.mjs",
 		"check:pi-packages": "node scripts/check-pi-packages.mjs",
 		"check:native-pi": "node scripts/check-native-pi.mjs",
-		"smoke:pi-knowledge": "node scripts/smoke-pi-package.mjs",
+		"check:pi-package-format": "node scripts/check-pi-package-format.mjs --configure-dir-env=DRONE_KNOWLEDGE_DIR",
 		"build:pi-core": "node scripts/build-pi-core.mjs",
 		"check:pi-core": "node scripts/build-pi-core.mjs --check",
 		"smoke:pi-core": "node scripts/smoke-pi-core.mjs",
@@ -58,11 +60,11 @@
 		"check:extensions": "node scripts/check-extensions-build.mjs",
 		"generate:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs",
 		"check:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs --check && npm run check -w @gyoungwe/plugin-api && node scripts/check-plugin-api.mjs --migration --lifecycle",
-		"build:tasks": "npm run build:runtime -w @drone/tasks && node scripts/build-task-runtime.mjs",
+		"build:tasks": "node scripts/build-task-runtime.mjs",
 		"build:knowledge": "npm run fetch:plugins",
 		"check:knowledge-runtime": "npm run fetch:plugins && node scripts/check-plugin-worker.mjs",
 		"check:research-runtime": "node scripts/build-research-runtime.mjs --check",
-		"check:tasks-runtime": "npm run build:runtime --workspace @drone/tasks -- --check && node scripts/build-task-runtime.mjs --check",
+		"check:tasks-runtime": "node scripts/build-task-runtime.mjs --check",
 		"test:compute:runner": "python3 scripts/test-compute-runner.py",
 		"test:compute:docker": "sh scripts/test-compute-docker.sh",
 		"test:compute:rnaseq": "sh scripts/b3-pipeline/run-rnaseq-smoke.sh",
@@ -72,7 +74,8 @@
 		"check:ui-evidence": "node scripts/check-ui-evidence.mjs",
 		"check:research-browser": "node scripts/check-research-browser-acceptance.mjs",
 		"eval:mainline": "node scripts/eval-mainline.mjs",
-		"test:mainline": "node --test scripts/eval-mainline.test.mjs"
+		"test:mainline": "node --test scripts/eval-mainline.test.mjs",
+		"check:native-plugin-boundary": "node scripts/check-native-plugin-boundary.mjs"
 	},
 	"engines": {
 		"node": ">=22.19"
@@ -80,10 +83,11 @@
 	"devDependencies": {
 		"@gyoungwe/pi-connectors": "0.1.0",
 		"@gyoungwe/pi-evidence": "0.1.0",
+		"@gyoungwe/pi-core": "0.1.9",
 		"@biomejs/biome": "^2.4.0",
 		"patch-package": "^8.0.1",
-		"@gyoungwe/pi-knowledge": "0.1.1",
-		"@gyoungwe/pi-research": "0.1.1"
+		"@gyoungwe/pi-knowledge": "0.2.1",
+		"@gyoungwe/pi-research": "0.2.0"
 	},
 	"allowScripts": {
 		"electron@43.3.0": true

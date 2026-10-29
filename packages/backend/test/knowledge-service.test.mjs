@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -11,6 +12,7 @@ import {
 } from "@drone/extensions/internal/obsidian-workbench";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import { loadWorkspaceConfig, saveWorkspaceConfig } from "@drone/extensions/workspace-config";
+import { createEventBus, SessionManager } from "@earendil-works/pi-coding-agent";
 import {
 	buildKnowledgeSearchExpression,
 	closeKnowledgeServices,
@@ -123,9 +125,11 @@ describe("application-wide knowledge ownership", () => {
 			"independent from application",
 		);
 	});
-	it("gives permitted subagents the application policy, not a project-only config", async () => {
+	it("leaves the knowledge Vault policy to the knowledge package's own child sessions", async () => {
 		await setup();
-		expect(await resolveSubagentMcpAccess(b, {})).toBe("read-local");
+		// The application binding allows read-local, but the host no longer reads it: Vault access for
+		// children is decided by the knowledge package. Only the project's MCP workspace file applies here.
+		expect(await resolveSubagentMcpAccess(b, {})).toBe("none");
 		expect(await resolveSubagentMcpAccess(b, { mcpAccess: "none" })).toBe("none");
 		expect(await resolveSubagentMcpAccess(b, {}, false)).toBe("none");
 	});
@@ -340,18 +344,21 @@ describe("Show Me presentation layer", () => {
 describe("navigation delivery and bounded maintenance", () => {
 	function harness(readOnly = false) {
 		const tools = new Map(),
-			events = new Map();
+			events = new Map(),
+			sessionManager = SessionManager.inMemory(a);
 		const api = {
+			events: createEventBus(),
+			appendEntry: (type, data) => sessionManager.appendCustomEntry(type, data),
 			registerCommand: () => {},
 			registerTool: (t) => tools.set(t.name, t),
 			on: (name, fn) => events.set(name, fn),
 		};
-		return { tools, events, interface: registerKnowledgeInterface(api, { readOnly }) };
+		return { tools, events, sessionManager, interface: registerKnowledgeInterface(api, { readOnly }) };
 	}
 	it("auto-stages one shared topic candidate after a successful evidence-gated run summary", async () => {
 		await prepared({ wiki: false });
 		const h = harness();
-		const ctx = { cwd: a, sessionId: "auto-topic" };
+		const ctx = { cwd: a, sessionId: "auto-topic", sessionManager: h.sessionManager };
 		const start = await h.interface.beforeStart({ prompt: "介绍这组研究文献并沉淀可复用主题" }, ctx);
 		expect(start.message?.customType).toBe("drone-knowledge-navigation");
 		await h.tools
@@ -359,6 +366,18 @@ describe("navigation delivery and bounded maintenance", () => {
 			.execute("read", { path: "Library/Papers/source.md" }, undefined, undefined, ctx);
 		const summary =
 			"# Insect autotomy evidence\n\nThis completed run compares the observed behavior, its method, scope, evidence limits, and what remains unknown. It is reusable across future literature review while preserving species-specific applicability.";
+		const sourcePath = join(vault, "Library/Papers/source.md");
+		const sourceHash = createHash("sha256")
+			.update(await readFile(sourcePath))
+			.digest("hex");
+		const bodySha256 = createHash("sha256").update(`${summary.trim()}\n`).digest("hex");
+		const claim = {
+			bindingId: "claim-one",
+			claim: "The observed behavior is species-specific.",
+			deliveryBodySha256: bodySha256,
+			sourcePath: "Library/Papers/source.md",
+			sourceHash,
+		};
 		await h.events.get("tool_execution_start")(
 			{
 				toolCallId: "sum",
@@ -376,7 +395,34 @@ describe("navigation delivery and bounded maintenance", () => {
 				toolCallId: "sum",
 				toolName: "research_summarize_run",
 				isError: false,
-				result: { details: { summary_saved: true, run: "/tmp/SUMMARY.md" } },
+				result: {
+					details: {
+						summary_saved: true,
+						run: "/tmp/SUMMARY.md",
+						claims: [claim],
+						delivery_receipt: {
+							version: 1,
+							bodySha256,
+							memoryClaimsSha256: createHash("sha256")
+								.update(JSON.stringify([claim]))
+								.digest("hex"),
+							semanticAssessment: {
+								status: "model-assessed",
+								memoryClaims: [
+									{
+										bindingId: claim.bindingId,
+										memoryClaimSha256: createHash("sha256").update(JSON.stringify(claim)).digest("hex"),
+										assessment: "supported",
+										evidence: [
+											{ path: claim.sourcePath, sha256: claim.sourceHash, readReceiptId: "read-one" },
+										],
+									},
+								],
+							},
+							sources: [{ path: claim.sourcePath, sha256: claim.sourceHash, readReceiptIds: ["read-one"] }],
+						},
+					},
+				},
 			},
 			ctx,
 		);
@@ -463,7 +509,7 @@ describe("navigation delivery and bounded maintenance", () => {
 	it("promotes a bound ordinary turn when the model actually reads knowledge", async () => {
 		await prepared({ wiki: false });
 		const h = harness();
-		const ctx = { cwd: a, sessionId: "lazy-knowledge" };
+		const ctx = { cwd: a, sessionId: "lazy-knowledge", sessionManager: h.sessionManager };
 		await h.interface.beforeStart({ prompt: "请直接回答这个问题" }, ctx);
 		await h.events.get("tool_execution_start")(
 			{ toolCallId: "read", toolName: "research_read_knowledge", args: {} },
@@ -551,7 +597,10 @@ describe("navigation delivery and bounded maintenance", () => {
 
 it("FTS-first query plan does not enumerate all notes through the scope index", async () => {
 	const source = await readFile(
-		join(dirname(fileURLToPath(import.meta.url)), "../../../.pi/extensions/knowledge-worker.mjs"),
+		join(
+			dirname(fileURLToPath(import.meta.url)),
+			"../../../vendor/plugins/pi-knowledge/lib/knowledge/runtime/worker.mjs",
+		),
 		"utf8",
 	);
 	const schema = source.match(/db\.exec\(`([\s\S]*?)`\);/)[1];
@@ -581,7 +630,7 @@ describe("optional semantic candidate retrieval", () => {
 			"# Mechanosensory escape circuit\n\nThis note intentionally omits the lexical query token.\n",
 		);
 		const binding = await readKnowledgeBinding();
-		const semantic = new KnowledgeService(binding, app, {
+		const semantic = new KnowledgeService(binding, {
 			semanticCandidateProvider: async ({ query }) =>
 				query === "nomatchinguniquetoken" ? [{ path: "Library/Papers/semantic-only.md", score: 0.98 }] : [],
 		});

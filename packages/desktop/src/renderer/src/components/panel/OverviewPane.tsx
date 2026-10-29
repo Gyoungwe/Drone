@@ -9,8 +9,8 @@ import { ContextUsageMeter } from "./ContextUsageMeter";
 import { EvidencePane } from "./EvidencePane";
 import { ProcessPane } from "./ProcessPane";
 import { ReviewerCard } from "./ReviewerCard";
+import { DecisionsSection, SessionOverviewSections } from "./SessionOverviewSections";
 import { SubagentsPane } from "./SubagentsPane";
-import { DecisionsSection, TasksPane } from "./TasksPane";
 
 /**
  * The default right rail view. Every section is derived from the active session
@@ -38,7 +38,7 @@ export function OverviewPane({ sessionId }: { sessionId: string | null }) {
 				<ContextUsageMeter sessionId={sessionId} />
 			</section>
 
-			<TasksPane sessionId={sessionId} embedded includeDecisions={false} />
+			<SessionOverviewSections sessionId={sessionId} embedded includeDecisions={false} />
 
 			{(todos.length > 0 || messages.length > 0 || turns.length > 0) && (
 				<section className="panel-card" data-testid="overview-steps">

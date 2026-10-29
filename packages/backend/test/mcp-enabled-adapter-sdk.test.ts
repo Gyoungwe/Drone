@@ -13,7 +13,9 @@ import {
 import { zoteroMcpSpec } from "@gyoungwe/pi-research/host";
 import { describe, expect, it, vi } from "vitest";
 import { McpService } from "../src/mcp/service";
+import type { PermissionGate } from "../src/permissions/gate";
 import { preferBundledMcpRuntime } from "../src/project/trust-loader";
+import { makeUiContext } from "../src/session/ui-context";
 
 // Same tree electron-builder ships as <resources>/pi-packages/node_modules (npm run stage:pi-packages).
 const PACKAGES = resolve(__dirname, "../../desktop/pi-packages/node_modules");
@@ -146,11 +148,22 @@ describe("enabled-state as pi-mcp-adapter 5.1.0 reads Pi's mcp.json", () => {
 				modelRuntime: runtime,
 				sessionManager: SessionManager.inMemory(cwd),
 			}));
-			await session.bindExtensions({});
+			const uiStatuses: Array<{ key: string; text: string | undefined }> = [];
+			await session.bindExtensions({
+				mode: "rpc",
+				uiContext: makeUiContext(
+					{ confirm: async () => false } as unknown as PermissionGate,
+					undefined,
+					() => {},
+					(key, text) => uiStatuses.push({ key, text }),
+				),
+			});
 			const deadline = Date.now() + 20_000;
 			const ready = () => statuses.some((s) => s.servers.some((x) => x.name === "on" && x.toolCount === 1));
 			while (Date.now() < deadline && !ready()) await new Promise((r) => setTimeout(r, 100));
 			expect(ready(), JSON.stringify(statuses.at(-1))).toBe(true);
+			expect(uiStatuses.some((s) => s.key === "mcp" && s.text?.includes("MCP"))).toBe(true);
+			expect(uiStatuses.every((s) => !s.text?.includes("\u001b"))).toBe(true);
 			const last = statuses.at(-1);
 			const off = last?.servers.find((x) => x.name === "off");
 			expect(off?.status, JSON.stringify(last)).toBe("disabled");

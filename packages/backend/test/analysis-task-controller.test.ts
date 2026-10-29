@@ -10,6 +10,7 @@ import {
 	sampleSheetSchemaHash,
 } from "@drone/compute";
 import type { ComputeAnalysisPlan, ComputeSampleSheet } from "@drone/shared";
+import { createAnalysisAdapterRegistry } from "@gyoungwe/pi-analysis/host";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime } from "../src/capabilities/runtime";
@@ -145,6 +146,7 @@ async function setup(mode: "exploratory" | "inferential" = "exploratory", review
 		analysis,
 		compute,
 		capabilityRuntime: runtime,
+		adapters: createAnalysisAdapterRegistry(),
 		...(reviewer ? { reviewer } : {}),
 	});
 	await controller.create({ id: "pasilla", question: "Pasilla DESeq2 workflow", assay: "bulk-rnaseq", mode });
@@ -153,6 +155,17 @@ async function setup(mode: "exploratory" | "inferential" = "exploratory", review
 }
 
 describe("NGS analysis task controller", () => {
+	it("fails closed when the optional analysis plugin is not installed", async () => {
+		const controller = new AnalysisTaskController({
+			analysis: {} as any,
+			compute: {} as any,
+			capabilityRuntime: { activate: (() => undefined) as any },
+		});
+		await expect(
+			controller.create({ id: "missing-plugin", question: "q", assay: "bulk-rnaseq", mode: "exploratory" }),
+		).rejects.toThrow("Analysis plugin host is unavailable");
+	});
+
 	it("loads stage capabilities and completes only after observed success and review", async () => {
 		const { controller, analysis, activate, compute, spec, job } = await setup();
 		const ready = await controller.prepareCompute("pasilla", spec, evidence);
@@ -238,7 +251,12 @@ describe("NGS analysis task controller", () => {
 		const { controller, open, runtime, compute, spec } = await setup();
 		await controller.prepareCompute("pasilla", spec, evidence);
 		await controller.approveExecution("pasilla");
-		const restored = new AnalysisTaskController({ analysis: open(), compute, capabilityRuntime: runtime });
+		const restored = new AnalysisTaskController({
+			analysis: open(),
+			compute,
+			capabilityRuntime: runtime,
+			adapters: createAnalysisAdapterRegistry(),
+		});
 		for (const changed of [
 			{ ...spec, resources: { cpus: 32 } },
 			{ ...spec, workflow: { name: "other", version: "1" } },

@@ -2,7 +2,7 @@ import { link, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
-import { makePermissionGateExtension } from "../src/permissions/extension";
+import { makePermissionGateExtensions } from "../src/permissions/extension";
 import { taskWriteAllowed } from "../src/permissions/task-consent";
 
 const dirs: string[] = [];
@@ -66,7 +66,7 @@ it.each(["default", "deny", "pattern-ask", "outside"])(
 				},
 			},
 		};
-		const extension = makePermissionGateExtension(agent, { projectRoot: root, confirm });
+		const extension = makePermissionGateExtensions(agent, { projectRoot: root, confirm }).gate;
 		await extension.factory(pi);
 		const result = await hooks.tool_call(
 			{

@@ -1,0 +1,57 @@
+{
+	"scope": "Source-owned session custom checkpoints and idle notifications",
+	"date": "2026-10-28",
+	"status": "PARTIAL_ARCHITECTURE",
+	"base": "788e02f6",
+	"publicTypes": "1d057120",
+	"operations": {
+		"session.records.read": "read",
+		"session.records.append": "write",
+		"session.notify": "write"
+	},
+	"authority": {
+		"session": "actual live RegisteredSession identity",
+		"namespace": "host-derived verified pluginId",
+		"assistantMessagesExposed": false,
+		"legacyReadEscape": false,
+		"newGlobalLedger": false
+	},
+	"durability": {
+		"lazyAndInMemory": "deferred, not saved",
+		"failure": "needs-reopen for same entry; last committed reads only",
+		"reloadClearsFailure": false,
+		"recovery": "fresh actual disk-backed SDK entry"
+	},
+	"checks": {
+		"actualSdkAndRestrictedWorker": {
+			"status": "PASS",
+			"tests": 7,
+			"log": "/tmp/plugin-provider-sdk-cohort-final.log"
+		},
+		"sdkQuestionsModelsAndRecords": {
+			"status": "PASS",
+			"files": 3,
+			"tests": 24
+		},
+		"backendAndDesktopNodeTypecheck": "PASS",
+		"publicApiPackageCheck": "PASS",
+		"architecture": "PASS",
+		"changedFileLint": "PASS",
+		"formalInstallerGui": "NOT_RUN",
+		"finalCombinedRootGates": "PARENT_INTEGRATION_PENDING"
+	},
+	"remaining": [
+		"service-only providers",
+		"explicit legacy checkpoint adoption",
+		"raw native CLI generation fence",
+		"true managed task owner cutover and startup facade removal",
+		"formal installer GUI"
+	],
+	"npmPublished": false,
+	"externalAcceptanceAndB8": "unchanged",
+	"followups": {
+		"currentBranch": "24f7b00c",
+		"privateJsonlDiagnostic": "b8c9026f",
+		"desktopGenericSessionGate": "5c5a7bc1"
+	}
+}

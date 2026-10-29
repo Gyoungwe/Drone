@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { MAX_NOTE_BYTES, validateNote } from "@gyoungwe/pi-knowledge/host";
+import { KNOWLEDGE_MAX_NOTE_BYTES, validateKnowledgeNotePath } from "@drone/shared";
 import { DOMParser } from "@xmldom/xmldom";
 
 export class KnowledgeWebDavError extends Error {
@@ -45,7 +45,7 @@ export function strongEtag(value: string | null | undefined): string | null {
 }
 
 export function cloudNotePath(path: string): string {
-	validateNote(path);
+	validateKnowledgeNotePath(path);
 	// 不同步任意工作区产物；URL 解码链与 Windows 特殊文件名均拒绝。
 	if (
 		path.length > 1024 ||
@@ -229,7 +229,7 @@ export class WebDavTransport {
 				await response.body?.cancel();
 				return { status: response.status, headers: response.headers, body: Buffer.alloc(0) };
 			}
-			const limit = method === "PROPFIND" ? 64 * 1024 : MAX_NOTE_BYTES;
+			const limit = method === "PROPFIND" ? 64 * 1024 : KNOWLEDGE_MAX_NOTE_BYTES;
 			if (Number(response.headers.get("content-length")) > limit) {
 				await response.body?.cancel();
 				throw new KnowledgeWebDavError("protocol", "WebDAV 响应超过大小限制");

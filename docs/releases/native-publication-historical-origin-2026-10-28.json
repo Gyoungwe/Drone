@@ -1,0 +1,37 @@
+{
+	"scope": "Host-only pinned SDK historical provenance; not live publication authority",
+	"sdk": "@earendil-works/pi-coding-agent@1.1.0",
+	"baseMechanism": "16db1594",
+	"patchSha256": "3ae022547de00f7390981b58bbfced3422b0ffb908c72047c6b3d28a296b6c40",
+	"source": "SDK _entryIdsByMessage WeakMap followed only by an actual current-branch message entry; no index, timestamp, content hash or copied ID fallback",
+	"red": {
+		"result": "FAIL as intended",
+		"newTests": 2,
+		"reason": "Real SDK has no host-only historical origin method before this patch",
+		"log": "/tmp/native-historical-origin-red.log"
+	},
+	"green": {
+		"result": "PASS",
+		"totalSDKTests": 9,
+		"newCases": [
+			"Actual fresh live assistant copying historical body/timestamp/ID has no mapping",
+			"Actual SDK reload messages resolve their genuine persisted origin",
+			"A plain copy of the same real historical message has no mapping",
+			"Branch switch rejects formerly mapped messages that left the branch",
+			"Disposed SDK session rejects historical origin lookup"
+		],
+		"log": "/tmp/native-historical-origin-green.log"
+	},
+	"checks": {
+		"backendTypecheck": "PASS",
+		"architecture": "PASS, 0 findings",
+		"targetBiome": "PASS",
+		"whitespace": "PASS"
+	},
+	"pending": [
+		"Private historical-origin courier and actual event/poll/export consumers",
+		"Full knowledge owner publication consumer and same-tarball workflow",
+		"Formal installer and final dual-repository gates"
+	],
+	"disclosure": "Origin method remains within session-engine; no renderer IPC or generic history-read capability is added."
+}

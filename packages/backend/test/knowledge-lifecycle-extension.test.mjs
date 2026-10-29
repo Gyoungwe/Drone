@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices, createTopicMemory } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,6 +30,7 @@ describe("topic memory extension lifecycle", () => {
 		const tools = new Map();
 		const events = new Map();
 		const pi = {
+			events: createEventBus(),
 			registerTool: (tool) => tools.set(tool.name, tool),
 			registerCommand: () => {},
 			on: (name, fn) => events.set(name, fn),
@@ -63,6 +65,7 @@ describe("topic memory extension lifecycle", () => {
 		const tools = new Map();
 		const events = new Map();
 		const pi = {
+			events: createEventBus(),
 			registerTool: (tool) => tools.set(tool.name, tool),
 			registerCommand: () => {},
 			on: (name, fn) => events.set(name, fn),
@@ -100,6 +103,7 @@ describe("topic memory extension lifecycle", () => {
 	it("returns bounded candidates for an ambiguous Chinese topic request", async () => {
 		const tools = new Map();
 		const pi = {
+			events: createEventBus(),
 			registerTool: (tool) => tools.set(tool.name, tool),
 			registerCommand: () => {},
 			on: () => {},
@@ -121,6 +125,7 @@ describe("topic memory extension lifecycle", () => {
 	it("fails closed when the binding revision changes", async () => {
 		const tools = new Map();
 		const pi = {
+			events: createEventBus(),
 			registerTool: (tool) => tools.set(tool.name, tool),
 			registerCommand: () => {},
 			on: () => {},
@@ -139,6 +144,7 @@ describe("topic memory extension lifecycle", () => {
 	it("omits write tools in read-only mode", async () => {
 		const tools = new Map();
 		const pi = {
+			events: createEventBus(),
 			registerTool: (tool) => tools.set(tool.name, tool),
 			registerCommand: () => {},
 			on: () => {},
@@ -152,6 +158,7 @@ describe("topic memory extension lifecycle", () => {
 		const tools = new Map(),
 			events = new Map();
 		const pi = {
+			events: createEventBus(),
 			registerTool: (tool) => tools.set(tool.name, tool),
 			registerCommand: () => {},
 			on: (name, fn) => events.set(name, fn),

@@ -1,11 +1,16 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
+import {
+	createInstalledTaskRuntime,
+	installedTaskPluginPath,
+	taskSdkExtensionPath,
+} from "./fixtures/task-plugin.mjs";
 
 function assertWire(messages) {
 	let pending = new Set();
@@ -49,12 +54,16 @@ it.each(["file", "file-cancel", "file-elaborate"])(
 			runtime.registerNativeProvider(faux.provider);
 			vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
 			backend = new PiBackend({
+				runtime: createInstalledTaskRuntime(),
 				projectTrust: true,
 				webFetch: false,
 				subagentPreferBuiltin: false,
 				desktopIntegration: {
 					appendSystemPrompt: [],
-					additionalExtensionPaths: [resolve("../../.pi/extensions/obsidian-workbench.mjs")],
+					additionalExtensionPaths: [
+						installedTaskPluginPath(),
+						taskSdkExtensionPath("obsidian-workbench.mjs"),
+					],
 					additionalSkillPaths: [],
 				},
 			});

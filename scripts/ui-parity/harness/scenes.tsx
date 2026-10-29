@@ -6,7 +6,7 @@ import { ProcessBlock } from "@renderer/components/chat/ProcessBlock";
 import { ProgressNote } from "@renderer/components/chat/ProgressNote";
 import { Composer } from "@renderer/components/composer/Composer";
 import { ResourceSidebar } from "@renderer/components/diff/ResourceSidebar";
-import { TasksPane } from "@renderer/components/panel/TasksPane";
+import { SessionOverviewSections } from "@renderer/components/panel/SessionOverviewSections";
 import { SessionRow } from "@renderer/components/projects/SessionRow";
 import { MemorySettingsView } from "@renderer/components/settings/MemorySettingsRow";
 import { useI18nStore } from "@renderer/i18n";
@@ -735,7 +735,7 @@ function RightPanel({ fresh }: { fresh?: boolean }) {
 				disabled
 				onCompact={() => {}}
 			/>
-			<TasksPane sessionId="s1" />
+			<SessionOverviewSections sessionId="s1" />
 		</div>
 	);
 }

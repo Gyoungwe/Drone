@@ -1,0 +1,30 @@
+{
+	"date": "2026-10-28",
+	"scope": "P4 actual storage mode, live/durable task state and activation-local authorization",
+	"status": "PARTIAL",
+	"hostCommits": ["db50ef36", "f5b71cf6", "3dfcec09", "7de102bf"],
+	"pluginCommits": ["af902cf", "d468846", "85285e7", "d614099"],
+	"package": {
+		"name": "@gyoungwe/pi-core",
+		"version": "0.2.0",
+		"sha256": "40489c45c031c11113b427751c6eef5ab977c166906b3402a49c3b783d6b2fee",
+		"published": false
+	},
+	"checks": {
+		"coreNode": { "passed": 29, "failed": 0 },
+		"coreRuntimeUi": { "passed": 215, "failed": 0 },
+		"actualInstalledSdk": { "files": 5, "passed": 38, "failed": 0 },
+		"recordProviderSdk": { "files": 2, "passed": 17, "failed": 0 },
+		"apiPackageCheck": "PASS",
+		"backendTypecheck": "PASS",
+		"desktopNodeTypecheck": "PASS",
+		"architecture": "PASS",
+		"formalPackageGui": "NOT_RUN"
+	},
+	"remaining": [
+		"Actual managed TaskApplication/native adapter/data provider",
+		"Live-object provider roles and real session authority",
+		"Remove startup taskHost/coreHost",
+		"Final package GUI and whole-repository gates"
+	]
+}

@@ -20,6 +20,7 @@ import { createAntigravityProvider } from "./antigravity/provider";
  * the host migrate to BackendServices without exposing the Pi SDK to callers.
  */
 export class SessionEngine {
+	private readonly disposals = new WeakMap<AgentSession, Promise<void>>();
 	private modelRuntime: ModelRuntime | undefined;
 	private modelPromise: Promise<ModelRuntime> | undefined;
 
@@ -36,8 +37,36 @@ export class SessionEngine {
 	}
 
 	/** Session lifecycle operations stay behind the SDK boundary. */
-	dispose(session: AgentSession): void {
-		session.dispose();
+	dispose(session: AgentSession): Promise<void> {
+		const pending = this.disposals.get(session);
+		if (pending) return pending;
+		// Pi 1.1.0 dispose() does not emit shutdown. Start notification before
+		// cancellation, but await both together: hooks may wait for aborted tools,
+		// and tools may wait for UI/resources released by their shutdown hook.
+		const disposal = Promise.resolve().then(async () => {
+			const hookFailures: Error[] = [];
+			// The official runner reports handler failures through onError and resolves emit().
+			const unsubscribe = session.extensionRunner?.onError((error) => {
+				if (error.event === "session_shutdown")
+					hookFailures.push(new Error(`Extension shutdown failed: ${error.error}`));
+			});
+			const results = await Promise.allSettled([
+				Promise.resolve().then(() =>
+					session.extensionRunner?.emit({ type: "session_shutdown", reason: "quit" }),
+				),
+				Promise.resolve().then(() => session.abort()),
+			]);
+			unsubscribe?.();
+			results.push(...(await Promise.allSettled([Promise.resolve().then(() => session.dispose())])));
+			const failures = results.filter((result) => result.status === "rejected");
+			if (failures.length || hookFailures.length)
+				throw new AggregateError(
+					[...hookFailures, ...failures.map((result) => result.reason)],
+					"Session shutdown failed",
+				);
+		});
+		this.disposals.set(session, disposal);
+		return disposal;
 	}
 
 	abort(session: AgentSession): Promise<void> {
@@ -50,6 +79,58 @@ export class SessionEngine {
 		options?: Parameters<AgentSession["prompt"]>[1],
 	): ReturnType<AgentSession["prompt"]> {
 		return session.prompt(text, options);
+	}
+
+	/** Actual SDK provenance only; callers keep this private and never promote it to a live proof. */
+	historicalMessageOrigin(
+		session: AgentSession,
+		message: Parameters<AgentSession["getHostPersistedMessage"]>[0],
+	): ReturnType<AgentSession["getHostPersistedMessage"]> {
+		return session.getHostPersistedMessage(message);
+	}
+
+	/** Explicit extension dispatch never falls through to model input. */
+	async command(
+		session: AgentSession,
+		name: string,
+		args: string,
+		signal: AbortSignal,
+		assertCurrent: () => void,
+	): Promise<void> {
+		assertCurrent();
+		const runner = session.extensionRunner;
+		const command = runner.getCommand(name);
+		if (!command) throw new Error(`Extension command unavailable: ${name}`);
+		const source = runner.createCommandContext();
+		const sourceSignal = source.signal;
+		const commandSignal = sourceSignal ? AbortSignal.any([signal, sourceSignal]) : signal;
+		const check = () => {
+			assertCurrent();
+			if (session.extensionRunner !== runner) throw new Error("Session commands changed during execution");
+		};
+		// Preserve the SDK lazy context getters; idle commands have no agent-run signal.
+		const context = new Proxy(source, {
+			get(target, property, receiver) {
+				check();
+				return property === "signal" ? commandSignal : Reflect.get(target, property, receiver);
+			},
+		});
+		const waitForIdle = context.waitForIdle;
+		context.waitForIdle = async () => {
+			await waitForIdle();
+			check();
+		};
+		try {
+			await command.handler(args, context);
+		} catch (error) {
+			runner.emitError({
+				extensionPath: `command:${name}`,
+				event: "command",
+				error: error instanceof Error ? error.message : String(error),
+			});
+			throw error;
+		}
+		check();
 	}
 
 	clearQueue(session: AgentSession): ReturnType<AgentSession["clearQueue"]> {
@@ -80,8 +161,8 @@ export class SessionEngine {
 		return session.exportToHtml();
 	}
 
-	exportJsonl(session: AgentSession): string {
-		return session.exportToJsonl();
+	exportJsonl(session: AgentSession): Promise<string> {
+		return session.exportToJsonlForHost();
 	}
 
 	async create(

@@ -16,7 +16,6 @@ import {
 	useSortable,
 } from "@dnd-kit/sortable";
 import type { SessionMeta } from "@drone/shared";
-import { taskNeedsUser } from "@drone/shared";
 import type { ComponentProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
@@ -366,23 +365,9 @@ export function SessionTabBar() {
 	const suffixes = useTitleSuffixes(sessions, t("tabbar.untitled"), t("projects.daily"));
 	const [listOpen, setListOpen] = useState(false);
 	const listRef = useRef<HTMLDivElement>(null);
-	// 提示点：最新一份 TaskView 里是否有任务在等用户拍板，或有权限请求挂起。
-	// 只从 selector 返回布尔值——订阅 transcript 对象会随每条流式 delta 全量级联重渲染整条 tab bar。
-	const taskAwaiting = useTranscriptStore((s) => {
-		if (!activeSessionId) return false;
-		const entry = s.bySession[activeSessionId];
-		if (entry && entry.pendingPermissions.length > 0) return true;
-		const messages = entry?.messages;
-		if (!messages) return false;
-		for (let i = messages.length - 1; i >= 0; i--) {
-			const m = messages[i];
-			if (m?.kind === "assistant" && m.taskView)
-				// 终态卡不再进聊天流，所以「任务停在半路」只剩这个点能提示；
-				// partial = 干到一半停了，不亮点的话用户完全不会知道。
-				return m.taskView.tasks.some((t) => taskNeedsUser(t) || t.state === "partial");
-		}
-		return false;
-	});
+	const permissionAwaiting = useTranscriptStore((state) =>
+		activeSessionId ? (state.bySession[activeSessionId]?.pendingPermissions.length ?? 0) > 0 : false,
+	);
 	const scrollerRef = useRef<HTMLDivElement>(null);
 	const [activeId, setActiveId] = useState<string | null>(null);
 	/** 被拖胶囊拾起时的实测宽度（px）：ghost 全程沿用，保持原胶囊尺寸。
@@ -563,7 +548,7 @@ export function SessionTabBar() {
 					title={panelOpen ? t("panel.collapse") : t("panel.expand")}
 				>
 					<PanelRightIcon size={16} />
-					{taskAwaiting && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-warn" />}
+					{permissionAwaiting && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-warn" />}
 				</button>
 			)}
 		</div>

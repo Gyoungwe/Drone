@@ -14,18 +14,23 @@ import {
 	createBackend,
 	createLogger,
 	initLogging,
+	type ResearchConnectorHostLoaderFactory,
 	setReplyLanguage,
 } from "@drone/backend";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
+import { registerAppLifecycle } from "./app-lifecycle";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
 import { electronDesktopHost, launchedHidden } from "./desktop-host";
 import { applyDesktopPrefs } from "./desktop-prefs";
 import { HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest } from "./html-preview-protocol";
-import { registerIpc, sendToRenderer } from "./ipc";
+import { createSessionQuestionTransport, registerIpc, sendToRenderer } from "./ipc";
 import { migrateLegacyUserDir } from "./legacy-migration";
 import { buildMenuTemplate, DESKTOP_COMMAND_CHANNEL } from "./menu";
+import { discoverCoreHostLoader, discoverPluginHostLoader } from "./optional-plugin-hosts";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
+import type { DesktopRuntimeBridge } from "./ui-plugins/runtime-bridge";
+import { createDesktopRuntime, createNativeRuntimeIntegration } from "./ui-plugins/runtime-host";
 import { loadUiState } from "./ui-state";
 import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
 import { applyChromeTheme, createWindow, resolveTheme } from "./window";
@@ -36,6 +41,7 @@ const log = createLogger("main");
 app.setName("Drone");
 let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
+let pluginRuntime: DesktopRuntimeBridge | undefined;
 let latestIncidentSnapshot: ReturnType<typeof buildIncidentSnapshot> | undefined;
 
 /** renderer 加载自定义背景图的协议（pi-bg://background/<文件名>，只读 userData/backgrounds/） */
@@ -290,8 +296,131 @@ app.whenReady().then(async () => {
 		},
 	);
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
+	const pluginPackageRoots = [
+		join(process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"), "npm", "node_modules"),
+		app.isPackaged
+			? join(process.resourcesPath, "pi-packages", "node_modules")
+			: join(__dirname, "../../pi-packages/node_modules"),
+		join(app.getAppPath(), "node_modules"),
+	];
+	const coreHost = await discoverCoreHostLoader({ packageRoots: pluginPackageRoots });
+	let coreHostPort: ReturnType<NonNullable<typeof coreHost>["loader"]["load"]> | undefined;
+	if (coreHost) {
+		try {
+			coreHostPort = coreHost.loader.load();
+		} catch (error) {
+			log.warn("Core host unavailable; continuing without core plugin", { error: String(error) });
+		}
+	}
+	if (coreHost) log.info("Core host discovered", coreHost.discovery);
+	const taskHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api/tasks").TaskHostLoader>({
+		packageRoots: pluginPackageRoots,
+		capability: "tasks",
+		exportName: "taskHostLoader",
+	});
+	if (taskHost) log.info("Optional tasks host discovered", taskHost.discovery);
+	const analysisHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").AnalysisHostLoader>({
+		packageRoots: [
+			join(
+				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
+				"npm",
+				"node_modules",
+			),
+			app.isPackaged
+				? join(process.resourcesPath, "pi-packages", "node_modules")
+				: join(__dirname, "../../pi-packages/node_modules"),
+			join(app.getAppPath(), "node_modules"),
+		],
+		capability: "analysis",
+	});
+	if (analysisHost) log.info("Optional analysis host discovered", analysisHost.discovery);
+	const discoveryHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").DiscoveryHostLoader>({
+		packageRoots: pluginPackageRoots,
+		capability: "discovery",
+	});
+	if (discoveryHost) log.info("Optional discovery host discovered", discoveryHost.discovery);
+	const evidenceHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").EvidenceHostLoader>({
+		packageRoots: [
+			join(
+				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
+				"npm",
+				"node_modules",
+			),
+			app.isPackaged
+				? join(process.resourcesPath, "pi-packages", "node_modules")
+				: join(__dirname, "../../pi-packages/node_modules"),
+			join(app.getAppPath(), "node_modules"),
+		],
+		capability: "evidence",
+	});
+	if (evidenceHost) log.info("Optional evidence host discovered", evidenceHost.discovery);
+	const knowledgeHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").KnowledgeHostLoader>({
+		packageRoots: [
+			join(
+				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
+				"npm",
+				"node_modules",
+			),
+			app.isPackaged
+				? join(process.resourcesPath, "pi-packages", "node_modules")
+				: join(__dirname, "../../pi-packages/node_modules"),
+			join(app.getAppPath(), "node_modules"),
+		],
+		capability: "knowledge",
+	});
+	if (knowledgeHost) log.info("Optional knowledge host discovered", knowledgeHost.discovery);
+	const researchHost = await discoverPluginHostLoader<import("@drone/backend").ResearchHostLoader>({
+		packageRoots: [
+			join(
+				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
+				"npm",
+				"node_modules",
+			),
+			app.isPackaged
+				? join(process.resourcesPath, "pi-packages", "node_modules")
+				: join(__dirname, "../../pi-packages/node_modules"),
+			join(app.getAppPath(), "node_modules"),
+		],
+		capability: "research",
+	});
+	if (researchHost) log.info("Optional research host discovered", researchHost.discovery);
+	const researchConnectorHost = await discoverPluginHostLoader<
+		import("@gyoungwe/plugin-api").ResearchConnectorHostLoader
+	>({
+		packageRoots: [
+			join(
+				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
+				"npm",
+				"node_modules",
+			),
+			app.isPackaged
+				? join(process.resourcesPath, "pi-packages", "node_modules")
+				: join(__dirname, "../../pi-packages/node_modules"),
+			join(app.getAppPath(), "node_modules"),
+		],
+		capability: "research",
+		exportName: "researchConnectorHostLoader",
+	});
+	if (researchConnectorHost)
+		log.info("Optional research connector host discovered", researchConnectorHost.discovery);
+	const researchConnectorHostLoaderFactory =
+		typeof researchConnectorHost?.module.createResearchConnectorHostLoader === "function"
+			? (researchConnectorHost.module.createResearchConnectorHostLoader as ResearchConnectorHostLoaderFactory)
+			: undefined;
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
+		...(coreHostPort ? { coreHost: coreHostPort } : {}),
+		...(taskHost ? { taskHostLoader: taskHost.loader } : {}),
+		...(analysisHost ? { analysisHostLoader: analysisHost.loader } : {}),
+		...(discoveryHost ? { discoveryHostLoader: discoveryHost.loader } : {}),
+		...(evidenceHost ? { analysisEvidenceHost: evidenceHost.loader.load() } : {}),
+		...(knowledgeHost ? { knowledgeHostLoader: knowledgeHost.loader } : {}),
+		...(researchHost ? { researchHostLoader: researchHost.loader } : {}),
+		...(researchConnectorHostLoaderFactory
+			? { researchConnectorHostLoaderFactory }
+			: researchConnectorHost
+				? { researchConnectorHostLoader: researchConnectorHost.loader }
+				: {}),
 		computeAuthorizeRemoteOperation: authorizeComputeOperation,
 		computeSshConfig: () => readSshConfigHosts(),
 		// Use one ledger per canonical workspace. The old single ledger remains
@@ -301,6 +430,16 @@ app.whenReady().then(async () => {
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
 			appendSystemPrompt: desktopSystemPrompt(),
+			nativeRuntime: createNativeRuntimeIntegration(
+				() => {
+					if (!uiPluginsManager) throw new Error("Plugin manager not initialized");
+					return uiPluginsManager;
+				},
+				() => {
+					if (!pluginRuntime) throw new Error("Plugin runtime not initialized");
+					return pluginRuntime;
+				},
+			),
 			pluginRuntimeDirectory: app.isPackaged
 				? join(process.resourcesPath, "plugin-runtime")
 				: join(__dirname, `../../plugin-runtime/${process.platform}-${process.arch}`),
@@ -342,7 +481,15 @@ app.whenReady().then(async () => {
 	consoleFlush.unref();
 	uiPluginsManager = new UiPluginManager();
 	await uiPluginsManager.init();
-	registerIpc(backendServices, uiPluginsManager, () => latestIncidentSnapshot);
+	pluginRuntime = createDesktopRuntime(
+		uiPluginsManager,
+		app.isPackaged
+			? join(process.resourcesPath, "plugin-runtime")
+			: join(__dirname, `../../plugin-runtime/${process.platform}-${process.arch}`),
+		backendServices.sessions,
+		(owner) => createSessionQuestionTransport(owner.id),
+	);
+	registerIpc(backendServices, uiPluginsManager, pluginRuntime, () => latestIncidentSnapshot);
 	await initUpdater();
 	scheduleAutoUpdateCheck();
 	const uiState = await loadUiState();
@@ -351,7 +498,7 @@ app.whenReady().then(async () => {
 	applyDesktopPrefs(uiState?.desktop, electronDesktopHost, app.isPackaged);
 	createWindow(resolveTheme(uiState?.theme), launchedHidden);
 
-	app.on("activate", () => {
+	appLifecycle.onActivate(() => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow(resolveTheme(uiState?.theme));
 	});
 });
@@ -360,7 +507,31 @@ app.on("window-all-closed", () => {
 	if (process.platform !== "darwin") app.quit();
 });
 
-app.on("before-quit", () => {
-	backendServices?.dispose();
-	uiPluginsManager?.disposeWatcher();
+app.on("web-contents-created", (_event, contents) => {
+	const ownerId = contents.id;
+	contents.once("destroyed", () => {
+		void pluginRuntime
+			?.revoke(undefined, ownerId)
+			.catch((error) => log.error("Plugin runtime window cleanup failed", error));
+	});
+});
+
+const appLifecycle = registerAppLifecycle(app, {
+	log,
+	cleanup: async () => {
+		log.info("app shutdown: closing plugin runtimes");
+		await pluginRuntime?.close();
+		log.info("app shutdown: plugin runtimes closed; disposing backend services");
+		await backendServices?.dispose();
+		log.info("app shutdown: backend services disposed");
+		uiPluginsManager?.disposeWatcher();
+		log.info("app shutdown: plugin watchers closed");
+	},
+	onShutdownError: (error) => {
+		log.error("Plugin runtime shutdown failed", error);
+		dialog.showErrorBox(
+			"Plugin runtime shutdown failed",
+			error instanceof Error ? error.message : String(error),
+		);
+	},
 });

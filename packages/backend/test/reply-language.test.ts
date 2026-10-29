@@ -1,3 +1,4 @@
+import { makeStatusTool } from "@gyoungwe/pi-core/host";
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	desktopLoaderOptions,
@@ -12,7 +13,6 @@ import {
 	replyLanguagePrompt,
 	setReplyLanguage,
 } from "../src/reply-language";
-import { makeStatusTool } from "../src/tools/status";
 
 afterEach(() => clearReplyLanguage());
 

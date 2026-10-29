@@ -108,7 +108,13 @@ export function AskDialog({
 	// request.id 变化必须清 sending：连续 ask 不会卸载对话框，否则会卡在「提交中…」
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset when the ask id changes, even though the effect only uses setters
 	useEffect(() => {
-		setDrafts({});
+		setDrafts(
+			Object.fromEntries(
+				(request?.questions ?? [])
+					.filter((question) => question.type === "text" && !question.required)
+					.map((question) => [question.id, { customText: "" }]),
+			),
+		);
 		setError(null);
 		setSending(false);
 	}, [request?.id]);

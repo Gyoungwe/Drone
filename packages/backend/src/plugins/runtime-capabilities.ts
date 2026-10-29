@@ -1,0 +1,238 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
+import type {
+	PluginResourcesLifecycle,
+	PluginRuntimeCapabilities,
+	PluginRuntimeResource,
+	PluginRuntimeSchema,
+	PluginRuntimeScope,
+} from "@gyoungwe/plugin-api/runtime";
+import { Type } from "typebox";
+import { Check } from "typebox/value";
+import type { AskQuestionRoute } from "../session/ask-gate";
+
+/** Created only around an actual SDK native callback; never accepted from operation or IPC input. */
+export interface PluginNativeInvocation {
+	readonly kind: "message_start" | "tool_execution_end";
+	readonly event: unknown;
+	readonly attachment: PluginNativeSession;
+}
+
+export interface PluginCapabilityContext {
+	readonly nativeInvocation?: PluginNativeInvocation;
+	/** Actual surrounding registry operation effect, distinct from the current capability's effect. */
+	readonly invocationEffect?: "read" | "write";
+	/** Host-only nested service lineage; never accepted from plugin JSON. */
+	readonly providerChain?: readonly { readonly source: object; readonly operation: string }[];
+	readonly operation?: string;
+	readonly questions?: AskQuestionRoute;
+	readonly pluginId: string;
+	readonly applicationId: string;
+	readonly scope: PluginRuntimeScope;
+	readonly callerIdentity: object | undefined;
+	/** Host-only live SessionRegistry identity; never supplied by plugin JSON. */
+	readonly sessionIdentity?: object;
+	readonly signal: AbortSignal;
+	readonly bootstrap: boolean;
+	/** This call only; resource children must receive a fresh port for every subsequent invocation. */
+	readonly capabilities: PluginRuntimeCapabilities;
+}
+export interface PluginCapabilityHandler {
+	readonly inputSchema: PluginRuntimeSchema;
+	readonly resultSchema: PluginRuntimeSchema;
+	readonly effect: "read" | "write";
+	/** Only pre-approved application state reads may run while constructing an owner. */
+	readonly bootstrap?: true;
+	/** Host-owned formatter, called only after capability input schema validation. */
+	approvalDetail?(
+		input: unknown,
+		facts: Pick<PluginCapabilityContext, "pluginId" | "applicationId" | "scope">,
+	): string;
+	execute(input: unknown, context: PluginCapabilityContext): Promise<unknown>;
+}
+export interface PluginRuntimeCapabilitiesOptions {
+	readonly handlers: Readonly<Record<string, PluginCapabilityHandler>>;
+	readonly resources: readonly PluginRuntimeResource[];
+	readonly resourcesLifecycle?: PluginResourcesLifecycle;
+	/** Drain and close host-owned resources; attempted even if domain disposal fails. */
+	dispose?(): Promise<void>;
+	/** Release writer leases only after domain, native and resource cleanup all succeeded. */
+	finalRelease?(): Promise<void>;
+}
+/** Host-owned identity only: no filesystem grant is implied by the returned scope. */
+const callerScopeHandler: PluginCapabilityHandler = {
+	inputSchema: Type.Null(),
+	resultSchema: Type.Union([
+		Type.Object({ kind: Type.Literal("application") }, { additionalProperties: false }),
+		Type.Object(
+			{
+				kind: Type.Literal("workspace"),
+				workspaceId: Type.String(),
+				workspaceDirectory: Type.String(),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				kind: Type.Literal("session"),
+				workspaceId: Type.String(),
+				workspaceDirectory: Type.String(),
+				sessionId: Type.String(),
+			},
+			{ additionalProperties: false },
+		),
+	]),
+	effect: "read",
+	bootstrap: true,
+	execute: async (_input, context) => ({ ...context.scope }),
+};
+
+interface Authority {
+	readonly context: PluginCapabilityContext;
+	readonly effect: "read" | "write";
+	readonly authorize: (
+		name: string,
+		input: unknown,
+		effect: "read" | "write",
+		detail?: string,
+		signal?: AbortSignal,
+	) => Promise<boolean>;
+	readonly check: () => void;
+	readonly pending: Set<Promise<unknown>>;
+	closed: boolean;
+}
+
+/** Factory-held ports borrow the current call's authority; retaining a port never retains a caller. */
+export class PluginCapabilityBroker {
+	private readonly calls = new AsyncLocalStorage<Authority | undefined>();
+	readonly port: PluginRuntimeCapabilities = {
+		call: (name, input, signal) => {
+			const authority = this.calls.getStore();
+			if (!authority || authority.closed)
+				return Promise.reject(new Error("Plugin capability has no live caller"));
+			return this.trackedCall(authority, name, input, signal);
+		},
+	};
+
+	constructor(private readonly options: PluginRuntimeCapabilitiesOptions) {}
+
+	/** Pure projection gets no borrowed factory port, including an ambient parent invocation. */
+	withoutCaller<T>(execute: () => Promise<T>): Promise<T> {
+		return this.calls.run(undefined, execute);
+	}
+
+	async run<T>(
+		context: Omit<PluginCapabilityContext, "capabilities">,
+		effect: "read" | "write",
+		check: () => void,
+		authorize: Authority["authorize"],
+		execute: () => Promise<T>,
+	): Promise<T> {
+		const authority: Authority = {
+			context: {
+				...context,
+				invocationEffect: effect,
+				capabilities: { call: (name, input, signal) => this.trackedCall(authority, name, input, signal) },
+			},
+			effect,
+			check,
+			authorize,
+			pending: new Set(),
+			closed: false,
+		};
+		const [execution] = await Promise.allSettled([this.calls.run(authority, execute)]);
+		authority.closed = true;
+		// Calls still pending at outer completion are drained and their failures join this receipt.
+		// Settled errors remain on their own promises: plugins must await calls and may recover explicitly.
+		// Promise/IPC transport cannot infer whether the plugin observed every earlier rejection.
+		const pending = await Promise.allSettled([...authority.pending]);
+		const failures = [execution, ...pending].filter((result) => result.status === "rejected");
+		if (failures.length === 1) throw failures[0]?.reason;
+		if (failures.length > 1)
+			throw new AggregateError(
+				failures.map((result) => result.reason),
+				"Plugin operation and capability cleanup failed",
+			);
+		if (execution.status === "rejected") throw execution.reason;
+		return execution.value;
+	}
+
+	private trackedCall(
+		authority: Authority,
+		name: string,
+		input: unknown,
+		signal?: AbortSignal,
+	): Promise<unknown> {
+		let current = authority;
+		if (signal) {
+			current = {
+				...authority,
+				context: {
+					...authority.context,
+					signal: AbortSignal.any([authority.context.signal, signal]),
+					capabilities: { call: (name, input, signal) => this.trackedCall(current, name, input, signal) },
+				},
+				check: () => {
+					if (authority.closed) throw new Error("Plugin capability caller completed");
+					authority.check();
+				},
+			};
+		}
+		const pending = this.call(current, name, input);
+		authority.pending.add(pending);
+		void pending.then(
+			() => authority.pending.delete(pending),
+			() => authority.pending.delete(pending),
+		);
+		return pending;
+	}
+
+	private async call(authority: Authority, name: string, input: unknown): Promise<unknown> {
+		const check = () => {
+			if (authority.closed) throw new Error("Plugin capability caller completed");
+			authority.context.signal.throwIfAborted();
+			authority.check();
+		};
+		check();
+		const handler =
+			name === "caller.scope"
+				? callerScopeHandler
+				: Object.hasOwn(this.options.handlers, name)
+					? this.options.handlers[name]
+					: undefined;
+		if (!handler) throw new Error(`Plugin capability is not registered: ${name}`);
+		if (!Check(handler.inputSchema, input)) throw new Error(`Invalid plugin capability input: ${name}`);
+		if (handler.effect === "write" && authority.effect !== "write")
+			throw new Error(`Read-only plugin invocation cannot use write capability: ${name}`);
+		if (authority.context.bootstrap) {
+			if (!handler.bootstrap || handler.effect !== "read")
+				throw new Error(`Plugin capability is unavailable during bootstrap: ${name}`);
+		} else if (
+			!(await authority.authorize(
+				name,
+				input,
+				handler.effect,
+				handler.approvalDetail?.(input, {
+					pluginId: authority.context.pluginId,
+					applicationId: authority.context.applicationId,
+					scope: authority.context.scope,
+				}),
+				authority.context.signal,
+			))
+		) {
+			throw new Error(`Plugin capability denied: ${name}`);
+		}
+		check();
+		const result = await this.calls.run(authority, () => handler.execute(input, authority.context));
+		check();
+		if (!Check(handler.resultSchema, result)) throw new Error(`Invalid plugin capability result: ${name}`);
+		return result;
+	}
+}
+
+export type PluginRuntimeCapabilitiesProvider = (activation: {
+	pluginId: string;
+	applicationId: string;
+	signal: AbortSignal;
+	events: { changed(): void };
+}) => PluginRuntimeCapabilitiesOptions | Promise<PluginRuntimeCapabilitiesOptions>;

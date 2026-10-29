@@ -8,19 +8,25 @@ import {
 	PROTECTED_KNOWLEDGE_AGENTS,
 	renderHarnessPromptLayer,
 	resolveHarnessModelFamily,
+	type SessionEvent,
 } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
-import { registerAnswerPublication } from "@gyoungwe/pi-knowledge/host";
+import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { Type } from "typebox";
-import { makePermissionGateExtension } from "../../permissions/extension";
+import { makePermissionGateExtensions } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
+import type { PluginNativeIntegration } from "../../plugins/coordinator";
 import { researchWorkbenchRoot } from "../../research-root";
+import { createSessionExtensionDiagnostics } from "../../session/extension-errors";
 import { projectKnowledgeEvent } from "../../session/knowledge-publication";
+import type { RegisteredSession } from "../../session/registry";
 import type { SessionTraces } from "../../session/traces";
 import { makeUiContext } from "../../session/ui-context";
 import type {
+	AgentSession,
 	AgentSessionEvent,
 	AgentToolResult,
+	HostExtensionSelectionReceipt,
 	ModelRuntime,
 	ToolDefinition,
 } from "../../session-engine/sdk";
@@ -33,7 +39,6 @@ import {
 } from "../../session-engine/sdk";
 import { globalToolManifest, ToolManifest } from "../manifest";
 import { makeSshTool } from "../ssh";
-import { makeStatusTool } from "../status";
 import { makeWebFetchTool } from "../webfetch";
 import type { SubagentDefinition, SubagentMcpAccess } from "./agents";
 import { withNativeSubagentSlot } from "./slots";
@@ -92,14 +97,24 @@ export interface RunSubagentInput {
 	onProgress?: (result: SingleResult) => void;
 }
 
+export interface NativeChildSessions {
+	readonly integration: PluginNativeIntegration;
+	/** Make the running child resolvable for plugin capabilities; the returned function removes it. */
+	register(entry: RegisteredSession): () => void;
+}
+
 export interface RunSubagentDeps {
+	/** Optional installed pi-core host port; absent means core child tools are unavailable. */
+	coreHost?: CoreHostPort;
+	/** Installed packages that declared read-only child support, resolved through the child-only registry. */
+	nativeChildren?: () => NativeChildSessions | undefined;
 	getModelRuntime: () => Promise<ModelRuntime>;
 	/** 设置页的 per-agent 覆盖；无配置时返回 undefined 并继续走 frontmatter / 父模型。 */
 	getSubagentModel: (agentName: string) => Promise<string | undefined>;
 	gate: PermissionGate;
 	traces: SessionTraces;
-	/** 把运行中子会话事件转发给宿主；未提供时只写 trace（供非桌面宿主使用）。 */
-	onEvent?: (sessionId: string, event: AgentSessionEvent) => void;
+	/** Forward child events with their own identity. Without a host stream, only SDK events enter trace. */
+	onEvent?: (sessionId: string, event: SessionEvent) => void;
 	/** Register/unregister a live child so the host can steer it or answer supervisor requests. */
 	registerLiveChild?: (
 		sessionId: string,
@@ -281,19 +296,14 @@ export async function resolveSubagentMcpAccess(
 	projectTrusted = true,
 ): Promise<SubagentMcpAccess> {
 	if (!projectTrusted) return "none";
+	// The research-obsidian MCP bridge follows the project's own workspace file. Knowledge Vault
+	// access for children is decided by the knowledge package from its binding (native child facts).
 	let workspacePolicy: SubagentMcpAccess = "none";
 	try {
-		if (process.env.DRONE_KNOWLEDGE_DIR) {
-			const binding = JSON.parse(
-				await readFile(join(process.env.DRONE_KNOWLEDGE_DIR, "binding.json"), "utf8"),
-			) as { version?: number; subagentPolicy?: unknown };
-			if (binding.version === 1 && binding.subagentPolicy === "read-local") workspacePolicy = "read-local";
-		} else {
-			const raw = JSON.parse(await readFile(join(cwd, ".pi", "research-workspace.json"), "utf8")) as {
-				subagentMcpPolicy?: unknown;
-			};
-			if (raw.subagentMcpPolicy === "read-local") workspacePolicy = "read-local";
-		}
+		const raw = JSON.parse(await readFile(join(cwd, ".pi", "research-workspace.json"), "utf8")) as {
+			subagentMcpPolicy?: unknown;
+		};
+		if (raw.subagentMcpPolicy === "read-local") workspacePolicy = "read-local";
 	} catch {
 		return "none";
 	}
@@ -417,7 +427,8 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 			};
 		},
 	};
-	const customTools: ToolDefinition[] = [makeStatusTool(), contactSupervisorTool];
+	const customTools: ToolDefinition[] = [contactSupervisorTool];
+	if (deps.coreHost) customTools.unshift(deps.coreHost.makeStatusTool() as ToolDefinition);
 	if (safeTools.includes("webfetch")) customTools.push(makeWebFetchTool());
 	if (safeTools.includes("ssh"))
 		customTools.push(
@@ -427,59 +438,119 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		);
 	const mcpAccess = await resolveSubagentMcpAccess(input.cwd, input.agent, input.projectTrusted);
 	const readonlyMcpExtension = join(researchWorkbenchRoot(), "extensions", "subagent-mcp-readonly.mjs");
-	const childExtensionFactories = [
-		makePermissionGateExtension(agentDir, {
-			projectRoot: input.cwd,
-			confirm: childGateConfirm,
-		}),
-	];
+	const childPermission = makePermissionGateExtensions(agentDir, {
+		projectRoot: input.cwd,
+		confirm: childGateConfirm,
+	});
+	const childExtensionFactories = [childPermission.gate];
 	if (mcpAccess === "read-local" && existsSync(readonlyMcpExtension)) {
 		const readonlyMcp = (await import(pathToFileURL(readonlyMcpExtension).href)) as {
 			makeSubagentReadonlyMcp: (cwd: string) => (pi: unknown) => void;
 		};
 		childExtensionFactories.push(readonlyMcp.makeSubagentReadonlyMcp(input.cwd) as never);
-	} else if (process.env.DRONE_KNOWLEDGE_DIR) {
-		// Children without Vault permission return labeled material, not a checked parent answer.
-		childExtensionFactories.push(((pi: unknown) =>
-			registerAnswerPublication(pi, { getCurrent: () => null, evidenceOnly: true }).begin(false)) as never);
 	}
-	const resourceLoader = new DefaultResourceLoader({
-		cwd: input.cwd,
-		agentDir,
-		settingsManager: childSettings,
-		noExtensions: true,
-		noSkills: true,
-		noPromptTemplates: true,
-		appendSystemPrompt: [
-			renderHarnessPromptLayer(resolveHarnessModelFamily(model?.provider, model?.id), {
-				effort: "normal",
-				delegation: "off",
-				autonomy: "autonomous",
-				mode: "execute",
-			}),
-			input.agent.systemPrompt,
-			"For multi-step work, use set_status when the current activity meaningfully changes. Keep status short, concrete, present-tense, and user-visible; never include hidden reasoning, conclusions, confidence, or percentages.",
-			"You have a live supervisor channel. Use contact_supervisor(reason=progress_update) only for meaningful discoveries that change the plan. Use need_decision when blocked and interview_request when structured clarification is required. Do not wait silently when a decision is required.",
-		],
-		extensionFactories: childExtensionFactories,
-	});
-	await resourceLoader.reload();
+	// Read-only native child: only packages that declared child support load, and they receive host
+	// facts (no root, no grant); "read" lets the package apply its own read policy. Plugins never run
+	// for untrusted projects (the broker refuses them), so an untrusted child loads none.
+	const childFiles: "none" | "read" = input.agent.mcpAccess === "none" ? "none" : "read";
+	const nativeChildren = input.projectTrusted ? deps.nativeChildren?.() : undefined;
+	const nativePaths = nativeChildren?.integration.childExtensionPaths() ?? [];
+	const native =
+		nativeChildren && nativePaths.length
+			? nativeChildren.integration.begin({ kind: "child", readOnly: true, files: childFiles })
+			: undefined;
+	const nativeDelivery = native?.delivery;
+	let unregisterChild: (() => void) | undefined;
+	let session: AgentSession;
+	try {
+		const resourceLoader = new DefaultResourceLoader({
+			cwd: input.cwd,
+			agentDir,
+			settingsManager: childSettings,
+			noExtensions: true,
+			...(native && nativeChildren
+				? {
+						additionalExtensionPaths: [...nativePaths],
+						extensionFactoryForPath: async (path: string) => {
+							const selected = nativeDelivery?.observeSelectedPath(path);
+							if (selected?.kind === "unconfirmed")
+								throw new Error("Native extension source authority is unavailable");
+							if (selected?.kind === "managed" && selected.state !== "enabled")
+								throw new Error("Native extension source is not enabled");
+							if (!nativeChildren.integration.manages(path))
+								throw new Error("A child session loads only managed native packages");
+							return native.factoryForPath(path);
+						},
+						...(nativeDelivery
+							? {
+									hostExtensionSelection: (receipt: HostExtensionSelectionReceipt) => {
+										if (receipt.phase === "loading") nativeDelivery.invalidateSelection();
+										else nativeDelivery.confirmSelection(receipt.paths);
+									},
+								}
+							: {}),
+					}
+				: {}),
+			noSkills: true,
+			noPromptTemplates: true,
+			appendSystemPrompt: [
+				renderHarnessPromptLayer(resolveHarnessModelFamily(model?.provider, model?.id), {
+					effort: "normal",
+					delegation: "off",
+					autonomy: "autonomous",
+					mode: "execute",
+				}),
+				input.agent.systemPrompt,
+				"For multi-step work, use set_status when the current activity meaningfully changes. Keep status short, concrete, present-tense, and user-visible; never include hidden reasoning, conclusions, confidence, or percentages.",
+				"You have a live supervisor channel. Use contact_supervisor(reason=progress_update) only for meaningful discoveries that change the plan. Use need_decision when blocked and interview_request when structured clarification is required. Do not wait silently when a decision is required.",
+			],
+			extensionFactories: [...childExtensionFactories, childPermission.finalCheck],
+		});
+		await resourceLoader.reload();
 
-	const sessionManager = SessionManager.create(input.cwd, sessionDir);
-	const { session } = await createAgentSession({
-		cwd: input.cwd,
-		agentDir,
-		modelRuntime: runtime,
-		model,
-		tools: safeTools,
-		customTools,
-		sessionManager,
-		settingsManager: childSettings,
-		resourceLoader,
-	});
-	// 子会话没有主会话的 message_start 自动命名器；创建后立即把任务首行写进自己的 jsonl。
-	session.setSessionName(subagentSessionName(input.agent.name, input.task));
-	await session.bindExtensions({ uiContext: makeUiContext(deps.gate), mode: "tui" });
+		const sessionManager = SessionManager.create(input.cwd, sessionDir);
+		({ session } = await createAgentSession({
+			cwd: input.cwd,
+			agentDir,
+			modelRuntime: runtime,
+			model,
+			tools: safeTools,
+			customTools,
+			sessionManager,
+			settingsManager: childSettings,
+			resourceLoader,
+			...(nativeDelivery
+				? {
+						hostDeliveryRunStart: (signal: AbortSignal) => nativeDelivery.start(signal),
+						hostExportIsOrdinary: () => nativeDelivery.isOrdinaryForExport(),
+						hostExportBoundary: (exported: Parameters<typeof nativeDelivery.exportProjection>[0]) =>
+							nativeDelivery.exportProjection(exported),
+						hostDeliveryBoundary: (
+							event: Parameters<typeof nativeDelivery.finalize>[0],
+							signal: AbortSignal,
+						) => nativeDelivery.finalize(event, signal),
+					}
+				: {}),
+		}));
+		if (native && nativeChildren) {
+			const childSession = session;
+			unregisterChild = nativeChildren.register({
+				session: childSession,
+				cwd: input.cwd,
+				readOnly: true,
+				nativeKind: "child",
+				nativeChildFiles: childFiles,
+				nativeDelivery,
+				unsubscribe: () => undefined,
+			});
+			native.bindSession(childSession.sessionId, () => childSession.abort());
+		}
+	} catch (error) {
+		unregisterChild?.();
+		await native?.dispose();
+		throw error;
+	}
+	const diagnostics = createSessionExtensionDiagnostics(session, deps.traces);
 	const result: SingleResult = {
 		agent: input.agent.name,
 		parentSessionId: input.parentSessionId,
@@ -600,6 +671,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		});
 	});
 	const abort = () => {
+		deps.onEvent?.(session.sessionId, { type: "extension_status", key: null, text: null });
 		void session.abort();
 	};
 	if (input.signal) {
@@ -607,9 +679,32 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		else input.signal.addEventListener("abort", abort, { once: true });
 	}
 	try {
+		await deps.traces.start(session.sessionId, session.sessionManager.getSessionDir());
+		await session.bindExtensions({
+			uiContext: makeUiContext(
+				deps.gate,
+				undefined,
+				deps.onEvent
+					? (message, severity) => {
+							// Revoked contexts never publish late UI output; these events are not traces.
+							if (result.exitCode !== -1 || input.signal?.aborted) return;
+							deps.onEvent?.(session.sessionId, { type: "extension_notification", severity, message });
+						}
+					: undefined,
+				deps.onEvent
+					? (key, text) => {
+							if (result.exitCode !== -1 || input.signal?.aborted) return;
+							deps.onEvent?.(session.sessionId, { type: "extension_status", key, text: text ?? null });
+						}
+					: undefined,
+			),
+			mode: "rpc",
+			onError: diagnostics.onError,
+		});
+		// Set the title before the first progress notification and model event.
+		session.setSessionName(subagentSessionName(input.agent.name, input.task));
 		// sessionFile 已在创建时落盘；先通知父工具/UI，用户即可在首个模型事件前进入实时子会话。
 		input.onProgress?.(result);
-		await deps.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 		// expandPromptTemplates: false——子会话无任何模板/命令，任务文本以 "/" 开头也不触发命令解析
 		await session.prompt(input.task, { expandPromptTemplates: false });
 		if (!settled) await endPromise;
@@ -630,6 +725,8 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		result.exitCode = 1;
 		result.error = failure;
 	} finally {
+		deps.onEvent?.(session.sessionId, { type: "extension_status", key: null, text: null });
+		diagnostics.dispose();
 		unsubscribeEvents?.();
 		unregisterLiveChild?.();
 		for (const pending of pendingSupervisor.values())
@@ -637,7 +734,10 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		pendingSupervisor.clear();
 		input.signal?.removeEventListener("abort", abort);
 		await deps.traces.stop(session.sessionId);
+		// Revoke the child's capabilities before its SDK session and native attachments shut down.
+		unregisterChild?.();
 		session.dispose();
+		await native?.dispose();
 	}
 	if (failure && !result.error) result.error = failure;
 	// totalTokens 从未上报时回落 input+output（卡片 tokens 展示用）

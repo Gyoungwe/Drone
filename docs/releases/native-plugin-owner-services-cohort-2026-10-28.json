@@ -1,0 +1,246 @@
+{
+	"schemaVersion": 1,
+	"status": "CHECKPOINT_PASSED",
+	"hostSourceBeforeReceipt": "bb918979f979d909a82f39eeffc1199189729af6",
+	"pluginSource": "1707f6c346486370eacc1dfce37b403461230d17",
+	"api": {
+		"sourceCommit": "2c4e3ecd8dc20ffba64dfdc79cfa16a484f5bc7e",
+		"filename": "gyoungwe-plugin-api-1.3.0-2c4e3ecd.tgz",
+		"sha256": "b296da73a05628b21e6f7cf6da2816b9c95ee8dbca27d053ac3237d292de4d70",
+		"integrity": "sha512-h/WtcK5iBuNz+puN7AhC8TDINYq4xvQH9npBcYqcwM3P3ALyVeVb2vy+5fol7UBi+geB/8D0HknaHLEYwm8myA==",
+		"published": false
+	},
+	"packages": [
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.3.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-knowledge-0.3.0.tgz",
+			"sha256": "d02d32bf9f461208b77166d5c31c97bd5e45c4f2d646d9a74bfc9076da8cf139"
+		},
+		{
+			"name": "@gyoungwe/pi-analysis",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-analysis-0.2.0.tgz",
+			"sha256": "325b8e8214837a4d7c1d06db91cd1eb14c9c4bf7cf9eba031e44718cf95d8cdb"
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"version": "0.3.2",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-research-0.3.2.tgz",
+			"sha256": "4db7092d8ef47a29f987833fd577ceaa18dc21f2295e605c0ce4be6be7a15176"
+		},
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-core-0.2.0.tgz",
+			"sha256": "61c8b93b988b84c76a1cd3aa131e11dc030f9df3f679c55d6ba061d7476598f6"
+		},
+		{
+			"name": "@gyoungwe/pi-discovery",
+			"version": "0.2.0",
+			"tarball": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-native-owner-services-cohort-pack-ccj31k/gyoungwe-pi-discovery-0.2.0.tgz",
+			"sha256": "378f831d75688dcc84f255a1bf06ca51ddd4be9b0467b502a5d2bc1877c7eb9e"
+		}
+	],
+	"checks": [
+		{
+			"path": "/tmp/drone-native-owner-services-packed-sdk-final.log",
+			"sha256": "911eb8619b3ed6d10dbfe213c94872403beb498f200481472e4b15a01f2b219a",
+			"exitCode": 0,
+			"scope": "Earlier six-file matching candidate acceptance passed after canonical source/RO hook fixture and success-only execution budget corrections. Before new SDK fallback fix and before local image preparation."
+		},
+		{
+			"path": "/tmp/drone-native-model-wait-projection-red.log",
+			"sha256": "9a43146dab924c3f68bba575173b3aec626bf0ebac0a87e41b368ea66cf9e2ae",
+			"exitCode": 1,
+			"scope": "Explicit native delivery fixture reproduced hidden provider activity causing a false silence timeout;13other tests passed."
+		},
+		{
+			"path": "/tmp/drone-native-model-wait-projection-green.log",
+			"sha256": "4b8ceedcdee67a82d2db7ac5b59218a33b124aee97d899de5f4981c9e14afd44",
+			"exitCode": 0,
+			"scope": "14 model wait fixtures plus12 actual delivery/export SDK tests passed after host activity inspection moved before public projection."
+		},
+		{
+			"path": "/tmp/drone-channel-watch-reconcile-red.log",
+			"sha256": "7e3b88d4d46c4795a6fbe50c2843f103db747581554f7ab5e0566af73578ffc5",
+			"exitCode": 1,
+			"scope": "Three deterministic native-directory/no-hint/nested watcher regressions failed before production reconciliation."
+		},
+		{
+			"path": "/tmp/drone-channel-watch-reconcile-lifecycle.log",
+			"sha256": "e721bc00476405f89836151a6540b6da4e3b1ae6e946aee2625b1f50cff9fe13",
+			"exitCode": 0,
+			"scope": "Four deterministic reconciliation/lifecycle tests, including no-hint recovery, duplicate suppression, late error after close and stop during initial IO."
+		},
+		{
+			"path": "/tmp/drone-cw-reconciled-default-watch-probe.log",
+			"sha256": "fd87f0d88569268971db114efe772edd89442f3fa1db083c60b513603ab24645",
+			"exitCode": 0,
+			"scope": "64 fresh-directory actual filesystem cases with production default5s reconciliation and150ms debounce;64passed,11had no independent raw watcher events. No formal installer claim."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-fault-regressions-matched.log",
+			"sha256": "b54c15f948ebbc9a71621935cd708d0d58961997e5db2706685704ba4827c50a",
+			"exitCode": 0,
+			"scope": "Seven matching source/tarball files,63passed, covering watcher, model monitor and real legacy Discovery execution/readback."
+		},
+		{
+			"path": "/tmp/drone-native-knowledge-service-real-context-tests.log",
+			"sha256": "57abd16e78b74fb89b06a9d51f3d31095a95e4b46380eb3cb278e79587b27b2b",
+			"exitCode": 0,
+			"scope": "Full knowledge service fixture file35passed after restoring actual SDK SessionManager shape; no production empty[] fallback."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-post-fix-build.log",
+			"sha256": "c79a66835d4f7326f40f1dacdaf011ae2436973766ff34a86605041f3e01d2ec",
+			"exitCode": 0,
+			"scope": "Primary integration root npm run build passed before pinned SDK fallback update; not independent final gates or a formal DMG."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-post-fix-plugin-api.log",
+			"sha256": "55dd23f9f7b7d6ae3a91acfe1986ca9d8d07701ed06b78d14f9314d8594ef4ed",
+			"exitCode": 1,
+			"scope": "Original migration checker rejected the committed root private API1.3 dev tarball; preserved."
+		},
+		{
+			"path": "/tmp/drone-native-private-api-dependency-policy-tests.log",
+			"sha256": "d9f35daa898e87e2ca6b4e3d2ea9f8164e952ee2ec4bf8c25f7ed774bcc3d065",
+			"exitCode": 0,
+			"scope": "Six dependency-policy tests: exact committed package+lock accepted; package/runtime/peer/override/unrelated/local-source paths, mismatched bytes, symlinks, stale integrity and wrong package identity rejected."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-private-api-gate-final.log",
+			"sha256": "22fe360522c16b7f58ecd71752a40107c726981a6918d6dac6cdfa7e20eced49",
+			"exitCode": 0,
+			"scope": "Root check:plugin-api --migration --lifecycle passed with exact committed API candidate; install0.9→upgrade1.3→rollback0.9→uninstall actual local package lifecycle, no npm publish."
+		},
+		{
+			"path": "/tmp/drone-native-real-container-image-pull.log",
+			"sha256": "1fce0a05362f571b5b7f6a107ccb8e7cebba5f26618a9ac4e57438cf344ed110",
+			"exitCode": 0,
+			"scope": "Prepared the code-default python:3.12-slim in verified local Docker desktop-linux Unix-socket context. Test runner still pull=never."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-real-container.log",
+			"sha256": "7660a6376e9fd2f3aa4e6f8e00956d5a4e298406f8f63d5fa551053dda7a445f",
+			"exitCode": 1,
+			"scope": "First real-container acceptance could not clean-install unpublished API1.3 peer; no execution claim. Corrected by installing matching explicit API tarball."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-real-container-2.log",
+			"sha256": "d14696a6b14af9a3e71ead02c94b1e3baaaa0dd8f46870f98a1b64c150a84653",
+			"exitCode": 0,
+			"scope": "Matching installed discovery/API artifacts through legacy host adapter: actual local Docker success/failure/close/timeout/dispose, exact own-container cleanup readback; separate from managed SDK/UI and formal GUI."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-final-sdk-ci.log",
+			"sha256": "160d31b9f19b38eca8ad5d6c551fed8b7828900b9afc586059cc106f129fb7d4",
+			"exitCode": 0,
+			"scope": "Fresh root npm ci successfully applied the new pinned1.1.0 SDK fallback/private-protocol patch."
+		},
+		{
+			"path": "/tmp/drone-native-owner-services-integrated-final-sdk.log",
+			"sha256": "8c24820e5730af0d816a2e770046e94613a4eb25fbf21d3914993cac63a4e51d",
+			"exitCode": 0,
+			"scope": "Current ecc86cc4 integrated22files/142passed with all original eight failures covered, matching five-pack cohort/API2c, full knowledge publication and UI review lifecycle, current pinned SDK private protocol/context/tree/cancel controls, actual managed SDK+rendered plugin UI→local Docker, standalone Pi→local Docker and legacy five cleanup cases. Formal Electron/DMG GUI NOT_RUN."
+		},
+		{
+			"path": "native-plugin-owner-services-host-gates-2026-10-29.json",
+			"sha256": "08323637f124b9f70264b4214057270008f5a4d7c73ecdccd8734919df3d4ac2",
+			"exitCode": 0,
+			"scope": "bb918979 fresh checkout npm ci, staged public runtime check, lint/typecheck/test/build/check:arch/check:plugin-api all passed. Both real Docker acceptance opt-ins enabled. Backend2154/17skipped, Desktop966/1skipped, Plugin API17/17, rootNode31/31. No formal DMG or whole-goal completion claim."
+		}
+	],
+	"pending": {
+		"hostCleanFullGates": "PASSED_BB918979_IN_INDEPENDENT_CLEAN_CHECKOUT",
+		"discoveryDesktopAcceptedExecution": "PASSED_REAL_SDK_AND_RENDERED_INSTALLED_UI_LOCAL_DOCKER_FORMAL_GUI_NOT_RUN",
+		"formalInstaller": "NOT_RUN",
+		"npmPublish": "NOT_AUTHORIZED_THIS_RUN",
+		"mainMerge": "NOT_AUTHORIZED_THIS_RUN",
+		"latestGateReceipt": "native-plugin-owner-services-host-gates-2026-10-29.json"
+	},
+	"boundary": {
+		"status": "INCOMPLETE",
+		"counts": {
+			"domain-build-step": 15,
+			"domain-manifest-dependency": 10,
+			"domain-type-import": 5,
+			"domain-runtime-import": 1,
+			"domain-packaged-resource": 21,
+			"required-domain-plugin": 4
+		},
+		"runtimeAcceptance": "NOT_RUN"
+	},
+	"watcher": {
+		"status": "RECONCILIATION_FIXED_TARGETED_AND_FULL_HOST_GATES_PASSED",
+		"logs": [
+			{
+				"path": "/tmp/drone-cw-current-watch-probe.log",
+				"sha256": "c08c3993dd3505601d5f9091cd5500e5eea17ce2d4789f56036878f6454f7586",
+				"exitCode": 1,
+				"scope": "64fresh roots with actual ChannelWatcher and independent raw fs.watch:62passed/2missed; both streams empty for the two failures."
+			},
+			{
+				"path": "/tmp/drone-cw-native-watch-matrix.log",
+				"sha256": "d00266282aaca8e5d5b622fd8cfba01f8058b6fdbb3f0f14da785b7d518f2510",
+				"exitCode": 0,
+				"scope": "Native fs.watch differential diagnostic only; multiple cells missed file events or delivered directory-only events. No product fix or final root-cause claim."
+			}
+		],
+		"sourceCommit": "260b660f55f2be8467ff53fc9f14e6d532c46e0c"
+	},
+	"remaining": [
+		"P0 full compatibility matrix and context boundaries",
+		"P1 whole package controls and final lifecycle evidence",
+		"P2 offline/full-tree/child history, task composition, legacy host deletion and formal GUI",
+		"P3 complete research/Zotero owner, writers and UI migration",
+		"P4 task durable actor/privileged role and remaining host startup deletion",
+		"P5 full analysis/evidence controller/UI, Discovery execution and Inquiry storage migration",
+		"P6 four required source locks and domain build/resource closure removal; genuine zero-domain build/start/chat",
+		"P7 final matching dual-repository gates and formal macOS install/disable/restore/upgrade/rollback"
+	],
+	"excludedUnchanged": ["Four retained external account/platform acceptances", "MinerU/GROBID", "B8/B8-2"],
+	"hostGateAttempts": [
+		{
+			"commit": "93d2ad1f",
+			"status": "FAILED",
+			"archive": "../archive/native-plugin-owner-services-failed-host-2026-10-28.json"
+		},
+		{
+			"commit": "ecc86cc4",
+			"status": "FAILED",
+			"archive": "../archive/native-plugin-owner-services-retry-gates-2026-10-29.json",
+			"attempts": 3
+		},
+		{
+			"commit": "bb918979f979d909a82f39eeffc1199189729af6",
+			"status": "PASSED",
+			"receipt": "native-plugin-owner-services-host-gates-2026-10-29.json"
+		}
+	],
+	"nextCohort": {
+		"knowledgeTopicProbeTimer": "Known600ms probe timer can outlive the500ms worker shutdown boundary with multiple attachments. bb26228 source fix and follow-up narrow-error handling are frozen/on child; not yet in1707 artifacts or this checkpoint.",
+		"knowledgeAdoption": "Source512043e and final artifacts850513de passed child actual three-session acceptance; not integrated into this cohort.",
+		"taskActorAndNativeProvider": "Frozen mode/durable actor and host-only live-provider work require next unified API/package integration.",
+		"inquiry": "WASM SQL, bounded binary ports, shared Node IO, legacy writer lease and persistent owner checkpoints await integration and full provider/native/UI/old-seam closure."
+	},
+	"archives": [
+		{
+			"path": "../archive/native-plugin-owner-services-initial-2026-10-28.json",
+			"sourceCommit": "a352aab2",
+			"scope": "Initial ten checks and first source/artifact checkpoint; historical statuses preserved."
+		},
+		{
+			"path": "../archive/native-plugin-owner-services-failed-host-2026-10-28.json",
+			"sourceCommit": "93d2ad1f",
+			"scope": "Original independent host gate attempt with eight backend failures; all command results and original log hash retained."
+		},
+		{
+			"path": "../archive/native-plugin-owner-services-retry-gates-2026-10-29.json",
+			"sourceCommit": "ecc86cc4",
+			"scope": "Three failed transport/daemon/isolated-checker-fixture attempts preserved with original commands and log hashes."
+		}
+	],
+	"goalStatus": "INCOMPLETE"
+}

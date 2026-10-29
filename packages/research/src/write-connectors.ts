@@ -1,16 +1,11 @@
 import { createHash } from "node:crypto";
 import type {
 	ResearchWriteAdapterDescriptor,
+	ResearchWriteAdapterPort,
 	ResearchWritePayload,
-	ResearchWritePlan,
-	ResearchWriteReceipt,
-	ResearchWriteRequest,
 } from "@drone/shared";
 
-export interface ResearchWriteExecutionContext {
-	readonly approved: boolean;
-	readonly signal?: AbortSignal;
-}
+export type { ResearchWriteExecutionContext } from "@drone/shared";
 
 export interface ResearchWritePort {
 	write(input: {
@@ -20,13 +15,7 @@ export interface ResearchWritePort {
 	}): Promise<{ readonly externalRef: string; readonly readBack?: boolean }>;
 }
 
-export interface ResearchWriteAdapter {
-	readonly id: string;
-	readonly label: string;
-	readonly writeEnabled: boolean;
-	prepare(input: ResearchWriteRequest): ResearchWritePlan;
-	execute(plan: ResearchWritePlan, context: ResearchWriteExecutionContext): Promise<ResearchWriteReceipt>;
-}
+export interface ResearchWriteAdapter extends ResearchWriteAdapterPort {}
 
 function hash(value: unknown): string {
 	return createHash("sha256").update(JSON.stringify(value)).digest("hex");

@@ -87,6 +87,8 @@ export type UIMessage =
 	  }
 	| {
 			kind: "assistant";
+			/** Display origin only; grants no task or publication authority. */
+			readonly hostStatus?: true;
 			taskView?: TaskView;
 			route?: TurnRoute;
 			cycleId?: string;
@@ -242,6 +244,8 @@ export interface SessionTranscriptState {
 	pendingLlmError: UiError | null;
 	/** Agent 自报状态 + 宿主真实工具覆盖；仅 live session 运行态，不进入历史消息。 */
 	researchStatus: ResearchStatusState;
+	/** Transient extension status bar text, never history content. */
+	extensionStatuses: Record<string, string>;
 	/** SDK 自动重试瞬时信息（auto_retry_start → 状态行；auto_retry_end/agent_settled 清） */
 	retrying: RetryInfo | null;
 	modelWait: ModelWaitEvent | null;
@@ -267,5 +271,6 @@ export function emptyTranscript(): SessionTranscriptState {
 		modelWait: null,
 		reviewerFindings: [],
 		researchStatus: { agent: null, host: null },
+		extensionStatuses: {},
 	};
 }

@@ -3,7 +3,7 @@
 // mirrors the permissive Pi SDK callback shapes.
 // @ts-nocheck
 import { randomUUID } from "node:crypto";
-import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -18,6 +18,7 @@ import {
 	runProject,
 	sessionEntriesOf,
 } from "@gyoungwe/pi-knowledge/host";
+import { createSummaryWriteTransaction } from "./internal/summary-write-transaction";
 import {
 	containedFile,
 	DEFAULT_VAULT_PROFILE,
@@ -266,48 +267,30 @@ function updateManagedBlock(original, body) {
 		: `${original.trimEnd()}\n\n${replacement}\n`;
 }
 
-async function atomicText(path, text) {
-	await mkdir(dirname(path), { recursive: true });
-	const temporary = `${path}.${process.pid}.tmp`;
-	await writeFile(temporary, text, "utf8");
-	await rename(temporary, path);
-}
-
-async function writeSummary(runDir, summary, status) {
-	const runPath = resolve(runDir);
+async function writeSummary(resultsRoot, runDir, summary, write) {
+	const root = await realpath(resultsRoot);
+	const runPath = await containedFile(root, await realpath(runDir));
 	const resultRoot = dirname(runPath);
-	const historyRoot = join(resultRoot, "summary-history");
+	const historyRoot = await containedFile(root, join(resultRoot, "summary-history"));
+	const stamp = new Date().toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
+	// Confirm every destination before any summary copy is written.
+	const run = await containedFile(root, join(runPath, "SUMMARY.md"));
+	const latest = await containedFile(root, join(resultRoot, "SUMMARY.md"));
+	const history = await containedFile(root, join(historyRoot, `${stamp}.md`));
 	await mkdir(historyRoot, { recursive: true });
 	const content = `${String(summary).trim()}\n`;
-	await atomicText(join(runPath, "SUMMARY.md"), content);
-	await atomicText(join(resultRoot, "SUMMARY.md"), content);
-	const stamp = new Date().toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
-	const history = join(historyRoot, `${stamp}.md`);
-	await atomicText(history, content);
-	const metadataPath = join(runPath, "metadata.json");
-	let metadata = {};
-	try {
-		metadata = JSON.parse(await readFile(metadataPath, "utf8"));
-	} catch {
-		/* metadata may be absent for a manually created run */
-	}
-	metadata.summary_status = status === "pending" ? "pending" : "written";
-	metadata.summary_updated_at = new Date().toISOString();
-	await atomicText(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
-	return { run: join(runPath, "SUMMARY.md"), latest: join(resultRoot, "SUMMARY.md"), history };
+	await write(run, content);
+	await write(latest, content);
+	await write(history, content);
+	return { run, latest, history };
 }
 
-async function syncRunNote(vault, project, resultSlug, runDir, summary) {
+async function syncRunNote(vault, project, resultSlug, runDir, summary, write) {
 	const safeProject = safeSegment(project, "project");
 	const safeSlug = safeSegment(resultSlug || "research-question", "result_slug");
 	const runPath = resolve(runDir);
 	const metadataPath = join(runPath, "metadata.json");
-	let metadata = {};
-	try {
-		metadata = JSON.parse(await readFile(metadataPath, "utf8"));
-	} catch {
-		/* handled by frontmatter defaults */
-	}
+	const metadata = JSON.parse(await readFile(metadataPath, "utf8"));
 	const runId = safeSegment(metadata.run_id || runPath.split(sep).at(-1), "run_id");
 	const note = await containedFile(vault, join("Projects", safeProject, "Runs", `${safeSlug}-${runId}.md`));
 	if (!knowledgeDirectory()) await initializeVault(vault, safeProject);
@@ -326,19 +309,23 @@ async function syncRunNote(vault, project, resultSlug, runDir, summary) {
 	].join("\n");
 	const resultUri = pathToFileURL(runPath).href;
 	const summaryUri = pathToFileURL(join(runPath, "SUMMARY.md")).href;
-	let original = "";
+	let before = null;
 	try {
-		original = await readFile(note, "utf8");
-	} catch {
-		/* new note */
+		before = await readFile(note);
+	} catch (error) {
+		if (error.code !== "ENOENT") throw error;
 	}
+	let original = before?.toString("utf8") || "";
 	if (!original) {
 		original = `${frontmatter}\n\n# ${safeSlug} · ${runId}\n\n## Agent-generated summary\n${"<!-- pi-agent:managed:start -->"}\n${String(summary).trim()}\n<!-- pi-agent:managed:end -->\n\n## Result files\n- [Open result directory](${resultUri})\n- [Open SUMMARY.md](${summaryUri})\n\n## Human review\n\n`;
-		await atomicText(note, original);
+		await write(note, original, before);
 	} else {
-		await atomicText(note, updateManagedBlock(original, summary));
+		original = updateManagedBlock(original, summary);
+		await write(note, original, before);
 	}
-	return note;
+	const marker = "<!-- pi-agent:managed:start -->\n";
+	const start = Buffer.byteLength(original.slice(0, original.indexOf(marker) + marker.length));
+	return { path: note, bodyRegion: { start, end: start + Buffer.byteLength(`${String(summary).trim()}\n`) } };
 }
 
 function runSummaryCard(event) {
@@ -359,52 +346,8 @@ function runSummaryCard(event) {
 	});
 }
 
-export function registerWorkspaceConfig(pi, options = {}) {
-	const baseCwd = options.cwd ? resolve(options.cwd) : process.cwd();
-	registerTool(pi, {
-		name: "research_workspace_status",
-		label: "Research workspace status",
-		drone: { readOnly: true, capabilities: ["research"] },
-		description: "Show result and Obsidian workspace configuration.",
-		parameters: { type: "object", properties: {} },
-		async execute(_id, _params, _signal, _update, ctx) {
-			const config = await loadWorkspaceConfig(ctx?.cwd || baseCwd);
-			return { content: [{ type: "text", text: JSON.stringify(config, null, 2) }], details: config };
-		},
-	});
-	registerTool(pi, {
-		name: "research_init_vault",
-		label: "Initialize Obsidian vault",
-		drone: { capabilities: ["research", "knowledge"], subagent: "exclude" },
-		description: "Create the new Obsidian knowledge vault structure without overwriting files.",
-		parameters: {
-			type: "object",
-			properties: {
-				path: { type: "string" },
-				project: { type: "string" },
-				profile: { type: "string", enum: ["project", "literature", "hybrid"] },
-			},
-			required: ["path"],
-		},
-		async execute(_id, params) {
-			if (knowledgeDirectory())
-				throw new Error("Use /obsidian-setup for confirmed application-wide initialization");
-			const profile = params.profile || (await loadWorkspaceConfig(baseCwd)).knowledgeProfile;
-			const result = await initializeVaultLayout(params.path, {
-				project: params.project || null,
-				profile,
-				excluded: [baseCwd, (await loadWorkspaceConfig(baseCwd)).resultsRoot],
-			});
-			const config = await saveWorkspaceConfig(baseCwd, {
-				obsidianVault: result.vault,
-				knowledgeProfile: profile,
-			});
-			return {
-				content: [{ type: "text", text: `Initialized Obsidian vault at ${result.vault}` }],
-				details: { result, config },
-			};
-		},
-	});
+/** Installed research owns evidence/revision/review; this adapter writes approved local files. */
+export function registerResearchSummaryTool(pi, delivery) {
 	registerTool(pi, {
 		name: "research_summarize_run",
 		label: "Summarize research run",
@@ -456,7 +399,7 @@ export function registerWorkspaceConfig(pi, options = {}) {
 			required: ["run_dir", "summary_markdown"],
 		},
 		async execute(_id, params, _signal, _update, ctx) {
-			const cwd = ctx?.cwd || baseCwd;
+			const cwd = ctx.cwd;
 			const config = await loadWorkspaceConfig(cwd);
 			const runDir = resolve(cwd, params.run_dir);
 			if (!isWithin(config.resultsRoot, runDir))
@@ -472,32 +415,11 @@ export function registerWorkspaceConfig(pi, options = {}) {
 			) {
 				throw new Error("run_dir must point to a run directory directly inside a result slug");
 			}
-			if (
-				!(await access(join(runDir, "metadata.json")).then(
-					() => true,
-					() => false,
-				))
-			) {
-				throw new Error("run_dir is missing metadata.json");
-			}
+
 			const metadata = JSON.parse(await readFile(join(runDir, "metadata.json"), "utf8"));
-			const gate = metadata.evidence_gate;
-			if (
-				gate?.stage !== "answerable" ||
-				gate.status !== "ok" ||
-				gate.answerable !== true ||
-				!Array.isArray(gate.claim_bindings) ||
-				gate.claim_bindings.length === 0
-			) {
-				throw new Error(
-					"Evidence gate is closed: research_loop must complete retrieval, inspection, archiving and structured claim binding before summarization",
-				);
-			}
-			const outputs = await writeSummary(runDir, params.summary_markdown, "succeeded");
-			let note = null,
-				indexes = null,
-				obsidianError = null,
-				indexError = null;
+			// Gate provenance, current read ledger and semantic scope are checked by
+			// the canonical research delivery owner before the writer is invoked.
+
 			// The run's recorded project wins; legacy "research-workbench" runs follow the current
 			// workspace (or daily-space session) project. A different model-supplied project is ignored.
 			const resolution = await resolveWorkspaceProject({
@@ -512,43 +434,122 @@ export function registerWorkspaceConfig(pi, options = {}) {
 				ignoredRequest:
 					resolution.requested !== null && normalizeProjectSlug(resolution.requested) !== project,
 			});
-			if (config.obsidianVault) {
-				try {
-					note = await syncRunNote(
-						config.obsidianVault,
-						project,
-						params.result_slug || metadata.result_slug,
-						runDir,
-						params.summary_markdown,
-					);
-				} catch (error) {
-					obsidianError = String(error.message).slice(0, 600);
-				}
-				if (note) {
+			const delivered = await delivery.deliver(
+				ctx,
+				{
+					runDir,
+					markdown: params.summary_markdown,
+					claims: params.claims,
+				},
+				async (prepared) => {
+					const transaction = createSummaryWriteTransaction();
 					try {
-						indexes = await refreshProjectIndexes(config.obsidianVault, {
-							project,
-							profile: config.knowledgeProfile,
-						});
+						_signal?.throwIfAborted();
+						const outputs = await writeSummary(config.resultsRoot, runDir, prepared.body, transaction.write);
+						const copies = Object.entries(outputs).map(([role, path]) => ({ role, path }));
+						let note = null;
+						if (config.obsidianVault) {
+							const saved = await syncRunNote(
+								config.obsidianVault,
+								project,
+								params.result_slug || metadata.result_slug,
+								runDir,
+								prepared.body,
+								transaction.write,
+							);
+							note = saved.path;
+							copies.push({ role: "vault", path: note, bodyRegion: saved.bodyRegion });
+						}
+						_signal?.throwIfAborted();
+						return { value: { ...outputs, obsidian_note: note }, copies, rollback: transaction.rollback };
 					} catch (error) {
-						indexError = String(error.message).slice(0, 600);
+						try {
+							await transaction.rollback();
+						} catch (rollbackError) {
+							throw new AggregateError(
+								[error, rollbackError],
+								`Partial summary delivery: write and rollback failed: ${rollbackError.message}`,
+							);
+						}
+						throw error;
 					}
+				},
+			);
+			let indexes = null,
+				indexError = null;
+			if (config.obsidianVault && delivered.value.obsidian_note) {
+				try {
+					indexes = await refreshProjectIndexes(config.obsidianVault, {
+						project,
+						profile: config.knowledgeProfile,
+					});
+				} catch (error) {
+					indexError = String(error.message).slice(0, 600);
 				}
 			}
 			const result = {
-				...outputs,
-				claims: Array.isArray(params.claims) ? params.claims : [],
-				obsidian_note: note,
+				...delivered.value,
+				claims: delivered.claims,
+				delivery_receipt: delivered.receipt,
 				project: projectResolution,
 				indexes,
 				summary_saved: true,
-				partial: Boolean(obsidianError || indexError),
-				obsidian_error: obsidianError,
+				partial: Boolean(indexError),
+				obsidian_error: null,
 				index_error: indexError,
 			};
 			return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
 		},
 	});
+}
+
+export function registerWorkspaceConfig(pi, options = {}) {
+	const baseCwd = options.cwd ? resolve(options.cwd) : process.cwd();
+	registerTool(pi, {
+		name: "research_workspace_status",
+		label: "Research workspace status",
+		drone: { readOnly: true, capabilities: ["research"] },
+		description: "Show result and Obsidian workspace configuration.",
+		parameters: { type: "object", properties: {} },
+		async execute(_id, _params, _signal, _update, ctx) {
+			const config = await loadWorkspaceConfig(ctx?.cwd || baseCwd);
+			return { content: [{ type: "text", text: JSON.stringify(config, null, 2) }], details: config };
+		},
+	});
+	registerTool(pi, {
+		name: "research_init_vault",
+		label: "Initialize Obsidian vault",
+		drone: { capabilities: ["research", "knowledge"], subagent: "exclude" },
+		description: "Create the new Obsidian knowledge vault structure without overwriting files.",
+		parameters: {
+			type: "object",
+			properties: {
+				path: { type: "string" },
+				project: { type: "string" },
+				profile: { type: "string", enum: ["project", "literature", "hybrid"] },
+			},
+			required: ["path"],
+		},
+		async execute(_id, params) {
+			if (knowledgeDirectory())
+				throw new Error("Use /obsidian-setup for confirmed application-wide initialization");
+			const profile = params.profile || (await loadWorkspaceConfig(baseCwd)).knowledgeProfile;
+			const result = await initializeVaultLayout(params.path, {
+				project: params.project || null,
+				profile,
+				excluded: [baseCwd, (await loadWorkspaceConfig(baseCwd)).resultsRoot],
+			});
+			const config = await saveWorkspaceConfig(baseCwd, {
+				obsidianVault: result.vault,
+				knowledgeProfile: profile,
+			});
+			return {
+				content: [{ type: "text", text: `Initialized Obsidian vault at ${result.vault}` }],
+				details: { result, config },
+			};
+		},
+	});
+
 	pi.registerCommand("research-workspace", {
 		description: "Show the configured result and Obsidian workspace",
 		handler: async (_args, ctx) => {

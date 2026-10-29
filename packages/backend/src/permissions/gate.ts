@@ -1,4 +1,9 @@
-import type { PermissionAnswer, PermissionRequest, PermissionRequestKind } from "@drone/shared";
+import type {
+	PermissionAnswer,
+	PermissionRequest,
+	PermissionRequestKind,
+	PermissionResolved,
+} from "@drone/shared";
 
 export type PermissionResponder = (req: PermissionRequest) => void;
 
@@ -18,7 +23,7 @@ let nextId = 0;
 export class PermissionGate {
 	private readonly pending = new Map<
 		string,
-		{ resolve: (answer: boolean) => void; message: string; meta?: PermissionRequestMeta }
+		{ resolve: (answer: boolean) => void; cleanup: () => void; message: string; meta?: PermissionRequestMeta }
 	>();
 	private readonly titles = new Map<string, string>();
 	private readonly alwaysAllowed = new Set<string>();
@@ -27,7 +32,10 @@ export class PermissionGate {
 
 	private sessionId = "";
 
-	constructor(private readonly onRequest: PermissionResponder) {}
+	constructor(
+		private readonly onRequest: PermissionResponder,
+		private readonly onCanceled?: (result: PermissionResolved) => void,
+	) {}
 
 	/** 会话创建后才能确定 sessionId，创建后绑定 */
 	bindSession(sessionId: string): void {
@@ -35,13 +43,29 @@ export class PermissionGate {
 	}
 
 	/** 实现 ExtensionUIContext.confirm 的语义；meta 由内置权限扩展携带（kind/suggestDir） */
-	confirm(title: string, message: string, meta?: PermissionRequestMeta): Promise<boolean> {
+	confirm(
+		title: string,
+		message: string,
+		meta?: PermissionRequestMeta,
+		signal?: AbortSignal,
+	): Promise<boolean> {
+		if (signal?.aborted) return Promise.resolve(false);
 		if (this.runAllowed || this.alwaysAllowed.has(title)) {
 			return Promise.resolve(true);
 		}
 		const id = `perm-${this.sessionId}-${nextId++}`;
 		return new Promise<boolean>((resolve) => {
-			this.pending.set(id, { resolve, message, meta });
+			const cancel = () => {
+				if (!this.pending.has(id)) return;
+				this.pending.delete(id);
+				this.titles.delete(id);
+				cleanup();
+				resolve(false);
+				this.onCanceled?.({ sessionId: this.sessionId, requestId: id, answered: false });
+			};
+			const cleanup = () => signal?.removeEventListener("abort", cancel);
+			this.pending.set(id, { resolve, cleanup, message, meta });
+			signal?.addEventListener("abort", cancel, { once: true });
 			this.titles.set(id, title);
 			this.onRequest({
 				id,
@@ -86,6 +110,7 @@ export class PermissionGate {
 		if (answer === "allowAlways" && title) {
 			this.alwaysAllowed.add(title);
 		}
+		entry.cleanup();
 		entry.resolve(answer !== "deny");
 		if (answer === "allowRun") {
 			// 本次 run 内后续确认直接通过；已排队的请求一并放行（用户语义：这一趟别再问了）
@@ -93,6 +118,7 @@ export class PermissionGate {
 			for (const [id, queued] of this.pending) {
 				this.pending.delete(id);
 				this.titles.delete(id);
+				queued.cleanup();
 				queued.resolve(true);
 			}
 		}
@@ -110,7 +136,10 @@ export class PermissionGate {
 
 	dispose(): void {
 		this.runAllowed = false;
-		for (const { resolve } of this.pending.values()) resolve(false);
+		for (const { resolve, cleanup } of this.pending.values()) {
+			cleanup();
+			resolve(false);
+		}
 		this.pending.clear();
 		this.titles.clear();
 	}

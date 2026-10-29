@@ -2,11 +2,6 @@ import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
-	type ResearchConnector,
-	type ResearchConnectorContext,
-	ResearchConnectorRegistry,
-} from "@drone/research";
-import {
 	contractContentHash,
 	createKnowledgeSnapshot,
 	type KnowledgeSnapshot,
@@ -14,12 +9,15 @@ import {
 	type ResearchCaptureRecord,
 	type ResearchCaptureRequest,
 	type ResearchCaptureResult,
+	type ResearchConnector,
+	type ResearchConnectorContext,
 	type ResearchConnectorDescriptor,
 	type ResearchConnectorFailure,
+	type ResearchConnectorHit,
+	type ResearchKnowledgeOperations,
 	type ResearchSearchRequest,
 	type ResearchSearchResponse,
 } from "@drone/shared";
-import { ingestKnowledgeSnapshot, resolveKnowledgeContext } from "@gyoungwe/pi-knowledge/host";
 import type { JsonStore } from "../json-store";
 
 interface CaptureLedger {
@@ -34,10 +32,57 @@ export interface ResearchConnectorSettings {
 
 export interface ResearchResourceServiceOptions {
 	readonly store: JsonStore<CaptureLedger>;
-	readonly connectors?: ResearchConnectorRegistry;
+	/** Connector registry is supplied by the host composition root or an installed connector package. */
+	readonly connectors: ResearchConnectorRegistryPort;
 	readonly connectorSettings?: JsonStore<ResearchConnectorSettings>;
 	/** Host-owned ports/configuration used by optional connectors; never persisted. */
 	readonly connectorContext?: ResearchConnectorContext;
+	/** Knowledge host operations used to create a versioned capture snapshot. */
+	readonly knowledgeOperations: ResearchKnowledgeOperations;
+}
+
+/** Host-neutral registry surface; connector implementations stay outside backend. */
+export interface ResearchConnectorRegistryPort {
+	list(): readonly ResearchConnector[];
+	recommend(
+		seed: string,
+		connectorId: string,
+		context?: ResearchConnectorContext,
+		limit?: number,
+	): Promise<{ hits: readonly ResearchConnectorHit[]; failures: readonly ResearchConnectorFailure[] }>;
+	search(input: ResearchSearchRequest, context?: ResearchConnectorContext): Promise<ResearchSearchResponse>;
+}
+
+/** Empty host-owned registry used when no connector plugin is installed. */
+export function createUnavailableResearchConnectorRegistry(): ResearchConnectorRegistryPort {
+	return {
+		list: () => [],
+		recommend: async (_seed, connectorId) => ({
+			hits: [],
+			failures: [
+				{
+					connectorId,
+					message: "Research connector plugin is unavailable",
+					retryable: false,
+					at: new Date().toISOString(),
+				},
+			],
+		}),
+		search: async (input) => ({
+			query: input.query,
+			hits: [],
+			failures: [
+				{
+					connectorId: input.connectorIds?.[0] ?? "research",
+					message: "Research connector plugin is unavailable",
+					retryable: false,
+					at: new Date().toISOString(),
+				},
+			],
+			connectors: [...(input.connectorIds ?? [])],
+			complete: false,
+		}),
+	};
 }
 
 const TEXT_EXTENSIONS = new Set([
@@ -166,11 +211,11 @@ function withApproval(snapshot: KnowledgeSnapshot, approval: "approved" | "revok
 
 /** Host-side seam for safe project capture and provenance-aware connector search. */
 export class ResearchResourceService {
-	private readonly connectors: ResearchConnectorRegistry;
+	private readonly connectors: ResearchConnectorRegistryPort;
 	private readonly disabledConnectors = new Set<string>();
 
 	constructor(private readonly options: ResearchResourceServiceOptions) {
-		this.connectors = options.connectors ?? new ResearchConnectorRegistry();
+		this.connectors = options.connectors;
 	}
 
 	/** Named seam used by host adapters; capture remains the short internal alias. */
@@ -212,9 +257,9 @@ export class ResearchResourceService {
 				...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
 			},
 		};
-		const snapshot = ingestKnowledgeSnapshot({
+		const snapshot = this.options.knowledgeOperations.ingestSnapshot({
 			id: `knowledge-${key.slice(0, 24)}`,
-			context: resolveKnowledgeContext({ workspaceRoot: file.root }),
+			context: this.options.knowledgeOperations.resolveContext({ workspaceRoot: file.root }),
 			sources: [sourceReceipt],
 			approval: "pending",
 			reuseLevel: "navigation-only",
@@ -329,22 +374,36 @@ export class ResearchResourceService {
 	async recommend(seed: string): Promise<ResearchSearchResponse> {
 		const descriptors = await this.listConnectors();
 		const connector = descriptors.find((item) => item.id === "semantic-scholar");
-		if (!connector?.enabled) {
+		if (!connector) {
 			return {
 				query: seed,
 				hits: [],
-				failures: connector
-					? [
-							{
-								connectorId: connector.id,
-								message: "Research connector is disabled",
-								retryable: false,
-								at: isoNow(),
-							},
-						]
-					: [],
+				failures: [
+					{
+						connectorId: "semantic-scholar",
+						message: "Research connector plugin is unavailable",
+						retryable: false,
+						at: isoNow(),
+					},
+				],
 				connectors: ["semantic-scholar"],
-				complete: true,
+				complete: false,
+			};
+		}
+		if (!connector.enabled) {
+			return {
+				query: seed,
+				hits: [],
+				failures: [
+					{
+						connectorId: connector.id,
+						message: "Research connector is disabled",
+						retryable: false,
+						at: isoNow(),
+					},
+				],
+				connectors: ["semantic-scholar"],
+				complete: false,
 			};
 		}
 		const result = await this.connectors.recommend(
@@ -387,7 +446,7 @@ export class ResearchResourceService {
 			id: connector.id,
 			kind: connector.kind,
 			label: connector.label,
-			enabled: !disabled.has(connector.id),
+			enabled: connector.enabled !== false && !disabled.has(connector.id),
 		};
 	}
 

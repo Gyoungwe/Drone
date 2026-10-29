@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -15,7 +15,12 @@ vi.mock("electron", () => ({
 	shell: { openPath: vi.fn() },
 }));
 
-import { discoverInstalledUiPackages, UiPluginManager } from "./manager";
+import { discoverInstalledUiPackages } from "./installed-package-sources";
+import { UiPluginManager } from "./manager";
+
+// The public-package gate supplies a clean installed tarball. Ordinary host
+// tests must also run without a sibling optional-plugin source checkout.
+const publicUiPackageDir = process.env.DRONE_PUBLIC_UI_PACKAGE_DIR;
 
 describe("installed desktop-ui-pack discovery", () => {
 	let root = "";
@@ -29,8 +34,24 @@ describe("installed desktop-ui-pack discovery", () => {
 
 	it("keeps the host usable when the managed package root is empty", async () => {
 		root = await mkdtemp(join(tmpdir(), "drone-ui-pack-empty-root-"));
+		electronState.userData = join(root, "user-data");
+		Object.defineProperty(process, "resourcesPath", {
+			configurable: true,
+			enumerable: originalResourcesPath?.enumerable ?? false,
+			value: fileURLToPath(new URL("../../../resources", import.meta.url)),
+			writable: true,
+		});
 		await mkdir(join(root, "agent", "npm", "node_modules"), { recursive: true });
-		expect(await discoverInstalledUiPackages(join(root, "agent", "npm", "node_modules"))).toEqual([]);
+		const installRoot = join(root, "agent", "npm", "node_modules");
+		expect(await discoverInstalledUiPackages(installRoot)).toEqual([]);
+
+		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+		await expect(manager.init()).resolves.toBeUndefined();
+		expect(manager.list()).toEqual([]);
+		expect(manager.info("optional-plugin")).toBeNull();
+		expect(manager.runtimeSource("optional-plugin")).toBeUndefined();
+		expect(manager.isEnabled("optional-plugin")).toBe(false);
+		expect(manager.diagnostics()).toEqual([]);
 	});
 
 	it("loads the installed package through the normal UI plugin lifecycle", async () => {
@@ -86,49 +107,45 @@ describe("installed desktop-ui-pack discovery", () => {
 		expect(manager.info("drone-research-ui")).toBeNull();
 	});
 
-	it("loads the built UI package distribution from the Pi managed install root", async () => {
-		root = await mkdtemp(join(tmpdir(), "drone-ui-pack-tarball-"));
-		electronState.userData = join(root, "user-data");
-		Object.defineProperty(process, "resourcesPath", {
-			configurable: true,
-			enumerable: originalResourcesPath?.enumerable ?? false,
-			value: fileURLToPath(new URL("../../../resources", import.meta.url)),
-			writable: true,
-		});
-		const packageUiSource = join(
-			process.env.DRONE_PUBLIC_UI_PACKAGE_DIR ||
-				join(
-					process.env.DRONE_PLUGINS_DIR || resolve(process.cwd(), "../../../drone-plugins"),
-					"packages/desktop-ui-pack",
-				),
-			"ui",
-		);
-		const packageUi = join(root, "agent", "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "ui");
-		await cp(packageUiSource, packageUi, { recursive: true });
-		const manifest = JSON.parse(await readFile(join(packageUi, "plugin.json"), "utf8"));
-		expect(manifest.name).toBe("drone-research-ui");
+	it.runIf(publicUiPackageDir)(
+		"loads the built UI package distribution from the Pi managed install root",
+		async () => {
+			root = await mkdtemp(join(tmpdir(), "drone-ui-pack-tarball-"));
+			electronState.userData = join(root, "user-data");
+			Object.defineProperty(process, "resourcesPath", {
+				configurable: true,
+				enumerable: originalResourcesPath?.enumerable ?? false,
+				value: fileURLToPath(new URL("../../../resources", import.meta.url)),
+				writable: true,
+			});
+			const packageUiSource = join(publicUiPackageDir!, "ui");
+			const packageUi = join(root, "agent", "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "ui");
+			await cp(packageUiSource, packageUi, { recursive: true });
+			const manifest = JSON.parse(await readFile(join(packageUi, "plugin.json"), "utf8"));
+			expect(manifest.name).toBe("drone-research-ui");
 
-		const manager = new UiPluginManager({ installedPackageDir: packageUi });
-		await manager.init();
-		expect(manager.info("drone-research-ui")).toMatchObject({
-			name: "drone-research-ui",
-			version: manifest.version,
-			built: false,
-			enabled: false,
-		});
-		await manager.updateConfig({
-			enabled: true,
-			plugins: { "drone-research-ui": { enabled: true, trusted: true } },
-		});
-		const code = await manager.readCode("drone-research-ui");
-		expect("manifest" in code).toBe(true);
-		if (!("manifest" in code)) throw new Error(code.error);
-		expect(code.manifest.main).toBe(manifest.main);
-		expect(code.manifest.contributions).toEqual(manifest.contributions);
-		for (const contribution of manifest.contributions) {
-			expect(code.code).toContain(contribution.export);
-		}
-	});
+			const manager = new UiPluginManager({ installedPackageDir: packageUi });
+			await manager.init();
+			expect(manager.info("drone-research-ui")).toMatchObject({
+				name: "drone-research-ui",
+				version: manifest.version,
+				built: false,
+				enabled: false,
+			});
+			await manager.updateConfig({
+				enabled: true,
+				plugins: { "drone-research-ui": { enabled: true, trusted: true } },
+			});
+			const code = await manager.readCode("drone-research-ui");
+			expect("manifest" in code).toBe(true);
+			if (!("manifest" in code)) throw new Error(code.error);
+			expect(code.manifest.main).toBe(manifest.main);
+			expect(code.manifest.contributions).toEqual(manifest.contributions);
+			for (const contribution of manifest.contributions) {
+				expect(code.code).toContain(contribution.export);
+			}
+		},
+	);
 
 	it("discovers a UI entrypoint from any installed package scope", async () => {
 		root = await mkdtemp(join(tmpdir(), "drone-ui-generic-discovery-"));
@@ -176,9 +193,13 @@ describe("installed desktop-ui-pack discovery", () => {
 
 		const manager = new UiPluginManager({ installedPackageRoot: installRoot });
 		await manager.init();
-		expect(manager.info("ui-fixture")).toMatchObject({ enabled: false, invalidReason: undefined });
+		expect(manager.info("ui-fixture")).toMatchObject({
+			packageName: "@example/ui-fixture",
+			enabled: false,
+			invalidReason: undefined,
+		});
 		expect(manager.list().find((item) => item.name === "package-example-broken-ui")?.invalidReason).toContain(
-			"entrypoints.ui does not contain",
+			"Invalid UI entrypoint",
 		);
 		const code = await manager.readCode("ui-fixture");
 		expect("manifest" in code).toBe(true);

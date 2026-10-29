@@ -1,7 +1,7 @@
+import { createHash } from "node:crypto";
 import { mkdir, stat, writeFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { extname, join, resolve } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
-import { createDefaultResearchWriteAdapters, ResearchWriteAdapterRegistry } from "@drone/research";
 import type {
 	AskRequest,
 	AskResponse,
@@ -17,29 +17,55 @@ import type {
 	PermissionMode,
 	PermissionRequest,
 	PermissionResolved,
+	ResearchProjectStoragePort,
+	ResearchWriteAdapterRegistryPort,
 	SessionEvent,
 	SessionMessage,
 	SessionsApi,
 	TrustAnswer,
 	TrustRequest,
 } from "@drone/shared";
-import type { ExperienceStorePort } from "@gyoungwe/pi-knowledge/host";
+import type {
+	AnalysisHostLoader,
+	DiscoveryHostLoader,
+	KnowledgeHostLoader,
+	ResearchConnectorHostLoader,
+	ResearchWriteAdapterHostLoader,
+} from "@gyoungwe/plugin-api";
+import type { ExperienceStorePort } from "@gyoungwe/plugin-api/knowledge";
+import type { TaskAcceptanceHostPort, TaskHostLoader } from "@gyoungwe/plugin-api/tasks";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import {
+	createDiscoveryService,
 	type DiscoveryAuthorization,
-	DiscoveryService,
 	type DiscoveryServicePort,
 } from "./discovery/service";
 import { JsonStore } from "./json-store";
-import type { KnowledgeUiServicePort } from "./knowledge/ui";
+import {
+	createBackendKnowledgeWorkerSetup,
+	createKnowledgeDailyDiscoveryOperations,
+	createKnowledgeExperienceOperation,
+	createKnowledgeMaintenanceOperations,
+	createKnowledgePublicationOperation,
+	createKnowledgeReadProvider,
+	createKnowledgeResearchResourceOperations,
+	type KnowledgeHostPort,
+	KnowledgeUiService,
+	type KnowledgeUiServicePort,
+	unavailableKnowledgeCompatibility,
+} from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
+import { DomainCapabilityRegistry, type DomainCapabilityRegistryPort } from "./plugins/domain-capabilities";
+import type { PluginSessionCallerContext } from "./plugins/session-caller";
 import { walkProjectFiles } from "./project/files";
 import { canonicalProjectId } from "./project-id";
+import type { ResearchHostLoader } from "./research-host";
 import { createDroneRuntime } from "./runtime";
 import { AnalysisEvidenceService, type EvidenceReplayRunner } from "./services/analysis-evidence";
+import type { AnalysisEvidencePluginHost } from "./services/analysis-evidence-host";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "./services/analysis-orchestration";
 import { parseAnalysisReviewDecision } from "./services/analysis-review-decision";
 import {
@@ -62,7 +88,12 @@ import {
 	type ComputeExperienceRecorder,
 	createComputeExperienceRecorder,
 } from "./services/compute-experience";
-import { completionText, DailyDiscoveryService } from "./services/daily-discovery";
+import {
+	completionText,
+	type DailyDiscoveryOptions,
+	DailyDiscoveryService,
+} from "./services/daily-discovery";
+import type { BackgroundReviewerPort } from "./services/deliverable-reviewer";
 import { type InquiryDecisionEvent, InquiryService, type InquiryServicePort } from "./services/inquiry";
 import {
 	computeInquiryMetadata,
@@ -70,24 +101,31 @@ import {
 	createInquiryComputeRerunCompletion,
 } from "./services/inquiry-compute";
 import type { InstitutionalServicePort } from "./services/institutional";
-import { KnowledgeMaintenanceService } from "./services/knowledge-maintenance";
+import {
+	type KnowledgeMaintenanceOptions,
+	KnowledgeMaintenanceService,
+} from "./services/knowledge-maintenance";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import { LocalExecutionRecorder } from "./services/local-execution";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
 import {
+	createResearchConnectorRegistryFromHost,
+	createResearchWriteAdapterRegistryFromHost,
+} from "./services/research-host-adapters";
+import {
+	createUnavailableResearchConnectorRegistry,
 	emptyCaptureLedger,
 	emptyResearchConnectorSettings,
+	type ResearchConnectorRegistryPort,
 	ResearchResourceService,
 } from "./services/research-resource";
-import { createEmptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
 import {
-	createProtocolsBookmarkWriteAdapter,
-	createProtocolsBookmarkWritePortFromEnv,
-	createWebdavWriteAdapter,
-	createWebdavWritePortFromEnv,
-} from "./services/reversible-write-adapters";
+	createEmptyResearchWriteLedger,
+	createUnavailableResearchWriteRegistry,
+	ResearchWriteService,
+} from "./services/research-write";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
@@ -98,6 +136,7 @@ import { SessionService, type SessionServiceOptions } from "./session-service";
 import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
+import type { StorageRegistry } from "./storage/registry";
 import type { SshHostEntry } from "./tools/ssh";
 import { applyStoredZoteroLocalKey } from "./zotero/local-write";
 import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
@@ -126,6 +165,11 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	 */
 	replySubagentSupervisor(sessionId: string, requestId: string, message: string): void | Promise<void>;
 	init(): Promise<void>;
+	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined;
+	getPluginSessionCapabilities(
+		recordAdoptions?: import("@gyoungwe/plugin-api/runtime").PluginRecordAdoptions,
+	): ReturnType<import("./services/session-api").SessionServiceApi["getPluginSessionCapabilities"]>;
+	getStorageRegistry(): StorageRegistry;
 	getEventRates(): Map<string, { window60s: number[]; lastEventAt: number }>;
 	onEvent(handler: (sessionId: string, event: SessionEvent) => void): () => void;
 	onAskRequest(handler: (request: AskRequest) => void): () => void;
@@ -134,7 +178,7 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	onTrustRequest(handler: (request: TrustRequest) => void): () => void;
 	onLoginEvent(handler: (payload: LoginEventPayload) => void): () => void;
 	onMcpStatus(handler: (cwd: string, status: McpStatus) => void): () => void;
-	respondAsk(requestId: string, response: AskResponse): boolean;
+	respondAsk(requestId: string, response: AskResponse, ownerId?: number): boolean;
 	respondPermission(requestId: string, answer: PermissionAnswer): void;
 	respondTrust(requestId: string, answer: TrustAnswer): void;
 	getSessionPermissionMode(sessionId: string): PermissionMode;
@@ -160,6 +204,8 @@ export interface MemoryServicePort {
 }
 
 export interface BackendServices {
+	/** Read-only domain availability view; providers can move to optional plugins without new IPC. */
+	domainCapabilities: DomainCapabilityRegistryPort;
 	/** Per-host runtime container; extension bridges must not use process globals. */
 	runtime: DroneRuntime;
 	/** Host-facing diagnostics boundary; keeps desktop IPC independent of PiBackend. */
@@ -208,8 +254,12 @@ export interface BackendServices {
 	research: ResearchResourceService;
 	/** Explicitly authorized, auditable research write adapters. */
 	researchWrites: ResearchWriteService;
+	/** Isolated acceptance registry exposed to an installed task/workbench plugin. */
+	taskHost?: TaskAcceptanceHostPort;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
+	/** Installed package-owned discovery surface; absent means discovery operations are unavailable. */
+	discoveryHost?: import("@gyoungwe/plugin-api").DiscoveryHostPort;
 	/** Durable B7 dataset, public-fetch and RO-Crate registry. */
 	dataDesign: ComputeDataDesignServicePort;
 	/** Durable NGS analysis lifecycle and scientific readiness gates. */
@@ -222,12 +272,21 @@ export interface BackendServices {
 	/** 每日发现：知识库更新后的新旧对照想法（默认开，每天一次） */
 	dailyDiscovery: DailyDiscoveryService;
 	knowledgeMaintenance: KnowledgeMaintenanceService;
-	dispose(): void;
+	dispose(): Promise<void>;
 }
+
+export type ResearchConnectorHostLoaderFactory = (options: {
+	readonly fetchImpl: typeof fetch;
+	readonly projectStorage: ResearchProjectStoragePort;
+}) => ResearchConnectorHostLoader;
 
 export interface BackendOptions extends SessionServiceOptions {
 	/** false 时不启动每日发现的定时检查（测试或无知识库宿主）；服务本身仍可手动运行 */
 	dailyDiscovery?: boolean;
+	/** Optional domain provider seam; the default keeps the current host implementation. */
+	dailyDiscoveryFactory?: (options: DailyDiscoveryOptions) => DailyDiscoveryService;
+	/** Optional domain provider seam; the default keeps the current host implementation. */
+	knowledgeMaintenanceFactory?: (options: KnowledgeMaintenanceOptions) => KnowledgeMaintenanceService;
 	/** Inject the renderer-facing host adapter without coupling the composition root to SSH details. */
 	compute?: ComputeHostAdapter;
 	/** Optional runner used by tests or a host-specific transport integration. */
@@ -262,6 +321,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	discoveryProjectId?: string;
 	/** Authorization gate for discovery execution and exports; omitted means fail closed. */
 	discoveryAuthorize?: DiscoveryAuthorization;
+	/** Optional installed discovery plugin loader; retained as an explicit seam during migration. */
+	discoveryHostLoader?: DiscoveryHostLoader;
 	/** Test or host supplied kernel runner; production defaults to Docker/Podman. */
 	discoveryRunner?: ControlledKernelRunner;
 	/** Durable discovery metadata root; defaults to the host agent directory. */
@@ -270,10 +331,63 @@ export interface BackendOptions extends SessionServiceOptions {
 	analysisAgentDir?: string;
 	/** Host-authorized clean-room runner used by the evidence replay IPC. */
 	analysisReplayRunner?: EvidenceReplayRunner;
+	/** Optional installed Pi plugin composition for read-only analysis/evidence preparation. */
+	analysisEvidenceHost?: AnalysisEvidencePluginHost;
+	/** Optional installed analysis plugin host; absent means analysis workflows are unavailable. */
+	analysisHostLoader?: AnalysisHostLoader;
+	/** Optional installed knowledge plugin host; absent uses the compatibility provider. */
+	knowledgeHostLoader?: KnowledgeHostLoader;
+	/** Optional installed research plugin host; absent means research run reads are unavailable. */
+	researchHostLoader?: ResearchHostLoader;
+	/** Optional host-owned research write adapter registry. */
+	researchWriteAdapterRegistry?: () => ResearchWriteAdapterRegistryPort;
+	/** Optional host-owned research connector registry. */
+	researchConnectorRegistry?: () => ResearchConnectorRegistryPort;
+	/** Optional installed research plugin connector host; takes precedence over compatibility only when no registry is supplied. */
+	researchConnectorHostLoader?: ResearchConnectorHostLoader;
+	/** Optional factory exported by an installed research plugin; host transports are injected here. */
+	researchConnectorHostLoaderFactory?: ResearchConnectorHostLoaderFactory;
+	/** Optional installed research plugin write host; takes precedence over compatibility only when no registry is supplied. */
+	researchWriteAdapterHostLoader?: ResearchWriteAdapterHostLoader;
+	/** Installed task owner; absence leaves task capability unavailable. */
+	taskHostLoader?: TaskHostLoader;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
+	const taskHost = options.taskHostLoader?.load();
+	if (taskHost?.dispose) runtime.registerDisposable?.({ dispose: taskHost.dispose });
+	// The packaged knowledge capability owns its runtime when installed. The
+	// generic host does not bootstrap the legacy worker; callers that still need
+	// that compatibility adapter is test-only and outside this composition path.
+	if (options.knowledgeHostLoader?.configureWorker) {
+		options.knowledgeHostLoader.configureWorker(createBackendKnowledgeWorkerSetup());
+	}
+	const domainCapabilities = new DomainCapabilityRegistry();
+	// Transitional host providers are explicit so callers can distinguish an
+	// installed plugin from an unavailable optional domain during migration.
+	for (const id of ["knowledge", "research"])
+		domainCapabilities.register({ id, status: "available", provider: "host-compat" });
+	domainCapabilities.register(
+		taskHost?.createNativeSession
+			? { id: "tasks", status: "available", provider: "plugin:tasks" }
+			: {
+					id: "tasks",
+					status: "unavailable",
+					provider: "none",
+					reason: "Install a task plugin with a native session adapter",
+				},
+	);
+	domainCapabilities.register(
+		options.analysisHostLoader
+			? { id: "analysis", status: "available", provider: "plugin:analysis" }
+			: {
+					id: "analysis",
+					status: "unavailable",
+					provider: "none",
+					reason: "Install an analysis plugin to enable analysis workflows",
+				},
+	);
 	const permissions = new PermissionSettingsService();
 	// Zotero Web API credentials saved in settings → process.env, so the research Zotero write channel sees them.
 	void applyStoredZoteroWebCredentials();
@@ -282,8 +396,39 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	let listComputeHosts: (() => Promise<ComputeHost[]>) | null = null;
 	const memory = new MemoryStore(join(getAgentDir(), "memory", "memory.db"));
 	runtime.registerDisposable?.({ dispose: () => memory.close() });
+	const knowledgeHost = options.knowledgeHostLoader?.load() as KnowledgeHostPort | undefined;
+	// The generic host never imports the legacy knowledge implementation.  An
+	// installed knowledge loader must provide each operation it advertises;
+	// undeclared operations fail closed instead of silently reaching a bundled
+	// optional package.  The compatibility worker remains an explicit test/host
+	// adapter via an explicit test fixture, outside this composition path.
+	const knowledgeCompatibility = unavailableKnowledgeCompatibility;
+	runtime.knowledge.registerAnswerPublication ??= createKnowledgePublicationOperation(
+		knowledgeHost,
+		knowledgeCompatibility,
+	);
+	const knowledgeFactory =
+		options.knowledgeFactory ??
+		(() =>
+			new KnowledgeUiService(
+				knowledgeHost ? createKnowledgeReadProvider(knowledgeHost, knowledgeCompatibility) : undefined,
+				{
+					compatibility: knowledgeCompatibility,
+					...(knowledgeHost ? { knowledgeHost } : {}),
+					...(options.researchHostLoader ? { researchHostLoader: options.researchHostLoader } : {}),
+				},
+			));
 	const sessions = new SessionService({
 		...options,
+		taskHost,
+		knowledgeFactory,
+		knowledgeSpecialistModelLoop: knowledgeHost?.runSpecialistModelLoop,
+		...(knowledgeHost?.backgroundReviewer
+			? {
+					knowledgeBackgroundReviewerFactory: (reviewerOptions) =>
+						knowledgeHost.backgroundReviewer?.(reviewerOptions) as BackgroundReviewerPort,
+				}
+			: {}),
 		memory,
 		runtime,
 		permissions,
@@ -299,12 +444,47 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					status: host.health.status,
 				})),
 	});
+	const researchProjectStorage: ResearchProjectStoragePort = {
+		search: async ({ cwd, query, limit, signal }) => {
+			if (signal?.aborted) return [];
+			const needle = query.normalize("NFKC").toLocaleLowerCase();
+			const paths = (await walkProjectFiles(cwd))
+				.filter((path) => !path.endsWith("/") && path.toLocaleLowerCase().includes(needle))
+				.slice(0, limit);
+			const items: Array<{
+				relativePath: string;
+				format: string;
+				size: number;
+				modifiedAt: string;
+			}> = [];
+			for (const relativePath of paths) {
+				if (signal?.aborted) break;
+				const info = await stat(join(cwd, relativePath)).catch(() => null);
+				if (!info?.isFile()) continue;
+				items.push({
+					relativePath,
+					format: extname(relativePath).replace(/^\./, "") || "binary",
+					size: info.size,
+					modifiedAt: info.mtime.toISOString(),
+				});
+			}
+			return items;
+		},
+	};
+	const explicitResearchConnectorRegistry = options.researchConnectorRegistry?.();
+	const researchConnectorHostLoader =
+		explicitResearchConnectorRegistry || options.researchConnectorHostLoader
+			? options.researchConnectorHostLoader
+			: options.researchConnectorHostLoaderFactory?.({
+					fetchImpl: globalThis.fetch,
+					projectStorage: researchProjectStorage,
+				});
 	const researchWrites = new ResearchWriteService({
-		adapters: new ResearchWriteAdapterRegistry([
-			...createDefaultResearchWriteAdapters(),
-			createWebdavWriteAdapter(createWebdavWritePortFromEnv()),
-			createProtocolsBookmarkWriteAdapter(createProtocolsBookmarkWritePortFromEnv()),
-		]),
+		adapters:
+			options.researchWriteAdapterRegistry?.() ??
+			(options.researchWriteAdapterHostLoader
+				? createResearchWriteAdapterRegistryFromHost(options.researchWriteAdapterHostLoader)
+				: createUnavailableResearchWriteRegistry()),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "writes.json"),
 			storageId: "agent-research-writes",
@@ -312,6 +492,12 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		}),
 	});
 	const research = new ResearchResourceService({
+		connectors:
+			explicitResearchConnectorRegistry ??
+			(researchConnectorHostLoader
+				? createResearchConnectorRegistryFromHost(researchConnectorHostLoader)
+				: createUnavailableResearchConnectorRegistry()),
+		knowledgeOperations: createKnowledgeResearchResourceOperations(knowledgeHost, knowledgeCompatibility),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "captures.json"),
 			storageId: "agent-research-captures",
@@ -344,28 +530,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					resolverUrl: process.env.DRONE_INSTITUTIONAL_RESOLVER,
 				},
 			},
-			projectStorage: {
-				search: async ({ cwd, query, limit, signal }) => {
-					if (signal?.aborted) return [];
-					const needle = query.normalize("NFKC").toLocaleLowerCase();
-					const paths = (await walkProjectFiles(cwd))
-						.filter((path) => !path.endsWith("/") && path.toLocaleLowerCase().includes(needle))
-						.slice(0, limit);
-					const items = [];
-					for (const relativePath of paths) {
-						if (signal?.aborted) break;
-						const info = await stat(join(cwd, relativePath)).catch(() => null);
-						if (!info?.isFile()) continue;
-						items.push({
-							relativePath,
-							format: extname(relativePath).replace(/^\./, "") || "binary",
-							size: info.size,
-							modifiedAt: info.mtime.toISOString(),
-						});
-					}
-					return items;
-				},
-			},
+			projectStorage: researchProjectStorage,
 		},
 	});
 	const defaultProjectId = canonicalProjectId(
@@ -403,17 +568,30 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		localExecution.observe(sessionId, event),
 	);
 	runtime.registerDisposable?.({ dispose: detachLocalExecution });
-	const discovery = new DiscoveryService({
-		projectId: canonicalProjectId(options.discoveryProjectId ?? "default"),
-		projectRoot: options.discoveryProjectRoot ?? options.defaultCwd ?? process.cwd(),
-		agentDir: options.discoveryAgentDir ?? join(getAgentDir(), "discovery"),
-		storage: sessions.getStorageRegistry(),
-		...(inquiry.domain ? { inquiry: inquiry.domain } : {}),
-		...(options.discoveryAuthorize ? { authorize: options.discoveryAuthorize } : {}),
-		...(options.discoveryRunner ? { runner: options.discoveryRunner } : {}),
-		onExecution: (event) =>
-			localExecution.recordKernelExecution({ ...event, projectId: canonicalProjectId(event.cwd) }),
-	});
+	const discoveryProjectRoot = resolve(options.discoveryProjectRoot ?? options.defaultCwd ?? process.cwd());
+	const discoveryProjectKey = createHash("sha256")
+		.update(canonicalProjectId(discoveryProjectRoot))
+		.digest("hex")
+		.slice(0, 32);
+	const discoveryProjectId = canonicalProjectId(
+		options.discoveryProjectId ?? `discovery-${discoveryProjectKey}`,
+	);
+	const { service: discovery, host: discoveryHost } = createDiscoveryService(
+		{
+			projectId: discoveryProjectId,
+			projectRoot: discoveryProjectRoot,
+			agentDir: options.discoveryAgentDir ?? join(getAgentDir(), "discovery", discoveryProjectKey),
+			...(!options.discoveryAgentDir ? { legacyJournalRoot: join(getAgentDir(), "discovery") } : {}),
+			storage: sessions.getStorageRegistry(),
+			inquiry: inquiry.discoveryPort(options.inquiryProjectId ?? discoveryProjectRoot, discoveryProjectId),
+			...(options.discoveryAuthorize ? { authorize: options.discoveryAuthorize } : {}),
+			...(options.discoveryRunner ? { runner: options.discoveryRunner } : {}),
+			onExecution: (event) =>
+				localExecution.recordKernelExecution({ ...event, projectId: canonicalProjectId(event.cwd) }),
+		},
+		options.discoveryHostLoader,
+	);
+
 	const dataDesign =
 		options.computeDataDesign ??
 		createComputeDataDesignService({
@@ -441,11 +619,16 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		analysis,
 		storage: sessions.getStorageRegistry(),
 		...(options.analysisReplayRunner ? { replayRunner: options.analysisReplayRunner } : {}),
+		...(options.analysisEvidenceHost ? { evidenceHost: options.analysisEvidenceHost } : {}),
 	});
 	const experienceRecorder =
 		options.computeExperienceRecorder ??
 		(options.computeExperienceStore
 			? createComputeExperienceRecorder({
+					recordTerminalJobExperience: createKnowledgeExperienceOperation(
+						knowledgeHost,
+						knowledgeCompatibility,
+					),
 					store: options.computeExperienceStore,
 					...(options.computeExperienceTopicId !== undefined
 						? { topicId: options.computeExperienceTopicId }
@@ -534,9 +717,10 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		runtime.compute = { service: compute, adapter: computeAdapter };
 	}
 	void computeAdapter.init?.();
-	void discovery.init();
-	const dailyDiscovery = new DailyDiscoveryService({
+	// The plugin initializes lazily on first operation; absence never opens domain storage.
+	const dailyDiscoveryOptions: DailyDiscoveryOptions = {
 		path: join(getAgentDir(), "daily-discovery.json"),
+		operations: createKnowledgeDailyDiscoveryOperations(knowledgeHost, knowledgeCompatibility),
 		context: async (sinceMs) => {
 			const base = await sessions.knowledge.dailyContext(sinceMs);
 			if (!base.bound) return base;
@@ -608,10 +792,14 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			);
 			return completionText(response);
 		},
-	});
+	};
+	const dailyDiscovery = options.dailyDiscoveryFactory
+		? options.dailyDiscoveryFactory(dailyDiscoveryOptions)
+		: new DailyDiscoveryService(dailyDiscoveryOptions);
 	if (options.dailyDiscovery !== false) dailyDiscovery.start();
-	const knowledgeMaintenance = new KnowledgeMaintenanceService({
+	const knowledgeMaintenanceOptions: KnowledgeMaintenanceOptions = {
 		path: join(getAgentDir(), "knowledge-maintenance.json"),
+		maintenance: createKnowledgeMaintenanceOperations(knowledgeHost, knowledgeCompatibility),
 		readOverview: (cwd) => sessions.knowledge.overview({ cwd }),
 		readGraph: (_cwd, revision) =>
 			sessions.knowledge.graph({ revision, limit: 5000, view: "all", mergeMirrors: false }),
@@ -658,18 +846,35 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			);
 			return completionText(response) ?? "";
 		},
-	});
+	};
+	const knowledgeMaintenance = options.knowledgeMaintenanceFactory
+		? options.knowledgeMaintenanceFactory(knowledgeMaintenanceOptions)
+		: new KnowledgeMaintenanceService(knowledgeMaintenanceOptions);
 	const onKnowledgeDeposited = (payload: unknown) => {
 		if (!payload || typeof payload !== "object" || typeof (payload as { cwd?: unknown }).cwd !== "string")
 			return;
 		knowledgeMaintenance.notifyContentChanged((payload as { cwd: string }).cwd);
 	};
-	process.on("drone:knowledge-deposited/v1", onKnowledgeDeposited);
+	const detachKnowledgeDeposited = runtime.events.on("drone:knowledge-deposited/v1", onKnowledgeDeposited);
+	// Legacy packaged extensions still announce Vault writes through process.emit.
+	// Keep this bridge deliberately thin: business handling lives on the runtime
+	// event bus, and the process listener is removed with this backend instance.
+	const defaultCwd = resolve(options.defaultCwd ?? process.cwd());
+	const forwardLegacyKnowledgeDeposited = (payload: unknown) => {
+		if (!payload || typeof payload !== "object" || typeof (payload as { cwd?: unknown }).cwd !== "string")
+			return;
+		const cwd = resolve((payload as { cwd: string }).cwd);
+		const boundToBackend =
+			cwd === defaultCwd || sessions.registry.list().some((entry) => resolve(entry.cwd) === cwd);
+		if (boundToBackend) runtime.events.emit("drone:knowledge-deposited/v1", payload);
+	};
+	process.on("drone:knowledge-deposited/v1", forwardLegacyKnowledgeDeposited);
 	if (options.dailyDiscovery !== false) knowledgeMaintenance.start(options.defaultCwd ?? process.cwd());
 	const diagnostics: DiagnosticsServicePort = {
 		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
 	};
 	return {
+		domainCapabilities,
 		runtime,
 		diagnostics,
 		sessions,
@@ -706,7 +911,8 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				return memory.status(canonicalProjectId(cwd));
 			},
 			promote: (cwd, id) => {
-				promoteObservation(memory, cwd, canonicalProjectId(cwd), id);
+				if (!options.coreHost) throw new Error("Core plugin is unavailable: memory promotion is disabled");
+				promoteObservation(memory, cwd, canonicalProjectId(cwd), id, options.coreHost.writeMemory);
 				return memory.status(canonicalProjectId(cwd));
 			},
 			promoteToKnowledge: (cwd, id) =>
@@ -716,7 +922,9 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		inquiry,
 		research,
 		researchWrites,
+		taskHost,
 		discovery,
+		...(discoveryHost ? { discoveryHost } : {}),
 		dataDesign,
 		analysis,
 		analysisEvidence,
@@ -766,6 +974,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				analysis,
 				compute,
 				reviewer,
+				...(options.analysisHostLoader ? { analysisHost: options.analysisHostLoader } : {}),
 				capabilityRuntime: {
 					activate: (capabilities, task) => {
 						if (sessions.checkSessionWritable(sessionId) !== "ok")
@@ -779,17 +988,18 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		},
 		dailyDiscovery,
 		knowledgeMaintenance,
-		dispose: () => {
+		dispose: async () => {
 			dailyDiscovery.dispose();
 			knowledgeMaintenance.dispose();
-			process.off("drone:knowledge-deposited/v1", onKnowledgeDeposited);
+			detachKnowledgeDeposited();
+			process.off("drone:knowledge-deposited/v1", forwardLegacyKnowledgeDeposited);
 			detachInquiryComputeEvents();
-			sessions.dispose();
-			void compute.dispose();
-			void computeAdapter.dispose?.();
-			inquiry.dispose();
-			discovery.dispose();
-			void runtime.dispose();
+			await sessions.dispose();
+			await compute.dispose();
+			await computeAdapter.dispose?.();
+			await inquiry.dispose();
+			await discovery.dispose();
+			await runtime.dispose();
 		},
 	};
 }

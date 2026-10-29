@@ -57,3 +57,30 @@ export interface ZoteroLocalWriteStatus {
 	/** 已保存的 key 属于别的 Zotero 数据库（换了数据目录），需要重新授权 */
 	staleServer: boolean;
 }
+
+/**
+ * Zotero library type spellings shared by the host boundary.
+ *
+ * The Web API path segment is plural (`/users/<id>`, `/groups/<id>`), while
+ * pyzotero/zotero-mcp read `ZOTERO_LIBRARY_TYPE` as singular and add the `s`
+ * themselves. Keeping this normalization in shared avoids making the host
+ * import the research plugin merely to translate a configuration value.
+ */
+export type ZoteroLibraryPath = "users" | "groups";
+export type ZoteroLibraryEnvValue = "user" | "group";
+
+/** Normalize singular/plural Zotero library type input to a Web API path. */
+export function zoteroLibraryPath(value: unknown): ZoteroLibraryPath | null {
+	if (value === undefined || value === null) return "users";
+	const text = String(value).trim().toLowerCase();
+	if (text === "" || text === "user" || text === "users") return "users";
+	if (text === "group" || text === "groups") return "groups";
+	return null;
+}
+
+/** Return the singular value expected by pyzotero/zotero-mcp. */
+export function zoteroLibraryEnvValue(
+	path: ZoteroLibraryPath | string | null | undefined,
+): ZoteroLibraryEnvValue {
+	return zoteroLibraryPath(path) === "groups" ? "group" : "user";
+}

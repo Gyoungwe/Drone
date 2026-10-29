@@ -514,7 +514,7 @@ it("extension captures tool events before start, returns current state, and igno
 	const ctx = { cwd, sessionId: "fixture-session" };
 	researchLoopExtension({
 		registerTool(t) {
-			tool = t;
+			if (t.name === "research_loop") tool = t;
 		},
 		on(name, fn) {
 			if (!hooks.has(name)) hooks.set(name, []);
@@ -658,7 +658,7 @@ it("research_loop start uses the shared project identity instead of research-wor
 	const ctx = { cwd, sessionId: "project-session" };
 	researchLoopExtension({
 		registerTool(t) {
-			tool = t;
+			if (t.name === "research_loop") tool = t;
 		},
 		on() {},
 	});

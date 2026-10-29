@@ -26,6 +26,7 @@ export class SessionExtensionsService {
 
 	dependencies(): SessionExtensionDependencies {
 		return {
+			coreHost: this.host.options.coreHost,
 			runtime: this.host.runtime,
 			permissionGates: this.host.options.permissionGates,
 			permissionExtension: this.host.options.permissionExtension,

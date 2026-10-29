@@ -162,3 +162,54 @@ it("rejects a modified shipped runtime before executing any plugin code", async 
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+it.skipIf(!existsSync(join(runtime, "runtime.json")))(
+	"shuts down while network consent is pending without opening a worker on late approval",
+	async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-loader-cancel-consent-"));
+		const entrypoint = join(root, "extension.mjs");
+		await writeFile(
+			entrypoint,
+			`export default pi=>pi.registerTool({name:"probe",label:"Probe",description:"Consent isolation",parameters:{type:"object",properties:{}},async execute(){return {content:[{type:"text",text:"must-not-execute"}]};}});`,
+		);
+		const loader = new DefaultResourceLoader({
+			cwd: root,
+			agentDir: root,
+			settingsManager: SettingsManager.inMemory({}),
+			noExtensions: true,
+			additionalExtensionPaths: [entrypoint],
+			extensionFactoryForPath: sandboxExtensionFactory(runtime, [], root),
+		});
+		let approve!: (value: boolean) => void;
+		let announce!: () => void;
+		const approval = new Promise<boolean>((resolve) => {
+			approve = resolve;
+		});
+		const asked = new Promise<void>((resolve) => {
+			announce = resolve;
+		});
+		try {
+			await loader.reload({ resolveProjectTrust: async () => true });
+			const extension = loader.getExtensions().extensions[0];
+			const tool = extension.tools.get("probe")!.definition;
+			const invocation = tool.execute("call", {}, undefined, undefined, {
+				hasUI: true,
+				ui: {
+					confirm: () => {
+						announce();
+						return approval;
+					},
+				},
+			} as ExtensionContext);
+			const rejected = expect(invocation).rejects.toThrow();
+			await asked;
+			for (const shutdown of extension.handlers.get("session_shutdown") ?? [])
+				await shutdown({ type: "session_shutdown", reason: "quit" }, {} as ExtensionContext);
+			await rejected;
+			approve(true);
+			await expect(tool.execute("late", {}, undefined, undefined, {} as ExtensionContext)).rejects.toThrow();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	},
+);
