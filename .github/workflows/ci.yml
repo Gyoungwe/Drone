@@ -11,12 +11,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plugins:
+    name: Locked plugin sources (rebuild and verify)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      # Rebuild every locked plugin from its exact source commit and verify the tarball
+      # hash once; the other jobs re-verify and unpack these same bytes on every platform.
+      - run: npm run fetch:plugins
+      - uses: actions/upload-artifact@v4
+        with:
+          name: locked-plugin-tarballs
+          path: vendor/plugins/.tarballs/
+          if-no-files-found: error
+
   static:
     name: Static checks (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
+    needs: plugins
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -25,6 +43,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: locked-plugin-tarballs
+          path: vendor/plugins/.tarballs/
       - name: Checkout bound plugin workspace
         uses: actions/checkout@v6
         with:
@@ -47,6 +69,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
+    needs: plugins
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -55,6 +78,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: locked-plugin-tarballs
+          path: vendor/plugins/.tarballs/
       # Same as the root pretest: build the workspace Plugin API, unpack the plugin artifacts
       # pinned in plugins.lock.json (node_modules/@gyoungwe/* and the gitignored
       # .pi/extensions/knowledge-worker.mjs) and stage the bundled plugin runtime.
@@ -67,6 +94,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
+    needs: plugins
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -75,6 +103,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: locked-plugin-tarballs
+          path: vendor/plugins/.tarballs/
       # Same as the root pretest: build the workspace Plugin API, unpack the plugin artifacts
       # pinned in plugins.lock.json (node_modules/@gyoungwe/* and the gitignored
       # .pi/extensions/knowledge-worker.mjs) and stage the bundled plugin runtime.
@@ -89,6 +121,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
+    needs: plugins
     runs-on: ${{ matrix.os }}
     env:
       # electron-vite OOMs at the default heap on macos-latest (same as release.yml build).
@@ -100,6 +133,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: locked-plugin-tarballs
+          path: vendor/plugins/.tarballs/
       # Same as the root pretest: build the workspace Plugin API, unpack the plugin artifacts
       # pinned in plugins.lock.json (node_modules/@gyoungwe/* and the gitignored
       # .pi/extensions/knowledge-worker.mjs) and stage the bundled plugin runtime.
@@ -111,7 +148,8 @@ jobs:
           ref: main
           path: drone-plugins
       # Backend is covered by the parallel unit/sdk jobs. Keep the other
-      # workspace suites and the root upgrade/build gates in this job.
+      # workspace suites and the root upgrade/build gates in this job. Knowledge
+      # and tasks moved to drone-plugins and are tested by its CI.
       - name: Preload real-load (required)
         run: npm run test:preload
       - run: npm test -w @drone/shared
@@ -119,8 +157,6 @@ jobs:
         env:
           DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
       - run: npm test -w @drone/extensions
-      - run: npm test -w @drone/knowledge
-      - run: npm test -w @drone/tasks
       - run: npm test -w @drone/research
       - run: npm test -w @drone/compute
       - run: npm test -w @drone/inquiry
@@ -135,6 +171,7 @@ jobs:
 
   pi-package-format:
     name: Official Pi package format (locked knowledge)
+    needs: plugins
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -143,6 +180,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: locked-plugin-tarballs
+          path: vendor/plugins/.tarballs/
       - run: npm run fetch:plugins
       # Pi's own package manager resolves the locked package as a source and loads it
       # without Drone; native Pi closed loops are out of scope (2026-10-29 revision).
