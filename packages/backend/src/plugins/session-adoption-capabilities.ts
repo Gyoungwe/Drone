@@ -52,6 +52,7 @@ export function sessionAdoptionCapabilityHandlers(
 	return {
 		"session.records.adoption.inspect": {
 			effect: "write",
+			approval: "always",
 			inputSchema: Type.Object({ type: logicalType }, { additionalProperties: false }),
 			resultSchema: Type.Object(
 				{
@@ -85,6 +86,7 @@ export function sessionAdoptionCapabilityHandlers(
 		},
 		"session.records.adoption.commit": {
 			effect: "write",
+			approval: "always",
 			inputSchema: Type.Object(
 				{
 					type: logicalType,

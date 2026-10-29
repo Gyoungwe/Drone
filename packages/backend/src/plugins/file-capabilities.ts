@@ -779,12 +779,14 @@ export function fileCapabilityHandlers(
 				{ additionalProperties: false },
 			),
 			effect: "write",
+			approval: "own",
 			execute: (input, call) => ports.writeBinary(input as PluginBinaryStateWriteInput, call),
 		},
 		"state.reserve": {
 			inputSchema: input,
 			resultSchema: Type.Object({ reserved: Type.Literal(true) }),
 			effect: "write",
+			approval: "own",
 			execute: (input, call) => ports.reserveState(input as PluginFileInput, call),
 		},
 		"state.list": {
@@ -805,6 +807,7 @@ export function fileCapabilityHandlers(
 			),
 			resultSchema: stateResult,
 			effect: "write",
+			approval: "own",
 			execute: (input, call) => ports.removeJson(input as PluginStateRemoveInput, call),
 		},
 		"state.ensureDirectory": {
@@ -814,6 +817,7 @@ export function fileCapabilityHandlers(
 			),
 			resultSchema: Type.Object({ created: Type.Boolean() }),
 			effect: "write",
+			approval: "own",
 			execute: (input, call) => ports.ensureStateDirectory(input as PluginFileInput, call),
 		},
 		"state.writeJson": {
@@ -828,6 +832,7 @@ export function fileCapabilityHandlers(
 			),
 			resultSchema: stateResult,
 			effect: "write",
+			approval: "own",
 			execute: (input, call) => ports.writeJson(input as PluginStateWriteInput, call),
 		},
 		"roots.resolve": {
@@ -867,6 +872,7 @@ export function fileCapabilityHandlers(
 				version: fileVersion,
 			}),
 			effect: "write",
+			approval: "always",
 			execute: (input, call) =>
 				ports.writeText(input as PluginFileInput & { text: string; expectedHash: string | null }, call),
 		},
@@ -881,6 +887,7 @@ export function fileCapabilityHandlers(
 			),
 			resultSchema: Type.Object({ removed: Type.Literal(true) }),
 			effect: "write",
+			approval: "always",
 			execute: (input, call) => ports.removeText(input as PluginFileInput & { expectedHash: string }, call),
 		},
 		"files.ensureDirectory": {
@@ -890,6 +897,7 @@ export function fileCapabilityHandlers(
 			),
 			resultSchema: Type.Object({ created: Type.Boolean() }),
 			effect: "write",
+			approval: "always",
 			execute: (input, call) => ports.ensureFileDirectory(input as PluginFileInput, call),
 		},
 		"files.readBinary": {

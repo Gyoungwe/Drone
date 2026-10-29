@@ -508,3 +508,7 @@ SDK 把同一个参数对象依次交给每个 `tool_call` 处理器，然后原
 ## Windows CI 从未真正跑通（2026-10-29 记录）
 
 宿主 CI 的 Windows 矩阵此前在取包/typecheck 阶段就失败，测试从未执行；发行版只有 macOS。修到能执行后暴露：插件构建脚本直接 spawn `node_modules/.bin/tsc`（Windows 需 `.cmd`），Windows checkout 的换行转换使从源码重建的插件 tarball 无法匹配锁哈希，以及 desktop `ui-plugins` 测试对路径别名（`RUNNER~1`）、文件权限位（0o666 vs 0o700）和符号链接的假设。现在锁定插件只在 Linux 从源码重建并校验，其他平台复验同一 tarball；Windows 的 static/unit/sdk/desktop job 设为 `continue-on-error` 仅作可见信号。要支持 Windows 发行，先修复这些测试与插件构建脚本，再去掉 `continue-on-error`。
+
+## 受管插件的写审批与任务授权
+
+受管插件的写调用默认每次弹原生对话框。不要为了让任务编排“能用”去缓存审批或让插件自报授权：插件自己的簿记（会话记录、私有状态）在能力上标 `approval: "own"`；一次任务授权只能由宿主 `task.grant.request` 签发（宿主解析目录、宿主渲染对话框、绑定 live 会话条目与当前安装来源），授权下仍需逐项确认的能力标 `approval: "always"`。新增写能力时必须决定它属于哪一类，缺省即“授权覆盖”。授权从不由插件返回值、JSON 记录或恢复数据产生，会话关闭、插件停用/升级即失效。详见[宿主任务授权](superpowers/specs/2026-10-29-host-task-grant-design.md)。

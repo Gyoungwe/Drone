@@ -766,8 +766,11 @@ it("exposes eight generic session handlers without a model declaration, then gat
 	const sessions = {
 		getPluginCallerContext: () => undefined,
 		getPluginSessionCapabilities: () => handlers,
+		getPluginTaskGrantCapabilities: () => ({ "task.grant.request": handler }),
+		getTaskGrants: () => taskGrants,
 		getStorageRegistry: () => new StorageRegistry(),
 	};
+	const taskGrants = { bindSourceValidator: vi.fn() };
 	createDesktopRuntime(
 		{ runtimeSource: () => source, isEnabled: () => true } as any,
 		root,
@@ -816,4 +819,12 @@ it("exposes eight generic session handlers without a model declaration, then gat
 	expect(without.handlers["session.records.adoption.inspect"]).toBeUndefined();
 
 	expect(withModel.handlers["model.toolStep"]).toBe(handler);
+	// Task authorization only for packages that declared drone.taskGrants; the bridge validates sources.
+	expect(without.handlers["task.grant.request"]).toBeUndefined();
+	const withTask = await desktop.bridgeOptions.capabilities(
+		{ ...selected, requestsTaskGrant: true },
+		owner,
+	)(activation());
+	expect(withTask.handlers["task.grant.request"]).toBe(handler);
+	expect(desktop.bridgeOptions.taskGrants).toBe(taskGrants);
 });

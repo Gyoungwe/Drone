@@ -18,11 +18,13 @@ import type {
 } from "@drone/shared";
 import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
+import type { PluginRuntimeSource } from "../plugins/coordinator";
 import { modelCapabilityHandlers } from "../plugins/model-capabilities";
 import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
 import { sessionCapabilityHandlers } from "../plugins/session-capabilities";
 import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
+import { type TaskGrantStore, taskGrantCapabilityHandlers } from "../plugins/task-grants";
 import { walkProjectFiles } from "../project/files";
 import { TraceRecorder } from "../session/trace";
 import { SessionRecordStore } from "../session-engine/session-records";
@@ -87,6 +89,15 @@ export class SessionServiceApi extends SessionSettingsApi {
 				getProfileThinking: (name) => this.host.modelSettings.getSubagentThinking(name),
 			}),
 		};
+	}
+
+	/** Task authorization capabilities bound to one installed plugin source. */
+	getPluginTaskGrantCapabilities(source: PluginRuntimeSource) {
+		return taskGrantCapabilityHandlers(this.host.taskGrants, this.host.pluginSessions, source);
+	}
+
+	getTaskGrants(): TaskGrantStore {
+		return this.host.taskGrants;
 	}
 
 	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined {

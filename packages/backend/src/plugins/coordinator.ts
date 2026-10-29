@@ -21,6 +21,7 @@ import type {
 } from "./runtime-capabilities";
 import { type PluginServiceTarget, serviceCapabilityHandlers } from "./service-capabilities";
 import type { PluginSessionCallerContext } from "./session-caller";
+import type { TaskGrantStore } from "./task-grants";
 
 export interface PluginRuntimeSource {
 	readonly pluginId: string;
@@ -42,6 +43,8 @@ export interface PluginRuntimeSource {
 	readonly requestsFileWrite?: boolean;
 	readonly requestsModel?: boolean;
 	readonly requestsExecution?: boolean;
+	/** Manifest `drone.taskGrants: "request"`: may ask the host for a task authorization. */
+	readonly requestsTaskGrant?: boolean;
 	readonly resources?: Readonly<Record<string, string>>;
 }
 export interface PluginRuntimeOwner {
@@ -90,6 +93,8 @@ export interface PluginRuntimeBridgeOptions {
 		signal?: AbortSignal,
 	): Promise<boolean>;
 	getSessionContext(sessionId: string): PluginSessionCallerContext | undefined;
+	/** Host task grants; a current grant for this plugin source covers its ordinary writes. */
+	taskGrants?: TaskGrantStore;
 }
 interface Selection {
 	readonly token: string;
@@ -142,6 +147,7 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.requestsFileWrite === b.requestsFileWrite &&
 		a.requestsModel === b.requestsModel &&
 		a.requestsExecution === b.requestsExecution &&
+		a.requestsTaskGrant === b.requestsTaskGrant &&
 		JSON.stringify(a.resources) === JSON.stringify(b.resources)
 	);
 }
@@ -175,7 +181,16 @@ export class PluginRuntimeBridge {
 		}
 	>();
 
-	constructor(private readonly options: PluginRuntimeBridgeOptions) {}
+	constructor(private readonly options: PluginRuntimeBridgeOptions) {
+		// A grant stays valid only while its exact source is an enabled installed source.
+		options.taskGrants?.bindSourceValidator((source) => this.sourceCurrent(source));
+	}
+
+	private sourceCurrent(source: PluginRuntimeSource): boolean {
+		const listed = this.options.sources?.();
+		if (listed) return listed.some((item) => item.state === "enabled" && sameSource(source, item.source));
+		return this.options.enabled(source.pluginId) && sameSource(source, this.options.source(source.pluginId));
+	}
 
 	/** Renderer selects an existing session; the backend supplies identity, cwd, trust and lifetime. */
 	selectSession(owner: PluginRuntimeOwner, sessionId: string | null): string {
@@ -440,7 +455,13 @@ export class PluginRuntimeBridge {
 						);
 					};
 					if (!permitted()) return false;
-					if (request.effect === "read") return true;
+					// Own bookkeeping (session records, granted private state) never prompts.
+					if (request.effect === "read" || request.approval === "own") return true;
+					if (request.approval !== "always" && selected.session) {
+						const grant = this.options.taskGrants?.current(selected.session.identity);
+						if (grant && sameSource(grant.source, source) && sameSource(source, this.options.source(name)))
+							return permitted();
+					}
 					return (
 						(await this.options.approve(
 							selected.owner.approvalOwner ?? selected.owner,

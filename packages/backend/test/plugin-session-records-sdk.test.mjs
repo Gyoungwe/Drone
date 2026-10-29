@@ -185,7 +185,8 @@ it("latest checkpoints are source-owned, current-branch only and never expose me
 		{ id: first.id, type: "checkpoint", data: { revision: 1 } },
 	]);
 	expect((await invoke("record-b", "read", null)).records).toEqual([]);
-	expect(approvals.filter((args) => args[2] === "capability:session.records.append")).toHaveLength(4);
+	// Own-source checkpoints are bookkeeping (host task grant design): they never prompt.
+	expect(approvals.filter((args) => args[2] === "capability:session.records.append")).toHaveLength(0);
 	expect(faux.state.callCount).toBe(modelCalls);
 });
 it("lazy SDK storage explicitly defers without creating a file; idle notifications have no trusted details or model turn", async () => {
@@ -303,8 +304,9 @@ it("approval cancellation, readonly/untrusted and application callers cannot app
 	const { service, entry, invoke, converse, approve, owner, bindings, select, meta, faux } = state;
 	await converse();
 	let release;
+	// Appends do not prompt; cancel while the surrounding write operation awaits its approval.
 	approve(async (_owner, _source, operation) =>
-		operation === "capability:session.records.append"
+		operation === "append"
 			? new Promise((resolve) => {
 					release = resolve;
 				})
