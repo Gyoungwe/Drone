@@ -2,8 +2,10 @@
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("../", import.meta.url).pathname;
+// fileURLToPath, not URL.pathname: on Windows pathname is "/D:/..." and resolves to D:\D:\.
+const root = fileURLToPath(new URL("../", import.meta.url));
 const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".ts", ".tsx"]);
 const allowed = new Set([
 	"@gyoungwe/plugin-api",
