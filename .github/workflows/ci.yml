@@ -55,6 +55,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Same as the root pretest: unpack the plugin artifacts pinned in plugins.lock.json
+      # (node_modules/@gyoungwe/* and the gitignored .pi/extensions/knowledge-worker.mjs)
+      # and stage the bundled plugin runtime the process-runtime tests load.
+      - run: npm run fetch:plugins && node scripts/stage-plugin-runtime.mjs
       - run: npm run test:unit
 
   sdk:
@@ -71,6 +75,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Same as the root pretest: unpack the plugin artifacts pinned in plugins.lock.json
+      # (node_modules/@gyoungwe/* and the gitignored .pi/extensions/knowledge-worker.mjs)
+      # and stage the bundled plugin runtime the process-runtime tests load.
+      - run: npm run fetch:plugins && node scripts/stage-plugin-runtime.mjs
       # Bundled MCP runtime (pinned pi-mcp-adapter); the SDK suite loads it like the packaged app.
       - run: npm run stage:pi-packages
       - run: npm run test:sdk
@@ -92,6 +100,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Same as the root pretest: unpack the plugin artifacts pinned in plugins.lock.json
+      # (node_modules/@gyoungwe/* and the gitignored .pi/extensions/knowledge-worker.mjs)
+      # and stage the bundled plugin runtime the process-runtime tests load.
+      - run: npm run fetch:plugins && node scripts/stage-plugin-runtime.mjs
       - name: Checkout bound plugin workspace
         uses: actions/checkout@v6
         with:
