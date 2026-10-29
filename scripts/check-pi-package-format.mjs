@@ -14,7 +14,7 @@
 // directory for the configured pass. It does not exercise domain behavior.
 
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
@@ -25,6 +25,16 @@ const configureEnv = process.argv
 	.slice(2)
 	.find((arg) => arg.startsWith("--configure-dir-env="))
 	?.slice("--configure-dir-env=".length);
+// `--all=<dir>`: every package directory under <dir> whose package.json declares `pi`.
+const all = process.argv
+	.slice(2)
+	.find((arg) => arg.startsWith("--all="))
+	?.slice("--all=".length);
+if (all)
+	for (const entry of readdirSync(all, { withFileTypes: true }))
+		if (entry.isDirectory() && existsSync(join(all, entry.name, "package.json")))
+			if (JSON.parse(readFileSync(join(all, entry.name, "package.json"), "utf8")).pi)
+				packages.push(join(all, entry.name));
 if (packages.length === 0) packages.push("node_modules/@gyoungwe/pi-knowledge");
 
 const inside = (root, path) => {
