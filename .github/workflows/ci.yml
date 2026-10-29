@@ -55,10 +55,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Same as the root pretest: unpack the plugin artifacts pinned in plugins.lock.json
-      # (node_modules/@gyoungwe/* and the gitignored .pi/extensions/knowledge-worker.mjs)
-      # and stage the bundled plugin runtime the process-runtime tests load.
-      - run: npm run fetch:plugins && node scripts/stage-plugin-runtime.mjs
+      # Same as the root pretest: build the workspace Plugin API, unpack the plugin artifacts
+      # pinned in plugins.lock.json (node_modules/@gyoungwe/* and the gitignored
+      # .pi/extensions/knowledge-worker.mjs) and stage the bundled plugin runtime.
+      - run: npm run prepare:test
       - run: npm run test:unit
 
   sdk:
@@ -75,10 +75,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Same as the root pretest: unpack the plugin artifacts pinned in plugins.lock.json
-      # (node_modules/@gyoungwe/* and the gitignored .pi/extensions/knowledge-worker.mjs)
-      # and stage the bundled plugin runtime the process-runtime tests load.
-      - run: npm run fetch:plugins && node scripts/stage-plugin-runtime.mjs
+      # Same as the root pretest: build the workspace Plugin API, unpack the plugin artifacts
+      # pinned in plugins.lock.json (node_modules/@gyoungwe/* and the gitignored
+      # .pi/extensions/knowledge-worker.mjs) and stage the bundled plugin runtime.
+      - run: npm run prepare:test
       # Bundled MCP runtime (pinned pi-mcp-adapter); the SDK suite loads it like the packaged app.
       - run: npm run stage:pi-packages
       - run: npm run test:sdk
@@ -100,10 +100,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Same as the root pretest: unpack the plugin artifacts pinned in plugins.lock.json
-      # (node_modules/@gyoungwe/* and the gitignored .pi/extensions/knowledge-worker.mjs)
-      # and stage the bundled plugin runtime the process-runtime tests load.
-      - run: npm run fetch:plugins && node scripts/stage-plugin-runtime.mjs
+      # Same as the root pretest: build the workspace Plugin API, unpack the plugin artifacts
+      # pinned in plugins.lock.json (node_modules/@gyoungwe/* and the gitignored
+      # .pi/extensions/knowledge-worker.mjs) and stage the bundled plugin runtime.
+      - run: npm run prepare:test
       - name: Checkout bound plugin workspace
         uses: actions/checkout@v6
         with:
@@ -133,8 +133,8 @@ jobs:
       - run: npm run check:pi-packages
       - run: npm run build
 
-  pi-package-smoke:
-    name: Native Pi knowledge package (fixture smoke)
+  pi-package-format:
+    name: Official Pi package format (locked knowledge)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -143,5 +143,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: "Fixture smoke (external Pi CLI: NOT_RUN)"
-        run: npm run smoke:pi-knowledge -- --fixture-only
+      - run: npm run fetch:plugins
+      # Pi's own package manager resolves the locked package as a source and loads it
+      # without Drone; native Pi closed loops are out of scope (2026-10-29 revision).
+      - run: npm run check:pi-package-format

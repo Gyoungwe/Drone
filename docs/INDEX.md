@@ -318,7 +318,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 `pi-knowledge` 的源码权威版本位于 `drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`）。公开 npm 版本仍为 0.2.1；当前宿主源码锁固定 `dd7effc` 的 0.3.0 候选，记录可复现 tarball SHA-256。插件负责 manifest、host 声明、native extension、worker 和 maintenance；`src/core/maintenance-topic.ts` 负责绑定 revision、canonical/mirror CAS 更新与回读。保留双方历史的整合已恢复同包 `ui/`、`src/native/` 和 `src/desktop/`；CLI/Desktop canonical 审核算法和 scoped IO 位于 `src/core/wiki-review{,-ports,-node}.ts` 与 `src/desktop/review-storage.ts`，history/undo 已通过真实受限进程验收；完整 hooks/proof、模型审核、其余 surfaces 与正式安装包 GUI 继续按 P2 跟踪，不因包构建通过而完成。Drone 暂保留端口、IPC、挂载/回退和旧资源装配。
 
-PR-4 历史入口曾在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
+PR-4 历史入口曾在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。该 PR-4 原生闭环在 0.2 迁移时已移除，旧夹具 `scripts/smoke-pi-package.mjs` 随 2026-10-29 修订删除；现由 `scripts/check-pi-package-format.mjs`（`npm run check:pi-package-format`）以官方 Pi 包管理器解析并加载锁定包，检查加载无错、声明技能可发现、配置后 Drone 清单声明的工具全部注册，不验证领域闭环。
 
 ## 外置 pi-core — 原生 Pi 核心插件
 

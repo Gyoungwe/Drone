@@ -23,6 +23,12 @@ const workspace = await mkdtemp(join(tmpdir(), "drone-plugin-fetch-"));
 const checkouts = new Map();
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: "inherit" });
+// Run npm through the npm that invoked this script (npm_execpath), so Windows needs no shell
+// or npm.cmd shim; a direct `node scripts/fetch-plugins.mjs` falls back to npm on PATH.
+const npm = (args, options) =>
+	process.env.npm_execpath
+		? execFileSync(process.execPath, [process.env.npm_execpath, ...args], options)
+		: execFileSync("npm", args, options);
 
 async function sourceCheckout(plugin) {
 	if (override) {
@@ -51,10 +57,10 @@ try {
 	for (const plugin of lock.plugins) {
 		const source = await sourceCheckout(plugin);
 		const sourceRoot = resolve(source, "..");
-		run("npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"], sourceRoot);
-		run("npm", ["run", "build", "--workspace", plugin.name], sourceRoot);
+		npm(["ci", "--ignore-scripts", "--no-audit", "--no-fund"], { cwd: sourceRoot, stdio: "inherit" });
+		npm(["run", "build", "--workspace", plugin.name], { cwd: sourceRoot, stdio: "inherit" });
 		const metadata = JSON.parse(
-			execFileSync("npm", ["pack", "--json", "--ignore-scripts", "--pack-destination", workspace], {
+			npm(["pack", "--json", "--ignore-scripts", "--pack-destination", workspace], {
 				cwd: source,
 				encoding: "utf8",
 			}),
