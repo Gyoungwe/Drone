@@ -1,3 +1,4 @@
+import { decodeTaskView } from "@drone/shared";
 import type { PluginSessionNotifyInput, PluginSessionRecordAppendInput } from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
 import { hostText } from "../reply-language";
@@ -58,6 +59,8 @@ export function sessionRecordCapabilityHandlers(
 		"session.records.append": {
 			effect: "write",
 			approval: "own",
+			// Own bookkeeping from any hook; the writable-session check below still applies.
+			readCallable: true,
 			inputSchema: Type.Object({ type: logicalType, data: json }, { additionalProperties: false }),
 			resultSchema: Type.Object({ id: Type.String(), durability }, { additionalProperties: false }),
 			approvalDetail: (input) =>
@@ -74,8 +77,15 @@ export function sessionRecordCapabilityHandlers(
 		},
 		"session.notify": {
 			effect: "write",
+			// Display only: no model turn, no authority, nothing the plugin could not show in its own UI.
+			approval: "own",
+			readCallable: true,
 			inputSchema: Type.Object(
-				{ content: Type.String({ minLength: 1, maxLength: 16000 }) },
+				{
+					content: Type.String({ minLength: 1, maxLength: 16000 }),
+					// Presentation only: a task view the host renders as a status card; it grants nothing.
+					view: Type.Optional(json),
+				},
 				{ additionalProperties: false },
 			),
 			resultSchema: Type.Object({ durability }, { additionalProperties: false }),
@@ -84,15 +94,20 @@ export function sessionRecordCapabilityHandlers(
 					"显示当前插件的会话通知（不触发模型）",
 					"Display an own-source session notification (no model turn)",
 				),
-			execute: async (input, context) =>
-				store.notify(
+			execute: async (input, context) => {
+				const view = (input as { view?: unknown }).view;
+				const taskView = view === undefined ? undefined : decodeTaskView(view);
+				if (view !== undefined && !taskView) throw new Error("Invalid task view for session notification");
+				return store.notify(
 					entryFor(context, true),
 					context.pluginId,
 					(input as PluginSessionNotifyInput).content,
 					() => {
 						entryFor(context, true);
 					},
-				),
+					taskView,
+				);
+			},
 		},
 	};
 }

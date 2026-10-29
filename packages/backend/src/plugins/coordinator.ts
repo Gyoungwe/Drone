@@ -45,6 +45,8 @@ export interface PluginRuntimeSource {
 	readonly requestsExecution?: boolean;
 	/** Manifest `drone.taskGrants: "request"`: may ask the host for a task authorization. */
 	readonly requestsTaskGrant?: boolean;
+	/** Manifest `drone.workspaceRead: "session"`: reads under the session's current read permissions. */
+	readonly requestsWorkspaceRead?: boolean;
 	readonly resources?: Readonly<Record<string, string>>;
 }
 export interface PluginRuntimeOwner {
@@ -148,6 +150,7 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.requestsModel === b.requestsModel &&
 		a.requestsExecution === b.requestsExecution &&
 		a.requestsTaskGrant === b.requestsTaskGrant &&
+		a.requestsWorkspaceRead === b.requestsWorkspaceRead &&
 		JSON.stringify(a.resources) === JSON.stringify(b.resources)
 	);
 }

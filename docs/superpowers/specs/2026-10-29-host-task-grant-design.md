@@ -36,3 +36,23 @@
 - 只有清单声明 `drone.taskGrants: "request"`（必须同时有 `desktopRuntime`）的包会拿到这三个能力；该声明进入来源比较，变更即视为新来源。
 - 权限门：`PermissionGateOptions.taskWriteRoots` 优先读取宿主授权，命中时不再广播 `drone:task-write-consent`；旧桥只在没有宿主授权时为启动期进程内 taskHost 保留，P4 cutover 时删除。
 - 验收：`src/plugins/task-grants.test.ts`（目录规则、绑定与失效、桥上策略、拒绝、只读/子会话/未信任、对话框期间目录替换）；`test/task-write-consent.test.ts`（宿主授权优先、事件总线无法扩大目录）；`test/task-grant-sdk.test.mjs`（真实 SDK 会话：一次宿主对话框后目录内 write 免确认、目录外仍确认、自身 checkpoint 不弹窗，来源停用或会话关闭后失效）。
+
+## 受管任务所需的其余宿主能力（第二步）
+
+为把任务状态机迁入受管运行时，宿主补三项通用能力，均不新增授权来源：
+
+- **自动续作 `task.continue`**（随 `drone.taskGrants` 提供）：只在该插件当前来源的任务授权下、针对授权的任务、会话空闲时可用；每次消耗授权对话框里写明的“自动续作最多 N 次”，用完即拒绝，新授权重新计数。宿主自己发出隐藏的 `plugin-continue:<插件>` 消息（followUp：有回合在跑时排在它之后，空闲时直接开始一轮），返回 `continuationId`；因此插件可以在自己的 `agent_end` hook 里请求续作，不需要在调用结束后另起定时器（受管插件在调用结束后没有 live caller）。沙箱插件不能伪造这种消息，插件在 `message_start` 用类型 + `continuationId` 识别自己的续作。
+- **状态卡 `session.notify` 的 `view`**：可附带一个任务视图，宿主用 `decodeTaskView` 校验后以 `plugin-notice:<插件>` 消息展示为状态卡（宿主生成 reportId），也计入 harness 的任务检查点与 recall。只用于展示，不授予任何权限；`session.notify` 归为 `approval: "own"`，不再逐次弹窗。
+- **按当前读权限读取工作区 `workspace.readFile`**（清单声明 `drone.workspaceRead: "session"`）：与模型 `read` 调用走同一次权限求值（规则、边界、确认），请求路径和解析后的真实路径都必须被允许，链接不能绕过规则；读取最多 8 MiB 的稳定快照并返回哈希与文件身份。会话关闭后不可用。旧的 `drone:task-read-check` 事件改为复用同一判定，随进程内 taskHost 一起删除。
+
+验收：`src/plugins/task-grants.test.ts`（续作的来源、任务、空闲、预算与新授权重计）；`packages/shared/src/task-status.test.ts`；`test/task-grant-sdk.test.mjs`（真实 SDK：状态卡渲染且无弹窗、非法视图拒绝；续作触发一轮隐藏消息并在预算用完后拒绝；工作区读取遵守拒绝规则、链接不能绕过、会话关闭后失效）。
+
+### 只读 hook 也能做的事
+
+受管插件的每个 hook/工具/命令按声明的 effect 调用能力：write 调用在没有任务授权时会逐次弹窗。任务编排在每轮对话里有十几次 hook（input、tool_call、tool_result、agent_end 等），如果它们都必须声明 write，任务开始前的普通聊天就会被弹窗淹没。因此不弹窗、不授予权限的能力允许从只读调用里使用（`readCallable`），可写会话检查仍在能力内部执行：
+
+- 自身簿记：`session.records.append`、`session.notify`；
+- 提问：`session.select` / `session.input` / `session.confirm` 归为 `approval: "own"`——问题本身就是用户的决定点，答案不授予目录、模型或执行权限，不再在提问前另弹“允许插件提问吗”；
+- `task.grant.request`（自带宿主对话框）、`task.grant.release`、`task.continue`（权威来自当前授权本身）。
+
+受管任务插件因此可以把 hook、`task_plan`/`task_wait` 工具和 `task-action` 命令都声明为 read：普通聊天不弹窗，任务开始只看到一次宿主任务授权，之后的文件写入由授权目录覆盖。

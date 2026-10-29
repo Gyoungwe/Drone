@@ -42,6 +42,11 @@ export interface PermissionGateOptions {
 	getMode?: () => PermissionMode;
 	/** Host task grant (task-grants.ts): directories the user approved for this session's task. */
 	taskWriteRoots?: (sessionId: string | undefined) => readonly string[] | undefined;
+	/**
+	 * Publish this session's read decision (the same evaluation as a model `read` call, including
+	 * any confirmation) for host capabilities that read workspace files on a plugin's behalf.
+	 */
+	registerReadCheck?: (sessionId: string, check: (path: string) => Promise<boolean>) => () => void;
 }
 
 /** 按会话权限模式的可变引用（PiBackend 持有 map，随扩展工厂闭包注入求值链） */
@@ -321,8 +326,31 @@ export function makePermissionGateExtensions(
 			});
 			pi.on("session_shutdown", () => approvals.clear());
 			let taskContext: ExtensionContext | undefined;
+			let unregisterReadCheck: (() => void) | undefined;
+			const readAllowed = async (path: string, ctx: ExtensionContext) =>
+				!(
+					await check(
+						{
+							type: "tool_call",
+							toolName: "read",
+							toolCallId: "host-task-read",
+							input: { path },
+						} as ToolCallEvent,
+						ctx,
+					)
+				)?.block;
 			pi.on("session_start", (_event, ctx) => {
 				taskContext = ctx;
+				unregisterReadCheck?.();
+				const sessionId = ctx.sessionManager?.getSessionId();
+				unregisterReadCheck =
+					sessionId && options?.registerReadCheck
+						? options.registerReadCheck(sessionId, (path) => readAllowed(path, ctx))
+						: undefined;
+			});
+			pi.on("session_shutdown", () => {
+				unregisterReadCheck?.();
+				unregisterReadCheck = undefined;
 			});
 			pi.events?.on?.("drone:task-read-check", (raw: unknown) => {
 				const request = raw as {
@@ -344,18 +372,7 @@ export function makePermissionGateExtensions(
 					return;
 				request.claim();
 				const complete = request.resolve;
-				void check(
-					{
-						type: "tool_call",
-						toolName: "read",
-						toolCallId: "host-task-read",
-						input: { path: request.path },
-					} as ToolCallEvent,
-					taskContext,
-				).then(
-					(result) => complete(!result?.block),
-					() => complete(false),
-				);
+				void readAllowed(request.path, taskContext).then(complete, () => complete(false));
 			});
 		},
 	};

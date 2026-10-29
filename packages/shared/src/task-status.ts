@@ -14,7 +14,9 @@ export function taskStatusDisplay(
 	};
 	if (
 		message.role !== "custom" ||
-		message.customType !== "drone-task-status" ||
+		typeof message.customType !== "string" ||
+		// The in-process task host and managed plugins' host-rendered notices (session.notify).
+		(message.customType !== "drone-task-status" && !message.customType.startsWith("plugin-notice:")) ||
 		message.display !== true ||
 		typeof message.content !== "string" ||
 		message.content.length > 16000 ||

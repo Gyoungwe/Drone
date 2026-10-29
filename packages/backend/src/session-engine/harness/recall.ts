@@ -65,7 +65,10 @@ export function recallFromBranch(
 			kind = "compaction";
 			body = contentText(entry.summary, 4_000);
 		} else if (entry.type === "custom_message" && typeof entry.customType === "string") {
-			const known = KNOWN_CUSTOM.get(entry.customType);
+			// Managed plugins' host-rendered status notices are task status like the in-process host's.
+			const known =
+				KNOWN_CUSTOM.get(entry.customType) ??
+				(entry.customType.startsWith("plugin-notice:") ? ("task" as const) : undefined);
 			if (!known) continue;
 			kind = known;
 			body = contentText(entry.content, 4_000);

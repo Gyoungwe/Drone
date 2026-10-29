@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type {
 	PluginRecordAdoptionDeclaration,
@@ -234,13 +234,19 @@ export class SessionRecordStore {
 		}));
 	}
 
-	notify(entry: RegisteredSession, pluginId: string, content: string, check: () => void) {
+	notify(entry: RegisteredSession, pluginId: string, content: string, check: () => void, taskView?: unknown) {
 		return this.write(
 			entry,
 			check,
 			async () => {
 				await entry.session.sendCustomMessage(
-					{ customType: `plugin-notice:${encodeURIComponent(pluginId)}`, content, display: true },
+					{
+						customType: `plugin-notice:${encodeURIComponent(pluginId)}`,
+						content,
+						display: true,
+						// Host-generated identity for the transcript row; the view was validated by the caller.
+						details: { reportId: randomUUID(), ...(taskView ? { taskView } : {}) },
+					},
 					{ triggerTurn: false },
 				);
 				return {};

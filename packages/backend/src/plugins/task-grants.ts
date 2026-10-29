@@ -50,6 +50,8 @@ export function resolveTaskWriteRoots(cwd: string, directories: readonly string[
 
 export class TaskGrantStore {
 	private readonly grants = new WeakMap<object, TaskGrant>();
+	/** Automatic continuations already started under each grant (by grant id). */
+	private readonly resumes = new Map<string, number>();
 	private sourceCurrent: (source: PluginRuntimeSource) => boolean = () => false;
 
 	constructor(private readonly sessions: SessionDirectory) {}
@@ -82,6 +84,18 @@ export class TaskGrantStore {
 		return grant;
 	}
 
+	/** Reserve one automatic continuation of the grant's budget; false when the budget is spent. */
+	reserveResume(grant: TaskGrant): boolean {
+		const used = this.resumes.get(grant.id) ?? 0;
+		if (used >= grant.maxAutoResumes) return false;
+		this.resumes.set(grant.id, used + 1);
+		return true;
+	}
+
+	resumesLeft(grant: TaskGrant): number {
+		return grant.maxAutoResumes - (this.resumes.get(grant.id) ?? 0);
+	}
+
 	release(identity: object, taskId: string): boolean {
 		const grant = this.current(identity);
 		if (grant?.taskId !== taskId) return false;
@@ -95,6 +109,9 @@ export class TaskGrantStore {
 		return entry ? this.current(entry)?.writeRoots : undefined;
 	}
 }
+
+/** Custom message type of host-started continuations for one plugin. */
+export const continuationType = (pluginId: string) => `plugin-continue:${encodeURIComponent(pluginId)}`;
 
 const text = (max: number) => ({ type: "string", minLength: 1, maxLength: max });
 const requestSchema = {
@@ -199,7 +216,10 @@ export function taskGrantCapabilityHandlers(
 	store: TaskGrantStore,
 	sessions: SessionDirectory,
 	source: PluginRuntimeSource,
-): Record<"task.grant.request" | "task.grant.release" | "task.grant.current", PluginCapabilityHandler> {
+): Record<
+	"task.grant.request" | "task.grant.release" | "task.grant.current" | "task.continue",
+	PluginCapabilityHandler
+> {
 	const writableEntry = (context: Parameters<PluginCapabilityHandler["execute"]>[1]) => {
 		const entry = requirePluginSession(sessions, context);
 		if (entry.readOnly || entry.nativeKind === "child" || !entry.session.settingsManager.isProjectTrusted())
@@ -267,6 +287,53 @@ export function taskGrantCapabilityHandlers(
 					(input as { taskId: string }).taskId,
 				),
 			}),
+		},
+		"task.continue": {
+			effect: "write",
+			// The authority is the current grant itself, checked below; no further dialog.
+			approval: "own",
+			readCallable: true,
+			inputSchema: {
+				type: "object",
+				properties: { taskId: text(128), prompt: text(4000) },
+				required: ["taskId", "prompt"],
+				additionalProperties: false,
+			},
+			resultSchema: {
+				type: "object",
+				properties: { continuationId: { type: "string" }, remaining: { type: "integer" } },
+				required: ["continuationId", "remaining"],
+				additionalProperties: false,
+			},
+			execute: async (input, context) => {
+				const request = input as { taskId: string; prompt: string };
+				const entry = writableEntry(context);
+				const grant = store.current(entry);
+				if (
+					!grant ||
+					grant.source.pluginId !== source.pluginId ||
+					grant.source.contentHash !== source.contentHash
+				)
+					throw new Error("Automatic continuation requires this plugin's current task authorization");
+				if (grant.taskId !== request.taskId)
+					throw new Error("Automatic continuation is limited to the authorized task");
+				if (!store.reserveResume(grant))
+					throw new Error("The authorized number of automatic continuations is used up");
+				const continuationId = randomUUID();
+				// Only the host creates this message type; a sandboxed plugin cannot forge it, so the
+				// plugin's message_start hook can trust customType + continuationId. A follow-up waits
+				// for a running turn to finish, so the plugin may ask from its agent_end hook.
+				await entry.session.sendCustomMessage(
+					{
+						customType: continuationType(source.pluginId),
+						content: request.prompt,
+						display: false,
+						details: { continuationId, taskId: grant.taskId, grantId: grant.id },
+					},
+					{ triggerTurn: true, deliverAs: "followUp" },
+				);
+				return { continuationId, remaining: store.resumesLeft(grant) };
+			},
 		},
 		"task.grant.current": {
 			effect: "read",
