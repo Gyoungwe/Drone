@@ -44,6 +44,7 @@ async function setup() {
 	// Project edits ask (the task grant is what removes the question), as with automatic edits off.
 	await writeFile(join(agentDir, "permissions.json"), JSON.stringify({ autoApproveProjectEdits: false }));
 	vi.stubEnv("HOME", join(root, "home"));
+	vi.stubEnv("USERPROFILE", join(root, "home"));
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
 	const runtime = await ModelRuntime.create({

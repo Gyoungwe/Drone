@@ -30,7 +30,9 @@ beforeEach(() => {
 	mkdirSync(join(project, "outputs"), { recursive: true });
 	mkdirSync(join(project, "notes"), { recursive: true });
 	writeFileSync(join(project, "file.txt"), "x");
+	// os.homedir() reads USERPROFILE on Windows and HOME elsewhere.
 	vi.stubEnv("HOME", join(work, "home"));
+	vi.stubEnv("USERPROFILE", join(work, "home"));
 });
 afterEach(() => {
 	vi.unstubAllEnvs();
