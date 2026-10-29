@@ -10,6 +10,8 @@ import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime
 import { requirePluginSession } from "./session-caller";
 
 const title = { type: "string", minLength: 1, maxLength: 512 };
+/** Question text; task authorization and progress prompts carry several paragraphs. */
+const questionText = { type: "string", minLength: 1, maxLength: 16000 };
 const cancelled = {
 	type: "object",
 	properties: { kind: { const: "cancelled" } },
@@ -85,7 +87,7 @@ export function sessionCapabilityHandlers(
 			inputSchema: {
 				type: "object",
 				properties: {
-					title,
+					title: questionText,
 					options: { type: "array", items: title, minItems: 1, maxItems: 32, uniqueItems: true },
 				},
 				required: ["title", "options"],
@@ -114,7 +116,7 @@ export function sessionCapabilityHandlers(
 			effect: "write",
 			inputSchema: {
 				type: "object",
-				properties: { title, placeholder: { type: "string", maxLength: 1024 } },
+				properties: { title: questionText, placeholder: { type: "string", maxLength: 1024 } },
 				required: ["title"],
 				additionalProperties: false,
 			},
