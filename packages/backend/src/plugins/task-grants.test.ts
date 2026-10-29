@@ -322,7 +322,7 @@ describe("automatic continuation", () => {
 			sessionIdentity: entry,
 			signal: new AbortController().signal,
 		}) as never;
-	it("starts a hidden host message only under this plugin's grant, for its task, idle, within budget", async () => {
+	it("starts a hidden host follow-up only under this plugin's grant, for its task, within budget", async () => {
 		const registry = new SessionRegistry();
 		const store = new TaskGrantStore(registry);
 		store.bindSourceValidator(() => true);
@@ -343,9 +343,6 @@ describe("automatic continuation", () => {
 		await expect(proceed()).rejects.toThrow("current task authorization");
 		store.issue(entry, { ...grant, source });
 		await expect(proceed("other")).rejects.toThrow("authorized task");
-		(entry.session as { isStreaming: boolean }).isStreaming = true;
-		await expect(proceed()).rejects.toThrow("idle");
-		(entry.session as { isStreaming: boolean }).isStreaming = false;
 		expect(await proceed()).toMatchObject({ remaining: 1 });
 		expect(await proceed()).toMatchObject({ remaining: 0 });
 		await expect(proceed()).rejects.toThrow("used up");

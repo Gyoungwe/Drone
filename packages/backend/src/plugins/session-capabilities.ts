@@ -84,6 +84,9 @@ export function sessionCapabilityHandlers(
 		},
 		"session.select": {
 			effect: "write",
+			// A question is itself the user's decision point and grants nothing; no extra dialog.
+			approval: "own",
+			readCallable: true,
 			inputSchema: {
 				type: "object",
 				properties: {
@@ -114,6 +117,9 @@ export function sessionCapabilityHandlers(
 		},
 		"session.input": {
 			effect: "write",
+			// A question is itself the user's decision point and grants nothing; no extra dialog.
+			approval: "own",
+			readCallable: true,
 			inputSchema: {
 				type: "object",
 				properties: { title: questionText, placeholder: { type: "string", maxLength: 1024 } },
@@ -144,6 +150,9 @@ export function sessionCapabilityHandlers(
 		},
 		"session.confirm": {
 			effect: "write",
+			// A question is itself the user's decision point and grants nothing; no extra dialog.
+			approval: "own",
+			readCallable: true,
 			inputSchema: {
 				type: "object",
 				properties: { title, message: { type: "string", minLength: 1, maxLength: 4000 } },

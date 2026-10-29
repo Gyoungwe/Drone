@@ -292,6 +292,7 @@ export function taskGrantCapabilityHandlers(
 			effect: "write",
 			// The authority is the current grant itself, checked below; no further dialog.
 			approval: "own",
+			readCallable: true,
 			inputSchema: {
 				type: "object",
 				properties: { taskId: text(128), prompt: text(4000) },
@@ -316,12 +317,12 @@ export function taskGrantCapabilityHandlers(
 					throw new Error("Automatic continuation requires this plugin's current task authorization");
 				if (grant.taskId !== request.taskId)
 					throw new Error("Automatic continuation is limited to the authorized task");
-				if (entry.session.isStreaming) throw new Error("Automatic continuation requires an idle session");
 				if (!store.reserveResume(grant))
 					throw new Error("The authorized number of automatic continuations is used up");
 				const continuationId = randomUUID();
 				// Only the host creates this message type; a sandboxed plugin cannot forge it, so the
-				// plugin's message_start hook can trust customType + continuationId.
+				// plugin's message_start hook can trust customType + continuationId. A follow-up waits
+				// for a running turn to finish, so the plugin may ask from its agent_end hook.
 				await entry.session.sendCustomMessage(
 					{
 						customType: continuationType(source.pluginId),

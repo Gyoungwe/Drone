@@ -59,6 +59,8 @@ export function sessionRecordCapabilityHandlers(
 		"session.records.append": {
 			effect: "write",
 			approval: "own",
+			// Own bookkeeping from any hook; the writable-session check below still applies.
+			readCallable: true,
 			inputSchema: Type.Object({ type: logicalType, data: json }, { additionalProperties: false }),
 			resultSchema: Type.Object({ id: Type.String(), durability }, { additionalProperties: false }),
 			approvalDetail: (input) =>
@@ -77,6 +79,7 @@ export function sessionRecordCapabilityHandlers(
 			effect: "write",
 			// Display only: no model turn, no authority, nothing the plugin could not show in its own UI.
 			approval: "own",
+			readCallable: true,
 			inputSchema: Type.Object(
 				{
 					content: Type.String({ minLength: 1, maxLength: 16000 }),
