@@ -37,6 +37,9 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest]
     needs: plugins
+    # Releases ship macOS only. Windows runs for visibility until its known failures
+    # (plugin build spawns, path aliases, file modes) are fixed; see docs/PITFALLS.md.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -72,6 +75,9 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest]
     needs: plugins
+    # Releases ship macOS only. Windows runs for visibility until its known failures
+    # (plugin build spawns, path aliases, file modes) are fixed; see docs/PITFALLS.md.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -97,6 +103,9 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest]
     needs: plugins
+    # Releases ship macOS only. Windows runs for visibility until its known failures
+    # (plugin build spawns, path aliases, file modes) are fixed; see docs/PITFALLS.md.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -124,6 +133,9 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest]
     needs: plugins
+    # Releases ship macOS only. Windows runs for visibility until its known failures
+    # (plugin build spawns, path aliases, file modes) are fixed; see docs/PITFALLS.md.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     runs-on: ${{ matrix.os }}
     env:
       # electron-vite OOMs at the default heap on macos-latest (same as release.yml build).

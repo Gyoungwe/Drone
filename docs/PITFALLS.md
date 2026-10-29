@@ -504,3 +504,7 @@ SDK 把同一个参数对象依次交给每个 `tool_call` 处理器，然后原
 ## native 会话创建时没有 live caller
 
 `createNativeSession` 与扩展注册发生在宿主 `bindSession` 之前，此时 broker 没有 live caller，任何能力调用（例如读本包绑定）都会以 `Plugin capability has no live caller` 失败，扩展整体加载失败、工具消失，最终交付被关闭。依赖插件状态的决定（如知识包的子会话 `subagentPolicy`）要放到工具执行或 hook 里，用当时 host 提供的 caller 读取。另：只读会话（包括子代理子会话）里，未声明 effect 的 hook、工具与 `projection.finalize` 默认按 write 处理并被 broker 拒绝；确实只读的路径要显式声明 `read`，而 `required` 交付投影的 finalize 被拒绝会让该会话每条答案都显示 `Final delivery unavailable`。未信任项目的会话 broker 拒绝一切插件操作，不要往其中加载插件。
+
+## Windows CI 从未真正跑通（2026-10-29 记录）
+
+宿主 CI 的 Windows 矩阵此前在取包/typecheck 阶段就失败，测试从未执行；发行版只有 macOS。修到能执行后暴露：插件构建脚本直接 spawn `node_modules/.bin/tsc`（Windows 需 `.cmd`），Windows checkout 的换行转换使从源码重建的插件 tarball 无法匹配锁哈希，以及 desktop `ui-plugins` 测试对路径别名（`RUNNER~1`）、文件权限位（0o666 vs 0o700）和符号链接的假设。现在锁定插件只在 Linux 从源码重建并校验，其他平台复验同一 tarball；Windows 的 static/unit/sdk/desktop job 设为 `continue-on-error` 仅作可见信号。要支持 Windows 发行，先修复这些测试与插件构建脚本，再去掉 `continue-on-error`。
