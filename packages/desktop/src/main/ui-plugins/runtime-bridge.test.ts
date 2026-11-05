@@ -397,6 +397,17 @@ describe("DesktopRuntimeBridge", () => {
 		await bridge.close();
 	});
 
+	it("revokes old bindings when the manifest changes its declared network hosts", async () => {
+		const { bridge, options, dispose } = setup();
+		const token = (await bridge.bind("ui", owner))!;
+		options.source.mockReturnValue({ ...source, networkHosts: ["api.example.org"] });
+		await expect(bridge.invoke(owner, token, "read", "data", selection(bridge, owner))).rejects.toThrow(
+			"no longer enabled",
+		);
+		expect(dispose).toHaveBeenCalledOnce();
+		await bridge.close();
+	});
+
 	it("keeps windows independent and cancels superseded parallel loads", async () => {
 		const { bridge, factory } = setup();
 		const first = bridge.bind("ui", owner);

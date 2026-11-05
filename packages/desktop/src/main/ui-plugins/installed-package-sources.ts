@@ -86,6 +86,8 @@ export interface InstalledUiRuntimeSource {
 	requestsExecution?: boolean;
 	requestsTaskGrant?: boolean;
 	requestsWorkspaceRead?: boolean;
+	networkHosts?: readonly string[];
+	networkReads?: readonly string[];
 	resources?: Readonly<Record<string, string>>;
 }
 
@@ -243,6 +245,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 							deliveryProjection?: unknown;
 							nativeChildSessions?: unknown;
 							taskGrants?: unknown;
+							networkReads?: unknown;
 							workspaceRead?: unknown;
 							provides?: unknown;
 							requires?: unknown;
@@ -343,6 +346,28 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 					manifest.permissions.network.includes("configured-services")
 				)
 					runtime.requestsModel = true;
+				if (Array.isArray(manifest.permissions?.network)) {
+					const hosts = manifest.permissions.network.filter(
+						(entry: unknown): entry is string => typeof entry === "string" && entry !== "configured-services",
+					);
+					if (hosts.length) runtime.networkHosts = hosts;
+				}
+				if (manifest.drone?.networkReads !== undefined) {
+					const reads = manifest.drone.networkReads;
+					const hosts = runtime.networkHosts ?? [];
+					// "host[:port]/path": a POST endpoint that only reads, on a declared host.
+					if (
+						!Array.isArray(reads) ||
+						reads.some(
+							(entry: unknown) =>
+								typeof entry !== "string" ||
+								!/^[^/\s]+\/[^\s?#]*$/.test(entry) ||
+								!hosts.includes(entry.slice(0, entry.indexOf("/"))),
+						)
+					)
+						throw new Error("drone.networkReads must list host/path endpoints on declared network hosts");
+					runtime.networkReads = reads;
+				}
 				if (
 					Array.isArray(manifest.permissions?.subprocess) &&
 					manifest.permissions.subprocess.includes("container")
@@ -387,6 +412,10 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 		}
 		if (manifest.drone?.workspaceRead !== undefined && !runtime) {
 			discoveries.push({ packageName, error: "drone.workspaceRead requires a desktopRuntime owner" });
+			continue;
+		}
+		if (manifest.drone?.networkReads !== undefined && !runtime) {
+			discoveries.push({ packageName, error: "drone.networkReads requires a desktopRuntime owner" });
 			continue;
 		}
 		if (manifest.drone?.taskGrants !== undefined && !runtime) {
