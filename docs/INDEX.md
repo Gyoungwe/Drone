@@ -4,7 +4,7 @@
 > 排查疑难问题优先看 `docs/PITFALLS.md`（症状索引 + 事故复盘）；打包发版流程见 AGENTS.md 与 `.local/docs/release.md`。
 > 本文件只做**导航**：职责一句话 + 指到源码；实现细节以代码为准，坑记 PITFALLS，不在此堆积。
 
-近期完整交接见[2026-10-29 改动与计划交接](handoff-2026-10-29.md)：区分旧计划交付、当前 P0–P7、公开版本/私有候选、已推分支、验证失败与待整合源，并列出全部计划文档导航。当前新候选结果见[domain-owner 机器回执](releases/native-plugin-domain-owner-cohort-2026-10-29.json)；完整根门禁仍以最近通过的冻结检查点为准。
+**P4 任务迁移的最新交接见[handoff-2026-10-29-p4.md](handoff-2026-10-29-p4.md)（接手从这里开始）。**更早的完整交接见[2026-10-29 改动与计划交接](handoff-2026-10-29.md)：区分旧计划交付、当前 P0–P7、公开版本/私有候选、已推分支、验证失败与待整合源，并列出全部计划文档导航。当前新候选结果见[domain-owner 机器回执](releases/native-plugin-domain-owner-cohort-2026-10-29.json)；完整根门禁仍以最近通过的冻结检查点为准。
 
 当前计划最终状态、九个 npm 公开版本及四项未完成验收的恢复配置，统一见[阶段状态汇总](plan-final-status-2026-10-26.md)。
 下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构设计](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已批准并开始实施；[P0–P7 执行计划](pluginization/native-plugin-implementation-plan.md)记录阶段状态，[SDK 运行时证据](pluginization/native-plugin-runtime-evidence.md)区分真实会话、执行适配与自动发现，[P1 正式安装包切片](pluginization/native-plugin-p1-packaged-evidence.md)记录窗口作用域后台的启停、拒绝、恢复与退出，完整领域迁移仍未完成。[P2 知识只读共享 owner](pluginization/native-plugin-knowledge-readonly-evidence.md)记录候选包、权限/资源边界、实际会话和安装包验收及完整功能缺口。
