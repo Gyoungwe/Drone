@@ -347,9 +347,9 @@ const stoppedTask = async (t) => {
 	return { taskId: view.tasks[0].id, revision: view.revision };
 };
 
-// KNOWN GAP: the managed adapter spends the host's task.continue budget (the 3 automatic resumes in the
-// grant dialog) on routine handoffs, which native Pi limits separately at LIMITS.autoHandoffs = 16.
-it.fails("one task authorization carries a task through more stages than the recovery budget", async () => {
+// The managed adapter spends the host's task.continue budget on routine handoffs; the grant asks for 19
+// (16 handoffs, as native Pi's LIMITS.autoHandoffs, plus 3 recoveries).
+it("one task authorization carries a task through more stages than the recovery budget", async () => {
 	const t = await setup();
 	script(t, { stages: 6 });
 	await t.prompt("Please write all the staged results");
@@ -357,9 +357,8 @@ it.fails("one task authorization carries a task through more stages than the rec
 	expect((await t.view()).tasks[0]).toMatchObject({ state: "completed" });
 }, 60000);
 
-// KNOWN GAP (handoff §5.2 item 5): once handoffs run out, agent_end should ask the user. progressTask
-// first requires an idle session, the run is still active inside agent_end, and agent_end's empty catch
-// swallows the refusal. The question never opens and the user sees only an ordinary status card.
+// Handoff §5.2 item 5: once handoffs run out, the user is asked. The run is still active inside
+// agent_end, so the adapter defers the question to agent_settled.
 const handoffsExhausted = async () => {
 	const t = await setup();
 	t.answer(() => CONTINUE);
@@ -372,16 +371,14 @@ const handoffsExhausted = async () => {
 	await quiet(t);
 	return t;
 };
-it.fails("when automatic handoffs run out, the run's end asks the user whether to go on", async () => {
+it("when automatic handoffs run out, the run's end asks the user whether to go on", async () => {
 	const t = await handoffsExhausted();
 	expect(t.questions).not.toEqual([]);
 }, 120000);
-it("why the question is lost today: progressTask sees an active run and never reaches session.select", async () => {
+it("the question waits for agent_settled and reaches session.select without errors", async () => {
 	const t = await handoffsExhausted();
 	expect((await t.view()).tasks[0].budget.autoHandoffs).toBe(16);
-	expect(t.calls.at(-1)).toBe("inspect:active");
-	expect(t.calls).not.toContain("select");
-	expect(t.questions).toEqual([]);
+	expect(t.calls).toContain("select");
 	expect(t.errors).toEqual([]);
 }, 120000);
 
@@ -397,10 +394,10 @@ it("the task panel's progress action asks while idle and continues on the user's
 	expect(t.errors).toEqual([]);
 }, 60000);
 
-// KNOWN GAP: progress-action.mjs posts this status without awaiting it and returns, so the invocation can
-// end while the post is in flight. The host refuses it ("caller completed") and the plugin treats that as a
+// Regression: progress-action.mjs used to post this status without awaiting it, so the invocation could
+// end while the post was in flight. The host refuses it ("caller completed") and the plugin treats that as a
 // storage failure. Awaiting the posts took concurrent runs from 6/18 fenced to 0/18; the delay makes it certain.
-it.fails("choosing to only re-check posts the status and leaves the task usable", async () => {
+it("choosing to only re-check posts the status and leaves the task usable", async () => {
 	const t = await setup();
 	t.answer(() => RECHECK);
 	const task = await stoppedTask(t);
