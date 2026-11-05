@@ -150,6 +150,7 @@ export {
 	type PluginRootGrant,
 } from "./plugins/file-capabilities";
 export type { SelectedNativeSource } from "./plugins/native-delivery";
+export { declaredTarget, networkCapabilityHandlers } from "./plugins/network-capabilities";
 export { createProcessPluginRuntime } from "./plugins/process-runtime";
 export { PluginResourceManager, type PluginResourceManagerOptions } from "./plugins/resource-capabilities";
 export type {

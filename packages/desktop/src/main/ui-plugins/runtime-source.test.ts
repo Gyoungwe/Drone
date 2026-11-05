@@ -27,6 +27,7 @@ async function writeManifest(
 	filesystem: unknown = [],
 	network: unknown = [],
 	subprocess: unknown = [],
+	drone?: Record<string, unknown>,
 ): Promise<void> {
 	await writeFile(
 		join(packageRoot, "plugin.manifest.json"),
@@ -35,6 +36,7 @@ async function writeManifest(
 			hosts: ["drone-desktop"],
 			permissions: { filesystem, network, subprocess },
 			entrypoints: { ui: "./ui/plugin.json", desktopRuntime, ...entries },
+			...(drone ? { drone } : {}),
 		}),
 	);
 }
@@ -425,6 +427,30 @@ it("derives model service access only from the installed package network declara
 	await writeManifest("./runtime.js", {}, [], ["example.invalid"]);
 	await manager.scanAll();
 	expect(manager.runtimeSource("results-ui")?.requestsModel).toBeUndefined();
+});
+
+it("lists declared network hosts, without the configured model services, as the package's only network reach", async () => {
+	const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+	await writeManifest("./runtime.js", {}, [], ["configured-services"]);
+	await manager.scanAll();
+	expect(manager.runtimeSource("results-ui")?.networkHosts).toBeUndefined();
+	await writeManifest("./runtime.js", {}, [], ["configured-services", "api.example.org", "127.0.0.1:23119"]);
+	await manager.scanAll();
+	expect(manager.runtimeSource("results-ui")?.networkHosts).toEqual(["api.example.org", "127.0.0.1:23119"]);
+});
+
+it("accepts POST read endpoints only on declared network hosts", async () => {
+	const manager = new UiPluginManager({ installedPackageRoot: installRoot });
+	const network = ["127.0.0.1:23119"];
+	await writeManifest("./runtime.js", {}, [], network, [], {
+		networkReads: ["127.0.0.1:23119/connector/ping"],
+	});
+	await manager.scanAll();
+	expect(manager.runtimeSource("results-ui")?.networkReads).toEqual(["127.0.0.1:23119/connector/ping"]);
+	await writeManifest("./runtime.js", {}, [], network, [], { networkReads: ["api.example.org/search"] });
+	expect((await discoverInstalledUiPackages(installRoot))[0]).toMatchObject({
+		error: expect.stringContaining("drone.networkReads"),
+	});
 });
 
 it("keeps a selected native source available without a UI declaration or UI trust", async () => {
