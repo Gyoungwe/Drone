@@ -36,6 +36,7 @@
 | 读取型 native 工具注册即报 Unsupported native Pi API: events | 2026-10-28 · 原生适配器提前读取未支持 API |
 | 摘要写过但缺 reviewed receipt、specialist 不继续 | 2026-10-28 · 研究摘要必须消费真实 delivery handle |
 | 不装知识插件后扩展通知丢失、旧 context 继续通知 | 2026-10-28 · SDK 退订与通用通知 |
+| 受管任务一轮对话后即 `Task storage failed … requires an idle session` / `caller completed` | 受管插件的状态卡要等运行结束、在调用内等待 |
 
 ## 2026-10-28：原生适配器提前读取未支持 API
 
@@ -508,6 +509,10 @@ SDK 把同一个参数对象依次交给每个 `tool_call` 处理器，然后原
 ## Windows CI 从未真正跑通（2026-10-29 记录）
 
 宿主 CI 的 Windows 矩阵此前在取包/typecheck 阶段就失败，测试从未执行；发行版只有 macOS。修到能执行后暴露：插件构建脚本直接 spawn `node_modules/.bin/tsc`（Windows 需 `.cmd`），Windows checkout 的换行转换使从源码重建的插件 tarball 无法匹配锁哈希，以及 desktop `ui-plugins` 测试对路径别名（`RUNNER~1`）、文件权限位（0o666 vs 0o700）和符号链接的假设。现在锁定插件只在 Linux 从源码重建并校验，其他平台复验同一 tarball；Windows 的 static/unit/sdk/desktop job 设为 `continue-on-error` 仅作可见信号。要支持 Windows 发行，先修复这些测试与插件构建脚本，再去掉 `continue-on-error`。
+
+## 受管插件的状态卡要等运行结束、在调用内等待
+
+`session.notify` 在 SDK 运行期间（`isStreaming`，含 `turn_end`、`agent_end` 时）一律拒绝：运行中排队的会话消息会延长这次运行。受管插件把这个拒绝当成存储失败处理，就会把 TaskSession 隔离成 needs-reopen，之后每个操作都报 `Task storage failed; reopen the application from disk`。状态卡要在运行中暂存，到 `agent_settled` 再发（Pi 1.1.0 公开事件，触发时会话已空闲）。另外，broker 只在 hook、工具或命令执行期间借出能力，所以每次发卡都必须在该调用内 `await`；不等待的调用到达宿主时会以 `Plugin capability caller completed` 失败，效果相同。插件单元测试的假宿主要同时模拟这两条规则，否则只有 SDK 测试能发现（drone-plugins 71fd56a / #244；回归见 `packages/backend/test/plugin-provider-sdk.test.mjs` 与插件 `task-managed-adapter.test.mjs`）。
 
 ## 受管插件的写审批与任务授权
 
