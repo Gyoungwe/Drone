@@ -163,7 +163,7 @@ export function decodeTaskView(value: unknown): TaskView | undefined {
 				(t.executionConsent === undefined ||
 					(t.executionConsent?.version === 1 &&
 						t.executionConsent.maxCalls === 192 &&
-						t.executionConsent.maxAutoResumes === 3 &&
+						(t.executionConsent.maxAutoResumes === 3 || t.executionConsent.maxAutoResumes === 19) &&
 						typeof t.executionConsent.approvedAt === "string" &&
 						/^[a-f0-9]{64}$/.test(t.executionConsent.contractHash))) &&
 				!!t.budget &&

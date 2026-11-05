@@ -125,7 +125,7 @@ const requestSchema = {
 		acceptance: { type: "array", items: text(500), maxItems: 32 },
 		compute: text(2000),
 		maxCalls: { type: "integer", minimum: 1, maximum: 1000 },
-		maxAutoResumes: { type: "integer", minimum: 0, maximum: 10 },
+		maxAutoResumes: { type: "integer", minimum: 0, maximum: 19 },
 	},
 	required: [
 		"taskId",

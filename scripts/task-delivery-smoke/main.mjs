@@ -77,7 +77,7 @@ async function run() {
 				contractHash: "fixture",
 				approvedAt: new Date().toISOString(),
 				maxCalls: 192,
-				maxAutoResumes: 3,
+				maxAutoResumes: 19,
 			},
 			planApproved: true,
 			milestones: [],
