@@ -9,6 +9,7 @@ export const NATIVE_EVENTS = [
 	"before_agent_start",
 	"agent_start",
 	"agent_end",
+	"agent_settled",
 	"input",
 	"tool_call",
 	"turn_start",

@@ -1007,6 +1007,13 @@ it("a real packed managed adapter owns one canonical TaskSession and serves stat
 		storage: { mode: "persistent", state: "deferred" },
 	});
 	await converse();
+	// The status card held through the run is posted from agent_settled, once the actual SDK
+	// run is idle; a post from turn_end/agent_end would be rejected and fence the session.
+	expect(
+		entry.session.sessionManager
+			.getBranch()
+			.filter((row) => row.customType === "plugin-notice:%40fixture%2Fprovider"),
+	).toHaveLength(1);
 	const planned = await invoke("write", { operation: "fixturePlan", input: taskPlan });
 	expect(planned).toMatchObject({
 		snapshot: { goal: taskPlan.goal, state: "waiting_user" },
