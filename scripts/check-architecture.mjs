@@ -8,6 +8,11 @@ import { existsSync } from "node:fs";
  * deliberate migration exception. Existing findings live in the baseline
  * fixture; new findings fail the check while fixed findings are reported so the
  * baseline can shrink over time.
+ *
+ * `--update-baseline` records fixed findings only: if any finding is new it
+ * lists them, writes nothing and fails. `--update-baseline --allow-moves` also
+ * accepts those, for existing code that moved unchanged; explain its use in the
+ * PR description.
  */
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -232,17 +237,47 @@ async function loadBaseline() {
 	throw new Error(`${displayPath(BASELINE_PATH)} must contain a findings array`);
 }
 
+/**
+ * Entries of `findings` with no counterpart in `others`. Keys leave out the line
+ * number, so they are matched one for one: a second copy of a baselined finding
+ * is new even though its key is already there.
+ */
+function unmatched(findings, others) {
+	const available = new Map();
+	for (const finding of others) {
+		const key = canonical(finding);
+		available.set(key, (available.get(key) ?? 0) + 1);
+	}
+	return findings.filter((finding) => {
+		const key = canonical(finding);
+		const count = available.get(key) ?? 0;
+		if (count > 0) available.set(key, count - 1);
+		return count === 0;
+	});
+}
+
+function describe(finding) {
+	return `${finding.rule} ${finding.file}:${finding.line} — ${finding.detail}`;
+}
+
 const findings = await scan();
 const baseline = await loadBaseline();
+const added = unmatched(findings, baseline);
+const removed = unmatched(baseline, findings);
 if (process.argv.includes("--update-baseline")) {
+	if (added.length && !process.argv.includes("--allow-moves")) {
+		console.error(`Architecture baseline not updated: ${added.length} new violation(s).`);
+		for (const finding of added) console.error(`- ${describe(finding)}`);
+		console.error(
+			"--update-baseline only records fixed findings; for existing code that moved unchanged, use --update-baseline --allow-moves and explain it in the PR description.",
+		);
+		process.exit(1);
+	}
+	for (const finding of added) console.log(`Accepted as moved: ${describe(finding)}`);
 	await writeFile(BASELINE_PATH, `${JSON.stringify({ version: 1, findings }, null, 2)}\n`);
 	console.log(`Updated ${displayPath(BASELINE_PATH)} with ${findings.length} findings.`);
 	process.exit(0);
 }
-const baselineKeys = new Set(baseline.map(canonical));
-const currentKeys = new Set(findings.map(canonical));
-const added = findings.filter((finding) => !baselineKeys.has(canonical(finding)));
-const removed = baseline.filter((finding) => !currentKeys.has(canonical(finding)));
 if (removed.length) {
 	console.warn(
 		`Architecture baseline has ${removed.length} fixed finding(s); update it with --update-baseline.`,
@@ -250,8 +285,7 @@ if (removed.length) {
 }
 if (added.length) {
 	console.error(`Architecture check failed: ${added.length} new violation(s).`);
-	for (const finding of added)
-		console.error(`- ${finding.rule} ${finding.file}:${finding.line} — ${finding.detail}`);
+	for (const finding of added) console.error(`- ${describe(finding)}`);
 	process.exit(1);
 }
 console.log(`Architecture check passed (${findings.length} baseline finding(s), ${removed.length} fixed).`);
