@@ -10,6 +10,7 @@ import type {
 	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
 import { installedPackageGraph } from "./installed-package-graph";
+import { networkDeclaration } from "./network-declaration";
 
 /**
  * Content identity for an installed package generation.
@@ -366,28 +367,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 					manifest.permissions.network.includes("configured-services")
 				)
 					runtime.requestsModel = true;
-				if (Array.isArray(manifest.permissions?.network)) {
-					const hosts = manifest.permissions.network.filter(
-						(entry: unknown): entry is string => typeof entry === "string" && entry !== "configured-services",
-					);
-					if (hosts.length) runtime.networkHosts = hosts;
-				}
-				if (manifest.drone?.networkReads !== undefined) {
-					const reads = manifest.drone.networkReads;
-					const hosts = runtime.networkHosts ?? [];
-					// "host[:port]/path": a POST endpoint that only reads, on a declared host.
-					if (
-						!Array.isArray(reads) ||
-						reads.some(
-							(entry: unknown) =>
-								typeof entry !== "string" ||
-								!/^[^/\s]+\/[^\s?#]*$/.test(entry) ||
-								!hosts.includes(entry.slice(0, entry.indexOf("/"))),
-						)
-					)
-						throw new Error("drone.networkReads must list host/path endpoints on declared network hosts");
-					runtime.networkReads = reads;
-				}
+				Object.assign(runtime, networkDeclaration(manifest));
 				if (
 					Array.isArray(manifest.permissions?.subprocess) &&
 					manifest.permissions.subprocess.includes("container")
