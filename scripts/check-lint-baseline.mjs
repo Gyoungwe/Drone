@@ -15,7 +15,12 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BASELINE_PATH = join(ROOT, "scripts/fixtures/lint-baseline.json");
-const RULES = ["suspicious/noExplicitAny", "style/noNonNullAssertion", "suspicious/noEmptyBlockStatements"];
+const RULES = [
+	"suspicious/noExplicitAny",
+	"style/noNonNullAssertion",
+	"suspicious/noEmptyBlockStatements",
+	"complexity/noExcessiveLinesPerFunction",
+];
 
 export function countDiagnostics(report) {
 	const counts = {};

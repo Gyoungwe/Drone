@@ -30,6 +30,12 @@
 			"preset": "recommended",
 			"suspicious": {
 				"noExplicitAny": "off"
+			},
+			"complexity": {
+				"noExcessiveLinesPerFunction": {
+					"level": "off",
+					"options": { "maxLines": 60, "skipBlankLines": true }
+				}
 			}
 		}
 	},
