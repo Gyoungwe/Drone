@@ -3,7 +3,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMainModule } from "./is-main-module.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const requiredOutputs = [
@@ -64,7 +64,7 @@ export async function verifyCoreMemoryArtifact(repoRoot = root) {
 	return { version: artifact.version, packagePaths: paths.map((path) => `vendor/plugins/pi-core/${path}`) };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
 	const artifact = await verifyPinnedCoreArtifact();
 	console.log(`Pinned pi-core ${artifact.version} artifacts verified (${artifact.outputs.length} outputs)`);
 }

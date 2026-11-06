@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { verifyPinnedCoreArtifact } from "./build-pi-core.mjs";
+import { isMainModule } from "./is-main-module.mjs";
 
 export async function smokePinnedCore(repoRoot = resolve(import.meta.dirname, "..")) {
 	const artifact = await verifyPinnedCoreArtifact(repoRoot);
@@ -24,7 +24,7 @@ export async function smokePinnedCore(repoRoot = resolve(import.meta.dirname, ".
 	return { version: artifact.version, tools: expected };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
 	const receipt = await smokePinnedCore();
 	console.log(
 		`Pinned pi-core ${receipt.version} bundle smoke passed (${receipt.tools.length} core tools + task runtime)`,

@@ -19,6 +19,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMainModule } from "./is-main-module.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const PI_PACKAGES_DIR = join(root, "packages/desktop/pi-packages");
@@ -142,7 +143,7 @@ export function stage({ force = false } = {}) {
 	return versions;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
 	const versions = process.argv.includes("--check")
 		? verifyStaged()
 		: stage({ force: process.argv.includes("--force") });

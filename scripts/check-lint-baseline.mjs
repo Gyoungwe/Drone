@@ -6,12 +6,18 @@
  * baseline fixture: a file whose count grows (or a new file with findings)
  * fails; a file whose count drops asks for `--update` so the baseline only
  * shrinks.
+ *
+ * `--update` records drops only: if a count would rise or a new entry appear it
+ * lists them, writes nothing and fails. `--update --allow-moves` also accepts
+ * those, for existing code that moved unchanged; explain its use in the PR
+ * description.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { isMainModule } from "./is-main-module.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BASELINE_PATH = join(ROOT, "scripts/fixtures/lint-baseline.json");
@@ -71,18 +77,33 @@ function sorted(counts) {
 	return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function describeGrowth({ key, allowed, count }) {
+	const [rule, file] = key.split("\t");
+	return `${file} has ${count} ${rule} (baseline ${allowed})`;
+}
+
+/** Applies `--update` and returns the exit code; a refused update leaves the baseline untouched. */
+export function updateBaseline(baselinePath, current, args) {
+	const { grown } = compare(JSON.parse(readFileSync(baselinePath, "utf8")), current);
+	if (grown.length > 0 && !args.includes("--allow-moves")) {
+		for (const entry of grown) console.error(`lint baseline: ${describeGrowth(entry)}; fix the new ones`);
+		console.error(
+			"lint baseline: not updated. --update only records drops; for existing code that moved unchanged, use --update --allow-moves and explain it in the PR description",
+		);
+		return 1;
+	}
+	for (const entry of grown) console.log(`lint baseline: accepted as moved: ${describeGrowth(entry)}`);
+	writeFileSync(baselinePath, `${JSON.stringify(sorted(current), null, "\t")}\n`);
+	console.log(`lint baseline updated (${Object.keys(current).length} file/rule entries)`);
+	return 0;
+}
+
+if (isMainModule(import.meta.url)) {
 	const current = countDiagnostics(JSON.parse(runBiome()));
-	if (process.argv.includes("--update")) {
-		writeFileSync(BASELINE_PATH, `${JSON.stringify(sorted(current), null, "\t")}\n`);
-		console.log(`lint baseline updated (${Object.keys(current).length} file/rule entries)`);
-		process.exit(0);
-	}
+	const args = process.argv.slice(2);
+	if (args.includes("--update")) process.exit(updateBaseline(BASELINE_PATH, current, args));
 	const { grown, shrunk } = compare(JSON.parse(readFileSync(BASELINE_PATH, "utf8")), current);
-	for (const { key, allowed, count } of grown) {
-		const [rule, file] = key.split("\t");
-		console.error(`lint baseline: ${file} has ${count} ${rule} (baseline ${allowed}); fix the new ones`);
-	}
+	for (const entry of grown) console.error(`lint baseline: ${describeGrowth(entry)}; fix the new ones`);
 	for (const { key, allowed, count } of shrunk) {
 		const [rule, file] = key.split("\t");
 		console.log(`lint baseline: ${file} ${rule} dropped ${allowed} -> ${count}; run with --update`);

@@ -24,7 +24,7 @@
 - **R6**：领域包依赖方向保持单向：tasks 可使用 knowledge 的公开类型，research 可使用 knowledge；反向依赖禁止。
 - **R7**：`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库；不得 import Electron、Pi SDK、backend、desktop 或其他领域包，宿主适配由组合根提供。
 
-`node scripts/check-architecture.mjs` 会比较当前结果和已登记基线：新增违规会失败，已修复违规会提示更新基线。
+`node scripts/check-architecture.mjs` 会比较当前结果和已登记基线：新增违规会失败，已修复违规会提示更新基线。`--update-baseline` 只移除已修复的条目，出现新违规时列出并失败、不写文件；只有已有代码原样搬动时才用 `--update-baseline --allow-moves`，且必须在 PR 描述里说明原因。
 
 ## 编码尺度：不要过度防御
 
@@ -72,7 +72,7 @@
 - 修 bug 先写能复现的失败用例；不为让测试通过而改断言、加 `skip`、加长超时或加 sleep，flaky 测试记录到 `docs/PITFALLS.md`。
 - 非平凡改动提交前，用 code-simplifier 只复查本次 diff；它的改动同样要过完整检查，并与行为改动分开提交。
 
-**硬性上限（由 lint 脚本和 pre-commit 直接拦下，按后续 PR 逐项接入）：** 单文件不超过 400 行、单函数不超过 60 行；不新增自写类 `extends` 和模块级 `let`；生成文件（`dist`、build manifest）不与源码同一提交；不新增 `.skip(` / 加长测试超时。已超限的老文件登记在基线里，只拦新增和变大；超限时先拆再加功能。确需 `--no-verify` 跳过时，在 PR 描述里写明原因。
+**硬性上限（由 lint 脚本和 pre-commit 直接拦下，按后续 PR 逐项接入）：** 单文件不超过 400 行、单函数不超过 60 行；不新增自写类 `extends` 和模块级 `let`；生成文件（`dist`、build manifest）不与源码同一提交；不新增 `.skip(` / 加长测试超时。已超限的老文件登记在基线里，只拦新增和变大；超限时先拆再加功能。确需 `--no-verify` 跳过时，在 PR 描述里写明原因。基线脚本的 `--update` 只记录下降，出现上升或新条目时列出并失败、不写文件；只有已有代码原样搬动时才用 `--update --allow-moves`，且必须在 PR 描述里说明原因。
 
 ## 常用命令
 
