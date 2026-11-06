@@ -24,7 +24,8 @@ import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-c
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
 import { sessionCapabilityHandlers } from "../plugins/session-capabilities";
 import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
-import { type TaskGrantStore, taskGrantCapabilityHandlers } from "../plugins/task-grants";
+import { taskGrantCapabilityHandlers } from "../plugins/task-grant-capability";
+import type { TaskGrantStore } from "../plugins/task-grants";
 import { workspaceCapabilityHandlers } from "../plugins/workspace-capabilities";
 import { walkProjectFiles } from "../project/files";
 import { TraceRecorder } from "../session/trace";
@@ -94,7 +95,9 @@ export class SessionServiceApi extends SessionSettingsApi {
 
 	/** Task authorization capabilities bound to one installed plugin source. */
 	getPluginTaskGrantCapabilities(source: PluginRuntimeSource) {
-		return taskGrantCapabilityHandlers(this.host.taskGrants, this.host.pluginSessions, source);
+		const grants = taskGrantCapabilityHandlers(this.host.taskGrants, this.host.pluginSessions, source);
+		// Requesting a grant is declared; any provider may read the allowances a grant gave it.
+		return source.requestsTaskGrant ? grants : { "task.grant.allowances": grants["task.grant.allowances"] };
 	}
 
 	/** Workspace reads under the calling session's current read permissions. */

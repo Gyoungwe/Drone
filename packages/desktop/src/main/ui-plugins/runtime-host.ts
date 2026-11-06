@@ -486,7 +486,7 @@ export function createDesktopRuntime(
 				handlers: {
 					...resourceCapabilities.handlers,
 					...executionCapabilities?.handlers,
-					...(source.requestsTaskGrant ? sessions.getPluginTaskGrantCapabilities(source) : {}),
+					...sessions.getPluginTaskGrantCapabilities(source),
 					...(source.requestsWorkspaceRead ? sessions.getPluginWorkspaceCapabilities() : {}),
 					...(source.networkHosts
 						? networkCapabilityHandlers({ hosts: source.networkHosts, reads: source.networkReads ?? [] })

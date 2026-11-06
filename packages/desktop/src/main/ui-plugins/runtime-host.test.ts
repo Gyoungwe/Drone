@@ -766,7 +766,8 @@ it("exposes eight generic session handlers without a model declaration, then gat
 	const sessions = {
 		getPluginCallerContext: () => undefined,
 		getPluginSessionCapabilities: () => handlers,
-		getPluginTaskGrantCapabilities: () => ({ "task.grant.request": handler }),
+		getPluginTaskGrantCapabilities: (s: { requestsTaskGrant?: boolean }) =>
+			s.requestsTaskGrant ? { "task.grant.request": handler } : {},
 		getTaskGrants: () => taskGrants,
 		getPluginWorkspaceCapabilities: () => ({ "workspace.readFile": handler }),
 		getStorageRegistry: () => new StorageRegistry(),
@@ -799,7 +800,6 @@ it("exposes eight generic session handlers without a model declaration, then gat
 		expect(without.handlers[name]).toBe(handler);
 	expect(without.handlers["model.selection"]).toBeUndefined();
 	expect(without.handlers["model.generate"]).toBeUndefined();
-	expect(without.handlers["model.toolStep"]).toBeUndefined();
 	expect(without.handlers["model.toolStep"]).toBeUndefined();
 	const withModel = await desktop.bridgeOptions.capabilities(
 		{ ...selected, requestsModel: true },

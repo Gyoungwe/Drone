@@ -77,6 +77,60 @@ const json = Type.Cyclic(
 	"Json",
 );
 
+/** Exactly one enabled source of the exact service version is selected; several are ambiguous, never the first. */
+function selectService(
+	sources: readonly CatalogEntry[],
+	requirement: { service: string; version: number },
+): { inspection: PluginProviderInspection; target: PluginServiceTarget | null } {
+	const candidates = sources.flatMap((item) => {
+		const declaration = item.source.provides;
+		const provision =
+			declaration && Object.hasOwn(declaration, requirement.service)
+				? declaration[requirement.service]
+				: undefined;
+		return provision ? [{ ...item, provision }] : [];
+	});
+	const compatible = candidates.filter((item) => item.provision.version === requirement.version);
+	const enabled = compatible.filter((item) => item.state === "enabled" && item.source.contentHash);
+	let state: PluginProviderInspection["state"];
+	if (!candidates.length) state = "absent";
+	else if (!compatible.length) state = "incompatible";
+	else if (enabled.length > 1) state = "ambiguous";
+	else if (enabled.length === 1) state = "available";
+	else state = compatible.some((item) => item.state !== "disabled") ? "unavailable" : "disabled";
+	const selected = state === "available" ? enabled[0] : undefined;
+	return {
+		inspection: {
+			state,
+			service: requirement.service,
+			requestedVersion: requirement.version,
+			provider: selected
+				? {
+						pluginId: selected.source.pluginId,
+						version: requirement.version,
+						contentHash: selected.source.contentHash as string,
+					}
+				: null,
+		},
+		target: selected
+			? { ...selected, service: requirement.service, operations: selected.provision.operations }
+			: null,
+	};
+}
+
+/** The single available provider of a role member the consumer declares, or null (task grant allowances). */
+export function resolveRoleMember(
+	consumer: PluginRuntimeSource,
+	sources: readonly CatalogEntry[],
+	role: string,
+	member: string,
+): PluginRuntimeSource | null {
+	const declaration = consumer.consumes;
+	if (!declaration || !Object.hasOwn(declaration, role)) return null;
+	const { servicePrefix, version } = declaration[role] as PluginServiceRole;
+	return selectService(sources, { service: servicePrefix + member, version }).target?.source ?? null;
+}
+
 /** The sole installed source catalog selects services. Package names are informational, never a requirement. */
 export function serviceCapabilityHandlers(
 	deps: Dependencies,
@@ -100,49 +154,8 @@ export function serviceCapabilityHandlers(
 		const role = declaredRole(address.role);
 		return { service: role.servicePrefix + address.member, version: role.version };
 	}
-	function resolve(address: PluginProviderInspectionInput): {
-		inspection: PluginProviderInspection;
-		target: PluginServiceTarget | null;
-	} {
-		const requirement = requirementFor(address);
-		const candidates = deps.sources().flatMap((item) => {
-			const declaration = item.source.provides;
-			const provision =
-				declaration && Object.hasOwn(declaration, requirement.service)
-					? declaration[requirement.service]
-					: undefined;
-			return provision ? [{ ...item, provision }] : [];
-		});
-		const compatible = candidates.filter((item) => item.provision.version === requirement.version);
-		const enabled = compatible.filter((item) => item.state === "enabled" && item.source.contentHash);
-		let state: PluginProviderInspection["state"];
-		if (!candidates.length) state = "absent";
-		else if (!compatible.length) state = "incompatible";
-		else if (enabled.length > 1) state = "ambiguous";
-		else if (enabled.length === 1) state = "available";
-		else state = compatible.some((item) => item.state !== "disabled") ? "unavailable" : "disabled";
-		const selected = state === "available" ? enabled[0] : undefined;
-		return {
-			inspection: {
-				state,
-				service: requirement.service,
-				requestedVersion: requirement.version,
-				provider: selected
-					? {
-							pluginId: selected.source.pluginId,
-							version: requirement.version,
-							contentHash: selected.source.contentHash as string,
-						}
-					: null,
-			},
-			target: selected
-				? {
-						...selected,
-						service: requirement.service,
-						operations: selected.provision.operations,
-					}
-				: null,
-		};
+	function resolve(address: PluginProviderInspectionInput) {
+		return selectService(deps.sources(), requirementFor(address));
 	}
 	const execute = async (
 		raw: unknown,
