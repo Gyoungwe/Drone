@@ -4,71 +4,71 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, isAbsolute, join, resolve } from "node:path";
-import { createHash as createHash2 } from "node:crypto";
+import { readdir, readFile as readFile2, stat } from "node:fs/promises";
+import { join as join2, relative, sep } from "node:path";
+import { createHash as createHash5 } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, open, realpath as realpath2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute2, join as join3, relative, sep } from "node:path";
-import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
-import { constants as constants2 } from "node:fs";
-import { link, lstat as lstat2, mkdir as mkdir2, open as open2, realpath as realpath3, rename as rename2, unlink, writeFile as writeFile2 } from "node:fs/promises";
-import { basename as basename2, dirname, isAbsolute as isAbsolute3, join as join4, relative as relative2, resolve as resolve3, sep as sep2 } from "node:path";
+import { lstat as lstat2, open, realpath as realpath2 } from "node:fs/promises";
+import { isAbsolute as isAbsolute3, join as join5, relative as relative3, sep as sep3 } from "node:path";
 import { createHash as createHash6, randomUUID as randomUUID3 } from "node:crypto";
-import { mkdir as mkdir3, readFile as readFile3, rename as rename3, unlink as unlink2, writeFile as writeFile3 } from "node:fs/promises";
-import { join as join5 } from "node:path";
-import { URL as URL2 } from "node:url";
+import { mkdir as mkdir3, readFile as readFile5, rename as rename3, unlink as unlink2, writeFile as writeFile3 } from "node:fs/promises";
+import { join as join6 } from "node:path";
 import { createHash as createHash7, randomUUID as randomUUID4 } from "node:crypto";
-import { lstat as lstat3, mkdir as mkdir4, readFile as readFile4, rename as rename4, unlink as unlink3, writeFile as writeFile4 } from "node:fs/promises";
-import { dirname as dirname2, join as join6 } from "node:path";
-import { realpath as realpath4, stat } from "node:fs/promises";
-import { isAbsolute as isAbsolute4, relative as relative3, resolve as resolve4, sep as sep3 } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { createHash as createHash8 } from "node:crypto";
-import { createHash as createHash9, randomUUID as randomUUID5 } from "node:crypto";
-import { lstat as lstat5, mkdir as mkdir5, readFile as readFile5, realpath as realpath6, rename as rename5, unlink as unlink4, writeFile as writeFile5 } from "node:fs/promises";
-import { dirname as dirname3, isAbsolute as isAbsolute5, join as join7, relative as relative5, resolve as resolve6, sep as sep5 } from "node:path";
-import { createHash as createHash10, randomUUID as randomUUID6 } from "node:crypto";
-import { mkdir as mkdir6, rename as rename6, writeFile as writeFile6 } from "node:fs/promises";
-import { dirname as dirname4 } from "node:path";
-import { readdir, readFile as readFile6, stat as stat2 } from "node:fs/promises";
-import { join as join8, relative as relative6, sep as sep6 } from "node:path";
-import { mkdirSync } from "node:fs";
-import { dirname as dirname5, join as join9 } from "node:path";
-import { randomUUID as randomUUID7 } from "node:crypto";
-import { mkdirSync as mkdirSync2, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join as join10 } from "node:path";
-import { createHash as createHash12, randomUUID as randomUUID8 } from "node:crypto";
-import { relative as relative7, resolve as resolve7, sep as sep7 } from "node:path";
+import { lstat as lstat3, mkdir as mkdir4, readFile as readFile6, rename as rename4, unlink as unlink3, writeFile as writeFile4 } from "node:fs/promises";
+import { dirname as dirname2, join as join7 } from "node:path";
+import { URL as URL2 } from "node:url";
+import { randomUUID as randomUUID5 } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { join as join8 } from "node:path";
+import { mkdirSync as mkdirSync2 } from "node:fs";
+import { dirname as dirname3, join as join9 } from "node:path";
+import { createHash as createHash8, randomUUID as randomUUID6 } from "node:crypto";
+import { relative as relative4, resolve as resolve4, sep as sep4 } from "node:path";
+import { randomUUID as randomUUID8 } from "node:crypto";
+import { mkdir as mkdir6, readFile as readFile7, rename as rename5, unlink as unlink4, writeFile as writeFile6 } from "node:fs/promises";
+import { join as join11 } from "node:path";
+import { createHash as createHash10, randomUUID as randomUUID10 } from "node:crypto";
+import { lstat as lstat6, mkdir as mkdir7, readFile as readFile9, realpath as realpath4, rename as rename6, unlink as unlink5, writeFile as writeFile7 } from "node:fs/promises";
+import { dirname as dirname4, isAbsolute as isAbsolute5, join as join12, relative as relative6, resolve as resolve6, sep as sep6 } from "node:path";
+import { createHash as createHash11 } from "node:crypto";
+import { createHash as createHash12, randomUUID as randomUUID11 } from "node:crypto";
+import { constants as constants2 } from "node:fs";
+import { link, lstat as lstat7, mkdir as mkdir8, open as open2, realpath as realpath5, rename as rename7, unlink as unlink6, writeFile as writeFile8 } from "node:fs/promises";
+import { basename as basename2, dirname as dirname5, isAbsolute as isAbsolute6, join as join13, relative as relative7, resolve as resolve7, sep as sep7 } from "node:path";
+import { createHash as createHash13, randomUUID as randomUUID12 } from "node:crypto";
+import { link as link2, lstat as lstat8, mkdir as mkdir9, readdir as readdir2, readFile as readFile10, rename as rename8, rm, unlink as unlink7, writeFile as writeFile9 } from "node:fs/promises";
+import { basename as basename3, dirname as dirname6, join as join14 } from "node:path";
 import { createHash as createHash14 } from "node:crypto";
-import { createHash as createHash15, randomUUID as randomUUID10 } from "node:crypto";
-import { link as link2, lstat as lstat6, mkdir as mkdir7, readFile as readFile7, readdir as readdir2, rename as rename7, rm, unlink as unlink5, writeFile as writeFile7 } from "node:fs/promises";
-import { basename as basename3, dirname as dirname6, join as join11 } from "node:path";
-import { createHash as createHash16, randomUUID as randomUUID11 } from "node:crypto";
-import { randomUUID as randomUUID12 } from "node:crypto";
-import { mkdir as mkdir8, readFile as readFile8, rename as rename8, unlink as unlink6, writeFile as writeFile8 } from "node:fs/promises";
-import { join as join12 } from "node:path";
-import { randomUUID as randomUUID15 } from "node:crypto";
-import { readdir as readdir3 } from "node:fs/promises";
-import { createHash as createHash17, randomUUID as randomUUID16 } from "node:crypto";
-import { lstat as lstat9, mkdir as mkdir10, readFile as readFile10, realpath as realpath8, stat as stat3, writeFile as writeFile10 } from "node:fs/promises";
-import { dirname as dirname7, isAbsolute as isAbsolute8, join as join14, relative as relative9, resolve as resolve10 } from "node:path";
-import { pathToFileURL as pathToFileURL3 } from "node:url";
-import { readFile as readFile2 } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join as join2, resolve as resolve2 } from "node:path";
-import { createHash as createHash4 } from "node:crypto";
-import { lstat as lstat4, realpath as realpath5 } from "node:fs/promises";
-import { relative as relative4, resolve as resolve5, sep as sep4 } from "node:path";
-import { pathToFileURL as pathToFileURL2 } from "node:url";
-import { createHash as createHash13, randomUUID as randomUUID9 } from "node:crypto";
-import { randomUUID as randomUUID13 } from "node:crypto";
-import { lstat as lstat7, readFile as readFile9 } from "node:fs/promises";
+import { createHash as createHash15, randomUUID as randomUUID13 } from "node:crypto";
 import { randomUUID as randomUUID14 } from "node:crypto";
-import { lstat as lstat8, mkdir as mkdir9, realpath as realpath7, writeFile as writeFile9 } from "node:fs/promises";
-import { isAbsolute as isAbsolute7, join as join13, relative as relative8, resolve as resolve9, sep as sep8 } from "node:path";
-import { createHash as createHash18, randomUUID as randomUUID17 } from "node:crypto";
-import { lstat as lstat10, mkdir as mkdir11, readFile as readFile11, rename as rename9, unlink as unlink7, writeFile as writeFile11 } from "node:fs/promises";
-import { isAbsolute as isAbsolute9, join as join15, relative as relative10, resolve as resolve11, sep as sep9 } from "node:path";
-import { createHash as createHash20 } from "node:crypto";
+import { createHash as createHash17, randomUUID as randomUUID16 } from "node:crypto";
+import { mkdir as mkdir10, rename as rename9, writeFile as writeFile10 } from "node:fs/promises";
+import { dirname as dirname8 } from "node:path";
+import { realpath as realpath6, stat as stat2 } from "node:fs/promises";
+import { isAbsolute as isAbsolute8, relative as relative8, resolve as resolve9, sep as sep8 } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { readdir as readdir3 } from "node:fs/promises";
+import { createHash as createHash20, randomUUID as randomUUID18 } from "node:crypto";
+import { lstat as lstat10, mkdir as mkdir11, readFile as readFile11, realpath as realpath8, stat as stat3, writeFile as writeFile11 } from "node:fs/promises";
+import { dirname as dirname9, isAbsolute as isAbsolute9, join as join16, relative as relative10, resolve as resolve11 } from "node:path";
+import { pathToFileURL as pathToFileURL3 } from "node:url";
+import { createHash as createHash3 } from "node:crypto";
+import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
+import { lstat, mkdir as mkdir2, readFile as readFile3, rename as rename2, unlink, writeFile as writeFile2 } from "node:fs/promises";
+import { isAbsolute as isAbsolute2, join as join3, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
+import { readFile as readFile4 } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join as join4, resolve as resolve3 } from "node:path";
+import { randomUUID as randomUUID7 } from "node:crypto";
+import { lstat as lstat4, mkdir as mkdir5, realpath as realpath3, writeFile as writeFile5 } from "node:fs/promises";
+import { isAbsolute as isAbsolute4, join as join10, relative as relative5, resolve as resolve5, sep as sep5 } from "node:path";
+import { randomUUID as randomUUID9 } from "node:crypto";
+import { lstat as lstat5, readFile as readFile8 } from "node:fs/promises";
+import { createHash as createHash9 } from "node:crypto";
+import { createHash as createHash19, randomUUID as randomUUID17 } from "node:crypto";
+import { lstat as lstat9, realpath as realpath7 } from "node:fs/promises";
+import { relative as relative9, resolve as resolve10, sep as sep9 } from "node:path";
+import { pathToFileURL as pathToFileURL2 } from "node:url";
 import { join as join18, resolve as resolve12 } from "node:path";
 import { posix } from "node:path";
 var __defProp = Object.defineProperty;
@@ -335,1149 +335,89 @@ var init_config = __esm({
     defaultState = createKnowledgeConfigState();
   }
 });
-var files_exports = {};
-__export(files_exports, {
-  MAX_NOTE_BYTES: () => MAX_NOTE_BYTES,
-  allowedSegment: () => allowedSegment,
-  canRead: () => canRead,
-  fileVersion: () => fileVersion,
-  inspectNote: () => inspectNote,
-  noteScope: () => noteScope,
-  readNoteFile: () => readNoteFile,
-  safeNotePath: () => safeNotePath,
-  snippet: () => snippet,
-  validateNote: () => validateNote
-});
-function allowedSegment(name) {
-  return !!name && !name.startsWith(".") && !OMIT.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
+function titleOf(path, text43) {
+  const heading = /^#\s+(.+)$/m.exec(text43)?.[1]?.trim();
+  return (heading || path.split("/").pop()?.replace(/\.md$/, "") || path).slice(0, 200);
 }
-function validateNote(path) {
-  if (typeof path !== "string" || isAbsolute2(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment))
-    throw new Error("Expected an allowed Vault-relative Markdown path");
-  const first = path.split("/")[0] ?? "";
-  if (RESERVED2.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
-    throw new Error("Reserved Vault directories require canonical casing");
-  return path;
-}
-function noteScope(path) {
-  const parts = path.split("/");
-  return path.startsWith("Projects/") && parts.length > 2 ? parts[1] ?? "shared" : "shared";
-}
-function canRead(path, project) {
-  const scope = noteScope(path);
-  return scope === "shared" || scope === project;
-}
-function fileVersion(stat42) {
-  return `${stat42.mtimeMs}:${stat42.ctimeMs}:${stat42.size}:${stat42.ino}`;
-}
-async function safeNotePath(vault, path) {
-  validateNote(path);
-  let full = vault;
-  for (const part of path.split("/")) {
-    full = join3(full, part);
-    if ((await lstat(full)).isSymbolicLink()) throw new Error("Knowledge reads do not follow symlinks");
-  }
-  const actual = await realpath2(full);
-  const rel = relative(vault, actual);
-  if (!rel || isAbsolute2(rel) || rel === ".." || rel.startsWith(`..${sep}`))
-    throw new Error("Note is outside the bound Vault");
-  return actual;
-}
-async function inspectNote(vault, path) {
-  const full = await safeNotePath(vault, path);
-  const stat42 = await lstat(full);
-  if (!stat42.isFile()) throw new Error("Expected a regular note");
-  return { full, stat: stat42, signature: fileVersion(stat42) };
-}
-async function closeQuietly(handle) {
-  try {
-    await handle.close();
-  } catch {
-  }
-}
-async function readNoteFile(vault, path) {
-  const { full } = await inspectNote(vault, path);
-  const handle = await open(full, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
-  try {
-    const before = await handle.stat();
-    if (!before.isFile() || before.size > MAX_NOTE_BYTES)
-      throw new Error("Note exceeds the 1 MiB indexing limit");
-    const buffer = Buffer.alloc(Number(before.size) + 1);
-    let offset = 0;
-    while (offset < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
-      if (!bytesRead) break;
-      offset += bytesRead;
-    }
-    const after = await handle.stat();
-    const current = await inspectNote(vault, path);
-    if (fileVersion(before) !== fileVersion(after) || fileVersion(after) !== current.signature || offset !== before.size)
-      throw new Error("Note changed while reading; retry against its latest version");
-    const bytes = buffer.subarray(0, offset);
-    return {
-      path,
-      text: bytes.toString("utf8"),
-      hash: createHash2("sha256").update(bytes).digest("hex"),
-      signature: fileVersion(after),
-      bytes: offset
-    };
-  } catch (error) {
-    await closeQuietly(handle);
-    throw error;
-  } finally {
-    await closeQuietly(handle);
-  }
-}
-function snippet(text43, { startLine = 1, maxChars = 5e3 } = {}) {
-  const lines = text43.split("\n");
-  const start = Math.max(0, Math.floor(startLine) - 1);
-  const selected = [];
-  let chars = 0;
-  for (let i = start; i < lines.length; i++) {
-    const line = lines[i] ?? "";
-    if (chars + line.length + 1 > maxChars) {
-      if (!selected.length) selected.push(line.slice(0, maxChars));
-      break;
-    }
-    selected.push(line);
-    chars += line.length + 1;
-  }
-  return {
-    text: selected.join("\n"),
-    startLine: start + 1,
-    endLine: start + selected.length,
-    totalLines: lines.length,
-    truncated: start > 0 || start + selected.length < lines.length || selected.length === 1 && (selected[0]?.length ?? 0) < (lines[start]?.length || 0)
-  };
-}
-var MAX_NOTE_BYTES;
-var OMIT;
-var RESERVED2;
-var init_files = __esm({
-  "src/core/files.ts"() {
-    "use strict";
-    MAX_NOTE_BYTES = 1024 * 1024;
-    OMIT = /* @__PURE__ */ new Set([
-      "node_modules",
-      "dist",
-      "build",
-      "out",
-      "coverage",
-      "vendor",
-      "venv",
-      "__pycache__",
-      "Attachments",
-      "Templates",
-      "_template"
-    ]);
-    RESERVED2 = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
-  }
-});
-function statusTone(status) {
-  const value = String(status || "");
-  if (OK.has(value)) return "ok";
-  if (ERROR.has(value)) return "error";
-  if (MUTED.has(value)) return "muted";
-  return "warn";
-}
-function cardLink(kind, target, label2, i18n) {
-  if (!["external", "resource", "note", "path"].includes(kind) || typeof target !== "string" || !target)
-    return null;
-  return {
-    label: clip(label2, 60) || kind,
-    ...i18n ? { i18n } : {},
-    kind,
-    target: target.slice(0, 4096)
-  };
-}
-function flowCard(input) {
-  const { key, kind, title, subtitle, status, tone, detail, path, fields, links, source, provisionalTitle } = input;
-  const state = clip(String(status ?? ""), 32) || "unknown";
-  const safeKind = clip(kind, 40) || "artifact";
-  return {
-    key: clip(String(key ?? ""), 512) || `${kind}:${title}`,
-    kind: safeKind,
-    title: clip(String(title ?? ""), 200) || kind || "artifact",
-    provisionalTitle: provisionalTitle === true,
-    subtitle: clip(subtitle, 300),
-    status: state,
-    tone: tone || statusTone(state),
-    detail: clip(detail, 400),
-    path: clip(path, 4096),
-    fields: (fields || []).filter(Boolean).slice(0, 12),
-    links: (links || []).filter(Boolean).slice(0, 6),
-    source: clip(source, 80),
-    at: Date.now()
-  };
-}
-function failureCard(event) {
-  const text43 = (event.result?.content || []).filter((block) => block?.type === "text").map((block) => block.text).join(" ");
-  return flowCard({
-    key: event.toolCallId,
-    kind: "failure",
-    title: event.toolName,
-    status: "failed",
-    detail: text43,
-    source: event.toolName
-  });
-}
-var OK;
-var ERROR;
-var MUTED;
-var clip;
-var record;
-var ZOTERO_KEY;
-var CHANNEL_LABEL;
-var init_flow_cards = __esm({
-  "src/core/flow-cards.ts"() {
-    "use strict";
-    OK = /* @__PURE__ */ new Set([
-      "verified",
-      "saved",
-      "reused",
-      "both-verified",
-      "attachment-indexed-not-read",
-      "applied",
-      "written",
-      "note-written",
-      "summary-written",
-      "explainer-archived",
-      "setup-complete",
-      "\u5DF2\u4FDD\u5B58",
-      "archived",
-      "found",
-      "ready"
-    ]);
-    ERROR = /* @__PURE__ */ new Set([
-      "failed",
-      "identity-mismatch",
-      "missing",
-      "blocked",
-      "cancelled",
-      "not-found",
-      "error"
-    ]);
-    MUTED = /* @__PURE__ */ new Set(["unknown", "unavailable", "pending"]);
-    clip = (value, max) => typeof value === "string" && value ? value.slice(0, max) : null;
-    record = (value) => value && typeof value === "object" ? value : {};
-    ZOTERO_KEY = /^[A-Z0-9]{8}$/;
-    CHANNEL_LABEL = { connector: "\u8FDE\u63A5\u5668", web: "Web API" };
-  }
-});
-async function hashRegularFile(path) {
-  const flags = constants2.O_RDONLY | (constants2.O_NOFOLLOW || 0);
-  const handle = await open2(path, flags);
-  try {
-    return createHash3("sha256").update(await handle.readFile()).digest("hex");
-  } finally {
-    await handle.close();
-  }
-}
-function containsPath(root, target) {
-  const relativePath = relative2(root, target);
-  return relativePath === "" || !isAbsolute3(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep2}`);
-}
-async function canonicalPath(path) {
-  try {
-    return await realpath3(path);
-  } catch (error) {
-    if (error.code !== "ENOENT" || dirname(path) === path) throw error;
-    return join4(await canonicalPath(dirname(path)), basename2(path));
-  }
-}
-async function containedVaultFile(root, path) {
-  const vault = resolve3(root);
-  const target = resolve3(vault, path);
-  if (!containsPath(vault, target) || !containsPath(vault, await canonicalPath(target)))
-    throw new Error("Path must stay inside Vault");
-  return target;
-}
-async function replaceVaultFile(path, content, options = {}) {
-  const current = await lstat2(path);
-  if (!current.isFile() || current.isSymbolicLink()) throw new Error(`Expected a regular Vault file: ${path}`);
-  if (options.expectedHash !== void 0) {
-    const observed = await hashRegularFile(path);
-    if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
-  }
-  const temporary = `${path}.${randomUUID2()}.tmp`;
-  await writeFile2(temporary, content, { encoding: "utf8", flag: "wx" });
-  try {
-    await options.beforeCommit?.();
-    if (options.expectedHash !== void 0) {
-      const observed = await hashRegularFile(path);
-      if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
-    }
-    await rename2(temporary, path);
-  } finally {
-    await unlink(temporary).catch(() => void 0);
-  }
-}
-var MANAGED_START;
-var MANAGED_END;
-var PROJECT_PATTERN;
-var NAVIGATION_TARGETS;
-var VaultFileConflictError;
-var hash;
-var init_layout = __esm({
-  "src/core/layout.ts"() {
-    "use strict";
-    init_files();
-    MANAGED_START = "<!-- pi-agent:managed:start -->";
-    MANAGED_END = "<!-- pi-agent:managed:end -->";
-    PROJECT_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-    NAVIGATION_TARGETS = /* @__PURE__ */ new Set(["Home.md", "Wiki/Index.md", "Library/Index.md"]);
-    VaultFileConflictError = class extends Error {
-      code = "conflict";
-      constructor(path) {
-        super(`Vault file changed while it was being updated: ${path}`);
-        this.name = "VaultFileConflictError";
+async function collectRecentNotes(vault, sinceMs) {
+  const found = [];
+  let scanned = 0;
+  async function walk(dir) {
+    if (scanned >= DAILY_DISCOVERY_LIMITS.maxScannedFiles) return;
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => null);
+    if (!entries) return;
+    for (const entry of entries) {
+      if (scanned >= DAILY_DISCOVERY_LIMITS.maxScannedFiles) return;
+      if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
+      const full = join2(dir, entry.name);
+      if (entry.isDirectory()) await walk(full);
+      else if (entry.isFile() && entry.name.endsWith(".md")) {
+        scanned++;
+        const path = relative(vault, full).split(sep).join("/");
+        if (NAVIGATION.test(path)) continue;
+        const info = await stat(full).catch(() => null);
+        if (info && info.mtimeMs > sinceMs && info.size <= DAILY_DISCOVERY_LIMITS.maxNoteBytes)
+          found.push({ path, mtime: info.mtimeMs, size: info.size });
       }
-    };
-    hash = (text43) => createHash3("sha256").update(text43).digest("hex");
-  }
-});
-function createLocalReviewPolicyStorage(config) {
-  let queue = Promise.resolve();
-  async function read() {
-    const directory = config.knowledgeDirectory();
-    if (!directory) return { kind: "missing", version: null };
-    let bytes;
-    try {
-      bytes = await readFile3(join5(directory, "review-policy.json"));
-    } catch (error) {
-      if (error.code === "ENOENT")
-        return { kind: "missing", version: null };
-      throw error;
     }
-    let value;
-    try {
-      value = JSON.parse(bytes.toString("utf8"));
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) throw error;
-      console.warn(
-        "[knowledge review policy] Invalid JSON; strict mode applies"
-      );
-      return { kind: "corrupt", version: null };
-    }
-    return {
-      kind: "value",
-      value,
-      version: createHash6("sha256").update(bytes).digest("hex")
-    };
   }
-  return {
-    read,
-    write(value, expectedVersion) {
-      const operation = queue.catch(() => void 0).then(async () => {
-        const directory = config.knowledgeDirectory();
-        if (!directory) throw new Error("No application knowledge directory");
-        const current = await read();
-        if (current.kind === "corrupt")
-          throw new Error(
-            "Review policy is damaged; repair it before changing settings"
-          );
-        if (current.version !== expectedVersion)
-          throw Object.assign(
-            new Error("Review policy changed; refresh before saving"),
-            { code: "ESTATECONFLICT" }
-          );
-        await mkdir3(directory, { recursive: true, mode: 448 });
-        const temporary = join5(
-          directory,
-          `review-policy.${randomUUID3()}.tmp`
-        );
-        await writeFile3(temporary, JSON.stringify(value), {
-          flag: "wx",
-          mode: 384
-        });
-        try {
-          await rename3(temporary, join5(directory, "review-policy.json"));
-        } catch (error) {
-          await unlink2(temporary);
-          throw error;
-        }
-        return read();
-      });
-      queue = operation;
-      return operation;
-    }
-  };
-}
-var init_review_policy_storage = __esm({
-  "src/core/review-policy-storage.ts"() {
-    "use strict";
-  }
-});
-var review_policy_exports = {};
-__export(review_policy_exports, {
-  advisoryCodes: () => advisoryCodes,
-  createKnowledgeReviewPolicy: () => createKnowledgeReviewPolicy,
-  createStoredKnowledgeReviewPolicy: () => createStoredKnowledgeReviewPolicy,
-  readReviewMode: () => readReviewMode,
-  saveReviewMode: () => saveReviewMode
-});
-function createStoredKnowledgeReviewPolicy(storage, strictOverride) {
-  async function readReviewPolicy() {
-    const document = await storage.read();
-    const override = strictOverride() ? "environment" : null;
-    if (document.kind === "missing")
-      return {
-        mode: override ? "strict" : "automatic",
-        persistedMode: null,
-        version: null,
-        override,
-        diagnostic: null
-      };
-    if (document.kind === "corrupt")
-      return {
-        mode: "strict",
-        persistedMode: null,
-        version: null,
-        override,
-        diagnostic: "invalid-json"
-      };
-    const value = document.value;
-    const mode = value && typeof value === "object" && "mode" in value ? value.mode : void 0;
-    if (mode !== "automatic" && mode !== "strict")
-      return {
-        mode: "strict",
-        persistedMode: null,
-        version: document.version,
-        override,
-        diagnostic: "invalid-policy"
-      };
-    return {
-      mode: override ? "strict" : mode,
-      persistedMode: mode,
-      version: document.version,
-      override,
-      diagnostic: null
-    };
-  }
-  async function readReviewMode2() {
-    return (await readReviewPolicy()).mode;
-  }
-  async function saveReviewMode2(mode, expectedVersion) {
-    if (mode !== "automatic" && mode !== "strict")
-      throw new Error("Invalid review mode");
-    const current = await readReviewPolicy();
-    if (current.diagnostic)
-      throw new Error(
-        "Review policy is damaged; repair it before changing settings"
-      );
-    await storage.write(
-      { version: 1, mode },
-      expectedVersion === void 0 ? current.version : expectedVersion
-    );
-    const saved = await readReviewPolicy();
-    if (saved.diagnostic || saved.persistedMode !== mode)
-      throw new Error("Review policy changed during write verification");
-    return { mode: saved.mode };
-  }
-  return { readReviewMode: readReviewMode2, readReviewPolicy, saveReviewMode: saveReviewMode2 };
-}
-function createKnowledgeReviewPolicy(config) {
-  return createStoredKnowledgeReviewPolicy(
-    createLocalReviewPolicyStorage(config),
-    () => process.env.DRONE_REVIEW_MODE === "strict"
-  );
-}
-var readReviewMode;
-var saveReviewMode;
-var advisoryCodes;
-var init_review_policy = __esm({
-  "src/core/review-policy.ts"() {
-    "use strict";
-    init_config();
-    init_review_policy_storage();
-    ({ readReviewMode, saveReviewMode } = createKnowledgeReviewPolicy(config_exports));
-    advisoryCodes = /* @__PURE__ */ new Set([
-      "paper-citation-required",
-      "search-required",
-      "coverage-incomplete",
-      "wiki-changed",
-      "citation-required",
-      "source-unread",
-      "source-changed",
-      "delivery-changed",
-      "search-stale",
-      "check-timeout",
-      "not-prepared",
-      "citation-invalid",
-      "citation-budget"
-    ]);
-  }
-});
-function loopback(hostname) {
-  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
-}
-function validateSemanticConfig(input = {}) {
-  if (!input || typeof input !== "object" || Array.isArray(input))
-    throw new Error("Semantic settings must be an object");
-  for (const key of Object.keys(input))
-    if (!CONFIG_KEYS.has(key)) throw new Error(`Unknown semantic setting: ${key}`);
-  if (input.enabled !== void 0 && typeof input.enabled !== "boolean")
-    throw new Error("enabled must be boolean");
-  if (input.provider !== void 0 && typeof input.provider !== "string")
-    throw new Error("provider must be a string");
-  const provider = input.provider ?? "none";
-  if (!["none", "ollama", "openai-compatible"].includes(provider))
-    throw new Error("Unknown semantic provider");
-  if (input.remoteConsent !== void 0 && typeof input.remoteConsent !== "boolean")
-    throw new Error("remoteConsent must be boolean");
-  if (input.timeoutMs !== void 0 && (!Number.isInteger(input.timeoutMs) || input.timeoutMs < 500 || input.timeoutMs > 3e4))
-    throw new Error("timeoutMs must be an integer between 500 and 30000");
-  if (input.chunkChars !== void 0 && (!Number.isInteger(input.chunkChars) || input.chunkChars < 256 || input.chunkChars > 8e3))
-    throw new Error("chunkChars must be an integer between 256 and 8000");
-  if (input.minSimilarity !== void 0 && (typeof input.minSimilarity !== "number" || !Number.isFinite(input.minSimilarity) || input.minSimilarity < 0 || input.minSimilarity > 1))
-    throw new Error("minSimilarity must be a finite number between 0 and 1");
-  const enabled = input.enabled ?? provider !== "none";
-  const baseUrl = input.baseUrl === void 0 ? "" : input.baseUrl;
-  const model = input.model === void 0 ? "" : input.model;
-  const credentialEnv = input.credentialEnv === void 0 || input.credentialEnv === null ? "" : input.credentialEnv;
-  if (typeof baseUrl !== "string" || typeof model !== "string" || typeof credentialEnv !== "string")
-    throw new Error("Semantic provider fields must be strings");
-  const trimmedBase = baseUrl.trim();
-  const trimmedModel = model.trim();
-  const trimmedCredential = credentialEnv.trim();
-  if (provider === "none") {
-    if (enabled) throw new Error("The none provider cannot be enabled");
-    if (input.remoteConsent === true) throw new Error("remoteConsent is not valid for the none provider");
-    return {
-      enabled: false,
-      provider: "none",
-      baseUrl: "",
-      model: "",
-      credentialEnv: "",
-      remoteConsent: false
-    };
-  }
-  if (!enabled && !trimmedBase && !trimmedModel)
-    return {
-      enabled: false,
-      provider,
-      baseUrl: "",
-      model: "",
-      credentialEnv: trimmedCredential,
-      remoteConsent: input.remoteConsent === true,
-      timeoutMs: input.timeoutMs ?? 1e4,
-      chunkChars: input.chunkChars ?? 1200,
-      minSimilarity: input.minSimilarity ?? 0.45
-    };
-  if (!trimmedBase || trimmedBase.length > 500 || !trimmedModel || trimmedModel.length > 200)
-    throw new Error("Semantic provider base URL and model are required");
-  if (trimmedCredential && !ENV_NAME.test(trimmedCredential))
-    throw new Error("credentialEnv must be a valid environment variable name");
-  let url;
-  try {
-    url = new URL2(trimmedBase);
-  } catch {
-    throw new Error("Semantic provider base URL is invalid");
-  }
-  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash)
-    throw new Error("Semantic provider URL must be plain http(s) without credentials, query, or fragment");
-  const remote = !loopback(url.hostname);
-  if (remote && url.protocol === "http:") throw new Error("Remote semantic providers require HTTPS");
-  if (remote && input.remoteConsent !== true)
-    throw new Error("Remote semantic provider requires explicit remoteConsent");
-  if (remote && !trimmedCredential)
-    throw new Error("Remote semantic providers require a credential environment variable");
-  return {
-    enabled,
-    provider,
-    baseUrl: url.toString().replace(/\/+$/, ""),
-    model: trimmedModel,
-    credentialEnv: trimmedCredential,
-    remoteConsent: input.remoteConsent === true,
-    timeoutMs: input.timeoutMs ?? 1e4,
-    chunkChars: input.chunkChars ?? 1200,
-    minSimilarity: input.minSimilarity ?? 0.45
-  };
-}
-function endpoint(config) {
-  const suffix = config.provider === "ollama" ? ["api/embed", "api"] : ["v1/embeddings", "v1"];
-  const base2 = config.baseUrl.replace(/\/+$/, "");
-  if (base2.endsWith(`/${suffix[0]}`)) return base2;
-  if (base2.endsWith(`/${suffix[1]}`)) return `${base2}/${suffix[0].split("/").at(-1)}`;
-  return `${base2}/${suffix[0]}`;
-}
-async function readBounded(response) {
-  const length = Number(response.headers.get("content-length"));
-  if (Number.isFinite(length) && length > MAX_RESPONSE)
-    throw new Error("Semantic provider response is too large");
-  const reader = response.body?.getReader();
-  if (!reader) {
-    const text43 = await response.text();
-    if (Buffer.byteLength(text43) > MAX_RESPONSE) throw new Error("Semantic provider response is too large");
-    return text43;
-  }
-  const chunks = [];
-  let total = 0;
-  for (; ; ) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > MAX_RESPONSE) {
-      await reader.cancel();
-      throw new Error("Semantic provider response is too large");
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks).toString("utf8");
-}
-function vectors(value, expected) {
-  if (!Array.isArray(value) || value.length !== expected)
-    throw new Error("Semantic provider returned an invalid vector count");
-  let dimension = 0;
-  const out = value.map((item) => {
-    if (!Array.isArray(item) || !item.length || item.length > 16384)
-      throw new Error("Semantic provider returned an invalid vector");
-    if (!dimension) dimension = item.length;
-    if (item.length !== dimension)
-      throw new Error("Semantic provider returned inconsistent vector dimensions");
-    const vector = item.map((n) => n);
-    if (vector.some((n) => typeof n !== "number" || !Number.isFinite(n) || Math.abs(n) > MAX_VECTOR_COMPONENT))
-      throw new Error("Semantic provider returned NaN or infinite vector values");
-    let sum = 0;
-    for (const n of vector) {
-      sum += n * n;
-      if (!Number.isFinite(sum) || sum > MAX_VECTOR_NORM ** 2)
-        throw new Error("Semantic provider returned an oversized vector norm");
-    }
-    if (!(sum > 0)) throw new Error("Semantic provider returned a zero-norm vector");
-    return vector;
-  });
-  return { vectors: out, dimension };
-}
-async function embedTexts(rawConfig, texts, { signal } = {}) {
-  const config = validateSemanticConfig(rawConfig);
-  if (!config.enabled) throw new Error("Semantic embeddings are disabled");
-  if (!Array.isArray(texts) || !texts.length || texts.length > MAX_BATCH || texts.some((text43) => typeof text43 !== "string" || !text43.length || text43.length > 16e3) || texts.join("\n").length > MAX_CHARS)
-    throw new Error("Semantic embedding batch is outside bounded limits");
-  const headers = { "content-type": "application/json", accept: "application/json" };
-  if (config.credentialEnv) {
-    const token = process.env[config.credentialEnv];
-    if (!token) throw new Error(`Credential environment variable ${config.credentialEnv} is not set`);
-    headers.authorization = `Bearer ${token}`;
-  }
-  const body = config.provider === "ollama" ? { model: config.model, input: texts, truncate: false } : { model: config.model, input: texts, encoding_format: "float" };
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(new Error("Semantic provider timeout")), config.timeoutMs);
-  const onAbort = () => controller.abort(signal.reason);
-  if (signal) {
-    if (signal.aborted) controller.abort(signal.reason);
-    else signal.addEventListener("abort", onAbort, { once: true });
-  }
-  try {
-    const response = await fetch(endpoint(config), {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      redirect: "error",
-      signal: controller.signal
+  for (const root of SCAN_ROOTS) await walk(join2(vault, root));
+  found.sort((a, b) => b.mtime - a.mtime);
+  const notes = [];
+  for (const item of found.slice(0, DAILY_DISCOVERY_LIMITS.maxNewNotes)) {
+    const text43 = await readFile2(join2(vault, item.path), "utf8").catch(() => "");
+    if (!text43.trim()) continue;
+    notes.push({
+      path: item.path,
+      title: titleOf(item.path, text43),
+      text: text43.slice(0, DAILY_DISCOVERY_LIMITS.maxNoteChars),
+      mtime: item.mtime
     });
-    let raw;
-    try {
-      raw = await readBounded(response);
-    } catch (error) {
-      try {
-        await response.body?.cancel();
-      } catch {
-      }
-      throw error;
-    }
-    let payload;
-    try {
-      payload = JSON.parse(raw);
-    } catch {
-      throw new Error(`Semantic provider returned HTTP ${response.status}`);
-    }
-    if (!response.ok) throw new Error(`Semantic provider returned HTTP ${response.status}`);
-    if (payload?.model !== void 0 && payload.model !== config.model)
-      throw new Error("Semantic provider returned an unexpected model");
-    const embeddings = config.provider === "ollama" ? payload?.embeddings : Array.isArray(payload?.data) && payload.data.length === texts.length ? [...payload.data].sort((a, b) => (a?.index ?? 0) - (b?.index ?? 0)).map((item, index) => {
-      if (!Number.isInteger(item?.index) || item.index !== index || !Object.hasOwn(item, "embedding"))
-        throw new Error("Semantic provider returned invalid embedding indexes");
-      return item.embedding;
-    }) : null;
-    return { ...vectors(embeddings, texts.length), provider: config.provider, model: config.model };
-  } finally {
-    clearTimeout(timer);
-    if (signal) signal.removeEventListener("abort", onAbort);
   }
+  return notes;
 }
-var MAX_BATCH;
-var MAX_CHARS;
-var MAX_RESPONSE;
-var ENV_NAME;
-var MAX_VECTOR_COMPONENT;
-var MAX_VECTOR_NORM;
-var CONFIG_KEYS;
-var semanticLimits;
-var init_semantic_provider = __esm({
-  "src/core/semantic-provider.ts"() {
+function ideaNoteMarkdown(idea, createdAt) {
+  return [
+    "---",
+    "type: idea",
+    'status: "speculative"',
+    "source: daily-discovery",
+    `created: ${JSON.stringify(createdAt.toISOString())}`,
+    "---",
+    "",
+    `# ${idea.title}`,
+    "",
+    idea.idea,
+    "",
+    "## \u4F9D\u636E",
+    ...idea.basis.map((path) => `- [[${path.replace(/\.md$/, "")}]]`),
+    "",
+    "## \u5982\u4F55\u68C0\u9A8C",
+    idea.test,
+    ...idea.whyOverlooked ? ["", "## \u4E3A\u4EC0\u4E48\u53EF\u80FD\u88AB\u5FFD\u7565", idea.whyOverlooked] : [],
+    "",
+    "> \u63A8\u6D4B\uFF1A\u7531\u6BCF\u65E5\u53D1\u73B0\u6839\u636E\u77E5\u8BC6\u5E93\u81EA\u52A8\u63D0\u51FA\uFF0C\u5C1A\u672A\u9A8C\u8BC1\u3002",
+    ""
+  ].join("\n");
+}
+var DAILY_DISCOVERY_LIMITS;
+var SCAN_ROOTS;
+var SKIP_DIRS;
+var NAVIGATION;
+var init_daily_discovery = __esm({
+  "src/core/daily-discovery.ts"() {
     "use strict";
-    MAX_BATCH = 32;
-    MAX_CHARS = 12e4;
-    MAX_RESPONSE = 8 * 1024 * 1024;
-    ENV_NAME = /^[A-Z_][A-Z0-9_]{0,127}$/;
-    MAX_VECTOR_COMPONENT = 1e6;
-    MAX_VECTOR_NORM = 1e9;
-    CONFIG_KEYS = /* @__PURE__ */ new Set([
-      "enabled",
-      "provider",
-      "baseUrl",
-      "model",
-      "credentialEnv",
-      "remoteConsent",
-      "timeoutMs",
-      "chunkChars",
-      "minSimilarity"
-    ]);
-    semanticLimits = Object.freeze({ MAX_BATCH, MAX_CHARS, MAX_RESPONSE });
-  }
-});
-var semantic_settings_exports = {};
-__export(semantic_settings_exports, {
-  createSemanticSettingsApi: () => createSemanticSettingsApi,
-  createSemanticSettingsState: () => createSemanticSettingsState,
-  createStoredSemanticSettingsApi: () => createStoredSemanticSettingsApi,
-  readSemanticSettings: () => readSemanticSettings,
-  saveSemanticSettings: () => saveSemanticSettings,
-  validateSemanticConfig: () => validateSemanticConfig2
-});
-function loopback2(hostname) {
-  return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname);
-}
-function validateSemanticConfig2(input = {}) {
-  if (!input || typeof input !== "object" || Array.isArray(input))
-    throw new Error("Semantic settings must be an object");
-  for (const key of Object.keys(input))
-    if (!CONFIG_KEYS2.has(key)) throw new Error(`Unknown semantic setting: ${key}`);
-  if (input.enabled !== void 0 && typeof input.enabled !== "boolean")
-    throw new Error("enabled must be boolean");
-  if (input.provider !== void 0 && typeof input.provider !== "string")
-    throw new Error("provider must be a string");
-  const provider = input.provider ?? "none";
-  if (!["none", "ollama", "openai-compatible"].includes(provider))
-    throw new Error("Unknown semantic provider");
-  if (input.remoteConsent !== void 0 && typeof input.remoteConsent !== "boolean")
-    throw new Error("remoteConsent must be boolean");
-  if (input.timeoutMs !== void 0 && (!Number.isInteger(input.timeoutMs) || input.timeoutMs < 500 || input.timeoutMs > 3e4))
-    throw new Error("timeoutMs must be an integer between 500 and 30000");
-  if (input.chunkChars !== void 0 && (!Number.isInteger(input.chunkChars) || input.chunkChars < 256 || input.chunkChars > 8e3))
-    throw new Error("chunkChars must be an integer between 256 and 8000");
-  if (input.minSimilarity !== void 0 && (typeof input.minSimilarity !== "number" || !Number.isFinite(input.minSimilarity) || input.minSimilarity < 0 || input.minSimilarity > 1))
-    throw new Error("minSimilarity must be a finite number between 0 and 1");
-  const enabled = input.enabled ?? provider !== "none";
-  const baseUrl = input.baseUrl === void 0 ? "" : input.baseUrl;
-  const model = input.model === void 0 ? "" : input.model;
-  const credentialEnv = input.credentialEnv === void 0 || input.credentialEnv === null ? "" : input.credentialEnv;
-  if (typeof baseUrl !== "string" || typeof model !== "string" || typeof credentialEnv !== "string")
-    throw new Error("Semantic provider fields must be strings");
-  const trimmedBase = baseUrl.trim();
-  const trimmedModel = model.trim();
-  const trimmedCredential = credentialEnv.trim();
-  if (provider === "none") {
-    if (enabled) throw new Error("The none provider cannot be enabled");
-    if (input.remoteConsent === true) throw new Error("remoteConsent is not valid for the none provider");
-    return {
-      enabled: false,
-      provider: "none",
-      baseUrl: "",
-      model: "",
-      credentialEnv: "",
-      remoteConsent: false
+    DAILY_DISCOVERY_LIMITS = {
+      maxScannedFiles: 4e3,
+      maxNoteBytes: 256 * 1024,
+      maxNewNotes: 8,
+      maxRelatedNotes: 10,
+      maxNoteChars: 2400,
+      maxIdeas: 3
     };
-  }
-  if (!enabled && !trimmedBase && !trimmedModel)
-    return {
-      enabled: false,
-      provider,
-      baseUrl: "",
-      model: "",
-      credentialEnv: trimmedCredential,
-      remoteConsent: input.remoteConsent === true,
-      timeoutMs: input.timeoutMs ?? 1e4,
-      chunkChars: input.chunkChars ?? 1200,
-      minSimilarity: input.minSimilarity ?? 0.45
-    };
-  if (!trimmedBase || trimmedBase.length > 500 || !trimmedModel || trimmedModel.length > 200)
-    throw new Error("Semantic provider base URL and model are required");
-  if (trimmedCredential && !ENV_NAME2.test(trimmedCredential))
-    throw new Error("credentialEnv must be a valid environment variable name");
-  let url;
-  try {
-    url = new URL(trimmedBase);
-  } catch {
-    throw new Error("Semantic provider base URL is invalid");
-  }
-  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash)
-    throw new Error("Semantic provider URL must be plain http(s) without credentials, query, or fragment");
-  const remote = !loopback2(url.hostname);
-  if (remote && url.protocol === "http:") throw new Error("Remote semantic providers require HTTPS");
-  if (remote && input.remoteConsent !== true)
-    throw new Error("Remote semantic provider requires explicit remoteConsent");
-  if (remote && !trimmedCredential)
-    throw new Error("Remote semantic providers require a credential environment variable");
-  return {
-    enabled,
-    provider,
-    baseUrl: url.toString().replace(/\/+$/, ""),
-    model: trimmedModel,
-    credentialEnv: trimmedCredential,
-    remoteConsent: input.remoteConsent === true,
-    timeoutMs: input.timeoutMs ?? 1e4,
-    chunkChars: input.chunkChars ?? 1200,
-    minSimilarity: input.minSimilarity ?? 0.45
-  };
-}
-function createSemanticSettingsState() {
-  return { defaultUpdatedAt: /* @__PURE__ */ new Map() };
-}
-function pathFor(vaultId, directory) {
-  if (!/^[a-f0-9]{24}$/.test(vaultId || "")) throw new Error("Invalid Vault binding");
-  if (!directory) throw new Error("Application knowledge directory is not configured");
-  return join6(directory, vaultId, "semantic.json");
-}
-async function assertDirectory(path, create) {
-  try {
-    const stat42 = await lstat3(path);
-    if (!stat42.isDirectory() || stat42.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-    if (create) {
-      await mkdir4(path, { recursive: true, mode: 448 });
-      const stat42 = await lstat3(path);
-      if (!stat42.isDirectory() || stat42.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
-    }
-  }
-  let ancestor = path;
-  for (let depth = 0; depth < 8 && ancestor !== dirname2(ancestor); depth++) {
-    try {
-      if ((await lstat3(ancestor)).isSymbolicLink()) throw new Error("Semantic settings ancestor is unsafe");
-    } catch (error) {
-      if (error.code !== "ENOENT") throw error;
-    }
-    ancestor = dirname2(ancestor);
-  }
-}
-async function assertFile(path) {
-  try {
-    const stat42 = await lstat3(path);
-    if (!stat42.isFile() || stat42.isSymbolicLink() || stat42.size > MAX_FILE_BYTES)
-      throw new Error("Semantic settings file is unsafe or too large");
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
-}
-function normalize2(value, revision, updatedAt = null) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1)
-    throw new Error("Invalid or future semantic settings schema");
-  for (const key of Object.keys(value))
-    if (!SETTINGS_KEYS.has(key)) throw new Error(`Unknown semantic setting: ${key}`);
-  if (!Number.isSafeInteger(revision) || Number(revision) < 0)
-    throw new Error("Invalid semantic settings revision");
-  const raw = value;
-  const config = validateSemanticConfig2({
-    enabled: raw.enabled,
-    provider: raw.provider,
-    baseUrl: raw.baseUrl,
-    model: raw.model,
-    credentialEnv: raw.credentialEnv,
-    remoteConsent: raw.remoteConsent,
-    timeoutMs: raw.timeoutMs,
-    chunkChars: raw.chunkChars,
-    minSimilarity: raw.minSimilarity
-  });
-  if (updatedAt !== null && (typeof updatedAt !== "string" || Number.isNaN(Date.parse(updatedAt))))
-    throw new Error("Invalid semantic settings updatedAt");
-  return {
-    version: 1,
-    revision: Number(revision),
-    ...config,
-    updatedAt: updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
-  };
-}
-function defaultSettings(state, path) {
-  const updatedAt = state.defaultUpdatedAt.get(path) || (/* @__PURE__ */ new Date()).toISOString();
-  state.defaultUpdatedAt.set(path, updatedAt);
-  return { version: 1, revision: 0, ...validateSemanticConfig2({}), updatedAt };
-}
-function createStoredSemanticSettingsApi(storage, state = createSemanticSettingsState()) {
-  function unpack(vaultId, document) {
-    if (document.kind === "missing") return defaultSettings(state, vaultId);
-    const value = document.value;
-    return normalize2(value, value?.revision, value?.updatedAt);
-  }
-  return {
-    readSemanticSettings: async (vaultId) => unpack(vaultId, await storage.read(vaultId)),
-    async saveSemanticSettings(vaultId, input, expectedRevision) {
-      const document = await storage.read(vaultId), current = unpack(vaultId, document);
-      if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== current.revision) throw new Error("Semantic settings revision is stale");
-      const value = normalize2({ version: 1, ...input }, current.revision + 1);
-      await storage.write(vaultId, value, document.version);
-      const saved = unpack(vaultId, await storage.read(vaultId));
-      if (JSON.stringify(saved) !== JSON.stringify(value)) throw new Error("Semantic settings write readback did not match");
-      return saved;
-    }
-  };
-}
-function localSemanticStorage(directory) {
-  async function read(vaultId) {
-    const path = pathFor(vaultId, directory());
-    await assertDirectory(dirname2(path), false);
-    await assertFile(path);
-    let raw;
-    try {
-      raw = await readFile4(path, "utf8");
-    } catch (error) {
-      if (error.code === "ENOENT") return { kind: "missing", version: null };
-      throw error;
-    }
-    if (Buffer.byteLength(raw) > MAX_FILE_BYTES) throw new Error("Semantic settings file is too large");
-    return { kind: "value", value: JSON.parse(raw), version: createHash7("sha256").update(raw).digest("hex") };
-  }
-  const queues2 = /* @__PURE__ */ new Map();
-  return {
-    read,
-    write(vaultId, value, expectedVersion) {
-      const prior = queues2.get(vaultId) ?? Promise.resolve();
-      const operation = prior.catch(() => void 0).then(async () => {
-        const path = pathFor(vaultId, directory());
-        if ((await read(vaultId)).version !== expectedVersion) throw new Error("Semantic settings revision is stale");
-        await assertDirectory(dirname2(path), true);
-        const temp = join6(dirname2(path), `semantic.${randomUUID4()}.tmp`);
-        try {
-          await writeFile4(temp, `${JSON.stringify(value, null, 2)}
-`, { mode: 384, flag: "wx" });
-          await rename4(temp, path);
-        } finally {
-          try {
-            await unlink3(temp);
-          } catch (error) {
-            if (error.code !== "ENOENT") throw error;
-          }
-        }
-      });
-      queues2.set(vaultId, operation);
-      return operation.finally(() => {
-        if (queues2.get(vaultId) === operation) queues2.delete(vaultId);
-      });
-    }
-  };
-}
-function createSemanticSettingsApi(state = createSemanticSettingsState(), directory = knowledgeDirectory()) {
-  return semanticSettingsApiForDirectory(state, () => directory);
-}
-function semanticSettingsApiForDirectory(state, directory) {
-  return createStoredSemanticSettingsApi(localSemanticStorage(directory), state);
-}
-var MAX_FILE_BYTES;
-var ENV_NAME2;
-var SETTINGS_KEYS;
-var CONFIG_KEYS2;
-var defaultApi;
-var readSemanticSettings;
-var saveSemanticSettings;
-var init_semantic_settings = __esm({
-  "src/core/semantic-settings.ts"() {
-    "use strict";
-    init_config();
-    MAX_FILE_BYTES = 256 * 1024;
-    ENV_NAME2 = /^[A-Z_][A-Z0-9_]{0,127}$/;
-    SETTINGS_KEYS = /* @__PURE__ */ new Set([
-      "version",
-      "revision",
-      "updatedAt",
-      "enabled",
-      "provider",
-      "baseUrl",
-      "model",
-      "credentialEnv",
-      "remoteConsent",
-      "timeoutMs",
-      "chunkChars",
-      "minSimilarity"
-    ]);
-    CONFIG_KEYS2 = /* @__PURE__ */ new Set([
-      "enabled",
-      "provider",
-      "baseUrl",
-      "model",
-      "credentialEnv",
-      "remoteConsent",
-      "timeoutMs",
-      "chunkChars",
-      "minSimilarity"
-    ]);
-    defaultApi = semanticSettingsApiForDirectory(createSemanticSettingsState(), knowledgeDirectory);
-    readSemanticSettings = (vaultId) => defaultApi.readSemanticSettings(vaultId);
-    saveSemanticSettings = (vaultId, input, expectedRevision) => defaultApi.saveSemanticSettings(vaultId, input, expectedRevision);
-  }
-});
-function inside(root, path) {
-  const relativePath = relative3(root, path);
-  return !relativePath || !isAbsolute4(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep3}`);
-}
-function hasControl(text43) {
-  return [...String(text43)].some((char) => char.charCodeAt(0) < 32);
-}
-function label(text43) {
-  return [...String(text43)].map(
-    (char) => "[]<>".includes(char) || char.charCodeAt(0) === 10 || char.charCodeAt(0) === 13 ? " " : char
-  ).join("").slice(0, 220);
-}
-function allowedSegment2(name) {
-  return !!name && !name.startsWith(".") && !omittedSegments.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
-}
-function validateNote2(path) {
-  if (typeof path !== "string" || isAbsolute4(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment2))
-    throw new Error("Expected an allowed Vault-relative Markdown path");
-  const reserved = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
-  const first = path.split("/")[0] ?? "";
-  if (reserved.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
-    throw new Error("Reserved Vault directories require canonical casing");
-}
-function canRead2(path, project) {
-  const scope = path.startsWith("Projects/") && path.split("/").length > 2 ? path.split("/")[1] : "shared";
-  return scope === "shared" || scope === project;
-}
-function onlineSourceLink(value, title = "Online source") {
-  const url = new URL(value);
-  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
-    throw new Error("Expected a credential-free HTTP(S) source URL");
-  return `[${label(title)}](<${url.href}>)`;
-}
-async function normalizeSourceLinks(values, { cwd, vault, resultsRoot, project }) {
-  if (!Array.isArray(values) || values.length > 40) throw new Error("Use at most 40 source references");
-  const links = [];
-  const unresolved = [];
-  for (const value of values) {
-    let raw = String(value).trim();
-    if (!raw || raw.length > 4096 || hasControl(raw)) throw new Error("Invalid source reference");
-    const md = raw.match(/^\[([^\]]+)\]\(<?([^>]+?)>?\)$/);
-    const title = md?.[1];
-    if (md) raw = md[2] ?? "";
-    if (/^10\.\d{4,9}\//.test(raw)) raw = `https://doi.org/${raw}`;
-    if (/^doi:/i.test(raw)) raw = `https://doi.org/${raw.slice(4).trim()}`;
-    if (/^https?:/i.test(raw)) {
-      links.push(onlineSourceLink(raw, title || raw));
-      continue;
-    }
-    const zotero = raw.match(/^zotero:([A-Za-z0-9]{8})$/i);
-    if (zotero) {
-      links.push(`[Zotero ${zotero[1]}](zotero://select/library/items/${zotero[1]})`);
-      continue;
-    }
-    const wiki = raw.match(/^\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]$/);
-    const notePath = `${(wiki?.[1] || raw).replace(/\.md$/, "")}.md`;
-    if (/^(?:Wiki|Library|Projects|Inbox|Indexes)\//.test(notePath)) {
-      validateNote2(notePath);
-      if (!canRead2(notePath, project)) throw new Error("Source note is outside project scope");
-      const full = resolve4(vault, notePath);
-      try {
-        if (!inside(await realpath4(vault), await realpath4(full)) || !(await stat(full)).isFile())
-          throw new Error("not a regular note");
-        links.push(`[[${notePath.slice(0, -3)}${wiki?.[2] ? `|${label(wiki[2])}` : ""}]]`);
-        continue;
-      } catch {
-      }
-    } else if (!/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("file:")) {
-      try {
-        const full = raw.startsWith("file:") ? fileURLToPath(raw) : resolve4(cwd, raw);
-        const actual = await realpath4(full);
-        const roots = await Promise.all(
-          [vault, resultsRoot].filter((path) => Boolean(path)).map((path) => realpath4(path).catch(() => null))
-        );
-        if (!roots.some((root) => root && inside(root, actual)) || !(await stat(actual)).isFile())
-          throw new Error("Source file is outside Vault/results");
-        links.push(`[${label(title || raw)}](<${pathToFileURL(actual).href}>)`);
-        continue;
-      } catch {
-      }
-    }
-    unresolved.push(raw);
-    links.push(`\`${raw.replace(/`/g, "")}\` \u2014 unresolved reference`);
-  }
-  return { links, unresolved };
-}
-var omittedSegments;
-var init_source_links = __esm({
-  "src/core/source-links.ts"() {
-    "use strict";
-    omittedSegments = /* @__PURE__ */ new Set([
-      "node_modules",
-      "dist",
-      "build",
-      "out",
-      "coverage",
-      "vendor",
-      "venv",
-      "__pycache__",
-      "Attachments",
-      "Templates",
-      "_template"
-    ]);
-  }
-});
-function targetWikiPath(path, project) {
-  if (typeof path !== "string")
-    throw new Error("Target must be a shared or current-project Wiki page, not navigation");
-  const parts = path.split("/");
-  if (!path.endsWith(".md") || path.includes("\\") || parts.some((part) => !part || part === "." || part === ".." || part.startsWith(".")))
-    throw new Error("Target must be a shared or current-project Wiki page, not navigation");
-  const prefix = `Projects/${project}/Wiki/`;
-  const tail = path.startsWith("Wiki/") ? path.slice(5) : path.startsWith(prefix) ? path.slice(prefix.length) : null;
-  if (!tail || tail.includes("/") || /^Index\.md$/i.test(tail) || /[[\]#|\r\n]/.test(tail))
-    throw new Error("Target must be a shared or current-project Wiki page, not navigation");
-  return path;
-}
-function immutableWikiProposalHash(proposal) {
-  return createHash8("sha256").update(
-    JSON.stringify({
-      id: proposal.id,
-      vaultId: proposal.vaultId,
-      bindingRevision: proposal.bindingRevision,
-      project: proposal.project,
-      path: proposal.path,
-      title: proposal.title,
-      rationale: proposal.rationale,
-      createdAt: proposal.createdAt,
-      before: proposal.before,
-      after: proposal.after,
-      sources: proposal.sources
-    })
-  ).digest("hex");
-}
-function managedParts(text43) {
-  const start = text43.indexOf(MANAGED_START2);
-  const end = text43.indexOf(MANAGED_END2);
-  if (start < 0 !== end < 0 || end < start || start >= 0 && (text43.indexOf(MANAGED_START2, start + 1) >= 0 || text43.indexOf(MANAGED_END2, end + 1) >= 0))
-    throw new Error("Invalid managed block markers");
-  return { start, end, body: start < 0 ? "" : text43.slice(start + MANAGED_START2.length, end).trim() };
-}
-function stripManagedHeader(body, pageTitle) {
-  let text43 = String(body).replace(/^\uFEFF/u, "").trim();
-  const fenced = text43.match(/^```(?:markdown|md)?[ \t]*\n([\s\S]*?)\n```\s*$/iu);
-  if (fenced?.[1] !== void 0) text43 = fenced[1].trim();
-  text43 = text43.replace(/^---[ \t]*\n[\s\S]*?\n---[ \t]*(?:\n|$)/u, "").trim();
-  const heading = text43.match(/^#[ \t]+([^\n]+)(?:\n+|$)/u);
-  if (heading?.[1] !== void 0) {
-    const found = heading[1].trim();
-    const expected = pageTitle?.trim();
-    if (!expected || found === expected || expected.startsWith(found) || found.startsWith(expected))
-      text43 = text43.slice(heading[0].length).trim();
-  }
-  return text43;
-}
-var MANAGED_START2;
-var MANAGED_END2;
-var init_wiki_policy = __esm({
-  "src/core/wiki-policy.ts"() {
-    "use strict";
-    MANAGED_START2 = "<!-- pi-agent:managed:start -->";
-    MANAGED_END2 = "<!-- pi-agent:managed:end -->";
+    SCAN_ROOTS = ["Library", "Wiki", "Projects"];
+    SKIP_DIRS = /* @__PURE__ */ new Set(["Explainers", "Attachments", ".obsidian", ".trash", ".git"]);
+    NAVIGATION = /(?:^|\/)(?:Index|Home|Context)\.md$/;
   }
 });
 var runtime_host_exports = {};
@@ -1525,7 +465,10 @@ function diagnosticText(value, limit = 4096) {
     } catch {
       return "[URL omitted]";
     }
-  }).replace(/(?:bearer\s+)[^\s,;"']+/gi, "Bearer [redacted]").replace(/(["']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret|authorization|cookie)["']?\s*[=:]\s*)(?:"[^"]*(?:"|$)|'[^']*(?:'|$)|[^\s,;]+)/gi, "$1[redacted]").replace(/\b(?:sk-|ghp_|github_pat_)[A-Za-z0-9_-]{8,}/g, "[redacted]").replace(/[\u0000-\u001f\u007f<>]/g, " ").slice(0, Math.max(0, limit));
+  }).replace(/(?:bearer\s+)[^\s,;"']+/gi, "Bearer [redacted]").replace(
+    /(["']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret|authorization|cookie)["']?\s*[=:]\s*)(?:"[^"]*(?:"|$)|'[^']*(?:'|$)|[^\s,;]+)/gi,
+    "$1[redacted]"
+  ).replace(/\b(?:sk-|ghp_|github_pat_)[A-Za-z0-9_-]{8,}/g, "[redacted]").replace(/[\u0000-\u001f\u007f<>]/g, " ").slice(0, Math.max(0, limit));
 }
 function createKnowledgeRuntimeHost() {
   const locks = /* @__PURE__ */ new Map();
@@ -1761,1133 +704,674 @@ var init_runtime_host = __esm({
     } = compatibilityKnowledgeRuntimeHost);
   }
 });
-var topic_memory_exports = {};
-__export(topic_memory_exports, {
-  TOPIC_MEMORY_LIMITS: () => TOPIC_MEMORY_LIMITS,
-  TOPIC_MEMORY_VERSION: () => TOPIC_MEMORY_VERSION,
-  archiveTopic: () => archiveTopic,
-  classifyTopic: () => classifyTopic,
-  createTopicMemory: () => createTopicMemory,
-  createTopicMemoryApi: () => createTopicMemoryApi,
-  listTopics: () => listTopics,
-  readTopic: () => readTopic,
-  topicRunHash: () => topicRunHash,
-  updateTopic: () => updateTopic
+var files_exports = {};
+__export(files_exports, {
+  MAX_NOTE_BYTES: () => MAX_NOTE_BYTES,
+  allowedSegment: () => allowedSegment,
+  canRead: () => canRead,
+  fileVersion: () => fileVersion,
+  inspectNote: () => inspectNote,
+  noteScope: () => noteScope,
+  readNoteFile: () => readNoteFile,
+  safeNotePath: () => safeNotePath,
+  snippet: () => snippet,
+  validateNote: () => validateNote
 });
-function projectKey(project) {
-  const value = text(project, 120);
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) throw new Error("Invalid knowledge project");
-  return value;
+function allowedSegment(name) {
+  return !!name && !name.startsWith(".") && !OMIT.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
 }
-function memoryPath(directory, vaultId, project) {
-  if (!isAbsolute5(directory) || !/^[a-f0-9]{24}$/.test(vaultId))
-    throw new Error("Invalid topic memory binding");
-  return join7(resolve6(directory), vaultId, "topic-memory", `${projectKey(project)}.json`);
+function validateNote(path) {
+  if (typeof path !== "string" || isAbsolute3(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment))
+    throw new Error("Expected an allowed Vault-relative Markdown path");
+  const first = path.split("/")[0] ?? "";
+  if (RESERVED2.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
+    throw new Error("Reserved Vault directories require canonical casing");
+  return path;
 }
-async function ensureWithin(root, target) {
-  const lexicalRoot = resolve6(root);
-  const actualRoot = await realpath6(root).catch(() => lexicalRoot);
-  const lexicalParent = resolve6(dirname3(target));
-  const rebased = lexicalParent.startsWith(lexicalRoot) ? join7(actualRoot, lexicalParent.slice(lexicalRoot.length)) : lexicalParent;
-  const parent = await realpath6(rebased).catch(() => rebased);
-  const rel = relative5(actualRoot, parent);
-  if (isAbsolute5(rel) || rel === ".." || rel.startsWith(`..${sep5}`))
-    throw new Error("Topic memory path escapes knowledge directory");
-  let cursor = actualRoot;
-  for (const part of relative5(actualRoot, rebased).split(sep5).filter(Boolean)) {
-    cursor = join7(cursor, part);
-    try {
-      if ((await lstat5(cursor)).isSymbolicLink())
-        throw new Error("Topic memory path cannot traverse symlinks");
-    } catch (error) {
-      if (error.code !== "ENOENT") throw error;
+function noteScope(path) {
+  const parts = path.split("/");
+  return path.startsWith("Projects/") && parts.length > 2 ? parts[1] ?? "shared" : "shared";
+}
+function canRead(path, project) {
+  const scope = noteScope(path);
+  return scope === "shared" || scope === project;
+}
+function fileVersion(stat42) {
+  return `${stat42.mtimeMs}:${stat42.ctimeMs}:${stat42.size}:${stat42.ino}`;
+}
+async function safeNotePath(vault, path) {
+  validateNote(path);
+  let full = vault;
+  for (const part of path.split("/")) {
+    full = join5(full, part);
+    if ((await lstat2(full)).isSymbolicLink()) throw new Error("Knowledge reads do not follow symlinks");
+  }
+  const actual = await realpath2(full);
+  const rel = relative3(vault, actual);
+  if (!rel || isAbsolute3(rel) || rel === ".." || rel.startsWith(`..${sep3}`))
+    throw new Error("Note is outside the bound Vault");
+  return actual;
+}
+async function inspectNote(vault, path) {
+  const full = await safeNotePath(vault, path);
+  const stat42 = await lstat2(full);
+  if (!stat42.isFile()) throw new Error("Expected a regular note");
+  return { full, stat: stat42, signature: fileVersion(stat42) };
+}
+async function closeQuietly(handle) {
+  try {
+    await handle.close();
+  } catch {
+  }
+}
+async function readNoteFile(vault, path) {
+  const { full } = await inspectNote(vault, path);
+  const handle = await open(full, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
+  try {
+    const before = await handle.stat();
+    if (!before.isFile() || before.size > MAX_NOTE_BYTES)
+      throw new Error("Note exceeds the 1 MiB indexing limit");
+    const buffer = Buffer.alloc(Number(before.size) + 1);
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    const after = await handle.stat();
+    const current = await inspectNote(vault, path);
+    if (fileVersion(before) !== fileVersion(after) || fileVersion(after) !== current.signature || offset !== before.size)
+      throw new Error("Note changed while reading; retry against its latest version");
+    const bytes = buffer.subarray(0, offset);
+    return {
+      path,
+      text: bytes.toString("utf8"),
+      hash: createHash5("sha256").update(bytes).digest("hex"),
+      signature: fileVersion(after),
+      bytes: offset
+    };
+  } catch (error) {
+    await closeQuietly(handle);
+    throw error;
+  } finally {
+    await closeQuietly(handle);
+  }
+}
+function snippet(text43, { startLine = 1, maxChars = 5e3 } = {}) {
+  const lines = text43.split("\n");
+  const start = Math.max(0, Math.floor(startLine) - 1);
+  const selected = [];
+  let chars = 0;
+  for (let i = start; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    if (chars + line.length + 1 > maxChars) {
+      if (!selected.length) selected.push(line.slice(0, maxChars));
       break;
     }
+    selected.push(line);
+    chars += line.length + 1;
   }
-  try {
-    const stat42 = await lstat5(target);
-    if (stat42.isSymbolicLink()) throw new Error("Topic memory file cannot be a symlink");
-    if (!stat42.isFile()) throw new Error("Topic memory path is not a regular file");
-    if (stat42.size > TOPIC_MEMORY_LIMITS.maxFileBytes) throw new Error("Topic memory file exceeds size limit");
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
-  return target;
-}
-function blank(vaultId, project) {
-  const now2 = (/* @__PURE__ */ new Date()).toISOString();
   return {
-    version: TOPIC_MEMORY_VERSION,
-    vaultId,
-    project,
-    revision: 0,
-    updatedAt: now2,
-    topics: []
+    text: selected.join("\n"),
+    startLine: start + 1,
+    endLine: start + selected.length,
+    totalLines: lines.length,
+    truncated: start > 0 || start + selected.length < lines.length || selected.length === 1 && (selected[0]?.length ?? 0) < (lines[start]?.length || 0)
   };
 }
-function validateSource(source, project = null) {
-  if (!source || typeof source !== "object" || typeof source.path !== "string" || isAbsolute5(source.path) || source.path.includes("\\") || source.path.split("/").includes("..") || !/^[^\0]+\.md$/.test(source.path) || source.path.length > 240 || /(?:^|\/)(?:Runs|Explainers)\//i.test(source.path) || !/^[a-f0-9]{64}$/.test(source.hash || ""))
-    return null;
-  try {
-    validateNote(source.path);
-  } catch {
-    return null;
-  }
-  if (project && !canRead(source.path, project)) return null;
-  return { path: source.path, hash: source.hash };
-}
-function normalizeTopic(topic, binding, project) {
-  if (!topic || typeof topic !== "object" || typeof topic.id !== "string")
-    throw new Error("Invalid topic record");
-  const sources = Array.isArray(topic.sources) ? (topic.sources.some((source) => !validateSource(source, project)) ? (() => {
-    throw new Error("Invalid or out-of-scope topic source");
-  })() : topic.sources).map((source) => validateSource(source, project)).filter(Boolean).slice(0, TOPIC_MEMORY_LIMITS.maxSources) : [];
-  const id2 = text(topic.id, 120);
-  if (!/^[a-z0-9][a-z0-9_-]{0,95}$/i.test(id2)) throw new Error("Invalid topic id");
-  return {
-    id: id2,
-    title: text(topic.title || topic.id, 180),
-    aliases: [
-      ...new Set(
-        (Array.isArray(topic.aliases) ? topic.aliases : []).map((x) => text(x, 120)).filter(Boolean)
-      )
-    ].slice(0, 12),
-    summary: text(topic.summary, TOPIC_MEMORY_LIMITS.maxSummaryChars),
-    entities: [
-      ...new Set(
-        (Array.isArray(topic.entities) ? topic.entities : []).map((x) => text(x, 100)).filter(Boolean)
-      )
-    ].slice(0, TOPIC_MEMORY_LIMITS.maxEntities),
-    unresolvedQuestions: [
-      ...new Set(
-        (Array.isArray(topic.unresolvedQuestions) ? topic.unresolvedQuestions : []).map((x) => text(x, 240)).filter(Boolean)
-      )
-    ].slice(0, TOPIC_MEMORY_LIMITS.maxQuestions),
-    sources,
-    artifacts: [
-      ...new Set(
-        (Array.isArray(topic.artifacts) ? topic.artifacts : []).map((x) => text(x, 240)).filter(Boolean)
-      )
-    ].slice(0, TOPIC_MEMORY_LIMITS.maxArtifacts),
-    sessionId: topic.sessionId ? text(topic.sessionId, 160) : null,
-    status: ["active", "stale", "conflict-candidate", "archived"].includes(topic.status) ? topic.status : "active",
-    createdAt: topic.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-    updatedAt: topic.updatedAt || (/* @__PURE__ */ new Date()).toISOString(),
-    lastRunHash: /^[a-f0-9]{64}$/.test(topic.lastRunHash || "") ? topic.lastRunHash : null,
-    lastRunId: topic.lastRunId ? text(topic.lastRunId, 200) : null,
-    recentRuns: Array.isArray(topic.recentRuns) ? topic.recentRuns.filter((x) => /^[a-f0-9]{64}$/.test(x)).slice(-TOPIC_MEMORY_LIMITS.maxRecentRuns) : [],
-    proposalIds: [
-      ...new Set(
-        (Array.isArray(topic.proposalIds) ? topic.proposalIds : []).map((x) => text(x, 120)).filter(Boolean)
-      )
-    ].slice(0, 12),
-    keyFindings: Array.isArray(topic.keyFindings) ? topic.keyFindings.map((x) => text(x, 300)).filter(Boolean).slice(0, 16) : [],
-    claims: Array.isArray(topic.claims) ? topic.claims.map((claim) => normalizeClaim(claim, project)).filter(Boolean).slice(-TOPIC_MEMORY_LIMITS.maxClaims) : [],
-    conflicts: Array.isArray(topic.conflicts) ? topic.conflicts.map((conflict) => normalizeConflict(conflict, project)).filter(Boolean).slice(-TOPIC_MEMORY_LIMITS.maxConflicts) : [],
-    history: Array.isArray(topic.history) ? topic.history.slice(-TOPIC_MEMORY_LIMITS.maxHistory).map((entry) => ({
-      summary: text(entry?.summary, 800),
-      updatedAt: text(entry?.updatedAt, 40)
-    })).filter((entry) => entry.summary) : [],
-    vaultId: typeof binding === "string" ? binding : binding?.vaultId,
-    project
-  };
-}
-function normalizeClaim(claim, project) {
-  if (!claim || typeof claim !== "object") return null;
-  const sourcePath = text(claim.sourcePath || claim.source_path, 240);
-  const sourceHash = text(claim.sourceHash || claim.source_hash, 64);
-  if (!sourcePath || !/^[a-f0-9]{64}$/.test(sourceHash) || !validateSource({ path: sourcePath, hash: sourceHash }, project))
-    return null;
-  const relation = ["observation", "interpretation", "hypothesis"].includes(claim.relation) ? claim.relation : "observation";
-  const value = text(claim.value, 600);
-  const statement = text(claim.claim, 1200);
-  if (!statement || !text(claim.subject, 180) || !text(claim.predicate, 180)) return null;
-  return {
-    claim: statement,
-    subject: text(claim.subject, 180),
-    predicate: text(claim.predicate, 180),
-    ...value ? { value } : {},
-    ...["organism", "tissue", "stage", "method", "endpoint", "unit"].reduce((result2, key) => {
-      const value2 = text(claim[key], 180);
-      if (value2) result2[key] = value2;
-      return result2;
-    }, {}),
-    ...claim.direction !== void 0 ? {
-      direction: ["increase", "decrease", "affirmed", "negated", "unknown"].includes(claim.direction) ? claim.direction : "unknown"
-    } : {},
-    ...Number.isFinite(claim.effect) ? { effect: claim.effect } : {},
-    sourcePath,
-    sourceHash,
-    ...claim.location ? { location: text(claim.location, 120) } : {},
-    ...claim.limitations ? { limitations: text(claim.limitations, 4e3) } : {},
-    relation
-  };
-}
-function validateConflictPath(path, project) {
-  if (typeof path !== "string" || !path || isAbsolute5(path) || path.includes("\\") || path.split("/").includes("..") || /(?:^|\/)(?:Runs|Explainers)\//i.test(path))
-    return false;
-  try {
-    validateNote(path);
-  } catch {
-    return false;
-  }
-  return canRead(path, project);
-}
-function normalizeConflict(conflict, project) {
-  if (!conflict || typeof conflict !== "object") return null;
-  const result2 = {
-    relation: text(conflict.relation, 40),
-    confidence: text(conflict.confidence, 20),
-    reason: text(conflict.reason, 600),
-    previousSourcePath: text(conflict.previousSourcePath, 240),
-    incomingSourcePath: text(conflict.incomingSourcePath, 240),
-    detectedAt: text(conflict.detectedAt, 40),
-    ...conflict.comparisonVersion === 2 ? {
-      comparisonVersion: 2,
-      previousSourceHash: text(conflict.previousSourceHash, 64),
-      incomingSourceHash: text(conflict.incomingSourceHash, 64),
-      missingConditions: conflict.missingConditions,
-      differingConditions: conflict.differingConditions
-    } : {}
-  };
-  if (!["contradicts", "supports", "refines", "supersedes", "unresolved"].includes(result2.relation))
-    return null;
-  if (!result2.reason || !validateConflictPath(result2.previousSourcePath, project) || !validateConflictPath(result2.incomingSourcePath, project))
-    return null;
-  return result2;
-}
-function validateDocument(value, vaultId, project) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Corrupt topic memory; refusing overwrite");
-  if (value.version !== TOPIC_MEMORY_VERSION)
-    throw new Error("Unsupported topic memory schema version; refusing overwrite");
-  if (value.vaultId !== vaultId || value.project !== project || !Number.isSafeInteger(value.revision) || value.revision < 0 || !Array.isArray(value.topics))
-    throw new Error("Corrupt topic memory; refusing overwrite");
-  if (value.topics.length > TOPIC_MEMORY_LIMITS.maxTopics)
-    throw new Error("Topic memory exceeds its bounded record limit");
-  return {
-    ...value,
-    topics: value.topics.map((topic) => normalizeTopic(topic, vaultId, project))
-  };
-}
-async function readDocument(path, vaultId, project) {
-  try {
-    const raw = await readFile5(path, "utf8");
-    if (Buffer.byteLength(raw) > TOPIC_MEMORY_LIMITS.maxFileBytes)
-      throw new Error("Topic memory file exceeds size limit");
-    const parsed = JSON.parse(raw);
-    return validateDocument(parsed, vaultId, project);
-  } catch (error) {
-    if (error.code === "ENOENT") return blank(vaultId, project);
-    if (error instanceof SyntaxError) throw new Error("Corrupt topic memory; refusing overwrite");
-    throw error;
-  }
-}
-async function atomicWrite(path, value) {
-  await mkdir5(dirname3(path), { recursive: true, mode: 448 });
-  const temp = join7(dirname3(path), `.${randomUUID5()}.tmp`);
-  try {
-    await writeFile5(temp, `${JSON.stringify(value, null, 2)}
-`, {
-      flag: "wx",
-      mode: 384
-    });
-    await rename5(temp, path);
-  } finally {
-    await unlink4(temp).catch((error) => {
-      if (error.code !== "ENOENT") throw error;
-    });
-  }
-}
-function classifyTopic(existing, incoming) {
-  if (!existing) return "new";
-  if (incoming.runHash && (incoming.runHash === existing.lastRunHash || existing.recentRuns?.includes(incoming.runHash)))
-    return "duplicate";
-  const oldSources = new Map((existing.sources || []).map((source) => [source.path, source.hash]));
-  const changed = (incoming.sources || []).some(
-    (source) => oldSources.has(source.path) && oldSources.get(source.path) !== source.hash
-  );
-  if (changed) return "stale";
-  const previousClaims = existing.claims || [];
-  const incomingClaims = incoming.claims || [];
-  if (previousClaims.length && incomingClaims.length && compareClaimSets(previousClaims, incomingClaims).some((comparison) => comparison.blocking))
-    return "conflict-candidate";
-  return "additional";
-}
-function createTopicMemoryWithHost(runtime, config, { binding, project, directory = config?.knowledgeDirectory() } = {}, storageFactory) {
-  if (!binding?.vaultId) throw new Error("Topic memory requires a bound Vault");
-  const scope = { vaultId: binding.vaultId, project: projectKey(project) };
-  const storage = storageFactory?.(binding, scope.project);
-  const path = storage ? storage.key : memoryPath(directory, scope.vaultId, scope.project);
-  const read = async () => {
-    if (storage) {
-      const value = await storage.read();
-      if (value === null) return blank(scope.vaultId, scope.project);
-      if (Buffer.byteLength(JSON.stringify(value)) > TOPIC_MEMORY_LIMITS.maxFileBytes)
-        throw new Error("Topic memory file exceeds size limit");
-      return validateDocument(value, scope.vaultId, scope.project);
-    }
-    await ensureWithin(directory, path);
-    return readDocument(path, scope.vaultId, scope.project);
-  };
-  const mutate = async (expectedRevision, updater) => runtime.runRuntimeExclusive("topic-memory", path, async () => {
-    const current = await read();
-    if (expectedRevision !== void 0 && expectedRevision !== null && current.revision !== expectedRevision)
-      throw new Error("Topic memory revision changed");
-    const next = updater(structuredClone(current));
-    if (next?.__topicNoop) return current;
-    const value = validateDocument(
-      {
-        ...next,
-        version: TOPIC_MEMORY_VERSION,
-        vaultId: scope.vaultId,
-        project: scope.project,
-        revision: current.revision + 1,
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      },
-      scope.vaultId,
-      scope.project
-    );
-    if (value.topics.length > TOPIC_MEMORY_LIMITS.maxTopics) {
-      const archived = value.topics.filter((topic) => topic.status === "archived");
-      if (!archived.length)
-        throw new Error("Topic memory quota exceeded; archive a topic before adding another");
-      const remove = value.topics.length - TOPIC_MEMORY_LIMITS.maxTopics;
-      const evict = new Set(archived.slice(-remove).map((topic) => topic.id));
-      value.topics = value.topics.filter((topic) => !evict.has(topic.id));
-    }
-    if (storage) await storage.write(value, current.revision);
-    else await atomicWrite(path, value);
-    return value;
-  });
-  const compact = (topic) => ({
-    id: topic.id,
-    title: topic.title,
-    aliases: topic.aliases,
-    summary: topic.summary.slice(0, TOPIC_MEMORY_LIMITS.maxContextChars),
-    entities: topic.entities,
-    unresolvedQuestions: topic.unresolvedQuestions,
-    sources: topic.sources,
-    artifacts: topic.artifacts,
-    status: topic.status,
-    revision: topic.revision,
-    updatedAt: topic.updatedAt,
-    lastRunHash: topic.lastRunHash,
-    lastRunId: topic.lastRunId,
-    recentRuns: topic.recentRuns,
-    proposalIds: topic.proposalIds,
-    keyFindings: topic.keyFindings,
-    claims: topic.claims,
-    conflicts: topic.conflicts,
-    history: topic.history
-  });
-  const context = (topic) => {
-    const value = {
-      id: topic.id,
-      title: topic.title,
-      entities: topic.entities.slice(0, 12),
-      summary: topic.summary.slice(0, 900),
-      claims: topic.claims.slice(-6).map((claim) => ({
-        claim: claim.claim,
-        subject: claim.subject,
-        predicate: claim.predicate,
-        value: claim.value,
-        organism: claim.organism,
-        tissue: claim.tissue,
-        stage: claim.stage,
-        method: claim.method,
-        relation: claim.relation
-      })),
-      conflicts: topic.conflicts.slice(-4)
-    };
-    let output = JSON.stringify(value);
-    if (output.length > TOPIC_MEMORY_LIMITS.maxContextChars)
-      output = JSON.stringify({
-        ...value,
-        summary: value.summary.slice(0, 400),
-        entities: value.entities.slice(0, 6)
-      });
-    if (output.length > TOPIC_MEMORY_LIMITS.maxContextChars)
-      output = JSON.stringify({
-        id: value.id,
-        title: value.title,
-        entities: value.entities.slice(0, 3)
-      });
-    return output;
-  };
-  return {
-    path,
-    scope,
-    read,
-    list: async (query = "", { includeArchived = false } = {}) => {
-      const doc = await read();
-      const q = text(query, 180).toLowerCase();
-      return {
-        revision: doc.revision,
-        topics: doc.topics.filter((topic) => includeArchived || topic.status !== "archived").filter(
-          (topic) => !q || [topic.id, topic.title, ...topic.aliases].some((value) => value.toLowerCase().includes(q))
-        ).map(compact)
-      };
-    },
-    get: async (idOrName) => {
-      const doc = await read();
-      const q = text(idOrName, 180).toLowerCase();
-      const matches = doc.topics.filter(
-        (topic) => [topic.id, topic.title, ...topic.aliases].some((value) => value.toLowerCase() === q)
-      );
-      return { revision: doc.revision, matches: matches.map(compact) };
-    },
-    context: async (topic) => {
-      const doc = await read();
-      const item = typeof topic === "string" ? doc.topics.find((x) => x.id === topic) : topic;
-      return item ? context(item) : null;
-    },
-    refreshSourceCheck: async (topicId) => {
-      const doc = await read();
-      const topic = doc.topics.find((item) => item.id === text(topicId, 120));
-      if (!topic) throw new Error("Topic not found");
-      const stale = [];
-      for (const source of topic.sources) {
-        try {
-          validateNote(source.path);
-          if (!canRead(source.path, scope.project) || /(?:^|\/)(?:Runs|Explainers)\//i.test(source.path)) {
-            stale.push({ path: source.path, reason: "out-of-scope" });
-            continue;
-          }
-          const current = storage ? await storage.readSource(source.path) : await readNoteFile(binding.vault, source.path);
-          if (current.hash !== source.hash) stale.push({ path: source.path, reason: "changed" });
-        } catch {
-          stale.push({ path: source.path, reason: "missing-or-invalid" });
-        }
-      }
-      if (stale.length && topic.status !== "stale") {
-        await mutate(void 0, (value) => {
-          const current = value.topics.find((item) => item.id === topic.id);
-          if (current) current.status = "stale";
-          return value;
-        });
-      }
-      return {
-        topic: {
-          ...compact(topic),
-          status: stale.length ? "stale" : topic.status
-        },
-        stale,
-        status: stale.length ? "stale" : topic.status
-      };
-    },
-    link: async (topicId, { proposalIds = [], artifacts = [] } = {}) => mutate(void 0, (doc) => {
-      const topic = doc.topics.find((item) => item.id === text(topicId, 120));
-      if (!topic) throw new Error("Topic not found");
-      topic.proposalIds = [.../* @__PURE__ */ new Set([...topic.proposalIds || [], ...proposalIds])].slice(-12);
-      topic.artifacts = [.../* @__PURE__ */ new Set([...topic.artifacts || [], ...artifacts])].slice(
-        -TOPIC_MEMORY_LIMITS.maxArtifacts
-      );
-      topic.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-      return doc;
-    }),
-    update: async (input, expectedRevision) => {
-      if (!Number.isSafeInteger(expectedRevision)) throw new Error("expectedRevision is required");
-      return mutate(expectedRevision, (doc) => {
-        const allowed = /* @__PURE__ */ new Set([
-          "id",
-          "title",
-          "summary",
-          "aliases",
-          "entities",
-          "unresolvedQuestions",
-          "keyFindings",
-          "claims"
-        ]);
-        for (const key of Object.keys(input || {}))
-          if (!allowed.has(key)) throw new Error(`Unsupported topic metadata field: ${key}`);
-        const id2 = text(input.id, 120);
-        if (!id2) throw new Error("Topic id is required");
-        const index = doc.topics.findIndex((topic) => topic.id === id2);
-        const previous = index >= 0 ? doc.topics[index] : null;
-        const incomingClaims = Array.isArray(input.claims) ? input.claims.map((claim) => normalizeClaim(claim, scope.project)).filter(Boolean) : [];
-        const claimComparisons = compareClaimSets(previous?.claims || [], incomingClaims);
-        const merged = normalizeTopic(
-          {
-            ...previous,
-            ...input,
-            ...claimComparisons.some((comparison) => comparison.blocking) ? { status: "conflict-candidate" } : previous?.status === "conflict-candidate" ? { status: "conflict-candidate" } : {},
-            conflicts: [
-              ...previous?.conflicts || [],
-              ...claimComparisons.map((comparison) => ({
-                comparisonVersion: 2,
-                previousSourceHash: comparison.previous.sourceHash,
-                incomingSourceHash: comparison.incoming.sourceHash,
-                missingConditions: comparison.missingConditions,
-                differingConditions: comparison.differingConditions,
-                relation: comparison.relation,
-                confidence: comparison.confidence,
-                reason: comparison.reason,
-                previousSourcePath: comparison.previous.sourcePath,
-                incomingSourcePath: comparison.incoming.sourcePath,
-                detectedAt: (/* @__PURE__ */ new Date()).toISOString()
-              }))
-            ],
-            id: id2,
-            createdAt: previous?.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-            updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-          },
-          scope.vaultId,
-          scope.project
-        );
-        if (index >= 0) doc.topics[index] = merged;
-        else doc.topics.unshift(merged);
-        return doc;
-      });
-    },
-    archive: async (id2, expectedRevision) => {
-      if (!Number.isSafeInteger(expectedRevision)) throw new Error("expectedRevision is required");
-      return mutate(expectedRevision, (doc) => {
-        const topic = doc.topics.find((item) => item.id === text(id2, 120));
-        if (!topic) throw new Error("Topic not found");
-        topic.status = "archived";
-        topic.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-        return doc;
-      });
-    },
-    record: async (input, expectedRevision) => {
-      if (!input || typeof input !== "object") throw new Error("Invalid topic record input");
-      let receipt2;
-      let claimComparisons = [];
-      const next = await mutate(expectedRevision, (value) => {
-        if (Array.isArray(input.sources) && input.sources.some((source) => !validateSource(source, scope.project)))
-          throw new Error("Invalid or out-of-scope topic source");
-        const key = text(input.topicId || input.title, 180).toLowerCase();
-        const matches = value.topics.filter(
-          (topic) => [topic.id, topic.title, ...topic.aliases].some((v) => v.toLowerCase() === key)
-        );
-        if (matches.length > 1) throw new Error("Ambiguous topic identity; choose an exact topic id");
-        const existing = matches[0] || (input.topicId ? value.topics.find((topic) => topic.id === text(input.topicId, 120)) : null);
-        const classification = classifyTopic(existing, input);
-        if (classification === "duplicate") {
-          receipt2 = {
-            classification,
-            revision: value.revision,
-            topic: compact(existing),
-            changed: false
-          };
-          value.__topicNoop = true;
-          return value;
-        }
-        const id2 = existing?.id || text(input.topicId, 96) || `${slug(input.title)}-${digest2(input.title).slice(0, 8)}`;
-        if (!/^[a-z0-9][a-z0-9_-]{0,95}$/i.test(id2)) throw new Error("Invalid topic id");
-        const index = value.topics.findIndex((topic) => topic.id === id2);
-        const prior = index >= 0 ? value.topics[index] : null;
-        const priorClaims = prior?.claims || [];
-        const incomingClaims = Array.isArray(input.claims) ? input.claims.map((claim) => normalizeClaim(claim, scope.project)).filter(Boolean) : [];
-        claimComparisons = compareClaimSets(priorClaims, incomingClaims);
-        const conflictRecords = claimComparisons.map((comparison) => ({
-          comparisonVersion: 2,
-          previousSourceHash: comparison.previous.sourceHash,
-          incomingSourceHash: comparison.incoming.sourceHash,
-          missingConditions: comparison.missingConditions,
-          differingConditions: comparison.differingConditions,
-          relation: comparison.relation,
-          confidence: comparison.confidence,
-          reason: comparison.reason,
-          previousSourcePath: comparison.previous.sourcePath,
-          incomingSourcePath: comparison.incoming.sourcePath,
-          detectedAt: (/* @__PURE__ */ new Date()).toISOString()
-        }));
-        const mergedClaims = [...priorClaims, ...incomingClaims].filter(
-          (claim, claimIndex, all) => all.findIndex(
-            (candidate) => candidate.sourcePath === claim.sourcePath && candidate.sourceHash === claim.sourceHash && candidate.claim === claim.claim
-          ) === claimIndex
-        );
-        const mergedSources = [];
-        for (const source of [...prior?.sources || [], ...input.sources || []]) {
-          if (!validateSource(source, scope.project) || mergedSources.some((item) => item.path === source.path && item.hash === source.hash))
-            continue;
-          mergedSources.push(source);
-        }
-        mergedSources.splice(0, Math.max(0, mergedSources.length - TOPIC_MEMORY_LIMITS.maxSources));
-        const updated = normalizeTopic(
-          {
-            ...prior,
-            ...input,
-            id: id2,
-            aliases: [.../* @__PURE__ */ new Set([...prior?.aliases || [], ...input.aliases || []])].slice(-12),
-            entities: [.../* @__PURE__ */ new Set([...prior?.entities || [], ...input.entities || []])].slice(
-              -TOPIC_MEMORY_LIMITS.maxEntities
-            ),
-            unresolvedQuestions: [
-              .../* @__PURE__ */ new Set([...prior?.unresolvedQuestions || [], ...input.unresolvedQuestions || []])
-            ].slice(-TOPIC_MEMORY_LIMITS.maxQuestions),
-            artifacts: [.../* @__PURE__ */ new Set([...prior?.artifacts || [], ...input.artifacts || []])].slice(
-              -TOPIC_MEMORY_LIMITS.maxArtifacts
-            ),
-            proposalIds: [.../* @__PURE__ */ new Set([...prior?.proposalIds || [], ...input.proposalIds || []])].slice(
-              -12
-            ),
-            keyFindings: [.../* @__PURE__ */ new Set([...prior?.keyFindings || [], ...input.keyFindings || []])].slice(
-              -16
-            ),
-            claims: mergedClaims,
-            conflicts: [...prior?.conflicts || [], ...conflictRecords].slice(
-              -TOPIC_MEMORY_LIMITS.maxConflicts
-            ),
-            history: [
-              ...prior?.history || [],
-              ...prior?.summary ? [{ summary: prior.summary, updatedAt: prior.updatedAt }] : []
-            ].slice(-TOPIC_MEMORY_LIMITS.maxHistory),
-            sources: mergedSources,
-            status: classification === "stale" || classification === "conflict-candidate" ? classification : prior?.status === "conflict-candidate" ? "conflict-candidate" : "active",
-            lastRunHash: input.runHash || prior?.lastRunHash,
-            recentRuns: input.runHash ? [.../* @__PURE__ */ new Set([...prior?.recentRuns || [], input.runHash])].slice(
-              -TOPIC_MEMORY_LIMITS.maxRecentRuns
-            ) : prior?.recentRuns,
-            updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-          },
-          scope.vaultId,
-          scope.project
-        );
-        if (index >= 0) value.topics[index] = updated;
-        else value.topics.unshift(updated);
-        receipt2 = { classification, topic: compact(updated), changed: true };
-        return value;
-      });
-      return {
-        ...receipt2,
-        ...claimComparisons.length ? { conflicts: claimComparisons } : {},
-        revision: next.revision,
-        topic: receipt2.topic && next.topics.find((topic) => topic.id === receipt2.topic.id) ? compact(next.topics.find((topic) => topic.id === receipt2.topic.id)) : receipt2.topic
-      };
-    }
-  };
-}
-function topicRunHash(summary, sources = []) {
-  return digest2(
-    JSON.stringify({
-      summary: text(summary, TOPIC_MEMORY_LIMITS.maxSummaryChars),
-      sources: sources.map(validateSource).filter(Boolean).sort((a, b) => a.path.localeCompare(b.path) || a.hash.localeCompare(b.hash))
-    })
-  );
-}
-function createTopicMemoryApi(runtime, config, storageFactory) {
-  const createTopicMemory2 = (options = {}) => createTopicMemoryWithHost(runtime, config, options, storageFactory);
-  async function listTopics2(options = {}) {
-    return (await createTopicMemory2(options).list(options.query || "")).topics;
-  }
-  async function readTopic2(options = {}) {
-    return (await createTopicMemory2(options).get(options.topic || options.id || "")).matches;
-  }
-  async function updateTopic2(options = {}) {
-    const { binding, project, directory, expectedRevision, ...input } = options;
-    if (!Number.isSafeInteger(expectedRevision)) throw new Error("expectedRevision is required");
-    return createTopicMemory2({ binding, project, directory }).update(input, expectedRevision);
-  }
-  async function archiveTopic2(options = {}) {
-    if (!Number.isSafeInteger(options.expectedRevision)) throw new Error("expectedRevision is required");
-    return createTopicMemory2(options).archive(options.id, options.expectedRevision);
-  }
-  return { createTopicMemory: createTopicMemory2, listTopics: listTopics2, readTopic: readTopic2, updateTopic: updateTopic2, archiveTopic: archiveTopic2 };
-}
-var TOPIC_MEMORY_VERSION;
-var TOPIC_MEMORY_LIMITS;
-var digest2;
-var text;
-var slug;
-var createTopicMemory;
-var listTopics;
-var readTopic;
-var updateTopic;
-var archiveTopic;
-var init_topic_memory = __esm({
-  "src/core/topic-memory.ts"() {
+var MAX_NOTE_BYTES;
+var OMIT;
+var RESERVED2;
+var init_files = __esm({
+  "src/core/files.ts"() {
     "use strict";
-    init_runtime_host();
-    init_claim_conflicts();
-    init_config();
-    init_files();
-    TOPIC_MEMORY_VERSION = 1;
-    TOPIC_MEMORY_LIMITS = Object.freeze({
-      maxTopics: 64,
-      maxSummaryChars: 4e3,
-      maxContextChars: 2400,
-      maxEntities: 24,
-      maxQuestions: 16,
-      maxSources: 24,
-      maxArtifacts: 12,
-      maxHistory: 8,
-      maxRecentRuns: 12,
-      maxClaims: 64,
-      maxConflicts: 32,
-      maxFileBytes: 512 * 1024
-    });
-    digest2 = (value) => createHash9("sha256").update(String(value)).digest("hex");
-    text = (value, limit) => String(value ?? "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, limit);
-    slug = (value) => text(value, 160).toLowerCase().replace(/[^a-z0-9\u0080-\uffff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "topic";
-    ({ createTopicMemory, listTopics, readTopic, updateTopic, archiveTopic } = createTopicMemoryApi(compatibilityKnowledgeRuntimeHost, { knowledgeDirectory }));
+    MAX_NOTE_BYTES = 1024 * 1024;
+    OMIT = /* @__PURE__ */ new Set([
+      "node_modules",
+      "dist",
+      "build",
+      "out",
+      "coverage",
+      "vendor",
+      "venv",
+      "__pycache__",
+      "Attachments",
+      "Templates",
+      "_template"
+    ]);
+    RESERVED2 = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
   }
 });
-async function updateNavigation(vault, path, heading, body) {
-  if (!["Home.md", "Wiki/Index.md", "Library/Index.md"].includes(path) && !/^Projects\/[a-z0-9-]+\/Index\.md$/.test(path))
-    throw new Error("Not an allowed navigation target");
-  const full = await containedVaultFile(vault, path);
-  let original = null;
-  try {
-    original = (await readNoteFile(vault, path)).text;
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
-  const base2 = original ?? `${heading}
-
-## Human review
-`;
-  const start = base2.indexOf(START), end = base2.indexOf(END), block = `${START}
-${body.trim()}
-${END}`;
-  if (start < 0 !== end < 0 || end < start || start >= 0 && (base2.indexOf(START, start + 1) >= 0 || base2.indexOf(END, end + 1) >= 0))
-    throw new Error("Invalid navigation managed markers");
-  const updated = start >= 0 ? base2.slice(0, start) + block + base2.slice(end + END.length) : `${base2.trimEnd()}
-
-${block}
-`;
-  if (updated === original) return { path, changed: false };
-  if (original !== null && (await readNoteFile(vault, path)).hash !== hash2(original))
-    throw new Error("Human navigation changed; update was not applied");
-  await mkdir6(dirname4(full), { recursive: true });
-  if (original === null) {
-    await writeFile6(full, updated, { flag: "wx" });
-    return { path, changed: true };
-  }
-  const temporary = `${full}.${randomUUID6()}.tmp`;
-  await writeFile6(temporary, updated, { flag: "wx" });
-  await rename6(temporary, full);
-  return { path, changed: true };
+function statusTone(status) {
+  const value = String(status || "");
+  if (OK.has(value)) return "ok";
+  if (ERROR.has(value)) return "error";
+  if (MUTED.has(value)) return "muted";
+  return "warn";
 }
-async function runNavigationMaintenance(service, project, limit = 3) {
-  const jobs = await service.request("jobs", { project, kind: "navigation" }), out = [];
-  for (const item of jobs.items.filter((job) => job.kind === "navigation").slice(0, Math.min(10, limit))) {
-    const rows = await service.request("navigation", {
-      project: item.scope === "shared" ? null : item.scope,
-      targetPath: item.path
-    });
-    const links = rows.slice(0, 60).filter((row) => !/[[\]|#\r\n]/.test(row.path)).map((row) => `- [[${row.path.slice(0, -3)}]]`);
-    const body = [...links, rows.length > 60 ? "\n\u66F4\u591A\u6761\u76EE\u8BF7\u4F7F\u7528\u77E5\u8BC6\u68C0\u7D22\uFF1B\u672C\u9875\u53EA\u4FDD\u7559\u77ED\u5BFC\u822A\u3002" : ""].join(
-      "\n"
-    );
+function cardLink(kind, target, label2, i18n) {
+  if (!["external", "resource", "note", "path"].includes(kind) || typeof target !== "string" || !target)
+    return null;
+  return {
+    label: clip(label2, 60) || kind,
+    ...i18n ? { i18n } : {},
+    kind,
+    target: target.slice(0, 4096)
+  };
+}
+function flowCard(input) {
+  const { key, kind, title, subtitle, status, tone, detail, path, fields, links, source, provisionalTitle } = input;
+  const state = clip(String(status ?? ""), 32) || "unknown";
+  const safeKind = clip(kind, 40) || "artifact";
+  return {
+    key: clip(String(key ?? ""), 512) || `${kind}:${title}`,
+    kind: safeKind,
+    title: clip(String(title ?? ""), 200) || kind || "artifact",
+    provisionalTitle: provisionalTitle === true,
+    subtitle: clip(subtitle, 300),
+    status: state,
+    tone: tone || statusTone(state),
+    detail: clip(detail, 400),
+    path: clip(path, 4096),
+    fields: (fields || []).filter(Boolean).slice(0, 12),
+    links: (links || []).filter(Boolean).slice(0, 6),
+    source: clip(source, 80),
+    at: Date.now()
+  };
+}
+function failureCard(event) {
+  const text43 = (event.result?.content || []).filter((block) => block?.type === "text").map((block) => block.text).join(" ");
+  return flowCard({
+    key: event.toolCallId,
+    kind: "failure",
+    title: event.toolName,
+    status: "failed",
+    detail: text43,
+    source: event.toolName
+  });
+}
+var OK;
+var ERROR;
+var MUTED;
+var clip;
+var record;
+var ZOTERO_KEY;
+var CHANNEL_LABEL;
+var init_flow_cards = __esm({
+  "src/core/flow-cards.ts"() {
+    "use strict";
+    OK = /* @__PURE__ */ new Set([
+      "verified",
+      "saved",
+      "reused",
+      "both-verified",
+      "attachment-indexed-not-read",
+      "applied",
+      "written",
+      "note-written",
+      "summary-written",
+      "explainer-archived",
+      "setup-complete",
+      "\u5DF2\u4FDD\u5B58",
+      "archived",
+      "found",
+      "ready"
+    ]);
+    ERROR = /* @__PURE__ */ new Set([
+      "failed",
+      "identity-mismatch",
+      "missing",
+      "blocked",
+      "cancelled",
+      "not-found",
+      "error"
+    ]);
+    MUTED = /* @__PURE__ */ new Set(["unknown", "unavailable", "pending"]);
+    clip = (value, max) => typeof value === "string" && value ? value.slice(0, max) : null;
+    record = (value) => value && typeof value === "object" ? value : {};
+    ZOTERO_KEY = /^[A-Z0-9]{8}$/;
+    CHANNEL_LABEL = { connector: "\u8FDE\u63A5\u5668", web: "Web API" };
+  }
+});
+function createLocalReviewPolicyStorage(config) {
+  let queue = Promise.resolve();
+  async function read() {
+    const directory = config.knowledgeDirectory();
+    if (!directory) return { kind: "missing", version: null };
+    let bytes;
     try {
-      const result2 = await updateNavigation(
-        service.binding.vault,
-        item.path,
-        `# ${item.scope === "shared" ? "Shared knowledge" : item.scope}`,
-        body
-      );
-      if (result2.changed) await service.request("changed", { paths: [item.path] });
-      await service.request("completeJob", { key: item.key, revision: item.revision });
-      out.push(result2);
+      bytes = await readFile5(join6(directory, "review-policy.json"));
     } catch (error) {
-      out.push({ path: item.path, error: error.message });
+      if (error.code === "ENOENT") return { kind: "missing", version: null };
+      throw error;
     }
+    let value;
+    try {
+      value = JSON.parse(bytes.toString("utf8"));
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      console.warn("[knowledge review policy] Invalid JSON; strict mode applies");
+      return { kind: "corrupt", version: null };
+    }
+    return {
+      kind: "value",
+      value,
+      version: createHash6("sha256").update(bytes).digest("hex")
+    };
   }
   return {
-    navigation: out,
-    semanticWikiRewritten: false,
-    remaining: await service.request("jobs", { project })
+    read,
+    write(value, expectedVersion) {
+      const operation = queue.catch(() => void 0).then(async () => {
+        const directory = config.knowledgeDirectory();
+        if (!directory) throw new Error("No application knowledge directory");
+        const current = await read();
+        if (current.kind === "corrupt")
+          throw new Error("Review policy is damaged; repair it before changing settings");
+        if (current.version !== expectedVersion)
+          throw Object.assign(new Error("Review policy changed; refresh before saving"), {
+            code: "ESTATECONFLICT"
+          });
+        await mkdir3(directory, { recursive: true, mode: 448 });
+        const temporary = join6(directory, `review-policy.${randomUUID3()}.tmp`);
+        await writeFile3(temporary, JSON.stringify(value), {
+          flag: "wx",
+          mode: 384
+        });
+        try {
+          await rename3(temporary, join6(directory, "review-policy.json"));
+        } catch (error) {
+          await unlink2(temporary);
+          throw error;
+        }
+        return read();
+      });
+      queue = operation;
+      return operation;
+    }
   };
 }
-var START;
-var END;
-var hash2;
-var init_maintenance = __esm({
-  "src/core/maintenance.ts"() {
-    "use strict";
-    init_layout();
-    init_files();
-    START = "<!-- pi-agent:managed:start -->";
-    END = "<!-- pi-agent:managed:end -->";
-    hash2 = (text43) => createHash10("sha256").update(text43).digest("hex");
-  }
-});
-var init_ingest_identity = __esm({
-  "src/core/ingest-identity.ts"() {
+var init_review_policy_storage = __esm({
+  "src/core/review-policy-storage.ts"() {
     "use strict";
   }
 });
-function stripComment(text43) {
-  let quote = null;
-  for (let i = 0; i < text43.length; i++) {
-    const char = text43[i];
-    if (quote) {
-      if (char === "\\" && quote === '"') i++;
-      else if (char === quote) quote = null;
-    } else if (char === '"' || char === "'") quote = char;
-    else if (char === "#" && (i === 0 || /\s/.test(text43[i - 1] ?? ""))) return text43.slice(0, i).trimEnd();
-  }
-  return text43;
-}
-function splitFlow(inner) {
-  const items = [];
-  let current = "";
-  let quote = null;
-  let depth = 0;
-  for (let i = 0; i < inner.length; i++) {
-    const char = inner[i] ?? "";
-    if (quote) {
-      current += char;
-      if (char === "\\" && quote === '"') current += inner[++i] ?? "";
-      else if (char === quote) quote = null;
-      continue;
-    }
-    if (char === '"' || char === "'") quote = char;
-    else if (char === "[" || char === "{") depth++;
-    else if (char === "]" || char === "}") depth--;
-    if (char === "," && depth === 0) {
-      items.push(current.trim());
-      current = "";
-    } else current += char;
-  }
-  if (current.trim()) items.push(current.trim());
-  return items;
-}
-function parseScalar(raw) {
-  const text43 = raw.trim();
-  if (text43 === "" || text43 === "~" || text43 === "null" || text43 === "Null" || text43 === "NULL") return null;
-  if (text43 === "true" || text43 === "True") return true;
-  if (text43 === "false" || text43 === "False") return false;
-  if (text43.startsWith('"')) {
-    if (text43.endsWith('"') && text43.length >= 2) {
-      try {
-        return JSON.parse(text43);
-      } catch {
-        return text43.slice(1, -1).replace(/\\"/g, '"');
-      }
-    }
-    throw new Error("Unterminated double-quoted string");
-  }
-  if (text43.startsWith("'")) {
-    if (text43.endsWith("'") && text43.length >= 2) return text43.slice(1, -1).replace(/''/g, "'");
-    throw new Error("Unterminated single-quoted string");
-  }
-  if (text43.startsWith("[")) {
-    if (!text43.endsWith("]")) throw new Error("Unterminated flow sequence");
-    const inner = text43.slice(1, -1).trim();
-    return inner ? splitFlow(inner).map(parseScalar) : [];
-  }
-  if (text43.startsWith("{")) {
-    if (!text43.endsWith("}")) throw new Error("Unterminated flow mapping");
-    const inner = text43.slice(1, -1).trim();
-    const out = {};
-    if (!inner) return out;
-    for (const pair of splitFlow(inner)) {
-      const match = pair.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:\s*(.*)$/);
-      if (!match) throw new Error(`Invalid flow mapping entry: ${pair}`);
-      const key = String(parseScalar(match[1] ?? ""));
-      if (!UNSAFE_KEYS.has(key)) out[key] = parseScalar(match[2] ?? "");
-    }
-    return out;
-  }
-  if (/^[&*!|>]/.test(text43)) throw new Error(`Unsupported YAML syntax: ${text43.slice(0, 20)}`);
-  if (/^-?\d+(?:\.\d+)?$/.test(text43) && text43.length <= 15) return Number(text43);
-  return text43;
-}
-function isListItem(line) {
-  return line.text === "-" || line.text.startsWith("- ");
-}
-var KNOWLEDGE_TYPES;
-var RUN_RESULT_TYPES;
-var NOTE_TYPES;
-var MAX_FRONTMATTER_CHARS;
-var MAX_DEPTH;
-var UNSAFE_KEYS;
-var KEY_LINE;
-var Parser;
-var init_ingest_frontmatter = __esm({
-  "src/core/ingest-frontmatter.ts"() {
-    "use strict";
-    init_ingest_identity();
-    KNOWLEDGE_TYPES = [
-      "paper",
-      "method",
-      "software",
-      "dataset",
-      "concept",
-      "entity",
-      "idea",
-      "claim",
-      "evidence",
-      "decision",
-      "question",
-      "wiki"
-    ];
-    RUN_RESULT_TYPES = ["run", "artifact", "explainer"];
-    NOTE_TYPES = [...KNOWLEDGE_TYPES, ...RUN_RESULT_TYPES];
-    MAX_FRONTMATTER_CHARS = 64 * 1024;
-    MAX_DEPTH = 6;
-    UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-    KEY_LINE = /^("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^\s"'#\-[{][^:#]*?|-[^\s:#][^:#]*?)\s*:(?:\s+(.*)|\s*)$/;
-    Parser = class {
-      constructor(lines) {
-        this.lines = lines;
-      }
-      index = 0;
-      parseDocument() {
-        if (!this.lines.length) return {};
-        const first = this.lines[0];
-        if (first.indent !== 0) throw new Error(`Line ${first.number}: top-level key must not be indented`);
-        if (isListItem(first)) throw new Error(`Line ${first.number}: frontmatter must be a mapping`);
-        const value = this.parseMap(0, 0);
-        if (this.index < this.lines.length) {
-          const line = this.lines[this.index];
-          throw new Error(`Line ${line.number}: unexpected indentation`);
-        }
-        return value;
-      }
-      peek() {
-        return this.lines[this.index];
-      }
-      parseBlock(indent, depth) {
-        if (depth > MAX_DEPTH) throw new Error("Frontmatter nesting is too deep");
-        const line = this.peek();
-        if (!line) return null;
-        return isListItem(line) ? this.parseList(line.indent, depth) : this.parseMap(indent, depth);
-      }
-      valueAfterKey(indent, depth, rest) {
-        if (rest !== void 0 && rest.trim() !== "") {
-          const value = stripComment(rest);
-          if (/^[|>][+-]?$/.test(value.trim())) return this.parseBlockScalar(indent, value.trim());
-          return parseScalar(value);
-        }
-        const next = this.peek();
-        if (!next) return null;
-        if (next.indent > indent) return this.parseBlock(next.indent, depth + 1);
-        if (next.indent === indent && isListItem(next)) return this.parseList(indent, depth + 1);
-        return null;
-      }
-      parseBlockScalar(indent, style) {
-        const collected = [];
-        let blockIndent = null;
-        while (this.index < this.lines.length) {
-          const line = this.lines[this.index];
-          if (line.indent <= indent) break;
-          blockIndent ??= line.indent;
-          collected.push(`${" ".repeat(Math.max(0, line.indent - blockIndent))}${line.text}`);
-          this.index++;
-        }
-        const joined = style.startsWith("|") ? collected.join("\n") : collected.join(" ");
-        return style.endsWith("-") ? joined : `${joined}
-`;
-      }
-      parseMap(indent, depth) {
-        const out = {};
-        while (this.index < this.lines.length) {
-          const line = this.lines[this.index];
-          if (line.indent < indent) break;
-          if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
-          if (isListItem(line)) break;
-          const match = line.text.match(KEY_LINE);
-          if (!match) throw new Error(`Line ${line.number}: expected "key: value"`);
-          const key = String(parseScalar(match[1] ?? "")).trim();
-          this.index++;
-          const value = this.valueAfterKey(indent, depth, match[2]);
-          if (UNSAFE_KEYS.has(key)) continue;
-          if (Object.hasOwn(out, key)) throw new Error(`Line ${line.number}: duplicate key "${key}"`);
-          out[key] = value;
-        }
-        return out;
-      }
-      parseList(indent, depth) {
-        const out = [];
-        while (this.index < this.lines.length) {
-          const line = this.lines[this.index];
-          if (line.indent !== indent || !isListItem(line)) {
-            if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
-            break;
-          }
-          const rest = line.text === "-" ? "" : line.text.slice(2);
-          const offset = line.text === "-" ? 1 : 2 + (rest.length - rest.trimStart().length);
-          const content = rest.trim();
-          if (!content) {
-            this.index++;
-            const next = this.peek();
-            out.push(next && next.indent > indent ? this.parseBlock(next.indent, depth + 1) : null);
-            continue;
-          }
-          if (KEY_LINE.test(stripComment(content)) && !/^["'[{]/.test(content)) {
-            this.lines[this.index] = { indent: indent + offset, text: content, number: line.number };
-            out.push(this.parseMap(indent + offset, depth + 1));
-            continue;
-          }
-          this.index++;
-          out.push(parseScalar(stripComment(content)));
-        }
-        return out;
-      }
+var review_policy_exports = {};
+__export(review_policy_exports, {
+  advisoryCodes: () => advisoryCodes,
+  createKnowledgeReviewPolicy: () => createKnowledgeReviewPolicy,
+  createStoredKnowledgeReviewPolicy: () => createStoredKnowledgeReviewPolicy,
+  readReviewMode: () => readReviewMode,
+  saveReviewMode: () => saveReviewMode
+});
+function createStoredKnowledgeReviewPolicy(storage, strictOverride) {
+  async function readReviewPolicy() {
+    const document = await storage.read();
+    const override = strictOverride() ? "environment" : null;
+    if (document.kind === "missing")
+      return {
+        mode: override ? "strict" : "automatic",
+        persistedMode: null,
+        version: null,
+        override,
+        diagnostic: null
+      };
+    if (document.kind === "corrupt")
+      return {
+        mode: "strict",
+        persistedMode: null,
+        version: null,
+        override,
+        diagnostic: "invalid-json"
+      };
+    const value = document.value;
+    const mode = value && typeof value === "object" && "mode" in value ? value.mode : void 0;
+    if (mode !== "automatic" && mode !== "strict")
+      return {
+        mode: "strict",
+        persistedMode: null,
+        version: document.version,
+        override,
+        diagnostic: "invalid-policy"
+      };
+    return {
+      mode: override ? "strict" : mode,
+      persistedMode: mode,
+      version: document.version,
+      override,
+      diagnostic: null
     };
   }
-});
-function looksLikeFileName(title) {
-  const value = String(title || "").trim();
-  if (!value) return true;
-  if (/\.(?:pdf|html?|md|txt|docx?|xlsx?|csv|json|zip|tar|gz)$/i.test(value)) return true;
-  if (/^(?:PMC|PMID)?\d[\d.]*$/i.test(value)) return true;
-  return /^[a-z0-9]+(?:[-_][a-z0-9]+){2,}$/.test(value) && /\d{4,}|[a-f0-9]{12,}/.test(value);
-}
-var clean3;
-var init_note_title = __esm({
-  "src/core/note-title.ts"() {
-    "use strict";
-    init_ingest_frontmatter();
-    clean3 = (value) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, 200) : "";
+  async function readReviewMode2() {
+    return (await readReviewPolicy()).mode;
   }
-});
-function titleOf(path, text43) {
-  const heading = /^#\s+(.+)$/m.exec(text43)?.[1]?.trim();
-  return (heading || path.split("/").pop()?.replace(/\.md$/, "") || path).slice(0, 200);
-}
-async function collectRecentNotes(vault, sinceMs) {
-  const found = [];
-  let scanned = 0;
-  async function walk(dir) {
-    if (scanned >= DAILY_DISCOVERY_LIMITS.maxScannedFiles) return;
-    const entries = await readdir(dir, { withFileTypes: true }).catch(() => null);
-    if (!entries) return;
-    for (const entry of entries) {
-      if (scanned >= DAILY_DISCOVERY_LIMITS.maxScannedFiles) return;
-      if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
-      const full = join8(dir, entry.name);
-      if (entry.isDirectory()) await walk(full);
-      else if (entry.isFile() && entry.name.endsWith(".md")) {
-        scanned++;
-        const path = relative6(vault, full).split(sep6).join("/");
-        if (NAVIGATION.test(path)) continue;
-        const info = await stat2(full).catch(() => null);
-        if (info && info.mtimeMs > sinceMs && info.size <= DAILY_DISCOVERY_LIMITS.maxNoteBytes)
-          found.push({ path, mtime: info.mtimeMs, size: info.size });
-      }
-    }
-  }
-  for (const root of SCAN_ROOTS) await walk(join8(vault, root));
-  found.sort((a, b) => b.mtime - a.mtime);
-  const notes = [];
-  for (const item of found.slice(0, DAILY_DISCOVERY_LIMITS.maxNewNotes)) {
-    const text43 = await readFile6(join8(vault, item.path), "utf8").catch(() => "");
-    if (!text43.trim()) continue;
-    notes.push({
-      path: item.path,
-      title: titleOf(item.path, text43),
-      text: text43.slice(0, DAILY_DISCOVERY_LIMITS.maxNoteChars),
-      mtime: item.mtime
-    });
-  }
-  return notes;
-}
-function ideaNoteMarkdown(idea, createdAt) {
-  return [
-    "---",
-    "type: idea",
-    'status: "speculative"',
-    "source: daily-discovery",
-    `created: ${JSON.stringify(createdAt.toISOString())}`,
-    "---",
-    "",
-    `# ${idea.title}`,
-    "",
-    idea.idea,
-    "",
-    "## \u4F9D\u636E",
-    ...idea.basis.map((path) => `- [[${path.replace(/\.md$/, "")}]]`),
-    "",
-    "## \u5982\u4F55\u68C0\u9A8C",
-    idea.test,
-    ...idea.whyOverlooked ? ["", "## \u4E3A\u4EC0\u4E48\u53EF\u80FD\u88AB\u5FFD\u7565", idea.whyOverlooked] : [],
-    "",
-    "> \u63A8\u6D4B\uFF1A\u7531\u6BCF\u65E5\u53D1\u73B0\u6839\u636E\u77E5\u8BC6\u5E93\u81EA\u52A8\u63D0\u51FA\uFF0C\u5C1A\u672A\u9A8C\u8BC1\u3002",
-    ""
-  ].join("\n");
-}
-var DAILY_DISCOVERY_LIMITS;
-var SCAN_ROOTS;
-var SKIP_DIRS;
-var NAVIGATION;
-var init_daily_discovery = __esm({
-  "src/core/daily-discovery.ts"() {
-    "use strict";
-    DAILY_DISCOVERY_LIMITS = {
-      maxScannedFiles: 4e3,
-      maxNoteBytes: 256 * 1024,
-      maxNewNotes: 8,
-      maxRelatedNotes: 10,
-      maxNoteChars: 2400,
-      maxIdeas: 3
-    };
-    SCAN_ROOTS = ["Library", "Wiki", "Projects"];
-    SKIP_DIRS = /* @__PURE__ */ new Set(["Explainers", "Attachments", ".obsidian", ".trash", ".git"]);
-    NAVIGATION = /(?:^|\/)(?:Index|Home|Context)\.md$/;
-  }
-});
-function memoryNoteSlug(memory) {
-  const base2 = memory.title.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 48);
-  return `${base2 || "memory"}-m${memory.id}`;
-}
-function memoryNoteMarkdown(memory, related = []) {
-  const date = new Date(memory.createdAt).toISOString().slice(0, 10);
-  const files = [...new Set(memory.files ?? [])].slice(0, 20);
-  const lines = [
-    "---",
-    "type: memory",
-    `title: ${yaml(memory.title)}`,
-    "source: drone-memory",
-    `memory_id: ${memory.id}`,
-    `memory_kind: ${memory.kind}`,
-    `session: ${yaml(memory.sessionId ?? "")}`,
-    `date: ${date}`,
-    ...files.length ? ["files:", ...files.map((f) => `  - ${yaml(f)}`)] : [],
-    "---",
-    "",
-    `# ${memory.title.trim()}`,
-    "",
-    memory.body.trim() || "\uFF08\u65E0\u6B63\u6587\uFF09",
-    "",
-    "## \u6765\u6E90",
-    "",
-    `- \u4F1A\u8BDD\uFF1A${memory.sessionId ?? "\u672A\u77E5"}`,
-    `- \u65E5\u671F\uFF1A${date}`,
-    `- \u7C7B\u578B\uFF1A${memory.kind}`,
-    ...files.length ? ["- \u6D89\u53CA\u6587\u4EF6\uFF1A", ...files.map((f) => `  - \`${f}\``)] : []
-  ];
-  const links = [...new Set(related.map((p) => p.replace(/\.md$/i, "")))].slice(0, 5);
-  if (links.length) lines.push("", "## \u76F8\u5173", "", ...links.map((p) => `- [[${p}]]`));
-  return `${lines.join("\n")}
-`;
-}
-var yaml;
-var init_memory_note = __esm({
-  "src/core/memory-note.ts"() {
-    "use strict";
-    yaml = (value) => JSON.stringify(value.replace(/\s+/g, " ").trim());
-  }
-});
-function mentionedWikiTitle(query, titles) {
-  const q = String(query || "").toLocaleLowerCase();
-  if (q.trim().length < 3) return null;
-  const queryTokens = new Set(tokens2(q).filter((t) => /[a-z0-9]/.test(t) && t.length >= 4 && !STOP.has(t)));
-  for (const raw of titles) {
-    const title = String(raw || "").toLocaleLowerCase().replace(/\.md$/, "").replace(/[-_]+/g, " ").trim();
-    if (!title) continue;
-    if (title.length >= 3 && q.includes(title)) return raw;
-    const lead = tokens2(title).filter((t) => t.length >= 4 && !STOP.has(t));
-    if (lead.some((t) => queryTokens.has(t))) return raw;
-  }
-  return null;
-}
-var STOP;
-var tokens2;
-var init_topic_probe = __esm({
-  "src/core/topic-probe.ts"() {
-    "use strict";
-    STOP = new Set(
-      "what when where which with from that this have about into your their there these those does using used make more most some such than then them they will would could should also only over very just like".split(
-        " "
-      )
+  async function saveReviewMode2(mode, expectedVersion) {
+    if (mode !== "automatic" && mode !== "strict") throw new Error("Invalid review mode");
+    const current = await readReviewPolicy();
+    if (current.diagnostic) throw new Error("Review policy is damaged; repair it before changing settings");
+    await storage.write(
+      { version: 1, mode },
+      expectedVersion === void 0 ? current.version : expectedVersion
     );
-    tokens2 = (text43) => String(text43 || "").toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+    const saved = await readReviewPolicy();
+    if (saved.diagnostic || saved.persistedMode !== mode)
+      throw new Error("Review policy changed during write verification");
+    return { mode: saved.mode };
+  }
+  return { readReviewMode: readReviewMode2, readReviewPolicy, saveReviewMode: saveReviewMode2 };
+}
+function createKnowledgeReviewPolicy(config) {
+  return createStoredKnowledgeReviewPolicy(
+    createLocalReviewPolicyStorage(config),
+    () => process.env.DRONE_REVIEW_MODE === "strict"
+  );
+}
+var readReviewMode;
+var saveReviewMode;
+var advisoryCodes;
+var init_review_policy = __esm({
+  "src/core/review-policy.ts"() {
+    "use strict";
+    init_config();
+    init_review_policy_storage();
+    ({ readReviewMode, saveReviewMode } = createKnowledgeReviewPolicy(config_exports));
+    advisoryCodes = /* @__PURE__ */ new Set([
+      "paper-citation-required",
+      "search-required",
+      "coverage-incomplete",
+      "wiki-changed",
+      "citation-required",
+      "source-unread",
+      "source-changed",
+      "delivery-changed",
+      "search-stale",
+      "check-timeout",
+      "not-prepared",
+      "citation-invalid",
+      "citation-budget"
+    ]);
+  }
+});
+var semantic_settings_exports = {};
+__export(semantic_settings_exports, {
+  createSemanticSettingsApi: () => createSemanticSettingsApi,
+  createSemanticSettingsState: () => createSemanticSettingsState,
+  createStoredSemanticSettingsApi: () => createStoredSemanticSettingsApi,
+  readSemanticSettings: () => readSemanticSettings,
+  saveSemanticSettings: () => saveSemanticSettings,
+  validateSemanticConfig: () => validateSemanticConfig
+});
+function loopback(hostname) {
+  return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname);
+}
+function validateSemanticConfig(input = {}) {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Semantic settings must be an object");
+  for (const key of Object.keys(input))
+    if (!CONFIG_KEYS.has(key)) throw new Error(`Unknown semantic setting: ${key}`);
+  if (input.enabled !== void 0 && typeof input.enabled !== "boolean")
+    throw new Error("enabled must be boolean");
+  if (input.provider !== void 0 && typeof input.provider !== "string")
+    throw new Error("provider must be a string");
+  const provider = input.provider ?? "none";
+  if (!["none", "ollama", "openai-compatible"].includes(provider))
+    throw new Error("Unknown semantic provider");
+  if (input.remoteConsent !== void 0 && typeof input.remoteConsent !== "boolean")
+    throw new Error("remoteConsent must be boolean");
+  if (input.timeoutMs !== void 0 && (!Number.isInteger(input.timeoutMs) || input.timeoutMs < 500 || input.timeoutMs > 3e4))
+    throw new Error("timeoutMs must be an integer between 500 and 30000");
+  if (input.chunkChars !== void 0 && (!Number.isInteger(input.chunkChars) || input.chunkChars < 256 || input.chunkChars > 8e3))
+    throw new Error("chunkChars must be an integer between 256 and 8000");
+  if (input.minSimilarity !== void 0 && (typeof input.minSimilarity !== "number" || !Number.isFinite(input.minSimilarity) || input.minSimilarity < 0 || input.minSimilarity > 1))
+    throw new Error("minSimilarity must be a finite number between 0 and 1");
+  const enabled = input.enabled ?? provider !== "none";
+  const baseUrl = input.baseUrl === void 0 ? "" : input.baseUrl;
+  const model = input.model === void 0 ? "" : input.model;
+  const credentialEnv = input.credentialEnv === void 0 || input.credentialEnv === null ? "" : input.credentialEnv;
+  if (typeof baseUrl !== "string" || typeof model !== "string" || typeof credentialEnv !== "string")
+    throw new Error("Semantic provider fields must be strings");
+  const trimmedBase = baseUrl.trim();
+  const trimmedModel = model.trim();
+  const trimmedCredential = credentialEnv.trim();
+  if (provider === "none") {
+    if (enabled) throw new Error("The none provider cannot be enabled");
+    if (input.remoteConsent === true) throw new Error("remoteConsent is not valid for the none provider");
+    return {
+      enabled: false,
+      provider: "none",
+      baseUrl: "",
+      model: "",
+      credentialEnv: "",
+      remoteConsent: false
+    };
+  }
+  if (!enabled && !trimmedBase && !trimmedModel)
+    return {
+      enabled: false,
+      provider,
+      baseUrl: "",
+      model: "",
+      credentialEnv: trimmedCredential,
+      remoteConsent: input.remoteConsent === true,
+      timeoutMs: input.timeoutMs ?? 1e4,
+      chunkChars: input.chunkChars ?? 1200,
+      minSimilarity: input.minSimilarity ?? 0.45
+    };
+  if (!trimmedBase || trimmedBase.length > 500 || !trimmedModel || trimmedModel.length > 200)
+    throw new Error("Semantic provider base URL and model are required");
+  if (trimmedCredential && !ENV_NAME.test(trimmedCredential))
+    throw new Error("credentialEnv must be a valid environment variable name");
+  let url;
+  try {
+    url = new URL(trimmedBase);
+  } catch {
+    throw new Error("Semantic provider base URL is invalid");
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash)
+    throw new Error("Semantic provider URL must be plain http(s) without credentials, query, or fragment");
+  const remote = !loopback(url.hostname);
+  if (remote && url.protocol === "http:") throw new Error("Remote semantic providers require HTTPS");
+  if (remote && input.remoteConsent !== true)
+    throw new Error("Remote semantic provider requires explicit remoteConsent");
+  if (remote && !trimmedCredential)
+    throw new Error("Remote semantic providers require a credential environment variable");
+  return {
+    enabled,
+    provider,
+    baseUrl: url.toString().replace(/\/+$/, ""),
+    model: trimmedModel,
+    credentialEnv: trimmedCredential,
+    remoteConsent: input.remoteConsent === true,
+    timeoutMs: input.timeoutMs ?? 1e4,
+    chunkChars: input.chunkChars ?? 1200,
+    minSimilarity: input.minSimilarity ?? 0.45
+  };
+}
+function createSemanticSettingsState() {
+  return { defaultUpdatedAt: /* @__PURE__ */ new Map() };
+}
+function pathFor2(vaultId, directory) {
+  if (!/^[a-f0-9]{24}$/.test(vaultId || "")) throw new Error("Invalid Vault binding");
+  if (!directory) throw new Error("Application knowledge directory is not configured");
+  return join7(directory, vaultId, "semantic.json");
+}
+async function assertDirectory(path, create) {
+  try {
+    const stat42 = await lstat3(path);
+    if (!stat42.isDirectory() || stat42.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    if (create) {
+      await mkdir4(path, { recursive: true, mode: 448 });
+      const stat42 = await lstat3(path);
+      if (!stat42.isDirectory() || stat42.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
+    }
+  }
+  let ancestor = path;
+  for (let depth = 0; depth < 8 && ancestor !== dirname2(ancestor); depth++) {
+    try {
+      if ((await lstat3(ancestor)).isSymbolicLink()) throw new Error("Semantic settings ancestor is unsafe");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    ancestor = dirname2(ancestor);
+  }
+}
+async function assertFile(path) {
+  try {
+    const stat42 = await lstat3(path);
+    if (!stat42.isFile() || stat42.isSymbolicLink() || stat42.size > MAX_FILE_BYTES)
+      throw new Error("Semantic settings file is unsafe or too large");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
+function normalize2(value, revision, updatedAt = null) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1)
+    throw new Error("Invalid or future semantic settings schema");
+  for (const key of Object.keys(value))
+    if (!SETTINGS_KEYS.has(key)) throw new Error(`Unknown semantic setting: ${key}`);
+  if (!Number.isSafeInteger(revision) || Number(revision) < 0)
+    throw new Error("Invalid semantic settings revision");
+  const raw = value;
+  const config = validateSemanticConfig({
+    enabled: raw.enabled,
+    provider: raw.provider,
+    baseUrl: raw.baseUrl,
+    model: raw.model,
+    credentialEnv: raw.credentialEnv,
+    remoteConsent: raw.remoteConsent,
+    timeoutMs: raw.timeoutMs,
+    chunkChars: raw.chunkChars,
+    minSimilarity: raw.minSimilarity
+  });
+  if (updatedAt !== null && (typeof updatedAt !== "string" || Number.isNaN(Date.parse(updatedAt))))
+    throw new Error("Invalid semantic settings updatedAt");
+  return {
+    version: 1,
+    revision: Number(revision),
+    ...config,
+    updatedAt: updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+function defaultSettings(state, path) {
+  const updatedAt = state.defaultUpdatedAt.get(path) || (/* @__PURE__ */ new Date()).toISOString();
+  state.defaultUpdatedAt.set(path, updatedAt);
+  return { version: 1, revision: 0, ...validateSemanticConfig({}), updatedAt };
+}
+function createStoredSemanticSettingsApi(storage, state = createSemanticSettingsState()) {
+  function unpack(vaultId, document) {
+    if (document.kind === "missing") return defaultSettings(state, vaultId);
+    const value = document.value;
+    return normalize2(value, value?.revision, value?.updatedAt);
+  }
+  return {
+    readSemanticSettings: async (vaultId) => unpack(vaultId, await storage.read(vaultId)),
+    async saveSemanticSettings(vaultId, input, expectedRevision) {
+      const document = await storage.read(vaultId), current = unpack(vaultId, document);
+      if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== current.revision)
+        throw new Error("Semantic settings revision is stale");
+      const value = normalize2({ version: 1, ...input }, current.revision + 1);
+      await storage.write(vaultId, value, document.version);
+      const saved = unpack(vaultId, await storage.read(vaultId));
+      if (JSON.stringify(saved) !== JSON.stringify(value))
+        throw new Error("Semantic settings write readback did not match");
+      return saved;
+    }
+  };
+}
+function localSemanticStorage(directory) {
+  async function read(vaultId) {
+    const path = pathFor2(vaultId, directory());
+    await assertDirectory(dirname2(path), false);
+    await assertFile(path);
+    let raw;
+    try {
+      raw = await readFile6(path, "utf8");
+    } catch (error) {
+      if (error.code === "ENOENT") return { kind: "missing", version: null };
+      throw error;
+    }
+    if (Buffer.byteLength(raw) > MAX_FILE_BYTES) throw new Error("Semantic settings file is too large");
+    return { kind: "value", value: JSON.parse(raw), version: createHash7("sha256").update(raw).digest("hex") };
+  }
+  const queues2 = /* @__PURE__ */ new Map();
+  return {
+    read,
+    write(vaultId, value, expectedVersion) {
+      const prior = queues2.get(vaultId) ?? Promise.resolve();
+      const operation = prior.catch(() => void 0).then(async () => {
+        const path = pathFor2(vaultId, directory());
+        if ((await read(vaultId)).version !== expectedVersion)
+          throw new Error("Semantic settings revision is stale");
+        await assertDirectory(dirname2(path), true);
+        const temp = join7(dirname2(path), `semantic.${randomUUID4()}.tmp`);
+        try {
+          await writeFile4(temp, `${JSON.stringify(value, null, 2)}
+`, { mode: 384, flag: "wx" });
+          await rename4(temp, path);
+        } finally {
+          try {
+            await unlink3(temp);
+          } catch (error) {
+            if (error.code !== "ENOENT") throw error;
+          }
+        }
+      });
+      queues2.set(vaultId, operation);
+      return operation.finally(() => {
+        if (queues2.get(vaultId) === operation) queues2.delete(vaultId);
+      });
+    }
+  };
+}
+function createSemanticSettingsApi(state = createSemanticSettingsState(), directory = knowledgeDirectory()) {
+  return semanticSettingsApiForDirectory(state, () => directory);
+}
+function semanticSettingsApiForDirectory(state, directory) {
+  return createStoredSemanticSettingsApi(localSemanticStorage(directory), state);
+}
+var MAX_FILE_BYTES;
+var ENV_NAME;
+var SETTINGS_KEYS;
+var CONFIG_KEYS;
+var defaultApi;
+var readSemanticSettings;
+var saveSemanticSettings;
+var init_semantic_settings = __esm({
+  "src/core/semantic-settings.ts"() {
+    "use strict";
+    init_config();
+    MAX_FILE_BYTES = 256 * 1024;
+    ENV_NAME = /^[A-Z_][A-Z0-9_]{0,127}$/;
+    SETTINGS_KEYS = /* @__PURE__ */ new Set([
+      "version",
+      "revision",
+      "updatedAt",
+      "enabled",
+      "provider",
+      "baseUrl",
+      "model",
+      "credentialEnv",
+      "remoteConsent",
+      "timeoutMs",
+      "chunkChars",
+      "minSimilarity"
+    ]);
+    CONFIG_KEYS = /* @__PURE__ */ new Set([
+      "enabled",
+      "provider",
+      "baseUrl",
+      "model",
+      "credentialEnv",
+      "remoteConsent",
+      "timeoutMs",
+      "chunkChars",
+      "minSimilarity"
+    ]);
+    defaultApi = semanticSettingsApiForDirectory(createSemanticSettingsState(), knowledgeDirectory);
+    readSemanticSettings = (vaultId) => defaultApi.readSemanticSettings(vaultId);
+    saveSemanticSettings = (vaultId, input, expectedRevision) => defaultApi.saveSemanticSettings(vaultId, input, expectedRevision);
   }
 });
 function centralityBoost(degree, weight, cap) {
@@ -2951,273 +1435,259 @@ var init_graph_retrieval = __esm({
     };
   }
 });
-function createKnowledgeWorkerTransportFactory(runtime, config, invalidateKnowledgeUi2, acquireWriterLease) {
-  const {
-    createKnowledgeWorker: createKnowledgeWorker2,
-    knowledgeWorkerMetadata: knowledgeWorkerMetadata2,
-    emitKnowledgeWorkerLifecycle: emitKnowledgeWorkerLifecycle2
-  } = runtime;
-  class KnowledgeWorkerTransport {
-    pending;
-    inFlightRequests;
-    next;
-    closed;
-    closing;
-    closePromise;
-    metadata;
-    version;
-    lifecycle;
-    readyPromise;
-    ready;
-    writerLease;
-    leaseReleaseError;
-    workerFailure;
-    worker;
-    constructor(binding, directory2, options) {
-      this.pending = /* @__PURE__ */ new Map();
-      this.inFlightRequests = 0;
-      this.next = 0;
-      this.closed = false;
-      this.closing = false;
-      this.closePromise = null;
-      this.metadata = knowledgeWorkerMetadata2();
-      this.version = typeof options.workerVersion === "string" && options.workerVersion ? options.workerVersion.slice(0, 200) : this.metadata.version;
-      this.lifecycle = "staged";
-      let readyResolve;
-      let readyReject;
-      this.readyPromise = new Promise((resolve132, reject) => {
-        readyResolve = resolve132;
-        readyReject = reject;
-      });
-      this.readyPromise.catch(() => void 0);
-      this.ready = false;
-      const workerOptions = {
-        workerData: {
-          vault: binding.vault,
-          database: join9(directory2, binding.vaultId, "index.sqlite"),
-          workerVersion: this.version
-        },
-        execArgv: process.execArgv.filter(
-          (arg) => !arg.startsWith("--input-type") && !arg.startsWith("--test")
-        )
-      };
-      mkdirSync(dirname5(workerOptions.workerData.database), {
-        recursive: true
-      });
-      this.writerLease = acquireWriterLease?.({
-        vault: binding.vault,
-        indexPath: workerOptions.workerData.database
-      });
-      this.leaseReleaseError = null;
-      this.workerFailure = null;
-      try {
-        this.worker = createKnowledgeWorker2(
-          new URL("./worker.mjs", import.meta.url),
-          workerOptions
-        );
-      } catch (error) {
-        this.writerLease?.release();
-        this.closed = true;
-        this.lifecycle = "disabled";
-        readyReject(error);
-        emitKnowledgeWorkerLifecycle2("disabled", {
-          version: this.version,
-          source: this.metadata.source,
-          integrity: this.metadata.integrity,
-          reason: String(error instanceof Error ? error.message : error).slice(
-            0,
-            400
-          )
-        });
-        throw error;
-      }
-      const fail = (error) => {
-        this.workerFailure ??= error;
-        if (!this.ready) readyReject(error);
-        this.closed = true;
-        this.lifecycle = "disabled";
-        for (const item of this.pending.values()) {
-          clearTimeout(item.timer);
-          item.reject(error);
-        }
-        this.pending.clear();
-        this.worker.unref();
-        emitKnowledgeWorkerLifecycle2("disabled", {
-          version: this.version,
-          source: this.metadata.source,
-          integrity: this.metadata.integrity,
-          reason: String(error instanceof Error ? error.message : error).slice(
-            0,
-            400
-          )
-        });
-      };
-      this.worker.on("message", (message) => {
-        if (message.ready) {
-          this.ready = true;
-          this.lifecycle = "verified";
-          readyResolve({ version: this.version });
-          emitKnowledgeWorkerLifecycle2("verified", {
-            version: this.version,
-            source: this.metadata.source,
-            integrity: this.metadata.integrity
-          });
-          if (!this.pending.size) this.worker.unref();
-          return;
-        }
-        if (message.uiChanged) {
-          invalidateKnowledgeUi2();
-          return;
-        }
-        const item = this.pending.get(message.id);
-        if (!item) return;
-        clearTimeout(item.timer);
-        this.pending.delete(message.id);
-        if (!this.pending.size) this.worker.unref();
-        if (message.error) item.reject(new Error(message.error));
-        else item.resolve(message.result);
-      });
-      this.worker.on("error", fail);
-      this.worker.on("exit", (code) => {
-        try {
-          this.writerLease?.release();
-        } catch (error) {
-          this.leaseReleaseError = error;
-          fail(error);
-        }
-        if (code !== 0 || !this.closed && !this.closing)
-          fail(new Error(`Knowledge worker exited (${code})`));
-      });
-      emitKnowledgeWorkerLifecycle2("staged", {
-        version: this.version,
-        source: this.metadata.source,
-        integrity: this.metadata.integrity
-      });
-    }
-    async waitUntilReady() {
-      if (this.ready) return { version: this.version };
-      if (this.closed) throw new Error("Knowledge worker failed to initialize");
-      return this.readyPromise;
-    }
-    request(op, args = {}) {
-      if (this.closed || this.closing && op !== "close")
-        return Promise.reject(new Error("Knowledge service is closed"));
-      const post = () => {
-        if (this.closed)
-          return Promise.reject(new Error("Knowledge service is closed"));
-        const id2 = ++this.next;
-        this.worker.ref();
-        return new Promise((resolvePromise, reject) => {
-          const timer = setTimeout(
-            () => {
-              this.pending.delete(id2);
-              if (!this.pending.size) this.worker.unref();
-              reject(
-                new Error(
-                  `Knowledge ${op} timed out; it was not reported as a successful empty result`
-                )
-              );
-            },
-            op === "reconcile" ? 12e4 : 2e4
-          );
-          this.pending.set(id2, { resolve: resolvePromise, reject, timer });
-          this.worker.postMessage({ id: id2, op, args });
-        });
-      };
-      if (op === "close") return post();
-      this.inFlightRequests += 1;
-      return this.waitUntilReady().then(post).finally(() => {
-        this.inFlightRequests = Math.max(0, this.inFlightRequests - 1);
-      });
-    }
-    close() {
-      if (this.closePromise) return this.closePromise;
-      this.closing = true;
-      this.lifecycle = "disabled";
-      emitKnowledgeWorkerLifecycle2("disabled", {
-        version: this.version,
-        previousVersion: this.version,
-        source: this.metadata.source,
-        integrity: this.metadata.integrity,
-        pendingRequests: this.pending.size
-      });
-      this.closePromise = (async () => {
-        let drainFailure = null;
-        const exited = new Promise((resolve132) => {
-          if (this.worker.threadId === -1) resolve132();
-          else this.worker.once("exit", resolve132);
-        });
-        try {
-          if (!this.closed) await this.waitUntilReady();
-          while (!this.closed && (this.pending.size || this.inFlightRequests))
-            await new Promise((resolve132) => setTimeout(resolve132, 10));
-          if (!this.closed) await this.request("close");
-        } catch (error) {
-          drainFailure = error;
-          await this.worker.terminate();
-        } finally {
-          this.closed = true;
-          for (const item of this.pending.values()) {
-            clearTimeout(item.timer);
-            item.reject(new Error("Knowledge service closed"));
-          }
-          this.pending.clear();
-          this.worker.ref();
-          const fallback = setTimeout(() => {
-            drainFailure = new Error(
-              "Knowledge worker required forced termination; drain did not complete"
-            );
-            void this.worker.terminate();
-          }, 5e3);
-          try {
-            await exited;
-          } finally {
-            clearTimeout(fallback);
-          }
-          if (this.leaseReleaseError) throw this.leaseReleaseError;
-          if (drainFailure) {
-            emitKnowledgeWorkerLifecycle2("disabled", {
-              version: this.version,
-              reason: String(
-                drainFailure instanceof Error ? drainFailure.message : drainFailure
-              ).slice(0, 400)
-            });
-            throw drainFailure;
-          }
-          if (this.workerFailure) throw this.workerFailure;
-          emitKnowledgeWorkerLifecycle2("drained", {
-            version: this.version,
-            source: this.metadata.source,
-            integrity: this.metadata.integrity
-          });
-        }
-      })();
-      return this.closePromise;
-    }
-    prepareUnload() {
-      if (this.closing || this.closed)
-        return { pendingRequests: this.pending.size, version: this.version };
-      this.closing = true;
-      return { pendingRequests: this.pending.size, version: this.version };
-    }
-    get pendingRequestCount() {
-      return this.pending.size;
-    }
+function loopback2(hostname) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+}
+function validateSemanticConfig2(input = {}) {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Semantic settings must be an object");
+  for (const key of Object.keys(input))
+    if (!CONFIG_KEYS2.has(key)) throw new Error(`Unknown semantic setting: ${key}`);
+  if (input.enabled !== void 0 && typeof input.enabled !== "boolean")
+    throw new Error("enabled must be boolean");
+  if (input.provider !== void 0 && typeof input.provider !== "string")
+    throw new Error("provider must be a string");
+  const provider = input.provider ?? "none";
+  if (!["none", "ollama", "openai-compatible"].includes(provider))
+    throw new Error("Unknown semantic provider");
+  if (input.remoteConsent !== void 0 && typeof input.remoteConsent !== "boolean")
+    throw new Error("remoteConsent must be boolean");
+  if (input.timeoutMs !== void 0 && (!Number.isInteger(input.timeoutMs) || input.timeoutMs < 500 || input.timeoutMs > 3e4))
+    throw new Error("timeoutMs must be an integer between 500 and 30000");
+  if (input.chunkChars !== void 0 && (!Number.isInteger(input.chunkChars) || input.chunkChars < 256 || input.chunkChars > 8e3))
+    throw new Error("chunkChars must be an integer between 256 and 8000");
+  if (input.minSimilarity !== void 0 && (typeof input.minSimilarity !== "number" || !Number.isFinite(input.minSimilarity) || input.minSimilarity < 0 || input.minSimilarity > 1))
+    throw new Error("minSimilarity must be a finite number between 0 and 1");
+  const enabled = input.enabled ?? provider !== "none";
+  const baseUrl = input.baseUrl === void 0 ? "" : input.baseUrl;
+  const model = input.model === void 0 ? "" : input.model;
+  const credentialEnv = input.credentialEnv === void 0 || input.credentialEnv === null ? "" : input.credentialEnv;
+  if (typeof baseUrl !== "string" || typeof model !== "string" || typeof credentialEnv !== "string")
+    throw new Error("Semantic provider fields must be strings");
+  const trimmedBase = baseUrl.trim();
+  const trimmedModel = model.trim();
+  const trimmedCredential = credentialEnv.trim();
+  if (provider === "none") {
+    if (enabled) throw new Error("The none provider cannot be enabled");
+    if (input.remoteConsent === true) throw new Error("remoteConsent is not valid for the none provider");
+    return {
+      enabled: false,
+      provider: "none",
+      baseUrl: "",
+      model: "",
+      credentialEnv: "",
+      remoteConsent: false
+    };
   }
-  function directory() {
-    const value = config.knowledgeDirectory();
-    if (!value) throw new Error("No application knowledge directory");
-    return value;
+  if (!enabled && !trimmedBase && !trimmedModel)
+    return {
+      enabled: false,
+      provider,
+      baseUrl: "",
+      model: "",
+      credentialEnv: trimmedCredential,
+      remoteConsent: input.remoteConsent === true,
+      timeoutMs: input.timeoutMs ?? 1e4,
+      chunkChars: input.chunkChars ?? 1200,
+      minSimilarity: input.minSimilarity ?? 0.45
+    };
+  if (!trimmedBase || trimmedBase.length > 500 || !trimmedModel || trimmedModel.length > 200)
+    throw new Error("Semantic provider base URL and model are required");
+  if (trimmedCredential && !ENV_NAME2.test(trimmedCredential))
+    throw new Error("credentialEnv must be a valid environment variable name");
+  let url;
+  try {
+    url = new URL2(trimmedBase);
+  } catch {
+    throw new Error("Semantic provider base URL is invalid");
   }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash)
+    throw new Error("Semantic provider URL must be plain http(s) without credentials, query, or fragment");
+  const remote = !loopback2(url.hostname);
+  if (remote && url.protocol === "http:") throw new Error("Remote semantic providers require HTTPS");
+  if (remote && input.remoteConsent !== true)
+    throw new Error("Remote semantic provider requires explicit remoteConsent");
+  if (remote && !trimmedCredential)
+    throw new Error("Remote semantic providers require a credential environment variable");
   return {
-    metadata: knowledgeWorkerMetadata2,
-    resourceKey: (binding) => join9(directory(), binding.vaultId, "index.sqlite"),
-    create: ({ binding, workerVersion }) => new KnowledgeWorkerTransport(binding, directory(), { workerVersion })
+    enabled,
+    provider,
+    baseUrl: url.toString().replace(/\/+$/, ""),
+    model: trimmedModel,
+    credentialEnv: trimmedCredential,
+    remoteConsent: input.remoteConsent === true,
+    timeoutMs: input.timeoutMs ?? 1e4,
+    chunkChars: input.chunkChars ?? 1200,
+    minSimilarity: input.minSimilarity ?? 0.45
   };
 }
-var init_worker_transport = __esm({
-  "src/core/worker-transport.ts"() {
+function endpoint(config) {
+  const suffix = config.provider === "ollama" ? ["api/embed", "api"] : ["v1/embeddings", "v1"];
+  const base2 = config.baseUrl.replace(/\/+$/, "");
+  if (base2.endsWith(`/${suffix[0]}`)) return base2;
+  if (base2.endsWith(`/${suffix[1]}`)) return `${base2}/${suffix[0].split("/").at(-1)}`;
+  return `${base2}/${suffix[0]}`;
+}
+async function readBounded(response) {
+  const length = Number(response.headers.get("content-length"));
+  if (Number.isFinite(length) && length > MAX_RESPONSE)
+    throw new Error("Semantic provider response is too large");
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const text43 = await response.text();
+    if (Buffer.byteLength(text43) > MAX_RESPONSE) throw new Error("Semantic provider response is too large");
+    return text43;
+  }
+  const chunks = [];
+  let total = 0;
+  for (; ; ) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_RESPONSE) {
+      await reader.cancel();
+      throw new Error("Semantic provider response is too large");
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+function vectors(value, expected) {
+  if (!Array.isArray(value) || value.length !== expected)
+    throw new Error("Semantic provider returned an invalid vector count");
+  let dimension = 0;
+  const out = value.map((item) => {
+    if (!Array.isArray(item) || !item.length || item.length > 16384)
+      throw new Error("Semantic provider returned an invalid vector");
+    if (!dimension) dimension = item.length;
+    if (item.length !== dimension)
+      throw new Error("Semantic provider returned inconsistent vector dimensions");
+    const vector = item.map((n) => n);
+    if (vector.some((n) => typeof n !== "number" || !Number.isFinite(n) || Math.abs(n) > MAX_VECTOR_COMPONENT))
+      throw new Error("Semantic provider returned NaN or infinite vector values");
+    let sum = 0;
+    for (const n of vector) {
+      sum += n * n;
+      if (!Number.isFinite(sum) || sum > MAX_VECTOR_NORM ** 2)
+        throw new Error("Semantic provider returned an oversized vector norm");
+    }
+    if (!(sum > 0)) throw new Error("Semantic provider returned a zero-norm vector");
+    return vector;
+  });
+  return { vectors: out, dimension };
+}
+async function embedTexts(rawConfig, texts, { signal } = {}) {
+  const config = validateSemanticConfig2(rawConfig);
+  if (!config.enabled) throw new Error("Semantic embeddings are disabled");
+  if (!Array.isArray(texts) || !texts.length || texts.length > MAX_BATCH || texts.some((text43) => typeof text43 !== "string" || !text43.length || text43.length > 16e3) || texts.join("\n").length > MAX_CHARS)
+    throw new Error("Semantic embedding batch is outside bounded limits");
+  const headers = { "content-type": "application/json", accept: "application/json" };
+  if (config.credentialEnv) {
+    const token = process.env[config.credentialEnv];
+    if (!token) throw new Error(`Credential environment variable ${config.credentialEnv} is not set`);
+    headers.authorization = `Bearer ${token}`;
+  }
+  const body = config.provider === "ollama" ? { model: config.model, input: texts, truncate: false } : { model: config.model, input: texts, encoding_format: "float" };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error("Semantic provider timeout")), config.timeoutMs);
+  const onAbort = () => controller.abort(signal.reason);
+  if (signal) {
+    if (signal.aborted) controller.abort(signal.reason);
+    else signal.addEventListener("abort", onAbort, { once: true });
+  }
+  try {
+    const response = await fetch(endpoint(config), {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      redirect: "error",
+      signal: controller.signal
+    });
+    let raw;
+    try {
+      raw = await readBounded(response);
+    } catch (error) {
+      try {
+        await response.body?.cancel();
+      } catch {
+      }
+      throw error;
+    }
+    let payload;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      throw new Error(`Semantic provider returned HTTP ${response.status}`);
+    }
+    if (!response.ok) throw new Error(`Semantic provider returned HTTP ${response.status}`);
+    if (payload?.model !== void 0 && payload.model !== config.model)
+      throw new Error("Semantic provider returned an unexpected model");
+    const embeddings = config.provider === "ollama" ? payload?.embeddings : Array.isArray(payload?.data) && payload.data.length === texts.length ? [...payload.data].sort((a, b) => (a?.index ?? 0) - (b?.index ?? 0)).map((item, index) => {
+      if (!Number.isInteger(item?.index) || item.index !== index || !Object.hasOwn(item, "embedding"))
+        throw new Error("Semantic provider returned invalid embedding indexes");
+      return item.embedding;
+    }) : null;
+    return { ...vectors(embeddings, texts.length), provider: config.provider, model: config.model };
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener("abort", onAbort);
+  }
+}
+var MAX_BATCH;
+var MAX_CHARS;
+var MAX_RESPONSE;
+var ENV_NAME2;
+var MAX_VECTOR_COMPONENT;
+var MAX_VECTOR_NORM;
+var CONFIG_KEYS2;
+var semanticLimits;
+var init_semantic_provider = __esm({
+  "src/core/semantic-provider.ts"() {
     "use strict";
+    MAX_BATCH = 32;
+    MAX_CHARS = 12e4;
+    MAX_RESPONSE = 8 * 1024 * 1024;
+    ENV_NAME2 = /^[A-Z_][A-Z0-9_]{0,127}$/;
+    MAX_VECTOR_COMPONENT = 1e6;
+    MAX_VECTOR_NORM = 1e9;
+    CONFIG_KEYS2 = /* @__PURE__ */ new Set([
+      "enabled",
+      "provider",
+      "baseUrl",
+      "model",
+      "credentialEnv",
+      "remoteConsent",
+      "timeoutMs",
+      "chunkChars",
+      "minSimilarity"
+    ]);
+    semanticLimits = Object.freeze({ MAX_BATCH, MAX_CHARS, MAX_RESPONSE });
+  }
+});
+function mentionedWikiTitle(query, titles) {
+  const q = String(query || "").toLocaleLowerCase();
+  if (q.trim().length < 3) return null;
+  const queryTokens = new Set(tokens2(q).filter((t) => /[a-z0-9]/.test(t) && t.length >= 4 && !STOP.has(t)));
+  for (const raw of titles) {
+    const title = String(raw || "").toLocaleLowerCase().replace(/\.md$/, "").replace(/[-_]+/g, " ").trim();
+    if (!title) continue;
+    if (title.length >= 3 && q.includes(title)) return raw;
+    const lead = tokens2(title).filter((t) => t.length >= 4 && !STOP.has(t));
+    if (lead.some((t) => queryTokens.has(t))) return raw;
+  }
+  return null;
+}
+var STOP;
+var tokens2;
+var init_topic_probe = __esm({
+  "src/core/topic-probe.ts"() {
+    "use strict";
+    STOP = new Set(
+      "what when where which with from that this have about into your their there these those does using used make more most some such than then them they will would could should also only over very just like".split(
+        " "
+      )
+    );
+    tokens2 = (text43) => String(text43 || "").toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
   }
 });
 var ui_state_exports = {};
@@ -3287,7 +1757,7 @@ function createKnowledgeUi(runtime, config, metrics) {
   const metricsFile = () => {
     try {
       const dir = knowledgeDirectory2();
-      return dir ? join10(dir, "answer-metrics.json") : null;
+      return dir ? join8(dir, "answer-metrics.json") : null;
     } catch {
       return null;
     }
@@ -3314,7 +1784,7 @@ function createKnowledgeUi(runtime, config, metrics) {
     const file = metricsFile();
     if (!file) return;
     try {
-      mkdirSync2(join10(file, ".."), { recursive: true });
+      mkdirSync(join8(file, ".."), { recursive: true });
       const tmp = `${file}.${process.pid}.tmp`;
       writeFileSync(tmp, JSON.stringify(state.localAnswerStats));
       renameSync(tmp, file);
@@ -3331,7 +1801,7 @@ function createKnowledgeUi(runtime, config, metrics) {
     if (!id2) return;
     const flow = {
       sessionId: id2,
-      turnId: randomUUID7(),
+      turnId: randomUUID5(),
       vaultId: binding?.vaultId || null,
       bindingRevision: binding?.revision || null,
       vault: binding?.vault || null,
@@ -3438,7 +1908,7 @@ function createKnowledgeUi(runtime, config, metrics) {
     if (typeof text43 !== "string" || !text43.trim()) return;
     emitKnowledgeUi2({
       kind: "notice",
-      id: randomUUID7(),
+      id: randomUUID5(),
       sessionId: id2,
       severity: ["info", "warning", "error"].includes(severity) ? severity : "info",
       text: text43.slice(0, 2e3)
@@ -3596,10 +2066,29 @@ function createKnowledgeUi(runtime, config, metrics) {
   function publicationKnowledgeFlow2(ctx, proof) {
     return metrics ? runtime.runRuntimeExclusive("knowledge-ui", "answer-metrics", () => updatePublicationFlow(ctx, proof)) : updatePublicationFlow(ctx, proof);
   }
-  return { dispose: () => {
-    state.listeners.clear();
-    state.flows.clear();
-  }, subscribeKnowledgeUi: subscribeKnowledgeUi2, emitKnowledgeUi: emitKnowledgeUi2, flowFor: flowFor2, knowledgeAnswerRate: knowledgeAnswerRate2, beginKnowledgeFlow: beginKnowledgeFlow2, updateKnowledgeFlow: updateKnowledgeFlow2, noteKnowledgeRead: noteKnowledgeRead2, publicationKnowledgeFlow: publicationKnowledgeFlow2, requestWikiReviewUi: requestWikiReviewUi2, notifyKnowledgeUi: notifyKnowledgeUi2, invalidateKnowledgeUi: invalidateKnowledgeUi2, clearKnowledgeFlow: clearKnowledgeFlow2, knowledgeExcerpt: knowledgeExcerpt2, noteKnowledgeSearch: noteKnowledgeSearch2, noteKnowledgeOperation: noteKnowledgeOperation2, noteKnowledgeSpecialist: noteKnowledgeSpecialist2, receiveCompatibilityEvent };
+  return {
+    dispose: () => {
+      state.listeners.clear();
+      state.flows.clear();
+    },
+    subscribeKnowledgeUi: subscribeKnowledgeUi2,
+    emitKnowledgeUi: emitKnowledgeUi2,
+    flowFor: flowFor2,
+    knowledgeAnswerRate: knowledgeAnswerRate2,
+    beginKnowledgeFlow: beginKnowledgeFlow2,
+    updateKnowledgeFlow: updateKnowledgeFlow2,
+    noteKnowledgeRead: noteKnowledgeRead2,
+    publicationKnowledgeFlow: publicationKnowledgeFlow2,
+    requestWikiReviewUi: requestWikiReviewUi2,
+    notifyKnowledgeUi: notifyKnowledgeUi2,
+    invalidateKnowledgeUi: invalidateKnowledgeUi2,
+    clearKnowledgeFlow: clearKnowledgeFlow2,
+    knowledgeExcerpt: knowledgeExcerpt2,
+    noteKnowledgeSearch: noteKnowledgeSearch2,
+    noteKnowledgeOperation: noteKnowledgeOperation2,
+    noteKnowledgeSpecialist: noteKnowledgeSpecialist2,
+    receiveCompatibilityEvent
+  };
 }
 var compatibilityKnowledgeUi;
 var subscribeKnowledgeUi;
@@ -3622,11 +2111,282 @@ var init_ui_state = __esm({
   "src/core/ui-state.ts"() {
     "use strict";
     init_config();
-    init_runtime_host();
     init_flow_cards();
+    init_runtime_host();
     compatibilityKnowledgeUi = createKnowledgeUi(compatibilityKnowledgeRuntimeHost, config_exports);
     process.on("drone:knowledge-ui/v1", compatibilityKnowledgeUi.receiveCompatibilityEvent);
-    ({ subscribeKnowledgeUi, emitKnowledgeUi, flowFor, knowledgeAnswerRate, beginKnowledgeFlow, updateKnowledgeFlow, noteKnowledgeRead, publicationKnowledgeFlow, requestWikiReviewUi, notifyKnowledgeUi, invalidateKnowledgeUi, clearKnowledgeFlow, knowledgeExcerpt, noteKnowledgeSearch, noteKnowledgeOperation, noteKnowledgeSpecialist } = compatibilityKnowledgeUi);
+    ({
+      subscribeKnowledgeUi,
+      emitKnowledgeUi,
+      flowFor,
+      knowledgeAnswerRate,
+      beginKnowledgeFlow,
+      updateKnowledgeFlow,
+      noteKnowledgeRead,
+      publicationKnowledgeFlow,
+      requestWikiReviewUi,
+      notifyKnowledgeUi,
+      invalidateKnowledgeUi,
+      clearKnowledgeFlow,
+      knowledgeExcerpt,
+      noteKnowledgeSearch,
+      noteKnowledgeOperation,
+      noteKnowledgeSpecialist
+    } = compatibilityKnowledgeUi);
+  }
+});
+function createKnowledgeWorkerTransportFactory(runtime, config, invalidateKnowledgeUi2, acquireWriterLease) {
+  const { createKnowledgeWorker: createKnowledgeWorker2, knowledgeWorkerMetadata: knowledgeWorkerMetadata2, emitKnowledgeWorkerLifecycle: emitKnowledgeWorkerLifecycle2 } = runtime;
+  class KnowledgeWorkerTransport {
+    pending;
+    inFlightRequests;
+    next;
+    closed;
+    closing;
+    closePromise;
+    metadata;
+    version;
+    lifecycle;
+    readyPromise;
+    ready;
+    writerLease;
+    leaseReleaseError;
+    workerFailure;
+    worker;
+    constructor(binding, directory2, options) {
+      this.pending = /* @__PURE__ */ new Map();
+      this.inFlightRequests = 0;
+      this.next = 0;
+      this.closed = false;
+      this.closing = false;
+      this.closePromise = null;
+      this.metadata = knowledgeWorkerMetadata2();
+      this.version = typeof options.workerVersion === "string" && options.workerVersion ? options.workerVersion.slice(0, 200) : this.metadata.version;
+      this.lifecycle = "staged";
+      let readyResolve;
+      let readyReject;
+      this.readyPromise = new Promise((resolve132, reject) => {
+        readyResolve = resolve132;
+        readyReject = reject;
+      });
+      this.readyPromise.catch(() => void 0);
+      this.ready = false;
+      const workerOptions = {
+        workerData: {
+          vault: binding.vault,
+          database: join9(directory2, binding.vaultId, "index.sqlite"),
+          workerVersion: this.version
+        },
+        execArgv: process.execArgv.filter(
+          (arg) => !arg.startsWith("--input-type") && !arg.startsWith("--test")
+        )
+      };
+      mkdirSync2(dirname3(workerOptions.workerData.database), {
+        recursive: true
+      });
+      this.writerLease = acquireWriterLease?.({
+        vault: binding.vault,
+        indexPath: workerOptions.workerData.database
+      });
+      this.leaseReleaseError = null;
+      this.workerFailure = null;
+      try {
+        this.worker = createKnowledgeWorker2(
+          new URL("./worker.mjs", import.meta.url),
+          workerOptions
+        );
+      } catch (error) {
+        this.writerLease?.release();
+        this.closed = true;
+        this.lifecycle = "disabled";
+        readyReject(error);
+        emitKnowledgeWorkerLifecycle2("disabled", {
+          version: this.version,
+          source: this.metadata.source,
+          integrity: this.metadata.integrity,
+          reason: String(error instanceof Error ? error.message : error).slice(0, 400)
+        });
+        throw error;
+      }
+      const fail = (error) => {
+        this.workerFailure ??= error;
+        if (!this.ready) readyReject(error);
+        this.closed = true;
+        this.lifecycle = "disabled";
+        for (const item of this.pending.values()) {
+          clearTimeout(item.timer);
+          item.reject(error);
+        }
+        this.pending.clear();
+        this.worker.unref();
+        emitKnowledgeWorkerLifecycle2("disabled", {
+          version: this.version,
+          source: this.metadata.source,
+          integrity: this.metadata.integrity,
+          reason: String(error instanceof Error ? error.message : error).slice(0, 400)
+        });
+      };
+      this.worker.on("message", (message) => {
+        if (message.ready) {
+          this.ready = true;
+          this.lifecycle = "verified";
+          readyResolve({ version: this.version });
+          emitKnowledgeWorkerLifecycle2("verified", {
+            version: this.version,
+            source: this.metadata.source,
+            integrity: this.metadata.integrity
+          });
+          if (!this.pending.size) this.worker.unref();
+          return;
+        }
+        if (message.uiChanged) {
+          invalidateKnowledgeUi2();
+          return;
+        }
+        const item = this.pending.get(message.id);
+        if (!item) return;
+        clearTimeout(item.timer);
+        this.pending.delete(message.id);
+        if (!this.pending.size) this.worker.unref();
+        if (message.error) item.reject(new Error(message.error));
+        else item.resolve(message.result);
+      });
+      this.worker.on("error", fail);
+      this.worker.on("exit", (code) => {
+        try {
+          this.writerLease?.release();
+        } catch (error) {
+          this.leaseReleaseError = error;
+          fail(error);
+        }
+        if (code !== 0 || !this.closed && !this.closing)
+          fail(new Error(`Knowledge worker exited (${code})`));
+      });
+      emitKnowledgeWorkerLifecycle2("staged", {
+        version: this.version,
+        source: this.metadata.source,
+        integrity: this.metadata.integrity
+      });
+    }
+    async waitUntilReady() {
+      if (this.ready) return { version: this.version };
+      if (this.closed) throw new Error("Knowledge worker failed to initialize");
+      return this.readyPromise;
+    }
+    request(op, args = {}) {
+      if (this.closed || this.closing && op !== "close")
+        return Promise.reject(new Error("Knowledge service is closed"));
+      const post = () => {
+        if (this.closed) return Promise.reject(new Error("Knowledge service is closed"));
+        const id2 = ++this.next;
+        this.worker.ref();
+        return new Promise((resolvePromise, reject) => {
+          const timer = setTimeout(
+            () => {
+              this.pending.delete(id2);
+              if (!this.pending.size) this.worker.unref();
+              reject(
+                new Error(`Knowledge ${op} timed out; it was not reported as a successful empty result`)
+              );
+            },
+            op === "reconcile" ? 12e4 : 2e4
+          );
+          this.pending.set(id2, { resolve: resolvePromise, reject, timer });
+          this.worker.postMessage({ id: id2, op, args });
+        });
+      };
+      if (op === "close") return post();
+      this.inFlightRequests += 1;
+      return this.waitUntilReady().then(post).finally(() => {
+        this.inFlightRequests = Math.max(0, this.inFlightRequests - 1);
+      });
+    }
+    close() {
+      if (this.closePromise) return this.closePromise;
+      this.closing = true;
+      this.lifecycle = "disabled";
+      emitKnowledgeWorkerLifecycle2("disabled", {
+        version: this.version,
+        previousVersion: this.version,
+        source: this.metadata.source,
+        integrity: this.metadata.integrity,
+        pendingRequests: this.pending.size
+      });
+      this.closePromise = (async () => {
+        let drainFailure = null;
+        const exited = new Promise((resolve132) => {
+          if (this.worker.threadId === -1) resolve132();
+          else this.worker.once("exit", resolve132);
+        });
+        try {
+          if (!this.closed) await this.waitUntilReady();
+          while (!this.closed && (this.pending.size || this.inFlightRequests))
+            await new Promise((resolve132) => setTimeout(resolve132, 10));
+          if (!this.closed) await this.request("close");
+        } catch (error) {
+          drainFailure = error;
+          await this.worker.terminate();
+        } finally {
+          this.closed = true;
+          for (const item of this.pending.values()) {
+            clearTimeout(item.timer);
+            item.reject(new Error("Knowledge service closed"));
+          }
+          this.pending.clear();
+          this.worker.ref();
+          const fallback = setTimeout(() => {
+            drainFailure = new Error("Knowledge worker required forced termination; drain did not complete");
+            void this.worker.terminate();
+          }, 5e3);
+          try {
+            await exited;
+          } finally {
+            clearTimeout(fallback);
+          }
+          if (this.leaseReleaseError) throw this.leaseReleaseError;
+          if (drainFailure) {
+            emitKnowledgeWorkerLifecycle2("disabled", {
+              version: this.version,
+              reason: String(drainFailure instanceof Error ? drainFailure.message : drainFailure).slice(
+                0,
+                400
+              )
+            });
+            throw drainFailure;
+          }
+          if (this.workerFailure) throw this.workerFailure;
+          emitKnowledgeWorkerLifecycle2("drained", {
+            version: this.version,
+            source: this.metadata.source,
+            integrity: this.metadata.integrity
+          });
+        }
+      })();
+      return this.closePromise;
+    }
+    prepareUnload() {
+      if (this.closing || this.closed) return { pendingRequests: this.pending.size, version: this.version };
+      this.closing = true;
+      return { pendingRequests: this.pending.size, version: this.version };
+    }
+    get pendingRequestCount() {
+      return this.pending.size;
+    }
+  }
+  function directory() {
+    const value = config.knowledgeDirectory();
+    if (!value) throw new Error("No application knowledge directory");
+    return value;
+  }
+  return {
+    metadata: knowledgeWorkerMetadata2,
+    resourceKey: (binding) => join9(directory(), binding.vaultId, "index.sqlite"),
+    create: ({ binding, workerVersion }) => new KnowledgeWorkerTransport(binding, directory(), { workerVersion })
+  };
+}
+var init_worker_transport = __esm({
+  "src/core/worker-transport.ts"() {
+    "use strict";
   }
 });
 var service_exports = {};
@@ -3699,7 +2459,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
     };
   }
   function fingerprintFor(settings2) {
-    return createHash12("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
+    return createHash8("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
   }
   function awaitSemanticDeadline(operation, controller) {
     let onAbort;
@@ -3785,11 +2545,11 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
             ...(related?.hits || []).filter((hit) => hit.kind === "wiki").map((hit) => hit.path)
           ])
         ];
-        const ticket = randomUUID8();
+        const ticket = randomUUID6();
         this.tickets.set(ticket, {
-          cwd: resolve7(cwd),
+          cwd: resolve4(cwd),
           project,
-          queryHash: createHash12("sha256").update(query).digest("hex"),
+          queryHash: createHash8("sha256").update(query).digest("hex"),
           query,
           navigation,
           linkedWiki: [...linkedWiki],
@@ -3820,7 +2580,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
       await withKnowledgeBinding2(this.binding, async () => {
       });
       const state = this.tickets.get(ticket);
-      if (!state || state.cwd !== resolve7(cwd) || Date.now() - state.createdAt > 60 * 60 * 1e3)
+      if (!state || state.cwd !== resolve4(cwd) || Date.now() - state.createdAt > 60 * 60 * 1e3)
         throw new Error("Read current navigation with research_prepare_knowledge first");
       for (const page of state.navigation) {
         const latest = await this.request("read", {
@@ -3862,7 +2622,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
           hash: page.hash,
           startLine: page.startLine,
           endLine: page.endLine,
-          excerptHash: createHash12("sha256").update(page.text).digest("hex")
+          excerptHash: createHash8("sha256").update(page.text).digest("hex")
         };
         state.reads.delete(path);
         state.reads.set(path, receipt2);
@@ -3973,7 +2733,9 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
       return withKnowledgeBinding2(this.binding, async () => {
         const result2 = await this.request("search", { query: text43, wikiOnly: true, project, limit: 6 });
         const hits = (result2?.hits || []).filter((hit) => hit.kind === "wiki");
-        const titles = hits.map((hit) => hit.title || String(hit.path || "").split("/").pop());
+        const titles = hits.map(
+          (hit) => hit.title || String(hit.path || "").split("/").pop()
+        );
         const title = mentionedWikiTitle(text43, titles);
         return title ? hits[titles.indexOf(title)]?.path || null : null;
       });
@@ -4122,7 +2884,8 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
                 ...Number.isInteger(semanticResult.totalEligible) ? { totalEligible: semanticResult.totalEligible } : {}
               };
               if (semanticResult.partial) metrics.index.semanticPartial = true;
-              if (Number.isInteger(semanticResult.scanned)) metrics.index.semanticScanned = semanticResult.scanned;
+              if (Number.isInteger(semanticResult.scanned))
+                metrics.index.semanticScanned = semanticResult.scanned;
               if (Number.isInteger(semanticResult.totalEligible))
                 metrics.index.semanticTotalEligible = semanticResult.totalEligible;
             }
@@ -4175,7 +2938,11 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
       if (!wikiOnly && !explainerOnly && result2.hits?.length) {
         try {
           const seeds = result2.hits.slice(0, GRAPH_RETRIEVAL_DEFAULTS.seeds).map((hit) => hit.path);
-          const graph = await this.request("graphNeighbors", { paths: seeds, project: state.project, perSeed: 8 });
+          const graph = await this.request("graphNeighbors", {
+            paths: seeds,
+            project: state.project,
+            perSeed: 8
+          });
           const expanded = expandWithGraph(result2.hits, graph?.items || [], { limit: Number(limit) || 5 });
           metrics.graphCandidates = (graph?.items || []).length;
           metrics.graphAccepted = expanded.filter((hit) => hit.retrieval === "graph").length;
@@ -4234,7 +3001,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
         await assertBinding(this.binding);
         if (expectedBindingRevision !== this.binding.revision)
           throw new Error("Semantic settings binding revision is stale");
-        validateSemanticConfig(input);
+        validateSemanticConfig2(input);
         const value = await saveSemanticSettings2(this.binding.vaultId, input, expectedSettingsRevision);
         await assertBinding(this.binding);
         return { ...value, credentialEnv: value.credentialEnv };
@@ -4244,7 +3011,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
       await assertBinding(this.binding);
       if (expectedBindingRevision !== this.binding.revision)
         throw new Error("Semantic provider binding revision is stale");
-      const config2 = validateSemanticConfig(input);
+      const config2 = validateSemanticConfig2(input);
       const result2 = await embedTexts(config2, ["drone semantic provider test"], options);
       await assertBinding(this.binding);
       return { ok: true, provider: result2.provider, model: result2.model, dimension: result2.dimension };
@@ -4307,7 +3074,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
       await withKnowledgeBinding2(this.binding, async () => {
       });
       const state = this.tickets.get(ticket);
-      if (!state || state.cwd !== resolve7(cwd) || Date.now() - state.createdAt > 60 * 60 * 1e3)
+      if (!state || state.cwd !== resolve4(cwd) || Date.now() - state.createdAt > 60 * 60 * 1e3)
         throw new Error("Read current navigation with research_prepare_knowledge first");
       const cap = Math.max(1, Math.min(12, Number(limit) || 12));
       const sources = [];
@@ -4324,7 +3091,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
     /** A delivery receipt confirms a generated link, not that its text is evidence. Host-only API. */
     async deliveryReceipt(ticket, cwd, absolutePath) {
       const state = await this.check(ticket, cwd);
-      const path = relative7(this.binding.vault, resolve7(absolutePath)).split(sep7).join("/");
+      const path = relative4(this.binding.vault, resolve4(absolutePath)).split(sep4).join("/");
       validateNote(path);
       if (!canRead(path, state.project) || !(path.startsWith("Library/Explainers/") || path.startsWith(`Projects/${state.project}/Runs/`)))
         throw new Error("Not an allowed presentation/run delivery");
@@ -4453,10 +3220,11 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
       };
     }
     close() {
-      if (!this.closePromise) this.closePromise = this.transport.close().catch((error) => {
-        this.closePromise = null;
-        throw error;
-      }).finally(() => this.tickets.clear());
+      if (!this.closePromise)
+        this.closePromise = this.transport.close().catch((error) => {
+          this.closePromise = null;
+          throw error;
+        }).finally(() => this.tickets.clear());
       return this.closePromise;
     }
     prepareUnload() {
@@ -4509,7 +3277,12 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
           integrity: candidate.workerMetadata.integrity
         });
         pool.set(key, candidate);
-        emitLegacyPeerEvent?.(SERVICE_EVENT, { action: "register", key, service: candidate, origin: serviceModule });
+        emitLegacyPeerEvent?.(SERVICE_EVENT, {
+          action: "register",
+          key,
+          service: candidate,
+          origin: serviceModule
+        });
         if (service) {
           emitKnowledgeWorkerLifecycle2("reloaded", {
             version: candidate.workerVersion,
@@ -4548,7 +3321,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
   async function notifyKnowledgeChange2(path) {
     const binding = await readKnowledgeBinding2();
     if (!binding) return { indexed: false, reason: "legacy-mode" };
-    const note = relative7(binding.vault, path).split(sep7).join("/");
+    const note = relative4(binding.vault, path).split(sep4).join("/");
     try {
       validateNote(note);
       const service = await getKnowledgeService2(binding);
@@ -4569,7 +3342,11 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
         if (closed[index].status === "fulfilled" && pool.get(key) === service) pool.delete(key);
       }
       const failures = [...pending, ...closed].filter((result2) => result2.status === "rejected");
-      if (failures.length) throw new AggregateError(failures.map((result2) => result2.reason), "Knowledge service pool disposal failed");
+      if (failures.length)
+        throw new AggregateError(
+          failures.map((result2) => result2.reason),
+          "Knowledge service pool disposal failed"
+        );
     })();
     const closing = operation.finally(() => {
       if (pool.closing === closing) pool.closing = null;
@@ -4577,7 +3354,14 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
     pool.closing = closing;
     return closing;
   }
-  return { dispose: () => pool.dispose(), KnowledgeService: KnowledgeService2, getKnowledgeService: getKnowledgeService2, notifyKnowledgeChange: notifyKnowledgeChange2, closeKnowledgeServices: closeKnowledgeServices2, receiveCompatibilityEvent };
+  return {
+    dispose: () => pool.dispose(),
+    KnowledgeService: KnowledgeService2,
+    getKnowledgeService: getKnowledgeService2,
+    notifyKnowledgeChange: notifyKnowledgeChange2,
+    closeKnowledgeServices: closeKnowledgeServices2,
+    receiveCompatibilityEvent
+  };
 }
 function createKnowledgeServicePool(runtime, config, semantic, reviewPolicy, transportFactory) {
   return createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, transportFactory, null);
@@ -4590,27 +3374,1263 @@ var closeKnowledgeServices;
 var init_service = __esm({
   "src/core/service.ts"() {
     "use strict";
-    init_topic_probe();
-    init_graph_retrieval();
-    init_worker_transport();
-    init_runtime_host();
     init_config();
     init_files();
+    init_graph_retrieval();
     init_review_policy();
+    init_runtime_host();
     init_semantic_provider();
     init_semantic_settings();
+    init_topic_probe();
     init_ui_state();
+    init_worker_transport();
     compatibilityKnowledgeServices = createKnowledgeServicePoolApi(
       compatibilityKnowledgeRuntimeHost,
       config_exports,
       semantic_settings_exports,
       review_policy_exports,
       // Remove with the 0.2 compatibility facade after complete owner disposal is wired.
-      createKnowledgeWorkerTransportFactory(compatibilityKnowledgeRuntimeHost, config_exports, invalidateKnowledgeUi, null),
+      createKnowledgeWorkerTransportFactory(
+        compatibilityKnowledgeRuntimeHost,
+        config_exports,
+        invalidateKnowledgeUi,
+        null
+      ),
       compatibilityKnowledgeRuntimeHost.emitProcessEvent
     );
     process.on("drone:knowledge-service/v1", compatibilityKnowledgeServices.receiveCompatibilityEvent);
     ({ KnowledgeService, getKnowledgeService, notifyKnowledgeChange, closeKnowledgeServices } = compatibilityKnowledgeServices);
+  }
+});
+var specialist_host_exports = {};
+__export(specialist_host_exports, {
+  SPECIALIST_LIMITS: () => SPECIALIST_LIMITS,
+  contextSessionId: () => contextSessionId,
+  createKnowledgeSpecialistHost: () => createKnowledgeSpecialistHost,
+  knowledgeSpecialistHost: () => knowledgeSpecialistHost,
+  registerKnowledgeSpecialistHost: () => registerKnowledgeSpecialistHost,
+  setSpecialistSettings: () => setSpecialistSettings,
+  specialistQueueSnapshot: () => specialistQueueSnapshot,
+  specialistSettings: () => specialistSettings2,
+  withSpecialistSlot: () => withSpecialistSlot
+});
+function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEvent, storage) {
+  const { runtimeSlot: runtimeSlot22 } = runtime;
+  const { knowledgeDirectory: knowledgeDirectory2, readKnowledgeBinding: readKnowledgeBinding2, withKnowledgeBinding: withKnowledgeBinding2 } = config;
+  const { invalidateKnowledgeUi: invalidateKnowledgeUi2 } = ui;
+  const state = runtimeSlot22("knowledge", "specialists", () => ({
+    hosts: /* @__PURE__ */ new Map(),
+    active: 0,
+    queue: [],
+    settingsQueue: Promise.resolve(),
+    disposed: false,
+    dispose() {
+      this.disposed = true;
+      this.hosts.clear();
+      for (const item of this.queue.splice(0)) item.reject();
+    }
+  }));
+  const HOST_EVENT = "drone:knowledge-specialist-host/v1";
+  const hostModule = {};
+  function receiveCompatibilityEvent(payload) {
+    if (!payload || payload.origin === hostModule || typeof payload.id !== "string") return;
+    if (payload.action === "register" && typeof payload.run === "function")
+      state.hosts.set(payload.id, payload.run);
+    if (payload.action === "unregister" && state.hosts.get(payload.id) === payload.run)
+      state.hosts.delete(payload.id);
+  }
+  const SPECIALIST_LIMITS2 = Object.freeze({
+    maxRunsPerTurn: 4,
+    maxRunsPerSession: 20,
+    maxToolOperations: 80,
+    concurrency: 2,
+    maxConcurrency: 4,
+    queueLimit: 8,
+    queueWaitMs: 15e3,
+    timeoutMs: 12e4,
+    maxTokensPerTurn: 24e3,
+    maxTokensPerSession: 12e4,
+    maxCostPerTurn: 1,
+    maxCostPerSession: 5
+  });
+  const contextSessionId2 = (ctx) => ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || null;
+  const specialistQueueSnapshot2 = () => ({ active: state.active, queueLength: state.queue.length });
+  function registerKnowledgeSpecialistHost2(id2, run2) {
+    if (!id2 || typeof run2 !== "function") throw new Error("A specialist host requires a session identity");
+    if (state.disposed) throw new Error("Knowledge specialist runtime has been disposed");
+    state.hosts.set(id2, run2);
+    emitLegacyPeerEvent?.(HOST_EVENT, { action: "register", id: id2, run: run2, origin: hostModule });
+    return () => {
+      if (state.hosts.get(id2) === run2) state.hosts.delete(id2);
+      emitLegacyPeerEvent?.(HOST_EVENT, { action: "unregister", id: id2, run: run2, origin: hostModule });
+    };
+  }
+  function knowledgeSpecialistHost2(ctx) {
+    const id2 = contextSessionId2(ctx);
+    return state.hosts.get(id2);
+  }
+  async function specialistSettings3() {
+    let data = { mode: "automatic", revision: 0 };
+    if (storage) {
+      const saved = await storage.read();
+      if (saved !== null) data = saved;
+    } else {
+      const dir = knowledgeDirectory2();
+      if (!dir) return { mode: "off", revision: 0, ...SPECIALIST_LIMITS2 };
+      try {
+        data = JSON.parse(await readFile7(join11(dir, "specialists.json"), "utf8"));
+      } catch (e) {
+        if (e.code !== "ENOENT") throw new Error("Knowledge specialist settings cannot be read");
+      }
+    }
+    if (!["automatic", "manual", "off"].includes(data.mode) || !Number.isSafeInteger(data.revision) || data.revision < 0)
+      throw new Error("Invalid knowledge specialist settings");
+    const integerLimits = {
+      maxRunsPerTurn: [1, SPECIALIST_LIMITS2.maxRunsPerTurn],
+      maxRunsPerSession: [1, SPECIALIST_LIMITS2.maxRunsPerSession],
+      maxToolOperations: [1, SPECIALIST_LIMITS2.maxToolOperations],
+      concurrency: [1, SPECIALIST_LIMITS2.maxConcurrency],
+      queueLimit: [1, SPECIALIST_LIMITS2.queueLimit],
+      queueWaitMs: [50, SPECIALIST_LIMITS2.queueWaitMs],
+      timeoutMs: [50, SPECIALIST_LIMITS2.timeoutMs],
+      maxTokensPerTurn: [1, SPECIALIST_LIMITS2.maxTokensPerTurn],
+      maxTokensPerSession: [1, SPECIALIST_LIMITS2.maxTokensPerSession]
+    };
+    for (const key of Object.keys(integerLimits))
+      if (data[key] !== void 0 && (!Number.isSafeInteger(data[key]) || data[key] < integerLimits[key][0]))
+        throw new Error("Invalid knowledge specialist settings");
+    const costLimits = {
+      maxCostPerTurn: SPECIALIST_LIMITS2.maxCostPerTurn,
+      maxCostPerSession: SPECIALIST_LIMITS2.maxCostPerSession
+    };
+    for (const key of Object.keys(costLimits))
+      if (data[key] !== void 0 && (typeof data[key] !== "number" || !Number.isFinite(data[key]) || data[key] < 0))
+        throw new Error("Invalid knowledge specialist settings");
+    const bounded3 = {};
+    for (const [key, [min, max]] of Object.entries(integerLimits))
+      bounded3[key] = Math.min(max, Math.max(min, data[key] ?? SPECIALIST_LIMITS2[key]));
+    for (const [key, max] of Object.entries(costLimits))
+      bounded3[key] = Math.min(max, Math.max(0, data[key] ?? SPECIALIST_LIMITS2[key]));
+    return { ...SPECIALIST_LIMITS2, ...bounded3, mode: data.mode, revision: data.revision };
+  }
+  async function setSpecialistSettings2({ mode, revision, bindingRevision, ...requested }) {
+    if (!["automatic", "manual", "off"].includes(mode) || !Number.isSafeInteger(revision))
+      throw new Error("Invalid specialist setting request");
+    const allowedRequested = /* @__PURE__ */ new Set([
+      "maxRunsPerTurn",
+      "maxRunsPerSession",
+      "maxToolOperations",
+      "concurrency",
+      "queueLimit",
+      "queueWaitMs",
+      "timeoutMs",
+      "maxTokensPerTurn",
+      "maxTokensPerSession",
+      "maxCostPerTurn",
+      "maxCostPerSession"
+    ]);
+    for (const key of Object.keys(requested))
+      if (!allowedRequested.has(key)) throw new Error(`Unknown specialist setting: ${key}`);
+    const operation = state.settingsQueue.catch(() => void 0).then(async () => {
+      const binding = await readKnowledgeBinding2({ fresh: true });
+      if (!binding || binding.revision !== bindingRevision)
+        throw new Error("Knowledge binding changed; refresh settings");
+      return withKnowledgeBinding2(binding, async () => {
+        const current = await specialistSettings3();
+        if (current.revision !== revision) throw new Error("Specialist settings changed; refresh first");
+        const data = { ...current, ...requested, mode, revision: revision + 1 };
+        const minimums = {
+          maxRunsPerTurn: 1,
+          maxRunsPerSession: 1,
+          maxToolOperations: 1,
+          concurrency: 1,
+          queueLimit: 1,
+          queueWaitMs: 50,
+          timeoutMs: 50,
+          maxTokensPerTurn: 1,
+          maxTokensPerSession: 1
+        };
+        for (const [key, minimum] of Object.entries(minimums))
+          if (data[key] !== void 0 && (!Number.isSafeInteger(data[key]) || data[key] < minimum))
+            throw new Error("Invalid knowledge specialist settings");
+        for (const key of ["maxCostPerTurn", "maxCostPerSession"])
+          if (data[key] !== void 0 && (typeof data[key] !== "number" || !Number.isFinite(data[key]) || data[key] < 0))
+            throw new Error("Invalid knowledge specialist settings");
+        for (const key of [
+          "maxRunsPerTurn",
+          "maxRunsPerSession",
+          "maxToolOperations",
+          "concurrency",
+          "queueLimit",
+          "queueWaitMs",
+          "timeoutMs",
+          "maxTokensPerTurn",
+          "maxTokensPerSession",
+          "maxCostPerTurn",
+          "maxCostPerSession"
+        ])
+          data[key] = Math.min(data[key] ?? SPECIALIST_LIMITS2[key], SPECIALIST_LIMITS2[key]);
+        data.mode = mode;
+        data.revision = revision + 1;
+        if (storage) await storage.write(data, revision);
+        else {
+          const dir = knowledgeDirectory2(), temp = join11(dir, `specialists.${randomUUID8()}.tmp`);
+          await mkdir6(dir, { recursive: true, mode: 448 });
+          try {
+            await writeFile6(temp, `${JSON.stringify(data)}
+`, { flag: "wx", mode: 384 });
+            await rename5(temp, join11(dir, "specialists.json"));
+          } finally {
+            await unlink4(temp).catch((e) => {
+              if (e.code !== "ENOENT") throw e;
+            });
+          }
+        }
+        invalidateKnowledgeUi2();
+        return { ...SPECIALIST_LIMITS2, ...data };
+      });
+    });
+    state.settingsQueue = operation;
+    return operation;
+  }
+  async function withSpecialistSlot2(signal, work, options = {}) {
+    signal?.throwIfAborted();
+    if (state.disposed) throw new Error("Knowledge specialist runtime has been disposed");
+    const bounded3 = (value, fallback, max) => Number.isSafeInteger(value) ? Math.min(max, Math.max(1, value)) : fallback;
+    const concurrency = bounded3(
+      options.concurrency,
+      SPECIALIST_LIMITS2.concurrency,
+      SPECIALIST_LIMITS2.maxConcurrency
+    );
+    const queueLimit = bounded3(
+      options.queueLimit,
+      SPECIALIST_LIMITS2.queueLimit,
+      SPECIALIST_LIMITS2.queueLimit
+    );
+    const queueWaitMs = bounded3(
+      options.queueWaitMs,
+      SPECIALIST_LIMITS2.queueWaitMs,
+      SPECIALIST_LIMITS2.queueWaitMs
+    );
+    if (state.active >= concurrency) {
+      if (state.queue.length >= queueLimit) throw new Error("Knowledge specialist queue is full");
+      await new Promise((resolve132, reject) => {
+        let settled = false;
+        const item = {
+          resolve: () => {
+            if (settled) return;
+            settled = true;
+            signal?.removeEventListener("abort", abort);
+            clearTimeout(timer);
+            resolve132();
+          },
+          reject: () => {
+            if (settled) return;
+            settled = true;
+            signal?.removeEventListener("abort", abort);
+            clearTimeout(timer);
+            reject(new Error("Knowledge specialist runtime has been disposed"));
+          }
+        };
+        const abort = () => {
+          if (settled) return;
+          settled = true;
+          const at = state.queue.indexOf(item);
+          if (at >= 0) state.queue.splice(at, 1);
+          clearTimeout(timer);
+          signal?.removeEventListener("abort", abort);
+          reject(new Error("Knowledge specialist cancelled while queued"));
+        };
+        const timer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          const at = state.queue.indexOf(item);
+          if (at >= 0) state.queue.splice(at, 1);
+          signal?.removeEventListener("abort", abort);
+          reject(new Error("Knowledge specialist queue wait deadline exceeded"));
+        }, queueWaitMs);
+        state.queue.push(item);
+        signal?.addEventListener("abort", abort, { once: true });
+      });
+    } else state.active++;
+    try {
+      signal?.throwIfAborted();
+      return await work();
+    } finally {
+      if (state.queue.length) state.queue.shift().resolve();
+      else state.active--;
+    }
+  }
+  return {
+    dispose: () => state.dispose(),
+    SPECIALIST_LIMITS: SPECIALIST_LIMITS2,
+    contextSessionId: contextSessionId2,
+    specialistQueueSnapshot: specialistQueueSnapshot2,
+    registerKnowledgeSpecialistHost: registerKnowledgeSpecialistHost2,
+    knowledgeSpecialistHost: knowledgeSpecialistHost2,
+    specialistSettings: specialistSettings3,
+    setSpecialistSettings: setSpecialistSettings2,
+    withSpecialistSlot: withSpecialistSlot2,
+    receiveCompatibilityEvent
+  };
+}
+function createKnowledgeSpecialistHost(runtime, config, ui, storage) {
+  return createKnowledgeSpecialistHostApi(runtime, config, ui, null, storage);
+}
+var compatibilityKnowledgeSpecialists;
+var SPECIALIST_LIMITS;
+var contextSessionId;
+var specialistQueueSnapshot;
+var registerKnowledgeSpecialistHost;
+var knowledgeSpecialistHost;
+var specialistSettings2;
+var setSpecialistSettings;
+var withSpecialistSlot;
+var init_specialist_host = __esm({
+  "src/core/specialist-host.ts"() {
+    "use strict";
+    init_config();
+    init_runtime_host();
+    init_ui_state();
+    compatibilityKnowledgeSpecialists = createKnowledgeSpecialistHostApi(
+      compatibilityKnowledgeRuntimeHost,
+      config_exports,
+      ui_state_exports,
+      compatibilityKnowledgeRuntimeHost.emitProcessEvent
+    );
+    process.on("drone:knowledge-specialist-host/v1", compatibilityKnowledgeSpecialists.receiveCompatibilityEvent);
+    ({
+      SPECIALIST_LIMITS,
+      contextSessionId,
+      specialistQueueSnapshot,
+      registerKnowledgeSpecialistHost,
+      knowledgeSpecialistHost,
+      specialistSettings: specialistSettings2,
+      setSpecialistSettings,
+      withSpecialistSlot
+    } = compatibilityKnowledgeSpecialists);
+  }
+});
+var topic_memory_exports = {};
+__export(topic_memory_exports, {
+  TOPIC_MEMORY_LIMITS: () => TOPIC_MEMORY_LIMITS,
+  TOPIC_MEMORY_VERSION: () => TOPIC_MEMORY_VERSION,
+  archiveTopic: () => archiveTopic,
+  classifyTopic: () => classifyTopic,
+  createTopicMemory: () => createTopicMemory,
+  createTopicMemoryApi: () => createTopicMemoryApi,
+  listTopics: () => listTopics,
+  readTopic: () => readTopic,
+  topicRunHash: () => topicRunHash,
+  updateTopic: () => updateTopic
+});
+function projectKey2(project) {
+  const value = text2(project, 120);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) throw new Error("Invalid knowledge project");
+  return value;
+}
+function memoryPath(directory, vaultId, project) {
+  if (!isAbsolute5(directory) || !/^[a-f0-9]{24}$/.test(vaultId))
+    throw new Error("Invalid topic memory binding");
+  return join12(resolve6(directory), vaultId, "topic-memory", `${projectKey2(project)}.json`);
+}
+async function ensureWithin(root, target) {
+  const lexicalRoot = resolve6(root);
+  const actualRoot = await realpath4(root).catch(() => lexicalRoot);
+  const lexicalParent = resolve6(dirname4(target));
+  const rebased = lexicalParent.startsWith(lexicalRoot) ? join12(actualRoot, lexicalParent.slice(lexicalRoot.length)) : lexicalParent;
+  const parent = await realpath4(rebased).catch(() => rebased);
+  const rel = relative6(actualRoot, parent);
+  if (isAbsolute5(rel) || rel === ".." || rel.startsWith(`..${sep6}`))
+    throw new Error("Topic memory path escapes knowledge directory");
+  let cursor = actualRoot;
+  for (const part of relative6(actualRoot, rebased).split(sep6).filter(Boolean)) {
+    cursor = join12(cursor, part);
+    try {
+      if ((await lstat6(cursor)).isSymbolicLink())
+        throw new Error("Topic memory path cannot traverse symlinks");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      break;
+    }
+  }
+  try {
+    const stat42 = await lstat6(target);
+    if (stat42.isSymbolicLink()) throw new Error("Topic memory file cannot be a symlink");
+    if (!stat42.isFile()) throw new Error("Topic memory path is not a regular file");
+    if (stat42.size > TOPIC_MEMORY_LIMITS.maxFileBytes) throw new Error("Topic memory file exceeds size limit");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  return target;
+}
+function blank2(vaultId, project) {
+  const now2 = (/* @__PURE__ */ new Date()).toISOString();
+  return {
+    version: TOPIC_MEMORY_VERSION,
+    vaultId,
+    project,
+    revision: 0,
+    updatedAt: now2,
+    topics: []
+  };
+}
+function validateSource(source, project = null) {
+  if (!source || typeof source !== "object" || typeof source.path !== "string" || isAbsolute5(source.path) || source.path.includes("\\") || source.path.split("/").includes("..") || !/^[^\0]+\.md$/.test(source.path) || source.path.length > 240 || /(?:^|\/)(?:Runs|Explainers)\//i.test(source.path) || !/^[a-f0-9]{64}$/.test(source.hash || ""))
+    return null;
+  try {
+    validateNote(source.path);
+  } catch {
+    return null;
+  }
+  if (project && !canRead(source.path, project)) return null;
+  return { path: source.path, hash: source.hash };
+}
+function normalizeTopic(topic, binding, project) {
+  if (!topic || typeof topic !== "object" || typeof topic.id !== "string")
+    throw new Error("Invalid topic record");
+  const sources = Array.isArray(topic.sources) ? (topic.sources.some((source) => !validateSource(source, project)) ? (() => {
+    throw new Error("Invalid or out-of-scope topic source");
+  })() : topic.sources).map((source) => validateSource(source, project)).filter(Boolean).slice(0, TOPIC_MEMORY_LIMITS.maxSources) : [];
+  const id2 = text2(topic.id, 120);
+  if (!/^[a-z0-9][a-z0-9_-]{0,95}$/i.test(id2)) throw new Error("Invalid topic id");
+  return {
+    id: id2,
+    title: text2(topic.title || topic.id, 180),
+    aliases: [
+      ...new Set(
+        (Array.isArray(topic.aliases) ? topic.aliases : []).map((x) => text2(x, 120)).filter(Boolean)
+      )
+    ].slice(0, 12),
+    summary: text2(topic.summary, TOPIC_MEMORY_LIMITS.maxSummaryChars),
+    entities: [
+      ...new Set(
+        (Array.isArray(topic.entities) ? topic.entities : []).map((x) => text2(x, 100)).filter(Boolean)
+      )
+    ].slice(0, TOPIC_MEMORY_LIMITS.maxEntities),
+    unresolvedQuestions: [
+      ...new Set(
+        (Array.isArray(topic.unresolvedQuestions) ? topic.unresolvedQuestions : []).map((x) => text2(x, 240)).filter(Boolean)
+      )
+    ].slice(0, TOPIC_MEMORY_LIMITS.maxQuestions),
+    sources,
+    artifacts: [
+      ...new Set(
+        (Array.isArray(topic.artifacts) ? topic.artifacts : []).map((x) => text2(x, 240)).filter(Boolean)
+      )
+    ].slice(0, TOPIC_MEMORY_LIMITS.maxArtifacts),
+    sessionId: topic.sessionId ? text2(topic.sessionId, 160) : null,
+    status: ["active", "stale", "conflict-candidate", "archived"].includes(topic.status) ? topic.status : "active",
+    createdAt: topic.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+    updatedAt: topic.updatedAt || (/* @__PURE__ */ new Date()).toISOString(),
+    lastRunHash: /^[a-f0-9]{64}$/.test(topic.lastRunHash || "") ? topic.lastRunHash : null,
+    lastRunId: topic.lastRunId ? text2(topic.lastRunId, 200) : null,
+    recentRuns: Array.isArray(topic.recentRuns) ? topic.recentRuns.filter((x) => /^[a-f0-9]{64}$/.test(x)).slice(-TOPIC_MEMORY_LIMITS.maxRecentRuns) : [],
+    proposalIds: [
+      ...new Set(
+        (Array.isArray(topic.proposalIds) ? topic.proposalIds : []).map((x) => text2(x, 120)).filter(Boolean)
+      )
+    ].slice(0, 12),
+    keyFindings: Array.isArray(topic.keyFindings) ? topic.keyFindings.map((x) => text2(x, 300)).filter(Boolean).slice(0, 16) : [],
+    claims: Array.isArray(topic.claims) ? topic.claims.map((claim) => normalizeClaim(claim, project)).filter(Boolean).slice(-TOPIC_MEMORY_LIMITS.maxClaims) : [],
+    conflicts: Array.isArray(topic.conflicts) ? topic.conflicts.map((conflict) => normalizeConflict(conflict, project)).filter(Boolean).slice(-TOPIC_MEMORY_LIMITS.maxConflicts) : [],
+    history: Array.isArray(topic.history) ? topic.history.slice(-TOPIC_MEMORY_LIMITS.maxHistory).map((entry) => ({
+      summary: text2(entry?.summary, 800),
+      updatedAt: text2(entry?.updatedAt, 40)
+    })).filter((entry) => entry.summary) : [],
+    vaultId: typeof binding === "string" ? binding : binding?.vaultId,
+    project
+  };
+}
+function normalizeClaim(claim, project) {
+  if (!claim || typeof claim !== "object") return null;
+  const sourcePath = text2(claim.sourcePath || claim.source_path, 240);
+  const sourceHash = text2(claim.sourceHash || claim.source_hash, 64);
+  if (!sourcePath || !/^[a-f0-9]{64}$/.test(sourceHash) || !validateSource({ path: sourcePath, hash: sourceHash }, project))
+    return null;
+  const relation = ["observation", "interpretation", "hypothesis"].includes(claim.relation) ? claim.relation : "observation";
+  const value = text2(claim.value, 600);
+  const statement = text2(claim.claim, 1200);
+  if (!statement || !text2(claim.subject, 180) || !text2(claim.predicate, 180)) return null;
+  return {
+    claim: statement,
+    subject: text2(claim.subject, 180),
+    predicate: text2(claim.predicate, 180),
+    ...value ? { value } : {},
+    ...["organism", "tissue", "stage", "method", "endpoint", "unit"].reduce((result2, key) => {
+      const value2 = text2(claim[key], 180);
+      if (value2) result2[key] = value2;
+      return result2;
+    }, {}),
+    ...claim.direction !== void 0 ? {
+      direction: ["increase", "decrease", "affirmed", "negated", "unknown"].includes(claim.direction) ? claim.direction : "unknown"
+    } : {},
+    ...Number.isFinite(claim.effect) ? { effect: claim.effect } : {},
+    sourcePath,
+    sourceHash,
+    ...claim.location ? { location: text2(claim.location, 120) } : {},
+    ...claim.limitations ? { limitations: text2(claim.limitations, 4e3) } : {},
+    relation
+  };
+}
+function validateConflictPath(path, project) {
+  if (typeof path !== "string" || !path || isAbsolute5(path) || path.includes("\\") || path.split("/").includes("..") || /(?:^|\/)(?:Runs|Explainers)\//i.test(path))
+    return false;
+  try {
+    validateNote(path);
+  } catch {
+    return false;
+  }
+  return canRead(path, project);
+}
+function normalizeConflict(conflict, project) {
+  if (!conflict || typeof conflict !== "object") return null;
+  const result2 = {
+    relation: text2(conflict.relation, 40),
+    confidence: text2(conflict.confidence, 20),
+    reason: text2(conflict.reason, 600),
+    previousSourcePath: text2(conflict.previousSourcePath, 240),
+    incomingSourcePath: text2(conflict.incomingSourcePath, 240),
+    detectedAt: text2(conflict.detectedAt, 40),
+    ...conflict.comparisonVersion === 2 ? {
+      comparisonVersion: 2,
+      previousSourceHash: text2(conflict.previousSourceHash, 64),
+      incomingSourceHash: text2(conflict.incomingSourceHash, 64),
+      missingConditions: conflict.missingConditions,
+      differingConditions: conflict.differingConditions
+    } : {}
+  };
+  if (!["contradicts", "supports", "refines", "supersedes", "unresolved"].includes(result2.relation))
+    return null;
+  if (!result2.reason || !validateConflictPath(result2.previousSourcePath, project) || !validateConflictPath(result2.incomingSourcePath, project))
+    return null;
+  return result2;
+}
+function validateDocument2(value, vaultId, project) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Corrupt topic memory; refusing overwrite");
+  if (value.version !== TOPIC_MEMORY_VERSION)
+    throw new Error("Unsupported topic memory schema version; refusing overwrite");
+  if (value.vaultId !== vaultId || value.project !== project || !Number.isSafeInteger(value.revision) || value.revision < 0 || !Array.isArray(value.topics))
+    throw new Error("Corrupt topic memory; refusing overwrite");
+  if (value.topics.length > TOPIC_MEMORY_LIMITS.maxTopics)
+    throw new Error("Topic memory exceeds its bounded record limit");
+  return {
+    ...value,
+    topics: value.topics.map((topic) => normalizeTopic(topic, vaultId, project))
+  };
+}
+async function readDocument2(path, vaultId, project) {
+  try {
+    const raw = await readFile9(path, "utf8");
+    if (Buffer.byteLength(raw) > TOPIC_MEMORY_LIMITS.maxFileBytes)
+      throw new Error("Topic memory file exceeds size limit");
+    const parsed = JSON.parse(raw);
+    return validateDocument2(parsed, vaultId, project);
+  } catch (error) {
+    if (error.code === "ENOENT") return blank2(vaultId, project);
+    if (error instanceof SyntaxError) throw new Error("Corrupt topic memory; refusing overwrite");
+    throw error;
+  }
+}
+async function atomicWrite2(path, value) {
+  await mkdir7(dirname4(path), { recursive: true, mode: 448 });
+  const temp = join12(dirname4(path), `.${randomUUID10()}.tmp`);
+  try {
+    await writeFile7(temp, `${JSON.stringify(value, null, 2)}
+`, {
+      flag: "wx",
+      mode: 384
+    });
+    await rename6(temp, path);
+  } finally {
+    await unlink5(temp).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+  }
+}
+function classifyTopic(existing, incoming) {
+  if (!existing) return "new";
+  if (incoming.runHash && (incoming.runHash === existing.lastRunHash || existing.recentRuns?.includes(incoming.runHash)))
+    return "duplicate";
+  const oldSources = new Map((existing.sources || []).map((source) => [source.path, source.hash]));
+  const changed = (incoming.sources || []).some(
+    (source) => oldSources.has(source.path) && oldSources.get(source.path) !== source.hash
+  );
+  if (changed) return "stale";
+  const previousClaims = existing.claims || [];
+  const incomingClaims = incoming.claims || [];
+  if (previousClaims.length && incomingClaims.length && compareClaimSets(previousClaims, incomingClaims).some((comparison) => comparison.blocking))
+    return "conflict-candidate";
+  return "additional";
+}
+function createTopicMemoryWithHost(runtime, config, { binding, project, directory = config?.knowledgeDirectory() } = {}, storageFactory) {
+  if (!binding?.vaultId) throw new Error("Topic memory requires a bound Vault");
+  const scope = { vaultId: binding.vaultId, project: projectKey2(project) };
+  const storage = storageFactory?.(binding, scope.project);
+  const path = storage ? storage.key : memoryPath(directory, scope.vaultId, scope.project);
+  const read = async () => {
+    if (storage) {
+      const value = await storage.read();
+      if (value === null) return blank2(scope.vaultId, scope.project);
+      if (Buffer.byteLength(JSON.stringify(value)) > TOPIC_MEMORY_LIMITS.maxFileBytes)
+        throw new Error("Topic memory file exceeds size limit");
+      return validateDocument2(value, scope.vaultId, scope.project);
+    }
+    await ensureWithin(directory, path);
+    return readDocument2(path, scope.vaultId, scope.project);
+  };
+  const mutate = async (expectedRevision, updater) => runtime.runRuntimeExclusive("topic-memory", path, async () => {
+    const current = await read();
+    if (expectedRevision !== void 0 && expectedRevision !== null && current.revision !== expectedRevision)
+      throw new Error("Topic memory revision changed");
+    const next = updater(structuredClone(current));
+    if (next?.__topicNoop) return current;
+    const value = validateDocument2(
+      {
+        ...next,
+        version: TOPIC_MEMORY_VERSION,
+        vaultId: scope.vaultId,
+        project: scope.project,
+        revision: current.revision + 1,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      },
+      scope.vaultId,
+      scope.project
+    );
+    if (value.topics.length > TOPIC_MEMORY_LIMITS.maxTopics) {
+      const archived = value.topics.filter((topic) => topic.status === "archived");
+      if (!archived.length)
+        throw new Error("Topic memory quota exceeded; archive a topic before adding another");
+      const remove = value.topics.length - TOPIC_MEMORY_LIMITS.maxTopics;
+      const evict = new Set(archived.slice(-remove).map((topic) => topic.id));
+      value.topics = value.topics.filter((topic) => !evict.has(topic.id));
+    }
+    if (storage) await storage.write(value, current.revision);
+    else await atomicWrite2(path, value);
+    return value;
+  });
+  const compact = (topic) => ({
+    id: topic.id,
+    title: topic.title,
+    aliases: topic.aliases,
+    summary: topic.summary.slice(0, TOPIC_MEMORY_LIMITS.maxContextChars),
+    entities: topic.entities,
+    unresolvedQuestions: topic.unresolvedQuestions,
+    sources: topic.sources,
+    artifacts: topic.artifacts,
+    status: topic.status,
+    revision: topic.revision,
+    updatedAt: topic.updatedAt,
+    lastRunHash: topic.lastRunHash,
+    lastRunId: topic.lastRunId,
+    recentRuns: topic.recentRuns,
+    proposalIds: topic.proposalIds,
+    keyFindings: topic.keyFindings,
+    claims: topic.claims,
+    conflicts: topic.conflicts,
+    history: topic.history
+  });
+  const context = (topic) => {
+    const value = {
+      id: topic.id,
+      title: topic.title,
+      entities: topic.entities.slice(0, 12),
+      summary: topic.summary.slice(0, 900),
+      claims: topic.claims.slice(-6).map((claim) => ({
+        claim: claim.claim,
+        subject: claim.subject,
+        predicate: claim.predicate,
+        value: claim.value,
+        organism: claim.organism,
+        tissue: claim.tissue,
+        stage: claim.stage,
+        method: claim.method,
+        relation: claim.relation
+      })),
+      conflicts: topic.conflicts.slice(-4)
+    };
+    let output = JSON.stringify(value);
+    if (output.length > TOPIC_MEMORY_LIMITS.maxContextChars)
+      output = JSON.stringify({
+        ...value,
+        summary: value.summary.slice(0, 400),
+        entities: value.entities.slice(0, 6)
+      });
+    if (output.length > TOPIC_MEMORY_LIMITS.maxContextChars)
+      output = JSON.stringify({
+        id: value.id,
+        title: value.title,
+        entities: value.entities.slice(0, 3)
+      });
+    return output;
+  };
+  return {
+    path,
+    scope,
+    read,
+    list: async (query = "", { includeArchived = false } = {}) => {
+      const doc = await read();
+      const q = text2(query, 180).toLowerCase();
+      return {
+        revision: doc.revision,
+        topics: doc.topics.filter((topic) => includeArchived || topic.status !== "archived").filter(
+          (topic) => !q || [topic.id, topic.title, ...topic.aliases].some((value) => value.toLowerCase().includes(q))
+        ).map(compact)
+      };
+    },
+    get: async (idOrName) => {
+      const doc = await read();
+      const q = text2(idOrName, 180).toLowerCase();
+      const matches = doc.topics.filter(
+        (topic) => [topic.id, topic.title, ...topic.aliases].some((value) => value.toLowerCase() === q)
+      );
+      return { revision: doc.revision, matches: matches.map(compact) };
+    },
+    context: async (topic) => {
+      const doc = await read();
+      const item = typeof topic === "string" ? doc.topics.find((x) => x.id === topic) : topic;
+      return item ? context(item) : null;
+    },
+    refreshSourceCheck: async (topicId) => {
+      const doc = await read();
+      const topic = doc.topics.find((item) => item.id === text2(topicId, 120));
+      if (!topic) throw new Error("Topic not found");
+      const stale = [];
+      for (const source of topic.sources) {
+        try {
+          validateNote(source.path);
+          if (!canRead(source.path, scope.project) || /(?:^|\/)(?:Runs|Explainers)\//i.test(source.path)) {
+            stale.push({ path: source.path, reason: "out-of-scope" });
+            continue;
+          }
+          const current = storage ? await storage.readSource(source.path) : await readNoteFile(binding.vault, source.path);
+          if (current.hash !== source.hash) stale.push({ path: source.path, reason: "changed" });
+        } catch {
+          stale.push({ path: source.path, reason: "missing-or-invalid" });
+        }
+      }
+      if (stale.length && topic.status !== "stale") {
+        await mutate(void 0, (value) => {
+          const current = value.topics.find((item) => item.id === topic.id);
+          if (current) current.status = "stale";
+          return value;
+        });
+      }
+      return {
+        topic: {
+          ...compact(topic),
+          status: stale.length ? "stale" : topic.status
+        },
+        stale,
+        status: stale.length ? "stale" : topic.status
+      };
+    },
+    link: async (topicId, { proposalIds = [], artifacts = [] } = {}) => mutate(void 0, (doc) => {
+      const topic = doc.topics.find((item) => item.id === text2(topicId, 120));
+      if (!topic) throw new Error("Topic not found");
+      topic.proposalIds = [.../* @__PURE__ */ new Set([...topic.proposalIds || [], ...proposalIds])].slice(-12);
+      topic.artifacts = [.../* @__PURE__ */ new Set([...topic.artifacts || [], ...artifacts])].slice(
+        -TOPIC_MEMORY_LIMITS.maxArtifacts
+      );
+      topic.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      return doc;
+    }),
+    update: async (input, expectedRevision) => {
+      if (!Number.isSafeInteger(expectedRevision)) throw new Error("expectedRevision is required");
+      return mutate(expectedRevision, (doc) => {
+        const allowed = /* @__PURE__ */ new Set([
+          "id",
+          "title",
+          "summary",
+          "aliases",
+          "entities",
+          "unresolvedQuestions",
+          "keyFindings",
+          "claims"
+        ]);
+        for (const key of Object.keys(input || {}))
+          if (!allowed.has(key)) throw new Error(`Unsupported topic metadata field: ${key}`);
+        const id2 = text2(input.id, 120);
+        if (!id2) throw new Error("Topic id is required");
+        const index = doc.topics.findIndex((topic) => topic.id === id2);
+        const previous = index >= 0 ? doc.topics[index] : null;
+        const incomingClaims = Array.isArray(input.claims) ? input.claims.map((claim) => normalizeClaim(claim, scope.project)).filter(Boolean) : [];
+        const claimComparisons = compareClaimSets(previous?.claims || [], incomingClaims);
+        const merged = normalizeTopic(
+          {
+            ...previous,
+            ...input,
+            ...claimComparisons.some((comparison) => comparison.blocking) ? { status: "conflict-candidate" } : previous?.status === "conflict-candidate" ? { status: "conflict-candidate" } : {},
+            conflicts: [
+              ...previous?.conflicts || [],
+              ...claimComparisons.map((comparison) => ({
+                comparisonVersion: 2,
+                previousSourceHash: comparison.previous.sourceHash,
+                incomingSourceHash: comparison.incoming.sourceHash,
+                missingConditions: comparison.missingConditions,
+                differingConditions: comparison.differingConditions,
+                relation: comparison.relation,
+                confidence: comparison.confidence,
+                reason: comparison.reason,
+                previousSourcePath: comparison.previous.sourcePath,
+                incomingSourcePath: comparison.incoming.sourcePath,
+                detectedAt: (/* @__PURE__ */ new Date()).toISOString()
+              }))
+            ],
+            id: id2,
+            createdAt: previous?.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+            updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+          },
+          scope.vaultId,
+          scope.project
+        );
+        if (index >= 0) doc.topics[index] = merged;
+        else doc.topics.unshift(merged);
+        return doc;
+      });
+    },
+    archive: async (id2, expectedRevision) => {
+      if (!Number.isSafeInteger(expectedRevision)) throw new Error("expectedRevision is required");
+      return mutate(expectedRevision, (doc) => {
+        const topic = doc.topics.find((item) => item.id === text2(id2, 120));
+        if (!topic) throw new Error("Topic not found");
+        topic.status = "archived";
+        topic.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+        return doc;
+      });
+    },
+    record: async (input, expectedRevision) => {
+      if (!input || typeof input !== "object") throw new Error("Invalid topic record input");
+      let receipt2;
+      let claimComparisons = [];
+      const next = await mutate(expectedRevision, (value) => {
+        if (Array.isArray(input.sources) && input.sources.some((source) => !validateSource(source, scope.project)))
+          throw new Error("Invalid or out-of-scope topic source");
+        const key = text2(input.topicId || input.title, 180).toLowerCase();
+        const matches = value.topics.filter(
+          (topic) => [topic.id, topic.title, ...topic.aliases].some((v) => v.toLowerCase() === key)
+        );
+        if (matches.length > 1) throw new Error("Ambiguous topic identity; choose an exact topic id");
+        const existing = matches[0] || (input.topicId ? value.topics.find((topic) => topic.id === text2(input.topicId, 120)) : null);
+        const classification = classifyTopic(existing, input);
+        if (classification === "duplicate") {
+          receipt2 = {
+            classification,
+            revision: value.revision,
+            topic: compact(existing),
+            changed: false
+          };
+          value.__topicNoop = true;
+          return value;
+        }
+        const id2 = existing?.id || text2(input.topicId, 96) || `${slug(input.title)}-${digest3(input.title).slice(0, 8)}`;
+        if (!/^[a-z0-9][a-z0-9_-]{0,95}$/i.test(id2)) throw new Error("Invalid topic id");
+        const index = value.topics.findIndex((topic) => topic.id === id2);
+        const prior = index >= 0 ? value.topics[index] : null;
+        const priorClaims = prior?.claims || [];
+        const incomingClaims = Array.isArray(input.claims) ? input.claims.map((claim) => normalizeClaim(claim, scope.project)).filter(Boolean) : [];
+        claimComparisons = compareClaimSets(priorClaims, incomingClaims);
+        const conflictRecords = claimComparisons.map((comparison) => ({
+          comparisonVersion: 2,
+          previousSourceHash: comparison.previous.sourceHash,
+          incomingSourceHash: comparison.incoming.sourceHash,
+          missingConditions: comparison.missingConditions,
+          differingConditions: comparison.differingConditions,
+          relation: comparison.relation,
+          confidence: comparison.confidence,
+          reason: comparison.reason,
+          previousSourcePath: comparison.previous.sourcePath,
+          incomingSourcePath: comparison.incoming.sourcePath,
+          detectedAt: (/* @__PURE__ */ new Date()).toISOString()
+        }));
+        const mergedClaims = [...priorClaims, ...incomingClaims].filter(
+          (claim, claimIndex, all) => all.findIndex(
+            (candidate) => candidate.sourcePath === claim.sourcePath && candidate.sourceHash === claim.sourceHash && candidate.claim === claim.claim
+          ) === claimIndex
+        );
+        const mergedSources = [];
+        for (const source of [...prior?.sources || [], ...input.sources || []]) {
+          if (!validateSource(source, scope.project) || mergedSources.some((item) => item.path === source.path && item.hash === source.hash))
+            continue;
+          mergedSources.push(source);
+        }
+        mergedSources.splice(0, Math.max(0, mergedSources.length - TOPIC_MEMORY_LIMITS.maxSources));
+        const updated = normalizeTopic(
+          {
+            ...prior,
+            ...input,
+            id: id2,
+            aliases: [.../* @__PURE__ */ new Set([...prior?.aliases || [], ...input.aliases || []])].slice(-12),
+            entities: [.../* @__PURE__ */ new Set([...prior?.entities || [], ...input.entities || []])].slice(
+              -TOPIC_MEMORY_LIMITS.maxEntities
+            ),
+            unresolvedQuestions: [
+              .../* @__PURE__ */ new Set([...prior?.unresolvedQuestions || [], ...input.unresolvedQuestions || []])
+            ].slice(-TOPIC_MEMORY_LIMITS.maxQuestions),
+            artifacts: [.../* @__PURE__ */ new Set([...prior?.artifacts || [], ...input.artifacts || []])].slice(
+              -TOPIC_MEMORY_LIMITS.maxArtifacts
+            ),
+            proposalIds: [.../* @__PURE__ */ new Set([...prior?.proposalIds || [], ...input.proposalIds || []])].slice(
+              -12
+            ),
+            keyFindings: [.../* @__PURE__ */ new Set([...prior?.keyFindings || [], ...input.keyFindings || []])].slice(
+              -16
+            ),
+            claims: mergedClaims,
+            conflicts: [...prior?.conflicts || [], ...conflictRecords].slice(
+              -TOPIC_MEMORY_LIMITS.maxConflicts
+            ),
+            history: [
+              ...prior?.history || [],
+              ...prior?.summary ? [{ summary: prior.summary, updatedAt: prior.updatedAt }] : []
+            ].slice(-TOPIC_MEMORY_LIMITS.maxHistory),
+            sources: mergedSources,
+            status: classification === "stale" || classification === "conflict-candidate" ? classification : prior?.status === "conflict-candidate" ? "conflict-candidate" : "active",
+            lastRunHash: input.runHash || prior?.lastRunHash,
+            recentRuns: input.runHash ? [.../* @__PURE__ */ new Set([...prior?.recentRuns || [], input.runHash])].slice(
+              -TOPIC_MEMORY_LIMITS.maxRecentRuns
+            ) : prior?.recentRuns,
+            updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+          },
+          scope.vaultId,
+          scope.project
+        );
+        if (index >= 0) value.topics[index] = updated;
+        else value.topics.unshift(updated);
+        receipt2 = { classification, topic: compact(updated), changed: true };
+        return value;
+      });
+      return {
+        ...receipt2,
+        ...claimComparisons.length ? { conflicts: claimComparisons } : {},
+        revision: next.revision,
+        topic: receipt2.topic && next.topics.find((topic) => topic.id === receipt2.topic.id) ? compact(next.topics.find((topic) => topic.id === receipt2.topic.id)) : receipt2.topic
+      };
+    }
+  };
+}
+function topicRunHash(summary, sources = []) {
+  return digest3(
+    JSON.stringify({
+      summary: text2(summary, TOPIC_MEMORY_LIMITS.maxSummaryChars),
+      sources: sources.map(validateSource).filter(Boolean).sort((a, b) => a.path.localeCompare(b.path) || a.hash.localeCompare(b.hash))
+    })
+  );
+}
+function createTopicMemoryApi(runtime, config, storageFactory) {
+  const createTopicMemory2 = (options = {}) => createTopicMemoryWithHost(runtime, config, options, storageFactory);
+  async function listTopics2(options = {}) {
+    return (await createTopicMemory2(options).list(options.query || "")).topics;
+  }
+  async function readTopic2(options = {}) {
+    return (await createTopicMemory2(options).get(options.topic || options.id || "")).matches;
+  }
+  async function updateTopic2(options = {}) {
+    const { binding, project, directory, expectedRevision, ...input } = options;
+    if (!Number.isSafeInteger(expectedRevision)) throw new Error("expectedRevision is required");
+    return createTopicMemory2({ binding, project, directory }).update(input, expectedRevision);
+  }
+  async function archiveTopic2(options = {}) {
+    if (!Number.isSafeInteger(options.expectedRevision)) throw new Error("expectedRevision is required");
+    return createTopicMemory2(options).archive(options.id, options.expectedRevision);
+  }
+  return { createTopicMemory: createTopicMemory2, listTopics: listTopics2, readTopic: readTopic2, updateTopic: updateTopic2, archiveTopic: archiveTopic2 };
+}
+var TOPIC_MEMORY_VERSION;
+var TOPIC_MEMORY_LIMITS;
+var digest3;
+var text2;
+var slug;
+var createTopicMemory;
+var listTopics;
+var readTopic;
+var updateTopic;
+var archiveTopic;
+var init_topic_memory = __esm({
+  "src/core/topic-memory.ts"() {
+    "use strict";
+    init_claim_conflicts();
+    init_config();
+    init_files();
+    init_runtime_host();
+    TOPIC_MEMORY_VERSION = 1;
+    TOPIC_MEMORY_LIMITS = Object.freeze({
+      maxTopics: 64,
+      maxSummaryChars: 4e3,
+      maxContextChars: 2400,
+      maxEntities: 24,
+      maxQuestions: 16,
+      maxSources: 24,
+      maxArtifacts: 12,
+      maxHistory: 8,
+      maxRecentRuns: 12,
+      maxClaims: 64,
+      maxConflicts: 32,
+      maxFileBytes: 512 * 1024
+    });
+    digest3 = (value) => createHash10("sha256").update(String(value)).digest("hex");
+    text2 = (value, limit) => String(value ?? "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, limit);
+    slug = (value) => text2(value, 160).toLowerCase().replace(/[^a-z0-9\u0080-\uffff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "topic";
+    ({ createTopicMemory, listTopics, readTopic, updateTopic, archiveTopic } = createTopicMemoryApi(
+      compatibilityKnowledgeRuntimeHost,
+      { knowledgeDirectory }
+    ));
+  }
+});
+function targetWikiPath(path, project) {
+  if (typeof path !== "string")
+    throw new Error("Target must be a shared or current-project Wiki page, not navigation");
+  const parts = path.split("/");
+  if (!path.endsWith(".md") || path.includes("\\") || parts.some((part) => !part || part === "." || part === ".." || part.startsWith(".")))
+    throw new Error("Target must be a shared or current-project Wiki page, not navigation");
+  const prefix = `Projects/${project}/Wiki/`;
+  const tail = path.startsWith("Wiki/") ? path.slice(5) : path.startsWith(prefix) ? path.slice(prefix.length) : null;
+  if (!tail || tail.includes("/") || /^Index\.md$/i.test(tail) || /[[\]#|\r\n]/.test(tail))
+    throw new Error("Target must be a shared or current-project Wiki page, not navigation");
+  return path;
+}
+function immutableWikiProposalHash(proposal) {
+  return createHash11("sha256").update(
+    JSON.stringify({
+      id: proposal.id,
+      vaultId: proposal.vaultId,
+      bindingRevision: proposal.bindingRevision,
+      project: proposal.project,
+      path: proposal.path,
+      title: proposal.title,
+      rationale: proposal.rationale,
+      createdAt: proposal.createdAt,
+      before: proposal.before,
+      after: proposal.after,
+      sources: proposal.sources
+    })
+  ).digest("hex");
+}
+function managedParts(text43) {
+  const start = text43.indexOf(MANAGED_START);
+  const end = text43.indexOf(MANAGED_END);
+  if (start < 0 !== end < 0 || end < start || start >= 0 && (text43.indexOf(MANAGED_START, start + 1) >= 0 || text43.indexOf(MANAGED_END, end + 1) >= 0))
+    throw new Error("Invalid managed block markers");
+  return { start, end, body: start < 0 ? "" : text43.slice(start + MANAGED_START.length, end).trim() };
+}
+function stripManagedHeader(body, pageTitle) {
+  let text43 = String(body).replace(/^\uFEFF/u, "").trim();
+  const fenced = text43.match(/^```(?:markdown|md)?[ \t]*\n([\s\S]*?)\n```\s*$/iu);
+  if (fenced?.[1] !== void 0) text43 = fenced[1].trim();
+  text43 = text43.replace(/^---[ \t]*\n[\s\S]*?\n---[ \t]*(?:\n|$)/u, "").trim();
+  const heading = text43.match(/^#[ \t]+([^\n]+)(?:\n+|$)/u);
+  if (heading?.[1] !== void 0) {
+    const found = heading[1].trim();
+    const expected = pageTitle?.trim();
+    if (!expected || found === expected || expected.startsWith(found) || found.startsWith(expected))
+      text43 = text43.slice(heading[0].length).trim();
+  }
+  return text43;
+}
+var MANAGED_START;
+var MANAGED_END;
+var init_wiki_policy = __esm({
+  "src/core/wiki-policy.ts"() {
+    "use strict";
+    MANAGED_START = "<!-- pi-agent:managed:start -->";
+    MANAGED_END = "<!-- pi-agent:managed:end -->";
+  }
+});
+async function hashRegularFile(path) {
+  const flags = constants2.O_RDONLY | (constants2.O_NOFOLLOW || 0);
+  const handle = await open2(path, flags);
+  try {
+    return createHash12("sha256").update(await handle.readFile()).digest("hex");
+  } finally {
+    await handle.close();
+  }
+}
+function containsPath(root, target) {
+  const relativePath = relative7(root, target);
+  return relativePath === "" || !isAbsolute6(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep7}`);
+}
+async function canonicalPath(path) {
+  try {
+    return await realpath5(path);
+  } catch (error) {
+    if (error.code !== "ENOENT" || dirname5(path) === path) throw error;
+    return join13(await canonicalPath(dirname5(path)), basename2(path));
+  }
+}
+async function containedVaultFile(root, path) {
+  const vault = resolve7(root);
+  const target = resolve7(vault, path);
+  if (!containsPath(vault, target) || !containsPath(vault, await canonicalPath(target)))
+    throw new Error("Path must stay inside Vault");
+  return target;
+}
+async function replaceVaultFile(path, content, options = {}) {
+  const current = await lstat7(path);
+  if (!current.isFile() || current.isSymbolicLink())
+    throw new Error(`Expected a regular Vault file: ${path}`);
+  if (options.expectedHash !== void 0) {
+    const observed = await hashRegularFile(path);
+    if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
+  }
+  const temporary = `${path}.${randomUUID11()}.tmp`;
+  await writeFile8(temporary, content, { encoding: "utf8", flag: "wx" });
+  try {
+    await options.beforeCommit?.();
+    if (options.expectedHash !== void 0) {
+      const observed = await hashRegularFile(path);
+      if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
+    }
+    await rename7(temporary, path);
+  } finally {
+    await unlink6(temporary).catch(() => void 0);
+  }
+}
+var MANAGED_START2;
+var MANAGED_END2;
+var PROJECT_PATTERN;
+var NAVIGATION_TARGETS;
+var VaultFileConflictError;
+var hash2;
+var init_layout = __esm({
+  "src/core/layout.ts"() {
+    "use strict";
+    init_files();
+    MANAGED_START2 = "<!-- pi-agent:managed:start -->";
+    MANAGED_END2 = "<!-- pi-agent:managed:end -->";
+    PROJECT_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    NAVIGATION_TARGETS = /* @__PURE__ */ new Set(["Home.md", "Wiki/Index.md", "Library/Index.md"]);
+    VaultFileConflictError = class extends Error {
+      code = "conflict";
+      constructor(path) {
+        super(`Vault file changed while it was being updated: ${path}`);
+        this.name = "VaultFileConflictError";
+      }
+    };
+    hash2 = (text43) => createHash12("sha256").update(text43).digest("hex");
+  }
+});
+async function renameWithRetry(from, to, options = {}) {
+  const attempts = options.attempts ?? 6, delay = options.delayMs ?? 40, doRename = options.renameImpl ?? rename8;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await doRename(from, to);
+      return;
+    } catch (error) {
+      const code = error.code;
+      if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts) throw error;
+      await new Promise((resolve132) => setTimeout(resolve132, delay * attempt));
+    }
+  }
+}
+function createLocalWikiReviewPorts(config) {
+  async function statePath(path) {
+    const root = config.knowledgeDirectory();
+    if (!root) throw new Error("No application knowledge directory");
+    return containedVaultFile(root, path);
+  }
+  const state = {
+    async read(path) {
+      const full = await statePath(path);
+      let bytes;
+      try {
+        const info = await lstat8(full);
+        if (!info.isFile() || info.isSymbolicLink()) throw new Error("Expected a regular review record");
+        bytes = await readFile10(full);
+      } catch (error) {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      }
+      if (bytes.length > 256 * 1024) throw new Error("Wiki proposal exceeds its storage budget");
+      return { value: JSON.parse(bytes.toString("utf8")), version: digest4(bytes) };
+    },
+    async list(path) {
+      return readdir2(await statePath(path));
+    },
+    async write(path, value, expectedVersion) {
+      const full = await statePath(path);
+      await mkdir9(dirname6(full), { recursive: true, mode: 448 });
+      const temporary = join14(dirname6(full), `.${randomUUID12()}.tmp`);
+      const text43 = `${JSON.stringify(value, null, 2)}
+`;
+      await writeFile9(temporary, text43, { flag: "wx", mode: 384 });
+      try {
+        const current = await state.read(path);
+        if ((current?.version ?? null) !== expectedVersion)
+          throw new Error("Wiki review state changed; refresh before writing");
+        if (expectedVersion === null) await link2(temporary, full);
+        else await renameWithRetry(temporary, full);
+      } finally {
+        await rm(temporary, { force: true });
+      }
+      if ((await state.read(path))?.version !== digest4(text43))
+        throw new Error("Wiki review state write could not be read back");
+    },
+    async remove(path, expectedVersion) {
+      const current = await state.read(path);
+      if (current?.version !== expectedVersion)
+        throw new Error("Wiki review state changed; refresh before deleting");
+      await unlink7(await statePath(path));
+      if (await state.read(path)) throw new Error("Wiki review state removal could not be read back");
+    }
+  };
+  const files = {
+    async read(binding, path) {
+      try {
+        return await readNoteFile(binding.vault, path);
+      } catch (error) {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      }
+    },
+    async write(binding, path, text43, expectedHash, check) {
+      let parent = binding.vault;
+      for (const part of path.split("/").slice(0, -1)) {
+        parent = join14(parent, part);
+        try {
+          await mkdir9(parent);
+        } catch (error) {
+          if (error.code !== "EEXIST") throw error;
+        }
+        const info = await lstat8(parent);
+        if (!info.isDirectory() || info.isSymbolicLink())
+          throw new Error("Wiki parent must be a regular directory");
+      }
+      const full = await containedVaultFile(binding.vault, path);
+      const temporary = join14(dirname6(full), `.${basename3(full)}.${randomUUID12()}.tmp`);
+      const mode = expectedHash === null ? 384 : (await lstat8(full)).mode & 511;
+      await writeFile9(temporary, text43, { flag: "wx", mode });
+      try {
+        await check();
+        if (((await files.read(binding, path))?.hash ?? null) !== expectedHash)
+          throw new Error("Wiki changed during review; no overwrite applied");
+        if (expectedHash === null) await link2(temporary, full);
+        else await renameWithRetry(temporary, full);
+      } finally {
+        await rm(temporary, { force: true });
+      }
+      if ((await files.read(binding, path))?.hash !== digest4(text43))
+        throw new Error("Wiki write could not be read back");
+    },
+    async remove(binding, path, expectedHash, check) {
+      await check();
+      if ((await files.read(binding, path))?.hash !== expectedHash)
+        throw new Error("Wiki changed during undo");
+      await unlink7(await containedVaultFile(binding.vault, path));
+      if (await files.read(binding, path)) throw new Error("Wiki removal could not be read back");
+    }
+  };
+  return { state, files };
+}
+var digest4;
+var RENAME_RETRY_CODES;
+var init_wiki_review_node = __esm({
+  "src/core/wiki-review-node.ts"() {
+    "use strict";
+    init_files();
+    init_layout();
+    digest4 = (text43) => createHash13("sha256").update(text43).digest("hex");
+    RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
   }
 });
 function createWikiReviewReader(storage, currentNote) {
@@ -4624,7 +4644,7 @@ function createWikiReviewReader(storage, currentNote) {
     if (p.id !== id2 || p.project !== project || p.vaultId !== service.binding.vaultId || p.bindingRevision !== service.binding.revision)
       throw new Error("Proposal belongs to a different project or binding");
     targetWikiPath(p.path, project);
-    if (immutableWikiProposalHash(p) !== p.proposalHash || digest3(p.after) !== p.afterHash || (p.before === null ? p.beforeHash !== null : digest3(p.before) !== p.beforeHash))
+    if (immutableWikiProposalHash(p) !== p.proposalHash || digest5(p.after) !== p.afterHash || (p.before === null ? p.beforeHash !== null : digest5(p.before) !== p.beforeHash))
       throw new Error("Wiki proposal content changed");
     return p;
   }
@@ -4718,7 +4738,7 @@ function createWikiReviewReader(storage, currentNote) {
 }
 var MAX_PENDING;
 var MAX_AGE;
-var digest3;
+var digest5;
 var init_wiki_review_reader = __esm({
   "src/core/wiki-review-reader.ts"() {
     "use strict";
@@ -4727,130 +4747,7 @@ var init_wiki_review_reader = __esm({
     init_wiki_policy();
     MAX_PENDING = 100;
     MAX_AGE = 24 * 60 * 60 * 1e3;
-    digest3 = (text43) => createHash14("sha256").update(text43).digest("hex");
-  }
-});
-async function renameWithRetry(from, to, options = {}) {
-  const attempts = options.attempts ?? 6, delay = options.delayMs ?? 40, doRename = options.renameImpl ?? rename7;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      await doRename(from, to);
-      return;
-    } catch (error) {
-      const code = error.code;
-      if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts) throw error;
-      await new Promise((resolve132) => setTimeout(resolve132, delay * attempt));
-    }
-  }
-}
-function createLocalWikiReviewPorts(config) {
-  async function statePath(path) {
-    const root = config.knowledgeDirectory();
-    if (!root) throw new Error("No application knowledge directory");
-    return containedVaultFile(root, path);
-  }
-  const state = {
-    async read(path) {
-      const full = await statePath(path);
-      let bytes;
-      try {
-        const info = await lstat6(full);
-        if (!info.isFile() || info.isSymbolicLink()) throw new Error("Expected a regular review record");
-        bytes = await readFile7(full);
-      } catch (error) {
-        if (error.code === "ENOENT") return null;
-        throw error;
-      }
-      if (bytes.length > 256 * 1024) throw new Error("Wiki proposal exceeds its storage budget");
-      return { value: JSON.parse(bytes.toString("utf8")), version: digest4(bytes) };
-    },
-    async list(path) {
-      return readdir2(await statePath(path));
-    },
-    async write(path, value, expectedVersion) {
-      const full = await statePath(path);
-      await mkdir7(dirname6(full), { recursive: true, mode: 448 });
-      const temporary = join11(dirname6(full), `.${randomUUID10()}.tmp`);
-      const text43 = `${JSON.stringify(value, null, 2)}
-`;
-      await writeFile7(temporary, text43, { flag: "wx", mode: 384 });
-      try {
-        const current = await state.read(path);
-        if ((current?.version ?? null) !== expectedVersion)
-          throw new Error("Wiki review state changed; refresh before writing");
-        if (expectedVersion === null) await link2(temporary, full);
-        else await renameWithRetry(temporary, full);
-      } finally {
-        await rm(temporary, { force: true });
-      }
-      if ((await state.read(path))?.version !== digest4(text43))
-        throw new Error("Wiki review state write could not be read back");
-    },
-    async remove(path, expectedVersion) {
-      const current = await state.read(path);
-      if (current?.version !== expectedVersion)
-        throw new Error("Wiki review state changed; refresh before deleting");
-      await unlink5(await statePath(path));
-      if (await state.read(path)) throw new Error("Wiki review state removal could not be read back");
-    }
-  };
-  const files = {
-    async read(binding, path) {
-      try {
-        return await readNoteFile(binding.vault, path);
-      } catch (error) {
-        if (error.code === "ENOENT") return null;
-        throw error;
-      }
-    },
-    async write(binding, path, text43, expectedHash, check) {
-      let parent = binding.vault;
-      for (const part of path.split("/").slice(0, -1)) {
-        parent = join11(parent, part);
-        try {
-          await mkdir7(parent);
-        } catch (error) {
-          if (error.code !== "EEXIST") throw error;
-        }
-        const info = await lstat6(parent);
-        if (!info.isDirectory() || info.isSymbolicLink())
-          throw new Error("Wiki parent must be a regular directory");
-      }
-      const full = await containedVaultFile(binding.vault, path);
-      const temporary = join11(dirname6(full), `.${basename3(full)}.${randomUUID10()}.tmp`);
-      const mode = expectedHash === null ? 384 : (await lstat6(full)).mode & 511;
-      await writeFile7(temporary, text43, { flag: "wx", mode });
-      try {
-        await check();
-        if (((await files.read(binding, path))?.hash ?? null) !== expectedHash)
-          throw new Error("Wiki changed during review; no overwrite applied");
-        if (expectedHash === null) await link2(temporary, full);
-        else await renameWithRetry(temporary, full);
-      } finally {
-        await rm(temporary, { force: true });
-      }
-      if ((await files.read(binding, path))?.hash !== digest4(text43))
-        throw new Error("Wiki write could not be read back");
-    },
-    async remove(binding, path, expectedHash, check) {
-      await check();
-      if ((await files.read(binding, path))?.hash !== expectedHash)
-        throw new Error("Wiki changed during undo");
-      await unlink5(await containedVaultFile(binding.vault, path));
-      if (await files.read(binding, path)) throw new Error("Wiki removal could not be read back");
-    }
-  };
-  return { state, files };
-}
-var digest4;
-var RENAME_RETRY_CODES;
-var init_wiki_review_node = __esm({
-  "src/core/wiki-review-node.ts"() {
-    "use strict";
-    init_files();
-    init_layout();
-    digest4 = (text43) => createHash15("sha256").update(text43).digest("hex");
-    RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
+    digest5 = (text43) => createHash14("sha256").update(text43).digest("hex");
   }
 });
 var wiki_review_exports = {};
@@ -4874,7 +4771,7 @@ function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui, io) {
   const { invalidateKnowledgeUi: invalidateKnowledgeUi2 } = ui;
   const AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
   const START2 = "<!-- pi-agent:managed:start -->", END2 = "<!-- pi-agent:managed:end -->";
-  const digest62 = (text43) => createHash16("sha256").update(text43).digest("hex");
+  const digest62 = (text43) => createHash15("sha256").update(text43).digest("hex");
   const MAX_PENDING2 = 100, MAX_AGE2 = 24 * 60 * 60 * 1e3;
   async function exclusive(key, operation) {
     return runRuntimeExclusive2("wiki-review", key, operation);
@@ -4998,7 +4895,7 @@ ${block}
 ${refs}`
       );
       const proposal = {
-        id: randomUUID11(),
+        id: randomUUID13(),
         status: "pending",
         vaultId: service.binding.vaultId,
         bindingRevision: service.binding.revision,
@@ -5318,14 +5215,14 @@ var renameWithRetry2;
 var init_wiki_review = __esm({
   "src/core/wiki-review.ts"() {
     "use strict";
-    init_runtime_host();
     init_config();
     init_files();
     init_review_policy();
+    init_runtime_host();
     init_ui_state();
-    init_wiki_review_reader();
     init_wiki_policy();
     init_wiki_review_node();
+    init_wiki_review_reader();
     compatibility2 = createKnowledgeWikiReview(
       compatibilityKnowledgeRuntimeHost,
       config_exports,
@@ -5345,286 +5242,6 @@ var init_wiki_review = __esm({
       undoWikiUpdate,
       renameWithRetry: renameWithRetry2
     } = compatibility2);
-  }
-});
-var specialist_host_exports = {};
-__export(specialist_host_exports, {
-  SPECIALIST_LIMITS: () => SPECIALIST_LIMITS,
-  contextSessionId: () => contextSessionId,
-  createKnowledgeSpecialistHost: () => createKnowledgeSpecialistHost,
-  knowledgeSpecialistHost: () => knowledgeSpecialistHost,
-  registerKnowledgeSpecialistHost: () => registerKnowledgeSpecialistHost,
-  setSpecialistSettings: () => setSpecialistSettings,
-  specialistQueueSnapshot: () => specialistQueueSnapshot,
-  specialistSettings: () => specialistSettings2,
-  withSpecialistSlot: () => withSpecialistSlot
-});
-function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEvent, storage) {
-  const { runtimeSlot: runtimeSlot22 } = runtime;
-  const { knowledgeDirectory: knowledgeDirectory2, readKnowledgeBinding: readKnowledgeBinding2, withKnowledgeBinding: withKnowledgeBinding2 } = config;
-  const { invalidateKnowledgeUi: invalidateKnowledgeUi2 } = ui;
-  const state = runtimeSlot22("knowledge", "specialists", () => ({
-    hosts: /* @__PURE__ */ new Map(),
-    active: 0,
-    queue: [],
-    settingsQueue: Promise.resolve(),
-    disposed: false,
-    dispose() {
-      this.disposed = true;
-      this.hosts.clear();
-      for (const item of this.queue.splice(0)) item.reject();
-    }
-  }));
-  const HOST_EVENT = "drone:knowledge-specialist-host/v1";
-  const hostModule = {};
-  function receiveCompatibilityEvent(payload) {
-    if (!payload || payload.origin === hostModule || typeof payload.id !== "string") return;
-    if (payload.action === "register" && typeof payload.run === "function")
-      state.hosts.set(payload.id, payload.run);
-    if (payload.action === "unregister" && state.hosts.get(payload.id) === payload.run)
-      state.hosts.delete(payload.id);
-  }
-  const SPECIALIST_LIMITS2 = Object.freeze({
-    maxRunsPerTurn: 4,
-    maxRunsPerSession: 20,
-    maxToolOperations: 80,
-    concurrency: 2,
-    maxConcurrency: 4,
-    queueLimit: 8,
-    queueWaitMs: 15e3,
-    timeoutMs: 12e4,
-    maxTokensPerTurn: 24e3,
-    maxTokensPerSession: 12e4,
-    maxCostPerTurn: 1,
-    maxCostPerSession: 5
-  });
-  const contextSessionId2 = (ctx) => ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || null;
-  const specialistQueueSnapshot2 = () => ({ active: state.active, queueLength: state.queue.length });
-  function registerKnowledgeSpecialistHost2(id2, run2) {
-    if (!id2 || typeof run2 !== "function") throw new Error("A specialist host requires a session identity");
-    if (state.disposed) throw new Error("Knowledge specialist runtime has been disposed");
-    state.hosts.set(id2, run2);
-    emitLegacyPeerEvent?.(HOST_EVENT, { action: "register", id: id2, run: run2, origin: hostModule });
-    return () => {
-      if (state.hosts.get(id2) === run2) state.hosts.delete(id2);
-      emitLegacyPeerEvent?.(HOST_EVENT, { action: "unregister", id: id2, run: run2, origin: hostModule });
-    };
-  }
-  function knowledgeSpecialistHost2(ctx) {
-    const id2 = contextSessionId2(ctx);
-    return state.hosts.get(id2);
-  }
-  async function specialistSettings3() {
-    let data = { mode: "automatic", revision: 0 };
-    if (storage) {
-      const saved = await storage.read();
-      if (saved !== null) data = saved;
-    } else {
-      const dir = knowledgeDirectory2();
-      if (!dir) return { mode: "off", revision: 0, ...SPECIALIST_LIMITS2 };
-      try {
-        data = JSON.parse(await readFile8(join12(dir, "specialists.json"), "utf8"));
-      } catch (e) {
-        if (e.code !== "ENOENT") throw new Error("Knowledge specialist settings cannot be read");
-      }
-    }
-    if (!["automatic", "manual", "off"].includes(data.mode) || !Number.isSafeInteger(data.revision) || data.revision < 0)
-      throw new Error("Invalid knowledge specialist settings");
-    const integerLimits = {
-      maxRunsPerTurn: [1, SPECIALIST_LIMITS2.maxRunsPerTurn],
-      maxRunsPerSession: [1, SPECIALIST_LIMITS2.maxRunsPerSession],
-      maxToolOperations: [1, SPECIALIST_LIMITS2.maxToolOperations],
-      concurrency: [1, SPECIALIST_LIMITS2.maxConcurrency],
-      queueLimit: [1, SPECIALIST_LIMITS2.queueLimit],
-      queueWaitMs: [50, SPECIALIST_LIMITS2.queueWaitMs],
-      timeoutMs: [50, SPECIALIST_LIMITS2.timeoutMs],
-      maxTokensPerTurn: [1, SPECIALIST_LIMITS2.maxTokensPerTurn],
-      maxTokensPerSession: [1, SPECIALIST_LIMITS2.maxTokensPerSession]
-    };
-    for (const key of Object.keys(integerLimits))
-      if (data[key] !== void 0 && (!Number.isSafeInteger(data[key]) || data[key] < integerLimits[key][0]))
-        throw new Error("Invalid knowledge specialist settings");
-    const costLimits = {
-      maxCostPerTurn: SPECIALIST_LIMITS2.maxCostPerTurn,
-      maxCostPerSession: SPECIALIST_LIMITS2.maxCostPerSession
-    };
-    for (const key of Object.keys(costLimits))
-      if (data[key] !== void 0 && (typeof data[key] !== "number" || !Number.isFinite(data[key]) || data[key] < 0))
-        throw new Error("Invalid knowledge specialist settings");
-    const bounded3 = {};
-    for (const [key, [min, max]] of Object.entries(integerLimits))
-      bounded3[key] = Math.min(max, Math.max(min, data[key] ?? SPECIALIST_LIMITS2[key]));
-    for (const [key, max] of Object.entries(costLimits))
-      bounded3[key] = Math.min(max, Math.max(0, data[key] ?? SPECIALIST_LIMITS2[key]));
-    return { ...SPECIALIST_LIMITS2, ...bounded3, mode: data.mode, revision: data.revision };
-  }
-  async function setSpecialistSettings2({ mode, revision, bindingRevision, ...requested }) {
-    if (!["automatic", "manual", "off"].includes(mode) || !Number.isSafeInteger(revision))
-      throw new Error("Invalid specialist setting request");
-    const allowedRequested = /* @__PURE__ */ new Set([
-      "maxRunsPerTurn",
-      "maxRunsPerSession",
-      "maxToolOperations",
-      "concurrency",
-      "queueLimit",
-      "queueWaitMs",
-      "timeoutMs",
-      "maxTokensPerTurn",
-      "maxTokensPerSession",
-      "maxCostPerTurn",
-      "maxCostPerSession"
-    ]);
-    for (const key of Object.keys(requested))
-      if (!allowedRequested.has(key)) throw new Error(`Unknown specialist setting: ${key}`);
-    const operation = state.settingsQueue.catch(() => void 0).then(async () => {
-      const binding = await readKnowledgeBinding2({ fresh: true });
-      if (!binding || binding.revision !== bindingRevision)
-        throw new Error("Knowledge binding changed; refresh settings");
-      return withKnowledgeBinding2(binding, async () => {
-        const current = await specialistSettings3();
-        if (current.revision !== revision) throw new Error("Specialist settings changed; refresh first");
-        const data = { ...current, ...requested, mode, revision: revision + 1 };
-        const minimums = {
-          maxRunsPerTurn: 1,
-          maxRunsPerSession: 1,
-          maxToolOperations: 1,
-          concurrency: 1,
-          queueLimit: 1,
-          queueWaitMs: 50,
-          timeoutMs: 50,
-          maxTokensPerTurn: 1,
-          maxTokensPerSession: 1
-        };
-        for (const [key, minimum] of Object.entries(minimums))
-          if (data[key] !== void 0 && (!Number.isSafeInteger(data[key]) || data[key] < minimum))
-            throw new Error("Invalid knowledge specialist settings");
-        for (const key of ["maxCostPerTurn", "maxCostPerSession"])
-          if (data[key] !== void 0 && (typeof data[key] !== "number" || !Number.isFinite(data[key]) || data[key] < 0))
-            throw new Error("Invalid knowledge specialist settings");
-        for (const key of [
-          "maxRunsPerTurn",
-          "maxRunsPerSession",
-          "maxToolOperations",
-          "concurrency",
-          "queueLimit",
-          "queueWaitMs",
-          "timeoutMs",
-          "maxTokensPerTurn",
-          "maxTokensPerSession",
-          "maxCostPerTurn",
-          "maxCostPerSession"
-        ])
-          data[key] = Math.min(data[key] ?? SPECIALIST_LIMITS2[key], SPECIALIST_LIMITS2[key]);
-        data.mode = mode;
-        data.revision = revision + 1;
-        if (storage) await storage.write(data, revision);
-        else {
-          const dir = knowledgeDirectory2(), temp = join12(dir, `specialists.${randomUUID12()}.tmp`);
-          await mkdir8(dir, { recursive: true, mode: 448 });
-          try {
-            await writeFile8(temp, `${JSON.stringify(data)}
-`, { flag: "wx", mode: 384 });
-            await rename8(temp, join12(dir, "specialists.json"));
-          } finally {
-            await unlink6(temp).catch((e) => {
-              if (e.code !== "ENOENT") throw e;
-            });
-          }
-        }
-        invalidateKnowledgeUi2();
-        return { ...SPECIALIST_LIMITS2, ...data };
-      });
-    });
-    state.settingsQueue = operation;
-    return operation;
-  }
-  async function withSpecialistSlot2(signal, work, options = {}) {
-    signal?.throwIfAborted();
-    if (state.disposed) throw new Error("Knowledge specialist runtime has been disposed");
-    const bounded3 = (value, fallback, max) => Number.isSafeInteger(value) ? Math.min(max, Math.max(1, value)) : fallback;
-    const concurrency = bounded3(
-      options.concurrency,
-      SPECIALIST_LIMITS2.concurrency,
-      SPECIALIST_LIMITS2.maxConcurrency
-    );
-    const queueLimit = bounded3(options.queueLimit, SPECIALIST_LIMITS2.queueLimit, SPECIALIST_LIMITS2.queueLimit);
-    const queueWaitMs = bounded3(
-      options.queueWaitMs,
-      SPECIALIST_LIMITS2.queueWaitMs,
-      SPECIALIST_LIMITS2.queueWaitMs
-    );
-    if (state.active >= concurrency) {
-      if (state.queue.length >= queueLimit) throw new Error("Knowledge specialist queue is full");
-      await new Promise((resolve132, reject) => {
-        let settled = false;
-        const item = {
-          resolve: () => {
-            if (settled) return;
-            settled = true;
-            signal?.removeEventListener("abort", abort);
-            clearTimeout(timer);
-            resolve132();
-          },
-          reject: () => {
-            if (settled) return;
-            settled = true;
-            signal?.removeEventListener("abort", abort);
-            clearTimeout(timer);
-            reject(new Error("Knowledge specialist runtime has been disposed"));
-          }
-        };
-        const abort = () => {
-          if (settled) return;
-          settled = true;
-          const at = state.queue.indexOf(item);
-          if (at >= 0) state.queue.splice(at, 1);
-          clearTimeout(timer);
-          signal?.removeEventListener("abort", abort);
-          reject(new Error("Knowledge specialist cancelled while queued"));
-        };
-        const timer = setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          const at = state.queue.indexOf(item);
-          if (at >= 0) state.queue.splice(at, 1);
-          signal?.removeEventListener("abort", abort);
-          reject(new Error("Knowledge specialist queue wait deadline exceeded"));
-        }, queueWaitMs);
-        state.queue.push(item);
-        signal?.addEventListener("abort", abort, { once: true });
-      });
-    } else state.active++;
-    try {
-      signal?.throwIfAborted();
-      return await work();
-    } finally {
-      if (state.queue.length) state.queue.shift().resolve();
-      else state.active--;
-    }
-  }
-  return { dispose: () => state.dispose(), SPECIALIST_LIMITS: SPECIALIST_LIMITS2, contextSessionId: contextSessionId2, specialistQueueSnapshot: specialistQueueSnapshot2, registerKnowledgeSpecialistHost: registerKnowledgeSpecialistHost2, knowledgeSpecialistHost: knowledgeSpecialistHost2, specialistSettings: specialistSettings3, setSpecialistSettings: setSpecialistSettings2, withSpecialistSlot: withSpecialistSlot2, receiveCompatibilityEvent };
-}
-function createKnowledgeSpecialistHost(runtime, config, ui, storage) {
-  return createKnowledgeSpecialistHostApi(runtime, config, ui, null, storage);
-}
-var compatibilityKnowledgeSpecialists;
-var SPECIALIST_LIMITS;
-var contextSessionId;
-var specialistQueueSnapshot;
-var registerKnowledgeSpecialistHost;
-var knowledgeSpecialistHost;
-var specialistSettings2;
-var setSpecialistSettings;
-var withSpecialistSlot;
-var init_specialist_host = __esm({
-  "src/core/specialist-host.ts"() {
-    "use strict";
-    init_runtime_host();
-    init_config();
-    init_ui_state();
-    compatibilityKnowledgeSpecialists = createKnowledgeSpecialistHostApi(compatibilityKnowledgeRuntimeHost, config_exports, ui_state_exports, compatibilityKnowledgeRuntimeHost.emitProcessEvent);
-    process.on("drone:knowledge-specialist-host/v1", compatibilityKnowledgeSpecialists.receiveCompatibilityEvent);
-    ({ SPECIALIST_LIMITS, contextSessionId, specialistQueueSnapshot, registerKnowledgeSpecialistHost, knowledgeSpecialistHost, specialistSettings: specialistSettings2, setSpecialistSettings, withSpecialistSlot } = compatibilityKnowledgeSpecialists);
   }
 });
 var wiki_model_review_exports = {};
@@ -5660,8 +5277,7 @@ function createKnowledgeModelReview(runtime, config, wiki, io, specialistSetting
   async function lastWikiModelReview2(service, id2, hash5) {
     if (!/^[0-9a-f-]{36}$/.test(id2)) throw new Error("Invalid proposal id");
     const index = (await io.state.read(`${rootFor(service)}/${id2}.latest.json`))?.value;
-    if (!index || index.proposalHash !== hash5 || !/^[0-9a-f-]{36}$/.test(index.auditId))
-      return null;
+    if (!index || index.proposalHash !== hash5 || !/^[0-9a-f-]{36}$/.test(index.auditId)) return null;
     const data = (await io.state.read(`${rootFor(service)}/${index.auditId}.json`))?.value;
     return data?.proposalHash === hash5 && data.vaultId === service.binding.vaultId ? data : null;
   }
@@ -5677,7 +5293,7 @@ function createKnowledgeModelReview(runtime, config, wiki, io, specialistSetting
     const key = `${binding.vaultId}:${id2}`;
     if (state.active.has(key)) throw new Error("This Wiki candidate is already being reviewed");
     state.active.add(key);
-    const startedAt = Date.now(), auditId = randomUUID15();
+    const startedAt = Date.now(), auditId = randomUUID14();
     let audit = null;
     const stillCurrent = async () => {
       signal?.throwIfAborted();
@@ -5707,16 +5323,12 @@ function createKnowledgeModelReview(runtime, config, wiki, io, specialistSetting
       if (input.autoApply && binding.depositMode === "run-only")
         throw new Error("run-only policy forbids applying Wiki changes");
       if (!preview.sources.length || preview.sources.length > 6)
-        throw new Error(
-          "Model review accepts 1\u20136 sources; split or manually review this candidate"
-        );
+        throw new Error("Model review accepts 1\u20136 sources; split or manually review this candidate");
       const sources = [];
       for (const source of preview.sources) {
         validateNote(source.path);
         if (!canRead(source.path, project) || /(?:^|\/)(?:Explainers|Runs|Wiki)\//i.test(source.path))
-          throw new Error(
-            "Model review requires underlying evidence, not summaries or another Wiki"
-          );
+          throw new Error("Model review requires underlying evidence, not summaries or another Wiki");
         if (!Number.isSafeInteger(source.startLine) || !Number.isSafeInteger(source.endLine) || source.startLine < 1 || source.endLine < source.startLine)
           throw new Error("Source has an invalid original read range");
         const original = await io.files.read(binding, source.path);
@@ -5849,8 +5461,10 @@ function createKnowledgeModelReview(runtime, config, wiki, io, specialistSetting
 }
 async function reviewWikiWithModel(input, options) {
   if (input?.acknowledged !== true || typeof input.autoApply !== "boolean")
-    throw new Error("Confirm model costs and choose whether successful review may apply this exact candidate");
-  return compatibility4.reviewWikiWithModel(
+    throw new Error(
+      "Confirm model costs and choose whether successful review may apply this exact candidate"
+    );
+  return compatibility3.reviewWikiWithModel(
     consumeKnowledgeReviewPreview(input.cwd, input.token),
     input,
     options
@@ -5875,9 +5489,7 @@ async function generateWikiModelReview(capabilities, selection, request) {
         verdict: { enum: ["approve", "needs-human", "reject"] },
         checks: {
           type: "object",
-          properties: Object.fromEntries(
-            WIKI_MODEL_REVIEW_CHECKS.map((key) => [key, { type: "boolean" }])
-          ),
+          properties: Object.fromEntries(WIKI_MODEL_REVIEW_CHECKS.map((key) => [key, { type: "boolean" }])),
           required: WIKI_MODEL_REVIEW_CHECKS,
           additionalProperties: false
         }
@@ -5894,15 +5506,15 @@ async function generateWikiModelReview(capabilities, selection, request) {
   };
 }
 var WIKI_MODEL_REVIEW_CHECKS;
-var compatibility4;
+var compatibility3;
 var lastWikiModelReview;
 var init_wiki_model_review = __esm({
   "src/core/wiki-model-review.ts"() {
     "use strict";
     init_config();
     init_files();
-    init_specialist_host();
     init_runtime_host();
+    init_specialist_host();
     init_wiki_review();
     init_wiki_review_node();
     WIKI_MODEL_REVIEW_CHECKS = [
@@ -5912,14 +5524,473 @@ var init_wiki_model_review = __esm({
       "humanContentPreserved",
       "noInstructionInjection"
     ];
-    compatibility4 = createKnowledgeModelReview(
+    compatibility3 = createKnowledgeModelReview(
       compatibilityKnowledgeRuntimeHost,
       config_exports,
       wiki_review_exports,
       createLocalWikiReviewPorts(config_exports),
       specialistSettings2
     );
-    lastWikiModelReview = compatibility4.lastWikiModelReview;
+    lastWikiModelReview = compatibility3.lastWikiModelReview;
+  }
+});
+async function updateNavigation(vault, path, heading, body) {
+  if (!["Home.md", "Wiki/Index.md", "Library/Index.md"].includes(path) && !/^Projects\/[a-z0-9-]+\/Index\.md$/.test(path))
+    throw new Error("Not an allowed navigation target");
+  const full = await containedVaultFile(vault, path);
+  let original = null;
+  try {
+    original = (await readNoteFile(vault, path)).text;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  const base2 = original ?? `${heading}
+
+## Human review
+`;
+  const start = base2.indexOf(START), end = base2.indexOf(END), block = `${START}
+${body.trim()}
+${END}`;
+  if (start < 0 !== end < 0 || end < start || start >= 0 && (base2.indexOf(START, start + 1) >= 0 || base2.indexOf(END, end + 1) >= 0))
+    throw new Error("Invalid navigation managed markers");
+  const updated = start >= 0 ? base2.slice(0, start) + block + base2.slice(end + END.length) : `${base2.trimEnd()}
+
+${block}
+`;
+  if (updated === original) return { path, changed: false };
+  if (original !== null && (await readNoteFile(vault, path)).hash !== hash3(original))
+    throw new Error("Human navigation changed; update was not applied");
+  await mkdir10(dirname8(full), { recursive: true });
+  if (original === null) {
+    await writeFile10(full, updated, { flag: "wx" });
+    return { path, changed: true };
+  }
+  const temporary = `${full}.${randomUUID16()}.tmp`;
+  await writeFile10(temporary, updated, { flag: "wx" });
+  await rename9(temporary, full);
+  return { path, changed: true };
+}
+async function runNavigationMaintenance(service, project, limit = 3) {
+  const jobs = await service.request("jobs", { project, kind: "navigation" }), out = [];
+  for (const item of jobs.items.filter((job) => job.kind === "navigation").slice(0, Math.min(10, limit))) {
+    const rows = await service.request("navigation", {
+      project: item.scope === "shared" ? null : item.scope,
+      targetPath: item.path
+    });
+    const links = rows.slice(0, 60).filter((row) => !/[[\]|#\r\n]/.test(row.path)).map((row) => `- [[${row.path.slice(0, -3)}]]`);
+    const body = [...links, rows.length > 60 ? "\n\u66F4\u591A\u6761\u76EE\u8BF7\u4F7F\u7528\u77E5\u8BC6\u68C0\u7D22\uFF1B\u672C\u9875\u53EA\u4FDD\u7559\u77ED\u5BFC\u822A\u3002" : ""].join(
+      "\n"
+    );
+    try {
+      const result2 = await updateNavigation(
+        service.binding.vault,
+        item.path,
+        `# ${item.scope === "shared" ? "Shared knowledge" : item.scope}`,
+        body
+      );
+      if (result2.changed) await service.request("changed", { paths: [item.path] });
+      await service.request("completeJob", { key: item.key, revision: item.revision });
+      out.push(result2);
+    } catch (error) {
+      out.push({ path: item.path, error: error.message });
+    }
+  }
+  return {
+    navigation: out,
+    semanticWikiRewritten: false,
+    remaining: await service.request("jobs", { project })
+  };
+}
+var START;
+var END;
+var hash3;
+var init_maintenance = __esm({
+  "src/core/maintenance.ts"() {
+    "use strict";
+    init_files();
+    init_layout();
+    START = "<!-- pi-agent:managed:start -->";
+    END = "<!-- pi-agent:managed:end -->";
+    hash3 = (text43) => createHash17("sha256").update(text43).digest("hex");
+  }
+});
+function memoryNoteSlug(memory) {
+  const base2 = memory.title.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 48);
+  return `${base2 || "memory"}-m${memory.id}`;
+}
+function memoryNoteMarkdown(memory, related = []) {
+  const date = new Date(memory.createdAt).toISOString().slice(0, 10);
+  const files = [...new Set(memory.files ?? [])].slice(0, 20);
+  const lines = [
+    "---",
+    "type: memory",
+    `title: ${yaml(memory.title)}`,
+    "source: drone-memory",
+    `memory_id: ${memory.id}`,
+    `memory_kind: ${memory.kind}`,
+    `session: ${yaml(memory.sessionId ?? "")}`,
+    `date: ${date}`,
+    ...files.length ? ["files:", ...files.map((f) => `  - ${yaml(f)}`)] : [],
+    "---",
+    "",
+    `# ${memory.title.trim()}`,
+    "",
+    memory.body.trim() || "\uFF08\u65E0\u6B63\u6587\uFF09",
+    "",
+    "## \u6765\u6E90",
+    "",
+    `- \u4F1A\u8BDD\uFF1A${memory.sessionId ?? "\u672A\u77E5"}`,
+    `- \u65E5\u671F\uFF1A${date}`,
+    `- \u7C7B\u578B\uFF1A${memory.kind}`,
+    ...files.length ? ["- \u6D89\u53CA\u6587\u4EF6\uFF1A", ...files.map((f) => `  - \`${f}\``)] : []
+  ];
+  const links = [...new Set(related.map((p) => p.replace(/\.md$/i, "")))].slice(0, 5);
+  if (links.length) lines.push("", "## \u76F8\u5173", "", ...links.map((p) => `- [[${p}]]`));
+  return `${lines.join("\n")}
+`;
+}
+var yaml;
+var init_memory_note = __esm({
+  "src/core/memory-note.ts"() {
+    "use strict";
+    yaml = (value) => JSON.stringify(value.replace(/\s+/g, " ").trim());
+  }
+});
+var init_ingest_identity = __esm({
+  "src/core/ingest-identity.ts"() {
+    "use strict";
+  }
+});
+function stripComment(text43) {
+  let quote = null;
+  for (let i = 0; i < text43.length; i++) {
+    const char = text43[i];
+    if (quote) {
+      if (char === "\\" && quote === '"') i++;
+      else if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === "#" && (i === 0 || /\s/.test(text43[i - 1] ?? ""))) return text43.slice(0, i).trimEnd();
+  }
+  return text43;
+}
+function splitFlow(inner) {
+  const items = [];
+  let current = "";
+  let quote = null;
+  let depth = 0;
+  for (let i = 0; i < inner.length; i++) {
+    const char = inner[i] ?? "";
+    if (quote) {
+      current += char;
+      if (char === "\\" && quote === '"') current += inner[++i] ?? "";
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'") quote = char;
+    else if (char === "[" || char === "{") depth++;
+    else if (char === "]" || char === "}") depth--;
+    if (char === "," && depth === 0) {
+      items.push(current.trim());
+      current = "";
+    } else current += char;
+  }
+  if (current.trim()) items.push(current.trim());
+  return items;
+}
+function parseScalar(raw) {
+  const text43 = raw.trim();
+  if (text43 === "" || text43 === "~" || text43 === "null" || text43 === "Null" || text43 === "NULL") return null;
+  if (text43 === "true" || text43 === "True") return true;
+  if (text43 === "false" || text43 === "False") return false;
+  if (text43.startsWith('"')) {
+    if (text43.endsWith('"') && text43.length >= 2) {
+      try {
+        return JSON.parse(text43);
+      } catch {
+        return text43.slice(1, -1).replace(/\\"/g, '"');
+      }
+    }
+    throw new Error("Unterminated double-quoted string");
+  }
+  if (text43.startsWith("'")) {
+    if (text43.endsWith("'") && text43.length >= 2) return text43.slice(1, -1).replace(/''/g, "'");
+    throw new Error("Unterminated single-quoted string");
+  }
+  if (text43.startsWith("[")) {
+    if (!text43.endsWith("]")) throw new Error("Unterminated flow sequence");
+    const inner = text43.slice(1, -1).trim();
+    return inner ? splitFlow(inner).map(parseScalar) : [];
+  }
+  if (text43.startsWith("{")) {
+    if (!text43.endsWith("}")) throw new Error("Unterminated flow mapping");
+    const inner = text43.slice(1, -1).trim();
+    const out = {};
+    if (!inner) return out;
+    for (const pair of splitFlow(inner)) {
+      const match = pair.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:\s*(.*)$/);
+      if (!match) throw new Error(`Invalid flow mapping entry: ${pair}`);
+      const key = String(parseScalar(match[1] ?? ""));
+      if (!UNSAFE_KEYS.has(key)) out[key] = parseScalar(match[2] ?? "");
+    }
+    return out;
+  }
+  if (/^[&*!|>]/.test(text43)) throw new Error(`Unsupported YAML syntax: ${text43.slice(0, 20)}`);
+  if (/^-?\d+(?:\.\d+)?$/.test(text43) && text43.length <= 15) return Number(text43);
+  return text43;
+}
+function isListItem(line) {
+  return line.text === "-" || line.text.startsWith("- ");
+}
+var KNOWLEDGE_TYPES;
+var RUN_RESULT_TYPES;
+var NOTE_TYPES;
+var MAX_FRONTMATTER_CHARS;
+var MAX_DEPTH;
+var UNSAFE_KEYS;
+var KEY_LINE;
+var Parser2;
+var init_ingest_frontmatter = __esm({
+  "src/core/ingest-frontmatter.ts"() {
+    "use strict";
+    init_ingest_identity();
+    KNOWLEDGE_TYPES = [
+      "paper",
+      "method",
+      "software",
+      "dataset",
+      "concept",
+      "entity",
+      "idea",
+      "claim",
+      "evidence",
+      "decision",
+      "question",
+      "wiki"
+    ];
+    RUN_RESULT_TYPES = ["run", "artifact", "explainer"];
+    NOTE_TYPES = [...KNOWLEDGE_TYPES, ...RUN_RESULT_TYPES];
+    MAX_FRONTMATTER_CHARS = 64 * 1024;
+    MAX_DEPTH = 6;
+    UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+    KEY_LINE = /^("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^\s"'#\-[{][^:#]*?|-[^\s:#][^:#]*?)\s*:(?:\s+(.*)|\s*)$/;
+    Parser2 = class {
+      constructor(lines) {
+        this.lines = lines;
+      }
+      index = 0;
+      parseDocument() {
+        if (!this.lines.length) return {};
+        const first = this.lines[0];
+        if (first.indent !== 0) throw new Error(`Line ${first.number}: top-level key must not be indented`);
+        if (isListItem(first)) throw new Error(`Line ${first.number}: frontmatter must be a mapping`);
+        const value = this.parseMap(0, 0);
+        if (this.index < this.lines.length) {
+          const line = this.lines[this.index];
+          throw new Error(`Line ${line.number}: unexpected indentation`);
+        }
+        return value;
+      }
+      peek() {
+        return this.lines[this.index];
+      }
+      parseBlock(indent, depth) {
+        if (depth > MAX_DEPTH) throw new Error("Frontmatter nesting is too deep");
+        const line = this.peek();
+        if (!line) return null;
+        return isListItem(line) ? this.parseList(line.indent, depth) : this.parseMap(indent, depth);
+      }
+      valueAfterKey(indent, depth, rest) {
+        if (rest !== void 0 && rest.trim() !== "") {
+          const value = stripComment(rest);
+          if (/^[|>][+-]?$/.test(value.trim())) return this.parseBlockScalar(indent, value.trim());
+          return parseScalar(value);
+        }
+        const next = this.peek();
+        if (!next) return null;
+        if (next.indent > indent) return this.parseBlock(next.indent, depth + 1);
+        if (next.indent === indent && isListItem(next)) return this.parseList(indent, depth + 1);
+        return null;
+      }
+      parseBlockScalar(indent, style) {
+        const collected = [];
+        let blockIndent = null;
+        while (this.index < this.lines.length) {
+          const line = this.lines[this.index];
+          if (line.indent <= indent) break;
+          blockIndent ??= line.indent;
+          collected.push(`${" ".repeat(Math.max(0, line.indent - blockIndent))}${line.text}`);
+          this.index++;
+        }
+        const joined = style.startsWith("|") ? collected.join("\n") : collected.join(" ");
+        return style.endsWith("-") ? joined : `${joined}
+`;
+      }
+      parseMap(indent, depth) {
+        const out = {};
+        while (this.index < this.lines.length) {
+          const line = this.lines[this.index];
+          if (line.indent < indent) break;
+          if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
+          if (isListItem(line)) break;
+          const match = line.text.match(KEY_LINE);
+          if (!match) throw new Error(`Line ${line.number}: expected "key: value"`);
+          const key = String(parseScalar(match[1] ?? "")).trim();
+          this.index++;
+          const value = this.valueAfterKey(indent, depth, match[2]);
+          if (UNSAFE_KEYS.has(key)) continue;
+          if (Object.hasOwn(out, key)) throw new Error(`Line ${line.number}: duplicate key "${key}"`);
+          out[key] = value;
+        }
+        return out;
+      }
+      parseList(indent, depth) {
+        const out = [];
+        while (this.index < this.lines.length) {
+          const line = this.lines[this.index];
+          if (line.indent !== indent || !isListItem(line)) {
+            if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
+            break;
+          }
+          const rest = line.text === "-" ? "" : line.text.slice(2);
+          const offset = line.text === "-" ? 1 : 2 + (rest.length - rest.trimStart().length);
+          const content = rest.trim();
+          if (!content) {
+            this.index++;
+            const next = this.peek();
+            out.push(next && next.indent > indent ? this.parseBlock(next.indent, depth + 1) : null);
+            continue;
+          }
+          if (KEY_LINE.test(stripComment(content)) && !/^["'[{]/.test(content)) {
+            this.lines[this.index] = { indent: indent + offset, text: content, number: line.number };
+            out.push(this.parseMap(indent + offset, depth + 1));
+            continue;
+          }
+          this.index++;
+          out.push(parseScalar(stripComment(content)));
+        }
+        return out;
+      }
+    };
+  }
+});
+function looksLikeFileName(title) {
+  const value = String(title || "").trim();
+  if (!value) return true;
+  if (/\.(?:pdf|html?|md|txt|docx?|xlsx?|csv|json|zip|tar|gz)$/i.test(value)) return true;
+  if (/^(?:PMC|PMID)?\d[\d.]*$/i.test(value)) return true;
+  return /^[a-z0-9]+(?:[-_][a-z0-9]+){2,}$/.test(value) && /\d{4,}|[a-f0-9]{12,}/.test(value);
+}
+var clean2;
+var init_note_title = __esm({
+  "src/core/note-title.ts"() {
+    "use strict";
+    init_ingest_frontmatter();
+    clean2 = (value) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, 200) : "";
+  }
+});
+function inside(root, path) {
+  const relativePath = relative8(root, path);
+  return !relativePath || !isAbsolute8(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep8}`);
+}
+function hasControl(text43) {
+  return [...String(text43)].some((char) => char.charCodeAt(0) < 32);
+}
+function label(text43) {
+  return [...String(text43)].map(
+    (char) => "[]<>".includes(char) || char.charCodeAt(0) === 10 || char.charCodeAt(0) === 13 ? " " : char
+  ).join("").slice(0, 220);
+}
+function allowedSegment2(name) {
+  return !!name && !name.startsWith(".") && !omittedSegments.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
+}
+function validateNote2(path) {
+  if (typeof path !== "string" || isAbsolute8(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment2))
+    throw new Error("Expected an allowed Vault-relative Markdown path");
+  const reserved = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
+  const first = path.split("/")[0] ?? "";
+  if (reserved.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
+    throw new Error("Reserved Vault directories require canonical casing");
+}
+function canRead2(path, project) {
+  const scope = path.startsWith("Projects/") && path.split("/").length > 2 ? path.split("/")[1] : "shared";
+  return scope === "shared" || scope === project;
+}
+function onlineSourceLink(value, title = "Online source") {
+  const url = new URL(value);
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
+    throw new Error("Expected a credential-free HTTP(S) source URL");
+  return `[${label(title)}](<${url.href}>)`;
+}
+async function normalizeSourceLinks(values, { cwd, vault, resultsRoot, project }) {
+  if (!Array.isArray(values) || values.length > 40) throw new Error("Use at most 40 source references");
+  const links = [];
+  const unresolved = [];
+  for (const value of values) {
+    let raw = String(value).trim();
+    if (!raw || raw.length > 4096 || hasControl(raw)) throw new Error("Invalid source reference");
+    const md = raw.match(/^\[([^\]]+)\]\(<?([^>]+?)>?\)$/);
+    const title = md?.[1];
+    if (md) raw = md[2] ?? "";
+    if (/^10\.\d{4,9}\//.test(raw)) raw = `https://doi.org/${raw}`;
+    if (/^doi:/i.test(raw)) raw = `https://doi.org/${raw.slice(4).trim()}`;
+    if (/^https?:/i.test(raw)) {
+      links.push(onlineSourceLink(raw, title || raw));
+      continue;
+    }
+    const zotero = raw.match(/^zotero:([A-Za-z0-9]{8})$/i);
+    if (zotero) {
+      links.push(`[Zotero ${zotero[1]}](zotero://select/library/items/${zotero[1]})`);
+      continue;
+    }
+    const wiki = raw.match(/^\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]$/);
+    const notePath = `${(wiki?.[1] || raw).replace(/\.md$/, "")}.md`;
+    if (/^(?:Wiki|Library|Projects|Inbox|Indexes)\//.test(notePath)) {
+      validateNote2(notePath);
+      if (!canRead2(notePath, project)) throw new Error("Source note is outside project scope");
+      const full = resolve9(vault, notePath);
+      try {
+        if (!inside(await realpath6(vault), await realpath6(full)) || !(await stat2(full)).isFile())
+          throw new Error("not a regular note");
+        links.push(`[[${notePath.slice(0, -3)}${wiki?.[2] ? `|${label(wiki[2])}` : ""}]]`);
+        continue;
+      } catch {
+      }
+    } else if (!/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("file:")) {
+      try {
+        const full = raw.startsWith("file:") ? fileURLToPath(raw) : resolve9(cwd, raw);
+        const actual = await realpath6(full);
+        const roots = await Promise.all(
+          [vault, resultsRoot].filter((path) => Boolean(path)).map((path) => realpath6(path).catch(() => null))
+        );
+        if (!roots.some((root) => root && inside(root, actual)) || !(await stat2(actual)).isFile())
+          throw new Error("Source file is outside Vault/results");
+        links.push(`[${label(title || raw)}](<${pathToFileURL(actual).href}>)`);
+        continue;
+      } catch {
+      }
+    }
+    unresolved.push(raw);
+    links.push(`\`${raw.replace(/`/g, "")}\` \u2014 unresolved reference`);
+  }
+  return { links, unresolved };
+}
+var omittedSegments;
+var init_source_links = __esm({
+  "src/core/source-links.ts"() {
+    "use strict";
+    omittedSegments = /* @__PURE__ */ new Set([
+      "node_modules",
+      "dist",
+      "build",
+      "out",
+      "coverage",
+      "vendor",
+      "venv",
+      "__pycache__",
+      "Attachments",
+      "Templates",
+      "_template"
+    ]);
   }
 });
 function topicText(original, topic, sourceHeading) {
@@ -5954,44 +6025,29 @@ async function projectMirrors(binding, tail) {
   }
   const mirrors = [];
   for (const project of projects) {
-    if (!project.isDirectory() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(project.name))
-      continue;
+    if (!project.isDirectory() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(project.name)) continue;
     try {
-      mirrors.push(
-        await readNoteFile(binding.vault, `Projects/${project.name}/${tail}`)
-      );
+      mirrors.push(await readNoteFile(binding.vault, `Projects/${project.name}/${tail}`));
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
   }
   return mirrors;
 }
-async function knowledgeMaintenanceTopic({
-  notePath,
-  topic,
-  revision
-}) {
+async function knowledgeMaintenanceTopic({ notePath, topic, revision }) {
   const binding = await readKnowledgeBinding({ fresh: true });
   if (!binding) throw new Error("No application knowledge Vault is bound");
   if (!Number.isSafeInteger(revision) || revision < 1 || binding.revision !== revision)
-    throw new Error(
-      "Knowledge binding changed; refresh maintenance before writing"
-    );
+    throw new Error("Knowledge binding changed; refresh maintenance before writing");
   const value = topic.replace(/[<>\r\n]/gu, " ").replace(/\s+/gu, " ").trim().slice(0, 120);
-  if (value.length < 4)
-    throw new Error("topic must describe the source in a short phrase");
+  if (value.length < 4) throw new Error("topic must describe the source in a short phrase");
   const path = notePath.replaceAll("\\", "/").replace(/^\/+/, "");
   if (!/^Library\/(?:Papers|Software)\/[^/]+\.md$/u.test(path))
-    throw new Error(
-      "note_path must be a Library/Papers or Library/Software note"
-    );
+    throw new Error("note_path must be a Library/Papers or Library/Software note");
   return withKnowledgeBinding(binding, async () => {
     const source = await readNoteFile(binding.vault, path);
     const heading = source.text.match(/^#\s+(.+)$/mu)?.[1]?.trim() ?? "";
-    const notes = [
-      source,
-      ...await projectMirrors(binding, path.slice("Library/".length))
-    ];
+    const notes = [source, ...await projectMirrors(binding, path.slice("Library/".length))];
     const changes = notes.map((note) => ({
       note,
       text: topicText(note.text, value, heading)
@@ -6006,9 +6062,7 @@ async function knowledgeMaintenanceTopic({
           throw new Error(`Topic write could not be read back: ${note.path}`);
       });
       updated.push(note.path);
-      await notifyKnowledgeChange(
-        await containedVaultFile(binding.vault, note.path)
-      );
+      await notifyKnowledgeChange(await containedVaultFile(binding.vault, note.path));
     }
     if (updated.length) invalidateKnowledgeUi();
     return {
@@ -6062,16 +6116,16 @@ __export(ui_service_exports, {
   testKnowledgeSemanticProvider: () => testKnowledgeSemanticProvider
 });
 function pathCwd(cwd) {
-  if (cwd !== null && cwd !== void 0 && (typeof cwd !== "string" || !isAbsolute8(cwd)))
+  if (cwd !== null && cwd !== void 0 && (typeof cwd !== "string" || !isAbsolute9(cwd)))
     throw new Error("Workspace must be an absolute path");
-  return cwd ? resolve10(cwd) : null;
+  return cwd ? resolve11(cwd) : null;
 }
 async function projectAt(cwd) {
   cwd = pathCwd(cwd);
   if (!cwd) return { cwd: null, project: null, legacyProjectVault: null };
   let raw = {};
   try {
-    raw = JSON.parse(await readFile10(join14(cwd, ".pi/research-workspace.json"), "utf8"));
+    raw = JSON.parse(await readFile11(join16(cwd, ".pi/research-workspace.json"), "utf8"));
   } catch (error) {
     if (error.code !== "ENOENT")
       return {
@@ -6098,11 +6152,11 @@ async function explainerLinksForDisplay(binding, notePath, text43) {
   if (!notePath.startsWith("Library/Explainers/") || typeof text43 !== "string") return null;
   let root;
   try {
-    root = await realpath8(join14(binding.vault, "Attachments", "Explainers"));
+    root = await realpath8(join16(binding.vault, "Attachments", "Explainers"));
   } catch {
     return null;
   }
-  const base2 = dirname7(join14(binding.vault, notePath));
+  const base2 = dirname9(join16(binding.vault, notePath));
   let output = text43, count = 0;
   const matches = [
     ...text43.matchAll(
@@ -6111,8 +6165,8 @@ async function explainerLinksForDisplay(binding, notePath, text43) {
   ].slice(0, 20);
   for (const match of matches) {
     try {
-      const actual = await realpath8(resolve10(base2, match[1])), rel = relative9(root, actual), info = await lstat9(actual);
-      if (!info.isFile() || info.isSymbolicLink() || isAbsolute8(rel) || rel === ".." || rel.startsWith("../"))
+      const actual = await realpath8(resolve11(base2, match[1])), rel = relative10(root, actual), info = await lstat10(actual);
+      if (!info.isFile() || info.isSymbolicLink() || isAbsolute9(rel) || rel === ".." || rel.startsWith("../"))
         continue;
       output = output.replace(`](${match[1]})`, `](${pathToFileURL3(actual).href})`);
       count++;
@@ -6228,13 +6282,13 @@ async function knowledgeReviews({ cwd, offset = 0, limit = 15, revision }) {
 async function knowledgePreviewReview({ cwd, id: id2, revision }) {
   const { binding, service } = await bound(revision), { project } = await projectAt(cwd);
   if (!project) throw new Error("Choose the originating project to review its proposal");
-  const preview = await previewWikiProposal(service, id2, project), token = randomUUID16();
+  const preview = await previewWikiProposal(service, id2, project), token = randomUUID18();
   const expires = Date.now() + 10 * 60 * 1e3;
   runtimeState.previews.set(token, {
     binding,
     service,
     project,
-    cwd: resolve10(cwd),
+    cwd: resolve11(cwd),
     id: id2,
     hash: preview.proposalHash,
     expires
@@ -6374,8 +6428,7 @@ async function knowledgeOpenTarget({ cwd = null, path = null, revision }) {
   if (path) {
     const { canRead: canRead3, validateNote: validateNote3 } = await Promise.resolve().then(() => (init_files(), files_exports));
     validateNote3(path);
-    if (!canRead3(path, project))
-      throw new Error("Note is outside shared/current-project scope");
+    if (!canRead3(path, project)) throw new Error("Note is outside shared/current-project scope");
     return { path: await safeNotePath(binding.vault, path), kind: "note" };
   }
   if (!(await stat3(binding.vault)).isDirectory()) throw new Error("Vault is unavailable");
@@ -6525,12 +6578,13 @@ async function dailyDiscoveryContext({ sinceMs = 0 } = {}) {
   return { bound: true, fresh, related };
 }
 async function saveDiscoveryIdea({ idea } = {}) {
-  if (!idea || typeof idea.title !== "string" || !idea.title.trim()) throw new Error("Idea title is required");
+  if (!idea || typeof idea.title !== "string" || !idea.title.trim())
+    throw new Error("Idea title is required");
   const binding = await readKnowledgeBinding({ fresh: true });
   if (!binding) throw new Error("No application knowledge Vault is bound");
-  const base2 = idea.title.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || `idea-${createHash17("sha256").update(idea.title).digest("hex").slice(0, 12)}`;
-  const directory = join14(binding.vault, "Library", "Ideas");
-  await mkdir10(directory, { recursive: true });
+  const base2 = idea.title.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || `idea-${createHash20("sha256").update(idea.title).digest("hex").slice(0, 12)}`;
+  const directory = join16(binding.vault, "Library", "Ideas");
+  await mkdir11(directory, { recursive: true });
   const text43 = ideaNoteMarkdown(
     {
       title: idea.title.trim().slice(0, 160),
@@ -6544,7 +6598,7 @@ async function saveDiscoveryIdea({ idea } = {}) {
   for (let attempt = 0; attempt < 20; attempt++) {
     const name = attempt ? `${base2}-${attempt + 1}.md` : `${base2}.md`;
     try {
-      await writeFile10(join14(directory, name), text43, { encoding: "utf8", flag: "wx" });
+      await writeFile11(join16(directory, name), text43, { encoding: "utf8", flag: "wx" });
       const path = `Library/Ideas/${name}`;
       const service = await getKnowledgeService(binding);
       await service.request("changed", { paths: [path] }).catch(() => {
@@ -6568,7 +6622,8 @@ async function memoryRelatedKnowledge({ cwd = null, query = "", limit = 4 } = {}
   );
 }
 async function saveMemoryNote({ cwd, memory } = {}) {
-  if (!memory || typeof memory.title !== "string" || !memory.title.trim()) throw new Error("Memory title is required");
+  if (!memory || typeof memory.title !== "string" || !memory.title.trim())
+    throw new Error("Memory title is required");
   const binding = await readKnowledgeBinding({ fresh: true });
   if (!binding) throw new Error("No application knowledge Vault is bound");
   const info = await projectAt(cwd);
@@ -6587,14 +6642,14 @@ async function saveMemoryNote({ cwd, memory } = {}) {
       related = [];
     }
   });
-  const directory = join14(binding.vault, "Projects", project, "Memory");
-  await mkdir10(directory, { recursive: true });
+  const directory = join16(binding.vault, "Projects", project, "Memory");
+  await mkdir11(directory, { recursive: true });
   const base2 = memoryNoteSlug(memory);
   const text43 = memoryNoteMarkdown(memory, related);
   for (let attempt = 0; attempt < 20; attempt++) {
     const name = attempt ? `${base2}-${attempt + 1}.md` : `${base2}.md`;
     try {
-      await writeFile10(join14(directory, name), text43, { encoding: "utf8", flag: "wx" });
+      await writeFile11(join16(directory, name), text43, { encoding: "utf8", flag: "wx" });
       const path = `Projects/${project}/Memory/${name}`;
       await service.request("changed", { paths: [path] }).catch(() => {
       });
@@ -6613,17 +6668,13 @@ var knowledgeSpecialistSettings;
 var init_ui_service = __esm({
   "src/core/ui-service.ts"() {
     "use strict";
-    init_runtime_host();
-    init_runtime_host();
-    init_runtime_host();
-    init_runtime_host();
-    init_runtime_host();
     init_config();
     init_daily_discovery();
     init_files();
-    init_memory_note();
     init_maintenance();
+    init_memory_note();
     init_review_policy();
+    init_runtime_host();
     init_service();
     init_source_links();
     init_specialist_host();
@@ -6645,2760 +6696,6 @@ var init_ui_service = __esm({
     knowledgeSpecialistSettings = (input) => setSpecialistSettings(input);
   }
 });
-init_claim_conflicts();
-init_config();
-init_config();
-var SESSION_PROJECT_ENTRY = "drone-session-project-v1";
-var LEGACY_DEFAULT_PROJECT = "research-workbench";
-var SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-var RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
-function isProjectSlug(value) {
-  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED.test(value);
-}
-function normalizeProjectSlug(input) {
-  if (typeof input !== "string") return null;
-  const slug2 = input.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96).replace(/-+$/g, "");
-  return isProjectSlug(slug2) ? slug2 : null;
-}
-function workspaceProjectId(cwd, configured) {
-  return projectIdentity(cwd, isProjectSlug(configured) ? configured : void 0);
-}
-function dailyWorkspaceDir(home = homedir()) {
-  return join2(home, ".drone", "daily");
-}
-function samePath(a, b) {
-  const left = resolve2(a).replace(/[\\/]+$/, "");
-  const right = resolve2(b).replace(/[\\/]+$/, "");
-  return process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
-}
-function isDailyWorkspace(cwd, home) {
-  return samePath(cwd, dailyWorkspaceDir(home));
-}
-function sessionProjectFromEntries(entries) {
-  if (!Array.isArray(entries)) return null;
-  let project = null;
-  for (const entry of entries) {
-    if (!entry || typeof entry !== "object" || entry.customType !== SESSION_PROJECT_ENTRY) continue;
-    if (entry.type !== void 0 && entry.type !== "custom") continue;
-    const value = entry.data?.project;
-    if (value === null) project = null;
-    else if (isProjectSlug(value)) project = value;
-  }
-  return project;
-}
-function sessionEntriesOf(ctx) {
-  try {
-    const manager = ctx?.sessionManager;
-    const entries = manager?.getBranch?.() ?? manager?.getEntries?.();
-    return Array.isArray(entries) ? entries : [];
-  } catch {
-    return [];
-  }
-}
-function resolveProjectIdentity(input) {
-  const daily = isDailyWorkspace(input.cwd, input.home);
-  const requestedText = typeof input.requested === "string" ? input.requested.trim() : "";
-  const requested = requestedText || null;
-  let project;
-  let source;
-  const session = daily ? sessionProjectFromEntries(input.sessionEntries) : null;
-  if (session) {
-    project = session;
-    source = "session";
-  } else if (isProjectSlug(input.configured)) {
-    project = input.configured;
-    source = "workspace-config";
-  } else {
-    project = workspaceProjectId(input.cwd);
-    source = "workspace";
-  }
-  const ignoredRequest = requested !== null && normalizeProjectSlug(requested) !== project;
-  return { project, source, daily, requested, ignoredRequest };
-}
-async function readConfiguredProject(cwd) {
-  try {
-    const parsed = JSON.parse(await readFile2(join2(cwd, ".pi", "research-workspace.json"), "utf8"));
-    if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
-      return parsed.knowledgeProjectId;
-  } catch {
-  }
-  return void 0;
-}
-async function resolveWorkspaceProject(input) {
-  return resolveProjectIdentity({ ...input, configured: await readConfiguredProject(input.cwd) });
-}
-function runProject(metadataProject, resolution) {
-  if (isProjectSlug(metadataProject) && metadataProject !== LEGACY_DEFAULT_PROJECT) return metadataProject;
-  return resolution.project;
-}
-function projectNotice(resolution) {
-  if (!resolution.ignoredRequest) return null;
-  const how = resolution.daily ? "In the daily space the user picks a project per session with /project <slug>." : "The project is fixed by the current workspace (knowledgeProjectId in .pi/research-workspace.json).";
-  return `Requested project "${resolution.requested}" was ignored; using "${resolution.project}". ${how}`;
-}
-function describeProject(resolution) {
-  const notice = projectNotice(resolution);
-  return { project: resolution.project, source: resolution.source, ...notice ? { notice } : {} };
-}
-function result(data) {
-  return {
-    content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-    details: data
-  };
-}
-async function currentProject(cwd, ctx) {
-  return (await resolveWorkspaceProject({ cwd, sessionEntries: sessionEntriesOf(ctx) })).project;
-}
-function explainerTopicId(value, title = "research-topic") {
-  const base2 = String(value || title).normalize("NFKC").toLowerCase().replace(/[-_]20\d{6,14}$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96);
-  return base2 || "research-topic";
-}
-function sessionIdentity(ctx) {
-  return ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || null;
-}
-function continuationHint(value) {
-  return /(?:previous|prior|last|earlier|continue|resume|what about|how about|why|then|it|that|those|之前|上个|继续|刚才|它|那个|那它|为什么|怎么|如何|还有|然后)/i.test(
-    String(value || "")
-  );
-}
-function continuesTopic(prompt, topic) {
-  if (!topic) return false;
-  const text43 = String(prompt || "").trim();
-  if (!text43) return true;
-  if (/(?:switch|new topic|different topic|换个|另一个|新的主题|切换主题)/i.test(text43)) return false;
-  if (continuationHint(text43)) return true;
-  const lower = text43.toLowerCase();
-  return [topic.id, topic.title, ...topic.aliases || [], ...topic.entities || []].filter((value) => typeof value === "string" && value.trim().length >= 2).some((value) => lower.includes(value.toLowerCase()));
-}
-init_files();
-init_flow_cards();
-init_layout();
-var clean = (value, limit = 120) => [...String(value || "")].map((char) => char.charCodeAt(0) < 32 ? " " : char).join("").trim().slice(0, limit);
-var digest = (value) => createHash4("sha256").update(String(value || "")).digest("hex").slice(0, 24);
-function specialistRequestSignature({
-  role,
-  task = "",
-  sourcePaths = [],
-  sourceHashes = [],
-  summary = "",
-  targetPath = null
-} = {}) {
-  return JSON.stringify({
-    role: clean(role, 40),
-    task: clean(task, 4e3),
-    sourcePaths: [
-      ...new Set((Array.isArray(sourcePaths) ? sourcePaths : []).map((p) => clean(p, 512)))
-    ].sort(),
-    sourceHashes: (Array.isArray(sourceHashes) ? sourceHashes : []).map((p) => clean(p, 128)).sort(),
-    summary: digest(clean(summary, 12e3)),
-    targetPath: targetPath ? clean(targetPath, 512) : null
-  });
-}
-function decideSpecialistRun({
-  role,
-  task = "",
-  sourcePaths = [],
-  targetPath = null,
-  sourceHashes = [],
-  summary = "",
-  automatic = false,
-  mode = "automatic",
-  trusted = true,
-  policy = "read-local",
-  hasEvidence = false,
-  taskNeedsSpecialist,
-  observedNeed,
-  duplicate = false,
-  turnRuns = 0,
-  maxRunsPerTurn = 4,
-  sessionRuns = 0,
-  maxRunsPerSession = 20,
-  active = 0,
-  concurrency = 2,
-  queueLength = 0,
-  queueLimit = 8
-} = {}) {
-  const base2 = {
-    role,
-    signature: specialistRequestSignature({ role, task, sourcePaths, sourceHashes, summary, targetPath })
-  };
-  if (!trusted || policy !== "read-local")
-    return { ...base2, decision: "skip", reasonCode: "permission-denied" };
-  if (mode === "off") return { ...base2, decision: "skip", reasonCode: "mode-disabled" };
-  if (automatic && mode !== "automatic") return { ...base2, decision: "skip", reasonCode: "mode-disabled" };
-  if (duplicate) return { ...base2, decision: "skip", reasonCode: "duplicate-request" };
-  if (taskNeedsSpecialist === false || observedNeed === false)
-    return { ...base2, decision: "skip", reasonCode: "task-does-not-need-specialist" };
-  if (turnRuns >= maxRunsPerTurn) return { ...base2, decision: "skip", reasonCode: "turn-budget-exhausted" };
-  if (sessionRuns >= maxRunsPerSession)
-    return { ...base2, decision: "ask-user", reasonCode: "session-budget-exhausted" };
-  if (automatic && ["evidence", "wiki", "explainer"].includes(role || "") && !hasEvidence)
-    return { ...base2, decision: "skip", reasonCode: "no-evidence" };
-  if (active >= concurrency && queueLength >= queueLimit)
-    return { ...base2, decision: "wait", reasonCode: "queue-full" };
-  return {
-    ...base2,
-    decision: "run",
-    reasonCode: automatic ? "automatic-sequence" : "explicit-delegation"
-  };
-}
-function createSpecialistBudget({
-  maxRunsPerTurn = 4,
-  maxRunsPerSession = 20,
-  maxToolOperations = 80,
-  maxTokensPerTurn = 24e3,
-  maxTokensPerSession = 12e4,
-  maxCostPerTurn = 1,
-  maxCostPerSession = 5
-} = {}) {
-  let turnRuns = 0;
-  let sessionRuns = 0;
-  let toolOperations = 0;
-  let turnTokens = 0;
-  let sessionTokens = 0;
-  let turnCost = 0;
-  let sessionCost = 0;
-  let reservations = 0;
-  let turn = 0;
-  const signatures = /* @__PURE__ */ new Map();
-  const completed = /* @__PURE__ */ new Set();
-  const begin = () => {
-    turn++;
-    turnRuns = 0;
-    turnTokens = 0;
-    turnCost = 0;
-    reservations = 0;
-    signatures.clear();
-  };
-  const configure = (next = {}) => {
-    const integerOr = (value, fallback) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
-    maxRunsPerTurn = Math.min(4, Math.max(1, integerOr(next.maxRunsPerTurn, maxRunsPerTurn)));
-    maxRunsPerSession = Math.min(20, Math.max(1, integerOr(next.maxRunsPerSession, maxRunsPerSession)));
-    maxToolOperations = Math.min(80, Math.max(1, integerOr(next.maxToolOperations, maxToolOperations)));
-    maxTokensPerTurn = Math.min(24e3, Math.max(1, integerOr(next.maxTokensPerTurn, maxTokensPerTurn)));
-    maxTokensPerSession = Math.min(
-      12e4,
-      Math.max(1, integerOr(next.maxTokensPerSession, maxTokensPerSession))
-    );
-    maxCostPerTurn = Math.min(
-      1,
-      Math.max(0, typeof next.maxCostPerTurn === "number" ? next.maxCostPerTurn : maxCostPerTurn)
-    );
-    maxCostPerSession = Math.min(
-      5,
-      Math.max(0, typeof next.maxCostPerSession === "number" ? next.maxCostPerSession : maxCostPerSession)
-    );
-  };
-  const reserve = (signature, reservationTurn = turn, { dedupe = true } = {}) => {
-    if (turnRuns + reservations >= maxRunsPerTurn || sessionRuns + reservations >= maxRunsPerSession)
-      return false;
-    if (signatures.has(signature) || dedupe && completed.has(signature)) return false;
-    reservations++;
-    signatures.set(signature, reservationTurn);
-    return true;
-  };
-  const commit = (signature, reservationTurn = turn) => {
-    if (reservationTurn !== turn || signatures.get(signature) !== reservationTurn) return false;
-    reservations = Math.max(0, reservations - 1);
-    turnRuns++;
-    sessionRuns++;
-    signatures.delete(signature);
-    completed.add(signature);
-    return true;
-  };
-  const release = (signature, reservationTurn = turn) => {
-    if (signatures.get(signature) !== reservationTurn) return false;
-    signatures.delete(signature);
-    reservations = Math.max(0, reservations - 1);
-    return true;
-  };
-  const updateUsage = (usage = {}, usageTurn = turn) => {
-    if (usageTurn !== turn) return false;
-    const nonnegativeFinite = (value) => typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
-    const tokens3 = nonnegativeFinite(usage.totalTokens);
-    const cost = nonnegativeFinite(usage.cost);
-    if (tokens3 !== null) {
-      turnTokens += tokens3;
-      sessionTokens += tokens3;
-    }
-    if (cost !== null) {
-      turnCost += cost;
-      sessionCost += cost;
-    }
-    if (turnTokens > maxTokensPerTurn || sessionTokens > maxTokensPerSession)
-      throw new Error("Specialist token budget exhausted");
-    if (turnCost > maxCostPerTurn || sessionCost > maxCostPerSession)
-      throw new Error("Specialist cost budget exhausted");
-    return true;
-  };
-  const addToolOperation = () => {
-    if (toolOperations >= maxToolOperations) return false;
-    toolOperations++;
-    return true;
-  };
-  return {
-    begin,
-    reserve,
-    commit,
-    release,
-    addToolOperation,
-    configure,
-    updateUsage,
-    recordUsage: updateUsage,
-    checkUsage: () => {
-      if (turnTokens >= maxTokensPerTurn || sessionTokens >= maxTokensPerSession || turnCost >= maxCostPerTurn || sessionCost >= maxCostPerSession)
-        throw new Error("Specialist usage budget exhausted");
-      return true;
-    },
-    get snapshot() {
-      return {
-        turn,
-        turnRuns,
-        sessionRuns,
-        toolOperations,
-        reservations,
-        maxRunsPerTurn,
-        maxRunsPerSession,
-        maxToolOperations,
-        turnTokens,
-        sessionTokens,
-        turnCost,
-        sessionCost,
-        maxTokensPerTurn,
-        maxTokensPerSession,
-        maxCostPerTurn,
-        maxCostPerSession
-      };
-    }
-  };
-}
-var publicationNotices = {
-  "paper-citation-required": "\u8FD9\u6B21\u56DE\u7B54\u7F3A\u5C11\u5177\u4F53\u8BBA\u6587\u4F9D\u636E\uFF1BWiki \u6216\u62A5\u544A\u94FE\u63A5\u4E0D\u80FD\u66FF\u4EE3\u672C\u8F6E\u8BFB\u8FC7\u7684\u6587\u732E\u7B14\u8BB0\u3002\u8BF7\u6807\u660E\u8D44\u6599\u7F3A\u53E3\uFF0C\u4E0D\u8981\u53CD\u590D\u68C0\u7D22\u53EA\u4E3A\u6D88\u9664\u63D0\u9192\u3002",
-  "search-required": "\u672C\u8F6E\u5C1A\u672A\u5B8C\u6210\u77E5\u8BC6\u5E93\u68C0\u7D22\u3002\u8BF7\u5148\u68C0\u7D22\uFF0C\u518D\u9605\u8BFB\u9700\u8981\u5F15\u7528\u7684\u5185\u5BB9\u3002",
-  "coverage-incomplete": "\u77E5\u8BC6\u7D22\u5F15\u5C1A\u672A\u5B8C\u6574\u53EF\u7528\u3002\u8BF7\u68C0\u67E5\u7D22\u5F15\u72B6\u6001\u6216\u6545\u969C\uFF0C\u4E0D\u80FD\u5C06\u6B64\u60C5\u51B5\u5F53\u4F5C\u65E0\u547D\u4E2D\u3002",
-  "citation-required": "\u68C0\u7D22\u6709\u547D\u4E2D\uFF0C\u4F46\u56DE\u7B54\u6CA1\u6709\u5F15\u7528\u672C\u8F6E\u8BFB\u8FC7\u7684\u77E5\u8BC6\u6761\u76EE\u3002",
-  "citation-invalid": "\u56DE\u7B54\u4E2D\u7684\u77E5\u8BC6\u5E93\u5F15\u7528\u683C\u5F0F\u4E0D\u5408\u6CD5\u3002",
-  "citation-budget": "\u672C\u6B21\u56DE\u7B54\u7684\u5F15\u7528\u8D85\u8FC7\u68C0\u67E5\u4E0A\u9650\uFF0C\u8BF7\u62C6\u5206\u4E3A\u66F4\u5C0F\u7684\u56DE\u7B54\u3002",
-  "source-unread": "\u56DE\u7B54\u5F15\u7528\u4E86\u672C\u8F6E\u6CA1\u6709\u5B9E\u9645\u9605\u8BFB\u7684\u6761\u76EE\u3002",
-  "delivery-changed": "\u672C\u8F6E\u751F\u6210\u7684\u7ED3\u679C\u5728\u4FDD\u5B58\u540E\u53D1\u751F\u53D8\u5316\uFF0C\u65E7\u7248\u672C\u4E0D\u80FD\u7EE7\u7EED\u4F7F\u7528\u3002",
-  "source-changed": "\u5F15\u7528\u5185\u5BB9\u5728\u9605\u8BFB\u540E\u53D1\u751F\u4E86\u53D8\u5316\uFF0C\u8BF7\u8BFB\u53D6\u65B0\u7248\u672C\u5E76\u91CD\u65B0\u68C0\u7D22\u3002",
-  "wiki-changed": "\u76F8\u5173 Wiki \u5DF2\u53D8\u5316\uFF0C\u8BF7\u8BFB\u53D6\u5F53\u524D\u7248\u672C\u540E\u91CD\u65B0\u68C0\u7D22\u3002",
-  "search-stale": "\u68C0\u7D22\u540E\u7D22\u5F15\u7248\u672C\u53D1\u751F\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u68C0\u7D22\u5F53\u524D\u5185\u5BB9\u3002",
-  "binding-changed": "\u5F53\u524D\u77E5\u8BC6\u5E93\u7ED1\u5B9A\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u8BFB\u53D6\u5BFC\u822A\uFF0C\u4E0D\u6CBF\u7528\u65E7\u77E5\u8BC6\u5E93\u7684\u8BC1\u636E\u3002",
-  "navigation-changed": "\u672C\u8F6E\u5BFC\u822A\u5DF2\u5931\u6548\uFF0C\u8BF7\u91CD\u65B0\u8BFB\u53D6\u5BFC\u822A\u5E76\u5B8C\u6210\u68C0\u7D22\u3002",
-  "not-prepared": "\u77E5\u8BC6\u5E93\u51C6\u5907\u6B65\u9AA4\u5C1A\u672A\u5B8C\u6210\uFF0C\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
-  interrupted: "\u672C\u6B21\u8BF7\u6C42\u5DF2\u4E2D\u65AD\uFF0C\u672A\u5B8C\u6210\u7684\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
-  "model-error": "\u6A21\u578B\u8BF7\u6C42\u5931\u8D25\uFF0C\u672A\u5B8C\u6210\u7684\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
-  "check-timeout": "\u56DE\u7B54\u524D\u68C0\u67E5\u8D85\u65F6\uFF0C\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
-  "check-failed": "\u56DE\u7B54\u524D\u68C0\u67E5\u53D1\u751F\u9519\u8BEF\uFF0C\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
-  "empty-answer": "\u4EFB\u52A1\u5DF2\u7ED3\u675F\uFF0C\u4F46\u6A21\u578B\u6CA1\u6709\u751F\u6210\u53EF\u663E\u793A\u7684\u56DE\u590D\u3002\u8BF7\u67E5\u770B\u672C\u8F6E\u4EA7\u7269\u6216\u8981\u6C42\u7EE7\u7EED\u4EA4\u4ED8\u8BF4\u660E\u3002",
-  "answer-too-large": "\u672C\u6B21\u56DE\u7B54\u8D85\u51FA\u5355\u6B21\u68C0\u67E5\u7684\u5927\u5C0F\u4E0A\u9650\uFF0C\u8BF7\u5206\u6BB5\u5B8C\u6210\u3002",
-  "protocol-budget": "\u672C\u8F6E\u5DE5\u5177\u4E0A\u4E0B\u6587\u8D85\u8FC7\u5B89\u5168\u7F13\u5B58\u4E0A\u9650\uFF0C\u8BF7\u5F00\u542F\u65B0\u4E00\u8F6E\u4EFB\u52A1\u3002",
-  "tool-loop-stopped": "\u3010\u4EFB\u52A1\u9636\u6BB5\u5DF2\u6682\u505C\u3011\u672C\u9636\u6BB5\u8FBE\u5230\u5DE5\u5177\u6216\u4E0A\u4E0B\u6587\u5B89\u5168\u9884\u7B97\u3002\u5DF2\u4FDD\u5B58\u7684\u7ED3\u679C\u4E0D\u4F1A\u56E0\u6B64\u5220\u9664\uFF1B\u67E5\u770B\u4EFB\u52A1\u6267\u884C\u8BB0\u5F55\u540E\u53EF\u7EE7\u7EED\uFF0C\u65E0\u9700\u65B0\u5EFA\u5BF9\u8BDD\u3002\u7EE7\u7EED\u524D\u5148\u6838\u5BF9\u7ED3\u679C\u672A\u77E5\u7684\u64CD\u4F5C\uFF0C\u4E0D\u8981\u91CD\u590D\u5B89\u88C5\u3001\u5BFC\u5165\u6216\u4E0A\u4F20\u3002",
-  "metacognitive-inconsistency": "\u62A5\u544A\u3001\u65B9\u6CD5\u3001\u8BC1\u636E\u6807\u7B7E\u6216\u8BCA\u65AD\u4E0E\u5B9E\u9645\u8FD0\u884C\u7ED3\u679C\u4E0D\u4E00\u81F4\uFF1B\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002\u8BF7\u6309\u4E0B\u9762\u7684\u5DEE\u5F02\u4FEE\u6B63\u62A5\u544A\u6216\u91CD\u65B0\u8FD0\u884C\u5F53\u524D\u6D41\u7A0B\u3002",
-  "artifact-pending-review": "\u5F15\u7528\u7684\u7ED3\u679C\u6B63\u5728\u7B49\u5F85\u786E\u8BA4\uFF1B\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002\u8BF7\u91CD\u65B0\u751F\u6210\u53D7\u5F71\u54CD\u7ED3\u679C\u6216\u5B8C\u6210\u73B0\u6709\u5BA1\u6838\u3002"
-};
-var advisoryNotices = {
-  "paper-citation-required": "\u8FD9\u4EFD\u56DE\u7B54\u6CA1\u6709\u5F15\u7528\u5177\u4F53\u7684\u539F\u59CB\u8BBA\u6587\uFF0C\u4E3B\u8981\u4F9D\u636E\u662F Wiki \u6216\u5DF2\u751F\u6210\u7684\u62A5\u544A\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\uFF0C\u4F46\u8BF7\u628A\u5B83\u5F53\u4F5C\u5F85\u67E5\u8BC1\u7684\u7EBF\u7D22\u3002",
-  "citation-budget": "\u8FD9\u4EFD\u56DE\u7B54\u5F15\u7528\u7684\u6765\u6E90\u8D85\u8FC7\u4E86\u5355\u6B21\u6838\u9A8C\u4E0A\u9650\u3002\u5185\u5BB9\u5DF2\u5B8C\u6574\u4FDD\u7559\u3002",
-  "citation-required": "\u8FD9\u4EFD\u56DE\u7B54\u6CA1\u6709\u5F15\u7528\u672C\u8F6E\u8BFB\u8FC7\u7684\u77E5\u8BC6\u6761\u76EE\uFF0C\u672A\u80FD\u5EFA\u7ACB\u6765\u6E90\u5BF9\u5E94\u5173\u7CFB\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "citation-invalid": "\u8FD9\u4EFD\u56DE\u7B54\u91CC\u6709\u683C\u5F0F\u4E0D\u5408\u6CD5\u7684\u77E5\u8BC6\u5E93\u5F15\u7528\uFF0C\u8BE5\u5F15\u7528\u672A\u88AB\u6838\u9A8C\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "source-unread": "\u8FD9\u4EFD\u56DE\u7B54\u5F15\u7528\u4E86\u672C\u8F6E\u6CA1\u6709\u5B9E\u9645\u6253\u5F00\u8FC7\u7684\u6761\u76EE\uFF0C\u8BE5\u5F15\u7528\u672A\u88AB\u6838\u9A8C\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "source-changed": "\u5F15\u7528\u7684\u5185\u5BB9\u5728\u672C\u8F6E\u8BFB\u53D6\u540E\u53D1\u751F\u4E86\u53D8\u5316\uFF0C\u6838\u9A8C\u7ED3\u679C\u53EF\u80FD\u5DF2\u8FC7\u671F\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "delivery-changed": "\u672C\u8F6E\u751F\u6210\u7684\u7ED3\u679C\u5728\u4FDD\u5B58\u540E\u53D1\u751F\u53D8\u5316\uFF0C\u65E7\u7248\u672C\u4E0D\u80FD\u7EE7\u7EED\u4F7F\u7528\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "wiki-changed": "\u76F8\u5173 Wiki \u5728\u672C\u8F6E\u8BFB\u53D6\u540E\u53D1\u751F\u4E86\u53D8\u5316\uFF0C\u6838\u9A8C\u7ED3\u679C\u53EF\u80FD\u5DF2\u8FC7\u671F\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "search-required": "\u672C\u8F6E\u6CA1\u6709\u5B8C\u6210\u77E5\u8BC6\u5E93\u68C0\u7D22\uFF0C\u68C0\u7D22\u8986\u76D6\u60C5\u51B5\u5C1A\u672A\u786E\u8BA4\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "search-stale": "\u68C0\u7D22\u5B8C\u6210\u540E\u77E5\u8BC6\u5E93\u7D22\u5F15\u53D1\u751F\u4E86\u53D8\u5316\uFF0C\u6838\u9A8C\u7ED3\u679C\u53EF\u80FD\u5DF2\u8FC7\u671F\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "coverage-incomplete": "\u77E5\u8BC6\u5E93\u7D22\u5F15\u672C\u8F6E\u672A\u5B8C\u6574\u5C31\u7EEA\uFF0C\u8FD9\u4E0D\u4EE3\u8868\u5E93\u4E2D\u6CA1\u6709\u76F8\u5173\u5185\u5BB9\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "check-timeout": "\u56DE\u7B54\u524D\u7684\u6838\u9A8C\u8D85\u65F6\uFF0C\u672C\u6B21\u672A\u5B8C\u6210\u6838\u9A8C\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
-  "not-prepared": "\u77E5\u8BC6\u5E93\u51C6\u5907\u6B65\u9AA4\u672A\u5B8C\u6210\uFF0C\u672C\u6B21\u672A\u505A\u6838\u9A8C\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002"
-};
-function publicationNotice(code) {
-  return publicationNotices[code] || publicationNotices["check-failed"];
-}
-function advisoryNotice(code) {
-  const normalized = code;
-  return advisoryNotices[normalized] || publicationNotice(normalized);
-}
-function advisoryLine(code, error) {
-  const verified = error?.verified;
-  const sources = Array.isArray(verified?.sources) ? verified.sources.length : 0;
-  const deliveries = Array.isArray(verified?.deliveries) ? verified.deliveries.length : 0;
-  const cited = typeof verified?.unverifiedCitationCount === "number" && Number.isFinite(verified.unverifiedCitationCount) ? verified.unverifiedCitationCount : Array.isArray(verified?.unverifiedCitations) ? verified.unverifiedCitations.length : 0;
-  const notice = code === "citation-budget" && numberIsInteger(verified?.citationCount) && numberIsInteger(verified?.citationLimit) ? `\u8FD9\u4EFD\u56DE\u7B54\u5F15\u7528\u4E86 ${verified?.citationCount} \u5904\u6765\u6E90\uFF0C\u8D85\u8FC7\u5355\u6B21\u6838\u9A8C\u4E0A\u9650\uFF08${verified?.citationLimit} \u5904\uFF09\u3002\u5185\u5BB9\u5DF2\u5B8C\u6574\u4FDD\u7559\u3002` : advisoryNotice(code);
-  const parts = [];
-  if (sources) parts.push(`\u5DF2\u6838\u5BF9 ${sources} \u5904\u6765\u6E90\u7684\u8BFB\u53D6\u8BB0\u5F55\u4E0E\u5F53\u524D\u7248\u672C`);
-  if (deliveries) parts.push(`\u5DF2\u6838\u5BF9 ${deliveries} \u4EFD\u672C\u8F6E\u4EA7\u7269`);
-  if (cited) parts.push(`${sources ? "\u53E6\u6709" : "\u5171"} ${cited} \u5904\u5F15\u7528\u672A\u9010\u6761\u6838\u9A8C`);
-  const detail = parts.length ? `${parts.join("\u3001")}\u3002` : "";
-  return `${notice}${detail ? ` ${detail}` : ""}${sources || deliveries ? " \u6765\u6E90\u6838\u5BF9\u4E0D\u4EE3\u8868\u79D1\u5B66\u7ED3\u8BBA\u5DF2\u83B7\u9A8C\u8BC1\u3002" : ""}`;
-}
-function numberIsInteger(value) {
-  return typeof value === "number" && Number.isInteger(value);
-}
-function errorMessage(error) {
-  return error && typeof error === "object" && "message" in error ? String(error.message || "") : "";
-}
-function errorCode2(error) {
-  return error && typeof error === "object" && "code" in error ? String(error.code || "") : "";
-}
-function knowledgeFailure(error) {
-  const code = classifyFailureCode(error);
-  const paths = [];
-  const rawPaths = error && typeof error === "object" && "paths" in error ? error.paths : [];
-  for (const path of Array.isArray(rawPaths) ? rawPaths : []) {
-    if (typeof path === "string" && path.length <= 512 && !/[\r\n<>]/.test(path)) paths.push(path);
-    if (paths.length >= 6) break;
-  }
-  return { code, message: publicationNotice(code), paths };
-}
-function classifyFailureCode(error) {
-  const code = errorCode2(error);
-  if (code in publicationNotices) return code;
-  const text43 = errorMessage(error);
-  if (/binding changed/i.test(text43)) return "binding-changed";
-  if (/navigation changed/i.test(text43)) return "navigation-changed";
-  if (/navigation|prepare_knowledge/i.test(text43)) return "not-prepared";
-  return "check-failed";
-}
-var MAX_FAILURES = 16;
-var MAX_TEXT = 600;
-var SHA256 = /^[a-f0-9]{64}$/i;
-function bounded(value, max = MAX_TEXT) {
-  const text43 = typeof value === "string" ? value : JSON.stringify(value);
-  return String(text43 ?? "").replace(/[\r\n]+/g, " ").slice(0, max);
-}
-function sameValue(left, right) {
-  if (Object.is(left, right)) return true;
-  if (typeof left === "number" && typeof right === "number" && Number.isFinite(left) && Number.isFinite(right))
-    return left === right;
-  try {
-    return JSON.stringify(left) === JSON.stringify(right);
-  } catch {
-    return false;
-  }
-}
-function hasKey(value, key) {
-  return Object.hasOwn(value, key);
-}
-function subset(expected, observed) {
-  if (!expected) return [];
-  if (!observed) return Object.keys(expected);
-  return Object.keys(expected).filter((key) => !hasKey(observed, key) || !sameValue(expected[key], observed[key]));
-}
-function numberValue(value) {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && value.trim() !== "" ? parsed : null;
-}
-function numberMatches(expected, observed, tolerance = 0) {
-  const left = numberValue(expected);
-  const right = numberValue(observed);
-  if (left !== null && right !== null) return Math.abs(left - right) <= Math.max(0, tolerance);
-  return String(expected).trim() === String(observed).trim();
-}
-function artifactHasNumber(artifact, claim) {
-  const tolerance = claim.rounding?.tolerance ?? (typeof claim.rounding?.digits === "number" && claim.rounding.digits >= 0 ? 0.5 * 10 ** -claim.rounding.digits : 0);
-  if (artifact.numbers?.some((item) => numberMatches(claim.value, item.value, item.tolerance ?? tolerance))) return true;
-  if (typeof artifact.text !== "string") return false;
-  const rendered = claim.rendered ?? String(claim.value);
-  if (artifact.text.includes(rendered)) return true;
-  return artifact.text.includes(String(claim.value));
-}
-function citedPaths(answer) {
-  return new Set(
-    Array.from(answer.matchAll(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g), (match) => {
-      const path = (match[1] || "").trim();
-      return path.endsWith(".md") ? path : `${path}.md`;
-    })
-  );
-}
-function addFailure(failures, failure2) {
-  if (failures.length < MAX_FAILURES) failures.push(failure2);
-}
-function addWarning(warnings, warning) {
-  if (warnings.length < 8) warnings.push(warning);
-}
-function evaluateMetacognitivePublication(answer, snapshot) {
-  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
-    return { ok: true, failures: [], warnings: [], findings: [] };
-  const input = snapshot;
-  if (input.enabled === false) return { ok: true, failures: [], warnings: [], findings: [] };
-  const failures = [];
-  const warnings = [];
-  const citations = citedPaths(answer);
-  const artifacts = /* @__PURE__ */ new Map();
-  for (const artifact of Array.isArray(input.artifacts) ? input.artifacts : []) {
-    if (artifact && typeof artifact.path === "string") {
-      artifacts.set(artifact.path, artifact);
-    }
-  }
-  const checkedPaths = /* @__PURE__ */ new Set();
-  const checkArtifact = (path, subject) => {
-    const artifact = artifacts.get(path);
-    if (!artifact) {
-      addFailure(failures, {
-        code: "artifact-checksum-stale",
-        subject,
-        detail: `No current checksum receipt for ${bounded(path, 240)}`,
-        path
-      });
-      return void 0;
-    }
-    if (artifact.status === "pending-review" && citations.has(path))
-      addFailure(failures, {
-        code: "artifact-pending-review",
-        subject: path,
-        detail: `Artifact ${bounded(path, 240)} is pending review after a revoked decision`,
-        path
-      });
-    if (artifact.reproducibility === "not-reproducible")
-      addWarning(warnings, {
-        code: "artifact-not-reproducible",
-        subject,
-        detail: `Cited artifact has no recorded code fingerprint or run provenance: ${bounded(path, 240)}`,
-        path
-      });
-    if (!SHA256.test(String(artifact.sha256 || "")) || !SHA256.test(String(artifact.currentSha256 || ""))) {
-      addFailure(failures, {
-        code: "artifact-checksum-stale",
-        subject,
-        detail: `Missing or malformed checksum receipt for ${bounded(path, 240)}`,
-        path
-      });
-    } else if (artifact.sha256?.toLowerCase() !== artifact.currentSha256?.toLowerCase()) {
-      addFailure(failures, {
-        code: "artifact-checksum-stale",
-        subject,
-        detail: `Cited artifact changed after observation (${bounded(artifact.sha256, 16)}\u2026 \u2192 ${bounded(artifact.currentSha256, 16)}\u2026)`,
-        path
-      });
-    }
-    checkedPaths.add(path);
-    return artifact;
-  };
-  for (const claim of Array.isArray(input.numbers) ? input.numbers : []) {
-    if (!claim || typeof claim.artifactPath !== "string") {
-      addFailure(failures, {
-        code: "metacognition-invalid",
-        subject: "report-number",
-        detail: "A report number has no cited artifact path"
-      });
-      continue;
-    }
-    const rendered = claim.rendered ?? String(claim.value);
-    if (!answer.includes(rendered)) {
-      addFailure(failures, {
-        code: "report-number-unbound",
-        subject: claim.id || rendered,
-        detail: `Reported number ${bounded(rendered, 80)} is not present in the final answer`,
-        path: claim.artifactPath
-      });
-    }
-    if (!citations.has(claim.artifactPath)) {
-      addFailure(failures, {
-        code: "report-number-unbound",
-        subject: claim.id || rendered,
-        detail: `Reported number ${bounded(rendered, 80)} is not tied to citation ${bounded(claim.artifactPath, 240)}`,
-        path: claim.artifactPath
-      });
-    }
-    const artifact = checkArtifact(claim.artifactPath, claim.id || rendered);
-    if (artifact && !artifactHasNumber(artifact, claim))
-      addFailure(failures, {
-        code: "report-number-unbound",
-        subject: claim.id || rendered,
-        detail: `Artifact does not contain ${bounded(String(claim.value), 80)} with the declared rounding`,
-        path: claim.artifactPath
-      });
-  }
-  for (const path of citations) {
-    if (artifacts.has(path) && !checkedPaths.has(path)) checkArtifact(path, "citation");
-  }
-  for (const method of Array.isArray(input.methods) ? input.methods : []) {
-    const executed = input.executed;
-    if (!method || typeof method.description !== "string" || !method.description.trim()) {
-      addFailure(failures, { code: "metacognition-invalid", subject: "method", detail: "Method description is empty" });
-      continue;
-    }
-    if (!answer.includes(method.description))
-      addFailure(failures, {
-        code: "method-mismatch",
-        subject: method.id || method.description,
-        detail: "Method description is not present in the final answer"
-      });
-    if (!executed) {
-      addFailure(failures, {
-        code: "method-mismatch",
-        subject: method.id || method.description,
-        detail: "No host-observed workflow execution was supplied"
-      });
-      continue;
-    }
-    if (method.workflow && !executed.workflows?.includes(method.workflow))
-      addFailure(failures, {
-        code: "method-mismatch",
-        subject: method.id || method.workflow,
-        detail: `Workflow ${bounded(method.workflow, 120)} was not observed`
-      });
-    for (const module of method.modules || [])
-      if (!executed.modules?.includes(module))
-        addFailure(failures, {
-          code: "method-mismatch",
-          subject: method.id || module,
-          detail: `Module ${bounded(module, 120)} was not observed`
-        });
-    for (const key of subset(method.params, executed.params))
-      addFailure(failures, {
-        code: "method-mismatch",
-        subject: method.id || key,
-        detail: `Parameter ${bounded(key, 120)} differs from the observed workflow`
-      });
-  }
-  const findingMap = /* @__PURE__ */ new Map();
-  const findingEvidence = [];
-  for (const rawFinding of Array.isArray(input.findings) ? input.findings : []) {
-    const finding = rawFinding;
-    if (!finding || typeof finding.id !== "string" || typeof finding.text !== "string") {
-      addFailure(failures, { code: "metacognition-invalid", subject: "finding", detail: "Finding is malformed" });
-      continue;
-    }
-    findingMap.set(finding.id, finding);
-    const paths = Array.from(
-      new Set(
-        (Array.isArray(finding.citationPaths) ? finding.citationPaths : []).filter(
-          (path) => typeof path === "string"
-        )
-      )
-    );
-    findingEvidence.push({ id: finding.id, text: bounded(finding.text), label: finding.label, citationPaths: paths });
-    for (const path of paths) {
-      if (!citations.has(path))
-        addFailure(failures, {
-          code: "finding-label-conflict",
-          subject: finding.id,
-          detail: `Finding is missing its cited artifact ${bounded(path, 240)}`,
-          path
-        });
-      else checkArtifact(path, finding.id);
-    }
-  }
-  for (const use of Array.isArray(input.uses) ? input.uses : []) {
-    const finding = findingMap.get(use?.findingId || "");
-    if (!finding) {
-      addFailure(failures, {
-        code: "finding-label-conflict",
-        subject: use?.findingId || "finding",
-        detail: "The final answer references an unknown finding"
-      });
-      continue;
-    }
-    if (["exploratory", "overturned", "unstable"].includes(finding.label)) {
-      const invalidRole = finding.label === "exploratory" ? ["conclusion", "validation"].includes(use.role) : use.role !== "exploratory";
-      if (invalidRole)
-        addFailure(failures, {
-          code: "finding-label-conflict",
-          subject: finding.id,
-          detail: `Finding labelled ${finding.label} cannot be used as ${use.role}`
-        });
-    }
-  }
-  for (const diagnostic of Array.isArray(input.diagnostics) ? input.diagnostics : []) {
-    if (!diagnostic || typeof diagnostic.id !== "string" || !sameValue(diagnostic.reported, diagnostic.observed))
-      addFailure(failures, {
-        code: "diagnostic-drift",
-        subject: diagnostic?.id || "diagnostic",
-        detail: `Reported diagnostic differs from the observed control/result (${bounded(diagnostic?.reported)} vs ${bounded(diagnostic?.observed)})`
-      });
-  }
-  return { ok: failures.length === 0, failures, warnings, findings: findingEvidence };
-}
-init_review_policy();
-init_semantic_provider();
-init_semantic_settings();
-init_source_links();
-var replaceControl = (text43) => [...String(text43 || "")].map((char) => char.charCodeAt(0) < 32 ? " " : char).join("");
-var clean2 = (text43, limit = 300) => replaceControl(text43).replace(/(?:bearer\s+|api[_-]?key[=:]\s*)[^\s]+/gi, "[redacted]").trim().slice(0, limit);
-var feedbackReason = (reason) => {
-  const labels = {
-    "not-prepared": "\u77E5\u8BC6\u5E93\u51C6\u5907\u5C1A\u672A\u5B8C\u6210",
-    "model-error": "\u6A21\u578B\u8BF7\u6C42\u5931\u8D25",
-    "check-timeout": "\u56DE\u7B54\u68C0\u67E5\u8D85\u65F6",
-    "check-failed": "\u56DE\u7B54\u68C0\u67E5\u53D1\u751F\u9519\u8BEF",
-    "tool-loop-stopped": "\u5F53\u524D\u5904\u7406\u9636\u6BB5\u5DF2\u6682\u505C",
-    interrupted: "\u672C\u6B21\u8BF7\u6C42\u5DF2\u4E2D\u65AD"
-  };
-  return labels[String(reason)] || "\u9700\u8981\u5148\u5904\u7406\u76F8\u5173\u8D44\u6599";
-};
-function createTaskFeedback() {
-  let failures = [];
-  let files = /* @__PURE__ */ new Map();
-  let seen = /* @__PURE__ */ new Set();
-  let archiveCount = 0;
-  let summarySaved = false;
-  let explainerSaved = false;
-  let candidates = /* @__PURE__ */ new Set();
-  const begin = () => {
-    failures = [];
-    files = /* @__PURE__ */ new Map();
-    seen = /* @__PURE__ */ new Set();
-    archiveCount = 0;
-    summarySaved = false;
-    explainerSaved = false;
-    candidates = /* @__PURE__ */ new Set();
-  };
-  const observe = async (event, ctx) => {
-    if (seen.has(event.toolCallId)) return;
-    seen.add(event.toolCallId);
-    if (seen.size > 512) {
-      const oldest = seen.values().next().value;
-      seen.delete(oldest);
-    }
-    const details = event.details || {};
-    const content = event.content || [];
-    if (event.isError || details.status === "failed" || details.error && details.successful === 0) {
-      failures.push({
-        tool: clean2(event.toolName, 60),
-        reason: clean2(
-          details.reason || details.error || content.filter((block) => block.type === "text").map((block) => block.text).join(" ")
-        )
-      });
-      failures = failures.slice(-6);
-      return;
-    }
-    let path = null;
-    if (event.toolName === "research_propose_wiki_update" && details.id) candidates.add(details.id);
-    if (event.toolName === "research_archive_source" && details.status === "downloaded") archiveCount++;
-    if (event.toolName === "research_summarize_run" && details.summary_saved) {
-      summarySaved = true;
-      path = details.run;
-    }
-    if (event.toolName === "research_archive_explainer" && details.knowledge_status === "written") {
-      explainerSaved = true;
-      path = details.note;
-    }
-    if (["write", "edit"].includes(String(event.toolName))) path = event.input?.path;
-    if (typeof path !== "string") return;
-    try {
-      const full = await realpath5(resolve5(ctx.cwd, path));
-      const rel = relative4(await realpath5(ctx.cwd), full);
-      if (rel.startsWith(`results${sep4}`) && (await lstat4(full)).isFile()) {
-        files.delete(full);
-        files.set(full, { name: clean2(rel.split(sep4).at(-1), 100), path: full });
-        while (files.size > 8) files.delete(files.keys().next().value);
-      }
-    } catch {
-    }
-  };
-  const facts = () => ({
-    archivedSources: archiveCount,
-    summarySaved,
-    explainerSaved,
-    pendingWikiCandidates: candidates.size,
-    files: [...files.values()],
-    failures: [...failures]
-  });
-  const report = (reason, message, paths = []) => {
-    const interrupted = reason === "interrupted";
-    const current = facts();
-    const lines = [
-      interrupted ? "\u672C\u6B21\u8BF7\u6C42\u5DF2\u4E2D\u65AD\uFF0C\u672A\u5B8C\u6210\u7684\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002" : `\u3010\u56DE\u7B54\u68C0\u67E5\u672A\u5B8C\u6210\u3011\u672C\u8F6E\u56DE\u7B54\u6682\u672A\u5C55\u793A\uFF08${feedbackReason(reason)}\uFF09\u3002`,
-      ...interrupted ? [] : [clean2(message, 450)]
-    ];
-    if (paths.length)
-      lines.push(
-        "\u9700\u8981\u5904\u7406\u7684\u5185\u5BB9\uFF1A" + paths.slice(0, 6).map((path) => `\`${clean2(path, 512).replaceAll("`", "")}\``).join("\u3001")
-      );
-    if (current.archivedSources || current.summarySaved || current.files.length)
-      lines.push(
-        `\u5DF2\u5B8C\u6210\u7684\u5DE5\u4F5C\u4ECD\u7136\u4FDD\u7559\uFF1A\u5DF2\u4FDD\u5B58\u6765\u6E90 ${current.archivedSources} \u9879\uFF1B\u7814\u7A76\u6458\u8981${current.summarySaved ? "\u5DF2\u4FDD\u5B58" : "\u5C1A\u672A\u786E\u8BA4\u4FDD\u5B58"}\uFF1BShow Me ${current.explainerSaved ? "\u5DF2\u4FDD\u5B58" : "\u5C1A\u672A\u786E\u8BA4\u4FDD\u5B58"}\uFF1B\u7B49\u5F85\u5BA1\u6838\u7684 Wiki \u6761\u76EE ${current.pendingWikiCandidates} \u4E2A\u3002`
-      );
-    if (current.files.length)
-      lines.push(
-        "\u672C\u8F6E\u5B9E\u9645\u5199\u5165\u7684\u4EA7\u7269\uFF08\u5185\u5BB9\u4ECD\u9700\u6838\u9A8C\uFF09\uFF1A\n" + current.files.map((file) => `- [${file.name.replace(/[[\]]/g, "")}](${pathToFileURL2(file.path).href})`).join("\n")
-      );
-    if (current.failures.length)
-      lines.push(
-        "\u8FC7\u7A0B\u4E2D\u8FD8\u53D1\u751F\u8FC7\u4EE5\u4E0B\u5DE5\u5177\u95EE\u9898\uFF1B\u90E8\u5206\u53EF\u80FD\u5DF2\u6539\u7528\u5176\u4ED6\u8DEF\u5F84\u7EE7\u7EED\uFF1A\n" + current.failures.slice(-3).map((entry) => `- ${entry.tool}\uFF1A${entry.reason}`).join("\n")
-      );
-    lines.push(
-      interrupted ? "\u5DF2\u8BB0\u5F55\u7684\u5DE5\u5177\u7ED3\u679C\u4ECD\u53EF\u5728\u672C\u4F1A\u8BDD\u67E5\u770B\u3002\u53EF\u4EE5\u7EE7\u7EED\u5269\u4F59\u5DE5\u4F5C\uFF1B\u4E0D\u9700\u8981\u91CD\u65B0\u4E0B\u8F7D\u5DF2\u7ECF\u4FDD\u5B58\u7684\u8D44\u6599\u3002" : "\u63A5\u4E0B\u6765\u5E94\u6839\u636E\u5177\u4F53\u68C0\u67E5\u539F\u56E0\u8865\u8BFB\u6216\u4FEE\u6B63\u5F15\u7528\uFF0C\u518D\u68C0\u67E5\u56DE\u7B54\uFF1B\u4E0D\u9700\u8981\u91CD\u65B0\u4E0B\u8F7D\u5DF2\u7ECF\u4FDD\u5B58\u7684\u8D44\u6599\u3002\u8FD9\u91CC\u62A5\u544A\u7684\u662F\u5904\u7406\u72B6\u6001\uFF0C\u4E0D\u4EE3\u8868\u672A\u5C55\u793A\u7684\u7814\u7A76\u7ED3\u8BBA\u5DF2\u7ECF\u5F97\u5230\u786E\u8BA4\u3002"
-    );
-    return lines.join("\n\n");
-  };
-  return { begin, observe, facts, report };
-}
-function guardResearchToolResult(event) {
-  if (!["fetch_content", "webfetch", "research_archive_source"].includes(String(event.toolName))) return;
-  const text43 = (event.content || []).filter((block) => block.type === "text").map((block) => String(block.text || "")).join("\n");
-  if (/(?:^|\n)%PDF-\d\.\d/.test(text43.slice(0, 1800)) && (text43.includes("\0") || /(?:\uFFFD|\d+\s+\d+\s+obj|\nstream)/.test(text43.slice(0, 6e3))))
-    return {
-      content: [
-        {
-          type: "text",
-          text: "\u8BFB\u53D6\u672A\u5B8C\u6210\uFF1A\u5DE5\u5177\u8FD4\u56DE\u4E86 PDF \u4E8C\u8FDB\u5236\uFF0C\u4E0D\u662F\u53EF\u8BFB\u6B63\u6587\u3002\u8BF7\u5F52\u6863\u539F PDF \u540E\u4F7F\u7528\u5DF2\u6709\u7684\u6587\u672C\u63D0\u53D6\u5DE5\u5177\u8BFB\u53D6\u9700\u8981\u7684\u9875\u6216\u6BB5\u843D\uFF1B\u4E0D\u8981\u628A\u8FD9\u4E9B\u5B57\u8282\u5F53\u4F5C\u8BC1\u636E\uFF0C\u4E5F\u4E0D\u8981\u91CD\u590D\u628A\u4E8C\u8FDB\u5236\u9001\u5165\u4E0A\u4E0B\u6587\u3002"
-        }
-      ],
-      isError: true,
-      details: { ...event.details || {}, error: "binary-pdf-returned", contentGuard: "binary-pdf" }
-    };
-  const details = event.details;
-  if (!event.isError && (details?.status === "failed" || details?.error && details.successful === 0))
-    return { isError: true };
-}
-function createToolBudget(options = {}) {
-  const maxReads = options.maxReads ?? 8;
-  const maxSearches = options.maxSearches ?? 4;
-  const maxRepeats = options.maxRepeats ?? 2;
-  let reads = 0;
-  let searches = 0;
-  let recoveries = 0;
-  const repeats = /* @__PURE__ */ new Map();
-  function reset() {
-    reads = 0;
-    searches = 0;
-    recoveries = 0;
-    repeats.clear();
-  }
-  function consume(kind, key, { recovery = false } = {}) {
-    const recoveryAllowed = recovery && kind === "read" && ++recoveries <= 2;
-    const normalized = String(key ?? "").trim();
-    const repeatKey = `${kind}:${normalized}`;
-    const seen = (repeats.get(repeatKey) ?? 0) + 1;
-    repeats.set(repeatKey, seen);
-    if (kind === "read") reads += 1;
-    else searches += 1;
-    const overReads = kind === "read" && reads > maxReads;
-    const overSearches = kind === "search" && searches > maxSearches;
-    const overRepeat = seen > maxRepeats && !recoveryAllowed;
-    if (!overReads && !overSearches && !overRepeat) return null;
-    return {
-      status: "budget-exhausted",
-      code: "tool-loop",
-      message: overRepeat ? `Repeated ${kind} (${normalized || "empty"}) ${seen} times; stop looping and answer from what you have.` : `Knowledge ${kind} budget exhausted (${kind === "read" ? reads : searches}/${kind === "read" ? maxReads : maxSearches}). Synthesize an answer now.`,
-      next: "Write the final answer from already-read evidence. Do not call research_read_knowledge or research_search_knowledge again this turn."
-    };
-  }
-  return { reset, consume, snapshot: () => ({ reads, searches }) };
-}
-function titleFromSummary(summary, query, resultSlug) {
-  const heading = summary.match(/^#\s+(.+)$/m)?.[1]?.trim();
-  const fallback = (String(query || "").split(/[\n。]/)[0] ?? "").trim();
-  const slug2 = String(resultSlug || "research-topic").replace(/[-_]20\d{6,14}$/, "").replace(/[-_]+/g, " ").trim();
-  return (heading || fallback || slug2 || "Research topic").slice(0, 180);
-}
-function fileStem(resultSlug, title) {
-  let value = String(resultSlug || "").replace(/[-_]20\d{6,14}$/, "").trim();
-  if (!value || value === "research-question") value = String(title || "research-topic");
-  value = [...value.normalize("NFKC")].map((char) => char.charCodeAt(0) < 32 || '\\/[]#|<>:"*?'.includes(char) ? "-" : char).join("").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^[.\- ]+|[.\- ]+$/g, "").slice(0, 120);
-  return value || "research-topic";
-}
-function autoTopicCandidate({
-  summary,
-  query,
-  resultSlug,
-  sourcePaths = []
-} = {}) {
-  const markdown = String(summary || "").trim();
-  if (markdown.length < 160) return { eligible: false, reason: "summary-too-short" };
-  if (markdown.length > 24e3) return { eligible: false, reason: "summary-too-large" };
-  if (!Array.isArray(sourcePaths) || sourcePaths.length < 1)
-    return { eligible: false, reason: "no-current-read-evidence" };
-  const title = titleFromSummary(markdown, query, resultSlug);
-  return {
-    eligible: true,
-    input: {
-      path: `Wiki/${fileStem(resultSlug, title)}.md`,
-      title,
-      markdown,
-      rationale: "Automatically staged from a completed, evidence-gated research run. Review scope, claims and applicability before publishing.",
-      source_paths: sourcePaths.slice(0, 12)
-    }
-  };
-}
-init_wiki_policy();
-init_topic_memory();
-init_maintenance();
-init_note_title();
-init_ingest_frontmatter();
-init_daily_discovery();
-init_daily_discovery();
-var DAILY_DISCOVERY_SYSTEM = [
-  "You are a research colleague looking for ideas the user has not considered.",
-  "You get notes that were added or changed recently (NEW) and older related notes (OLD) from the user's knowledge base.",
-  "Find connections between NEW and OLD: a contradiction between sources, a combination nobody has studied, a method that transfers from another field, a default assumption worth challenging, or the next implication of a conclusion.",
-  "Keep only ideas that are new (not already stated in the notes), grounded (rest on specific notes given here) and testable (an experiment, dataset or analysis could confirm or refute them).",
-  `Return ONLY a JSON array with at most ${DAILY_DISCOVERY_LIMITS.maxIdeas} objects: {"title": short title, "idea": one or two sentences, "basis": [note paths from the input], "test": how to test it, "whyOverlooked": why it may have been missed}.`,
-  "Write title, idea, test and whyOverlooked in the language of the notes. If nothing passes all three checks, return []. Never invent a note path, paper or number."
-].join("\n");
-init_memory_note();
-init_config();
-init_service();
-init_runtime_host();
-init_runtime_host();
-var SECTOR_ANGLES = {
-  // SVG y grows downwards: 7 o'clock is 120° and 8 o'clock is 150°.
-  paper: 2 * Math.PI / 3,
-  software: 5 * Math.PI / 6,
-  method: Math.PI,
-  dataset: 7 * Math.PI / 6,
-  evidence: 4 * Math.PI / 3,
-  claim: 3 * Math.PI / 2,
-  concept: 11 * Math.PI / 6,
-  entity: 0,
-  idea: Math.PI / 6,
-  decision: Math.PI / 3,
-  question: Math.PI / 2,
-  wiki: 3 * Math.PI / 4,
-  other: 11 * Math.PI / 6
-};
-init_ui_state();
-var publication_exports = {};
-__export(publication_exports, {
-  advisoryLine: () => advisoryLine,
-  advisoryNotice: () => advisoryNotice,
-  createKnowledgePublication: () => createKnowledgePublication,
-  createManagedKnowledgePublication: () => createManagedKnowledgePublication,
-  knowledgeFailure: () => knowledgeFailure,
-  projectKnowledgeEvent: () => projectKnowledgeEvent,
-  projectKnowledgeSnapshot: () => projectKnowledgeSnapshot,
-  registerAnswerPublication: () => registerAnswerPublication
-});
-init_config();
-init_runtime_host();
-init_runtime_host();
-init_review_policy();
-init_review_policy();
-init_ui_state();
-function createPublicationApi(ui, reviewPolicy, ports, createState, signal = null) {
-  const { publicationKnowledgeFlow: publicationKnowledgeFlow2, updateKnowledgeFlow: updateKnowledgeFlow2 } = ui;
-  const { readReviewMode: readReviewMode2 } = reviewPolicy;
-  const state = createState(
-    /** @returns {any} */
-    () => ({
-      proofs: /* @__PURE__ */ new WeakSet(),
-      projectEvent: projectKnowledgeEvent2,
-      projectSnapshot: projectKnowledgeSnapshot2
-    })
-  );
-  const FIELD = "knowledgePublication";
-  const hash5 = (content) => createHash13("sha256").update(JSON.stringify(content ?? [])).digest("hex");
-  const protocolKey = (message) => hash5({
-    timestamp: message.timestamp,
-    api: message.api,
-    provider: message.provider,
-    model: message.model,
-    responseId: message.responseId,
-    calls: message.content.filter((block) => block.type === "toolCall")
-  });
-  function sanitizeError(text43) {
-    return diagnosticText(text43, 4096).trim();
-  }
-  function isUserAbortError(message) {
-    return /was aborted|request aborted/i.test(String(message?.errorMessage || ""));
-  }
-  function base2(message, content) {
-    const { errorMessage: originalError, diagnostics, ...metadata } = message;
-    const errorMessage2 = message.stopReason === "error" && typeof originalError === "string" ? sanitizeError(originalError) : "";
-    return {
-      ...metadata,
-      content,
-      // Diagnostics do not control provider replay. Keep only safe error text;
-      // arbitrary details and stacks must not enter public/persisted history.
-      ...diagnostics ? { diagnostics: diagnostics.map(({ type, timestamp, error }) => ({
-        type: sanitizeError(type),
-        timestamp,
-        ...error ? { error: { message: sanitizeError(error.message) } } : {}
-      })) } : {},
-      ...errorMessage2 ? { errorMessage: errorMessage2 } : {}
-    };
-  }
-  function seal(message, content, detail) {
-    signal?.throwIfAborted();
-    const proof = { version: 1, id: randomUUID9(), ...detail, contentHash: hash5(content) };
-    state.proofs.add(proof);
-    return { ...base2(message, content), [FIELD]: proof };
-  }
-  function blocked(message, code = "check-failed", turnId = null, operational = null, paths = [], extra = null) {
-    return seal(
-      message,
-      [
-        {
-          type: "text",
-          text: operational || (code === "interrupted" ? publicationNotices.interrupted : `\u3010\u77E5\u8BC6\u5E93\u68C0\u67E5\u672A\u901A\u8FC7\u3011${publicationNotices[code] || publicationNotices["check-failed"]}`)
-        }
-      ],
-      {
-        status: "blocked",
-        reason: code,
-        turnId,
-        ...paths.length ? { paths } : {},
-        ...extra && typeof extra === "object" ? extra : {},
-        scientificallyVerified: false
-      }
-    );
-  }
-  function verifiedEvidence(error) {
-    const verified = error?.verified;
-    if (!verified || typeof verified !== "object") return {};
-    const { sources, deliveries, ...rest } = verified;
-    return {
-      ...rest,
-      sources: Array.isArray(sources) ? sources : [],
-      deliveries: Array.isArray(deliveries) ? deliveries : []
-    };
-  }
-  function isSealed(message, restore = false) {
-    const proof = message?.[FIELD];
-    return proof?.version === 1 && (state.proofs.has(proof) || restore) && [
-      "released",
-      "no-hits",
-      "blocked",
-      "tool-only",
-      "unconfigured",
-      "evidence-only",
-      "setup-complete",
-      "operational"
-    ].includes(proof.status) && proof.contentHash === hash5(message.content);
-  }
-  function inplace(target, source) {
-    for (const name of Object.keys(target)) delete target[name];
-    Object.assign(target, source);
-    return target;
-  }
-  function projectUnsealed(message) {
-    if (message.stopReason === "error" && !isUserAbortError(message))
-      return seal(message, [], { status: "blocked", reason: "model-error", scientificallyVerified: false });
-    if (["aborted", "length", "pending"].includes(message.stopReason) || isUserAbortError(message))
-      return blocked(message, "interrupted");
-    return blocked(message);
-  }
-  function projectKnowledgeEvent2(event) {
-    signal?.throwIfAborted();
-    if (!ports.available()) return event;
-    if (event.type === "message_update") return null;
-    if (event.type === "message_start" && event.message?.role === "assistant")
-      return { ...event, message: base2(event.message, []) };
-    if (event.type === "message_end" && event.message?.role === "assistant") {
-      if (!isSealed(event.message)) inplace(event.message, projectUnsealed(event.message));
-      return event;
-    }
-    if (event.type === "turn_end" && event.message?.role === "assistant")
-      return { ...event, message: isSealed(event.message) ? event.message : projectUnsealed(event.message) };
-    if (event.type === "agent_end")
-      return {
-        ...event,
-        messages: event.messages.map((m) => m.role === "assistant" && !isSealed(m) ? projectUnsealed(m) : m)
-      };
-    return event;
-  }
-  function projectKnowledgeSnapshot2(messages, persisted = []) {
-    signal?.throwIfAborted();
-    if (!ports.available()) return messages;
-    return messages.map((m) => {
-      if (m.role !== "assistant" || isSealed(m)) return m;
-      const saved = ports.persisted(m, persisted);
-      if (saved && (!m[FIELD] || isSealed(m, true))) return m;
-      return projectUnsealed(m);
-    });
-  }
-  function registerAnswerPublication2(pi, {
-    runtime = null,
-    getCurrent,
-    evidenceOnly = false,
-    getDeliveryFooter = null,
-    getTaskFeedback = null,
-    getTaskRuntime = null,
-    getMetacognition = null,
-    maxToolRounds = 24
-  }) {
-    const attachRuntime = (next) => {
-      if (!next || typeof next !== "object" || !next.scheduler || !next.knowledge) return false;
-      const slot = next.knowledge.publication || {};
-      slot.proofs ??= /* @__PURE__ */ new WeakSet();
-      slot.projectEvent = (event) => projectKnowledgeEvent2(event);
-      slot.projectSnapshot = (messages, persisted) => projectKnowledgeSnapshot2(messages, persisted);
-      next.knowledge.publication = slot;
-      attachReviewer(next.knowledge.reviewer);
-      return true;
-    };
-    let reviewer = null;
-    const attachReviewer = (next) => {
-      if (!next || typeof next !== "object" || typeof next.schedule !== "function") return false;
-      reviewer = next;
-      return true;
-    };
-    const sessionIdFor = (ctx) => ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || "";
-    const scheduleReview = (ctx, snapshot, trigger) => {
-      if (!reviewer || !sessionIdFor(ctx)) return;
-      try {
-        reviewer.schedule({ sessionId: sessionIdFor(ctx), snapshot, trigger });
-      } catch {
-      }
-    };
-    if (runtime) attachRuntime(runtime);
-    let turnId = null, required = true, started = false, protocolBytes = 0, toolRounds = 0, setupReceipt = null;
-    const protocol = /* @__PURE__ */ new Map(), deliveries = /* @__PURE__ */ new Map();
-    const advisoryFooter = (ctx) => {
-      const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(ctx) : null;
-      return footer ? [{ type: "text", text: `
-
-${String(footer).slice(0, 2e3)}` }] : [];
-    };
-    const failure2 = (message, error) => {
-      const info = knowledgeFailure(error);
-      const metacognitive = error?.metacognition;
-      const metacognitiveReport = metacognitive && Array.isArray(metacognitive.failures) && metacognitive.failures.length ? metacognitive.failures.slice(0, 8).map((item) => `- ${String(item.detail || item.code).slice(0, 600)}`).join("\n") : "";
-      const task = getTaskRuntime?.();
-      if (task?.snapshot()) task.pause(info.code);
-      const report = task?.snapshot() ? `${task.render()}
-
-\u7814\u7A76\u8BF4\u660E\u6682\u672A\u5C55\u793A\uFF1A${info.message}` : getTaskFeedback?.()?.report(info.code, info.message, info.paths);
-      return blocked(
-        message,
-        info.code,
-        turnId,
-        [report, metacognitiveReport].filter(Boolean).join("\n\n") || null,
-        info.paths,
-        metacognitive ? { metacognition: metacognitive } : null
-      );
-    };
-    const evaluateMetacognition = async (ctx, current, text43) => {
-      if (typeof getMetacognition !== "function") return null;
-      let snapshot;
-      try {
-        snapshot = await getMetacognition(ctx, current);
-      } catch {
-        throw Object.assign(new Error("Metacognitive host snapshot unavailable"), {
-          code: "metacognitive-inconsistency",
-          metacognition: {
-            ok: false,
-            findings: [],
-            failures: [
-              {
-                code: "metacognition-invalid",
-                subject: "host-snapshot",
-                detail: "Host metacognitive snapshot could not be read"
-              }
-            ]
-          }
-        });
-      }
-      if (snapshot == null) return null;
-      const evaluation = evaluateMetacognitivePublication(text43, snapshot);
-      if (!evaluation.ok)
-        throw Object.assign(new Error("Metacognitive publication checks failed"), {
-          code: evaluation.failures.some((failure22) => failure22.code === "artifact-pending-review") ? "artifact-pending-review" : "metacognitive-inconsistency",
-          paths: evaluation.failures.map((item) => item.path).filter(Boolean).slice(0, 6),
-          metacognition: evaluation,
-          verified: { metacognition: evaluation }
-        });
-      return evaluation;
-    };
-    pi.on("context", async (event) => ({
-      messages: event.messages.map((message) => {
-        if (message.role !== "assistant") return message;
-        const original = protocol.get(protocolKey(message));
-        return original ? { ...message, content: original } : message;
-      })
-    }));
-    const handleMessageEnd = async (event, ctx) => {
-      const message = event.message;
-      if (message.role !== "assistant") return;
-      const sessionId = sessionIdFor(ctx);
-      const cwd = ctx?.cwd;
-      const signal2 = ctx?.signal;
-      const flowCtx = { sessionId };
-      const report = async (message2) => {
-        if (message2[FIELD]?.status !== "tool-only" && message2[FIELD]?.reason !== "model-error")
-          await publicationKnowledgeFlow2(flowCtx, message2[FIELD]);
-        return { message: message2 };
-      };
-      const blocks = Array.isArray(message.content) ? message.content : [];
-      const tools = blocks.filter((b) => b.type === "toolCall");
-      if (tools.length) {
-        toolRounds += 1;
-        if (toolRounds > maxToolRounds && await getTaskRuntime?.()?.advanceStage?.()) toolRounds = 1;
-        const bytes = Buffer.byteLength(JSON.stringify(blocks), "utf8");
-        if (toolRounds > maxToolRounds || protocolBytes + bytes > 4 * 1024 * 1024 || protocol.size >= 64) {
-          const limit = toolRounds > maxToolRounds ? "tool-round-limit" : protocolBytes + bytes > 4 * 1024 * 1024 ? "protocol-byte-limit" : "protocol-entry-limit";
-          const task = getTaskRuntime?.();
-          task?.pause(limit);
-          const reportText = [publicationNotices["tool-loop-stopped"], task?.snapshot() ? task.render() : null].filter(Boolean).join("\n\n");
-          const denied = blocked(message, "tool-loop-stopped", turnId, reportText);
-          denied[FIELD].limit = {
-            kind: limit,
-            toolRounds,
-            maxToolRounds,
-            protocolBytes,
-            entries: protocol.size
-          };
-          denied.stopReason = "stop";
-          return report(denied);
-        }
-        const safe = seal(message, tools, { status: "tool-only", turnId, scientificallyVerified: false });
-        protocol.set(protocolKey(message), structuredClone(blocks));
-        protocolBytes += bytes;
-        return report(safe);
-      }
-      if (message.stopReason === "error" && !isUserAbortError(message))
-        return report(
-          seal(message, [], {
-            status: "blocked",
-            reason: "model-error",
-            turnId,
-            scientificallyVerified: false
-          })
-        );
-      if (["aborted", "length", "pending"].includes(message.stopReason) || signal2?.aborted || isUserAbortError(message))
-        return report(failure2(message, { code: "interrupted" }));
-      const content = blocks.filter((b) => b.type === "text");
-      if (!evidenceOnly) await getTaskRuntime?.()?.takeReport();
-      if (setupReceipt) {
-        const done = setupReceipt;
-        setupReceipt = null;
-        try {
-          await done.checkCurrent?.();
-        } catch {
-          return report(blocked(message, "binding-changed", turnId));
-        }
-        return report(
-          seal(
-            message,
-            [
-              {
-                type: "text",
-                text: [
-                  "\u77E5\u8BC6\u5E93\u521D\u59CB\u5316\u5DF2\u5B8C\u6210\u3002",
-                  `\u5F53\u524D\u77E5\u8BC6\u5E93\uFF1A${done.vault}`,
-                  `\u4F5C\u7528\u8303\u56F4\uFF1A\u6574\u4E2A Drone\uFF1B\u5F53\u524D\u9879\u76EE\uFF1A${done.project || "\u5C1A\u672A\u521B\u5EFA\u9879\u76EE\u5206\u533A"}\u3002`,
-                  "\u77E5\u8BC6\u5E93\u5DF2\u6309\u5F53\u524D\u8BBE\u7F6E\u542F\u7528\uFF1B\u534F\u4F5C\u8005\u53EA\u4F1A\u8BBF\u95EE\u672C\u6B21\u4EFB\u52A1\u5141\u8BB8\u7684\u8D44\u6599\u3002",
-                  "\u5DF2\u4FDD\u5B58\u7ED1\u5B9A\u5E76\u521B\u5EFA\u7F3A\u5931\u7684\u5BFC\u822A\u548C\u6A21\u677F\uFF0C\u672A\u642C\u8FC1\u6216\u5220\u9664\u5DF2\u6709\u7B14\u8BB0\u3002",
-                  "\u8FD9\u53EA\u662F\u521D\u59CB\u5316\u5B8C\u6210\uFF0C\u4E0D\u4EE3\u8868\u8BBA\u6587\u5DF2\u7ECF\u4E0B\u8F7D\u3001\u77E5\u8BC6\u5DF2\u7ECF\u6574\u7406\u6216\u539F\u59CB MCP \u5DF2\u8FDE\u63A5\u3002",
-                  "\u63A5\u4E0B\u6765\u53EF\u4EE5\u8981\u6C42\u68C0\u7D22\u6216\u4E0B\u8F7D\u8D44\u6599\uFF1B\u8BBA\u6587\u5E94\u4EA4\u4ED8\u4E3B\u8981\u89C2\u70B9\u4E0E\u65B9\u6CD5\uFF0C\u8F6F\u4EF6\u5E94\u4EA4\u4ED8\u7248\u672C\u5BF9\u5E94\u7684\u547D\u4EE4\u3001\u53C2\u6570\u4E0E\u793A\u4F8B\u3002"
-                ].join("\n\n")
-              }
-            ],
-            {
-              status: "setup-complete",
-              turnId,
-              vaultId: done.vaultId,
-              bindingRevision: done.bindingRevision,
-              scientificallyVerified: false
-            }
-          )
-        );
-      }
-      if (!content.some((block) => block.text?.trim()))
-        return report(failure2(message, { code: "empty-answer" }));
-      if (evidenceOnly)
-        return {
-          message: seal(
-            message,
-            [{ type: "text", text: "\u3010\u5C1A\u672A\u6838\u5B9E\u7684\u8865\u5145\u6750\u6599\u3011\u4EE5\u4E0B\u5185\u5BB9\u4E0D\u662F\u4E3B\u4F1A\u8BDD\u5DF2\u786E\u8BA4\u7684\u6700\u7EC8\u7ED3\u8BBA\u3002\n\n" }, ...content],
-            { status: "evidence-only", turnId, scientificallyVerified: false }
-          )
-        };
-      if (!started) return report(blocked(message, "not-prepared", turnId));
-      if (!required)
-        return report(
-          seal(message, content, { status: "unconfigured", turnId, scientificallyVerified: false })
-        );
-      const text43 = content.map((b) => b.text).join("\n");
-      if (Buffer.byteLength(text43, "utf8") > 128 * 1024)
-        return report(blocked(message, "answer-too-large", turnId));
-      updateKnowledgeFlow2(flowCtx, { phase: "checking" });
-      let currentTurn;
-      try {
-        const c = getCurrent(ctx);
-        currentTurn = c;
-        if (!c) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
-        let publishText = text43;
-        let publishContent = content;
-        const attachMaterializedCitations = async (refresh = false) => {
-          if (typeof c.service.materializeCitations !== "function") return;
-          const paths = await c.service.materializeCitations(c.ticket, cwd, c.query, { refresh });
-          if (!paths.length || /\[\[[^\]]+\]\]/.test(publishText)) return;
-          const suffix = `
-
-\u4F9D\u636E\uFF1A${paths.map((path) => `[[${path.replace(/\.md$/i, "")}]]`).join(" ")}`;
-          publishText = `${publishText}${suffix}`;
-          publishContent = publishContent.map(
-            (block, index) => block.type === "text" && index === publishContent.length - 1 ? { ...block, text: `${block.text}${suffix}` } : block
-          );
-        };
-        const validateWithTimeout = async () => {
-          let timer;
-          try {
-            return await Promise.race([
-              c.service.validateAnswer(c.ticket, cwd, publishText, {
-                deliveries: [...deliveries.values()]
-              }),
-              new Promise((_, reject) => {
-                timer = setTimeout(
-                  () => reject(Object.assign(new Error("check timeout"), { code: "check-timeout" })),
-                  5e3
-                );
-              })
-            ]);
-          } finally {
-            if (timer) clearTimeout(timer);
-          }
-        };
-        const automatic = await readReviewMode2() === "automatic";
-        if (!automatic) await attachMaterializedCitations();
-        let proof;
-        try {
-          proof = await validateWithTimeout();
-        } catch (error) {
-          if (automatic || !["coverage-incomplete", "search-stale"].includes(error?.code)) throw error;
-          await attachMaterializedCitations(true);
-          proof = await validateWithTimeout();
-        }
-        if (signal2?.aborted) return report(failure2(message, { code: "interrupted" }));
-        const metacognitive = await evaluateMetacognition(flowCtx, c, publishText);
-        const warnings = [
-          ...Array.isArray(proof.warnings) ? proof.warnings : [],
-          ...(metacognitive?.warnings || []).map((warning) => ({ code: warning.code, message: warning.detail }))
-        ];
-        let reviewerWarnings = [];
-        if (reviewer && typeof getMetacognition === "function") {
-          try {
-            const reviewSnapshot = await getMetacognition(flowCtx, c);
-            if (reviewSnapshot && typeof reviewSnapshot === "object") {
-              const snapshot = { ...reviewSnapshot, body: publishText };
-              const cached = reviewer.getCached?.(sessionId, snapshot);
-              const prior = reviewer.getFindings?.(sessionId);
-              reviewerWarnings = [
-                ...Array.isArray(cached?.findings) ? cached.findings : [],
-                ...Array.isArray(prior) ? prior : []
-              ].filter((finding, index, all) => finding.severity === "high" && !finding.handled && all.findIndex((item) => item.id === finding.id) === index);
-              scheduleReview(flowCtx, snapshot, "publication-projection");
-            }
-          } catch {
-          }
-        }
-        const published = proof.status === "no-hits" ? [
-          {
-            type: "text",
-            text: "\u3010\u77E5\u8BC6\u5E93\u6CA1\u6709\u627E\u5230\u5339\u914D\u5185\u5BB9\u3011\u672C\u8F6E\u67E5\u8BE2\u672A\u627E\u5230\u5339\u914D\u6761\u76EE\uFF1B\u4E0B\u6587\u4E0D\u662F\u57FA\u4E8E\u672C\u5E93\u8BC1\u636E\u7684\u7ED3\u8BBA\uFF0C\u4E5F\u4E0D\u8868\u793A\u5168\u5E93\u4E0D\u5B58\u5728\u76F8\u5173\u77E5\u8BC6\u3002\n\n"
-          },
-          ...publishContent
-        ] : publishContent;
-        const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(flowCtx) : null;
-        const visible = footer ? [...published, { type: "text", text: `
-
-${String(footer).slice(0, 2e3)}` }] : published;
-        return report(
-          seal(message, visible, {
-            ...proof,
-            ...warnings.length ? { warnings } : {},
-            ...metacognitive ? { metacognition: metacognitive } : {},
-            ...reviewerWarnings.length ? { reviewerWarnings } : {},
-            status: proof.status === "ready" ? "released" : "no-hits",
-            turnId
-          })
-        );
-      } catch (error) {
-        const info = knowledgeFailure(error);
-        if (await readReviewMode2() === "automatic" && advisoryCodes.has(info.code) && !signal2?.aborted) {
-          if (info.code !== "not-prepared")
-            try {
-              const current = currentTurn;
-              if (!current) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
-              await current.service.check(current.ticket, cwd);
-            } catch (authorityError) {
-              return report(failure2(message, authorityError));
-            }
-          const advisoryContent = info.code === "citation-required" ? [] : [{ type: "text", text: `
-
-\u3010\u6709\u63D0\u9192\u3011${advisoryLine(info.code, error)}` }];
-          return report(
-            seal(
-              message,
-              [
-                ...content,
-                ...advisoryContent,
-                ...advisoryFooter(flowCtx)
-              ],
-              {
-                status: "released",
-                reviewMode: "automatic",
-                ...verifiedEvidence(error),
-                warnings: [info],
-                turnId,
-                scientificallyVerified: false
-              }
-            )
-          );
-        }
-        return report(failure2(message, error));
-      }
-    };
-    ports.registerFinalizer(pi, handleMessageEnd);
-    return {
-      attachRuntime,
-      attachReviewer,
-      async recordDelivery(ctx, path) {
-        const sessionId = sessionIdFor(ctx);
-        const cwd = ctx?.cwd;
-        const flowCtx = { sessionId };
-        const c = getCurrent(ctx);
-        if (!c) return;
-        const receipt2 = await c.service.deliveryReceipt(c.ticket, cwd, path);
-        deliveries.set(receipt2.path, receipt2);
-        scheduleReview(
-          flowCtx,
-          {
-            enabled: true,
-            deliverables: [{ id: receipt2.path, path: receipt2.path, sha256: receipt2.hash }]
-          },
-          "deliverable-write"
-        );
-        while (deliveries.size > 12) deliveries.delete(deliveries.keys().next().value);
-      },
-      async preflight(ctx, text43) {
-        const sessionId = sessionIdFor(ctx);
-        const cwd = ctx?.cwd;
-        const flowCtx = { sessionId };
-        let timer;
-        try {
-          if (typeof text43 !== "string" || Buffer.byteLength(text43, "utf8") > 128 * 1024)
-            throw { code: "answer-too-large" };
-          const c = getCurrent(ctx), proof = await Promise.race([
-            c.service.validateAnswer(c.ticket, cwd, text43, { deliveries: [...deliveries.values()] }),
-            new Promise((_, reject) => {
-              timer = setTimeout(() => reject({ code: "check-timeout" }), 5e3);
-            })
-          ]);
-          const metacognition = await evaluateMetacognition(flowCtx, c, text43);
-          if (reviewer && typeof getMetacognition === "function") {
-            try {
-              const snapshot = await getMetacognition(flowCtx, c);
-              if (snapshot && typeof snapshot === "object")
-                scheduleReview(flowCtx, { ...snapshot, body: text43 }, "publication-projection");
-            } catch {
-            }
-          }
-          return { ok: true, proof, ...metacognition ? { metacognition } : {} };
-        } catch (error) {
-          const info = knowledgeFailure(error);
-          if (await readReviewMode2() === "automatic" && advisoryCodes.has(info.code)) {
-            if (info.code !== "not-prepared")
-              try {
-                const current = getCurrent(ctx);
-                await current.service.check(current.ticket, cwd);
-              } catch {
-                return {
-                  ok: false,
-                  code: "binding-changed",
-                  message: "Refresh the current knowledge binding before continuing."
-                };
-              }
-            return {
-              ok: true,
-              status: "warning",
-              ...verifiedEvidence(error),
-              warnings: [info],
-              scientificallyVerified: false,
-              next: "Deliver the answer with its limitations. Do not repeat read/search/check solely to clear this advisory."
-            };
-          }
-          return {
-            ok: false,
-            ...info,
-            next: "For operational progress, call task_status and deliver its host receipt without unrelated citations. For scientific claims, read the listed evidence or repair the reported stage, then check again. Never retry a write merely because output was lost.",
-            task: getTaskFeedback?.()?.facts()
-          };
-        } finally {
-          if (timer) clearTimeout(timer);
-        }
-      },
-      recordSetup(result2, checkCurrent) {
-        if (result2?.state === "ready" && result2.scope === "application")
-          setupReceipt = {
-            vault: result2.vault,
-            project: result2.project,
-            profile: result2.profile,
-            depositMode: result2.depositMode,
-            subagentMcpPolicy: result2.subagentMcpPolicy,
-            vaultId: result2.vaultId,
-            bindingRevision: result2.bindingRevision,
-            checkCurrent
-          };
-      },
-      begin(isRequired = true, newTurn = true) {
-        started = true;
-        required = isRequired;
-        if (newTurn) {
-          turnId = randomUUID9();
-          protocol.clear();
-          deliveries.clear();
-          protocolBytes = 0;
-          toolRounds = 0;
-          setupReceipt = null;
-        }
-      },
-      invalidate() {
-        started = false;
-        required = true;
-        turnId = null;
-        protocol.clear();
-        deliveries.clear();
-        protocolBytes = 0;
-        toolRounds = 0;
-        setupReceipt = null;
-      },
-      async guidance() {
-        return await readReviewMode2() === "automatic" ? "Answer the user's question directly. For a planning request, first provide a concise provisional framework with explicit assumptions, then deepen only the evidence needed. Cite scientific claims inline using exact [[path]] citations from research_read_knowledge results read this turn; a saved report link is a deliverable, not an evidence citation. Reuse successful read receipts instead of reading the same source through both generic read and research_read_knowledge. Do not invent citations or cite a source merely to clear a warning. Label suggested sample sizes as design heuristics, not universal statistical thresholds. Acknowledge uncertainty and save useful knowledge. Evidence quality reminders are nonblocking: do not run repeated read/search/check just to clear them. Never claim scientific verification. Host permission, binding, abort and spending limits still apply; human Wiki edits require confirmation." : "For execution progress in ANY task (analysis, code, environment, experiments, writing), use task_status; its host-generated report needs no research citations. Never add irrelevant sources to an operational report. Scientific host-checked answers need a current-turn search, reads of cited [[path]] sources, then research_check_answer. Public text must answer the user's question; do not lecture about Vault policy or evidence-gate stages. Use short set_status about the task, not product design. Show Me/run links are deliverables, not evidence.";
-      }
-    };
-  }
-  return { projectKnowledgeEvent: projectKnowledgeEvent2, projectKnowledgeSnapshot: projectKnowledgeSnapshot2, registerAnswerPublication: registerAnswerPublication2 };
-}
-function localPublicationPorts(config) {
-  return {
-    available: () => Boolean(config.knowledgeDirectory()),
-    registerFinalizer: (pi, handler) => pi.on("message_end", handler),
-    persisted: (message, saved) => saved.includes(message)
-  };
-}
-function createManagedKnowledgePublication(ui, reviewPolicy, signal) {
-  let finalizer;
-  const publication = createPublicationApi(ui, reviewPolicy, {
-    available: () => true,
-    registerFinalizer(_pi, handler) {
-      if (finalizer) throw new Error("Knowledge publication is already registered");
-      finalizer = handler;
-    },
-    // Only the host's private SDK-origin courier can preserve this identity across IPC.
-    // History display never enrolls a recovered proof in the live WeakSet.
-    persisted: (message, saved) => saved.includes(message)
-  }, (create) => create(), signal);
-  return {
-    ...publication,
-    projection: {
-      async finalize(event, context) {
-        if (!finalizer) throw new Error("Knowledge publication has not been registered");
-        if (context.scope.kind !== "session") throw new Error("Knowledge publication requires its live session");
-        context.signal.throwIfAborted();
-        const result2 = await finalizer(event, {
-          cwd: context.scope.workspaceDirectory,
-          sessionManager: { getSessionId: () => context.scope.sessionId },
-          signal: context.signal
-        });
-        context.signal.throwIfAborted();
-        return result2?.message ? { ...event, message: result2.message } : event;
-      },
-      event: (event, signal2) => {
-        signal2?.throwIfAborted();
-        return publication.projectKnowledgeEvent(event);
-      },
-      snapshot: (messages, persisted, signal2) => {
-        signal2?.throwIfAborted();
-        return publication.projectKnowledgeSnapshot(messages, persisted);
-      }
-    }
-  };
-}
-function createKnowledgePublication(ui, reviewPolicy, config, signal) {
-  return createPublicationApi(ui, reviewPolicy, localPublicationPorts(config), (create) => create(), signal);
-}
-var compatibility = createPublicationApi(ui_state_exports, review_policy_exports, localPublicationPorts(config_exports), (create) => runtimeSlot("knowledge", "publication", create));
-var { projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication } = compatibility;
-init_service();
-init_config();
-init_wiki_review();
-init_specialist_host();
-var specialists_exports = {};
-__export(specialists_exports, {
-  createKnowledgeSpecialistTools: () => createKnowledgeSpecialistTools,
-  createKnowledgeSpecialists: () => createKnowledgeSpecialists,
-  knowledgeReadStart: () => knowledgeReadStart,
-  shouldOrientKnowledge: () => shouldOrientKnowledge
-});
-init_runtime_host();
-init_config();
-init_files();
-init_specialist_host();
-init_ui_state();
-function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
-  const { deliveryContract: deliveryContract22 } = runtime;
-  const { readKnowledgeBinding: readKnowledgeBinding2 } = config;
-  const { knowledgeSpecialistHost: knowledgeSpecialistHost2, specialistQueueSnapshot: specialistQueueSnapshot2, specialistSettings: specialistSettings3, withSpecialistSlot: withSpecialistSlot2 } = specialists;
-  const { noteKnowledgeSpecialist: noteKnowledgeSpecialist2 } = ui;
-  const profiles = {
-    navigator: ["knowledge-navigator", "\u77E5\u8BC6\u5BFC\u822A\u5458"],
-    evidence: ["knowledge-evidence-curator", "\u8BC1\u636E\u6574\u7406\u5458"],
-    wiki: ["knowledge-wiki-editor", "Wiki \u4FEE\u8BA2\u5458"],
-    explainer: ["knowledge-explainer", "Show Me \u8BB2\u89E3\u5458"]
-  };
-  const derived = (path) => /(?:^|\/)(?:Explainers|Runs)\//i.test(path);
-  const brief = (page) => ({
-    path: page.path,
-    hash: page.hash,
-    startLine: page.startLine,
-    endLine: page.endLine,
-    text: page.text,
-    humanReview: page.humanReview,
-    truncated: page.truncated,
-    missing: page.missing
-  });
-  const readSchema = {
-    type: "object",
-    properties: {
-      path: { type: "string", maxLength: 512 },
-      start_line: { type: "integer", minimum: 1 },
-      startLine: { type: "integer", minimum: 1, description: "Compatibility alias; prefer start_line" }
-    },
-    required: ["path"],
-    additionalProperties: false
-  };
-  const searchSchema = {
-    type: "object",
-    properties: { query: { type: "string", minLength: 1, maxLength: 1e3 }, wiki_only: { type: "boolean" } },
-    required: ["query"],
-    additionalProperties: false
-  };
-  function knowledgeReadStart2({ start_line, startLine } = {}) {
-    if (start_line !== void 0 && startLine !== void 0 && start_line !== startLine)
-      throw new Error("Conflicting read ranges");
-    const value = start_line ?? startLine ?? 1;
-    if (!Number.isInteger(value) || value < 1) throw new Error("Invalid read start line");
-    return value;
-  }
-  function shouldOrientKnowledge2(prompt) {
-    const text43 = String(prompt || "").trim();
-    if (!text43 || text43.startsWith("/") || /初始化|取消任务|停止任务/.test(text43)) return false;
-    if (/只读|read[- ]only/i.test(text43) && /复用|既有|已有|reuse|existing/i.test(text43) && !/调用.{0,8}子代理|委派|delegate|specialist/i.test(text43))
-      return false;
-    return !!deliveryContract22(text43) || /比较|对比|分析|综述|compare|analy[sz]|review/i.test(text43) && /论文|文献|研究|证据|方法|软件|papers?|evidence|software/i.test(text43) || /知识库|已有知识|主题.{0,8}(?:知识|进展)|根据.{0,10}(?:文献|笔记)|(?:介绍|解读|讲解).{0,12}(?:论文|文献)|下载.{0,12}(?:软件说明书|说明书|软件文档)|show\s*-?\s*me|\bwiki\b/i.test(text43);
-  }
-  function createKnowledgeSpecialists2(pi, { getCurrent, readOnly = false }) {
-    let epoch = 0, goal = "", oriented = false, handoffs = [], used = /* @__PURE__ */ new Set(), controllers = /* @__PURE__ */ new Set(), decisions = [], budget = createSpecialistBudget();
-    function begin(prompt = "") {
-      for (const c of controllers) c.abort();
-      controllers = /* @__PURE__ */ new Set();
-      epoch++;
-      goal = String(prompt || "").slice(0, 4e3);
-      oriented = false;
-      handoffs = [];
-      decisions = [];
-      used = /* @__PURE__ */ new Set();
-      budget.begin();
-    }
-    async function showMeSkill() {
-      const commands = pi.getCommands?.() || [];
-      const entry = commands.find((item) => item.source === "skill" && item.name === "skill:show-me") || commands.find((item) => item.source === "skill" && item.name === "skill:research-show-me");
-      if (!entry?.sourceInfo?.path) return null;
-      const path = entry.sourceInfo.path, info = await lstat7(path);
-      if (!info.isFile() || info.size > 18e3)
-        throw new Error("Loaded show-me skill exceeds the specialist context budget");
-      return { text: await readFile9(path, "utf8"), name: entry.name.slice(6) };
-    }
-    async function run2(ctx, role, {
-      task = goal,
-      sourcePaths = [],
-      sourceHashes = [],
-      summary = "",
-      automatic = false,
-      targetPath = null
-    } = {}) {
-      if (!profiles[role]) throw new Error("Unknown knowledge specialist role");
-      const generation = epoch, reservations = used, parentSignal = ctx.signal, turnToken = budget.snapshot.turn;
-      const c = getCurrent(ctx), host = knowledgeSpecialistHost2(ctx), settings2 = await specialistSettings3();
-      budget.configure(settings2);
-      const signature = specialistRequestSignature({
-        role,
-        task,
-        sourcePaths,
-        sourceHashes,
-        summary,
-        targetPath
-      });
-      const remember = (value) => {
-        decisions.push({ role, ...value, at: Date.now() });
-        if (decisions.length > 32) decisions.splice(0, decisions.length - 32);
-        return value;
-      };
-      const decision = decideSpecialistRun({
-        role,
-        task,
-        sourcePaths,
-        targetPath,
-        automatic,
-        mode: settings2.mode,
-        trusted: !!ctx.isProjectTrusted?.(),
-        policy: c.binding.subagentPolicy,
-        hasEvidence: Array.isArray(sourcePaths) && sourcePaths.length > 0,
-        duplicate: false,
-        turnRuns: budget.snapshot.turnRuns,
-        maxRunsPerTurn: settings2.maxRunsPerTurn,
-        sessionRuns: budget.snapshot.sessionRuns,
-        maxRunsPerSession: settings2.maxRunsPerSession,
-        active: specialistQueueSnapshot2().active,
-        concurrency: settings2.concurrency,
-        queueLength: specialistQueueSnapshot2().queueLength,
-        queueLimit: settings2.queueLimit,
-        summary,
-        sourceHashes
-      });
-      const skip = (reason, status = "skipped", requestedDecision = null, record32 = true) => {
-        const publicDecision = requestedDecision || (status === "waiting" ? "ask-user" : "skip");
-        if (record32) remember({ decision: publicDecision, reasonCode: reason });
-        return {
-          status,
-          role,
-          reason,
-          reasonCode: reason,
-          decision: publicDecision,
-          nextAction: publicDecision === "ask-user" ? "Start a new session or use human settings to reset/extend the specialist budget." : reason === "permission-denied" ? "Ask a human to change project trust or specialist settings." : "Read sources or adjust the task before retrying."
-        };
-      };
-      if (generation !== epoch || getCurrent(ctx) !== c || parentSignal?.aborted)
-        return skip("parent-turn-changed", "cancelled");
-      if (readOnly) return skip("permission-denied");
-      if (!host) return skip("host-unavailable");
-      if (decision.decision !== "run") {
-        remember({ decision: decision.decision, reasonCode: decision.reasonCode });
-        const id3 = randomUUID13();
-        noteKnowledgeSpecialist2(ctx, {
-          id: id3,
-          role,
-          name: profiles[role][0],
-          label: profiles[role][1],
-          status: decision.decision === "ask-user" ? "waiting" : "skipped",
-          decision: decision.decision,
-          reasonCode: decision.reasonCode,
-          endedAt: Date.now()
-        });
-        return skip(
-          decision.reasonCode,
-          decision.decision === "ask-user" ? "waiting" : "skipped",
-          decision.decision,
-          false
-        );
-      }
-      if (automatic && ["wiki", "explainer"].includes(role) && c.binding.depositMode === "run-only")
-        return skip("run-only");
-      if (!Array.isArray(sourcePaths) || sourcePaths.length > 6 || summary.length > 12e3)
-        throw new Error("Specialist task packet exceeds its limit");
-      if (used.has(role)) return skip("already-called-this-turn");
-      if (!budget.reserve(signature, turnToken, { dedupe: sourceHashes.length > 0 }))
-        return skip("duplicate-request");
-      remember({ decision: "run", reasonCode: decision.reasonCode });
-      reservations.add(role);
-      let skillText = "", skillName = null;
-      try {
-        if (role === "explainer") {
-          const skill = await showMeSkill();
-          if (!skill) {
-            reservations.delete(role);
-            budget.release(signature, turnToken);
-            return skip("show-me-not-loaded");
-          }
-          skillText = skill.text;
-          skillName = skill.name;
-        }
-      } catch (error) {
-        reservations.delete(role);
-        budget.release(signature, turnToken);
-        throw error;
-      }
-      if (generation !== epoch || getCurrent(ctx) !== c || parentSignal?.aborted) {
-        budget.release(signature, turnToken);
-        return {
-          status: "cancelled",
-          role,
-          reason: "parent-turn-changed",
-          reasonCode: "parent-turn-changed",
-          decision: "skip",
-          nextAction: "Start a new turn before retrying."
-        };
-      }
-      const controller = new AbortController(), abort = () => controller.abort();
-      controllers.add(controller);
-      if (parentSignal?.aborted) abort();
-      else parentSignal?.addEventListener("abort", abort, { once: true });
-      const deadline = setTimeout(abort, settings2.timeoutMs);
-      const [name, label2] = profiles[role], id2 = randomUUID13();
-      let progress = {
-        id: id2,
-        role,
-        name,
-        label: label2,
-        status: "queued",
-        startedAt: Date.now(),
-        decision: "run",
-        reasonCode: decision.reasonCode,
-        budget: budget.snapshot
-      };
-      const publish = (patch) => {
-        progress = { ...progress, ...patch };
-        if (generation === epoch) noteKnowledgeSpecialist2(ctx, progress);
-      };
-      publish({});
-      let prepared;
-      let committed = false;
-      let resultUsage = null;
-      const check = async () => {
-        controller.signal.throwIfAborted();
-        const currentBudget = budget.snapshot;
-        if (currentBudget.turnTokens >= currentBudget.maxTokensPerTurn || currentBudget.sessionTokens >= currentBudget.maxTokensPerSession || currentBudget.turnCost >= currentBudget.maxCostPerTurn || currentBudget.sessionCost >= currentBudget.maxCostPerSession)
-          throw new Error("Specialist usage budget exhausted");
-        if (generation !== epoch || getCurrent(ctx) !== c) throw new Error("Parent knowledge turn changed");
-        if (!ctx.isProjectTrusted?.()) throw new Error("Project trust was revoked");
-        const binding = await readKnowledgeBinding2({ fresh: true }), latest = await specialistSettings3();
-        if (binding?.vaultId !== c.binding.vaultId || binding?.revision !== c.binding.revision || binding.subagentPolicy !== "read-local")
-          throw new Error("Knowledge binding or child permissions changed");
-        if (latest.mode === "off" || automatic && latest.mode !== "automatic")
-          throw new Error("Knowledge specialists were disabled");
-      };
-      try {
-        const answer = await withSpecialistSlot2(
-          controller.signal,
-          async () => {
-            committed = budget.commit(signature, turnToken);
-            if (!committed) throw new Error("Parent knowledge turn changed");
-            await check();
-            publish({ status: "running", action: "navigation" });
-            prepared = await c.service.prepare({ cwd: ctx.cwd, project: c.project, query: task });
-            const allowed = /* @__PURE__ */ new Set([...prepared.linkedWiki, ...prepared.navigationLinks || []]), readPages = /* @__PURE__ */ new Map();
-            for (const page of prepared.navigation || []) if (page?.path) allowed.add(page.path);
-            let readCount = 0, searchCount = 0, lastSearch = null;
-            for (const path of sourcePaths) {
-              validateNote(path);
-              if (!canRead(path, c.project) || derived(path))
-                throw new Error("Source is outside the permitted evidence scope");
-              allowed.add(path);
-            }
-            if (targetPath) {
-              validateNote(targetPath);
-              if (!canRead(targetPath, c.project))
-                throw new Error("Wiki target is outside the permitted scope");
-              allowed.add(targetPath);
-            }
-            const read = async (options) => {
-              const { path, start_line, startLine } = options;
-              const firstLine = knowledgeReadStart2({ start_line, startLine });
-              await check();
-              if (!budget.addToolOperation() || ++readCount > 8)
-                throw new Error("Specialist read budget exhausted");
-              validateNote(path);
-              if (!allowed.has(path) || !canRead(path, c.project))
-                throw new Error("Knowledge specialist may read only supplied or discovered paths");
-              const page = await c.service.read(prepared.ticket, ctx.cwd, {
-                path,
-                startLine: firstLine,
-                maxChars: 3e3
-              });
-              if (page.text?.trim()) readPages.set(path, page);
-              if (role === "navigator")
-                for (const link32 of (page.text || "").matchAll(/\[\[([^\]|#]+)(?:[^\]]*)\]\]/g)) {
-                  let next = link32[1].trim();
-                  if (!next.endsWith(".md")) next += ".md";
-                  try {
-                    validateNote(next);
-                    if (canRead(next, c.project) && !derived(next) && allowed.size < 64) allowed.add(next);
-                  } catch {
-                  }
-                }
-              return brief(page);
-            };
-            const sources = [];
-            if (role !== "navigator") for (const path of sourcePaths) sources.push(await read({ path }));
-            const target = targetPath ? await read({ path: targetPath }) : null;
-            const capabilities = [
-              {
-                name: "knowledge_read",
-                description: "Read an allowed Wiki or evidence note range. No arbitrary filesystem access.",
-                parameters: readSchema,
-                execute: read
-              }
-            ];
-            if (role === "navigator")
-              capabilities.push({
-                name: "knowledge_search",
-                description: "Search current shared/project knowledge after reading linked Wiki; at most two bounded queries.",
-                parameters: searchSchema,
-                execute: async ({ query, wiki_only = false }) => {
-                  await check();
-                  if (!budget.addToolOperation() || ++searchCount > 2)
-                    throw new Error("Specialist search budget exhausted");
-                  const found = await c.service.search(prepared.ticket, ctx.cwd, {
-                    query,
-                    wikiOnly: wiki_only,
-                    limit: 4
-                  });
-                  if (!wiki_only)
-                    lastSearch = {
-                      query: found.query,
-                      complete: found.complete,
-                      coverage: found.coverage,
-                      count: found.hits.length
-                    };
-                  for (const hit of found.hits) allowed.add(hit.path);
-                  return {
-                    ...lastSearch,
-                    wikiOnly: wiki_only,
-                    hits: found.hits.map((hit) => ({ ...brief(hit), title: hit.title, kind: hit.kind })),
-                    complete: found.complete
-                  };
-                }
-              });
-            const packet = JSON.stringify({
-              project: c.project,
-              navigation: prepared.navigation.map((page) => ({
-                ...brief(page),
-                text: (page.text || "").slice(0, 1e3)
-              })),
-              linkedWiki: prepared.linkedWiki.slice(0, 12),
-              navigationLinks: (prepared.navigationLinks || []).slice(0, 12),
-              sources,
-              target,
-              summary,
-              warning: `Read-only data. Draft outputs are unverified. ${prepared.warning}`
-            });
-            const result2 = await host({
-              role,
-              task: String(task).slice(0, 4e3),
-              packet,
-              skillText,
-              parentModel: ctx.model,
-              capabilities,
-              signal: controller.signal,
-              timeoutMs: settings2.timeoutMs,
-              onUsage: (usage) => {
-                resultUsage = resultUsage || {
-                  inputTokens: 0,
-                  outputTokens: 0,
-                  cacheReadTokens: 0,
-                  cacheWriteTokens: 0,
-                  reasoningTokens: 0,
-                  totalTokens: 0,
-                  cost: 0,
-                  reported: false,
-                  reportedFields: []
-                };
-                for (const key of [
-                  "inputTokens",
-                  "outputTokens",
-                  "cacheReadTokens",
-                  "cacheWriteTokens",
-                  "reasoningTokens",
-                  "totalTokens",
-                  "cost"
-                ])
-                  resultUsage[key] += usage[key] || 0;
-                resultUsage.reported = resultUsage.reported || usage.reported;
-                resultUsage.reportedFields = [
-                  .../* @__PURE__ */ new Set([...resultUsage.reportedFields || [], ...usage.reportedFields || []])
-                ];
-                return budget.updateUsage(
-                  {
-                    totalTokens: usage.reportedFields?.includes("totalTokens") ? usage.totalTokens : void 0,
-                    cost: usage.reportedFields?.includes("cost") ? usage.cost : void 0
-                  },
-                  turnToken
-                );
-              },
-              check,
-              progress: (value) => publish({ ...value, status: "running" })
-            });
-            await check();
-            const data = result2.data;
-            if (!data || !Array.isArray(data.source_paths) || data.source_paths.length > 6 || typeof data.summary !== "string" || data.summary.length > 1600)
-              throw new Error("Invalid specialist handoff");
-            if (role === "navigator" && !lastSearch)
-              throw new Error("Navigator returned without a real evidence search");
-            if (role !== "navigator" && !data.source_paths.length)
-              throw new Error("Specialist result has no read sources");
-            for (const path of data.source_paths)
-              if (!readPages.has(path) || derived(path))
-                throw new Error("Specialist cited an unread or presentation-only source");
-            if (data.source_paths.length)
-              await c.service.evidenceReceipts(prepared.ticket, ctx.cwd, data.source_paths);
-            const refs = data.source_paths.map((path) => {
-              const page = readPages.get(path);
-              return {
-                path,
-                hash: page.hash,
-                startLine: page.startLine,
-                endLine: page.endLine,
-                excerpt: (page.text || "").slice(0, 500),
-                truncated: page.truncated
-              };
-            });
-            return { ...result2, refs, search: lastSearch };
-          },
-          {
-            concurrency: settings2.concurrency,
-            queueLimit: settings2.queueLimit,
-            queueWaitMs: settings2.queueWaitMs
-          }
-        );
-        publish({
-          status: "completed",
-          endedAt: Date.now(),
-          ...visibleUsage(answer.usage),
-          model: answer.model,
-          thinkingLevel: answer.thinkingLevel,
-          sourceCount: answer.refs.length,
-          sources: answer.refs.map((ref) => ({ ...ref, excerpt: ref.excerpt.slice(0, 280) })),
-          summary: answer.data.summary.slice(0, 500),
-          elapsedMs: Math.max(0, Date.now() - progress.startedAt),
-          budget: budget.snapshot
-        });
-        return { status: "completed", role, id: id2, skillName, ...answer };
-      } catch (error) {
-        const cancelled = controller.signal.aborted || generation !== epoch;
-        publish({
-          status: cancelled ? "cancelled" : "failed",
-          endedAt: Date.now(),
-          error: String(error.message).slice(0, 300),
-          ...visibleUsage(resultUsage),
-          elapsedMs: Math.max(0, Date.now() - progress.startedAt),
-          budget: budget.snapshot
-        });
-        return {
-          status: cancelled ? "cancelled" : "failed",
-          role,
-          id: id2,
-          reason: String(error.message).slice(0, 300),
-          decision: cancelled ? "skip" : "run",
-          nextAction: cancelled ? "Start a new turn before retrying." : "Inspect the provider failure before retrying."
-        };
-      } finally {
-        clearTimeout(deadline);
-        if (prepared) c.service.tickets.delete(prepared.ticket);
-        controllers.delete(controller);
-        if (!committed) budget.release(signature, turnToken);
-        parentSignal?.removeEventListener("abort", abort);
-      }
-    }
-    function visibleUsage(usage) {
-      if (!usage) return {};
-      const visible = { usageReported: usage.reported === true, reportedFields: usage.reportedFields || [] };
-      for (const key of usage.reportedFields || [])
-        if ([
-          "inputTokens",
-          "outputTokens",
-          "cacheReadTokens",
-          "cacheWriteTokens",
-          "reasoningTokens",
-          "totalTokens",
-          "cost"
-        ].includes(key))
-          visible[key] = usage[key];
-      return visible;
-    }
-    function compact(result2) {
-      if (result2.status !== "completed")
-        return {
-          role: result2.role,
-          status: result2.status,
-          reason: result2.reason,
-          reasonCode: result2.reasonCode || result2.reason,
-          decision: result2.decision || (result2.status === "cancelled" ? "skip" : "run"),
-          nextAction: result2.status === "waiting" || result2.decision === "ask-user" ? "Start a new session or use human settings to reset/extend the specialist budget." : "Read sources or adjust the task before retrying."
-        };
-      return {
-        role: result2.role,
-        status: result2.status,
-        decision: "run",
-        summary: result2.data.summary.slice(0, 1100),
-        cautions: result2.data.cautions,
-        refs: result2.refs.slice(0, 4).map((ref) => ({ ...ref, excerpt: ref.excerpt.slice(0, 280) })),
-        search: result2.search,
-        usageReported: result2.usage?.reported === true,
-        elapsedMs: result2.elapsedMs,
-        budget: budget.snapshot,
-        warning: "Unverified specialist handoff; this does NOT grant the parent evidence/read/search receipts. Read cited originals and complete native publication checks."
-      };
-    }
-    async function orient(ctx) {
-      if (oriented || readOnly) return handoffs;
-      oriented = true;
-      const generation = epoch;
-      if (!shouldOrientKnowledge2(goal)) return handoffs;
-      const nav = await run2(ctx, "navigator", { automatic: true });
-      if (generation !== epoch) return [];
-      if (nav.status === "skipped") return handoffs;
-      handoffs = [compact(nav)];
-      if (nav.status === "completed" && nav.refs.length >= 2 && /比较|对比|冲突|矛盾|compare|conflict/i.test(goal)) {
-        const paths = nav.refs.map((r) => r.path).filter((p) => !/(?:^|\/)Wiki\//.test(p)).slice(0, 4);
-        if (paths.length >= 2) {
-          const evidence = await run2(ctx, "evidence", {
-            sourcePaths: paths,
-            sourceHashes: nav.refs.map((r) => r.hash).filter(Boolean),
-            automatic: true
-          });
-          if (generation !== epoch) return [];
-          handoffs.push(compact(evidence));
-        }
-      }
-      return handoffs;
-    }
-    return {
-      begin,
-      run: run2,
-      orient,
-      compact,
-      goal: () => goal,
-      budget: () => budget.snapshot,
-      decisions: () => decisions.slice(),
-      decisionHistory: () => decisions.slice(),
-      close: () => begin("")
-    };
-  }
-  return { knowledgeReadStart: knowledgeReadStart2, shouldOrientKnowledge: shouldOrientKnowledge2, createKnowledgeSpecialists: createKnowledgeSpecialists2 };
-}
-var compatibility3 = createKnowledgeSpecialistTools(compatibilityKnowledgeRuntimeHost, config_exports, specialist_host_exports, ui_state_exports);
-var { knowledgeReadStart, shouldOrientKnowledge, createKnowledgeSpecialists } = compatibility3;
-var specialist_delivery_exports = {};
-__export(specialist_delivery_exports, {
-  createSpecialistDelivery: () => createSpecialistDelivery,
-  saveSpecialistExplainer: () => saveSpecialistExplainer,
-  validateSpecialistHtml: () => validateSpecialistHtml2
-});
-init_runtime_host();
-init_config();
-var contained = (root, path) => {
-  const rel = relative8(root, path);
-  return !isAbsolute7(rel) && rel !== ".." && !rel.startsWith(`..${sep8}`);
-};
-function validateSpecialistHtml2(html) {
-  if (typeof html !== "string" || html.length > 64e3 || !/<html\b/i.test(html) || !/<body\b/i.test(html))
-    throw new Error("Explainer must be one bounded HTML document");
-  if (/<(?:script|iframe|frame|object|embed|base|form|link)\b|\bon[a-z]+\s*=|<meta\b[^>]*http-equiv\s*=|javascript\s*:|@import|url\s*\(/i.test(
-    html
-  ))
-    throw new Error("Explainer must be static and self-contained; active content was refused");
-  if (/\bsrc\s*=\s*["']?(?!data:image\/)[^\s>]/i.test(html))
-    throw new Error("Explainer external resources are not allowed");
-  return html;
-}
-function createSpecialistDelivery(runtime, bindings) {
-  async function saveSpecialistExplainer2(c, ctx, { runDir, topicId, answer }) {
-    if (answer.status !== "completed") return answer;
-    const html = validateSpecialistHtml2(answer.data.html), config = await runtime.loadWorkspaceConfig(ctx.cwd);
-    const root = await realpath7(config.resultsRoot), run2 = await realpath7(resolve9(ctx.cwd, runDir || ""));
-    if (!contained(root, run2) || relative8(root, run2).split(sep8).length !== 2 || !run2.split(sep8).at(-1).startsWith("run-") || !(await lstat8(join13(run2, "metadata.json"))).isFile())
-      throw new Error("Explainer destination must be an existing research run");
-    return bindings.withKnowledgeBinding(c.binding, async () => {
-      const artifactPath = join13(run2, `show-me-${randomUUID14()}.html`);
-      const sources = await c.service.evidenceReceipts(c.ticket, ctx.cwd, answer.data.source_paths);
-      await mkdir9(run2, { recursive: true });
-      await writeFile9(artifactPath, html, { flag: "wx", mode: 384 });
-      const archived = await runtime.publishExplainer({
-        cwd: ctx.cwd,
-        project: c.project,
-        topicId,
-        title: answer.data.title,
-        artifactPath,
-        summary: answer.data.summary,
-        sources: sources.sources
-      });
-      return {
-        ...archived,
-        result_file: artifactPath,
-        producer: "knowledge-explainer",
-        skill: answer.skillName || "show-me"
-      };
-    });
-  }
-  return { saveSpecialistExplainer: saveSpecialistExplainer2 };
-}
-var { saveSpecialistExplainer } = createSpecialistDelivery(
-  compatibilityKnowledgeRuntimeHost,
-  { withKnowledgeBinding }
-);
-init_wiki_model_review();
-init_ui_service();
-init_config();
-init_runtime_host();
-var EXPERIENCE_VERSION = 1;
-var EXPERIENCE_LIMITS = Object.freeze({
-  maxRecords: 128,
-  maxFileBytes: 512 * 1024,
-  maxSummaryChars: 1200,
-  maxReasonChars: 600,
-  maxTags: 16,
-  maxArtifacts: 16,
-  maxSources: 16,
-  maxObservationIds: 8,
-  maxJobIds: 8,
-  maxWorkflowSpecDiffs: 16,
-  maxQcMetrics: 24,
-  maxQcValues: 128,
-  maxModelSummaryChars: 500,
-  maxSearchResults: 24,
-  maxHostIdChars: 64,
-  maxProjectChars: 96,
-  maxWorkflowChars: 180,
-  maxSchedulerChars: 32,
-  maxRevisionChars: 180,
-  maxSchedulerJobIdChars: 180,
-  maxQueryChars: 200
-});
-var HASH2 = (value) => createHash18("sha256").update(value).digest("hex");
-var now = () => (/* @__PURE__ */ new Date()).toISOString();
-function text2(value, limit) {
-  if (typeof value !== "string" && typeof value !== "number") return "";
-  return String(value).normalize("NFKC").replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/(?:bearer\s+)[^\s,;"']+/gi, "Bearer [redacted]").replace(/(["']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret|authorization|cookie)["']?\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi, "$1[redacted]").replace(/https?:\/\/[^\s<>"]+/gi, (raw) => {
-    try {
-      const url = new URL(raw);
-      url.username = "";
-      url.password = "";
-      url.search = "";
-      url.hash = "";
-      return url.toString();
-    } catch {
-      return "[URL omitted]";
-    }
-  }).trim().slice(0, limit);
-}
-function id(value, label2, limit = 180) {
-  const result2 = text2(value, limit);
-  if (!result2) throw new Error(`${label2} is required`);
-  if (/[\\/]/.test(result2) || result2 === "." || result2 === "..") throw new Error(`Invalid ${label2}`);
-  return result2;
-}
-function projectKey2(value) {
-  const project = text2(value, EXPERIENCE_LIMITS.maxProjectChars).toLowerCase();
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(project)) throw new Error("Invalid experience project");
-  return project;
-}
-function hostKey(value) {
-  const host = text2(value, EXPERIENCE_LIMITS.maxHostIdChars).toLowerCase();
-  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(host)) throw new Error("Invalid experience host");
-  return host;
-}
-function vaultKey(value) {
-  const vault = text2(value, 64).toLowerCase();
-  if (!/^[a-f0-9]{24}$/.test(vault)) throw new Error("Invalid experience binding");
-  return vault;
-}
-function hash4(value) {
-  const result2 = text2(value, 128).toLowerCase();
-  return /^[a-f0-9]{64}$/.test(result2) ? result2 : null;
-}
-function opaqueRef(value, limit = 180) {
-  const result2 = text2(value, limit);
-  if (!result2 || /[\\/]/.test(result2)) return "";
-  return result2;
-}
-function boundedStringList(value, limit) {
-  if (!Array.isArray(value)) return [];
-  return [...new Set(value.map((item) => text2(item, 240)).filter(Boolean))].slice(0, limit);
-}
-function finiteNonNegative(value, maximum = 1e12) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > maximum) return null;
-  return value;
-}
-function finiteNumber(value, maximum = 1e12) {
-  if (typeof value !== "number" || !Number.isFinite(value) || Math.abs(value) > maximum) return null;
-  return value;
-}
-function normalizeExitCode(value) {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= -1 && value <= 255 ? value : null;
-}
-function normalizeRepair(value) {
-  if (typeof value === "boolean") return { succeeded: value };
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const item = value;
-  const succeeded = item.succeeded === true || item.success === true;
-  const summary = text2(item.summary, 400) || null;
-  const observationId = opaqueRef(item.observationId, 180) || null;
-  if (item.succeeded !== void 0 && typeof item.succeeded !== "boolean" || item.success !== void 0 && typeof item.success !== "boolean")
-    return null;
-  return {
-    succeeded,
-    ...summary ? { summary } : {},
-    ...observationId ? { observationId } : {}
-  };
-}
-function normalizeDiffValue(value) {
-  if (value === null || typeof value === "boolean") return value;
-  if (typeof value === "number") return Number.isFinite(value) && Math.abs(value) <= 1e12 ? value : void 0;
-  if (typeof value === "string") return text2(value, 240) || null;
-  return void 0;
-}
-function normalizeWorkflowSpecDiff(value) {
-  let entries = [];
-  if (Array.isArray(value)) entries = value;
-  else if (value && typeof value === "object") {
-    entries = Object.entries(value).map(([path, after]) => ({ path, after }));
-  }
-  const result2 = [];
-  for (const entry of entries.slice(0, EXPERIENCE_LIMITS.maxWorkflowSpecDiffs)) {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
-    const item = entry;
-    const path = text2(item.path ?? item.field ?? item.key, 180);
-    if (!path || /[\\]/.test(path)) continue;
-    const before = normalizeDiffValue(item.before);
-    const after = normalizeDiffValue(item.after ?? item.value);
-    if (before === void 0 && after === void 0) continue;
-    result2.push({ path, ...before === void 0 ? {} : { before }, ...after === void 0 ? {} : { after } });
-  }
-  return result2;
-}
-function normalizeResourceUse(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  const result2 = {};
-  for (const [key, raw] of Object.entries(value).slice(0, 32)) {
-    const name = text2(key, 64);
-    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(name) || /(token|secret|password|credential|command|output|path|url)/i.test(name)) continue;
-    const number = finiteNonNegative(raw);
-    if (number !== null) result2[name] = number;
-    if (Object.keys(result2).length >= 16) break;
-  }
-  return result2;
-}
-function normalizeQcMetrics(value) {
-  let entries = [];
-  if (Array.isArray(value)) {
-    entries = value.map((entry) => ["", entry]);
-  } else if (value && typeof value === "object") {
-    entries = Object.entries(value);
-  }
-  const result2 = [];
-  for (const [mapName, raw] of entries.slice(0, EXPERIENCE_LIMITS.maxQcMetrics)) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
-    const item = raw;
-    const name = text2(item.name ?? mapName, 120);
-    if (!name) continue;
-    const unit = text2(item.unit, 32) || null;
-    const valueNumber = finiteNonNegative(item.value, 1e12);
-    const count = finiteNonNegative(item.count, 1e9);
-    const distributionInput = item.distribution && typeof item.distribution === "object" ? item.distribution : item;
-    const distribution = {};
-    for (const [rawKey, rawValue] of Object.entries(distributionInput).slice(0, 16)) {
-      const key = text2(rawKey, 32);
-      if (!/^[A-Za-z][A-Za-z0-9_.-]{0,31}$/.test(key) || ["count", "name", "unit", "value", "values"].includes(key)) continue;
-      const number = finiteNumber(rawValue, 1e12);
-      if (number !== null) distribution[key] = number;
-    }
-    const distributionCount = finiteNonNegative(distributionInput.count, 1e9);
-    if (distributionCount !== null) distribution.count = distributionCount;
-    const values = Array.isArray(item.values) ? item.values.map((entry) => finiteNumber(entry, 1e12)).filter((entry) => entry !== null).slice(0, EXPERIENCE_LIMITS.maxQcValues) : [];
-    if (valueNumber === null && count === null && Object.keys(distribution).length === 0 && values.length === 0) continue;
-    result2.push({
-      name,
-      ...unit ? { unit } : {},
-      ...valueNumber === null ? {} : { value: valueNumber },
-      ...count === null ? {} : { count },
-      ...Object.keys(distribution).length ? { distribution } : {},
-      ...values.length ? { values } : {}
-    });
-  }
-  return result2;
-}
-function normalizeArtifact(value) {
-  if (!value || typeof value !== "object") return null;
-  const item = value;
-  const sha2562 = hash4(item.sha256);
-  if (!sha2562) return null;
-  const bytes = typeof item.bytes === "number" && Number.isSafeInteger(item.bytes) && item.bytes >= 0 ? item.bytes : void 0;
-  const pathValue = text2(item.path, 240).replaceAll("\\", "/");
-  const safePath = pathValue && !isAbsolute9(pathValue) && !pathValue.split("/").includes("..") && !/(?:^|\/)(?:\.env(?:\.[^/]*)?|auth\.json|credentials(?:\.json)?|\.ssh|\.git)(?:\/|$)/i.test(pathValue) ? pathValue : "";
-  return {
-    ...safePath ? { path: safePath } : {},
-    sha256: sha2562,
-    ...bytes === void 0 ? {} : { bytes }
-  };
-}
-function normalizeArtifactRefs(value) {
-  if (!Array.isArray(value)) return [];
-  return value.map(normalizeArtifact).filter((item) => Boolean(item)).slice(0, EXPERIENCE_LIMITS.maxArtifacts);
-}
-function normalizeWorkflow(value) {
-  const result2 = text2(value, EXPERIENCE_LIMITS.maxWorkflowChars);
-  return result2 || null;
-}
-function normalizeWorkflowRevision(value) {
-  const result2 = text2(value, EXPERIENCE_LIMITS.maxRevisionChars);
-  return result2 || null;
-}
-function normalizeScheduler(value) {
-  const result2 = text2(value, EXPERIENCE_LIMITS.maxSchedulerChars).toLowerCase();
-  return result2 && /^[a-z][a-z0-9._-]{0,31}$/.test(result2) ? result2 : null;
-}
-function normalizeSchedulerJobId(value) {
-  return opaqueRef(value, EXPERIENCE_LIMITS.maxSchedulerJobIdChars) || null;
-}
-function normalizeProvenance(input) {
-  if (!input || typeof input !== "object") throw new Error("Experience provenance is required");
-  const item = input;
-  const manifestSha256 = hash4(item.manifestSha256 ?? item.manifestHash);
-  const artifactHashes = Array.isArray(item.artifactHashes) ? item.artifactHashes.map(normalizeArtifact).filter((value) => Boolean(value)).slice(0, EXPERIENCE_LIMITS.maxArtifacts) : [];
-  const runId = opaqueRef(item.runId);
-  const observationId = opaqueRef(item.observationId);
-  const receiptId = opaqueRef(item.receiptId);
-  const result2 = {
-    ...runId ? { runId } : {},
-    ...observationId ? { observationId } : {},
-    ...receiptId ? { receiptId } : {},
-    ...manifestSha256 ? { manifestSha256 } : {},
-    ...artifactHashes.length ? { artifactHashes } : {}
-  };
-  if (!result2.runId && !result2.receiptId && !result2.manifestSha256 && !result2.artifactHashes?.length)
-    throw new Error("Experience provenance must reference a host receipt or manifest");
-  return result2;
-}
-function blank2(vaultId, project, hostId) {
-  return { version: EXPERIENCE_VERSION, vaultId, project, hostId, revision: 0, updatedAt: now(), records: [] };
-}
-function validateDocument2(value, vaultId, project, hostId) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Corrupt experience document");
-  const item = value;
-  if (item.version !== EXPERIENCE_VERSION || item.vaultId !== vaultId || item.project !== project || item.hostId !== hostId)
-    throw new Error("Experience binding mismatch");
-  if (!Number.isSafeInteger(item.revision) || Number(item.revision) < 0 || !Array.isArray(item.records))
-    throw new Error("Corrupt experience document");
-  if (item.records.length > EXPERIENCE_LIMITS.maxRecords) throw new Error("Experience record limit exceeded");
-  return {
-    version: EXPERIENCE_VERSION,
-    vaultId,
-    project,
-    hostId,
-    revision: Number(item.revision),
-    updatedAt: text2(item.updatedAt, 40) || now(),
-    records: item.records.map((record32) => normalizeRecord(record32, vaultId, project, hostId))
-  };
-}
-function normalizeRecord(value, vaultId, project, hostId) {
-  if (!value || typeof value !== "object") throw new Error("Invalid experience record");
-  const item = value;
-  const status = item.status === "verified" ? "verified" : item.status === "observed" ? "observed" : null;
-  const outcome = ["success", "failure", "blocked", "unknown"].includes(String(item.outcome)) ? item.outcome : null;
-  if (!status || !outcome || item.navigationOnly !== true || item.evidenceEligible !== false || item.instructionEligible !== false)
-    throw new Error("Invalid experience record safety flags");
-  const result2 = {
-    id: id(item.id, "experience id"),
-    version: EXPERIENCE_VERSION,
-    vaultId,
-    project,
-    hostId,
-    jobId: id(item.jobId, "jobId"),
-    featureKey: id(item.featureKey, "featureKey", 240),
-    topicId: text2(item.topicId, 180) || null,
-    summary: text2(item.summary, EXPERIENCE_LIMITS.maxSummaryChars),
-    reason: text2(item.reason, EXPERIENCE_LIMITS.maxReasonChars) || null,
-    outcome,
-    status,
-    observedAt: text2(item.observedAt, 40) || now(),
-    observationIds: boundedStringList(item.observationIds, EXPERIENCE_LIMITS.maxObservationIds),
-    observationCount: Number.isSafeInteger(item.observationCount) && Number(item.observationCount) > 0 ? Number(item.observationCount) : 1,
-    jobIds: (() => {
-      const values = boundedStringList(item.jobIds, EXPERIENCE_LIMITS.maxJobIds);
-      return values.length ? values : [id(item.jobId, "jobId")];
-    })(),
-    jobCount: Number.isSafeInteger(item.jobCount) && Number(item.jobCount) > 0 ? Math.min(Number(item.jobCount), EXPERIENCE_LIMITS.maxJobIds) : 1,
-    failureSignature: text2(item.failureSignature, 240) || null,
-    exitCode: normalizeExitCode(item.exitCode),
-    failedStep: text2(item.failedStep, 240) || null,
-    repair: normalizeRepair(item.repair),
-    workflowSpecDiff: normalizeWorkflowSpecDiff(item.workflowSpecDiff ?? item.workflowSpecDiffs),
-    resourceUse: normalizeResourceUse(item.resourceUse),
-    qcMetrics: normalizeQcMetrics(item.qcMetrics ?? item.qc ?? item.qcMetricDistribution),
-    modelSummary: text2(item.modelSummary, EXPERIENCE_LIMITS.maxModelSummaryChars) || null,
-    modelGenerated: item.modelGenerated === true && Boolean(text2(item.modelSummary, EXPERIENCE_LIMITS.maxModelSummaryChars)),
-    contractHash: hash4(item.contractHash),
-    workflow: normalizeWorkflow(item.workflow),
-    workflowRevision: normalizeWorkflowRevision(item.workflowRevision ?? item.workflowRevisionId),
-    scheduler: normalizeScheduler(item.scheduler),
-    schedulerJobId: normalizeSchedulerJobId(item.schedulerJobId),
-    artifactRefs: normalizeArtifactRefs(item.artifactRefs ?? item.artifacts),
-    provenance: normalizeProvenance(item.provenance || {}),
-    tags: boundedStringList(item.tags, EXPERIENCE_LIMITS.maxTags),
-    sourceRefs: boundedStringList(item.sourceRefs, EXPERIENCE_LIMITS.maxSources),
-    navigationOnly: true,
-    evidenceEligible: false,
-    instructionEligible: false,
-    createdAt: text2(item.createdAt, 40) || now(),
-    updatedAt: text2(item.updatedAt, 40) || now()
-  };
-  if (!result2.summary) throw new Error("Experience summary is required");
-  return result2;
-}
-function pathFor2(directory, vaultId, project, hostId) {
-  if (!isAbsolute9(directory)) throw new Error("Experience directory must be absolute");
-  return join15(resolve11(directory), vaultId, "experience", project, `${hostId}.json`);
-}
-async function ensureSafePath(directory, path) {
-  const root = resolve11(directory);
-  const relativePath = relative10(root, resolve11(path));
-  if (isAbsolute9(relativePath) || relativePath === ".." || relativePath.startsWith(`..${sep9}`)) throw new Error("Experience path escapes knowledge directory");
-  let current = root;
-  for (const segment of relativePath.split(sep9).slice(0, -1)) {
-    current = join15(current, segment);
-    try {
-      const stat42 = await lstat10(current);
-      if (stat42.isSymbolicLink()) throw new Error("Experience path cannot traverse symlinks");
-      if (!stat42.isDirectory()) throw new Error("Experience path parent must be a directory");
-    } catch (error) {
-      if (error.code !== "ENOENT") throw error;
-      await mkdir11(current, { mode: 448 });
-    }
-  }
-}
-async function readDocument2(path, vaultId, project, hostId) {
-  try {
-    const stat42 = await lstat10(path);
-    if (stat42.isSymbolicLink() || !stat42.isFile()) throw new Error("Experience file must be a regular file");
-    if (stat42.size > EXPERIENCE_LIMITS.maxFileBytes) throw new Error("Experience file exceeds size limit");
-    return validateDocument2(JSON.parse(await readFile11(path, "utf8")), vaultId, project, hostId);
-  } catch (error) {
-    if (error.code === "ENOENT") return blank2(vaultId, project, hostId);
-    if (error instanceof SyntaxError) throw new Error("Corrupt experience document");
-    throw error;
-  }
-}
-async function atomicWrite2(path, value) {
-  const temporary = `${path}.${randomUUID17()}.tmp`;
-  try {
-    await writeFile11(temporary, `${JSON.stringify(value, null, 2)}
-`, { flag: "wx", mode: 384 });
-    await rename9(temporary, path);
-  } finally {
-    await unlink7(temporary).catch((error) => {
-      if (error.code !== "ENOENT") throw error;
-    });
-  }
-}
-function tokenSet(value) {
-  return new Set(value.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((token) => token.length > 1));
-}
-function scoreRecord(record32, query) {
-  if (!query) return 0;
-  const queryTokens = tokenSet(query);
-  const fields = [
-    record32.featureKey,
-    record32.summary,
-    record32.reason || "",
-    record32.failureSignature || "",
-    record32.failedStep || "",
-    record32.modelSummary || "",
-    record32.workflow || "",
-    record32.workflowRevision || "",
-    record32.scheduler || "",
-    record32.schedulerJobId || "",
-    record32.hostId,
-    ...record32.tags,
-    record32.topicId || ""
-  ];
-  const recordTokens = tokenSet(fields.join(" "));
-  let score = 0;
-  for (const token of queryTokens) if (recordTokens.has(token)) score++;
-  if (record32.featureKey.toLowerCase().includes(query.toLowerCase())) score += 2;
-  return score;
-}
-function createExperienceStore(options) {
-  const vaultId = vaultKey(options.binding?.vaultId);
-  const project = projectKey2(options.project);
-  const hostId = hostKey(options.hostId);
-  const directory = options.directory === void 0 || options.directory === null ? knowledgeDirectory() : options.directory;
-  if (!directory) throw new Error("Knowledge directory is not configured");
-  const path = pathFor2(directory, vaultId, project, hostId);
-  const read = async () => {
-    await ensureSafePath(directory, path);
-    return readDocument2(path, vaultId, project, hostId);
-  };
-  const mutate = async (expectedRevision, updater) => runRuntimeExclusive("experience-store", path, async () => {
-    await ensureSafePath(directory, path);
-    const current = await readDocument2(path, vaultId, project, hostId);
-    if (expectedRevision !== void 0 && current.revision !== expectedRevision) throw new Error("Experience revision changed");
-    const next = updater(structuredClone(current));
-    if (next.noop) return { document: current, result: next.result };
-    const candidate = { ...next.document, version: EXPERIENCE_VERSION, vaultId, project, hostId, revision: current.revision + 1, updatedAt: now(), records: next.document.records.slice(-EXPERIENCE_LIMITS.maxRecords) };
-    const document = validateDocument2(candidate, vaultId, project, hostId);
-    await atomicWrite2(path, document);
-    return { document, result: next.result };
-  });
-  return {
-    path,
-    scope: { vaultId, project, hostId },
-    read,
-    record: async (input, expectedRevision) => {
-      if (!input || typeof input !== "object") throw new Error("Invalid experience input");
-      const rawInput = input;
-      const jobId = id(input.jobId || rawInput.job?.id || rawInput.terminalJob?.id, "jobId");
-      const observation = input.observation || input.hostObservation;
-      const featureKey = id(
-        input.featureKey || observation?.featureKey || input.failureSignature || observation?.failureSignature || input.failedStep || input.step,
-        "featureKey",
-        240
-      );
-      if (!observation || typeof observation !== "object") throw new Error("Terminal host observation is required");
-      const observationId = id(observation.id, "observation id");
-      const outcome = observation.outcome;
-      if (!["success", "failure", "blocked", "unknown"].includes(outcome)) throw new Error("Invalid experience outcome");
-      const provenance2 = normalizeProvenance(input.provenance || observation.provenance || {});
-      const summary = text2(input.summary, EXPERIENCE_LIMITS.maxSummaryChars);
-      if (!summary) throw new Error("Experience summary is required");
-      const failureSignature = text2(input.failureSignature ?? observation.failureSignature, 240) || null;
-      const exitCode = normalizeExitCode(input.exitCode ?? observation.exitCode);
-      const failedStep = text2(input.failedStep ?? input.step ?? observation.failedStep ?? observation.step, 240) || null;
-      const repair = normalizeRepair(input.repair ?? observation.repair ?? (input.repairSucceeded === true || observation.repairSucceeded === true ? { succeeded: true } : null));
-      const repairSucceeded = input.repairSucceeded === true || observation.repairSucceeded === true || repair?.succeeded === true;
-      const workflowSpecDiff = normalizeWorkflowSpecDiff(input.workflowSpecDiff ?? observation.workflowSpecDiff);
-      const resourceUse = normalizeResourceUse(input.resourceUse ?? observation.resourceUse);
-      const qcMetrics = normalizeQcMetrics(input.qcMetrics ?? input.qc ?? observation.qcMetrics ?? observation.qc);
-      const modelSummary = text2(input.modelSummary ?? observation.modelSummary, EXPERIENCE_LIMITS.maxModelSummaryChars) || null;
-      const contractHash = hash4(input.contractHash ?? observation.contractHash);
-      const workflow = normalizeWorkflow(input.workflow ?? observation.workflow);
-      const workflowRevision = normalizeWorkflowRevision(input.workflowRevision ?? observation.workflowRevision);
-      const scheduler = normalizeScheduler(input.scheduler ?? observation.scheduler);
-      const schedulerJobId = normalizeSchedulerJobId(input.schedulerJobId ?? observation.schedulerJobId);
-      const artifactRefs = normalizeArtifactRefs(input.artifactRefs ?? observation.artifactRefs);
-      const observedAt = text2(observation.observedAt, 40) || now();
-      const sanitizedTags = boundedStringList(input.tags, EXPERIENCE_LIMITS.maxTags);
-      const sanitizedSources = boundedStringList(input.sourceRefs, EXPERIENCE_LIMITS.maxSources);
-      const key = featureKey;
-      const out = await mutate(expectedRevision, (document) => {
-        const matching = document.records.filter((record4) => record4.featureKey === featureKey);
-        const existing = document.records.find((record4) => record4.id === HASH2(key).slice(0, 32));
-        if (existing?.observationIds.includes(observationId)) return { document, result: { classification: "duplicate", record: existing }, noop: true };
-        const observations = new Set(matching.flatMap((record4) => record4.observationIds));
-        observations.add(observationId);
-        const jobs = new Set(matching.flatMap((record4) => record4.jobIds.length ? record4.jobIds : [record4.jobId]));
-        jobs.add(jobId);
-        const status = repairSucceeded || jobs.size >= 2 ? "verified" : "observed";
-        const record32 = existing || {
-          id: HASH2(key).slice(0, 32),
-          version: EXPERIENCE_VERSION,
-          vaultId,
-          project,
-          hostId,
-          jobId,
-          featureKey,
-          topicId: text2(input.topicId, 180) || null,
-          summary,
-          // A failure reason may be supplied as summary context, but raw output is never accepted.
-          reason: text2(input.reason, EXPERIENCE_LIMITS.maxReasonChars) || null,
-          outcome,
-          status,
-          observedAt,
-          observationIds: [],
-          observationCount: 0,
-          jobIds: [],
-          jobCount: 0,
-          failureSignature,
-          exitCode,
-          failedStep,
-          repair,
-          workflowSpecDiff,
-          resourceUse,
-          qcMetrics,
-          modelSummary,
-          modelGenerated: Boolean(modelSummary),
-          contractHash,
-          workflow,
-          workflowRevision,
-          scheduler,
-          schedulerJobId,
-          artifactRefs,
-          provenance: provenance2,
-          tags: sanitizedTags,
-          sourceRefs: sanitizedSources,
-          navigationOnly: true,
-          evidenceEligible: false,
-          instructionEligible: false,
-          createdAt: now(),
-          updatedAt: now()
-        };
-        record32.observationIds = [...observations].slice(-EXPERIENCE_LIMITS.maxObservationIds);
-        record32.observationCount = Math.min(observations.size, EXPERIENCE_LIMITS.maxObservationIds);
-        record32.jobIds = [...jobs].slice(-EXPERIENCE_LIMITS.maxJobIds);
-        record32.jobCount = Math.min(jobs.size, EXPERIENCE_LIMITS.maxJobIds);
-        record32.status = status;
-        record32.updatedAt = now();
-        record32.observedAt = observedAt;
-        record32.outcome = outcome;
-        record32.summary = summary;
-        record32.provenance = provenance2;
-        record32.tags = sanitizedTags;
-        record32.sourceRefs = sanitizedSources;
-        if (failureSignature) record32.failureSignature = failureSignature;
-        if (input.exitCode !== void 0 || observation.exitCode !== void 0) record32.exitCode = exitCode;
-        if (failedStep) record32.failedStep = failedStep;
-        if (repair) record32.repair = repair;
-        if (input.workflowSpecDiff !== void 0 || observation.workflowSpecDiff !== void 0) record32.workflowSpecDiff = workflowSpecDiff;
-        if (input.resourceUse !== void 0 || observation.resourceUse !== void 0) record32.resourceUse = resourceUse;
-        if (input.qcMetrics !== void 0 || input.qc !== void 0 || observation.qcMetrics !== void 0 || observation.qc !== void 0) record32.qcMetrics = qcMetrics;
-        if (modelSummary) {
-          record32.modelSummary = modelSummary;
-          record32.modelGenerated = true;
-        }
-        if (contractHash) record32.contractHash = contractHash;
-        if (workflow) record32.workflow = workflow;
-        if (workflowRevision) record32.workflowRevision = workflowRevision;
-        if (scheduler) record32.scheduler = scheduler;
-        if (schedulerJobId) record32.schedulerJobId = schedulerJobId;
-        if (artifactRefs.length) record32.artifactRefs = artifactRefs;
-        if (!existing) document.records.unshift(record32);
-        return { document, result: { classification: existing ? "updated" : "new", record: record32 } };
-      });
-      return { ...out.result, revision: out.document.revision, record: out.result.record };
-    },
-    search: async (query = "", options2 = {}) => {
-      const document = await read();
-      const q = text2(query, EXPERIENCE_LIMITS.maxQueryChars);
-      const limit = Math.min(EXPERIENCE_LIMITS.maxSearchResults, Math.max(1, Math.floor(options2.limit || EXPERIENCE_LIMITS.maxSearchResults)));
-      const workflowFilter = normalizeWorkflow(options2.workflow);
-      const hostFilter = options2.hostId === void 0 ? null : hostKey(options2.hostId);
-      const failureFilter = text2(options2.failureSignature, 240).toLowerCase() || null;
-      const records = document.records.filter((record32) => !workflowFilter || record32.workflow?.toLowerCase() === workflowFilter.toLowerCase()).filter((record32) => !hostFilter || record32.hostId === hostFilter).filter((record32) => !failureFilter || record32.failureSignature?.toLowerCase() === failureFilter).filter((record32) => options2.includeObserved !== false || record32.status === "verified").map((record32) => ({ record: record32, score: scoreRecord(record32, q) })).filter((hit) => !q || hit.score > 0).sort((left, right) => right.score - left.score || right.record.updatedAt.localeCompare(left.record.updatedAt) || left.record.id.localeCompare(right.record.id)).slice(0, limit);
-      return { revision: document.revision, query: q, records, navigationOnly: true, evidenceEligible: false, instructionEligible: false };
-    }
-  };
-}
-async function searchExperiences(options) {
-  const { query = "", limit, includeObserved, workflow, failureSignature, hostFilter, ...storeOptions } = options;
-  const store = createExperienceStore(storeOptions);
-  return store.search(query, { limit, includeObserved, workflow, hostId: hostFilter, failureSignature });
-}
-init_ui_state();
-init_semantic_settings();
-init_review_policy();
-init_service();
-init_worker_transport();
-init_specialist_host();
-init_wiki_model_review();
-init_wiki_review();
-init_wiki_review_node();
-init_topic_memory();
-var digest5 = (text43) => createHash20("sha256").update(text43).digest("hex");
-function summaryDeliveryClaims(details, markdown) {
-  const receipt2 = details.delivery_receipt;
-  if (!receipt2 || receipt2.version !== 1 || receipt2.semanticAssessment?.status !== "model-assessed" || receipt2.bodySha256 !== digest5(`${markdown.trim()}
-`))
-    throw new Error("Topic memory requires a current, reviewed summary delivery receipt");
-  if (!Array.isArray(details.claims) || receipt2.memoryClaimsSha256 !== digest5(JSON.stringify(details.claims)))
-    throw new Error("Topic memory claims differ from the reviewed delivery packet");
-  const reviewed = receipt2.semanticAssessment.memoryClaims;
-  if (!Array.isArray(reviewed) || reviewed.length !== details.claims.length)
-    throw new Error("Topic memory requires a separate assessment for every delivered memory claim");
-  const seen = /* @__PURE__ */ new Set();
-  for (const claim of details.claims) {
-    if (claim.deliveryBodySha256 !== receipt2.bodySha256 || !receipt2.sources.some(
-      (source) => source.path === claim.sourcePath && source.sha256 === claim.sourceHash
-    ))
-      throw new Error("Topic memory claim does not reference the delivered evidence version");
-    const assessment = reviewed.find((item) => item.bindingId === claim.bindingId);
-    if (!assessment || seen.has(claim.bindingId) || assessment.assessment !== "supported" || assessment.memoryClaimSha256 !== digest5(JSON.stringify(claim)))
-      throw new Error("Topic memory claim lacks its exact supported scope assessment");
-    seen.add(claim.bindingId);
-    if (!Array.isArray(assessment.evidence) || !assessment.evidence.some(
-      (ref) => ref.path === claim.sourcePath && ref.sha256 === claim.sourceHash && receipt2.sources.some(
-        (source) => source.path === ref.path && source.sha256 === ref.sha256 && source.readReceiptIds.includes(ref.readReceiptId)
-      )
-    ))
-      throw new Error("Topic memory scope assessment lacks a delivered read reference");
-  }
-  return details.claims;
-}
 var memory_exports = {};
 __export(memory_exports, {
   Assign: () => Assign,
@@ -16158,7 +13455,7 @@ function Assert3(context, type, value) {
     throw new ParseError2(value, Errors2(context, type, value));
   return value;
 }
-var Parser2 = Pipeline([
+var Parser = Pipeline([
   (_context, _type, value) => Clone2(value),
   (context, type, value) => Default(context, type, value),
   (context, type, value) => Convert(context, type, value),
@@ -16180,6 +13477,22 @@ var Delete2 = _Object_({
   path: String2()
 });
 var Edit = Union([Insert2, Update2, Delete2]);
+var SCIENCE_CONTRACT = [
+  "Scientific contract:",
+  "- Inspect relevant files, data, and source records before assuming or fitting.",
+  "- Keep observations, interpretations, hypotheses, and unknowns separate.",
+  "- Check numbers and generated outputs against the current source or a fresh run.",
+  "- Preserve source data and write new results beside existing work; do not silently overwrite or delete.",
+  "- Treat simulated data, teacher outputs, pseudo-labels, and self-generated validators as assumptions, not real-world error checks.",
+  "- State missing evidence, failed checks, and remaining limitations in the final answer."
+].join("\n");
+var RESPONSE_CONTRACT = [
+  "Response contract:",
+  "- Progress narration between tools is short and only reports a new observation, choice, result, or blocker.",
+  "- The final answer is the user-facing answer; its length and structure follow the answer mode.",
+  "- Never claim a file was saved, a source was read, or a check passed unless the host returned that evidence.",
+  "- Keep private reasoning private; expose observable actions, evidence, decisions, and conclusions."
+].join("\n");
 var KNOWLEDGE_SPECIALISTS = [
   {
     role: "navigator",
@@ -16228,29 +13541,2879 @@ var KNOWLEDGE_REVIEWER = {
   maxTokens: 2800
 };
 var PROTECTED_KNOWLEDGE_AGENTS = [...KNOWLEDGE_SPECIALISTS, KNOWLEDGE_REVIEWER];
-var SCIENCE_CONTRACT = [
-  "Scientific contract:",
-  "- Inspect relevant files, data, and source records before assuming or fitting.",
-  "- Keep observations, interpretations, hypotheses, and unknowns separate.",
-  "- Check numbers and generated outputs against the current source or a fresh run.",
-  "- Preserve source data and write new results beside existing work; do not silently overwrite or delete.",
-  "- Treat simulated data, teacher outputs, pseudo-labels, and self-generated validators as assumptions, not real-world error checks.",
-  "- State missing evidence, failed checks, and remaining limitations in the final answer."
+init_claim_conflicts();
+init_config();
+init_daily_discovery();
+init_daily_discovery();
+var DAILY_DISCOVERY_SYSTEM = [
+  "You are a research colleague looking for ideas the user has not considered.",
+  "You get notes that were added or changed recently (NEW) and older related notes (OLD) from the user's knowledge base.",
+  "Find connections between NEW and OLD: a contradiction between sources, a combination nobody has studied, a method that transfers from another field, a default assumption worth challenging, or the next implication of a conclusion.",
+  "Keep only ideas that are new (not already stated in the notes), grounded (rest on specific notes given here) and testable (an experiment, dataset or analysis could confirm or refute them).",
+  `Return ONLY a JSON array with at most ${DAILY_DISCOVERY_LIMITS.maxIdeas} objects: {"title": short title, "idea": one or two sentences, "basis": [note paths from the input], "test": how to test it, "whyOverlooked": why it may have been missed}.`,
+  "Write title, idea, test and whyOverlooked in the language of the notes. If nothing passes all three checks, return []. Never invent a note path, paper or number."
 ].join("\n");
-var RESPONSE_CONTRACT = [
-  "Response contract:",
-  "- Progress narration between tools is short and only reports a new observation, choice, result, or blocker.",
-  "- The final answer is the user-facing answer; its length and structure follow the answer mode.",
-  "- Never claim a file was saved, a source was read, or a check passed unless the host returned that evidence.",
-  "- Keep private reasoning private; expose observable actions, evidence, decisions, and conclusions."
-].join("\n");
+var digest = (text43) => createHash3("sha256").update(text43).digest("hex");
+function summaryDeliveryClaims(details, markdown) {
+  const receipt2 = details.delivery_receipt;
+  if (!receipt2 || receipt2.version !== 1 || receipt2.semanticAssessment?.status !== "model-assessed" || receipt2.bodySha256 !== digest(`${markdown.trim()}
+`))
+    throw new Error("Topic memory requires a current, reviewed summary delivery receipt");
+  if (!Array.isArray(details.claims) || receipt2.memoryClaimsSha256 !== digest(JSON.stringify(details.claims)))
+    throw new Error("Topic memory claims differ from the reviewed delivery packet");
+  const reviewed = receipt2.semanticAssessment.memoryClaims;
+  if (!Array.isArray(reviewed) || reviewed.length !== details.claims.length)
+    throw new Error("Topic memory requires a separate assessment for every delivered memory claim");
+  const seen = /* @__PURE__ */ new Set();
+  for (const claim of details.claims) {
+    if (claim.deliveryBodySha256 !== receipt2.bodySha256 || !receipt2.sources.some(
+      (source) => source.path === claim.sourcePath && source.sha256 === claim.sourceHash
+    ))
+      throw new Error("Topic memory claim does not reference the delivered evidence version");
+    const assessment = reviewed.find((item) => item.bindingId === claim.bindingId);
+    if (!assessment || seen.has(claim.bindingId) || assessment.assessment !== "supported" || assessment.memoryClaimSha256 !== digest(JSON.stringify(claim)))
+      throw new Error("Topic memory claim lacks its exact supported scope assessment");
+    seen.add(claim.bindingId);
+    if (!Array.isArray(assessment.evidence) || !assessment.evidence.some(
+      (ref) => ref.path === claim.sourcePath && ref.sha256 === claim.sourceHash && receipt2.sources.some(
+        (source) => source.path === ref.path && source.sha256 === ref.sha256 && source.readReceiptIds.includes(ref.readReceiptId)
+      )
+    ))
+      throw new Error("Topic memory scope assessment lacks a delivered read reference");
+  }
+  return details.claims;
+}
+init_config();
+init_runtime_host();
+var EXPERIENCE_VERSION = 1;
+var EXPERIENCE_LIMITS = Object.freeze({
+  maxRecords: 128,
+  maxFileBytes: 512 * 1024,
+  maxSummaryChars: 1200,
+  maxReasonChars: 600,
+  maxTags: 16,
+  maxArtifacts: 16,
+  maxSources: 16,
+  maxObservationIds: 8,
+  maxJobIds: 8,
+  maxWorkflowSpecDiffs: 16,
+  maxQcMetrics: 24,
+  maxQcValues: 128,
+  maxModelSummaryChars: 500,
+  maxSearchResults: 24,
+  maxHostIdChars: 64,
+  maxProjectChars: 96,
+  maxWorkflowChars: 180,
+  maxSchedulerChars: 32,
+  maxRevisionChars: 180,
+  maxSchedulerJobIdChars: 180,
+  maxQueryChars: 200
+});
+var HASH = (value) => createHash4("sha256").update(value).digest("hex");
+var now = () => (/* @__PURE__ */ new Date()).toISOString();
+function text(value, limit) {
+  if (typeof value !== "string" && typeof value !== "number") return "";
+  return String(value).normalize("NFKC").replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/(?:bearer\s+)[^\s,;"']+/gi, "Bearer [redacted]").replace(
+    /(["']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret|authorization|cookie)["']?\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+    "$1[redacted]"
+  ).replace(/https?:\/\/[^\s<>"]+/gi, (raw) => {
+    try {
+      const url = new URL(raw);
+      url.username = "";
+      url.password = "";
+      url.search = "";
+      url.hash = "";
+      return url.toString();
+    } catch {
+      return "[URL omitted]";
+    }
+  }).trim().slice(0, limit);
+}
+function id(value, label2, limit = 180) {
+  const result2 = text(value, limit);
+  if (!result2) throw new Error(`${label2} is required`);
+  if (/[\\/]/.test(result2) || result2 === "." || result2 === "..") throw new Error(`Invalid ${label2}`);
+  return result2;
+}
+function projectKey(value) {
+  const project = text(value, EXPERIENCE_LIMITS.maxProjectChars).toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(project)) throw new Error("Invalid experience project");
+  return project;
+}
+function hostKey(value) {
+  const host = text(value, EXPERIENCE_LIMITS.maxHostIdChars).toLowerCase();
+  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(host)) throw new Error("Invalid experience host");
+  return host;
+}
+function vaultKey(value) {
+  const vault = text(value, 64).toLowerCase();
+  if (!/^[a-f0-9]{24}$/.test(vault)) throw new Error("Invalid experience binding");
+  return vault;
+}
+function hash(value) {
+  const result2 = text(value, 128).toLowerCase();
+  return /^[a-f0-9]{64}$/.test(result2) ? result2 : null;
+}
+function opaqueRef(value, limit = 180) {
+  const result2 = text(value, limit);
+  if (!result2 || /[\\/]/.test(result2)) return "";
+  return result2;
+}
+function boundedStringList(value, limit) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => text(item, 240)).filter(Boolean))].slice(0, limit);
+}
+function finiteNonNegative(value, maximum = 1e12) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > maximum) return null;
+  return value;
+}
+function finiteNumber(value, maximum = 1e12) {
+  if (typeof value !== "number" || !Number.isFinite(value) || Math.abs(value) > maximum) return null;
+  return value;
+}
+function normalizeExitCode(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= -1 && value <= 255 ? value : null;
+}
+function normalizeRepair(value) {
+  if (typeof value === "boolean") return { succeeded: value };
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const item = value;
+  const succeeded = item.succeeded === true || item.success === true;
+  const summary = text(item.summary, 400) || null;
+  const observationId = opaqueRef(item.observationId, 180) || null;
+  if (item.succeeded !== void 0 && typeof item.succeeded !== "boolean" || item.success !== void 0 && typeof item.success !== "boolean")
+    return null;
+  return {
+    succeeded,
+    ...summary ? { summary } : {},
+    ...observationId ? { observationId } : {}
+  };
+}
+function normalizeDiffValue(value) {
+  if (value === null || typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) && Math.abs(value) <= 1e12 ? value : void 0;
+  if (typeof value === "string") return text(value, 240) || null;
+  return void 0;
+}
+function normalizeWorkflowSpecDiff(value) {
+  let entries = [];
+  if (Array.isArray(value)) entries = value;
+  else if (value && typeof value === "object") {
+    entries = Object.entries(value).map(([path, after]) => ({ path, after }));
+  }
+  const result2 = [];
+  for (const entry of entries.slice(0, EXPERIENCE_LIMITS.maxWorkflowSpecDiffs)) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const item = entry;
+    const path = text(item.path ?? item.field ?? item.key, 180);
+    if (!path || /[\\]/.test(path)) continue;
+    const before = normalizeDiffValue(item.before);
+    const after = normalizeDiffValue(item.after ?? item.value);
+    if (before === void 0 && after === void 0) continue;
+    result2.push({
+      path,
+      ...before === void 0 ? {} : { before },
+      ...after === void 0 ? {} : { after }
+    });
+  }
+  return result2;
+}
+function normalizeResourceUse(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const result2 = {};
+  for (const [key, raw] of Object.entries(value).slice(0, 32)) {
+    const name = text(key, 64);
+    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(name) || /(token|secret|password|credential|command|output|path|url)/i.test(name))
+      continue;
+    const number = finiteNonNegative(raw);
+    if (number !== null) result2[name] = number;
+    if (Object.keys(result2).length >= 16) break;
+  }
+  return result2;
+}
+function normalizeQcMetrics(value) {
+  let entries = [];
+  if (Array.isArray(value)) {
+    entries = value.map((entry) => ["", entry]);
+  } else if (value && typeof value === "object") {
+    entries = Object.entries(value);
+  }
+  const result2 = [];
+  for (const [mapName, raw] of entries.slice(0, EXPERIENCE_LIMITS.maxQcMetrics)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const item = raw;
+    const name = text(item.name ?? mapName, 120);
+    if (!name) continue;
+    const unit = text(item.unit, 32) || null;
+    const valueNumber = finiteNonNegative(item.value, 1e12);
+    const count = finiteNonNegative(item.count, 1e9);
+    const distributionInput = item.distribution && typeof item.distribution === "object" ? item.distribution : item;
+    const distribution = {};
+    for (const [rawKey, rawValue] of Object.entries(distributionInput).slice(0, 16)) {
+      const key = text(rawKey, 32);
+      if (!/^[A-Za-z][A-Za-z0-9_.-]{0,31}$/.test(key) || ["count", "name", "unit", "value", "values"].includes(key))
+        continue;
+      const number = finiteNumber(rawValue, 1e12);
+      if (number !== null) distribution[key] = number;
+    }
+    const distributionCount = finiteNonNegative(distributionInput.count, 1e9);
+    if (distributionCount !== null) distribution.count = distributionCount;
+    const values = Array.isArray(item.values) ? item.values.map((entry) => finiteNumber(entry, 1e12)).filter((entry) => entry !== null).slice(0, EXPERIENCE_LIMITS.maxQcValues) : [];
+    if (valueNumber === null && count === null && Object.keys(distribution).length === 0 && values.length === 0)
+      continue;
+    result2.push({
+      name,
+      ...unit ? { unit } : {},
+      ...valueNumber === null ? {} : { value: valueNumber },
+      ...count === null ? {} : { count },
+      ...Object.keys(distribution).length ? { distribution } : {},
+      ...values.length ? { values } : {}
+    });
+  }
+  return result2;
+}
+function normalizeArtifact(value) {
+  if (!value || typeof value !== "object") return null;
+  const item = value;
+  const sha2562 = hash(item.sha256);
+  if (!sha2562) return null;
+  const bytes = typeof item.bytes === "number" && Number.isSafeInteger(item.bytes) && item.bytes >= 0 ? item.bytes : void 0;
+  const pathValue = text(item.path, 240).replaceAll("\\", "/");
+  const safePath = pathValue && !isAbsolute2(pathValue) && !pathValue.split("/").includes("..") && !/(?:^|\/)(?:\.env(?:\.[^/]*)?|auth\.json|credentials(?:\.json)?|\.ssh|\.git)(?:\/|$)/i.test(pathValue) ? pathValue : "";
+  return {
+    ...safePath ? { path: safePath } : {},
+    sha256: sha2562,
+    ...bytes === void 0 ? {} : { bytes }
+  };
+}
+function normalizeArtifactRefs(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(normalizeArtifact).filter((item) => Boolean(item)).slice(0, EXPERIENCE_LIMITS.maxArtifacts);
+}
+function normalizeWorkflow(value) {
+  const result2 = text(value, EXPERIENCE_LIMITS.maxWorkflowChars);
+  return result2 || null;
+}
+function normalizeWorkflowRevision(value) {
+  const result2 = text(value, EXPERIENCE_LIMITS.maxRevisionChars);
+  return result2 || null;
+}
+function normalizeScheduler(value) {
+  const result2 = text(value, EXPERIENCE_LIMITS.maxSchedulerChars).toLowerCase();
+  return result2 && /^[a-z][a-z0-9._-]{0,31}$/.test(result2) ? result2 : null;
+}
+function normalizeSchedulerJobId(value) {
+  return opaqueRef(value, EXPERIENCE_LIMITS.maxSchedulerJobIdChars) || null;
+}
+function normalizeProvenance(input) {
+  if (!input || typeof input !== "object") throw new Error("Experience provenance is required");
+  const item = input;
+  const manifestSha256 = hash(item.manifestSha256 ?? item.manifestHash);
+  const artifactHashes = Array.isArray(item.artifactHashes) ? item.artifactHashes.map(normalizeArtifact).filter((value) => Boolean(value)).slice(0, EXPERIENCE_LIMITS.maxArtifacts) : [];
+  const runId = opaqueRef(item.runId);
+  const observationId = opaqueRef(item.observationId);
+  const receiptId = opaqueRef(item.receiptId);
+  const result2 = {
+    ...runId ? { runId } : {},
+    ...observationId ? { observationId } : {},
+    ...receiptId ? { receiptId } : {},
+    ...manifestSha256 ? { manifestSha256 } : {},
+    ...artifactHashes.length ? { artifactHashes } : {}
+  };
+  if (!result2.runId && !result2.receiptId && !result2.manifestSha256 && !result2.artifactHashes?.length)
+    throw new Error("Experience provenance must reference a host receipt or manifest");
+  return result2;
+}
+function blank(vaultId, project, hostId) {
+  return {
+    version: EXPERIENCE_VERSION,
+    vaultId,
+    project,
+    hostId,
+    revision: 0,
+    updatedAt: now(),
+    records: []
+  };
+}
+function validateDocument(value, vaultId, project, hostId) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Corrupt experience document");
+  const item = value;
+  if (item.version !== EXPERIENCE_VERSION || item.vaultId !== vaultId || item.project !== project || item.hostId !== hostId)
+    throw new Error("Experience binding mismatch");
+  if (!Number.isSafeInteger(item.revision) || Number(item.revision) < 0 || !Array.isArray(item.records))
+    throw new Error("Corrupt experience document");
+  if (item.records.length > EXPERIENCE_LIMITS.maxRecords) throw new Error("Experience record limit exceeded");
+  return {
+    version: EXPERIENCE_VERSION,
+    vaultId,
+    project,
+    hostId,
+    revision: Number(item.revision),
+    updatedAt: text(item.updatedAt, 40) || now(),
+    records: item.records.map((record32) => normalizeRecord(record32, vaultId, project, hostId))
+  };
+}
+function normalizeRecord(value, vaultId, project, hostId) {
+  if (!value || typeof value !== "object") throw new Error("Invalid experience record");
+  const item = value;
+  const status = item.status === "verified" ? "verified" : item.status === "observed" ? "observed" : null;
+  const outcome = ["success", "failure", "blocked", "unknown"].includes(String(item.outcome)) ? item.outcome : null;
+  if (!status || !outcome || item.navigationOnly !== true || item.evidenceEligible !== false || item.instructionEligible !== false)
+    throw new Error("Invalid experience record safety flags");
+  const result2 = {
+    id: id(item.id, "experience id"),
+    version: EXPERIENCE_VERSION,
+    vaultId,
+    project,
+    hostId,
+    jobId: id(item.jobId, "jobId"),
+    featureKey: id(item.featureKey, "featureKey", 240),
+    topicId: text(item.topicId, 180) || null,
+    summary: text(item.summary, EXPERIENCE_LIMITS.maxSummaryChars),
+    reason: text(item.reason, EXPERIENCE_LIMITS.maxReasonChars) || null,
+    outcome,
+    status,
+    observedAt: text(item.observedAt, 40) || now(),
+    observationIds: boundedStringList(item.observationIds, EXPERIENCE_LIMITS.maxObservationIds),
+    observationCount: Number.isSafeInteger(item.observationCount) && Number(item.observationCount) > 0 ? Number(item.observationCount) : 1,
+    jobIds: (() => {
+      const values = boundedStringList(item.jobIds, EXPERIENCE_LIMITS.maxJobIds);
+      return values.length ? values : [id(item.jobId, "jobId")];
+    })(),
+    jobCount: Number.isSafeInteger(item.jobCount) && Number(item.jobCount) > 0 ? Math.min(Number(item.jobCount), EXPERIENCE_LIMITS.maxJobIds) : 1,
+    failureSignature: text(item.failureSignature, 240) || null,
+    exitCode: normalizeExitCode(item.exitCode),
+    failedStep: text(item.failedStep, 240) || null,
+    repair: normalizeRepair(item.repair),
+    workflowSpecDiff: normalizeWorkflowSpecDiff(item.workflowSpecDiff ?? item.workflowSpecDiffs),
+    resourceUse: normalizeResourceUse(item.resourceUse),
+    qcMetrics: normalizeQcMetrics(item.qcMetrics ?? item.qc ?? item.qcMetricDistribution),
+    modelSummary: text(item.modelSummary, EXPERIENCE_LIMITS.maxModelSummaryChars) || null,
+    modelGenerated: item.modelGenerated === true && Boolean(text(item.modelSummary, EXPERIENCE_LIMITS.maxModelSummaryChars)),
+    contractHash: hash(item.contractHash),
+    workflow: normalizeWorkflow(item.workflow),
+    workflowRevision: normalizeWorkflowRevision(item.workflowRevision ?? item.workflowRevisionId),
+    scheduler: normalizeScheduler(item.scheduler),
+    schedulerJobId: normalizeSchedulerJobId(item.schedulerJobId),
+    artifactRefs: normalizeArtifactRefs(item.artifactRefs ?? item.artifacts),
+    provenance: normalizeProvenance(item.provenance || {}),
+    tags: boundedStringList(item.tags, EXPERIENCE_LIMITS.maxTags),
+    sourceRefs: boundedStringList(item.sourceRefs, EXPERIENCE_LIMITS.maxSources),
+    navigationOnly: true,
+    evidenceEligible: false,
+    instructionEligible: false,
+    createdAt: text(item.createdAt, 40) || now(),
+    updatedAt: text(item.updatedAt, 40) || now()
+  };
+  if (!result2.summary) throw new Error("Experience summary is required");
+  return result2;
+}
+function pathFor(directory, vaultId, project, hostId) {
+  if (!isAbsolute2(directory)) throw new Error("Experience directory must be absolute");
+  return join3(resolve2(directory), vaultId, "experience", project, `${hostId}.json`);
+}
+async function ensureSafePath(directory, path) {
+  const root = resolve2(directory);
+  const relativePath = relative2(root, resolve2(path));
+  if (isAbsolute2(relativePath) || relativePath === ".." || relativePath.startsWith(`..${sep2}`))
+    throw new Error("Experience path escapes knowledge directory");
+  let current = root;
+  for (const segment of relativePath.split(sep2).slice(0, -1)) {
+    current = join3(current, segment);
+    try {
+      const stat42 = await lstat(current);
+      if (stat42.isSymbolicLink()) throw new Error("Experience path cannot traverse symlinks");
+      if (!stat42.isDirectory()) throw new Error("Experience path parent must be a directory");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      await mkdir2(current, { mode: 448 });
+    }
+  }
+}
+async function readDocument(path, vaultId, project, hostId) {
+  try {
+    const stat42 = await lstat(path);
+    if (stat42.isSymbolicLink() || !stat42.isFile()) throw new Error("Experience file must be a regular file");
+    if (stat42.size > EXPERIENCE_LIMITS.maxFileBytes) throw new Error("Experience file exceeds size limit");
+    return validateDocument(JSON.parse(await readFile3(path, "utf8")), vaultId, project, hostId);
+  } catch (error) {
+    if (error.code === "ENOENT") return blank(vaultId, project, hostId);
+    if (error instanceof SyntaxError) throw new Error("Corrupt experience document");
+    throw error;
+  }
+}
+async function atomicWrite(path, value) {
+  const temporary = `${path}.${randomUUID2()}.tmp`;
+  try {
+    await writeFile2(temporary, `${JSON.stringify(value, null, 2)}
+`, { flag: "wx", mode: 384 });
+    await rename2(temporary, path);
+  } finally {
+    await unlink(temporary).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+  }
+}
+function tokenSet(value) {
+  return new Set(
+    value.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((token) => token.length > 1)
+  );
+}
+function scoreRecord(record32, query) {
+  if (!query) return 0;
+  const queryTokens = tokenSet(query);
+  const fields = [
+    record32.featureKey,
+    record32.summary,
+    record32.reason || "",
+    record32.failureSignature || "",
+    record32.failedStep || "",
+    record32.modelSummary || "",
+    record32.workflow || "",
+    record32.workflowRevision || "",
+    record32.scheduler || "",
+    record32.schedulerJobId || "",
+    record32.hostId,
+    ...record32.tags,
+    record32.topicId || ""
+  ];
+  const recordTokens = tokenSet(fields.join(" "));
+  let score = 0;
+  for (const token of queryTokens) if (recordTokens.has(token)) score++;
+  if (record32.featureKey.toLowerCase().includes(query.toLowerCase())) score += 2;
+  return score;
+}
+function createExperienceStore(options) {
+  const vaultId = vaultKey(options.binding?.vaultId);
+  const project = projectKey(options.project);
+  const hostId = hostKey(options.hostId);
+  const directory = options.directory === void 0 || options.directory === null ? knowledgeDirectory() : options.directory;
+  if (!directory) throw new Error("Knowledge directory is not configured");
+  const path = pathFor(directory, vaultId, project, hostId);
+  const read = async () => {
+    await ensureSafePath(directory, path);
+    return readDocument(path, vaultId, project, hostId);
+  };
+  const mutate = async (expectedRevision, updater) => runRuntimeExclusive("experience-store", path, async () => {
+    await ensureSafePath(directory, path);
+    const current = await readDocument(path, vaultId, project, hostId);
+    if (expectedRevision !== void 0 && current.revision !== expectedRevision)
+      throw new Error("Experience revision changed");
+    const next = updater(structuredClone(current));
+    if (next.noop) return { document: current, result: next.result };
+    const candidate = {
+      ...next.document,
+      version: EXPERIENCE_VERSION,
+      vaultId,
+      project,
+      hostId,
+      revision: current.revision + 1,
+      updatedAt: now(),
+      records: next.document.records.slice(-EXPERIENCE_LIMITS.maxRecords)
+    };
+    const document = validateDocument(candidate, vaultId, project, hostId);
+    await atomicWrite(path, document);
+    return { document, result: next.result };
+  });
+  return {
+    path,
+    scope: { vaultId, project, hostId },
+    read,
+    record: async (input, expectedRevision) => {
+      if (!input || typeof input !== "object") throw new Error("Invalid experience input");
+      const rawInput = input;
+      const jobId = id(input.jobId || rawInput.job?.id || rawInput.terminalJob?.id, "jobId");
+      const observation = input.observation || input.hostObservation;
+      const featureKey = id(
+        input.featureKey || observation?.featureKey || input.failureSignature || observation?.failureSignature || input.failedStep || input.step,
+        "featureKey",
+        240
+      );
+      if (!observation || typeof observation !== "object")
+        throw new Error("Terminal host observation is required");
+      const observationId = id(observation.id, "observation id");
+      const outcome = observation.outcome;
+      if (!["success", "failure", "blocked", "unknown"].includes(outcome))
+        throw new Error("Invalid experience outcome");
+      const provenance2 = normalizeProvenance(input.provenance || observation.provenance || {});
+      const summary = text(input.summary, EXPERIENCE_LIMITS.maxSummaryChars);
+      if (!summary) throw new Error("Experience summary is required");
+      const failureSignature = text(input.failureSignature ?? observation.failureSignature, 240) || null;
+      const exitCode = normalizeExitCode(input.exitCode ?? observation.exitCode);
+      const failedStep = text(input.failedStep ?? input.step ?? observation.failedStep ?? observation.step, 240) || null;
+      const repair = normalizeRepair(
+        input.repair ?? observation.repair ?? (input.repairSucceeded === true || observation.repairSucceeded === true ? { succeeded: true } : null)
+      );
+      const repairSucceeded = input.repairSucceeded === true || observation.repairSucceeded === true || repair?.succeeded === true;
+      const workflowSpecDiff = normalizeWorkflowSpecDiff(
+        input.workflowSpecDiff ?? observation.workflowSpecDiff
+      );
+      const resourceUse = normalizeResourceUse(input.resourceUse ?? observation.resourceUse);
+      const qcMetrics = normalizeQcMetrics(
+        input.qcMetrics ?? input.qc ?? observation.qcMetrics ?? observation.qc
+      );
+      const modelSummary = text(input.modelSummary ?? observation.modelSummary, EXPERIENCE_LIMITS.maxModelSummaryChars) || null;
+      const contractHash = hash(input.contractHash ?? observation.contractHash);
+      const workflow = normalizeWorkflow(input.workflow ?? observation.workflow);
+      const workflowRevision = normalizeWorkflowRevision(
+        input.workflowRevision ?? observation.workflowRevision
+      );
+      const scheduler = normalizeScheduler(input.scheduler ?? observation.scheduler);
+      const schedulerJobId = normalizeSchedulerJobId(input.schedulerJobId ?? observation.schedulerJobId);
+      const artifactRefs = normalizeArtifactRefs(input.artifactRefs ?? observation.artifactRefs);
+      const observedAt = text(observation.observedAt, 40) || now();
+      const sanitizedTags = boundedStringList(input.tags, EXPERIENCE_LIMITS.maxTags);
+      const sanitizedSources = boundedStringList(input.sourceRefs, EXPERIENCE_LIMITS.maxSources);
+      const key = featureKey;
+      const out = await mutate(expectedRevision, (document) => {
+        const matching = document.records.filter((record4) => record4.featureKey === featureKey);
+        const existing = document.records.find((record4) => record4.id === HASH(key).slice(0, 32));
+        if (existing?.observationIds.includes(observationId))
+          return { document, result: { classification: "duplicate", record: existing }, noop: true };
+        const observations = new Set(matching.flatMap((record4) => record4.observationIds));
+        observations.add(observationId);
+        const jobs = new Set(
+          matching.flatMap((record4) => record4.jobIds.length ? record4.jobIds : [record4.jobId])
+        );
+        jobs.add(jobId);
+        const status = repairSucceeded || jobs.size >= 2 ? "verified" : "observed";
+        const record32 = existing || {
+          id: HASH(key).slice(0, 32),
+          version: EXPERIENCE_VERSION,
+          vaultId,
+          project,
+          hostId,
+          jobId,
+          featureKey,
+          topicId: text(input.topicId, 180) || null,
+          summary,
+          // A failure reason may be supplied as summary context, but raw output is never accepted.
+          reason: text(input.reason, EXPERIENCE_LIMITS.maxReasonChars) || null,
+          outcome,
+          status,
+          observedAt,
+          observationIds: [],
+          observationCount: 0,
+          jobIds: [],
+          jobCount: 0,
+          failureSignature,
+          exitCode,
+          failedStep,
+          repair,
+          workflowSpecDiff,
+          resourceUse,
+          qcMetrics,
+          modelSummary,
+          modelGenerated: Boolean(modelSummary),
+          contractHash,
+          workflow,
+          workflowRevision,
+          scheduler,
+          schedulerJobId,
+          artifactRefs,
+          provenance: provenance2,
+          tags: sanitizedTags,
+          sourceRefs: sanitizedSources,
+          navigationOnly: true,
+          evidenceEligible: false,
+          instructionEligible: false,
+          createdAt: now(),
+          updatedAt: now()
+        };
+        record32.observationIds = [...observations].slice(-EXPERIENCE_LIMITS.maxObservationIds);
+        record32.observationCount = Math.min(observations.size, EXPERIENCE_LIMITS.maxObservationIds);
+        record32.jobIds = [...jobs].slice(-EXPERIENCE_LIMITS.maxJobIds);
+        record32.jobCount = Math.min(jobs.size, EXPERIENCE_LIMITS.maxJobIds);
+        record32.status = status;
+        record32.updatedAt = now();
+        record32.observedAt = observedAt;
+        record32.outcome = outcome;
+        record32.summary = summary;
+        record32.provenance = provenance2;
+        record32.tags = sanitizedTags;
+        record32.sourceRefs = sanitizedSources;
+        if (failureSignature) record32.failureSignature = failureSignature;
+        if (input.exitCode !== void 0 || observation.exitCode !== void 0) record32.exitCode = exitCode;
+        if (failedStep) record32.failedStep = failedStep;
+        if (repair) record32.repair = repair;
+        if (input.workflowSpecDiff !== void 0 || observation.workflowSpecDiff !== void 0)
+          record32.workflowSpecDiff = workflowSpecDiff;
+        if (input.resourceUse !== void 0 || observation.resourceUse !== void 0)
+          record32.resourceUse = resourceUse;
+        if (input.qcMetrics !== void 0 || input.qc !== void 0 || observation.qcMetrics !== void 0 || observation.qc !== void 0)
+          record32.qcMetrics = qcMetrics;
+        if (modelSummary) {
+          record32.modelSummary = modelSummary;
+          record32.modelGenerated = true;
+        }
+        if (contractHash) record32.contractHash = contractHash;
+        if (workflow) record32.workflow = workflow;
+        if (workflowRevision) record32.workflowRevision = workflowRevision;
+        if (scheduler) record32.scheduler = scheduler;
+        if (schedulerJobId) record32.schedulerJobId = schedulerJobId;
+        if (artifactRefs.length) record32.artifactRefs = artifactRefs;
+        if (!existing) document.records.unshift(record32);
+        return {
+          document,
+          result: { classification: existing ? "updated" : "new", record: record32 }
+        };
+      });
+      return { ...out.result, revision: out.document.revision, record: out.result.record };
+    },
+    search: async (query = "", options2 = {}) => {
+      const document = await read();
+      const q = text(query, EXPERIENCE_LIMITS.maxQueryChars);
+      const limit = Math.min(
+        EXPERIENCE_LIMITS.maxSearchResults,
+        Math.max(1, Math.floor(options2.limit || EXPERIENCE_LIMITS.maxSearchResults))
+      );
+      const workflowFilter = normalizeWorkflow(options2.workflow);
+      const hostFilter = options2.hostId === void 0 ? null : hostKey(options2.hostId);
+      const failureFilter = text(options2.failureSignature, 240).toLowerCase() || null;
+      const records = document.records.filter(
+        (record32) => !workflowFilter || record32.workflow?.toLowerCase() === workflowFilter.toLowerCase()
+      ).filter((record32) => !hostFilter || record32.hostId === hostFilter).filter((record32) => !failureFilter || record32.failureSignature?.toLowerCase() === failureFilter).filter((record32) => options2.includeObserved !== false || record32.status === "verified").map((record32) => ({ record: record32, score: scoreRecord(record32, q) })).filter((hit) => !q || hit.score > 0).sort(
+        (left, right) => right.score - left.score || right.record.updatedAt.localeCompare(left.record.updatedAt) || left.record.id.localeCompare(right.record.id)
+      ).slice(0, limit);
+      return {
+        revision: document.revision,
+        query: q,
+        records,
+        navigationOnly: true,
+        evidenceEligible: false,
+        instructionEligible: false
+      };
+    }
+  };
+}
+async function searchExperiences(options) {
+  const {
+    query = "",
+    limit,
+    includeObserved,
+    workflow,
+    failureSignature,
+    hostFilter,
+    ...storeOptions
+  } = options;
+  const store = createExperienceStore(storeOptions);
+  return store.search(query, { limit, includeObserved, workflow, hostId: hostFilter, failureSignature });
+}
+init_config();
+var SESSION_PROJECT_ENTRY = "drone-session-project-v1";
+var LEGACY_DEFAULT_PROJECT = "research-workbench";
+var SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+var RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
+function isProjectSlug(value) {
+  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED.test(value);
+}
+function normalizeProjectSlug(input) {
+  if (typeof input !== "string") return null;
+  const slug2 = input.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96).replace(/-+$/g, "");
+  return isProjectSlug(slug2) ? slug2 : null;
+}
+function workspaceProjectId(cwd, configured) {
+  return projectIdentity(cwd, isProjectSlug(configured) ? configured : void 0);
+}
+function dailyWorkspaceDir(home = homedir()) {
+  return join4(home, ".drone", "daily");
+}
+function samePath(a, b) {
+  const left = resolve3(a).replace(/[\\/]+$/, "");
+  const right = resolve3(b).replace(/[\\/]+$/, "");
+  return process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+function isDailyWorkspace(cwd, home) {
+  return samePath(cwd, dailyWorkspaceDir(home));
+}
+function sessionProjectFromEntries(entries) {
+  if (!Array.isArray(entries)) return null;
+  let project = null;
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || entry.customType !== SESSION_PROJECT_ENTRY) continue;
+    if (entry.type !== void 0 && entry.type !== "custom") continue;
+    const value = entry.data?.project;
+    if (value === null) project = null;
+    else if (isProjectSlug(value)) project = value;
+  }
+  return project;
+}
+function sessionEntriesOf(ctx) {
+  try {
+    const manager = ctx?.sessionManager;
+    const entries = manager?.getBranch?.() ?? manager?.getEntries?.();
+    return Array.isArray(entries) ? entries : [];
+  } catch {
+    return [];
+  }
+}
+function resolveProjectIdentity(input) {
+  const daily = isDailyWorkspace(input.cwd, input.home);
+  const requestedText = typeof input.requested === "string" ? input.requested.trim() : "";
+  const requested = requestedText || null;
+  let project;
+  let source;
+  const session = daily ? sessionProjectFromEntries(input.sessionEntries) : null;
+  if (session) {
+    project = session;
+    source = "session";
+  } else if (isProjectSlug(input.configured)) {
+    project = input.configured;
+    source = "workspace-config";
+  } else {
+    project = workspaceProjectId(input.cwd);
+    source = "workspace";
+  }
+  const ignoredRequest = requested !== null && normalizeProjectSlug(requested) !== project;
+  return { project, source, daily, requested, ignoredRequest };
+}
+async function readConfiguredProject(cwd) {
+  try {
+    const parsed = JSON.parse(await readFile4(join4(cwd, ".pi", "research-workspace.json"), "utf8"));
+    if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
+      return parsed.knowledgeProjectId;
+  } catch {
+  }
+  return void 0;
+}
+async function resolveWorkspaceProject(input) {
+  return resolveProjectIdentity({ ...input, configured: await readConfiguredProject(input.cwd) });
+}
+function runProject(metadataProject, resolution) {
+  if (isProjectSlug(metadataProject) && metadataProject !== LEGACY_DEFAULT_PROJECT) return metadataProject;
+  return resolution.project;
+}
+function projectNotice(resolution) {
+  if (!resolution.ignoredRequest) return null;
+  const how = resolution.daily ? "In the daily space the user picks a project per session with /project <slug>." : "The project is fixed by the current workspace (knowledgeProjectId in .pi/research-workspace.json).";
+  return `Requested project "${resolution.requested}" was ignored; using "${resolution.project}". ${how}`;
+}
+function describeProject(resolution) {
+  const notice = projectNotice(resolution);
+  return { project: resolution.project, source: resolution.source, ...notice ? { notice } : {} };
+}
+function result(data) {
+  return {
+    content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    details: data
+  };
+}
+async function currentProject(cwd, ctx) {
+  return (await resolveWorkspaceProject({ cwd, sessionEntries: sessionEntriesOf(ctx) })).project;
+}
+function explainerTopicId(value, title = "research-topic") {
+  const base2 = String(value || title).normalize("NFKC").toLowerCase().replace(/[-_]20\d{6,14}$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96);
+  return base2 || "research-topic";
+}
+function sessionIdentity(ctx) {
+  return ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || null;
+}
+function continuationHint(value) {
+  return /(?:previous|prior|last|earlier|continue|resume|what about|how about|why|then|it|that|those|之前|上个|继续|刚才|它|那个|那它|为什么|怎么|如何|还有|然后)/i.test(
+    String(value || "")
+  );
+}
+function continuesTopic(prompt, topic) {
+  if (!topic) return false;
+  const text43 = String(prompt || "").trim();
+  if (!text43) return true;
+  if (/(?:switch|new topic|different topic|换个|另一个|新的主题|切换主题)/i.test(text43)) return false;
+  if (continuationHint(text43)) return true;
+  const lower = text43.toLowerCase();
+  return [topic.id, topic.title, ...topic.aliases || [], ...topic.entities || []].filter((value) => typeof value === "string" && value.trim().length >= 2).some((value) => lower.includes(value.toLowerCase()));
+}
+init_files();
+init_flow_cards();
+init_review_policy();
+init_semantic_settings();
+init_service();
+var specialist_delivery_exports = {};
+__export(specialist_delivery_exports, {
+  createSpecialistDelivery: () => createSpecialistDelivery,
+  saveSpecialistExplainer: () => saveSpecialistExplainer,
+  validateSpecialistHtml: () => validateSpecialistHtml
+});
+init_config();
+init_runtime_host();
+var contained = (root, path) => {
+  const rel = relative5(root, path);
+  return !isAbsolute4(rel) && rel !== ".." && !rel.startsWith(`..${sep5}`);
+};
+function validateSpecialistHtml(html) {
+  if (typeof html !== "string" || html.length > 64e3 || !/<html\b/i.test(html) || !/<body\b/i.test(html))
+    throw new Error("Explainer must be one bounded HTML document");
+  if (/<(?:script|iframe|frame|object|embed|base|form|link)\b|\bon[a-z]+\s*=|<meta\b[^>]*http-equiv\s*=|javascript\s*:|@import|url\s*\(/i.test(
+    html
+  ))
+    throw new Error("Explainer must be static and self-contained; active content was refused");
+  if (/\bsrc\s*=\s*["']?(?!data:image\/)[^\s>]/i.test(html))
+    throw new Error("Explainer external resources are not allowed");
+  return html;
+}
+function createSpecialistDelivery(runtime, bindings) {
+  async function saveSpecialistExplainer2(c, ctx, { runDir, topicId, answer }) {
+    if (answer.status !== "completed") return answer;
+    const html = validateSpecialistHtml(answer.data.html), config = await runtime.loadWorkspaceConfig(ctx.cwd);
+    const root = await realpath3(config.resultsRoot), run2 = await realpath3(resolve5(ctx.cwd, runDir || ""));
+    if (!contained(root, run2) || relative5(root, run2).split(sep5).length !== 2 || !run2.split(sep5).at(-1).startsWith("run-") || !(await lstat4(join10(run2, "metadata.json"))).isFile())
+      throw new Error("Explainer destination must be an existing research run");
+    return bindings.withKnowledgeBinding(c.binding, async () => {
+      const artifactPath = join10(run2, `show-me-${randomUUID7()}.html`);
+      const sources = await c.service.evidenceReceipts(c.ticket, ctx.cwd, answer.data.source_paths);
+      await mkdir5(run2, { recursive: true });
+      await writeFile5(artifactPath, html, { flag: "wx", mode: 384 });
+      const archived = await runtime.publishExplainer({
+        cwd: ctx.cwd,
+        project: c.project,
+        topicId,
+        title: answer.data.title,
+        artifactPath,
+        summary: answer.data.summary,
+        sources: sources.sources
+      });
+      return {
+        ...archived,
+        result_file: artifactPath,
+        producer: "knowledge-explainer",
+        skill: answer.skillName || "show-me"
+      };
+    });
+  }
+  return { saveSpecialistExplainer: saveSpecialistExplainer2 };
+}
+var { saveSpecialistExplainer } = createSpecialistDelivery(compatibilityKnowledgeRuntimeHost, {
+  withKnowledgeBinding
+});
+init_specialist_host();
+var specialists_exports = {};
+__export(specialists_exports, {
+  createKnowledgeSpecialistTools: () => createKnowledgeSpecialistTools,
+  createKnowledgeSpecialists: () => createKnowledgeSpecialists,
+  knowledgeReadStart: () => knowledgeReadStart,
+  shouldOrientKnowledge: () => shouldOrientKnowledge
+});
+init_config();
+init_files();
+var clean = (value, limit = 120) => [...String(value || "")].map((char) => char.charCodeAt(0) < 32 ? " " : char).join("").trim().slice(0, limit);
+var digest2 = (value) => createHash9("sha256").update(String(value || "")).digest("hex").slice(0, 24);
+function specialistRequestSignature({
+  role,
+  task = "",
+  sourcePaths = [],
+  sourceHashes = [],
+  summary = "",
+  targetPath = null
+} = {}) {
+  return JSON.stringify({
+    role: clean(role, 40),
+    task: clean(task, 4e3),
+    sourcePaths: [
+      ...new Set((Array.isArray(sourcePaths) ? sourcePaths : []).map((p) => clean(p, 512)))
+    ].sort(),
+    sourceHashes: (Array.isArray(sourceHashes) ? sourceHashes : []).map((p) => clean(p, 128)).sort(),
+    summary: digest2(clean(summary, 12e3)),
+    targetPath: targetPath ? clean(targetPath, 512) : null
+  });
+}
+function decideSpecialistRun({
+  role,
+  task = "",
+  sourcePaths = [],
+  targetPath = null,
+  sourceHashes = [],
+  summary = "",
+  automatic = false,
+  mode = "automatic",
+  trusted = true,
+  policy = "read-local",
+  hasEvidence = false,
+  taskNeedsSpecialist,
+  observedNeed,
+  duplicate = false,
+  turnRuns = 0,
+  maxRunsPerTurn = 4,
+  sessionRuns = 0,
+  maxRunsPerSession = 20,
+  active = 0,
+  concurrency = 2,
+  queueLength = 0,
+  queueLimit = 8
+} = {}) {
+  const base2 = {
+    role,
+    signature: specialistRequestSignature({ role, task, sourcePaths, sourceHashes, summary, targetPath })
+  };
+  if (!trusted || policy !== "read-local")
+    return { ...base2, decision: "skip", reasonCode: "permission-denied" };
+  if (mode === "off") return { ...base2, decision: "skip", reasonCode: "mode-disabled" };
+  if (automatic && mode !== "automatic") return { ...base2, decision: "skip", reasonCode: "mode-disabled" };
+  if (duplicate) return { ...base2, decision: "skip", reasonCode: "duplicate-request" };
+  if (taskNeedsSpecialist === false || observedNeed === false)
+    return { ...base2, decision: "skip", reasonCode: "task-does-not-need-specialist" };
+  if (turnRuns >= maxRunsPerTurn) return { ...base2, decision: "skip", reasonCode: "turn-budget-exhausted" };
+  if (sessionRuns >= maxRunsPerSession)
+    return { ...base2, decision: "ask-user", reasonCode: "session-budget-exhausted" };
+  if (automatic && ["evidence", "wiki", "explainer"].includes(role || "") && !hasEvidence)
+    return { ...base2, decision: "skip", reasonCode: "no-evidence" };
+  if (active >= concurrency && queueLength >= queueLimit)
+    return { ...base2, decision: "wait", reasonCode: "queue-full" };
+  return {
+    ...base2,
+    decision: "run",
+    reasonCode: automatic ? "automatic-sequence" : "explicit-delegation"
+  };
+}
+function createSpecialistBudget({
+  maxRunsPerTurn = 4,
+  maxRunsPerSession = 20,
+  maxToolOperations = 80,
+  maxTokensPerTurn = 24e3,
+  maxTokensPerSession = 12e4,
+  maxCostPerTurn = 1,
+  maxCostPerSession = 5
+} = {}) {
+  let turnRuns = 0;
+  let sessionRuns = 0;
+  let toolOperations = 0;
+  let turnTokens = 0;
+  let sessionTokens = 0;
+  let turnCost = 0;
+  let sessionCost = 0;
+  let reservations = 0;
+  let turn = 0;
+  const signatures = /* @__PURE__ */ new Map();
+  const completed = /* @__PURE__ */ new Set();
+  const begin = () => {
+    turn++;
+    turnRuns = 0;
+    turnTokens = 0;
+    turnCost = 0;
+    reservations = 0;
+    signatures.clear();
+  };
+  const configure = (next = {}) => {
+    const integerOr = (value, fallback) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
+    maxRunsPerTurn = Math.min(4, Math.max(1, integerOr(next.maxRunsPerTurn, maxRunsPerTurn)));
+    maxRunsPerSession = Math.min(20, Math.max(1, integerOr(next.maxRunsPerSession, maxRunsPerSession)));
+    maxToolOperations = Math.min(80, Math.max(1, integerOr(next.maxToolOperations, maxToolOperations)));
+    maxTokensPerTurn = Math.min(24e3, Math.max(1, integerOr(next.maxTokensPerTurn, maxTokensPerTurn)));
+    maxTokensPerSession = Math.min(
+      12e4,
+      Math.max(1, integerOr(next.maxTokensPerSession, maxTokensPerSession))
+    );
+    maxCostPerTurn = Math.min(
+      1,
+      Math.max(0, typeof next.maxCostPerTurn === "number" ? next.maxCostPerTurn : maxCostPerTurn)
+    );
+    maxCostPerSession = Math.min(
+      5,
+      Math.max(0, typeof next.maxCostPerSession === "number" ? next.maxCostPerSession : maxCostPerSession)
+    );
+  };
+  const reserve = (signature, reservationTurn = turn, { dedupe = true } = {}) => {
+    if (turnRuns + reservations >= maxRunsPerTurn || sessionRuns + reservations >= maxRunsPerSession)
+      return false;
+    if (signatures.has(signature) || dedupe && completed.has(signature)) return false;
+    reservations++;
+    signatures.set(signature, reservationTurn);
+    return true;
+  };
+  const commit = (signature, reservationTurn = turn) => {
+    if (reservationTurn !== turn || signatures.get(signature) !== reservationTurn) return false;
+    reservations = Math.max(0, reservations - 1);
+    turnRuns++;
+    sessionRuns++;
+    signatures.delete(signature);
+    completed.add(signature);
+    return true;
+  };
+  const release = (signature, reservationTurn = turn) => {
+    if (signatures.get(signature) !== reservationTurn) return false;
+    signatures.delete(signature);
+    reservations = Math.max(0, reservations - 1);
+    return true;
+  };
+  const updateUsage = (usage = {}, usageTurn = turn) => {
+    if (usageTurn !== turn) return false;
+    const nonnegativeFinite = (value) => typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+    const tokens3 = nonnegativeFinite(usage.totalTokens);
+    const cost = nonnegativeFinite(usage.cost);
+    if (tokens3 !== null) {
+      turnTokens += tokens3;
+      sessionTokens += tokens3;
+    }
+    if (cost !== null) {
+      turnCost += cost;
+      sessionCost += cost;
+    }
+    if (turnTokens > maxTokensPerTurn || sessionTokens > maxTokensPerSession)
+      throw new Error("Specialist token budget exhausted");
+    if (turnCost > maxCostPerTurn || sessionCost > maxCostPerSession)
+      throw new Error("Specialist cost budget exhausted");
+    return true;
+  };
+  const addToolOperation = () => {
+    if (toolOperations >= maxToolOperations) return false;
+    toolOperations++;
+    return true;
+  };
+  return {
+    begin,
+    reserve,
+    commit,
+    release,
+    addToolOperation,
+    configure,
+    updateUsage,
+    recordUsage: updateUsage,
+    checkUsage: () => {
+      if (turnTokens >= maxTokensPerTurn || sessionTokens >= maxTokensPerSession || turnCost >= maxCostPerTurn || sessionCost >= maxCostPerSession)
+        throw new Error("Specialist usage budget exhausted");
+      return true;
+    },
+    get snapshot() {
+      return {
+        turn,
+        turnRuns,
+        sessionRuns,
+        toolOperations,
+        reservations,
+        maxRunsPerTurn,
+        maxRunsPerSession,
+        maxToolOperations,
+        turnTokens,
+        sessionTokens,
+        turnCost,
+        sessionCost,
+        maxTokensPerTurn,
+        maxTokensPerSession,
+        maxCostPerTurn,
+        maxCostPerSession
+      };
+    }
+  };
+}
+init_runtime_host();
+init_specialist_host();
+init_ui_state();
+function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
+  const { deliveryContract: deliveryContract22 } = runtime;
+  const { readKnowledgeBinding: readKnowledgeBinding2 } = config;
+  const { knowledgeSpecialistHost: knowledgeSpecialistHost2, specialistQueueSnapshot: specialistQueueSnapshot2, specialistSettings: specialistSettings3, withSpecialistSlot: withSpecialistSlot2 } = specialists;
+  const { noteKnowledgeSpecialist: noteKnowledgeSpecialist2 } = ui;
+  const profiles = {
+    navigator: ["knowledge-navigator", "\u77E5\u8BC6\u5BFC\u822A\u5458"],
+    evidence: ["knowledge-evidence-curator", "\u8BC1\u636E\u6574\u7406\u5458"],
+    wiki: ["knowledge-wiki-editor", "Wiki \u4FEE\u8BA2\u5458"],
+    explainer: ["knowledge-explainer", "Show Me \u8BB2\u89E3\u5458"]
+  };
+  const derived = (path) => /(?:^|\/)(?:Explainers|Runs)\//i.test(path);
+  const brief = (page) => ({
+    path: page.path,
+    hash: page.hash,
+    startLine: page.startLine,
+    endLine: page.endLine,
+    text: page.text,
+    humanReview: page.humanReview,
+    truncated: page.truncated,
+    missing: page.missing
+  });
+  const readSchema = {
+    type: "object",
+    properties: {
+      path: { type: "string", maxLength: 512 },
+      start_line: { type: "integer", minimum: 1 },
+      startLine: { type: "integer", minimum: 1, description: "Compatibility alias; prefer start_line" }
+    },
+    required: ["path"],
+    additionalProperties: false
+  };
+  const searchSchema = {
+    type: "object",
+    properties: { query: { type: "string", minLength: 1, maxLength: 1e3 }, wiki_only: { type: "boolean" } },
+    required: ["query"],
+    additionalProperties: false
+  };
+  function knowledgeReadStart2({ start_line, startLine } = {}) {
+    if (start_line !== void 0 && startLine !== void 0 && start_line !== startLine)
+      throw new Error("Conflicting read ranges");
+    const value = start_line ?? startLine ?? 1;
+    if (!Number.isInteger(value) || value < 1) throw new Error("Invalid read start line");
+    return value;
+  }
+  function shouldOrientKnowledge2(prompt) {
+    const text43 = String(prompt || "").trim();
+    if (!text43 || text43.startsWith("/") || /初始化|取消任务|停止任务/.test(text43)) return false;
+    if (/只读|read[- ]only/i.test(text43) && /复用|既有|已有|reuse|existing/i.test(text43) && !/调用.{0,8}子代理|委派|delegate|specialist/i.test(text43))
+      return false;
+    return !!deliveryContract22(text43) || /比较|对比|分析|综述|compare|analy[sz]|review/i.test(text43) && /论文|文献|研究|证据|方法|软件|papers?|evidence|software/i.test(text43) || /知识库|已有知识|主题.{0,8}(?:知识|进展)|根据.{0,10}(?:文献|笔记)|(?:介绍|解读|讲解).{0,12}(?:论文|文献)|下载.{0,12}(?:软件说明书|说明书|软件文档)|show\s*-?\s*me|\bwiki\b/i.test(
+      text43
+    );
+  }
+  function createKnowledgeSpecialists2(pi, { getCurrent, readOnly = false }) {
+    let epoch = 0, goal = "", oriented = false, handoffs = [], used = /* @__PURE__ */ new Set(), controllers = /* @__PURE__ */ new Set(), decisions = [], budget = createSpecialistBudget();
+    function begin(prompt = "") {
+      for (const c of controllers) c.abort();
+      controllers = /* @__PURE__ */ new Set();
+      epoch++;
+      goal = String(prompt || "").slice(0, 4e3);
+      oriented = false;
+      handoffs = [];
+      decisions = [];
+      used = /* @__PURE__ */ new Set();
+      budget.begin();
+    }
+    async function showMeSkill() {
+      const commands = pi.getCommands?.() || [];
+      const entry = commands.find((item) => item.source === "skill" && item.name === "skill:show-me") || commands.find((item) => item.source === "skill" && item.name === "skill:research-show-me");
+      if (!entry?.sourceInfo?.path) return null;
+      const path = entry.sourceInfo.path, info = await lstat5(path);
+      if (!info.isFile() || info.size > 18e3)
+        throw new Error("Loaded show-me skill exceeds the specialist context budget");
+      return { text: await readFile8(path, "utf8"), name: entry.name.slice(6) };
+    }
+    async function run2(ctx, role, {
+      task = goal,
+      sourcePaths = [],
+      sourceHashes = [],
+      summary = "",
+      automatic = false,
+      targetPath = null
+    } = {}) {
+      if (!profiles[role]) throw new Error("Unknown knowledge specialist role");
+      const generation = epoch, reservations = used, parentSignal = ctx.signal, turnToken = budget.snapshot.turn;
+      const c = getCurrent(ctx), host = knowledgeSpecialistHost2(ctx), settings2 = await specialistSettings3();
+      budget.configure(settings2);
+      const signature = specialistRequestSignature({
+        role,
+        task,
+        sourcePaths,
+        sourceHashes,
+        summary,
+        targetPath
+      });
+      const remember = (value) => {
+        decisions.push({ role, ...value, at: Date.now() });
+        if (decisions.length > 32) decisions.splice(0, decisions.length - 32);
+        return value;
+      };
+      const decision = decideSpecialistRun({
+        role,
+        task,
+        sourcePaths,
+        targetPath,
+        automatic,
+        mode: settings2.mode,
+        trusted: !!ctx.isProjectTrusted?.(),
+        policy: c.binding.subagentPolicy,
+        hasEvidence: Array.isArray(sourcePaths) && sourcePaths.length > 0,
+        duplicate: false,
+        turnRuns: budget.snapshot.turnRuns,
+        maxRunsPerTurn: settings2.maxRunsPerTurn,
+        sessionRuns: budget.snapshot.sessionRuns,
+        maxRunsPerSession: settings2.maxRunsPerSession,
+        active: specialistQueueSnapshot2().active,
+        concurrency: settings2.concurrency,
+        queueLength: specialistQueueSnapshot2().queueLength,
+        queueLimit: settings2.queueLimit,
+        summary,
+        sourceHashes
+      });
+      const skip = (reason, status = "skipped", requestedDecision = null, record32 = true) => {
+        const publicDecision = requestedDecision || (status === "waiting" ? "ask-user" : "skip");
+        if (record32) remember({ decision: publicDecision, reasonCode: reason });
+        return {
+          status,
+          role,
+          reason,
+          reasonCode: reason,
+          decision: publicDecision,
+          nextAction: publicDecision === "ask-user" ? "Start a new session or use human settings to reset/extend the specialist budget." : reason === "permission-denied" ? "Ask a human to change project trust or specialist settings." : "Read sources or adjust the task before retrying."
+        };
+      };
+      if (generation !== epoch || getCurrent(ctx) !== c || parentSignal?.aborted)
+        return skip("parent-turn-changed", "cancelled");
+      if (readOnly) return skip("permission-denied");
+      if (!host) return skip("host-unavailable");
+      if (decision.decision !== "run") {
+        remember({ decision: decision.decision, reasonCode: decision.reasonCode });
+        const id3 = randomUUID9();
+        noteKnowledgeSpecialist2(ctx, {
+          id: id3,
+          role,
+          name: profiles[role][0],
+          label: profiles[role][1],
+          status: decision.decision === "ask-user" ? "waiting" : "skipped",
+          decision: decision.decision,
+          reasonCode: decision.reasonCode,
+          endedAt: Date.now()
+        });
+        return skip(
+          decision.reasonCode,
+          decision.decision === "ask-user" ? "waiting" : "skipped",
+          decision.decision,
+          false
+        );
+      }
+      if (automatic && ["wiki", "explainer"].includes(role) && c.binding.depositMode === "run-only")
+        return skip("run-only");
+      if (!Array.isArray(sourcePaths) || sourcePaths.length > 6 || summary.length > 12e3)
+        throw new Error("Specialist task packet exceeds its limit");
+      if (used.has(role)) return skip("already-called-this-turn");
+      if (!budget.reserve(signature, turnToken, { dedupe: sourceHashes.length > 0 }))
+        return skip("duplicate-request");
+      remember({ decision: "run", reasonCode: decision.reasonCode });
+      reservations.add(role);
+      let skillText = "", skillName = null;
+      try {
+        if (role === "explainer") {
+          const skill = await showMeSkill();
+          if (!skill) {
+            reservations.delete(role);
+            budget.release(signature, turnToken);
+            return skip("show-me-not-loaded");
+          }
+          skillText = skill.text;
+          skillName = skill.name;
+        }
+      } catch (error) {
+        reservations.delete(role);
+        budget.release(signature, turnToken);
+        throw error;
+      }
+      if (generation !== epoch || getCurrent(ctx) !== c || parentSignal?.aborted) {
+        budget.release(signature, turnToken);
+        return {
+          status: "cancelled",
+          role,
+          reason: "parent-turn-changed",
+          reasonCode: "parent-turn-changed",
+          decision: "skip",
+          nextAction: "Start a new turn before retrying."
+        };
+      }
+      const controller = new AbortController(), abort = () => controller.abort();
+      controllers.add(controller);
+      if (parentSignal?.aborted) abort();
+      else parentSignal?.addEventListener("abort", abort, { once: true });
+      const deadline = setTimeout(abort, settings2.timeoutMs);
+      const [name, label2] = profiles[role], id2 = randomUUID9();
+      let progress = {
+        id: id2,
+        role,
+        name,
+        label: label2,
+        status: "queued",
+        startedAt: Date.now(),
+        decision: "run",
+        reasonCode: decision.reasonCode,
+        budget: budget.snapshot
+      };
+      const publish = (patch) => {
+        progress = { ...progress, ...patch };
+        if (generation === epoch) noteKnowledgeSpecialist2(ctx, progress);
+      };
+      publish({});
+      let prepared;
+      let committed = false;
+      let resultUsage = null;
+      const check = async () => {
+        controller.signal.throwIfAborted();
+        const currentBudget = budget.snapshot;
+        if (currentBudget.turnTokens >= currentBudget.maxTokensPerTurn || currentBudget.sessionTokens >= currentBudget.maxTokensPerSession || currentBudget.turnCost >= currentBudget.maxCostPerTurn || currentBudget.sessionCost >= currentBudget.maxCostPerSession)
+          throw new Error("Specialist usage budget exhausted");
+        if (generation !== epoch || getCurrent(ctx) !== c) throw new Error("Parent knowledge turn changed");
+        if (!ctx.isProjectTrusted?.()) throw new Error("Project trust was revoked");
+        const binding = await readKnowledgeBinding2({ fresh: true }), latest = await specialistSettings3();
+        if (binding?.vaultId !== c.binding.vaultId || binding?.revision !== c.binding.revision || binding.subagentPolicy !== "read-local")
+          throw new Error("Knowledge binding or child permissions changed");
+        if (latest.mode === "off" || automatic && latest.mode !== "automatic")
+          throw new Error("Knowledge specialists were disabled");
+      };
+      try {
+        const answer = await withSpecialistSlot2(
+          controller.signal,
+          async () => {
+            committed = budget.commit(signature, turnToken);
+            if (!committed) throw new Error("Parent knowledge turn changed");
+            await check();
+            publish({ status: "running", action: "navigation" });
+            prepared = await c.service.prepare({ cwd: ctx.cwd, project: c.project, query: task });
+            const allowed = /* @__PURE__ */ new Set([...prepared.linkedWiki, ...prepared.navigationLinks || []]), readPages = /* @__PURE__ */ new Map();
+            for (const page of prepared.navigation || []) if (page?.path) allowed.add(page.path);
+            let readCount = 0, searchCount = 0, lastSearch = null;
+            for (const path of sourcePaths) {
+              validateNote(path);
+              if (!canRead(path, c.project) || derived(path))
+                throw new Error("Source is outside the permitted evidence scope");
+              allowed.add(path);
+            }
+            if (targetPath) {
+              validateNote(targetPath);
+              if (!canRead(targetPath, c.project))
+                throw new Error("Wiki target is outside the permitted scope");
+              allowed.add(targetPath);
+            }
+            const read = async (options) => {
+              const { path, start_line, startLine } = options;
+              const firstLine = knowledgeReadStart2({ start_line, startLine });
+              await check();
+              if (!budget.addToolOperation() || ++readCount > 8)
+                throw new Error("Specialist read budget exhausted");
+              validateNote(path);
+              if (!allowed.has(path) || !canRead(path, c.project))
+                throw new Error("Knowledge specialist may read only supplied or discovered paths");
+              const page = await c.service.read(prepared.ticket, ctx.cwd, {
+                path,
+                startLine: firstLine,
+                maxChars: 3e3
+              });
+              if (page.text?.trim()) readPages.set(path, page);
+              if (role === "navigator")
+                for (const link32 of (page.text || "").matchAll(/\[\[([^\]|#]+)(?:[^\]]*)\]\]/g)) {
+                  let next = link32[1].trim();
+                  if (!next.endsWith(".md")) next += ".md";
+                  try {
+                    validateNote(next);
+                    if (canRead(next, c.project) && !derived(next) && allowed.size < 64) allowed.add(next);
+                  } catch {
+                  }
+                }
+              return brief(page);
+            };
+            const sources = [];
+            if (role !== "navigator") for (const path of sourcePaths) sources.push(await read({ path }));
+            const target = targetPath ? await read({ path: targetPath }) : null;
+            const capabilities = [
+              {
+                name: "knowledge_read",
+                description: "Read an allowed Wiki or evidence note range. No arbitrary filesystem access.",
+                parameters: readSchema,
+                execute: read
+              }
+            ];
+            if (role === "navigator")
+              capabilities.push({
+                name: "knowledge_search",
+                description: "Search current shared/project knowledge after reading linked Wiki; at most two bounded queries.",
+                parameters: searchSchema,
+                execute: async ({ query, wiki_only = false }) => {
+                  await check();
+                  if (!budget.addToolOperation() || ++searchCount > 2)
+                    throw new Error("Specialist search budget exhausted");
+                  const found = await c.service.search(prepared.ticket, ctx.cwd, {
+                    query,
+                    wikiOnly: wiki_only,
+                    limit: 4
+                  });
+                  if (!wiki_only)
+                    lastSearch = {
+                      query: found.query,
+                      complete: found.complete,
+                      coverage: found.coverage,
+                      count: found.hits.length
+                    };
+                  for (const hit of found.hits) allowed.add(hit.path);
+                  return {
+                    ...lastSearch,
+                    wikiOnly: wiki_only,
+                    hits: found.hits.map((hit) => ({ ...brief(hit), title: hit.title, kind: hit.kind })),
+                    complete: found.complete
+                  };
+                }
+              });
+            const packet = JSON.stringify({
+              project: c.project,
+              navigation: prepared.navigation.map((page) => ({
+                ...brief(page),
+                text: (page.text || "").slice(0, 1e3)
+              })),
+              linkedWiki: prepared.linkedWiki.slice(0, 12),
+              navigationLinks: (prepared.navigationLinks || []).slice(0, 12),
+              sources,
+              target,
+              summary,
+              warning: `Read-only data. Draft outputs are unverified. ${prepared.warning}`
+            });
+            const result2 = await host({
+              role,
+              task: String(task).slice(0, 4e3),
+              packet,
+              skillText,
+              parentModel: ctx.model,
+              capabilities,
+              signal: controller.signal,
+              timeoutMs: settings2.timeoutMs,
+              onUsage: (usage) => {
+                resultUsage = resultUsage || {
+                  inputTokens: 0,
+                  outputTokens: 0,
+                  cacheReadTokens: 0,
+                  cacheWriteTokens: 0,
+                  reasoningTokens: 0,
+                  totalTokens: 0,
+                  cost: 0,
+                  reported: false,
+                  reportedFields: []
+                };
+                for (const key of [
+                  "inputTokens",
+                  "outputTokens",
+                  "cacheReadTokens",
+                  "cacheWriteTokens",
+                  "reasoningTokens",
+                  "totalTokens",
+                  "cost"
+                ])
+                  resultUsage[key] += usage[key] || 0;
+                resultUsage.reported = resultUsage.reported || usage.reported;
+                resultUsage.reportedFields = [
+                  .../* @__PURE__ */ new Set([...resultUsage.reportedFields || [], ...usage.reportedFields || []])
+                ];
+                return budget.updateUsage(
+                  {
+                    totalTokens: usage.reportedFields?.includes("totalTokens") ? usage.totalTokens : void 0,
+                    cost: usage.reportedFields?.includes("cost") ? usage.cost : void 0
+                  },
+                  turnToken
+                );
+              },
+              check,
+              progress: (value) => publish({ ...value, status: "running" })
+            });
+            await check();
+            const data = result2.data;
+            if (!data || !Array.isArray(data.source_paths) || data.source_paths.length > 6 || typeof data.summary !== "string" || data.summary.length > 1600)
+              throw new Error("Invalid specialist handoff");
+            if (role === "navigator" && !lastSearch)
+              throw new Error("Navigator returned without a real evidence search");
+            if (role !== "navigator" && !data.source_paths.length)
+              throw new Error("Specialist result has no read sources");
+            for (const path of data.source_paths)
+              if (!readPages.has(path) || derived(path))
+                throw new Error("Specialist cited an unread or presentation-only source");
+            if (data.source_paths.length)
+              await c.service.evidenceReceipts(prepared.ticket, ctx.cwd, data.source_paths);
+            const refs = data.source_paths.map((path) => {
+              const page = readPages.get(path);
+              return {
+                path,
+                hash: page.hash,
+                startLine: page.startLine,
+                endLine: page.endLine,
+                excerpt: (page.text || "").slice(0, 500),
+                truncated: page.truncated
+              };
+            });
+            return { ...result2, refs, search: lastSearch };
+          },
+          {
+            concurrency: settings2.concurrency,
+            queueLimit: settings2.queueLimit,
+            queueWaitMs: settings2.queueWaitMs
+          }
+        );
+        publish({
+          status: "completed",
+          endedAt: Date.now(),
+          ...visibleUsage(answer.usage),
+          model: answer.model,
+          thinkingLevel: answer.thinkingLevel,
+          sourceCount: answer.refs.length,
+          sources: answer.refs.map((ref) => ({ ...ref, excerpt: ref.excerpt.slice(0, 280) })),
+          summary: answer.data.summary.slice(0, 500),
+          elapsedMs: Math.max(0, Date.now() - progress.startedAt),
+          budget: budget.snapshot
+        });
+        return { status: "completed", role, id: id2, skillName, ...answer };
+      } catch (error) {
+        const cancelled = controller.signal.aborted || generation !== epoch;
+        publish({
+          status: cancelled ? "cancelled" : "failed",
+          endedAt: Date.now(),
+          error: String(error.message).slice(0, 300),
+          ...visibleUsage(resultUsage),
+          elapsedMs: Math.max(0, Date.now() - progress.startedAt),
+          budget: budget.snapshot
+        });
+        return {
+          status: cancelled ? "cancelled" : "failed",
+          role,
+          id: id2,
+          reason: String(error.message).slice(0, 300),
+          decision: cancelled ? "skip" : "run",
+          nextAction: cancelled ? "Start a new turn before retrying." : "Inspect the provider failure before retrying."
+        };
+      } finally {
+        clearTimeout(deadline);
+        if (prepared) c.service.tickets.delete(prepared.ticket);
+        controllers.delete(controller);
+        if (!committed) budget.release(signature, turnToken);
+        parentSignal?.removeEventListener("abort", abort);
+      }
+    }
+    function visibleUsage(usage) {
+      if (!usage) return {};
+      const visible = { usageReported: usage.reported === true, reportedFields: usage.reportedFields || [] };
+      for (const key of usage.reportedFields || [])
+        if ([
+          "inputTokens",
+          "outputTokens",
+          "cacheReadTokens",
+          "cacheWriteTokens",
+          "reasoningTokens",
+          "totalTokens",
+          "cost"
+        ].includes(key))
+          visible[key] = usage[key];
+      return visible;
+    }
+    function compact(result2) {
+      if (result2.status !== "completed")
+        return {
+          role: result2.role,
+          status: result2.status,
+          reason: result2.reason,
+          reasonCode: result2.reasonCode || result2.reason,
+          decision: result2.decision || (result2.status === "cancelled" ? "skip" : "run"),
+          nextAction: result2.status === "waiting" || result2.decision === "ask-user" ? "Start a new session or use human settings to reset/extend the specialist budget." : "Read sources or adjust the task before retrying."
+        };
+      return {
+        role: result2.role,
+        status: result2.status,
+        decision: "run",
+        summary: result2.data.summary.slice(0, 1100),
+        cautions: result2.data.cautions,
+        refs: result2.refs.slice(0, 4).map((ref) => ({ ...ref, excerpt: ref.excerpt.slice(0, 280) })),
+        search: result2.search,
+        usageReported: result2.usage?.reported === true,
+        elapsedMs: result2.elapsedMs,
+        budget: budget.snapshot,
+        warning: "Unverified specialist handoff; this does NOT grant the parent evidence/read/search receipts. Read cited originals and complete native publication checks."
+      };
+    }
+    async function orient(ctx) {
+      if (oriented || readOnly) return handoffs;
+      oriented = true;
+      const generation = epoch;
+      if (!shouldOrientKnowledge2(goal)) return handoffs;
+      const nav = await run2(ctx, "navigator", { automatic: true });
+      if (generation !== epoch) return [];
+      if (nav.status === "skipped") return handoffs;
+      handoffs = [compact(nav)];
+      if (nav.status === "completed" && nav.refs.length >= 2 && /比较|对比|冲突|矛盾|compare|conflict/i.test(goal)) {
+        const paths = nav.refs.map((r) => r.path).filter((p) => !/(?:^|\/)Wiki\//.test(p)).slice(0, 4);
+        if (paths.length >= 2) {
+          const evidence = await run2(ctx, "evidence", {
+            sourcePaths: paths,
+            sourceHashes: nav.refs.map((r) => r.hash).filter(Boolean),
+            automatic: true
+          });
+          if (generation !== epoch) return [];
+          handoffs.push(compact(evidence));
+        }
+      }
+      return handoffs;
+    }
+    return {
+      begin,
+      run: run2,
+      orient,
+      compact,
+      goal: () => goal,
+      budget: () => budget.snapshot,
+      decisions: () => decisions.slice(),
+      decisionHistory: () => decisions.slice(),
+      close: () => begin("")
+    };
+  }
+  return { knowledgeReadStart: knowledgeReadStart2, shouldOrientKnowledge: shouldOrientKnowledge2, createKnowledgeSpecialists: createKnowledgeSpecialists2 };
+}
+var compatibility = createKnowledgeSpecialistTools(
+  compatibilityKnowledgeRuntimeHost,
+  config_exports,
+  specialist_host_exports,
+  ui_state_exports
+);
+var { knowledgeReadStart, shouldOrientKnowledge, createKnowledgeSpecialists } = compatibility;
+init_topic_memory();
+init_ui_state();
+init_wiki_model_review();
+init_wiki_review();
+init_wiki_review_node();
+init_worker_transport();
+init_layout();
+init_maintenance();
+init_memory_note();
+var MAX_FAILURES = 16;
+var MAX_TEXT = 600;
+var SHA2562 = /^[a-f0-9]{64}$/i;
+function bounded2(value, max = MAX_TEXT) {
+  const text43 = typeof value === "string" ? value : JSON.stringify(value);
+  return String(text43 ?? "").replace(/[\r\n]+/g, " ").slice(0, max);
+}
+function sameValue(left, right) {
+  if (Object.is(left, right)) return true;
+  if (typeof left === "number" && typeof right === "number" && Number.isFinite(left) && Number.isFinite(right))
+    return left === right;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+}
+function hasKey(value, key) {
+  return Object.hasOwn(value, key);
+}
+function subset(expected, observed) {
+  if (!expected) return [];
+  if (!observed) return Object.keys(expected);
+  return Object.keys(expected).filter(
+    (key) => !hasKey(observed, key) || !sameValue(expected[key], observed[key])
+  );
+}
+function numberValue(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && value.trim() !== "" ? parsed : null;
+}
+function numberMatches2(expected, observed, tolerance = 0) {
+  const left = numberValue(expected);
+  const right = numberValue(observed);
+  if (left !== null && right !== null) return Math.abs(left - right) <= Math.max(0, tolerance);
+  return String(expected).trim() === String(observed).trim();
+}
+function artifactHasNumber(artifact, claim) {
+  const tolerance = claim.rounding?.tolerance ?? (typeof claim.rounding?.digits === "number" && claim.rounding.digits >= 0 ? 0.5 * 10 ** -claim.rounding.digits : 0);
+  if (artifact.numbers?.some((item) => numberMatches2(claim.value, item.value, item.tolerance ?? tolerance)))
+    return true;
+  if (typeof artifact.text !== "string") return false;
+  const rendered = claim.rendered ?? String(claim.value);
+  if (artifact.text.includes(rendered)) return true;
+  return artifact.text.includes(String(claim.value));
+}
+function citedPaths(answer) {
+  return new Set(
+    Array.from(answer.matchAll(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g), (match) => {
+      const path = (match[1] || "").trim();
+      return path.endsWith(".md") ? path : `${path}.md`;
+    })
+  );
+}
+function addFailure(failures, failure2) {
+  if (failures.length < MAX_FAILURES) failures.push(failure2);
+}
+function addWarning(warnings, warning) {
+  if (warnings.length < 8) warnings.push(warning);
+}
+function evaluateMetacognitivePublication(answer, snapshot) {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
+    return { ok: true, failures: [], warnings: [], findings: [] };
+  const input = snapshot;
+  if (input.enabled === false) return { ok: true, failures: [], warnings: [], findings: [] };
+  const failures = [];
+  const warnings = [];
+  const citations = citedPaths(answer);
+  const artifacts = /* @__PURE__ */ new Map();
+  for (const artifact of Array.isArray(input.artifacts) ? input.artifacts : []) {
+    if (artifact && typeof artifact.path === "string") {
+      artifacts.set(artifact.path, artifact);
+    }
+  }
+  const checkedPaths = /* @__PURE__ */ new Set();
+  const checkArtifact = (path, subject) => {
+    const artifact = artifacts.get(path);
+    if (!artifact) {
+      addFailure(failures, {
+        code: "artifact-checksum-stale",
+        subject,
+        detail: `No current checksum receipt for ${bounded2(path, 240)}`,
+        path
+      });
+      return void 0;
+    }
+    if (artifact.status === "pending-review" && citations.has(path))
+      addFailure(failures, {
+        code: "artifact-pending-review",
+        subject: path,
+        detail: `Artifact ${bounded2(path, 240)} is pending review after a revoked decision`,
+        path
+      });
+    if (artifact.reproducibility === "not-reproducible")
+      addWarning(warnings, {
+        code: "artifact-not-reproducible",
+        subject,
+        detail: `Cited artifact has no recorded code fingerprint or run provenance: ${bounded2(path, 240)}`,
+        path
+      });
+    if (!SHA2562.test(String(artifact.sha256 || "")) || !SHA2562.test(String(artifact.currentSha256 || ""))) {
+      addFailure(failures, {
+        code: "artifact-checksum-stale",
+        subject,
+        detail: `Missing or malformed checksum receipt for ${bounded2(path, 240)}`,
+        path
+      });
+    } else if (artifact.sha256?.toLowerCase() !== artifact.currentSha256?.toLowerCase()) {
+      addFailure(failures, {
+        code: "artifact-checksum-stale",
+        subject,
+        detail: `Cited artifact changed after observation (${bounded2(artifact.sha256, 16)}\u2026 \u2192 ${bounded2(artifact.currentSha256, 16)}\u2026)`,
+        path
+      });
+    }
+    checkedPaths.add(path);
+    return artifact;
+  };
+  for (const claim of Array.isArray(input.numbers) ? input.numbers : []) {
+    if (!claim || typeof claim.artifactPath !== "string") {
+      addFailure(failures, {
+        code: "metacognition-invalid",
+        subject: "report-number",
+        detail: "A report number has no cited artifact path"
+      });
+      continue;
+    }
+    const rendered = claim.rendered ?? String(claim.value);
+    if (!answer.includes(rendered)) {
+      addFailure(failures, {
+        code: "report-number-unbound",
+        subject: claim.id || rendered,
+        detail: `Reported number ${bounded2(rendered, 80)} is not present in the final answer`,
+        path: claim.artifactPath
+      });
+    }
+    if (!citations.has(claim.artifactPath)) {
+      addFailure(failures, {
+        code: "report-number-unbound",
+        subject: claim.id || rendered,
+        detail: `Reported number ${bounded2(rendered, 80)} is not tied to citation ${bounded2(claim.artifactPath, 240)}`,
+        path: claim.artifactPath
+      });
+    }
+    const artifact = checkArtifact(claim.artifactPath, claim.id || rendered);
+    if (artifact && !artifactHasNumber(artifact, claim))
+      addFailure(failures, {
+        code: "report-number-unbound",
+        subject: claim.id || rendered,
+        detail: `Artifact does not contain ${bounded2(String(claim.value), 80)} with the declared rounding`,
+        path: claim.artifactPath
+      });
+  }
+  for (const path of citations) {
+    if (artifacts.has(path) && !checkedPaths.has(path)) checkArtifact(path, "citation");
+  }
+  for (const method of Array.isArray(input.methods) ? input.methods : []) {
+    const executed = input.executed;
+    if (!method || typeof method.description !== "string" || !method.description.trim()) {
+      addFailure(failures, {
+        code: "metacognition-invalid",
+        subject: "method",
+        detail: "Method description is empty"
+      });
+      continue;
+    }
+    if (!answer.includes(method.description))
+      addFailure(failures, {
+        code: "method-mismatch",
+        subject: method.id || method.description,
+        detail: "Method description is not present in the final answer"
+      });
+    if (!executed) {
+      addFailure(failures, {
+        code: "method-mismatch",
+        subject: method.id || method.description,
+        detail: "No host-observed workflow execution was supplied"
+      });
+      continue;
+    }
+    if (method.workflow && !executed.workflows?.includes(method.workflow))
+      addFailure(failures, {
+        code: "method-mismatch",
+        subject: method.id || method.workflow,
+        detail: `Workflow ${bounded2(method.workflow, 120)} was not observed`
+      });
+    for (const module of method.modules || [])
+      if (!executed.modules?.includes(module))
+        addFailure(failures, {
+          code: "method-mismatch",
+          subject: method.id || module,
+          detail: `Module ${bounded2(module, 120)} was not observed`
+        });
+    for (const key of subset(method.params, executed.params))
+      addFailure(failures, {
+        code: "method-mismatch",
+        subject: method.id || key,
+        detail: `Parameter ${bounded2(key, 120)} differs from the observed workflow`
+      });
+  }
+  const findingMap = /* @__PURE__ */ new Map();
+  const findingEvidence = [];
+  for (const rawFinding of Array.isArray(input.findings) ? input.findings : []) {
+    const finding = rawFinding;
+    if (!finding || typeof finding.id !== "string" || typeof finding.text !== "string") {
+      addFailure(failures, {
+        code: "metacognition-invalid",
+        subject: "finding",
+        detail: "Finding is malformed"
+      });
+      continue;
+    }
+    findingMap.set(finding.id, finding);
+    const paths = Array.from(
+      new Set(
+        (Array.isArray(finding.citationPaths) ? finding.citationPaths : []).filter(
+          (path) => typeof path === "string"
+        )
+      )
+    );
+    findingEvidence.push({
+      id: finding.id,
+      text: bounded2(finding.text),
+      label: finding.label,
+      citationPaths: paths
+    });
+    for (const path of paths) {
+      if (!citations.has(path))
+        addFailure(failures, {
+          code: "finding-label-conflict",
+          subject: finding.id,
+          detail: `Finding is missing its cited artifact ${bounded2(path, 240)}`,
+          path
+        });
+      else checkArtifact(path, finding.id);
+    }
+  }
+  for (const use of Array.isArray(input.uses) ? input.uses : []) {
+    const finding = findingMap.get(use?.findingId || "");
+    if (!finding) {
+      addFailure(failures, {
+        code: "finding-label-conflict",
+        subject: use?.findingId || "finding",
+        detail: "The final answer references an unknown finding"
+      });
+      continue;
+    }
+    if (["exploratory", "overturned", "unstable"].includes(finding.label)) {
+      const invalidRole = finding.label === "exploratory" ? ["conclusion", "validation"].includes(use.role) : use.role !== "exploratory";
+      if (invalidRole)
+        addFailure(failures, {
+          code: "finding-label-conflict",
+          subject: finding.id,
+          detail: `Finding labelled ${finding.label} cannot be used as ${use.role}`
+        });
+    }
+  }
+  for (const diagnostic of Array.isArray(input.diagnostics) ? input.diagnostics : []) {
+    if (!diagnostic || typeof diagnostic.id !== "string" || !sameValue(diagnostic.reported, diagnostic.observed))
+      addFailure(failures, {
+        code: "diagnostic-drift",
+        subject: diagnostic?.id || "diagnostic",
+        detail: `Reported diagnostic differs from the observed control/result (${bounded2(diagnostic?.reported)} vs ${bounded2(diagnostic?.observed)})`
+      });
+  }
+  return { ok: failures.length === 0, failures, warnings, findings: findingEvidence };
+}
+init_note_title();
+var publication_exports = {};
+__export(publication_exports, {
+  advisoryLine: () => advisoryLine,
+  advisoryNotice: () => advisoryNotice,
+  createKnowledgePublication: () => createKnowledgePublication,
+  createManagedKnowledgePublication: () => createManagedKnowledgePublication,
+  knowledgeFailure: () => knowledgeFailure,
+  projectKnowledgeEvent: () => projectKnowledgeEvent,
+  projectKnowledgeSnapshot: () => projectKnowledgeSnapshot,
+  registerAnswerPublication: () => registerAnswerPublication
+});
+init_config();
+var publicationNotices = {
+  "paper-citation-required": "\u8FD9\u6B21\u56DE\u7B54\u7F3A\u5C11\u5177\u4F53\u8BBA\u6587\u4F9D\u636E\uFF1BWiki \u6216\u62A5\u544A\u94FE\u63A5\u4E0D\u80FD\u66FF\u4EE3\u672C\u8F6E\u8BFB\u8FC7\u7684\u6587\u732E\u7B14\u8BB0\u3002\u8BF7\u6807\u660E\u8D44\u6599\u7F3A\u53E3\uFF0C\u4E0D\u8981\u53CD\u590D\u68C0\u7D22\u53EA\u4E3A\u6D88\u9664\u63D0\u9192\u3002",
+  "search-required": "\u672C\u8F6E\u5C1A\u672A\u5B8C\u6210\u77E5\u8BC6\u5E93\u68C0\u7D22\u3002\u8BF7\u5148\u68C0\u7D22\uFF0C\u518D\u9605\u8BFB\u9700\u8981\u5F15\u7528\u7684\u5185\u5BB9\u3002",
+  "coverage-incomplete": "\u77E5\u8BC6\u7D22\u5F15\u5C1A\u672A\u5B8C\u6574\u53EF\u7528\u3002\u8BF7\u68C0\u67E5\u7D22\u5F15\u72B6\u6001\u6216\u6545\u969C\uFF0C\u4E0D\u80FD\u5C06\u6B64\u60C5\u51B5\u5F53\u4F5C\u65E0\u547D\u4E2D\u3002",
+  "citation-required": "\u68C0\u7D22\u6709\u547D\u4E2D\uFF0C\u4F46\u56DE\u7B54\u6CA1\u6709\u5F15\u7528\u672C\u8F6E\u8BFB\u8FC7\u7684\u77E5\u8BC6\u6761\u76EE\u3002",
+  "citation-invalid": "\u56DE\u7B54\u4E2D\u7684\u77E5\u8BC6\u5E93\u5F15\u7528\u683C\u5F0F\u4E0D\u5408\u6CD5\u3002",
+  "citation-budget": "\u672C\u6B21\u56DE\u7B54\u7684\u5F15\u7528\u8D85\u8FC7\u68C0\u67E5\u4E0A\u9650\uFF0C\u8BF7\u62C6\u5206\u4E3A\u66F4\u5C0F\u7684\u56DE\u7B54\u3002",
+  "source-unread": "\u56DE\u7B54\u5F15\u7528\u4E86\u672C\u8F6E\u6CA1\u6709\u5B9E\u9645\u9605\u8BFB\u7684\u6761\u76EE\u3002",
+  "delivery-changed": "\u672C\u8F6E\u751F\u6210\u7684\u7ED3\u679C\u5728\u4FDD\u5B58\u540E\u53D1\u751F\u53D8\u5316\uFF0C\u65E7\u7248\u672C\u4E0D\u80FD\u7EE7\u7EED\u4F7F\u7528\u3002",
+  "source-changed": "\u5F15\u7528\u5185\u5BB9\u5728\u9605\u8BFB\u540E\u53D1\u751F\u4E86\u53D8\u5316\uFF0C\u8BF7\u8BFB\u53D6\u65B0\u7248\u672C\u5E76\u91CD\u65B0\u68C0\u7D22\u3002",
+  "wiki-changed": "\u76F8\u5173 Wiki \u5DF2\u53D8\u5316\uFF0C\u8BF7\u8BFB\u53D6\u5F53\u524D\u7248\u672C\u540E\u91CD\u65B0\u68C0\u7D22\u3002",
+  "search-stale": "\u68C0\u7D22\u540E\u7D22\u5F15\u7248\u672C\u53D1\u751F\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u68C0\u7D22\u5F53\u524D\u5185\u5BB9\u3002",
+  "binding-changed": "\u5F53\u524D\u77E5\u8BC6\u5E93\u7ED1\u5B9A\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u8BFB\u53D6\u5BFC\u822A\uFF0C\u4E0D\u6CBF\u7528\u65E7\u77E5\u8BC6\u5E93\u7684\u8BC1\u636E\u3002",
+  "navigation-changed": "\u672C\u8F6E\u5BFC\u822A\u5DF2\u5931\u6548\uFF0C\u8BF7\u91CD\u65B0\u8BFB\u53D6\u5BFC\u822A\u5E76\u5B8C\u6210\u68C0\u7D22\u3002",
+  "not-prepared": "\u77E5\u8BC6\u5E93\u51C6\u5907\u6B65\u9AA4\u5C1A\u672A\u5B8C\u6210\uFF0C\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
+  interrupted: "\u672C\u6B21\u8BF7\u6C42\u5DF2\u4E2D\u65AD\uFF0C\u672A\u5B8C\u6210\u7684\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
+  "model-error": "\u6A21\u578B\u8BF7\u6C42\u5931\u8D25\uFF0C\u672A\u5B8C\u6210\u7684\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
+  "check-timeout": "\u56DE\u7B54\u524D\u68C0\u67E5\u8D85\u65F6\uFF0C\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
+  "check-failed": "\u56DE\u7B54\u524D\u68C0\u67E5\u53D1\u751F\u9519\u8BEF\uFF0C\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002",
+  "empty-answer": "\u4EFB\u52A1\u5DF2\u7ED3\u675F\uFF0C\u4F46\u6A21\u578B\u6CA1\u6709\u751F\u6210\u53EF\u663E\u793A\u7684\u56DE\u590D\u3002\u8BF7\u67E5\u770B\u672C\u8F6E\u4EA7\u7269\u6216\u8981\u6C42\u7EE7\u7EED\u4EA4\u4ED8\u8BF4\u660E\u3002",
+  "answer-too-large": "\u672C\u6B21\u56DE\u7B54\u8D85\u51FA\u5355\u6B21\u68C0\u67E5\u7684\u5927\u5C0F\u4E0A\u9650\uFF0C\u8BF7\u5206\u6BB5\u5B8C\u6210\u3002",
+  "protocol-budget": "\u672C\u8F6E\u5DE5\u5177\u4E0A\u4E0B\u6587\u8D85\u8FC7\u5B89\u5168\u7F13\u5B58\u4E0A\u9650\uFF0C\u8BF7\u5F00\u542F\u65B0\u4E00\u8F6E\u4EFB\u52A1\u3002",
+  "tool-loop-stopped": "\u3010\u4EFB\u52A1\u9636\u6BB5\u5DF2\u6682\u505C\u3011\u672C\u9636\u6BB5\u8FBE\u5230\u5DE5\u5177\u6216\u4E0A\u4E0B\u6587\u5B89\u5168\u9884\u7B97\u3002\u5DF2\u4FDD\u5B58\u7684\u7ED3\u679C\u4E0D\u4F1A\u56E0\u6B64\u5220\u9664\uFF1B\u67E5\u770B\u4EFB\u52A1\u6267\u884C\u8BB0\u5F55\u540E\u53EF\u7EE7\u7EED\uFF0C\u65E0\u9700\u65B0\u5EFA\u5BF9\u8BDD\u3002\u7EE7\u7EED\u524D\u5148\u6838\u5BF9\u7ED3\u679C\u672A\u77E5\u7684\u64CD\u4F5C\uFF0C\u4E0D\u8981\u91CD\u590D\u5B89\u88C5\u3001\u5BFC\u5165\u6216\u4E0A\u4F20\u3002",
+  "metacognitive-inconsistency": "\u62A5\u544A\u3001\u65B9\u6CD5\u3001\u8BC1\u636E\u6807\u7B7E\u6216\u8BCA\u65AD\u4E0E\u5B9E\u9645\u8FD0\u884C\u7ED3\u679C\u4E0D\u4E00\u81F4\uFF1B\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002\u8BF7\u6309\u4E0B\u9762\u7684\u5DEE\u5F02\u4FEE\u6B63\u62A5\u544A\u6216\u91CD\u65B0\u8FD0\u884C\u5F53\u524D\u6D41\u7A0B\u3002",
+  "artifact-pending-review": "\u5F15\u7528\u7684\u7ED3\u679C\u6B63\u5728\u7B49\u5F85\u786E\u8BA4\uFF1B\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002\u8BF7\u91CD\u65B0\u751F\u6210\u53D7\u5F71\u54CD\u7ED3\u679C\u6216\u5B8C\u6210\u73B0\u6709\u5BA1\u6838\u3002"
+};
+var advisoryNotices = {
+  "paper-citation-required": "\u8FD9\u4EFD\u56DE\u7B54\u6CA1\u6709\u5F15\u7528\u5177\u4F53\u7684\u539F\u59CB\u8BBA\u6587\uFF0C\u4E3B\u8981\u4F9D\u636E\u662F Wiki \u6216\u5DF2\u751F\u6210\u7684\u62A5\u544A\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\uFF0C\u4F46\u8BF7\u628A\u5B83\u5F53\u4F5C\u5F85\u67E5\u8BC1\u7684\u7EBF\u7D22\u3002",
+  "citation-budget": "\u8FD9\u4EFD\u56DE\u7B54\u5F15\u7528\u7684\u6765\u6E90\u8D85\u8FC7\u4E86\u5355\u6B21\u6838\u9A8C\u4E0A\u9650\u3002\u5185\u5BB9\u5DF2\u5B8C\u6574\u4FDD\u7559\u3002",
+  "citation-required": "\u8FD9\u4EFD\u56DE\u7B54\u6CA1\u6709\u5F15\u7528\u672C\u8F6E\u8BFB\u8FC7\u7684\u77E5\u8BC6\u6761\u76EE\uFF0C\u672A\u80FD\u5EFA\u7ACB\u6765\u6E90\u5BF9\u5E94\u5173\u7CFB\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "citation-invalid": "\u8FD9\u4EFD\u56DE\u7B54\u91CC\u6709\u683C\u5F0F\u4E0D\u5408\u6CD5\u7684\u77E5\u8BC6\u5E93\u5F15\u7528\uFF0C\u8BE5\u5F15\u7528\u672A\u88AB\u6838\u9A8C\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "source-unread": "\u8FD9\u4EFD\u56DE\u7B54\u5F15\u7528\u4E86\u672C\u8F6E\u6CA1\u6709\u5B9E\u9645\u6253\u5F00\u8FC7\u7684\u6761\u76EE\uFF0C\u8BE5\u5F15\u7528\u672A\u88AB\u6838\u9A8C\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "source-changed": "\u5F15\u7528\u7684\u5185\u5BB9\u5728\u672C\u8F6E\u8BFB\u53D6\u540E\u53D1\u751F\u4E86\u53D8\u5316\uFF0C\u6838\u9A8C\u7ED3\u679C\u53EF\u80FD\u5DF2\u8FC7\u671F\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "delivery-changed": "\u672C\u8F6E\u751F\u6210\u7684\u7ED3\u679C\u5728\u4FDD\u5B58\u540E\u53D1\u751F\u53D8\u5316\uFF0C\u65E7\u7248\u672C\u4E0D\u80FD\u7EE7\u7EED\u4F7F\u7528\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "wiki-changed": "\u76F8\u5173 Wiki \u5728\u672C\u8F6E\u8BFB\u53D6\u540E\u53D1\u751F\u4E86\u53D8\u5316\uFF0C\u6838\u9A8C\u7ED3\u679C\u53EF\u80FD\u5DF2\u8FC7\u671F\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "search-required": "\u672C\u8F6E\u6CA1\u6709\u5B8C\u6210\u77E5\u8BC6\u5E93\u68C0\u7D22\uFF0C\u68C0\u7D22\u8986\u76D6\u60C5\u51B5\u5C1A\u672A\u786E\u8BA4\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "search-stale": "\u68C0\u7D22\u5B8C\u6210\u540E\u77E5\u8BC6\u5E93\u7D22\u5F15\u53D1\u751F\u4E86\u53D8\u5316\uFF0C\u6838\u9A8C\u7ED3\u679C\u53EF\u80FD\u5DF2\u8FC7\u671F\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "coverage-incomplete": "\u77E5\u8BC6\u5E93\u7D22\u5F15\u672C\u8F6E\u672A\u5B8C\u6574\u5C31\u7EEA\uFF0C\u8FD9\u4E0D\u4EE3\u8868\u5E93\u4E2D\u6CA1\u6709\u76F8\u5173\u5185\u5BB9\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "check-timeout": "\u56DE\u7B54\u524D\u7684\u6838\u9A8C\u8D85\u65F6\uFF0C\u672C\u6B21\u672A\u5B8C\u6210\u6838\u9A8C\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002",
+  "not-prepared": "\u77E5\u8BC6\u5E93\u51C6\u5907\u6B65\u9AA4\u672A\u5B8C\u6210\uFF0C\u672C\u6B21\u672A\u505A\u6838\u9A8C\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\u3002"
+};
+function publicationNotice(code) {
+  return publicationNotices[code] || publicationNotices["check-failed"];
+}
+function advisoryNotice(code) {
+  const normalized = code;
+  return advisoryNotices[normalized] || publicationNotice(normalized);
+}
+function advisoryLine(code, error) {
+  const verified = error?.verified;
+  const sources = Array.isArray(verified?.sources) ? verified.sources.length : 0;
+  const deliveries = Array.isArray(verified?.deliveries) ? verified.deliveries.length : 0;
+  const cited = typeof verified?.unverifiedCitationCount === "number" && Number.isFinite(verified.unverifiedCitationCount) ? verified.unverifiedCitationCount : Array.isArray(verified?.unverifiedCitations) ? verified.unverifiedCitations.length : 0;
+  const notice = code === "citation-budget" && numberIsInteger(verified?.citationCount) && numberIsInteger(verified?.citationLimit) ? `\u8FD9\u4EFD\u56DE\u7B54\u5F15\u7528\u4E86 ${verified?.citationCount} \u5904\u6765\u6E90\uFF0C\u8D85\u8FC7\u5355\u6B21\u6838\u9A8C\u4E0A\u9650\uFF08${verified?.citationLimit} \u5904\uFF09\u3002\u5185\u5BB9\u5DF2\u5B8C\u6574\u4FDD\u7559\u3002` : advisoryNotice(code);
+  const parts = [];
+  if (sources) parts.push(`\u5DF2\u6838\u5BF9 ${sources} \u5904\u6765\u6E90\u7684\u8BFB\u53D6\u8BB0\u5F55\u4E0E\u5F53\u524D\u7248\u672C`);
+  if (deliveries) parts.push(`\u5DF2\u6838\u5BF9 ${deliveries} \u4EFD\u672C\u8F6E\u4EA7\u7269`);
+  if (cited) parts.push(`${sources ? "\u53E6\u6709" : "\u5171"} ${cited} \u5904\u5F15\u7528\u672A\u9010\u6761\u6838\u9A8C`);
+  const detail = parts.length ? `${parts.join("\u3001")}\u3002` : "";
+  return `${notice}${detail ? ` ${detail}` : ""}${sources || deliveries ? " \u6765\u6E90\u6838\u5BF9\u4E0D\u4EE3\u8868\u79D1\u5B66\u7ED3\u8BBA\u5DF2\u83B7\u9A8C\u8BC1\u3002" : ""}`;
+}
+function numberIsInteger(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
+function errorMessage(error) {
+  return error && typeof error === "object" && "message" in error ? String(error.message || "") : "";
+}
+function errorCode2(error) {
+  return error && typeof error === "object" && "code" in error ? String(error.code || "") : "";
+}
+function knowledgeFailure(error) {
+  const code = classifyFailureCode(error);
+  const paths = [];
+  const rawPaths = error && typeof error === "object" && "paths" in error ? error.paths : [];
+  for (const path of Array.isArray(rawPaths) ? rawPaths : []) {
+    if (typeof path === "string" && path.length <= 512 && !/[\r\n<>]/.test(path)) paths.push(path);
+    if (paths.length >= 6) break;
+  }
+  return { code, message: publicationNotice(code), paths };
+}
+function classifyFailureCode(error) {
+  const code = errorCode2(error);
+  if (code in publicationNotices) return code;
+  const text43 = errorMessage(error);
+  if (/binding changed/i.test(text43)) return "binding-changed";
+  if (/navigation changed/i.test(text43)) return "navigation-changed";
+  if (/navigation|prepare_knowledge/i.test(text43)) return "not-prepared";
+  return "check-failed";
+}
+init_review_policy();
+init_review_policy();
+init_runtime_host();
+init_ui_state();
+function createPublicationApi(ui, reviewPolicy, ports, createState, signal = null) {
+  const { publicationKnowledgeFlow: publicationKnowledgeFlow2, updateKnowledgeFlow: updateKnowledgeFlow2 } = ui;
+  const { readReviewMode: readReviewMode2 } = reviewPolicy;
+  const state = createState(
+    /** @returns {any} */
+    () => ({
+      proofs: /* @__PURE__ */ new WeakSet(),
+      projectEvent: projectKnowledgeEvent2,
+      projectSnapshot: projectKnowledgeSnapshot2
+    })
+  );
+  const FIELD = "knowledgePublication";
+  const hash5 = (content) => createHash19("sha256").update(JSON.stringify(content ?? [])).digest("hex");
+  const protocolKey = (message) => hash5({
+    timestamp: message.timestamp,
+    api: message.api,
+    provider: message.provider,
+    model: message.model,
+    responseId: message.responseId,
+    calls: message.content.filter((block) => block.type === "toolCall")
+  });
+  function sanitizeError(text43) {
+    return diagnosticText(text43, 4096).trim();
+  }
+  function isUserAbortError(message) {
+    return /was aborted|request aborted/i.test(String(message?.errorMessage || ""));
+  }
+  function base2(message, content) {
+    const { errorMessage: originalError, diagnostics, ...metadata } = message;
+    const errorMessage2 = message.stopReason === "error" && typeof originalError === "string" ? sanitizeError(originalError) : "";
+    return {
+      ...metadata,
+      content,
+      // Diagnostics do not control provider replay. Keep only safe error text;
+      // arbitrary details and stacks must not enter public/persisted history.
+      ...diagnostics ? {
+        diagnostics: diagnostics.map(({ type, timestamp, error }) => ({
+          type: sanitizeError(type),
+          timestamp,
+          ...error ? { error: { message: sanitizeError(error.message) } } : {}
+        }))
+      } : {},
+      ...errorMessage2 ? { errorMessage: errorMessage2 } : {}
+    };
+  }
+  function seal(message, content, detail) {
+    signal?.throwIfAborted();
+    const proof = { version: 1, id: randomUUID17(), ...detail, contentHash: hash5(content) };
+    state.proofs.add(proof);
+    return { ...base2(message, content), [FIELD]: proof };
+  }
+  function blocked(message, code = "check-failed", turnId = null, operational = null, paths = [], extra = null) {
+    return seal(
+      message,
+      [
+        {
+          type: "text",
+          text: operational || (code === "interrupted" ? publicationNotices.interrupted : `\u3010\u77E5\u8BC6\u5E93\u68C0\u67E5\u672A\u901A\u8FC7\u3011${publicationNotices[code] || publicationNotices["check-failed"]}`)
+        }
+      ],
+      {
+        status: "blocked",
+        reason: code,
+        turnId,
+        ...paths.length ? { paths } : {},
+        ...extra && typeof extra === "object" ? extra : {},
+        scientificallyVerified: false
+      }
+    );
+  }
+  function verifiedEvidence(error) {
+    const verified = error?.verified;
+    if (!verified || typeof verified !== "object") return {};
+    const { sources, deliveries, ...rest } = verified;
+    return {
+      ...rest,
+      sources: Array.isArray(sources) ? sources : [],
+      deliveries: Array.isArray(deliveries) ? deliveries : []
+    };
+  }
+  function isSealed(message, restore = false) {
+    const proof = message?.[FIELD];
+    return proof?.version === 1 && (state.proofs.has(proof) || restore) && [
+      "released",
+      "no-hits",
+      "blocked",
+      "tool-only",
+      "unconfigured",
+      "evidence-only",
+      "setup-complete",
+      "operational"
+    ].includes(proof.status) && proof.contentHash === hash5(message.content);
+  }
+  function inplace(target, source) {
+    for (const name of Object.keys(target)) delete target[name];
+    Object.assign(target, source);
+    return target;
+  }
+  function projectUnsealed(message) {
+    if (message.stopReason === "error" && !isUserAbortError(message))
+      return seal(message, [], { status: "blocked", reason: "model-error", scientificallyVerified: false });
+    if (["aborted", "length", "pending"].includes(message.stopReason) || isUserAbortError(message))
+      return blocked(message, "interrupted");
+    return blocked(message);
+  }
+  function projectKnowledgeEvent2(event) {
+    signal?.throwIfAborted();
+    if (!ports.available()) return event;
+    if (event.type === "message_update") return null;
+    if (event.type === "message_start" && event.message?.role === "assistant")
+      return { ...event, message: base2(event.message, []) };
+    if (event.type === "message_end" && event.message?.role === "assistant") {
+      if (!isSealed(event.message)) inplace(event.message, projectUnsealed(event.message));
+      return event;
+    }
+    if (event.type === "turn_end" && event.message?.role === "assistant")
+      return { ...event, message: isSealed(event.message) ? event.message : projectUnsealed(event.message) };
+    if (event.type === "agent_end")
+      return {
+        ...event,
+        messages: event.messages.map(
+          (m) => m.role === "assistant" && !isSealed(m) ? projectUnsealed(m) : m
+        )
+      };
+    return event;
+  }
+  function projectKnowledgeSnapshot2(messages, persisted = []) {
+    signal?.throwIfAborted();
+    if (!ports.available()) return messages;
+    return messages.map((m) => {
+      if (m.role !== "assistant" || isSealed(m)) return m;
+      const saved = ports.persisted(m, persisted);
+      if (saved && (!m[FIELD] || isSealed(m, true))) return m;
+      return projectUnsealed(m);
+    });
+  }
+  function registerAnswerPublication2(pi, {
+    runtime = null,
+    getCurrent,
+    evidenceOnly = false,
+    getDeliveryFooter = null,
+    getTaskFeedback = null,
+    getTaskRuntime = null,
+    getMetacognition = null,
+    maxToolRounds = 24
+  }) {
+    const attachRuntime = (next) => {
+      if (!next || typeof next !== "object" || !next.scheduler || !next.knowledge) return false;
+      const slot = next.knowledge.publication || {};
+      slot.proofs ??= /* @__PURE__ */ new WeakSet();
+      slot.projectEvent = (event) => projectKnowledgeEvent2(event);
+      slot.projectSnapshot = (messages, persisted) => projectKnowledgeSnapshot2(messages, persisted);
+      next.knowledge.publication = slot;
+      attachReviewer(next.knowledge.reviewer);
+      return true;
+    };
+    let reviewer = null;
+    const attachReviewer = (next) => {
+      if (!next || typeof next !== "object" || typeof next.schedule !== "function") return false;
+      reviewer = next;
+      return true;
+    };
+    const sessionIdFor = (ctx) => ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || "";
+    const scheduleReview = (ctx, snapshot, trigger) => {
+      if (!reviewer || !sessionIdFor(ctx)) return;
+      try {
+        reviewer.schedule({ sessionId: sessionIdFor(ctx), snapshot, trigger });
+      } catch {
+      }
+    };
+    if (runtime) attachRuntime(runtime);
+    let turnId = null, required = true, started = false, protocolBytes = 0, toolRounds = 0, setupReceipt = null;
+    const protocol = /* @__PURE__ */ new Map(), deliveries = /* @__PURE__ */ new Map();
+    const advisoryFooter = (ctx) => {
+      const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(ctx) : null;
+      return footer ? [{ type: "text", text: `
+
+${String(footer).slice(0, 2e3)}` }] : [];
+    };
+    const failure2 = (message, error) => {
+      const info = knowledgeFailure(error);
+      const metacognitive = error?.metacognition;
+      const metacognitiveReport = metacognitive && Array.isArray(metacognitive.failures) && metacognitive.failures.length ? metacognitive.failures.slice(0, 8).map((item) => `- ${String(item.detail || item.code).slice(0, 600)}`).join("\n") : "";
+      const task = getTaskRuntime?.();
+      if (task?.snapshot()) task.pause(info.code);
+      const report = task?.snapshot() ? `${task.render()}
+
+\u7814\u7A76\u8BF4\u660E\u6682\u672A\u5C55\u793A\uFF1A${info.message}` : getTaskFeedback?.()?.report(info.code, info.message, info.paths);
+      return blocked(
+        message,
+        info.code,
+        turnId,
+        [report, metacognitiveReport].filter(Boolean).join("\n\n") || null,
+        info.paths,
+        metacognitive ? { metacognition: metacognitive } : null
+      );
+    };
+    const evaluateMetacognition = async (ctx, current, text43) => {
+      if (typeof getMetacognition !== "function") return null;
+      let snapshot;
+      try {
+        snapshot = await getMetacognition(ctx, current);
+      } catch {
+        throw Object.assign(new Error("Metacognitive host snapshot unavailable"), {
+          code: "metacognitive-inconsistency",
+          metacognition: {
+            ok: false,
+            findings: [],
+            failures: [
+              {
+                code: "metacognition-invalid",
+                subject: "host-snapshot",
+                detail: "Host metacognitive snapshot could not be read"
+              }
+            ]
+          }
+        });
+      }
+      if (snapshot == null) return null;
+      const evaluation = evaluateMetacognitivePublication(text43, snapshot);
+      if (!evaluation.ok)
+        throw Object.assign(new Error("Metacognitive publication checks failed"), {
+          code: evaluation.failures.some((failure22) => failure22.code === "artifact-pending-review") ? "artifact-pending-review" : "metacognitive-inconsistency",
+          paths: evaluation.failures.map((item) => item.path).filter(Boolean).slice(0, 6),
+          metacognition: evaluation,
+          verified: { metacognition: evaluation }
+        });
+      return evaluation;
+    };
+    pi.on("context", async (event) => ({
+      messages: event.messages.map((message) => {
+        if (message.role !== "assistant") return message;
+        const original = protocol.get(protocolKey(message));
+        return original ? { ...message, content: original } : message;
+      })
+    }));
+    const handleMessageEnd = async (event, ctx) => {
+      const message = event.message;
+      if (message.role !== "assistant") return;
+      const sessionId = sessionIdFor(ctx);
+      const cwd = ctx?.cwd;
+      const signal2 = ctx?.signal;
+      const flowCtx = { sessionId };
+      const report = async (message2) => {
+        if (message2[FIELD]?.status !== "tool-only" && message2[FIELD]?.reason !== "model-error")
+          await publicationKnowledgeFlow2(flowCtx, message2[FIELD]);
+        return { message: message2 };
+      };
+      const blocks = Array.isArray(message.content) ? message.content : [];
+      const tools = blocks.filter((b) => b.type === "toolCall");
+      if (tools.length) {
+        toolRounds += 1;
+        if (toolRounds > maxToolRounds && await getTaskRuntime?.()?.advanceStage?.()) toolRounds = 1;
+        const bytes = Buffer.byteLength(JSON.stringify(blocks), "utf8");
+        if (toolRounds > maxToolRounds || protocolBytes + bytes > 4 * 1024 * 1024 || protocol.size >= 64) {
+          const limit = toolRounds > maxToolRounds ? "tool-round-limit" : protocolBytes + bytes > 4 * 1024 * 1024 ? "protocol-byte-limit" : "protocol-entry-limit";
+          const task = getTaskRuntime?.();
+          task?.pause(limit);
+          const reportText = [publicationNotices["tool-loop-stopped"], task?.snapshot() ? task.render() : null].filter(Boolean).join("\n\n");
+          const denied = blocked(message, "tool-loop-stopped", turnId, reportText);
+          denied[FIELD].limit = {
+            kind: limit,
+            toolRounds,
+            maxToolRounds,
+            protocolBytes,
+            entries: protocol.size
+          };
+          denied.stopReason = "stop";
+          return report(denied);
+        }
+        const safe = seal(message, tools, { status: "tool-only", turnId, scientificallyVerified: false });
+        protocol.set(protocolKey(message), structuredClone(blocks));
+        protocolBytes += bytes;
+        return report(safe);
+      }
+      if (message.stopReason === "error" && !isUserAbortError(message))
+        return report(
+          seal(message, [], {
+            status: "blocked",
+            reason: "model-error",
+            turnId,
+            scientificallyVerified: false
+          })
+        );
+      if (["aborted", "length", "pending"].includes(message.stopReason) || signal2?.aborted || isUserAbortError(message))
+        return report(failure2(message, { code: "interrupted" }));
+      const content = blocks.filter((b) => b.type === "text");
+      if (!evidenceOnly) await getTaskRuntime?.()?.takeReport();
+      if (setupReceipt) {
+        const done = setupReceipt;
+        setupReceipt = null;
+        try {
+          await done.checkCurrent?.();
+        } catch {
+          return report(blocked(message, "binding-changed", turnId));
+        }
+        return report(
+          seal(
+            message,
+            [
+              {
+                type: "text",
+                text: [
+                  "\u77E5\u8BC6\u5E93\u521D\u59CB\u5316\u5DF2\u5B8C\u6210\u3002",
+                  `\u5F53\u524D\u77E5\u8BC6\u5E93\uFF1A${done.vault}`,
+                  `\u4F5C\u7528\u8303\u56F4\uFF1A\u6574\u4E2A Drone\uFF1B\u5F53\u524D\u9879\u76EE\uFF1A${done.project || "\u5C1A\u672A\u521B\u5EFA\u9879\u76EE\u5206\u533A"}\u3002`,
+                  "\u77E5\u8BC6\u5E93\u5DF2\u6309\u5F53\u524D\u8BBE\u7F6E\u542F\u7528\uFF1B\u534F\u4F5C\u8005\u53EA\u4F1A\u8BBF\u95EE\u672C\u6B21\u4EFB\u52A1\u5141\u8BB8\u7684\u8D44\u6599\u3002",
+                  "\u5DF2\u4FDD\u5B58\u7ED1\u5B9A\u5E76\u521B\u5EFA\u7F3A\u5931\u7684\u5BFC\u822A\u548C\u6A21\u677F\uFF0C\u672A\u642C\u8FC1\u6216\u5220\u9664\u5DF2\u6709\u7B14\u8BB0\u3002",
+                  "\u8FD9\u53EA\u662F\u521D\u59CB\u5316\u5B8C\u6210\uFF0C\u4E0D\u4EE3\u8868\u8BBA\u6587\u5DF2\u7ECF\u4E0B\u8F7D\u3001\u77E5\u8BC6\u5DF2\u7ECF\u6574\u7406\u6216\u539F\u59CB MCP \u5DF2\u8FDE\u63A5\u3002",
+                  "\u63A5\u4E0B\u6765\u53EF\u4EE5\u8981\u6C42\u68C0\u7D22\u6216\u4E0B\u8F7D\u8D44\u6599\uFF1B\u8BBA\u6587\u5E94\u4EA4\u4ED8\u4E3B\u8981\u89C2\u70B9\u4E0E\u65B9\u6CD5\uFF0C\u8F6F\u4EF6\u5E94\u4EA4\u4ED8\u7248\u672C\u5BF9\u5E94\u7684\u547D\u4EE4\u3001\u53C2\u6570\u4E0E\u793A\u4F8B\u3002"
+                ].join("\n\n")
+              }
+            ],
+            {
+              status: "setup-complete",
+              turnId,
+              vaultId: done.vaultId,
+              bindingRevision: done.bindingRevision,
+              scientificallyVerified: false
+            }
+          )
+        );
+      }
+      if (!content.some((block) => block.text?.trim()))
+        return report(failure2(message, { code: "empty-answer" }));
+      if (evidenceOnly)
+        return {
+          message: seal(
+            message,
+            [
+              { type: "text", text: "\u3010\u5C1A\u672A\u6838\u5B9E\u7684\u8865\u5145\u6750\u6599\u3011\u4EE5\u4E0B\u5185\u5BB9\u4E0D\u662F\u4E3B\u4F1A\u8BDD\u5DF2\u786E\u8BA4\u7684\u6700\u7EC8\u7ED3\u8BBA\u3002\n\n" },
+              ...content
+            ],
+            { status: "evidence-only", turnId, scientificallyVerified: false }
+          )
+        };
+      if (!started) return report(blocked(message, "not-prepared", turnId));
+      if (!required)
+        return report(
+          seal(message, content, { status: "unconfigured", turnId, scientificallyVerified: false })
+        );
+      const text43 = content.map((b) => b.text).join("\n");
+      if (Buffer.byteLength(text43, "utf8") > 128 * 1024)
+        return report(blocked(message, "answer-too-large", turnId));
+      updateKnowledgeFlow2(flowCtx, { phase: "checking" });
+      let currentTurn;
+      try {
+        const c = getCurrent(ctx);
+        currentTurn = c;
+        if (!c) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
+        let publishText = text43;
+        let publishContent = content;
+        const attachMaterializedCitations = async (refresh = false) => {
+          if (typeof c.service.materializeCitations !== "function") return;
+          const paths = await c.service.materializeCitations(c.ticket, cwd, c.query, { refresh });
+          if (!paths.length || /\[\[[^\]]+\]\]/.test(publishText)) return;
+          const suffix = `
+
+\u4F9D\u636E\uFF1A${paths.map((path) => `[[${path.replace(/\.md$/i, "")}]]`).join(" ")}`;
+          publishText = `${publishText}${suffix}`;
+          publishContent = publishContent.map(
+            (block, index) => block.type === "text" && index === publishContent.length - 1 ? { ...block, text: `${block.text}${suffix}` } : block
+          );
+        };
+        const validateWithTimeout = async () => {
+          let timer;
+          try {
+            return await Promise.race([
+              c.service.validateAnswer(c.ticket, cwd, publishText, {
+                deliveries: [...deliveries.values()]
+              }),
+              new Promise((_, reject) => {
+                timer = setTimeout(
+                  () => reject(Object.assign(new Error("check timeout"), { code: "check-timeout" })),
+                  5e3
+                );
+              })
+            ]);
+          } finally {
+            if (timer) clearTimeout(timer);
+          }
+        };
+        const automatic = await readReviewMode2() === "automatic";
+        if (!automatic) await attachMaterializedCitations();
+        let proof;
+        try {
+          proof = await validateWithTimeout();
+        } catch (error) {
+          if (automatic || !["coverage-incomplete", "search-stale"].includes(error?.code)) throw error;
+          await attachMaterializedCitations(true);
+          proof = await validateWithTimeout();
+        }
+        if (signal2?.aborted) return report(failure2(message, { code: "interrupted" }));
+        const metacognitive = await evaluateMetacognition(flowCtx, c, publishText);
+        const warnings = [
+          ...Array.isArray(proof.warnings) ? proof.warnings : [],
+          ...(metacognitive?.warnings || []).map((warning) => ({
+            code: warning.code,
+            message: warning.detail
+          }))
+        ];
+        let reviewerWarnings = [];
+        if (reviewer && typeof getMetacognition === "function") {
+          try {
+            const reviewSnapshot = await getMetacognition(flowCtx, c);
+            if (reviewSnapshot && typeof reviewSnapshot === "object") {
+              const snapshot = { ...reviewSnapshot, body: publishText };
+              const cached = reviewer.getCached?.(sessionId, snapshot);
+              const prior = reviewer.getFindings?.(sessionId);
+              reviewerWarnings = [
+                ...Array.isArray(cached?.findings) ? cached.findings : [],
+                ...Array.isArray(prior) ? prior : []
+              ].filter(
+                (finding, index, all) => finding.severity === "high" && !finding.handled && all.findIndex((item) => item.id === finding.id) === index
+              );
+              scheduleReview(flowCtx, snapshot, "publication-projection");
+            }
+          } catch {
+          }
+        }
+        const published = proof.status === "no-hits" ? [
+          {
+            type: "text",
+            text: "\u3010\u77E5\u8BC6\u5E93\u6CA1\u6709\u627E\u5230\u5339\u914D\u5185\u5BB9\u3011\u672C\u8F6E\u67E5\u8BE2\u672A\u627E\u5230\u5339\u914D\u6761\u76EE\uFF1B\u4E0B\u6587\u4E0D\u662F\u57FA\u4E8E\u672C\u5E93\u8BC1\u636E\u7684\u7ED3\u8BBA\uFF0C\u4E5F\u4E0D\u8868\u793A\u5168\u5E93\u4E0D\u5B58\u5728\u76F8\u5173\u77E5\u8BC6\u3002\n\n"
+          },
+          ...publishContent
+        ] : publishContent;
+        const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(flowCtx) : null;
+        const visible = footer ? [...published, { type: "text", text: `
+
+${String(footer).slice(0, 2e3)}` }] : published;
+        return report(
+          seal(message, visible, {
+            ...proof,
+            ...warnings.length ? { warnings } : {},
+            ...metacognitive ? { metacognition: metacognitive } : {},
+            ...reviewerWarnings.length ? { reviewerWarnings } : {},
+            status: proof.status === "ready" ? "released" : "no-hits",
+            turnId
+          })
+        );
+      } catch (error) {
+        const info = knowledgeFailure(error);
+        if (await readReviewMode2() === "automatic" && advisoryCodes.has(info.code) && !signal2?.aborted) {
+          if (info.code !== "not-prepared")
+            try {
+              const current = currentTurn;
+              if (!current) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
+              await current.service.check(current.ticket, cwd);
+            } catch (authorityError) {
+              return report(failure2(message, authorityError));
+            }
+          const advisoryContent = info.code === "citation-required" ? [] : [{ type: "text", text: `
+
+\u3010\u6709\u63D0\u9192\u3011${advisoryLine(info.code, error)}` }];
+          return report(
+            seal(message, [...content, ...advisoryContent, ...advisoryFooter(flowCtx)], {
+              status: "released",
+              reviewMode: "automatic",
+              ...verifiedEvidence(error),
+              warnings: [info],
+              turnId,
+              scientificallyVerified: false
+            })
+          );
+        }
+        return report(failure2(message, error));
+      }
+    };
+    ports.registerFinalizer(pi, handleMessageEnd);
+    return {
+      attachRuntime,
+      attachReviewer,
+      async recordDelivery(ctx, path) {
+        const sessionId = sessionIdFor(ctx);
+        const cwd = ctx?.cwd;
+        const flowCtx = { sessionId };
+        const c = getCurrent(ctx);
+        if (!c) return;
+        const receipt2 = await c.service.deliveryReceipt(c.ticket, cwd, path);
+        deliveries.set(receipt2.path, receipt2);
+        scheduleReview(
+          flowCtx,
+          {
+            enabled: true,
+            deliverables: [{ id: receipt2.path, path: receipt2.path, sha256: receipt2.hash }]
+          },
+          "deliverable-write"
+        );
+        while (deliveries.size > 12) deliveries.delete(deliveries.keys().next().value);
+      },
+      async preflight(ctx, text43) {
+        const sessionId = sessionIdFor(ctx);
+        const cwd = ctx?.cwd;
+        const flowCtx = { sessionId };
+        let timer;
+        try {
+          if (typeof text43 !== "string" || Buffer.byteLength(text43, "utf8") > 128 * 1024)
+            throw { code: "answer-too-large" };
+          const c = getCurrent(ctx), proof = await Promise.race([
+            c.service.validateAnswer(c.ticket, cwd, text43, { deliveries: [...deliveries.values()] }),
+            new Promise((_, reject) => {
+              timer = setTimeout(() => reject({ code: "check-timeout" }), 5e3);
+            })
+          ]);
+          const metacognition = await evaluateMetacognition(flowCtx, c, text43);
+          if (reviewer && typeof getMetacognition === "function") {
+            try {
+              const snapshot = await getMetacognition(flowCtx, c);
+              if (snapshot && typeof snapshot === "object")
+                scheduleReview(flowCtx, { ...snapshot, body: text43 }, "publication-projection");
+            } catch {
+            }
+          }
+          return { ok: true, proof, ...metacognition ? { metacognition } : {} };
+        } catch (error) {
+          const info = knowledgeFailure(error);
+          if (await readReviewMode2() === "automatic" && advisoryCodes.has(info.code)) {
+            if (info.code !== "not-prepared")
+              try {
+                const current = getCurrent(ctx);
+                await current.service.check(current.ticket, cwd);
+              } catch {
+                return {
+                  ok: false,
+                  code: "binding-changed",
+                  message: "Refresh the current knowledge binding before continuing."
+                };
+              }
+            return {
+              ok: true,
+              status: "warning",
+              ...verifiedEvidence(error),
+              warnings: [info],
+              scientificallyVerified: false,
+              next: "Deliver the answer with its limitations. Do not repeat read/search/check solely to clear this advisory."
+            };
+          }
+          return {
+            ok: false,
+            ...info,
+            next: "For operational progress, call task_status and deliver its host receipt without unrelated citations. For scientific claims, read the listed evidence or repair the reported stage, then check again. Never retry a write merely because output was lost.",
+            task: getTaskFeedback?.()?.facts()
+          };
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      },
+      recordSetup(result2, checkCurrent) {
+        if (result2?.state === "ready" && result2.scope === "application")
+          setupReceipt = {
+            vault: result2.vault,
+            project: result2.project,
+            profile: result2.profile,
+            depositMode: result2.depositMode,
+            subagentMcpPolicy: result2.subagentMcpPolicy,
+            vaultId: result2.vaultId,
+            bindingRevision: result2.bindingRevision,
+            checkCurrent
+          };
+      },
+      begin(isRequired = true, newTurn = true) {
+        started = true;
+        required = isRequired;
+        if (newTurn) {
+          turnId = randomUUID17();
+          protocol.clear();
+          deliveries.clear();
+          protocolBytes = 0;
+          toolRounds = 0;
+          setupReceipt = null;
+        }
+      },
+      invalidate() {
+        started = false;
+        required = true;
+        turnId = null;
+        protocol.clear();
+        deliveries.clear();
+        protocolBytes = 0;
+        toolRounds = 0;
+        setupReceipt = null;
+      },
+      async guidance() {
+        return await readReviewMode2() === "automatic" ? "Answer the user's question directly. For a planning request, first provide a concise provisional framework with explicit assumptions, then deepen only the evidence needed. Cite scientific claims inline using exact [[path]] citations from research_read_knowledge results read this turn; a saved report link is a deliverable, not an evidence citation. Reuse successful read receipts instead of reading the same source through both generic read and research_read_knowledge. Do not invent citations or cite a source merely to clear a warning. Label suggested sample sizes as design heuristics, not universal statistical thresholds. Acknowledge uncertainty and save useful knowledge. Evidence quality reminders are nonblocking: do not run repeated read/search/check just to clear them. Never claim scientific verification. Host permission, binding, abort and spending limits still apply; human Wiki edits require confirmation." : "For execution progress in ANY task (analysis, code, environment, experiments, writing), use task_status; its host-generated report needs no research citations. Never add irrelevant sources to an operational report. Scientific host-checked answers need a current-turn search, reads of cited [[path]] sources, then research_check_answer. Public text must answer the user's question; do not lecture about Vault policy or evidence-gate stages. Use short set_status about the task, not product design. Show Me/run links are deliverables, not evidence.";
+      }
+    };
+  }
+  return { projectKnowledgeEvent: projectKnowledgeEvent2, projectKnowledgeSnapshot: projectKnowledgeSnapshot2, registerAnswerPublication: registerAnswerPublication2 };
+}
+function localPublicationPorts(config) {
+  return {
+    available: () => Boolean(config.knowledgeDirectory()),
+    registerFinalizer: (pi, handler) => pi.on("message_end", handler),
+    persisted: (message, saved) => saved.includes(message)
+  };
+}
+function createManagedKnowledgePublication(ui, reviewPolicy, signal) {
+  let finalizer;
+  const publication = createPublicationApi(
+    ui,
+    reviewPolicy,
+    {
+      available: () => true,
+      registerFinalizer(_pi, handler) {
+        if (finalizer) throw new Error("Knowledge publication is already registered");
+        finalizer = handler;
+      },
+      // Only the host's private SDK-origin courier can preserve this identity across IPC.
+      // History display never enrolls a recovered proof in the live WeakSet.
+      persisted: (message, saved) => saved.includes(message)
+    },
+    (create) => create(),
+    signal
+  );
+  return {
+    ...publication,
+    projection: {
+      async finalize(event, context) {
+        if (!finalizer) throw new Error("Knowledge publication has not been registered");
+        if (context.scope.kind !== "session")
+          throw new Error("Knowledge publication requires its live session");
+        context.signal.throwIfAborted();
+        const result2 = await finalizer(event, {
+          cwd: context.scope.workspaceDirectory,
+          sessionManager: { getSessionId: () => context.scope.sessionId },
+          signal: context.signal
+        });
+        context.signal.throwIfAborted();
+        return result2?.message ? { ...event, message: result2.message } : event;
+      },
+      event: (event, signal2) => {
+        signal2?.throwIfAborted();
+        return publication.projectKnowledgeEvent(event);
+      },
+      snapshot: (messages, persisted, signal2) => {
+        signal2?.throwIfAborted();
+        return publication.projectKnowledgeSnapshot(messages, persisted);
+      }
+    }
+  };
+}
+function createKnowledgePublication(ui, reviewPolicy, config, signal) {
+  return createPublicationApi(ui, reviewPolicy, localPublicationPorts(config), (create) => create(), signal);
+}
+var compatibility4 = createPublicationApi(
+  ui_state_exports,
+  review_policy_exports,
+  localPublicationPorts(config_exports),
+  (create) => runtimeSlot("knowledge", "publication", create)
+);
+var { projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication } = compatibility4;
+init_ingest_frontmatter();
+init_config();
+init_service();
+init_config();
+init_review_policy();
+init_runtime_host();
+var SECTOR_ANGLES = {
+  // SVG y grows downwards: 7 o'clock is 120° and 8 o'clock is 150°.
+  paper: 2 * Math.PI / 3,
+  software: 5 * Math.PI / 6,
+  method: Math.PI,
+  dataset: 7 * Math.PI / 6,
+  evidence: 4 * Math.PI / 3,
+  claim: 3 * Math.PI / 2,
+  concept: 11 * Math.PI / 6,
+  entity: 0,
+  idea: Math.PI / 6,
+  decision: Math.PI / 3,
+  question: Math.PI / 2,
+  wiki: 3 * Math.PI / 4,
+  other: 11 * Math.PI / 6
+};
+init_semantic_provider();
+init_semantic_settings();
+init_service();
+init_source_links();
+init_specialist_host();
+var replaceControl = (text43) => [...String(text43 || "")].map((char) => char.charCodeAt(0) < 32 ? " " : char).join("");
+var clean3 = (text43, limit = 300) => replaceControl(text43).replace(/(?:bearer\s+|api[_-]?key[=:]\s*)[^\s]+/gi, "[redacted]").trim().slice(0, limit);
+var feedbackReason = (reason) => {
+  const labels = {
+    "not-prepared": "\u77E5\u8BC6\u5E93\u51C6\u5907\u5C1A\u672A\u5B8C\u6210",
+    "model-error": "\u6A21\u578B\u8BF7\u6C42\u5931\u8D25",
+    "check-timeout": "\u56DE\u7B54\u68C0\u67E5\u8D85\u65F6",
+    "check-failed": "\u56DE\u7B54\u68C0\u67E5\u53D1\u751F\u9519\u8BEF",
+    "tool-loop-stopped": "\u5F53\u524D\u5904\u7406\u9636\u6BB5\u5DF2\u6682\u505C",
+    interrupted: "\u672C\u6B21\u8BF7\u6C42\u5DF2\u4E2D\u65AD"
+  };
+  return labels[String(reason)] || "\u9700\u8981\u5148\u5904\u7406\u76F8\u5173\u8D44\u6599";
+};
+function createTaskFeedback() {
+  let failures = [];
+  let files = /* @__PURE__ */ new Map();
+  let seen = /* @__PURE__ */ new Set();
+  let archiveCount = 0;
+  let summarySaved = false;
+  let explainerSaved = false;
+  let candidates = /* @__PURE__ */ new Set();
+  const begin = () => {
+    failures = [];
+    files = /* @__PURE__ */ new Map();
+    seen = /* @__PURE__ */ new Set();
+    archiveCount = 0;
+    summarySaved = false;
+    explainerSaved = false;
+    candidates = /* @__PURE__ */ new Set();
+  };
+  const observe = async (event, ctx) => {
+    if (seen.has(event.toolCallId)) return;
+    seen.add(event.toolCallId);
+    if (seen.size > 512) {
+      const oldest = seen.values().next().value;
+      seen.delete(oldest);
+    }
+    const details = event.details || {};
+    const content = event.content || [];
+    if (event.isError || details.status === "failed" || details.error && details.successful === 0) {
+      failures.push({
+        tool: clean3(event.toolName, 60),
+        reason: clean3(
+          details.reason || details.error || content.filter((block) => block.type === "text").map((block) => block.text).join(" ")
+        )
+      });
+      failures = failures.slice(-6);
+      return;
+    }
+    let path = null;
+    if (event.toolName === "research_propose_wiki_update" && details.id) candidates.add(details.id);
+    if (event.toolName === "research_archive_source" && details.status === "downloaded") archiveCount++;
+    if (event.toolName === "research_summarize_run" && details.summary_saved) {
+      summarySaved = true;
+      path = details.run;
+    }
+    if (event.toolName === "research_archive_explainer" && details.knowledge_status === "written") {
+      explainerSaved = true;
+      path = details.note;
+    }
+    if (["write", "edit"].includes(String(event.toolName))) path = event.input?.path;
+    if (typeof path !== "string") return;
+    try {
+      const full = await realpath7(resolve10(ctx.cwd, path));
+      const rel = relative9(await realpath7(ctx.cwd), full);
+      if (rel.startsWith(`results${sep9}`) && (await lstat9(full)).isFile()) {
+        files.delete(full);
+        files.set(full, { name: clean3(rel.split(sep9).at(-1), 100), path: full });
+        while (files.size > 8) files.delete(files.keys().next().value);
+      }
+    } catch {
+    }
+  };
+  const facts = () => ({
+    archivedSources: archiveCount,
+    summarySaved,
+    explainerSaved,
+    pendingWikiCandidates: candidates.size,
+    files: [...files.values()],
+    failures: [...failures]
+  });
+  const report = (reason, message, paths = []) => {
+    const interrupted = reason === "interrupted";
+    const current = facts();
+    const lines = [
+      interrupted ? "\u672C\u6B21\u8BF7\u6C42\u5DF2\u4E2D\u65AD\uFF0C\u672A\u5B8C\u6210\u7684\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002" : `\u3010\u56DE\u7B54\u68C0\u67E5\u672A\u5B8C\u6210\u3011\u672C\u8F6E\u56DE\u7B54\u6682\u672A\u5C55\u793A\uFF08${feedbackReason(reason)}\uFF09\u3002`,
+      ...interrupted ? [] : [clean3(message, 450)]
+    ];
+    if (paths.length)
+      lines.push(
+        "\u9700\u8981\u5904\u7406\u7684\u5185\u5BB9\uFF1A" + paths.slice(0, 6).map((path) => `\`${clean3(path, 512).replaceAll("`", "")}\``).join("\u3001")
+      );
+    if (current.archivedSources || current.summarySaved || current.files.length)
+      lines.push(
+        `\u5DF2\u5B8C\u6210\u7684\u5DE5\u4F5C\u4ECD\u7136\u4FDD\u7559\uFF1A\u5DF2\u4FDD\u5B58\u6765\u6E90 ${current.archivedSources} \u9879\uFF1B\u7814\u7A76\u6458\u8981${current.summarySaved ? "\u5DF2\u4FDD\u5B58" : "\u5C1A\u672A\u786E\u8BA4\u4FDD\u5B58"}\uFF1BShow Me ${current.explainerSaved ? "\u5DF2\u4FDD\u5B58" : "\u5C1A\u672A\u786E\u8BA4\u4FDD\u5B58"}\uFF1B\u7B49\u5F85\u5BA1\u6838\u7684 Wiki \u6761\u76EE ${current.pendingWikiCandidates} \u4E2A\u3002`
+      );
+    if (current.files.length)
+      lines.push(
+        "\u672C\u8F6E\u5B9E\u9645\u5199\u5165\u7684\u4EA7\u7269\uFF08\u5185\u5BB9\u4ECD\u9700\u6838\u9A8C\uFF09\uFF1A\n" + current.files.map((file) => `- [${file.name.replace(/[[\]]/g, "")}](${pathToFileURL2(file.path).href})`).join("\n")
+      );
+    if (current.failures.length)
+      lines.push(
+        "\u8FC7\u7A0B\u4E2D\u8FD8\u53D1\u751F\u8FC7\u4EE5\u4E0B\u5DE5\u5177\u95EE\u9898\uFF1B\u90E8\u5206\u53EF\u80FD\u5DF2\u6539\u7528\u5176\u4ED6\u8DEF\u5F84\u7EE7\u7EED\uFF1A\n" + current.failures.slice(-3).map((entry) => `- ${entry.tool}\uFF1A${entry.reason}`).join("\n")
+      );
+    lines.push(
+      interrupted ? "\u5DF2\u8BB0\u5F55\u7684\u5DE5\u5177\u7ED3\u679C\u4ECD\u53EF\u5728\u672C\u4F1A\u8BDD\u67E5\u770B\u3002\u53EF\u4EE5\u7EE7\u7EED\u5269\u4F59\u5DE5\u4F5C\uFF1B\u4E0D\u9700\u8981\u91CD\u65B0\u4E0B\u8F7D\u5DF2\u7ECF\u4FDD\u5B58\u7684\u8D44\u6599\u3002" : "\u63A5\u4E0B\u6765\u5E94\u6839\u636E\u5177\u4F53\u68C0\u67E5\u539F\u56E0\u8865\u8BFB\u6216\u4FEE\u6B63\u5F15\u7528\uFF0C\u518D\u68C0\u67E5\u56DE\u7B54\uFF1B\u4E0D\u9700\u8981\u91CD\u65B0\u4E0B\u8F7D\u5DF2\u7ECF\u4FDD\u5B58\u7684\u8D44\u6599\u3002\u8FD9\u91CC\u62A5\u544A\u7684\u662F\u5904\u7406\u72B6\u6001\uFF0C\u4E0D\u4EE3\u8868\u672A\u5C55\u793A\u7684\u7814\u7A76\u7ED3\u8BBA\u5DF2\u7ECF\u5F97\u5230\u786E\u8BA4\u3002"
+    );
+    return lines.join("\n\n");
+  };
+  return { begin, observe, facts, report };
+}
+function guardResearchToolResult(event) {
+  if (!["fetch_content", "webfetch", "research_archive_source"].includes(String(event.toolName))) return;
+  const text43 = (event.content || []).filter((block) => block.type === "text").map((block) => String(block.text || "")).join("\n");
+  if (/(?:^|\n)%PDF-\d\.\d/.test(text43.slice(0, 1800)) && (text43.includes("\0") || /(?:\uFFFD|\d+\s+\d+\s+obj|\nstream)/.test(text43.slice(0, 6e3))))
+    return {
+      content: [
+        {
+          type: "text",
+          text: "\u8BFB\u53D6\u672A\u5B8C\u6210\uFF1A\u5DE5\u5177\u8FD4\u56DE\u4E86 PDF \u4E8C\u8FDB\u5236\uFF0C\u4E0D\u662F\u53EF\u8BFB\u6B63\u6587\u3002\u8BF7\u5F52\u6863\u539F PDF \u540E\u4F7F\u7528\u5DF2\u6709\u7684\u6587\u672C\u63D0\u53D6\u5DE5\u5177\u8BFB\u53D6\u9700\u8981\u7684\u9875\u6216\u6BB5\u843D\uFF1B\u4E0D\u8981\u628A\u8FD9\u4E9B\u5B57\u8282\u5F53\u4F5C\u8BC1\u636E\uFF0C\u4E5F\u4E0D\u8981\u91CD\u590D\u628A\u4E8C\u8FDB\u5236\u9001\u5165\u4E0A\u4E0B\u6587\u3002"
+        }
+      ],
+      isError: true,
+      details: { ...event.details || {}, error: "binary-pdf-returned", contentGuard: "binary-pdf" }
+    };
+  const details = event.details;
+  if (!event.isError && (details?.status === "failed" || details?.error && details.successful === 0))
+    return { isError: true };
+}
+function createToolBudget(options = {}) {
+  const maxReads = options.maxReads ?? 8;
+  const maxSearches = options.maxSearches ?? 4;
+  const maxRepeats = options.maxRepeats ?? 2;
+  let reads = 0;
+  let searches = 0;
+  let recoveries = 0;
+  const repeats = /* @__PURE__ */ new Map();
+  function reset() {
+    reads = 0;
+    searches = 0;
+    recoveries = 0;
+    repeats.clear();
+  }
+  function consume(kind, key, { recovery = false } = {}) {
+    const recoveryAllowed = recovery && kind === "read" && ++recoveries <= 2;
+    const normalized = String(key ?? "").trim();
+    const repeatKey = `${kind}:${normalized}`;
+    const seen = (repeats.get(repeatKey) ?? 0) + 1;
+    repeats.set(repeatKey, seen);
+    if (kind === "read") reads += 1;
+    else searches += 1;
+    const overReads = kind === "read" && reads > maxReads;
+    const overSearches = kind === "search" && searches > maxSearches;
+    const overRepeat = seen > maxRepeats && !recoveryAllowed;
+    if (!overReads && !overSearches && !overRepeat) return null;
+    return {
+      status: "budget-exhausted",
+      code: "tool-loop",
+      message: overRepeat ? `Repeated ${kind} (${normalized || "empty"}) ${seen} times; stop looping and answer from what you have.` : `Knowledge ${kind} budget exhausted (${kind === "read" ? reads : searches}/${kind === "read" ? maxReads : maxSearches}). Synthesize an answer now.`,
+      next: "Write the final answer from already-read evidence. Do not call research_read_knowledge or research_search_knowledge again this turn."
+    };
+  }
+  return { reset, consume, snapshot: () => ({ reads, searches }) };
+}
+function titleFromSummary(summary, query, resultSlug) {
+  const heading = summary.match(/^#\s+(.+)$/m)?.[1]?.trim();
+  const fallback = (String(query || "").split(/[\n。]/)[0] ?? "").trim();
+  const slug2 = String(resultSlug || "research-topic").replace(/[-_]20\d{6,14}$/, "").replace(/[-_]+/g, " ").trim();
+  return (heading || fallback || slug2 || "Research topic").slice(0, 180);
+}
+function fileStem(resultSlug, title) {
+  let value = String(resultSlug || "").replace(/[-_]20\d{6,14}$/, "").trim();
+  if (!value || value === "research-question") value = String(title || "research-topic");
+  value = [...value.normalize("NFKC")].map((char) => char.charCodeAt(0) < 32 || '\\/[]#|<>:"*?'.includes(char) ? "-" : char).join("").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^[.\- ]+|[.\- ]+$/g, "").slice(0, 120);
+  return value || "research-topic";
+}
+function autoTopicCandidate({
+  summary,
+  query,
+  resultSlug,
+  sourcePaths = []
+} = {}) {
+  const markdown = String(summary || "").trim();
+  if (markdown.length < 160) return { eligible: false, reason: "summary-too-short" };
+  if (markdown.length > 24e3) return { eligible: false, reason: "summary-too-large" };
+  if (!Array.isArray(sourcePaths) || sourcePaths.length < 1)
+    return { eligible: false, reason: "no-current-read-evidence" };
+  const title = titleFromSummary(markdown, query, resultSlug);
+  return {
+    eligible: true,
+    input: {
+      path: `Wiki/${fileStem(resultSlug, title)}.md`,
+      title,
+      markdown,
+      rationale: "Automatically staged from a completed, evidence-gated research run. Review scope, claims and applicability before publishing.",
+      source_paths: sourcePaths.slice(0, 12)
+    }
+  };
+}
+init_topic_memory();
+init_ui_service();
+init_ui_state();
+init_wiki_model_review();
+init_wiki_policy();
+init_wiki_review();
 init_note_title();
 init_config();
 init_files();
 init_layout();
+init_runtime_host();
 init_ui_state();
 init_wiki_model_review();
-init_runtime_host();
+init_config();
+init_flow_cards();
+init_maintenance();
 var text3 = typebox_exports.String({ minLength: 1, maxLength: 512 });
 var record2 = typebox_exports.Object({
   id: text3,
@@ -16265,7 +16428,10 @@ var record2 = typebox_exports.Object({
   evicted: typebox_exports.Boolean(),
   used: typebox_exports.Boolean()
 });
-var checkpoint = typebox_exports.Object({ scope: typebox_exports.String({ minLength: 1 }), records: typebox_exports.Array(record2, { maxItems: 8 }) });
+var checkpoint = typebox_exports.Object({
+  scope: typebox_exports.String({ minLength: 1 }),
+  records: typebox_exports.Array(record2, { maxItems: 8 })
+});
 function parseKnowledgeRecoveryCheckpoint(value) {
   if (!Check2(checkpoint, value)) throw new Error("Invalid knowledge recovery checkpoint");
   const records = value.records.map((item) => {
@@ -16286,10 +16452,19 @@ function parseKnowledgeRecoveryCheckpoint(value) {
       used: item.used
     };
   });
-  if (new Set(records.map((record32) => record32.id)).size !== records.length) throw new Error("Knowledge recovery checkpoint has duplicate receipt identities");
+  if (new Set(records.map((record32) => record32.id)).size !== records.length)
+    throw new Error("Knowledge recovery checkpoint has duplicate receipt identities");
   return { scope: value.scope, records };
 }
-function createKnowledgePrepareTool({ prepare }) {
+init_runtime_host();
+init_service();
+init_topic_memory();
+init_topic_memory();
+init_ui_state();
+init_wiki_review();
+function createKnowledgePrepareTool({
+  prepare
+}) {
   return {
     name: "research_prepare_knowledge",
     drone: {
@@ -16304,7 +16479,11 @@ function createKnowledgePrepareTool({ prepare }) {
     execute: async (_id, _params, _signal, _update, ctx) => result(await prepare(ctx))
   };
 }
-function createKnowledgeReadTool({ ensureTurn, toolBudget, observer }) {
+function createKnowledgeReadTool({
+  ensureTurn,
+  toolBudget,
+  observer
+}) {
   return {
     name: "research_read_knowledge",
     drone: {
@@ -16361,13 +16540,22 @@ function createKnowledgeReadTool({ ensureTurn, toolBudget, observer }) {
           } : {}
         });
       } catch (error) {
-        observer?.updateFlow?.(ctx, { phase: "blocked", error: String(error.message).slice(0, 400) });
+        observer?.updateFlow?.(ctx, {
+          phase: "blocked",
+          error: String(error.message).slice(0, 400)
+        });
         throw error;
       }
     }
   };
 }
-function createKnowledgeSearchTool({ ensureTurn, toolBudget, observer, searchContext, searchExperiences: searchExperiences2 }) {
+function createKnowledgeSearchTool({
+  ensureTurn,
+  toolBudget,
+  observer,
+  searchContext,
+  searchExperiences: searchExperiences2
+}) {
   return {
     name: "research_search_knowledge",
     drone: {
@@ -16393,7 +16581,10 @@ function createKnowledgeSearchTool({ ensureTurn, toolBudget, observer, searchCon
     },
     execute: async (_id, p, _s, _u, ctx) => {
       const c = await ensureTurn(ctx, p.query);
-      const blocked = toolBudget.consume("search", p.kind === "experiences" ? JSON.stringify([p.kind, p.workflow, p.host_id, p.query]) : p.query);
+      const blocked = toolBudget.consume(
+        "search",
+        p.kind === "experiences" ? JSON.stringify([p.kind, p.workflow, p.host_id, p.query]) : p.query
+      );
       if (blocked) return result(blocked);
       if (p.kind === "experiences") {
         if (!p.workflow?.trim() || !p.host_id?.trim())
@@ -16414,13 +16605,19 @@ function createKnowledgeSearchTool({ ensureTurn, toolBudget, observer, searchCon
         ) : found?.hits;
         return result(slimHits ? { ...found, hits: slimHits } : found);
       } catch (error) {
-        observer?.updateFlow?.(ctx, { phase: "blocked", error: String(error.message).slice(0, 400) });
+        observer?.updateFlow?.(ctx, {
+          phase: "blocked",
+          error: String(error.message).slice(0, 400)
+        });
         throw error;
       }
     }
   };
 }
-function createKnowledgeAnswerCheckTool({ ensureTurn, preflight }) {
+function createKnowledgeAnswerCheckTool({
+  ensureTurn,
+  preflight
+}) {
   return {
     name: "research_check_answer",
     drone: { readOnly: true, recoverySafe: true, capabilities: ["research", "knowledge"] },
@@ -16437,15 +16634,6 @@ function createKnowledgeAnswerCheckTool({ ensureTurn, preflight }) {
     }
   };
 }
-init_runtime_host();
-init_config();
-init_flow_cards();
-init_maintenance();
-init_service();
-init_topic_memory();
-init_topic_memory();
-init_ui_state();
-init_wiki_review();
 function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHandshake) {
   const { publishExplainer: publishExplainer2, deliveryContract: deliveryContract22 } = dependencies.host;
   const { readKnowledgeBinding: readKnowledgeBinding2, withKnowledgeBinding: withKnowledgeBinding2 } = dependencies.config;
@@ -16502,7 +16690,11 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
       resolve: async (review, { cwd }) => {
         try {
           const service = await getKnowledgeService2();
-          const p = await previewWikiProposal2(service, review.id, review.project || await currentProject2(cwd));
+          const p = await previewWikiProposal2(
+            service,
+            review.id,
+            review.project || await currentProject2(cwd)
+          );
           const stale = p.sources.some((s) => s.changed);
           return {
             status: p.status,
@@ -16550,7 +16742,8 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
     let removeAcceptance;
     if (!readOnly) {
       const declaration = { version: 1, kind: "wiki_review", definition: registerWikiReviewAcceptance2() };
-      if (dependencies.session) removeAcceptance = dependencies.session.registerAcceptance(declaration.definition);
+      if (dependencies.session)
+        removeAcceptance = dependencies.session.registerAcceptance(declaration.definition);
       else {
         const publishAcceptance = () => pi.events.emit("drone:acceptance-verifier/v1", declaration);
         removeAcceptance = pi.events.on("drone:acceptance-verifier/request/v1", (payload) => {
@@ -16588,14 +16781,16 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
       const data = { scope: recoveryScope, records: [...recovery.values()].slice(-8) };
       if (dependencies.session) {
         const receipt2 = await dependencies.session.appendRecord("drone-knowledge-recovery-v1", data, ctx);
-        if (receipt2.durability !== "durable") throw new Error("Knowledge recovery checkpoint is deferred; no durable recovery was recorded");
+        if (receipt2.durability !== "durable")
+          throw new Error("Knowledge recovery checkpoint is deferred; no durable recovery was recorded");
       } else pi.appendEntry("drone-knowledge-recovery-v1", data);
     };
     const attachRecovery = async (ctx) => {
       const scope = `${sessionIdentity(ctx)}:${resolve12(ctx.cwd)}`;
       if (scope === recoveryScope) return;
       const result2 = dependencies.session ? await dependencies.session.readRecords(ctx) : null;
-      if (result2?.state === "needs-reopen") throw new Error("Session records need reopening before knowledge recovery");
+      if (result2?.state === "needs-reopen")
+        throw new Error("Session records need reopening before knowledge recovery");
       const entries = result2 ? result2.records.map((record32) => ({ customType: record32.type, data: record32.data })) : ctx.sessionManager.getBranch();
       const next = /* @__PURE__ */ new Map();
       for (const entry of entries) {
@@ -16604,7 +16799,8 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
         if (checkpoint2.scope !== scope) continue;
         next.clear();
         for (const record32 of checkpoint2.records) {
-          if (record32.sessionId !== sessionIdentity(ctx)) throw new Error("Knowledge recovery record has a foreign session identity");
+          if (record32.sessionId !== sessionIdentity(ctx))
+            throw new Error("Knowledge recovery record has a foreign session identity");
           next.set(record32.id, record32);
         }
       }
@@ -16612,15 +16808,16 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
       for (const [id2, record32] of next) recovery.set(id2, record32);
       recoveryScope = scope;
     };
-    if (!dependencies.session) pi.events.on("drone:context-evicted", async (e) => {
-      let changed = false;
-      for (const r of recovery.values())
-        if (r.sessionId === e.sessionId && e.toolCallIds?.includes(r.id)) {
-          r.evicted = true;
-          changed = true;
-        }
-      if (changed) await saveRecovery();
-    });
+    if (!dependencies.session)
+      pi.events.on("drone:context-evicted", async (e) => {
+        let changed = false;
+        for (const r of recovery.values())
+          if (r.sessionId === e.sessionId && e.toolCallIds?.includes(r.id)) {
+            r.evicted = true;
+            changed = true;
+          }
+        if (changed) await saveRecovery();
+      });
     pi.on("session_tree", async (_e, ctx) => {
       recoveryScope = null;
       await attachRecovery(ctx);
@@ -16664,7 +16861,9 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
           service.probeTopic({ query: prompt, project }),
           new Promise((resolveProbe) => {
             timer = setTimeout(() => {
-              console.warn("[knowledge] Optional topic probe exceeded its deadline; continuing ordinary chat.");
+              console.warn(
+                "[knowledge] Optional topic probe exceeded its deadline; continuing ordinary chat."
+              );
               resolveProbe(null);
             }, 600);
           })
@@ -16753,7 +16952,9 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
           event.result.details,
           String(args.summary_markdown || "")
         );
-        const readEvidence = await current.service.currentReadEvidence(current.ticket, ctx.cwd, { limit: 12 });
+        const readEvidence = await current.service.currentReadEvidence(current.ticket, ctx.cwd, {
+          limit: 12
+        });
         const deliveredSources = event.result.details.delivery_receipt.sources.map((source) => ({
           path: source.path,
           hash: source.sha256
@@ -16816,7 +17017,9 @@ Topic memory receipt: ${JSON.stringify({ classification: memoryReceipt.classific
               };
           }
         } catch (error) {
-          appendFooter(`\u4E3B\u9898\u8BB0\u5FC6\u672A\u66F4\u65B0\uFF1A${String(error.message).slice(0, 300)}\uFF1B\u6B63\u5F0F\u77E5\u8BC6\u4E0E\u8BC1\u636E\u95E8\u7981\u4E0D\u53D7\u5F71\u54CD\u3002`);
+          appendFooter(
+            `\u4E3B\u9898\u8BB0\u5FC6\u672A\u66F4\u65B0\uFF1A${String(error.message).slice(0, 300)}\uFF1B\u6B63\u5F0F\u77E5\u8BC6\u4E0E\u8BC1\u636E\u95E8\u7981\u4E0D\u53D7\u5F71\u54CD\u3002`
+          );
         }
         const paths = evidence.sources.map((source) => source.path);
         if (paths.length && !explainerArchived && deliveryContract22(specialists.goal(), { showMeAvailable: true })) {
@@ -17117,34 +17320,37 @@ ${JSON.stringify(visible)}`
         });
       }
     });
-    registerTool3(pi, createKnowledgeReadTool({
-      ensureTurn,
-      toolBudget,
-      observer: {
-        updateFlow: updateKnowledgeFlow2,
-        noteRead: noteKnowledgeRead2,
-        recordRead: async (_id, ctx, c, page, p) => {
-          await attachRecovery(ctx);
-          if (page.hash && page.text) {
-            recovery.set(_id, {
-              id: _id,
-              sessionId: sessionIdentity(ctx),
-              taskId: getTaskRuntime()?.snapshot()?.id || null,
-              path: p.path,
-              hash: page.hash,
-              startLine: p.start_line || 1,
-              maxChars: p.max_chars || 5e3,
-              vaultId: c.binding.vaultId,
-              bindingRevision: c.binding.revision,
-              evicted: false,
-              used: false
-            });
-            while (recovery.size > 8) recovery.delete(recovery.keys().next().value);
-            await saveRecovery(ctx);
+    registerTool3(
+      pi,
+      createKnowledgeReadTool({
+        ensureTurn,
+        toolBudget,
+        observer: {
+          updateFlow: updateKnowledgeFlow2,
+          noteRead: noteKnowledgeRead2,
+          recordRead: async (_id, ctx, c, page, p) => {
+            await attachRecovery(ctx);
+            if (page.hash && page.text) {
+              recovery.set(_id, {
+                id: _id,
+                sessionId: sessionIdentity(ctx),
+                taskId: getTaskRuntime()?.snapshot()?.id || null,
+                path: p.path,
+                hash: page.hash,
+                startLine: p.start_line || 1,
+                maxChars: p.max_chars || 5e3,
+                vaultId: c.binding.vaultId,
+                bindingRevision: c.binding.revision,
+                evicted: false,
+                used: false
+              });
+              while (recovery.size > 8) recovery.delete(recovery.keys().next().value);
+              await saveRecovery(ctx);
+            }
           }
         }
-      }
-    }));
+      })
+    );
     registerTool3(pi, {
       name: "research_restore_evidence",
       drone: { readOnly: true, capabilities: ["research"] },
@@ -17180,29 +17386,39 @@ ${JSON.stringify(visible)}`
         return result(page);
       }
     });
-    registerTool3(pi, createKnowledgeSearchTool({
-      ensureTurn,
-      toolBudget,
-      searchExperiences: async (ctx, input) => {
-        const scope = await requireTopicTurn(ctx);
-        return searchExperiences({
-          binding: scope.binding,
-          project: scope.project,
-          hostId: input.host_id,
-          query: input.query,
-          workflow: input.workflow,
-          hostFilter: input.host_id,
-          limit: input.limit,
-          includeObserved: true
-        });
-      },
-      observer: { updateFlow: updateKnowledgeFlow2, noteSearch: noteKnowledgeSearch2 },
-      searchContext: async (_ctx, c) => activeTopic ? JSON.parse(await (topicMemory || createTopicMemory2({ binding: c.binding, project: c.project })).context(activeTopic.id)) : void 0
-    }));
-    registerTool3(pi, createKnowledgeAnswerCheckTool({
-      ensureTurn,
-      preflight: (ctx, draft) => publication.preflight(ctx, draft)
-    }));
+    registerTool3(
+      pi,
+      createKnowledgeSearchTool({
+        ensureTurn,
+        toolBudget,
+        searchExperiences: async (ctx, input) => {
+          const scope = await requireTopicTurn(ctx);
+          return searchExperiences({
+            binding: scope.binding,
+            project: scope.project,
+            hostId: input.host_id,
+            query: input.query,
+            workflow: input.workflow,
+            hostFilter: input.host_id,
+            limit: input.limit,
+            includeObserved: true
+          });
+        },
+        observer: { updateFlow: updateKnowledgeFlow2, noteSearch: noteKnowledgeSearch2 },
+        searchContext: async (_ctx, c) => activeTopic ? JSON.parse(
+          await (topicMemory || createTopicMemory2({ binding: c.binding, project: c.project })).context(
+            activeTopic.id
+          )
+        ) : void 0
+      })
+    );
+    registerTool3(
+      pi,
+      createKnowledgeAnswerCheckTool({
+        ensureTurn,
+        preflight: (ctx, draft) => publication.preflight(ctx, draft)
+      })
+    );
     registerTool3(pi, {
       name: "research_task_status",
       drone: { readOnly: true, recoverySafe: true, capabilities: ["research", "knowledge"] },
@@ -17285,7 +17501,10 @@ ${JSON.stringify(visible)}`
                   tissue: { type: "string", maxLength: 180 },
                   stage: { type: "string", maxLength: 180 },
                   method: { type: "string", maxLength: 180 },
-                  direction: { type: "string", enum: ["increase", "decrease", "affirmed", "negated", "unknown"] },
+                  direction: {
+                    type: "string",
+                    enum: ["increase", "decrease", "affirmed", "negated", "unknown"]
+                  },
                   endpoint: { type: "string", maxLength: 180 },
                   unit: { type: "string", maxLength: 180 },
                   effect: { type: "number" },
@@ -17563,11 +17782,12 @@ ${JSON.stringify(visible)}`
             const pending = await listWikiProposals2(service, project);
             if (!pending.items.length) {
               if (dependencies.session) await dependencies.session.notify(JSON.stringify(pending), ctx);
-              else pi.sendMessage({
-                customType: "obsidian-review",
-                display: true,
-                content: JSON.stringify(pending)
-              });
+              else
+                pi.sendMessage({
+                  customType: "obsidian-review",
+                  display: true,
+                  content: JSON.stringify(pending)
+                });
               return;
             }
             const options2 = pending.items.map((item) => `${item.id} \xB7 ${item.title}`);
@@ -17602,11 +17822,12 @@ ${text43}`, options);
             choice === "\u786E\u8BA4\u5E94\u7528\u6B64\u5019\u9009" ? "apply" : "reject"
           );
           if (dependencies.session) await dependencies.session.notify(JSON.stringify(output, null, 2), ctx);
-          else pi.sendMessage({
-            customType: "obsidian-review",
-            display: true,
-            content: JSON.stringify(output, null, 2)
-          });
+          else
+            pi.sendMessage({
+              customType: "obsidian-review",
+              display: true,
+              content: JSON.stringify(output, null, 2)
+            });
         }
       });
     }
@@ -17740,7 +17961,8 @@ ${text43}`, options);
         sessionScopeId = nextSessionId;
         current = null;
         bootstrap = null;
-        if (newSession || activeTopic && !continuesTopic(event.prompt || "", activeTopic)) activeTopic = null;
+        if (newSession || activeTopic && !continuesTopic(event.prompt || "", activeTopic))
+          activeTopic = null;
         topicMemory = null;
         explicitTopicProposal = false;
         deliveryFooter = null;
@@ -17819,32 +18041,46 @@ ${text43}`, options);
       }
     };
   }
-  return { configureKnowledgeExtensionHost: configureKnowledgeExtensionHost2, LOCAL_FIRST_GUIDANCE: LOCAL_FIRST_GUIDANCE2, registerWikiReviewAcceptance: registerWikiReviewAcceptance2, registerKnowledgeInterface: registerKnowledgeInterface2 };
+  return {
+    configureKnowledgeExtensionHost: configureKnowledgeExtensionHost2,
+    LOCAL_FIRST_GUIDANCE: LOCAL_FIRST_GUIDANCE2,
+    registerWikiReviewAcceptance: registerWikiReviewAcceptance2,
+    registerKnowledgeInterface: registerKnowledgeInterface2
+  };
 }
-var compatibility5 = createKnowledgeInterfaceApi({
-  host: runtime_host_exports,
-  config: config_exports,
-  services: service_exports,
-  publication: publication_exports,
-  delivery: specialist_delivery_exports,
-  specialists: specialists_exports,
-  topics: topic_memory_exports,
-  ui: ui_state_exports,
-  wiki: wiki_review_exports
-}, {}, true);
-var { configureKnowledgeExtensionHost, LOCAL_FIRST_GUIDANCE, registerWikiReviewAcceptance, registerKnowledgeInterface } = compatibility5;
+var compatibility5 = createKnowledgeInterfaceApi(
+  {
+    host: runtime_host_exports,
+    config: config_exports,
+    services: service_exports,
+    publication: publication_exports,
+    delivery: specialist_delivery_exports,
+    specialists: specialists_exports,
+    topics: topic_memory_exports,
+    ui: ui_state_exports,
+    wiki: wiki_review_exports
+  },
+  {},
+  true
+);
+var {
+  configureKnowledgeExtensionHost,
+  LOCAL_FIRST_GUIDANCE,
+  registerWikiReviewAcceptance,
+  registerKnowledgeInterface
+} = compatibility5;
 
 // node_modules/@gyoungwe/pi-research/dist/host.mjs
-import { createHash as createHash5 } from "node:crypto";
 import { mkdir as mkdir12, readFile as readFile12, writeFile as writeFile12 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
-import { dirname as dirname8, join as join16 } from "node:path";
-import { createHash as createHash32, randomUUID as randomUUID18 } from "node:crypto";
-import { createHash as createHash22 } from "node:crypto";
+import { dirname, join as join15 } from "node:path";
+import { createHash as createHash2, randomUUID as randomUUID15 } from "node:crypto";
+import { createHash as createHash16 } from "node:crypto";
 import { readFile as readFile22, realpath as realpath9, stat as stat4 } from "node:fs/promises";
-import { isAbsolute as isAbsolute6, relative as relative11, resolve as resolve8, sep as sep10 } from "node:path";
+import { isAbsolute as isAbsolute7, relative as relative11, resolve as resolve8, sep as sep10 } from "node:path";
 import { realpath as realpath22 } from "node:fs/promises";
 import { resolve as resolve22 } from "node:path";
+import { createHash as createHash32 } from "node:crypto";
 import { createHash as createHash42, randomUUID as randomUUID22 } from "node:crypto";
 import { access, mkdir as mkdir22, readFile as readFile32, realpath as realpath32, rename as rename10, writeFile as writeFile22 } from "node:fs/promises";
 import { dirname as dirname22, isAbsolute as isAbsolute22, join as join22, relative as relative22, resolve as resolve32, sep as sep22 } from "node:path";
@@ -17875,172 +18111,6 @@ var __export2 = (target, all) => {
   for (var name in all)
     __defProp2(target, name, { get: all[name], enumerable: true });
 };
-var summaryHash = (value) => createHash5("sha256").update(value).digest("hex");
-var summaryBody = (markdown) => `${markdown.trim()}
-`;
-function deliveryMemoryClaims(input, prepared) {
-  if (input === void 0) return [];
-  if (!Array.isArray(input) || input.length > 24) throw new Error("Provide at most 24 summary memory claims");
-  const bindings = /* @__PURE__ */ new Set();
-  return input.map((claim) => {
-    if (!claim || typeof claim !== "object") throw new Error("Invalid summary memory claim");
-    const binding = prepared.claims.find(
-      (candidate) => claim.bindingId ? candidate.id === claim.bindingId : candidate.claim === claim.claim
-    );
-    if (!binding) throw new Error("Summary memory claim is not bound to this research run");
-    if (bindings.has(binding.id)) throw new Error("Provide one memory claim per bindingId");
-    bindings.add(binding.id);
-    const source = binding.sources.find(
-      (item) => item.path === claim.sourcePath && item.hash === claim.sourceHash
-    );
-    if (!source) throw new Error("Summary memory claim source/hash differs from the bound evidence");
-    for (const key of ["subject", "predicate"]) {
-      if (typeof claim[key] !== "string" || !claim[key].trim() || claim[key].length > 180)
-        throw new Error(`Invalid memory claim ${key}`);
-    }
-    if (!["observation", "interpretation", "hypothesis"].includes(claim.relation))
-      throw new Error("Invalid memory claim relation");
-    const result2 = {
-      bindingId: binding.id,
-      claim: binding.claim,
-      subject: claim.subject,
-      predicate: claim.predicate,
-      sourcePath: source.path,
-      sourceHash: source.hash,
-      startLine: source.start_line,
-      endLine: source.end_line,
-      location: `${source.start_line}-${source.end_line}`,
-      limitations: binding.limitations,
-      relation: binding.relationship === "hypothesis" || binding.relationship === "unsupported" ? "hypothesis" : claim.relation,
-      deliveryBodySha256: prepared.bodySha256
-    };
-    for (const key of ["value", "organism", "tissue", "stage", "method", "direction", "endpoint", "unit"]) {
-      if (claim[key] !== void 0) {
-        if (typeof claim[key] !== "string" || claim[key].length > 600)
-          throw new Error(`Invalid memory claim ${key}`);
-        result2[key] = claim[key];
-      }
-    }
-    if (claim.effect !== void 0) {
-      if (!Number.isFinite(claim.effect)) throw new Error("Invalid memory claim effect");
-      result2.effect = claim.effect;
-    }
-    return result2;
-  });
-}
-function summaryReviewPacket(prepared, memoryClaims) {
-  const blocks = [...prepared.body.matchAll(/\S[\s\S]*?(?=\n\s*\n|$)/g)].map((match, index) => ({
-    blockId: `block-${index + 1}`,
-    text: match[0],
-    start: match.index,
-    end: match.index + match[0].length,
-    proposedClaimIds: prepared.claims.map((claim) => claim.id)
-  }));
-  const packet = {
-    version: 1,
-    body: prepared.body,
-    bodySha256: prepared.bodySha256,
-    gateSha256: prepared.gateSha256,
-    claimsSha256: prepared.claimsSha256,
-    evidenceRevision: prepared.evidenceRevision,
-    blocks,
-    claims: prepared.claims,
-    readReceipts: prepared.readReceipts,
-    memoryClaims: memoryClaims.map((claim) => ({
-      ...claim,
-      memoryClaimSha256: summaryHash(JSON.stringify(claim))
-    }))
-  };
-  const bytes = JSON.stringify(packet);
-  if (Buffer.byteLength(bytes) > 512 * 1024)
-    throw new Error("Summary evidence packet exceeds 512 KiB; narrow the delivery before review");
-  return { ...packet, packetSha256: summaryHash(bytes) };
-}
-function validateSummaryAssessment(value, packet) {
-  if (!value || typeof value !== "object") throw new Error("Missing summary semantic assessment");
-  const review = value;
-  if (review.packetSha256 !== packet.packetSha256 || review.bodySha256 !== packet.bodySha256)
-    throw new Error("Summary semantic assessment belongs to different body/evidence bytes");
-  if (typeof review.provider !== "string" || !review.provider.trim() || typeof review.model !== "string" || !review.model.trim() || !Array.isArray(review.blocks) || review.blocks.length !== packet.blocks.length)
-    throw new Error("Incomplete summary semantic assessment");
-  const validateRead = (ref) => {
-    const read = packet.readReceipts.find(
-      (item) => item.receiptId === ref.readReceiptId && item.path === ref.path && item.sha256 === ref.sha256
-    );
-    if (!read || !Number.isInteger(ref.startLine) || !Number.isInteger(ref.endLine) || ref.startLine < read.startLine || ref.endLine < ref.startLine || ref.endLine > read.endLine)
-      throw new Error("Summary assessment cites evidence that was not read in this scope");
-  };
-  const seen = /* @__PURE__ */ new Set();
-  for (const block of review.blocks) {
-    if (!block || !packet.blocks.some((item) => item.blockId === block.blockId) || seen.has(block.blockId) || !["claim", "limitation", "navigation"].includes(block.role) || !["supported", "contradicted", "out-of-scope", "unknown"].includes(block.assessment) || typeof block.reason !== "string" || !block.reason.trim() || !Array.isArray(block.claimIds) || !Array.isArray(block.evidence))
-      throw new Error("Invalid summary block assessment");
-    seen.add(block.blockId);
-    const claims2 = block.claimIds.map((id2) => {
-      const claim = packet.claims.find((candidate) => candidate.id === id2);
-      if (!claim) throw new Error("Summary block references an unknown claim");
-      return claim;
-    });
-    if (!claims2.length) throw new Error("Every summary block requires a valid claim mapping");
-    for (const ref of block.evidence) validateRead(ref);
-    if (block.assessment === "supported")
-      for (const claim of claims2) {
-        if (claim.relationship !== "direct" && claim.relationship !== "indirect") continue;
-        let mapped = false;
-        for (const ref of block.evidence) {
-          if (claim.sources.some(
-            (source) => source.path === ref.path && source.hash === ref.sha256 && ref.startLine >= source.start_line && ref.endLine <= source.end_line
-          ))
-            mapped = true;
-        }
-        if (!mapped)
-          throw new Error(`Summary factual block lacks evidence from its mapped claim: ${claim.id}`);
-      }
-  }
-  if (!Array.isArray(review.memoryClaims) || review.memoryClaims.length !== packet.memoryClaims.length)
-    throw new Error("Incomplete summary memory claim assessment");
-  const reviewedMemory = /* @__PURE__ */ new Set();
-  for (const result2 of review.memoryClaims) {
-    const memory = packet.memoryClaims.find((claim) => claim.bindingId === result2.bindingId);
-    if (!memory || reviewedMemory.has(result2.bindingId) || result2.memoryClaimSha256 !== memory.memoryClaimSha256 || !["supported", "contradicted", "out-of-scope", "unknown"].includes(result2.assessment) || typeof result2.reason !== "string" || !result2.reason.trim() || !Array.isArray(result2.evidence))
-      throw new Error("Invalid summary memory claim assessment or object hash");
-    reviewedMemory.add(result2.bindingId);
-    for (const ref of result2.evidence) validateRead(ref);
-    if (result2.assessment === "supported") {
-      const spans = result2.evidence.filter(
-        (ref) => ref.path === memory.sourcePath && ref.sha256 === memory.sourceHash && ref.startLine >= memory.startLine && ref.endLine <= memory.endLine
-      ).sort((a, b) => a.startLine - b.startLine);
-      let nextLine = memory.startLine;
-      for (const ref of spans) {
-        if (ref.startLine > nextLine) break;
-        nextLine = Math.max(nextLine, ref.endLine + 1);
-      }
-      if (nextLine <= memory.endLine)
-        throw new Error(
-          `Summary memory claim lacks complete evidence from its bound source: ${memory.bindingId}`
-        );
-    }
-  }
-  const unresolved = review.blocks.filter((block) => block.assessment !== "supported");
-  if (unresolved.length)
-    throw new Error(
-      `Summary semantic review is unresolved: ${unresolved.map((block) => `${block.blockId} ${block.assessment}: ${block.reason}`).join("; ")}`
-    );
-  const unresolvedMemory = review.memoryClaims.filter((claim) => claim.assessment !== "supported");
-  if (unresolvedMemory.length)
-    throw new Error(
-      `Summary memory claim review is unresolved: ${unresolvedMemory.map((claim) => `${claim.bindingId} ${claim.assessment}: ${claim.reason}`).join("; ")}`
-    );
-  return {
-    status: "model-assessed",
-    packetSha256: packet.packetSha256,
-    bodySha256: packet.bodySha256,
-    provider: review.provider,
-    model: review.model,
-    blocks: review.blocks,
-    memoryClaims: review.memoryClaims,
-    ...review.usage === void 0 ? {} : { usage: review.usage }
-  };
-}
 var claim_bindings_exports = {};
 __export2(claim_bindings_exports, {
   CLAIM_BINDING_SCHEMA: () => CLAIM_BINDING_SCHEMA,
@@ -18236,8 +18306,8 @@ function inferEzproxyTemplateFromUrl(navigatedUrl) {
   }
 }
 var INSTITUTIONAL_CONFIG_NAME = "institutional.json";
-var INSTITUTIONAL_AGENT_DIR = join16(homedir2(), ".pi", "agent");
-var INSTITUTIONAL_CONFIG_PATH = join16(INSTITUTIONAL_AGENT_DIR, INSTITUTIONAL_CONFIG_NAME);
+var INSTITUTIONAL_AGENT_DIR = join15(homedir2(), ".pi", "agent");
+var INSTITUTIONAL_CONFIG_PATH = join15(INSTITUTIONAL_AGENT_DIR, INSTITUTIONAL_CONFIG_NAME);
 function emptyInstitutionalConfig() {
   return { version: 1, autoDownloadEnabled: true, perTaskLimit: 20 };
 }
@@ -18287,7 +18357,7 @@ async function saveInstitutionalConfig(config, path = INSTITUTIONAL_CONFIG_PATH,
   }
 }) {
   const normalized = normalizeInstitutionalConfig(config);
-  await io.mkdir(dirname8(path));
+  await io.mkdir(dirname(path));
   await io.writeFile(path, `${JSON.stringify(normalized, null, 2)}
 `);
   return normalized;
@@ -18378,7 +18448,7 @@ async function verifyLiteratureReceipt({
     vaultResolved = true;
     const file = await realpath9(resolve8(root, notePath));
     const rel = relative11(root, file);
-    if (isAbsolute6(rel) || rel === ".." || rel.startsWith(`..${sep10}`)) throw new Error("outside-vault");
+    if (isAbsolute7(rel) || rel === ".." || rel.startsWith(`..${sep10}`)) throw new Error("outside-vault");
     if ((await stat4(file)).size > 1024 * 1024) throw new Error("note-too-large");
     const text6 = await readFile22(file, "utf8");
     const linked = text6.includes(`zotero:${zoteroKey}`) || new RegExp(`zotero://select/library/items/${zoteroKey}(?=[)\\s<>]|$)`).test(text6) || new RegExp(`^zotero_key: *["']?${zoteroKey}["']? *$`, "m").test(text6);
@@ -18387,7 +18457,7 @@ async function verifyLiteratureReceipt({
       status: linked && dois.some((item) => normalizeDoi(item.replace(/[.,;]+$/, "")) === normalizedDoi) ? "verified" : "identity-mismatch",
       path: notePath,
       vault: root,
-      hash: createHash22("sha256").update(text6).digest("hex")
+      hash: createHash16("sha256").update(text6).digest("hex")
     };
   } catch (error) {
     if (vaultResolved && error instanceof Error && "code" in error && error.code === "ENOENT") {
@@ -18419,11 +18489,11 @@ function destinationRecovery(receipt2 = {}) {
 function literatureOperationId(vault, revision, doi) {
   const normalized = normalizeDoi(doi);
   if (!normalized) throw new Error("Valid DOI required");
-  return createHash32("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
+  return createHash2("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
 }
 function createLiteratureOperations(ports) {
   const now2 = ports.now || (() => (/* @__PURE__ */ new Date()).toISOString());
-  const createId = ports.createId || randomUUID18;
+  const createId = ports.createId || randomUUID15;
   return {
     async reconcileLiteratureOperation({ cwd = process.cwd(), runDir, doi, zoteroKey, notePath }, { verify = ports.verify } = {}) {
       const normalized = normalizeDoi(doi);
@@ -19025,6 +19095,172 @@ function createResearchReceiptJournal(cwd, { sessionId = null, ports }) {
       runs.clear();
       buffer.clear();
     }
+  };
+}
+var summaryHash = (value) => createHash32("sha256").update(value).digest("hex");
+var summaryBody = (markdown) => `${markdown.trim()}
+`;
+function deliveryMemoryClaims(input, prepared) {
+  if (input === void 0) return [];
+  if (!Array.isArray(input) || input.length > 24) throw new Error("Provide at most 24 summary memory claims");
+  const bindings = /* @__PURE__ */ new Set();
+  return input.map((claim) => {
+    if (!claim || typeof claim !== "object") throw new Error("Invalid summary memory claim");
+    const binding = prepared.claims.find(
+      (candidate) => claim.bindingId ? candidate.id === claim.bindingId : candidate.claim === claim.claim
+    );
+    if (!binding) throw new Error("Summary memory claim is not bound to this research run");
+    if (bindings.has(binding.id)) throw new Error("Provide one memory claim per bindingId");
+    bindings.add(binding.id);
+    const source = binding.sources.find(
+      (item) => item.path === claim.sourcePath && item.hash === claim.sourceHash
+    );
+    if (!source) throw new Error("Summary memory claim source/hash differs from the bound evidence");
+    for (const key of ["subject", "predicate"]) {
+      if (typeof claim[key] !== "string" || !claim[key].trim() || claim[key].length > 180)
+        throw new Error(`Invalid memory claim ${key}`);
+    }
+    if (!["observation", "interpretation", "hypothesis"].includes(claim.relation))
+      throw new Error("Invalid memory claim relation");
+    const result2 = {
+      bindingId: binding.id,
+      claim: binding.claim,
+      subject: claim.subject,
+      predicate: claim.predicate,
+      sourcePath: source.path,
+      sourceHash: source.hash,
+      startLine: source.start_line,
+      endLine: source.end_line,
+      location: `${source.start_line}-${source.end_line}`,
+      limitations: binding.limitations,
+      relation: binding.relationship === "hypothesis" || binding.relationship === "unsupported" ? "hypothesis" : claim.relation,
+      deliveryBodySha256: prepared.bodySha256
+    };
+    for (const key of ["value", "organism", "tissue", "stage", "method", "direction", "endpoint", "unit"]) {
+      if (claim[key] !== void 0) {
+        if (typeof claim[key] !== "string" || claim[key].length > 600)
+          throw new Error(`Invalid memory claim ${key}`);
+        result2[key] = claim[key];
+      }
+    }
+    if (claim.effect !== void 0) {
+      if (!Number.isFinite(claim.effect)) throw new Error("Invalid memory claim effect");
+      result2.effect = claim.effect;
+    }
+    return result2;
+  });
+}
+function summaryReviewPacket(prepared, memoryClaims) {
+  const blocks = [...prepared.body.matchAll(/\S[\s\S]*?(?=\n\s*\n|$)/g)].map((match, index) => ({
+    blockId: `block-${index + 1}`,
+    text: match[0],
+    start: match.index,
+    end: match.index + match[0].length,
+    proposedClaimIds: prepared.claims.map((claim) => claim.id)
+  }));
+  const packet = {
+    version: 1,
+    body: prepared.body,
+    bodySha256: prepared.bodySha256,
+    gateSha256: prepared.gateSha256,
+    claimsSha256: prepared.claimsSha256,
+    evidenceRevision: prepared.evidenceRevision,
+    blocks,
+    claims: prepared.claims,
+    readReceipts: prepared.readReceipts,
+    memoryClaims: memoryClaims.map((claim) => ({
+      ...claim,
+      memoryClaimSha256: summaryHash(JSON.stringify(claim))
+    }))
+  };
+  const bytes = JSON.stringify(packet);
+  if (Buffer.byteLength(bytes) > 512 * 1024)
+    throw new Error("Summary evidence packet exceeds 512 KiB; narrow the delivery before review");
+  return { ...packet, packetSha256: summaryHash(bytes) };
+}
+function validateSummaryAssessment(value, packet) {
+  if (!value || typeof value !== "object") throw new Error("Missing summary semantic assessment");
+  const review = value;
+  if (review.packetSha256 !== packet.packetSha256 || review.bodySha256 !== packet.bodySha256)
+    throw new Error("Summary semantic assessment belongs to different body/evidence bytes");
+  if (typeof review.provider !== "string" || !review.provider.trim() || typeof review.model !== "string" || !review.model.trim() || !Array.isArray(review.blocks) || review.blocks.length !== packet.blocks.length)
+    throw new Error("Incomplete summary semantic assessment");
+  const validateRead = (ref) => {
+    const read = packet.readReceipts.find(
+      (item) => item.receiptId === ref.readReceiptId && item.path === ref.path && item.sha256 === ref.sha256
+    );
+    if (!read || !Number.isInteger(ref.startLine) || !Number.isInteger(ref.endLine) || ref.startLine < read.startLine || ref.endLine < ref.startLine || ref.endLine > read.endLine)
+      throw new Error("Summary assessment cites evidence that was not read in this scope");
+  };
+  const seen = /* @__PURE__ */ new Set();
+  for (const block of review.blocks) {
+    if (!block || !packet.blocks.some((item) => item.blockId === block.blockId) || seen.has(block.blockId) || !["claim", "limitation", "navigation"].includes(block.role) || !["supported", "contradicted", "out-of-scope", "unknown"].includes(block.assessment) || typeof block.reason !== "string" || !block.reason.trim() || !Array.isArray(block.claimIds) || !Array.isArray(block.evidence))
+      throw new Error("Invalid summary block assessment");
+    seen.add(block.blockId);
+    const claims2 = block.claimIds.map((id2) => {
+      const claim = packet.claims.find((candidate) => candidate.id === id2);
+      if (!claim) throw new Error("Summary block references an unknown claim");
+      return claim;
+    });
+    if (!claims2.length) throw new Error("Every summary block requires a valid claim mapping");
+    for (const ref of block.evidence) validateRead(ref);
+    if (block.assessment === "supported")
+      for (const claim of claims2) {
+        if (claim.relationship !== "direct" && claim.relationship !== "indirect") continue;
+        let mapped = false;
+        for (const ref of block.evidence) {
+          if (claim.sources.some(
+            (source) => source.path === ref.path && source.hash === ref.sha256 && ref.startLine >= source.start_line && ref.endLine <= source.end_line
+          ))
+            mapped = true;
+        }
+        if (!mapped)
+          throw new Error(`Summary factual block lacks evidence from its mapped claim: ${claim.id}`);
+      }
+  }
+  if (!Array.isArray(review.memoryClaims) || review.memoryClaims.length !== packet.memoryClaims.length)
+    throw new Error("Incomplete summary memory claim assessment");
+  const reviewedMemory = /* @__PURE__ */ new Set();
+  for (const result2 of review.memoryClaims) {
+    const memory = packet.memoryClaims.find((claim) => claim.bindingId === result2.bindingId);
+    if (!memory || reviewedMemory.has(result2.bindingId) || result2.memoryClaimSha256 !== memory.memoryClaimSha256 || !["supported", "contradicted", "out-of-scope", "unknown"].includes(result2.assessment) || typeof result2.reason !== "string" || !result2.reason.trim() || !Array.isArray(result2.evidence))
+      throw new Error("Invalid summary memory claim assessment or object hash");
+    reviewedMemory.add(result2.bindingId);
+    for (const ref of result2.evidence) validateRead(ref);
+    if (result2.assessment === "supported") {
+      const spans = result2.evidence.filter(
+        (ref) => ref.path === memory.sourcePath && ref.sha256 === memory.sourceHash && ref.startLine >= memory.startLine && ref.endLine <= memory.endLine
+      ).sort((a, b) => a.startLine - b.startLine);
+      let nextLine = memory.startLine;
+      for (const ref of spans) {
+        if (ref.startLine > nextLine) break;
+        nextLine = Math.max(nextLine, ref.endLine + 1);
+      }
+      if (nextLine <= memory.endLine)
+        throw new Error(
+          `Summary memory claim lacks complete evidence from its bound source: ${memory.bindingId}`
+        );
+    }
+  }
+  const unresolved = review.blocks.filter((block) => block.assessment !== "supported");
+  if (unresolved.length)
+    throw new Error(
+      `Summary semantic review is unresolved: ${unresolved.map((block) => `${block.blockId} ${block.assessment}: ${block.reason}`).join("; ")}`
+    );
+  const unresolvedMemory = review.memoryClaims.filter((claim) => claim.assessment !== "supported");
+  if (unresolvedMemory.length)
+    throw new Error(
+      `Summary memory claim review is unresolved: ${unresolvedMemory.map((claim) => `${claim.bindingId} ${claim.assessment}: ${claim.reason}`).join("; ")}`
+    );
+  return {
+    status: "model-assessed",
+    packetSha256: packet.packetSha256,
+    bodySha256: packet.bodySha256,
+    provider: review.provider,
+    model: review.model,
+    blocks: review.blocks,
+    memoryClaims: review.memoryClaims,
+    ...review.usage === void 0 ? {} : { usage: review.usage }
   };
 }
 var research_loop_exports = {};
@@ -21436,6 +21672,21 @@ function summarizeZoteroAttachments(children, parentKey) {
     metadataOnly: true
   }));
 }
+var zotero_library_exports = {};
+__export2(zotero_library_exports, {
+  zoteroLibraryEnvValue: () => zoteroLibraryEnvValue,
+  zoteroLibraryPath: () => zoteroLibraryPath
+});
+function zoteroLibraryPath(value) {
+  if (value === void 0 || value === null) return "users";
+  const text6 = String(value).trim().toLowerCase();
+  if (text6 === "" || text6 === "user" || text6 === "users") return "users";
+  if (text6 === "group" || text6 === "groups") return "groups";
+  return null;
+}
+function zoteroLibraryEnvValue(path) {
+  return zoteroLibraryPath(path) === "groups" ? "group" : "user";
+}
 var zotero_reconcile_exports = {};
 __export2(zotero_reconcile_exports, {
   lookupZoteroByDoi: () => lookupZoteroByDoi
@@ -21504,21 +21755,6 @@ __export2(zotero_reconcile_runtime_exports, {
   createLocalZoteroReconciler: () => createLocalZoteroReconciler,
   createZoteroReconciler: () => createZoteroReconciler
 });
-var zotero_library_exports = {};
-__export2(zotero_library_exports, {
-  zoteroLibraryEnvValue: () => zoteroLibraryEnvValue,
-  zoteroLibraryPath: () => zoteroLibraryPath
-});
-function zoteroLibraryPath(value) {
-  if (value === void 0 || value === null) return "users";
-  const text6 = String(value).trim().toLowerCase();
-  if (text6 === "" || text6 === "user" || text6 === "users") return "users";
-  if (text6 === "group" || text6 === "groups") return "groups";
-  return null;
-}
-function zoteroLibraryEnvValue(path) {
-  return zoteroLibraryPath(path) === "groups" ? "group" : "user";
-}
 var LOCAL_API = "http://127.0.0.1:23119/api/users/0";
 var LOCAL_USER_LIBRARY_IDS = /* @__PURE__ */ new Set(["0", "1"]);
 function createZoteroReconciler({
@@ -23220,6 +23456,15 @@ ${changes.map((line) => `- ${line}`).join("\n")}`);
   );
   return lines.join("\n\n");
 }
+var EVIDENCE_STAGES = Object.freeze([
+  "created",
+  "local_query_recorded",
+  "external_search_recorded",
+  "sources_inspected",
+  "sources_archived",
+  "claims_bound",
+  "answerable"
+]);
 var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for factual research claims, not unrelated citations for ordinary chat. For a simple factual question that can be answered from existing local knowledge, take the light path: retrieve, answer, and auto-deposit a bounded note when appropriate; do not create a task_plan or ask for write authorization just to answer. For substantive tasks, do bounded read-only preparation and consolidate scope, assumptions, needed permissions and deliverables into one task_plan for one user authorization. After authorization, carry out routine steps and recoverable checks within that scope without repeatedly asking whether to continue. Respect prior decisions, especially declined installs. New risks or scope, missing credentials and genuinely unavailable user data still require a specific request; never infer consent. At completion, explain what changed, link actual outputs or show key figures, separate execution from validation, and give one next step only if needed. Keep internal counters and tool logs out of the main answer.";
 function sessionKey(ctx) {
   return ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || ctx?.cwd || "";
@@ -23462,17 +23707,8 @@ For substantive research, use research_loop(action=start) when a tracked run is 
     )
   };
 }
-var EVIDENCE_STAGES = Object.freeze([
-  "created",
-  "local_query_recorded",
-  "external_search_recorded",
-  "sources_inspected",
-  "sources_archived",
-  "claims_bound",
-  "answerable"
-]);
 var DEFAULT_TIMEOUT_MS2 = 12e3;
-function hash3(value) {
+function hash4(value) {
   return createHash102("sha256").update(JSON.stringify(value)).digest("hex");
 }
 function isoNow() {
@@ -23494,7 +23730,7 @@ function receipt(input) {
     sourceType: input.kind,
     title: input.title,
     accessedAt: isoNow(),
-    contentHash: hash3(input.payload),
+    contentHash: hash4(input.payload),
     readOnly: true
   };
 }
@@ -23535,7 +23771,10 @@ async function fetchText(fetchImpl, url, options) {
   const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
   try {
     const response = await fetchImpl(url, {
-      headers: { accept: "application/atom+xml,application/xml,text/xml", "user-agent": "Drone-Research-Workbench/0.33" },
+      headers: {
+        accept: "application/atom+xml,application/xml,text/xml",
+        "user-agent": "Drone-Research-Workbench/0.33"
+      },
       signal
     });
     if (!response.ok) throw Object.assign(new Error(`HTTP ${response.status}`), { status: response.status });
@@ -23642,9 +23881,9 @@ function createArxivConnector(fetchImpl) {
         const title = xmlTag(entry, "title");
         if (!arxivId || !title) return [];
         const locator = `https://arxiv.org/abs/${arxivId}`;
-        const authors = [...entry.matchAll(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/giu)].map(
-          (item) => text42(item[1]).replaceAll("&amp;", "&")
-        );
+        const authors = [
+          ...entry.matchAll(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/giu)
+        ].map((item) => text42(item[1]).replaceAll("&amp;", "&"));
         const publishedAt = xmlTag(entry, "published") || void 0;
         return [
           {
@@ -23679,7 +23918,7 @@ function createProjectStorageConnector(projectStorage) {
       return items.slice(0, limit).flatMap((item) => {
         const relativePath2 = text42(item.relativePath).replaceAll("\\", "/");
         if (!relativePath2 || relativePath2.endsWith("/")) return [];
-        const sourceRef = `project-storage:${hash3({ cwd: options.cwd, relativePath: relativePath2 })}`;
+        const sourceRef = `project-storage:${hash4({ cwd: options.cwd, relativePath: relativePath2 })}`;
         const title = text42(item.title) || relativePath2;
         return [
           {
@@ -23695,7 +23934,7 @@ function createProjectStorageConnector(projectStorage) {
               title,
               version: item.modifiedAt,
               accessedAt: isoNow(),
-              contentHash: item.contentHash || hash3({ cwd: options.cwd, relativePath: relativePath2, size: item.size, modifiedAt: item.modifiedAt }),
+              contentHash: item.contentHash || hash4({ cwd: options.cwd, relativePath: relativePath2, size: item.size, modifiedAt: item.modifiedAt }),
               readOnly: true
             }
           }
@@ -23717,10 +23956,14 @@ function createResearchConnectorHostLoader(options) {
         status: "unavailable",
         list: () => [],
         recommend: async () => {
-          throw new Error("Research connector transport is unavailable; the host must inject an authorized connector registry");
+          throw new Error(
+            "Research connector transport is unavailable; the host must inject an authorized connector registry"
+          );
         },
         search: async () => {
-          throw new Error("Research connector transport is unavailable; the host must inject an authorized connector registry");
+          throw new Error(
+            "Research connector transport is unavailable; the host must inject an authorized connector registry"
+          );
         }
       })
     };
@@ -23739,7 +23982,14 @@ function createResearchConnectorHostLoader(options) {
           if (!connector) {
             return {
               hits: [],
-              failures: [{ connectorId, message: `Unknown research connector: ${connectorId}`, retryable: false, at: isoNow() }]
+              failures: [
+                {
+                  connectorId,
+                  message: `Unknown research connector: ${connectorId}`,
+                  retryable: false,
+                  at: isoNow()
+                }
+              ]
             };
           }
           if (!connector.recommend) return { hits: [], failures: [] };
@@ -23755,7 +24005,12 @@ function createResearchConnectorHostLoader(options) {
           const requested = input.connectorIds ? [...input.connectorIds] : connectors.map((connector) => connector.descriptor.id);
           const selected = requested.map((id2) => byId.get(id2)).filter((connector) => Boolean(connector));
           const limit = clampLimit(input.limit);
-          const failures = requested.filter((id2) => !byId.has(id2)).map((connectorId) => ({ connectorId, message: `Unknown research connector: ${connectorId}`, retryable: false, at: isoNow() }));
+          const failures = requested.filter((id2) => !byId.has(id2)).map((connectorId) => ({
+            connectorId,
+            message: `Unknown research connector: ${connectorId}`,
+            retryable: false,
+            at: isoNow()
+          }));
           const settled = await Promise.allSettled(
             selected.map(
               (connector) => connector.search(query, {
@@ -23773,7 +24028,10 @@ function createResearchConnectorHostLoader(options) {
             if (result2.status === "fulfilled") hits.push(...result2.value);
             else failures.push(failure(connector.descriptor.id, result2.reason));
           });
-          const deduped = [...new Map(hits.map((hit) => [hit.id, hit])).values()].slice(0, limit * Math.max(1, selected.length));
+          const deduped = [...new Map(hits.map((hit) => [hit.id, hit])).values()].slice(
+            0,
+            limit * Math.max(1, selected.length)
+          );
           return { query, hits: deduped, failures, connectors: requested, complete: failures.length === 0 };
         }
       };
@@ -24220,7 +24478,7 @@ import { pathToFileURL as pathToFileURL4 } from "node:url";
 // packages/extensions/src/internal/summary-write-transaction.ts
 import { randomUUID as randomUUID19 } from "node:crypto";
 import { mkdir as mkdir13, readFile as readFile13, rename as rename11, rm as rm2, unlink as unlink8, writeFile as writeFile13 } from "node:fs/promises";
-import { dirname as dirname9 } from "node:path";
+import { dirname as dirname7 } from "node:path";
 async function existingBytes(path) {
   try {
     return await readFile13(path);
@@ -24235,7 +24493,7 @@ async function assertPreimage(path, expected) {
     throw new Error(`Summary destination changed before committing: ${path}`);
 }
 async function atomicBytes(path, bytes, expected) {
-  await mkdir13(dirname9(path), { recursive: true });
+  await mkdir13(dirname7(path), { recursive: true });
   const temporary = `${path}.${randomUUID19()}.tmp`;
   try {
     await writeFile13(temporary, bytes);

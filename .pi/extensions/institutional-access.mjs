@@ -3,16 +3,16 @@
 import { createRequire } from "node:module";
 
 // node_modules/@gyoungwe/pi-research/dist/host.mjs
-import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { createHash as createHash3, randomUUID } from "node:crypto";
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash2, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { readFile as readFile2, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { realpath as realpath2 } from "node:fs/promises";
 import { resolve as resolve2 } from "node:path";
+import { createHash as createHash3 } from "node:crypto";
 import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
 import { access, mkdir as mkdir2, readFile as readFile3, realpath as realpath3, rename, writeFile as writeFile2 } from "node:fs/promises";
 import { dirname as dirname2, isAbsolute as isAbsolute2, join as join2, relative as relative2, resolve as resolve3, sep as sep2 } from "node:path";
@@ -43,9 +43,6 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var summaryHash = (value) => createHash("sha256").update(value).digest("hex");
-var summaryBody = (markdown) => `${markdown.trim()}
-`;
 var claim_bindings_exports = {};
 __export(claim_bindings_exports, {
   CLAIM_BINDING_SCHEMA: () => CLAIM_BINDING_SCHEMA,
@@ -392,7 +389,7 @@ async function verifyLiteratureReceipt({
       status: linked && dois.some((item) => normalizeDoi(item.replace(/[.,;]+$/, "")) === normalizedDoi) ? "verified" : "identity-mismatch",
       path: notePath,
       vault: root,
-      hash: createHash2("sha256").update(text6).digest("hex")
+      hash: createHash("sha256").update(text6).digest("hex")
     };
   } catch (error) {
     if (vaultResolved && error instanceof Error && "code" in error && error.code === "ENOENT") {
@@ -424,7 +421,7 @@ function destinationRecovery(receipt2 = {}) {
 function literatureOperationId(vault, revision, doi) {
   const normalized = normalizeDoi(doi);
   if (!normalized) throw new Error("Valid DOI required");
-  return createHash3("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
+  return createHash2("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
 }
 function createLiteratureOperations(ports) {
   const now = ports.now || (() => (/* @__PURE__ */ new Date()).toISOString());
@@ -1032,6 +1029,9 @@ function createResearchReceiptJournal(cwd, { sessionId = null, ports }) {
     }
   };
 }
+var summaryHash = (value) => createHash3("sha256").update(value).digest("hex");
+var summaryBody = (markdown) => `${markdown.trim()}
+`;
 var research_loop_exports = {};
 __export(research_loop_exports, {
   RESEARCH_DOCUMENT_KIND: () => RESEARCH_DOCUMENT_KIND,
@@ -3441,6 +3441,21 @@ function summarizeZoteroAttachments(children, parentKey) {
     metadataOnly: true
   }));
 }
+var zotero_library_exports = {};
+__export(zotero_library_exports, {
+  zoteroLibraryEnvValue: () => zoteroLibraryEnvValue,
+  zoteroLibraryPath: () => zoteroLibraryPath
+});
+function zoteroLibraryPath(value) {
+  if (value === void 0 || value === null) return "users";
+  const text6 = String(value).trim().toLowerCase();
+  if (text6 === "" || text6 === "user" || text6 === "users") return "users";
+  if (text6 === "group" || text6 === "groups") return "groups";
+  return null;
+}
+function zoteroLibraryEnvValue(path) {
+  return zoteroLibraryPath(path) === "groups" ? "group" : "user";
+}
 var zotero_reconcile_exports = {};
 __export(zotero_reconcile_exports, {
   lookupZoteroByDoi: () => lookupZoteroByDoi
@@ -3509,21 +3524,6 @@ __export(zotero_reconcile_runtime_exports, {
   createLocalZoteroReconciler: () => createLocalZoteroReconciler,
   createZoteroReconciler: () => createZoteroReconciler
 });
-var zotero_library_exports = {};
-__export(zotero_library_exports, {
-  zoteroLibraryEnvValue: () => zoteroLibraryEnvValue,
-  zoteroLibraryPath: () => zoteroLibraryPath
-});
-function zoteroLibraryPath(value) {
-  if (value === void 0 || value === null) return "users";
-  const text6 = String(value).trim().toLowerCase();
-  if (text6 === "" || text6 === "user" || text6 === "users") return "users";
-  if (text6 === "group" || text6 === "groups") return "groups";
-  return null;
-}
-function zoteroLibraryEnvValue(path) {
-  return zoteroLibraryPath(path) === "groups" ? "group" : "user";
-}
 var LOCAL_API = "http://127.0.0.1:23119/api/users/0";
 var LOCAL_USER_LIBRARY_IDS = /* @__PURE__ */ new Set(["0", "1"]);
 function createZoteroReconciler({
@@ -5298,7 +5298,10 @@ async function fetchText(fetchImpl, url, options) {
   const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
   try {
     const response = await fetchImpl(url, {
-      headers: { accept: "application/atom+xml,application/xml,text/xml", "user-agent": "Drone-Research-Workbench/0.33" },
+      headers: {
+        accept: "application/atom+xml,application/xml,text/xml",
+        "user-agent": "Drone-Research-Workbench/0.33"
+      },
       signal
     });
     if (!response.ok) throw Object.assign(new Error(`HTTP ${response.status}`), { status: response.status });
@@ -5405,9 +5408,9 @@ function createArxivConnector(fetchImpl) {
         const title = xmlTag(entry, "title");
         if (!arxivId || !title) return [];
         const locator = `https://arxiv.org/abs/${arxivId}`;
-        const authors = [...entry.matchAll(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/giu)].map(
-          (item) => text4(item[1]).replaceAll("&amp;", "&")
-        );
+        const authors = [
+          ...entry.matchAll(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/giu)
+        ].map((item) => text4(item[1]).replaceAll("&amp;", "&"));
         const publishedAt = xmlTag(entry, "published") || void 0;
         return [
           {
@@ -5480,10 +5483,14 @@ function createResearchConnectorHostLoader(options) {
         status: "unavailable",
         list: () => [],
         recommend: async () => {
-          throw new Error("Research connector transport is unavailable; the host must inject an authorized connector registry");
+          throw new Error(
+            "Research connector transport is unavailable; the host must inject an authorized connector registry"
+          );
         },
         search: async () => {
-          throw new Error("Research connector transport is unavailable; the host must inject an authorized connector registry");
+          throw new Error(
+            "Research connector transport is unavailable; the host must inject an authorized connector registry"
+          );
         }
       })
     };
@@ -5502,7 +5509,14 @@ function createResearchConnectorHostLoader(options) {
           if (!connector) {
             return {
               hits: [],
-              failures: [{ connectorId, message: `Unknown research connector: ${connectorId}`, retryable: false, at: isoNow() }]
+              failures: [
+                {
+                  connectorId,
+                  message: `Unknown research connector: ${connectorId}`,
+                  retryable: false,
+                  at: isoNow()
+                }
+              ]
             };
           }
           if (!connector.recommend) return { hits: [], failures: [] };
@@ -5518,7 +5532,12 @@ function createResearchConnectorHostLoader(options) {
           const requested = input.connectorIds ? [...input.connectorIds] : connectors.map((connector) => connector.descriptor.id);
           const selected = requested.map((id) => byId.get(id)).filter((connector) => Boolean(connector));
           const limit = clampLimit(input.limit);
-          const failures = requested.filter((id) => !byId.has(id)).map((connectorId) => ({ connectorId, message: `Unknown research connector: ${connectorId}`, retryable: false, at: isoNow() }));
+          const failures = requested.filter((id) => !byId.has(id)).map((connectorId) => ({
+            connectorId,
+            message: `Unknown research connector: ${connectorId}`,
+            retryable: false,
+            at: isoNow()
+          }));
           const settled = await Promise.allSettled(
             selected.map(
               (connector) => connector.search(query, {
@@ -5536,7 +5555,10 @@ function createResearchConnectorHostLoader(options) {
             if (result.status === "fulfilled") hits.push(...result.value);
             else failures.push(failure(connector.descriptor.id, result.reason));
           });
-          const deduped = [...new Map(hits.map((hit) => [hit.id, hit])).values()].slice(0, limit * Math.max(1, selected.length));
+          const deduped = [...new Map(hits.map((hit) => [hit.id, hit])).values()].slice(
+            0,
+            limit * Math.max(1, selected.length)
+          );
           return { query, hits: deduped, failures, connectors: requested, complete: failures.length === 0 };
         }
       };
