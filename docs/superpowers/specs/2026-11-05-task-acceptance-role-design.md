@@ -1,6 +1,6 @@
 # 跨插件验收器角色（P4 §5.2 第 3 项）
 
-日期：2026-11-05。状态：**部分确认，尚未实现**：用户已选决定 1 的方案 A（2026-11-05）；决定 2、3 待确认。依据：[P4 交接](../../handoff-2026-10-29-p4.md) §5.2、[动态 owner 设计](2026-10-28-task-managed-owner-cutover-design.md)“acceptance/verifier”一行、[宿主任务授权](2026-10-29-host-task-grant-design.md)。
+日期：2026-11-05。状态：**已确认，部分实现**：用户已选决定 1 的方案 A、决定 2 的 `consumes` + 前缀枚举、决定 3 的宿主弹框（均 2026-11-05）。依据：[P4 交接](../../handoff-2026-10-29-p4.md) §5.2、[动态 owner 设计](2026-10-28-task-managed-owner-cutover-design.md)“acceptance/verifier”一行、[宿主任务授权](2026-10-29-host-task-grant-design.md)。
 
 ## 要解决的问题
 
@@ -87,8 +87,8 @@
    - **A（推荐）**：把 Zotero 工具和验收器这一小片提前到 P4，迁入 `pi-research` 受管运行时。这样 §5.3 的 Zotero 示例任务能真实通过，旧桥也能一次删干净。代价是 P4 变大，且受管进程里跑 Zotero 写入（本机 API、MCP 子进程、`worker_threads` 限制）还没验证，要先做一次探查。
    - **B**：P4 只交付机制和 `wiki_review`，切换时 `zotero_item` 明确报“不可用”，直到 P3 完成。P4 小得多，但 P3 之前依赖 Zotero 的示例任务不可用，§5.3 的验收要相应减项。
    - 不建议保留进程内桥接等 P3：这和 §5.3 要删除 `drone:task-write-consent` 直接冲突。
-2. **`consumes` + 前缀枚举是否可以？** 备选是专用声明 `drone.acceptanceVerifiers`，更直白，但等于第二个目录，后续其他角色还要再加。我推荐前者。
-3. **`rebind` 走宿主弹框是否可以？** 这是我唯一改变了“谁来渲染”的用户可见流程。
+2. **`consumes` + 前缀枚举是否可以？** 备选是专用声明 `drone.acceptanceVerifiers`，更直白，但等于第二个目录，后续其他角色还要再加。我推荐前者。**已选：`consumes` + 前缀枚举（2026-11-05）。**
+3. **`rebind` 走宿主弹框是否可以？** 这是我唯一改变了“谁来渲染”的用户可见流程。**已选：宿主弹框（2026-11-05）。**
 
 ## 方案 A 的探查结果（2026-11-05）
 
