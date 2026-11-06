@@ -3,7 +3,9 @@ import { test } from "node:test";
 import { compare, scanSource } from "./check-structure.mjs";
 
 test("flags long files, non-Error extends and module-level let", () => {
-	const text = `${"x\n".repeat(401)}class A extends B {}\nclass E extends Error {}\nclass F extends errors.HttpError {}\nlet a = 1;\nexport let b = 2;\nfunction f() {\n\tlet c = 3;\n}\n`;
+	// Built from parts so this file does not trip the check it tests.
+	const ext = "ext" + "ends";
+	const text = `${"x\n".repeat(401)}class A ${ext} B {}\nclass E ${ext} Error {}\nclass F ${ext} errors.HttpError {}\nlet a = 1;\nexport let b = 2;\nfunction f() {\n\tlet c = 3;\n}\n`;
 	assert.deepEqual(scanSource(text), { "file-lines": 409, "class-extends": 1, "module-let": 2 });
 	assert.deepEqual(scanSource("const a = 1;\n"), {});
 });

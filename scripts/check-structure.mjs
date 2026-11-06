@@ -2,7 +2,7 @@
 /**
  * Ratcheting structure guard (AGENTS.md hard limits):
  * - files over 400 lines,
- * - `class X extends Y` for anything other than Error subclasses,
+ * - class inheritance other than Error subclasses,
  * - module-level `let`.
  *
  * Existing findings live in the baseline fixture. A file that newly crosses a
