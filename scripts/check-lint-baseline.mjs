@@ -17,6 +17,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { isMainModule } from "./is-main-module.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BASELINE_PATH = join(ROOT, "scripts/fixtures/lint-baseline.json");
@@ -97,7 +98,7 @@ export function updateBaseline(baselinePath, current, args) {
 	return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
 	const current = countDiagnostics(JSON.parse(runBiome()));
 	const args = process.argv.slice(2);
 	if (args.includes("--update")) process.exit(updateBaseline(BASELINE_PATH, current, args));

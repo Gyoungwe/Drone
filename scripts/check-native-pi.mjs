@@ -10,6 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMainModule } from "./is-main-module.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_FIXTURE = path.join(SCRIPT_DIR, "fixtures", "native-pi-tools.json");
@@ -306,7 +307,7 @@ function parseArgs(argv) {
 	return args;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
 	try {
 		const args = parseArgs(process.argv.slice(2));
 		const fixture = JSON.parse(fs.readFileSync(args.fixture, "utf8"));

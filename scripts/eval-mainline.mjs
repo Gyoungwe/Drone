@@ -12,6 +12,7 @@ import { dirname, relative, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { createModels, fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
+import { isMainModule } from "./is-main-module.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const DEFAULT_FIXTURE = resolve(root, "fixtures/mainline-questions.json");
@@ -311,7 +312,7 @@ export async function runMainlineEval({ fixture = DEFAULT_FIXTURE, output, now =
 	return { ...report, reportPath };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
 	try {
 		const report = await runMainlineEval({ output: process.env.MAINLINE_EVAL_OUT });
 		console.log(

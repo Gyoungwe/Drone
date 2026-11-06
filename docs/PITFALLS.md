@@ -18,6 +18,7 @@
 | 打包产物缺 pi SDK、Electron 版本漂移 | 三 · 打包两个坑 |
 | Electron 二进制下载不动、npm 拦 postinstall | 三 · Node/npm 环境 |
 | 新增 UI 文案只显示一种语言 | 四 · i18n 双字典 |
+| 检查脚本没有任何输出就退出 0 | 检查脚本经符号链接运行时静默通过 |
 | 凭证泄漏风险、密钥误提交 | 五 · 绝不打印/提交 API key |
 | LAN 页连接僵死不重连、状态「重连中/已连接」反复跳 | 二 · SSE 心跳必须是命名事件帧 |
 | LAN 对话页正文重复出现在末尾、run 结束又恢复正常 | 二 · 流式增量帧不可重放（healing 兜底差量） |
@@ -505,6 +506,10 @@ SDK 把同一个参数对象依次交给每个 `tool_call` 处理器，然后原
 ## native 会话创建时没有 live caller
 
 `createNativeSession` 与扩展注册发生在宿主 `bindSession` 之前，此时 broker 没有 live caller，任何能力调用（例如读本包绑定）都会以 `Plugin capability has no live caller` 失败，扩展整体加载失败、工具消失，最终交付被关闭。依赖插件状态的决定（如知识包的子会话 `subagentPolicy`）要放到工具执行或 hook 里，用当时 host 提供的 caller 读取。另：只读会话（包括子代理子会话）里，未声明 effect 的 hook、工具与 `projection.finalize` 默认按 write 处理并被 broker 拒绝；确实只读的路径要显式声明 `read`，而 `required` 交付投影的 finalize 被拒绝会让该会话每条答案都显示 `Final delivery unavailable`。未信任项目的会话 broker 拒绝一切插件操作，不要往其中加载插件。
+
+## 检查脚本经符号链接运行时静默通过（2026-11-06 记录）
+
+Node 会解析主模块的符号链接并对 `import.meta.url` 做百分号编码，`process.argv[1]` 却保持原样。因此脚本用 `import.meta.url === \`file://${process.argv[1]}\`` 或 `resolve(process.argv[1]) === fileURLToPath(import.meta.url)` 判断是否被直接运行时，经符号链接（如 macOS 的 `/tmp`）的绝对路径调用会判为“不是主模块”：什么都不做并退出 0，看起来就是检查通过。`file://` 写法在路径含空格或中文时、以及在 Windows 上也同样不成立。脚本统一使用 `scripts/is-main-module.mjs` 的 `isMainModule(import.meta.url)`，`scripts/is-main-module.test.mjs` 会拦下新的手写比较。
 
 ## Windows CI 从未真正跑通（2026-10-29 记录）
 
