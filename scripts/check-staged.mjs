@@ -7,6 +7,7 @@
  */
 import { execFileSync } from "node:child_process";
 import process from "node:process";
+import { isMainModule } from "./is-main-module.mjs";
 
 const GENERATED_RE = /(?:^|\/)dist\/|^\.pi\/extensions\/|(?:^|\/)\.?build-manifest\.json$/;
 const TEST_FILE_RE = /(?:^|\/)(?:test|tests)\/|\.(?:test|spec)\.[cm]?[jt]sx?$/;
@@ -39,7 +40,7 @@ export function parseAddedLines(diff) {
 	return added;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
 	const git = (...args) => execFileSync("git", args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
 	const paths = git("diff", "--cached", "--name-only", "--diff-filter=ACMR").split("\n").filter(Boolean);
 	const problems = checkStaged(

@@ -15,7 +15,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isMainModule } from "./is-main-module.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const resources = join(root, "packages/desktop/plugin-runtime");
@@ -72,5 +72,5 @@ export async function stagePluginRuntime(platform = process.platform, arch = pro
 		rmSync(temp, { recursive: true, force: true });
 	}
 }
-if (import.meta.url === pathToFileURL(process.argv[1]).href)
+if (isMainModule(import.meta.url))
 	console.log(await stagePluginRuntime(process.platform, process.arch, process.argv.includes("--check")));
