@@ -19,6 +19,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { isMainModule } from "./is-main-module.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BASELINE_PATH = join(ROOT, "scripts/fixtures/structure-baseline.json");
@@ -89,7 +90,7 @@ function scanRepository() {
 	return current;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
 	const current = scanRepository();
 	const args = process.argv.slice(2);
 	if (args.includes("--update")) process.exit(updateBaseline(BASELINE_PATH, current, args));

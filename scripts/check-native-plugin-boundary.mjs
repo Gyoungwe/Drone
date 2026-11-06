@@ -2,8 +2,8 @@
 /** Static migration inventory; an empty report is never a runtime acceptance. */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import ts from "typescript";
+import { isMainModule } from "./is-main-module.mjs";
 
 const DOMAIN_PACKAGE =
 	/^(@drone\/(?:knowledge|tasks|research|discovery|inquiry)|@gyoungwe\/(?:pi-core|pi-knowledge|pi-research|pi-analysis|pi-evidence|pi-connectors|research-suite|desktop-ui-pack))(?:\/|$)/;
@@ -133,7 +133,7 @@ export function inventoryNativePluginBoundary(root) {
 	};
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (isMainModule(import.meta.url)) {
 	const report = inventoryNativePluginBoundary(resolve(import.meta.dirname, ".."));
 	console.log(JSON.stringify(report, null, 2));
 	process.exitCode = report.findings.length ? 1 : 0;

@@ -40,7 +40,7 @@
 		"validate:upgrade": "node scripts/check-upgrade-release.mjs --ui",
 		"check:arch": "node scripts/check-architecture.mjs && node scripts/check-host-domain-dependencies.mjs && node scripts/check-host-independence.mjs",
 		"check:host-domain-deps": "node scripts/check-host-domain-dependencies.mjs",
-		"test:arch": "node --test scripts/check-architecture.test.mjs scripts/check-lint-baseline.test.mjs scripts/check-structure.test.mjs scripts/check-staged.test.mjs",
+		"test:arch": "node --test scripts/check-architecture.test.mjs scripts/check-lint-baseline.test.mjs scripts/check-structure.test.mjs scripts/check-staged.test.mjs scripts/is-main-module.test.mjs",
 		"check:pi": "tsc -p .pi --pretty false",
 		"build:extensions": "node scripts/build-extensions.mjs",
 		"stage:pi-packages": "node scripts/stage-pi-packages.mjs",

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isMainModule } from "./is-main-module.mjs";
 
 /**
  * Runtime domain dependencies that still exist while P2–P5 migrate.  Keeping
@@ -43,7 +42,7 @@ export function inspectHostDependencies(packageJson) {
 	};
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+if (isMainModule(import.meta.url)) {
 	const root = new URL("../", import.meta.url);
 	const packageJson = JSON.parse(await readFile(new URL("packages/backend/package.json", root), "utf8"));
 	const result = inspectHostDependencies(packageJson);

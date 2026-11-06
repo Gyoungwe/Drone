@@ -3,6 +3,7 @@
 // 用法：node scripts/academic-eval/score.mjs answers-before.json answers-after.json
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { isMainModule } from "../is-main-module.mjs";
 
 const questions = JSON.parse(
 	await readFile(resolve(import.meta.dirname, "questions.json"), "utf8"),
@@ -47,7 +48,7 @@ async function load(file) {
 	return new Map(rows.map((row) => [row.id, row.answer]));
 }
 
-if (process.argv[1] === import.meta.filename) {
+if (isMainModule(import.meta.url)) {
 	const files = process.argv.slice(2);
 	if (!files.length) {
 		console.error("usage: score.mjs answers-a.json [answers-b.json ...]");
