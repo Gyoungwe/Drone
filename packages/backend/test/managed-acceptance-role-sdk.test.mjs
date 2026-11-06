@@ -185,8 +185,9 @@ async function setup() {
 	const owner = { id: 31, isDestroyed: () => false };
 	const zotero = zoteroDesktop();
 	const dialogs = [];
+	const details = [];
 	let service,
-		approveWrites = true;
+		approve = true;
 	backend = createBackend({
 		projectTrust: false,
 		lazyCapabilities: false,
@@ -210,9 +211,11 @@ async function setup() {
 		source: (name) => catalog.find((item) => item.name === name && item.state === "enabled")?.source,
 		sources: () => catalog,
 		enabled: (name) => catalog.some((item) => item.name === name && item.state === "enabled"),
-		approve: async (_owner, _source, operation) => {
+		// The user answers the task authorization and any write dialog the same way.
+		approve: async (_owner, _source, operation, detail) => {
 			dialogs.push(operation);
-			return operation === "capability:network.write" ? approveWrites : true;
+			details.push(detail);
+			return /^capability:(?:task\.grant\.request|network\.write)$/.test(operation ?? "") ? approve : true;
 		},
 		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
 		getSessionContext: (id) => service?.getPluginCallerContext(id),
@@ -278,11 +281,12 @@ async function setup() {
 	return {
 		zotero,
 		dialogs,
+		details,
 		errors,
 		run,
 		saveResult,
-		declineWrites: () => {
-			approveWrites = false;
+		decline: () => {
+			approve = false;
 		},
 		view: async () => (await bridge.invoke(owner, binding, "fixtureView", null, selection)).tasks[0],
 	};
@@ -306,15 +310,18 @@ it("one save binds a DOI-less Zotero milestone from the actual tool event and th
 			}),
 		}),
 	]);
-	// The task grant and the one network write are the only dialogs; reading back needs none.
-	expect(t.dialogs.filter((d) => d === "capability:network.write")).toHaveLength(1);
-	expect(t.zotero.received).toContain("POST /connector/saveItems");
+	// The authorization names the Zotero write and the package that makes it, so the save itself asks nothing.
+	const grant = t.dialogs.indexOf("capability:task.grant.request");
+	expect(t.details[grant]).toContain("@gyoungwe/pi-research");
+	expect(t.dialogs).not.toContain("capability:network.write");
+	expect(t.zotero.received.filter((r) => r === "POST /connector/saveItems")).toHaveLength(1);
 }, 120000);
 
-it("a declined write binds nothing, so the milestone is not passed", async () => {
+it("a declined authorization leaves the write asking, and declining it binds nothing", async () => {
 	const t = await setup();
-	t.declineWrites();
+	t.decline();
 	await t.run();
+	expect(t.dialogs).toContain("capability:network.write");
 	expect(t.saveResult()?.details).toMatchObject({ status: "cancelled", reason: "user-declined" });
 	expect(t.zotero.received).not.toContain("POST /connector/saveItems");
 	const [milestone] = (await t.view()).milestones;
