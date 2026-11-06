@@ -7,7 +7,6 @@ import {
 	createProcessPluginRuntime,
 	fileCapabilityHandlers,
 	hostText,
-	networkCapabilityHandlers,
 	PluginFileCapabilities,
 	type PluginNativeIntegration,
 	PluginResourceManager,
@@ -365,7 +364,7 @@ export function createDesktopRuntime(
 		| "getPluginCallerContext"
 		| "getStorageRegistry"
 		| "getPluginSessionCapabilities"
-		| "getPluginTaskGrantCapabilities"
+		| "getPluginSourceCapabilities"
 		| "getTaskGrants"
 		| "getPluginWorkspaceCapabilities"
 	>,
@@ -486,11 +485,8 @@ export function createDesktopRuntime(
 				handlers: {
 					...resourceCapabilities.handlers,
 					...executionCapabilities?.handlers,
-					...sessions.getPluginTaskGrantCapabilities(source),
+					...sessions.getPluginSourceCapabilities(source),
 					...(source.requestsWorkspaceRead ? sessions.getPluginWorkspaceCapabilities() : {}),
-					...(source.networkHosts
-						? networkCapabilityHandlers({ hosts: source.networkHosts, reads: source.networkReads ?? [] })
-						: {}),
 					"session.inspect": capabilities["session.inspect"],
 					"session.tools": capabilities["session.tools"],
 					"session.select": capabilities["session.select"],

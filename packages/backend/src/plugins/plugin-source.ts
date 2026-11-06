@@ -4,6 +4,7 @@ import type {
 	PluginServiceRequirement,
 	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
+import type { PluginCredentialSlot } from "./plugin-credentials";
 
 export interface PluginRuntimeSource {
 	readonly pluginId: string;
@@ -34,6 +35,8 @@ export interface PluginRuntimeSource {
 	readonly networkHosts?: readonly string[];
 	/** Manifest `drone.networkReads`: "host/path" POST endpoints that only read, so `network.read` may send them. */
 	readonly networkReads?: readonly string[];
+	/** Manifest `drone.credentials`: secrets the host keeps and adds to `network.*` requests. */
+	readonly credentials?: readonly PluginCredentialSlot[];
 	readonly resources?: Readonly<Record<string, string>>;
 }
 
@@ -64,6 +67,7 @@ export function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | unde
 		a.requestsWorkspaceRead === b.requestsWorkspaceRead &&
 		JSON.stringify(a.networkHosts) === JSON.stringify(b.networkHosts) &&
 		JSON.stringify(a.networkReads) === JSON.stringify(b.networkReads) &&
+		JSON.stringify(a.credentials) === JSON.stringify(b.credentials) &&
 		JSON.stringify(a.resources) === JSON.stringify(b.resources)
 	);
 }

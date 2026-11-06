@@ -10,7 +10,7 @@ import type {
 	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
 import { installedPackageGraph } from "./installed-package-graph";
-import { networkDeclaration } from "./network-declaration";
+import { type NetworkDeclaration, networkDeclaration } from "./network-declaration";
 
 /**
  * Content identity for an installed package generation.
@@ -64,7 +64,7 @@ export function installedPackageHash(root: string): string {
 	return hash.digest("hex");
 }
 
-export interface InstalledUiRuntimeSource {
+export interface InstalledUiRuntimeSource extends NetworkDeclaration {
 	pluginId: string;
 	contentHash: string;
 	deliveryProjection?: "required";
@@ -89,8 +89,6 @@ export interface InstalledUiRuntimeSource {
 	requestsExecution?: boolean;
 	requestsTaskGrant?: boolean;
 	requestsWorkspaceRead?: boolean;
-	networkHosts?: readonly string[];
-	networkReads?: readonly string[];
 	resources?: Readonly<Record<string, string>>;
 }
 
@@ -266,6 +264,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 							nativeChildSessions?: unknown;
 							taskGrants?: unknown;
 							networkReads?: unknown;
+							credentials?: unknown;
 							workspaceRead?: unknown;
 							provides?: unknown;
 							requires?: unknown;
