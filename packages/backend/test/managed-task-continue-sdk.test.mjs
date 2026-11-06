@@ -242,7 +242,7 @@ async function setup() {
 			handlers: observed(
 				{
 					...service.getPluginSessionCapabilities(),
-					...service.getPluginTaskGrantCapabilities(source),
+					...service.getPluginSourceCapabilities(source),
 					...service.getPluginWorkspaceCapabilities(),
 				},
 				calls,

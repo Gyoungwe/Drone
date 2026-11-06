@@ -5,15 +5,11 @@ import type { PluginNativeRuntimeFactory, PluginNativeSession } from "@gyoungwe/
 import type {
 	PluginNativeSessionFacts,
 	PluginProviderInvocationInput,
-	PluginRecordAdoptions,
 	PluginRuntimeClient,
-	PluginServiceProvision,
-	PluginServiceRequirement,
-	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
 import type { AskQuestionRoute } from "../session/ask-gate";
 import { NativeSessionDelivery, type SelectedNativeSource } from "./native-delivery";
-import { sameSource } from "./plugin-source";
+import { type PluginRuntimeSource, sameSource } from "./plugin-source";
 import { type ManagedNativeSession, type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 import type {
 	PluginCapabilityContext,
@@ -29,37 +25,7 @@ import {
 import type { PluginSessionCallerContext } from "./session-caller";
 import type { TaskGrantStore } from "./task-grants";
 
-export interface PluginRuntimeSource {
-	readonly pluginId: string;
-	readonly packageRoot: string;
-	readonly installationPath?: string;
-	readonly nativeDeclaredPath?: string;
-	readonly entrypoint: string;
-	readonly nativeEntrypoint?: string;
-	readonly contentHash?: string;
-	readonly deliveryProjection?: "required";
-	readonly provides?: Readonly<Record<string, PluginServiceProvision>>;
-	readonly requires?: Readonly<Record<string, PluginServiceRequirement>>;
-	readonly consumes?: Readonly<Record<string, PluginServiceRole>>;
-	readonly recordAdoptions?: PluginRecordAdoptions;
-	readonly requestsStateRead?: boolean;
-	readonly requestsStateWrite?: boolean;
-	readonly requestsBinaryStateRead?: boolean;
-	readonly requestsBinaryStateWrite?: boolean;
-	readonly requestsFileRead?: boolean;
-	readonly requestsFileWrite?: boolean;
-	readonly requestsModel?: boolean;
-	readonly requestsExecution?: boolean;
-	/** Manifest `drone.taskGrants: "request"`: may ask the host for a task authorization. */
-	readonly requestsTaskGrant?: boolean;
-	/** Manifest `drone.workspaceRead: "session"`: reads under the session's current read permissions. */
-	readonly requestsWorkspaceRead?: boolean;
-	/** Manifest `permissions.network` minus `configured-services`: the only hosts `network.*` may reach. */
-	readonly networkHosts?: readonly string[];
-	/** Manifest `drone.networkReads`: "host/path" POST endpoints that only read, so `network.read` may send them. */
-	readonly networkReads?: readonly string[];
-	readonly resources?: Readonly<Record<string, string>>;
-}
+export type { PluginRuntimeSource } from "./plugin-source";
 export interface PluginRuntimeOwner {
 	readonly id: number;
 	readonly approvalOwner?: PluginRuntimeOwner;

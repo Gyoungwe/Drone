@@ -20,11 +20,12 @@ import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
 import type { PluginRuntimeSource } from "../plugins/coordinator";
 import { modelCapabilityHandlers } from "../plugins/model-capabilities";
+import { PluginCredentialStore } from "../plugins/plugin-credentials";
 import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
 import { sessionCapabilityHandlers } from "../plugins/session-capabilities";
 import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
-import { taskGrantCapabilityHandlers } from "../plugins/task-grant-capability";
+import { sourceCapabilityHandlers } from "../plugins/source-capabilities";
 import type { TaskGrantStore } from "../plugins/task-grants";
 import { workspaceCapabilityHandlers } from "../plugins/workspace-capabilities";
 import { walkProjectFiles } from "../project/files";
@@ -48,6 +49,7 @@ import { SessionSettingsApi } from "./session-api-settings";
 
 export class SessionServiceApi extends SessionSettingsApi {
 	private readonly pluginSessionRecords = new SessionRecordStore();
+	private readonly pluginCredentials = new PluginCredentialStore();
 	async init(): Promise<void> {
 		await this.host.knowledge.connect();
 		await this.host.getModelRuntime();
@@ -93,11 +95,10 @@ export class SessionServiceApi extends SessionSettingsApi {
 		};
 	}
 
-	/** Task authorization capabilities bound to one installed plugin source. */
-	getPluginTaskGrantCapabilities(source: PluginRuntimeSource) {
-		const grants = taskGrantCapabilityHandlers(this.host.taskGrants, this.host.pluginSessions, source);
-		// Requesting a grant is declared; any provider may read the allowances a grant gave it.
-		return source.requestsTaskGrant ? grants : { "task.grant.allowances": grants["task.grant.allowances"] };
+	/** Capabilities bound to one installed plugin source: task authorization, network and its credentials. */
+	getPluginSourceCapabilities(source: PluginRuntimeSource) {
+		const { taskGrants, pluginSessions: sessions } = this.host;
+		return sourceCapabilityHandlers({ taskGrants, sessions, credentials: this.pluginCredentials }, source);
 	}
 
 	/** Workspace reads under the calling session's current read permissions. */

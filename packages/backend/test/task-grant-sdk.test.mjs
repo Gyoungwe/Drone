@@ -99,7 +99,7 @@ async function setup() {
 			handlers: {
 				"session.records.append": backend.getPluginSessionCapabilities()["session.records.append"],
 				"session.notify": backend.getPluginSessionCapabilities()["session.notify"],
-				...backend.getPluginTaskGrantCapabilities(source),
+				...backend.getPluginSourceCapabilities(source),
 				...backend.getPluginWorkspaceCapabilities(),
 			},
 		}),

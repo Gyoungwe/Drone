@@ -36,6 +36,8 @@ const requestSchema = (methods: readonly string[], extra = {}) =>
 			url: Type.String({ minLength: 1, maxLength: 4096 }),
 			headers: Type.Optional(Type.Record(Type.String({ maxLength: 128 }), Type.String({ maxLength: 8192 }))),
 			bodyBase64: Type.Optional(Type.String({ maxLength: MAX_FILE_BINARY_BASE64 })),
+			/** A `drone.credentials` slot whose saved secret the host adds as a header. */
+			credential: Type.Optional(Type.String({ minLength: 1, maxLength: 64 })),
 		},
 		{ additionalProperties: false },
 	);
@@ -55,22 +57,32 @@ interface NetworkRequest {
 	readonly headers?: Readonly<Record<string, string>>;
 	readonly bodyBase64?: string;
 	readonly summary?: string;
+	readonly credential?: string;
 }
 export interface NetworkDeclaration {
 	/** Manifest `permissions.network` minus `configured-services`. */
 	readonly hosts: readonly string[];
 	/** Manifest `drone.networkReads`: "host/path" POST endpoints that only read. */
 	readonly reads: readonly string[];
+	/** Declared credential slots: their headers are the host's, and `credential` names one to add. */
+	readonly credentials?: {
+		readonly headers: readonly string[];
+		header(slot: string, url: URL): Promise<Record<string, string>>;
+	};
 }
 
-function target(raw: unknown, declared: readonly string[]): { request: NetworkRequest; url: URL } {
+function target(
+	raw: unknown,
+	{ hosts, credentials }: NetworkDeclaration,
+): { request: NetworkRequest; url: URL } {
 	const request = raw as NetworkRequest;
 	const url = new URL(request.url);
 	if (url.username || url.password) throw new Error("Network URLs must not carry credentials");
-	if (!declaredTarget(url, declared))
+	if (!declaredTarget(url, hosts))
 		throw new Error(`Network host is not declared in this package's manifest: ${url.host}`);
 	for (const name of Object.keys(request.headers ?? {}))
-		if (RESERVED_HEADER.test(name)) throw new Error(`Network header is reserved for the host: ${name}`);
+		if (RESERVED_HEADER.test(name) || credentials?.headers.includes(name.toLowerCase()))
+			throw new Error(`Network header is reserved for the host: ${name}`);
 	return { request, url };
 }
 
@@ -91,14 +103,17 @@ async function readLimited(response: Response): Promise<Buffer> {
 }
 
 export function networkCapabilityHandlers(
-	{ hosts, reads }: NetworkDeclaration,
+	declaration: NetworkDeclaration,
 	fetchImpl: typeof fetch = fetch,
 ): Record<"network.read" | "network.write", PluginCapabilityHandler> {
 	const send = async (request: NetworkRequest, url: URL, signal: AbortSignal) => {
 		const body = request.bodyBase64 === undefined ? undefined : Buffer.from(request.bodyBase64, "base64");
+		if (request.credential && !declaration.credentials)
+			throw new Error(`Credential slot is not declared in this package's manifest: ${request.credential}`);
+		const secret = request.credential ? await declaration.credentials?.header(request.credential, url) : {};
 		const response = await fetchImpl(url, {
 			method: request.method,
-			headers: request.headers,
+			headers: { ...request.headers, ...secret },
 			body,
 			redirect: "error",
 			signal: AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)]),
@@ -121,8 +136,8 @@ export function networkCapabilityHandlers(
 			inputSchema: requestSchema(DECLARED_READ_METHODS),
 			resultSchema,
 			execute: async (raw, context) => {
-				const { request, url } = target(raw, hosts);
-				if (request.method === "POST" && !reads.includes(`${url.host}${url.pathname}`))
+				const { request, url } = target(raw, declaration);
+				if (request.method === "POST" && !declaration.reads.includes(`${url.host}${url.pathname}`))
 					throw new Error(
 						`POST is a network write unless drone.networkReads lists ${url.host}${url.pathname}`,
 					);
@@ -142,14 +157,18 @@ export function networkCapabilityHandlers(
 			}),
 			resultSchema,
 			approvalDetail: (raw) => {
-				const { request, url } = target(raw, hosts);
-				const facts = `${hostText("网络写入", "Network write")}: ${request.method} ${url.host}${url.pathname}`;
+				const { request, url } = target(raw, declaration);
+				const facts = `${hostText("网络写入", "Network write")}: ${request.method} ${url.host}${url.pathname}${
+					request.credential
+						? `\n${hostText("使用已保存凭据", "Uses saved credential")}: ${request.credential}`
+						: ""
+				}`;
 				return request.summary
 					? `${facts}\n${hostText("插件说明", "Plugin description")}: ${request.summary}`
 					: facts;
 			},
 			execute: async (raw, context) => {
-				const { request, url } = target(raw, hosts);
+				const { request, url } = target(raw, declaration);
 				return send(request, url, context.signal);
 			},
 		},

@@ -766,7 +766,7 @@ it("exposes eight generic session handlers without a model declaration, then gat
 	const sessions = {
 		getPluginCallerContext: () => undefined,
 		getPluginSessionCapabilities: () => handlers,
-		getPluginTaskGrantCapabilities: (s: { requestsTaskGrant?: boolean }) =>
+		getPluginSourceCapabilities: (s: { requestsTaskGrant?: boolean }) =>
 			s.requestsTaskGrant ? { "task.grant.request": handler } : {},
 		getTaskGrants: () => taskGrants,
 		getPluginWorkspaceCapabilities: () => ({ "workspace.readFile": handler }),

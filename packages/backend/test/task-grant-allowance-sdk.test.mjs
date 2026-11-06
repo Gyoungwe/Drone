@@ -139,7 +139,7 @@ async function setup() {
 		capabilities: (source) => ({
 			resources: [],
 			handlers: {
-				...backend.getPluginTaskGrantCapabilities(source),
+				...backend.getPluginSourceCapabilities(source),
 				...(source === provider ? networkCapabilityHandlers({ hosts: [host], reads: [] }) : {}),
 			},
 		}),

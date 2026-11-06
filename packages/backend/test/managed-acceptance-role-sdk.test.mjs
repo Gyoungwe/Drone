@@ -224,7 +224,7 @@ async function setup() {
 			resources: [],
 			handlers: {
 				...service.getPluginSessionCapabilities(),
-				...service.getPluginTaskGrantCapabilities(source),
+				...service.getPluginSourceCapabilities(source),
 				...service.getPluginWorkspaceCapabilities(),
 				...(source.networkHosts
 					? networkCapabilityHandlers(
