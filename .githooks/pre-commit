@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+node scripts/check-staged.mjs
+node scripts/check-structure.mjs
