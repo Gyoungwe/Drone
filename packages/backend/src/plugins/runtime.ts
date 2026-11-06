@@ -66,7 +66,7 @@ export interface PluginRuntimeInvocation extends PluginRuntimeActivation {
 	/** Produced by a host capability handler, never taken from plugin operation input. */
 	readonly approvalDetail?: string;
 	/** Host capability approval policy; absent for plugin operations. */
-	readonly approval?: "own" | "always";
+	readonly approval?: "own" | "always" | "allowance";
 }
 
 export interface PluginRuntimePolicy {

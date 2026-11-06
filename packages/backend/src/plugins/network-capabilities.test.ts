@@ -99,9 +99,9 @@ describe("network capabilities", () => {
 		expect(detail).toMatch(/Save 10\.1000\/xyz/);
 	});
 
-	it("writes always ask, with the method and target in the host's dialog", () => {
+	it("writes ask unless a task grant allowance covers them, with the method and target in the host's dialog", () => {
 		const { "network.write": write } = networkCapabilityHandlers({ hosts: declared, reads }, ok());
-		expect(write).toMatchObject({ effect: "write", approval: "always" });
+		expect(write).toMatchObject({ effect: "write", approval: "allowance" });
 		expect(
 			write.approvalDetail?.(
 				{ method: "POST", url: "https://api.zotero.org/users/1/items?x=1" },

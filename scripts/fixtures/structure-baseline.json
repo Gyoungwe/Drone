@@ -18,7 +18,7 @@
 	"file-lines\tpackages/backend/src/knowledge/ui.ts": 952,
 	"file-lines\tpackages/backend/src/mcp/service.ts": 442,
 	"file-lines\tpackages/backend/src/plugin-sandbox.ts": 669,
-	"file-lines\tpackages/backend/src/plugins/coordinator.ts": 940,
+	"file-lines\tpackages/backend/src/plugins/coordinator.ts": 927,
 	"file-lines\tpackages/backend/src/plugins/file-capabilities.ts": 941,
 	"file-lines\tpackages/backend/src/plugins/process-runtime.test.ts": 793,
 	"file-lines\tpackages/backend/src/plugins/process-runtime.ts": 995,

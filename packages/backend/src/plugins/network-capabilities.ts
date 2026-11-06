@@ -131,12 +131,14 @@ export function networkCapabilityHandlers(
 		},
 		"network.write": {
 			effect: "write",
-			approval: "always",
+			// A write the user already approved inside the current task authorization does not ask again.
+			approval: "allowance",
 			// Its own host dialog is the user's decision, so a read-declared tool may ask for it.
 			readCallable: true,
 			inputSchema: requestSchema(WRITE_METHODS, {
 				/** The plugin's description of the write, shown labelled as such beside the host's facts. */
 				summary: Type.Optional(Type.String({ minLength: 1, maxLength: 1000 })),
+				allowance: Type.Optional(Type.String({ minLength: 1, maxLength: 128 })),
 			}),
 			resultSchema,
 			approvalDetail: (raw) => {

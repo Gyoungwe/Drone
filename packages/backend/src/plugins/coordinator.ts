@@ -13,6 +13,7 @@ import type {
 } from "@gyoungwe/plugin-api/runtime";
 import type { AskQuestionRoute } from "../session/ask-gate";
 import { NativeSessionDelivery, type SelectedNativeSource } from "./native-delivery";
+import { sameSource } from "./plugin-source";
 import { type ManagedNativeSession, type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 import type {
 	PluginCapabilityContext,
@@ -20,7 +21,11 @@ import type {
 	PluginRuntimeCapabilitiesOptions,
 	PluginRuntimeCapabilitiesProvider,
 } from "./runtime-capabilities";
-import { type PluginServiceTarget, serviceCapabilityHandlers } from "./service-capabilities";
+import {
+	type PluginServiceTarget,
+	resolveRoleMember,
+	serviceCapabilityHandlers,
+} from "./service-capabilities";
 import type { PluginSessionCallerContext } from "./session-caller";
 import type { TaskGrantStore } from "./task-grants";
 
@@ -134,35 +139,6 @@ interface Binding {
 	unsubscribe?: () => void;
 	nativeAbort?: () => Promise<void>;
 }
-function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined): boolean {
-	return (
-		a.pluginId === b?.pluginId &&
-		a.packageRoot === b.packageRoot &&
-		a.installationPath === b.installationPath &&
-		a.nativeDeclaredPath === b.nativeDeclaredPath &&
-		a.entrypoint === b.entrypoint &&
-		a.nativeEntrypoint === b.nativeEntrypoint &&
-		a.contentHash === b.contentHash &&
-		a.deliveryProjection === b.deliveryProjection &&
-		JSON.stringify(a.provides) === JSON.stringify(b.provides) &&
-		JSON.stringify(a.requires) === JSON.stringify(b.requires) &&
-		JSON.stringify(a.consumes) === JSON.stringify(b.consumes) &&
-		JSON.stringify(a.recordAdoptions) === JSON.stringify(b.recordAdoptions) &&
-		a.requestsStateRead === b.requestsStateRead &&
-		a.requestsStateWrite === b.requestsStateWrite &&
-		a.requestsBinaryStateRead === b.requestsBinaryStateRead &&
-		a.requestsBinaryStateWrite === b.requestsBinaryStateWrite &&
-		a.requestsFileRead === b.requestsFileRead &&
-		a.requestsFileWrite === b.requestsFileWrite &&
-		a.requestsModel === b.requestsModel &&
-		a.requestsExecution === b.requestsExecution &&
-		a.requestsTaskGrant === b.requestsTaskGrant &&
-		a.requestsWorkspaceRead === b.requestsWorkspaceRead &&
-		JSON.stringify(a.networkHosts) === JSON.stringify(b.networkHosts) &&
-		JSON.stringify(a.networkReads) === JSON.stringify(b.networkReads) &&
-		JSON.stringify(a.resources) === JSON.stringify(b.resources)
-	);
-}
 
 /** One domain owner per application/package. Window tokens only grant revocable caller access. */
 export class PluginRuntimeBridge {
@@ -196,6 +172,9 @@ export class PluginRuntimeBridge {
 	constructor(private readonly options: PluginRuntimeBridgeOptions) {
 		// A grant stays valid only while its exact source is an enabled installed source.
 		options.taskGrants?.bindSourceValidator((source) => this.sourceCurrent(source));
+		options.taskGrants?.bindProviderResolver((consumer, role, member) =>
+			resolveRoleMember(consumer, options.sources?.() ?? [], role, member),
+		);
 	}
 
 	private sourceCurrent(source: PluginRuntimeSource): boolean {
@@ -469,6 +448,14 @@ export class PluginRuntimeBridge {
 					if (!permitted()) return false;
 					// Own bookkeeping (session records, granted private state) never prompts.
 					if (request.effect === "read" || request.approval === "own") return true;
+					if (request.approval === "allowance" && selected.session) {
+						const allowance = (request.input as { allowance?: unknown } | undefined)?.allowance;
+						if (
+							typeof allowance === "string" &&
+							this.options.taskGrants?.consumeAllowance(selected.session.identity, source, allowance)
+						)
+							return permitted();
+					}
 					if (request.approval !== "always" && selected.session) {
 						const grant = this.options.taskGrants?.current(selected.session.identity);
 						if (grant && sameSource(grant.source, source) && sameSource(source, this.options.source(name)))

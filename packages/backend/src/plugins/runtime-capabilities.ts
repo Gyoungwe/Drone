@@ -44,9 +44,11 @@ export interface PluginCapabilityHandler {
 	/**
 	 * Write approval policy (host task grant design): "own" is the plugin's own bookkeeping and
 	 * never prompts; "always" prompts even under an active task grant; absent writes are covered by
-	 * the session's current task grant and otherwise prompt.
+	 * the session's current task grant and otherwise prompt. "allowance" prompts like "always" unless
+	 * the input names (`allowance`) an unused write allowance the caller holds in the current task grant;
+	 * the host consumes it instead of asking.
 	 */
-	readonly approval?: "own" | "always";
+	readonly approval?: "own" | "always" | "allowance";
 	/** A write whose own host dialog is the user's decision may be requested from a read invocation. */
 	readonly readCallable?: true;
 	/** Only pre-approved application state reads may run while constructing an owner. */

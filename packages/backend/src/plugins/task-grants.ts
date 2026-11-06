@@ -2,11 +2,8 @@ import { randomUUID } from "node:crypto";
 import { realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, parse, relative, resolve } from "node:path";
-import { hostText } from "../reply-language";
 import type { RegisteredSession, SessionDirectory } from "../session/registry";
 import type { PluginRuntimeSource } from "./coordinator";
-import type { PluginCapabilityHandler } from "./runtime-capabilities";
-import { requirePluginSession } from "./session-caller";
 
 /**
  * Host-issued task authorization (docs/superpowers/specs/2026-10-29-host-task-grant-design.md).
@@ -23,7 +20,27 @@ export interface TaskGrant {
 	readonly maxCalls: number;
 	readonly maxAutoResumes: number;
 	readonly issuedAt: string;
+	/** External writes the user approved in the dialog, each admitted once without asking again. */
+	readonly allowances: readonly TaskGrantAllowance[];
 }
+
+/**
+ * One write allowance: the provider of a role member the requester consumes (resolved and shown by the
+ * host) may make one `approval: "allowance"` write. Label and consent are the plugins' JSON; the host
+ * renders the label and hands consent to that provider only, never interpreting either.
+ */
+export interface TaskGrantAllowance {
+	readonly id: string;
+	readonly role: string;
+	readonly member: string;
+	readonly label: string;
+	readonly consent: unknown;
+	readonly provider: { readonly pluginId: string; readonly contentHash: string };
+}
+const sameSource = (
+	a: { pluginId: string; contentHash?: string },
+	b: { pluginId: string; contentHash?: string },
+) => a.pluginId === b.pluginId && !!a.contentHash && a.contentHash === b.contentHash;
 
 export const MAX_TASK_WRITE_ROOTS = 8;
 
@@ -53,6 +70,13 @@ export class TaskGrantStore {
 	/** Automatic continuations already started under each grant (by grant id). */
 	private readonly resumes = new Map<string, number>();
 	private sourceCurrent: (source: PluginRuntimeSource) => boolean = () => false;
+	private providerFor: (
+		consumer: PluginRuntimeSource,
+		role: string,
+		member: string,
+	) => PluginRuntimeSource | null = () => null;
+	/** Allowances already used, by grant id. */
+	private readonly used = new Map<string, Set<string>>();
 
 	constructor(private readonly sessions: SessionDirectory) {}
 
@@ -61,8 +85,75 @@ export class TaskGrantStore {
 		this.sourceCurrent = current;
 	}
 
-	issue(identity: object, grant: Omit<TaskGrant, "id" | "issuedAt">): TaskGrant {
-		const issued = { ...grant, id: randomUUID(), issuedAt: new Date().toISOString() };
+	/** The plugin bridge resolves role members from the installed catalog; until then none resolves. */
+	bindProviderResolver(
+		resolve: (consumer: PluginRuntimeSource, role: string, member: string) => PluginRuntimeSource | null,
+	): void {
+		this.providerFor = resolve;
+	}
+
+	provider(consumer: PluginRuntimeSource, role: string, member: string): PluginRuntimeSource | null {
+		return this.providerFor(consumer, role, member);
+	}
+
+	/** Uses one allowance of the session's current grant held by exactly this provider source. */
+	consumeAllowance(identity: object, caller: PluginRuntimeSource, id: string): boolean {
+		const grant = this.current(identity);
+		const allowance = grant?.allowances.find((item) => item.id === id);
+		if (!grant || !allowance || !sameSource(allowance.provider, caller)) return false;
+		const used = this.used.get(grant.id) ?? new Set<string>();
+		if (used.has(id)) return false;
+		used.add(id);
+		this.used.set(grant.id, used);
+		return true;
+	}
+
+	allowancesFor(identity: object, caller: PluginRuntimeSource) {
+		const grant = this.current(identity);
+		if (!grant) return null;
+		const used = this.used.get(grant.id);
+		return {
+			taskId: grant.taskId,
+			allowances: grant.allowances
+				.filter((item) => sameSource(item.provider, caller))
+				.map(({ id, role, member, consent }) => ({
+					id,
+					role,
+					member,
+					consent: consent ?? null,
+					used: !!used?.has(id),
+				})),
+		};
+	}
+
+	allowance(identity: object, id: string): TaskGrantAllowance | undefined {
+		return this.current(identity)?.allowances.find((item) => item.id === id);
+	}
+
+	/** Replaces one allowance after its own host dialog; the replacement is unused. */
+	amend(
+		identity: object,
+		requester: PluginRuntimeSource,
+		taskId: string,
+		id: string,
+		label: string,
+		consent: unknown,
+	) {
+		const grant = this.current(identity);
+		const index = grant ? grant.allowances.findIndex((item) => item.id === id) : -1;
+		if (!grant || grant.taskId !== taskId || !sameSource(grant.source, requester) || index < 0)
+			throw new Error("Only the authorized task's own plugin can change an allowance it holds");
+		const allowances = [...grant.allowances];
+		allowances[index] = { ...(allowances[index] as TaskGrantAllowance), label, consent };
+		this.grants.set(identity, { ...grant, allowances });
+		this.used.get(grant.id)?.delete(id);
+	}
+
+	issue(
+		identity: object,
+		grant: Omit<TaskGrant, "id" | "issuedAt" | "allowances"> & { allowances?: readonly TaskGrantAllowance[] },
+	): TaskGrant {
+		const issued = { allowances: [], ...grant, id: randomUUID(), issuedAt: new Date().toISOString() };
 		// One active task grant per session: a new authorization replaces the previous one.
 		this.grants.set(identity, issued);
 		return issued;
@@ -108,241 +199,4 @@ export class TaskGrantStore {
 		const entry = this.sessions.get(sessionId);
 		return entry ? this.current(entry)?.writeRoots : undefined;
 	}
-}
-
-/** Custom message type of host-started continuations for one plugin. */
-export const continuationType = (pluginId: string) => `plugin-continue:${encodeURIComponent(pluginId)}`;
-
-const text = (max: number) => ({ type: "string", minLength: 1, maxLength: max });
-const requestSchema = {
-	type: "object",
-	properties: {
-		taskId: text(128),
-		contractHash: { type: "string", pattern: "^[0-9a-f]{64}$" },
-		goal: text(2000),
-		summary: text(2000),
-		writeDirectories: { type: "array", items: text(512), maxItems: MAX_TASK_WRITE_ROOTS },
-		acceptance: { type: "array", items: text(500), maxItems: 32 },
-		compute: text(2000),
-		maxCalls: { type: "integer", minimum: 1, maximum: 1000 },
-		maxAutoResumes: { type: "integer", minimum: 0, maximum: 19 },
-	},
-	required: [
-		"taskId",
-		"contractHash",
-		"goal",
-		"writeDirectories",
-		"acceptance",
-		"maxCalls",
-		"maxAutoResumes",
-	],
-	additionalProperties: false,
-};
-interface TaskGrantRequest {
-	readonly taskId: string;
-	readonly contractHash: string;
-	readonly goal: string;
-	readonly summary?: string;
-	readonly writeDirectories: readonly string[];
-	readonly acceptance: readonly string[];
-	readonly compute?: string;
-	readonly maxCalls: number;
-	readonly maxAutoResumes: number;
-}
-const grantSchema = {
-	type: "object",
-	properties: {
-		grantId: { type: "string" },
-		taskId: { type: "string" },
-		contractHash: { type: "string" },
-		writeRoots: { type: "array", items: { type: "string" } },
-		maxCalls: { type: "integer" },
-		maxAutoResumes: { type: "integer" },
-		issuedAt: { type: "string" },
-	},
-	required: ["grantId", "taskId", "contractHash", "writeRoots", "maxCalls", "maxAutoResumes", "issuedAt"],
-	additionalProperties: false,
-};
-const view = (grant: TaskGrant) => ({
-	grantId: grant.id,
-	taskId: grant.taskId,
-	contractHash: grant.contractHash,
-	writeRoots: [...grant.writeRoots],
-	maxCalls: grant.maxCalls,
-	maxAutoResumes: grant.maxAutoResumes,
-	issuedAt: grant.issuedAt,
-});
-
-/** The host-rendered task authorization text; the plugin only supplies validated plain fields. */
-export function taskGrantDialog(request: TaskGrantRequest, writeRoots: readonly string[]): string {
-	return [
-		hostText(`要做的事：${request.goal}`, `Task: ${request.goal}`),
-		...(request.summary ? [request.summary] : []),
-		writeRoots.length
-			? hostText(
-					`会写入这些文件夹（包括子文件夹），不再逐项询问：\n${writeRoots.map((root) => `- ${root}`).join("\n")}`,
-					`It will write in these folders (and subfolders) without asking each time:\n${writeRoots.map((root) => `- ${root}`).join("\n")}`,
-				)
-			: hostText(
-					"不会新增可写文件夹；改动文件仍按你现有的权限设置逐项确认。",
-					"No folder becomes writable; file changes still follow your permission settings.",
-				),
-		request.compute ??
-			hostText(
-				"不包含远程计算；运行计算任务仍会单独询问。",
-				"No remote computation; running compute jobs still asks separately.",
-			),
-		hostText(
-			`预算：最多 ${request.maxCalls} 次工具调用，自动续作最多 ${request.maxAutoResumes} 次。`,
-			`Budget: at most ${request.maxCalls} tool calls and ${request.maxAutoResumes} automatic resumptions.`,
-		),
-		request.acceptance.length
-			? hostText(
-					`做完的标准：\n${request.acceptance.map((line) => `- ${line}`).join("\n")}`,
-					`Done when:\n${request.acceptance.map((line) => `- ${line}`).join("\n")}`,
-				)
-			: "",
-		hostText(
-			"同意后它会自己做完这些事，中途不再反复问你；删除文件、碰敏感文件、写到上面以外的位置或运行计算仍会先征得你同意。任务结束、会话关闭、插件停用或更新时授权自动失效，你随时可以停止。",
-			"Once approved it finishes these steps without asking again; deleting files, sensitive files, writing elsewhere or running computation still asks first. The authorization ends with the task, the session, or when the plugin is disabled or updated. You can stop at any time.",
-		),
-	]
-		.filter(Boolean)
-		.join("\n\n");
-}
-
-/** Capabilities bound to one installed plugin source; the grant records exactly this source. */
-export function taskGrantCapabilityHandlers(
-	store: TaskGrantStore,
-	sessions: SessionDirectory,
-	source: PluginRuntimeSource,
-): Record<
-	"task.grant.request" | "task.grant.release" | "task.grant.current" | "task.continue",
-	PluginCapabilityHandler
-> {
-	const writableEntry = (context: Parameters<PluginCapabilityHandler["execute"]>[1]) => {
-		const entry = requirePluginSession(sessions, context);
-		if (entry.readOnly || entry.nativeKind === "child" || !entry.session.settingsManager.isProjectTrusted())
-			throw new Error("Task authorization requires a writable trusted primary session");
-		return entry;
-	};
-	// The broker hands the same validated input object to the dialog formatter and to execute.
-	const shown = new WeakMap<object, readonly string[]>();
-	return {
-		"task.grant.request": {
-			effect: "write",
-			// The host dialog below is the user's decision; it is never skipped by an existing grant.
-			approval: "always",
-			readCallable: true,
-			inputSchema: requestSchema,
-			resultSchema: grantSchema,
-			approvalDetail: (input, facts) => {
-				if (facts.scope.kind !== "session") throw new Error("Task authorization requires a live session");
-				const request = input as TaskGrantRequest;
-				const roots = resolveTaskWriteRoots(facts.scope.workspaceDirectory, request.writeDirectories);
-				shown.set(input as object, roots);
-				return taskGrantDialog(request, roots);
-			},
-			execute: async (input, context) => {
-				const request = input as TaskGrantRequest;
-				const entry = writableEntry(context);
-				// Re-resolve after approval: a directory replaced while the dialog was open is refused.
-				const writeRoots = resolveTaskWriteRoots(entry.cwd, request.writeDirectories);
-				const approved = shown.get(input as object);
-				shown.delete(input as object);
-				if (!approved || writeRoots.join("\0") !== approved.join("\0"))
-					throw new Error("Task directories changed during authorization; ask again.");
-				return view(
-					store.issue(entry, {
-						source,
-						taskId: request.taskId,
-						contractHash: request.contractHash,
-						writeRoots,
-						maxCalls: request.maxCalls,
-						maxAutoResumes: request.maxAutoResumes,
-					}),
-				);
-			},
-		},
-		"task.grant.release": {
-			effect: "write",
-			// Releasing only removes authority.
-			approval: "own",
-			readCallable: true,
-			inputSchema: {
-				type: "object",
-				properties: { taskId: text(128) },
-				required: ["taskId"],
-				additionalProperties: false,
-			},
-			resultSchema: {
-				type: "object",
-				properties: { released: { type: "boolean" } },
-				required: ["released"],
-				additionalProperties: false,
-			},
-			execute: async (input, context) => ({
-				released: store.release(
-					requirePluginSession(sessions, context),
-					(input as { taskId: string }).taskId,
-				),
-			}),
-		},
-		"task.continue": {
-			effect: "write",
-			// The authority is the current grant itself, checked below; no further dialog.
-			approval: "own",
-			readCallable: true,
-			inputSchema: {
-				type: "object",
-				properties: { taskId: text(128), prompt: text(4000) },
-				required: ["taskId", "prompt"],
-				additionalProperties: false,
-			},
-			resultSchema: {
-				type: "object",
-				properties: { continuationId: { type: "string" }, remaining: { type: "integer" } },
-				required: ["continuationId", "remaining"],
-				additionalProperties: false,
-			},
-			execute: async (input, context) => {
-				const request = input as { taskId: string; prompt: string };
-				const entry = writableEntry(context);
-				const grant = store.current(entry);
-				if (
-					!grant ||
-					grant.source.pluginId !== source.pluginId ||
-					grant.source.contentHash !== source.contentHash
-				)
-					throw new Error("Automatic continuation requires this plugin's current task authorization");
-				if (grant.taskId !== request.taskId)
-					throw new Error("Automatic continuation is limited to the authorized task");
-				if (!store.reserveResume(grant))
-					throw new Error("The authorized number of automatic continuations is used up");
-				const continuationId = randomUUID();
-				// Only the host creates this message type; a sandboxed plugin cannot forge it, so the
-				// plugin's message_start hook can trust customType + continuationId. A follow-up waits
-				// for a running turn to finish, so the plugin may ask from its agent_end hook.
-				await entry.session.sendCustomMessage(
-					{
-						customType: continuationType(source.pluginId),
-						content: request.prompt,
-						display: false,
-						details: { continuationId, taskId: grant.taskId, grantId: grant.id },
-					},
-					{ triggerTurn: true, deliverAs: "followUp" },
-				);
-				return { continuationId, remaining: store.resumesLeft(grant) };
-			},
-		},
-		"task.grant.current": {
-			effect: "read",
-			inputSchema: { type: "null" },
-			resultSchema: { anyOf: [{ type: "null" }, grantSchema] },
-			execute: async (_input, context) => {
-				const grant = store.current(requirePluginSession(sessions, context));
-				return grant && grant.source.pluginId === source.pluginId ? view(grant) : null;
-			},
-		},
-	};
 }
