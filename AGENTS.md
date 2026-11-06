@@ -24,7 +24,7 @@
 - **R6**：领域包依赖方向保持单向：tasks 可使用 knowledge 的公开类型，research 可使用 knowledge；反向依赖禁止。
 - **R7**：`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库；不得 import Electron、Pi SDK、backend、desktop 或其他领域包，宿主适配由组合根提供。
 
-`node scripts/check-architecture.mjs` 会比较当前结果和已登记基线：新增违规会失败，已修复违规会提示更新基线。
+`node scripts/check-architecture.mjs` 会比较当前结果和已登记基线：新增违规会失败，已修复违规会提示更新基线。`--update-baseline` 只移除已修复的条目，出现新违规时列出并失败、不写文件；只有已有代码原样搬动时才用 `--update-baseline --allow-moves`，且必须在 PR 描述里说明原因。
 
 ## 编码尺度：不要过度防御
 
