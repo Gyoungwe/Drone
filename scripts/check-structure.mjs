@@ -8,6 +8,11 @@
  * Existing findings live in the baseline fixture. A file that newly crosses a
  * limit, or whose oversize line count / finding count grows, fails; a file that
  * improves asks for `--update` so the baseline only shrinks.
+ *
+ * `--update` records drops only: if a count would rise or a new entry appear it
+ * lists them, writes nothing and fails. `--update --allow-moves` also accepts
+ * those, for existing code that moved unchanged; explain its use in the PR
+ * description.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -49,6 +54,28 @@ export function compare(baseline, current) {
 	return { grown, shrunk };
 }
 
+function describeGrowth({ key, allowed, count }) {
+	const [rule, file] = key.split("\t");
+	return `${file} ${rule} is ${count} (allowed ${allowed})`;
+}
+
+/** Applies `--update` and returns the exit code; a refused update leaves the baseline untouched. */
+export function updateBaseline(baselinePath, current, args) {
+	const { grown } = compare(JSON.parse(readFileSync(baselinePath, "utf8")), current);
+	if (grown.length > 0 && !args.includes("--allow-moves")) {
+		for (const entry of grown) console.error(`structure: ${describeGrowth(entry)}; split or remove it`);
+		console.error(
+			"structure: not updated. --update only records drops; for existing code that moved unchanged, use --update --allow-moves and explain it in the PR description",
+		);
+		return 1;
+	}
+	for (const entry of grown) console.log(`structure: accepted as moved: ${describeGrowth(entry)}`);
+	const sorted = Object.fromEntries(Object.entries(current).sort(([a], [b]) => a.localeCompare(b)));
+	writeFileSync(baselinePath, `${JSON.stringify(sorted, null, "\t")}\n`);
+	console.log(`structure baseline updated (${Object.keys(current).length} entries)`);
+	return 0;
+}
+
 function scanRepository() {
 	const files = execFileSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8" })
 		.split("\n")
@@ -64,17 +91,10 @@ function scanRepository() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
 	const current = scanRepository();
-	if (process.argv.includes("--update")) {
-		const sorted = Object.fromEntries(Object.entries(current).sort(([a], [b]) => a.localeCompare(b)));
-		writeFileSync(BASELINE_PATH, `${JSON.stringify(sorted, null, "\t")}\n`);
-		console.log(`structure baseline updated (${Object.keys(current).length} entries)`);
-		process.exit(0);
-	}
+	const args = process.argv.slice(2);
+	if (args.includes("--update")) process.exit(updateBaseline(BASELINE_PATH, current, args));
 	const { grown, shrunk } = compare(JSON.parse(readFileSync(BASELINE_PATH, "utf8")), current);
-	for (const { key, allowed, count } of grown) {
-		const [rule, file] = key.split("\t");
-		console.error(`structure: ${file} ${rule} is ${count} (allowed ${allowed}); split or remove it`);
-	}
+	for (const entry of grown) console.error(`structure: ${describeGrowth(entry)}; split or remove it`);
 	for (const { key, allowed, count } of shrunk) {
 		const [rule, file] = key.split("\t");
 		console.log(`structure: ${file} ${rule} dropped ${allowed} -> ${count}; run with --update`);

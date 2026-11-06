@@ -194,7 +194,7 @@ packages/
 
 | 脚本 | 用途 |
 |---|---|
-| `scripts/check-lint-baseline.mjs` / `check-structure.mjs` | `npm run lint` 的棘轮检查：`any`、非空断言、空块、超 60 行函数，以及超 400 行文件、非 Error 继承、模块级 `let`；基线在 `scripts/fixtures/{lint,structure}-baseline.json`，只降不升（`--update` 更新） |
+| `scripts/check-lint-baseline.mjs` / `check-structure.mjs` | `npm run lint` 的棘轮检查：`any`、非空断言、空块、超 60 行函数，以及超 400 行文件、非 Error 继承、模块级 `let`；基线在 `scripts/fixtures/{lint,structure}-baseline.json`，只降不升（`--update` 只记录下降，遇上升或新条目列出并失败；已有代码原样搬动时用 `--update --allow-moves`，须在 PR 描述里说明） |
 | `.githooks/pre-commit` + `scripts/check-staged.mjs` | 提交前拦截生成文件与源码混提、新增 `.skip(` 和测试超时；`npm install` 经 `prepare` 设置 `core.hooksPath` |
 | `.claude/hooks/stop-check.mjs` | Claude Code Stop hook：结束一轮前对改动文件跑 biome、结构基线和所属 workspace 的 typecheck |
 | `scripts/build-extensions.mjs` | 将 `packages/extensions/src/*.ts` 打包到 `.pi/extensions/*.mjs`（默认保护已有产物，并写入 `.build-manifest.json` 记录源/产物哈希） |
