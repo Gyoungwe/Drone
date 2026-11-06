@@ -86,7 +86,6 @@
 	"file-lines\tpackages/desktop/src/main/ui-plugins/manager.ts": 849,
 	"file-lines\tpackages/desktop/src/main/ui-plugins/runtime-bridge.test.ts": 554,
 	"file-lines\tpackages/desktop/src/main/ui-plugins/runtime-host.test.ts": 837,
-	"file-lines\tpackages/desktop/src/main/ui-plugins/runtime-host.ts": 590,
 	"file-lines\tpackages/desktop/src/main/ui-plugins/runtime-source.test.ts": 530,
 	"file-lines\tpackages/desktop/src/preload/index.ts": 656,
 	"file-lines\tpackages/desktop/src/renderer/src/components/composer/Composer.tsx": 694,
