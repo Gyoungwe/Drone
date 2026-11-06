@@ -1,0 +1,88 @@
+#!/usr/bin/env node
+/**
+ * Ratcheting lint guard for rules too widespread to enable outright.
+ *
+ * Counts biome diagnostics per file and rule, and compares them with the
+ * baseline fixture: a file whose count grows (or a new file with findings)
+ * fails; a file whose count drops asks for `--update` so the baseline only
+ * shrinks.
+ */
+import { execFileSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const BASELINE_PATH = join(ROOT, "scripts/fixtures/lint-baseline.json");
+const RULES = ["suspicious/noExplicitAny", "style/noNonNullAssertion", "suspicious/noEmptyBlockStatements"];
+
+export function countDiagnostics(report) {
+	const counts = {};
+	for (const diagnostic of report.diagnostics) {
+		const rule = diagnostic.category.replace(/^lint\//, "");
+		if (!RULES.includes(rule)) continue;
+		const key = `${rule}\t${diagnostic.location.path}`;
+		counts[key] = (counts[key] ?? 0) + 1;
+	}
+	return counts;
+}
+
+export function compare(baseline, current) {
+	const grown = [];
+	const shrunk = [];
+	for (const [key, count] of Object.entries(current)) {
+		const allowed = baseline[key] ?? 0;
+		if (count > allowed) grown.push({ key, allowed, count });
+	}
+	for (const [key, allowed] of Object.entries(baseline)) {
+		if ((current[key] ?? 0) < allowed) shrunk.push({ key, allowed, count: current[key] ?? 0 });
+	}
+	return { grown, shrunk };
+}
+
+function runBiome() {
+	const args = [
+		"lint",
+		...RULES.map((rule) => `--only=${rule}`),
+		"--reporter=json",
+		"--max-diagnostics=none",
+		".",
+	];
+	try {
+		return execFileSync(join(ROOT, "node_modules/.bin/biome"), args, {
+			cwd: ROOT,
+			encoding: "utf8",
+			maxBuffer: 256 * 1024 * 1024,
+		});
+	} catch (error) {
+		// biome exits non-zero when it reports errors; the JSON report is still on stdout.
+		if (typeof error.stdout === "string" && error.stdout.startsWith("{")) return error.stdout;
+		throw error;
+	}
+}
+
+function sorted(counts) {
+	return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+	const current = countDiagnostics(JSON.parse(runBiome()));
+	if (process.argv.includes("--update")) {
+		writeFileSync(BASELINE_PATH, `${JSON.stringify(sorted(current), null, "\t")}\n`);
+		console.log(`lint baseline updated (${Object.keys(current).length} file/rule entries)`);
+		process.exit(0);
+	}
+	const { grown, shrunk } = compare(JSON.parse(readFileSync(BASELINE_PATH, "utf8")), current);
+	for (const { key, allowed, count } of grown) {
+		const [rule, file] = key.split("\t");
+		console.error(`lint baseline: ${file} has ${count} ${rule} (baseline ${allowed}); fix the new ones`);
+	}
+	for (const { key, allowed, count } of shrunk) {
+		const [rule, file] = key.split("\t");
+		console.log(`lint baseline: ${file} ${rule} dropped ${allowed} -> ${count}; run with --update`);
+	}
+	// Shrinking also fails so the baseline is lowered in the same change and cannot regrow.
+	if (grown.length > 0 || shrunk.length > 0) process.exit(1);
+	console.log("lint baseline: no new findings");
+}
