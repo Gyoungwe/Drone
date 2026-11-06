@@ -117,6 +117,7 @@ it("decodes service-only declarations from the same native source without loadin
 		drone: {
 			provides: { "checkpoint.runtime": { version: 1, operations: ["status", "update"] } },
 			requires: { audit: { service: "audit.runtime", version: 2 } },
+			consumes: { acceptance: { servicePrefix: "task.acceptance:", version: 1 } },
 		},
 	});
 	expect(await discoverInstalledPackages(modules)).toMatchObject([
@@ -124,6 +125,7 @@ it("decodes service-only declarations from the same native source without loadin
 			runtime: {
 				provides: { "checkpoint.runtime": { version: 1, operations: ["status", "update"] } },
 				requires: { audit: { service: "audit.runtime", version: 2 } },
+				consumes: { acceptance: { servicePrefix: "task.acceptance:", version: 1 } },
 				contentHash: installedPackageHash(directory),
 			},
 		},
@@ -136,6 +138,8 @@ it.each([
 	{ drone: { provides: { "checkpoint.runtime": { version: 0, operations: ["status"] } } } },
 	{ drone: { requires: { audit: { service: "audit.runtime", version: 1, package: "optional-package" } } } },
 	{ drone: { provides: ["checkpoint.runtime"] } },
+	{ drone: { consumes: { acceptance: { servicePrefix: "", version: 1 } } } },
+	{ drone: { consumes: { acceptance: { servicePrefix: "task.acceptance:", version: 1, package: "x" } } } },
 ])("diagnoses an invalid installed service contract without activating it: %j", async (extra) => {
 	await manifest(extra);
 	expect(await discoverInstalledPackages(modules)).toEqual([
@@ -147,6 +151,15 @@ it("refuses service declarations without a managed owner", async () => {
 	await manifest({
 		entrypoints: { extension: "./native.mjs" },
 		drone: { provides: { "checkpoint.runtime": { version: 1, operations: ["status"] } } },
+	});
+	expect(await discoverInstalledPackages(modules)).toEqual([
+		{ packageName: "@example/native", error: "drone service declarations require a desktopRuntime owner" },
+	]);
+});
+it("refuses a consumed role without a managed owner", async () => {
+	await manifest({
+		entrypoints: { extension: "./native.mjs" },
+		drone: { consumes: { acceptance: { servicePrefix: "task.acceptance:", version: 1 } } },
 	});
 	expect(await discoverInstalledPackages(modules)).toEqual([
 		{ packageName: "@example/native", error: "drone service declarations require a desktopRuntime owner" },

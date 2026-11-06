@@ -7,6 +7,7 @@ import type {
 	PluginRecordAdoptions,
 	PluginServiceProvision,
 	PluginServiceRequirement,
+	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
 import { installedPackageGraph } from "./installed-package-graph";
 
@@ -70,6 +71,7 @@ export interface InstalledUiRuntimeSource {
 	nativeChildSessions?: "read-only";
 	provides?: Readonly<Record<string, PluginServiceProvision>>;
 	requires?: Readonly<Record<string, PluginServiceRequirement>>;
+	consumes?: Readonly<Record<string, PluginServiceRole>>;
 	recordAdoptions?: PluginRecordAdoptions;
 	packageRoot: string;
 	installationPath: string;
@@ -114,8 +116,8 @@ function serviceVersion(value: unknown, field: string): number {
 		throw new Error(`${field} must be a positive safe integer`);
 	return value as number;
 }
-function installedServices(declarations: { provides?: unknown; requires?: unknown }) {
-	const services: Pick<InstalledUiRuntimeSource, "provides" | "requires"> = {};
+function installedServices(declarations: { provides?: unknown; requires?: unknown; consumes?: unknown }) {
+	const services: Pick<InstalledUiRuntimeSource, "provides" | "requires" | "consumes"> = {};
 	if (declarations.provides !== undefined) {
 		const provided: [string, PluginServiceProvision][] = [];
 		for (const [name, value] of Object.entries(serviceMap(declarations.provides, "drone.provides"))) {
@@ -154,6 +156,23 @@ function installedServices(declarations: { provides?: unknown; requires?: unknow
 			]);
 		}
 		services.requires = Object.freeze(Object.fromEntries(required));
+	}
+	if (declarations.consumes !== undefined) {
+		const roles: [string, PluginServiceRole][] = [];
+		for (const [role, value] of Object.entries(serviceMap(declarations.consumes, "drone.consumes"))) {
+			const field = `drone.consumes.${serviceName(role, "role name")}`;
+			const record = serviceMap(value, field);
+			if (Object.keys(record).some((key) => !["servicePrefix", "version"].includes(key)))
+				throw new Error(`${field} only accepts servicePrefix and version`);
+			roles.push([
+				role,
+				{
+					servicePrefix: serviceName(record.servicePrefix, `${field}.servicePrefix`),
+					version: serviceVersion(record.version, `${field}.version`),
+				},
+			]);
+		}
+		services.consumes = Object.freeze(Object.fromEntries(roles));
 	}
 	return services;
 }
@@ -249,6 +268,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 							workspaceRead?: unknown;
 							provides?: unknown;
 							requires?: unknown;
+							consumes?: unknown;
 							recordAdoptions?: unknown;
 						};
 						permissions?: { filesystem?: unknown; network?: unknown; subprocess?: unknown };
@@ -422,7 +442,12 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 			discoveries.push({ packageName, error: "drone.taskGrants requires a desktopRuntime owner" });
 			continue;
 		}
-		if ((manifest.drone?.provides !== undefined || manifest.drone?.requires !== undefined) && !runtime) {
+		if (
+			(manifest.drone?.provides !== undefined ||
+				manifest.drone?.requires !== undefined ||
+				manifest.drone?.consumes !== undefined) &&
+			!runtime
+		) {
 			discoveries.push({ packageName, error: "drone service declarations require a desktopRuntime owner" });
 			continue;
 		}

@@ -356,12 +356,24 @@ export interface PluginServiceRequirement {
 	readonly service: string;
 	readonly version: number;
 }
-export interface PluginProviderInspectionInput {
-	readonly alias: string;
+/** Manifest `drone.consumes`: every enabled service whose name starts with the prefix is a member of the role. */
+export interface PluginServiceRole {
+	readonly servicePrefix: string;
+	readonly version: number;
 }
-export interface PluginProviderInvocationInput extends PluginProviderInspectionInput {
+/** A provider is addressed by a declared alias, or by a declared role and the service-name suffix after its prefix. */
+export type PluginProviderInspectionInput =
+	| { readonly alias: string }
+	| { readonly role: string; readonly member: string };
+export type PluginProviderInvocationInput = PluginProviderInspectionInput & {
 	readonly operation: string;
 	readonly input: unknown;
+};
+export interface PluginProviderEnumerationInput {
+	readonly role: string;
+}
+export interface PluginProviderEnumeration {
+	readonly members: readonly (PluginProviderInspection & { readonly member: string })[];
 }
 export interface PluginProviderInspection {
 	readonly state: "available" | "absent" | "disabled" | "unavailable" | "incompatible" | "ambiguous";

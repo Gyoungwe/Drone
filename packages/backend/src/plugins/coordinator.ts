@@ -9,6 +9,7 @@ import type {
 	PluginRuntimeClient,
 	PluginServiceProvision,
 	PluginServiceRequirement,
+	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
 import type { AskQuestionRoute } from "../session/ask-gate";
 import { NativeSessionDelivery, type SelectedNativeSource } from "./native-delivery";
@@ -34,6 +35,7 @@ export interface PluginRuntimeSource {
 	readonly deliveryProjection?: "required";
 	readonly provides?: Readonly<Record<string, PluginServiceProvision>>;
 	readonly requires?: Readonly<Record<string, PluginServiceRequirement>>;
+	readonly consumes?: Readonly<Record<string, PluginServiceRole>>;
 	readonly recordAdoptions?: PluginRecordAdoptions;
 	readonly requestsStateRead?: boolean;
 	readonly requestsStateWrite?: boolean;
@@ -144,6 +146,7 @@ function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | undefined):
 		a.deliveryProjection === b.deliveryProjection &&
 		JSON.stringify(a.provides) === JSON.stringify(b.provides) &&
 		JSON.stringify(a.requires) === JSON.stringify(b.requires) &&
+		JSON.stringify(a.consumes) === JSON.stringify(b.consumes) &&
 		JSON.stringify(a.recordAdoptions) === JSON.stringify(b.recordAdoptions) &&
 		a.requestsStateRead === b.requestsStateRead &&
 		a.requestsStateWrite === b.requestsStateWrite &&

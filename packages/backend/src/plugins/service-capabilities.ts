@@ -1,7 +1,11 @@
 import type {
+	PluginProviderEnumeration,
+	PluginProviderEnumerationInput,
 	PluginProviderInspection,
 	PluginProviderInspectionInput,
 	PluginProviderInvocationInput,
+	PluginServiceRequirement,
+	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
 import { hostText } from "../reply-language";
@@ -38,6 +42,27 @@ interface Dependencies {
 }
 
 const text = Type.String({ minLength: 1, maxLength: 128 });
+const address = (extra: Record<string, ReturnType<typeof Type.String> | typeof json> = {}) =>
+	Type.Union([
+		Type.Object({ alias: text, ...extra }, { additionalProperties: false }),
+		Type.Object({ role: text, member: text, ...extra }, { additionalProperties: false }),
+	]);
+const inspectionFields = {
+	state: Type.Union(
+		["available", "absent", "disabled", "unavailable", "incompatible", "ambiguous"].map((state) =>
+			Type.Literal(state),
+		),
+	),
+	service: Type.String({ minLength: 1, maxLength: 256 }),
+	requestedVersion: Type.Integer({ minimum: 1 }),
+	provider: Type.Union([
+		Type.Null(),
+		Type.Object(
+			{ pluginId: Type.String(), version: Type.Integer({ minimum: 1 }), contentHash: Type.String() },
+			{ additionalProperties: false },
+		),
+	]),
+};
 const json = Type.Cyclic(
 	{
 		Json: Type.Union([
@@ -56,16 +81,30 @@ const json = Type.Cyclic(
 export function serviceCapabilityHandlers(
 	deps: Dependencies,
 ): Record<
-	"provider.inspect" | "provider.read" | "provider.write" | "provider.native",
+	"provider.inspect" | "provider.enumerate" | "provider.read" | "provider.write" | "provider.native",
 	PluginCapabilityHandler
 > {
-	function resolve(alias: string): {
+	function declaredRole(role: string) {
+		const declaration = deps.consumer.consumes;
+		if (!declaration || !Object.hasOwn(declaration, role))
+			throw new Error(`Undeclared provider role: ${role}`);
+		return declaration[role] as PluginServiceRole;
+	}
+	function requirementFor(address: PluginProviderInspectionInput): { service: string; version: number } {
+		if ("alias" in address) {
+			const requires = deps.consumer.requires;
+			if (!requires || !Object.hasOwn(requires, address.alias))
+				throw new Error(`Undeclared provider alias: ${address.alias}`);
+			return requires[address.alias] as PluginServiceRequirement;
+		}
+		const role = declaredRole(address.role);
+		return { service: role.servicePrefix + address.member, version: role.version };
+	}
+	function resolve(address: PluginProviderInspectionInput): {
 		inspection: PluginProviderInspection;
 		target: PluginServiceTarget | null;
 	} {
-		const requirement = deps.consumer.requires?.[alias];
-		if (!requirement || !Object.hasOwn(deps.consumer.requires, alias))
-			throw new Error(`Undeclared provider alias: ${alias}`);
+		const requirement = requirementFor(address);
 		const candidates = deps.sources().flatMap((item) => {
 			const declaration = item.source.provides;
 			const provision =
@@ -113,24 +152,25 @@ export function serviceCapabilityHandlers(
 	) => {
 		deps.check(context, effect);
 		const input = raw as PluginProviderInvocationInput;
-		const { inspection, target } = resolve(input.alias);
-		if (!target) throw new Error(`Provider ${input.alias} is ${inspection.state}`);
+		const { inspection, target } = resolve(input);
+		if (!target) throw new Error(`Provider ${inspection.service} is ${inspection.state}`);
 		if (!target.operations.includes(input.operation))
 			throw new Error(`Provider operation is not declared: ${input.operation}`);
 		const result = await invoke(context, target, input, effect);
 		deps.check(context, effect);
-		const current = resolve(input.alias);
+		const current = resolve(input);
 		if (current.inspection.state !== "available" || current.target?.source !== target.source)
 			throw new Error("Provider source selection changed during invocation");
 		return result;
 	};
 	const invocation = (effect: "read" | "write"): PluginCapabilityHandler => ({
 		effect,
-		inputSchema: Type.Object({ alias: text, operation: text, input: json }, { additionalProperties: false }),
+		inputSchema: address({ operation: text, input: json }),
 		resultSchema: json,
 		approvalDetail: (raw) => {
 			const input = raw as PluginProviderInvocationInput;
-			return `${hostText("插件服务", "Plugin service")} ${input.alias}: ${input.operation}`;
+			const name = "alias" in input ? input.alias : `${input.role}/${input.member}`;
+			return `${hostText("插件服务", "Plugin service")} ${name}: ${input.operation}`;
 		},
 		execute: (raw, context) => execute(raw, context, effect, deps.invoke),
 	});
@@ -138,39 +178,46 @@ export function serviceCapabilityHandlers(
 		"provider.inspect": {
 			effect: "read",
 			bootstrap: true,
-			inputSchema: Type.Object({ alias: text }, { additionalProperties: false }),
+			inputSchema: address(),
+			resultSchema: Type.Object(inspectionFields, { additionalProperties: false }),
+			execute: async (raw, context) => {
+				deps.check(context, "read");
+				return resolve(raw as PluginProviderInspectionInput).inspection;
+			},
+		},
+		"provider.enumerate": {
+			effect: "read",
+			bootstrap: true,
+			inputSchema: Type.Object({ role: text }, { additionalProperties: false }),
 			resultSchema: Type.Object(
 				{
-					state: Type.Union(
-						["available", "absent", "disabled", "unavailable", "incompatible", "ambiguous"].map((state) =>
-							Type.Literal(state),
-						),
+					members: Type.Array(
+						Type.Object({ member: text, ...inspectionFields }, { additionalProperties: false }),
 					),
-					service: text,
-					requestedVersion: Type.Integer({ minimum: 1 }),
-					provider: Type.Union([
-						Type.Null(),
-						Type.Object(
-							{ pluginId: Type.String(), version: Type.Integer({ minimum: 1 }), contentHash: Type.String() },
-							{ additionalProperties: false },
-						),
-					]),
 				},
 				{ additionalProperties: false },
 			),
-			execute: async (raw, context) => {
+			execute: async (raw, context): Promise<PluginProviderEnumeration> => {
 				deps.check(context, "read");
-				return resolve((raw as PluginProviderInspectionInput).alias).inspection;
+				const { role } = raw as PluginProviderEnumerationInput;
+				const { servicePrefix } = declaredRole(role);
+				const members = new Set(
+					deps
+						.sources()
+						.flatMap((item) => Object.keys(item.source.provides ?? {}))
+						.filter((service) => service.startsWith(servicePrefix) && service.length > servicePrefix.length)
+						.map((service) => service.slice(servicePrefix.length)),
+				);
+				return {
+					members: [...members].sort().map((member) => ({ member, ...resolve({ role, member }).inspection })),
+				};
 			},
 		},
 		"provider.read": invocation("read"),
 		"provider.write": invocation("write"),
 		"provider.native": {
 			effect: "read",
-			inputSchema: Type.Object(
-				{ alias: text, operation: text, input: json },
-				{ additionalProperties: false },
-			),
+			inputSchema: address({ operation: text, input: json }),
 			resultSchema: json,
 			execute: (raw, context) => {
 				const origin = context.nativeInvocation,
