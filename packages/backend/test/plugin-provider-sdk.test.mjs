@@ -56,6 +56,8 @@ export default async context=>{
 const consumerSource = `export default async()=>({operations:{
  directAdoption:{effect:'write',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('session.records.adoption.inspect',input)},
  inspect:{effect:'read',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('provider.inspect',input)},
+ enumerate:{effect:'read',inputSchema:{type:'object'},resultSchema:{type:'object'},execute:async(input,ctx)=>ctx.capabilities.call('provider.enumerate',input)},
+ roleRead:{effect:'read',inputSchema:{type:'object'},resultSchema:{},execute:async(input,ctx)=>ctx.capabilities.call('provider.read',input)},
  read:{effect:'read',inputSchema:{type:'object'},resultSchema:{},execute:async(input,ctx)=>ctx.capabilities.call('provider.read',{alias:'store',...input})},
  write:{effect:'write',inputSchema:{type:'object'},resultSchema:{},execute:async(input,ctx)=>ctx.capabilities.call('provider.write',{alias:'store',...input})},
  cycle:{effect:'read',inputSchema:{type:'null'},resultSchema:{type:'null'},execute:async(_input,ctx)=>ctx.capabilities.call('provider.read',{alias:'store',operation:'cycle',input:null})}
@@ -106,6 +108,7 @@ async function setup({
 	providerNative = true,
 	taskData = false,
 	binaryFiles = false,
+	acceptance = false,
 } = {}) {
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-provider-packed-")));
 	const archives = [];
@@ -130,6 +133,7 @@ async function setup({
 							...(roles ? ["observe", "write", "tool", "ordinary", "fail"] : []),
 						],
 					},
+					...(acceptance ? { "task.acceptance:fixture_item": { version: 1, operations: ["status"] } } : {}),
 				},
 				requires: {
 					back: { service: "cycle.service", version: 1 },
@@ -153,6 +157,9 @@ async function setup({
 					store: { service: "checkpoint.service", version: 1 },
 					unknown: { service: "absent.service", version: 1 },
 				},
+				...(acceptance
+					? { consumes: { acceptance: { servicePrefix: "task.acceptance:", version: 1 } } }
+					: {}),
 			},
 		],
 	]) {
@@ -464,6 +471,36 @@ it("real installed tarballs share one restricted provider owner between capabili
 			.every((args) => args[0].id === 71),
 	).toBe(true);
 }, 20000);
+it("a consumed role enumerates every provider by service prefix and calls one by member, without naming its package", async () => {
+	const t = await setup({ acceptance: true });
+	await t.converse();
+	const listed = await t.invoke("enumerate", { role: "acceptance" });
+	expect(listed.members).toEqual([
+		expect.objectContaining({
+			member: "fixture_item",
+			state: "available",
+			service: "task.acceptance:fixture_item",
+			provider: expect.objectContaining({ pluginId: "@fixture/provider" }),
+		}),
+	]);
+	expect(
+		await t.invoke("roleRead", {
+			role: "acceptance",
+			member: "fixture_item",
+			operation: "status",
+			input: null,
+		}),
+	).toMatchObject({ value: 0 });
+	await expect(
+		t.invoke("roleRead", { role: "acceptance", member: "missing", operation: "status", input: null }),
+	).rejects.toThrow(/task\.acceptance:missing is absent/);
+	await expect(t.invoke("enumerate", { role: "undeclared" })).rejects.toThrow(/Undeclared provider role/);
+	t.setState("disabled");
+	expect((await t.invoke("enumerate", { role: "acceptance" })).members).toEqual([
+		expect.objectContaining({ member: "fixture_item", state: "disabled", provider: null }),
+	]);
+}, 60000);
+
 it("same installed catalog reports absent/disabled/unavailable/incompatible/ambiguous without activating an arbitrary provider", async () => {
 	const { provider, invoke, setState, catalog, rescan } = await setup();
 	expect(await invoke("inspect", { alias: "unknown" })).toMatchObject({ state: "absent", provider: null });

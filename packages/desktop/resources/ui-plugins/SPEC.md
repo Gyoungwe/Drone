@@ -347,6 +347,8 @@ read 同时返回 `mode:"persistent"|"memory"`，只由实际 SDK `getSessionFil
 
 `provider.inspect({alias})` 为 read，返回 `{state,service,requestedVersion,provider}`，state 为 available/absent/disabled/unavailable/incompatible/ambiguous，provider 为 available 的 `{pluginId,version,contentHash}` 或 null；它只检查已声明 alias，构造期可读取元数据，不激活目标。服务只选择精确版本唯一 enabled 来源，多提供者不能取第一个。
 
+`provider.enumerate({role})` 为 read，构造期可调用。角色由清单 `drone.consumes.<role> = {servicePrefix, version}` 声明；宿主列出已安装来源中名字以该前缀开头的每个服务，返回 `{members:[{member,...inspect 结果}]}`，`member` 是前缀之后的部分，状态语义与 `provider.inspect` 相同。宿主只比较前缀与版本，不解析服务含义。`provider.inspect/read/write/native` 都可用 `{role,member}` 代替 `{alias}` 寻址，其余校验不变。
+
 `provider.read` / `provider.write` 接收 `{alias,operation,input:JSON}`，在实际提供者 owner 中执行其已声明且真实存在的 runtime operation。read 不可调用 write，所有写入仍逐次走双方来源与实际操作授权。短 lease 沿原 host caller/同 SDK entry/原窗口与 signal；已有 native/UI binding 时复用同 application owner，无其他 binding 时该纯服务 owner 仅活本次调用，状态应显式持久化。结束必须 await drain/revoke，清理失败使回执失败并保留 teardown 屏障。嵌套调用的 host-only source/operation 链拒绝实际循环，不把函数、caller 身份或授权放进 JSON。
 
 `provider.native({alias,operation,input:JSON})` 仅在实际 SDK `message_start` / `tool_execution_end` 的在途 native hook 内可用。接收者在同一来源 owner 的 `createNativeSession()` 返回 `nativeOperations`，每项声明 event、effect、inputSchema、resultSchema 和实际 execute；宿主要求它已绑定到完全相同的 live SDK entry，不自动 attach。原始事件由宿主私有调用元数据与既有 message courier 交给接收者，不从 JSON input/event/nonce 认领。普通 operation、tool、command、bootstrap、projection 与普通 provider.read/write 都不携带这项 authority；返回值仍是普通 JSON。
