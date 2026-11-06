@@ -194,6 +194,9 @@ packages/
 
 | 脚本 | 用途 |
 |---|---|
+| `scripts/check-lint-baseline.mjs` / `check-structure.mjs` | `npm run lint` 的棘轮检查：`any`、非空断言、空块、超 60 行函数，以及超 400 行文件、非 Error 继承、模块级 `let`；基线在 `scripts/fixtures/{lint,structure}-baseline.json`，只降不升（`--update` 更新） |
+| `.githooks/pre-commit` + `scripts/check-staged.mjs` | 提交前拦截生成文件与源码混提、新增 `.skip(` 和测试超时；`npm install` 经 `prepare` 设置 `core.hooksPath` |
+| `.claude/hooks/stop-check.mjs` | Claude Code Stop hook：结束一轮前对改动文件跑 biome、结构基线和所属 workspace 的 typecheck |
 | `scripts/build-extensions.mjs` | 将 `packages/extensions/src/*.ts` 打包到 `.pi/extensions/*.mjs`（默认保护已有产物，并写入 `.build-manifest.json` 记录源/产物哈希） |
 | `scripts/check-native-pi.mjs` | 静态扫描一方工具注册，按 fixture 映射原生 Pi 可用性、源码位置和目标插件包（不读取生成的 `.pi` 产物） |
 | `scripts/smoke-backend.mts` | 真实 SDK 冒烟（需 `AI_OPS_API_KEY`） |
