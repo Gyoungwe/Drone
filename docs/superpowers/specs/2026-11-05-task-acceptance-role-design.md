@@ -142,7 +142,9 @@
 ### Zotero 迁移进度（2026-11-05）
 
 - 已完成：研究包 `src/desktop/capability-fetch.ts`（`fetch` 形状，走 `network.*`）与 `zotero-tools.ts`；受管会话注册 `research_zotero_status`（精简）、`research_zotero_save`（只走 connector）、`research_zotero_update`（无凭据时返回 blocked）。工具声明为读，插件不再自己弹确认；用户在宿主对话框拒绝时回执为 `cancelled / user-declined`。
-- 未迁：`research_setup_zotero` 与 `/zotero-setup`（需子进程）、run 日志、流程卡片、`zotero_item` 验收器（待决定 2、3）。
+- 未迁：`research_setup_zotero` 与 `/zotero-setup`（需子进程）、run 日志、流程卡片。
+- `zotero_item` 验收器（正向，2026-11-06 完成）：宿主 `drone.consumes` + `provider.enumerate` + `{role, member}` 寻址（Drone #250）；研究包提供 `task.acceptance:zotero_item` 的 `describe`/`verify` 与 `tool_execution_end` 上的 `identify`，pi-core 受管适配器按角色注册（drone-plugins #7）。真实 SDK 用例 `packages/backend/test/managed-acceptance-role-sdk.test.mjs`。已确认 `tool_execution_end` 在 `tool_result` 之后、`agent_end` 之前；受管下声明为读的工具没有操作记录，身份绑定不依赖它。
+- 反向（待做）：用户 2026-11-06 选定授权内免询问（授权框逐条列出 Zotero 条目，每条签发一次性写入令牌）与宿主按插件保管凭据。
 - 待做：宿主凭据引用；Drone 重锁研究包后用真实 SDK 跑真实研究包；切换时从 workbench 清单删除 `zotero-literature.mjs`，避免同名工具。
 - 已知限制：Web API 附件的上传地址事先未知、上传需超过 30 秒；写入被拒后核心代码仍读回 4 次（约 2 秒）才返回。
 
