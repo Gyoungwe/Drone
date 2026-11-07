@@ -19,6 +19,7 @@
 | Electron 二进制下载不动、npm 拦 postinstall | 三 · Node/npm 环境 |
 | 新增 UI 文案只显示一种语言 | 四 · i18n 双字典 |
 | 检查脚本没有任何输出就退出 0 | 检查脚本经符号链接运行时静默通过 |
+| 想给受管插件开 worker 线程 | `--allow-worker` 会让插件脱离 `--permission` |
 | 凭证泄漏风险、密钥误提交 | 五 · 绝不打印/提交 API key |
 | LAN 页连接僵死不重连、状态「重连中/已连接」反复跳 | 二 · SSE 心跳必须是命名事件帧 |
 | LAN 对话页正文重复出现在末尾、run 结束又恢复正常 | 二 · 流式增量帧不可重放（healing 兜底差量） |
@@ -518,6 +519,10 @@ Node 会解析主模块的符号链接并对 `import.meta.url` 做百分号编�
 ## 受管插件的状态卡要等运行结束、在调用内等待
 
 `session.notify` 在 SDK 运行期间（`isStreaming`，含 `turn_end`、`agent_end` 时）一律拒绝：运行中排队的会话消息会延长这次运行。受管插件把这个拒绝当成存储失败处理，就会把 TaskSession 隔离成 needs-reopen，之后每个操作都报 `Task storage failed; reopen the application from disk`。状态卡要在运行中暂存，到 `agent_settled` 再发（Pi 1.1.0 公开事件，触发时会话已空闲）。另外，broker 只在 hook、工具或命令执行期间借出能力，所以每次发卡都必须在该调用内 `await`；不等待的调用到达宿主时会以 `Plugin capability caller completed` 失败，效果相同。插件单元测试的假宿主要同时模拟这两条规则，否则只有 SDK 测试能发现（drone-plugins 71fd56a / #244；回归见 `packages/backend/test/plugin-provider-sdk.test.mjs` 与插件 `task-managed-adapter.test.mjs`）。
+
+## `--allow-worker` 会让插件脱离 `--permission`（2026-11-07 记录）
+
+在锁定的 Node 26.12.1 上实测：进程带 `--permission --allow-worker` 时，插件代码 `new Worker(code, { eval: true, execArgv: [] })` 建出的 worker 不再受文件权限限制，能读到沙箱外的文件（默认继承 execArgv 时仍被拒，所以只测默认情况会误判安全）。Node 自己也会打印 SecurityWarning。因此受管插件永远不加 `--allow-worker`；需要隔离的重计算（如 PDF 解析）由宿主每次新起一个同样受限、不开 worker 的一次性进程完成，见 `backend/src/plugins/pdf-text-capability.ts`。
 
 ## 受管插件的写审批与任务授权
 

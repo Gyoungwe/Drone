@@ -11,7 +11,7 @@
 	"file-lines\tpackages/backend/src/capabilities/runtime.ts": 745,
 	"file-lines\tpackages/backend/src/compute/default-executor.ts": 1455,
 	"file-lines\tpackages/backend/src/create-backend.test.ts": 1028,
-	"file-lines\tpackages/backend/src/create-backend.ts": 1012,
+	"file-lines\tpackages/backend/src/create-backend.ts": 1010,
 	"file-lines\tpackages/backend/src/discovery/service.test.ts": 417,
 	"file-lines\tpackages/backend/src/discovery/service.ts": 491,
 	"file-lines\tpackages/backend/src/index.ts": 416,

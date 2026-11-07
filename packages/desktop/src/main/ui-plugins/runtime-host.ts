@@ -1,5 +1,7 @@
+import { realpathSync } from "node:fs";
 import { realpath } from "node:fs/promises";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import {
 	createExecutionIntegrityKey,
 	createPluginExecutionCapabilities,
@@ -36,6 +38,13 @@ export function createDesktopRuntime(
 	>,
 	questionTransport: NonNullable<DesktopRuntimeBridgeOptions["questionTransport"]>,
 ): DesktopRuntimeBridge {
+	// pdf.js ships with the app; the plain-Node parser process can read it only outside app.asar.
+	const pdfjsRoot = realpathSync(
+		dirname(createRequire(import.meta.url).resolve("pdfjs-dist/package.json")).replace(
+			/app\.asar(?=[\\/])/,
+			"app.asar.unpacked",
+		),
+	);
 	const executionIntegrityKey = createExecutionIntegrityKey();
 	const executionAcceptedFacts = new Map<string, ExecutionIdentity>();
 	return new DesktopRuntimeBridge({
@@ -152,7 +161,9 @@ export function createDesktopRuntime(
 					...resourceCapabilities.handlers,
 					...executionCapabilities?.handlers,
 					...sessions.getPluginSourceCapabilities(source),
-					...(source.requestsWorkspaceRead ? sessions.getPluginWorkspaceCapabilities() : {}),
+					...(source.requestsWorkspaceRead
+						? sessions.getPluginWorkspaceCapabilities({ runtimeDirectory, pdfjsRoot })
+						: {}),
 					"session.inspect": capabilities["session.inspect"],
 					"session.tools": capabilities["session.tools"],
 					"session.select": capabilities["session.select"],
