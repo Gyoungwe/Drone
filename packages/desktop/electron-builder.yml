@@ -13,6 +13,8 @@ asarUnpack:
   # unpack 后 Electron child_process 自动把 app.asar 路径重写为 app.asar.unpacked
   - "**/node_modules/esbuild/**"
   - "**/node_modules/@esbuild/**"
+  # Host PDF text runs pdf.js in a plain plugin-runtime Node process, which cannot read inside asar.
+  - "**/node_modules/pdfjs-dist/**"
 # pi SDK 包资源镜像：docs/examples/README 不进 asar，agent 的 read/bash 工具都能直接访问。
 # main 进程经 PI_PACKAGE_DIR 指到这里（export-html/themes/package.json 同根解析，必须一起带）。
 extraResources:
