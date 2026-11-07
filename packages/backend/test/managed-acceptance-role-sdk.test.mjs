@@ -42,6 +42,11 @@ export default async context=>{
  }};
 };`;
 const DOI = "10.1000/gut.2021.001";
+// The pi-core manifest gets these with the §5.3 cutover; the fixture only adds them early.
+const CUTOVER_SERVICES = {
+	requires: { knowledge: { service: "knowledge.binding", version: 1 } },
+	consumes: { acceptance: { servicePrefix: "task.acceptance:", version: 1 } },
+};
 
 async function pack(dir) {
 	const [packed] = JSON.parse(
@@ -87,8 +92,7 @@ async function install() {
 				resultContract: "drone-result/v3",
 				taskGrants: "request",
 				workspaceRead: "session",
-				// The pi-core manifest gets this with the §5.3 cutover; the fixture only adds it early.
-				consumes: { acceptance: { servicePrefix: "task.acceptance:", version: 1 } },
+				...CUTOVER_SERVICES,
 				provides: { "fixture.tasks": { version: 1, operations: ["fixtureView"] } },
 			},
 			permissions: { filesystem: ["workspace-read"], network: [], subprocess: [] },

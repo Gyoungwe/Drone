@@ -121,7 +121,7 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/knowledge-ui.test.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/login.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/managed-acceptance-role-sdk.test.mjs": 1,
-	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/managed-task-continue-sdk.test.mjs": 2,
+	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/managed-task-continue-sdk.test.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/mcp-adapter-bundle-sdk.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/mcp-connector-gates.test.ts": 3,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/mcp-enabled-adapter-sdk.test.ts": 2,

@@ -101,6 +101,8 @@ async function writeFixture(dir) {
 				resultContract: "drone-result/v3",
 				taskGrants: "request",
 				workspaceRead: "session",
+				// As pi-core's manifest declares it at the managed switch: Vault acceptance asks the knowledge plugin.
+				requires: { knowledge: { service: "knowledge.binding", version: 1 } },
 				provides: { "fixture.tasks": { version: 1, operations: ["fixtureView"] } },
 			},
 			permissions: { filesystem: ["workspace-read"], network: [], subprocess: [] },
