@@ -20,6 +20,7 @@ import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
 import type { PluginRuntimeSource } from "../plugins/coordinator";
 import { modelCapabilityHandlers } from "../plugins/model-capabilities";
+import { pdfTextCapabilityHandlers } from "../plugins/pdf-text-capability";
 import { PluginCredentialStore } from "../plugins/plugin-credentials";
 import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
@@ -101,9 +102,12 @@ export class SessionServiceApi extends SessionSettingsApi {
 		return sourceCapabilityHandlers({ taskGrants, sessions, credentials: this.pluginCredentials }, source);
 	}
 
-	/** Workspace reads under the calling session's current read permissions. */
-	getPluginWorkspaceCapabilities() {
-		return workspaceCapabilityHandlers(this.host.pluginSessions, this.host.readChecks);
+	/** Workspace reads under the calling session's current read permissions, and PDF text of what was read. */
+	getPluginWorkspaceCapabilities(pdf: Parameters<typeof pdfTextCapabilityHandlers>[0]) {
+		return {
+			...workspaceCapabilityHandlers(this.host.pluginSessions, this.host.readChecks),
+			...pdfTextCapabilityHandlers(pdf),
+		};
 	}
 
 	getTaskGrants(): TaskGrantStore {
