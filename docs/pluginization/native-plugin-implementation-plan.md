@@ -43,7 +43,7 @@
 
 后继 `e4fbead/e41cf906` 已整合知识恢复显式导入、完整树导出、可选探测 timer 清理，任务 live/last-durable 回执、host-only native provider/数据，以及 Inquiry 原格式 SQLite/WASM、二进制 CAS、旧 writer 租约和同包 Pi/UI。统一 API、插件完整检查、六包干净重建与真实 Inquiry 三路验收已通过；宿主修复后整轮仍待复验。子代理后继的 resource 请求 signal、Inquiry event projector/Discovery provider 消费已冻结待整合；实际 child 策略、持续任务授权/续作/PDF、最终工具参数权限修复仍在推进。源码、未提交工作、精确 SHA 与恢复顺序见[交接文档](../handoff-2026-10-29.md)，不把子代理切片提升为阶段完成。
 
-P3 研究/Zotero 与 P5 分析/证据完整控制器、页面和旧宿主业务删除仍是主体剩余工作。P4 继续处理实际任务授权/续作、科研示例/领域记忆和旧 startup/core/task host；P6 删除四个必需领域锁及构建/资源闭包，证明不下载科研插件也能独立构建、启动和聊天；P7 以最终同候选正式安装包验收完整 GUI、销毁失败和升级回滚。目标保持 active，既有四项外部验收和暂缓范围不变。
+P3 研究/Zotero 与 P5 分析/证据完整控制器、页面和旧宿主业务删除仍是主体剩余工作。P4 已于 2026-11-08 完成（Drone #270–#272、drone-plugins #17；pi-core 以只读内置包走受管运行时，启动期 taskHost/coreHost 与旧权限桥已删除，见 [P4 交接](../handoff-2026-10-29-p4.md)）；P6 删除四个必需领域锁及构建/资源闭包，证明不下载科研插件也能独立构建、启动和聊天；P7 以最终同候选正式安装包验收完整 GUI、销毁失败和升级回滚。目标保持 active，既有四项外部验收和暂缓范围不变。
 
 此前阶段性后继状态已归档至[历史快照](../archive/native-plugin-owner-services-plan-status-through-2026-10-28.md)，历史未完成描述只适用于记录时的来源版本。
 
