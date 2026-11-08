@@ -37,7 +37,7 @@
 	"file-lines\tpackages/backend/src/services/reversible-write-adapters.ts": 580,
 	"file-lines\tpackages/backend/src/services/session-construction.ts": 516,
 	"file-lines\tpackages/backend/src/session-engine/antigravity/oauth.ts": 574,
-	"file-lines\tpackages/backend/src/session-service.ts": 487,
+	"file-lines\tpackages/backend/src/session-service.ts": 473,
 	"file-lines\tpackages/backend/src/session/messages.ts": 588,
 	"file-lines\tpackages/backend/src/settings/settings.ts": 422,
 	"file-lines\tpackages/backend/src/tools/bio/databases.ts": 417,

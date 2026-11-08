@@ -424,6 +424,7 @@ src/
 | `src/settings/model-prefs.ts` | `ModelPrefsService` | `model-prefs.json`：隐藏模型 + 停用 provider + per-agent 子代理模型；`listModels()` 唯一出口过滤 |
 | `src/settings/login.ts` | `LoginService` | provider 交互登录桥接：AuthInteraction → IPC 事件（prompt 挂起等 renderer 应答；浏览器先到则拒挂起 prompt）。支持 OAuth + api_key 交互登录（如 Google Vertex）；`filterAuthSelectOptions` 对 google-vertex 剔除必败的 api-key 选项（Vertex 不接受 API key，见 PITFALLS） |
 | `src/services/packages.ts` | `PackageService` | 社区包搜索/安装/卸载/已配置清单 + 装卸后对非流式会话热重载（对齐 CLI /reload）；npm ENOENT 转带哨兵的可读错误；通过 `BackendServices.packages` 暴露 |
+| `src/services/decision-fanout.ts` | `DecisionFanout` | agent 决策记录分发：补全项目后交给 inquiry 日志；处理器异常不打断会话 |
 | `src/services/approvals.ts` | `ApprovalService` | per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播和 allowRun 队列裁决；通过 `BackendServices.approvals` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/permissions.ts` | `PermissionSettingsService` | `permissions.json` 快照、原子保存、恢复默认、规则试算与审计尾部；通过 `BackendServices.permissions` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/session-permissions.ts` | `SessionPermissionService` | 活跃会话的内存权限模式（default/fullAccess）；关闭会话或重启即归零；通过 `BackendServices.sessionPermissions` 暴露 |

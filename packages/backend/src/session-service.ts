@@ -24,6 +24,7 @@ import { TaskGrantStore } from "./plugins/task-grants";
 import type { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import type { ApprovalDecision, ApprovalService } from "./services/approvals";
+import { DecisionFanout } from "./services/decision-fanout";
 import type { BackgroundReviewerFactory } from "./services/deliverable-reviewer";
 import { InstitutionalService } from "./services/institutional";
 import type { KnowledgeReviewControl, KnowledgeSessionService } from "./services/knowledge-session";
@@ -140,7 +141,6 @@ export interface SessionServiceOptions {
 type LoginHandler = (payload: LoginEventPayload) => void;
 type AskHandler = (req: AskRequest) => void;
 type TrustHandler = (req: TrustRequest) => void;
-type DecisionHandler = (event: unknown) => void;
 
 /**
  * PiBackend：pi SDK 的唯一适配层（门面）。不依赖 Electron，
@@ -169,7 +169,7 @@ export class SessionService extends SessionServiceApi {
 	readonly trustHandlers = new Set<TrustHandler>();
 	readonly loginHandlers = new Set<LoginHandler>();
 	readonly mcpHandlers = new Set<(cwd: string, status: McpStatus) => void>();
-	readonly decisionHandlers = new Set<DecisionHandler>();
+	readonly decisions = new DecisionFanout();
 	readonly liveSubagents = new Map<
 		string,
 		{
@@ -339,26 +339,12 @@ export class SessionService extends SessionServiceApi {
 			...(this.options.listSshHosts ? { listSshHosts: this.options.listSshHosts } : {}),
 			...(this.options.memory ? { memory: this.options.memory } : {}),
 			relatedKnowledge: (cwd, query) => this.knowledge.relatedForMemory(cwd, query, 4),
-			onDecision: (sessionId, event) => {
-				for (const handler of this.decisionHandlers) {
-					try {
-						const value = event && typeof event === "object" ? (event as Record<string, unknown>) : {};
-						const projectId =
-							typeof value.projectId === "string" && value.projectId.trim()
-								? value.projectId
-								: this.registry.get(sessionId)?.cwd;
-						handler({ ...value, ...(projectId ? { projectId } : {}) });
-					} catch {
-						// Decision journaling is observational and must not interrupt a session.
-					}
-				}
-			},
+			onDecision: (sessionId, event) => this.decisions.publish(event, this.registry.get(sessionId)?.cwd),
 		};
 	}
 
-	onDecision(handler: DecisionHandler): () => void {
-		this.decisionHandlers.add(handler);
-		return () => this.decisionHandlers.delete(handler);
+	onDecision(handler: (event: unknown) => void): () => void {
+		return this.decisions.on(handler);
 	}
 
 	async getModelRuntime(): Promise<ModelRuntime> {
