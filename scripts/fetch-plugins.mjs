@@ -11,6 +11,7 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { BUILTIN_PACKAGES_DIR } from "./check-builtin-plugins.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const lockPath = join(root, "plugins.lock.json");
@@ -23,6 +24,8 @@ const workspace = await mkdtemp(join(tmpdir(), "drone-plugin-fetch-"));
 const checkouts = new Map();
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const cacheDir = join(root, "vendor/plugins/.tarballs");
+// Restaged from scratch: a plugin that stops being built-in must not keep shipping.
+await rm(BUILTIN_PACKAGES_DIR, { recursive: true, force: true });
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: "inherit" });
 // Run npm through the npm that invoked this script (npm_execpath), so Windows needs no shell
 // or npm.cmd shim; a direct `node scripts/fetch-plugins.mjs` falls back to npm on PATH.
@@ -115,6 +118,13 @@ try {
 			join(target, ".drone-fetch.json"),
 			`${JSON.stringify({ commit: plugin.commit, sha256: digest }, null, "\t")}\n`,
 		);
+		// A built-in plugin ships read-only under <resources>/plugin-packages/node_modules.
+		if (plugin.builtin === true) {
+			const staged = join(BUILTIN_PACKAGES_DIR, ...plugin.name.split("/"));
+			await rm(staged, { recursive: true, force: true });
+			await mkdir(dirname(staged), { recursive: true });
+			await cp(target, staged, { recursive: true, dereference: true });
+		}
 		console.log(
 			`[fetch-plugins] ${plugin.name}@${installed.version} -> vendor/plugins/${plugin.name.split("/").at(-1)} (${digest})`,
 		);

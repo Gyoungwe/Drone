@@ -31,7 +31,8 @@
 			"commit": "0a7db49d75560bdb7fac88145346d5d18bebaa31",
 			"path": "packages/pi-core",
 			"version": "0.2.0",
-			"tarballSha256": "4c7d8ff6189b6148a4a1a01c28f0d6ade444aa7f14e8e70310c393844bb2bc3d"
+			"tarballSha256": "4c7d8ff6189b6148a4a1a01c28f0d6ade444aa7f14e8e70310c393844bb2bc3d",
+			"builtin": true
 		}
 	]
 }

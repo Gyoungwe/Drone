@@ -43,8 +43,8 @@ export interface PluginNativeIntegration {
 	manages(path: string): boolean;
 	/** Native entries of packages that declared read-only child session support. */
 	childExtensionPaths(): readonly string[];
+	extensionPaths?(): readonly string[]; // Host-shipped built-in package entries, read on each session load.
 }
-
 export interface PluginRuntimeBridgeOptions {
 	classifySelectedPath?(path: string): SelectedNativeSource;
 	questionTransport?(owner: PluginRuntimeOwner): AskQuestionRoute;

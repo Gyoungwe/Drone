@@ -386,20 +386,8 @@ export function PluginSourcesSection() {
 				<h2 className="text-sm font-semibold text-ink">{t("skillsConnections.pluginsCardTitle")}</h2>
 				<p className="mt-1 text-xs text-ink-dim">{t("skillsConnections.pluginsCardHint")}</p>
 				<ul className="mt-2 divide-y divide-border">
-					{builtinEntries.map((entry) => (
-						<li key={`builtin:${entry.packageName}`} className="flex items-start gap-3 py-3">
-							<div className="min-w-0 flex-1">
-								<p className="truncate text-sm font-medium text-ink">{entry.packageName}</p>
-								{entry.description ? (
-									<p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-dim">
-										{entry.description}
-									</p>
-								) : null}
-							</div>
-							<span className="shrink-0 text-xs text-ok">{t("skillsConnections.builtinEnabled")}</span>
-						</li>
-					))}
-					{optionalEntries.map((entry) => (
+					{/* Built-ins cannot be removed; one that ships a UI is switched off with it. */}
+					{[...builtinEntries, ...optionalEntries].map((entry) => (
 						<DronePackageRow
 							key={entry.packageName}
 							entry={entry}
