@@ -1,5 +1,4 @@
 import { dirname, resolve } from "node:path";
-import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { createLogger } from "../log";
 import {
 	type PermissionConfirm,
@@ -64,7 +63,6 @@ export function desktopLoaderOptions(
 	integration: DesktopIntegration | undefined,
 	cwd?: string,
 	nativeBootstrap?: PluginNativeBootstrap,
-	coreHost?: CoreHostPort,
 ) {
 	if (!integration) return {};
 	const delivery = nativeBootstrap?.delivery;
@@ -147,7 +145,6 @@ export function useUtf8WindowsShell<T extends Pick<SettingsManager, "getShellCom
 export class ProjectResourceLoader {
 	constructor(
 		private readonly deps: {
-			coreHost?: CoreHostPort;
 			trustStore: ProjectTrustStore;
 			/** 信任未决时弹窗询问（TrustGate.ask） */
 			ask: (cwd: string, options: TrustOptionInternal[]) => Promise<number | undefined>;
@@ -194,12 +191,7 @@ export class ProjectResourceLoader {
 		const settingsManager = useUtf8WindowsShell(
 			SettingsManager.create(cwd, agentDir, { projectTrusted: false }),
 		);
-		const desktop = desktopLoaderOptions(
-			this.deps.desktopIntegration,
-			cwd,
-			options?.nativeBootstrap,
-			this.deps.coreHost,
-		);
+		const desktop = desktopLoaderOptions(this.deps.desktopIntegration, cwd, options?.nativeBootstrap);
 		const resourceLoader = new DefaultResourceLoader({
 			cwd,
 			agentDir,

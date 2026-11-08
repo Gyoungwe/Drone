@@ -27,7 +27,7 @@ import { HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest } from "./html-preview-
 import { createSessionQuestionTransport, registerIpc, sendToRenderer } from "./ipc";
 import { migrateLegacyUserDir } from "./legacy-migration";
 import { buildMenuTemplate, DESKTOP_COMMAND_CHANNEL } from "./menu";
-import { discoverCoreHostLoader, discoverPluginHostLoader } from "./optional-plugin-hosts";
+import { discoverPluginHostLoader } from "./optional-plugin-hosts";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
 import type { DesktopRuntimeBridge } from "./ui-plugins/runtime-bridge";
 import { createDesktopRuntime, createNativeRuntimeIntegration } from "./ui-plugins/runtime-host";
@@ -303,16 +303,6 @@ app.whenReady().then(async () => {
 			: join(__dirname, "../../pi-packages/node_modules"),
 		join(app.getAppPath(), "node_modules"),
 	];
-	const coreHost = await discoverCoreHostLoader({ packageRoots: pluginPackageRoots });
-	let coreHostPort: ReturnType<NonNullable<typeof coreHost>["loader"]["load"]> | undefined;
-	if (coreHost) {
-		try {
-			coreHostPort = coreHost.loader.load();
-		} catch (error) {
-			log.warn("Core host unavailable; continuing without core plugin", { error: String(error) });
-		}
-	}
-	if (coreHost) log.info("Core host discovered", coreHost.discovery);
 	const taskHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api/tasks").TaskHostLoader>({
 		packageRoots: pluginPackageRoots,
 		capability: "tasks",
@@ -409,7 +399,6 @@ app.whenReady().then(async () => {
 			: undefined;
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
-		...(coreHostPort ? { coreHost: coreHostPort } : {}),
 		...(taskHost ? { taskHostLoader: taskHost.loader } : {}),
 		...(analysisHost ? { analysisHostLoader: analysisHost.loader } : {}),
 		...(discoveryHost ? { discoveryHostLoader: discoveryHost.loader } : {}),

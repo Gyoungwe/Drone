@@ -8,7 +8,6 @@ import {
 import type { ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { InlineExtension, ModelRuntime, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { makeCapabilityExtension } from "../capabilities/extension";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { makeKnowledgeSpecialistBridge } from "../knowledge/specialist-bridge";
@@ -73,8 +72,6 @@ type LiveChildControl = {
 export interface SessionExtensionDependencies {
 	knowledgeSpecialistModelLoop?: import("@gyoungwe/plugin-api").LegacyKnowledgeSpecialistLoop;
 	taskHost?: import("@gyoungwe/plugin-api/tasks").TaskAcceptanceHostPort;
-	/** Optional core plugin host port; absent means core tools are unavailable. */
-	coreHost?: CoreHostPort;
 	/** Host-owned runtime shared with first-party .pi extensions through a versioned event. */
 	runtime: DroneRuntime;
 	permissionGates?: boolean;
