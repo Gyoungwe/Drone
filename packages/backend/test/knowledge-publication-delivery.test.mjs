@@ -17,12 +17,6 @@ import {
 } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import {
-	makeDeliverFilesTool,
-	makeMemorySaveTool,
-	makeStatusTool,
-	makeTodoTool,
-} from "@gyoungwe/pi-core/host";
-import {
 	closeKnowledgeServices,
 	getKnowledgeService,
 	subscribeKnowledgeUi,
@@ -70,15 +64,6 @@ beforeEach(async () => {
 		projectTrust: false,
 		webFetch: false,
 		subagentPreferBuiltin: false,
-		coreHost: {
-			contractVersion: 1,
-			makeDeliverFilesTool,
-			makeMemorySaveTool,
-			makeStatusTool,
-			makeTodoTool,
-			memoryIndexPrompt: () => [],
-			writeMemory: () => "",
-		},
 		desktopIntegration: {
 			appendSystemPrompt: [],
 			additionalExtensionPaths: [

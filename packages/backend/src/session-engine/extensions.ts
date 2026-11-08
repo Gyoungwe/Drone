@@ -8,7 +8,6 @@ import {
 import type { ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { InlineExtension, ModelRuntime, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { makeCapabilityExtension } from "../capabilities/extension";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { makeKnowledgeSpecialistBridge } from "../knowledge/specialist-bridge";
@@ -36,6 +35,7 @@ import { makeComputeRouteTool } from "../tools/compute-route";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
 import { makeDeliverFilesTool } from "../tools/deliver-files";
 import { bindToolManifestEvents } from "../tools/manifest";
+import { makeMemorySaveTool } from "../tools/memory-save";
 import { makeShowImageTool } from "../tools/show-image";
 import { makeSshHostsTool, makeSshTool, type SshHostEntry } from "../tools/ssh";
 import { makeStatusTool } from "../tools/status";
@@ -72,8 +72,6 @@ type LiveChildControl = {
 export interface SessionExtensionDependencies {
 	knowledgeSpecialistModelLoop?: import("@gyoungwe/plugin-api").LegacyKnowledgeSpecialistLoop;
 	taskHost?: import("@gyoungwe/plugin-api/tasks").TaskAcceptanceHostPort;
-	/** Optional core plugin host port; absent means core tools are unavailable. */
-	coreHost?: CoreHostPort;
 	/** Host-owned runtime shared with first-party .pi extensions through a versioned event. */
 	runtime: DroneRuntime;
 	permissionGates?: boolean;
@@ -157,9 +155,12 @@ export function buildSessionCustomTools(
 		}) as ToolDefinition,
 	);
 	tools.push(makeBioDatabaseTool() as ToolDefinition);
-	// Live status, todo and delivery cards are host UI tools; project memory stays with pi-core.
-	tools.push(makeStatusTool() as ToolDefinition, makeTodoTool() as ToolDefinition);
-	if (deps.coreHost) tools.push(deps.coreHost.makeMemorySaveTool() as ToolDefinition);
+	// Live status, todo cards and project memory (<cwd>/.pi/memory) are host-owned.
+	tools.push(
+		makeStatusTool() as ToolDefinition,
+		makeTodoTool() as ToolDefinition,
+		makeMemorySaveTool() as ToolDefinition,
+	);
 	if (harness.recall) {
 		tools.push(
 			makeHarnessRecallTool({
