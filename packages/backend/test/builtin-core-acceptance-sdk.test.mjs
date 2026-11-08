@@ -1,39 +1,23 @@
 // P4 switch acceptance (docs/handoff-2026-10-29-p4.md §5.3): the pi-core Drone ships in its read-only
 // built-in root, found by the real UiPluginManager and run by its managed runtime in a restricted
 // process, against real SDK sessions. Only the model is the offline faux provider.
-import { existsSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
+import { join } from "node:path";
+import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai";
 import { getCurrentTools } from "@earendil-works/pi-ai/utils/transcript";
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
 
 const environment = vi.hoisted(() => ({ userData: "" }));
 vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => environment.userData } }));
 
-import { UiPluginManager } from "../../desktop/src/main/ui-plugins/manager";
-import { createBackend } from "../src/create-backend";
-import { PluginRuntimeBridge } from "../src/plugins/coordinator";
-import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
+import { CORE_UI, startBuiltinCore, TASK_TOOLS } from "./fixtures/builtin-core.mjs";
 
-const repo = resolve(import.meta.dirname, "../../..");
-/** The copy fetch-plugins staged for packaging; check-builtin-plugins proves it is the locked artifact. */
-const shipped = join(repo, "packages/desktop/plugin-packages/node_modules/@gyoungwe/pi-core");
-const runtimeDirectory = join(repo, `packages/desktop/plugin-runtime/${process.platform}-${process.arch}`);
-const CORE_UI = "drone-task-ui";
-const TASK_TOOLS = ["task_status", "task_plan", "task_wait", "task_reconcile", "task_evidence_restore"];
-
-/** Per-test resources. */
+/** The running test's built-in pi-core host. */
 const live = {};
 afterEach(async () => {
-	await live.bridge?.close();
-	await live.backend?.dispose();
-	vi.restoreAllMocks();
-	vi.unstubAllEnvs();
-	if (live.root) await rm(live.root, { recursive: true, force: true });
-	for (const key of Object.keys(live)) delete live[key];
+	await live.host?.close();
+	delete live.host;
 });
 
 const textOf = (message) =>
@@ -94,165 +78,16 @@ const respond = (context) => {
 	return fauxAssistantMessage("all done");
 };
 
-async function offlineModels(agentDir) {
-	const modelRuntime = await ModelRuntime.create({
-		authPath: join(agentDir, "auth.json"),
-		modelsPath: null,
-		allowModelNetwork: false,
-		refreshOnCreate: false,
-	});
-	live.faux = fauxProvider({ provider: "builtin-core-offline", tokensPerSecond: 0 });
-	modelRuntime.registerNativeProvider(live.faux.provider);
-	vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
-	live.faux.setResponses(Array.from({ length: 400 }, () => respond));
-	return modelRuntime;
-}
-
-/** Desktop's composition (ui-plugins/runtime-host.ts) without Electron windows. */
-function wire(manager, service, owner, record) {
-	live.bridge = new PluginRuntimeBridge({
-		source: (name) => manager.runtimeSource(name),
-		sources: () => manager.runtimeSources(),
-		classifySelectedPath: (path) => manager.classifyNativeSelection(path),
-		enabled: (name) => manager.isEnabled(name) || manager.isNativeSourceAvailable(name),
-		// As approveDesktopRuntime's caller: a built-in's activation is not a dialog; anything else is.
-		approve: async (_owner, source, operation) => {
-			if (operation === undefined && manager.builtinPackages.has(source.packageRoot)) return true;
-			record.push(operation ?? `activation:${source.pluginId}`);
-			return true;
-		},
-		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
-		getSessionContext: (id) => service.getPluginCallerContext(id),
-		taskGrants: service.getTaskGrants(),
-		capabilities: (source) => () => ({
-			resources: [],
-			handlers: {
-				...service.getPluginSessionCapabilities(source.recordAdoptions),
-				...service.getPluginSourceCapabilities(source),
-				...(source.requestsWorkspaceRead ? service.getPluginWorkspaceCapabilities() : {}),
-			},
-		}),
-	});
-	return {
-		manages: (path) => manager.classifyNativeSelection(path).kind !== "ordinary",
-		childExtensionPaths: () => manager.nativeChildExtensionPaths(),
-		extensionPaths: () => manager.builtinExtensionPaths(),
-		begin: (facts) => live.bridge.beginNative(owner, (path) => manager.nativeRuntimeName(path), facts),
-	};
-}
-
-/** One SDK session as the test drives it: prompts, the built-in's loaded tools, its task status and grant. */
-function attachSession({ service, owner, core, nativeEntry }, meta) {
-	const entry = service.registry.get(meta.sessionId);
-	const errors = [];
-	entry.session.extensionRunner.onError((error) => errors.push(`${error.event}: ${error.error}`));
-	const settle = async () => {
-		await vi.waitFor(() => expect(entry.session.isStreaming).toBe(false));
-		await entry.session.waitForIdle?.();
-	};
-	const prompt = async (text) => {
-		await entry.session.prompt(text, { expandPromptTemplates: false });
-		await entry.session.agent.waitForIdle?.();
-		await settle();
-		// Automatic task continuations start after the prompt settles.
-		await new Promise((done) => setTimeout(done, 300));
-		await settle();
-	};
-	const loaded = () =>
-		entry.session.resourceLoader.getExtensions().extensions.find((e) => e.path === nativeEntry);
-	const status = async () => {
-		const binding = await live.bridge.bind(core.name, owner);
-		return live.bridge.invoke(
-			owner,
-			binding,
-			"status",
-			null,
-			live.bridge.selectSession(owner, meta.sessionId),
-		);
-	};
-	return {
-		meta,
-		cwd: meta.cwd,
-		session: entry.session,
-		errors,
-		prompt,
-		status,
-		tools: () => [...(loaded()?.tools.keys() ?? [])],
-		commands: () => [...(loaded()?.commands.keys() ?? [])],
-		writeRoots: () => service.getTaskGrants().writeRoots(meta.sessionId),
-		/** The last write was refused: by the task owner (no current plan) or the host's dialog. */
-		refused: (path) => {
-			const result = entry.session.messages.findLast(
-				(m) => m.role === "toolResult" && m.toolName === "write",
-			);
-			return result?.isError === true && !existsSync(join(meta.cwd, path));
-		},
-	};
-}
-
-/** The backend as Desktop composes it; every host permission request is recorded and denied. */
-async function startBackend(manager, agentDir, owner, dialogs, permissions) {
-	const holder = {};
-	live.backend = createBackend({
-		projectTrust: false,
-		lazyCapabilities: false,
-		permissionGates: true,
-		tools: ["read", "write", ...TASK_TOOLS],
-		desktopIntegration: {
-			appendSystemPrompt: [],
-			additionalSkillPaths: [],
-			pluginRuntimeDirectory: runtimeDirectory,
-			nativeRuntime: {
-				manages: (path) => holder.native.manages(path),
-				childExtensionPaths: () => holder.native.childExtensionPaths(),
-				extensionPaths: () => holder.native.extensionPaths(),
-				begin: (facts) => holder.native.begin(facts),
-			},
-		},
-	});
-	const service = live.backend.sessions;
-	service.modelRuntime = await offlineModels(agentDir);
-	holder.native = wire(manager, service, owner, dialogs);
-	service.onPermissionRequest((request) => {
-		permissions.push(request.message);
-		queueMicrotask(() => service.respondPermission(request.id, "deny"));
-	});
-	return service;
-}
-
 async function setup() {
-	live.root = await realpath(await mkdtemp(join(tmpdir(), "drone-builtin-core-")));
-	const builtinRoot = join(live.root, "builtin", "node_modules");
-	await cp(shipped, join(builtinRoot, "@gyoungwe", "pi-core"), { recursive: true });
-	const home = join(live.root, "home"),
-		agentDir = join(live.root, "agent");
-	environment.userData = join(live.root, "user-data");
-	await mkdir(join(environment.userData, "ui-plugins"), { recursive: true });
-	await mkdir(agentDir);
-	for (const [key, value] of Object.entries({ HOME: home, USERPROFILE: home, PI_CODING_AGENT_DIR: agentDir }))
-		vi.stubEnv(key, value);
-	vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
-	vi.stubEnv("DRONE_REPLY_LANGUAGE", "zh");
-	const manager = new UiPluginManager({
-		installedPackageRoot: join(agentDir, "npm", "node_modules"),
-		builtinPackageRoot: builtinRoot,
+	live.host = await startBuiltinCore({
+		root: await realpath(await mkdtemp(join(tmpdir(), "drone-builtin-core-"))),
+		setUserData: (path) => {
+			environment.userData = path;
+		},
+		respond,
+		backend: { lazyCapabilities: false, tools: ["read", "write", ...TASK_TOOLS] },
 	});
-	await manager.scanAll();
-	const owner = { id: 41, isDestroyed: () => false };
-	const dialogs = [],
-		permissions = [];
-	const service = await startBackend(manager, agentDir, owner, dialogs, permissions);
-	const [core] = manager.runtimeSources();
-	const nativeEntry = manager.builtinExtensionPaths()[0];
-	const attach = (meta) => attachSession({ service, owner, core, nativeEntry }, meta);
-	const open = async (name) => {
-		const cwd = join(home, name);
-		await mkdir(join(cwd, "outputs"), { recursive: true });
-		return attach(
-			await service.createSession({ cwd, provider: live.faux.provider.id, modelId: live.faux.getModel().id }),
-		);
-	};
-	return { manager, service, core, nativeEntry, builtinRoot, dialogs, permissions, open, attach };
+	return live.host;
 }
 
 it("ordinary chat asks nothing; one authorization completes a task whose files read back", async () => {
