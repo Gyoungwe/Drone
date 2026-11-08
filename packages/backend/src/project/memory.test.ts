@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import {
 	listMemories,
 	memoryDir,
@@ -8,8 +9,7 @@ import {
 	parseMemory,
 	serializeMemory,
 	writeMemory,
-} from "@gyoungwe/pi-core/host";
-import { describe, expect, it } from "vitest";
+} from "./project-memory";
 
 describe("project memory (P12)", () => {
 	it("round-trips typed memory files", () => {

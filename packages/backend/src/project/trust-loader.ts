@@ -16,6 +16,7 @@ import type {
 	ProjectTrustStore,
 } from "../session-engine/sdk";
 import { DefaultResourceLoader, getAgentDir, SettingsManager } from "../session-engine/sdk";
+import { memoryIndexPrompt } from "./project-memory";
 import { resolveProjectTrust, type TrustOptionInternal } from "./trust";
 
 const log = createLogger("backend");
@@ -110,7 +111,7 @@ export function desktopLoaderOptions(
 		appendSystemPrompt: [
 			...rest.appendSystemPrompt,
 			...replyLanguagePrompt(),
-			...(cwd && coreHost ? coreHost.memoryIndexPrompt(cwd) : []),
+			...(cwd ? memoryIndexPrompt(cwd) : []),
 		],
 	};
 	if (!mcpRuntimePath) return options;
