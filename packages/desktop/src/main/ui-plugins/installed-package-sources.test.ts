@@ -105,6 +105,16 @@ it("decodes a session workspace read declaration", async () => {
 	expect(await discoverInstalledPackages(modules)).toMatchObject([
 		{ runtime: { requestsWorkspaceRead: true } },
 	]);
+	// The session's read permission covers the workspace, so activation selects no data directory.
+	const permissions = { filesystem: ["workspace-read", "workspace"] };
+	await manifest({ drone: { workspaceRead: "session" }, permissions });
+	const [session] = await discoverInstalledPackages(modules);
+	expect(session).toMatchObject({ runtime: { requestsWorkspaceRead: true } });
+	expect(session && "runtime" in session ? session.runtime?.requestsFileRead : "error").toBeUndefined();
+	await manifest({ permissions });
+	expect(await discoverInstalledPackages(modules)).toMatchObject([{ runtime: { requestsFileRead: true } }]);
+	await manifest({ drone: { workspaceRead: "session" }, permissions: { filesystem: ["vault-read"] } });
+	expect(await discoverInstalledPackages(modules)).toMatchObject([{ runtime: { requestsFileRead: true } }]);
 	await manifest({ drone: { workspaceRead: "all" } });
 	expect(await discoverInstalledPackages(modules)).toEqual([
 		{ packageName: "@example/native", error: expect.stringContaining("drone.workspaceRead must be session") },

@@ -53,8 +53,8 @@ async function newestMtime(dir: string): Promise<number | null> {
 export class UiPluginManager {
 	private readonly installedPackageRoot: string;
 	private readonly builtinPackageRoot: string;
-	/** Read-only built-in packages of the current scan: package root → package name. */
-	private builtinPackages = new Map<string, string>();
+	/** Read-only built-in packages of the current scan: package root → package name. Drone vouches for them. */
+	builtinPackages: ReadonlyMap<string, string> = new Map();
 	private readonly legacyInstalledPackageDir?: string;
 	/** name → 扫描信息（scanAll 合成；buildError 是内存态，保留在 Map 里跨扫描存活） */
 	private infos = new Map<string, UiPluginInfo>();

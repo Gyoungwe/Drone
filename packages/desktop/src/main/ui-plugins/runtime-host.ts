@@ -204,7 +204,11 @@ export function createDesktopRuntime(
 					: {}),
 			};
 		},
-		approve: approveDesktopRuntime,
+		// Starting a built-in's runtime is not a separate permission; every capability it uses still asks.
+		approve: (owner, source, operation, detail, signal) =>
+			operation === undefined && manager.builtinPackages.has(source.packageRoot)
+				? Promise.resolve(true)
+				: approveDesktopRuntime(owner, source, operation, detail, signal),
 	});
 }
 
