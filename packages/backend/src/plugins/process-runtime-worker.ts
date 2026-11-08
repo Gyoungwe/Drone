@@ -1,4 +1,4 @@
-import { NATIVE_EVENTS } from "./native-events";
+import { PLUGIN_EVENTS } from "./native-events";
 
 /** Executed only in the permission-restricted child, never imported as plugin code by the host. */
 export const PROCESS_RUNTIME_WORKER = String.raw`
@@ -12,7 +12,7 @@ const messageError = (error) => error instanceof Error ? error.message : String(
 const lifecycle = new AbortController();
 const calls = new Map();
 const nativeSessions = new Map();
-const supportedEvents = new Set(${JSON.stringify(NATIVE_EVENTS)});
+const supportedEvents = new Set(${JSON.stringify(PLUGIN_EVENTS)});
 const currentCall = new AsyncLocalStorage();
 const capabilityCalls = new Map();
 let capabilitySequence = 0;

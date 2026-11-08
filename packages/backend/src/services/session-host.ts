@@ -69,6 +69,7 @@ export interface SessionHost {
 	readonly pluginSessions: SessionDirectory;
 	readonly taskGrants: import("../plugins/task-grants").TaskGrantStore;
 	readonly readChecks: ReadonlyMap<string, (path: string) => Promise<boolean>>;
+	readonly decisions: import("./decision-fanout").DecisionFanout;
 	readonly askHandlers: Set<(req: AskRequest) => void>;
 	readonly trustHandlers: Set<(req: TrustRequest) => void>;
 	readonly loginHandlers: Set<(payload: LoginEventPayload) => void>;

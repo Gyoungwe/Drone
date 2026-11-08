@@ -21,7 +21,7 @@ import { Check } from "typebox/value";
 import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
 import { canonicalProjectId } from "../project-id";
 import { toolProgressSchema } from "../tool-progress";
-import { NATIVE_EVENTS, type NativeEventName } from "./native-events";
+import { type NativeEventName, PLUGIN_EVENTS } from "./native-events";
 import { NativeMessageCourier, type NativeMessageReferences } from "./native-message-courier";
 import { PROCESS_RUNTIME_WORKER } from "./process-runtime-worker";
 
@@ -159,7 +159,7 @@ const nativeDeclarationsSchema = Type.Object({
 	),
 	events: Type.Array(
 		Type.Object({
-			name: Type.Union(NATIVE_EVENTS.map((name) => Type.Literal(name))),
+			name: Type.Union(PLUGIN_EVENTS.map((name) => Type.Literal(name))),
 			index: Type.Integer({ minimum: 0 }),
 		}),
 	),

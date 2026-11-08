@@ -24,7 +24,10 @@ import { pdfTextCapabilityHandlers } from "../plugins/pdf-text-capability";
 import { PluginCredentialStore } from "../plugins/plugin-credentials";
 import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
-import { sessionCapabilityHandlers } from "../plugins/session-capabilities";
+import {
+	sessionCapabilityHandlers,
+	sessionDecisionCapabilityHandlers,
+} from "../plugins/session-capabilities";
 import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
 import { sourceCapabilityHandlers } from "../plugins/source-capabilities";
 import type { TaskGrantStore } from "../plugins/task-grants";
@@ -81,6 +84,7 @@ export class SessionServiceApi extends SessionSettingsApi {
 	getPluginSessionCapabilities(recordAdoptions?: PluginRecordAdoptions) {
 		return {
 			...sessionCapabilityHandlers(this.host.pluginSessions),
+			...sessionDecisionCapabilityHandlers(this.host.pluginSessions, this.host.decisions),
 			...sessionRecordCapabilityHandlers(this.host.pluginSessions, this.pluginSessionRecords),
 			...sessionAdoptionCapabilityHandlers(
 				this.host.pluginSessions,
