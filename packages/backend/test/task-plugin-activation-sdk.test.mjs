@@ -4,18 +4,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
-import {
-	createAgentSession,
-	DefaultResourceLoader,
-	ModelRuntime,
-	SessionManager,
-	SettingsManager,
-} from "@earendil-works/pi-coding-agent";
-import { taskHostLoader } from "@gyoungwe/pi-core/host";
+import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, expect, it, vi } from "vitest";
 import { createBackend } from "../src/create-backend";
-import { SessionEngine } from "../src/session-engine/engine";
 
 const knowledgeExtension = join(
 	resolve(import.meta.dirname, "../../.."),
@@ -36,7 +28,7 @@ afterEach(async () => {
 	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
-async function setup(installedCore, order = "knowledge-first", declaration = false) {
+async function setup(installedCore, order = "knowledge-first") {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-task-activation-")));
 	roots.push(root);
 	const cwd = join(root, "project"),
@@ -60,20 +52,7 @@ async function setup(installedCore, order = "knowledge-first", declaration = fal
 	const faux = fauxProvider({ provider: "task-activation-offline", tokensPerSecond: 0 });
 	modelRuntime.registerNativeProvider(faux.provider);
 	vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
-	const declarationPath = join(root, "session-declaration.mjs");
-	if (declaration)
-		await writeFile(
-			declarationPath,
-			`export default pi => {
- pi.on("session_start", (_event, ctx) => {
-  if (ctx.cwd === ${JSON.stringify(cwd)}) pi.events.emit("drone:acceptance-verifier/v1", {
-   version:1, kind:"session_only", definition:{fields:["sessionField"], verify:(_input,{cwd:scope})=>({state:scope===${JSON.stringify(cwd)}?"found":"missing",summary:"Same-session verifier executed"})}
-  });
- });
-};`,
-		);
 	const backend = createBackend({
-		...(installedCore ? { taskHostLoader } : {}),
 		projectTrust: false,
 		lazyCapabilities: false,
 		webFetch: false,
@@ -85,7 +64,6 @@ async function setup(installedCore, order = "knowledge-first", declaration = fal
 				...(installedCore && ["core-first", "native-knowledge"].includes(order) ? [coreExtension] : []),
 				...(order === "native-knowledge" ? [nativeKnowledgeExtension] : [knowledgeExtension]),
 				...(installedCore && order === "knowledge-first" ? [coreExtension] : []),
-				...(declaration ? [declarationPath] : []),
 			],
 		},
 	});
@@ -156,285 +134,6 @@ it("keeps read/write/bash under host permissions when only the knowledge resourc
 	expect(session.getAllTools().map((tool) => tool.name)).not.toContain("task_plan");
 }, 20000);
 
-it.each(["core-first", "knowledge-first", "adapter-only", "native-knowledge"])(
-	"activates installed core before/after knowledge (%s) and completes its approved file milestone",
-	async (order) => {
-		const { session, cwd, faux, asks } = await setup(true, order);
-		if (order === "native-knowledge")
-			expect(
-				session.getToolDefinition("task_plan").parameters.properties.milestones.items.properties.acceptance
-					.properties.kind.enum,
-			).toContain("wiki_review");
-		faux.setResponses([
-			response("read", { path: "input.txt" }),
-			response("write", { path: "unplanned.txt", content: "must not write" }),
-			response("bash", { command: "printf 'must not run' > unplanned-command.txt" }),
-			response("task_plan", {
-				goal: "Write one approved file",
-				summary: "Write one synthetic result",
-				writeDirectories: ["."],
-				milestones: [{ id: "report", title: "Report", acceptance: { kind: "file", path: "result.txt" } }],
-			}),
-			response("write", { path: "result.txt", content: "approved task output" }),
-			response("task_status", {}),
-			fauxAssistantMessage("completed"),
-		]);
-		await session.prompt("Read input and deliver a synthetic file after task authorization.");
-		await session.waitForIdle();
-		expect(
-			results(session, "read"),
-			JSON.stringify(
-				session.messages
-					.filter((message) => message.role === "assistant")
-					.map((message) => ({ stopReason: message.stopReason, errorMessage: message.errorMessage })),
-			),
-		).not.toHaveLength(0);
-		expect(results(session, "read")[0].isError).toBe(false);
-		expect(
-			results(session, "write").map((result) => result.isError),
-			JSON.stringify(session.messages.filter((message) => message.role === "toolResult")),
-		).toEqual([true, false]);
-		expect(results(session, "write")[0].content[0].text).toContain("No approved task plan");
-		expect(results(session, "bash")[0].isError).toBe(true);
-		expect(results(session, "task_plan")[0].isError).toBe(false);
-		expect(asks()).toBe(1);
-		expect(await readFile(join(cwd, "result.txt"), "utf8")).toBe("approved task output");
-		await expect(readFile(join(cwd, "unplanned.txt"))).rejects.toMatchObject({ code: "ENOENT" });
-		await expect(readFile(join(cwd, "unplanned-command.txt"))).rejects.toMatchObject({ code: "ENOENT" });
-		const view = [...session.messages].reverse().find((message) => message.details?.taskView)
-			?.details.taskView;
-		expect(view.tasks.find((task) => task.id === view.activeTaskId).remainingSummary).toContain("已验收 1/1");
-	},
-	20000,
-);
-
-it("two installed loaders and two real sessions isolate verifier registries, and disposed owners release basic tools", async () => {
-	const first = await setup(true, "adapter-only", true);
-	const secondCwd = join(first.cwd, "..", "second-project");
-	await mkdir(secondCwd);
-	const secondMeta = await first.service.createSession({
-		cwd: secondCwd,
-		provider: first.faux.provider.id,
-		modelId: first.faux.getModel().id,
-	});
-	const second = first.service.registry.get(secondMeta.sessionId).session;
-	const other = await setup(true, "adapter-only");
-	const kinds = (session) =>
-		session.getToolDefinition("task_plan").parameters.properties.milestones.items.properties.acceptance
-			.properties.kind.enum;
-	expect(kinds(first.session)).toContain("session_only");
-	expect(kinds(second)).not.toContain("session_only");
-	expect(kinds(other.session)).not.toContain("session_only");
-	first.faux.setResponses([
-		response("task_plan", {
-			goal: "Check this session's verifier",
-			summary: "Use the declared local criterion",
-			milestones: [
-				{
-					id: "scoped",
-					title: "Scoped check",
-					acceptance: { kind: "session_only", sessionField: "only-first" },
-				},
-			],
-		}),
-		response("task_reconcile", {}),
-		response("task_status", {}),
-		fauxAssistantMessage("Scoped criterion checked"),
-	]);
-	await first.session.prompt("Reconcile the declared criterion in this session only.");
-	await first.session.waitForIdle();
-	const ownView = first.session.messages.findLast((message) => message.details?.taskView).details.taskView;
-	expect(ownView.tasks.find((task) => task.id === ownView.activeTaskId).milestones[0]).toMatchObject({
-		state: "completed",
-		evidence: { summary: "Same-session verifier executed" },
-	});
-	other.faux.setResponses([
-		response("task_plan", {
-			goal: "Unavailable foreign criterion",
-			summary: "Must fail",
-			milestones: [{ id: "foreign", title: "Foreign", acceptance: { kind: "session_only" } }],
-		}),
-		fauxAssistantMessage("Foreign criterion unavailable"),
-	]);
-	await other.session.prompt("Attempt the foreign criterion without importing its declaration.");
-	await other.session.waitForIdle();
-	expect(results(other.session, "task_plan").at(-1).isError).toBe(true);
-	expect(other.asks()).toBe(0);
-	first.backend.taskHost.registerAcceptanceVerifier("loader_only", { fields: ["loaderField"] });
-	expect(other.backend.taskHost.readAcceptanceVerifier("loader_only")).toBeNull();
-	await first.backend.taskHost.dispose();
-	first.faux.setResponses([
-		response("task_plan", {
-			goal: "disabled",
-			summary: "disabled",
-			milestones: [{ id: "one", title: "one", acceptance: { kind: "human_review" } }],
-		}),
-		response("read", { path: "input.txt" }),
-		response("write", { path: "after-disable.txt", content: "host permission approved" }),
-		response("bash", { command: "printf 'host bash approved' > after-disable-command.txt" }),
-		fauxAssistantMessage("done"),
-	]);
-	await first.session.prompt("Read input and create the two outputs after permission checks.");
-	await first.session.waitForIdle();
-	expect(results(first.session, "task_plan").at(-1).isError).toBe(true);
-	expect(results(first.session, "task_plan").at(-1).content[0].text).toContain("disposed");
-	expect(results(first.session, "read").at(-1).isError).toBe(false);
-	expect(results(first.session, "write").at(-1).isError).toBe(false);
-	expect(results(first.session, "bash").at(-1).isError).toBe(false);
-	expect(await readFile(join(first.cwd, "after-disable.txt"), "utf8")).toBe("host permission approved");
-	expect(first.permissions.some((request) => request.message.includes("after-disable.txt"))).toBe(true);
-	expect(other.backend.taskHost.readAcceptanceVerifier("wiki_review")).toBeNull();
-}, 30000);
-
-it("disposing a task owner cancels an open native authorization without granting consent", async () => {
-	const current = await setup(true, "adapter-only");
-	current.stopAutoApproval();
-	let opened;
-	current.service.onAskRequest((request) => {
-		opened = request;
-	});
-	current.faux.setResponses([
-		response("task_plan", {
-			goal: "One bounded output",
-			summary: "Wait for approval",
-			writeDirectories: ["."],
-			milestones: [{ id: "one", title: "One", acceptance: { kind: "file", path: "never.txt" } }],
-		}),
-		fauxAssistantMessage("Stopped before execution"),
-	]);
-	const prompt = current.session.prompt("Prepare one output and wait for the task approval.");
-	await vi.waitFor(() => expect(opened).toBeDefined());
-	await current.backend.taskHost.dispose();
-	await prompt;
-	await current.session.waitForIdle();
-	expect(results(current.session, "task_plan").at(-1)).toMatchObject({
-		isError: true,
-		content: [{ type: "text", text: "Task session is closed" }],
-	});
-	expect(
-		current.service.respondAsk(opened.id, {
-			kind: "answer",
-			mode: "submit",
-			answers: Object.fromEntries(
-				opened.questions.map((question) => [
-					question.id,
-					{ values: [question.options.find((option) => option.value === "同意本次请求").value] },
-				]),
-			),
-		}),
-	).toBe(false);
-	const checkpoints = current.session.sessionManager
-		.getBranch()
-		.filter((entry) => entry.customType === "drone-task-session-v1");
-	expect(checkpoints.length).toBeGreaterThan(0);
-	expect(checkpoints.some((entry) => entry.data.workbench.tasks.some((task) => task.executionConsent))).toBe(
-		false,
-	);
-	expect(current.permissions).toHaveLength(0);
-	await expect(readFile(join(current.cwd, "never.txt"))).rejects.toMatchObject({ code: "ENOENT" });
-}, 30000);
-
-it("restores the installed session owner from durable SDK entries without replaying accepted writes", async () => {
-	const current = await setup(true, "adapter-only");
-	current.faux.setResponses([
-		response("task_plan", {
-			goal: "Preserve one accepted output",
-			summary: "Read back and retain the checkpoint",
-			writeDirectories: ["."],
-			milestones: [
-				{ id: "file", title: "File", acceptance: { kind: "file", path: "persisted.txt" } },
-				{ id: "review", title: "Review", dependsOn: ["file"], acceptance: { kind: "human_review" } },
-			],
-		}),
-		response("write", { path: "persisted.txt", content: "durable accepted output" }),
-		response("task_status", {}),
-		fauxAssistantMessage("Waiting for the bounded review"),
-	]);
-	await current.session.prompt("Prepare the bounded output and retain the review for the user.");
-	await current.session.waitForIdle();
-	const before = current.session.messages.findLast((message) => message.details?.taskView).details.taskView;
-	const task = before.tasks.find((value) => value.id === before.activeTaskId);
-	expect(task.milestones[0].state).toBe("completed");
-	expect(task.executionConsent).toMatchObject({ version: 1 });
-	// The same real approved checkpoint can be read as inMemory data, but cannot
-	// restore the prior activation's authorization, including SDK reload of that manager.
-	const settingsManager = SettingsManager.inMemory({});
-	const resourceLoader = new DefaultResourceLoader({
-		cwd: current.cwd,
-		agentDir: current.cwd,
-		settingsManager,
-		noExtensions: true,
-		noSkills: true,
-		noPromptTemplates: true,
-		additionalExtensionPaths: [coreExtension],
-	});
-	await resourceLoader.reload({ resolveProjectTrust: async () => true });
-	const manager = SessionManager.inMemory(current.cwd, undefined, [
-		current.session.sessionManager.getHeader(),
-		...current.session.sessionManager.getBranch(),
-	]);
-	const { session: memory } = await createAgentSession({
-		cwd: current.cwd,
-		settingsManager,
-		resourceLoader,
-		sessionManager: manager,
-		modelRuntime: current.session.modelRuntime,
-		model: current.faux.getModel(),
-	});
-	try {
-		await memory.bindExtensions({});
-		for (let generation = 0; generation < 2; generation++) {
-			if (generation) await memory.reload();
-			await memory.prompt("/task-status");
-			const report = memory.messages.findLast((message) => message.details?.taskView);
-			expect(report.details.taskStorage).toEqual({ mode: "memory", state: "deferred" });
-			expect(
-				report.details.taskView.tasks.find((value) => value.id === task.id).executionConsent,
-			).toBeUndefined();
-		}
-		expect(memory.sessionManager).toBe(manager);
-		expect(
-			manager
-				.getBranch()
-				.findLast((entry) => entry.customType === "drone-task-session-v1")
-				.data.workbench.tasks.find((value) => value.id === task.id).executionConsent,
-		).toMatchObject({ version: 1 });
-	} finally {
-		await new SessionEngine().dispose(memory);
-	}
-	await current.session.reload();
-	await current.service.command(current.session.sessionId, "task-status", "");
-	expect(
-		current.session.messages
-			.findLast((message) => message.details?.taskView)
-			.details.taskView.tasks.find((value) => value.id === task.id).executionConsent,
-	).toBeUndefined();
-	const file = current.session.sessionFile;
-	await current.service.closeSession(current.session.sessionId);
-	const restored = await current.service.openSession(file);
-	const session = current.service.registry.get(restored.sessionId).session;
-	current.faux.setResponses([response("task_status", {}), fauxAssistantMessage("Checkpoint retained")]);
-	await session.prompt("Report the existing checkpoint without repeating the write.");
-	await session.waitForIdle();
-	const after = session.messages.findLast((message) => message.details?.taskView).details.taskView;
-	const recovered = after.tasks.find((value) => value.id === task.id);
-	expect(recovered.milestones[0]).toMatchObject({
-		id: task.milestones[0].id,
-		state: "completed",
-		acceptance: task.milestones[0].acceptance,
-		evidence: {
-			path: task.milestones[0].evidence.path,
-			sha256: task.milestones[0].evidence.sha256,
-			bytes: task.milestones[0].evidence.bytes,
-		},
-	});
-	expect(recovered.milestones[1].state).not.toBe("completed");
-	expect(recovered.executionConsent).toBeUndefined();
-	expect(results(session, "write")).toHaveLength(1);
-	expect(current.asks()).toBe(1);
-	expect(await readFile(join(current.cwd, "persisted.txt"), "utf8")).toBe("durable accepted output");
-}, 30000);
-
 it("ordinary native core and knowledge keep a real unreviewed Wiki proposal outside task acceptance", async () => {
 	const current = await setup(true, "native-knowledge");
 	vi.stubEnv("DRONE_REVIEW_MODE", "strict");
@@ -476,7 +175,7 @@ it("ordinary native core and knowledge keep a real unreviewed Wiki proposal outs
 	expect(current.asks()).toBe(1);
 }, 30000);
 
-it.each(["adapter-only", "core-first"])(
+it.each(["core-first"])(
 	"routes task-status intent inside the installed Pi package (%s) without starting a model",
 	async (order) => {
 		const { service, session, faux } = await setup(true, order);

@@ -71,7 +71,6 @@ type LiveChildControl = {
 
 export interface SessionExtensionDependencies {
 	knowledgeSpecialistModelLoop?: import("@gyoungwe/plugin-api").LegacyKnowledgeSpecialistLoop;
-	taskHost?: import("@gyoungwe/plugin-api/tasks").TaskAcceptanceHostPort;
 	/** Host-owned runtime shared with first-party .pi extensions through a versioned event. */
 	runtime: DroneRuntime;
 	permissionGates?: boolean;
@@ -200,14 +199,6 @@ export function buildSessionExtensionFactories(
 ): InlineExtension[] {
 	const harness = resolveSessionHarnessUnits(deps);
 	const factories: InlineExtension[] = [];
-	if (deps.taskHost?.createNativeSession) {
-		const create = deps.taskHost.createNativeSession.bind(deps.taskHost);
-		factories.push(async (pi) => {
-			const native = await create();
-			pi.on("session_shutdown", () => native.dispose());
-			await native.extension(pi);
-		});
-	}
 	if (capability)
 		factories.push(makeCapabilityExtension(capability, deps.desktopIntegration?.academicPiRoot));
 	factories.push((pi) => {

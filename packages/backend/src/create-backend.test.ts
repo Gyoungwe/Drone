@@ -369,40 +369,10 @@ describe("createBackend", () => {
 		explicit.dispose();
 	});
 
-	it("leaves task capability unavailable without an installed native owner", () => {
+	it("assembles no task owner: tasks come only from the managed pi-core plugin", () => {
 		const services = createBackend({ projectTrust: false, permissionGates: false });
-		expect(services.taskHost).toBeUndefined();
-		expect(services.domainCapabilities.list().find((item) => item.id === "tasks")).toMatchObject({
-			status: "unavailable",
-			provider: "none",
-		});
-		services.dispose();
-	});
-
-	it("accepts an installed task host loader without rebuilding its registry", async () => {
-		let loaderInput: { workbench?: unknown } | undefined;
-		const host = {
-			contractVersion: 1 as const,
-			registerAcceptanceVerifier: () => undefined,
-			readAcceptanceVerifier: () => null,
-			createNativeSession: () => ({ extension: () => {}, dispose: async () => {} }),
-		};
-		const services = createBackend({
-			projectTrust: false,
-			permissionGates: false,
-			taskHostLoader: {
-				contractVersion: 1,
-				load: (input) => {
-					loaderInput = input;
-					return host;
-				},
-			},
-		});
-		expect(loaderInput).toBeUndefined();
-		expect(services.taskHost).toBe(host);
-		expect(services.domainCapabilities.list().find((item) => item.id === "tasks")).toMatchObject({
-			provider: "plugin:tasks",
-		});
+		expect("taskHost" in services).toBe(false);
+		expect(services.domainCapabilities.list().map((item) => item.id)).not.toContain("tasks");
 		services.dispose();
 	});
 
