@@ -8,6 +8,12 @@ import { PiBackend } from "../src/pi-backend";
 import * as sdk from "../src/session-engine/sdk";
 import { runSubagent } from "../src/tools/subagent/runner";
 
+const childStatusTool = vi.hoisted(() => ({ current: undefined }));
+vi.mock("../src/tools/status", async (original) => {
+	const actual = await original();
+	return { ...actual, makeStatusTool: () => childStatusTool.current ?? actual.makeStatusTool() };
+});
+
 it("delivers official notifications from real created/restored sessions with no knowledge plugin and revokes old contexts", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-generic-notify-")));
 	const agentDir = join(root, "agent"),
@@ -171,6 +177,22 @@ it("forwards real child SDK notifications with child identity through the host e
 			fauxAssistantMessage(fauxToolCall("read", { path })),
 			fauxAssistantMessage("Child completed."),
 		]);
+		// The child gets the host's set_status; this probe replaces it to exercise the child UI context.
+		childStatusTool.current = {
+			name: "set_status",
+			label: "Notify child",
+			description: "Exercise official child UI notifications",
+			parameters: { type: "object", properties: {} },
+			async execute(_id, _input, _signal, _update, ctx) {
+				for (const severity of ["info", "warning", "error"]) ctx.ui.notify(`child ${severity}`, severity);
+				ctx.ui.setStatus("mcp", ctx.ui.theme.fg("accent", "Child MCP ready"));
+				expect(ctx.mode).toBe("rpc");
+				await expect(ctx.ui.input("unsupported child question")).rejects.toThrow(
+					"input without a question transport",
+				);
+				return { content: [{ type: "text", text: "Notifications requested" }] };
+			},
+		};
 		const result = await runSubagent(
 			{
 				getModelRuntime: async () => modelRuntime,
@@ -178,24 +200,6 @@ it("forwards real child SDK notifications with child identity through the host e
 				gate: { confirm: async () => true },
 				traces: backend.traces,
 				onEvent: (id, event) => backend.emitEvent(id, event),
-				coreHost: {
-					makeStatusTool: () => ({
-						name: "set_status",
-						label: "Notify child",
-						description: "Exercise official child UI notifications",
-						parameters: { type: "object", properties: {} },
-						async execute(_id, _input, _signal, _update, ctx) {
-							for (const severity of ["info", "warning", "error"])
-								ctx.ui.notify(`child ${severity}`, severity);
-							ctx.ui.setStatus("mcp", ctx.ui.theme.fg("accent", "Child MCP ready"));
-							expect(ctx.mode).toBe("rpc");
-							await expect(ctx.ui.input("unsupported child question")).rejects.toThrow(
-								"input without a question transport",
-							);
-							return { content: [{ type: "text", text: "Notifications requested" }] };
-						},
-					}),
-				},
 			},
 			{
 				cwd,

@@ -11,7 +11,6 @@ import {
 	type SessionEvent,
 } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
-import type { CoreHostPort } from "@gyoungwe/plugin-api";
 import { Type } from "typebox";
 import { makePermissionGateExtensions } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
@@ -39,6 +38,7 @@ import {
 } from "../../session-engine/sdk";
 import { globalToolManifest, ToolManifest } from "../manifest";
 import { makeSshTool } from "../ssh";
+import { makeStatusTool } from "../status";
 import { makeWebFetchTool } from "../webfetch";
 import type { SubagentDefinition, SubagentMcpAccess } from "./agents";
 import { withNativeSubagentSlot } from "./slots";
@@ -104,8 +104,6 @@ export interface NativeChildSessions {
 }
 
 export interface RunSubagentDeps {
-	/** Optional installed pi-core host port; absent means core child tools are unavailable. */
-	coreHost?: CoreHostPort;
 	/** Installed packages that declared read-only child support, resolved through the child-only registry. */
 	nativeChildren?: () => NativeChildSessions | undefined;
 	getModelRuntime: () => Promise<ModelRuntime>;
@@ -428,7 +426,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		},
 	};
 	const customTools: ToolDefinition[] = [contactSupervisorTool];
-	if (deps.coreHost) customTools.unshift(deps.coreHost.makeStatusTool() as ToolDefinition);
+	customTools.unshift(makeStatusTool() as ToolDefinition);
 	if (safeTools.includes("webfetch")) customTools.push(makeWebFetchTool());
 	if (safeTools.includes("ssh"))
 		customTools.push(

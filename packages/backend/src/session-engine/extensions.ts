@@ -34,10 +34,13 @@ import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
 import { makeComputeRouteTool } from "../tools/compute-route";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
+import { makeDeliverFilesTool } from "../tools/deliver-files";
 import { bindToolManifestEvents } from "../tools/manifest";
 import { makeShowImageTool } from "../tools/show-image";
 import { makeSshHostsTool, makeSshTool, type SshHostEntry } from "../tools/ssh";
+import { makeStatusTool } from "../tools/status";
 import { makeSubagentTool } from "../tools/subagent";
+import { makeTodoTool } from "../tools/todo";
 import { makeTodoReminderExtension } from "../tools/todo-reminder";
 import { makeWebFetchTool } from "../tools/webfetch";
 import { makeCloudflareAskExtension } from "./cloudflare-ask";
@@ -131,9 +134,7 @@ export function buildSessionCustomTools(
 	// submission remains behind the desktop approval and compute preflight gates.
 	tools.push(makeComputeRouteTool());
 	tools.push(makeShowImageTool());
-	if (deps.coreHost) {
-		tools.push(deps.coreHost.makeDeliverFilesTool() as ToolDefinition);
-	}
+	tools.push(makeDeliverFilesTool() as ToolDefinition);
 	tools.push(
 		makeSshTool({
 			confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
@@ -156,11 +157,9 @@ export function buildSessionCustomTools(
 		}) as ToolDefinition,
 	);
 	tools.push(makeBioDatabaseTool() as ToolDefinition);
-	if (deps.coreHost) {
-		tools.push(deps.coreHost.makeStatusTool() as ToolDefinition);
-		tools.push(deps.coreHost.makeTodoTool() as ToolDefinition);
-		tools.push(deps.coreHost.makeMemorySaveTool() as ToolDefinition);
-	}
+	// Live status, todo and delivery cards are host UI tools; project memory stays with pi-core.
+	tools.push(makeStatusTool() as ToolDefinition, makeTodoTool() as ToolDefinition);
+	if (deps.coreHost) tools.push(deps.coreHost.makeMemorySaveTool() as ToolDefinition);
 	if (harness.recall) {
 		tools.push(
 			makeHarnessRecallTool({
@@ -172,7 +171,6 @@ export function buildSessionCustomTools(
 	if (deps.subagentPreferBuiltin !== false) {
 		tools.push(
 			makeSubagentTool({
-				coreHost: deps.coreHost,
 				nativeChildren: () => {
 					const integration = deps.desktopIntegration?.nativeRuntime;
 					const register = deps.registerChildSession;

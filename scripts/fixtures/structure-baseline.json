@@ -43,7 +43,7 @@
 	"file-lines\tpackages/backend/src/tools/bio/databases.ts": 417,
 	"file-lines\tpackages/backend/src/tools/context-evaporation/evaporate.ts": 833,
 	"file-lines\tpackages/backend/src/tools/subagent/panel.ts": 498,
-	"file-lines\tpackages/backend/src/tools/subagent/runner.ts": 753,
+	"file-lines\tpackages/backend/src/tools/subagent/runner.ts": 751,
 	"file-lines\tpackages/backend/test/capability-runtime.test.ts": 450,
 	"file-lines\tpackages/backend/test/channel-watch-extension.test.ts": 425,
 	"file-lines\tpackages/backend/test/context-evaporation.test.ts": 647,

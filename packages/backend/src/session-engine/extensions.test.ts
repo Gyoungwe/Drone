@@ -6,13 +6,13 @@ import { SessionTraces } from "../session/traces";
 import { buildSessionCustomTools, type SessionExtensionDependencies } from "./extensions";
 
 function coreHost(): CoreHostPort {
-	const tool = (name: string) => ({ name });
+	const tool = (name: string) => vi.fn(() => ({ name }));
 	return {
 		contractVersion: 1,
-		makeDeliverFilesTool: () => tool("deliver_files"),
-		makeMemorySaveTool: () => tool("memory_save"),
-		makeStatusTool: () => tool("set_status"),
-		makeTodoTool: () => tool("todo"),
+		makeDeliverFilesTool: tool("deliver_files"),
+		makeMemorySaveTool: tool("memory_save"),
+		makeStatusTool: tool("set_status"),
+		makeTodoTool: tool("todo"),
 		memoryIndexPrompt: () => [],
 		writeMemory: () => "project.md",
 	};
@@ -34,27 +34,29 @@ function dependencies(core?: CoreHostPort): SessionExtensionDependencies {
 	};
 }
 
-describe("core host tool wiring", () => {
-	it("fails closed when the core plugin is unavailable", async () => {
+const UI_TOOLS = ["deliver_files", "set_status", "todo"];
+const names = (deps: SessionExtensionDependencies) =>
+	buildSessionCustomTools(deps, new PermissionGate(() => undefined), {
+		ask: vi.fn(async () => ({ kind: "cancel" as const })),
+	}).map((tool) => tool.name);
+
+describe("core tool wiring", () => {
+	it("keeps the host UI tools without the core plugin, and no project memory tool", async () => {
 		const deps = dependencies();
-		const tools = buildSessionCustomTools(deps, new PermissionGate(() => undefined), {
-			ask: vi.fn(async () => ({ kind: "cancel" as const })),
-		});
-		expect(tools.map((tool) => tool.name)).not.toEqual(
-			expect.arrayContaining(["deliver_files", "memory_save", "set_status", "todo"]),
-		);
+		const tools = names(deps);
+		expect(tools).toEqual(expect.arrayContaining(UI_TOOLS));
+		expect(tools).not.toContain("memory_save");
 		await deps.runtime.dispose();
 	});
 
-	it("uses the injected core host factories", async () => {
+	it("takes only project memory from the core host", async () => {
 		const injected = coreHost();
 		const deps = dependencies(injected);
-		const tools = buildSessionCustomTools(deps, new PermissionGate(() => undefined), {
-			ask: vi.fn(async () => ({ kind: "cancel" as const })),
-		});
-		expect(tools.map((tool) => tool.name)).toEqual(
-			expect.arrayContaining(["deliver_files", "memory_save", "set_status", "todo"]),
-		);
+		const tools = names(deps);
+		expect(tools).toContain("memory_save");
+		// Each UI tool is the host's own, registered once.
+		for (const name of UI_TOOLS) expect(tools.filter((tool) => tool === name)).toHaveLength(1);
+		expect(injected.makeStatusTool).not.toHaveBeenCalled();
 		await deps.runtime.dispose();
 	});
 });
