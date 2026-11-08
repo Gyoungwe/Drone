@@ -15,7 +15,7 @@ import type {
 import { Check } from "typebox/value";
 import { hostText } from "../reply-language";
 import type { AskQuestionRoute } from "../session/ask-gate";
-import { NATIVE_EVENTS } from "./native-events";
+import { onPluginEvent } from "./native-events";
 import {
 	PluginCapabilityBroker,
 	type PluginNativeInvocation,
@@ -408,14 +408,8 @@ export class PluginRuntimeRegistry {
 							);
 						},
 					});
-				const on = pi.on.bind(pi) as (
-					name: string,
-					handler: (event: unknown, context: ExtensionContext) => Promise<unknown>,
-				) => () => void;
-				adapted.on = ((name: string, handler: (event: unknown, context: ExtensionContext) => unknown) => {
-					if (!(NATIVE_EVENTS as readonly string[]).includes(name))
-						throw new Error(`Unsupported native Pi event: ${name}`);
-					return on(name, async (event, context) => {
+				adapted.on = ((name: string, handler: (event: unknown, context: ExtensionContext) => unknown) =>
+					onPluginEvent(pi, name, async (event, context) => {
 						// Shutdown releases the attachment with no new caller authority or capability grant.
 						if (name === "session_shutdown") return handler(event, context);
 						return this.call(
@@ -445,8 +439,7 @@ export class PluginRuntimeRegistry {
 								? { kind: name, event, attachment: native }
 								: undefined,
 						);
-					});
-				}) as ExtensionAPI["on"];
+					})) as ExtensionAPI["on"];
 				return native.extension(
 					new Proxy(adapted, {
 						get: (target, name) => {
