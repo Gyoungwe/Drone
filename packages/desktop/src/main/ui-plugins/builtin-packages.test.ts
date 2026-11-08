@@ -55,6 +55,7 @@ it("ships a built-in package on by default, loads its native entry, and turns it
 	expect(manager.info("core-ui")).toMatchObject({ enabled: true, trusted: true, builtin: true });
 	expect(manager.isNativeSourceAvailable(`package:${core}`)).toBe(true);
 	expect(manager.builtinExtensionPaths()).toEqual([join(core, "native.mjs")]);
+	expect(manager.builtinPackages.has(core)).toBe(true);
 
 	await manager.updateConfig({ plugins: { "core-ui": { enabled: false, trusted: true } } });
 	expect(manager.info("core-ui")).toMatchObject({ enabled: false, builtin: true });
@@ -99,5 +100,6 @@ it("a user-installed copy of a built-in never shadows it, and ordinary packages 
 	expect(manager.info("core-ui")?.packageName).toBe("@drone/core");
 	expect(manager.info("other-ui")).toMatchObject({ enabled: false, trusted: false });
 	expect(manager.info("other-ui")?.builtin).toBeUndefined();
+	expect(manager.builtinPackages.has(other)).toBe(false);
 	expect(manager.builtinExtensionPaths()).toEqual([join(core, "native.mjs")]);
 });

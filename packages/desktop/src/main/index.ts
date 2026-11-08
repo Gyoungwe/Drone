@@ -303,12 +303,7 @@ app.whenReady().then(async () => {
 			: join(__dirname, "../../pi-packages/node_modules"),
 		join(app.getAppPath(), "node_modules"),
 	];
-	const taskHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api/tasks").TaskHostLoader>({
-		packageRoots: pluginPackageRoots,
-		capability: "tasks",
-		exportName: "taskHostLoader",
-	});
-	if (taskHost) log.info("Optional tasks host discovered", taskHost.discovery);
+	// Tasks run in pi-core's managed runtime from the read-only built-in root (ui-plugins/managed-roots.ts).
 	const analysisHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").AnalysisHostLoader>({
 		packageRoots: [
 			join(
@@ -399,7 +394,6 @@ app.whenReady().then(async () => {
 			: undefined;
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
-		...(taskHost ? { taskHostLoader: taskHost.loader } : {}),
 		...(analysisHost ? { analysisHostLoader: analysisHost.loader } : {}),
 		...(discoveryHost ? { discoveryHostLoader: discoveryHost.loader } : {}),
 		...(evidenceHost ? { analysisEvidenceHost: evidenceHost.loader.load() } : {}),

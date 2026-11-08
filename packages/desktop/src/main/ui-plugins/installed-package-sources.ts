@@ -353,8 +353,8 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 					if (filesystem.includes("workspace-write") || filesystem.includes("configured-vault-write"))
 						runtime.requestsFileWrite = true;
 					if (
-						filesystem.includes("workspace") ||
-						filesystem.includes("workspace-read") ||
+						// drone.workspaceRead "session": the session's read permission covers the workspace.
+						(!runtime.requestsWorkspaceRead && filesystem.some((item) => /^workspace(-read)?$/.test(item))) ||
 						filesystem.includes("configured-vault") ||
 						filesystem.includes("vault-read") ||
 						runtime.requestsFileWrite

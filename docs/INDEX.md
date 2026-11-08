@@ -293,7 +293,7 @@ packages/
 
 ## 外部任务 owner 与通用宿主装配
 
-任务状态机、guard、acceptance registry、规范化、授权续作及 SDK checkpoint 恢复由 `../drone-plugins/packages/pi-core/src/task-runtime/` 和 `src/milestone-plan.ts` 拥有。标准 Pi 根入口与版本化 `taskHostLoader` 使用同一 owner 构造器；每个 native session 拥有独立 registry/journal，官方 Pi event bus 只在同一会话内路由版本化声明与当前 journal。知识/Zotero 扩展声明验收器，不再创建任务引擎。
+任务状态机、guard、acceptance registry、规范化、授权续作及 SDK checkpoint 恢复由 `../drone-plugins/packages/pi-core/src/task-runtime/` 和 `src/milestone-plan.ts` 拥有。标准 Pi 根入口与版本化 `taskHostLoader` 使用同一 owner 构造器；每个 native session 拥有独立 registry/journal，官方 Pi event bus 只在同一会话内路由版本化声明与当前 journal。知识/Zotero 扩展声明验收器，不再创建任务引擎。Desktop 不再在启动时发现 `taskHostLoader`：pi-core 作为只读内置包经 `dist/managed-runtime.mjs` 受管运行（`taskGrants`/`workspaceRead`/`requires.knowledge`/`consumes.acceptance`），真实安装包验收见 `backend/test/builtin-core-acceptance-sdk.test.mjs`；backend 的 `taskHostLoader` 选项、inline task factory 与 `drone:task-write-consent`/`drone:task-read-check` 旧桥只剩测试使用，下一步删除。
 
 宿主 `packages/backend/src/session-engine/extensions.ts` 实际消费已安装 task host 的 `createNativeSession`；缺少 adapter 时能力 unavailable，无本地引擎回退。`packages/extensions/src/internal/runtime/` 仅保留旧扩展仍使用的通用 scheduler/slot/tool 声明机制；`packages/tasks`、compiled runtime、反向 workbench handler 和 acceptance collector 已删除。已发布 `plugin-api/tasks` 的旧 helpers/字段保留 1.x 类型兼容，不作为生产 owner。
 
