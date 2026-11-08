@@ -83,7 +83,7 @@
 	"file-lines\tpackages/desktop/src/main/research-skill-updater.ts": 502,
 	"file-lines\tpackages/desktop/src/main/skill-repositories.ts": 554,
 	"file-lines\tpackages/desktop/src/main/ui-plugins/installed-package-sources.ts": 488,
-	"file-lines\tpackages/desktop/src/main/ui-plugins/manager.ts": 849,
+	"file-lines\tpackages/desktop/src/main/ui-plugins/manager.ts": 664,
 	"file-lines\tpackages/desktop/src/main/ui-plugins/runtime-bridge.test.ts": 554,
 	"file-lines\tpackages/desktop/src/main/ui-plugins/runtime-host.test.ts": 837,
 	"file-lines\tpackages/desktop/src/main/ui-plugins/runtime-source.test.ts": 530,
