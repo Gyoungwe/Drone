@@ -209,7 +209,8 @@ describe("discoverPluginHostLoader", () => {
 	it("passes the discovered evidence host into the backend composition root", async () => {
 		const source = await readFile(new URL("./index.ts", import.meta.url), "utf8");
 		expect(source).toContain("analysisEvidenceHost: evidenceHost.loader.load()");
-		expect(source).toContain("taskHostLoader: taskHost.loader");
+		// Tasks are managed by the built-in pi-core runtime, never a startup host loader.
+		expect(source).not.toContain("taskHostLoader");
 		expect(source).toContain("discoveryHostLoader: discoveryHost.loader");
 		expect(source).toContain("researchConnectorHostLoaderFactory");
 		expect(source).toContain("createResearchConnectorHostLoader");
