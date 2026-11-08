@@ -33,7 +33,6 @@ import type {
 	ResearchWriteAdapterHostLoader,
 } from "@gyoungwe/plugin-api";
 import type { ExperienceStorePort } from "@gyoungwe/plugin-api/knowledge";
-import type { TaskAcceptanceHostPort, TaskHostLoader } from "@gyoungwe/plugin-api/tasks";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import {
@@ -260,8 +259,6 @@ export interface BackendServices {
 	research: ResearchResourceService;
 	/** Explicitly authorized, auditable research write adapters. */
 	researchWrites: ResearchWriteService;
-	/** Isolated acceptance registry exposed to an installed task/workbench plugin. */
-	taskHost?: TaskAcceptanceHostPort;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
 	/** Installed package-owned discovery surface; absent means discovery operations are unavailable. */
@@ -355,14 +352,10 @@ export interface BackendOptions extends SessionServiceOptions {
 	researchConnectorHostLoaderFactory?: ResearchConnectorHostLoaderFactory;
 	/** Optional installed research plugin write host; takes precedence over compatibility only when no registry is supplied. */
 	researchWriteAdapterHostLoader?: ResearchWriteAdapterHostLoader;
-	/** Installed task owner; absence leaves task capability unavailable. */
-	taskHostLoader?: TaskHostLoader;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
-	const taskHost = options.taskHostLoader?.load();
-	if (taskHost?.dispose) runtime.registerDisposable?.({ dispose: taskHost.dispose });
 	// The packaged knowledge capability owns its runtime when installed. The
 	// generic host does not bootstrap the legacy worker; callers that still need
 	// that compatibility adapter is test-only and outside this composition path.
@@ -374,16 +367,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	// installed plugin from an unavailable optional domain during migration.
 	for (const id of ["knowledge", "research"])
 		domainCapabilities.register({ id, status: "available", provider: "host-compat" });
-	domainCapabilities.register(
-		taskHost?.createNativeSession
-			? { id: "tasks", status: "available", provider: "plugin:tasks" }
-			: {
-					id: "tasks",
-					status: "unavailable",
-					provider: "none",
-					reason: "Install a task plugin with a native session adapter",
-				},
-	);
+	// Tasks are a managed plugin (pi-core, built in); the backend assembles no task owner.
 	domainCapabilities.register(
 		options.analysisHostLoader
 			? { id: "analysis", status: "available", provider: "plugin:analysis" }
@@ -426,7 +410,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			));
 	const sessions = new SessionService({
 		...options,
-		taskHost,
 		knowledgeFactory,
 		knowledgeSpecialistModelLoop: knowledgeHost?.runSpecialistModelLoop,
 		...(knowledgeHost?.backgroundReviewer
@@ -927,7 +910,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		inquiry,
 		research,
 		researchWrites,
-		taskHost,
 		discovery,
 		...(discoveryHost ? { discoveryHost } : {}),
 		dataDesign,

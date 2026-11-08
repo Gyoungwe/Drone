@@ -245,18 +245,8 @@ export function makePermissionGateExtensions(
 					patternText &&
 					config.rules[event.toolName] === "ask"
 				) {
-					const sessionId = ctx.sessionManager?.getSessionId();
-					// Host-issued grant first; the event bridge only serves the in-process startup taskHost
-					// and is removed with it at the P4 cutover.
-					let roots: unknown = options?.taskWriteRoots?.(sessionId);
-					if (roots === undefined)
-						await pi.events?.emit?.("drone:task-write-consent", {
-							cwd: ctx.cwd,
-							sessionId: ctx.sessionManager?.getSessionId(),
-							respond: (grant: { writeRoots?: unknown } | null) => {
-								roots = grant?.writeRoots;
-							},
-						});
+					// Only the host-issued task grant covers writes; a plugin cannot answer for it.
+					const roots = options?.taskWriteRoots?.(ctx.sessionManager?.getSessionId());
 					if (await taskWriteAllowed(roots, patternText)) {
 						audit.record({
 							t: new Date().toISOString(),
@@ -325,7 +315,6 @@ export function makePermissionGateExtensions(
 				return result;
 			});
 			pi.on("session_shutdown", () => approvals.clear());
-			let taskContext: ExtensionContext | undefined;
 			let unregisterReadCheck: (() => void) | undefined;
 			const readAllowed = async (path: string, ctx: ExtensionContext) =>
 				!(
@@ -340,7 +329,6 @@ export function makePermissionGateExtensions(
 					)
 				)?.block;
 			pi.on("session_start", (_event, ctx) => {
-				taskContext = ctx;
 				unregisterReadCheck?.();
 				const sessionId = ctx.sessionManager?.getSessionId();
 				unregisterReadCheck =
@@ -351,28 +339,6 @@ export function makePermissionGateExtensions(
 			pi.on("session_shutdown", () => {
 				unregisterReadCheck?.();
 				unregisterReadCheck = undefined;
-			});
-			pi.events?.on?.("drone:task-read-check", (raw: unknown) => {
-				const request = raw as {
-					cwd?: string;
-					path?: string;
-					sessionId?: string;
-					claim?: () => void;
-					resolve?: (allowed: boolean) => void;
-				};
-				if (
-					!request ||
-					!taskContext ||
-					request.sessionId !== taskContext.sessionManager?.getSessionId() ||
-					request.cwd !== taskContext.cwd ||
-					typeof request.path !== "string" ||
-					typeof request.claim !== "function" ||
-					typeof request.resolve !== "function"
-				)
-					return;
-				request.claim();
-				const complete = request.resolve;
-				void readAllowed(request.path, taskContext).then(complete, () => complete(false));
 			});
 		},
 	};

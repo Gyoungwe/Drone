@@ -67,8 +67,6 @@ import { withNativeSubagentSlot } from "./tools/subagent/slots";
 const _log = createLogger("backend");
 
 export interface SessionServiceOptions {
-	/** Optional installed task owner. No host task implementation is substituted. */
-	taskHost?: import("@gyoungwe/plugin-api/tasks").TaskAcceptanceHostPort;
 	/** 已登记的远程主机目录（由组合根接到计算主机登记表），供 ssh / ssh_hosts 工具使用 */
 	listSshHosts?: () => Promise<import("./tools/ssh").SshHostEntry[]>;
 	/** 观察记忆库；缺省不捕获、不注入。 */
@@ -298,7 +296,6 @@ export class SessionService extends SessionServiceApi {
 
 	sessionExtensionDependencies(): SessionExtensionDependencies {
 		return {
-			taskHost: this.options.taskHost,
 			runtime: this.runtime,
 			permissionGates: this.options.permissionGates,
 			permissionExtension: this.options.permissionExtension,
