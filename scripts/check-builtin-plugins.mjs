@@ -7,7 +7,6 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parse } from "yaml";
 import { isMainModule } from "./is-main-module.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -65,7 +64,9 @@ export function verifyBuiltinPackages(nodeModules, repoRoot = root) {
 	return versions;
 }
 
-function builderMapping() {
+/** `yaml` loads lazily: fetch-plugins imports this module before `npm ci` in the plugins CI job. */
+async function builderMapping() {
+	const { parse } = await import("yaml");
 	const config = parse(readFileSync(join(root, "packages/desktop/electron-builder.yml"), "utf8"));
 	const entry = config.extraResources.find((item) => item.from === "plugin-packages/node_modules");
 	assert(entry, "electron-builder.yml must copy plugin-packages/node_modules into extraResources");
@@ -96,7 +97,7 @@ function packagedResources(directory, depth = 0, found = []) {
 }
 
 if (isMainModule(import.meta.url)) {
-	builderMapping();
+	await builderMapping();
 	const packagedArg = process.argv.indexOf("--packaged");
 	if (packagedArg >= 0) {
 		const dist = resolve(process.argv[packagedArg + 1] ?? "");
