@@ -137,6 +137,7 @@ async function setup({
 				},
 				requires: {
 					back: { service: "cycle.service", version: 1 },
+					knowledge: { service: "knowledge.binding", version: 1 },
 					...(roles ? { self: { service: "checkpoint.service", version: 1 } } : {}),
 				},
 				recordAdoptions: {
@@ -246,21 +247,8 @@ async function setup({
 	const prefix = join(root, "installed");
 	await mkdir(prefix);
 	await writeFile(join(prefix, "package.json"), JSON.stringify({ private: true, type: "module" }));
-	execFileSync(
-		"npm",
-		[
-			"install",
-			"--prefix",
-			prefix,
-			"--ignore-scripts",
-			"--offline",
-			"--no-audit",
-			"--no-fund",
-			"--package-lock=false",
-			...archives,
-		],
-		{ encoding: "utf8" },
-	);
+	const flags = ["--ignore-scripts", "--offline", "--no-audit", "--no-fund", "--package-lock=false"];
+	execFileSync("npm", ["install", "--prefix", prefix, ...flags, ...archives], { encoding: "utf8" });
 	let catalog = (await discoverInstalledPackages(join(prefix, "node_modules"))).map((item) => {
 		if ("error" in item || !item.runtime) throw new Error(JSON.stringify(item));
 		return { name: `package:${item.packageRoot}`, source: item.runtime, state: "enabled" };

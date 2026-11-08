@@ -91,6 +91,8 @@ async function installFixture() {
 				resultContract: "drone-result/v3",
 				taskGrants: "request",
 				workspaceRead: "session",
+				// As pi-core's manifest declares it at the managed switch: Vault acceptance asks the knowledge plugin.
+				requires: { knowledge: { service: "knowledge.binding", version: 1 } },
 				provides: { "fixture.tasks": { version: 1, operations: ["status", "fixtureView", "fixtureProbe"] } },
 			},
 			permissions: { filesystem: ["workspace-read"], network: [], subprocess: [] },
@@ -106,21 +108,10 @@ async function installFixture() {
 	const prefix = join(root, "installed");
 	await mkdir(prefix);
 	await writeFile(join(prefix, "package.json"), JSON.stringify({ private: true, type: "module" }));
-	execFileSync(
-		"npm",
-		[
-			"install",
-			"--prefix",
-			prefix,
-			"--ignore-scripts",
-			"--offline",
-			"--no-audit",
-			"--no-fund",
-			"--package-lock=false",
-			join(root, pack.filename),
-		],
-		{ encoding: "utf8" },
-	);
+	const flags = ["--ignore-scripts", "--offline", "--no-audit", "--no-fund", "--package-lock=false"];
+	execFileSync("npm", ["install", "--prefix", prefix, ...flags, join(root, pack.filename)], {
+		encoding: "utf8",
+	});
 	return (await discoverInstalledPackages(join(prefix, "node_modules"))).map((item) => {
 		if ("error" in item || !item.runtime) throw new Error(JSON.stringify(item));
 		return { name: `package:${item.packageRoot}`, source: item.runtime, state: "enabled" };
