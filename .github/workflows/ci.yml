@@ -181,6 +181,7 @@ jobs:
       # The installer ships pi-packages/node_modules; verify the mapping, pins and that the adapter loads.
       - run: npm run stage:pi-packages
       - run: npm run check:pi-packages
+      - run: npm run check:builtin-plugins
       - run: npm run build
 
   pi-package-format:

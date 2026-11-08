@@ -335,7 +335,7 @@ PR-4 历史入口曾在同一入口注册 `knowledge_search`、`knowledge_read`�
 
 ## 外置 pi-core — 原生 Pi 核心插件
 
-插件仓库 `packages/pi-core/` 拥有工具、项目记忆、native runtime 和 milestone 校验；host loader 通过公开 client 合同接入。宿主旧源码和重复测试已删除，插件仓库保留原历史、同名测试及严格干净消费者 tsc。`scripts/build-pi-core.mjs` 现在只验证源码锁、fetch receipt、产物哈希与公开声明；`scripts/smoke-pi-core.mjs`、`scripts/check-pi-compat.mjs` 消费 `vendor/plugins/pi-core/`，不再构建宿主副本。`scripts/check-core-artifact.test.mjs` 验证无旧源码的锁定产物边界；backend 的真实 tarball 回归位于 `test/packed-core-host-sdk.test.ts`。公开 0.1.9 仅用于 npm-ci bootstrap，本轮源码锁候选为 0.2.0。
+插件仓库 `packages/pi-core/` 拥有工具、项目记忆、native runtime 和 milestone 校验；host loader 通过公开 client 合同接入。宿主旧源码和重复测试已删除，插件仓库保留原历史、同名测试及严格干净消费者 tsc。`scripts/build-pi-core.mjs` 现在只验证源码锁、fetch receipt、产物哈希与公开声明；`scripts/smoke-pi-core.mjs`、`scripts/check-pi-compat.mjs` 消费 `vendor/plugins/pi-core/`，不再构建宿主副本。`scripts/check-core-artifact.test.mjs` 验证无旧源码的锁定产物边界；pi-core 在 `plugins.lock.json` 标 `builtin: true`：`scripts/fetch-plugins.mjs` 把锁定产物放进 `packages/desktop/plugin-packages/node_modules`，electron-builder 原样带到 `<resources>/plugin-packages/node_modules`（只读），`scripts/check-builtin-plugins.mjs` 在 beforePack、CI 和发版 `--packaged` 检查逐字节一致；UI 插件 manager 把它作为第二个受管根扫描（`ui-plugins/managed-roots.ts`），默认启用、不可卸载、用它的 UI 开关停用，启用时 native 入口经 `PluginNativeIntegration.extensionPaths()` 每次会话加载。backend 的真实 tarball 回归位于 `test/packed-core-host-sdk.test.ts`。公开 0.1.9 仅用于 npm-ci bootstrap，本轮源码锁候选为 0.2.0。
 
 Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain/`，宿主 `backend/src/discovery/service.ts` 仅注入授权、惰性 container runner、原子 JsonStore、runs 文件边界和项目绑定 Inquiry。无插件不登记 discovery 存储；旧共享 journal 保持字节并报告 unassigned，不自动冒认项目。候选同包原生工具读取当前工作区真实 journal，见 [writer→SDK 回读证据](releases/native-plugin-discovery-readback-2026-10-28.json)；取消、关闭和 dispose 等待自有容器销毁并向 daemon 回读，见 [真实资源关闭证据](releases/native-plugin-discovery-cleanup-2026-10-28.json)。Desktop/native 共享 owner、原生执行、Inquiry 和完整 B5 GUI 仍未完成。
 
@@ -469,6 +469,7 @@ src/
 | `src/main/ui-plugins/config.ts` | `ui-plugins.json` 读写（normalize 白名单；assignments 指向失效插件保留） |
 | `src/main/ui-plugins/build.ts` | 插件 esbuild 构建器：`loadEsbuild` 懒加载 + `ESBUILD_BINARY_PATH` 指向 asar.unpacked 真实二进制（打包态坑，升级 esbuild 前重评）；react 系四个 specifier 重写到 `window.DroneUI` shim（**与 renderer host-api.ts、resources/drone-ui.d.ts 逐名一致**）；图片/音频资产 dataurl 内联（CSP img-src / media-src 均放行 data:） |
 | `src/main/ui-plugins/manager.ts` | UiPluginManager：scanAll（manifest 校验 + 单插件 try 不阻断启动）/ ensureBuilt / fs.watch 300ms 防抖热重载 / filterContributions（校验 region/anchor） |
+| `src/main/ui-plugins/managed-roots.ts` | 两个受管包根：Pi 用户 npm 根 + 只读内置根（`plugin-packages/node_modules`）；同名用户副本不覆盖内置包、只报诊断 |
 | `src/main/ui-plugins/plugin-manifest.ts` | UI 插件 `plugin.json` 读取与校验（name/droneUi/main/slots/contributions） |
 | `src/main/ui-plugins/plugin-dirs.ts` | 插件目录与随包种子：用户插件目录、managed npm 根、seedBuiltinPlugins（resources builtin/ → 用户目录，版本戳幂等）、seedDocs（SPEC.md + symlink `~/.drone/ui-plugins`） |
 | `src/main/ui-plugins/installed-package-graph.ts` | 从 managed npm prefix 的明确安装根沿 Pi 资源引用解析声明依赖（含 npm 提升）；不递归普通库依赖。manager 诊断重复来源、版本或 UI 名冲突，发现不授予信任 |

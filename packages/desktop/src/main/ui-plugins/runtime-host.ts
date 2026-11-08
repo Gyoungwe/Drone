@@ -257,6 +257,7 @@ export function createNativeRuntimeIntegration(
 	return {
 		manages: (path) => manager().classifyNativeSelection(path).kind !== "ordinary",
 		childExtensionPaths: () => manager().nativeChildExtensionPaths(),
+		extensionPaths: () => manager().builtinExtensionPaths(),
 		begin: (facts) => {
 			const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
 			if (!window || window.isDestroyed())

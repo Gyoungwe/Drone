@@ -7,14 +7,16 @@ import { app } from "electron";
 import { buildPlugin } from "./build";
 import { defaultUiPluginsConfig, loadUiPluginsConfig, saveUiPluginsConfig } from "./config";
 import {
-	discoverInstalledPackages,
+	type InstalledPackageDiscovery,
 	type InstalledUiDiscovery,
 	type InstalledUiRuntimeSource,
 	installedPackageHash,
 } from "./installed-package-sources";
+import { discoverManagedPackages } from "./managed-roots";
 import { filterContributions } from "./manifest-contributions";
 import { classifyUnmanagedNativePath } from "./native-source-classification";
 import {
+	builtinPackageRoot,
 	builtinPluginsDir,
 	installedUiPackageRoot,
 	NAME_RE,
@@ -50,6 +52,9 @@ async function newestMtime(dir: string): Promise<number | null> {
 
 export class UiPluginManager {
 	private readonly installedPackageRoot: string;
+	private readonly builtinPackageRoot: string;
+	/** Read-only built-in packages of the current scan: package root → package name. */
+	private builtinPackages = new Map<string, string>();
 	private readonly legacyInstalledPackageDir?: string;
 	/** name → 扫描信息（scanAll 合成；buildError 是内存态，保留在 Map 里跨扫描存活） */
 	private infos = new Map<string, UiPluginInfo>();
@@ -73,8 +78,13 @@ export class UiPluginManager {
 	/** 插件名 → 防抖重建定时器（连续保存只重建一次） */
 	private rebuildTimers = new Map<string, NodeJS.Timeout>();
 
-	constructor(options?: { installedPackageRoot?: string; installedPackageDir?: string }) {
+	constructor(options?: {
+		installedPackageRoot?: string;
+		builtinPackageRoot?: string;
+		installedPackageDir?: string;
+	}) {
 		this.installedPackageRoot = options?.installedPackageRoot ?? installedUiPackageRoot();
+		this.builtinPackageRoot = options?.builtinPackageRoot ?? builtinPackageRoot();
 		this.legacyInstalledPackageDir = options?.installedPackageDir;
 	}
 
@@ -102,6 +112,9 @@ export class UiPluginManager {
 		const manifest = await readManifest(srcDir);
 		const invalidReason = validateManifest(name, manifest ?? {}, runtime);
 		const prev = this.infos.get(name);
+		// A built-in package is on until the user turns it off; Drone itself vouches for it.
+		const builtinPackage =
+			packageName !== undefined && [...this.builtinPackages.values()].includes(packageName);
 		return {
 			name,
 			...(packageName ? { packageName } : {}),
@@ -112,12 +125,12 @@ export class UiPluginManager {
 			slots: manifest?.slots ?? {},
 			contributions: filterContributions(manifest?.contributions),
 			headless: manifest?.headless === true ? true : undefined,
-			enabled: forceReconfirmation ? false : (this.config.plugins[name]?.enabled ?? false),
-			trusted: forceReconfirmation ? false : (this.config.plugins[name]?.trusted ?? false),
+			enabled: forceReconfirmation ? false : (this.config.plugins[name]?.enabled ?? builtinPackage),
+			trusted: forceReconfirmation ? false : (this.config.plugins[name]?.trusted ?? builtinPackage),
 			invalidReason: invalidReason ?? undefined,
 			buildError: prev?.buildError,
 			built: existsSync(join(this.buildDirectory(srcDir, contentHash), "index.js")),
-			builtin: this.builtinNames.has(name) || undefined, // 用户插件不落字段（保持载荷干净）
+			builtin: this.builtinNames.has(name) || builtinPackage || undefined, // 用户插件不落字段（保持载荷干净）
 		};
 	}
 
@@ -171,9 +184,11 @@ export class UiPluginManager {
 		// Installed packages are discovered from their own Drone manifest. The host
 		// never names an optional package; a damaged or incompatible package becomes
 		// a diagnostic row and cannot affect the user/built-in plugin scan.
-		const installed = this.legacyInstalledPackageDir
-			? []
-			: await discoverInstalledPackages(this.installedPackageRoot);
+		const managed = this.legacyInstalledPackageDir
+			? { installed: [], builtins: new Map<string, string>() }
+			: await discoverManagedPackages(this.installedPackageRoot, this.builtinPackageRoot);
+		const installed: InstalledPackageDiscovery[] = managed.installed;
+		this.builtinPackages = managed.builtins;
 		const packageSources = new Map(
 			[...this.packageSources].map(([name, item]) => [name, { source: item.source, current: false }]),
 		);
@@ -271,7 +286,9 @@ export class UiPluginManager {
 				};
 				const previous =
 					this.installedPackageHashes.get(installedName) ?? persistedInstallations[candidate.packageName];
-				if (previous && (previous.root !== identity.root || previous.hash !== identity.hash)) {
+				// A built-in changes only with Drone itself, so a new generation keeps the user's choice.
+				const changed = previous && (previous.root !== identity.root || previous.hash !== identity.hash);
+				if (changed && !this.builtinPackages.has(identity.root)) {
 					this.reconfirmInstallations.add(installedName);
 				}
 				nextInstallations[candidate.packageName] = identity;
@@ -345,7 +362,7 @@ export class UiPluginManager {
 	runtimeSource(name: string): InstalledUiRuntimeSource | undefined {
 		const native = this.packageSources.get(name);
 		if (native) {
-			if (!native.current) return undefined;
+			if (!native.current || this.builtinDisabled(native.source.packageRoot)) return undefined;
 			try {
 				return this.runtimeSourceCurrent(native.source) ? native.source : undefined;
 			} catch (error) {
@@ -382,6 +399,22 @@ export class UiPluginManager {
 			if (path) paths.push(path);
 		}
 		return paths;
+	}
+
+	/** Native entries of enabled built-in packages; Pi's package manager does not list them. */
+	builtinExtensionPaths(): string[] {
+		return [...this.packageSources].flatMap(([name, { source }]) => {
+			const path = source.nativeDeclaredPath ?? source.nativeEntrypoint;
+			return path && this.builtinPackages.has(source.packageRoot) && this.runtimeSource(name) ? [path] : [];
+		});
+	}
+
+	/** A built-in package is disabled through its UI plugin's switch, which is also its package switch. */
+	private builtinDisabled(packageRoot: string): boolean {
+		if (!this.builtinPackages.has(packageRoot)) return false;
+		for (const [name, item] of this.installedSources)
+			if (item.packageRoot === packageRoot && this.config.plugins[name]?.enabled === false) return true;
+		return false;
 	}
 
 	/** Called only for a path selected by the actual Pi extension loader. UI visibility grants no native authority. */

@@ -10,6 +10,11 @@ module.exports = async function verifyResearchRelease(context) {
 		cwd: join(__dirname, ".."),
 		stdio: "inherit",
 	});
+	// Built-in plugins ship read-only; refuse to package a copy that is not the locked artifact.
+	execFileSync(process.execPath, [join(__dirname, "check-builtin-plugins.mjs")], {
+		cwd: join(__dirname, ".."),
+		stdio: "inherit",
+	});
 	execFileSync(
 		process.env.PYTHON || "python",
 		[join(__dirname, "sync-research-skills.py"), "--sources", "nature", "scientific", "--check"],

@@ -89,6 +89,15 @@ export function desktopLoaderOptions(
 			: {}),
 		...(pluginRuntimeDirectory && cwd
 			? {
+					// Built-in package entries load only where the managed factory below owns them.
+					...(nativeRuntime?.extensionPaths?.().length
+						? {
+								additionalExtensionPaths: [
+									...(rest.additionalExtensionPaths ?? []),
+									...nativeRuntime.extensionPaths(),
+								],
+							}
+						: {}),
 					extensionFactoryForPath: async (path: string) => {
 						const selected = nativeBootstrap?.delivery?.observeSelectedPath(path);
 						if (selected?.kind === "unconfirmed")

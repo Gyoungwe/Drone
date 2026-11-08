@@ -58,6 +58,12 @@ extraResources:
   - from: "pi-packages/node_modules"
     to: "pi-packages/node_modules"
     filter: ["**/*", "!.drone-staged.json", "!.package-lock.json"]
+  # Read-only built-in plugin packages (plugins.lock.json `builtin: true`), staged by
+  # scripts/fetch-plugins.mjs. The UI plugin manager scans this second managed root: built-ins
+  # follow the Drone version, cannot be uninstalled and can be disabled. beforePack verifies them.
+  - from: "plugin-packages/node_modules"
+    to: "plugin-packages/node_modules"
+    filter: ["**/*"]
   # All first-party research capabilities, loaded from one versioned manifest.
   # Never package local settings, sessions, downloaded papers, credentials or the user skill directory.
   - from: "../../.pi/extensions"

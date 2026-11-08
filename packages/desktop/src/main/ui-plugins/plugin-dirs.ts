@@ -35,6 +35,16 @@ export function installedUiPackageRoot(): string {
 	return join(agentDir, "npm", "node_modules");
 }
 
+/**
+ * Read-only built-in plugin packages shipped with Drone (plugins.lock.json `builtin: true`,
+ * staged by scripts/fetch-plugins.mjs). Nothing here is written at runtime.
+ */
+export function builtinPackageRoot(): string {
+	return app.isPackaged
+		? join(process.resourcesPath, "plugin-packages", "node_modules")
+		: join(__dirname, "../../plugin-packages/node_modules");
+}
+
 export function packageDiagnosticName(packageName: string): string {
 	const slug = packageName
 		.replace(/^@/u, "")

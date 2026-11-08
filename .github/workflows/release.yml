@@ -221,6 +221,8 @@ jobs:
             eb-${{ runner.os }}-${{ matrix.platform }}-
       - run: npm ci --prefer-offline --no-audit --no-fund
       - run: npm run stage:pi-packages
+      # Locked plugins: knowledge worker resources and the read-only built-in plugin packages.
+      - run: npm run fetch:plugins
       - name: Acquire pinned research skill packs
         shell: bash
         run: |
@@ -238,6 +240,8 @@ jobs:
           echo "Unsigned release artifacts are intentional; OS trust prompts remain expected."
       - name: Verify bundled MCP runtime in packaged app
         run: node scripts/check-pi-packages.mjs --packaged packages/desktop/dist
+      - name: Verify built-in plugin packages in packaged app
+        run: node scripts/check-builtin-plugins.mjs --packaged packages/desktop/dist
       - name: Collect release assets
         shell: bash
         run: |
