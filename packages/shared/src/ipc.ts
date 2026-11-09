@@ -4,10 +4,7 @@ import type { DesktopCommand } from "./desktop-command";
 import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { HostFileAction } from "./file-actions";
 import type { PreviewKind } from "./file-types";
-import type { ComputeApi } from "./host-api/compute";
-import type { DiscoveryApi } from "./host-api/discovery";
-import type { EvidenceApi } from "./host-api/evidence";
-import type { InquiryApi } from "./host-api/inquiry";
+import type { ComputeApi, DiscoveryApi, EvidenceApi, InquiryApi } from "./host-api";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
 import type { PluginRuntimeEvent } from "./host-api/plugin-runtime";
 import type { ResearchApi } from "./host-api/research";
@@ -230,7 +227,6 @@ export const IpcChannels = {
 	InstitutionalOpenUrl: "institutional:openUrl",
 	InstitutionalClear: "institutional:clear",
 	InstitutionalTestAccess: "institutional:testAccess",
-	InstitutionalEvent: "institutional:event",
 
 	SessionCreate: "session:create",
 	SessionList: "session:list",

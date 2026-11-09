@@ -2,11 +2,6 @@ import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
-	pluginRuntime: {
-		title: "Plugin runtime permission",
-		detail:
-			"The runtime runs in a separate process with read access to its own package only. Network, file writes, child processes and host credentials are unavailable. Disabling the plugin or closing the window revokes access.",
-	},
 	knowledgeFallback: {
 		title: "Knowledge",
 		hint: "Enable the knowledge UI plugin to browse, search, explore the graph, review and configure your library.",
@@ -245,7 +240,6 @@ export const en: Messages = {
 		decisionAffected: "{count} affected output(s)",
 		decisionRevoke: "Revoke",
 		decisionRevoking: "Revoking…",
-		decisionRevoked: "Revoked",
 		decisionConfirm: "Revoke this decision? {summary}",
 		decisionRevokeReason: "Revoked by the user",
 		decisionConfirmTitle: "Confirm decision action",
@@ -254,9 +248,6 @@ export const en: Messages = {
 		decisionConfirmReview: "Confirm review",
 		decisionConfirmed: "Confirmed by you",
 		decisionCancel: "Cancel",
-		reviewTitle: "Please take a look",
-		reviewAcknowledge: "Confirm reviewed",
-		reviewLater: "This card stays here until you decide",
 		tasksEmpty: "No task list yet — it appears here once the agent makes a plan.",
 		listTruncated:
 			"This list is long, so only the first {count} items are rendered; the summary keeps the full count.",
@@ -577,9 +568,6 @@ export const en: Messages = {
 			manualHostTitle: "Manual registration or advanced settings",
 			manualHostHint:
 				"Use this only when SSH config does not cover the host; remote operations still require approval. Never enter private key contents here.",
-			addHostTitle: "Register an SSH device",
-			addHostHint:
-				"Connection details stay in the approved compute profile; private keys are never entered here.",
 			addHost: "Register remote device",
 			cancel: "Cancel job",
 			terminal: "Built-in terminal",

@@ -1,10 +1,5 @@
 /** 中文语言包（作为 key 的结构定义，en.ts 与之同形） */
 export const zh = {
-	pluginRuntime: {
-		title: "插件后台权限",
-		detail:
-			"后台在独立进程中运行，只能读取自身包文件；不能联网、写文件、创建子进程或读取宿主凭据。停用或关闭窗口会撤销访问。",
-	},
 	knowledgeFallback: {
 		title: "知识库",
 		hint: "启用知识界面插件后可使用浏览、搜索、图谱、审阅与设置。",
@@ -232,7 +227,6 @@ export const zh = {
 		decisionAffected: "受影响产物 {count} 个",
 		decisionRevoke: "撤销",
 		decisionRevoking: "撤销中…",
-		decisionRevoked: "已撤销",
 		decisionConfirm: "确定撤销这个决定吗？{summary}",
 		decisionRevokeReason: "用户撤销了这项决定",
 		decisionConfirmTitle: "确认决策操作",
@@ -241,9 +235,6 @@ export const zh = {
 		decisionConfirmReview: "确认无误",
 		decisionConfirmed: "已由你确认",
 		decisionCancel: "取消",
-		reviewTitle: "请你查看",
-		reviewAcknowledge: "确认已查看",
-		reviewLater: "稍后处理可保留此卡",
 		tasksEmpty: "还没有任务清单——Agent 建立计划后会显示在这里。",
 		listTruncated: "列表较长，仅渲染前 {count} 项；完整数量仍保留在汇总中。",
 		runOverview: {
@@ -558,8 +549,6 @@ export const zh = {
 			sshConfigAdded: "已加入",
 			manualHostTitle: "手动登记或调整高级设置",
 			manualHostHint: "仅在 SSH 配置没有覆盖时填写；连接时仍需经过远程操作审批。不要在这里输入私钥内容。",
-			addHostTitle: "登记 SSH 设备",
-			addHostHint: "连接信息保存在已授权的计算配置中；不要在这里输入私钥内容。",
 			addHost: "登记远程设备",
 			cancel: "取消作业",
 			terminal: "内置终端",

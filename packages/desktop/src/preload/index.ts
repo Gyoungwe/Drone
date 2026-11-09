@@ -34,7 +34,6 @@ const channelFrom = (channels: Record<string, string>, method: string): string =
 };
 
 const appClient = exposeContract(AppContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -80,7 +79,6 @@ const appClient = exposeContract(AppContract, {
 		),
 });
 const knowledgeClient = exposeContract(KnowledgeContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -137,7 +135,6 @@ const knowledgeClient = exposeContract(KnowledgeContract, {
 		),
 });
 const researchClient = exposeContract(ResearchContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -158,7 +155,6 @@ const researchClient = exposeContract(ResearchContract, {
 		),
 });
 const settingsClient = exposeContract(SettingsContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -185,7 +181,6 @@ const settingsClient = exposeContract(SettingsContract, {
 		),
 });
 const permissionsClient = exposeContract(PermissionsContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -210,7 +205,6 @@ const permissionsClient = exposeContract(PermissionsContract, {
 		),
 });
 const subagentsClient = exposeContract(SubagentsContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -223,7 +217,6 @@ const subagentsClient = exposeContract(SubagentsContract, {
 		),
 });
 const packagesClient = exposeContract(PackagesContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -240,7 +233,6 @@ const packagesClient = exposeContract(PackagesContract, {
 		),
 });
 const institutionalClient = exposeContract(InstitutionalContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -255,7 +247,6 @@ const institutionalClient = exposeContract(InstitutionalContract, {
 		),
 });
 const memoryClient = exposeContract(MemoryContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -271,7 +262,6 @@ const memoryClient = exposeContract(MemoryContract, {
 		),
 });
 const mcpClient = exposeContract(McpContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -285,7 +275,6 @@ const mcpClient = exposeContract(McpContract, {
 		),
 });
 const pluginRuntimeClient = exposeContract(PluginRuntimeContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -297,7 +286,6 @@ const pluginRuntimeClient = exposeContract(PluginRuntimeContract, {
 		),
 });
 const uiPluginsClient = exposeContract(UiPluginsContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -314,7 +302,6 @@ const uiPluginsClient = exposeContract(UiPluginsContract, {
 		),
 });
 const computeClient = exposeContract(ComputeContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -341,7 +328,6 @@ const computeClient = exposeContract(ComputeContract, {
 		),
 });
 const evidenceClient = exposeContract(EvidenceContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -356,7 +342,6 @@ const evidenceClient = exposeContract(EvidenceContract, {
 		),
 });
 const discoveryClient = exposeContract(DiscoveryContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -373,7 +358,6 @@ const discoveryClient = exposeContract(DiscoveryContract, {
 		),
 });
 const decisionsClient = exposeContract(DecisionsContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -385,7 +369,6 @@ const decisionsClient = exposeContract(DecisionsContract, {
 		),
 });
 const inquiryClient = exposeContract(InquiryContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
@@ -617,7 +600,6 @@ const SESSION_CHANNELS: Record<string, string> = {
 	ensureProjectTrust: IpcChannels.ProjectEnsureTrust,
 };
 const sessionsApi = exposeContract(SessionsContract, {
-	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) => {
 		const channel = SESSION_CHANNELS[method];
 		if (!channel) throw new Error(`Missing session channel: ${method}`);
