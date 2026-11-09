@@ -150,7 +150,7 @@ export {
 	type PluginRootGrant,
 } from "./plugins/file-capabilities";
 export type { SelectedNativeSource } from "./plugins/native-delivery";
-export type { PluginCredentialSlot } from "./plugins/plugin-credentials";
+export { type PluginCredentialSlot, PluginCredentialStore } from "./plugins/plugin-credentials";
 export { createProcessPluginRuntime } from "./plugins/process-runtime";
 export { PluginResourceManager, type PluginResourceManagerOptions } from "./plugins/resource-capabilities";
 export type {

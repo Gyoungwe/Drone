@@ -1767,6 +1767,15 @@ export const en: Messages = {
 			hidden: "Hidden",
 		},
 		uiPlugins: {
+			credentialsTitle: "Plugin credentials",
+			credentialsHint:
+				"Drone keeps these secrets on this computer and adds them only to a plugin's requests to the hosts it declared. The plugin itself never sees them. If a plugin update changes a credential definition, enter it again.",
+			credentialConfigured: "Configured",
+			credentialMissing: "Not configured",
+			credentialHosts: "Sent only to",
+			credentialSecret: "Secret",
+			credentialSecretReplace: "Enter a new secret to replace it",
+			credentialClear: "Clear",
 			title: "UI Plugins",
 			masterHint:
 				"Plugins from your local user directory can replace built-in components such as the tool call card, subagent card, and todo panel; turning the switch off disables them all immediately (files and config are kept)",

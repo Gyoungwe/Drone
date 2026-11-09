@@ -1683,6 +1683,15 @@ export const zh = {
 			hidden: "隐藏",
 		},
 		uiPlugins: {
+			credentialsTitle: "插件凭据",
+			credentialsHint:
+				"密钥由 Drone 保存在本机，只在插件向声明的主机发请求时附加；插件本身读不到密钥。插件更新改了凭据定义时需要重新填写。",
+			credentialConfigured: "已配置",
+			credentialMissing: "未配置",
+			credentialHosts: "仅发往",
+			credentialSecret: "密钥",
+			credentialSecretReplace: "输入新密钥以替换",
+			credentialClear: "清除",
 			title: "UI 插件",
 			masterHint:
 				"本机用户目录里的插件可替换工具调用卡、子代理卡、任务列表面板等内置组件；关闭后所有插件立即停用，文件与配置保留。",

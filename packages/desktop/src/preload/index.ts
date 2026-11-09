@@ -13,6 +13,7 @@ import {
 	PackagesContract,
 	PermissionsContract,
 	type PiApi,
+	PluginCredentialsContract,
 	PluginRuntimeContract,
 	ResearchContract,
 	SessionsContract,
@@ -285,6 +286,7 @@ const pluginRuntimeClient = exposeContract(PluginRuntimeContract, {
 			method,
 		),
 });
+const pluginCredentialsClient = exposeContract(PluginCredentialsContract);
 const uiPluginsClient = exposeContract(UiPluginsContract, {
 	channelForMethod: (_contract, method) =>
 		channelFrom(
@@ -617,6 +619,7 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
 const api: PiApi = {
 	...invokeApi,
 	...sessionsApi,
+	...pluginCredentialsClient,
 	// platform：同步值，preload 注入供 renderer 按平台分流 UI
 	platform: process.platform,
 	onKnowledgeEvent: (cb) => subscribe(IpcChannels.KnowledgeEvent, cb),
