@@ -4,10 +4,7 @@ import type { DesktopCommand } from "./desktop-command";
 import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { HostFileAction } from "./file-actions";
 import type { PreviewKind } from "./file-types";
-import type { ComputeApi } from "./host-api/compute";
-import type { DiscoveryApi } from "./host-api/discovery";
-import type { EvidenceApi } from "./host-api/evidence";
-import type { InquiryApi } from "./host-api/inquiry";
+import type { ComputeApi, DiscoveryApi, EvidenceApi, InquiryApi, PluginCredentialsApi } from "./host-api";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
 import type { PluginRuntimeEvent } from "./host-api/plugin-runtime";
 import type { ResearchApi } from "./host-api/research";
@@ -230,7 +227,6 @@ export const IpcChannels = {
 	InstitutionalOpenUrl: "institutional:openUrl",
 	InstitutionalClear: "institutional:clear",
 	InstitutionalTestAccess: "institutional:testAccess",
-	InstitutionalEvent: "institutional:event",
 
 	SessionCreate: "session:create",
 	SessionList: "session:list",
@@ -464,7 +460,8 @@ export interface PiApi
 		DecisionsApi,
 		InquiryApi,
 		EvidenceApi,
-		ResearchApi {
+		ResearchApi,
+		PluginCredentialsApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */

@@ -24,6 +24,7 @@ import { registerMcpIpc } from "./mcp";
 import { registerMemoryIpc } from "./memory";
 import { registerPackagesIpc } from "./packages";
 import { registerPermissionSettingsIpc } from "./permissions";
+import { registerPluginCredentialsIpc } from "./plugin-credentials";
 import { registerPluginRuntimeIpc } from "./plugin-runtime";
 import { registerResearchIpc } from "./research";
 import { registerSessionsIpc } from "./sessions";
@@ -98,6 +99,7 @@ export function registerIpc(
 	registerInquiryIpc(backendServices, sendToRenderer);
 	registerUiPluginsIpc(uiPluginsManager, runtime);
 	registerPluginRuntimeIpc(runtime);
+	registerPluginCredentialsIpc(uiPluginsManager);
 	runtime.onEvent((owner, event) => {
 		const contents = webContents.fromId(owner.id);
 		if (contents && !contents.isDestroyed()) contents.send(IpcChannels.PluginRuntimeEvent, event);

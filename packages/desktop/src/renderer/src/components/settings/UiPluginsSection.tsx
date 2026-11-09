@@ -6,6 +6,7 @@ import { FolderIcon, RefreshIcon } from "../icons";
 import { Dropdown } from "../ui/Dropdown";
 import { Switch } from "../ui/Switch";
 import { Tooltip } from "../ui/Tooltip";
+import { PluginCredentialsSection } from "./PluginCredentialsSection";
 
 /** 槽位名 → i18n key（KNOWN_UI_SLOTS 与 renderer slots.ts 对齐） */
 const SLOT_KEYS: Record<string, MessageKey> = {
@@ -307,6 +308,9 @@ export function UiPluginsSection() {
 					<AssignmentSection />
 				</div>
 			)}
+			<div className="mt-5">
+				<PluginCredentialsSection />
+			</div>
 		</div>
 	);
 }
