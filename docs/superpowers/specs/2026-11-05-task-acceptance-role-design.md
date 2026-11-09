@@ -137,15 +137,16 @@
 - **固定行为**：`redirect: "error"`（跳转可能离开声明的主机）；请求体与响应体各最多 8 MiB，以 base64 传输；30 秒超时并随调用者信号取消；不允许插件设置 `host`、`cookie`、`proxy-*` 等由宿主或连接决定的头。
 - **结果**：`{ status, headers, base64, bytes }`，头名小写。非 2xx 照常返回，由插件按领域语义判断，宿主不解析响应。
 - **为什么要 `networkReads`**：宿主对每次写能力调用单独审批；Zotero connector 连只读操作也用 POST，按方法划分会让一次保存弹 3 次框。声明后一次保存只弹 1 次（2026-11-05 用户确认）。
-- **本片不含**：凭据引用（宿主在发出时按清单声明附加，插件读不到明文）和授权内免询问（§4 的 acceptance 条目签发一次性令牌，`network.write` 凭令牌放行）。两者都等决定 2、3 确认后再加；在那之前 Zotero 写入每次都会询问。
+- **本片不含**：凭据引用（宿主在发出时按清单声明附加，插件读不到明文）和授权内免询问（§4 的 acceptance 条目签发一次性令牌，`network.write` 凭令牌放行）。两者后来都已完成，见下方“Zotero 迁移进度”。
 
 ### Zotero 迁移进度（2026-11-05）
 
-- 已完成：研究包 `src/desktop/capability-fetch.ts`（`fetch` 形状，走 `network.*`）与 `zotero-tools.ts`；受管会话注册 `research_zotero_status`（精简）、`research_zotero_save`（只走 connector）、`research_zotero_update`（无凭据时返回 blocked）。工具声明为读，插件不再自己弹确认；用户在宿主对话框拒绝时回执为 `cancelled / user-declined`。
+- 已完成：研究包 `src/desktop/capability-fetch.ts`（`fetch` 形状，走 `network.*`）与 `zotero-tools.ts`；受管会话注册 `research_zotero_status`（精简）、`research_zotero_save`（connector 在线时走 connector，否则走 Web API）、`research_zotero_update`（走 Web API；未保存密钥时返回 blocked）。工具声明为读，插件不再自己弹确认；用户在宿主对话框拒绝时回执为 `cancelled / user-declined`。
 - 未迁：`research_setup_zotero` 与 `/zotero-setup`（需子进程）、run 日志、流程卡片。
 - `zotero_item` 验收器（正向，2026-11-06 完成）：宿主 `drone.consumes` + `provider.enumerate` + `{role, member}` 寻址（Drone #250）；研究包提供 `task.acceptance:zotero_item` 的 `describe`/`verify` 与 `tool_execution_end` 上的 `identify`，pi-core 受管适配器按角色注册（drone-plugins #7）。真实 SDK 用例 `packages/backend/test/managed-acceptance-role-sdk.test.mjs`。已确认 `tool_execution_end` 在 `tool_result` 之后、`agent_end` 之前；受管下声明为读的工具没有操作记录，身份绑定不依赖它。
-- 反向（待做）：用户 2026-11-06 选定授权内免询问（授权框逐条列出 Zotero 条目，每条签发一次性写入令牌）与宿主按插件保管凭据。
-- 待做：宿主凭据引用；Drone 重锁研究包后用真实 SDK 跑真实研究包；切换时从 workbench 清单删除 `zotero-literature.mjs`，避免同名工具。
+- 授权内免询问（2026-11-06 完成）：pi-core 为每个提供者给出同意条目的里程碑生成一条 allowance，宿主任务授权框逐条列出（括号里是执行写入的插件），`network.write` 带 `allowance` 时由 coordinator 一次性消耗并放行（Drone #257、#261，drone-plugins #8 的 `allowanceFor`）。真实安装包证据：`packages/backend/test/managed-acceptance-role-sdk.test.mjs`（授权框列出 `@gyoungwe/pi-research`，保存不再弹 `capability:network.write`；拒绝授权后写入重新询问），宿主侧另有 `packages/backend/test/task-grant-allowance-sdk.test.mjs`。
+- 宿主凭据引用（2026-11-09 完成）：宿主按插件保管 Web API 密钥并在 `network.*` 上附加（Drone #262、#274），研究包声明 `zotero-web` 槽位并改用它（drone-plugins #18）；Drone 重锁到 drone-plugins `23448b1` 后，真实研究包经 Web API 修改条目的 SDK 用例见 `packages/backend/test/research-zotero-web-credential-sdk.test.mjs`。
+- 待做：切换时从 workbench 清单删除 `zotero-literature.mjs`，避免同名工具；届时恢复示例任务 `evidence-literature` 的 `zotero=yes` 用例（`example-tasks-one-authorization-sdk`）。
 - 已知限制：Web API 附件的上传地址事先未知、上传需超过 30 秒；写入被拒后核心代码仍读回 4 次（约 2 秒）才返回。
 
 ## 仍需验证（实现前用真实 SDK 确认）
