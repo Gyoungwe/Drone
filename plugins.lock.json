@@ -4,7 +4,7 @@
 		{
 			"name": "@gyoungwe/pi-knowledge",
 			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
-			"commit": "23448b14ba71948ba854d8b2738f14093cf25209",
+			"commit": "0df9a4f119c492e0a64878d821eedad066d16f19",
 			"path": "packages/pi-knowledge",
 			"version": "0.3.0",
 			"tarballSha256": "d2231afd8114cc7f2d16e731885ffad2dfef194b4d2ef73bb9b79379a2374177"
@@ -12,7 +12,7 @@
 		{
 			"name": "@gyoungwe/pi-analysis",
 			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
-			"commit": "23448b14ba71948ba854d8b2738f14093cf25209",
+			"commit": "0df9a4f119c492e0a64878d821eedad066d16f19",
 			"path": "packages/pi-analysis",
 			"version": "0.2.0",
 			"tarballSha256": "1cc86e9e15b1dbbc10bd64dfe96b5d825633f07ab7954fdaff4968ef99225cdf"
@@ -20,7 +20,7 @@
 		{
 			"name": "@gyoungwe/pi-research",
 			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
-			"commit": "23448b14ba71948ba854d8b2738f14093cf25209",
+			"commit": "0df9a4f119c492e0a64878d821eedad066d16f19",
 			"path": "packages/pi-research",
 			"version": "0.3.2",
 			"tarballSha256": "7d86bb6b82578a4d8f55cebc6edcf7cb8cc656ea81422e03bde06e3d82d7cee8"
@@ -28,10 +28,10 @@
 		{
 			"name": "@gyoungwe/pi-core",
 			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
-			"commit": "23448b14ba71948ba854d8b2738f14093cf25209",
+			"commit": "0df9a4f119c492e0a64878d821eedad066d16f19",
 			"path": "packages/pi-core",
 			"version": "0.2.0",
-			"tarballSha256": "975297ec25353dcc0aa5f59ce82e9ba4a38009a41f94f5f9906c6a0b6e563a18",
+			"tarballSha256": "fe94fcd80f03d99c8ff5ebf882ef3bf801fb2f3b87f9f6358709a560537efc5d",
 			"builtin": true
 		}
 	]
