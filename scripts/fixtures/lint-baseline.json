@@ -178,7 +178,6 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/stage-timeline.test.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/subagent-panel.test.ts": 2,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/task-authorization-wire-sdk.test.mjs": 1,
-	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/task-failure-feedback-sdk.test.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/task-grant-sdk.test.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/task-native-effects-sdk.test.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/terminal-ui-capabilities-sdk.test.mjs": 1,
