@@ -40,7 +40,7 @@ async function offlineModels(agentDir, respond) {
 }
 
 /** As ui-plugins/runtime-host.ts: a built-in's activation is not a dialog; every other approval is recorded. */
-function bridgeFor(manager, service, dialogs, answer) {
+function bridgeFor(manager, service, dialogs, answer, approve) {
 	return new PluginRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
 		sources: () => manager.runtimeSources(),
@@ -49,7 +49,7 @@ function bridgeFor(manager, service, dialogs, answer) {
 		approve: async (_owner, source, operation) => {
 			if (operation === undefined && manager.builtinPackages.has(source.packageRoot)) return true;
 			dialogs.push(operation ?? `activation:${source.pluginId}`);
-			return true;
+			return approve(operation);
 		},
 		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
 		getSessionContext: (id) => service.getPluginCallerContext(id),
@@ -134,7 +134,8 @@ function backendFor(manager, backend, begin) {
 /**
  * Starts the backend with the built-in pi-core under `root`. `respond` is the offline model,
  * `permission` answers host permission requests ("deny" or "allow"; each is recorded), `answer`
- * answers plugin questions, and `backend` adds createBackend options.
+ * answers plugin questions, `approve` answers recorded host dialogs (default: approve), and
+ * `backend` adds createBackend options.
  */
 export async function startBuiltinCore({
 	root,
@@ -142,6 +143,7 @@ export async function startBuiltinCore({
 	respond,
 	permission = "deny",
 	answer = () => undefined,
+	approve = () => true,
 	backend = {},
 }) {
 	const { builtinRoot, home, agentDir } = await prepareRoot(root, setUserData);
@@ -160,7 +162,7 @@ export async function startBuiltinCore({
 	const service = services.sessions;
 	const { modelRuntime, faux } = await offlineModels(agentDir, respond);
 	service.modelRuntime = modelRuntime;
-	live.bridge = bridgeFor(manager, service, dialogs, answer);
+	live.bridge = bridgeFor(manager, service, dialogs, answer, approve);
 	service.onPermissionRequest((request) => {
 		permissions.push(request.message);
 		queueMicrotask(() => service.respondPermission(request.id, permission));
