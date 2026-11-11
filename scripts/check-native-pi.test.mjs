@@ -27,7 +27,8 @@ test("native Pi scan maps host registrations while installed task tools remain d
 				record.registrationSource?.endsWith("channel-watch/extension.ts"),
 		),
 	);
-	assert.ok(records.some((record) => record.name === "research_zotero_update"));
+	assert.ok(!records.some((record) => record.name === "research_zotero_update"));
+	assert.equal(fixture.tools.research_zotero_update.delegated, true);
 });
 
 test("checked-in fixture covers every discovered registration", () => {
