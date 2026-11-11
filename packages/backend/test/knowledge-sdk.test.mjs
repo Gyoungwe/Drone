@@ -1,84 +1,73 @@
-import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
-import {
-	createAgentSession,
-	DefaultResourceLoader,
-	ModelRuntime,
-	SessionManager,
-	SettingsManager,
-} from "@earendil-works/pi-coding-agent";
 import { closeKnowledgeServices } from "@gyoungwe/pi-knowledge/host";
 import { expect, it, vi } from "vitest";
-import { installedTaskPluginPath, taskSdkExtensionPath } from "./fixtures/task-plugin.mjs";
+
+const environment = vi.hoisted(() => ({ userData: "" }));
+vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => environment.userData } }));
+
+import { startBuiltinCore } from "./fixtures/builtin-core.mjs";
+import { taskSdkExtensionPath } from "./fixtures/extension-paths.mjs";
 
 it("real SDK delivers global navigation before model invocation in an unrelated project", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-sdk-")));
 	const a = join(root, "A"),
-		b = join(root, "B"),
-		agentDir = join(root, "agent");
-	let session;
-	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
+		b = join(root, "B");
+	let host;
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
 	try {
-		await Promise.all([mkdir(a), mkdir(b), mkdir(agentDir)]);
+		await Promise.all([mkdir(a), mkdir(b)]);
+		host = await startBuiltinCore({
+			root,
+			setUserData: (path) => {
+				environment.userData = path;
+			},
+			backend: {
+				webFetch: false,
+				subagentPreferBuiltin: false,
+				harness: { recall: false },
+				lazyCapabilities: false,
+				desktopIntegration: {
+					additionalExtensionPaths: [taskSdkExtensionPath("obsidian-workbench.mjs")],
+					additionalSkillPaths: [resolve("../../.pi/skills/research-vault/SKILL.md")],
+				},
+			},
+		});
+		vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 		const bound = await configureObsidian({ cwd: a, vault: join(root, "Vault"), project: "project-a" });
-		const settingsManager = SettingsManager.create(b, agentDir);
-		const resourceLoader = new DefaultResourceLoader({
-			cwd: b,
-			agentDir,
-			settingsManager,
-			additionalExtensionPaths: [installedTaskPluginPath(), taskSdkExtensionPath("obsidian-workbench.mjs")],
-			additionalSkillPaths: [resolve("../../.pi/skills/research-vault/SKILL.md")],
-		});
-		await resourceLoader.reload();
-		expect(resourceLoader.getExtensions().errors).toEqual([]);
-		const runtime = await ModelRuntime.create({
-			authPath: join(agentDir, "auth.json"),
-			modelsPath: null,
-			modelsStorePath: join(agentDir, "models-cache.json"),
-			allowModelNetwork: false,
-			refreshOnCreate: false,
-		});
-		vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
+		const runtime = host.service.modelRuntime;
 		const noNetwork = vi.spyOn(runtime, "streamSimple").mockImplementation(() => {
 			throw new Error("Network not allowed");
 		});
-		({ session } = await createAgentSession({
-			cwd: b,
-			agentDir,
-			settingsManager,
-			resourceLoader,
-			modelRuntime: runtime,
-			sessionManager: SessionManager.inMemory(b),
-			model: {
-				id: "fixture",
-				provider: "fixture",
-				name: "fixture",
-				api: "openai-completions",
-				baseUrl: "https://example.invalid",
-				input: ["text"],
-				reasoning: false,
-				contextWindow: 128000,
-				maxTokens: 8192,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-			},
-		}));
-		const errors = [];
-		await session.bindExtensions({ onError: (error) => errors.push(error) });
+		const { session, errors } = host.attach(
+			await host.service.createSession({
+				cwd: b,
+				provider: host.faux.provider.id,
+				modelId: host.faux.getModel().id,
+			}),
+		);
+		const resourceLoader = session.resourceLoader;
+		expect(resourceLoader.getExtensions().errors).toEqual([]);
 		const model = vi.spyOn(session.agent, "prompt").mockResolvedValue(undefined);
 		const events = [];
 		session.subscribe((event) => events.push(event));
 		await session.prompt("/task-status");
 		expect(model).not.toHaveBeenCalled();
+		const coreNotice = `plugin-notice:${encodeURIComponent(host.core.source.pluginId)}`;
 		const status = events.find(
-			(event) => event.type === "message_end" && event.message.customType === "drone-task-status",
+			(event) =>
+				event.type === "message_end" &&
+				event.message.customType === coreNotice &&
+				event.message.details?.taskView,
 		);
 		expect(status?.message).toMatchObject({ role: "custom", display: true });
 		expect(status.message.content).toContain("还没有任务记录");
-		expect(session.messages.some((message) => message.customType === "drone-task-status")).toBe(true);
+		expect(
+			session.messages.some((message) => message.customType === coreNotice && message.details?.taskView),
+		).toBe(true);
 		await session.prompt("请先了解当前知识库，再解释研究流程。", { expandPromptTemplates: false });
 		expect(model).toHaveBeenCalledOnce();
 		const payload = JSON.stringify(model.mock.calls[0][0]);
@@ -97,10 +86,7 @@ it("real SDK delivers global navigation before model invocation in an unrelated 
 		expect(errors).toEqual([]);
 		expect(noNetwork).not.toHaveBeenCalled();
 	} finally {
-		session?.dispose();
 		await closeKnowledgeServices();
-		vi.restoreAllMocks();
-		vi.unstubAllEnvs();
-		await rm(root, { recursive: true, force: true });
+		await host?.close();
 	}
 });

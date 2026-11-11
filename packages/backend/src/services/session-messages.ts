@@ -73,7 +73,7 @@ export class SessionMessageService {
 		const panelRecords = subagentPanelRawMessages(branch);
 		const raw = entry.session.messages as RawMessage[];
 		let live = raw;
-		if (entry.nativeDelivery) {
+		if (entry.nativeDelivery && !entry.nativeDelivery.isOrdinary()) {
 			const historical = raw.filter((message) => {
 				const origin = this.host.sessionEngine.historicalMessageOrigin(
 					entry.session,
@@ -84,7 +84,7 @@ export class SessionMessageService {
 			});
 			live = await entry.nativeDelivery.snapshot(raw, historical);
 		} else if (this.host.runtime.knowledge.publication?.projectSnapshot) {
-			// API 1.x compatibility, not a source of authority for the 0.3 managed owner.
+			// API 1.x legacy ownership also applies under ordinary native delivery; remove after 0.3 cutover.
 			const persisted = branch
 				.filter((item): item is Extract<SessionEntry, { type: "message" }> => item.type === "message")
 				.map((item) => item.message as RawMessage);

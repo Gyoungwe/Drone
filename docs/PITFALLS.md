@@ -39,6 +39,17 @@
 | 摘要写过但缺 reviewed receipt、specialist 不继续 | 2026-10-28 · 研究摘要必须消费真实 delivery handle |
 | 不装知识插件后扩展通知丢失、旧 context 继续通知 | 2026-10-28 · SDK 退订与通用通知 |
 | 受管任务一轮对话后即 `Task storage failed … requires an idle session` / `caller completed` | 受管插件的状态卡要等运行结束、在调用内等待 |
+| Ordinary native delivery exposes unchecked knowledge drafts or provider protocol | 2026-11-12 · Ordinary native delivery bypassed the legacy publication owner |
+
+## 2026-11-12: Ordinary native delivery bypassed the legacy publication owner
+
+Desktop creates a native delivery bootstrap even when no selected package requires managed publication.
+Treating the bootstrap's presence as exclusive publication ownership bypassed the registered API 1.x /
+pi-knowledge 0.2.1 projector: raw stream events and unsealed polling drafts could reach consumers.
+Use `NativeSessionDelivery.isOrdinary()` with the same current-run policy as event projection. An absent or
+ordinary delivery uses the explicitly registered legacy projector; required and closed delivery keep their
+managed boundary, without applying both owners. SDK exports read persisted entries, so event projection
+also protects their content. Keep the publication suite's built-in-core bootstrap and its assertions intact.
 
 ## 2026-10-28：原生适配器提前读取未支持 API
 

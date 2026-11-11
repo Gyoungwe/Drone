@@ -1,13 +1,8 @@
 /** Installed canonical owner only; no host task engine or copied planning rules. */
-import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
 import { taskHostLoader } from "@gyoungwe/pi-core/host";
 import { createDroneRuntime } from "../../src/runtime";
 
 export const createInstalledTaskRuntime = createDroneRuntime;
-export const taskSdkExtensionPath = (name) =>
-	join(resolve(import.meta.dirname, "../../../.."), ".pi", "extensions", name);
-export const installedTaskPluginPath = () => createRequire(import.meta.url).resolve("@gyoungwe/pi-core");
 
 export async function registerTaskRuntime(pi) {
 	const host = taskHostLoader.load();

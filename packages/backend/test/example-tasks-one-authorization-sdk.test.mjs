@@ -10,7 +10,7 @@ const environment = vi.hoisted(() => ({ userData: "" }));
 vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => environment.userData } }));
 
 import { startBuiltinCore } from "./fixtures/builtin-core.mjs";
-import { taskSdkExtensionPath } from "./fixtures/task-plugin.mjs";
+import { taskSdkExtensionPath } from "./fixtures/extension-paths.mjs";
 
 /** The running scenario's built-in pi-core host. */
 const live = {};

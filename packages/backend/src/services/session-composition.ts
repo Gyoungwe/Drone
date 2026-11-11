@@ -163,9 +163,9 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		new SessionEventService({
 			projectDelivery: (sessionId, event) => {
 				const delivery = service.registry.get(sessionId)?.nativeDelivery;
-				if (delivery) return delivery.projectEvent(event);
-				// API 1.x / pi-knowledge 0.2.1 compatibility: only an explicitly registered
-				// legacy owner participates. Remove after its consumers use nativeDelivery.
+				if (delivery && !delivery.isOrdinary()) return delivery.projectEvent(event);
+				// API 1.x / pi-knowledge 0.2.1: a registered legacy owner also applies under
+				// ordinary native delivery. Remove after its consumers use the managed owner.
 				return service.runtime.knowledge.publication?.projectEvent
 					? projectKnowledgeEvent(event, service.runtime, true)
 					: event;
