@@ -24,6 +24,8 @@ export function registerPluginCredentialsIpc(
 			.get(pluginId)
 			?.find((entry) => entry.slot === name);
 		if (!slot) throw new Error(`Plugin ${pluginId} declares no credential slot ${name}`);
+		if (PluginCredentialStore.isHostKept(pluginId, slot))
+			throw new Error(`Credential ${name} is managed in Zotero settings`);
 		return slot;
 	};
 	bindContract(PluginCredentialsContract, {
@@ -31,6 +33,7 @@ export function registerPluginCredentialsIpc(
 			const entries: PluginCredentialEntry[] = [];
 			for (const [pluginId, slots] of declared())
 				for (const definition of slots) {
+					if (PluginCredentialStore.isHostKept(pluginId, definition)) continue;
 					const saved = await store.get(pluginId, definition);
 					entries.push({
 						pluginId,

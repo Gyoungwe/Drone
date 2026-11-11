@@ -3,6 +3,8 @@
 // A real SDK session, the real restricted plugin process and the host's own capabilities; only the Web API
 // upstream is fake, answering the host's outgoing fetch. Its request log is the evidence: every request
 // carries the saved key as the declared header, and the key never reaches the plugin or the transcript.
+// The same session also writes through Zotero 10's local API with the key Settings authorized, which the
+// host keeps and attaches to pi-research's `zotero-local` slot (writes only).
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -34,6 +36,8 @@ const runtimeDirectory = resolve(
 const SECRET = "fixture-secret-0123456789";
 const ITEM = "ABCD2345";
 const COLLECTION = "COLL2345";
+const LOCAL_SECRET = "FakeLocalKey123";
+const SERVER_ID = "TESTSERVER1";
 
 async function installResearch() {
 	const [packed] = JSON.parse(
@@ -55,8 +59,11 @@ async function installResearch() {
 	});
 }
 
-/** The Zotero Web API for user library 42: one item, one collection, nothing else. */
-function zoteroWebApi() {
+/**
+ * Zotero for user library 42: one item, one collection, nothing else. It answers as the Web API and as
+ * Zotero 10's local API on 127.0.0.1:23119 (library users/0, server SERVER_ID); the connector is offline.
+ */
+function zoteroApis() {
 	const received = [];
 	let collections = [];
 	const json = (value, headers = {}) =>
@@ -66,25 +73,30 @@ function zoteroWebApi() {
 		});
 	const fetchImpl = async (url, init = {}) => {
 		const { host, pathname } = new URL(url);
-		if (host !== "api.zotero.org") throw new Error(`Unexpected upstream ${host}`);
+		const local = host === "127.0.0.1:23119";
+		if (!local && host !== "api.zotero.org") throw new Error(`Unexpected upstream ${host}`);
 		const method = init.method || "GET";
-		received.push({ request: `${method} ${pathname}`, key: new Headers(init.headers).get("zotero-api-key") });
+		const headers = new Headers(init.headers);
+		received.push({ request: `${method} ${host}${pathname}`, key: headers.get("zotero-api-key") });
+		if (local && pathname.startsWith("/connector/")) throw new TypeError("fetch failed");
+		if (local && pathname === "/api/") return json({}, { "zotero-server-id": SERVER_ID });
+		const library = local ? "/api/users/0" : "/users/42";
 		if (pathname === "/keys/current")
 			return json({ userID: 42, username: "reader", access: { user: { library: true, write: true } } });
-		if (pathname === "/users/42/collections")
+		if (pathname === `${library}/collections`)
 			return json([{ key: COLLECTION, data: { name: "Gut" } }], { "total-results": "1" });
-		if (pathname === `/users/42/items/${ITEM}/children`) return json([], { "total-results": "0" });
-		if (pathname === `/users/42/items/${ITEM}` && method === "GET")
+		if (pathname === `${library}/items/${ITEM}/children`) return json([], { "total-results": "0" });
+		if (pathname === `${library}/items/${ITEM}` && method === "GET")
 			return json({
 				key: ITEM,
 				version: 7,
 				data: { title: "Gut signatures", itemType: "journalArticle", collections },
 			});
-		if (pathname === `/users/42/items/${ITEM}` && method === "PATCH") {
+		if (pathname === `${library}/items/${ITEM}` && method === "PATCH") {
 			collections = JSON.parse(init.body).collections;
 			return new Response(null, { status: 204 });
 		}
-		throw new Error(`Unexpected Zotero request ${method} ${pathname}`);
+		throw new Error(`Unexpected Zotero request ${method} ${host}${pathname}`);
 	};
 	return { received, fetchImpl };
 }
@@ -99,6 +111,9 @@ async function isolateHome() {
 	vi.stubEnv("USERPROFILE", home);
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
+	// Zotero 10 local writes are authorized in Settings, which leaves the key in the host's environment.
+	vi.stubEnv("ZOTERO_LOCAL_API_KEY", undefined);
+	vi.stubEnv("ZOTERO_LOCAL_SERVER_ID", undefined);
 	return { cwd, agentDir };
 }
 
@@ -169,7 +184,7 @@ async function setup() {
 	const research = catalog.find((item) => item.source.pluginId === "@gyoungwe/pi-research");
 	const { cwd, agentDir } = await isolateHome();
 	// The host's network capability fetches unchanged; the fake answers in place of api.zotero.org.
-	const zotero = zoteroWebApi();
+	const zotero = zoteroApis();
 	vi.stubGlobal("fetch", zotero.fetchImpl);
 	const { modelRuntime, faux } = await offlineModel(agentDir);
 	const service = startBackend(catalog);
@@ -212,6 +227,8 @@ async function setup() {
 	};
 }
 
+const web = (received) => received.filter((r) => r.request.includes(" api.zotero.org/"));
+
 it("the research package files an item through the Web API with the key the host attaches", async () => {
 	const t = await setup();
 	await t.save();
@@ -223,16 +240,17 @@ it("the research package files an item through the Web API with the key the host
 		changes: { addCollection: { key: COLLECTION, httpStatus: 204, error: null, verified: true } },
 		readBack: { collections: [COLLECTION] },
 	});
-	expect(t.zotero.received.map((r) => r.request)).toEqual([
-		"GET /keys/current",
-		`GET /users/42/items/${ITEM}`,
-		"GET /users/42/collections",
-		`PATCH /users/42/items/${ITEM}`,
-		`GET /users/42/items/${ITEM}`,
-		`GET /users/42/items/${ITEM}/children`,
+	expect(web(t.zotero.received).map((r) => r.request)).toEqual([
+		"GET api.zotero.org/keys/current",
+		`GET api.zotero.org/users/42/items/${ITEM}`,
+		"GET api.zotero.org/users/42/collections",
+		`PATCH api.zotero.org/users/42/items/${ITEM}`,
+		`GET api.zotero.org/users/42/items/${ITEM}`,
+		`GET api.zotero.org/users/42/items/${ITEM}/children`,
 	]);
 	// Every request carries the saved key, never the plugin's stand-in; the key itself stays with the host.
-	expect(t.zotero.received.every((r) => r.key === SECRET)).toBe(true);
+	expect(web(t.zotero.received).every((r) => r.key === SECRET)).toBe(true);
+	expect(t.zotero.received.some((r) => r.request.includes("/api/"))).toBe(false);
 	expect(t.dialogs.filter((d) => d === "capability:network.write")).toHaveLength(1);
 	expect(t.transcript()).not.toContain(SECRET);
 }, 120000);
@@ -242,6 +260,30 @@ it("without a saved key the update is blocked and nothing reaches the Web API", 
 	await t.run();
 	expect(t.errors).toEqual([]);
 	expect(t.result()?.details).toMatchObject({ status: "blocked", channel: "web" });
-	expect(t.zotero.received).toEqual([]);
+	expect(web(t.zotero.received)).toEqual([]);
+	expect(t.zotero.received.filter((r) => r.request.startsWith("PATCH"))).toEqual([]);
 	expect(t.dialogs).not.toContain("capability:network.write");
+}, 120000);
+
+it("the research package files an item through Zotero 10's local API with the key Settings authorized", async () => {
+	const t = await setup();
+	vi.stubEnv("ZOTERO_LOCAL_API_KEY", LOCAL_SECRET);
+	vi.stubEnv("ZOTERO_LOCAL_SERVER_ID", SERVER_ID);
+	await t.run();
+	expect(t.errors).toEqual([]);
+	expect(t.result()?.details).toMatchObject({
+		status: "updated",
+		channel: "local",
+		zoteroKey: ITEM,
+		library: { type: "users", id: "0", local: true },
+		changes: { addCollection: { key: COLLECTION, httpStatus: 204, error: null, verified: true } },
+		readBack: { collections: [COLLECTION] },
+	});
+	expect(web(t.zotero.received)).toEqual([]);
+	// Only the write carries the key, filled in by the host; reads and the plugin never see it.
+	const writes = t.zotero.received.filter((r) => r.request.startsWith("PATCH"));
+	expect(writes).toEqual([{ request: `PATCH 127.0.0.1:23119/api/users/0/items/${ITEM}`, key: LOCAL_SECRET }]);
+	expect(t.zotero.received.filter((r) => r.key !== null)).toEqual(writes);
+	expect(t.dialogs.filter((d) => d === "capability:network.write")).toHaveLength(1);
+	expect(t.transcript()).not.toContain(LOCAL_SECRET);
 }, 120000);
