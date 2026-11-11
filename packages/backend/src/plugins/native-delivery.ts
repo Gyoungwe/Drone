@@ -182,9 +182,13 @@ export class NativeSessionDelivery {
 		return undefined;
 	}
 
+	isOrdinary(): boolean {
+		return !this.closed && (this.currentRun ?? this.policy()).kind === "ordinary";
+	}
+
 	/** Synchronous fanout uses only the exact SDK object already judged by its live owner. */
 	projectEvent<T extends { type: string }>(event: T): T | null {
-		if (!this.closed && (this.currentRun ?? this.policy()).kind === "ordinary") return event;
+		if (this.isOrdinary()) return event;
 		return projectDeliveryEvent(event, (message, starting) => {
 			const receipt = this.delivered.get(message);
 			return !starting &&
