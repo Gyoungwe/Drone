@@ -24,6 +24,7 @@ vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => environmen
 
 import { startBuiltinCore } from "./fixtures/builtin-core.mjs";
 
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 }); // real pi-core child process per test
 let root, cwd, vault, host, backend, session, sid, faux, events;
 async function note(path, text) {
 	await mkdir(join(vault, path, ".."), { recursive: true });
@@ -238,7 +239,7 @@ describe("live-run edges and provider protocol compatibility", () => {
 		};
 		const running = run(responses);
 		await finalReady.promise;
-		await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+		await vi.waitFor(() => expect(release).toBeTypeOf("function"), { timeout: 10_000 });
 		const view = await backend.getSessionMessages(sid);
 		expect(JSON.stringify(view)).not.toContain("Released conditional observation");
 		expect(await readFile(await backend.exportSession(sid, "jsonl"), "utf8")).not.toContain(
@@ -316,7 +317,7 @@ describe("live-run edges and provider protocol compatibility", () => {
 		const prompt = "A normal desktop research question.";
 		faux.setResponses([reply("IPC_PATH_CURRENT_PROOF")]);
 		await expect(backend.prompt(sid, prompt)).resolves.toEqual({ kind: "agent" });
-		await vi.waitFor(() => expect(events.some((e) => e.type === "agent_settled")).toBe(true));
+		await vi.waitFor(() => expect(events.map((e) => e.type)).toContain("agent_settled"), { timeout: 10_000 });
 		const final = events
 			.filter((event) => event.type === "message_end" && event.message?.role === "assistant")
 			.at(-1)?.message;
@@ -482,7 +483,7 @@ it("manual recovery resumes a failed final with existing proof, no new user prom
 	expect(a).toEqual({ kind: "agent" });
 	expect(b).toEqual(a);
 	await session.waitForIdle();
-	await vi.waitFor(() => expect(session.getActiveToolNames()).toEqual(originalTools));
+	await vi.waitFor(() => expect(session.getActiveToolNames()).toEqual(originalTools), { timeout: 10_000 });
 	const final = session.messages.filter((m) => m.role === "assistant").at(-1);
 	expect(final.content[0].text).toContain("RECOVERED_WITH_EXISTING_EVIDENCE");
 	expect(final.knowledgePublication.status).toBe("released");

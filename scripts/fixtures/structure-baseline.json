@@ -47,7 +47,7 @@
 	"file-lines\tpackages/backend/test/capability-runtime.test.ts": 450,
 	"file-lines\tpackages/backend/test/channel-watch-extension.test.ts": 425,
 	"file-lines\tpackages/backend/test/context-evaporation.test.ts": 647,
-	"file-lines\tpackages/backend/test/knowledge-publication-delivery.test.mjs": 493,
+	"file-lines\tpackages/backend/test/knowledge-publication-delivery.test.mjs": 494,
 	"file-lines\tpackages/backend/test/knowledge-publication-hooks.test.mjs": 525,
 	"file-lines\tpackages/backend/test/knowledge-semantic.test.mjs": 445,
 	"file-lines\tpackages/backend/test/knowledge-service.test.mjs": 660,
