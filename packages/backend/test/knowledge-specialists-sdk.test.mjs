@@ -22,7 +22,7 @@ import {
 } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, expect, it, vi } from "vitest";
 import { makeKnowledgeSpecialistBridge } from "../src/knowledge/specialist-bridge";
-import { taskSdkExtensionPath } from "./fixtures/task-plugin.mjs";
+import { taskSdkExtensionPath } from "./fixtures/extension-paths.mjs";
 
 let root, session;
 afterEach(async () => {

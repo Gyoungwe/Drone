@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
@@ -9,25 +9,22 @@ import {
 	messagesToUIMessages,
 	reduceEvent,
 } from "@drone/shared";
-import {
-	fauxToolCall as call,
-	fauxProvider,
-	fauxText,
-	fauxAssistantMessage as reply,
-} from "@earendil-works/pi-ai";
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { fauxToolCall as call, fauxText, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import {
 	closeKnowledgeServices,
 	getKnowledgeService,
 	subscribeKnowledgeUi,
 } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/knowledge-publication";
 import { readSessionMessagesFromContent } from "../src/session/messages";
-import { installedTaskPluginPath } from "./fixtures/task-plugin.mjs";
 
-let root, cwd, vault, backend, session, sid, faux, events;
+const environment = vi.hoisted(() => ({ userData: "" }));
+vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => environment.userData } }));
+
+import { startBuiltinCore } from "./fixtures/builtin-core.mjs";
+
+let root, cwd, vault, host, backend, session, sid, faux, events;
 async function note(path, text) {
 	await mkdir(join(vault, path, ".."), { recursive: true });
 	await writeFile(join(vault, path), text);
@@ -38,42 +35,34 @@ beforeEach(async () => {
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-publication-delivery-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
-	const agentDir = join(root, "agent");
 	await mkdir(cwd);
-	await mkdir(agentDir);
-	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
-	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
+	host = await startBuiltinCore({
+		root,
+		setUserData: (path) => {
+			environment.userData = path;
+		},
+		backend: {
+			webFetch: false,
+			subagentPreferBuiltin: false,
+			harness: { recall: false },
+			desktopIntegration: {
+				additionalExtensionPaths: [
+					resolve(import.meta.dirname, "../../../.pi/extensions/obsidian-workbench.mjs"),
+				],
+				additionalSkillPaths: [resolve(import.meta.dirname, "../../../.pi/skills/research-vault/SKILL.md")],
+			},
+		},
+	});
+	backend = host.service;
+	faux = host.faux;
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	await configureObsidian({ cwd, vault, project: "project-a" });
 	await note("Wiki/Index.md", "# Topics\n[[Wiki/Autotomy]]\n");
 	await note("Wiki/Autotomy.md", "# Autotomy\nRead evidence.\n[[Library/Papers/source]]\n");
 	await note("Library/Papers/source.md", "# Autotomy evidence\nObservation under limited conditions.\n");
 	await (await getKnowledgeService()).request("reconcile");
-	const runtime = await ModelRuntime.create({
-		authPath: join(agentDir, "auth.json"),
-		modelsPath: null,
-		modelsStorePath: join(agentDir, "cache.json"),
-		allowModelNetwork: false,
-		refreshOnCreate: false,
-	});
-	faux = fauxProvider({ provider: "publication-fixture" });
-	runtime.registerNativeProvider(faux.provider);
-	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
-	backend = new PiBackend({
-		projectTrust: false,
-		webFetch: false,
-		subagentPreferBuiltin: false,
-		desktopIntegration: {
-			appendSystemPrompt: [],
-			additionalExtensionPaths: [
-				installedTaskPluginPath(),
-				resolve(import.meta.dirname, "../../../.pi/extensions/obsidian-workbench.mjs"),
-			],
-			additionalSkillPaths: [resolve(import.meta.dirname, "../../../.pi/skills/research-vault/SKILL.md")],
-		},
-	});
-	backend.modelRuntime = runtime;
 	events = [];
 	backend.onEvent((_id, event) => events.push(structuredClone(event)));
 	const meta = await backend.createSession({ cwd, provider: faux.provider.id, modelId: faux.getModel().id });
@@ -88,11 +77,9 @@ beforeEach(async () => {
 	vi.spyOn(session, "exportToHtml").mockImplementation(() => exportHtml(join(root, "export.html")));
 });
 afterEach(async () => {
-	backend?.dispose();
 	await closeKnowledgeServices();
-	vi.restoreAllMocks();
-	vi.unstubAllEnvs();
-	await rm(root, { recursive: true, force: true });
+	await host?.close();
+	host = undefined;
 });
 const tool = (name, args, text = "") =>
 	reply([...(text ? [fauxText(text)] : []), call(name, args)], { stopReason: "toolUse" });
@@ -241,7 +228,16 @@ describe("live-run edges and provider protocol compatibility", () => {
 					release = async () => resolveProof(await validate(...args));
 				}),
 		);
-		const running = run(steps());
+		// Start the validation wait after the managed tool cycle reaches the final draft.
+		const finalReady = Promise.withResolvers();
+		const responses = steps(),
+			final = responses[3];
+		responses[3] = () => {
+			finalReady.resolve();
+			return final;
+		};
+		const running = run(responses);
+		await finalReady.promise;
 		await vi.waitFor(() => expect(release).toBeTypeOf("function"));
 		const view = await backend.getSessionMessages(sid);
 		expect(JSON.stringify(view)).not.toContain("Released conditional observation");

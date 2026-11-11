@@ -5,7 +5,8 @@ import { defineConfig } from "vitest/config";
 
 const PACKAGE_ROOT = dirname(fileURLToPath(import.meta.url));
 const TEST_FILE = /\.(?:test|spec)\.[^/]+$/;
-const REAL_RUNTIME = /\bnew\s+PiBackend\s*\(|\bcreateAgentSession\s*\(|\bnew\s+AgentSession\s*\(/;
+const REAL_RUNTIME =
+	/\bnew\s+PiBackend\s*\(|\bcreateAgentSession\s*\(|\bnew\s+AgentSession\s*\(|\bstartBuiltinCore\s*\(/;
 
 /**
  * Keep tests that instantiate PiBackend/createAgentSession in the SDK project
