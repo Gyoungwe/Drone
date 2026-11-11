@@ -23,7 +23,8 @@
 			"commit": "b0211126c57f23431ca53760b18fe5b7c953e5ba",
 			"path": "packages/pi-research",
 			"version": "0.3.2",
-			"tarballSha256": "e06efb7a4b08e7f67df3e712e0c9fcb8868507195e96f142d89a807f1bc7f95f"
+			"tarballSha256": "e06efb7a4b08e7f67df3e712e0c9fcb8868507195e96f142d89a807f1bc7f95f",
+			"builtin": true
 		},
 		{
 			"name": "@gyoungwe/pi-core",
