@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { activeExampleTaskMilestones, composeExampleTaskPrompt, exampleTask } from "@drone/shared";
@@ -45,6 +45,7 @@ const PAPERS = [
 		publication: "Journal of Examples",
 	},
 ];
+// Concurrent saves for DOI-less milestones must use distinct allowances from the single task grant.
 const SCENARIOS = [
 	{
 		id: "planning-hypotheses",
@@ -52,11 +53,14 @@ const SCENARIOS = [
 	},
 	{
 		id: "evidence-literature",
+		label: "evidence-literature (zotero=no)",
 		values: { topic: "肠道菌群与帕金森病早期诊断", years: "2019–2025", zotero: "no" },
 	},
-	// zotero=yes needs an in-memory Zotero connector fixture. The managed plugin now reserves distinct
-	// DOI-less allowances for concurrent saves (drone-plugins #26), which the earlier trial lacked;
-	// restoring the scenario is a follow-up so this cutover keeps the one-authorization assertion as is.
+	{
+		id: "evidence-literature",
+		label: "evidence-literature (zotero=yes)",
+		values: { topic: "肠道菌群与帕金森病早期诊断", years: "2019–2025", zotero: "yes" },
+	},
 	{
 		id: "analysis-explore",
 		values: { data: "data.csv", question: "treatment 组与 control 组的 score 是否有差异" },
@@ -80,6 +84,69 @@ const SCENARIOS = [
 	},
 ];
 const EFFECT_TOOLS = new Set(["write", "bash", "research_zotero_save", "task_wait"]);
+
+/** Only the connector upstream is simulated; the host still authorizes every write and reads it back. */
+function zoteroConnector() {
+	const items = [],
+		writes = [];
+	const json = (value, status = 200, total = 0) =>
+		new Response(JSON.stringify(value), {
+			status,
+			headers: { "content-type": "application/json", "total-results": String(total) },
+		});
+	const fetchImpl = async (url, init) => {
+		const { host, pathname, searchParams } = new URL(url);
+		if (host !== "127.0.0.1:23119") throw new Error(`Unexpected upstream ${host}`);
+		if (init.method === "POST" && pathname === "/connector/ping") return json({});
+		if (init.method === "POST" && pathname === "/connector/getSelectedCollection")
+			return json({ libraryID: 1, libraryName: "Test Library", libraryEditable: true });
+		if (init.method === "POST" && pathname === "/connector/saveItems") {
+			const saved = JSON.parse(init.body.toString()).items;
+			writes.push(saved);
+			for (const item of saved) {
+				const key = `SAVE${String(items.length + 1).padStart(4, "0")}`;
+				items.push({ key, data: { ...item, key, collections: [] } });
+			}
+			return json({}, 201);
+		}
+		if (init.method === "GET" && pathname === "/api/users/0/items") {
+			const matches = items.filter((item) => item.data.DOI === searchParams.get("q"));
+			return json(matches, 200, matches.length);
+		}
+		if (init.method === "GET" && /^\/api\/users\/0\/items\/[A-Z0-9]{8}\/children$/.test(pathname))
+			return json([]);
+		throw new Error(`Unexpected Zotero request ${init.method} ${pathname}`);
+	};
+	return { items, writes, fetchImpl };
+}
+
+async function installResearch(host) {
+	await cp(
+		join(import.meta.dirname, "../../desktop/plugin-packages/node_modules/@gyoungwe/pi-research"),
+		join(host.builtinRoot, "@gyoungwe/pi-research"),
+		{ recursive: true },
+	);
+	await host.manager.scanAll();
+}
+
+function assertZoteroSaves(messages, zotero, allowances) {
+	const saves = messages.filter((m) => m.role === "toolResult" && m.toolName === "research_zotero_save");
+	expect(saves).toHaveLength(PAPERS.length);
+	expect(zotero.writes).toHaveLength(PAPERS.length);
+	for (const paper of PAPERS) {
+		expect(zotero.writes.filter((items) => items.length === 1 && items[0].DOI === paper.doi)).toHaveLength(1);
+		expect(saves.find((m) => m.details.doi === paper.doi)?.details).toMatchObject({
+			status: "saved",
+			zoteroKey: zotero.items.find((item) => item.data.DOI === paper.doi).key,
+			consent: { via: "task-grant", milestoneId: expect.any(String) },
+		});
+	}
+	const allowanceIds = allowances.mock.calls.map(([, , id]) => id);
+	expect(allowanceIds).toHaveLength(PAPERS.length);
+	expect(new Set(allowanceIds).size).toBe(PAPERS.length);
+	expect(allowances.mock.results.map(({ value }) => value)).toEqual(PAPERS.map(() => true));
+	expect(saves.map((m) => m.details.consent.milestoneId).sort()).toEqual(allowanceIds.sort());
+}
 
 /** 示例里程碑 → task_plan 契约：file 用建议文件名；zotero_item 每篇一条、DOI 留空；human_review 原样。 */
 function contractFor(task, values) {
@@ -241,9 +308,11 @@ it.each(SCENARIOS.map((s) => ({ ...s, label: s.label || s.id })))(
 		const task = exampleTask(scenario.id);
 		const metrics = { asks: [], nudges: 0 };
 		const contract = contractFor(task, scenario.values);
+		const zotero = zoteroConnector();
 		const network = vi.spyOn(globalThis, "fetch").mockImplementation(() => {
 			throw new Error("Network forbidden in fixture");
 		});
+		if (scenario.values.zotero === "yes") network.mockImplementation(zotero.fetchImpl);
 		live.host = await startBuiltinCore({
 			root: await realpath(await mkdtemp(join(tmpdir(), "drone-one-auth-"))),
 			setUserData: (path) => {
@@ -268,6 +337,8 @@ it.each(SCENARIOS.map((s) => ({ ...s, label: s.label || s.id })))(
 				desktopIntegration: { additionalExtensionPaths: [taskSdkExtensionPath("obsidian-workbench.mjs")] },
 			},
 		});
+		if (scenario.values.zotero === "yes") await installResearch(live.host);
+		const allowances = vi.spyOn(live.host.service.getTaskGrants(), "consumeAllowance");
 		const s = await live.host.open("project");
 		for (const [name, content] of Object.entries(scenario.fixtures || {})) {
 			await mkdir(dirname(join(s.cwd, name)), { recursive: true });
@@ -293,7 +364,7 @@ it.each(SCENARIOS.map((s) => ({ ...s, label: s.label || s.id })))(
 				milestones: current?.milestones.map((m) => `${m.id}:${m.state}`),
 			})}`,
 		);
-		expect(network).not.toHaveBeenCalled();
+		if (scenario.values.zotero !== "yes") expect(network).not.toHaveBeenCalled();
 		for (const m of contract.filter((m) => m.path))
 			expect(await readFile(join(s.cwd, m.path), "utf8")).toContain(m.title);
 		// 一次授权：唯一的弹窗是宿主的任务授权；没有权限确认、没有插件提问、不用再说「继续」。
@@ -306,6 +377,7 @@ it.each(SCENARIOS.map((s) => ({ ...s, label: s.label || s.id })))(
 		expect(s.errors).toEqual([]);
 		const failed = s.session.messages.filter((m) => m.role === "toolResult" && m.isError);
 		expect(failed.map((m) => m.toolName)).toEqual([]);
+		if (scenario.values.zotero === "yes") assertZoteroSaves(s.session.messages, zotero, allowances);
 	},
 	120000,
 );
