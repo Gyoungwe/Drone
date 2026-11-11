@@ -488,7 +488,7 @@
 	"suspicious/noEmptyBlockStatements\tpackages/backend/test/mcp-host-wiring-sdk.test.ts": 3,
 	"suspicious/noEmptyBlockStatements\tpackages/backend/test/model-wait-event.test.ts": 3,
 	"suspicious/noEmptyBlockStatements\tpackages/backend/test/native-delivery-selection-sdk.test.mjs": 1,
-	"suspicious/noEmptyBlockStatements\tpackages/backend/test/native-runtime-owner-sdk.test.mjs": 2,
+	"suspicious/noEmptyBlockStatements\tpackages/backend/test/native-runtime-owner-sdk.test.mjs": 1,
 	"suspicious/noEmptyBlockStatements\tpackages/backend/test/native-tool-protocol-sdk.test.mjs": 3,
 	"suspicious/noEmptyBlockStatements\tpackages/backend/test/packages-lifecycle.test.ts": 1,
 	"suspicious/noEmptyBlockStatements\tpackages/backend/test/packed-discovery-execution-sdk.test.ts": 4,

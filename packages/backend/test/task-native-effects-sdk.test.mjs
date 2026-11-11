@@ -1,32 +1,60 @@
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
-import {
-	createAgentSession,
-	DefaultResourceLoader,
-	ModelRuntime,
-	SessionManager,
-	SettingsManager,
-} from "@earendil-works/pi-coding-agent";
+import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai";
 import { expect, it, vi } from "vitest";
 import { withRuntime } from "../../extensions/src/internal/runtime/runtime-bridge";
 import { defineTool } from "../../extensions/src/internal/runtime/tool-manifest";
 import { PluginRuntimeRegistry } from "../src/plugins/runtime";
 import { createDroneRuntime as createStandaloneRuntime } from "../src/runtime";
-import { SessionEngine } from "../src/session-engine/engine";
-import { registerTaskRuntime } from "./fixtures/task-plugin.mjs";
+
+const environment = vi.hoisted(() => ({ userData: "" }));
+vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => environment.userData } }));
+
+import { startBuiltinCore } from "./fixtures/builtin-core.mjs";
 
 it("uses each SDK session's native effects for task guards without borrowing stale read-only manifests", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-task-native-")));
-	const sessions = [],
-		runtimes = [];
+	const sessions = [];
+	const runtime = createStandaloneRuntime();
+	const current = {};
 	const registry = new PluginRuntimeRegistry({
 		authorizeActivation: async () => true,
 		authorizeInvocation: async () => true,
 	});
 	const calls = { read: 0, write: 0, unknown: 0 };
+	let host;
 	try {
+		host = await startBuiltinCore({
+			root,
+			setUserData: (path) => {
+				environment.userData = path;
+			},
+			backend: {
+				runtime,
+				lazyCapabilities: false,
+				harnessContext: false,
+				permissionGates: false,
+				webFetch: false,
+				subagentPreferBuiltin: false,
+			},
+			decorateNativeBootstrap: (bootstrap) => {
+				const { effect, native } = current;
+				return {
+					...bootstrap,
+					factoryForPath: async (path) => {
+						const builtin = await bootstrap.factoryForPath(path);
+						return async (pi) => {
+							await builtin(pi);
+							// A prior v1 registration must never override a current native write/unknown declaration.
+							if (effect !== "read")
+								withRuntime(runtime, () => defineTool({ name: "native_probe", drone: { readOnly: true } }));
+							await native.extension(pi);
+						};
+					},
+				};
+			},
+		});
 		for (const effect of ["read", "write", "unknown"]) {
 			registry.register(effect, async () => ({
 				operations: {},
@@ -52,51 +80,11 @@ it("uses each SDK session's native effects for task guards without borrowing sta
 			}));
 			const caller = { identity: {}, signal: new AbortController().signal, scope: { kind: "application" } };
 			await registry.activate(effect, () => caller);
-			const native = await registry.attachNative(effect, () => caller);
-			const runtime = createStandaloneRuntime();
-			runtimes.push(runtime);
-			const extension = async (pi) => {
-				pi.events.on("drone:runtime/request/v1", () =>
-					pi.events.emit("drone:runtime/v1", { version: 1, runtime }),
-				);
-				await registerTaskRuntime(pi);
-				// A prior v1 registration must never override a current native write/unknown declaration.
-				if (effect !== "read")
-					withRuntime(runtime, () => defineTool({ name: "native_probe", drone: { readOnly: true } }));
-				await native.extension(pi);
-			};
-			const settingsManager = SettingsManager.inMemory({});
-			const resourceLoader = new DefaultResourceLoader({
-				cwd: root,
-				agentDir: root,
-				settingsManager,
-				noExtensions: true,
-				noSkills: true,
-				noPromptTemplates: true,
-				extensionFactories: [extension],
-			});
-			await resourceLoader.reload({ resolveProjectTrust: async () => true });
-			expect(resourceLoader.getExtensions().errors).toEqual([]);
-			const modelRuntime = await ModelRuntime.create({
-				authPath: join(root, `auth-${effect}.json`),
-				modelsPath: null,
-				allowModelNetwork: false,
-				refreshOnCreate: false,
-			});
-			const faux = fauxProvider({ provider: `task-native-${effect}`, tokensPerSecond: 0 });
-			modelRuntime.registerNativeProvider(faux.provider);
-			vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
-			const { session } = await createAgentSession({
-				cwd: root,
-				agentDir: root,
-				settingsManager,
-				resourceLoader,
-				modelRuntime,
-				sessionManager: SessionManager.inMemory(root),
-				model: faux.getModel(),
-			});
-			sessions.push({ session, faux, effect });
-			await session.bindExtensions({});
+			current.effect = effect;
+			current.native = await registry.attachNative(effect, () => caller);
+			const { session } = await host.open(effect);
+			expect(session.resourceLoader.getExtensions().errors).toEqual([]);
+			sessions.push({ session, faux: host.faux, effect });
 		}
 		// Keep all sessions alive simultaneously; same name has three different effective declarations.
 		for (const { session, faux, effect } of sessions) {
@@ -122,9 +110,9 @@ it("uses each SDK session's native effects for task guards without borrowing sta
 		await session.waitForIdle();
 		expect(calls.read).toBe(2);
 	} finally {
-		for (const { session } of sessions) await new SessionEngine().dispose(session);
+		await host?.close();
 		for (const effect of ["read", "write", "unknown"]) await registry.deactivate(effect);
-		for (const runtime of runtimes) await runtime.dispose();
+		await runtime.dispose();
 		vi.restoreAllMocks();
 		await rm(root, { recursive: true, force: true });
 	}

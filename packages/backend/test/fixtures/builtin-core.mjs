@@ -135,7 +135,8 @@ function backendFor(manager, backend, begin) {
  * Starts the backend with the built-in pi-core under `root`. `respond` is the offline model,
  * `permission` answers host permission requests ("deny" or "allow"; each is recorded), `answer`
  * answers plugin questions, `approve` answers recorded host dialogs (default: approve), and
- * `backend` adds createBackend options.
+ * `backend` adds createBackend options. `decorateNativeBootstrap` composes test extensions with
+ * the built-in's managed attachment while preserving its delivery and session binding.
  */
 export async function startBuiltinCore({
 	root,
@@ -145,6 +146,7 @@ export async function startBuiltinCore({
 	answer = () => undefined,
 	approve = () => true,
 	backend = {},
+	decorateNativeBootstrap = (bootstrap) => bootstrap,
 }) {
 	const { builtinRoot, home, agentDir } = await prepareRoot(root, setUserData);
 	const manager = new UiPluginManager({
@@ -157,7 +159,7 @@ export async function startBuiltinCore({
 		permissions = [],
 		live = {};
 	const services = backendFor(manager, backend, (facts) =>
-		live.bridge.beginNative(owner, (path) => manager.nativeRuntimeName(path), facts),
+		decorateNativeBootstrap(live.bridge.beginNative(owner, (path) => manager.nativeRuntimeName(path), facts)),
 	);
 	const service = services.sessions;
 	const { modelRuntime, faux } = await offlineModels(agentDir, respond);
