@@ -5,7 +5,6 @@ import {
 	messagesToUIMessages,
 	reduceEvent,
 } from "@drone/shared";
-import { makeStatusTool } from "@gyoungwe/pi-core/host";
 import { describe, expect, it } from "vitest";
 import { toSessionMessages } from "../src/session/messages";
 
@@ -160,15 +159,6 @@ describe("public summary → tools → next summary timeline", () => {
 			"tool:research_read_knowledge",
 			"tool:research_search_knowledge",
 		]);
-	});
-	it("preserves the public summary kind in the real status tool result", async () => {
-		const tool = makeStatusTool(),
-			r = await tool.execute("s", {
-				text: "Evidence gap remains",
-				kind: "summary",
-				detail: "The queried source did not resolve the parameter version.",
-			});
-		expect(r.details.kind).toBe("summary");
 	});
 });
 

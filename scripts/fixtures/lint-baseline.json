@@ -175,7 +175,6 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/simulated-user-fixtures.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/skill-acceptance-sdk.test.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/source-archive-open-access.test.mjs": 3,
-	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/stage-timeline.test.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/subagent-panel.test.ts": 2,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/task-grant-sdk.test.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/test/task-native-effects-sdk.test.mjs": 1,

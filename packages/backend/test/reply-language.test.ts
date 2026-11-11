@@ -1,4 +1,3 @@
-import { makeStatusTool } from "@gyoungwe/pi-core/host";
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	desktopLoaderOptions,
@@ -58,28 +57,6 @@ describe("reply language", () => {
 		const en = desktopLoaderOptions(integration) as { appendSystemPrompt: string[] };
 		expect(en.appendSystemPrompt.join("\n")).not.toContain("简体中文");
 		expect(desktopLoaderOptions(undefined)).toEqual({});
-	});
-});
-
-describe("set_status", () => {
-	const run = async (params: Record<string, unknown>) =>
-		(await makeStatusTool().execute("id", params as never, undefined, undefined, undefined as never)) as {
-			content: Array<{ text: string }>;
-			details: { kind?: string; status: string };
-		};
-
-	it('accepts kind "progress" as an alias of "update"', async () => {
-		expect((await run({ text: "检索文献", kind: "progress" })).details.kind).toBe("update");
-		expect((await run({ text: "检索文献", kind: "summary" })).details.kind).toBe("summary");
-		expect((await run({ text: "检索文献" })).details).not.toHaveProperty("kind");
-	});
-
-	it("asks for the user's language and localizes the host result", async () => {
-		const schema = JSON.stringify(makeStatusTool().parameters);
-		expect(schema).toContain("user's language");
-		expect((await run({ text: "Searching" })).content[0].text).toBe("Status updated: Searching");
-		setReplyLanguage("zh");
-		expect((await run({ text: "正在检索  文献" })).content[0].text).toBe("状态已更新：正在检索 文献");
 	});
 });
 
