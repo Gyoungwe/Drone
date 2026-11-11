@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { Type } from "typebox";
 import { JsonStore } from "../json-store";
 import { getAgentDir } from "../session-engine/sdk";
+import { isHostKeptCredential, readHostKeptCredential } from "./host-kept-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 
@@ -37,6 +38,10 @@ function credentialKey(pluginId: string, { slot, hosts, header, fields }: Plugin
 
 export class PluginCredentialStore {
 	private readonly store: JsonStore<Record<string, SavedCredential>>;
+
+	static isHostKept(pluginId: string, slot: PluginCredentialSlot): boolean {
+		return isHostKeptCredential(pluginId, slot);
+	}
 
 	constructor(path = join(getAgentDir(), "plugin-credentials.json")) {
 		this.store = new JsonStore({
@@ -89,7 +94,9 @@ export async function credentialHeader(
 	if (!slot) throw new Error(`Credential slot is not declared in this package's manifest: ${name}`);
 	if (!slot.hosts.some((host) => host.toLowerCase() === url.host))
 		throw new Error(`Credential ${name} may not be sent to ${url.host}`);
-	const saved = await store.get(source.pluginId, slot);
+	const saved = isHostKeptCredential(source.pluginId, slot)
+		? readHostKeptCredential()
+		: await store.get(source.pluginId, slot);
 	if (!saved) throw new Error(`Credential ${name} is not configured; add it in Drone settings`);
 	return { [slot.header]: saved.secret };
 }
@@ -120,7 +127,9 @@ export function credentialCapabilityHandlers(
 			execute: async () => {
 				const slots: Record<string, { configured: boolean; fields: Record<string, string> }> = {};
 				for (const slot of source.credentials ?? []) {
-					const saved = await store.get(source.pluginId, slot);
+					const saved = isHostKeptCredential(source.pluginId, slot)
+						? readHostKeptCredential()
+						: await store.get(source.pluginId, slot);
 					slots[slot.slot] = { configured: Boolean(saved), fields: { ...saved?.fields } };
 				}
 				return { slots };
