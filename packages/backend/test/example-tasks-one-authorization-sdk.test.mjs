@@ -54,9 +54,9 @@ const SCENARIOS = [
 		id: "evidence-literature",
 		values: { topic: "肠道菌群与帕金森病早期诊断", years: "2019–2025", zotero: "no" },
 	},
-	// pi-research 0.3.2 still asks for network.write after task authorization when two DOI-less saves
-	// run concurrently. Restore zotero=yes once the managed plugin reserves distinct allowances;
-	// the T15 trial completed but required a second dialog, so the one-authorization assertion stays.
+	// zotero=yes needs an in-memory Zotero connector fixture. The managed plugin now reserves distinct
+	// DOI-less allowances for concurrent saves (drone-plugins #26), which the earlier trial lacked;
+	// restoring the scenario is a follow-up so this cutover keeps the one-authorization assertion as is.
 	{
 		id: "analysis-explore",
 		values: { data: "data.csv", question: "treatment 组与 control 组的 score 是否有差异" },

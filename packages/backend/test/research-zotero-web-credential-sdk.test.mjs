@@ -257,13 +257,13 @@ it("without a saved key the update is blocked and nothing reaches the Web API", 
 	expect(t.dialogs).not.toContain("capability:network.write");
 }, 120000);
 
-it("a declined managed update reports denial and writes nothing", async () => {
+it("a declined managed update returns a cancelled receipt and writes nothing", async () => {
 	const t = await setup(false);
 	await t.save();
 	await t.run();
 	expect(t.errors).toEqual([]);
-	expect(t.result()?.isError).toBe(true);
-	expect(t.result()?.content).toEqual([{ type: "text", text: "Plugin capability denied: network.write" }]);
+	expect(t.result()?.isError).toBeFalsy();
+	expect(t.result()?.details).toMatchObject({ status: "cancelled", reason: "user-declined" });
 	expect(t.zotero.received.filter((r) => r.request.startsWith("PATCH"))).toEqual([]);
 	expect(t.dialogs.filter((d) => d === "capability:network.write")).toHaveLength(1);
 }, 120000);
