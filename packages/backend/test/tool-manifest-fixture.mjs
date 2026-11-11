@@ -1,10 +1,39 @@
+import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import researchLoop from "@drone/extensions/research-loop";
 import sourceArchive from "@drone/extensions/source-archive";
 import zoteroLiterature from "@drone/extensions/zotero-literature";
-import { bindToolManifestEvents } from "../src/tools/manifest";
+import { bindToolManifestEvents, TOOL_MANIFEST_EVENT } from "../src/tools/manifest";
+
+const researchRoot = resolve(
+	import.meta.dirname,
+	"../../desktop/plugin-packages/node_modules/@gyoungwe/pi-research",
+);
+const researchManifest = JSON.parse(readFileSync(join(researchRoot, "plugin.manifest.json"), "utf8"));
+export const createManagedResearchRuntime = (
+	await import(pathToFileURL(join(researchRoot, researchManifest.entrypoints.desktopRuntime)).href)
+).default;
+const researchRuntime = await createManagedResearchRuntime({
+	capabilities: {
+		call: async () => {
+			throw new Error("Metadata registration must not call the host");
+		},
+	},
+});
+const researchSession = await researchRuntime.createNativeSession();
+
+/** Project the shipped managed declarations through the same host collector as SDK tools. */
+export function registerManagedResearchToolMeta(pi) {
+	researchSession.extension({
+		registerTool: (tool) => {
+			pi.registerTool(tool);
+			pi.events.emit(TOOL_MANIFEST_EVENT, { version: 1, name: tool.name, meta: tool.drone });
+		},
+	});
+}
 
 // Re-export an existing extension entry so event-bridge tests exercise the
 // real registration path without adding another package-relative .pi import.
@@ -60,6 +89,7 @@ export function registerResearchToolMeta() {
 	sourceArchive(stubPi(tools));
 	researchLoop(stubPi(tools));
 	zoteroLiterature(stubPi(tools));
+	registerManagedResearchToolMeta(stubPi(tools));
 	registered = tools;
 	return tools;
 }

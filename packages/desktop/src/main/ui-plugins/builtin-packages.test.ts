@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const environment = vi.hoisted(() => ({ userData: "" }));
@@ -84,6 +84,28 @@ it("keeps the user's choice when a new Drone ships a different built-in generati
 	await upgraded.scanAll();
 	expect(upgraded.info("core-ui")).toMatchObject({ enabled: true, trusted: true });
 	expect(upgraded.builtinExtensionPaths()).toEqual([join(core, "native.mjs")]);
+});
+
+it("lets the user disable and re-enable the shipped research package", async () => {
+	const manager = new UiPluginManager({
+		installedPackageRoot: roots().user,
+		builtinPackageRoot: resolve(import.meta.dirname, "../../../plugin-packages/node_modules"),
+	});
+	await manager.scanAll();
+	const research = manager.runtimeSources().find(({ source }) => source.pluginId === "@gyoungwe/pi-research");
+	if (!research) throw new Error("The shipped research package was not discovered");
+	expect(manager.info("drone-research-ui")).toMatchObject({ enabled: true, trusted: true, builtin: true });
+	const entry = research.source.nativeDeclaredPath;
+	expect(manager.builtinExtensionPaths()).toContain(entry);
+
+	await manager.updateConfig({ plugins: { "drone-research-ui": { enabled: false, trusted: true } } });
+	expect(manager.info("drone-research-ui")?.enabled).toBe(false);
+	expect(manager.builtinExtensionPaths()).not.toContain(entry);
+	expect(manager.isNativeSourceAvailable(research.name)).toBe(false);
+
+	await manager.updateConfig({ plugins: { "drone-research-ui": { enabled: true, trusted: true } } });
+	expect(manager.builtinExtensionPaths()).toContain(entry);
+	expect(manager.isNativeSourceAvailable(research.name)).toBe(true);
 });
 
 it("a user-installed copy of a built-in never shadows it, and ordinary packages are not built-in", async () => {

@@ -96,9 +96,9 @@
 			"source": "zotero-literature.ts",
 			"output": "zotero-literature.mjs",
 			"status": "generated",
-			"sourceSha256": "c6f0424a5208257f50c3d8d6fba5c8ab52ad34acdab11347fcf7eaf58e4b32f9",
-			"inputsSha256": "12b78273ee9bfac50e9b169f21c8dfda84ee98cdfb97a3670fdfd0067c3eb11c",
-			"outputSha256": "4912db491e8dbb37dfaa774bb542af0bd193d0f133889ee9b89bf20fec6d5bfa"
+			"sourceSha256": "7199c0643c866198ed1f600a1bdfb2bb3f736866bed2d5e34467af4cb0ab5b8e",
+			"inputsSha256": "fbd81e0eb15d358a9c11a90fe33cadd97228ad7feab92750182e1419af217293",
+			"outputSha256": "76d388e6308bee0cee95a867d1901222fb02106881ef84258eabe265bcc5480f"
 		}
 	},
 	"legacyOutputs": ["knowledge-worker.mjs"]

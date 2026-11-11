@@ -5,8 +5,7 @@
 // carries the saved key as the declared header, and the key never reaches the plugin or the transcript.
 // The same session also writes through Zotero 10's local API with the key Settings authorized, which the
 // host keeps and attaches to pi-research's `zotero-local` slot (writes only).
-import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
@@ -40,20 +39,13 @@ const LOCAL_SECRET = "FakeLocalKey123";
 const SERVER_ID = "TESTSERVER1";
 
 async function installResearch() {
-	const [packed] = JSON.parse(
-		execFileSync("npm", ["pack", "--ignore-scripts", "--json", "--pack-destination", live.root], {
-			cwd: resolve(import.meta.dirname, "../../../vendor/plugins/pi-research"),
-			encoding: "utf8",
-		}),
+	const nodeModules = join(live.root, "builtin", "node_modules");
+	await cp(
+		resolve(import.meta.dirname, "../../desktop/plugin-packages/node_modules/@gyoungwe/pi-research"),
+		join(nodeModules, "@gyoungwe", "pi-research"),
+		{ recursive: true },
 	);
-	const prefix = join(live.root, "installed");
-	await mkdir(prefix);
-	await writeFile(join(prefix, "package.json"), JSON.stringify({ private: true, type: "module" }));
-	const flags = ["--ignore-scripts", "--no-audit", "--no-fund", "--package-lock=false"];
-	execFileSync("npm", ["install", "--prefix", prefix, ...flags, join(live.root, packed.filename)], {
-		encoding: "utf8",
-	});
-	return (await discoverInstalledPackages(join(prefix, "node_modules"))).map((item) => {
+	return (await discoverInstalledPackages(nodeModules)).map((item) => {
 		if ("error" in item || !item.runtime) throw new Error(JSON.stringify(item));
 		return { name: `package:${item.packageRoot}`, source: item.runtime, state: "enabled" };
 	});
@@ -155,14 +147,14 @@ function startBackend(catalog) {
 	return live.backend.sessions;
 }
 
-function startBridge(catalog, service, dialogs) {
+function startBridge(catalog, service, dialogs, allowWrite) {
 	live.bridge = new PluginRuntimeBridge({
 		source: (name) => catalog.find((item) => item.name === name)?.source,
 		sources: () => catalog,
 		enabled: () => true,
 		approve: async (_owner, _source, operation) => {
 			dialogs.push(operation);
-			return true;
+			return operation !== "capability:network.write" || allowWrite;
 		},
 		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
 		getSessionContext: (id) => service?.getPluginCallerContext(id),
@@ -178,7 +170,7 @@ function startBridge(catalog, service, dialogs) {
 	});
 }
 
-async function setup() {
+async function setup(allowWrite = true) {
 	live.root = await realpath(await mkdtemp(join(tmpdir(), "drone-research-credential-")));
 	const catalog = await installResearch();
 	const research = catalog.find((item) => item.source.pluginId === "@gyoungwe/pi-research");
@@ -190,7 +182,7 @@ async function setup() {
 	const service = startBackend(catalog);
 	service.modelRuntime = modelRuntime;
 	const dialogs = [];
-	startBridge(catalog, service, dialogs);
+	startBridge(catalog, service, dialogs, allowWrite);
 	const meta = await service.createSession({ cwd, provider: faux.provider.id, modelId: faux.getModel().id });
 	const entry = service.registry.get(meta.sessionId);
 	const errors = [];
@@ -263,6 +255,17 @@ it("without a saved key the update is blocked and nothing reaches the Web API", 
 	expect(web(t.zotero.received)).toEqual([]);
 	expect(t.zotero.received.filter((r) => r.request.startsWith("PATCH"))).toEqual([]);
 	expect(t.dialogs).not.toContain("capability:network.write");
+}, 120000);
+
+it("a declined managed update returns a cancelled receipt and writes nothing", async () => {
+	const t = await setup(false);
+	await t.save();
+	await t.run();
+	expect(t.errors).toEqual([]);
+	expect(t.result()?.isError).toBeFalsy();
+	expect(t.result()?.details).toMatchObject({ status: "cancelled", reason: "user-declined" });
+	expect(t.zotero.received.filter((r) => r.request.startsWith("PATCH"))).toEqual([]);
+	expect(t.dialogs.filter((d) => d === "capability:network.write")).toHaveLength(1);
 }, 120000);
 
 it("the research package files an item through Zotero 10's local API with the key Settings authorized", async () => {

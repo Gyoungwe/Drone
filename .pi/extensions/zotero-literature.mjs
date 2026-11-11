@@ -1,13 +1,4 @@
 // @ts-nocheck
-// packages/extensions/src/zotero-literature.ts
-import { randomUUID as randomUUID19 } from "node:crypto";
-import { readFile as readFile14, realpath as realpath11, rename as rename12, writeFile as writeFile14 } from "node:fs/promises";
-import { isAbsolute as isAbsolute11, join as join19, relative as relative13, resolve as resolve14, sep as sep12 } from "node:path";
-
-// packages/extensions/src/workspace-config.ts
-import { mkdir as mkdir12, readFile as readFile12, realpath as realpath9, rename as rename10, writeFile as writeFile12 } from "node:fs/promises";
-import { dirname, isAbsolute as isAbsolute7, join as join15, relative as relative11, resolve as resolve8, sep as sep10 } from "node:path";
-
 // node_modules/@gyoungwe/pi-knowledge/dist/host.mjs
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
@@ -485,8 +476,8 @@ function createKnowledgeRuntimeHost() {
     const lockKey = JSON.stringify([namespace, key]);
     const previous = locks.get(lockKey) ?? Promise.resolve();
     let release;
-    const current = new Promise((resolve132) => {
-      release = resolve132;
+    const current = new Promise((resolve13) => {
+      release = resolve13;
     });
     const tail = previous.then(() => current);
     locks.set(lockKey, tail);
@@ -512,13 +503,13 @@ function createKnowledgeRuntimeHost() {
     if (host.deliveryContract) deliveryLookup = host.deliveryContract;
     if (host.runtimeSlot) hostSlotProvider = host.runtimeSlot;
   }
-  const runRuntimeExclusive22 = (namespace, key, work) => runtimeExclusive(namespace, key, work);
+  const runRuntimeExclusive2 = (namespace, key, work) => runtimeExclusive(namespace, key, work);
   const emitProcessEvent22 = (event, payload) => processEvent(event, payload);
   const slots = /* @__PURE__ */ new Map();
   function runtimeSlot22(domain, key, factory) {
     let hostProxy;
     let provider;
-    const resolve132 = () => {
+    const resolve13 = () => {
       if (hostSlotProvider) {
         if (provider !== hostSlotProvider) {
           provider = hostSlotProvider;
@@ -532,14 +523,14 @@ function createKnowledgeRuntimeHost() {
     };
     return new Proxy({}, {
       get: (_target, property) => {
-        const state = resolve132();
+        const state = resolve13();
         const value = Reflect.get(state, property);
         return typeof value === "function" ? value.bind(state) : value;
       },
-      set: (_target, property, value) => Reflect.set(resolve132(), property, value),
-      ownKeys: () => Reflect.ownKeys(resolve132()),
+      set: (_target, property, value) => Reflect.set(resolve13(), property, value),
+      ownKeys: () => Reflect.ownKeys(resolve13()),
       getOwnPropertyDescriptor: (_target, property) => {
-        const descriptor = Reflect.getOwnPropertyDescriptor(resolve132(), property);
+        const descriptor = Reflect.getOwnPropertyDescriptor(resolve13(), property);
         return descriptor ? { ...descriptor, configurable: true } : void 0;
       }
     });
@@ -601,7 +592,7 @@ function createKnowledgeRuntimeHost() {
     if (host.consumeKnowledgeReviewPreview) reviewPreviewConsumer = host.consumeKnowledgeReviewPreview;
     if (host.specialistSettings) specialistSettingsReader = host.specialistSettings;
   }
-  const loadWorkspaceConfig22 = (cwd) => workspaceConfigLoader(cwd);
+  const loadWorkspaceConfig2 = (cwd) => workspaceConfigLoader(cwd);
   const publishExplainer2 = (input) => explainerPublisher(input);
   const consumeKnowledgeReviewPreview3 = (cwd, token) => reviewPreviewConsumer(cwd, token);
   const specialistSettings3 = () => specialistSettingsReader();
@@ -626,7 +617,7 @@ function createKnowledgeRuntimeHost() {
   const researchSetupOptions2 = () => setupOptionsReader();
   return {
     configureKnowledgeRuntime: configureKnowledgeRuntime2,
-    runRuntimeExclusive: runRuntimeExclusive22,
+    runRuntimeExclusive: runRuntimeExclusive2,
     emitProcessEvent: emitProcessEvent22,
     runtimeSlot: runtimeSlot22,
     toolMeta: toolMeta2,
@@ -638,7 +629,7 @@ function createKnowledgeRuntimeHost() {
     configureKnowledgeEvidence: configureKnowledgeEvidence2,
     deliveryContract: deliveryContract22,
     configureKnowledgeHost: configureKnowledgeHost2,
-    loadWorkspaceConfig: loadWorkspaceConfig22,
+    loadWorkspaceConfig: loadWorkspaceConfig2,
     publishExplainer: publishExplainer2,
     consumeKnowledgeReviewPreview: consumeKnowledgeReviewPreview3,
     specialistSettings: specialistSettings3,
@@ -858,18 +849,6 @@ function statusTone(status) {
   if (MUTED.has(value)) return "muted";
   return "warn";
 }
-function cardField(label2, value, extra = {}) {
-  const text43 = clip(String(value ?? ""), 200) || "unknown";
-  return {
-    label: clip(label2, 60) || "",
-    ...extra.i18n ? { i18n: extra.i18n } : {},
-    value: text43,
-    ...extra.status === false ? {} : { status: true },
-    ...extra.code !== void 0 ? { code: clip(extra.code, 4096) } : {},
-    ...extra.note !== void 0 ? { note: clip(extra.note, 200) } : {},
-    tone: extra.tone || (extra.status === false ? "muted" : statusTone(text43))
-  };
-}
 function cardLink(kind, target, label2, i18n) {
   if (!["external", "resource", "note", "path"].includes(kind) || typeof target !== "string" || !target)
     return null;
@@ -908,50 +887,6 @@ function failureCard(event) {
     title: event.toolName,
     status: "failed",
     detail: text43,
-    source: event.toolName
-  });
-}
-function literatureCard(event, { write = false } = {}) {
-  const details = record(event.result?.details);
-  const receipt2 = write ? {} : record(details.receipt);
-  const receiptData = write || !details.receipt || typeof details.receipt !== "object" ? details : receipt2;
-  const doi = clip(write ? details.doi : receiptData.doi, 300);
-  if (!doi) return null;
-  const zoteroKey = clip(write ? details.zoteroKey : receiptData.zoteroKey, 8);
-  const zoteroStatus = write ? details.status === "saved" || details.status === "reused" ? "verified" : clip(details.status, 32) || "unavailable" : clip(record(receiptData.zotero).status, 32) || "unavailable";
-  const obsidianStatus = write ? "unknown" : clip(record(receiptData.obsidian).status, 32) || "unavailable";
-  const notePath = write ? null : clip(record(receiptData.obsidian).path, 4096);
-  const fulltext = clip(write ? details.fulltextStatus : record(receiptData.zotero).fulltextStatus, 64);
-  const channel = write ? clip(details.channel, 16) : null;
-  const library = write ? clip(record(details.library).name, 120) : null;
-  const title = clip(write ? details.title : record(receiptData.zotero).title, 200);
-  const status = write ? clip(details.status, 32) || "unknown" : clip(receiptData.status, 32) || zoteroStatus;
-  return flowCard({
-    key: `doi:${doi}`,
-    kind: "literature",
-    title: title || doi,
-    provisionalTitle: !title,
-    subtitle: `DOI ${doi}`,
-    status,
-    path: notePath,
-    fields: [
-      cardField("Zotero", zoteroStatus, {
-        code: zoteroKey && ZOTERO_KEY.test(zoteroKey) ? zoteroKey : null,
-        note: [channel ? CHANNEL_LABEL[channel] || channel : null, library].filter(Boolean).join(" \xB7 ") || null
-      }),
-      cardField("Vault \u7B14\u8BB0", obsidianStatus, { i18n: "flow.field.vaultNote", code: notePath }),
-      cardField("\u5168\u6587", fulltext || "unknown", { i18n: "flow.field.fulltext" })
-    ],
-    links: [
-      zoteroKey && ZOTERO_KEY.test(zoteroKey) ? cardLink(
-        "resource",
-        `zotero://select/library/items/${zoteroKey}`,
-        "\u5728 Zotero \u4E2D\u6253\u5F00",
-        "flow.link.openInZotero"
-      ) : null,
-      notePath ? cardLink("note", notePath, "\u6253\u5F00\u7B14\u8BB0", "flow.link.openNote") : null,
-      cardLink("external", `https://doi.org/${encodeURI(doi)}`, "\u6253\u5F00 DOI", "flow.link.openDoi")
-    ],
     source: event.toolName
   });
 }
@@ -2230,8 +2165,8 @@ function createKnowledgeWorkerTransportFactory(runtime, config, invalidateKnowle
       this.lifecycle = "staged";
       let readyResolve;
       let readyReject;
-      this.readyPromise = new Promise((resolve132, reject) => {
-        readyResolve = resolve132;
+      this.readyPromise = new Promise((resolve13, reject) => {
+        readyResolve = resolve13;
         readyReject = reject;
       });
       this.readyPromise.catch(() => void 0);
@@ -2379,14 +2314,14 @@ function createKnowledgeWorkerTransportFactory(runtime, config, invalidateKnowle
       });
       this.closePromise = (async () => {
         let drainFailure = null;
-        const exited = new Promise((resolve132) => {
-          if (this.worker.threadId === -1) resolve132();
-          else this.worker.once("exit", resolve132);
+        const exited = new Promise((resolve13) => {
+          if (this.worker.threadId === -1) resolve13();
+          else this.worker.once("exit", resolve13);
         });
         try {
           if (!this.closed) await this.waitUntilReady();
           while (!this.closed && (this.pending.size || this.inFlightRequests))
-            await new Promise((resolve132) => setTimeout(resolve132, 10));
+            await new Promise((resolve13) => setTimeout(resolve13, 10));
           if (!this.closed) await this.request("close");
         } catch (error) {
           drainFailure = error;
@@ -2465,7 +2400,7 @@ __export(service_exports, {
 function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, transportFactory, emitLegacyPeerEvent) {
   const {
     emitKnowledgeWorkerLifecycle: emitKnowledgeWorkerLifecycle2,
-    runRuntimeExclusive: runRuntimeExclusive22,
+    runRuntimeExclusive: runRuntimeExclusive2,
     runtimeSlot: runtimeSlot22,
     hasPaperCitation: hasPaperCitation22,
     requiresPaperEvidence: requiresPaperEvidence22
@@ -2508,7 +2443,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
   }
   const MAX_TICKETS = 128;
   function queueSemantic(key, task) {
-    return runRuntimeExclusive22("semantic-lock", key, task);
+    return runRuntimeExclusive2("semantic-lock", key, task);
   }
   function providerConfig(settings2) {
     return {
@@ -3679,7 +3614,7 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
     );
     if (state.active >= concurrency) {
       if (state.queue.length >= queueLimit) throw new Error("Knowledge specialist queue is full");
-      await new Promise((resolve132, reject) => {
+      await new Promise((resolve13, reject) => {
         let settled = false;
         const item = {
           resolve: () => {
@@ -3687,7 +3622,7 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
             settled = true;
             signal?.removeEventListener("abort", abort);
             clearTimeout(timer);
-            resolve132();
+            resolve13();
           },
           reject: () => {
             if (settled) return;
@@ -4584,7 +4519,7 @@ async function renameWithRetry(from, to, options = {}) {
     } catch (error) {
       const code = error.code;
       if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts) throw error;
-      await new Promise((resolve132) => setTimeout(resolve132, delay * attempt));
+      await new Promise((resolve13) => setTimeout(resolve13, delay * attempt));
     }
   }
 }
@@ -4830,7 +4765,7 @@ __export(wiki_review_exports, {
   wikiHistory: () => wikiHistory
 });
 function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui, io) {
-  const { runRuntimeExclusive: runRuntimeExclusive22 } = runtime;
+  const { runRuntimeExclusive: runRuntimeExclusive2 } = runtime;
   const { withKnowledgeBinding: withKnowledgeBinding2 } = config;
   const { readReviewMode: readReviewMode2 } = reviewPolicy;
   const { invalidateKnowledgeUi: invalidateKnowledgeUi2 } = ui;
@@ -4839,7 +4774,7 @@ function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui, io) {
   const digest62 = (text43) => createHash15("sha256").update(text43).digest("hex");
   const MAX_PENDING2 = 100, MAX_AGE2 = 24 * 60 * 60 * 1e3;
   async function exclusive(key, operation) {
-    return runRuntimeExclusive22("wiki-review", key, operation);
+    return runRuntimeExclusive2("wiki-review", key, operation);
   }
   function rootFor(service) {
     return `${service.binding.vaultId}/wiki-review`;
@@ -18121,173 +18056,19 @@ var {
   registerKnowledgeInterface
 } = compatibility5;
 
-// packages/extensions/src/internal/vault.ts
-var VAULT_PROFILES = {
-  project: {
-    id: "project",
-    projectTypes: [
-      "Questions",
-      "Concepts",
-      "Entities",
-      "Papers",
-      "Sources",
-      "Evidence",
-      "Claims",
-      "Decisions",
-      "Runs",
-      "Artifacts",
-      "Wiki"
-    ],
-    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Datasets", "Explainers"]
-  },
-  literature: {
-    id: "literature",
-    projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"]
-  },
-  hybrid: {
-    id: "hybrid",
-    projectTypes: [
-      "Questions",
-      "Concepts",
-      "Entities",
-      "Papers",
-      "Sources",
-      "Evidence",
-      "Claims",
-      "Decisions",
-      "Runs",
-      "Artifacts",
-      "Wiki"
-    ],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"]
-  }
-};
-var DEFAULT_VAULT_PROFILE = "hybrid";
-var SUBAGENT_MCP_POLICIES = ["none", "read-local"];
-function getVaultProfile(id2 = DEFAULT_VAULT_PROFILE) {
-  if (typeof id2 !== "string" || !(id2 in VAULT_PROFILES)) throw new Error(`Unknown knowledge profile: ${id2}`);
-  return VAULT_PROFILES[id2];
-}
-
-// packages/extensions/src/research-policy.ts
-var MAX_CONCURRENT_RESEARCH_SUBAGENTS = 3;
-
-// packages/extensions/src/workspace-config.ts
-var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
-  resultsRoot: "./results",
-  obsidianVault: null,
-  // Keep the compatibility fields present in every returned shape. The
-  // legacy Obsidian adapter reads these fields even when no desktop binding
-  // has been established yet.
-  vaultWritePolicy: null,
-  mcpStatus: null,
-  knowledgeScope: "project",
-  knowledgeProjectId: null,
-  knowledgeBindingRevision: 0,
-  legacyProjectVault: null,
-  maxConcurrentSubagents: MAX_CONCURRENT_RESEARCH_SUBAGENTS,
-  timezone: "Asia/Shanghai",
-  knowledgeProfile: DEFAULT_VAULT_PROFILE,
-  knowledgeDepositMode: "verified",
-  subagentMcpPolicy: "read-local"
-});
-var CONFIG_NAME = ".pi/research-workspace.json";
-function configPath(cwd) {
-  return join15(cwd, CONFIG_NAME);
-}
-function resolveConfiguredPath(cwd, value) {
-  if (value == null || value === "") return null;
-  return resolve8(cwd, value);
-}
-function validatePatch(config) {
-  const max = Number(config.maxConcurrentSubagents);
-  if (!Number.isInteger(max) || max < 1 || max > MAX_CONCURRENT_RESEARCH_SUBAGENTS) {
-    throw new Error(
-      `maxConcurrentSubagents must be an integer between 1 and ${MAX_CONCURRENT_RESEARCH_SUBAGENTS}`
-    );
-  }
-  if (typeof config.timezone !== "string" || !config.timezone.trim()) {
-    throw new Error("timezone must be a non-empty string");
-  }
-  if (typeof config.resultsRoot !== "string" || !config.resultsRoot.trim()) {
-    throw new Error("resultsRoot must be a non-empty path");
-  }
-  getVaultProfile(config.knowledgeProfile);
-  if (!["run-only", "verified", "rich"].includes(config.knowledgeDepositMode)) {
-    throw new Error("knowledgeDepositMode must be run-only, verified, or rich");
-  }
-  if (!SUBAGENT_MCP_POLICIES.includes(config.subagentMcpPolicy)) {
-    throw new Error("subagentMcpPolicy must be none or read-local");
-  }
-}
-async function loadWorkspaceConfig2(cwd = process.cwd()) {
-  if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
-    const desktop = JSON.parse(await readFile12(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
-    return {
-      ...DEFAULT_WORKSPACE_CONFIG,
-      resultsRoot: desktop.resultsRoot,
-      obsidianVault: desktop.vaultStatus === "bound" ? desktop.obsidianVault : null,
-      vaultWritePolicy: desktop.vaultWritePolicy,
-      mcpStatus: desktop.mcpStatus
-    };
-  }
-  const projectRoot = resolve8(cwd);
-  let raw = {};
-  try {
-    raw = JSON.parse(await readFile12(configPath(projectRoot), "utf8"));
-  } catch (error) {
-    if (error.code !== "ENOENT") raw = {};
-  }
-  const merged = { ...DEFAULT_WORKSPACE_CONFIG, ...raw };
-  if (knowledgeDirectory()) {
-    const binding = await readKnowledgeBinding();
-    return {
-      ...DEFAULT_WORKSPACE_CONFIG,
-      resultsRoot: resolveConfiguredPath(
-        projectRoot,
-        typeof raw.resultsRoot === "string" && raw.resultsRoot.trim() ? raw.resultsRoot : DEFAULT_WORKSPACE_CONFIG.resultsRoot
-      ),
-      obsidianVault: binding?.vault || null,
-      knowledgeProfile: binding?.profile || "hybrid",
-      knowledgeDepositMode: binding?.depositMode || "verified",
-      subagentMcpPolicy: binding?.subagentPolicy || "none",
-      knowledgeScope: "application",
-      knowledgeProjectId: projectIdentity(projectRoot, raw.knowledgeProjectId),
-      knowledgeBindingRevision: binding?.revision || 0,
-      legacyProjectVault: raw.obsidianVault || null,
-      maxConcurrentSubagents: [1, 2, 3].includes(raw.maxConcurrentSubagents) ? raw.maxConcurrentSubagents : DEFAULT_WORKSPACE_CONFIG.maxConcurrentSubagents
-    };
-  }
-  try {
-    validatePatch(merged);
-  } catch {
-    return {
-      ...DEFAULT_WORKSPACE_CONFIG,
-      resultsRoot: resolveConfiguredPath(projectRoot, DEFAULT_WORKSPACE_CONFIG.resultsRoot),
-      obsidianVault: null
-    };
-  }
-  return {
-    ...merged,
-    resultsRoot: resolveConfiguredPath(projectRoot, merged.resultsRoot),
-    obsidianVault: resolveConfiguredPath(projectRoot, merged.obsidianVault)
-  };
-}
-
 // node_modules/@gyoungwe/pi-research/dist/host.mjs
-import { mkdir as mkdir13, readFile as readFile13, writeFile as writeFile13 } from "node:fs/promises";
+import { mkdir as mkdir12, readFile as readFile12, writeFile as writeFile12 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
-import { dirname as dirname7, join as join17 } from "node:path";
+import { dirname, join as join15 } from "node:path";
 import { createHash as createHash2, randomUUID as randomUUID15 } from "node:crypto";
 import { createHash as createHash16 } from "node:crypto";
-import { readFile as readFile22, realpath as realpath10, stat as stat4 } from "node:fs/promises";
-import { isAbsolute as isAbsolute10, relative as relative12, resolve as resolve13, sep as sep11 } from "node:path";
+import { readFile as readFile22, realpath as realpath9, stat as stat4 } from "node:fs/promises";
+import { isAbsolute as isAbsolute7, relative as relative11, resolve as resolve8, sep as sep10 } from "node:path";
 import { realpath as realpath22 } from "node:fs/promises";
 import { resolve as resolve22 } from "node:path";
 import { createHash as createHash32 } from "node:crypto";
 import { createHash as createHash42, randomUUID as randomUUID22 } from "node:crypto";
-import { access, mkdir as mkdir22, readFile as readFile32, realpath as realpath32, rename as rename11, writeFile as writeFile22 } from "node:fs/promises";
+import { access, mkdir as mkdir22, readFile as readFile32, realpath as realpath32, rename as rename10, writeFile as writeFile22 } from "node:fs/promises";
 import { dirname as dirname22, isAbsolute as isAbsolute22, join as join22, relative as relative22, resolve as resolve32, sep as sep22 } from "node:path";
 import { createHash as createHash52 } from "node:crypto";
 import { readdir as readdir4, readFile as readFile42 } from "node:fs/promises";
@@ -18511,8 +18292,8 @@ function inferEzproxyTemplateFromUrl(navigatedUrl) {
   }
 }
 var INSTITUTIONAL_CONFIG_NAME = "institutional.json";
-var INSTITUTIONAL_AGENT_DIR = join17(homedir2(), ".pi", "agent");
-var INSTITUTIONAL_CONFIG_PATH = join17(INSTITUTIONAL_AGENT_DIR, INSTITUTIONAL_CONFIG_NAME);
+var INSTITUTIONAL_AGENT_DIR = join15(homedir2(), ".pi", "agent");
+var INSTITUTIONAL_CONFIG_PATH = join15(INSTITUTIONAL_AGENT_DIR, INSTITUTIONAL_CONFIG_NAME);
 function emptyInstitutionalConfig() {
   return { version: 1, autoDownloadEnabled: true, perTaskLimit: 20 };
 }
@@ -18545,7 +18326,7 @@ function normalizeInstitutionalConfig(raw) {
     configured: Boolean(ezproxyTemplate || openUrlResolver || institutionName || lastLoginAt)
   };
 }
-async function loadInstitutionalConfig(path = INSTITUTIONAL_CONFIG_PATH, io = { readFile: (file) => readFile13(file, "utf8") }) {
+async function loadInstitutionalConfig(path = INSTITUTIONAL_CONFIG_PATH, io = { readFile: (file) => readFile12(file, "utf8") }) {
   try {
     return normalizeInstitutionalConfig(JSON.parse(await io.readFile(path)));
   } catch {
@@ -18553,16 +18334,16 @@ async function loadInstitutionalConfig(path = INSTITUTIONAL_CONFIG_PATH, io = { 
   }
 }
 async function saveInstitutionalConfig(config, path = INSTITUTIONAL_CONFIG_PATH, io = {
-  readFile: (file) => readFile13(file, "utf8"),
+  readFile: (file) => readFile12(file, "utf8"),
   writeFile: async (file, data) => {
-    await writeFile13(file, data, "utf8");
+    await writeFile12(file, data, "utf8");
   },
   mkdir: async (dir) => {
-    await mkdir13(dir, { recursive: true });
+    await mkdir12(dir, { recursive: true });
   }
 }) {
   const normalized = normalizeInstitutionalConfig(config);
-  await io.mkdir(dirname7(path));
+  await io.mkdir(dirname(path));
   await io.writeFile(path, `${JSON.stringify(normalized, null, 2)}
 `);
   return normalized;
@@ -18649,11 +18430,11 @@ async function verifyLiteratureReceipt({
     const notePath = String(note_path || "");
     if (!vault || !/^(?:Library)\/Papers\/.+\.md$/.test(notePath) || notePath.split("/").includes("..") || notePath.includes("\\"))
       throw new Error("invalid-note-path");
-    const root = await realpath10(String(vault));
+    const root = await realpath9(String(vault));
     vaultResolved = true;
-    const file = await realpath10(resolve13(root, notePath));
-    const rel = relative12(root, file);
-    if (isAbsolute10(rel) || rel === ".." || rel.startsWith(`..${sep11}`)) throw new Error("outside-vault");
+    const file = await realpath9(resolve8(root, notePath));
+    const rel = relative11(root, file);
+    if (isAbsolute7(rel) || rel === ".." || rel.startsWith(`..${sep10}`)) throw new Error("outside-vault");
     if ((await stat4(file)).size > 1024 * 1024) throw new Error("note-too-large");
     const text6 = await readFile22(file, "utf8");
     const linked = text6.includes(`zotero:${zoteroKey}`) || new RegExp(`zotero://select/library/items/${zoteroKey}(?=[)\\s<>]|$)`).test(text6) || new RegExp(`^zotero_key: *["']?${zoteroKey}["']? *$`, "m").test(text6);
@@ -19323,7 +19104,7 @@ var RESEARCH_STAGES = Object.freeze([
 ]);
 var RESEARCH_DOCUMENT_KIND = "drone.research.run";
 function createResearchLoop(ports) {
-  const loadWorkspaceConfig3 = ports.workspace;
+  const loadWorkspaceConfig2 = ports.workspace;
   const verifyLiteratureReceipt2 = ports.verifyLiteratureReceipt;
   const sourceStatus2 = ports.sourceStatus;
   const runtimeState2 = {
@@ -19351,7 +19132,7 @@ function createResearchLoop(ports) {
     if (runDir) runtimeState2.receiptLedger.delete(runKey(cwd, runDir));
   }
   async function reusableSources(cwd, runDir) {
-    const config = await loadWorkspaceConfig3(cwd);
+    const config = await loadWorkspaceConfig2(cwd);
     if (!config.obsidianVault) return [];
     const root = await realpath32(config.obsidianVault);
     const state = ledger(cwd, runDir), result2 = [];
@@ -19631,7 +19412,7 @@ function createResearchLoop(ports) {
     const temp = `${path}.${randomUUID22()}.tmp`;
     await writeFile22(temp, `${JSON.stringify(value, null, 2)}
 `, "utf8");
-    await rename11(temp, path);
+    await rename10(temp, path);
   }
   function gateOf2(metadata) {
     const gate2 = metadata.evidence_gate && typeof metadata.evidence_gate === "object" ? metadata.evidence_gate : {};
@@ -19682,7 +19463,7 @@ function createResearchLoop(ports) {
     };
   }
   async function resolveRun(cwd, runDir) {
-    const config = await loadWorkspaceConfig3(cwd);
+    const config = await loadWorkspaceConfig2(cwd);
     if (!runDir) throw new Error("run_dir is required for this action");
     const path = resolve32(cwd, runDir);
     if (!within3(config.resultsRoot, path))
@@ -19700,7 +19481,7 @@ function createResearchLoop(ports) {
     query,
     requiresProvenance = false
   } = {}) {
-    const config = await loadWorkspaceConfig3(cwd);
+    const config = await loadWorkspaceConfig2(cwd);
     project = safeSlug(project || await ports.resolveProject(cwd), "project");
     resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
     if (typeof query !== "string" || !query.trim()) throw new Error("query is required");
@@ -19996,7 +19777,7 @@ function createResearchLoop(ports) {
           })
         );
         if (/^Library\/Papers\/.+\.md$/.test(path) && /^[a-f0-9]{64}$/i.test(details.hash || "") && typeof details.text === "string" && details.text.trim() && Number.isInteger(details.startLine) && details.endLine >= details.startLine) {
-          const config = await loadWorkspaceConfig3(cwd);
+          const config = await loadWorkspaceConfig2(cwd);
           if (config.obsidianVault)
             rememberRead(cwd, runDir, [path], {
               hash: details.hash,
@@ -20487,10 +20268,10 @@ async function observeExecutionReceipt({
   details = {},
   isError = false,
   observedAt,
-  loadWorkspaceConfig: loadWorkspaceConfig3 = defaultWorkspaceConfig
+  loadWorkspaceConfig: loadWorkspaceConfig2 = defaultWorkspaceConfig
 }) {
   if (!["bash", "powershell"].includes(toolName) || !toolCallId) return null;
-  const run2 = await runPath(cwd, runDir, loadWorkspaceConfig3);
+  const run2 = await runPath(cwd, runDir, loadWorkspaceConfig2);
   const file = join42(run2, "execution-observations.json");
   const work = (queues.get(file) || Promise.resolve()).catch(() => {
   }).then(async () => {
@@ -20530,9 +20311,9 @@ async function recordRunProvenance({
   runDir,
   files = [],
   declarations = {},
-  loadWorkspaceConfig: loadWorkspaceConfig3 = defaultWorkspaceConfig
+  loadWorkspaceConfig: loadWorkspaceConfig2 = defaultWorkspaceConfig
 }) {
-  const run2 = await runPath(cwd, runDir, loadWorkspaceConfig3);
+  const run2 = await runPath(cwd, runDir, loadWorkspaceConfig2);
   const root = await realpath42(cwd);
   if (!Array.isArray(files) || files.length > 64) throw new Error("At most 64 explicitly selected files");
   const snapshots = [];
@@ -20609,9 +20390,9 @@ var text32 = (value) => typeof value === "string" && value ? value : null;
 async function readMethodsFacts({
   cwd = process.cwd(),
   runDir,
-  loadWorkspaceConfig: loadWorkspaceConfig3 = defaultWorkspaceConfig
+  loadWorkspaceConfig: loadWorkspaceConfig2 = defaultWorkspaceConfig
 }) {
-  const run2 = await runPath(cwd, runDir, loadWorkspaceConfig3);
+  const run2 = await runPath(cwd, runDir, loadWorkspaceConfig2);
   const metadata = await readJson2(join42(run2, "metadata.json")) ?? {};
   const manifest = await readJson2(
     join42(run2, "reproducibility-manifest.json")
@@ -20659,12 +20440,12 @@ async function saveMethodsSection({
   runDir,
   text: body,
   approvedAt = (/* @__PURE__ */ new Date()).toISOString(),
-  loadWorkspaceConfig: loadWorkspaceConfig3 = defaultWorkspaceConfig
+  loadWorkspaceConfig: loadWorkspaceConfig2 = defaultWorkspaceConfig
 }) {
   const content = String(body ?? "").trim();
   if (!content) throw new Error("Methods text is empty");
   if (content.length > 2e4) throw new Error("Methods text is longer than 20,000 characters");
-  const run2 = await runPath(cwd, runDir, loadWorkspaceConfig3);
+  const run2 = await runPath(cwd, runDir, loadWorkspaceConfig2);
   const path = join42(run2, "METHODS.md");
   const document = `<!-- drone:methods approved_at=${approvedAt} \u2014 reviewed by the user; software versions are as declared in reproducibility-manifest.json -->
 
@@ -23854,8 +23635,8 @@ var KeyedScheduler = class {
     if (this.#disposed) throw new Error("Runtime scheduler has been disposed");
     const previous = this.#tails.get(key) || Promise.resolve();
     let unlock;
-    const gate = new Promise((resolve15) => {
-      unlock = resolve15;
+    const gate = new Promise((resolve13) => {
+      unlock = resolve13;
     });
     const tail = previous.then(() => gate);
     this.#tails.set(key, tail);
@@ -24050,9 +23831,6 @@ function runtimeSlot2(domain, slot, create) {
   );
   return proxy;
 }
-function runRuntimeExclusive2(namespace, key, operation) {
-  return currentRuntime().scheduler.run(`${namespace}:${key}`, operation);
-}
 var RUNTIME_BRIDGE_VERSION = 1;
 
 // packages/extensions/src/internal/runtime/process-events.ts
@@ -24150,51 +23928,6 @@ function registerTool(pi, definition) {
 }
 
 // packages/extensions/src/zotero-literature.ts
-var contained2 = (root, target) => {
-  const rel = relative13(root, target);
-  return rel !== ".." && !rel.startsWith(`..${sep12}`) && !isAbsolute11(rel);
-};
-async function resolveRunJournal(cwd, runDir) {
-  const config = await loadWorkspaceConfig2(cwd);
-  const root = await realpath11(config.resultsRoot);
-  const run2 = await realpath11(resolve14(cwd, runDir || ""));
-  const parts = relative13(root, run2).split(sep12);
-  if (!contained2(root, run2) || parts.length !== 2 || !parts[1].startsWith("run-"))
-    throw new Error("Operation log must be inside a research run");
-  await readFile14(join19(run2, "metadata.json"), "utf8");
-  return {
-    file: join19(run2, "literature-operations.json"),
-    vault: config.obsidianVault ? await realpath11(config.obsidianVault) : null,
-    revision: Number(config.knowledgeBindingRevision || 0)
-  };
-}
-async function readJournal(file) {
-  try {
-    const value = JSON.parse(await readFile14(file, "utf8"));
-    if (value?.version !== 1 || !value.operations || typeof value.operations !== "object")
-      throw new Error("Invalid operation log");
-    return value;
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    return { version: 1, operations: {} };
-  }
-}
-async function writeJournal(file, journal) {
-  const temporary = `${file}.${randomUUID19()}.tmp`;
-  await writeFile14(temporary, `${JSON.stringify(journal, null, 2)}
-`);
-  await rename12(temporary, file);
-}
-var operations = createLiteratureOperations({
-  resolveRunJournal,
-  readJournal,
-  writeJournal,
-  exclusive: (file, work) => runRuntimeExclusive2("literature-operation", file, work),
-  verify: verifyLiteratureReceipt
-});
-var recordZoteroWrite = (...args) => operations.recordZoteroWrite(...args);
-var SAVE_ALLOW = "\u540C\u610F\u5199\u5165 Zotero";
-var SAVE_DENY = "\u6682\u4E0D\u5199\u5165";
 var ZOTERO_KEY2 = /^[A-Z0-9]{8}$/;
 function describeZoteroEvidence(result2) {
   const key = ZOTERO_KEY2.test(result2?.itemId || "") ? result2.itemId : null;
@@ -24250,160 +23983,6 @@ function zoteroAcceptanceDefinition() {
     }
   };
 }
-var slotClaims = runtimeSlot2("tasks", "zotero-slot-claims", () => /* @__PURE__ */ new Map());
-function claimSlot(taskId, milestoneId) {
-  const key = String(taskId || "");
-  const claimed = slotClaims.get(key) || /* @__PURE__ */ new Set();
-  if (claimed.has(milestoneId)) return false;
-  claimed.add(milestoneId);
-  slotClaims.delete(key);
-  slotClaims.set(key, claimed);
-  while (slotClaims.size > 64) slotClaims.delete(slotClaims.keys().next().value);
-  return true;
-}
-async function taskConsentFor(pi, ctx, doi) {
-  let grant = null;
-  await pi.events?.emit?.("drone:task-write-consent", {
-    cwd: ctx.cwd,
-    sessionId: ctx.sessionManager?.getSessionId?.(),
-    respond: (value) => {
-      grant = value;
-    }
-  });
-  const items = Array.isArray(grant?.acceptances) ? grant.acceptances : [];
-  const named = items.find((entry) => entry?.kind === "zotero_item" && normalizeDoi(entry?.doi) === doi);
-  if (named)
-    return { taskId: grant.taskId || null, milestoneId: named.milestoneId || null, via: "task-plan" };
-  for (const entry of items) {
-    if (entry?.kind !== "zotero_item" || !entry.slot || !entry.milestoneId) continue;
-    if (!claimSlot(grant.taskId, entry.milestoneId)) continue;
-    return {
-      taskId: grant.taskId || null,
-      milestoneId: entry.milestoneId,
-      via: "task-plan-slot",
-      release: () => slotClaims.get(String(grant.taskId || ""))?.delete(entry.milestoneId)
-    };
-  }
-  return null;
-}
-async function consentToZoteroSave(pi, ctx, plan, signal) {
-  const task = await taskConsentFor(pi, ctx, plan.doi);
-  if (task) return { granted: true, ...task };
-  if (!ctx.hasUI || !ctx.ui?.select)
-    throw new Error(
-      "Writing to Zotero needs an authorized task plan naming this DOI as a zotero_item milestone, or an interactive desktop confirmation. Neither is available here; no write performed."
-    );
-  const selected = await ctx.ui.select(
-    `ask_user \xB7 \u5199\u5165 Zotero \u6587\u732E\u5E93\uFF1F
-
-${describeZoteroSavePlan(plan)}`,
-    [SAVE_DENY, SAVE_ALLOW],
-    { signal }
-  );
-  return { granted: selected === SAVE_ALLOW && !signal?.aborted, via: "ask-card" };
-}
-var UPDATE_ALLOW = "\u540C\u610F\u4FEE\u6539\u8BE5\u6761\u76EE";
-var UPDATE_DENY = "\u6682\u4E0D\u4FEE\u6539";
-async function consentToZoteroUpdate(pi, ctx, plan, signal) {
-  if (plan.doi) {
-    const task = await taskConsentFor(pi, ctx, plan.doi);
-    if (task?.via === "task-plan") return { granted: true, ...task };
-    task?.release?.();
-  }
-  if (!ctx.hasUI || !ctx.ui?.select)
-    throw new Error(
-      "Changing a Zotero item needs an authorized task plan naming its DOI, or an interactive desktop confirmation. Neither is available here; no change made."
-    );
-  const selected = await ctx.ui.select(
-    `ask_user \xB7 \u4FEE\u6539 Zotero \u5DF2\u6709\u6761\u76EE\uFF1F
-
-${describeZoteroUpdatePlan(plan)}`,
-    [UPDATE_DENY, UPDATE_ALLOW],
-    { signal }
-  );
-  return { granted: selected === UPDATE_ALLOW && !signal?.aborted, via: "ask-card" };
-}
-async function runZoteroUpdate(pi, params, ctx, signal, deps = {}) {
-  const plan = await prepareZoteroUpdate(params, { signal, cwd: ctx.cwd, ...deps });
-  let receipt2, consent = { via: "not-needed" };
-  if (plan.action !== "update") receipt2 = receiptWithoutUpdate(plan);
-  else {
-    consent = await consentToZoteroUpdate(pi, ctx, plan, signal);
-    receipt2 = consent.granted ? await executeZoteroUpdate(plan, { signal, ...deps }) : receiptWithoutUpdate({ ...plan, action: "cancelled", reason: "user-declined" });
-  }
-  receipt2.consent = {
-    via: consent.via,
-    taskId: consent.taskId || null,
-    milestoneId: consent.milestoneId || null
-  };
-  if (receipt2.write?.performed)
-    pi.events?.emit?.("drone:decision-record/v1", {
-      id: `zotero-update:${receipt2.zoteroKey}:${receipt2.write.at}`,
-      kind: "zotero-write",
-      summary: `Zotero update receipt for ${receipt2.doi || receipt2.zoteroKey}`,
-      basis: [receipt2.zoteroKey],
-      at: (/* @__PURE__ */ new Date()).toISOString()
-    });
-  if (params.run_dir && receipt2.write?.performed && receipt2.doi) {
-    try {
-      receipt2.journal = await recordZoteroWrite({
-        cwd: ctx.cwd,
-        runDir: params.run_dir,
-        receipt: {
-          ...receipt2,
-          collection: receipt2.changes?.addCollection || null,
-          attachment: receipt2.changes?.uploadFile || receipt2.changes?.attachUrl || null,
-          writesToLibraries: 1
-        }
-      });
-    } catch (error) {
-      receipt2.journal = { error: String(error.message || error).slice(0, 200) };
-    }
-  }
-  return receipt2;
-}
-async function runZoteroSave(pi, params, ctx, signal, deps = {}) {
-  const plan = await prepareZoteroSave(params, { signal, ...deps });
-  let receipt2, consent = { via: "not-needed" };
-  if (plan.action !== "create") receipt2 = receiptWithoutWrite(plan);
-  else {
-    consent = await consentToZoteroSave(pi, ctx, plan, signal);
-    try {
-      receipt2 = consent.granted ? await executeZoteroSave(plan, { signal, ...deps }) : receiptWithoutWrite({ ...plan, action: "cancelled", reason: "user-declined" });
-    } catch (error) {
-      consent.release?.();
-      throw error;
-    }
-    if (!SAVE_BOUND_STATUSES.has(receipt2.status)) consent.release?.();
-  }
-  receipt2.consent = {
-    via: consent.via,
-    taskId: consent.taskId || null,
-    milestoneId: consent.milestoneId || null
-  };
-  if (SAVE_BOUND_STATUSES.has(receipt2.status))
-    pi.events?.emit?.("drone:decision-record/v1", {
-      id: `zotero-write:${receipt2.zoteroKey || receipt2.doi}`,
-      kind: "zotero-write",
-      summary: `Zotero write receipt for ${receipt2.doi}`,
-      basis: [
-        receipt2.zoteroKey || receipt2.doi,
-        ...receipt2.journal?.operationId ? [receipt2.journal.operationId] : []
-      ],
-      at: (/* @__PURE__ */ new Date()).toISOString()
-    });
-  if (params.run_dir) {
-    try {
-      receipt2.journal = await recordZoteroWrite({ cwd: ctx.cwd, runDir: params.run_dir, receipt: receipt2 });
-    } catch (error) {
-      receipt2.journal = { error: String(error.message || error).slice(0, 200) };
-    }
-  }
-  if (receipt2.status === "reused" && (params.collection_key || params.attachment_url))
-    receipt2.update = "The item already exists, so nothing was changed. To file it into a collection or attach a PDF, call research_zotero_update with zotero_key and collection_key / collection_name / attachment_url / local_file.";
-  receipt2.next = receipt2.zoteroKey ? `research_deposit_knowledge type=paper zotero_key=${receipt2.zoteroKey} doi=${receipt2.doi}, then research_verify_literature.` : "Do not retry automatically. Inspect Zotero or ask the user before any further write.";
-  return receipt2;
-}
 async function startSetup(pi, args, ctx) {
   if (!ctx.hasUI) throw new Error("Zotero /zotero-setup requires an interactive desktop UI");
   const bootstrap = await bootstrapZotero({
@@ -24434,38 +24013,6 @@ function zoteroLiterature(pi) {
   });
   pi.on("session_shutdown", removeAcceptance);
   publishAcceptance();
-  registerTool(pi, {
-    name: "research_zotero_status",
-    label: "Zotero literature status",
-    drone: {
-      readOnly: true,
-      capabilities: ["research", "external"],
-      activity: { text: "\u6B63\u5728\u68C0\u67E5 Zotero \u63A5\u5165\u72B6\u6001\u2026", phase: "verification" },
-      // MCP 代理工具 research-zotero_*（含子代理只读通道）的状态条 / 动作文案由这里声明
-      families: [
-        {
-          match: "research-zotero",
-          label: "Zotero",
-          readOnly: true,
-          capabilities: ["research", "external"],
-          activity: {
-            text: "\u6B63\u5728\u68C0\u7D22 Zotero \u6587\u732E\u5E93\u2026",
-            phase: "literature-search",
-            verb: "\u6B63\u5728\u68C0\u7D22 Zotero",
-            queryKeys: ["query", "q", "search", "search_text", "text"]
-          }
-        }
-      ]
-    },
-    description: "Read-only: report zotero-cli/zotero-mcp paths, installer availability, local Zotero API reachability, and MCP registration. Does not install software or write the Vault.",
-    parameters: { type: "object", properties: {} },
-    async execute() {
-      return run2(async () => {
-        const status = await inspectZotero();
-        return { content: [{ type: "text", text: JSON.stringify(status, null, 2) }], details: status };
-      });
-    }
-  });
   registerTool(pi, {
     name: "research_setup_zotero",
     label: "Install Zotero CLI and register optional MCP",
@@ -24521,129 +24068,6 @@ function zoteroLiterature(pi) {
       });
     }
   });
-  registerTool(pi, {
-    name: "research_zotero_save",
-    label: "Save one paper to Zotero (host-controlled)",
-    drone: {
-      capabilities: ["research", "external"],
-      subagent: "exclude",
-      activity: { text: "\u6B63\u5728\u5199\u5165 Zotero \u6587\u732E\u5E93\u2026", phase: "literature-write" },
-      flow: "literature",
-      flowCards: (event) => literatureCard(event, { write: true })
-    },
-    description: "Write ONE bibliographic item into the user's Zotero library, keyed by exact DOI. Host-controlled: dedups by DOI first (an existing item is reused, never duplicated), asks the user on a native card unless an authorized task plan lists this DOI as a zotero_item milestone, writes once through Zotero desktop (connector, preferred) or the Zotero Web API (write-scoped ZOTERO_API_KEY from the environment), then reads the item back by DOI. Never retries, deletes, merges or moves items. Attachments are URL-based only: Zotero desktop downloads attachment_url itself; the Web API records it as a linked URL. An existing item is never modified here (status=reused): use research_zotero_update to file it into a collection or attach a PDF. Returns the receipt (status, zoteroKey, library, fulltextStatus). Follow with research_deposit_knowledge type=paper and research_verify_literature; the Vault note stays the citable object.",
-    parameters: {
-      type: "object",
-      required: ["doi", "title"],
-      properties: {
-        doi: { type: "string", description: "Exact DOI, e.g. 10.1038/s41586-020-2649-2" },
-        title: { type: "string" },
-        item_type: {
-          type: "string",
-          enum: [...ZOTERO_ITEM_TYPES],
-          description: "Zotero item type; default journalArticle."
-        },
-        creators: {
-          type: "array",
-          description: "Authors in order. Use last_name/first_name, or name for organisations.",
-          items: {
-            type: "object",
-            properties: {
-              last_name: { type: "string" },
-              first_name: { type: "string" },
-              name: { type: "string" },
-              creator_type: { type: "string", description: "author (default), editor, contributor" }
-            }
-          }
-        },
-        date: { type: "string" },
-        publication: { type: "string", description: "Journal, proceedings, book or repository title." },
-        volume: { type: "string" },
-        issue: { type: "string" },
-        pages: { type: "string" },
-        url: { type: "string" },
-        abstract: { type: "string" },
-        tags: { type: "array", items: { type: "string" } },
-        attachment_url: {
-          type: "string",
-          description: "Optional http(s) URL of an open-access PDF whose license allows saving. To upload a local PDF to an existing item use research_zotero_update local_file."
-        },
-        attachment_title: { type: "string" },
-        channel: {
-          type: "string",
-          enum: ["auto", "connector", "web"],
-          description: "auto (default) prefers Zotero desktop, then the Web API."
-        },
-        target: {
-          type: "string",
-          description: 'Connector only: "L<libraryID>" or "C<collectionID>" as reported by Zotero desktop. Default: the library/collection currently selected in Zotero.'
-        },
-        collection_key: {
-          type: "string",
-          description: "Web API only: 8-character collection key to file the item into."
-        },
-        run_dir: {
-          type: "string",
-          description: "Research run directory; the receipt is journaled to <run>/literature-operations.json."
-        }
-      }
-    },
-    async execute(_id, params, signal, _update, ctx) {
-      return run2(async () => {
-        const receipt2 = await runZoteroSave(pi, params || {}, ctx, signal);
-        return { content: [{ type: "text", text: JSON.stringify(receipt2, null, 2) }], details: receipt2 };
-      });
-    }
-  });
-  registerTool(pi, {
-    name: "research_zotero_update",
-    label: "Update an existing Zotero item (host-controlled)",
-    drone: {
-      capabilities: ["research", "external"],
-      subagent: "exclude",
-      activity: { text: "\u6B63\u5728\u4FEE\u6539 Zotero \u6761\u76EE\u2026", phase: "literature-write" },
-      flow: "literature",
-      flowCards: (event) => literatureCard(event, { write: true })
-    },
-    description: "Change ONE existing item in the user's Zotero library: add it to a collection (by collection_key or exact collection_name; existing collections are kept), attach an open-access PDF link (attachment_url) and/or upload a local PDF from the project (local_file). Writes through Zotero 10's local API when the user has authorized local writes (channel=local, the PDF stays on this computer), otherwise through the Zotero Web API (channel=web, the PDF counts against the user's Zotero storage). Identify the item by zotero_key or exact DOI. Asks the user on a native card unless an authorized task plan names the DOI; writes once, then reads the item back. Never deletes, removes from collections, merges or retries. Without either channel it returns status=blocked with the reason \u2014 tell the user to authorize local writes or add a write-enabled key in Drone Settings \u2192 Zotero; never ask for a key in chat.",
-    parameters: {
-      type: "object",
-      properties: {
-        zotero_key: { type: "string", description: "8-character key of the existing item (preferred)." },
-        doi: {
-          type: "string",
-          description: "Exact DOI when the key is unknown; must match exactly one item."
-        },
-        collection_key: {
-          type: "string",
-          description: "8-character key of the collection to add the item to."
-        },
-        collection_name: {
-          type: "string",
-          description: "Exact collection name, used when the key is unknown."
-        },
-        attachment_url: {
-          type: "string",
-          description: "http(s) URL of an open-access PDF to attach as a link."
-        },
-        attachment_title: { type: "string" },
-        local_file: {
-          type: "string",
-          description: "Path (inside the project) of a PDF to upload as a stored attachment, e.g. results/x/papers/a.pdf."
-        },
-        run_dir: {
-          type: "string",
-          description: "Research run directory; the receipt is journaled to <run>/literature-operations.json."
-        }
-      }
-    },
-    async execute(_id, params, signal, _update, ctx) {
-      return run2(async () => {
-        const receipt2 = await runZoteroUpdate(pi, params || {}, ctx, signal);
-        return { content: [{ type: "text", text: JSON.stringify(receipt2, null, 2) }], details: receipt2 };
-      });
-    }
-  });
   pi.registerCommand(ZOTERO_SETUP_BINDING.command, {
     droneMenu: {
       version: 1,
@@ -24659,7 +24083,5 @@ export {
   zoteroLiterature as default,
   describeZoteroEvidence,
   identifyZoteroReceipt,
-  runZoteroSave,
-  runZoteroUpdate,
   zoteroAcceptanceDefinition
 };
