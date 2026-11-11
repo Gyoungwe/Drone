@@ -58,7 +58,6 @@
 	"file-lines\tpackages/backend/test/mcp-service.test.ts": 412,
 	"file-lines\tpackages/backend/test/native-command-protocol-sdk.test.mjs": 531,
 	"file-lines\tpackages/backend/test/native-delivery-fence-sdk.test.mjs": 630,
-	"file-lines\tpackages/backend/test/native-runtime-owner-sdk.test.mjs": 418,
 	"file-lines\tpackages/backend/test/native-tool-protocol-sdk.test.mjs": 437,
 	"file-lines\tpackages/backend/test/obsidian-setup.test.mjs": 405,
 	"file-lines\tpackages/backend/test/packed-discovery-execution-sdk.test.ts": 608,

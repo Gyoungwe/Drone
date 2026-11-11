@@ -14,12 +14,13 @@ import { SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime } from "../src/capabilities/runtime";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
-import { getPluginSessionCaller } from "../src/plugins/session-caller";
 import { canonicalProjectId } from "../src/project-id";
-import { createDroneRuntime as createStandaloneRuntime } from "../src/runtime";
-import { SessionRegistry } from "../src/session/registry";
 import { SessionEngine } from "../src/session-engine/engine";
-import { registerTaskRuntime } from "./fixtures/task-plugin.mjs";
+
+const environment = vi.hoisted(() => ({ userData: "" }));
+vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => environment.userData } }));
+
+import { startBuiltinCore } from "./fixtures/builtin-core.mjs";
 
 const runtimeDirectory = resolve(
 	import.meta.dirname,
@@ -49,10 +50,10 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
  const last=event.messages.filter(message=>message.role==='user').at(-1);
  const text=JSON.stringify(last?.content);
  if(text.includes('hold managed hook')){
-  const sessionId=ctx.sessionManager.getSessionId();await capabilities.call('entered',null);
-  await new Promise(resolve=>ctx.signal.addEventListener('abort',resolve,{once:true}));
+  const sessionId=ctx.sessionManager.getSessionId(),aborted=new Promise(resolve=>ctx.signal.addEventListener('abort',resolve,{once:true}));
+  try{await capabilities.call('entered',null);await aborted;}finally{
   let lateDenied=false;try{await capabilities.call('caller.scope',null);}catch{lateDenied=true;}
-  signals.push({sessionId,aborted:ctx.signal.aborted,lateDenied});
+  signals.push({sessionId,aborted:ctx.signal.aborted,lateDenied});}
   return;
  }
  contexts++;scopes.push((await capabilities.call("caller.scope",null)).sessionId);event.messages.push({role:"user",content:[{type:"text",text:"first managed context"}],timestamp:1});});
@@ -65,8 +66,8 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 };`,
 		);
 		const source = { pluginId: "fixture", packageRoot: pkg, entrypoint, nativeEntrypoint };
-		const registry = new SessionRegistry();
-		const enteredHooks = [];
+		let host;
+		const hooks = { entered: [], pending: Promise.withResolvers() };
 		let originalDestroyed = false;
 		let window = { id: 1, isDestroyed: () => originalDestroyed };
 		const bridge = new PluginRuntimeBridge({
@@ -74,7 +75,7 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 			enabled: () => true,
 			approve: async () => true,
 			factory: () => createProcessPluginRuntime({ ...source, runtimeDirectory }),
-			getSessionContext: (id) => getPluginSessionCaller(registry, id),
+			getSessionContext: (id) => host.service.getPluginCallerContext(id),
 			capabilities: () => () => ({
 				resources: [],
 				handlers: {
@@ -83,7 +84,8 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 						resultSchema: { type: "null" },
 						effect: "read",
 						execute: async (_input, context) => {
-							enteredHooks.push(context.scope.sessionId);
+							hooks.entered.push(context.scope.sessionId);
+							hooks.pending.resolve();
 							return null;
 						},
 					},
@@ -91,73 +93,56 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 			}),
 		});
 		const sessions = [];
-		const providers = [];
-		const bootstraps = [];
 		let pid;
 		try {
+			host = await startBuiltinCore({
+				root: join(root, "core"),
+				setUserData: (path) => {
+					environment.userData = path;
+				},
+				backend: {
+					lazyCapabilities: false,
+					harnessContext: false,
+					permissionGates: false,
+					webFetch: false,
+					subagentPreferBuiltin: false,
+				},
+				decorateNativeBootstrap: (builtin) => {
+					const bootstrap = bridge.beginNative(window, (path) =>
+						path === nativeEntrypoint ? "fixture-ui" : undefined,
+					);
+					return {
+						...builtin,
+						factoryForPath: async (path) => {
+							const core = await builtin.factoryForPath(path);
+							const fixture = await bootstrap.factoryForPath(nativeEntrypoint);
+							return async (pi) => {
+								await core(pi);
+								await fixture(pi);
+							};
+						},
+						bindSession: (id, abort) => {
+							builtin.bindSession(id, abort);
+							bootstrap.bindSession(id, abort);
+						},
+						dispose: () => Promise.all([bootstrap.dispose(), builtin.dispose()]),
+					};
+				},
+			});
 			let binding = await bridge.bind("fixture-ui", window);
 			let application = bridge.selectSession(window, null);
 			for (let i = 0; i < 2; i++) {
-				const cwd = join(root, `project-${i}`);
-				await mkdir(cwd);
-				const bootstrap = bridge.beginNative(window, (path) =>
-					path === nativeEntrypoint ? "fixture-ui" : undefined,
-				);
-				bootstraps.push(bootstrap);
-				const settingsManager = SettingsManager.inMemory({});
-				const resourceLoader = new DefaultResourceLoader({
-					cwd,
-					agentDir: cwd,
-					settingsManager,
-					noExtensions: true,
-					noSkills: true,
-					noPromptTemplates: true,
-					additionalExtensionPaths: [nativeEntrypoint],
-					extensionFactoryForPath: bootstrap.factoryForPath,
-					extensionFactories: [
-						async (pi) => {
-							const runtime = createStandaloneRuntime();
-							pi.events.on("drone:runtime/request/v1", () =>
-								pi.events.emit("drone:runtime/v1", { version: 1, runtime }),
-							);
-							await registerTaskRuntime(pi);
-							pi.on("session_shutdown", () => runtime.dispose());
-						},
-					],
-				});
-				await resourceLoader.reload({ resolveProjectTrust: async () => true });
-				expect(resourceLoader.getExtensions().errors).toEqual([]);
-				const modelRuntime = await ModelRuntime.create({
-					authPath: join(cwd, "auth.json"),
-					modelsPath: null,
-					allowModelNetwork: false,
-					refreshOnCreate: false,
-				});
-				const faux = fauxProvider({ provider: `shared-native-offline-${i}`, tokensPerSecond: 0 });
-				modelRuntime.registerNativeProvider(faux.provider);
-				providers.push(faux);
-				vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
-				faux.setResponses([
+				const { session, cwd } = await host.open(`project-${i}`);
+				expect(session.resourceLoader.getExtensions().errors).toEqual([]);
+				host.faux.setResponses([
 					fauxAssistantMessage(fauxToolCall("owner_read", {})),
 					fauxAssistantMessage("verified"),
 				]);
-				const { session } = await createAgentSession({
-					cwd,
-					agentDir: cwd,
-					settingsManager,
-					resourceLoader,
-					modelRuntime,
-					sessionManager: SessionManager.inMemory(cwd),
-					model: faux.getModel(),
-				});
 				const capabilities = new CapabilityRuntime(new SkillVisibility());
 				capabilities.bind(session);
 				capabilities.activate(["files"]);
 				expect(session.getActiveToolNames()).toContain("owner_read");
 				sessions.push(session);
-				registry.add({ session, cwd, unsubscribe: () => {} });
-				bootstrap.bindSession(session.sessionId);
-				await session.bindExtensions({});
 				await session.prompt("Read the shared owner.");
 				await session.waitForIdle();
 				const result = session.messages.find(
@@ -191,7 +176,7 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 				window = { id: 2, isDestroyed: () => false };
 				binding = await bridge.bind("fixture-ui", window);
 				application = bridge.selectSession(window, null);
-				providers[1].setResponses([
+				host.faux.setResponses([
 					fauxAssistantMessage(fauxToolCall("owner_read", {})),
 					fauxAssistantMessage("still available"),
 				]);
@@ -206,15 +191,16 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 
 			let closingPrompt;
 			if (shutdownOrder === "native-first") {
-				providers[0].setResponses([fauxAssistantMessage("must be canceled before inference")]);
+				host.faux.setResponses([fauxAssistantMessage("must be canceled before inference")]);
 				const canceledPrompt = Promise.allSettled([sessions[0].prompt("hold managed hook cancel")]);
-				await vi.waitFor(() => expect(enteredHooks).toEqual([sessions[0].sessionId]));
+				await Promise.race([hooks.pending.promise, canceledPrompt]);
+				expect(hooks.entered).toEqual([sessions[0].sessionId]);
 				await sessions[0].abort();
 				await canceledPrompt;
 				expect(await bridge.invoke(window, binding, "overview", null, application)).toMatchObject({
 					signals: [{ sessionId: sessions[0].sessionId, aborted: true, lateDenied: true }],
 				});
-				providers[1].setResponses([
+				host.faux.setResponses([
 					fauxAssistantMessage(fauxToolCall("owner_read", {})),
 					fauxAssistantMessage("second session remains live"),
 				]);
@@ -224,8 +210,10 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 					.filter((message) => message.role === "toolResult" && message.toolName === "owner_read")
 					.at(-1);
 				expect(sibling.isError, JSON.stringify(sibling)).toBe(false);
+				hooks.pending = Promise.withResolvers();
 				closingPrompt = Promise.allSettled([sessions[0].prompt("hold managed hook close")]);
-				await vi.waitFor(() => expect(enteredHooks).toEqual([sessions[0].sessionId, sessions[0].sessionId]));
+				await Promise.race([hooks.pending.promise, closingPrompt]);
+				expect(hooks.entered).toEqual([sessions[0].sessionId, sessions[0].sessionId]);
 			}
 
 			expect(await bridge.invoke(window, binding, "overview", null, application)).toMatchObject({
@@ -235,8 +223,7 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 				scope: { kind: "application" },
 			});
 			const first = sessions.shift();
-			registry.revoke(first.sessionId);
-			await new SessionEngine().dispose(first);
+			await host.service.closeSession(first.sessionId);
 			if (closingPrompt) {
 				await closingPrompt;
 				expect(await bridge.invoke(window, binding, "overview", null, application)).toMatchObject({
@@ -246,23 +233,18 @@ it.each(["native-first", "host-first", "approval-window-closed"])(
 					],
 				});
 			}
-			registry.delete(first.sessionId);
 			expect(await bridge.invoke(window, binding, "overview", null, application)).toMatchObject({
 				pid,
 				sessions: 1,
 			});
 			await bridge.revoke(undefined, window.id);
 			const second = sessions.shift();
-			registry.revoke(second.sessionId);
 			if (shutdownOrder === "host-first") await bridge.close();
-			await new SessionEngine().dispose(second);
-			registry.delete(second.sessionId);
+			await host.service.closeSession(second.sessionId);
 			await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow());
 		} finally {
-			for (const session of sessions) await new SessionEngine().dispose(session);
-			for (const bootstrap of bootstraps) await bootstrap.dispose();
+			await host?.close();
 			await bridge.close();
-			vi.restoreAllMocks();
 			await rm(root, { recursive: true, force: true });
 		}
 	},
