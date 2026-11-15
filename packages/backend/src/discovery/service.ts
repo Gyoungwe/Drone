@@ -1,9 +1,6 @@
-import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { lstat, mkdir, readFile, realpath } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import type {
-	ControlledKernelRunner,
-	CriticProvider,
 	CriticRequest,
 	DiscoveryBaselineRecord,
 	DiscoveryEvaluationCase,
@@ -11,8 +8,6 @@ import type {
 	DiscoveryEvaluationRun,
 	DiscoveryExplorationBudget,
 	DiscoveryLedgerInput,
-	InquiryDiscoveryPort,
-	KernelLanguage,
 	KernelSession,
 	MultipathPathExecutionResult,
 	MultipathPlan,
@@ -29,31 +24,17 @@ import type {
 	DiscoveryKernelSession,
 	DiscoveryMultipathAssessment,
 } from "@drone/shared";
-import type {
-	DiscoveryHostInput,
-	DiscoveryHostLoader,
-	DiscoveryHostPort,
-	DiscoveryHostServices,
-	DiscoveryJournalName,
-} from "@gyoungwe/plugin-api";
-import {
-	ContainerSandboxRunner as ContainerKernelRunner,
-	type ContainerSandboxOptions as ContainerKernelRunnerOptions,
-} from "@gyoungwe/plugin-api/node/execution";
+import type { DiscoveryHostLoader, DiscoveryHostPort } from "@gyoungwe/plugin-api";
 import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
-import { JsonStore, JsonStoreCorruptedError } from "../json-store";
 import { canonicalProjectId } from "../project-id";
-import type { StorageRegistry } from "../storage/registry";
+import { createDiscoveryHostInput, type DiscoveryServiceOptions } from "./host-input";
 
-export type DiscoveryAuthorizationOperation =
-	| { readonly kind: "create-kernel-session"; readonly projectId: string }
-	| { readonly kind: "execute-kernel"; readonly projectId: string; readonly sessionId: string }
-	| { readonly kind: "export-kernel"; readonly projectId: string; readonly sessionId: string }
-	| { readonly kind: "close-kernel-session"; readonly projectId: string; readonly sessionId: string }
-	| { readonly kind: "multipath-execution"; readonly projectId: string; readonly planId: string }
-	| { readonly kind: "evaluation-execution"; readonly projectId: string; readonly runId: string };
-
-export type DiscoveryAuthorization = (operation: DiscoveryAuthorizationOperation) => Promise<void>;
+export {
+	createDiscoveryHostInput,
+	type DiscoveryAuthorization,
+	type DiscoveryAuthorizationOperation,
+	type DiscoveryServiceOptions,
+} from "./host-input";
 
 export interface DiscoveryKernelSessionInput {
 	readonly sessionId: string;
@@ -64,30 +45,6 @@ export interface DiscoveryKernelSessionInput {
 	readonly executionTimeoutMs?: number;
 	readonly maxExecutions?: number;
 	readonly maxOutputBytes?: number;
-}
-
-export interface DiscoveryServiceOptions {
-	readonly projectId: string;
-	readonly projectRoot: string;
-	readonly storage?: StorageRegistry;
-	readonly agentDir?: string;
-	/** Existing unassigned journal root, reported without automatic adoption. */
-	readonly legacyJournalRoot?: string;
-	readonly inquiry?: InquiryDiscoveryPort;
-	readonly authorize?: DiscoveryAuthorization;
-	readonly runner?: ControlledKernelRunner;
-	readonly runnerFactory?: (language: KernelLanguage) => Promise<ControlledKernelRunner>;
-	readonly container?: Omit<ContainerKernelRunnerOptions, "projectRoot">;
-	readonly criticProvider?: CriticProvider;
-	readonly onExecution?: (input: {
-		readonly sessionId: string;
-		readonly projectId: string;
-		readonly cwd: string;
-		readonly runDirectory: string;
-		readonly language: string;
-		readonly code: string;
-		readonly execution: Awaited<ReturnType<KernelSession["execute"]>>;
-	}) => void | Promise<void>;
 }
 
 export interface DiscoveryServicePort {
@@ -132,196 +89,6 @@ export interface DiscoveryServicePort {
 	dispose(): void | Promise<void>;
 	listBaselines(): Promise<readonly DiscoveryBaselineRecord[]>;
 	putBaseline(record: DiscoveryBaselineRecord): Promise<void>;
-}
-
-/** Writer used by KernelSession.export; every target is checked against projectRoot/runs. */
-class ProjectRunFileWriter {
-	constructor(private readonly projectRoot: string) {}
-	private target(path: string): string {
-		if (isAbsolute(path) || path.includes("\u0000")) throw new Error("export path must be relative");
-		const target = resolve(this.projectRoot, path);
-		const rel = relative(resolve(this.projectRoot), target).replaceAll("\\", "/");
-		if (!rel.startsWith("runs/") || rel.includes("../"))
-			throw new Error("exports are restricted to project runs");
-		return target;
-	}
-	private async rejectSymlink(target: string): Promise<void> {
-		const root = resolve(this.projectRoot);
-		const rel = relative(root, target).replaceAll("\\", "/");
-		const parts = rel.split("/");
-		let current = root;
-		for (const part of parts) {
-			current = join(current, part);
-			try {
-				if ((await lstat(current)).isSymbolicLink()) throw new Error("export path contains a symlink");
-			} catch (error) {
-				if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-			}
-		}
-	}
-	async prepareDirectory(path: string): Promise<void> {
-		const target = this.target(`${path}/.directory`);
-		await this.rejectSymlink(target);
-		await mkdir(dirname(target), { recursive: true });
-	}
-	async write(path: string, content: string): Promise<void> {
-		const target = this.target(path);
-		await this.rejectSymlink(target);
-		await mkdir(dirname(target), { recursive: true });
-		await writeFile(target, content, { encoding: "utf8", flag: "wx" }).catch(async (error: unknown) => {
-			if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-			await writeFile(target, content, { encoding: "utf8" });
-		});
-	}
-}
-
-const journalNames: readonly DiscoveryJournalName[] = [
-	"sessions",
-	"critics",
-	"multipath",
-	"plans",
-	"evaluations",
-	"baselines",
-];
-
-/** Infrastructure is constructed only for an installed capability; kernels remain lazy. */
-export function createDiscoveryHostInput(
-	options: DiscoveryServiceOptions,
-	reserveWriter: () => Promise<void>,
-	retainWriter: (error: unknown) => void,
-): DiscoveryHostInput {
-	const projectRoot = resolve(options.projectRoot);
-	const root = resolve(options.agentDir ?? join(projectRoot, "runs", ".drone-discovery"));
-	options.storage?.registerDiscoveredRoot("discovery-root", root, "discovery/service", "private");
-	let runnerPromise: Promise<ControlledKernelRunner> | undefined;
-	const files = new ProjectRunFileWriter(projectRoot);
-	const services: DiscoveryHostServices = {
-		journal: <T>(name: DiscoveryJournalName) => {
-			if (!journalNames.includes(name)) throw new Error("Unknown discovery journal");
-			const entry = options.storage?.registerDiscoveredRoot(
-				`discovery-${name}`,
-				join(root, `${name}.json`),
-				`discovery/${name}`,
-				"private",
-			);
-			const store = new JsonStore<T[]>({
-				path: join(root, `${name}.json`),
-				storageId: entry?.id ?? `agent-discovery-${name}`,
-				defaultValue: () => [],
-			});
-			let expectedVersion: string | null | undefined;
-			const snapshot = async () => {
-				const path = join(root, `${name}.json`);
-				let text: string;
-				try {
-					if ((await lstat(root)).isSymbolicLink() || (await lstat(path)).isSymbolicLink())
-						throw new Error("Discovery journal path contains a symlink");
-					text = await readFile(path, "utf8");
-				} catch (error) {
-					if ((error as NodeJS.ErrnoException).code === "ENOENT") return { value: [] as T[], version: null };
-					throw error;
-				}
-				let value: unknown;
-				try {
-					value = JSON.parse(text);
-				} catch (error) {
-					throw new JsonStoreCorruptedError(path, error);
-				}
-				if (!Array.isArray(value))
-					throw new JsonStoreCorruptedError(path, new Error("Discovery journal must contain an array"));
-				return { value: value as T[], version: createHash("sha256").update(text).digest("hex") };
-			};
-			return {
-				read: async () => {
-					const current = await snapshot();
-					expectedVersion = current.version;
-					return current.value;
-				},
-				write: async (records: T[]) => {
-					await reserveWriter();
-					const writtenHash = createHash("sha256")
-						.update(`${JSON.stringify(records, null, 2)}\n`)
-						.digest("hex");
-					const current = await store
-						.writeChecked(records, {
-							check: async () => {
-								if (expectedVersion === undefined || (await snapshot()).version !== expectedVersion)
-									throw new Error("Discovery journal changed; close and reopen this owner before writing");
-							},
-							readBack: async () => {
-								const stored = await snapshot();
-								if (stored.version !== writtenHash)
-									throw new Error("Discovery journal did not read back after write");
-								return stored;
-							},
-						})
-						.catch((error) => {
-							if (error instanceof AggregateError) retainWriter(error);
-							throw error;
-						});
-					expectedVersion = current.version;
-				},
-			};
-		},
-		authorize: async (operation) => {
-			if (operation.projectId !== options.projectId)
-				throw new Error("Discovery authorization belongs to another project");
-			if (!options.authorize) throw new Error("discovery operation requires task authorization");
-			await options.authorize(operation);
-			await reserveWriter();
-		},
-		runner: async (language) => {
-			let runner: ControlledKernelRunner;
-			if (options.runner) runner = options.runner;
-			else if (options.runnerFactory) runner = await options.runnerFactory(language);
-			else {
-				if (!runnerPromise)
-					runnerPromise = ContainerKernelRunner.create({ projectRoot, ...options.container }).then(
-						(value) =>
-							value ?? {
-								capabilities: {
-									kind: "unavailable" as const,
-									languages: ["python", "r"],
-									networkDisabled: false,
-									writesOnlyToRunDirectory: false,
-								},
-								run: async () => {
-									throw new Error("needs-container");
-								},
-							},
-					);
-				runner = await runnerPromise;
-			}
-			if (runner.capabilities.kind !== "fixture") return runner;
-			return {
-				capabilities: runner.capabilities,
-				run: async (request) => {
-					// Logical creation has no filesystem effect. Legacy fixture execution prepares its real cwd
-					// only after the service's actual execute authorization, using the same confined writer.
-					await files.prepareDirectory(request.runDirectory);
-					return runner.run({ ...request, runDirectory: resolve(projectRoot, request.runDirectory) });
-				},
-			};
-		},
-		files,
-		...(options.inquiry ? { inquiry: options.inquiry } : {}),
-		...(options.criticProvider ? { criticProvider: options.criticProvider } : {}),
-		legacyJournal: async () => {
-			if (!options.legacyJournalRoot || resolve(options.legacyJournalRoot) === root) return undefined;
-			for (const name of journalNames) {
-				try {
-					if ((await stat(join(options.legacyJournalRoot, `${name}.json`))).isFile())
-						return { status: "unassigned", path: options.legacyJournalRoot };
-				} catch (error) {
-					if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-				}
-			}
-			return undefined;
-		},
-		onExecution: (receipt) =>
-			options.onExecution?.({ ...receipt, projectId: options.projectId, cwd: projectRoot }),
-	};
-	return { projectId: options.projectId, projectRoot, agentDir: root, services };
 }
 
 /** The sole backend discovery surface delegates business behavior to the installed package. */
