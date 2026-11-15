@@ -639,7 +639,7 @@
 	"suspicious/noExplicitAny\tpackages/desktop/src/main/ipc/compute.test.ts": 4,
 	"suspicious/noExplicitAny\tpackages/desktop/src/main/ipc/decisions.integration.test.ts": 2,
 	"suspicious/noExplicitAny\tpackages/desktop/src/main/ipc/decisions.test.ts": 3,
-	"suspicious/noExplicitAny\tpackages/desktop/src/main/ipc/knowledge.test.ts": 6,
+	"suspicious/noExplicitAny\tpackages/desktop/src/main/ipc/knowledge.test.ts": 3,
 	"suspicious/noExplicitAny\tpackages/desktop/src/main/ipc/mcp.test.ts": 4,
 	"suspicious/noExplicitAny\tpackages/desktop/src/main/ipc/permissions.test.ts": 3,
 	"suspicious/noExplicitAny\tpackages/desktop/src/main/ui-plugins/runtime-host.test.ts": 3,

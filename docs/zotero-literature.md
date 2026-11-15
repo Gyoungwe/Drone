@@ -64,7 +64,7 @@ Pi-format files accept only `command`, `args`, `env`, `cwd`, `url`, `headers`, `
 }
 ```
 
-Credentials are not written into `mcp.json`: the MCP child inherits `ZOTERO_API_KEY` / `ZOTERO_LIBRARY_ID` (Settings → Zotero → Web API) or `ZOTERO_LOCAL_API_KEY` / `ZOTERO_LOCAL_SERVER_ID` (Zotero 10 local writes) from the host environment. `ZOTERO_LIBRARY_TYPE` is injected and written in pyzotero's singular spelling (`user` / `group`); pyzotero appends the "s" itself, so the plural value older builds injected produced `https://api.zotero.org/userss/<id>` (404) in zotero-mcp / zotero-cli. Drone's own Zotero channels accept both spellings. `.mcp.example.json` shows the adapter-format (`.mcp.json`) equivalent.
+Web API credentials are not written into `mcp.json` or injected from Drone settings. MCP and research connectors see only the Web API variables the user sets in the environment: `ZOTERO_API_KEY`, `ZOTERO_LIBRARY_ID` / `ZOTERO_USER_ID`, and `ZOTERO_LIBRARY_TYPE`. Plugin credentials are available to managed pi-research tools only. Set `ZOTERO_LIBRARY_TYPE` to pyzotero's singular spelling (`user` / `group`); pyzotero appends the "s" itself, so plural `users` produces `https://api.zotero.org/userss/<id>` (404) in zotero-mcp / zotero-cli. Drone's own Zotero channels accept both spellings. `.mcp.example.json` shows the adapter-format (`.mcp.json`) equivalent.
 
 ## Writing to Zotero
 
@@ -72,7 +72,7 @@ Credentials are not written into `mcp.json`: the MCP child inherits `ZOTERO_API_
 
 | Step | Behaviour |
 |---|---|
-| Channel | Zotero desktop connector (`127.0.0.1:23119/connector/saveItems`) when Zotero is running and the local API is enabled; otherwise the Zotero Web API v3 with a **write-scoped** `ZOTERO_API_KEY` plus `ZOTERO_LIBRARY_ID` / `ZOTERO_USER_ID` (and `ZOTERO_LIBRARY_TYPE=group` for a group; `groups` is accepted too) from the host environment, or the key saved in Drone Settings → Zotero → Web API (stored in `agentDir/zotero-web.json`, injected into the same variables; a user-set environment variable wins). Credentials never come from chat or tool arguments. |
+| Channel | Zotero desktop connector (`127.0.0.1:23119/connector/saveItems`) when Zotero is running and the local API is enabled; otherwise the Zotero Web API v3 with a **write-scoped** key and library settings saved under Settings → Plugins → pi-research → credentials. This plugin slot is not injected into the environment; MCP and research connectors use only user-set Web API environment variables. Credentials never come from chat or tool arguments. |
 | Dedup | Exact-DOI lookup first (local API or Web API). One existing item ⇒ `reused`, no write. Several ⇒ `ambiguous`, no write. Incomplete lookup ⇒ `blocked`. |
 | Consent | If the authorized, unchanged task plan lists the DOI as a `zotero_item` milestone, that consent covers the write. Otherwise the host's own `network.write` capability dialog asks once before the write; declining writes nothing. There is no standing “always allow” setting. |
 | Write | Exactly one write. Metadata is whitelisted per item type (unknown fields are dropped, the DOI goes to `extra` for types without a DOI field). Attachments are URL-only here: the connector lets Zotero download `attachment_url` itself; the Web API records it as a `linked_url` attachment. Uploading a local PDF to an item is `research_zotero_update local_file`. |
@@ -92,7 +92,7 @@ Credentials are not written into `mcp.json`: the MCP child inherits `ZOTERO_API_
 | Consent | A task plan naming the DOI as a `zotero_item` milestone covers it; otherwise the native ask card lists every change and only “同意修改该条目” writes. Headless sessions without task consent are refused. |
 | Write | One `PATCH` with `If-Unmodified-Since-Version` (a concurrent edit returns 412 and nothing is overwritten), one child item per attachment. No deletes, no removal from collections, no retries. |
 | Read-back | The item and its children are read again: `updated` (all verified), `partial`, `unverified` or `failed`, per change. |
-| Not configured | `blocked` with the reason; the agent tells the user to authorize local writes (Zotero 10+) or add a write-enabled key in Settings → Zotero, and never asks for a key in chat. A saved local key whose server id no longer matches (the Zotero data directory changed) is not used, and the reason says to authorize again. |
+| Not configured | `blocked` with the reason; the agent tells the user to authorize local writes (Zotero 10+) or add a write-enabled key in Settings → Plugins → pi-research → credentials, and never asks for a key in chat. A saved local key whose server id no longer matches (the Zotero data directory changed) is not used, and the reason says to authorize again. |
 
 The desktop context panel shows the result: the 产物 tab lists one literature receipt per DOI (Zotero status + key, Vault note path, fulltext status, open in Zotero via `zotero://select/library/items/<key>`, open note, DOI page); the 任务 tab shows the read-back evidence under each `zotero_item` milestone. Task milestones are reconciled by the desktop local API first and the Web API second (`createCompositeZoteroReconciler`). Subagents (`PI_SUBAGENT_CHILD=1`) do not receive the tool.
 

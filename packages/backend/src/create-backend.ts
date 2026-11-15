@@ -139,7 +139,6 @@ import type { SettingsServicePort } from "./settings/settings";
 import type { StorageRegistry } from "./storage/registry";
 import type { SshHostEntry } from "./tools/ssh";
 import { applyStoredZoteroLocalKey } from "./zotero/local-write";
-import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
 
 /**
  * Transitional composition root for the v2 migration.
@@ -379,8 +378,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				},
 	);
 	const permissions = new PermissionSettingsService();
-	// Zotero Web API credentials saved in settings → process.env, so the research Zotero write channel sees them.
-	void applyStoredZoteroWebCredentials();
 	void applyStoredZoteroLocalKey();
 	// The compute host registry is created after sessions; ssh tools read it lazily at execute time.
 	let listComputeHosts: (() => Promise<ComputeHost[]>) | null = null;

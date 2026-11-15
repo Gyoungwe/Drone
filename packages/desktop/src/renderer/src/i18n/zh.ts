@@ -769,7 +769,6 @@ export const zh = {
 		webdav: "WebDAV 知识库",
 		webdavDescription: "云端知识库连接；同步仍需逐项确认。",
 		zoteroDescription: "Zotero 本机与文献库连接",
-		zoteroWebConfigured: "Zotero Web API 已配置",
 		zoteroLocalAuthorized: "Zotero 本机写入已授权",
 		institutional: "机构访问",
 		institutionalDescription: "机构登录尚未完成",
