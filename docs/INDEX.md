@@ -301,6 +301,8 @@ packages/
 
 规则回归位于插件 `packages/pi-core/test/task-runtime/`，宿主的 `test/builtin-core-*-sdk.test.mjs` 检查内置安装包、生产 SessionService、独立会话、停用与重新授权，`test/task-plugin-activation-sdk.test.mjs` 检查未装任务包时的基础权限；`scripts/knowledge-ui-smoke/task-owner.mjs` 从安装包读取 UI fixture 的 journal，不复制算法。任务 UI 已同包，整个可选 native 包生命周期和正式安装包验收仍未完成。
 
+`backend/test/task-manifest-session.test.mjs` checks the independently bundled knowledge extension's read-only declaration in two standalone host runtimes, without a task owner. Task guard behavior belongs to pi-core; this host test does not verify managed idempotency.
+
 ## packages/research — 宿主研究合同与知识桥
 
 `@drone/research` 保留 `connectors.ts`、`write-connectors.ts`、`capability-discovery.ts` 的 shared/宿主端口合同，以及 `run-summary.ts` 的知识沉淀组合桥。证据状态机、归档、回执、provenance、Zotero 与 research-run-ui 已由外部 `@gyoungwe/pi-research/host` 提供；宿主不再维护这些领域模块的副本。

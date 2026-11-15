@@ -86,7 +86,7 @@ managed Pi proxy 的属性读取本身会明确拒绝未支持 API。`createKnow
 
 正式包中 `research_prepare_knowledge` 的 `drone.readOnly` 已进入宿主 runtime，但 SDK 的 `tool_call` 钩子在注册作用域外运行。任务门禁读取了默认 runtime，首轮把只读调用记为副作用，下一轮同参数调用被 `idempotency-check` 拒绝。不要通过清空账本、硬编码工具名或进程级清单来绕过。
 
-`registerWorkbench` 现在注入通过 `withHostRuntime(pi, ...)` 查询的只读判定，每次调用解析当前绑定，兼容宿主稍后宣布 runtime 的加载顺序。`task-manifest-session.test.mjs` 使用真实独立构建的知识扩展，检查跨轮读取不受阻、另一独立 event bus 未声明同名工具时仍拦截重复效果；源码单测通过后仍须重新打包做 GUI 验收。
+The historical native guard used `withHostRuntime(pi, ...)` to query the declaration in the current binding, including when the host announced its runtime after extension registration. `task-manifest-session.test.mjs` now isolates the host contract: the real independently bundled knowledge extension declares its tool read-only in its own standalone runtime, while another runtime has no such declaration. Managed pi-core guards consume SDK `annotations.readOnlyHint` through `session.tools`; a legacy `drone.readOnly` declaration alone does not establish managed guard coverage. Repeated-call behavior needs separate guard evidence, and source tests do not replace packaged GUI acceptance.
 
 同轮正式包重验还发现：`build:extensions` 默认保留现有输出，但曾把传递依赖的新摘要写进旧输出的 manifest，`check:extensions` 因而误判通过。生成器现在拒绝这种依赖漂移且不更新 manifest；必须 `npm run build:extensions -- --force` 重建。回归在 `scripts/check-build-inputs.test.mjs`，第二个含旧 bundle 的中间 DMG 已废弃，不能计入最终 PASS。
 
