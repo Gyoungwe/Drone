@@ -7,9 +7,12 @@
  * the API/contract identifiers and the pure negotiation helper below.
  */
 
+import type { PluginPermissionDeclaration } from "./approvals.js";
+
 export const PLUGIN_API_VERSION = 1 as const;
 export const RESULT_CONTRACT = "drone-result/v3" as const;
 
+export type * from "./approvals.js";
 export * from "./core.js";
 export type * from "./legacy-knowledge.js";
 export * from "./research.js";
@@ -251,25 +254,6 @@ export interface AuthorizationReceipt {
 	readonly authorizationRef?: string;
 	readonly decidedAt: string;
 	readonly reason?: string;
-}
-
-/** Permission scopes that a Drone manifest may declare for host-mediated work. */
-export type PluginFilesystemPermission =
-	| "workspace-read"
-	| "workspace"
-	| "configured-vault"
-	| "configured-vault-write"
-	| "vault-read"
-	/** Declares explicit state/lease roots; requires a scoped storage broker, not arbitrary file access. */
-	| "application-state"
-	| "binary-state-read"
-	| "binary-state-write";
-
-export interface PluginPermissionDeclaration {
-	readonly filesystem: readonly PluginFilesystemPermission[];
-	readonly network: readonly string[];
-	readonly subprocess: readonly string[];
-	readonly externalWrites: boolean;
 }
 
 export type PluginPermissionOperation =

@@ -107,7 +107,7 @@
 	"file-lines\tpackages/inquiry/src/service.ts": 422,
 	"file-lines\tpackages/inquiry/src/storage.ts": 687,
 	"file-lines\tpackages/inquiry/test/inquiry.test.ts": 564,
-	"file-lines\tpackages/plugin-api/src/index.ts": 794,
+	"file-lines\tpackages/plugin-api/src/index.ts": 778,
 	"file-lines\tpackages/plugin-api/src/knowledge.ts": 766,
 	"file-lines\tpackages/plugin-api/src/node/execution.ts": 439,
 	"file-lines\tpackages/plugin-api/src/runtime.ts": 436,
