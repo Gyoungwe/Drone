@@ -85,8 +85,6 @@ extraResources:
     to: "research-workbench/skills/research-show-me"
   - from: "../../.pi/skills/zotero-literature"
     to: "research-workbench/skills/zotero-literature"
-  - from: "../../.pi/skills/bio-environment"
-    to: "research-workbench/skills/bio-environment"
 mac:
   extraResources:
     - from: "plugin-runtime/darwin-${arch}"
