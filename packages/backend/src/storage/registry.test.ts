@@ -39,7 +39,7 @@ describe("StorageRegistry", () => {
 					sites.push(file);
 					continue;
 				}
-				if (file.endsWith("/discovery/service.ts")) {
+				if (file.endsWith("/discovery/host-input.ts")) {
 					expect(block).toContain("storageId: entry?.id");
 					expect(lines.join("\n")).toContain("registerDiscoveredRoot");
 					sites.push(file);
