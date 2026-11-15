@@ -11,6 +11,7 @@ import { dirname, join, resolve } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { getCurrentTools } from "@earendil-works/pi-ai/utils/transcript";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { beginKnowledgeFlow, flowFor, noteKnowledgeOperation } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, expect, it, vi } from "vitest";
 import { discoverInstalledPackages } from "../../desktop/src/main/ui-plugins/installed-package-sources";
 import { createBackend } from "../src/create-backend";
@@ -50,10 +51,14 @@ const CUTOVER_SERVICES = {
 
 async function pack(dir) {
 	const [packed] = JSON.parse(
-		execFileSync("npm", ["pack", "--ignore-scripts", "--json", "--pack-destination", root], {
-			cwd: dir,
-			encoding: "utf8",
-		}),
+		execFileSync(
+			"npm",
+			["pack", "--ignore-scripts", "--json", "--cache", join(root, "npm-cache"), "--pack-destination", root],
+			{
+				cwd: dir,
+				encoding: "utf8",
+			},
+		),
 	);
 	return join(root, packed.filename);
 }
@@ -99,28 +104,16 @@ async function install() {
 			tools: [],
 		}),
 	);
-	const archives = [
-		await pack(tasks),
-		await pack(resolve(import.meta.dirname, "../../../vendor/plugins/pi-research")),
-	];
-	const prefix = join(root, "installed");
-	await mkdir(prefix);
-	await writeFile(join(prefix, "package.json"), JSON.stringify({ private: true, type: "module" }));
-	execFileSync(
-		"npm",
-		[
-			"install",
-			"--prefix",
-			prefix,
-			"--ignore-scripts",
-			"--no-audit",
-			"--no-fund",
-			"--package-lock=false",
-			...archives,
-		],
-		{ encoding: "utf8" },
+	const nodeModules = join(root, "installed", "node_modules");
+	const taskPackage = join(nodeModules, "@fixture", "tasks");
+	await mkdir(taskPackage, { recursive: true });
+	execFileSync("tar", ["-xzf", await pack(tasks), "-C", taskPackage, "--strip-components=1"]);
+	await cp(
+		resolve(import.meta.dirname, "../../desktop/plugin-packages/node_modules/@gyoungwe/pi-research"),
+		join(nodeModules, "@gyoungwe", "pi-research"),
+		{ recursive: true },
 	);
-	return (await discoverInstalledPackages(join(prefix, "node_modules"))).map((item) => {
+	return (await discoverInstalledPackages(nodeModules)).map((item) => {
 		if ("error" in item || !item.runtime) throw new Error(JSON.stringify(item));
 		return { name: `package:${item.packageRoot}`, source: item.runtime, state: "enabled" };
 	});
@@ -302,6 +295,16 @@ it("one save binds a DOI-less Zotero milestone from the actual tool event and th
 	expect(t.errors).toEqual([]);
 	expect(t.saveResult()?.details).toMatchObject({ status: "saved", zoteroKey: "ABCD2345" });
 	const task = await t.view();
+	const result = t.saveResult();
+	expect(result.details.cards).toEqual([
+		expect.objectContaining({ key: `doi:${DOI}`, kind: "literature", status: "saved" }),
+	]);
+	const ctx = { sessionManager: { getSessionId: () => "managed-zotero-flow" } };
+	beginKnowledgeFlow(ctx, { vaultId: "fixture", revision: 1, vault: "/vault" });
+	noteKnowledgeOperation(ctx, { toolName: "research_zotero_save", toolCallId: result.toolCallId, result });
+	expect(flowFor("managed-zotero-flow").cards).toEqual(
+		result.details.cards.map((card) => ({ ...card, at: expect.any(Number) })),
+	);
 	expect(task.milestones).toEqual([
 		expect.objectContaining({
 			id: "z",

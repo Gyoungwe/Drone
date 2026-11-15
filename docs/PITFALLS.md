@@ -11,6 +11,7 @@
 | 全 app 卡死、日志/磁盘分钟级 GB 暴涨、renderer unresponsive | 一 · 0.4.6 冻结事故 |
 | 流式期间白屏、`error #185`、无限重渲染整树卸载 | 一 · 0.5.0 白屏事故；四 · Zustand selector（#185 另一成因） |
 | 扩展注册的工具模型用不了、模型说「工具列表为 none」 | 二 · createAgentSession tools 白名单 |
+| A managed tool keeps executing an old in-process implementation | 2026-11-12 · First tool registration wins |
 | 设置页永久 Loading、模型列表为空 | 二 · runtime.refresh 网络挂起 / getAvailable 返回空 |
 | 权限 confirm 弹窗不生效 | 二 · bindExtensions 注入点 |
 | preload 加载失败（sandbox 下 require is not defined） | 三 · preload 必须 CJS |
@@ -50,6 +51,10 @@ Use `NativeSessionDelivery.isOrdinary()` with the same current-run policy as eve
 ordinary delivery uses the explicitly registered legacy projector; required and closed delivery keep their
 managed boundary, without applying both owners. SDK exports read persisted entries, so event projection
 also protects their content. Keep the publication suite's built-in-core bootstrap and its assertions intact.
+
+## 2026-11-12: First tool registration wins
+
+Pi keeps the first registration of a tool name. Drone loads bundled extension paths before built-in package entries, so an old bundled registration shadows the managed implementation even when the managed runtime loads successfully. During a cutover, remove the old `registerTool` block and its unused helpers, rebuild the bundle, and verify the selected tool's metadata and actual SDK receipt. For Zotero, `research_zotero_status/save/update` belong only to the built-in pi-research managed runtime; its status tool supplies the `research-zotero` family and its write results supply `details.cards`. Keep setup and the legacy acceptance verifier until P3.
 
 ## 2026-10-28：原生适配器提前读取未支持 API
 

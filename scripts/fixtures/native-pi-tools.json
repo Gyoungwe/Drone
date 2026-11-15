@@ -320,22 +320,25 @@
       "targetPackage": "pi-knowledge"
     },
     "research_zotero_save": {
-      "source": "packages/extensions/src/zotero-literature.ts",
+      "source": "vendor/plugins/pi-research/dist/desktop-runtime.mjs",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-research"
+      "targetPackage": "pi-research",
+      "delegated": true
     },
     "research_zotero_status": {
-      "source": "packages/extensions/src/zotero-literature.ts",
+      "source": "vendor/plugins/pi-research/dist/desktop-runtime.mjs",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-research"
+      "targetPackage": "pi-research",
+      "delegated": true
     },
     "research_zotero_update": {
-      "source": "packages/extensions/src/zotero-literature.ts",
+      "source": "vendor/plugins/pi-research/dist/desktop-runtime.mjs",
       "registration": "registerTool",
       "nativePiAvailable": true,
-      "targetPackage": "pi-research"
+      "targetPackage": "pi-research",
+      "delegated": true
     },
     "task_evidence_restore": {
       "source": "packages/backend/src/session-engine/extensions.ts",

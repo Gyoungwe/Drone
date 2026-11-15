@@ -22,6 +22,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parse } from "yaml";
 import { detectCapabilities, toolCapabilities } from "../src/capabilities/runtime";
+import { registerManagedResearchToolMeta, stubPi } from "./tool-manifest-fixture.mjs";
 
 let root, cwd, vault, agentDir;
 beforeEach(async () => {
@@ -296,6 +297,7 @@ describe("capability routing", () => {
 			getCommands: () => [],
 			events: createEventBus(),
 		});
+		registerManagedResearchToolMeta(stubPi());
 		expect(detectCapabilities("在 zotero 里找这篇论文")).toEqual(
 			expect.arrayContaining(["research", "external"]),
 		);
@@ -306,15 +308,17 @@ describe("capability routing", () => {
 	});
 });
 
-it("slash command is labeled as from-zero install", () => {
+it("keeps setup and its slash command without shadowing the managed Zotero tools", () => {
 	const commands = new Map();
+	const tools = [];
 	zoteroLiterature({
 		on() {},
 		events: createEventBus(),
-		registerTool: () => {},
+		registerTool: (tool) => tools.push(tool.name),
 		registerCommand: (name, command) => commands.set(name, command),
 		getCommands: () => [],
 	});
+	expect(tools).toEqual(["research_setup_zotero"]);
 	expect(commands.get("zotero-setup").description).toContain("从零安装");
 });
 
