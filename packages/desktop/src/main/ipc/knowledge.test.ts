@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-	handlers: new Map<string, (event: any, input: any) => any>(),
+	handlers: new Map<string, (event: unknown, ...args: unknown[]) => Promise<unknown>>(),
 	window: { isDestroyed: () => false, webContents: { send: vi.fn() } },
 	openPath: vi.fn(async () => ""),
 	openExternal: vi.fn(async () => {}),
@@ -77,6 +77,37 @@ it("opens only backend-resolved knowledge paths", async () => {
 	);
 	expect(mocks.openExternal).toHaveBeenCalledWith("obsidian://open?path=%2Ffixture%2FVault%2Fnote.md");
 });
+
+it("returns an unconfigured Zotero Web API status without key material", async () => {
+	const frame = {};
+	await expect(
+		mocks.handlers.get(IpcChannels.ZoteroWebApiGet)?.({
+			sender: { mainFrame: frame },
+			senderFrame: frame,
+		}),
+	).resolves.toEqual({
+		configured: false,
+		source: null,
+		libraryType: "users",
+		libraryId: null,
+		username: null,
+		write: null,
+		keyHint: null,
+	});
+});
+
+it.each([IpcChannels.ZoteroWebApiSave, IpcChannels.ZoteroWebApiClear])(
+	"redirects retired Zotero credential writes through %s to plugin credentials",
+	async (name) => {
+		const frame = {};
+		const args = name === IpcChannels.ZoteroWebApiSave ? [{ apiKey: " ".repeat(16) }] : [];
+		await expect(
+			mocks.handlers.get(name)?.({ sender: { mainFrame: frame }, senderFrame: frame }, ...args),
+		).rejects.toThrow(
+			new Error("Zotero Web API keys are now saved under Settings → Plugins → pi-research → credentials"),
+		);
+	},
+);
 
 it("specialist mode writes require the same main-frame restriction as approvals", async () => {
 	const frame = {};

@@ -9,7 +9,6 @@ import type {
 	SkillRepositoryRecord,
 	ZoteroLocalWriteStatus,
 	ZoteroStatus,
-	ZoteroWebApiStatus,
 } from "@drone/shared";
 import { MARKET_RESOURCE_LINKS, RESEARCH_SKILL_SOURCES, researchSkillProfile } from "@drone/shared";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -241,7 +240,6 @@ export function SkillsConnectionsView() {
 	const [connectorLoading, setConnectorLoading] = useState(false);
 	const [connectorPending, setConnectorPending] = useState<string | null>(null);
 	const [zotero, setZotero] = useState<ZoteroStatus | null>(null);
-	const [zoteroWeb, setZoteroWeb] = useState<ZoteroWebApiStatus | null>(null);
 	const [zoteroLocal, setZoteroLocal] = useState<ZoteroLocalWriteStatus | null>(null);
 	const [institutional, setInstitutional] = useState<InstitutionalStatus | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -281,26 +279,16 @@ export function SkillsConnectionsView() {
 			loadPlugins(),
 			getPi().getMcpStatus(cwd ?? undefined),
 			getPi().getZoteroStatus(),
-			getPi().getZoteroWebApi(),
 			getPi().getZoteroLocalWrite(),
 			getPi().getInstitutionalStatus(),
 			typeof getPi().listSkillRepositories === "function"
 				? getPi().listSkillRepositories()
 				: Promise.resolve([]),
 		]);
-		const [
-			settingsResult,
-			,
-			mcpResult,
-			zoteroResult,
-			webResult,
-			localResult,
-			institutionalResult,
-			repositoriesResult,
-		] = results;
+		const [settingsResult, , mcpResult, zoteroResult, localResult, institutionalResult, repositoriesResult] =
+			results;
 		if (mcpResult.status === "fulfilled") setMcp(mcpResult.value);
 		if (zoteroResult.status === "fulfilled") setZotero(zoteroResult.value);
-		if (webResult.status === "fulfilled") setZoteroWeb(webResult.value);
 		if (localResult.status === "fulfilled") setZoteroLocal(localResult.value);
 		if (institutionalResult.status === "fulfilled") setInstitutional(institutionalResult.value);
 		if (repositoriesResult?.status === "fulfilled") setSkillRepositories(repositoriesResult.value);
@@ -356,11 +344,9 @@ export function SkillsConnectionsView() {
 		if (zotero || zoteroConnector) {
 			// The `connector:webdav` route is intentionally owned by Knowledge settings;
 			// this page keeps only the Zotero read switch and its write drawer together.
-			const detail = zoteroWeb?.configured
-				? t("skillsConnections.zoteroWebConfigured")
-				: zoteroLocal?.authorized
-					? t("skillsConnections.zoteroLocalAuthorized")
-					: t("skillsConnections.zoteroDescription");
+			const detail = zoteroLocal?.authorized
+				? t("skillsConnections.zoteroLocalAuthorized")
+				: t("skillsConnections.zoteroDescription");
 			next.push({
 				id: "connector:zotero",
 				kind: "connector",
@@ -395,7 +381,7 @@ export function SkillsConnectionsView() {
 			});
 		}
 		return next;
-	}, [connectors, institutional, mcp, t, zotero, zoteroLocal, zoteroWeb]);
+	}, [connectors, institutional, mcp, t, zotero, zoteroLocal]);
 
 	const visibleRows = useMemo(() => {
 		const kind = capabilitySectionKind(section);

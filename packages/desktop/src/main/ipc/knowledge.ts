@@ -134,9 +134,25 @@ export function registerKnowledgeIpc(
 			hostServices?.knowledgeMaintenance?.getRuns() ??
 			Promise.reject(new Error("Knowledge maintenance service unavailable")),
 		getZoteroStatus: () => zotero.getStatus(),
-		getZoteroWebApi: () => (zotero.getWebApi ? zotero.getWebApi() : unavailable()),
-		saveZoteroWebApi: (input) => (zotero.saveWebApi ? zotero.saveWebApi(input) : unavailable()),
-		clearZoteroWebApi: () => (zotero.clearWebApi ? zotero.clearWebApi() : unavailable()),
+		getZoteroWebApi: async () => ({
+			configured: false,
+			source: null,
+			libraryType: "users",
+			libraryId: null,
+			username: null,
+			write: null,
+			keyHint: null,
+		}),
+		saveZoteroWebApi: async () => {
+			throw new Error(
+				"Zotero Web API keys are now saved under Settings → Plugins → pi-research → credentials",
+			);
+		},
+		clearZoteroWebApi: async () => {
+			throw new Error(
+				"Zotero Web API keys are now saved under Settings → Plugins → pi-research → credentials",
+			);
+		},
 		getZoteroLocalWrite: () => (zotero.getLocalWrite ? zotero.getLocalWrite() : unavailable()),
 		authorizeZoteroLocalWrite: () =>
 			zotero.authorizeLocalWrite ? zotero.authorizeLocalWrite() : unavailable(),

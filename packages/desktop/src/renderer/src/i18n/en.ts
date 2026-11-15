@@ -799,7 +799,6 @@ export const en: Messages = {
 		webdav: "WebDAV knowledge base",
 		webdavDescription: "Cloud knowledge connection; sync remains an explicit per-note action.",
 		zoteroDescription: "Zotero desktop and literature library connection",
-		zoteroWebConfigured: "Zotero Web API configured",
 		zoteroLocalAuthorized: "Zotero local writes authorized",
 		institutional: "Institutional access",
 		institutionalDescription: "Institution login is not complete",

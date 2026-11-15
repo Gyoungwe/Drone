@@ -8,7 +8,7 @@ export interface FirstRunStatus {
 
 /** Probe what the user already configured. Each probe fails closed (false) so a broken IPC never hides the guide. */
 export async function probeFirstRunStatus(
-	pi: Pick<PiApi, "getZoteroStatus" | "getZoteroWebApi" | "listHosts" | "getKnowledgeOverview">,
+	pi: Pick<PiApi, "getZoteroStatus" | "listHosts" | "getKnowledgeOverview">,
 	cwd: string | null,
 ): Promise<FirstRunStatus> {
 	const safe = async (fn: () => Promise<boolean>) => {
@@ -20,10 +20,7 @@ export async function probeFirstRunStatus(
 	};
 	const [knowledge, zotero, compute] = await Promise.all([
 		safe(async () => (cwd ? (await pi.getKnowledgeOverview({ cwd })).binding?.revision != null : false)),
-		safe(async () => {
-			const [status, web] = await Promise.all([pi.getZoteroStatus(), pi.getZoteroWebApi().catch(() => null)]);
-			return Boolean(status?.enabled || web?.configured);
-		}),
+		safe(async () => Boolean((await pi.getZoteroStatus()).enabled)),
 		safe(async () => (await pi.listHosts()).length > 0),
 	]);
 	return { knowledge, zotero, compute };
