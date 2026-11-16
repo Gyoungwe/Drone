@@ -60,7 +60,6 @@
 	"file-lines\tpackages/backend/test/packed-discovery-inquiry-sdk.test.ts": 444,
 	"file-lines\tpackages/backend/test/packed-discovery-owner-sdk.test.ts": 453,
 	"file-lines\tpackages/backend/test/packed-discovery-real-container-sdk.test.ts": 455,
-	"file-lines\tpackages/backend/test/packed-knowledge-runtime-sdk.test.mjs": 1339,
 	"file-lines\tpackages/backend/test/permission-extension.test.ts": 544,
 	"file-lines\tpackages/backend/test/plugin-model-capabilities-sdk.test.mjs": 657,
 	"file-lines\tpackages/backend/test/plugin-provider-sdk.test.mjs": 1253,
