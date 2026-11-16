@@ -1,3 +1,4 @@
+import { Check } from "typebox/value";
 import { describe, expect, it, vi } from "vitest";
 import { declaredTarget, networkCapabilityHandlers } from "./network-capabilities";
 
@@ -6,7 +7,7 @@ const reads = ["127.0.0.1:23119/connector/ping"];
 const context = { signal: new AbortController().signal } as Parameters<
 	ReturnType<typeof networkCapabilityHandlers>["network.read"]["execute"]
 >[1];
-const ok = (body = "{}", init: ResponseInit = {}) => vi.fn(async () => new Response(body, init));
+const ok = (body: BodyInit = "{}", init: ResponseInit = {}) => vi.fn(async () => new Response(body, init));
 
 describe("declared network hosts", () => {
 	it("admits a declared host and nothing else", () => {
@@ -112,12 +113,61 @@ describe("network capabilities", () => {
 
 	it("fails instead of truncating an oversized response", async () => {
 		const big = new Uint8Array(8 * 1024 * 1024 + 1);
-		const { "network.read": read } = networkCapabilityHandlers(
-			{ hosts: declared, reads },
-			ok(big as unknown as string),
-		);
+		const { "network.read": read } = networkCapabilityHandlers({ hosts: declared, reads }, ok(big));
 		await expect(read.execute({ method: "GET", url: "https://api.zotero.org/" }, context)).rejects.toThrow(
 			"exceeds",
 		);
 	});
+});
+
+it("accepts bounded PROPFIND reads independently of POST read declarations", async () => {
+	const fetchImpl = ok();
+	const read = networkCapabilityHandlers({ hosts: declared, reads: [] }, fetchImpl)["network.read"];
+	await read.execute(
+		{ method: "PROPFIND", url: "https://api.zotero.org/", headers: { dEpTh: "0" } },
+		context,
+	);
+	expect(fetchImpl).toHaveBeenCalledOnce();
+	for (const headers of [
+		undefined,
+		{ Depth: "1" },
+		{ Depth: "infinity" },
+		{ Depth: " 0" },
+		{ Depth: "1", depth: "0" },
+	]) {
+		await expect(
+			read.execute({ method: "PROPFIND", url: "https://api.zotero.org/", headers }, context),
+		).rejects.toThrow("PROPFIND requires Depth: 0");
+	}
+	expect(fetchImpl).toHaveBeenCalledOnce();
+});
+
+it("adds strict HTTP auth metadata to both schemas and keeps MKCOL a write", async () => {
+	const handlers = networkCapabilityHandlers({ hosts: declared, reads }, ok());
+	const input = {
+		method: "GET",
+		url: "https://api.zotero.org/",
+		credential: "webdav",
+		httpAuth: { username: "user" },
+	};
+	for (const [name, method] of [
+		["network.read", "PROPFIND"],
+		["network.write", "MKCOL"],
+	] as const) {
+		const handler = handlers[name];
+		expect(Check(handler.inputSchema, { ...input, method })).toBe(true);
+		for (const httpAuth of [
+			{ username: "" },
+			{ username: "x".repeat(257) },
+			{ username: "user", password: "x" },
+		])
+			expect(Check(handler.inputSchema, { ...input, method, httpAuth })).toBe(false);
+	}
+	expect(Check(handlers["network.read"].inputSchema, { ...input, method: "MKCOL" })).toBe(false);
+	expect(handlers["network.write"]).toMatchObject({
+		effect: "write",
+		approval: "allowance",
+		readCallable: true,
+	});
+	await handlers["network.write"].execute({ method: "MKCOL", url: input.url }, context);
 });

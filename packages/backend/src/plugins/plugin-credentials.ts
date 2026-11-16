@@ -93,6 +93,15 @@ export function credentialHeaders(source: PluginRuntimeSource): readonly string[
 	return (source.credentials ?? []).map((slot) => slot.header.toLowerCase());
 }
 
+/** Resolve a declared slot and validate its destination before accessing any secret. */
+export function credentialSlot(source: PluginRuntimeSource, name: string, url: URL): PluginCredentialSlot {
+	const slot = source.credentials?.find((entry) => entry.slot === name);
+	if (!slot) throw new Error(`Credential slot is not declared in this package's manifest: ${name}`);
+	if (!slot.hosts.some((host) => host.toLowerCase() === url.host))
+		throw new Error(`Credential ${name} may not be sent to ${url.host}`);
+	return slot;
+}
+
 /** The header a `network.*` request naming `credential` carries, checked against the slot's hosts. */
 export async function credentialHeader(
 	store: PluginCredentialStore,
@@ -100,10 +109,7 @@ export async function credentialHeader(
 	name: string,
 	url: URL,
 ): Promise<Record<string, string>> {
-	const slot = source.credentials?.find((entry) => entry.slot === name);
-	if (!slot) throw new Error(`Credential slot is not declared in this package's manifest: ${name}`);
-	if (!slot.hosts.some((host) => host.toLowerCase() === url.host))
-		throw new Error(`Credential ${name} may not be sent to ${url.host}`);
+	const slot = credentialSlot(source, name, url);
 	if (slot.authentication) throw new Error(`Credential ${name} requires host HTTP authentication`);
 	const { credential } = await store.resolve(source.pluginId, slot);
 	if (!credential) throw new Error(`Credential ${name} is not configured; add it in Drone settings`);
