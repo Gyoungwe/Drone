@@ -1,213 +1,43 @@
-import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
-import { extname, isAbsolute, relative, resolve, sep } from "node:path";
+import { resolve } from "node:path";
 import {
 	contractContentHash,
-	createKnowledgeSnapshot,
-	type KnowledgeSnapshot,
 	type KnowledgeSourceReceipt,
 	type ResearchCaptureRecord,
 	type ResearchCaptureRequest,
 	type ResearchCaptureResult,
 	type ResearchConnector,
-	type ResearchConnectorContext,
 	type ResearchConnectorDescriptor,
 	type ResearchConnectorFailure,
-	type ResearchConnectorHit,
-	type ResearchKnowledgeOperations,
 	type ResearchSearchRequest,
 	type ResearchSearchResponse,
 } from "@drone/shared";
-import type { JsonStore } from "../json-store";
+import {
+	captureId,
+	formatFor,
+	hashBytes,
+	isoNow,
+	parentRef,
+	projectKey,
+	resolveProjectFile,
+	withApproval,
+} from "./research-capture-policy";
+import type {
+	CaptureLedger,
+	ResearchConnectorRegistryPort,
+	ResearchResourceServiceOptions,
+} from "./research-resource-options";
 
-interface CaptureLedger {
-	version: 1;
-	items: ResearchCaptureRecord[];
-}
-
-export interface ResearchConnectorSettings {
-	version: 1;
-	disabled: string[];
-}
-
-export interface ResearchResourceServiceOptions {
-	readonly store: JsonStore<CaptureLedger>;
-	/** Connector registry is supplied by the host composition root or an installed connector package. */
-	readonly connectors: ResearchConnectorRegistryPort;
-	readonly connectorSettings?: JsonStore<ResearchConnectorSettings>;
-	/** Host-owned ports/configuration used by optional connectors; never persisted. */
-	readonly connectorContext?: ResearchConnectorContext;
-	/** Knowledge host operations used to create a versioned capture snapshot. */
-	readonly knowledgeOperations: ResearchKnowledgeOperations;
-}
-
-/** Host-neutral registry surface; connector implementations stay outside backend. */
-export interface ResearchConnectorRegistryPort {
-	list(): readonly ResearchConnector[];
-	recommend(
-		seed: string,
-		connectorId: string,
-		context?: ResearchConnectorContext,
-		limit?: number,
-	): Promise<{ hits: readonly ResearchConnectorHit[]; failures: readonly ResearchConnectorFailure[] }>;
-	search(input: ResearchSearchRequest, context?: ResearchConnectorContext): Promise<ResearchSearchResponse>;
-}
-
-/** Empty host-owned registry used when no connector plugin is installed. */
-export function createUnavailableResearchConnectorRegistry(): ResearchConnectorRegistryPort {
-	return {
-		list: () => [],
-		recommend: async (_seed, connectorId) => ({
-			hits: [],
-			failures: [
-				{
-					connectorId,
-					message: "Research connector plugin is unavailable",
-					retryable: false,
-					at: new Date().toISOString(),
-				},
-			],
-		}),
-		search: async (input) => ({
-			query: input.query,
-			hits: [],
-			failures: [
-				{
-					connectorId: input.connectorIds?.[0] ?? "research",
-					message: "Research connector plugin is unavailable",
-					retryable: false,
-					at: new Date().toISOString(),
-				},
-			],
-			connectors: [...(input.connectorIds ?? [])],
-			complete: false,
-		}),
-	};
-}
-
-const TEXT_EXTENSIONS = new Set([
-	".txt",
-	".md",
-	".markdown",
-	".csv",
-	".tsv",
-	".json",
-	".yaml",
-	".yml",
-	".xml",
-	".fa",
-	".fasta",
-	".fna",
-	".faa",
-	".ffn",
-	".frn",
-	".fas",
-	".fastq",
-	".fq",
-	".bed",
-	".bedgraph",
-	".gff",
-	".gff3",
-	".gtf",
-	".vcf",
-	".sam",
-	".aln",
-	".clustal",
-	".clw",
-	".sto",
-	".stk",
-	".stockholm",
-	".phy",
-	".phylip",
-	".afa",
-	".msa",
-	".mfa",
-	".nwk",
-	".newick",
-	".tree",
-	".treefile",
-	".tre",
-	".contree",
-	".log",
-]);
-
-function isoNow(): string {
-	return new Date().toISOString();
-}
-
-function hashBytes(value: Buffer): string {
-	return createHash("sha256").update(value).digest("hex");
-}
-
-function formatFor(path: string): string {
-	const filename = path.replaceAll("\\", "/").split("/").pop() ?? path;
-	const lower = filename.toLowerCase();
-	const compression = [".gz", ".bgz", ".bz2", ".xz"].find((suffix) => lower.endsWith(suffix));
-	const logicalName = compression ? lower.slice(0, -compression.length) : lower;
-	const ext = extname(logicalName);
-	if (ext === ".pdf") return "pdf";
-	if ([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".tif", ".tiff"].includes(ext)) return "image";
-	if (TEXT_EXTENSIONS.has(ext)) return ext.slice(1) || "text";
-	if (compression && ext) return ext.slice(1);
-	return ext.slice(1) || (compression ? compression.slice(1) : "binary");
-}
-
-function projectKey(
-	cwd: string,
-	relativePath: string,
-	byteHash: string,
-	scope: "project" | "workspace",
-): string {
-	return contractContentHash({ cwd: resolve(cwd), relativePath, byteHash, scope });
-}
-
-function captureId(key: string): string {
-	return `research-capture-${key.slice(0, 24)}`;
-}
-
-function safeRelativePath(value: string): string {
-	if (!value.trim() || isAbsolute(value)) throw new Error("Capture path must be project-relative");
-	const normalized = value.replaceAll("\\", "/");
-	if (normalized.split("/").some((segment) => segment === ".."))
-		throw new Error("Capture path escapes project root");
-	return normalized.replace(/^\.\//, "");
-}
-
-async function resolveProjectFile(
-	cwd: string,
-	relativePath: string,
-): Promise<{ absolute: string; root: string; relativePath: string }> {
-	if (!isAbsolute(cwd)) throw new Error("Capture cwd must be absolute");
-	const safePath = safeRelativePath(relativePath);
-	const root = await realpath(cwd);
-	const candidate = resolve(root, safePath);
-	const absolute = await realpath(candidate);
-	const rel = relative(root, absolute);
-	if (!rel || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
-		throw new Error("Capture path escapes project root");
-	const info = await stat(absolute);
-	if (!info.isFile()) throw new Error("Only regular files can be captured");
-	return { absolute, root, relativePath: rel.split(sep).join("/") };
-}
-
-function parentRef(snapshot: KnowledgeSnapshot) {
-	return {
-		kind: snapshot.kind,
-		id: snapshot.id,
-		revision: snapshot.revision,
-		contentHash: snapshot.contentHash,
-	};
-}
-
-function withApproval(snapshot: KnowledgeSnapshot, approval: "approved" | "revoked"): KnowledgeSnapshot {
-	const { schemaVersion: _schemaVersion, contentHash: _contentHash, kind: _kind, ...body } = snapshot;
-	return createKnowledgeSnapshot({
-		...body,
-		approval,
-		revision: snapshot.revision + 1,
-		parentRefs: [...snapshot.parentRefs, parentRef(snapshot)],
-	});
-}
+export type {
+	ResearchConnectorRegistryPort,
+	ResearchConnectorSettings,
+	ResearchResourceServiceOptions,
+} from "./research-resource-options";
+export {
+	createUnavailableResearchConnectorRegistry,
+	emptyCaptureLedger,
+	emptyResearchConnectorSettings,
+} from "./research-resource-options";
 
 /** Host-side seam for safe project capture and provenance-aware connector search. */
 export class ResearchResourceService {
@@ -483,14 +313,6 @@ export class ResearchResourceService {
 			complete: result.complete && disabledFailures.length === 0,
 		};
 	}
-}
-
-export function emptyCaptureLedger(): CaptureLedger {
-	return { version: 1, items: [] };
-}
-
-export function emptyResearchConnectorSettings(): ResearchConnectorSettings {
-	return { version: 1, disabled: [] };
 }
 
 export type { CaptureLedger };
