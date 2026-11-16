@@ -30,7 +30,6 @@
 	"file-lines\tpackages/backend/src/services/execution-route.ts": 483,
 	"file-lines\tpackages/backend/src/services/inquiry.test.ts": 436,
 	"file-lines\tpackages/backend/src/services/inquiry.ts": 862,
-	"file-lines\tpackages/backend/src/services/research-resource.ts": 496,
 	"file-lines\tpackages/backend/src/services/reversible-write-adapters.ts": 580,
 	"file-lines\tpackages/backend/src/services/session-construction.ts": 516,
 	"file-lines\tpackages/backend/src/session-engine/antigravity/oauth.ts": 574,
