@@ -7,7 +7,7 @@ import type {
 	ResearchWriteReceipt,
 	ResearchWriteRequest,
 } from "@drone/shared";
-import { WebDavTransport } from "../knowledge/webdav-transport";
+import { WebDavTransport } from "./webdav-transport";
 
 type DeletionAwareResearchWriteReceipt = ResearchWriteReceipt & {
 	readonly deleted?: "verified" | "unverified" | "not-applicable";
