@@ -4,10 +4,10 @@
 		{
 			"name": "@gyoungwe/pi-knowledge",
 			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
-			"commit": "d32b11fd5585b8c8ec1f98fbd7812a1fe092856e",
+			"commit": "57428876bad6db2bb3a65338d38e30054064cb83",
 			"path": "packages/pi-knowledge",
 			"version": "0.3.0",
-			"tarballSha256": "5b1e68a1c67551181746cb66699da599a10148d10fa41b4e32274f3ebcd762d3"
+			"tarballSha256": "60273e5c0f67454b7317798de57a7d27b413c38d2bbe52fc62125753b3532e57"
 		},
 		{
 			"name": "@gyoungwe/pi-analysis",
