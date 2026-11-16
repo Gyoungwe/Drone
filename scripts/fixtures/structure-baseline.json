@@ -7,7 +7,6 @@
 	"class-extends\tpackages/desktop/src/main/app-lifecycle.test.ts": 1,
 	"class-extends\tpackages/desktop/src/renderer/src/components/AppErrorBoundary.tsx": 2,
 	"class-extends\tpackages/desktop/src/renderer/src/plugins/PluginBoundary.tsx": 1,
-	"file-lines\tpackages/backend/src/capabilities/research-skill-router.ts": 503,
 	"file-lines\tpackages/backend/src/capabilities/runtime.ts": 745,
 	"file-lines\tpackages/backend/src/compute/default-executor.ts": 1455,
 	"file-lines\tpackages/backend/src/create-backend.test.ts": 998,
