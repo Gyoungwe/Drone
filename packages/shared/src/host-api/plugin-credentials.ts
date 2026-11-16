@@ -13,6 +13,9 @@ export interface PluginCredentialEntry {
 	/** Non-secret values saved with the secret, such as a library id. */
 	fields: string[];
 	configured: boolean;
+	authentication?: "http-basic-digest";
+	source: "env" | "saved" | null;
+	savedConfigured: boolean;
 	values: Record<string, string>;
 }
 
@@ -26,6 +29,9 @@ const Entry = Type.Object(
 		hosts: Type.Array(Type.String()),
 		fields: Type.Array(Type.String()),
 		configured: Type.Boolean(),
+		authentication: Type.Optional(Type.Literal("http-basic-digest")),
+		source: Type.Union([Type.Literal("env"), Type.Literal("saved"), Type.Null()]),
+		savedConfigured: Type.Boolean(),
 		values: Type.Record(Type.String(), Type.String()),
 	},
 	{ additionalProperties: false },

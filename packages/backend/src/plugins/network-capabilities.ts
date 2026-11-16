@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import { hostText } from "../reply-language";
+import { type HttpAuthentication, sendHttp } from "./http-transport";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 import { MAX_FILE_BINARY_BASE64, MAX_FILE_BINARY_BYTES } from "./stable-file-bytes";
 
@@ -8,11 +9,10 @@ import { MAX_FILE_BINARY_BASE64, MAX_FILE_BINARY_BYTES } from "./stable-file-byt
  * `permissions.network` (design: docs/superpowers/specs/2026-11-05-task-acceptance-role-design.md, N1).
  * The restricted worker itself has no network; this is its only route out.
  */
-const READ_METHODS = ["GET", "HEAD"] as const;
+const READ_METHODS = ["GET", "HEAD", "PROPFIND"] as const;
 /** POST reads only to an endpoint the manifest lists in `drone.networkReads`. */
 const DECLARED_READ_METHODS = [...READ_METHODS, "POST"] as const;
-const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"] as const;
-const TIMEOUT_MS = 30_000;
+const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE", "MKCOL"] as const;
 /** Decided by the host or the connection, never by plugin code. */
 const RESERVED_HEADER =
 	/^(?:host|cookie|connection|keep-alive|transfer-encoding|upgrade|te|trailer|content-length|proxy-.*)$/i;
@@ -36,8 +36,14 @@ const requestSchema = (methods: readonly string[], extra = {}) =>
 			url: Type.String({ minLength: 1, maxLength: 4096 }),
 			headers: Type.Optional(Type.Record(Type.String({ maxLength: 128 }), Type.String({ maxLength: 8192 }))),
 			bodyBase64: Type.Optional(Type.String({ maxLength: MAX_FILE_BINARY_BASE64 })),
-			/** A `drone.credentials` slot whose saved secret the host adds as a header. */
+			/** A `drone.credentials` slot whose secret stays with the host. */
 			credential: Type.Optional(Type.String({ minLength: 1, maxLength: 64 })),
+			httpAuth: Type.Optional(
+				Type.Object(
+					{ username: Type.String({ minLength: 1, maxLength: 256 }) },
+					{ additionalProperties: false },
+				),
+			),
 		},
 		{ additionalProperties: false },
 	);
@@ -58,6 +64,7 @@ interface NetworkRequest {
 	readonly bodyBase64?: string;
 	readonly summary?: string;
 	readonly credential?: string;
+	readonly httpAuth?: { readonly username: string };
 }
 export interface NetworkDeclaration {
 	/** Manifest `permissions.network` minus `configured-services`. */
@@ -68,13 +75,15 @@ export interface NetworkDeclaration {
 	readonly credentials?: {
 		readonly headers: readonly string[];
 		header(slot: string, url: URL): Promise<Record<string, string>>;
+		/** Validates slot/auth metadata without resolving its secret until the returned sender runs. */
+		authenticate?(slot: string, url: URL, username?: string): HttpAuthentication | undefined;
 	};
 }
 
 function target(
 	raw: unknown,
 	{ hosts, credentials }: NetworkDeclaration,
-): { request: NetworkRequest; url: URL } {
+): { request: NetworkRequest; url: URL; authenticate?: HttpAuthentication } {
 	const request = raw as NetworkRequest;
 	const url = new URL(request.url);
 	if (url.username || url.password) throw new Error("Network URLs must not carry credentials");
@@ -83,52 +92,38 @@ function target(
 	for (const name of Object.keys(request.headers ?? {}))
 		if (RESERVED_HEADER.test(name) || credentials?.headers.includes(name.toLowerCase()))
 			throw new Error(`Network header is reserved for the host: ${name}`);
-	return { request, url };
-}
-
-async function readLimited(response: Response): Promise<Buffer> {
-	const chunks: Buffer[] = [];
-	let total = 0;
-	const reader = response.body?.getReader();
-	if (!reader) return Buffer.alloc(0);
-	for (let read = await reader.read(); !read.done; read = await reader.read()) {
-		total += read.value.byteLength;
-		if (total > MAX_FILE_BINARY_BYTES) {
-			await reader.cancel();
-			throw new Error(`Network response exceeds ${MAX_FILE_BINARY_BYTES} bytes`);
-		}
-		chunks.push(Buffer.from(read.value));
+	if (request.credential && !credentials)
+		throw new Error(`Credential slot is not declared in this package's manifest: ${request.credential}`);
+	if (request.httpAuth && !request.credential)
+		throw new Error("HTTP authentication requires a credential slot");
+	const authenticate = request.credential
+		? credentials?.authenticate?.(request.credential, url, request.httpAuth?.username)
+		: undefined;
+	if (request.httpAuth && !authenticate)
+		throw new Error(`Credential ${request.credential} does not use host HTTP authentication`);
+	if (request.method === "PROPFIND") {
+		const depth = Object.entries(request.headers ?? {}).filter(([name]) => name.toLowerCase() === "depth");
+		if (depth.length !== 1 || depth[0]?.[1] !== "0") throw new Error("PROPFIND requires Depth: 0");
 	}
-	return Buffer.concat(chunks);
+	return { request, url, authenticate };
 }
 
 export function networkCapabilityHandlers(
 	declaration: NetworkDeclaration,
 	fetchImpl: typeof fetch = fetch,
 ): Record<"network.read" | "network.write", PluginCapabilityHandler> {
-	const send = async (request: NetworkRequest, url: URL, signal: AbortSignal) => {
-		const body = request.bodyBase64 === undefined ? undefined : Buffer.from(request.bodyBase64, "base64");
-		if (request.credential && !declaration.credentials)
-			throw new Error(`Credential slot is not declared in this package's manifest: ${request.credential}`);
-		const secret = request.credential ? await declaration.credentials?.header(request.credential, url) : {};
-		const response = await fetchImpl(url, {
-			method: request.method,
-			headers: { ...request.headers, ...secret },
-			body,
-			redirect: "error",
-			signal: AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)]),
-		});
-		const bytes = await readLimited(response);
-		const headers: Record<string, string> = {};
-		response.headers.forEach((value, name) => {
-			headers[name.toLowerCase()] = value;
-		});
-		return {
-			status: response.status,
-			headers,
-			base64: bytes.toString("base64"),
-			bytes: bytes.length,
-		};
+	const send = async ({ request, url, authenticate }: ReturnType<typeof target>, signal: AbortSignal) => {
+		const secret =
+			request.credential && !authenticate
+				? await declaration.credentials?.header(request.credential, url)
+				: {};
+		return sendHttp(
+			{ ...request, headers: { ...request.headers, ...secret } },
+			url,
+			signal,
+			fetchImpl,
+			authenticate,
+		);
 	};
 	return {
 		"network.read": {
@@ -136,12 +131,13 @@ export function networkCapabilityHandlers(
 			inputSchema: requestSchema(DECLARED_READ_METHODS),
 			resultSchema,
 			execute: async (raw, context) => {
-				const { request, url } = target(raw, declaration);
+				const validated = target(raw, declaration);
+				const { request, url } = validated;
 				if (request.method === "POST" && !declaration.reads.includes(`${url.host}${url.pathname}`))
 					throw new Error(
 						`POST is a network write unless drone.networkReads lists ${url.host}${url.pathname}`,
 					);
-				return send(request, url, context.signal);
+				return send(validated, context.signal);
 			},
 		},
 		"network.write": {
@@ -168,8 +164,7 @@ export function networkCapabilityHandlers(
 					: facts;
 			},
 			execute: async (raw, context) => {
-				const { request, url } = target(raw, declaration);
-				return send(request, url, context.signal);
+				return send(target(raw, declaration), context.signal);
 			},
 		},
 	};

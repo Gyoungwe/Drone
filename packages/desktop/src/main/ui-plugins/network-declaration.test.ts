@@ -35,4 +35,25 @@ describe("drone.credentials", () => {
 		expect(() => networkDeclaration(manifest([slot, slot]))).toThrow("drone.credentials");
 		expect(() => networkDeclaration(manifest([]))).toThrow("drone.credentials");
 	});
+
+	it.each(["Authorization", "authorization", "AUTHORIZATION"])(
+		"accepts HTTP authentication with %s",
+		(header) => {
+			const auth = { ...slot, header, fields: [], authentication: "http-basic-digest" };
+			expect(networkDeclaration(manifest([auth])).credentials).toEqual([auth]);
+		},
+	);
+
+	it.each([
+		{ ...slot, authentication: "http-basic-digest" },
+		{ ...slot, header: "Authorization", authentication: "http-basic-digest" },
+		...[null, "", "basic", true, 1].map((authentication) => ({
+			...slot,
+			header: "Authorization",
+			fields: [],
+			authentication,
+		})),
+	])("rejects invalid HTTP authentication declarations %#", (bad) => {
+		expect(() => networkDeclaration(manifest([bad]))).toThrow("drone.credentials");
+	});
 });

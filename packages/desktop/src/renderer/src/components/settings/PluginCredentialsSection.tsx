@@ -7,6 +7,14 @@ import { useT } from "../../i18n";
 const inputClass =
 	"w-full rounded-lg border border-border px-3 py-2 text-[12px] outline-none focus:border-ink-faint";
 
+function credentialStatusKey({ configured, source, savedConfigured }: PluginCredentialEntry) {
+	if (source === "env")
+		return savedConfigured
+			? "settings.uiPlugins.credentialEnvOverridesSaved"
+			: "settings.uiPlugins.credentialEnv";
+	return configured ? "settings.uiPlugins.credentialConfigured" : "settings.uiPlugins.credentialMissing";
+}
+
 /** One declared slot: the secret is write-only; non-secret fields show what was saved. */
 function CredentialRow({ entry, onChanged }: { entry: PluginCredentialEntry; onChanged: () => void }) {
 	const t = useT();
@@ -45,11 +53,7 @@ function CredentialRow({ entry, onChanged }: { entry: PluginCredentialEntry; onC
 			<div className="flex items-center gap-2">
 				<span className={`h-2 w-2 shrink-0 rounded-full ${entry.configured ? "bg-ok" : "bg-ink-faint"}`} />
 				<span className="truncate text-[13px] font-medium text-ink">{entry.label[language]}</span>
-				<span className="ml-auto shrink-0 text-[11px] text-ink-faint">
-					{entry.configured
-						? t("settings.uiPlugins.credentialConfigured")
-						: t("settings.uiPlugins.credentialMissing")}
-				</span>
+				<span className="ml-auto shrink-0 text-[11px] text-ink-faint">{t(credentialStatusKey(entry))}</span>
 			</div>
 			<div className="mt-0.5 truncate pl-4 text-[11px] text-ink-faint">
 				<span className="font-mono">{pluginId}</span> · {t("settings.uiPlugins.credentialHosts")}{" "}

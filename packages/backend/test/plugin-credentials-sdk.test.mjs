@@ -132,7 +132,16 @@ it("the host adds the saved secret as the declared header; the plugin sees only 
 	expect((await stat(join(t.agentDir, "plugin-credentials.json"))).mode & 0o777).toBe(0o600);
 
 	const status = await t.status();
-	expect(status).toEqual({ slots: { "zotero-web": { configured: true, fields: { libraryId: "123" } } } });
+	expect(status).toEqual({
+		slots: {
+			"zotero-web": {
+				configured: true,
+				fields: { libraryId: "123" },
+				source: "saved",
+				savedConfigured: true,
+			},
+		},
+	});
 	expect(JSON.stringify(status)).not.toContain(SECRET);
 
 	await expect(t.get({ credential: "zotero-web" })).resolves.toMatchObject({ status: 200 });
@@ -146,7 +155,9 @@ it("the host adds the saved secret as the declared header; the plugin sees only 
 it("nothing leaves the host when the secret is unsaved, sent elsewhere, or the header is forged", async () => {
 	const t = await setup();
 	await expect(t.get({ credential: "zotero-web" })).rejects.toThrow("not configured");
-	expect(await t.status()).toEqual({ slots: { "zotero-web": { configured: false, fields: {} } } });
+	expect(await t.status()).toEqual({
+		slots: { "zotero-web": { configured: false, fields: {}, source: null, savedConfigured: false } },
+	});
 
 	await t.save();
 	await expect(t.get({ credential: "zotero-web", url: "http://127.0.0.1:1/keys" })).rejects.toThrow(

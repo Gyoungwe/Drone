@@ -14,11 +14,11 @@ export function isHostKeptCredential(pluginId: string, slot: PluginCredentialSlo
 }
 
 /** Read on every call so authorization, clearing and user-provided environment values take effect. */
-export function readHostKeptCredential():
-	| { readonly secret: string; readonly fields: Readonly<Record<string, string>> }
-	| undefined {
-	const secret = process.env.ZOTERO_LOCAL_API_KEY;
+export function readHostKeptCredential(
+	env: NodeJS.ProcessEnv = process.env,
+): { readonly secret: string; readonly fields: Readonly<Record<string, string>> } | undefined {
+	const secret = env.ZOTERO_LOCAL_API_KEY;
 	if (!secret) return undefined;
-	const serverId = process.env.ZOTERO_LOCAL_SERVER_ID;
+	const serverId = env.ZOTERO_LOCAL_SERVER_ID;
 	return { secret, fields: serverId === undefined ? {} : { serverId } };
 }

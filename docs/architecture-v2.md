@@ -161,6 +161,8 @@ negotiation、`drone-result/v3` 状态以及来源/运行/计算/授权回执类
 不兼容提示。发布前，`drone-plugins` 通过宿主 `npm pack` tarball 或固定 git
 commit 验证，禁止 `file:`、`workspace:` 或指向 Drone 源码的相对依赖。
 
+Generic host HTTP authentication stays below the plugin capability broker: `plugins/network-capabilities.ts` validates destinations and request metadata, while `plugins/http-transport.ts` resolves host-kept credential slots only during authorized execution and delegates Basic/Digest negotiation to `plugins/http-auth.ts`. Challenge state belongs to the credential store lifetime and is scoped by plugin, origin, slot, effective source and secret hash; authenticated results expose bounded success bodies, discard error bodies and filter response headers. Plugins receive neither passwords nor challenge material, and writes retain the existing allowance approval boundary.
+
 **依赖规则**（由 `scripts/check-architecture.mjs` 在 CI 里强制检查）：
 
 | 规则 | 说明 |

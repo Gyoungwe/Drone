@@ -1,4 +1,5 @@
 import type { SessionDirectory } from "../session/registry";
+import { authenticatedRequest } from "./http-transport";
 import { networkCapabilityHandlers } from "./network-capabilities";
 import {
 	credentialCapabilityHandlers,
@@ -26,6 +27,8 @@ export function sourceCapabilityHandlers(
 				credentials: source.credentials && {
 					headers: credentialHeaders(source),
 					header: (slot, url) => credentialHeader(host.credentials, source, slot, url),
+					authenticate: (slot, url, username) =>
+						authenticatedRequest(host.credentials, source, slot, url, username),
 				},
 			})),
 		...(source.credentials && credentialCapabilityHandlers(host.credentials, source)),

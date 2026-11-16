@@ -51,7 +51,14 @@ it("reports the current server id without exposing the host-kept key", async () 
 	const status = credentialCapabilityHandlers(t.store, localSource)["credentials.status"];
 	const result = await status.execute(null, context);
 	expect(result).toEqual({
-		slots: { "zotero-local": { configured: true, fields: { serverId: "FakeServer123" } } },
+		slots: {
+			"zotero-local": {
+				configured: true,
+				source: "env",
+				savedConfigured: false,
+				fields: { serverId: "FakeServer123" },
+			},
+		},
 	});
 	expect(JSON.stringify(result)).not.toContain("FakeLocalKey123");
 });
@@ -66,7 +73,14 @@ it("uses updated environment values without recreating the status handler", asyn
 	});
 	const result = await status.execute(null, context);
 	expect(result).toEqual({
-		slots: { "zotero-local": { configured: true, fields: { serverId: "FakeUpdatedServer123" } } },
+		slots: {
+			"zotero-local": {
+				configured: true,
+				source: "env",
+				savedConfigured: false,
+				fields: { serverId: "FakeUpdatedServer123" },
+			},
+		},
 	});
 	expect(JSON.stringify(result)).not.toContain("FakeUpdatedLocalKey123");
 });
@@ -78,7 +92,9 @@ it.each([undefined, ""])("does not use a stored key when the environment key is 
 	vi.stubEnv("ZOTERO_LOCAL_API_KEY", key);
 	expect(
 		await credentialCapabilityHandlers(t.store, localSource)["credentials.status"].execute(null, context),
-	).toEqual({ slots: { "zotero-local": { configured: false, fields: {} } } });
+	).toEqual({
+		slots: { "zotero-local": { configured: false, source: null, savedConfigured: false, fields: {} } },
+	});
 	await expect(credentialHeader(t.store, localSource, "zotero-local", localUrl)).rejects.toThrow(
 		"Credential zotero-local is not configured; add it in Drone settings",
 	);
@@ -88,7 +104,7 @@ it("does not share the host-kept key with another plugin", async () => {
 	const otherSource = { ...localSource, pluginId: "@other/plugin" };
 	const status = credentialCapabilityHandlers(t.store, otherSource)["credentials.status"];
 	expect(await status.execute(null, context)).toEqual({
-		slots: { "zotero-local": { configured: false, fields: {} } },
+		slots: { "zotero-local": { configured: false, source: null, savedConfigured: false, fields: {} } },
 	});
 	await expect(credentialHeader(t.store, otherSource, "zotero-local", localUrl)).rejects.toThrow(
 		"not configured",
@@ -100,7 +116,14 @@ it("does not share the host-kept key with another plugin", async () => {
 		"Zotero-API-Key": "FakeOtherPluginKey123",
 	});
 	expect(await status.execute(null, context)).toEqual({
-		slots: { "zotero-local": { configured: true, fields: { serverId: "FakeOtherServer123" } } },
+		slots: {
+			"zotero-local": {
+				configured: true,
+				source: "saved",
+				savedConfigured: true,
+				fields: { serverId: "FakeOtherServer123" },
+			},
+		},
 	});
 });
 
@@ -117,7 +140,7 @@ it.each<{ change: string; definition: Partial<PluginCredentialSlot> }>([
 	const url = new URL(`http://${changedSlot.hosts[0]}/api/users/0/items/X`);
 	const status = credentialCapabilityHandlers(t.store, changedSource)["credentials.status"];
 	expect(await status.execute(null, context)).toEqual({
-		slots: { [changedSlot.slot]: { configured: false, fields: {} } },
+		slots: { [changedSlot.slot]: { configured: false, source: null, savedConfigured: false, fields: {} } },
 	});
 	await expect(credentialHeader(t.store, changedSource, changedSlot.slot, url)).rejects.toThrow(
 		"not configured",
@@ -128,7 +151,9 @@ it.each<{ change: string; definition: Partial<PluginCredentialSlot> }>([
 		[changedSlot.header]: "FakeChangedSlotKey123",
 	});
 	expect(await status.execute(null, context)).toEqual({
-		slots: { [changedSlot.slot]: { configured: true, fields: savedFields } },
+		slots: {
+			[changedSlot.slot]: { configured: true, source: "saved", savedConfigured: true, fields: savedFields },
+		},
 	});
 });
 
