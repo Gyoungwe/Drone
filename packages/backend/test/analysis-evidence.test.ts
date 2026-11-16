@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stableJson } from "@drone/compute";
 import { describe, expect, it, vi } from "vitest";
 import { JsonStore } from "../src/json-store";
 import { AnalysisEvidenceService, checkpointId, type FrozenFile } from "../src/services/analysis-evidence";
@@ -125,17 +126,30 @@ describe("analysis evidence checkpoints", () => {
 				environmentFingerprint: "env-1",
 			});
 			const exported = await evidence.exportCapsule(checkpoint.id);
-			expect(await readFile(exported.path, "utf8")).toContain("drone-evidence-capsule");
+			const privateBytes = `${stableJson({
+				format: "drone-evidence-capsule",
+				version: 1,
+				checkpoint,
+				blobs: {
+					[sha256("reads")]: Buffer.from("reads").toString("base64"),
+					[sha256("print('ok')")]: Buffer.from("print('ok')").toString("base64"),
+					[sha256("done")]: Buffer.from("done").toString("base64"),
+				},
+			})}\n`;
+			expect(await readFile(exported.path)).toEqual(Buffer.from(privateBytes));
+			expect(exported.sha256).toBe(sha256(privateBytes));
 			expect(exported.audience).toBe("private");
 			const publicExport = await evidence.exportCapsule(checkpoint.id, "public");
 			const publicCapsule = JSON.parse(await readFile(publicExport.path, "utf8")) as {
-				publication?: { audience: string; omittedPaths: string[] };
+				format: string;
+				audience: string;
+				files: { sha256: string; included: boolean }[];
 				blobs: Record<string, string>;
 			};
-			expect(publicCapsule.publication).toMatchObject({ audience: "public" });
-			expect(publicCapsule.publication?.omittedPaths).toHaveLength(3);
+			expect(publicCapsule).toMatchObject({ format: "drone-evidence-attestation", audience: "public" });
+			expect(publicCapsule.files).toHaveLength(3);
+			expect(publicCapsule.files.every((file) => !file.included)).toBe(true);
 			expect(Object.keys(publicCapsule.blobs)).toHaveLength(0);
-			await expect(evidence.importCapsule(publicExport.path)).resolves.toMatchObject({ id: checkpoint.id });
 			const receipt = await evidence.replay(checkpoint.id, {
 				run: async ({ outputDir }) => {
 					await mkdir(outputDir, { recursive: true });
@@ -235,8 +249,8 @@ describe("analysis evidence checkpoints", () => {
 			await rm(root, { recursive: true, force: true });
 		}
 	});
-	it("publishes only explicitly public artifact bytes and rejects a forged omission list", async () => {
-		const { root, evidence, source, frozen } = await setup();
+	it("imports legacy public capsules and rejects a forged omission list or omitted private blob", async () => {
+		const { root, runs, evidence, source, frozen } = await setup();
 		try {
 			const publicFrozen = frozen.map((file, index) =>
 				index === 2 ? { ...file, artifact: { ...file.artifact, accessLevel: "public" as const } } : file,
@@ -247,32 +261,32 @@ describe("analysis evidence checkpoints", () => {
 				files: publicFrozen,
 				environmentFingerprint: "env-1",
 			});
-			const exported = await evidence.exportCapsule(checkpoint.id, "public");
-			const capsule = JSON.parse(await readFile(exported.path, "utf8")) as {
-				publication: { omittedPaths: string[] };
-				blobs: Record<string, string>;
+			const capsule = {
+				format: "drone-evidence-capsule",
+				version: 1,
+				checkpoint,
+				publication: { audience: "public", omittedPaths: ["input.txt", "script.py"] },
+				blobs: { [sha256("done")]: Buffer.from("done").toString("base64") },
 			};
-			expect(capsule.publication.omittedPaths).toEqual(["input.txt", "script.py"]);
-			expect(Object.keys(capsule.blobs)).toHaveLength(1);
+			const legacyPath = join(root, "legacy-public.json");
+			await writeFile(legacyPath, JSON.stringify(capsule));
+			const recipient = new AnalysisEvidenceService({
+				root: join(root, "imported-evidence"),
+				analysis: runs,
+				storage: new StorageRegistry(),
+			});
+			await expect(recipient.importCapsule(legacyPath)).resolves.toEqual(checkpoint);
+			expect(await readFile(join(root, "imported-evidence", "blobs", sha256("done")), "utf8")).toBe("done");
 			const forged = { ...capsule, publication: { ...capsule.publication, omittedPaths: [] } };
 			const forgedPath = join(root, "forged.json");
-			await writeFile(
-				forgedPath,
-				JSON.stringify({
-					format: "drone-evidence-capsule",
-					version: 1,
-					checkpoint,
-					blobs: capsule.blobs,
-					publication: forged.publication,
-				}),
-			);
+			await writeFile(forgedPath, JSON.stringify(forged));
 			await expect(evidence.importCapsule(forgedPath)).rejects.toThrow("omission list mismatch");
 			const omittedBlob = join(root, "omitted-blob.json");
 			await writeFile(
 				omittedBlob,
 				JSON.stringify({
 					...capsule,
-					blobs: { ...capsule.blobs, [frozen[0]!.artifact.sha256]: Buffer.from("reads").toString("base64") },
+					blobs: { ...capsule.blobs, [sha256("reads")]: Buffer.from("reads").toString("base64") },
 				}),
 			);
 			await expect(evidence.importCapsule(omittedBlob)).rejects.toThrow(/Unexpected capsule blobs/);

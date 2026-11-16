@@ -22,9 +22,11 @@ import {
 	verifyAnalysisEvidenceReplay,
 } from "./analysis-evidence-host";
 import type { AnalysisOrchestrationService } from "./analysis-orchestration";
+import type { EvidenceAttestationCapsule } from "./evidence-attestation";
+import { audienceRank, buildAttestationCapsule, CAPSULE_LIMIT } from "./evidence-attestation";
 
 /** Bounded, portable JSON capsule. No code from a capsule is executed on import. */
-export const CAPSULE_LIMIT = 64 * 1024 * 1024;
+export { CAPSULE_LIMIT } from "./evidence-attestation";
 export type EvidenceAudience = "public" | "restricted" | "private";
 export interface FrozenFile {
 	readonly artifact: AnalysisArtifactVersion;
@@ -183,9 +185,6 @@ function validateCheckpoint(checkpoint: EvidenceCheckpoint): void {
 	}
 	if (size > CAPSULE_LIMIT)
 		throw new Error("Evidence exceeds capsule limit; use a smaller explicit checkpoint");
-}
-function audienceRank(audience: EvidenceAudience): number {
-	return audience === "public" ? 0 : audience === "restricted" ? 1 : 2;
 }
 function validateCapsule(capsule: EvidenceCapsule): void {
 	if (capsule.format !== "drone-evidence-capsule" || capsule.version !== 1)
@@ -413,38 +412,35 @@ export class AnalysisEvidenceService {
 			if (digest(current) !== hash) throw new Error("Frozen blob is corrupted");
 		}
 	}
-	private async buildCapsule(id: string, audience: EvidenceAudience = "private"): Promise<EvidenceCapsule> {
+	private async buildCapsule(id: string): Promise<EvidenceCapsule> {
 		const checkpoint = await this.getCheckpoint(id);
 		const blobs: Record<string, string> = {};
-		const omittedPaths: string[] = [];
 		for (const file of checkpoint.files) {
-			if (audienceRank(file.artifact.accessLevel ?? "private") > audienceRank(audience)) {
-				omittedPaths.push(file.artifact.path);
-				continue;
-			}
 			blobs[file.artifact.sha256] = (
 				await readWithin(join(this.root, "blobs"), file.artifact.sha256)
 			).toString("base64");
 		}
-		const capsule: EvidenceCapsule = {
-			format: "drone-evidence-capsule",
-			version: 1,
-			checkpoint,
-			blobs,
-			...(audience === "private" ? {} : { publication: { audience, omittedPaths } }),
-		};
+		const capsule: EvidenceCapsule = { format: "drone-evidence-capsule", version: 1, checkpoint, blobs };
 		validateCapsule(capsule);
 		return capsule;
 	}
 	async capsule(id: string): Promise<EvidenceCapsule> {
-		return this.buildCapsule(id, "private");
+		return this.buildCapsule(id);
 	}
-	/** Same checkpoint always produces the same bytes, including across restarts. Private local export. */
+	/** Private exports are deterministic; other audiences receive verify-only attestations. */
 	async exportCapsule(
 		id: string,
 		audience: EvidenceAudience = "private",
 	): Promise<{ path: string; sha256: string; audience: EvidenceAudience }> {
-		const capsule = await this.buildCapsule(id, audience);
+		const capsule =
+			audience === "private"
+				? await this.buildCapsule(id)
+				: await buildAttestationCapsule(
+						await this.getCheckpoint(id),
+						audience,
+						new Date().toISOString(),
+						(hash) => readWithin(join(this.root, "blobs"), hash),
+					);
 		const bytes = canonical(capsule);
 		const path = join(this.root, "capsules", `${id}.${audience}.json`);
 		await new JsonStore({
@@ -460,11 +456,11 @@ export class AnalysisEvidenceService {
 	async importCapsule(path: string): Promise<EvidenceCheckpoint> {
 		const stat = await lstat(path);
 		if (!stat.isFile() || stat.size > CAPSULE_LIMIT * 2) throw new Error("Invalid capsule file size");
-		const capsule = JSON.parse(await readFile(path, "utf8")) as EvidenceCapsule;
+		const capsule = JSON.parse(await readFile(path, "utf8")) as EvidenceCapsule | EvidenceAttestationCapsule;
+		if (capsule.format === "drone-evidence-attestation")
+			throw new Error("Attestation capsules are verify-only and cannot be imported");
 		validateCapsule(capsule);
-		// Public/restricted capsules are metadata-only for omitted files. They
-		// remain useful for provenance, but cannot be replayed as if private bytes
-		// were present. Keep that distinction in the persisted checkpoint.
+		// Legacy publications preserve provenance but cannot replay omitted bytes.
 		if (capsule.publication?.audience !== "private" && capsule.publication?.omittedPaths.length) {
 			const omitted = new Set(capsule.publication.omittedPaths);
 			if (
