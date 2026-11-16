@@ -384,7 +384,6 @@
 	"style/noNonNullAssertion\tpackages/backend/src/plugins/task-grants.test.ts": 1,
 	"style/noNonNullAssertion\tpackages/backend/src/services/inquiry-writer-lease.test.ts": 1,
 	"style/noNonNullAssertion\tpackages/backend/src/session-engine/harness/memory.test.ts": 4,
-	"style/noNonNullAssertion\tpackages/backend/test/analysis-evidence.test.ts": 1,
 	"style/noNonNullAssertion\tpackages/backend/test/analysis-task-controller.test.ts": 2,
 	"style/noNonNullAssertion\tpackages/backend/test/antigravity-oauth.test.ts": 2,
 	"style/noNonNullAssertion\tpackages/backend/test/antigravity-transport.test.ts": 6,
