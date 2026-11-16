@@ -125,10 +125,12 @@ it.each(["double", "cancel-retry"])(
 	"registered command %s completes exactly once",
 	async (mode) => {
 		let pendingAsk;
+		let nextAsk = Promise.withResolvers();
 		const s = await setup(
 			() =>
 				new Promise((resolve) => {
 					pendingAsk = { resolve };
+					nextAsk.resolve();
 				}),
 		);
 		const { backend, faux, session, meta, asks } = s;
@@ -139,7 +141,7 @@ it.each(["double", "cancel-retry"])(
 		).toString("base64url");
 		const submit = () => backend.prompt(meta.sessionId, `/task-action ${command}`).catch((error) => error);
 		let first = submit();
-		await vi.waitFor(() => expect(pendingAsk).toBeTruthy());
+		await nextAsk.promise;
 		let second;
 		if (mode === "double") {
 			second = submit();
@@ -148,9 +150,9 @@ it.each(["double", "cancel-retry"])(
 			pendingAsk.resolve(undefined);
 			await first;
 			expect(faux.state.callCount).toBe(2);
-			pendingAsk = null;
+			nextAsk = Promise.withResolvers();
 			first = submit();
-			await vi.waitFor(() => expect(pendingAsk).toBeTruthy());
+			await nextAsk.promise;
 		}
 		pendingAsk.resolve("接着做完剩下的");
 		expect(await first).not.toBeInstanceOf(Error);
