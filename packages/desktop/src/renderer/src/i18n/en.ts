@@ -1,3 +1,4 @@
+import { enUiPlugins } from "./ui-plugins";
 import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
@@ -1765,51 +1766,7 @@ export const en: Messages = {
 			loadErrors: "{count} extensions failed to load",
 			hidden: "Hidden",
 		},
-		uiPlugins: {
-			credentialsTitle: "Plugin credentials",
-			credentialsHint:
-				"Drone keeps these secrets on this computer and adds them only to a plugin's requests to the hosts it declared. The plugin itself never sees them. If a plugin update changes a credential definition, enter it again.",
-			credentialConfigured: "Configured",
-			credentialMissing: "Not configured",
-			credentialHosts: "Sent only to",
-			credentialSecret: "Secret",
-			credentialSecretReplace: "Enter a new secret to replace it",
-			credentialClear: "Clear",
-			title: "UI Plugins",
-			masterHint:
-				"Plugins from your local user directory can replace built-in components such as the tool call card, subagent card, and todo panel; turning the switch off disables them all immediately (files and config are kept)",
-			pluginCount: "{count} plugin(s)",
-			empty:
-				"No plugins yet. The plugin directory lives under ui-plugins in the user data directory (ask an agent to write one following the SPEC)",
-			agentHint:
-				"Ask drone (agent) to write a plugin per the SPEC, or drop one into the plugin directory and enable it here",
-			openDir: "Open folder",
-			enable: "Enable",
-			enableFailed: "Failed to enable plugin",
-			confirmEnable: "Enable? This plugin's code will run inside the app",
-			disable: "Disable",
-			rebuild: "Rebuild",
-			builtinBadge: "Built-in",
-			statusInvalid: "Invalid manifest",
-			statusBuildFailed: "Build failed",
-			statusLoadFailed: "Load failed",
-			slotsLabel: "Slots",
-			slotToolCallCard: "Tool call card",
-			slotSubagentCard: "Subagent card",
-			slotTodoPanel: "Todo panel",
-			contributionsLabel: "Contributions",
-			regionAppBackground: "App background",
-			regionAppOverlay: "App overlay",
-			regionCornerTopLeft: "Chat top-left",
-			regionCornerTopRight: "Chat top-right",
-			regionCornerBottomLeft: "Chat bottom-left",
-			regionCornerBottomRight: "Chat bottom-right",
-			regionDiffSidebar: "Right sidebar",
-			regionSettingsPanel: "Settings panel",
-			assignmentTitle: "Slot assignment",
-			assignmentHint: "Multiple plugins declare this slot; pick which one takes effect",
-			assignmentNone: "Unassigned",
-		},
+		uiPlugins: enUiPlugins,
 	},
 	lang: {
 		zh: "中文",

@@ -1,3 +1,5 @@
+import { zhUiPlugins } from "./ui-plugins";
+
 /** 中文语言包（作为 key 的结构定义，en.ts 与之同形） */
 export const zh = {
 	knowledgeFallback: {
@@ -1681,49 +1683,7 @@ export const zh = {
 			loadErrors: "{count} 个扩展加载失败",
 			hidden: "隐藏",
 		},
-		uiPlugins: {
-			credentialsTitle: "插件凭据",
-			credentialsHint:
-				"密钥由 Drone 保存在本机，只在插件向声明的主机发请求时附加；插件本身读不到密钥。插件更新改了凭据定义时需要重新填写。",
-			credentialConfigured: "已配置",
-			credentialMissing: "未配置",
-			credentialHosts: "仅发往",
-			credentialSecret: "密钥",
-			credentialSecretReplace: "输入新密钥以替换",
-			credentialClear: "清除",
-			title: "UI 插件",
-			masterHint:
-				"本机用户目录里的插件可替换工具调用卡、子代理卡、任务列表面板等内置组件；关闭后所有插件立即停用，文件与配置保留。",
-			pluginCount: "{count} 个插件",
-			empty: "还没有任何插件。插件目录在用户数据目录的 ui-plugins 下（agent 可帮你按 SPEC 写插件）",
-			agentHint: "让 drone（agent）按 SPEC 写一个插件，或手动放入插件目录后在这里启用",
-			openDir: "打开目录",
-			enable: "启用",
-			enableFailed: "启用插件失败",
-			confirmEnable: "确认启用？该插件代码将在应用内执行",
-			disable: "停用",
-			rebuild: "重新构建",
-			builtinBadge: "内置",
-			statusInvalid: "清单无效",
-			statusBuildFailed: "构建失败",
-			statusLoadFailed: "加载失败",
-			slotsLabel: "覆盖槽位",
-			slotToolCallCard: "工具调用卡",
-			slotSubagentCard: "子代理卡",
-			slotTodoPanel: "任务列表面板",
-			contributionsLabel: "贡献",
-			regionAppBackground: "背景层",
-			regionAppOverlay: "悬浮层",
-			regionCornerTopLeft: "聊天区左上角",
-			regionCornerTopRight: "聊天区右上角",
-			regionCornerBottomLeft: "聊天区左下角",
-			regionCornerBottomRight: "聊天区右下角",
-			regionDiffSidebar: "右侧扩展栏",
-			regionSettingsPanel: "设置面板",
-			assignmentTitle: "槽位指派",
-			assignmentHint: "多个插件声明同一槽位时，选择生效的插件",
-			assignmentNone: "未指派",
-		},
+		uiPlugins: zhUiPlugins,
 	},
 	lang: {
 		zh: "中文",

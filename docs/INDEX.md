@@ -583,7 +583,7 @@ src/
 | 语音提醒（任务完成/审批等待播提示音） | 内置无头插件 `resources/ui-plugins/builtin/voice-alerts/`（全局安静检测状态机 + `new Audio(dataUrl)`，激活/清理走 registry headless 生命周期；开关 = UI 插件面板的插件启用）；音频 = 插件 `src/assets/*.mp3` dataurl 内联，替换文件即热重载；主窗口 `backgroundThrottling: false`（锁屏/后台不节流提醒计时） |
 | 新增 IPC 通道 | 见硬约束「四处同步」 |
 | 新增设置面板分类 | 面板文件 + `settings/SettingsDialog.tsx` 的 `PANELS`（插件 settings.panel 贡献不用登记，registry 动态拼接） |
-| 文案 | `i18n/zh.ts` + `en.ts` |
+| 文案 | `i18n/zh.ts` + `en.ts` + `ui-plugins.ts`（`settings.uiPlugins`） |
 | 示例任务（任务页签空态卡 / `/` 菜单「示例：…」/ 表单对话框） | 数据 shared `example-tasks.ts/json`；UI `components/tasks/ExampleTaskCards.tsx` + `ExampleTaskDialog.tsx` + `stores/example-tasks.ts`；菜单项 `composer/slash-filter.ts`（`exampleTask` 字段）；发送复用 `use-composer-send.ts` 的 `ensureActiveSession` + `prompt`；路径选择 IPC `file:pickPath`；文档 [example-tasks.md](example-tasks.md) |
 
 ## 本地文档（`.local/`，不入库，会定期清理——引用可能失效）
