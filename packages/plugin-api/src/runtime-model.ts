@@ -8,11 +8,16 @@ export interface PluginModelSelection {
 	readonly profile?: string;
 	/** Preserve an unset optional preference's provenance for subsequent per-step checks. */
 	readonly optionalProfile?: string;
+	/** Present only when the caller opted in; preserved through generation and tool steps. */
+	readonly inheritedThinking?: "nearest-supported";
 }
 export interface PluginModelSelectionInput {
 	readonly profile?: string;
 	/** Parent is used only when this exact preference is truly unset. Configured but unavailable stays closed. */
 	readonly optionalProfile?: string;
+	/** Applies only to thinking inherited from the parent (no profile, or no configured profile thinking).
+	 * Explicitly configured profile thinking is always strict. */
+	readonly inheritedThinking?: "strict" | "nearest-supported";
 }
 /** One isolated structured result request; no parent transcript or executable tools are inherited. */
 export interface PluginModelGenerateInput {

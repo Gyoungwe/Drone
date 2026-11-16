@@ -1,8 +1,8 @@
 import type { Model, ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import type { PluginModelSelection } from "@gyoungwe/plugin-api/runtime";
+import type { PluginModelSelection, PluginModelSelectionInput } from "@gyoungwe/plugin-api/runtime";
 import type { SessionDirectory } from "../session/registry";
-import { resolvedModelThinking } from "../session-engine/structured-model";
+import { nearestSupportedThinking, resolvedModelThinking } from "../session-engine/structured-model";
 import type { PluginCapabilityContext } from "./runtime-capabilities";
 import { requirePluginSession } from "./session-caller";
 
@@ -18,6 +18,7 @@ export async function resolveModelSelection(
 	context: PluginCapabilityContext,
 	profile?: string,
 	optionalProfile?: string,
+	inheritedThinking?: PluginModelSelectionInput["inheritedThinking"],
 ) {
 	const entryFor = (context: PluginCapabilityContext) => requirePluginSession(deps.registry, context);
 	const entry = entryFor(context);
@@ -26,8 +27,7 @@ export async function resolveModelSelection(
 	const parentModel = entry.session.model,
 		parentThinking = entry.session.thinkingLevel;
 	const runtime = await deps.getRuntime();
-	let model = parentModel,
-		thinking: ModelThinkingLevel = parentThinking;
+	let model = parentModel;
 	const requestedProfile = profile ?? optionalProfile;
 	const ref = requestedProfile === undefined ? undefined : await deps.getProfileModel(requestedProfile);
 	if (profile !== undefined && !ref) throw new Error("Named model preference is not configured");
@@ -41,15 +41,20 @@ export async function resolveModelSelection(
 			throw new Error("Configured model preference is unavailable; no provider fallback was used");
 		model = matches[0];
 	}
-	if (requestedProfile !== undefined)
-		thinking = (await deps.getProfileThinking(requestedProfile)) ?? parentThinking;
+	const profileThinking =
+		requestedProfile === undefined ? undefined : await deps.getProfileThinking(requestedProfile);
+	const thinking = profileThinking ?? parentThinking;
 	if (!model || !runtime.hasConfiguredAuth(model.provider))
 		throw new Error("Selected model is unavailable or has no configured credentials");
 	const selectedModel: Model<any> = model;
 	const selection: PluginModelSelection = {
 		provider: model.provider,
 		model: model.id,
-		thinkingLevel: resolvedModelThinking(model, thinking),
+		thinkingLevel:
+			profileThinking === undefined && inheritedThinking === "nearest-supported"
+				? nearestSupportedThinking(model, thinking)
+				: resolvedModelThinking(model, thinking),
+		...(inheritedThinking === "nearest-supported" ? { inheritedThinking } : {}),
 		...(ref !== undefined
 			? { profile: requestedProfile }
 			: optionalProfile === undefined
@@ -79,7 +84,8 @@ export function assertModelSelection(
 		current.selection.model !== selection.model ||
 		current.selection.thinkingLevel !== selection.thinkingLevel ||
 		current.selection.profile !== selection.profile ||
-		current.selection.optionalProfile !== selection.optionalProfile
+		current.selection.optionalProfile !== selection.optionalProfile ||
+		current.selection.inheritedThinking !== selection.inheritedThinking
 	)
 		throw new Error("Model selection changed or does not match the authorized request");
 }
