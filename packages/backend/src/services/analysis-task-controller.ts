@@ -1,10 +1,8 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { stableJson } from "@drone/compute";
 import type {
 	AnalysisContext,
-	AnalysisExecutionContext,
 	AnalysisMode,
 	AnalysisProvenance,
 	AnalysisReadinessInput,
@@ -17,9 +15,30 @@ import type { CapabilityRuntime } from "../capabilities/runtime";
 import { newRunAttemptId, nextCausalEnvelope, rootCausalEnvelope } from "../causality";
 import { readAnalysisArtifacts, type VerifiedAnalysisArtifact } from "./analysis-artifacts";
 import type { AnalysisOrchestrationService } from "./analysis-orchestration";
+import type {
+	AnalysisResultReviewer,
+	AnalysisReviewArtifact,
+	AnalysisReviewDecision,
+} from "./analysis-result-review";
 import { unavailableAnalysisReview } from "./analysis-review-decision";
+import { AnalysisTaskGateError, unavailableAdapters } from "./analysis-task-gate";
+import {
+	hashValue,
+	inputArtifacts,
+	observedExecutionContext,
+	submissionHash,
+	workflowIdentity,
+} from "./analysis-task-submission";
 import type { ComputeServicePort } from "./compute";
 import { assertComputePreflight, type ComputePreflightJobSpec } from "./compute-preflight";
+
+export type {
+	AnalysisResultReviewer,
+	AnalysisReviewArtifact,
+	AnalysisReviewDecision,
+	AnalysisReviewRequest,
+} from "./analysis-result-review";
+export { AnalysisTaskGateError } from "./analysis-task-gate";
 
 export interface AnalysisTaskControllerOptions {
 	readonly analysis: AnalysisOrchestrationService;
@@ -37,52 +56,6 @@ export interface AnalysisTaskControllerOptions {
 export interface AnalysisComputeSubmission {
 	readonly context: AnalysisContext;
 	readonly job: Awaited<ReturnType<ComputeServicePort["submit"]>>;
-}
-
-export interface AnalysisReviewArtifact {
-	readonly path: string;
-	readonly bytes?: number;
-	readonly sha256?: string;
-	readonly text?: string;
-}
-
-export interface AnalysisReviewRequest {
-	readonly context: AnalysisContext;
-	readonly jobId: string;
-	readonly workflow: unknown;
-	readonly artifacts: readonly AnalysisReviewArtifact[];
-	readonly limitations: readonly string[];
-	readonly checks: readonly AnalysisReviewCheck[];
-	readonly reviewInstructions: string;
-}
-
-export interface AnalysisReviewDecision {
-	readonly approved: boolean;
-	readonly detail: string;
-	readonly reportMarkdown: string;
-}
-
-export type AnalysisResultReviewer = (request: AnalysisReviewRequest) => Promise<AnalysisReviewDecision>;
-
-const unavailableAdapters: AnalysisAdapterRegistryPort = {
-	resolve(assay: string): never {
-		throw new Error(`Analysis plugin host is unavailable for assay: ${assay}`);
-	},
-	list: () => [],
-	find: () => undefined,
-	findByAssay: () => [],
-};
-
-/** A blocked analysis never reaches ComputeService or an executor. */
-export class AnalysisTaskGateError extends Error {
-	readonly code = "analysis_task_gate_blocked" as const;
-	readonly context: AnalysisContext;
-
-	constructor(message: string, context: AnalysisContext) {
-		super(message);
-		this.name = "AnalysisTaskGateError";
-		this.context = context;
-	}
 }
 
 /**
@@ -411,55 +384,4 @@ export class AnalysisTaskController {
 		}
 		return context;
 	}
-}
-
-function submissionHash(spec: ComputePreflightJobSpec): string {
-	const { lineage: _lineage, ...content } = spec;
-	return createHash("sha256").update(stableJson(content)).digest("hex");
-}
-
-function workflowIdentity(spec: ComputePreflightJobSpec): { id: string; version: string } {
-	const workflow = spec.workflow;
-	return "name" in workflow
-		? { id: workflow.name, version: workflow.version }
-		: {
-				id: "workflow-spec",
-				version: `sha256:${createHash("sha256").update(stableJson(workflow)).digest("hex")}`,
-			};
-}
-
-function inputArtifacts(spec: ComputePreflightJobSpec) {
-	const files = spec.dataDesign?.dataset.files ?? [];
-	return files.map((file) => ({
-		artifactId: `${spec.dataDesign?.dataset.datasetId}:${file.path}`,
-		versionId: `sha256:${file.sha256}`,
-		path: file.path,
-		sha256: file.sha256,
-		bytes: file.bytes,
-		role: "input" as const,
-		parentVersionIds: [],
-	}));
-}
-
-function hashValue(value: unknown): string {
-	return createHash("sha256").update(stableJson(value)).digest("hex");
-}
-
-function observedExecutionContext(value: Record<string, unknown>): AnalysisExecutionContext | undefined {
-	const raw = value.executionContext;
-	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-	const record = raw as Record<string, unknown>;
-	const values: Record<string, string | number | boolean | null> = {};
-	for (const [key, item] of Object.entries(record)) {
-		if (typeof item === "string" || typeof item === "number" || typeof item === "boolean" || item === null)
-			values[key] = item;
-	}
-	if (!Object.keys(values).length) return undefined;
-	return {
-		schemaVersion: 1,
-		revision: hashValue(values),
-		observedAt: new Date().toISOString(),
-		source: "host",
-		values,
-	};
 }
