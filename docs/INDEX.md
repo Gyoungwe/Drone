@@ -22,6 +22,8 @@ managed native `registerCommand` 由 `plugins/{runtime,process-runtime,process-r
 
 宿主保管的凭据槽位在 `backend/src/plugins/host-kept-credentials.ts`：只认 pi-research 完全一致的 `zotero-local` 槽位定义，请求头和 `credentials.status` 的非密字段每次从宿主当前环境（`ZOTERO_LOCAL_API_KEY` / `ZOTERO_LOCAL_SERVER_ID`，由「设置 → Zotero」授权注入）读取；`PluginCredentialStore.isHostKept` 让插件凭据设置页不列出、也不允许保存或清除该槽位。
 
+凭据选择统一在 `backend/src/plugins/credential-override.ts`（`resolvePluginCredential`，由 `PluginCredentialStore.resolve` 提供给请求头、`credentials.status` 与设置 IPC）：保留 Zotero 宿主管理规则；仅 pi-knowledge 的 `webdav` / `http-basic-digest` 槽位每次读取非空 `DRONE_WEBDAV_PASSWORD` 优先于已存槽位，同时投影有效来源与本机保存状态。WebDAV 在通用凭据设置中保持可编辑；HTTP 认证槽位拒绝直接附加密码请求头，质询认证路径由后续切片提供。
+
 任务授权的状态只在 `backend/src/plugins/task-grants.ts`（`TaskGrantStore`），插件能力、宿主授权对话框和请求 schema 在 `task-grant-capability.ts`；`plugin-source.ts` 放 `PluginRuntimeSource` 类型与来源比较（`coordinator.ts` 仅再导出该类型）。allowance 绑定角色成员解析出的唯一 provider 来源，真实会话证据见 `backend/test/task-grant-allowance-sdk.test.mjs`。
 临时旧检查点的两阶段 write 导入位于 `backend/src/plugins/session-adoption-capabilities.ts`，复用同 `SessionRecordStore`；source 精确声明、未知旧来源、当前 branch/hash/once 检查、真实回读与仍未完成的领域迁移器见[导入端口证据](pluginization/native-plugin-record-adoption-evidence.md)。
 P2/P3/P5/P6 剩余宿主领域面的只读盘点（调用方、插件侧替代、建议动作、待决问题）：[Inquiry/Discovery 接缝](pluginization/inventory-inquiry-discovery.md)、[宿主知识库操作](pluginization/inventory-host-knowledge.md)、[研究写入与 Zotero 设置](pluginization/inventory-research-writers.md)、[分析/证据服务](pluginization/inventory-analysis-services.md)、[领域构建与打包资源闭包](pluginization/inventory-domain-build-closure.md)。

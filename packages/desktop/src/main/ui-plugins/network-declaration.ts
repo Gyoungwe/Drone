@@ -26,7 +26,11 @@ function credentialSlots(raw: unknown, hosts: readonly string[]): readonly Plugi
 			slot.hosts.every((host) => hosts.includes(host)) &&
 			text(slot.header, /^[A-Za-z][A-Za-z0-9-]{0,127}$/) &&
 			Array.isArray(slot.fields) &&
-			slot.fields.every((field) => text(field, /^[A-Za-z][A-Za-z0-9]{0,63}$/)),
+			slot.fields.every((field) => text(field, /^[A-Za-z][A-Za-z0-9]{0,63}$/)) &&
+			(slot.authentication === undefined ||
+				(slot.authentication === "http-basic-digest" &&
+					slot.header.toLowerCase() === "authorization" &&
+					slot.fields.length === 0)),
 	);
 	if (
 		!Array.isArray(raw) ||
@@ -38,8 +42,15 @@ function credentialSlots(raw: unknown, hosts: readonly string[]): readonly Plugi
 			"drone.credentials must list unique slots with a label, declared network hosts, a header and fields",
 		);
 	return slots.map(
-		({ slot, label, hosts, header, fields }) =>
-			({ slot, label, hosts, header, fields }) as PluginCredentialSlot,
+		({ slot, label, hosts, header, fields, authentication }) =>
+			({
+				slot,
+				label,
+				hosts,
+				header,
+				fields,
+				...(authentication ? { authentication } : {}),
+			}) as PluginCredentialSlot,
 	);
 }
 

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -54,6 +54,21 @@ function network(fetchImpl = vi.fn(async () => new Response("{}"))) {
 }
 
 describe("plugin credential t.store", () => {
+	it("preserves the existing literal-header key hash", async () => {
+		await t.store.save(source.pluginId, slot, "TEST_ONLY_KEY_STABILITY_MARKER", fields);
+		expect(Object.keys(JSON.parse(readFileSync(join(t.dir, "plugin-credentials.json"), "utf8")))).toEqual([
+			"@gyoungwe/pi-research\t65a7e09e60f8c972d24029baa0e5bcdf10bfdad456364af4c7273a6880b50fad",
+		]);
+	});
+
+	it("includes authentication in the slot identity", async () => {
+		const literal = { ...slot, header: "Authorization", fields: [] };
+		await t.store.save(source.pluginId, literal, "TEST_ONLY_SLOT_IDENTITY_MARKER", {});
+		expect(
+			await t.store.get(source.pluginId, { ...literal, authentication: "http-basic-digest" }),
+		).toBeUndefined();
+	});
+
 	it("keeps the secret in an owner-only file and keeps it across versions of the same slot", async () => {
 		await t.store.save(source.pluginId, slot, "s3cret", fields);
 		expect(statSync(join(t.dir, "plugin-credentials.json")).mode & 0o777).toBe(0o600);
@@ -83,11 +98,13 @@ describe("plugin credential t.store", () => {
 	it("reports configured slots and their fields without the secret", async () => {
 		const status = credentialCapabilityHandlers(t.store, source)["credentials.status"];
 		expect(await status.execute(null, context)).toEqual({
-			slots: { "zotero-web": { configured: false, fields: {} } },
+			slots: { "zotero-web": { configured: false, source: null, savedConfigured: false, fields: {} } },
 		});
 		await t.store.save(source.pluginId, slot, "s3cret", fields);
 		const result = await status.execute(null, context);
-		expect(result).toEqual({ slots: { "zotero-web": { configured: true, fields } } });
+		expect(result).toEqual({
+			slots: { "zotero-web": { configured: true, source: "saved", savedConfigured: true, fields } },
+		});
 		expect(JSON.stringify(result)).not.toContain("s3cret");
 	});
 });

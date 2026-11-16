@@ -2,7 +2,9 @@ export const zhUiPlugins = {
 	credentialsTitle: "插件凭据",
 	credentialsHint:
 		"密钥由 Drone 保存在本机，只在插件向声明的主机发请求时附加；插件本身读不到密钥。插件更新改了凭据定义时需要重新填写。",
-	credentialConfigured: "已配置",
+	credentialConfigured: "已配置 — 保存在本机",
+	credentialEnv: "正在使用 DRONE_WEBDAV_PASSWORD",
+	credentialEnvOverridesSaved: "DRONE_WEBDAV_PASSWORD 优先于已保存的密码",
 	credentialMissing: "未配置",
 	credentialHosts: "仅发往",
 	credentialSecret: "密钥",
@@ -46,7 +48,9 @@ export const enUiPlugins: typeof zhUiPlugins = {
 	credentialsTitle: "Plugin credentials",
 	credentialsHint:
 		"Drone keeps these secrets on this computer and adds them only to a plugin's requests to the hosts it declared. The plugin itself never sees them. If a plugin update changes a credential definition, enter it again.",
-	credentialConfigured: "Configured",
+	credentialConfigured: "Configured — saved on this computer",
+	credentialEnv: "Using DRONE_WEBDAV_PASSWORD",
+	credentialEnvOverridesSaved: "DRONE_WEBDAV_PASSWORD overrides the saved password",
 	credentialMissing: "Not configured",
 	credentialHosts: "Sent only to",
 	credentialSecret: "Secret",

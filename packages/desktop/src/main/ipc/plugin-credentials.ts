@@ -34,21 +34,38 @@ export function registerPluginCredentialsIpc(
 			for (const [pluginId, slots] of declared())
 				for (const definition of slots) {
 					if (PluginCredentialStore.isHostKept(pluginId, definition)) continue;
-					const saved = await store.get(pluginId, definition);
+					const { credential, savedConfigured } = await store.resolve(pluginId, definition);
 					entries.push({
 						pluginId,
 						slot: definition.slot,
 						label: { ...definition.label },
 						hosts: [...definition.hosts],
 						fields: [...definition.fields],
-						configured: Boolean(saved),
-						values: { ...saved?.fields },
+						configured: Boolean(credential),
+						...(definition.authentication ? { authentication: definition.authentication } : {}),
+						source: credential?.source ?? null,
+						savedConfigured,
+						values: { ...credential?.fields },
 					});
 				}
 			return entries;
 		},
-		savePluginCredential: ({ pluginId, slot, secret, fields }) =>
-			store.save(pluginId, slotOf(pluginId, slot), secret, fields),
-		clearPluginCredential: ({ pluginId, slot }) => store.clear(pluginId, slotOf(pluginId, slot)),
+		savePluginCredential: async ({ pluginId, slot, secret, fields }) => {
+			const definition = slotOf(pluginId, slot);
+			await store.save(pluginId, definition, secret, fields);
+			const saved = await store.get(pluginId, definition);
+			if (
+				!saved ||
+				saved.secret !== secret ||
+				Object.keys(saved.fields).length !== Object.keys(fields).length ||
+				Object.entries(fields).some(([name, value]) => saved.fields[name] !== value)
+			)
+				throw new Error("Credential was not saved");
+		},
+		clearPluginCredential: async ({ pluginId, slot }) => {
+			const definition = slotOf(pluginId, slot);
+			await store.clear(pluginId, definition);
+			if (await store.get(pluginId, definition)) throw new Error("Credential was not cleared");
+		},
 	});
 }

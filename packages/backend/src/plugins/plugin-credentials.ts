@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { Type } from "typebox";
+import { type Static, Type } from "typebox";
 import { JsonStore } from "../json-store";
 import { getAgentDir } from "../session-engine/sdk";
-import { isHostKeptCredential, readHostKeptCredential } from "./host-kept-credentials";
+import { resolvePluginCredential } from "./credential-override";
+import { isHostKeptCredential } from "./host-kept-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 
@@ -20,6 +21,8 @@ export interface PluginCredentialSlot {
 	readonly header: string;
 	/** Non-secret values saved with the secret that the plugin may read, such as a library id. */
 	readonly fields: readonly string[];
+	/** The host handles HTTP challenges instead of attaching a literal secret header. */
+	readonly authentication?: "http-basic-digest";
 }
 
 interface SavedCredential {
@@ -29,9 +32,12 @@ interface SavedCredential {
 }
 
 /** A credential belongs to the plugin and the slot definition; a version bump alone keeps it. */
-function credentialKey(pluginId: string, { slot, hosts, header, fields }: PluginCredentialSlot): string {
+function credentialKey(
+	pluginId: string,
+	{ slot, hosts, header, fields, authentication }: PluginCredentialSlot,
+): string {
 	const definition = createHash("sha256")
-		.update(JSON.stringify({ slot, hosts, header, fields }))
+		.update(JSON.stringify({ slot, hosts, header, fields, ...(authentication ? { authentication } : {}) }))
 		.digest("hex");
 	return `${pluginId}\t${definition}`;
 }
@@ -54,6 +60,10 @@ export class PluginCredentialStore {
 
 	async get(pluginId: string, slot: PluginCredentialSlot): Promise<SavedCredential | undefined> {
 		return (await this.store.read())[credentialKey(pluginId, slot)];
+	}
+
+	resolve(pluginId: string, slot: PluginCredentialSlot, env: NodeJS.ProcessEnv = process.env) {
+		return resolvePluginCredential(this, pluginId, slot, env);
 	}
 
 	async save(
@@ -94,27 +104,30 @@ export async function credentialHeader(
 	if (!slot) throw new Error(`Credential slot is not declared in this package's manifest: ${name}`);
 	if (!slot.hosts.some((host) => host.toLowerCase() === url.host))
 		throw new Error(`Credential ${name} may not be sent to ${url.host}`);
-	const saved = isHostKeptCredential(source.pluginId, slot)
-		? readHostKeptCredential()
-		: await store.get(source.pluginId, slot);
-	if (!saved) throw new Error(`Credential ${name} is not configured; add it in Drone settings`);
-	return { [slot.header]: saved.secret };
+	if (slot.authentication) throw new Error(`Credential ${name} requires host HTTP authentication`);
+	const { credential } = await store.resolve(source.pluginId, slot);
+	if (!credential) throw new Error(`Credential ${name} is not configured; add it in Drone settings`);
+	return { [slot.header]: credential.secret };
 }
 
+const slotStatusResult = Type.Object(
+	{
+		configured: Type.Boolean(),
+		fields: Type.Record(Type.String(), Type.String()),
+		authentication: Type.Optional(Type.Literal("http-basic-digest")),
+		source: Type.Union([Type.Literal("env"), Type.Literal("saved"), Type.Null()]),
+		savedConfigured: Type.Boolean(),
+	},
+	{ additionalProperties: false },
+);
 const statusResult = Type.Object(
 	{
-		slots: Type.Record(
-			Type.String(),
-			Type.Object(
-				{ configured: Type.Boolean(), fields: Type.Record(Type.String(), Type.String()) },
-				{ additionalProperties: false },
-			),
-		),
+		slots: Type.Record(Type.String(), slotStatusResult),
 	},
 	{ additionalProperties: false },
 );
 
-/** `credentials.status`: which declared slots are saved, with their non-secret fields; never the secret. */
+/** `credentials.status`: effective source, saved presence and non-secret fields; never the secret. */
 export function credentialCapabilityHandlers(
 	store: PluginCredentialStore,
 	source: PluginRuntimeSource,
@@ -125,12 +138,16 @@ export function credentialCapabilityHandlers(
 			inputSchema: Type.Null(),
 			resultSchema: statusResult,
 			execute: async () => {
-				const slots: Record<string, { configured: boolean; fields: Record<string, string> }> = {};
+				const slots: Record<string, Static<typeof slotStatusResult>> = {};
 				for (const slot of source.credentials ?? []) {
-					const saved = isHostKeptCredential(source.pluginId, slot)
-						? readHostKeptCredential()
-						: await store.get(source.pluginId, slot);
-					slots[slot.slot] = { configured: Boolean(saved), fields: { ...saved?.fields } };
+					const { credential, savedConfigured } = await store.resolve(source.pluginId, slot);
+					slots[slot.slot] = {
+						configured: Boolean(credential),
+						fields: { ...credential?.fields },
+						...(slot.authentication ? { authentication: slot.authentication } : {}),
+						source: credential?.source ?? null,
+						savedConfigured,
+					};
 				}
 				return { slots };
 			},

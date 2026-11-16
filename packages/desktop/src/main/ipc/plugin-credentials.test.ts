@@ -48,6 +48,7 @@ beforeEach(() => {
 	mocks.handlers.clear();
 	t.dir = mkdtempSync(join(tmpdir(), "plugin-credentials-ipc-"));
 	t.path = join(t.dir, "plugin-credentials.json");
+	vi.stubEnv("DRONE_WEBDAV_PASSWORD", undefined);
 	// A stale copy declares an older slot definition; the enabled package's definition is the one shown.
 	const stale = { ...slot, hosts: ["old.zotero.org"] };
 	const manager = {
@@ -67,6 +68,8 @@ it("saves, lists and clears a declared slot without ever returning the secret", 
 			hosts: slot.hosts,
 			fields: slot.fields,
 			configured: false,
+			source: null,
+			savedConfigured: false,
 			values: {},
 		},
 	]);
@@ -147,4 +150,130 @@ it.each([
 	]);
 	await call("clearPluginCredential", { pluginId: owner, slot: "zotero-local" });
 	expect(await call("listPluginCredentials")).toMatchObject([{ configured: false, values: {} }]);
+});
+
+const webdavSlot: PluginCredentialSlot = {
+	slot: "webdav",
+	label: { zh: "WebDAV 密码", en: "WebDAV password" },
+	hosts: ["10.126.126.1:8080"],
+	header: "Authorization",
+	fields: [],
+	authentication: "http-basic-digest",
+};
+const knowledgeId = "@gyoungwe/pi-knowledge";
+
+it.each([
+	{ name: "env only", saved: false, env: "TEST_ONLY_IPC_ENV_MARKER", source: "env" },
+	{ name: "env plus saved", saved: true, env: "TEST_ONLY_IPC_ENV_MARKER", source: "env" },
+	{ name: "saved only", saved: true, env: undefined, source: "saved" },
+	{ name: "missing", saved: false, env: undefined, source: null },
+	{ name: "empty env", saved: true, env: "", source: "saved" },
+])("lists WebDAV $name with safe effective and saved metadata", async ({ saved, env, source }) => {
+	const store = new PluginCredentialStore(t.path);
+	registerPluginCredentialsIpc(
+		{ runtimeSources: () => [runtime([webdavSlot], "enabled", knowledgeId)] },
+		store,
+	);
+	if (saved) await store.save(knowledgeId, webdavSlot, "TEST_ONLY_IPC_SAVED_MARKER", {});
+	vi.stubEnv("DRONE_WEBDAV_PASSWORD", env);
+	const result = await call("listPluginCredentials");
+	expect(result).toEqual([
+		{
+			pluginId: knowledgeId,
+			slot: "webdav",
+			label: webdavSlot.label,
+			hosts: webdavSlot.hosts,
+			fields: [],
+			values: {},
+			authentication: "http-basic-digest",
+			configured: source !== null,
+			source,
+			savedConfigured: saved,
+		},
+	]);
+	for (const marker of ["TEST_ONLY_IPC_ENV_MARKER", "TEST_ONLY_IPC_SAVED_MARKER"])
+		expect(JSON.stringify(result)).not.toContain(marker);
+});
+
+it("keeps WebDAV editable under the env override and reloads the current env each time", async () => {
+	const store = new PluginCredentialStore(t.path);
+	registerPluginCredentialsIpc(
+		{ runtimeSources: () => [runtime([webdavSlot], "enabled", knowledgeId)] },
+		store,
+	);
+	vi.stubEnv("DRONE_WEBDAV_PASSWORD", "TEST_ONLY_IPC_ENV_MARKER");
+	const target = { pluginId: knowledgeId, slot: "webdav" };
+	await call("savePluginCredential", { ...target, secret: "TEST_ONLY_IPC_SAVED_MARKER", fields: {} });
+	expect(await call("listPluginCredentials")).toMatchObject([{ source: "env", savedConfigured: true }]);
+	await call("clearPluginCredential", target);
+	expect(await call("listPluginCredentials")).toMatchObject([
+		{
+			configured: true,
+			source: "env",
+			savedConfigured: false,
+		},
+	]);
+	expect(process.env.DRONE_WEBDAV_PASSWORD === "TEST_ONLY_IPC_ENV_MARKER").toBe(true);
+	vi.stubEnv("DRONE_WEBDAV_PASSWORD", undefined);
+	expect(await call("listPluginCredentials")).toMatchObject([
+		{
+			configured: false,
+			source: null,
+			savedConfigured: false,
+		},
+	]);
+});
+
+it.each<{ name: string; readback: Awaited<ReturnType<PluginCredentialStore["get"]>> }>([
+	{ name: "missing", readback: undefined },
+	{
+		name: "wrong secret",
+		readback: {
+			secret: "TEST_ONLY_WRONG_READBACK",
+			fields: { libraryType: "users", libraryId: "42" },
+			savedAt: "test",
+		},
+	},
+	{
+		name: "wrong fields",
+		readback: {
+			secret: "TEST_ONLY_READBACK_MARKER",
+			fields: { libraryType: "users", libraryId: "43" },
+			savedAt: "test",
+		},
+	},
+	{
+		name: "extra fields",
+		readback: {
+			secret: "TEST_ONLY_READBACK_MARKER",
+			fields: { libraryType: "users", libraryId: "42", extra: "field" },
+			savedAt: "test",
+		},
+	},
+])("rejects save with a fixed safe error when readback is $name", async ({ readback }) => {
+	const store = new PluginCredentialStore(t.path);
+	vi.spyOn(store, "save").mockResolvedValue(undefined);
+	vi.spyOn(store, "get").mockResolvedValue(readback);
+	registerPluginCredentialsIpc({ runtimeSources: () => [runtime([slot], "enabled")] }, store);
+	await expect(
+		call("savePluginCredential", {
+			pluginId,
+			slot: slot.slot,
+			secret: "TEST_ONLY_READBACK_MARKER",
+			fields: { libraryType: "users", libraryId: "42" },
+		}),
+	).rejects.toThrow(new Error("Credential was not saved"));
+});
+
+it("rejects clear with a fixed safe error when the saved record remains", async () => {
+	const store = new PluginCredentialStore(t.path);
+	await store.save(pluginId, slot, "TEST_ONLY_CLEAR_READBACK_MARKER", {
+		libraryType: "users",
+		libraryId: "42",
+	});
+	vi.spyOn(store, "clear").mockResolvedValue(undefined);
+	registerPluginCredentialsIpc({ runtimeSources: () => [runtime([slot], "enabled")] }, store);
+	await expect(call("clearPluginCredential", { pluginId, slot: slot.slot })).rejects.toThrow(
+		new Error("Credential was not cleared"),
+	);
 });
