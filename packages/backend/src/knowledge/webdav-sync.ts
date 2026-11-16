@@ -4,8 +4,8 @@ import type {
 	KnowledgeCloudSyncPreview,
 	KnowledgeCloudSyncResult,
 } from "@drone/shared";
+import { cloudError, cloudNotePath, KnowledgeWebDavError } from "../services/webdav-transport";
 import type { KnowledgeWebDavService } from "./webdav";
-import { cloudError, cloudNotePath, KnowledgeWebDavError } from "./webdav-transport";
 
 /** Host-owned Vault operations used by the WebDAV sync boundary. */
 export interface KnowledgeWebDavVault {

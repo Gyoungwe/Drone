@@ -13,8 +13,8 @@ import {
 	VaultFileConflictError,
 } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, describe, expect, it } from "vitest";
+import { KnowledgeWebDavError } from "../services/webdav-transport";
 import { syncCloudNotes } from "./webdav-sync";
-import { KnowledgeWebDavError } from "./webdav-transport";
 
 const roots: string[] = [];
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
