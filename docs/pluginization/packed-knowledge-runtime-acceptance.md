@@ -14,6 +14,19 @@ npx vitest run packages/backend/test/packed-knowledge-runtime-sdk.test.mjs
 
 可通过 `DRONE_PLUGIN_RUNTIME_DIRECTORY` 指定另一份宿主已准备的 Node runtime 目录。脚本会使用公开 npm registry、`--ignore-scripts --omit=peer`，把传入 tarball 安装到独立临时前缀；实际会话使用宿主锁定的 SDK。安装前缀、合成状态及 Vault 在验收结束后清理。失败阶段写入同路径的 `.failure.json`，只有完整断言及清理都通过才写成功 JSON。
 
+## WebDAV cloud slice
+
+`packages/backend/test/packed-knowledge-webdav-sdk.test.mjs` is a separate opt-in test of the installed knowledge tarball, a real offline SDK session, restricted workers, host credential storage, broker approval and file capabilities. Its DAV fixture independently verifies Basic/Digest credentials and records only credential-source labels. The sole network seam rewrites `http://10.126.126.1:8080` to the loopback server; all other origins fail.
+
+From the repository root, run on a host allowed to install the artifact and listen on loopback:
+
+```sh
+cd packages/backend && DRONE_KNOWLEDGE_TARBALL="$PWD/../../vendor/plugins/.tarballs/pi-knowledge-cfd7b50bcb254a66259db4c11d2001f911cd0570be1710fa50f465ecadbc3318.tgz" \
+  npx vitest run --project sdk test/packed-knowledge-webdav-sdk.test.mjs --configLoader runner
+```
+
+The eight labelled phases cover missing credentials, saved Digest/challenge reuse, denied and approved MKCOL/PUT, challenged Basic, env override/no fallback, writable/read-only Vault pulls, disclosure checks and fetch confinement. Installation follows the temporary-prefix procedure above, including optional `DRONE_PLUGIN_API_TARBALL`; cleanup restores fetch/environment and closes workers, SDK sessions and the server. Without `DRONE_KNOWLEDGE_TARBALL` the test skips. A skip or static check is not runtime acceptance; sandbox workers leave the authenticated run `NOT_RUN`. Note paths use `Inbox/`, because the shipped cloud path policy only accepts `Home.md` and Markdown under `Wiki/`, `Library/`, `Projects/` or `Inbox/`.
+
 ## 实际覆盖
 
 - 从安装后的真实 `plugin.manifest.json` 解析 desktopRuntime、native extension 和 resource entrypoints；校验路径留在包内，并与官方 `package.json` 的 Pi extension 元数据一致。
