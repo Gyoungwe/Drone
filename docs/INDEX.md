@@ -91,7 +91,7 @@ P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享
 - `@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库；宿主连接、SSH、Pi SDK 和 Electron 适配留在组合根（R7）。
 - NGS/生信编排门禁见 `packages/shared/src/analysis-orchestration.ts`：阶段到 `capability_load` 能力映射、数据/重复数/参考版本/授权检查，以及执行、结果审查和发布暂停状态机。
 - 持久化宿主门面见 `packages/backend/src/services/analysis-orchestration.ts`：通过 `JsonStore` 保存分析快照并在重启后恢复；计算提交仍必须经过既有 Compute 授权与 B7 preflight。
-- NGS 任务控制器适配见 `packages/backend/src/services/analysis-task-controller.ts`：按阶段自动激活 `capability_load` 能力，绑定已评估的 Compute 规格，并在提交和重启恢复后继续执行门禁。
+- NGS 任务控制器适配见 `packages/backend/src/services/analysis-task-controller.ts`：按阶段自动激活 `capability_load` 能力，绑定已评估的 Compute 规格，并在提交和重启恢复后继续执行门禁。同目录拆出：`analysis-result-review.ts`（模型复核请求/决策合同类型）、`analysis-task-submission.ts`（提交哈希、workflow 身份、输入制品与执行上下文辅助函数）、`analysis-task-gate.ts`（`AnalysisTaskGateError` 与无插件时的适配器占位）；控制器再导出原有公开名。
 - NGS review→delivery 闭环也由该控制器负责：收集并读取已校验产物，调用会话模型生成审查报告，持久化限制说明，并仅在审查通过后完成交付。
 - 分析适配器由 `@gyoungwe/pi-analysis/host` 提供版本化 registry/loader：通用编排器只消费公开的 adapter contract、readiness 与确定性结果检查；契约快照、工具合同和宿主执行上下文会进入 provenance。当前提供 bulk RNA-seq/DESeq2 和 assembly 适配器，并持久化 adapter、workflow、method 版本及 artifact lineage/reproducibility 状态。
 - analysis/evidence 只读工作流组合位于 `packages/backend/src/services/analysis-evidence-host.ts`：宿主消费 manifest 声明的 `analysis_prepare_evidence`、`evidence_validate_manifest` 与 replay 元数据校验 `evidence_verify_replay`，要求准备计划 `execution=host-required`，并返回内容寻址稳定回执；缺失插件能力显式为 `unavailable`，持久化 checkpoint/replay receipt 仍由 evidence service 通过 `JsonStore` 持有。
