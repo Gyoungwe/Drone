@@ -24,6 +24,7 @@ const selectionProperties = {
 	thinkingLevel: text,
 	profile: text,
 	optionalProfile: text,
+	inheritedThinking: { enum: ["nearest-supported"] },
 };
 const selectionSchema = {
 	type: "object",
@@ -50,6 +51,7 @@ export function modelCapabilityHandlers(deps: PluginModelCapabilitiesDependencie
 			context,
 			input.selection.profile,
 			input.selection.optionalProfile,
+			input.selection.inheritedThinking,
 		);
 		const check = async () => {
 			context.signal.throwIfAborted();
@@ -58,6 +60,7 @@ export function modelCapabilityHandlers(deps: PluginModelCapabilitiesDependencie
 				context,
 				input.selection.profile,
 				input.selection.optionalProfile,
+				input.selection.inheritedThinking,
 			);
 			assertModelSelection(initial, current, input.selection);
 		};
@@ -93,7 +96,11 @@ export function modelCapabilityHandlers(deps: PluginModelCapabilitiesDependencie
 			effect: "read",
 			inputSchema: {
 				type: "object",
-				properties: { profile: text, optionalProfile: text },
+				properties: {
+					profile: text,
+					optionalProfile: text,
+					inheritedThinking: { enum: ["strict", "nearest-supported"] },
+				},
 				not: { required: ["profile", "optionalProfile"] },
 				additionalProperties: false,
 			},
@@ -105,6 +112,7 @@ export function modelCapabilityHandlers(deps: PluginModelCapabilitiesDependencie
 						context,
 						(input as PluginModelSelectionInput).profile,
 						(input as PluginModelSelectionInput).optionalProfile,
+						(input as PluginModelSelectionInput).inheritedThinking,
 					)
 				).selection,
 		},

@@ -12,6 +12,18 @@ export function resolvedModelThinking(model: Model<any>, requested: ModelThinkin
 	return requested;
 }
 
+/** Preserve inherited thinking when supported; otherwise prefer medium over disabling reasoning. */
+export function nearestSupportedThinking(
+	model: Model<string>,
+	requested: ModelThinkingLevel,
+): ModelThinkingLevel {
+	const supported = getSupportedThinkingLevels(model);
+	const firstReasoning = supported.find((level) => level !== "off");
+	if (firstReasoning === undefined) return resolvedModelThinking(model, "off");
+	if (supported.includes(requested)) return requested;
+	return supported.includes("medium") ? "medium" : firstReasoning;
+}
+
 /** The host supplies no executable tools; the sole declared tool returns schema-validated JSON. */
 export async function generateStructuredModel(
 	runtime: ModelRuntime,
