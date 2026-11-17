@@ -39,6 +39,7 @@ export const KNOWN_UI_REGIONS: string[] = [
 	"knowledge.surface",
 	"home.section",
 	"skills.section",
+	"panel.artifact.contribution",
 ];
 
 /** app.overlay 的九宫格锚点枚举（spec §16） */

@@ -55,6 +55,7 @@ export const UI_REGIONS = {
 	HomeSection: "home.section",
 	/** 技能页分区：Skills & Connections 页面中的附加区域。 */
 	SkillsSection: "skills.section",
+	ArtifactContribution: "panel.artifact.contribution",
 } as const;
 export type RegionName = (typeof UI_REGIONS)[keyof typeof UI_REGIONS];
 

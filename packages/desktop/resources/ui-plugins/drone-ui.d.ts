@@ -74,6 +74,7 @@ declare module "@gyoungwe/plugin-api" {
 		| "home.section"
 		| "skills.section"
 		| "panel.tab"
+		| "panel.artifact.contribution"
 		| "rail.view"
 		| "app.background"
 		| "app.overlay"

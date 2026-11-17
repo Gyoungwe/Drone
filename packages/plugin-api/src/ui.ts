@@ -25,6 +25,7 @@ import type {
 	WorkbenchTask,
 } from "./ui-wire.js";
 
+export type { ArtifactContributionProps, ArtifactSurface } from "./ui-artifact.js";
 export type * from "./ui-wire.js";
 
 /** Generic session actions preserve host session authorization and lifecycle boundaries. */
@@ -193,6 +194,7 @@ export interface KnowledgeUiRegions {
 	KnowledgeSurface: "knowledge.surface";
 	HomeSection: "home.section";
 	SkillsSection: "skills.section";
+	ArtifactContribution: "panel.artifact.contribution";
 }
 export type KnowledgeUiRegion = KnowledgeUiRegions[keyof KnowledgeUiRegions];
 export interface KnowledgeUiBindings {
