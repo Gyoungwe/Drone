@@ -14,6 +14,8 @@ npx vitest run packages/backend/test/packed-knowledge-runtime-sdk.test.mjs
 
 Runtime SDK acceptance also requires `DRONE_PLUGIN_API_TARBALL` to point to the vendored plugin-api candidate pinned in the plugins repository's `package.json` (for example, `DRONE_PLUGIN_API_TARBALL=vendor/gyoungwe-plugin-api-1.3.0-<hash>.tgz`); a run without it is not acceptance.
 
+Every `pi-knowledge` relock must run `packages/backend/test/packed-knowledge-runtime-sdk.test.mjs` with both `DRONE_KNOWLEDGE_TARBALL` and `DRONE_PLUGIN_API_TARBALL` because the default gate skips this suite; on 2026-11-17, only this suite caught a relocked `pi-knowledge` whose `modelReviewInfo` result schema rejected the host's selection fields.
+
 可通过 `DRONE_PLUGIN_RUNTIME_DIRECTORY` 指定另一份宿主已准备的 Node runtime 目录。脚本会使用公开 npm registry、`--ignore-scripts --omit=peer`，把传入 tarball 安装到独立临时前缀；实际会话使用宿主锁定的 SDK。安装前缀、合成状态及 Vault 在验收结束后清理。失败阶段写入同路径的 `.failure.json`，只有完整断言及清理都通过才写成功 JSON。
 
 ## WebDAV cloud slice
@@ -27,7 +29,7 @@ cd packages/backend && DRONE_KNOWLEDGE_TARBALL="$PWD/../../vendor/plugins/.tarba
   npx vitest run --project sdk test/packed-knowledge-webdav-sdk.test.mjs --configLoader runner
 ```
 
-The eight labelled phases cover missing credentials, saved Digest/challenge reuse, denied and approved MKCOL/PUT, challenged Basic, env override/no fallback, writable/read-only Vault pulls, disclosure checks and fetch confinement. Installation follows the temporary-prefix procedure above, including optional `DRONE_PLUGIN_API_TARBALL`; cleanup restores fetch/environment and closes workers, SDK sessions and the server. Without `DRONE_KNOWLEDGE_TARBALL` the test skips. A skip or static check is not runtime acceptance; sandbox workers leave the authenticated run `NOT_RUN`. Note paths use `Inbox/`, because the shipped cloud path policy only accepts `Home.md` and Markdown under `Wiki/`, `Library/`, `Projects/` or `Inbox/`.
+The eight labelled phases cover missing credentials, saved Digest/challenge reuse, denied and approved MKCOL/PUT, challenged Basic, env override/no fallback, writable/read-only Vault pulls, disclosure checks and fetch confinement. Installation follows the temporary-prefix procedure above and requires `DRONE_PLUGIN_API_TARBALL`; a run without it is not acceptance. Cleanup restores fetch/environment and closes workers, SDK sessions and the server. Without `DRONE_KNOWLEDGE_TARBALL` the test skips. A skip or static check is not runtime acceptance; sandbox workers leave the authenticated run `NOT_RUN`. Note paths use `Inbox/`, because the shipped cloud path policy only accepts `Home.md` and Markdown under `Wiki/`, `Library/`, `Projects/` or `Inbox/`.
 
 ## 实际覆盖
 

@@ -555,3 +555,7 @@ Node 会解析主模块的符号链接并对 `import.meta.url` 做百分号编�
 ## 生成脚本经 stdin 调 Biome 可能挂住（2026-11-17 记录）
 
 `scripts/generate-knowledge-ui-contract.mjs` 经无 `timeout` 的 `execFileSync` 调用 `biome format --stdin-file-path …`；在 `node_modules` 符号链接到主 checkout 的 git worktree 中，一次 typecheck/build 门禁曾卡在该子进程数小时，终止后重跑通过。门禁长时间无输出时，检查是否有 `biome format --stdin` 子进程；worktree 优先独立执行 `npm ci` 安装真实依赖，新生成器调用子进程时应传入 `timeout`。
+
+## worktree 的 node_modules 符号链接会复用旧依赖（2026-11-17 记录）
+
+worktree 的 `node_modules` 若是指向主 checkout 的符号链接，使用的就是主 checkout 的依赖，可能已经过期。例如旧 vendored `@gyoungwe/plugin-api` 缺少 `inheritedThinking`，会让 drone-plugins 的 pi-knowledge 构建在 `tsc` 阶段失败，也会让 Drone 强制重建扩展时产生产物漂移。修复时在 worktree 内真正执行 `npm ci` 安装独立依赖；Drone 随后还要运行 `npm run build -w @gyoungwe/plugin-api` 和 `npm run fetch:plugins`。
