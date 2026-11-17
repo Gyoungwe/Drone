@@ -62,6 +62,12 @@ export interface PluginCapabilityHandler {
 		input: unknown,
 		facts: Pick<PluginCapabilityContext, "pluginId" | "applicationId" | "scope">,
 	): string;
+	/** Host-only observation of the broker's decision and guarded execution; never plugin JSON. */
+	observe?(
+		input: unknown,
+		context: PluginCapabilityContext,
+		invocation: { readonly approved: boolean; execute(): Promise<unknown> },
+	): Promise<unknown>;
 	execute(input: unknown, context: PluginCapabilityContext): Promise<unknown>;
 }
 export interface PluginRuntimeCapabilitiesOptions {
@@ -233,8 +239,10 @@ export class PluginCapabilityBroker {
 		if (authority.context.bootstrap) {
 			if (!handler.bootstrap || handler.effect !== "read")
 				throw new Error(`Plugin capability is unavailable during bootstrap: ${name}`);
-		} else if (
-			!(await authority.authorize(
+		}
+		const approved =
+			authority.context.bootstrap ||
+			(await authority.authorize(
 				name,
 				input,
 				handler.effect,
@@ -245,15 +253,17 @@ export class PluginCapabilityBroker {
 				}),
 				authority.context.signal,
 				handler.approval,
-			))
-		) {
-			throw new Error(`Plugin capability denied: ${name}`);
-		}
-		check();
-		const result = await this.calls.run(authority, () => handler.execute(input, authority.context));
-		check();
-		if (!Check(handler.resultSchema, result)) throw new Error(`Invalid plugin capability result: ${name}`);
-		return result;
+			));
+		const execute = async () => {
+			if (!approved) throw new Error(`Plugin capability denied: ${name}`);
+			check();
+			const result = await this.calls.run(authority, () => handler.execute(input, authority.context));
+			check();
+			if (!Check(handler.resultSchema, result)) throw new Error(`Invalid plugin capability result: ${name}`);
+			return result;
+		};
+		if (handler.observe) return handler.observe(input, authority.context, { approved, execute });
+		return execute();
 	}
 }
 

@@ -37,6 +37,30 @@ const brokerContext = {
 	bootstrap: false,
 };
 
+it.each([true, false, "bootstrap"] as const)("guards observers: %s", async (decision) => {
+	const bootstrap = decision === "bootstrap";
+	const approved = decision !== false;
+	const authorize = vi.fn(async () => approved);
+	const execute = vi.fn(async () => "done");
+	const observe = vi.fn<NonNullable<PluginCapabilityHandler["observe"]>>((_input, _context, invocation) =>
+		invocation.execute(),
+	);
+	const broker = new PluginCapabilityBroker({
+		resources: [],
+		handlers: {
+			save: { ...handler(execute), effect: bootstrap ? "read" : "write", bootstrap: true, observe },
+		},
+	});
+	const result = broker.run({ ...brokerContext, bootstrap }, "write", vi.fn(), authorize, () =>
+		broker.port.call("save", null),
+	);
+	if (approved) await expect(result).resolves.toBe("done");
+	else await expect(result).rejects.toThrow("Plugin capability denied: save");
+	expect(authorize).toHaveBeenCalledTimes(bootstrap ? 0 : 1);
+	expect(observe.mock.calls[0]?.[2]).toMatchObject({ approved });
+	expect(execute).toHaveBeenCalledTimes(approved ? 1 : 0);
+});
+
 it("drains pending calls before finalizing once in reverse order, preserving narrowed context", async () => {
 	const contexts: PluginCapabilityContext[] = [];
 	const events: string[] = [];
