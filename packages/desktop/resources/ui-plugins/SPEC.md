@@ -130,6 +130,7 @@ export const stores: {                      // 宿主 zustand store（与宿主�
 	useTranscriptStore; useSessionsStore; useUiStore; useProjectsStore; useSettingsStore;
 	useUiPreferencesStore;                   // 应用级 UI 偏好（ui-state.json 持久化：轨道/中央动画等开关）
 	useKnowledgeStore;                       // 知识流（flows[sessionId].cards 等）
+	createPluginStore;                       // 用宿主同一份 zustand 创建插件自有 store：createPluginStore((set, get, store) => state)
 };
 export const sessions: {
 	prompt(sessionId: string, text: string, images?: ImageInput[], ids?: PromptIds): Promise<PromptReceipt>;
@@ -219,6 +220,7 @@ Slot 是「替换」，Region/Contribution 是「新增」：插件可以在宿�
 | `knowledge.page` | 知识库主区 | 由第一个启用贡献完整接管知识库主区；没有可用贡献或渲染失败时回退宿主轻量页（绑定状态、打开文件夹、插件管理） | 整页知识工作台 |
 | `home.section` | 新任务首页卡片区 | 在内置首页卡片之后追加分区 | 首页摘要或引导 |
 | `skills.section` | 技能与连接页 | 在内置能力内容前追加分区 | 插件配置或状态 |
+| `panel.artifact.contribution` | 概览页证据区（`evidence.overview`）、产物页证据区（`evidence.pane`）、每张产物溯源卡（`artifacts.card`） | 宿主默认内容总是先渲染，贡献按启用顺序追加在其后；每个贡献独立 PluginBoundary | 产物/证据的领域补充视图 |
 
 z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全屏预览 50。**插件层永在弹窗之下**。
 
@@ -240,6 +242,8 @@ z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全�
 - `anchor`：仅 `app.overlay` 有意义，九宫格枚举 `top-left/top-center/top-right/center-left/center/center-right/bottom-left/bottom-center/bottom-right`，缺省 `bottom-right`；其他区域忽略该字段；
 - `title`：可选展示名（`settings.panel` 用作设置分类标题；`panel.tab` / `rail.view` 用作页签 / 导航标签，缺省用 `id`）。
 
+`panel.artifact.contribution` 与 `knowledge.surface` 一样是带 props 的区域（例外于上文“贡献无 props”）：贡献组件收到冻结的 `ArtifactContributionProps`（`@gyoungwe/plugin-api/ui`），恰好 7 个字段 `surface` / `artifactId` / `analysisId` / `capabilityId` / `sessionId` / `workspaceId` / `renderDefault`。这些 ID 只是展示上下文，不授予任何运行时权限；需要读写时仍走宿主能力与审批。
+
 ### 10.2 三条硬纪律
 
 1. **pointer-events**：overlay / background / corner 容器一律 `pointer-events-none`（不挡宿主交互）；插件需要交互的子树自己开 `pointer-events-auto`（如宠物本体）；
@@ -256,6 +260,7 @@ z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全�
 - 排查：贡献根元素外层的宿主容器挂 `data-plugin="<name>"` 属性（插件无需自己做）；
 - **内置插件**：`resources/ui-plugins/builtin/` 随包分发，应用首次启动/升级时导出到用户插件目录（与用户插件同一条扫描/构建/热重载路径，面板带「内置」badge、启用免二次确认）。**直接改内置副本会在下次升级被覆盖——魔改请把目录改名另存**（`plugin.json` 的 `name` 同步改）；手动删除的目录本版本内不会回来，下次升级重新导出；
 - 新 hooks（`drone-ui.d.ts` 已声明）：`useContextUsage(sessionId)` 返回 `{ tokens, contextWindow, percent }`（事件驱动刷新，token 仪表盘用）；`useLanguage()` 返回 `"zh" | "en"`（插件自有文案跟随中英）。
+- `stores.createPluginStore`：插件自有状态请用它创建，不要自带 zustand 副本；selector 必须返回稳定引用（未变化的选择保持同一引用，派生值请 memo），组件卸载时自动退订。
 
 ### 10.4 示例
 
