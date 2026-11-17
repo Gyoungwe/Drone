@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from "node:util";
 import {
 	type Code,
 	type Receipt,
+	type ReceiptInput,
 	type RequestInput,
 	validateP5Receipt,
 } from "@gyoungwe/plugin-api/p5-receipts";
@@ -39,6 +40,7 @@ type Completion = Pick<Receipt, "at" | "resultSha256" | "readback"> & {
 export interface P5ReceiptStore {
 	/** Host-derived IDs only. Historical records convey no execution or approval authority. */
 	get(request: RequestInput): Promise<Receipt | undefined>;
+	getByRef(input: ReceiptInput): Promise<Receipt | undefined>;
 	/** Host observations, never plugin-supplied proof; denial can be recorded without invocation. */
 	accept(request: RequestInput, metadata: Acceptance): Promise<Receipt>;
 	finish(request: RequestInput, completion: Completion): Promise<Receipt>;
@@ -200,6 +202,8 @@ export function createP5ReceiptStore(options: {
 	return {
 		get: async (request) =>
 			(await readSnapshot(storage.path)).receipts.find((entry) => entry.requestId === request.requestId),
+		getByRef: async (input) =>
+			(await readSnapshot(storage.path)).receipts.find((entry) => entry.receiptRef === input.receiptRef),
 		accept: (request, metadata) => acceptReceipt(storage, request, metadata),
 		finish: (request, completion) => finishReceipt(storage, request, completion),
 	};
