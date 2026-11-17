@@ -9,6 +9,7 @@ import {
 	verifyRetainedUiOwner,
 } from "./packed-knowledge-runtime/evidence.mjs";
 import { verifyModelReview } from "./packed-knowledge-runtime/model-review.mjs";
+import { verifyModelReviewVerdicts } from "./packed-knowledge-runtime/model-review-verdicts.mjs";
 import { verifyStatePolicy } from "./packed-knowledge-runtime/policy.mjs";
 import { verifyApplicationReading, verifySessionReading } from "./packed-knowledge-runtime/reading.mjs";
 import { prepareReviewProposals, verifyReviewPreview } from "./packed-knowledge-runtime/review-preview.mjs";
@@ -50,6 +51,7 @@ it.skipIf(!tarball)(
 			await createWritableSession(ctx);
 			await verifyReviewWrites(ctx);
 			await verifyModelReview(ctx);
+			await verifyModelReviewVerdicts(ctx);
 			await verifyRetainedUiOwner(ctx);
 			await collectReceipt(ctx);
 		} catch (error) {
