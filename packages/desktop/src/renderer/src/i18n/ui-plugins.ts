@@ -10,6 +10,14 @@ export const zhUiPlugins = {
 	credentialSecret: "密钥",
 	credentialSecretReplace: "输入新密钥以替换",
 	credentialClear: "清除",
+	webdavEffectiveEndpoint: "生效地址",
+	webdavEndpointDefault: "使用默认地址。",
+	webdavEndpointEnv: "地址来自环境变量 DRONE_WEBDAV_ENDPOINT。",
+	webdavEndpointInvalid:
+		"DRONE_WEBDAV_ENDPOINT 无效；云端操作已停用。请设置带明确端口、无凭据和路径参数的 HTTP(S) 根地址，然后重启 Drone。",
+	webdavEndpointChanged: "WebDAV 地址已变化；请刷新状态后重试。",
+	webdavEndpointUnsupported: "此 Drone 版本尚不支持 WebDAV 地址配置；请更新 Drone。",
+	webdavEndpointHttpWarning: "当前地址使用未加密的 HTTP；请仅在可信网络中使用。",
 	title: "UI 插件",
 	masterHint:
 		"本机用户目录里的插件可替换工具调用卡、子代理卡、任务列表面板等内置组件；关闭后所有插件立即停用，文件与配置保留。",
@@ -56,6 +64,15 @@ export const enUiPlugins: typeof zhUiPlugins = {
 	credentialSecret: "Secret",
 	credentialSecretReplace: "Enter a new secret to replace it",
 	credentialClear: "Clear",
+	webdavEffectiveEndpoint: "Effective endpoint",
+	webdavEndpointDefault: "Using the default endpoint.",
+	webdavEndpointEnv: "Endpoint from environment variable DRONE_WEBDAV_ENDPOINT.",
+	webdavEndpointInvalid:
+		"DRONE_WEBDAV_ENDPOINT is invalid; cloud operations are disabled. Set an HTTP(S) root URL with an explicit port and no credentials or path parameters, then restart Drone.",
+	webdavEndpointChanged: "The WebDAV endpoint changed. Refresh status and try again.",
+	webdavEndpointUnsupported:
+		"This Drone version does not support WebDAV endpoint configuration yet; update Drone.",
+	webdavEndpointHttpWarning: "The current endpoint uses unencrypted HTTP; use it only on a trusted network.",
 	title: "UI Plugins",
 	masterHint:
 		"Plugins from your local user directory can replace built-in components such as the tool call card, subagent card, and todo panel; turning the switch off disables them all immediately (files and config are kept)",
