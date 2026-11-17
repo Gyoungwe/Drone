@@ -88,6 +88,42 @@ it("persists exact accepted and terminal receipts across fresh JsonStore instanc
 	expect(JSON.parse(await readFile(fixture.path, "utf8"))).toEqual([terminal]);
 });
 
+it("looks up accepted and terminal receipts by reference after reopening", async () => {
+	const store = open();
+	const first = await store.accept(request, accepted);
+	const second = await store.accept(
+		{ requestId: "host-request-2" },
+		{ ...accepted, receiptRef: "host-receipt-2" },
+	);
+	expect(await open().getByRef({ receiptRef: first.receiptRef })).toEqual(first);
+	expect(await open().getByRef({ receiptRef: second.receiptRef })).toEqual(second);
+	const terminal = await store.finish(request, succeeded);
+	const reopened = open();
+	expect(await reopened.getByRef({ receiptRef: first.receiptRef })).toEqual(terminal);
+	expect(await reopened.getByRef({ receiptRef: second.receiptRef })).toEqual(second);
+});
+
+it("returns undefined for unknown references without creating or changing the ledger", async () => {
+	const store = open();
+	const missing = { receiptRef: "host-receipt-missing" };
+	expect(await store.getByRef(missing)).toBeUndefined();
+	await expect(readFile(fixture.path)).rejects.toMatchObject({ code: "ENOENT" });
+	await store.accept(request, accepted);
+	const bytes = await readFile(fixture.path);
+	expect(await open().getByRef(missing)).toBeUndefined();
+	expect(await open().getByRef({ receiptRef: request.requestId })).toBeUndefined();
+	expect(await readFile(fixture.path)).toEqual(bytes);
+});
+
+it("rejects a reference reused by another request with a typed conflict and preserves file bytes", async () => {
+	await open().accept(request, accepted);
+	const bytes = await readFile(fixture.path);
+	const conflicting = open().accept({ requestId: "host-request-2" }, accepted);
+	await expect(conflicting).rejects.toBeInstanceOf(P5ReceiptStoreError);
+	await expect(conflicting).rejects.toMatchObject({ code: "DUPLICATE_CONFLICT" });
+	expect(await readFile(fixture.path)).toEqual(bytes);
+});
+
 it("returns the stored receipt for the same request hash without writing, including after completion", async () => {
 	const store = open();
 	const first = await store.accept(request, accepted);
@@ -194,6 +230,21 @@ it.each(["{broken", "{}", '[{"requestId":"invalid-record"}]'])(
 			() => store.finish(request, succeeded),
 		]) {
 			await expect(action()).rejects.toBeInstanceOf(JsonStoreCorruptedError);
+			expect(await readFile(fixture.path, "utf8")).toBe(garbage);
+		}
+	},
+);
+
+it.each(["{broken", "{}", '[{"requestId":"invalid-record"}]'])(
+	"rejects corrupt disk contents on reference lookup without changing them: %s",
+	async (garbage) => {
+		const store = open();
+		await store.accept(request, accepted);
+		await writeFile(fixture.path, garbage);
+		for (const reader of [store, open()]) {
+			await expect(reader.getByRef({ receiptRef: accepted.receiptRef })).rejects.toBeInstanceOf(
+				JsonStoreCorruptedError,
+			);
 			expect(await readFile(fixture.path, "utf8")).toBe(garbage);
 		}
 	},
