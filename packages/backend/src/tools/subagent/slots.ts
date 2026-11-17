@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
@@ -15,6 +16,18 @@ interface Waiter {
 let active = 0;
 const byProject = new Map<string, number>(),
 	queue: Waiter[] = [];
+const nativeRuns = new AsyncLocalStorage<{ key: string; held: boolean }>();
+
+export function nativeSubagentSlotCounts(cwd: string): { active: number; project: number } {
+	return { active, project: byProject.get(resolve(cwd)) ?? 0 };
+}
+
+/** Only the host's live native run can lend its slot to a nested plugin invocation. */
+export function inheritNativeSubagentSlot(cwd: string): (() => void) | undefined {
+	const run = nativeRuns.getStore();
+	if (run?.held && run.key === resolve(cwd)) return () => undefined;
+	return undefined;
+}
 /** 本项目并发上限（.pi/research-workspace.json maxConcurrentSubagents ∈ 1–3，缺省 3）；面板「运行槽」展示同源 */
 export async function nativeSubagentProjectLimit(cwd: string): Promise<number> {
 	try {
@@ -86,10 +99,13 @@ export async function withNativeSubagentSlot<T>(
 	work: () => Promise<T>,
 ): Promise<T> {
 	const release = await acquireNativeSubagentSlot(cwd, signal);
+	const run = { key: resolve(cwd), held: true };
 	try {
 		signal?.throwIfAborted();
-		return await work();
+		return await nativeRuns.run(run, work);
 	} finally {
+		// Async callbacks can outlive work; their inherited context must stop lending this slot.
+		run.held = false;
 		release();
 	}
 }
