@@ -79,6 +79,26 @@
 			"types": "./dist/node/binary-state.d.ts",
 			"import": "./dist/node/binary-state.js",
 			"default": "./dist/node/binary-state.js"
+		},
+		"./p5-receipts": {
+			"types": "./dist/p5-receipts.d.ts",
+			"import": "./dist/p5-receipts.js",
+			"default": "./dist/p5-receipts.js"
+		},
+		"./p5-evidence": {
+			"types": "./dist/p5-evidence.d.ts",
+			"import": "./dist/p5-evidence.js",
+			"default": "./dist/p5-evidence.js"
+		},
+		"./p5-inquiry": {
+			"types": "./dist/p5-inquiry.d.ts",
+			"import": "./dist/p5-inquiry.js",
+			"default": "./dist/p5-inquiry.js"
+		},
+		"./p5-discovery": {
+			"types": "./dist/p5-discovery.d.ts",
+			"import": "./dist/p5-discovery.js",
+			"default": "./dist/p5-discovery.js"
 		}
 	},
 	"files": [
