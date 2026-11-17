@@ -1,6 +1,7 @@
 import { collectDeliveries, deriveProcessLaneTurns } from "@drone/shared";
 import { useMemo, useState } from "react";
 import { useT } from "../../i18n";
+import { ArtifactContributions } from "../../plugins/ArtifactContributions";
 import { useSessionsStore } from "../../stores/sessions";
 import { summarizeRuns, useSubagentsStore } from "../../stores/subagents";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
@@ -90,7 +91,15 @@ export function OverviewPane({ sessionId }: { sessionId: string | null }) {
 				</details>
 			)}
 
-			<EvidencePane defaultRoot={cwd} hideWhenEmpty />
+			<ArtifactContributions
+				surface="evidence.overview"
+				artifactId={null}
+				analysisId={null}
+				capabilityId={null}
+				sessionId={sessionId}
+				workspaceId={null}
+				renderDefault={() => <EvidencePane defaultRoot={cwd} hideWhenEmpty />}
+			/>
 
 			{transcript.reviewerFindings.length > 0 && (
 				<details className="panel-card" data-testid="overview-review">
