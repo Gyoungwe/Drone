@@ -150,6 +150,7 @@ async function writeControls(ctx) {
 	ctx.grantFileWrite = false;
 	ctx.denyReviewWrites = false;
 	ctx.denyModelGeneration = false;
+	ctx.denyFileWrite = false;
 	ctx.failNextReviewRecord = false;
 	ctx.storage = new StorageRegistry().register({
 		id: "packed-plugin-state",

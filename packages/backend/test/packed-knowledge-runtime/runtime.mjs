@@ -27,7 +27,8 @@ export async function createRuntime(ctx) {
 			return !(
 				(ctx.denyStateWrite && operation === "setReviewPolicy") ||
 				(ctx.denyReviewWrites && ["applyReview", "undoReview"].includes(operation)) ||
-				(ctx.denyModelGeneration && operation === "capability:model.generate")
+				(ctx.denyModelGeneration && operation === "capability:model.generate") ||
+				(ctx.denyFileWrite && operation === "capability:files.writeText")
 			);
 		},
 		getSessionContext: (id) => getPluginSessionCaller(ctx.sessions, id),
