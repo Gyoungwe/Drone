@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { PluginAgentSlotReleaseInput } from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
-import { acquireNativeSubagentSlot } from "../tools/subagent/slots";
+import { acquireNativeSubagentSlot, inheritNativeSubagentSlot } from "../tools/subagent/slots";
 import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
 
 const leases = new Map<
@@ -26,7 +26,12 @@ async function acquireLease(acquire: typeof acquireNativeSubagentSlot, context: 
 	if (context.scope.kind === "application") throw new Error("Agent slot needs a workspace caller");
 	const { invocationToken, onInvocationSettled } = context;
 	if (!invocationToken || !onInvocationSettled) throw new Error("Agent slot needs an operation invocation");
-	const release = await acquire(context.scope.workspaceDirectory, context.signal);
+	context.signal.throwIfAborted();
+	const inherited =
+		context.scope.kind === "session"
+			? inheritNativeSubagentSlot(context.scope.workspaceDirectory)
+			: undefined;
+	const release = inherited ?? (await acquire(context.scope.workspaceDirectory, context.signal));
 	const lease = randomUUID();
 	leases.set(lease, {
 		release,
