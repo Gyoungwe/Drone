@@ -1,3 +1,4 @@
+export * from "./analysis-lifecycle.js";
 export {
 	type PluginAgentSlotAcquireResult,
 	type PluginAgentSlotReleaseInput,

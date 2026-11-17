@@ -35,6 +35,11 @@
 			"import": "./dist/runtime.js",
 			"default": "./dist/runtime.js"
 		},
+		"./analysis-lifecycle": {
+			"types": "./dist/analysis-lifecycle.d.ts",
+			"import": "./dist/analysis-lifecycle.js",
+			"default": "./dist/analysis-lifecycle.js"
+		},
 		"./native": {
 			"types": "./dist/native.d.ts",
 			"import": "./dist/native.js",

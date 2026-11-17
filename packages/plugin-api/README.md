@@ -30,6 +30,14 @@ The local candidate package is `1.3.0`; the current public release remains `1.2.
 minor or patch only when the contract changes, verify the packed tarball in a
 clean consumer before release, and never overwrite an existing version.
 
+## Analysis lifecycle (1.3.0 candidate)
+
+`@gyoungwe/plugin-api/analysis-lifecycle` exports `ANALYSIS_LIFECYCLE_CONTRACT_VERSION` (1), the stateless `AnalysisLifecyclePort` / `AnalysisLifecycleHostLoader` types and `assertAnalysisLifecycleResult(before, command, clock, result)`. The same exports are available from `./runtime`; existing root analysis contracts remain unchanged. The port takes an immutable v1 ledger, a command and an explicit host timestamp and returns a proposed replacement ledger plus the target run's appended event suffix. This package defines the contract and validates proposals; pi-analysis owns lifecycle decisions.
+
+The assertion rejects unsupported versions or fields, malformed nested JSON, unrelated changes, rewritten identities or event history, command data mismatches, illegal stage/status edges and publication completion inconsistent with the current host decision. Existing optional adapter, bindings, review, provenance, execution context and lineage fields retain their v1 shape and optionality; validation never fills defaults or mutates records. An omitted bindings map remains omitted except during readiness assessment, which initializes it as in the current host service.
+
+At a future host cutover, read the current record within the JsonStore transaction, pass a detached immutable copy and trusted command/time to the plugin, validate its unknown result before committing, and emit events only after durable success. Unsupported stored records must remain on disk for explicit review. This candidate does not switch host callers or authorize effects: readiness/review booleans, publication intent, lifecycle events and binding/lineage strings are ordinary data. The host retains persistence, causal issuance, live authorization, execution preflight and write/readback receipts.
+
 ## Desktop knowledge UI contract
 
 `@gyoungwe/plugin-api/ui` exports the type-only `KnowledgeUiPort`,
