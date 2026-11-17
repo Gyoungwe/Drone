@@ -4,6 +4,11 @@ import { type Static, Type } from "typebox";
 import { JsonStore } from "../json-store";
 import { getAgentDir } from "../session-engine/sdk";
 import { resolvePluginCredential } from "./credential-override";
+import {
+	assertEndpointAvailable,
+	type PluginEndpointPolicy,
+	runtimeEndpointMatches,
+} from "./endpoint-policy";
 import { isHostKeptCredential } from "./host-kept-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
@@ -94,10 +99,20 @@ export function credentialHeaders(source: PluginRuntimeSource): readonly string[
 }
 
 /** Resolve a declared slot and validate its destination before accessing any secret. */
-export function credentialSlot(source: PluginRuntimeSource, name: string, url: URL): PluginCredentialSlot {
+export function credentialSlot(
+	source: PluginRuntimeSource,
+	name: string,
+	url: URL,
+	policy?: PluginEndpointPolicy,
+	httpAuth = false,
+): PluginCredentialSlot {
 	const slot = source.credentials?.find((entry) => entry.slot === name);
 	if (!slot) throw new Error(`Credential slot is not declared in this package's manifest: ${name}`);
-	if (!slot.hosts.some((host) => host.toLowerCase() === url.host))
+	assertEndpointAvailable(policy, name);
+	if (
+		!slot.hosts.some((host) => host.toLowerCase() === url.host) &&
+		!runtimeEndpointMatches(policy, url, name, httpAuth, policy?.credentialHosts[name])
+	)
 		throw new Error(`Credential ${name} may not be sent to ${url.host}`);
 	return slot;
 }
@@ -108,8 +123,9 @@ export async function credentialHeader(
 	source: PluginRuntimeSource,
 	name: string,
 	url: URL,
+	policy?: PluginEndpointPolicy,
 ): Promise<Record<string, string>> {
-	const slot = credentialSlot(source, name, url);
+	const slot = credentialSlot(source, name, url, policy);
 	if (slot.authentication) throw new Error(`Credential ${name} requires host HTTP authentication`);
 	const { credential } = await store.resolve(source.pluginId, slot);
 	if (!credential) throw new Error(`Credential ${name} is not configured; add it in Drone settings`);

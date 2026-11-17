@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { PluginEndpointAccess } from "./endpoint-policy";
 import { HttpAuthChallenges, type HttpAuthSend, validHttpUsername } from "./http-auth";
 import { credentialSlot, type PluginCredentialStore } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
@@ -17,8 +18,9 @@ export function authenticatedRequest(
 	name: string,
 	url: URL,
 	username?: string,
+	endpointAccess?: PluginEndpointAccess,
 ): HttpAuthentication | undefined {
-	const slot = credentialSlot(source, name, url);
+	const slot = credentialSlot(source, name, url, endpointAccess?.policy, username !== undefined);
 	if (!slot.authentication) {
 		if (username !== undefined) throw new Error(`Credential ${name} does not use host HTTP authentication`);
 		return undefined;
@@ -26,7 +28,9 @@ export function authenticatedRequest(
 	if (username === undefined) throw new Error(`Credential ${name} requires host HTTP authentication`);
 	if (!validHttpUsername(username)) throw new Error("Invalid HTTP authentication username");
 	return async (method, send) => {
+		endpointAccess?.check();
 		const { credential } = await store.resolve(source.pluginId, slot);
+		endpointAccess?.check();
 		if (!credential) throw new Error(`Credential ${name} is not configured; add it in Drone settings`);
 		let challenges = challengesByStore.get(store);
 		if (!challenges) {
@@ -35,9 +39,19 @@ export function authenticatedRequest(
 		}
 		const hash = createHash("sha256").update(credential.secret).digest("hex");
 		const scope = `${source.pluginId}\t${url.origin}\t${name}\t${credential.source}\t${hash}`;
+		const checkedSend: HttpAuthSend = (authorization) => {
+			endpointAccess?.check();
+			return send(authorization);
+		};
 		try {
-			return await challenges.send(scope, { method, url }, { username, password: credential.secret }, send);
+			return await challenges.send(
+				scope,
+				{ method, url },
+				{ username, password: credential.secret },
+				checkedSend,
+			);
 		} catch {
+			endpointAccess?.check();
 			// Network diagnostics may echo host-only Authorization material; callers get a fixed failure.
 			throw new Error("Authenticated network request failed");
 		}
@@ -86,17 +100,20 @@ export async function sendHttp(
 	signal: AbortSignal,
 	fetchImpl: typeof fetch,
 	authenticate?: HttpAuthentication,
+	checkEndpoint?: () => void,
 ) {
 	const body = request.bodyBase64 === undefined ? undefined : Buffer.from(request.bodyBase64, "base64");
 	const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)]);
-	const send: HttpAuthSend = (authorization) =>
-		fetchImpl(url, {
+	const send: HttpAuthSend = (authorization) => {
+		checkEndpoint?.();
+		return fetchImpl(url, {
 			method: request.method,
 			headers: { ...request.headers, ...(authorization === null ? {} : { Authorization: authorization }) },
 			body,
 			redirect: "error",
 			signal: requestSignal,
 		});
+	};
 	const response = authenticate ? await authenticate(request.method, send) : await send(null);
 	if (!authenticate) return responseResult(response, false);
 	try {

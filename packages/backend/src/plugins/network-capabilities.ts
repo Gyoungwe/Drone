@@ -1,5 +1,11 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { Type } from "typebox";
 import { hostText } from "../reply-language";
+import {
+	assertEndpointAvailable,
+	type PluginEndpointAccess,
+	runtimeEndpointMatches,
+} from "./endpoint-policy";
 import { type HttpAuthentication, sendHttp } from "./http-transport";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 import { MAX_FILE_BINARY_BASE64, MAX_FILE_BINARY_BYTES } from "./stable-file-bytes";
@@ -71,23 +77,46 @@ export interface NetworkDeclaration {
 	readonly hosts: readonly string[];
 	/** Manifest `drone.networkReads`: "host/path" POST endpoints that only read. */
 	readonly reads: readonly string[];
+	/** Fresh policy and revocation check supplied only by the host composition boundary. */
+	readonly endpointPolicy?: () => PluginEndpointAccess;
 	/** Declared credential slots: their headers are the host's, and `credential` names one to add. */
 	readonly credentials?: {
 		readonly headers: readonly string[];
-		header(slot: string, url: URL): Promise<Record<string, string>>;
+		header(slot: string, url: URL, endpointAccess?: PluginEndpointAccess): Promise<Record<string, string>>;
 		/** Validates slot/auth metadata without resolving its secret until the returned sender runs. */
-		authenticate?(slot: string, url: URL, username?: string): HttpAuthentication | undefined;
+		authenticate?(
+			slot: string,
+			url: URL,
+			username?: string,
+			endpointAccess?: PluginEndpointAccess,
+		): HttpAuthentication | undefined;
 	};
 }
 
 function target(
 	raw: unknown,
-	{ hosts, credentials }: NetworkDeclaration,
-): { request: NetworkRequest; url: URL; authenticate?: HttpAuthentication } {
+	{ hosts, credentials, endpointPolicy }: NetworkDeclaration,
+): {
+	request: NetworkRequest;
+	url: URL;
+	authenticate?: HttpAuthentication;
+	endpointAccess?: PluginEndpointAccess;
+} {
 	const request = raw as NetworkRequest;
+	const endpointAccess = endpointPolicy?.();
+	assertEndpointAvailable(endpointAccess?.policy, request.credential);
 	const url = new URL(request.url);
 	if (url.username || url.password) throw new Error("Network URLs must not carry credentials");
-	if (!declaredTarget(url, hosts))
+	if (
+		!declaredTarget(url, hosts) &&
+		!runtimeEndpointMatches(
+			endpointAccess?.policy,
+			url,
+			request.credential,
+			Boolean(request.httpAuth),
+			endpointAccess?.policy.networkHosts,
+		)
+	)
 		throw new Error(`Network host is not declared in this package's manifest: ${url.host}`);
 	for (const name of Object.keys(request.headers ?? {}))
 		if (RESERVED_HEADER.test(name) || credentials?.headers.includes(name.toLowerCase()))
@@ -97,7 +126,7 @@ function target(
 	if (request.httpAuth && !request.credential)
 		throw new Error("HTTP authentication requires a credential slot");
 	const authenticate = request.credential
-		? credentials?.authenticate?.(request.credential, url, request.httpAuth?.username)
+		? credentials?.authenticate?.(request.credential, url, request.httpAuth?.username, endpointAccess)
 		: undefined;
 	if (request.httpAuth && !authenticate)
 		throw new Error(`Credential ${request.credential} does not use host HTTP authentication`);
@@ -105,41 +134,86 @@ function target(
 		const depth = Object.entries(request.headers ?? {}).filter(([name]) => name.toLowerCase() === "depth");
 		if (depth.length !== 1 || depth[0]?.[1] !== "0") throw new Error("PROPFIND requires Depth: 0");
 	}
-	return { request, url, authenticate };
+	return { request, url, authenticate, endpointAccess };
+}
+
+async function sendRequest(
+	{ request, url, authenticate, endpointAccess }: ReturnType<typeof target>,
+	declaration: NetworkDeclaration,
+	fetchImpl: typeof fetch,
+	signal: AbortSignal,
+) {
+	const secret =
+		request.credential && !authenticate
+			? await declaration.credentials?.header(request.credential, url, endpointAccess)
+			: {};
+	return sendHttp(
+		{ ...request, headers: { ...request.headers, ...secret } },
+		url,
+		signal,
+		fetchImpl,
+		authenticate,
+		endpointAccess?.check,
+	);
+}
+
+function writeDetail({ request, url }: ReturnType<typeof target>): string {
+	const facts = `${hostText("网络写入", "Network write")}: ${request.method} ${url.host}${url.pathname}${
+		request.credential
+			? `\n${hostText("使用已保存凭据", "Uses saved credential")}: ${request.credential}`
+			: ""
+	}`;
+	return request.summary
+		? `${facts}\n${hostText("插件说明", "Plugin description")}: ${request.summary}`
+		: facts;
+}
+
+function readCapability(
+	declaration: NetworkDeclaration,
+	fetchImpl: typeof fetch,
+	capture: (raw: unknown) => ReturnType<typeof target>,
+	executeTarget: (raw: unknown) => ReturnType<typeof target>,
+): PluginCapabilityHandler {
+	return {
+		effect: "read",
+		inputSchema: requestSchema(DECLARED_READ_METHODS),
+		resultSchema,
+		...(declaration.endpointPolicy
+			? {
+					approvalDetail: (raw: unknown) => {
+						capture(raw);
+						return "";
+					},
+				}
+			: {}),
+		execute: async (raw, context) => {
+			const validated = executeTarget(raw);
+			const { request, url } = validated;
+			if (request.method === "POST" && !declaration.reads.includes(`${url.host}${url.pathname}`))
+				throw new Error(`POST is a network write unless drone.networkReads lists ${url.host}${url.pathname}`);
+			return sendRequest(validated, declaration, fetchImpl, context.signal);
+		},
+	};
 }
 
 export function networkCapabilityHandlers(
 	declaration: NetworkDeclaration,
 	fetchImpl: typeof fetch = fetch,
 ): Record<"network.read" | "network.write", PluginCapabilityHandler> {
-	const send = async ({ request, url, authenticate }: ReturnType<typeof target>, signal: AbortSignal) => {
-		const secret =
-			request.credential && !authenticate
-				? await declaration.credentials?.header(request.credential, url)
-				: {};
-		return sendHttp(
-			{ ...request, headers: { ...request.headers, ...secret } },
-			url,
-			signal,
-			fetchImpl,
-			authenticate,
-		);
+	// The broker awaits authorization after formatting details. Its continuation retains this call's
+	// selection even when inputs are reused or overlapping approvals complete in a different order.
+	const approvals = new AsyncLocalStorage<PluginEndpointAccess>();
+	const capture = (raw: unknown) => {
+		const validated = target(raw, declaration);
+		if (validated.endpointAccess) approvals.enterWith(validated.endpointAccess);
+		return validated;
+	};
+	const executeTarget = (raw: unknown) => {
+		approvals.getStore()?.check();
+		return target(raw, declaration);
 	};
 	return {
-		"network.read": {
-			effect: "read",
-			inputSchema: requestSchema(DECLARED_READ_METHODS),
-			resultSchema,
-			execute: async (raw, context) => {
-				const validated = target(raw, declaration);
-				const { request, url } = validated;
-				if (request.method === "POST" && !declaration.reads.includes(`${url.host}${url.pathname}`))
-					throw new Error(
-						`POST is a network write unless drone.networkReads lists ${url.host}${url.pathname}`,
-					);
-				return send(validated, context.signal);
-			},
-		},
+		"network.read": readCapability(declaration, fetchImpl, capture, executeTarget),
 		"network.write": {
 			effect: "write",
 			// A write the user already approved inside the current task authorization does not ask again.
@@ -152,19 +226,9 @@ export function networkCapabilityHandlers(
 				allowance: Type.Optional(Type.String({ minLength: 1, maxLength: 128 })),
 			}),
 			resultSchema,
-			approvalDetail: (raw) => {
-				const { request, url } = target(raw, declaration);
-				const facts = `${hostText("网络写入", "Network write")}: ${request.method} ${url.host}${url.pathname}${
-					request.credential
-						? `\n${hostText("使用已保存凭据", "Uses saved credential")}: ${request.credential}`
-						: ""
-				}`;
-				return request.summary
-					? `${facts}\n${hostText("插件说明", "Plugin description")}: ${request.summary}`
-					: facts;
-			},
+			approvalDetail: (raw) => writeDetail(capture(raw)),
 			execute: async (raw, context) => {
-				return send(target(raw, declaration), context.signal);
+				return sendRequest(executeTarget(raw), declaration, fetchImpl, context.signal);
 			},
 		},
 	};
