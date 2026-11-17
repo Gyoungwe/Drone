@@ -9,10 +9,16 @@ import { sessionRecordCapabilityHandlers } from "../../src/plugins/session-recor
 import { canonicalProjectId } from "../../src/project-id";
 
 export async function createRuntime(ctx) {
+	ctx.disabledSources = new Set();
 	ctx.bridge = new PluginRuntimeBridge({
 		source: (name) => ctx.sources.get(name),
-		sources: () => [...ctx.sources].map(([name, source]) => ({ name, source, state: "enabled" })),
-		enabled: () => true,
+		sources: () =>
+			[...ctx.sources].map(([name, source]) => ({
+				name,
+				source,
+				state: ctx.disabledSources.has(name) ? "disabled" : "enabled",
+			})),
+		enabled: (name) => !ctx.disabledSources.has(name),
 		factory: (value) => createProcessPluginRuntime({ ...value, runtimeDirectory: ctx.runtimeDirectory }),
 		approve: async (_owner, value, operation) => {
 			ctx.approvals.push({ pluginId: value.pluginId, operation: operation ?? null });
