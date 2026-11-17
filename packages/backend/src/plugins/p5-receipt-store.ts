@@ -11,7 +11,7 @@ import { JsonStore, JsonStoreCorruptedError } from "../json-store";
 import type { StorageEntry, StorageRegistry } from "../storage/registry";
 
 export const P5_RECEIPT_STORAGE = {
-	id: "p5-receipts",
+	id: "agent-p5-receipts",
 	owner: "plugins/p5-receipt-store",
 	schema: 1,
 	sensitivity: "private",
@@ -190,7 +190,7 @@ export function createP5ReceiptStore(options: {
 		options.store ??
 		new JsonStore<Receipt[]>({
 			path: entry.path,
-			storageId: entry.id,
+			storageId: "agent-p5-receipts",
 			defaultValue: () => [],
 			parse: (text) => parseLedger(text, entry.path),
 			mode: 0o600,

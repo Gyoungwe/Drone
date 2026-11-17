@@ -7,6 +7,7 @@ export const AGENT_DIR_ENTRIES: readonly (readonly [string, string, string, Stor
 	["agent-analysis-evidence", "analysis/evidence", "analysis/evidence", "private"],
 	["agent-settings", "settings.json", "settings/settings", "config"],
 	["agent-plugin-credentials", "plugin-credentials.json", "plugins/plugin-credentials", "secret"],
+	["agent-p5-receipts", "p5-receipts.json", "plugins/p5-receipt-store", "private"],
 	["agent-zotero-web", "zotero-web.json", "zotero/web-credentials", "secret"],
 	["agent-knowledge-webdav", "knowledge-webdav.json", "knowledge/webdav-credentials", "secret"],
 	["agent-zotero-local", "zotero-local.json", "zotero/local-write", "secret"],

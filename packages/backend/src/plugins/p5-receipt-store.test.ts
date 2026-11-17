@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { Receipt } from "@gyoungwe/plugin-api/p5-receipts";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { JsonStore, JsonStoreCorruptedError } from "../json-store";
-import { StorageRegistry } from "../storage/registry";
+import { createDefaultStorageRegistry, StorageRegistry } from "../storage/registry";
 import { createP5ReceiptStore, P5_RECEIPT_STORAGE, P5ReceiptStoreError } from "./p5-receipt-store";
 
 const request = { requestId: "host-request-1" };
@@ -58,6 +58,23 @@ it("registers private host metadata and reads a missing request without creating
 	});
 	expect(await store.get(request)).toBeUndefined();
 	await expect(readFile(fixture.path)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+it("uses the default registry's private receipt path and rejects a different path", () => {
+	const agentDir = fixture.directory;
+	const path = join(agentDir, "p5-receipts.json");
+	const registry = createDefaultStorageRegistry({ agentDir });
+	expect(registry.get("agent-p5-receipts")).toEqual({
+		id: "agent-p5-receipts",
+		path,
+		owner: "plugins/p5-receipt-store",
+		schema: 1,
+		sensitivity: "private",
+	});
+	expect(() => createP5ReceiptStore({ path, registry })).not.toThrow();
+	expect(() => createP5ReceiptStore({ path: fixture.path, registry })).toThrow(
+		"P5 receipt storage registration does not match the ledger",
+	);
 });
 
 it("persists exact accepted and terminal receipts across fresh JsonStore instances", async () => {
