@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, extname, relative, resolve } from "node:path";
@@ -141,7 +142,12 @@ const manifest = {
 	entries: records,
 	legacyOutputs,
 };
-await writeFile(manifestPath, `${JSON.stringify(manifest, null, "\t")}\n`, "utf8");
+const formattedManifest = execFileSync(
+	process.execPath,
+	[resolve(root, "node_modules/@biomejs/biome/bin/biome"), "format", "--stdin-file-path", manifestPath],
+	{ input: `${JSON.stringify(manifest, null, "\t")}\n`, encoding: "utf8", timeout: 60_000 },
+);
+await writeFile(manifestPath, formattedManifest, "utf8");
 console.log(
 	`wrote ${relative(root, manifestPath)} (${Object.keys(records).length} source entries; ${legacyOutputs.length} legacy outputs)`,
 );
