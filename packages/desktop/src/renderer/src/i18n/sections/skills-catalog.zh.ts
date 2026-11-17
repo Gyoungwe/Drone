@@ -1,0 +1,28 @@
+export const zhSkillsCatalog = {
+	search: "搜索技能名称、用途或来源…",
+	count: "已加载 {count} 个技能 · {groups} 个分类",
+	aliases: "兼容名称：",
+	scopeHint: "按用途收拢展示，不删除或改名你的技能。目录与权限仍由原技能管理。",
+	setupHint: "这些 skill 配置各自的工程工具，不是 Obsidian 知识库初始化。默认收起，搜索仍可找到。",
+	supportHint: "作为其他技能的参考依赖保留，不作为独立工作流推荐。",
+	owner: "Obsidian 统一入口",
+	ownerHint:
+		"初始化只用 /obsidian-setup；审核用 /obsidian-review；文献库在技能与连接页使用内置 Zotero 连接器。旧 /setup、/research-setup 继续兼容，不再单列。",
+	manage: "管理知识库",
+	noMatch: "没有匹配的技能",
+	details: "查看说明与来源",
+	repository: "来源仓库",
+	repositoryUnknown: "来源仓库未登记（本地或未映射）",
+	all: "全部分类",
+	group: {
+		knowledge: "知识库",
+		research: "研究与文献",
+		writing: "写作与审稿",
+		presentation: "图表与讲解",
+		engineering: "开发与测试",
+		collaboration: "协作与任务规划",
+		setup: "工具专用初始化",
+		support: "内部共用参考",
+		other: "其他技能",
+	},
+};
