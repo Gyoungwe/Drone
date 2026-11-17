@@ -1,5 +1,5 @@
 import { reportedUsage, sanitizeProviderError } from "@drone/shared";
-import type { Model, ModelThinkingLevel, Tool } from "@earendil-works/pi-ai";
+import type { Model, ModelThinkingLevel, Tool, ToolCall } from "@earendil-works/pi-ai";
 import { getSupportedThinkingLevels, validateToolArguments } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { PluginModelGenerateInput, PluginModelGenerateResult } from "@gyoungwe/plugin-api/runtime";
@@ -22,6 +22,17 @@ export function nearestSupportedThinking(
 	if (firstReasoning === undefined) return resolvedModelThinking(model, "off");
 	if (supported.includes(requested)) return requested;
 	return supported.includes("medium") ? "medium" : firstReasoning;
+}
+
+function structuredResultValue(tool: Tool, call: ToolCall): unknown {
+	try {
+		return validateToolArguments(tool, call);
+	} catch {
+		// SDK validation diagnostics include model-supplied arguments.
+		throw new Error(
+			'Validation failed for tool "structured_result": model result does not match the result schema',
+		);
+	}
 }
 
 /** The host supplies no executable tools; the sole declared tool returns schema-validated JSON. */
@@ -69,7 +80,7 @@ export async function generateStructuredModel(
 	const calls = reply.content.filter((block) => block.type === "toolCall");
 	if (calls.length !== 1 || calls[0]?.name !== tool.name)
 		throw new Error("Model must return exactly one structured_result call; no model tools were executed");
-	const value = validateToolArguments(tool, calls[0]);
+	const value = structuredResultValue(tool, calls[0]);
 	const usage = reportedUsage(reply);
 	// Pi 1.1.0's cache warmer likewise treats all-zero rates as unavailable economics.
 	// Preserve observed charges; a default SDK cost zero with no usable rate is unknown.
