@@ -1,0 +1,37 @@
+import type { zhWorkbench } from "./workbench.zh";
+
+export const enWorkbench: typeof zhWorkbench = {
+	nav: {
+		title: "Research workbench navigation",
+		newTask: "New task",
+		chat: "Chat",
+		projects: "Projects",
+		research: "Materials",
+		knowledge: "Knowledge",
+		skills: "Skills & connections",
+		hosts: "Hosts",
+		projectsAll: "All",
+		rootProject: "Root",
+		projectsGroup: "Projects",
+		projectsEmpty: "No projects yet; start a task and it will appear here.",
+		extensions: "Extensions",
+		settings: "Settings",
+		help: "Help",
+		account: "Account menu",
+		skillsAttention: "{count} skills need attention",
+		hostCount: "{count} configured hosts",
+		recent: "Recent",
+		recentEmpty: "No recent sessions yet.",
+		expand: "Expand sidebar",
+		collapse: "Collapse to icons",
+	},
+	modelNotSelected: "No model selected",
+	wikiReport: "Wiki report",
+	wikiDescription: "The research report is organized into stages and updates as the agent works.",
+	openInWiki: "Open in Wiki",
+	stage: {
+		completed: "Completed",
+		inProgress: "In progress",
+		pending: "Pending",
+	},
+};

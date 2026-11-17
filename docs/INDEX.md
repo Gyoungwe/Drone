@@ -524,6 +524,7 @@ src/
 | `hooks/` | `use-context-usage`（上下文用量，事件驱动刷新）/ `use-language` / `use-session-state`（useSessionReadOnly/useSessionBusy 收敛）/ `use-session-event-bridge`（App 事件桥装配层专用） |
 | `plugins/` | UI 插件运行时：`slots.ts`（槽位名+props 契约单一来源）/ `registry.ts`（zustand：overrides + contributions 堆叠 + headless activate/cleanups + 崩溃计数/loadNonces）/ `Slot.tsx`（总开关门控 + PluginBoundary 包裹）/ `RegionHost.tsx`（区域挂载点，容器语义）/ `PluginBoundary.tsx`（class 错误边界，崩溃回退）/ `host-api.ts`（`window.DroneUI` 挂载，main.tsx render 前 import）/ `knowledge-api.ts`（显式 `KnowledgeUiPort` 方法适配，保留宿主授权和持久化边界）/ `loader.ts`（initUiPlugins/reloadAll/computeAssignedSlots） |
 | `i18n/` | 宿主 zh/en 字典 + `useT()`（宿主文案同步双字典；迁出知识 UI 的双语文案在插件 `ui/knowledge/{copy,zotero-copy}.ts`） |
+| `i18n/sections/` | Large host dictionary sections in matching `<section>.zh.ts` / `<section>.en.ts` modules; Settings composes its model and connection groups from `settings-connections.*.ts`. |
 | `styles/globals.css` | Tailwind 入口 + 主题 token（`bg-canvas/bg-surface/ink 灰阶/shadow 三档` 等；组件禁写死色值，一律语义 token）+ markdown/滚动条/动画样式段 |
 
 ### components/（按域分目录）
