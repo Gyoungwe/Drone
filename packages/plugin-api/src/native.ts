@@ -3,6 +3,7 @@ import type { PluginRuntimeContext, PluginRuntimeSchema } from "./runtime.js";
 
 /** Called only by the host for the current actual SDK event and its already-bound native attachment.
  * Event identity is private transport metadata, never an input-selected message or serialized proof.
+ * Host facts use a separate delivery lifecycle; they are not native events.
  */
 export interface PluginNativeOperation {
 	readonly event: "message_start" | "tool_execution_end";

@@ -306,3 +306,43 @@ export interface ComputeRerunResult {
 	readonly artifacts: readonly FactArtifact[];
 	readonly receiptRef: Id;
 }
+
+/** Host-issued live identity; JSON copies cannot establish a binding.
+ * Origin, workspace/session binding and cancellation remain private host metadata.
+ */
+export interface HostFactDeliveryHandle {
+	readonly __hostDeliveryHandle: unique symbol;
+}
+
+/** Already-journaled facts in sequence order, plus a non-JSON host handle.
+ * Fact kinds describe observations; payload fields never establish producer authority.
+ */
+export interface HostFactDelivery extends FactsResult {
+	readonly handle: HostFactDeliveryHandle;
+}
+
+/** Returned only after the owner's projection and cursor transaction has committed. */
+export interface HostFactDeliveryAcknowledgement {
+	/** Highest consumed fact ID; a sequence gap must not be consumed or acknowledged past. */
+	readonly cursor: Id;
+}
+
+/** Callback on the already-active owner, invoked only by the host, never a JSON/native provider. */
+export interface HostFactDeliveryOwner {
+	/** The host advances only to the acknowledged cursor after the owner's committed transaction. */
+	deliver(delivery: HostFactDelivery): Promise<HostFactDeliveryAcknowledgement>;
+}
+
+/** Disable unsubscribes first, then drains before releasing the owner. */
+export interface HostFactDeliveryBinding {
+	unsubscribe(): void;
+	/** Wait for in-flight delivery; retain unacknowledged facts for explicit re-adoption. */
+	drain(): Promise<void>;
+}
+
+/** Host-only binding to an already-active owner in the actual workspace/session; never implicitly attach.
+ * The host subscribes at bind and keeps scope, origin and cancellation outside JSON.
+ */
+export interface HostFactDeliveryLifecycle {
+	bind(owner: HostFactDeliveryOwner): HostFactDeliveryBinding;
+}
