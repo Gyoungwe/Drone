@@ -212,8 +212,7 @@ function streamingResponse(harness, controller, streamed) {
 	};
 }
 
-// Leaks via model.toolStep result.reply.errorMessage after the SDK converts a provider throw to an error reply.
-it.fails("contains provider throws through real SDK generate and toolStep failures", async () => {
+it("contains provider throws through real SDK generate and toolStep failures", async () => {
 	const harness = await setup(),
 		observations = [];
 	for (const operation of ["model.generate", "model.toolStep"]) {
@@ -226,8 +225,7 @@ it.fails("contains provider throws through real SDK generate and toolStep failur
 	expectSecretSafe(harness, observations);
 });
 
-// Leaks via model.toolStep result.reply.errorMessage when the provider returns an error reply.
-it.fails("contains provider error replies through real SDK generate and toolStep failures", async () => {
+it("contains provider error replies through real SDK generate and toolStep failures", async () => {
 	const harness = await setup(),
 		observations = [];
 	for (const operation of ["model.generate", "model.toolStep"]) {
@@ -245,8 +243,7 @@ it.fails("contains provider error replies through real SDK generate and toolStep
 	expectSecretSafe(harness, observations);
 });
 
-// Leaks via model.generate error.message and String(error) from SDK argument validation.
-it.fails("contains malformed structured_result arguments through the real SDK schema failure", async () => {
+it("contains malformed structured_result arguments through the real SDK schema failure", async () => {
 	const harness = await setup();
 	const observation = await observeFailure(
 		harness,

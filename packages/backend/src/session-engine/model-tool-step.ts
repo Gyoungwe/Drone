@@ -54,6 +54,11 @@ export async function completeModelToolStep(
 		throw new Error(sanitizeProviderError(error instanceof Error ? error.message : String(error)));
 	}
 	await check();
+	if (reply.errorMessage !== undefined)
+		reply = {
+			...reply,
+			errorMessage: sanitizeProviderError(reply.errorMessage || "Model request failed"),
+		};
 	const count = (value: unknown): number | null =>
 		typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 	const priced = [model.cost, ...(model.cost.tiers ?? [])].some(
