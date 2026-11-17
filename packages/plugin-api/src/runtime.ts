@@ -5,6 +5,7 @@ export {
 	type PluginAgentSlotReleaseResult,
 	withPluginAgentSlot,
 } from "./runtime-agent-slot.js";
+export * from "./runtime-config.js";
 export type {
 	PluginModelGenerateInput,
 	PluginModelGenerateResult,
