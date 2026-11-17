@@ -92,6 +92,7 @@ export async function expectWorkersReleased(ctx) {
 	expect(await packageChildren(ctx.packageRoot)).toEqual([]);
 	for (const namespace of await readdir(ctx.leases))
 		expect(await readdir(join(ctx.leases, namespace))).toEqual([]);
+	expect(ctx.agentSlots.size, "all native agent slots were released").toBe(0);
 }
 
 export function disableKnowledge(ctx) {

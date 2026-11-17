@@ -148,6 +148,7 @@ export async function cleanupRuntime(ctx) {
 		(async () => {
 			for (const namespace of await readdir(ctx.leases))
 				expect(await readdir(join(ctx.leases, namespace))).toEqual([]);
+			expect(ctx.agentSlots.size, "all native agent slots were released").toBe(0);
 		})(),
 	);
 	await cleanupPhase("fixture-remove", rm(ctx.root, { recursive: true, force: true }));

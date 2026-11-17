@@ -41,6 +41,7 @@ export async function createContext(ctx) {
 	ctx.failure = undefined;
 	ctx.sqliteReopened = 0;
 	ctx.cleanup = [];
+	ctx.agentSlots = new Set();
 	ctx.stage = "clean-install";
 	ctx.sessions = new SessionRegistry();
 	ctx.records = new SessionRecordStore();
