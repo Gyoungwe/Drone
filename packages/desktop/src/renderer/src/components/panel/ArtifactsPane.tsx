@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { mergeKnowledgeArtifacts } from "../../lib/knowledge-artifacts";
+import { ArtifactContributions } from "../../plugins/ArtifactContributions";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
@@ -132,21 +133,39 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 					<header className="text-[12px] font-medium text-ink">{t("panel.artifactProvenance.title")}</header>
 					<div className="mt-1 space-y-2">
 						{ledgerArtifacts.map((record) => (
-							<ArtifactProvenanceCard
+							<ArtifactContributions
 								key={record.id}
-								record={record}
-								provenance={provenanceById[record.id]}
-								expanded={expandedId === record.id}
-								rerunning={rerunningId === record.id}
-								rerunResult={rerunResults[record.id]}
-								onToggle={() => void toggleProvenance(record)}
-								onRerun={() => void rerun(record)}
+								surface="artifacts.card"
+								artifactId={record.id}
+								analysisId={null}
+								capabilityId={null}
+								sessionId={sessionId}
+								workspaceId={null}
+								renderDefault={() => (
+									<ArtifactProvenanceCard
+										record={record}
+										provenance={provenanceById[record.id]}
+										expanded={expandedId === record.id}
+										rerunning={rerunningId === record.id}
+										rerunResult={rerunResults[record.id]}
+										onToggle={() => void toggleProvenance(record)}
+										onRerun={() => void rerun(record)}
+									/>
+								)}
 							/>
 						))}
 					</div>
 				</section>
 			)}
-			<EvidencePane defaultRoot={cwd} />
+			<ArtifactContributions
+				surface="evidence.pane"
+				artifactId={null}
+				analysisId={null}
+				capabilityId={null}
+				sessionId={sessionId}
+				workspaceId={null}
+				renderDefault={() => <EvidencePane defaultRoot={cwd} />}
+			/>
 			<div className="panel-flow">
 				<KnowledgeFlowCard sessionId={sessionId} />
 			</div>

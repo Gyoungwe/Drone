@@ -1,7 +1,13 @@
+// @vitest-environment jsdom
 import type { InquiryArtifactProvenance, InquiryArtifactRecord } from "@drone/shared";
+import type { ArtifactContributionProps } from "@gyoungwe/plugin-api/ui";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useUiPluginRegistry } from "../../plugins/registry";
+import { UI_REGIONS } from "../../plugins/slots";
+import { useUiPluginsStore } from "../../stores/ui-plugins";
 
 vi.mock("../../i18n", () => ({
 	useT: () => (key: string) => key,
@@ -17,17 +23,127 @@ vi.mock("../../stores/sessions", () => ({
 }));
 vi.mock("../../stores/knowledge", () => ({ useKnowledgeStore: () => ({}) }));
 vi.mock("../../stores/transcript", () => ({
-	selectTranscript: () => ({ messages: [] }),
-	useTranscriptStore: () => ({}),
+	selectTranscript: () => ({ messages: [], todos: [], reviewerFindings: [] }),
+	useTranscriptStore: (selector: (state: object) => unknown) => selector({}),
 }));
 vi.mock("../../stores/ui", () => ({ useUiStore: () => ({ openResourcePreview: vi.fn() }) }));
-vi.mock("../../api", () => ({ getPi: () => ({ listArtifacts: vi.fn(async () => []) }) }));
+vi.mock("../../api", () => ({
+	getPi: () => ({
+		listArtifacts: async () => [record, { ...record, id: "artifact-2", path: "results/second.tsv" }],
+		onRerunUpdated: () => vi.fn(),
+		getEvidenceOverview: async () => ({
+			analyses: [
+				{ id: "overview-analysis", question: "fixture", assay: "fixture", stage: "design", artifactCount: 0 },
+			],
+			capabilities: [],
+			checkpoints: [],
+			branches: [],
+			replays: [],
+		}),
+	}),
+}));
 vi.mock("../knowledge/KnowledgeFlowCard", () => ({ KnowledgeFlowCard: () => null }));
 vi.mock("./FlowCards", () => ({ FlowCards: () => null }));
+vi.mock("./ContextUsageMeter", () => ({ ContextUsageMeter: () => null }));
+vi.mock("../chat/Markdown", () => ({ Markdown: () => null }));
+vi.mock("./SessionOverviewSections", () => ({
+	SessionOverviewSections: () => null,
+	DecisionsSection: () => null,
+}));
 
 vi.stubGlobal("React", React);
 
-import { ArtifactProvenanceCard } from "./ArtifactsPane";
+import { ArtifactProvenanceCard, ArtifactsPane } from "./ArtifactsPane";
+import { OverviewPane } from "./OverviewPane";
+
+afterEach(cleanup);
+beforeEach(() => {
+	useUiPluginRegistry.setState({ contributions: {}, loadNonces: {}, crashCounts: {} });
+	useUiPluginsStore.setState({ config: { enabled: true, plugins: {}, assignments: {} } });
+});
+
+it("mounts each Artifacts contribution once with its surface and host IDs", async () => {
+	const Panel = vi.fn((props: ArtifactContributionProps) => (
+		<p data-testid="artifact-contribution">{`${props.surface}:${props.artifactId}`}</p>
+	));
+	useUiPluginRegistry.getState().applyPlugin(
+		{
+			name: "artifact-fixture",
+			droneUi: 1,
+			main: "src/index.tsx",
+			contributions: [{ id: "artifact", region: UI_REGIONS.ArtifactContribution, export: "Panel" }],
+		},
+		{ Panel },
+		[],
+	);
+	render(<ArtifactsPane sessionId="host-session" />);
+	const section = await screen.findByTestId("inquiry-artifacts");
+	expect(section.querySelectorAll('[data-testid="artifact-provenance-card"]')).toHaveLength(2);
+	expect(screen.getByText(record.path)).toBeTruthy();
+	expect(screen.getByTestId("evidence-panel")).toBeTruthy();
+	expect(screen.getAllByTestId("artifact-contribution").map((element) => element.textContent)).toEqual([
+		"artifacts.card:artifact-1",
+		"artifacts.card:artifact-2",
+		"evidence.pane:null",
+	]);
+	expect(
+		Panel.mock.calls.map(([props]) => props).filter((props) => props.surface === "artifacts.card"),
+	).toEqual(
+		["artifact-1", "artifact-2"].map((artifactId) => ({
+			surface: "artifacts.card",
+			artifactId,
+			analysisId: null,
+			capabilityId: null,
+			sessionId: "host-session",
+			workspaceId: null,
+			renderDefault: expect.any(Function),
+		})),
+	);
+	const evidenceProps = {
+		surface: "evidence.pane",
+		artifactId: null,
+		analysisId: null,
+		capabilityId: null,
+		sessionId: "host-session",
+		workspaceId: null,
+		renderDefault: expect.any(Function),
+	};
+	expect(Panel.mock.calls.find(([props]) => props.surface === "evidence.pane")?.[0]).toEqual(evidenceProps);
+	fireEvent.change(screen.getByPlaceholderText("panel.evidence.analysisId"), {
+		target: { value: "draft-analysis" },
+	});
+	expect(Panel.mock.lastCall?.[0]).toEqual(evidenceProps);
+});
+
+it("mounts the Overview contribution exactly once on evidence.overview", async () => {
+	const Panel = vi.fn((props: ArtifactContributionProps) => (
+		<p data-testid="artifact-contribution">{props.surface}</p>
+	));
+	useUiPluginRegistry.getState().applyPlugin(
+		{
+			name: "overview-fixture",
+			droneUi: 1,
+			main: "src/index.tsx",
+			contributions: [{ id: "evidence", region: UI_REGIONS.ArtifactContribution, export: "Panel" }],
+		},
+		{ Panel },
+		[],
+	);
+	render(<OverviewPane sessionId="overview-session" />);
+	expect(await screen.findByTestId("evidence-panel")).toBeTruthy();
+	expect(screen.getAllByTestId("artifact-contribution")).toHaveLength(1);
+	expect(screen.getByTestId("artifact-contribution").textContent).toBe("evidence.overview");
+	const expected = {
+		surface: "evidence.overview",
+		artifactId: null,
+		analysisId: null,
+		capabilityId: null,
+		sessionId: "overview-session",
+		workspaceId: null,
+		renderDefault: expect.any(Function),
+	};
+	for (const [props] of Panel.mock.calls) expect(props).toEqual(expected);
+});
 
 const record: InquiryArtifactRecord = {
 	id: "artifact-1",
