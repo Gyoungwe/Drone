@@ -12,6 +12,8 @@ DRONE_KNOWLEDGE_EVIDENCE=.local/acceptance/packed-knowledge/result.json \
 npx vitest run packages/backend/test/packed-knowledge-runtime-sdk.test.mjs
 ```
 
+Runtime SDK acceptance also requires `DRONE_PLUGIN_API_TARBALL` to point to the vendored plugin-api candidate pinned in the plugins repository's `package.json` (for example, `DRONE_PLUGIN_API_TARBALL=vendor/gyoungwe-plugin-api-1.3.0-<hash>.tgz`); a run without it is not acceptance.
+
 可通过 `DRONE_PLUGIN_RUNTIME_DIRECTORY` 指定另一份宿主已准备的 Node runtime 目录。脚本会使用公开 npm registry、`--ignore-scripts --omit=peer`，把传入 tarball 安装到独立临时前缀；实际会话使用宿主锁定的 SDK。安装前缀、合成状态及 Vault 在验收结束后清理。失败阶段写入同路径的 `.failure.json`，只有完整断言及清理都通过才写成功 JSON。
 
 ## WebDAV cloud slice

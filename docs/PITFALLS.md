@@ -543,3 +543,15 @@ Node 会解析主模块的符号链接并对 `import.meta.url` 做百分号编�
 ## 受管插件的写审批与任务授权
 
 受管插件的写调用默认每次弹原生对话框。不要为了让任务编排“能用”去缓存审批或让插件自报授权：插件自己的簿记（会话记录、私有状态）在能力上标 `approval: "own"`；一次任务授权只能由宿主 `task.grant.request` 签发（宿主解析目录、宿主渲染对话框、绑定 live 会话条目与当前安装来源），授权下仍需逐项确认的能力标 `approval: "always"`。新增写能力时必须决定它属于哪一类，缺省即“授权覆盖”。授权从不由插件返回值、JSON 记录或恢复数据产生，会话关闭、插件停用/升级即失效。详见[宿主任务授权](superpowers/specs/2026-10-29-host-task-grant-design.md)。
+
+## 重新锁定插件后要单独跑 `check:extensions`（2026-11-17 记录）
+
+修改 `plugins.lock.json` 后，内联 plugin-api/shared 输入的 `.pi/extensions/*.mjs` 可能过期；CI 会运行 `npm run check:extensions` 并失败，但本地常跑的 `lint/typecheck/test/build/check:arch` 不包含它（例：Drone #307）。重新锁定后单独运行 `npm run check:extensions`，过期时用 `npm run build:extensions -- --force` 重建，将 bundles 与 `.pi/extensions/.build-manifest.json` 作为独立的 `build(extensions)` 提交；plugin-api 改动后还要运行 `npm run check:plugin-api`。
+
+## 强制重建后的 manifest 会被 Biome lint 拒绝（2026-11-17 记录）
+
+`scripts/build-extensions.mjs` 用 `JSON.stringify(manifest, null, "\t")` 写 manifest，短数组的排版与 Biome 不同，导致每次强制重建后 `npm run lint` 都失败。T67 正在将脚本改为经 Biome 格式化；修复前或仍遇到此问题时，运行 `npx biome format --write .pi/extensions/.build-manifest.json`。
+
+## 生成脚本经 stdin 调 Biome 可能挂住（2026-11-17 记录）
+
+`scripts/generate-knowledge-ui-contract.mjs` 经无 `timeout` 的 `execFileSync` 调用 `biome format --stdin-file-path …`；在 `node_modules` 符号链接到主 checkout 的 git worktree 中，一次 typecheck/build 门禁曾卡在该子进程数小时，终止后重跑通过。门禁长时间无输出时，检查是否有 `biome format --stdin` 子进程；worktree 优先独立执行 `npm ci` 安装真实依赖，新生成器调用子进程时应传入 `timeout`。
