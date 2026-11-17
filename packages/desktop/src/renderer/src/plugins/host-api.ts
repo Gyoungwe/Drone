@@ -38,6 +38,7 @@ import { PluginEntryHost, usePluginEntries } from "./PluginRegions";
 import { usePluginRuntime } from "./runtime";
 import { sessionUiPort, useSessionMessages } from "./session-api";
 import { UI_REGIONS } from "./slots";
+import { createPluginStore } from "./state-api";
 
 /**
  * 宿主 API：把宿主能力挂到 window.DroneUI（插件运行时的唯一入口，与宿主共享同一 React 实例）。
@@ -101,6 +102,7 @@ window.DroneUI = {
 	// </drone:generated namespace="hooks">
 	// <drone:generated namespace="stores">
 	stores: {
+		createPluginStore: createPluginStore,
 		useTranscriptStore: useTranscriptStore,
 		useSessionsStore: useSessionsStore,
 		useUiStore: useUiStore,
