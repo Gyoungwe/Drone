@@ -150,7 +150,7 @@ export {
 	type PluginRootGrant,
 } from "./plugins/file-capabilities";
 export type { SelectedNativeSource } from "./plugins/native-delivery";
-export { type PluginCredentialSlot, PluginCredentialStore } from "./plugins/plugin-credentials";
+/* biome-ignore format: Keep the baselined barrel line count fixed. */ export { type PluginCredentialSlot, PluginCredentialStore, type PluginEndpointPolicy, resolvePluginEndpointPolicy } from "./plugins/plugin-credentials";
 export { createProcessPluginRuntime } from "./plugins/process-runtime";
 export { PluginResourceManager, type PluginResourceManagerOptions } from "./plugins/resource-capabilities";
 export type {

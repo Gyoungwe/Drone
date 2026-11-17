@@ -17,6 +17,9 @@ export interface PluginCredentialEntry {
 	source: "env" | "saved" | null;
 	savedConfigured: boolean;
 	values: Record<string, string>;
+	endpoint?:
+		| { state: "ready"; url: string; source: "default" | "env" }
+		| { state: "invalid"; reason: "invalid_endpoint" };
 }
 
 const Id = Type.String({ minLength: 1, maxLength: 256 });
@@ -33,6 +36,22 @@ const Entry = Type.Object(
 		source: Type.Union([Type.Literal("env"), Type.Literal("saved"), Type.Null()]),
 		savedConfigured: Type.Boolean(),
 		values: Type.Record(Type.String(), Type.String()),
+		endpoint: Type.Optional(
+			Type.Union([
+				Type.Object(
+					{
+						state: Type.Literal("ready"),
+						url: Type.String(),
+						source: Type.Union([Type.Literal("default"), Type.Literal("env")]),
+					},
+					{ additionalProperties: false },
+				),
+				Type.Object(
+					{ state: Type.Literal("invalid"), reason: Type.Literal("invalid_endpoint") },
+					{ additionalProperties: false },
+				),
+			]),
+		),
 	},
 	{ additionalProperties: false },
 );

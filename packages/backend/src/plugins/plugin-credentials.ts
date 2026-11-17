@@ -13,6 +13,8 @@ import { isHostKeptCredential } from "./host-kept-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 
+export { type PluginEndpointPolicy, resolvePluginEndpointPolicy } from "./endpoint-policy";
+
 /**
  * Secrets the host keeps for one installed plugin (docs/superpowers/specs/2026-11-06-plugin-credentials-design.md).
  * The plugin declares a slot in `drone.credentials`; the host adds the secret as a request header on
