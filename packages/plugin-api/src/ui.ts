@@ -293,6 +293,7 @@ export interface KnowledgeUiBindings {
 		UI_REGIONS: KnowledgeUiRegions;
 	};
 	stores: {
+		createPluginStore: PluginStoreCreator;
 		useKnowledgeStore: UiStoreBinding<KnowledgeStoreState>;
 		useSessionsStore: UiStoreBinding<KnowledgeSessionState>;
 		useSettingsStore: UiStoreBinding<KnowledgeSettingsState>;
@@ -305,3 +306,33 @@ export interface DroneUiRuntime extends KnowledgeUiBindings, SessionUiBindings {
 	version: 1;
 	knowledge: KnowledgeUiPort;
 }
+
+/** Plugin-owned state only; creating a store grants no host data or runtime authority. */
+export interface PluginStoreApi<State> {
+	setState(
+		partial: State | Partial<State> | ((state: State) => State | Partial<State>),
+		replace?: false,
+	): void;
+	setState(state: State | ((state: State) => State), replace: true): void;
+	getState(): State;
+	getInitialState(): State;
+	/** Imperative subscribers must call the returned cleanup when their owner stops. */
+	subscribe(listener: (state: State, previousState: State) => void): () => void;
+}
+
+export interface PluginStore<State> extends PluginStoreApi<State> {
+	/**
+	 * Select existing slices or memoized values: unchanged selections must retain
+	 * their reference. This React hook releases its subscription on unmount.
+	 */
+	<Selected>(selector: (state: State) => Selected): Selected;
+}
+
+/** Create once per plugin owner, outside render; each call returns an independent store/hook. */
+export type PluginStoreCreator = <State>(
+	initialize: (
+		set: PluginStoreApi<State>["setState"],
+		get: PluginStoreApi<State>["getState"],
+		store: PluginStoreApi<State>,
+	) => State,
+) => PluginStore<State>;

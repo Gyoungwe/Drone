@@ -219,6 +219,12 @@
 		],
 		"stores": [
 			{
+				"name": "createPluginStore",
+				"hostValue": "createPluginStore",
+				"envType": "import(\"@gyoungwe/plugin-api/ui\").PluginStoreCreator",
+				"pluginType": "import(\"@gyoungwe/plugin-api/ui\").PluginStoreCreator"
+			},
+			{
 				"name": "useTranscriptStore",
 				"hostValue": "useTranscriptStore",
 				"envType": "typeof useTranscriptStore",

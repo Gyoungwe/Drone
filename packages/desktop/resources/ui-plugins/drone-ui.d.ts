@@ -273,6 +273,7 @@ declare module "@gyoungwe/plugin-api" {
 	/** 知识流：flows[sessionId] 含 cards[]（通用回执卡）、phase、publication 等 */
 	// <drone:generated namespace="stores">
 	export const stores: {
+		createPluginStore: import("@gyoungwe/plugin-api/ui").PluginStoreCreator;
 		useTranscriptStore: unknown;
 		useSessionsStore: unknown;
 		useUiStore: unknown;
@@ -394,6 +395,7 @@ declare module "@gyoungwe/plugin-api" {
 	export const usePluginEntries: import("@gyoungwe/plugin-api/ui").KnowledgeUiBindings["hooks"]["usePluginEntries"];
 	export const usePluginRuntime: () => import("@gyoungwe/plugin-api/ui").PluginUiRuntimeClient;
 	export const useSessionMessages: import("@gyoungwe/plugin-api/ui").SessionMessagesHook;
+	export const createPluginStore: import("@gyoungwe/plugin-api/ui").PluginStoreCreator;
 	export const useTranscriptStore: unknown;
 	export const useSessionsStore: unknown;
 	export const useUiStore: unknown;

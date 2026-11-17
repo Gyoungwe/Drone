@@ -92,6 +92,7 @@ export interface DroneUiApi {
 	// </drone:generated namespace="hooks">
 	// <drone:generated namespace="stores">
 	stores: {
+		createPluginStore: import("@gyoungwe/plugin-api/ui").PluginStoreCreator;
 		useTranscriptStore: typeof useTranscriptStore;
 		useSessionsStore: typeof useSessionsStore;
 		useUiStore: typeof useUiStore;
