@@ -38,6 +38,17 @@ The assertion rejects unsupported versions or fields, malformed nested JSON, unr
 
 At a future host cutover, read the current record within the JsonStore transaction, pass a detached immutable copy and trusted command/time to the plugin, validate its unknown result before committing, and emit events only after durable success. Unsupported stored records must remain on disk for explicit review. This candidate does not switch host callers or authorize effects: readiness/review booleans, publication intent, lifecycle events and binding/lineage strings are ordinary data. The host retains persistence, causal issuance, live authorization, execution preflight and write/readback receipts.
 
+## P5 schemas (1.3.0 candidate)
+
+These subpaths expose dependency-free JSON Schema values plus types:
+
+- `@gyoungwe/plugin-api/p5-receipts`
+- `@gyoungwe/plugin-api/p5-evidence`
+- `@gyoungwe/plugin-api/p5-inquiry`
+- `@gyoungwe/plugin-api/p5-discovery`
+
+The host creates authorizations and receipts; plugins consume the schemas and types.
+
 ## Desktop knowledge UI contract
 
 `@gyoungwe/plugin-api/ui` exports the type-only `KnowledgeUiPort`,
