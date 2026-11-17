@@ -1,3 +1,4 @@
+import { agentSlotCapabilityHandlers } from "../../src/plugins/agent-slot-capabilities";
 import { PluginRuntimeBridge } from "../../src/plugins/coordinator";
 import { fileCapabilityHandlers, PluginFileCapabilities } from "../../src/plugins/file-capabilities";
 import { modelCapabilityHandlers } from "../../src/plugins/model-capabilities";
@@ -7,12 +8,19 @@ import { getPluginSessionCaller } from "../../src/plugins/session-caller";
 import { sessionCapabilityHandlers } from "../../src/plugins/session-capabilities";
 import { sessionRecordCapabilityHandlers } from "../../src/plugins/session-record-capabilities";
 import { canonicalProjectId } from "../../src/project-id";
+import { acquireNativeSubagentSlot } from "../../src/tools/subagent/slots";
 
 export async function createRuntime(ctx) {
+	ctx.disabledSources = new Set();
 	ctx.bridge = new PluginRuntimeBridge({
 		source: (name) => ctx.sources.get(name),
-		sources: () => [...ctx.sources].map(([name, source]) => ({ name, source, state: "enabled" })),
-		enabled: () => true,
+		sources: () =>
+			[...ctx.sources].map(([name, source]) => ({
+				name,
+				source,
+				state: ctx.disabledSources.has(name) ? "disabled" : "enabled",
+			})),
+		enabled: (name) => !ctx.disabledSources.has(name),
 		factory: (value) => createProcessPluginRuntime({ ...value, runtimeDirectory: ctx.runtimeDirectory }),
 		approve: async (_owner, value, operation) => {
 			ctx.approvals.push({ pluginId: value.pluginId, operation: operation ?? null });
@@ -94,6 +102,16 @@ async function createCapabilities(ctx, value, { pluginId, applicationId, signal,
 	};
 }
 
+async function acquireAgentSlot(ctx, cwd, signal) {
+	const release = await acquireNativeSubagentSlot(cwd, signal);
+	const trackedRelease = () => {
+		release();
+		ctx.agentSlots.delete(trackedRelease);
+	};
+	ctx.agentSlots.add(trackedRelease);
+	return trackedRelease;
+}
+
 function createHandlers(ctx, value, files, resources) {
 	return Object.fromEntries(
 		Object.entries({
@@ -101,6 +119,9 @@ function createHandlers(ctx, value, files, resources) {
 			...resources.handlers(),
 			...sessionCapabilityHandlers(ctx.sessions),
 			...sessionRecordCapabilityHandlers(ctx.sessions, ctx.records),
+			...(value.requestsModel
+				? agentSlotCapabilityHandlers({ acquire: (cwd, signal) => acquireAgentSlot(ctx, cwd, signal) })
+				: {}),
 			...(value.requestsModel
 				? modelCapabilityHandlers({
 						registry: ctx.sessions,

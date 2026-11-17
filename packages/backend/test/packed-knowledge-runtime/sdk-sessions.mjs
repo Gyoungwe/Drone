@@ -36,7 +36,7 @@ async function loadReadOnlyExtensions(ctx) {
 	expect(ctx.resourceLoader.getExtensions().errors).toEqual([]);
 }
 
-async function configureOfflineModel(ctx) {
+export async function configureOfflineModel(ctx) {
 	ctx.modelRuntime = await ModelRuntime.create({
 		authPath: join(ctx.agentDir, "auth.json"),
 		modelsPath: null,
