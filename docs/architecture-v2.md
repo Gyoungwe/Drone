@@ -178,6 +178,23 @@ The unpublished plugin-api 1.3.0 candidate adds the stateless `./analysis-lifecy
 | R5 | 禁止出现穿越包边界的相对路径（`../../../…/.pi/`） |
 | R6 | 领域包之间：tasks 可以依赖 knowledge 的**公开类型**；research 可以依赖 knowledge；反方向禁止 |
 
+### 3.1.1 P5 public contracts and host-private authority
+
+P5 defines four public, dependency-free contract subpaths:
+
+- `@gyoungwe/plugin-api/p5-evidence`
+- `@gyoungwe/plugin-api/p5-discovery`
+- `@gyoungwe/plugin-api/p5-inquiry`
+- `@gyoungwe/plugin-api/p5-receipts`
+
+These exports contain only plain schema values and types, with no host implementation, Node, React, Pi runtime or new dependency. They describe JSON data; JSON never carries grants or executable authority.
+
+All authority behind receipts, facts, staged-file references, batch review and rerun acceptance stays host-private. The host derives scope from the actual caller, effective source/generation and workspace/session, and resolves references against its own records in that scope. Copied references, imported receipt objects and historical approvals grant no authority to execute or resume work.
+
+Operations reuse only the existing S (`application-state-write`), C (compute preflight / effect approval) and M (`background-model-spend`) approval boundaries. S/C/M are shorthand, not new categories; pure preflight validation is not consent. R1–R7 remain unchanged.
+
+The [P5 host prerequisite map](pluginization/p5-host-prerequisites.md) records mechanism ownership, dependencies, unresolved decisions and acceptance cuts. This section registers the boundary before implementation; it does not claim runtime acceptance.
+
 ### 3.2 DroneRuntime：用显式注入替代全局握手
 
 ```ts
