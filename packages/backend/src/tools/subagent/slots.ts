@@ -39,11 +39,11 @@ function drain() {
 		item.resolve();
 	}
 }
-export async function withNativeSubagentSlot<T>(
+/** Waits for a slot like withNativeSubagentSlot; the returned release is idempotent. */
+export async function acquireNativeSubagentSlot(
 	cwd: string,
 	signal: AbortSignal | undefined,
-	work: () => Promise<T>,
-): Promise<T> {
+): Promise<() => void> {
 	signal?.throwIfAborted();
 	const key = resolve(cwd),
 		limit = await nativeSubagentProjectLimit(cwd);
@@ -69,14 +69,27 @@ export async function withNativeSubagentSlot<T>(
 		signal?.addEventListener("abort", item.abort, { once: true });
 		drain();
 	});
-	try {
-		signal?.throwIfAborted();
-		return await work();
-	} finally {
+	let released = false;
+	return () => {
+		if (released) return;
+		released = true;
 		active--;
 		const count = (byProject.get(key) || 1) - 1;
 		if (count) byProject.set(key, count);
 		else byProject.delete(key);
 		drain();
+	};
+}
+export async function withNativeSubagentSlot<T>(
+	cwd: string,
+	signal: AbortSignal | undefined,
+	work: () => Promise<T>,
+): Promise<T> {
+	const release = await acquireNativeSubagentSlot(cwd, signal);
+	try {
+		signal?.throwIfAborted();
+		return await work();
+	} finally {
+		release();
 	}
 }

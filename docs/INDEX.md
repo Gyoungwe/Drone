@@ -142,6 +142,7 @@ Paper2Agent 生成的 MCP 服务器接入方式和证据边界见 [paper2agent.m
 
 插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型、host-neutral analysis contract、版本化 `AnalysisHostPort` registry/loader 合同、research connector/write registry 的 `ResearchConnectorHostLoader`/`ResearchWriteAdapterHostLoader` 合同，以及隔离任务验收 registry 的 `TaskAcceptanceHostPort` 合同。`@gyoungwe/pi-analysis/host` 是宿主唯一的分析 adapter 入口；`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
 `packages/plugin-api/src/approvals.ts` 定义公开文件系统权限、审批类别和可选后台模型花费声明，由包根入口再导出；这些类型本身不授予运行时权限。
+`packages/plugin-api/src/runtime-agent-slot.ts` defines the invocation-bound native agent slot lease types and `withPluginAgentSlot`, re-exported from `./runtime`.
 
 通用领域可用性只读投影位于 `packages/backend/src/plugins/domain-capabilities.ts`，由组合根登记当前 provider；它是迁移诊断边界，不承载领域实现或替代插件生命周期。
 本轮切片的命令回执和剩余边界见[能力发现与 clean-prefix 包验收](pluginization/native-plugin-capability-slice-evidence.md)。
@@ -400,6 +401,7 @@ src/
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
 | `src/create-backend.ts` | `BackendServices`、`createBackend` | 组合根：注入每 host `DroneRuntime`，组装 session、knowledge、zotero、institutional、subagents、mcp、settings、models、login、packages、permissions、approvals、B5 discovery 与 B7 data-design 服务；compute preflight/experience bridge 通过显式 host 端口接入，desktop IPC 优先消费这些端口 |
+| `src/plugins/agent-slot-capabilities.ts` | `agentSlotCapabilityHandlers` | Read-effect native subagent slot acquisition/release, caller-bound leases and invocation settlement cleanup. |
 | `src/discovery/` | `DiscoveryService`、`ContainerKernelRunner` | B5d–B5f 的项目作用域宿主适配：Docker/Podman 无网络、只写 `runs/` 的内核会话，Inquiry 记录，独立批评、多路径稳健性、基线和评测持久化；无容器运行时 fail-closed |
 | `src/session-engine/antigravity/{oauth,transport,request,response,provider,catalog}.ts` | `createAntigravityProvider`、PKCE OAuth、Cloud Code Assist SSE | Google Antigravity 原生 provider：浏览器 OAuth + loopback/manual 回调、项目发现/开通、动态模型目录和 Gemini 请求/响应适配；凭证只经 Pi runtime 管理 |
 | `src/services/compute-{data-design,preflight,experience}.ts` | B7 registry/gate、`createComputeExperienceRecorder` | 数据集版本、公共数据回执、RO-Crate、设计/混杂检查在提交前阻断并生成 proposal questions；终态 compute 事件可写入知识 experience store，保留 observed/verified 边界 |
