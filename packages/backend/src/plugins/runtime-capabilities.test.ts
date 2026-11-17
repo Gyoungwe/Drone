@@ -1,7 +1,11 @@
 import { Type } from "typebox";
 import { describe, expect, it, vi } from "vitest";
 import { PluginRuntimeRegistry } from "./runtime";
-import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
+import {
+	PluginCapabilityBroker,
+	type PluginCapabilityContext,
+	type PluginCapabilityHandler,
+} from "./runtime-capabilities";
 
 const caller = {
 	identity: {},
@@ -24,6 +28,59 @@ const policy = () => ({
 	authorizeInvocation: vi.fn<import("./runtime").PluginRuntimePolicy["authorizeInvocation"]>(
 		async () => true,
 	),
+});
+const brokerContext = {
+	...caller,
+	pluginId: "plugin",
+	applicationId: "app",
+	callerIdentity: caller.identity,
+	bootstrap: false,
+};
+
+it("drains pending calls before finalizing once in reverse order, preserving narrowed context", async () => {
+	const contexts: PluginCapabilityContext[] = [];
+	const events: string[] = [];
+	let finish: () => void = vi.fn();
+	const pending = new Promise<void>((resolve) => {
+		finish = resolve;
+	});
+	const broker = new PluginCapabilityBroker({
+		resources: [],
+		handlers: {
+			read: handler(async (_input, context) => {
+				const callNumber = contexts.push(context);
+				context.onInvocationSettled?.(() => {
+					events.push(`${callNumber}:first`);
+				});
+				context.onInvocationSettled?.(() => {
+					events.push(`${callNumber}:second`);
+				});
+				if (contexts.length === 2) await pending;
+				return "read";
+			}),
+		},
+	});
+	const invocation = broker.run(
+		brokerContext,
+		"read",
+		vi.fn(),
+		async () => true,
+		async () => {
+			await broker.port.call("read", null);
+			void broker.port.call("read", null, new AbortController().signal);
+			await Promise.resolve();
+			events.push("operation");
+		},
+	);
+	const rejection = expect(invocation).rejects.toThrow("caller completed");
+	await vi.waitFor(() => expect(contexts).toHaveLength(2));
+	expect(events).toEqual(["operation"]);
+	expect(contexts[0]?.invocationToken).toBeDefined();
+	expect(contexts[1]?.invocationToken).toBe(contexts[0]?.invocationToken);
+	expect(contexts[1]?.onInvocationSettled).toBe(contexts[0]?.onInvocationSettled);
+	finish();
+	await rejection;
+	expect(events).toEqual(["operation", "2:second", "2:first", "1:second", "1:first"]);
 });
 
 describe("plugin capability authority", () => {

@@ -18,6 +18,7 @@ import type {
 } from "@drone/shared";
 import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
+import { agentSlotCapabilityHandlers } from "../plugins/agent-slot-capabilities";
 import type { PluginRuntimeSource } from "../plugins/coordinator";
 import { modelCapabilityHandlers } from "../plugins/model-capabilities";
 import { pdfTextCapabilityHandlers } from "../plugins/pdf-text-capability";
@@ -97,6 +98,7 @@ export class SessionServiceApi extends SessionSettingsApi {
 				getProfileModel: (name) => this.host.modelSettings.getSubagentModel(name),
 				getProfileThinking: (name) => this.host.modelSettings.getSubagentThinking(name),
 			}),
+			...agentSlotCapabilityHandlers(),
 		};
 	}
 

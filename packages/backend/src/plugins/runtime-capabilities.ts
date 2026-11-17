@@ -22,6 +22,10 @@ export interface PluginCapabilityContext {
 	readonly nativeInvocation?: PluginNativeInvocation;
 	/** Actual surrounding registry operation effect, distinct from the current capability's effect. */
 	readonly invocationEffect?: "read" | "write";
+	/** host-only; never accepted from plugin JSON. */
+	readonly invocationToken?: object;
+	/** host-only; never accepted from plugin JSON. */
+	readonly onInvocationSettled?: (finalizer: () => void) => void;
 	/** Host-only nested service lineage; never accepted from plugin JSON. */
 	readonly providerChain?: readonly { readonly source: object; readonly operation: string }[];
 	readonly operation?: string;
@@ -110,6 +114,7 @@ interface Authority {
 	) => Promise<boolean>;
 	readonly check: () => void;
 	readonly pending: Set<Promise<unknown>>;
+	readonly finalizers: Array<() => void>;
 	closed: boolean;
 }
 
@@ -142,6 +147,8 @@ export class PluginCapabilityBroker {
 		const authority: Authority = {
 			context: {
 				...context,
+				invocationToken: {},
+				onInvocationSettled: (finalizer) => authority.finalizers.push(finalizer),
 				invocationEffect: effect,
 				capabilities: { call: (name, input, signal) => this.trackedCall(authority, name, input, signal) },
 			},
@@ -149,6 +156,7 @@ export class PluginCapabilityBroker {
 			check,
 			authorize,
 			pending: new Set(),
+			finalizers: [],
 			closed: false,
 		};
 		const [execution] = await Promise.allSettled([this.calls.run(authority, execute)]);
@@ -158,6 +166,13 @@ export class PluginCapabilityBroker {
 		// Promise/IPC transport cannot infer whether the plugin observed every earlier rejection.
 		const pending = await Promise.allSettled([...authority.pending]);
 		const failures = [execution, ...pending].filter((result) => result.status === "rejected");
+		for (const finalizer of authority.finalizers.reverse()) {
+			try {
+				finalizer();
+			} catch (reason) {
+				failures.push({ status: "rejected", reason });
+			}
+		}
 		if (failures.length === 1) throw failures[0]?.reason;
 		if (failures.length > 1)
 			throw new AggregateError(
