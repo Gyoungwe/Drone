@@ -4384,6 +4384,29 @@ var init_topic_memory = __esm({
     ));
   }
 });
+function redactDiagnostic(value) {
+  return value.slice(0, 8192).replace(/https?:\/\/[^\s<>"']+/gi, (raw) => {
+    let url;
+    try {
+      url = new URL(raw);
+    } catch {
+      return "[URL omitted]";
+    }
+    url.username = "";
+    url.password = "";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  }).replace(/bearer\s+[^\s,;"']+/gi, "Bearer [redacted]").replace(
+    /(["']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret|authorization|cookie)["']?\s*[=:]\s*)(?:"[^"]*(?:"|$)|'[^']*(?:'|$)|[^\s,;]+)/gi,
+    "$1[redacted]"
+  ).replace(/\b(?:sk-|ghp_|github_pat_)[A-Za-z0-9_-]{8,}/g, "[redacted]").split("").map((character) => character.charCodeAt(0) < 32 ? " " : character).join("").slice(0, 4096);
+}
+var init_redact_diagnostic = __esm({
+  "src/core/redact-diagnostic.ts"() {
+    "use strict";
+  }
+});
 function targetWikiPath(path, project) {
   if (typeof path !== "string")
     throw new Error("Target must be a shared or current-project Wiki page, not navigation");
@@ -5445,8 +5468,9 @@ function createKnowledgeModelReview(runtime, config, wiki, io, specialistSetting
       }
       return audit;
     } catch (error) {
+      const diagnostic = redactDiagnostic(error instanceof Error ? error.message : String(error));
       if (audit) {
-        audit = { ...audit, applyError: String(error.message).slice(0, 400) };
+        audit = { ...audit, applyError: diagnostic.slice(0, 400) };
         try {
           await save(audit);
         } catch (saveError) {
@@ -5458,7 +5482,9 @@ function createKnowledgeModelReview(runtime, config, wiki, io, specialistSetting
         }
         return audit;
       }
-      throw error;
+      if (error?.name === "AbortError" || signal?.aborted && error === signal.reason) throw error;
+      if (error instanceof Error && diagnostic === error.message && error.cause === void 0) throw error;
+      throw new Error(diagnostic);
     } finally {
       state.active.delete(key);
     }
@@ -5523,6 +5549,7 @@ var init_wiki_model_review = __esm({
     "use strict";
     init_config();
     init_files();
+    init_redact_diagnostic();
     init_runtime_host();
     init_specialist_host();
     init_wiki_review();
