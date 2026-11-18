@@ -559,3 +559,7 @@ Node 会解析主模块的符号链接并对 `import.meta.url` 做百分号编�
 ## worktree 的 node_modules 符号链接会复用旧依赖（2026-11-17 记录）
 
 worktree 的 `node_modules` 若是指向主 checkout 的符号链接，使用的就是主 checkout 的依赖，可能已经过期。例如旧 vendored `@gyoungwe/plugin-api` 缺少 `inheritedThinking`，会让 drone-plugins 的 pi-knowledge 构建在 `tsc` 阶段失败，也会让 Drone 强制重建扩展时产生产物漂移。修复时在 worktree 内真正执行 `npm ci` 安装独立依赖；Drone 随后还要运行 `npm run build -w @gyoungwe/plugin-api` 和 `npm run fetch:plugins`。
+
+## 2026-11-19: Knowledge UI contract checks bound biome stdin hangs
+
+The contract check can hang on biome stdin; `scripts/generate-knowledge-ui-contract.mjs` now bounds the formatter to 120 s with `SIGKILL` and piped stdio. If it trips, rerun `node scripts/generate-knowledge-ui-contract.mjs --check`, then look for a stuck biome daemon. Timeout errors name biome and the limit without printing the generated contract; other formatter errors propagate unchanged.
