@@ -1,6 +1,7 @@
 /** P5 section 3 Evidence/Analysis/bundle wire contracts. References never convey authority. */
 import { FileReadback, Hash, Id, Relative, resultEnvelope, Time } from "./p5-receipts.js";
 
+export * from "./p5-staged-transport.js";
 export { resultEnvelope };
 
 const dialect = "https://json-schema.org/draft/2020-12/schema";
