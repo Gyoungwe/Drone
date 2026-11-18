@@ -100,6 +100,17 @@ it.each(["edit", "replace", "delete", "appear"])("rejects prior target CAS confl
 	);
 	expect(fs.readdirSync(f.root)).toEqual(kind === "delete" ? [] : ["blob"]);
 });
+it("reports a racing create as a state conflict and preserves the other writer's bytes", () => {
+	const f = fixture();
+	const link = fs.linkSync;
+	vi.spyOn(fs, "linkSync").mockImplementationOnce((from, to) => {
+		fs.writeFileSync(to, "other writer");
+		link(from, to);
+	});
+	expect(() => f.transaction.write(f.plan, true)).toThrow("P5 byte transaction: STATE_CONFLICT");
+	expect(fs.readFileSync(join(f.root, "blob"), "utf8")).toBe("other writer");
+	expect(fs.readdirSync(f.root)).toEqual(["blob"]);
+});
 it.each(["edit", "cancel", "parent", "root"])("rechecks after temporary write: %s", (kind) => {
 	const f = fixture();
 	fs.mkdirSync(join(f.root, "branch"));
