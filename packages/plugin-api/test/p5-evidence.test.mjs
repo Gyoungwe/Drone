@@ -53,7 +53,16 @@ return d;
 }
 
 const definitions = designDefinitions();
-const { resultEnvelope, ...schemas } = evidence;
+const {
+	resultEnvelope,
+	STAGED_DECODED_LIMIT,
+	STAGED_SERIALIZED_LIMIT,
+	validateStagedOpen,
+	validateStagedChunk,
+	validateStagedSeal,
+	validateStagedRef,
+	...schemas
+} = evidence;
 const dialect = "https://json-schema.org/draft/2020-12/schema";
 
 function inlineReferences(node) {
@@ -82,9 +91,17 @@ function assertClosedTree(node, path) {
 	for (const [key, value] of Object.entries(node)) assertClosedTree(value, `${path}.${key}`);
 }
 
-test("exports exactly the 27 requested schemas and the shared result envelope", () => {
+test("exports the 27 design schemas plus staged transport and the shared result envelope", () => {
 	const expected = Object.keys(definitions).filter((name) => name !== "FileReadback");
 	assert.equal(expected.length, 27);
+	expected.push(
+		"StagedOpenInput",
+		"StagedChunkInput",
+		"StagedSealInput",
+		"StagedRefInput",
+		"StagedRef",
+		"StagedState",
+	);
 	assert.deepEqual(Object.keys(schemas).sort(), expected.sort());
 	assert.equal(resultEnvelope, receipts.resultEnvelope);
 });
@@ -136,4 +153,109 @@ test("shared result envelopes retain closed success and failure branches", () =>
 	assert.equal(envelope.anyOf[0].properties.value, evidence.BundleCommit);
 	assert.equal(envelope.anyOf[1], receipts.Failure);
 	assertClosedTree(envelope, "BundleCommit result");
+});
+
+const hash = "a".repeat(64);
+const open = { requestId: "request", path: "capsules/example.json", bytes: 64 * 1024 * 1024 };
+const chunk = { fileRef: "stage", offset: open.bytes - 1, base64: "YQ==" };
+const seal = { fileRef: "stage", bytes: open.bytes, sha256: hash };
+const staged = {
+	fileRef: "stage",
+	state: "open",
+	bytes: open.bytes,
+	sha256: hash,
+	sealedRanges: [{ offset: 0, bytes: open.bytes }],
+};
+const ok = (value) => ({ status: "ok", value });
+const failure = (code) => ({ status: "failed", code, receiptRef: null });
+
+test("D2=A and D9=A retain the exact decoded and serialized boundaries", () => {
+	assert.equal(STAGED_DECODED_LIMIT, 64 * 1024 * 1024);
+	assert.equal(STAGED_SERIALIZED_LIMIT, 128 * 1024 * 1024);
+	assert.deepEqual(validateStagedOpen(open), ok(open));
+	assert.deepEqual(validateStagedOpen({ ...open, bytes: open.bytes + 1 }), failure("LIMIT_EXCEEDED"));
+	const empty = { ...staged, sealedRanges: [] };
+	assert.deepEqual(validateStagedChunk(chunk, empty, STAGED_SERIALIZED_LIMIT), ok(chunk));
+	assert.deepEqual(validateStagedChunk(chunk, empty, STAGED_SERIALIZED_LIMIT + 1), failure("LIMIT_EXCEEDED"));
+	assert.deepEqual(
+		validateStagedChunk({ ...chunk, offset: open.bytes }, empty, 100),
+		failure("LIMIT_EXCEEDED"),
+	);
+	assert.deepEqual(
+		validateStagedChunk(chunk, { ...empty, bytes: chunk.offset - 1 }, 100),
+		failure("LIMIT_EXCEEDED"),
+	);
+	assert.deepEqual(
+		validateStagedChunk(chunk, { ...empty, bytes: chunk.offset }, 100),
+		failure("LIMIT_EXCEEDED"),
+	);
+});
+
+test("root-relative path length follows the shared schema's Unicode character count", () => {
+	const unicode = { ...open, path: `${"😀/".repeat(511)}ab` };
+	assert.deepEqual(validateStagedOpen(unicode), ok(unicode));
+});
+
+test("chunks cannot overwrite sealed ranges but may adjoin them", () => {
+	assert.deepEqual(validateStagedChunk(chunk, staged, 100), failure("STATE_CONFLICT"));
+	const adjacent = { ...staged, sealedRanges: [{ offset: 0, bytes: chunk.offset }] };
+	assert.deepEqual(validateStagedChunk(chunk, adjacent, 100), ok(chunk));
+	assert.deepEqual(
+		validateStagedChunk(chunk, { ...staged, state: "sealed" }, 100),
+		failure("STATE_CONFLICT"),
+	);
+});
+
+test("one chunk may span all 64 MiB, but one more decoded byte fails", () => {
+	const empty = { ...staged, sealedRanges: [] };
+	const full = { ...chunk, offset: 0, base64: `${"A".repeat(Math.ceil(open.bytes / 3) * 4 - 2)}==` };
+	assert.equal(validateStagedChunk(full, empty, STAGED_SERIALIZED_LIMIT).status, "ok");
+	const excess = { ...full, base64: `${full.base64.slice(0, -2)}A=` };
+	assert.deepEqual(validateStagedChunk(excess, empty, STAGED_SERIALIZED_LIMIT), failure("LIMIT_EXCEEDED"));
+});
+
+test("seal requires complete ranges and host hash readback; sealed identity is immutable", () => {
+	assert.deepEqual(validateStagedSeal(seal, staged), ok(seal));
+	assert.deepEqual(validateStagedSeal(seal, { ...staged, state: "sealed" }), ok(seal));
+	assert.deepEqual(
+		validateStagedSeal({ ...seal, sha256: "b".repeat(64) }, { ...staged, state: "sealed" }),
+		failure("STATE_CONFLICT"),
+	);
+	assert.deepEqual(validateStagedSeal({ ...seal, bytes: seal.bytes - 1 }, staged), failure("STATE_CONFLICT"));
+	assert.deepEqual(validateStagedSeal(seal, { ...staged, sealedRanges: [] }), failure("STATE_CONFLICT"));
+	assert.deepEqual(
+		validateStagedSeal({ ...seal, sha256: "b".repeat(64) }, staged),
+		failure("READBACK_FAILED"),
+	);
+	assert.deepEqual(validateStagedRef({ fileRef: "stage" }, { ...staged, state: "sealed" }), ok(seal));
+	assert.deepEqual(validateStagedRef({ fileRef: "stage" }, staged), failure("STATE_CONFLICT"));
+});
+
+test("cancel, caller replacement and host restart invalidate every ref operation", () => {
+	for (const [state, code] of [
+		["cancelled", "CANCELLED"],
+		["invalidated", "SCOPE_CHANGED"],
+	]) {
+		const context = { ...staged, state };
+		assert.deepEqual(validateStagedChunk(chunk, context, 100), failure(code));
+		assert.deepEqual(validateStagedSeal(seal, context), failure(code));
+		assert.deepEqual(validateStagedRef({ fileRef: "stage" }, context), failure(code));
+	}
+	assert.deepEqual(validateStagedRef({ fileRef: "copied" }, staged), failure("SCOPE_CHANGED"));
+});
+
+test("staged boundary validators reject grant fields, callbacks, open objects and malformed bytes", () => {
+	for (const [input, validate] of [
+		[open, validateStagedOpen],
+		[chunk, (value) => validateStagedChunk(value, staged, 100)],
+		[seal, (value) => validateStagedSeal(value, staged)],
+		[{ fileRef: "stage" }, (value) => validateStagedRef(value, staged)],
+	]) {
+		for (const extra of [{ grant: {} }, { execute: () => "not-wire" }, { scope: {} }])
+			assert.deepEqual(validate({ ...input, ...extra }), failure("INVALID_INPUT"));
+	}
+	for (const path of ["../escape", "/absolute", "a/../escape", "a\\escape", "C:/escape", "a\0b"])
+		assert.deepEqual(validateStagedOpen({ ...open, path }), failure("PATH_ESCAPE"));
+	for (const base64 of ["YQ=", "YR==", "a===", "%%%%", "AAA\n"])
+		assert.deepEqual(validateStagedChunk({ ...chunk, base64 }, staged, 100), failure("INVALID_INPUT"));
 });
