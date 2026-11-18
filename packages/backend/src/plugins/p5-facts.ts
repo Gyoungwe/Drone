@@ -7,11 +7,15 @@ import { type Code, Hash, type Result, Scope } from "@gyoungwe/plugin-api/p5-rec
 import { Type } from "typebox";
 import { Check } from "typebox/value";
 import { JsonStore, JsonStoreCorruptedError } from "../json-store";
+import { createLogger } from "../log";
 import type { StorageEntry, StorageRegistry } from "../storage/registry";
 import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime-capabilities";
 
 type FactScope = Pick<Scope, "workspaceId" | "sessionId">;
 type FactInput = Omit<Fact, "sequence">;
+export interface P5FactCommitPort {
+	subscribe(scope: FactScope, changed: () => void): () => void;
+}
 interface Entry extends FactScope {
 	readonly sha256: string;
 	readonly fact: Fact;
@@ -94,10 +98,15 @@ async function snapshot(path: string) {
 	};
 }
 type Storage = { readonly path: string; readonly json: JsonStore<Entry[]> };
-const inScope = (entry: Entry, scope: FactScope) =>
+const inScope = (entry: FactScope, scope: FactScope) =>
 	entry.workspaceId === scope.workspaceId && entry.sessionId === scope.sessionId;
 
-async function append(storage: Storage, scope: FactScope, input: FactInput): Promise<Fact> {
+async function append(
+	storage: Storage,
+	scope: FactScope,
+	input: FactInput,
+	notify: (scope: FactScope) => void,
+): Promise<Fact> {
 	const candidate = structuredClone({ ...input, sequence: 1 });
 	if (!Check(Fact, candidate) || candidate.summary !== p5FactSummary(candidate))
 		throw new P5FactStoreError("INVALID_INPUT");
@@ -114,7 +123,7 @@ async function append(storage: Storage, scope: FactScope, input: FactInput): Pro
 	const { workspaceId, sessionId } = scope;
 	const next = [...before.entries, { workspaceId, sessionId, sha256, fact }];
 	// R1's strict snapshot/CAS/readback pattern avoids JsonStore.read's corruption fallback.
-	return storage.json.writeChecked(next, {
+	const saved = await storage.json.writeChecked(next, {
 		check: async () => {
 			if ((await snapshot(storage.path)).version !== before.version)
 				throw new P5FactStoreError("STATE_CONFLICT");
@@ -125,6 +134,8 @@ async function append(storage: Storage, scope: FactScope, input: FactInput): Pro
 			return fact;
 		},
 	});
+	notify({ workspaceId, sessionId });
+	return saved;
 }
 async function read(path: string, scope: FactScope, input: CollectInput): Promise<FactsResult> {
 	const entries = (await snapshot(path)).entries.filter((entry) => inScope(entry, scope));
@@ -137,7 +148,13 @@ async function read(path: string, scope: FactScope, input: CollectInput): Promis
 	return { cursor: facts.at(-1)?.id ?? input.after, facts };
 }
 /** Host-only append port; composition supplies scope and verified metadata, never producer JSON. */
-export function createP5FactStore(options: { readonly path: string; readonly registry: StorageRegistry }) {
+export function createP5FactStore(options: {
+	readonly path: string;
+	readonly registry: StorageRegistry;
+}): P5FactCommitPort & {
+	append(scope: FactScope, input: FactInput): Promise<Fact>;
+	read(scope: FactScope, input: CollectInput): Promise<FactsResult>;
+} {
 	const entry = { ...P5_FACT_STORAGE, path: options.path };
 	if (!options.registry.get(entry.id)) options.registry.register(entry);
 	if (!isDeepStrictEqual(options.registry.assertRegistered(entry.id), entry))
@@ -150,9 +167,29 @@ export function createP5FactStore(options: { readonly path: string; readonly reg
 		mode: 0o600,
 	});
 	if (json.storageId !== entry.id) throw new Error("P5 fact JsonStore has a different storage ID");
+	const log = createLogger("p5-facts");
+	const subscriptions = new Set<FactScope & { changed: () => void }>();
+	const notify = (scope: FactScope) => {
+		for (const subscription of subscriptions) {
+			if (!inScope(subscription, scope)) continue;
+			try {
+				subscription.changed();
+			} catch {
+				// A committed append stays successful; other subscribers must still be notified.
+				log.warn("Fact commit subscriber failed; committed fact remains available");
+			}
+		}
+	};
 	return {
-		append: (scope: FactScope, input: FactInput) => append({ path: entry.path, json }, scope, input),
+		append: (scope: FactScope, input: FactInput) => append({ path: entry.path, json }, scope, input, notify),
 		read: (scope: FactScope, input: CollectInput) => read(entry.path, scope, input),
+		subscribe({ workspaceId, sessionId }: FactScope, changed: () => void): () => void {
+			const subscription = { workspaceId, sessionId, changed };
+			subscriptions.add(subscription);
+			return () => {
+				subscriptions.delete(subscription);
+			};
+		},
 	};
 }
 
