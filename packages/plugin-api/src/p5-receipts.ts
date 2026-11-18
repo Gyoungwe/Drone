@@ -36,7 +36,26 @@ export const FileReadback = closedObject({
 	sha256: Hash,
 	bytes: { type: "integer", minimum: 0 },
 });
-export const Receipt = {
+const nonNegativeInteger = { type: "integer", minimum: 0 } as const;
+export const Usage = {
+	...closedObject({
+		state: { enum: ["known", "unknown"] },
+		metered: { type: "boolean" },
+		inputTokens: nullable(nonNegativeInteger),
+		outputTokens: nullable(nonNegativeInteger),
+		cost: nullable(
+			closedObject({
+				amountMicros: nonNegativeInteger,
+				currency: { type: "string", pattern: "^[A-Z]{3}$", maxLength: 3 },
+			}),
+		),
+	}),
+	anyOf: [
+		{ properties: { state: { const: "unknown" } } },
+		{ properties: { inputTokens: nonNegativeInteger, outputTokens: nonNegativeInteger } },
+	],
+} as const;
+const receiptSchema = {
 	$schema: dialect,
 	...closedObject({
 		receiptRef: Id,
@@ -52,6 +71,10 @@ export const Receipt = {
 		readback: { type: "array", items: FileReadback, minItems: 0, maxItems: 10000 },
 		parentReceiptRef: nullable(Id),
 	}),
+} as const;
+export const Receipt = {
+	...receiptSchema,
+	properties: { ...receiptSchema.properties, usage: Usage },
 } as const;
 export const RequestInput = { $schema: dialect, ...closedObject({ requestId: Id }) } as const;
 export const ReceiptInput = { $schema: dialect, ...closedObject({ receiptRef: Id }) } as const;
@@ -122,7 +145,17 @@ export interface Receipt {
 	readonly resultSha256: Hash | null;
 	readonly readback: readonly FileReadback[];
 	readonly parentReceiptRef: Id | null;
+	readonly usage?: Usage;
 }
+export type Usage = {
+	readonly metered: boolean;
+	readonly inputTokens: number | null;
+	readonly outputTokens: number | null;
+	readonly cost: { readonly amountMicros: number; readonly currency: string } | null;
+} & (
+	| { readonly state: "known"; readonly inputTokens: number; readonly outputTokens: number }
+	| { readonly state: "unknown" }
+);
 export interface RequestInput {
 	readonly requestId: Id;
 }
@@ -141,15 +174,22 @@ export type P5Validation = { ok: true } | { ok: false; errors: string[] };
 type Check = (value: unknown, path: string, errors: string[]) => void;
 type Fields = Readonly<Record<string, Check>>;
 
-function shape(value: unknown, fields: Fields, path: string, errors: string[]): void {
+function shape(
+	value: unknown,
+	fields: Fields,
+	path: string,
+	errors: string[],
+	required: readonly string[] = Object.keys(fields),
+): void {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		errors.push(`${path} must be an object`);
 		return;
 	}
 	const record = value as Record<string, unknown>;
 	for (const [key, check] of Object.entries(fields)) {
-		if (!Object.hasOwn(record, key)) errors.push(`${path}.${key} is required`);
-		else check(record[key], `${path}.${key}`, errors);
+		if (!Object.hasOwn(record, key)) {
+			if (required.includes(key)) errors.push(`${path}.${key} is required`);
+		} else check(record[key], `${path}.${key}`, errors);
 	}
 	for (const key of Object.keys(record)) {
 		if (!Object.hasOwn(fields, key)) errors.push(`${path}.${key} is not allowed`);
@@ -216,7 +256,7 @@ const scopeFields: Fields = {
 };
 const relativePattern = matching(Relative.pattern);
 const relativeLength = boundedString(Relative.minLength, Relative.maxLength);
-const fileFields: Fields = {
+const fileFields = {
 	path: (value, path, errors) => {
 		relativeLength(value, path, errors);
 		relativePattern(value, path, errors);
@@ -226,7 +266,7 @@ const fileFields: Fields = {
 		(value) => typeof value === "number" && Number.isInteger(value) && value >= 0,
 		"a non-negative integer",
 	),
-};
+} satisfies Fields;
 
 function readbacks(value: unknown, path: string, errors: string[]): void {
 	if (!Array.isArray(value)) {
@@ -250,13 +290,35 @@ const receiptFields: Fields = {
 	resultSha256: nullOr(hash),
 	readback: readbacks,
 	parentReceiptRef: nullOr(id),
+	usage: (value, path, errors) => shape(value, usageFields, path, errors),
+};
+
+const count = fileFields.bytes;
+const costFields: Fields = {
+	amountMicros: count,
+	currency: check(
+		(value) => typeof value === "string" && value.length === 3 && /^[A-Z]{3}$/.test(value),
+		"a three-letter uppercase currency code",
+	),
+};
+const usageFields: Fields = {
+	state: oneOf(Usage.properties.state.enum),
+	metered: oneOf([true, false]),
+	inputTokens: nullOr(count),
+	outputTokens: nullOr(count),
+	cost: nullOr((value, path, errors) => shape(value, costFields, path, errors)),
 };
 
 export function validateP5Receipt(value: unknown): P5Validation {
 	const errors: string[] = [];
-	shape(value, receiptFields, "receipt", errors);
+	shape(value, receiptFields, "receipt", errors, Receipt.required);
 	if (errors.length > 0) return { ok: false, errors };
 	const receipt = value as Receipt;
+	if (
+		receipt.usage?.state === "known" &&
+		(receipt.usage.inputTokens === null || receipt.usage.outputTokens === null)
+	)
+		errors.push("Known usage requires non-null token counts");
 	if (receipt.decision === "denied") {
 		if (receipt.status !== "failed" || receipt.resultSha256 !== null || receipt.readback.length !== 0)
 			errors.push("A denied receipt must fail with a null resultSha256 and empty readback");

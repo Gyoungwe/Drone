@@ -84,6 +84,22 @@ it("reads durable acceptance inside the effect and persists result hash plus act
 	});
 });
 
+it.each([true, false])(
+	"attaches outcome usage with metered=%s without changing the result",
+	async (metered) => {
+		const usage = {
+			state: "known",
+			metered,
+			inputTokens: 12,
+			outputTokens: 3,
+			cost: { amountMicros: 250, currency: "USD" },
+		} as const;
+		const attempt = observation({ usage: () => usage });
+		expect(await createP5ReceiptObserver(open(), now)(attempt)).toBe("done");
+		expect(await open().get(request)).toMatchObject({ status: "succeeded", usage });
+	},
+);
+
 it("records an undefined result as succeeded with the hash of null", async () => {
 	const attempt = { ...observation(), execute: vi.fn(async () => undefined) };
 	await expect(createP5ReceiptObserver(open(), now)(attempt)).resolves.toBeUndefined();
@@ -125,7 +141,15 @@ it("does not invoke or change either file when durable acceptance fails", async 
 });
 
 it.each(["effect", "readback"])("records uncertainty on %s error without exposing content", async (stage) => {
+	const usage = {
+		state: "known",
+		metered: true,
+		inputTokens: 12,
+		outputTokens: 3,
+		cost: null,
+	} as const;
 	const attempt = observation({
+		usage: () => usage,
 		[stage === "effect" ? "execute" : "readback"]: async () => {
 			throw new Error("synthetic private payload");
 		},
@@ -133,7 +157,11 @@ it.each(["effect", "readback"])("records uncertainty on %s error without exposin
 	const result = createP5ReceiptObserver(open(), now)(attempt);
 	await expect(result).rejects.toMatchObject({ code: "OUTCOME_UNKNOWN" });
 	await expect(result).rejects.toThrow("P5 receipt observation failed: OUTCOME_UNKNOWN");
-	expect(await open().get(request)).toMatchObject({ status: "outcome-unknown", resultSha256: null });
+	expect(await open().get(request)).toMatchObject({
+		status: "outcome-unknown",
+		resultSha256: null,
+		usage: { ...usage, state: "unknown" },
+	});
 	expect(await readFile(fixture.path, "utf8")).not.toContain("synthetic private payload");
 	await unchanged();
 });
