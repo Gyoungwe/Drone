@@ -124,48 +124,7 @@ export {
 	type PluginSandboxToolDeclaration,
 	sandboxEntrypointUrl,
 } from "./plugin-sandbox";
-export type {
-	PluginNativeBootstrap,
-	PluginNativeIntegration,
-	PluginRuntimeBridgeOptions,
-	PluginRuntimeOwner,
-	PluginRuntimeSource,
-} from "./plugins/coordinator";
-export { PluginRuntimeBridge } from "./plugins/coordinator";
-export {
-	type DomainCapability,
-	type DomainCapabilityRegistration,
-	DomainCapabilityRegistry,
-	type DomainCapabilityRegistryPort,
-	type DomainCapabilityStatus,
-} from "./plugins/domain-capabilities";
-export {
-	createExecutionIntegrityKey,
-	createPluginExecutionCapabilities,
-	type PluginExecutionCapabilitiesOptions,
-} from "./plugins/execution-capabilities";
-export {
-	fileCapabilityHandlers,
-	PluginFileCapabilities,
-	type PluginRootGrant,
-} from "./plugins/file-capabilities";
-export type { SelectedNativeSource } from "./plugins/native-delivery";
-/* biome-ignore format: Keep the baselined barrel line count fixed. */ export { type PluginCredentialSlot, PluginCredentialStore, type PluginEndpointPolicy, resolvePluginEndpointPolicy } from "./plugins/plugin-credentials";
-export { createProcessPluginRuntime } from "./plugins/process-runtime";
-export { PluginResourceManager, type PluginResourceManagerOptions } from "./plugins/resource-capabilities";
-export type {
-	PluginRuntimeCaller,
-	PluginRuntimeCallerResolver,
-	PluginRuntimePolicy,
-} from "./plugins/runtime";
-export { PluginRuntimeRegistry } from "./plugins/runtime";
-export type {
-	PluginCapabilityContext,
-	PluginCapabilityHandler,
-	PluginRuntimeCapabilitiesOptions,
-	PluginRuntimeCapabilitiesProvider,
-} from "./plugins/runtime-capabilities";
-export type { PluginSessionCallerContext } from "./plugins/session-caller";
+export * from "./plugins/public-exports";
 export {
 	buildTrustOptions,
 	type ResolveTrustOptions,
