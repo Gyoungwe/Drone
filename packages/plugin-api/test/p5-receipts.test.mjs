@@ -62,9 +62,29 @@ function closed(properties) {
 	return { type: "object", properties, required: Object.keys(properties), additionalProperties: false };
 }
 
-test("Receipt requires exactly the 12 design keys", () => {
+const integer = { type: "integer", minimum: 0 };
+const usageSchema = {
+	...closed({
+		state: { enum: ["known", "unknown"] },
+		metered: { type: "boolean" },
+		inputTokens: { anyOf: [integer, { type: "null" }] },
+		outputTokens: { anyOf: [integer, { type: "null" }] },
+		cost: {
+			anyOf: [
+				closed({ amountMicros: integer, currency: { type: "string", pattern: "^[A-Z]{3}$", maxLength: 3 } }),
+				{ type: "null" },
+			],
+		},
+	}),
+	anyOf: [
+		{ properties: { state: { const: "unknown" } } },
+		{ properties: { inputTokens: integer, outputTokens: integer } },
+	],
+};
+
+test("Receipt keeps the 12 required keys and permits optional usage", () => {
 	assert.deepEqual(Receipt.required, requiredKeys);
-	assert.deepEqual(Object.keys(Receipt.properties), requiredKeys);
+	assert.deepEqual(Object.keys(Receipt.properties), [...requiredKeys, "usage"]);
 });
 
 test("common schemas preserve the design scalars and closed shapes", () => {
@@ -97,7 +117,10 @@ test("common schemas preserve the design scalars and closed shapes", () => {
 });
 
 test("Receipt and Failure use the exact design fields and result envelope", () => {
-	assert.deepEqual(Receipt, {
+	const { usage: optionalUsage, ...requiredProperties } = Receipt.properties;
+	assert.deepEqual(optionalUsage, usageSchema);
+	const withoutUsage = { ...Receipt, properties: requiredProperties };
+	assert.deepEqual(withoutUsage, {
 		$schema: dialect,
 		...closed({
 			receiptRef: Id,
@@ -317,3 +340,45 @@ test("receipt accepts denial without invocation and successful approved or unreq
 	assert.deepEqual(validateP5Receipt({ ...value, status: "cleanup-failed" }), { ok: true });
 	assert.deepEqual(validateP5Receipt({ ...value, status: "accepted", resultSha256: hash }), { ok: true });
 });
+
+const usage = {
+	state: "known",
+	metered: true,
+	inputTokens: 12,
+	outputTokens: 3,
+	cost: { amountMicros: 250, currency: "USD" },
+};
+
+test("usage is a closed public schema and preserves known, unmetered and unknown metadata", async () => {
+	assert.deepEqual((await import("../dist/p5-receipts.js")).Usage, usageSchema);
+	for (const metadata of [
+		usage,
+		{ ...usage, metered: false, inputTokens: 0, outputTokens: 0, cost: { ...usage.cost, amountMicros: 0 } },
+		{ state: "unknown", metered: true, inputTokens: null, outputTokens: null, cost: null },
+	]) {
+		const value = { ...receipt(), status: "succeeded", resultSha256: hash, usage: metadata };
+		const original = structuredClone(value);
+		assert.deepEqual(validateP5Receipt(value), { ok: true });
+		assert.deepEqual(value, original);
+	}
+});
+
+for (const patch of [
+	{ state: "other" },
+	{ metered: "yes" },
+	{ inputTokens: -1 },
+	{ inputTokens: null },
+	{ outputTokens: 0.5 },
+	{ outputTokens: null },
+	{ inputTokens: "12" },
+	{ prompt: "synthetic text" },
+	{ response: "synthetic text" },
+	{ authority: true },
+	{ cost: { ...usage.cost, content: "synthetic text" } },
+	...[-1, 0.5].map((amountMicros) => ({ cost: { ...usage.cost, amountMicros } })),
+	...["usd", "US", "USDD", "U1D", "USD\n"].map((currency) => ({ cost: { ...usage.cost, currency } })),
+]) {
+	test(`receipt rejects invalid usage ${JSON.stringify(patch)}`, () => {
+		rejected(validateP5Receipt, { ...receipt(), usage: { ...usage, ...patch } });
+	});
+}

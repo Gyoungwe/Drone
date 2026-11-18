@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import type { Code, FileReadback, Receipt, RequestInput } from "@gyoungwe/plugin-api/p5-receipts";
+import type { Code, FileReadback, Receipt, RequestInput, Usage } from "@gyoungwe/plugin-api/p5-receipts";
 import type { P5ReceiptStore } from "./p5-receipt-store";
 
 export interface P5ReceiptObservation<T> {
@@ -11,6 +11,8 @@ export interface P5ReceiptObservation<T> {
 	readonly approved: boolean;
 	execute(): Promise<T>;
 	readback(): Promise<readonly FileReadback[]>;
+	/** Host-reported metadata, available even when execution or readback throws. */
+	usage?(): Usage;
 }
 
 function failure(code: Code): Error {
@@ -21,6 +23,11 @@ async function runEffect<T>(observation: P5ReceiptObservation<T>) {
 	const value = await observation.execute();
 	const readback = await observation.readback();
 	return { value, readback };
+}
+
+function usageMetadata(usage: Usage | undefined, status: Receipt["status"]): Pick<Receipt, "usage"> {
+	if (usage === undefined) return {};
+	return { usage: status === "outcome-unknown" ? { ...usage, state: "unknown" } : usage };
 }
 
 /** Host-only observation: callers supply current approval and metadata, never restored authority. */
@@ -48,10 +55,19 @@ export function createP5ReceiptObserver(store: P5ReceiptStore, now: () => string
 			status: "succeeded" | "failed" | "outcome-unknown",
 			resultSha256: string | null,
 			readback: readonly FileReadback[],
-		) =>
-			store.finish(observation.request, { status, at: now(), resultSha256, readback }).catch(() => {
-				throw failure("PERSISTENCE_PENDING");
-			});
+		) => {
+			return store
+				.finish(observation.request, {
+					status,
+					at: now(),
+					resultSha256,
+					readback,
+					...usageMetadata(observation.usage?.(), status),
+				})
+				.catch(() => {
+					throw failure("PERSISTENCE_PENDING");
+				});
+		};
 		let result: Awaited<ReturnType<typeof runEffect<T>>>;
 		try {
 			result = await runEffect(observation);

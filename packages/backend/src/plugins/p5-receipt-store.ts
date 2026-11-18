@@ -33,7 +33,7 @@ export class P5ReceiptStoreError extends Error {
 
 type ReceiptJsonStore = Pick<JsonStore<Receipt[]>, "storageId" | "read" | "writeChecked">;
 type Acceptance = Omit<Receipt, "requestId">;
-type Completion = Pick<Receipt, "at" | "resultSha256" | "readback"> & {
+type Completion = Pick<Receipt, "at" | "resultSha256" | "readback" | "usage"> & {
 	readonly status: Exclude<Receipt["status"], "accepted">;
 };
 
@@ -136,8 +136,14 @@ async function acceptReceipt(
 	const before = await readSnapshot(storage.path);
 	const existing = before.receipts.find((entry) => entry.requestId === receipt.requestId);
 	if (existing) {
-		if (existing.inputSha256 !== receipt.inputSha256)
-			throw new P5ReceiptStoreError("DUPLICATE_CONFLICT", "P5 request ID has a different input hash");
+		if (
+			existing.inputSha256 !== receipt.inputSha256 ||
+			(receipt.usage !== undefined && !isDeepStrictEqual(existing.usage, receipt.usage))
+		)
+			throw new P5ReceiptStoreError(
+				"DUPLICATE_CONFLICT",
+				"P5 request ID has a different input hash or usage",
+			);
 		return existing;
 	}
 	if (before.receipts.some((entry) => entry.receiptRef === receipt.receiptRef))
@@ -150,8 +156,14 @@ async function acceptReceipt(
 				(entry) => entry.requestId === receipt.requestId,
 			);
 			if (!current) throw error;
-			if (current.inputSha256 !== receipt.inputSha256)
-				throw new P5ReceiptStoreError("DUPLICATE_CONFLICT", "P5 request ID has a different input hash");
+			if (
+				current.inputSha256 !== receipt.inputSha256 ||
+				(receipt.usage !== undefined && !isDeepStrictEqual(current.usage, receipt.usage))
+			)
+				throw new P5ReceiptStoreError(
+					"DUPLICATE_CONFLICT",
+					"P5 request ID has a different input hash or usage",
+				);
 			return current;
 		},
 	);
@@ -172,6 +184,7 @@ async function finishReceipt(
 		at: completion.at,
 		resultSha256: completion.resultSha256,
 		readback: completion.readback,
+		...(completion.usage === undefined ? {} : { usage: completion.usage }),
 	});
 	validateReceipt(receipt);
 	const next = before.receipts.map((entry) => (entry.requestId === receipt.requestId ? receipt : entry));

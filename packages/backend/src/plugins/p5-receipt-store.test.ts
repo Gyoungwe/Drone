@@ -88,6 +88,47 @@ it("persists exact accepted and terminal receipts across fresh JsonStore instanc
 	expect(JSON.parse(await readFile(fixture.path, "utf8"))).toEqual([terminal]);
 });
 
+it.each([
+	{
+		state: "known",
+		metered: false,
+		inputTokens: 12,
+		outputTokens: 3,
+		cost: { amountMicros: 250, currency: "USD" },
+	},
+	{ state: "unknown", metered: true, inputTokens: null, outputTokens: null, cost: null },
+] as const)("persists $state per-item usage unchanged across reopen", async (usage) => {
+	const store = open();
+	await store.accept(request, accepted);
+	const terminal = await store.finish(request, { ...succeeded, usage });
+	expect(terminal).toEqual({ ...accepted, ...request, ...succeeded, usage });
+	expect(await open().get(request)).toEqual(terminal);
+	expect(await open().getByRef({ receiptRef: accepted.receiptRef })).toEqual(terminal);
+	const bytes = await readFile(fixture.path);
+	await expect(
+		open().finish(request, { ...succeeded, usage: { ...usage, metered: !usage.metered } }),
+	).rejects.toMatchObject({ code: "STATE_CONFLICT" });
+	expect(await readFile(fixture.path)).toEqual(bytes);
+});
+
+it("rejects concurrent acceptance with different usage", async () => {
+	const usage = {
+		state: "unknown",
+		metered: true,
+		inputTokens: null,
+		outputTokens: null,
+		cost: null,
+	} as const;
+	const results = await Promise.allSettled([
+		open().accept(request, { ...accepted, usage }),
+		open().accept(request, { ...accepted, usage: { ...usage, metered: false } }),
+	]);
+	expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+	expect(results.filter((result) => result.status === "rejected")).toEqual([
+		expect.objectContaining({ reason: expect.objectContaining({ code: "DUPLICATE_CONFLICT" }) }),
+	]);
+});
+
 it("looks up accepted and terminal receipts by reference after reopening", async () => {
 	const store = open();
 	const first = await store.accept(request, accepted);
