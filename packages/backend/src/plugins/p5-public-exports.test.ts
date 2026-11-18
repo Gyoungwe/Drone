@@ -1,5 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import * as backend from "../index";
+import { type FrozenP5Batch, freezeP5Batch } from "./p5-batch-review";
+import { type FrozenP5Bundle, freezeP5Bundle } from "./p5-bundle-review";
 import { createP5FactStore, P5_FACT_STORAGE, P5FactStoreError, p5FactCapabilityHandlers } from "./p5-facts";
 import { p5ReceiptCapabilityHandlers } from "./p5-receipt-capabilities";
 import {
@@ -18,6 +20,8 @@ const publicP5Values = {
 	P5FactStoreError,
 	P5_FACT_STORAGE,
 	p5FactCapabilityHandlers,
+	freezeP5Batch,
+	freezeP5Bundle,
 };
 
 describe("backend P5 public exports", () => {
@@ -27,6 +31,11 @@ describe("backend P5 public exports", () => {
 
 	it("exports the receipt store type", () => {
 		expectTypeOf<backend.P5ReceiptStore>().toEqualTypeOf<P5ReceiptStore>();
+	});
+
+	it("exports the frozen snapshot types", () => {
+		expectTypeOf<backend.FrozenP5Batch>().toEqualTypeOf<FrozenP5Batch>();
+		expectTypeOf<backend.FrozenP5Bundle>().toEqualTypeOf<FrozenP5Bundle>();
 	});
 
 	it("keeps unlisted P5 entry points private", () => {
@@ -43,6 +52,10 @@ describe("backend P5 public exports", () => {
 			"p5ByteCapabilityHandlers",
 			"createP5BatchExecutor",
 			"createP5BatchLifecycle",
+			"createP5BatchReviewer",
+			"createP5BundleReviewer",
+			"P5BundleReviewError",
+			"P5_REVIEW_MAX_TEXT_BYTES",
 			"createP5CriticHandler",
 			"p5BundleCapability",
 			"createP5RerunSubmitHandler",
