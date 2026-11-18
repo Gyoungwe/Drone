@@ -28,6 +28,8 @@ import {
 	reservationPath,
 	reserveState,
 	resolveRootPath,
+	sameFile,
+	version,
 } from "./plugin-root-checks";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 import { MAX_FILE_BINARY_BASE64, MAX_FILE_BINARY_BYTES, readStableFileBytes } from "./stable-file-bytes";
@@ -76,20 +78,6 @@ export class PluginStateConflictError extends Error {
 type FileKind = "file" | "directory" | "symlink" | "other";
 type Root = PluginRootGrant & { readonly identity: Stats };
 const MAX_TEXT_BYTES = 1024 * 1024;
-
-function version(stat: Stats): PluginFileVersion {
-	return { dev: stat.dev, ino: stat.ino, size: stat.size, mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs };
-}
-
-function sameFile(left: PluginFileVersion, right: PluginFileVersion): boolean {
-	return (
-		left.dev === right.dev &&
-		left.ino === right.ino &&
-		left.size === right.size &&
-		left.mtimeMs === right.mtimeMs &&
-		left.ctimeMs === right.ctimeMs
-	);
-}
 
 function kind(stat: Pick<Stats, "isFile" | "isDirectory" | "isSymbolicLink">): FileKind {
 	if (stat.isFile()) return "file";

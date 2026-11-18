@@ -16,7 +16,7 @@
 	"file-lines\tpackages/backend/src/mcp/service.ts": 442,
 	"file-lines\tpackages/backend/src/plugin-sandbox.ts": 669,
 	"file-lines\tpackages/backend/src/plugins/coordinator.ts": 893,
-	"file-lines\tpackages/backend/src/plugins/file-capabilities.ts": 890,
+	"file-lines\tpackages/backend/src/plugins/file-capabilities.ts": 878,
 	"file-lines\tpackages/backend/src/plugins/process-runtime.test.ts": 793,
 	"file-lines\tpackages/backend/src/plugins/process-runtime.ts": 858,
 	"file-lines\tpackages/backend/src/plugins/runtime.test.ts": 471,

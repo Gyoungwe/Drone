@@ -2,9 +2,28 @@ import type { Stats } from "node:fs";
 import { lstat, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
 import type { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
-import type { PluginFileCall, PluginFileInput, PluginRootGrant } from "./file-capabilities";
+import type {
+	PluginFileCall,
+	PluginFileInput,
+	PluginFileVersion,
+	PluginRootGrant,
+} from "./file-capabilities";
 
 type Root = PluginRootGrant & { readonly identity: Stats };
+
+export function version(stat: Stats): PluginFileVersion {
+	return { dev: stat.dev, ino: stat.ino, size: stat.size, mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs };
+}
+
+export function sameFile(left: PluginFileVersion, right: PluginFileVersion): boolean {
+	return (
+		left.dev === right.dev &&
+		left.ino === right.ino &&
+		left.size === right.size &&
+		left.mtimeMs === right.mtimeMs &&
+		left.ctimeMs === right.ctimeMs
+	);
+}
 
 export function grantRoot(
 	roots: ReadonlyMap<string, Root>,
