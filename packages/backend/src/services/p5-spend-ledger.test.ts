@@ -23,7 +23,7 @@ const unknown: Usage = {
 	cost: null,
 };
 
-function fixture(limit: number | undefined) {
+function fixture(limit: number | "default" | undefined) {
 	const path = join(tmpdir(), `drone-p5-spend-${randomUUID()}.json`);
 	const clock = { now: new Date("2026-11-18T23:59:59+08:00") };
 	const limits = new Map([
@@ -156,7 +156,17 @@ it("persists only workspace-day totals, item counts and the unknown flag", async
 	await open().record({ workspaceId: metered.workspaceId, ...known });
 	const disk = new JsonStore<unknown>({ path, storageId: P5_SPEND_STORAGE.id, defaultValue: () => null });
 	expect(await disk.read()).toEqual([
-		{ workspaceId: "workspace-1", dayKey: "2026-11-18", tokens: 9, items: 2, unknownUsage: true },
+		{
+			workspaceId: "workspace-1",
+			dayKey: "2026-11-18",
+			tokens: 9,
+			items: 2,
+			unknownUsage: true,
+			inputTokens: 6,
+			outputTokens: 3,
+			cacheReadTokens: 0,
+			cacheWriteTokens: 0,
+		},
 	]);
 });
 
@@ -183,3 +193,120 @@ it.each([{ tokens: 10 }, { unknownUsage: true }])(
 		expect(await disk.read()).toEqual([empty, { ...empty, ...override }]);
 	},
 );
+
+it("records cache reads separately without counting them and counts cache writes", async () => {
+	const { open, path } = fixture(10);
+	await open().record({
+		...known,
+		workspaceId: metered.workspaceId,
+		cacheReadTokens: 1_000_000,
+		cacheWriteTokens: null,
+	});
+	expect(await open().check(metered)).toBe("allowed");
+	await open().record({
+		...known,
+		workspaceId: metered.workspaceId,
+		inputTokens: 0,
+		outputTokens: 0,
+		cacheReadTokens: null,
+		cacheWriteTokens: 1,
+	});
+	expect(await open().check(metered)).toBe("denied");
+	const disk = new JsonStore<unknown>({ path, storageId: P5_SPEND_STORAGE.id, defaultValue: () => null });
+	expect(await disk.read()).toEqual([
+		{
+			workspaceId: "workspace-1",
+			dayKey: "2026-11-18",
+			tokens: 10,
+			items: 2,
+			unknownUsage: false,
+			inputTokens: 6,
+			outputTokens: 3,
+			cacheReadTokens: 1_000_000,
+			cacheWriteTokens: 1,
+		},
+	]);
+});
+
+it("denies the next metered item exactly at the explicit 10M default", async () => {
+	const { open } = fixture("default");
+	expect(await open().check(metered)).toBe("allowed");
+	await open().record({
+		...known,
+		workspaceId: metered.workspaceId,
+		inputTokens: 4_000_000,
+		outputTokens: 3_000_000,
+		cacheReadTokens: 50_000_000,
+		cacheWriteTokens: 2_999_999,
+	});
+	expect(await open().check(metered)).toBe("allowed");
+	await open().record({
+		...known,
+		workspaceId: metered.workspaceId,
+		inputTokens: 0,
+		outputTokens: 0,
+		cacheWriteTokens: 1,
+	});
+	expect(await open().check(metered)).toBe("denied");
+	expect(await open().check({ ...metered, metered: false })).toBe("allowed");
+});
+
+it("loads pre-T150 ledger totals as already counted and retains them when adding cache usage", async () => {
+	const { open, path } = fixture(10);
+	const disk = new JsonStore<unknown>({ path, storageId: P5_SPEND_STORAGE.id, defaultValue: () => null });
+	const legacy = {
+		workspaceId: "workspace-1",
+		dayKey: "2026-11-18",
+		tokens: 9,
+		items: 1,
+		unknownUsage: false,
+	};
+	await disk.write([legacy]);
+	expect(await open().check(metered)).toBe("allowed");
+	await open().record({
+		...known,
+		workspaceId: metered.workspaceId,
+		inputTokens: 0,
+		outputTokens: 0,
+		cacheReadTokens: 100,
+		cacheWriteTokens: 1,
+	});
+	expect(await open().check(metered)).toBe("denied");
+	expect(await disk.read()).toEqual([
+		{
+			...legacy,
+			tokens: 10,
+			items: 2,
+			inputTokens: 0,
+			outputTokens: 0,
+			cacheReadTokens: 100,
+			cacheWriteTokens: 1,
+		},
+	]);
+});
+
+it("records available fields of unknown usage while stopping the workspace-day", async () => {
+	const { open, path } = fixture(10);
+	await open().record({
+		...unknown,
+		workspaceId: metered.workspaceId,
+		inputTokens: 6,
+		cacheReadTokens: 100,
+		cacheWriteTokens: 4,
+	});
+	expect(await open().check(metered)).toBe("denied");
+	const disk = new JsonStore<unknown>({ path, storageId: P5_SPEND_STORAGE.id, defaultValue: () => null });
+	expect(await disk.read()).toEqual([
+		{
+			workspaceId: "workspace-1",
+			dayKey: "2026-11-18",
+			tokens: 10,
+			items: 1,
+			unknownUsage: true,
+			inputTokens: 6,
+			outputTokens: 0,
+			cacheReadTokens: 100,
+			cacheWriteTokens: 4,
+		},
+	]);
+});

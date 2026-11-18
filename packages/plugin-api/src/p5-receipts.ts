@@ -43,6 +43,8 @@ export const Usage = {
 		metered: { type: "boolean" },
 		inputTokens: nullable(nonNegativeInteger),
 		outputTokens: nullable(nonNegativeInteger),
+		cacheReadTokens: nullable(nonNegativeInteger),
+		cacheWriteTokens: nullable(nonNegativeInteger),
 		cost: nullable(
 			closedObject({
 				amountMicros: nonNegativeInteger,
@@ -50,6 +52,8 @@ export const Usage = {
 			}),
 		),
 	}),
+	// API 1.3 receipts persisted before T150 have no cache fields.
+	required: ["state", "metered", "inputTokens", "outputTokens", "cost"],
 	anyOf: [
 		{ properties: { state: { const: "unknown" } } },
 		{ properties: { inputTokens: nonNegativeInteger, outputTokens: nonNegativeInteger } },
@@ -151,6 +155,8 @@ export type Usage = {
 	readonly metered: boolean;
 	readonly inputTokens: number | null;
 	readonly outputTokens: number | null;
+	readonly cacheReadTokens?: number | null;
+	readonly cacheWriteTokens?: number | null;
 	readonly cost: { readonly amountMicros: number; readonly currency: string } | null;
 } & (
 	| { readonly state: "known"; readonly inputTokens: number; readonly outputTokens: number }
@@ -290,7 +296,7 @@ const receiptFields: Fields = {
 	resultSha256: nullOr(hash),
 	readback: readbacks,
 	parentReceiptRef: nullOr(id),
-	usage: (value, path, errors) => shape(value, usageFields, path, errors),
+	usage: (value, path, errors) => shape(value, usageFields, path, errors, Usage.required),
 };
 
 const count = fileFields.bytes;
@@ -306,6 +312,8 @@ const usageFields: Fields = {
 	metered: oneOf([true, false]),
 	inputTokens: nullOr(count),
 	outputTokens: nullOr(count),
+	cacheReadTokens: nullOr(count),
+	cacheWriteTokens: nullOr(count),
 	cost: nullOr((value, path, errors) => shape(value, costFields, path, errors)),
 };
 

@@ -1,9 +1,11 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { CriticInput, CriticResult } from "@gyoungwe/plugin-api/p5-discovery";
 import { type Scope, validateP5Receipt } from "@gyoungwe/plugin-api/p5-receipts";
 import { afterEach, expect, it, vi } from "vitest";
+import { JsonStore } from "../json-store";
+import { createP5SpendLedger } from "../services/p5-spend-ledger";
 import { StorageRegistry } from "../storage/registry";
 import { createP5CriticHandler, type P5CriticPorts } from "./p5-critic-capability";
 import { createP5PrimaryRunResolver, type PrimaryRunRecord } from "./p5-primary-run-facts";
@@ -33,7 +35,13 @@ const answer: CriticResult = {
 	journalVersion: null,
 	inquiryReceiptRefs: [],
 };
-const reported = { inputTokens: 120, outputTokens: 30, cost: null };
+const reported = {
+	inputTokens: 120,
+	outputTokens: 30,
+	cacheReadTokens: null,
+	cacheWriteTokens: null,
+	cost: null,
+};
 const directories: string[] = [];
 const caller = {
 	pluginId: "fixture",
@@ -99,8 +107,10 @@ async function fixture(metered = true, overrides: Partial<PrimaryRunRecord> = {}
 		);
 		const receipt = await open().get(request);
 		for (const [recorded] of record.mock.calls) {
-			expect(validateP5Receipt({ ...receipt, usage: recorded.usage })).toEqual({ ok: true });
-			expect(recorded.usage).toEqual(receipt?.usage);
+			const { workspaceId, ...usage } = recorded;
+			expect(workspaceId).toBe(scope.workspaceId);
+			expect(validateP5Receipt({ ...receipt, usage })).toEqual({ ok: true });
+			expect(usage).toEqual(receipt?.usage);
 		}
 		return result;
 	};
@@ -155,7 +165,7 @@ it.each([true, false])("records known token usage without cost with metered=%s",
 	expect(host.check).toHaveBeenCalledTimes(metered ? 1 : 0);
 	expect(host.record).toHaveBeenCalledExactlyOnceWith({
 		workspaceId: scope.workspaceId,
-		usage: receipt?.usage,
+		...receipt?.usage,
 	});
 	expect(await readFile(host.path, "utf8")).not.toContain(request.findingStatement);
 	expect(await host.run()).toMatchObject({ status: "failed", code: "STATE_CONFLICT" });
@@ -174,7 +184,7 @@ it.each(
 	expect((await host.open().get(request))?.usage).toEqual(expected);
 	expect(host.record).toHaveBeenCalledExactlyOnceWith({
 		workspaceId: scope.workspaceId,
-		usage: expected,
+		...expected,
 	});
 });
 it.each([
@@ -194,7 +204,7 @@ it.each(["invalid", "unknown", "throws"])(
 	"records %s model output without inventing success or usage",
 	async (mode) => {
 		const host = await fixture(false);
-		const usage = mode === "invalid" ? reported : { inputTokens: null, outputTokens: null, cost: null };
+		const usage = mode === "invalid" ? reported : { ...reported, inputTokens: null, outputTokens: null };
 		host.generateStructured.mockResolvedValue({
 			value: mode === "invalid" ? { ...answer, tools: [] } : answer,
 			usage,
@@ -218,3 +228,76 @@ it.each(["invalid", "unknown", "throws"])(
 		expect(await readFile(host.path, "utf8")).not.toContain("Synthetic private model payload");
 	},
 );
+
+it.each(
+	[undefined, null, -1, 1.5, Infinity, NaN].flatMap((count) =>
+		(["cacheReadTokens", "cacheWriteTokens"] as const).map((field) => ({ field, count })),
+	),
+)(
+	"normalizes reported cache $field=$count to null without making usage unknown",
+	async ({ field, count }) => {
+		const host = await fixture(false);
+		const usage = { ...reported, cacheReadTokens: 5, cacheWriteTokens: 7, [field]: count };
+		host.generateStructured.mockResolvedValue({ value: answer, usage });
+		expect(await host.run()).toMatchObject({ status: "ok" });
+		expect((await host.open().get(request))?.usage).toEqual({
+			...usage,
+			[field]: null,
+			state: "known",
+			metered: false,
+		});
+	},
+);
+
+it("passes the real ledger to the critic and stops the next review at the default limit", async () => {
+	const host = await fixture();
+	const spend = createP5SpendLedger({
+		path: join(dirname(host.path), "spend.json"),
+		limitFor: () => "default",
+		clock: () => new Date("2026-11-18T12:00:00Z"),
+		localDayKey: (date) => date.toISOString().slice(0, 10),
+	});
+	const usage = {
+		inputTokens: 4_000_000,
+		outputTokens: 3_000_000,
+		cacheReadTokens: 50_000_000,
+		cacheWriteTokens: 3_000_000,
+		cost: null,
+	};
+	host.generateStructured.mockResolvedValue({ value: answer, usage });
+	const broker = new PluginCapabilityBroker({
+		resources: [],
+		handlers: { "model.critic.review": createP5CriticHandler({ ...host.ports, spend }) },
+	});
+	const run = (input: CriticInput) =>
+		broker.run(
+			caller,
+			"write",
+			() => undefined,
+			async () => true,
+			() => broker.port.call("model.critic.review", input),
+		);
+	expect(await run(request)).toMatchObject({ status: "ok" });
+	expect((await host.open().get(request))?.usage).toEqual({ ...usage, state: "known", metered: true });
+	expect(await run({ ...request, requestId: "critic-2" })).toMatchObject({
+		status: "failed",
+		code: "BUDGET_EXHAUSTED",
+	});
+	expect(host.generateStructured).toHaveBeenCalledTimes(1);
+});
+
+it("reads a persisted pre-T150 receipt with no cache fields through the real receipt store", async () => {
+	const host = await fixture(false);
+	expect(await host.run()).toMatchObject({ status: "ok" });
+	const legacy = {
+		...(await host.open().get(request)),
+		usage: { state: "known", metered: false, inputTokens: 120, outputTokens: 30, cost: null },
+	};
+	const disk = new JsonStore<unknown>({
+		path: host.path,
+		storageId: "agent-p5-receipts",
+		defaultValue: () => null,
+	});
+	await disk.write([legacy]);
+	expect(await host.open().get(request)).toEqual(legacy);
+});

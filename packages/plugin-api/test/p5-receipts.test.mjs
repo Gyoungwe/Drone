@@ -69,6 +69,8 @@ const usageSchema = {
 		metered: { type: "boolean" },
 		inputTokens: { anyOf: [integer, { type: "null" }] },
 		outputTokens: { anyOf: [integer, { type: "null" }] },
+		cacheReadTokens: { anyOf: [integer, { type: "null" }] },
+		cacheWriteTokens: { anyOf: [integer, { type: "null" }] },
 		cost: {
 			anyOf: [
 				closed({ amountMicros: integer, currency: { type: "string", pattern: "^[A-Z]{3}$", maxLength: 3 } }),
@@ -76,6 +78,7 @@ const usageSchema = {
 			],
 		},
 	}),
+	required: ["state", "metered", "inputTokens", "outputTokens", "cost"],
 	anyOf: [
 		{ properties: { state: { const: "unknown" } } },
 		{ properties: { inputTokens: integer, outputTokens: integer } },
@@ -353,6 +356,8 @@ test("usage is a closed public schema and preserves known, unmetered and unknown
 	assert.deepEqual((await import("../dist/p5-receipts.js")).Usage, usageSchema);
 	for (const metadata of [
 		usage,
+		{ ...usage, cacheReadTokens: 100, cacheWriteTokens: 10 },
+		{ ...usage, cacheReadTokens: null, cacheWriteTokens: null },
 		{ ...usage, metered: false, inputTokens: 0, outputTokens: 0, cost: { ...usage.cost, amountMicros: 0 } },
 		{ state: "unknown", metered: true, inputTokens: null, outputTokens: null, cost: null },
 	]) {
@@ -370,6 +375,9 @@ for (const patch of [
 	{ inputTokens: null },
 	{ outputTokens: 0.5 },
 	{ outputTokens: null },
+	...["cacheReadTokens", "cacheWriteTokens"].flatMap((field) =>
+		[-1, 0.5, "12"].map((value) => ({ [field]: value })),
+	),
 	{ inputTokens: "12" },
 	{ prompt: "synthetic text" },
 	{ response: "synthetic text" },
