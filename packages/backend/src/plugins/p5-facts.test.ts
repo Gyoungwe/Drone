@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { Fact } from "@gyoungwe/plugin-api/p5-inquiry";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { JsonStoreCorruptedError } from "../json-store";
-import { StorageRegistry } from "../storage/registry";
+import { createDefaultStorageRegistry, StorageRegistry } from "../storage/registry";
 import { createP5FactStore, p5FactCapabilityHandlers, p5FactSummary } from "./p5-facts";
 import { PluginCapabilityBroker } from "./runtime-capabilities";
 
@@ -41,6 +41,23 @@ beforeEach(async () => {
 });
 afterEach(async () => {
 	await rm(fixture.directory, { recursive: true, force: true });
+});
+
+it("uses the default registry's private fact path and rejects a different path", () => {
+	const agentDir = fixture.directory;
+	const path = join(agentDir, "p5-facts.json");
+	const registry = createDefaultStorageRegistry({ agentDir });
+	expect(registry.get("agent-p5-facts")).toEqual({
+		id: "agent-p5-facts",
+		path,
+		owner: "plugins/p5-facts",
+		schema: 1,
+		sensitivity: "private",
+	});
+	expect(() => createP5FactStore({ path, registry })).not.toThrow();
+	expect(() => createP5FactStore({ path: fixture.path, registry })).toThrow(
+		"P5 fact storage registration does not match the journal",
+	);
 });
 
 it("persists gapless workspace sequences and reads only the host-bound session after reopen", async () => {

@@ -144,11 +144,12 @@ export function createP5FactStore(options: { readonly path: string; readonly reg
 		throw new Error("P5 fact storage registration does not match the journal");
 	const json = new JsonStore<Entry[]>({
 		path: entry.path,
-		storageId: entry.id,
+		storageId: "agent-p5-facts",
 		defaultValue: () => [],
 		parse: (text) => parseLedger(text, entry.path),
 		mode: 0o600,
 	});
+	if (json.storageId !== entry.id) throw new Error("P5 fact JsonStore has a different storage ID");
 	return {
 		append: (scope: FactScope, input: FactInput) => append({ path: entry.path, json }, scope, input),
 		read: (scope: FactScope, input: CollectInput) => read(entry.path, scope, input),
