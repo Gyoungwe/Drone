@@ -24,6 +24,8 @@ export {
 	type PluginRootGrant,
 } from "./file-capabilities";
 export type { SelectedNativeSource } from "./native-delivery";
+export { type FrozenP5Batch, freezeP5Batch } from "./p5-batch-review";
+export { type FrozenP5Bundle, freezeP5Bundle } from "./p5-bundle-review";
 export {
 	createP5FactStore,
 	P5_FACT_STORAGE,
