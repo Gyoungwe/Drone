@@ -274,6 +274,7 @@ def capabilities():
         "runnerVersion": RUNNER_VERSION,
         "version": RUNNER_VERSION,
         "protocolVersion": PROTOCOL_VERSION,
+        "cleanupEvidence": 1,
         "compatibleVersions": [RUNNER_VERSION],
         "scheduler": scheduler,
         "containerRuntime": container,
@@ -884,29 +885,129 @@ def collect(job_id, payload):
     return {"jobId": job_id, "manifest": manifest}
 
 
-def cancel(job_id):
+# ---- Identity-bound cancellation evidence (single-file deployment) ----
+
+def cleanup_group_gone(pid, seconds):
+    deadline = time.monotonic() + seconds
+    while True:
+        try:
+            os.killpg(pid, 0)
+        except ProcessLookupError:
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.05)
+
+
+def cleanup_process(pid, marker):
+    if not isinstance(pid, int) or pid <= 1:
+        return "unknown"
+    if WINDOWS:
+        if marker is not None and process_matches(pid, marker):
+            terminate_process_group(pid)
+        return "unknown"
+    try:
+        if cleanup_group_gone(pid, 0):
+            return "confirmed"
+        if marker is None:
+            return "unknown"
+        if not process_matches(pid, marker):
+            observed = process_start_marker(pid)
+            if observed is not None and observed != marker:
+                return "confirmed"
+            return "confirmed" if cleanup_group_gone(pid, 0) else "unknown"
+        # Both recorded processes start their own session; never signal a
+        # different group discovered through a reused or non-leader PID.
+        if os.getpgid(pid) != pid:
+            return "unknown"
+        for signum, seconds in ((signal.SIGTERM, 5), (signal.SIGKILL, 2)):
+            observed = process_start_marker(pid)
+            if observed is not None and observed != marker:
+                return "confirmed"
+            try:
+                os.killpg(pid, signum)
+            except ProcessLookupError:
+                return "confirmed"
+            if cleanup_group_gone(pid, seconds):
+                return "confirmed"
+        return "failed"
+    except OSError:
+        # Inaccessible process/group observations cannot prove cleanup.
+        return "unknown"
+
+
+def cleanup_direct(directory, submission):
+    child = read_json(directory / "child.json", {})
+    deadline = time.monotonic() + 5
+    # A live worker must finish publishing its child identity before signals;
+    # otherwise cancellation could strand a child between spawn and record.
+    while not child and process_matches(submission.get("pid"), submission.get("processStartMarker")):
+        if time.monotonic() >= deadline:
+            return "unknown"
+        time.sleep(0.05)
+        child = read_json(directory / "child.json", {})
+    outcomes = [cleanup_process(child.get("pid"), child.get("startMarker"))] if child else []
+    outcomes.append(cleanup_process(submission.get("pid"), submission.get("processStartMarker")))
+    return "failed" if "failed" in outcomes else "unknown" if "unknown" in outcomes else "confirmed"
+
+
+def cleanup_slurm(submission, command_runner):
+    scheduler_id = submission.get("schedulerJobId")
+    if not isinstance(scheduler_id, str) or not re.fullmatch(r"[0-9]+(?:_[0-9]+)?", scheduler_id):
+        return "unknown"
+    try:
+        result = command_runner(["scancel", scheduler_id], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, timeout=5, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return "unknown"
+    if result.returncode != 0:
+        return "failed"
+    deadline = time.monotonic() + 5
+    terminal = ("CANCELLED", "COMPLETED", "FAILED", "TIMEOUT", "OUT_OF_MEMORY", "NODE_FAIL")
+    while time.monotonic() < deadline:
+        observations = []
+        for argv in (["sacct", "-n", "-X", "-j", scheduler_id, "--parsable2", "--format=JobIDRaw,State"],
+                     ["squeue", "-h", "-j", scheduler_id, "-o", "%i|%T"]):
+            try:
+                result = command_runner(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                        timeout=max(0.001, min(2, deadline - time.monotonic())), check=False)
+            except (OSError, subprocess.TimeoutExpired):
+                return "unknown"
+            if result.returncode != 0:
+                return "unknown"
+            rows = [line.strip().split("|") for line in result.stdout.decode("utf-8", "replace").splitlines() if line.strip()]
+            if len(rows) > 1 or any(len(row) != 2 or row[0] != scheduler_id or not row[1].strip() for row in rows):
+                return "unknown"
+            observations.append(rows[0][1].split()[0].upper().rstrip("+") if rows else None)
+        accounting, queue = observations
+        if accounting in terminal and (queue is None or queue in terminal):
+            return "confirmed"
+        time.sleep(min(0.1, max(0, deadline - time.monotonic())))
+    return "unknown"
+
+
+def cancel(job_id, command_runner=subprocess.run):
     directory = ensure_prepared(job_id)
     value = read_json(status_path(directory), {})
     if not isinstance(value, dict):
         raise RunnerError("corrupt-status", "status.json is missing or invalid", True)
-    if value.get("state") in ("succeeded", "failed", "cancelled"):
-        return value
-    scheduler_id = value.get("schedulerJobId")
-    if scheduler_id:
-        try:
-            result = subprocess.run(["scancel", str(scheduler_id)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20, check=False)
-        except (OSError, subprocess.TimeoutExpired) as error:
-            raise RunnerError("cancel-unknown", "scancel could not be invoked: %s" % error, True)
-        if result.returncode != 0:
-            raise RunnerError("cancel-failed", result.stderr.decode("utf-8", "replace").strip() or "scancel failed", True)
-    elif isinstance(value.get("pid"), int) and process_matches(value["pid"], value.get("processStartMarker")):
-        child = read_json(directory / "child.json", {})
-        if isinstance(child, dict) and isinstance(child.get("pid"), int) and process_matches(child["pid"], child.get("startMarker")):
-            terminate_process_group(child["pid"])
-        terminate_process_group(value["pid"])
-    else:
-        raise RunnerError("cancel-unknown", "worker process is not present", True)
-    return write_status(directory, "cancelled", finishedAt=utc_now(), message="cancelled by request")
+    submission = read_json(directory / "submission.json", {})
+    method = "slurm" if submission.get("scheduler") == "slurm" else "direct"
+    outcome = "unknown"
+    if submission.get("jobId") == job_id:
+        if submission.get("scheduler") == "slurm":
+            outcome = cleanup_slurm(submission, command_runner)
+        elif submission.get("scheduler") == "direct":
+            outcome = cleanup_direct(directory, submission)
+        else:
+            outcome = "unsupported"
+    evidence = {"state": outcome, "jobId": job_id, "method": method, "observedAt": utc_now()}
+    state = value["state"]
+    if outcome == "confirmed" and state not in ("succeeded", "failed", "cancelled"):
+        return write_status(directory, "cancelled", cleanup=evidence, finishedAt=utc_now())
+    return write_status(directory, state, cleanup=evidence)
+
+# ---- End cancellation evidence ----
 
 
 def dispatch(request):
