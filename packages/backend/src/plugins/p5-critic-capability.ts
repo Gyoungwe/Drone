@@ -3,6 +3,7 @@ import { contractContentHash } from "@drone/shared";
 import { CriticInput, CriticResult, resultEnvelope } from "@gyoungwe/plugin-api/p5-discovery";
 import { Code, type Failure, type Result, type Scope, Usage } from "@gyoungwe/plugin-api/p5-receipts";
 import { Check } from "typebox/value";
+import type { SpendGate } from "../services/p5-spend-ledger";
 import type { createP5PrimaryRunResolver } from "./p5-primary-run-facts";
 import { createP5ReceiptObserver } from "./p5-receipt-observer";
 import type { P5ReceiptStore } from "./p5-receipt-store";
@@ -11,11 +12,6 @@ import type { PluginCapabilityContext, PluginCapabilityHandler } from "./runtime
 interface CriticProfile {
 	readonly providerId: string;
 	readonly modelId: string;
-}
-/** Workspace budgets count input + output tokens; reported cost is optional metadata. */
-export interface SpendGate {
-	check(input: { workspaceId: string; metered: boolean }): Promise<"allowed" | "denied">;
-	record(input: { workspaceId: string; usage: Usage }): Promise<void>;
 }
 export interface P5CriticPorts {
 	readonly store: P5ReceiptStore;
@@ -37,7 +33,10 @@ export interface P5CriticPorts {
 		signal: AbortSignal,
 	): Promise<{
 		readonly value: unknown;
-		readonly usage: Pick<Usage, "inputTokens" | "outputTokens" | "cost">;
+		readonly usage: Pick<
+			Usage,
+			"inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheWriteTokens" | "cost"
+		>;
 	}>;
 }
 function failure(code: Code, receiptRef: string | null = null): Failure {
@@ -96,7 +95,15 @@ async function observeCritic(
 		plan,
 		receiptRef: null,
 		invalidResult: false,
-		usage: { state: "unknown", metered: ports.metered, inputTokens: null, outputTokens: null, cost: null },
+		usage: {
+			state: "unknown",
+			metered: ports.metered,
+			inputTokens: null,
+			outputTokens: null,
+			cacheReadTokens: null,
+			cacheWriteTokens: null,
+			cost: null,
+		},
 	};
 	const store: P5ReceiptStore = {
 		...ports.store,
@@ -153,13 +160,35 @@ async function executeCritic(
 		const { inputTokens: input, outputTokens: output, cost: reportedCost } = reply.usage;
 		const inputTokens = Check(Usage.properties.inputTokens, input) ? input : null;
 		const outputTokens = Check(Usage.properties.outputTokens, output) ? output : null;
+		const cacheReadTokens = Check(Usage.properties.cacheReadTokens, reply.usage.cacheReadTokens)
+			? reply.usage.cacheReadTokens
+			: null;
+		const cacheWriteTokens = Check(Usage.properties.cacheWriteTokens, reply.usage.cacheWriteTokens)
+			? reply.usage.cacheWriteTokens
+			: null;
 		const cost = Check(Usage.properties.cost, reportedCost) ? reportedCost : null;
 		review.usage =
 			inputTokens === null || outputTokens === null
-				? { state: "unknown", metered: ports.metered, inputTokens, outputTokens, cost }
-				: { state: "known", metered: ports.metered, inputTokens, outputTokens, cost };
+				? {
+						state: "unknown",
+						metered: ports.metered,
+						inputTokens,
+						outputTokens,
+						cacheReadTokens,
+						cacheWriteTokens,
+						cost,
+					}
+				: {
+						state: "known",
+						metered: ports.metered,
+						inputTokens,
+						outputTokens,
+						cacheReadTokens,
+						cacheWriteTokens,
+						cost,
+					};
 	} finally {
-		await ports.spend.record({ workspaceId: review.scope.workspaceId, usage: review.usage });
+		await ports.spend.record({ workspaceId: review.scope.workspaceId, ...review.usage });
 	}
 	if (!Check(CriticResult, reply.value)) {
 		review.invalidResult = true;
