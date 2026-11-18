@@ -164,8 +164,14 @@ export class P5ByteTransaction {
 			}
 			check();
 			const target = join(parent, basename(plan.path));
-			if (plan.expected === null) fs.linkSync(temporary, target);
-			else fs.renameSync(temporary, target);
+			if (plan.expected === null) {
+				try {
+					fs.linkSync(temporary, target);
+				} catch (error) {
+					if ((error as NodeJS.ErrnoException).code === "EEXIST") this.fail("STATE_CONFLICT");
+					throw error;
+				}
+			} else fs.renameSync(temporary, target);
 		} finally {
 			try {
 				if (!same(fs.lstatSync(this.parent(plan.path)), identity)) this.fail("CLEANUP_FAILED");
