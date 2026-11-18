@@ -229,3 +229,134 @@ it.each(["throw", "unverified", "readback"])(
 		expect(f.port.execute).toHaveBeenCalledTimes(3);
 	},
 );
+
+it("resolves ordered durable receipts without executing, reading back or writing", async () => {
+	const f = await fixture();
+	const before = await readFile(f.path);
+	expect(await f.executor().receipts(f.reviewed)).toEqual({ status: "ok", value: [null, null, null] });
+	expect(f.port.execute).not.toHaveBeenCalled();
+	expect(f.port.readback).not.toHaveBeenCalled();
+	expect(await readFile(f.path)).toEqual(before);
+	const result = await f.executor().run(f.reviewed, f.batch);
+	if (result.status !== "ok") throw new Error("Expected batch outcome");
+	f.port.execute.mockClear();
+	f.port.readback.mockClear();
+	const fresh = f.open();
+	const accept = vi.spyOn(fresh, "accept");
+	const finish = vi.spyOn(fresh, "finish");
+	const persisted = await readFile(f.path);
+	expect(await f.executor(false, fresh).receipts(f.reviewed)).toEqual({
+		status: "ok",
+		value: result.value.items,
+	});
+	expect(f.port.execute).not.toHaveBeenCalled();
+	expect(f.port.readback).not.toHaveBeenCalled();
+	expect(accept).not.toHaveBeenCalled();
+	expect(finish).not.toHaveBeenCalled();
+	expect(await readFile(f.path)).toEqual(persisted);
+});
+
+it.each(["operation", "inputSha256", "scope"] as const)(
+	"reports a public conflict for a stored receipt with mismatched %s",
+	async (field) => {
+		const f = await fixture();
+		const result = await f.executor().run(f.reviewed, f.batch);
+		if (result.status !== "ok") throw new Error("Expected batch outcome");
+		const [receipt] = result.value.items;
+		if (!receipt) throw new Error("Expected item receipt");
+		const ledger = createP5ReceiptStore({ path: `${f.path}.conflict`, registry: new StorageRegistry() });
+		await ledger.accept(receipt, {
+			...receipt,
+			[field]: field === "scope" ? { ...scope, sessionId: "other" } : "e".repeat(64),
+			status: "accepted",
+			resultSha256: null,
+			readback: [],
+		});
+		f.port.execute.mockClear();
+		f.port.readback.mockClear();
+		expect(await f.executor(false, ledger).receipts(f.reviewed)).toEqual({
+			status: "failed",
+			code: "DUPLICATE_CONFLICT",
+			receiptRef: null,
+		});
+		expect(f.port.execute).not.toHaveBeenCalled();
+		expect(f.port.readback).not.toHaveBeenCalled();
+	},
+);
+
+it("does not start any item when the host signal is already aborted", async () => {
+	const f = await fixture();
+	const controller = new AbortController();
+	controller.abort();
+	const before = await readFile(f.path);
+	expect(await f.executor().run(f.reviewed, f.batch, { signal: controller.signal })).toEqual({
+		status: "ok",
+		value: { status: "cancelled", items: [] },
+	});
+	expect(f.port.execute).not.toHaveBeenCalled();
+	expect(await readFile(f.path)).toEqual(before);
+});
+
+it("stops before item two without creating its receipt when aborted after item one", async () => {
+	const f = await fixture();
+	const controller = new AbortController();
+	f.port.readback.mockImplementationOnce(async () => {
+		controller.abort();
+		return [file];
+	});
+	const result = await f.executor().run(f.reviewed, f.batch, { signal: controller.signal });
+	if (result.status !== "ok") throw new Error("Expected batch outcome");
+	expect(result.value.status).toBe("cancelled");
+	expect(result.value.items).toHaveLength(1);
+	expect(result.value.items[0]?.status).toBe("succeeded");
+	expect(f.port.execute.mock.calls.map(([item]) => item.id)).toEqual(["one"]);
+	expect(await f.executor(false, f.open()).receipts(f.reviewed)).toEqual({
+		status: "ok",
+		value: [...result.value.items, null, null],
+	});
+});
+
+it("passes the host signal and waits for active cleanup and its durable observation", async () => {
+	const f = await fixture();
+	const controller = new AbortController();
+	const release = vi.fn<() => void>();
+	const cleanup = new Promise<void>((resolve) => release.mockImplementation(resolve));
+	const sawAbort = vi.fn();
+	const active = new Promise<void>((resolve) => {
+		f.port.execute.mockImplementation(async (_item, _batch, context) => {
+			resolve();
+			await cleanup;
+			sawAbort(context.signal?.aborted);
+			throw new Error("Synthetic private abort reason");
+		});
+	});
+	const executor = f.executor();
+	const settled = vi.fn();
+	const running = executor.run(f.reviewed, f.batch, { signal: controller.signal }).then((result) => {
+		settled();
+		return result;
+	});
+	await active;
+	controller.abort("Synthetic private abort reason");
+	try {
+		expect(await executor.receipts(f.reviewed)).toMatchObject({
+			status: "ok",
+			value: [{ status: "accepted" }, null, null],
+		});
+		expect(settled).not.toHaveBeenCalled();
+	} finally {
+		release();
+	}
+	const result = await running;
+	if (result.status !== "ok") throw new Error("Expected batch outcome");
+	expect(result.value.status).toBe("cancelled");
+	expect(result.value.items).toHaveLength(1);
+	expect(result.value.items[0]?.status).toBe("outcome-unknown");
+	expect(f.port.execute).toHaveBeenCalledTimes(1);
+	expect(f.port.execute.mock.calls[0]?.[2].signal).toBe(controller.signal);
+	expect(sawAbort).toHaveBeenCalledWith(true);
+	expect(await Promise.all(result.value.items.map((receipt) => f.open().getByRef(receipt)))).toEqual(
+		result.value.items,
+	);
+	expect(await readFile(f.path, "utf8")).not.toContain("Synthetic private abort reason");
+});
