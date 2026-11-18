@@ -8,6 +8,7 @@ export const AGENT_DIR_ENTRIES: readonly (readonly [string, string, string, Stor
 	["agent-settings", "settings.json", "settings/settings", "config"],
 	["agent-plugin-credentials", "plugin-credentials.json", "plugins/plugin-credentials", "secret"],
 	["agent-p5-receipts", "p5-receipts.json", "plugins/p5-receipt-store", "private"],
+	["agent-p5-compute-plans", "p5-compute-plans.json", "services/p5-compute-plans", "private"],
 	["agent-p5-facts", "p5-facts.json", "plugins/p5-facts", "private"],
 	["agent-p5-spend-ledger", "p5-spend-ledger.json", "services/p5-spend-ledger", "private"],
 	["agent-zotero-web", "zotero-web.json", "zotero/web-credentials", "secret"],
