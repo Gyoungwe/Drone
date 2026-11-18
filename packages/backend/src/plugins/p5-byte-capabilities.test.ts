@@ -12,6 +12,8 @@ import { PluginCapabilityBroker } from "./runtime-capabilities";
 
 const sha256 = createHash("sha256").update("abcdef").digest("hex");
 const failed = (code: string) => ({ status: "failed", code, receiptRef: null });
+const ok = (value: unknown) => ({ status: "ok", value });
+const openInput = { requestId: "stage", path: "blob", bytes: 6 };
 type Opened = { value: { fileRef: string } };
 function fixture() {
 	const base = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "p5-capabilities-")));
@@ -33,11 +35,13 @@ function fixture() {
 	const transaction = new P5ByteTransaction(root, staging, () => owner, leases);
 	const state = { approved: true, granted: true };
 	const grantOf = vi.fn(() => (state.granted ? { staging, transaction } : undefined));
-	const broker = new PluginCapabilityBroker({
-		handlers: p5ByteCapabilityHandlers(grantOf, () => 120),
-		resources: [],
-	});
+	const handlers = p5ByteCapabilityHandlers(grantOf, () => 120);
+	const broker = new PluginCapabilityBroker({ handlers, resources: [] });
 	const authorize = vi.fn<Parameters<PluginCapabilityBroker["run"]>[3]>(async () => state.approved);
+	// Match coordinator routing: reads and own bookkeeping bypass the approval prompt.
+	const decide = vi.fn<Parameters<PluginCapabilityBroker["run"]>[3]>((...args) =>
+		args[2] === "read" || args[5] === "own" ? Promise.resolve(true) : authorize(...args),
+	);
 	const { workspaceId, sessionId } = owner;
 	const context = {
 		pluginId: "caller",
@@ -49,7 +53,7 @@ function fixture() {
 	};
 	const call = (name: string, input: unknown) => {
 		const invoke = () => broker.port.call(name, input);
-		return broker.run(context, "write", () => undefined, authorize, invoke);
+		return broker.run(context, "write", () => undefined, decide, invoke);
 	};
 	onTestFinished(() => {
 		vi.restoreAllMocks();
@@ -57,46 +61,68 @@ function fixture() {
 		leases.dispose();
 		fs.rmSync(base, { recursive: true, force: true });
 	});
-	return { base, root, owner, transaction, state, grantOf, authorize, call };
+	return { base, root, owner, transaction, state, grantOf, authorize, decide, call };
 }
 async function staged(f: ReturnType<typeof fixture>) {
-	const opened = (await f.call("bytes.stage.open", { requestId: "stage", path: "blob", bytes: 6 })) as Opened;
+	const opened = (await f.call("bytes.stage.open", openInput)) as Opened;
 	const source: StagedRef = { ...opened.value, bytes: 6, sha256 };
-	expect(await f.call("bytes.stage.chunk", { ...opened.value, offset: 0, base64: "YWJjZGVm" })).toEqual({
-		status: "ok",
-		value: null,
-	});
+	for (const offset of [0, 2, 4]) {
+		const base64 = Buffer.from("abcdef".slice(offset, offset + 2)).toString("base64");
+		expect(await f.call("bytes.stage.chunk", { ...opened.value, offset, base64 })).toEqual(ok(null));
+	}
 	expect(await f.call("bytes.stage.seal", source)).toEqual({ status: "ok", value: source });
 	return { path: "blob", source, expected: null };
 }
-it("requests fresh S for each write and returns verified file readback", async () => {
+it("requests S only for open and write across three chunks and verifies readback", async () => {
 	const f = fixture();
 	const plan = await staged(f);
-	expect(f.authorize.mock.calls.every((call) => call[5] === "always")).toBe(true);
-	f.authorize.mockClear();
 	const result = { status: "ok", value: { file: { path: "blob", bytes: 6, sha256 }, cleanup: "complete" } };
 	expect(await f.call("bytes.write", plan)).toEqual(result);
+	expect(f.authorize.mock.calls.map((call) => [call[0], call[2], call[3], call[5]])).toEqual([
+		["bytes.stage.open", "write", "application-state-write", "always"],
+		["bytes.write", "write", "application-state-write", "always"],
+	]);
 	const inspected = (await f.call("bytes.inspect", { path: "blob" })) as { value: P5ByteVersion };
 	expect(await f.call("bytes.write", { ...plan, expected: inspected.value })).toEqual(result);
-	const writes = f.authorize.mock.calls.filter(([name]) => name === "bytes.write");
-	expect(writes).toHaveLength(2);
-	expect(writes.every((call) => call[2] === "write" && call[5] === "always")).toBe(true);
 	expect(fs.readFileSync(join(f.root, "blob"), "utf8")).toBe("abcdef");
 	const ref = { fileRef: plan.source.fileRef };
 	expect(await f.call("bytes.stage.read", ref)).toEqual({ status: "ok", value: plan.source });
-	expect(await f.call("bytes.stage.cancel", ref)).toEqual({ status: "ok", value: null });
-	expect(await f.call("bytes.stage.read", ref)).toEqual(failed("SCOPE_CHANGED"));
 	f.state.granted = false;
 	expect(await f.call("bytes.inspect", { path: "blob" })).toEqual(failed("SCOPE_CHANGED"));
+	expect(await f.call("bytes.stage.read", ref)).toEqual(failed("SCOPE_CHANGED"));
+	f.state.granted = true;
+	expect(await f.call("bytes.stage.cancel", ref)).toEqual({ status: "ok", value: null });
+	expect(await f.call("bytes.stage.read", ref)).toEqual(failed("SCOPE_CHANGED"));
+	expect(f.authorize).toHaveBeenCalledTimes(3);
+	for (const call of f.decide.mock.calls)
+		if (!["bytes.stage.open", "bytes.write"].includes(call[0]))
+			expect([call[3], call[5]]).toEqual([undefined, call[2] === "read" ? undefined : "own"]);
 });
-it.each(["DENIED", "SCOPE_CHANGED"])("rejects %s without output bytes", async (code) => {
+it.each(["callerId", "sessionId", "forged", "cancelled"])("rejects %s staging refs", async (kind) => {
+	for (const operation of ["chunk", "seal", "cancel"] as const) {
+		const f = fixture();
+		const { source } = await staged(f);
+		const ref = { fileRef: kind === "forged" ? "forged" : source.fileRef };
+		if (kind === "cancelled") await f.call("bytes.stage.cancel", ref);
+		if (kind === "callerId" || kind === "sessionId") Object.assign(f.owner, { [kind]: "other" });
+		const inputs = {
+			chunk: { ...ref, offset: 0, base64: "YWJjZGVm" },
+			seal: { ...source, ...ref },
+			cancel: ref,
+		};
+		expect(await f.call(`bytes.stage.${operation}`, inputs[operation])).toEqual(failed("SCOPE_CHANGED"));
+		expect(fs.readdirSync(f.root)).toEqual([]);
+	}
+});
+it.each(["open", "write", "scope"])("rejects %s without output bytes", async (kind) => {
 	const f = fixture();
-	const plan = await staged(f);
+	const input = kind === "open" ? openInput : await staged(f);
 	f.grantOf.mockClear();
-	if (code === "DENIED") f.state.approved = false;
+	if (kind !== "scope") f.state.approved = false;
 	else Object.assign(f.owner, { sessionId: "other" });
-	expect(await f.call("bytes.write", plan)).toEqual(failed(code));
-	expect(f.grantOf).toHaveBeenCalledTimes(code === "DENIED" ? 0 : 1);
+	const operation = kind === "open" ? "bytes.stage.open" : "bytes.write";
+	expect(await f.call(operation, input)).toEqual(failed(kind === "scope" ? "SCOPE_CHANGED" : "DENIED"));
+	expect(f.grantOf).toHaveBeenCalledTimes(kind === "scope" ? 1 : 0);
 	expect(fs.readdirSync(f.root)).toEqual([]);
 });
 it("retains the writer lease after cleanup fails and exposes only the public code", async () => {
@@ -114,13 +140,10 @@ it.each(["root", "scope", "approval"])("rejects request-supplied %s before autho
 	const f = fixture();
 	const plan = await staged(f);
 	f.authorize.mockClear();
-	for (const [name, input] of [
-		["bytes.stage.open", { requestId: "forged", path: "blob", bytes: 6 }],
-		["bytes.write", plan],
-	] as const) {
-		await expect(f.call(name, { ...input, [field]: "forged" })).rejects.toThrow(
-			"Invalid plugin capability input",
-		);
+	const inputs = { "bytes.stage.open": openInput, "bytes.write": plan };
+	for (const [name, input] of Object.entries(inputs)) {
+		const rejected = f.call(name, { ...input, [field]: "forged" });
+		await expect(rejected).rejects.toThrow("Invalid plugin capability input");
 	}
 	expect(f.authorize).not.toHaveBeenCalled();
 	expect(fs.readdirSync(f.root)).toEqual([]);

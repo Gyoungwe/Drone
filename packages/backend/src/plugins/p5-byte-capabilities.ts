@@ -41,22 +41,21 @@ function handler(grantOf: GrantOf) {
 	return <Input>(
 		inputSchema: object,
 		resultSchema: object,
-		effect: Handler["effect"],
+		approval: "always" | "own" | undefined,
 		run: (grant: Grant, input: Input, context: Context) => unknown,
 	): Handler => ({
 		inputSchema,
 		resultSchema: resultEnvelope(resultSchema),
-		effect,
-		approval: "always",
-		approvalDetail: (input) => {
-			if (inputSchema === writeInput) {
-				const plan = input as P5ByteWrite;
-				Object.freeze(plan.source);
-				Object.freeze(plan.expected);
-			}
-			Object.freeze(input);
-			return "application-state-write";
-		},
+		effect: approval ? "write" : "read",
+		approval,
+		approvalDetail:
+			approval === "always"
+				? (input) => {
+						for (const value of Object.values(input as Record<string, unknown>)) Object.freeze(value);
+						Object.freeze(input);
+						return "application-state-write";
+					}
+				: undefined,
 		observe: async (_input, _context, invocation) =>
 			invocation.approved ? invocation.execute() : failure("DENIED"),
 		execute: async (input, context) => {
@@ -76,44 +75,43 @@ function handler(grantOf: GrantOf) {
 		},
 	});
 }
-/** Composition supplies current root/caller grants and host-measured envelope bytes, never JSON.
- * The broker must route every write through fresh S (application-state-write) approval.
- * Lifecycle disposal stays with composition; a failed transaction cleanup retains its lease. */
+/** Host grants supply roots, callers and envelope bytes; only open/write request S.
+ * Composition owns disposal; failed transaction cleanup retains its lease. */
 export function p5ByteCapabilityHandlers(
 	grantOf: GrantOf,
 	serializedBytes: (context: Context) => number,
 ): Record<string, Handler> {
 	const make = handler(grantOf);
 	return {
-		"bytes.stage.open": make(wire.StagedOpenInput, wire.StagedRefInput, "write", (grant, input) =>
+		"bytes.stage.open": make(wire.StagedOpenInput, wire.StagedRefInput, "always", (grant, input) =>
 			grant.staging.open(input),
 		),
 		"bytes.stage.chunk": make(
 			wire.StagedChunkInput,
 			{ type: "null" },
-			"write",
+			"own",
 			(grant, input: wire.StagedChunkInput, context) => grant.staging.chunk(input, serializedBytes(context)),
 		),
 		"bytes.stage.seal": make(
 			wire.StagedSealInput,
 			wire.StagedRef,
-			"write",
+			"own",
 			(grant, input: wire.StagedSealInput) => grant.staging.seal(input),
 		),
-		"bytes.stage.read": make(wire.StagedRefInput, wire.StagedRef, "read", metadata),
+		"bytes.stage.read": make(wire.StagedRefInput, wire.StagedRef, undefined, metadata),
 		"bytes.stage.cancel": make(
 			wire.StagedRefInput,
 			{ type: "null" },
-			"write",
+			"own",
 			(grant, input: wire.StagedRefInput) => grant.staging.cancel(input),
 		),
 		"bytes.inspect": make(
 			closed({ path: Relative }),
 			nullableVersion,
-			"read",
+			undefined,
 			(grant, input: { path: string }) => grant.transaction.inspect(input.path),
 		),
-		"bytes.write": make(writeInput, writeResult, "write", (grant, input: P5ByteWrite) => {
+		"bytes.write": make(writeInput, writeResult, "always", (grant, input: P5ByteWrite) => {
 			// Preserve staging scope failures before the transaction sanitizes staging errors.
 			grant.staging.read({ fileRef: input.source.fileRef });
 			return grant.transaction.write(input, true);
