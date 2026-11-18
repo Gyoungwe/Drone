@@ -3,7 +3,6 @@ import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readdirSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
-import { createInterface } from "node:readline";
 import type { ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type {
 	PluginNativeRuntimeFactory,
@@ -20,9 +19,16 @@ import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
 import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
 import { canonicalProjectId } from "../project-id";
-import { toolProgressSchema } from "../tool-progress";
 import { type NativeEventName, PLUGIN_EVENTS } from "./native-events";
 import { NativeMessageCourier, type NativeMessageReferences } from "./native-message-courier";
+import {
+	type Declarations,
+	executeProcessRuntimeCapability,
+	type Message,
+	type NativeToolUpdate,
+	type PendingInvocation,
+	readProcessRuntimeMessages,
+} from "./process-runtime-messages";
 import { PROCESS_RUNTIME_WORKER } from "./process-runtime-worker";
 
 export interface ProcessPluginRuntimeOptions {
@@ -35,62 +41,6 @@ export interface ProcessPluginRuntimeOptions {
 	readonly resource?: { readonly storageDirectory: string; readonly parameters: unknown };
 }
 
-const declarationSchema = Type.Record(
-	Type.String(),
-	Type.Object({
-		inputSchema: Type.Record(Type.String(), Type.Unknown()),
-		resultSchema: Type.Record(Type.String(), Type.Unknown()),
-		effect: Type.Union([Type.Literal("read"), Type.Literal("write")]),
-	}),
-);
-type NativeToolUpdate = NonNullable<Parameters<ToolDefinition["execute"]>[3]>;
-
-const messageSchema = Type.Union([
-	Type.Object({ type: Type.Literal("native_update"), id: Type.String(), value: toolProgressSchema }),
-	Type.Object(
-		{
-			type: Type.Literal("dispose_resources"),
-			id: Type.String({ minLength: 1 }),
-			callId: Type.String({ minLength: 1 }),
-		},
-		{ additionalProperties: false },
-	),
-	Type.Object({ type: Type.Literal("ready"), operations: declarationSchema, native: Type.Boolean() }),
-	Type.Object({
-		type: Type.Literal("result"),
-		id: Type.String(),
-		ok: Type.Literal(true),
-		value: Type.Unknown(),
-	}),
-	Type.Object({
-		type: Type.Literal("result"),
-		id: Type.String(),
-		ok: Type.Literal(false),
-		error: Type.String(),
-	}),
-	Type.Object({ type: Type.Literal("error"), error: Type.String() }),
-	Type.Object({ type: Type.Literal("canceled") }),
-	Type.Object({ type: Type.Literal("changed") }),
-	Type.Object({
-		type: Type.Literal("capability"),
-		cancelKey: Type.String({ minLength: 1 }),
-		id: Type.String({ minLength: 1 }),
-		callId: Type.String({ minLength: 1 }),
-		name: Type.String({ minLength: 1 }),
-		input: Type.Unknown(),
-	}),
-	Type.Object(
-		{
-			type: Type.Literal("cancel_capability"),
-			id: Type.String({ minLength: 1 }),
-			callId: Type.String({ minLength: 1 }),
-			cancelKey: Type.String({ minLength: 1 }),
-		},
-		{ additionalProperties: false },
-	),
-]);
-type Message = Static<typeof messageSchema>;
-type Declarations = { operations: Static<typeof declarationSchema>; native: boolean };
 const nativeDeclarationsSchema = Type.Object({
 	tools: Type.Array(
 		Type.Object({
@@ -371,14 +321,9 @@ class RuntimeProcess {
 	>();
 	private readonly pending = new Map<
 		string,
-		{
-			resolve: (value: unknown) => void;
-			reject: (error: Error) => void;
-			cleanup: () => void;
+		PendingInvocation & {
 			budget: GuestTimeBudget;
 			context?: PluginRuntimeContext;
-			onUpdate?: NativeToolUpdate;
-			signal?: AbortSignal;
 		}
 	>();
 	private readonly ready: Promise<Declarations>;
@@ -400,23 +345,22 @@ class RuntimeProcess {
 			this.resolveReady = resolve;
 			this.rejectReady = reject;
 		});
-		const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
+		const lines = readProcessRuntimeMessages(child.stdout, {
+			failed: () => this.failure !== undefined,
+			context,
+			pending: this.pending,
+			fail: (error) => this.fail(error),
+			ready: (declarations) => this.resolveReady(declarations),
+			disposeResources: (message) => this.receiveResourceCleanup(message),
+			cancelCapability: (message) => {
+				const call = this.hostCapabilities.get(message.id);
+				if (call?.callId === message.callId && call.cancelKey === message.cancelKey)
+					call.abort.abort(new Error("Plugin capability locally canceled"));
+			},
+			capability: (message) => this.capability(message),
+		});
 		child.stderr.on("data", (chunk: Buffer) => {
 			this.stderr = `${this.stderr}${chunk.toString("utf8")}`.slice(-8000);
-		});
-		lines.on("line", (line) => {
-			let message: unknown;
-			try {
-				message = JSON.parse(line);
-			} catch (error) {
-				this.fail(new Error("Plugin runtime emitted invalid JSON", { cause: error }));
-				return;
-			}
-			if (!Check(messageSchema, message)) {
-				this.fail(new Error("Plugin runtime emitted an invalid protocol message"));
-				return;
-			}
-			this.receive(message as Message);
 		});
 		child.once("error", (error) => this.fail(error));
 		child.stdin.on("error", (error) => this.fail(error));
@@ -484,90 +428,32 @@ class RuntimeProcess {
 		if (!this.failure) this.child.stdin.write(`${JSON.stringify(message)}\n`);
 	}
 
-	private receive(message: Message): void {
-		if (this.failure) return;
-		if (message.type === "canceled") {
-			this.fail(
-				this.context.signal.aborted
-					? this.context.signal.reason
-					: new Error("Plugin runtime canceled without host cancellation"),
-			);
+	private receiveResourceCleanup(message: Extract<Message, { type: "dispose_resources" }>): void {
+		const budget =
+			message.callId === "bootstrap" ? this.bootstrapBudget : this.pending.get(message.callId)?.budget;
+		if (!budget) {
+			this.fail(new Error("Plugin resource cleanup requires its actual parent invocation"));
 			return;
 		}
-		if (message.type === "dispose_resources") {
-			const budget =
-				message.callId === "bootstrap" ? this.bootstrapBudget : this.pending.get(message.callId)?.budget;
-			if (!budget) {
-				this.fail(new Error("Plugin resource cleanup requires its actual parent invocation"));
-				return;
-			}
-			budget.pause();
-			const cleanup = this.disposeResources(message.id);
-			this.resourceCleanups.add(cleanup);
-			void cleanup.then(
-				() => {
-					this.resourceCleanups.delete(cleanup);
-					budget.resume();
-				},
-				() => {
-					this.resourceCleanups.delete(cleanup);
-					budget.resume();
-				},
-			);
-			if (this.shutdownPending) {
-				clearTimeout(this.shutdownTimer);
-				this.shutdownTimer = undefined;
-				this.shutdownPending = undefined;
-				this.boundShutdown();
-			}
-			return;
+		budget.pause();
+		const cleanup = this.disposeResources(message.id);
+		this.resourceCleanups.add(cleanup);
+		void cleanup.then(
+			() => {
+				this.resourceCleanups.delete(cleanup);
+				budget.resume();
+			},
+			() => {
+				this.resourceCleanups.delete(cleanup);
+				budget.resume();
+			},
+		);
+		if (this.shutdownPending) {
+			clearTimeout(this.shutdownTimer);
+			this.shutdownTimer = undefined;
+			this.shutdownPending = undefined;
+			this.boundShutdown();
 		}
-		if (message.type === "cancel_capability") {
-			const call = this.hostCapabilities.get(message.id);
-			if (call?.callId === message.callId && call.cancelKey === message.cancelKey)
-				call.abort.abort(new Error("Plugin capability locally canceled"));
-			return;
-		}
-		if (message.type === "capability") {
-			this.capability(message);
-			return;
-		}
-		if (message.type === "changed") {
-			if (!this.context.signal.aborted) this.context.events.changed();
-			return;
-		}
-		if (message.type === "ready") {
-			this.resolveReady({ operations: message.operations, native: message.native });
-			return;
-		}
-		if (message.type === "error") {
-			this.fail(new Error(message.error));
-			return;
-		}
-		const pending = this.pending.get(message.id);
-		if (!pending) {
-			this.fail(new Error("Plugin runtime replied to an unknown invocation"));
-			return;
-		}
-		if (message.type === "native_update") {
-			if (!pending.onUpdate) {
-				this.fail(new Error("Plugin runtime sent an unrequested tool update"));
-				return;
-			}
-			if (!pending.signal?.aborted) {
-				try {
-					pending.onUpdate(message.value as Parameters<NativeToolUpdate>[0]);
-				} catch (error) {
-					// A failed SDK observer must reject this runtime, never escape the protocol listener.
-					this.fail(error as Error);
-				}
-			}
-			return;
-		}
-		this.pending.delete(message.id);
-		pending.cleanup();
-		if (message.ok) pending.resolve(message.value);
-		else pending.reject(new Error(message.error));
 	}
 
 	private async disposeResources(id: string): Promise<void> {
@@ -598,7 +484,9 @@ class RuntimeProcess {
 			message.callId === "bootstrap" ? this.bootstrapBudget : this.pending.get(message.callId)?.budget;
 		budget?.pause();
 		const abort = new AbortController();
-		const settled = Promise.resolve().then(() => this.executeCapability(message, context, abort));
+		const settled = Promise.resolve().then(() =>
+			executeProcessRuntimeCapability(message, context, abort, (response) => this.send(response)),
+		);
 		this.hostCapabilities.set(message.id, {
 			callId: message.callId,
 			cancelKey: message.cancelKey,
@@ -615,31 +503,6 @@ class RuntimeProcess {
 				budget?.resume();
 			},
 		);
-	}
-
-	private async executeCapability(
-		message: Extract<Message, { type: "capability" }>,
-		context: PluginRuntimeFactoryContext | PluginRuntimeContext,
-		abort: AbortController,
-	): Promise<void> {
-		try {
-			context.signal.throwIfAborted();
-			const value = await context.capabilities.call(message.name, message.input, abort.signal);
-			context.signal.throwIfAborted();
-			this.send({ type: "capability_result", id: message.id, ok: true, value });
-		} catch (error) {
-			this.send({
-				type: "capability_result",
-				id: message.id,
-				ok: false,
-				error: error instanceof Error ? error.message : String(error),
-				...(error instanceof Error &&
-				Object.hasOwn(error, "code") &&
-				typeof (error as Error & { code?: unknown }).code === "string"
-					? { code: (error as Error & { code: string }).code }
-					: {}),
-			});
-		}
 	}
 
 	async start(): Promise<PluginNativeRuntimeInstance> {
