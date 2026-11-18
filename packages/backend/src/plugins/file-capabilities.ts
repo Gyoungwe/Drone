@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Stats } from "node:fs";
 import { constants } from "node:fs";
 import { link, lstat, mkdir, open, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
 	MAX_BINARY_BASE64,
 	readBinaryStateFile,
@@ -21,6 +21,14 @@ import type {
 import { Type } from "typebox";
 import { JsonStore, JsonStoreCorruptedError } from "../json-store";
 import type { StorageRegistry } from "../storage/registry";
+import {
+	assertCleanupComplete,
+	checkRoot,
+	grantRoot,
+	reservationPath,
+	reserveState,
+	resolveRootPath,
+} from "./plugin-root-checks";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 import { MAX_FILE_BINARY_BASE64, MAX_FILE_BINARY_BYTES, readStableFileBytes } from "./stable-file-bytes";
 
@@ -137,53 +145,15 @@ export class PluginFileCapabilities {
 	}
 
 	private grant(input: PluginFileInput, call: PluginFileCall, expected: Root["kind"]): Root {
-		call.signal.throwIfAborted();
-		const root = this.roots.get(input.root);
-		if (!root || root.kind !== expected) throw new Error("Plugin root capability was not granted");
-		if (call.bootstrap && root.kind !== "state") throw new Error("Bootstrap may only read approved state");
-		if (
-			root.scope.kind === "workspace" &&
-			(call.scope.kind === "application" || call.scope.workspaceId !== root.scope.workspaceId)
-		) {
-			throw new Error("Plugin root belongs to another workspace");
-		}
-		if (
-			isAbsolute(input.path) ||
-			input.path.includes("\\") ||
-			input.path.includes("\0") ||
-			(input.path !== "" && input.path.split("/").some((part) => !part || part === "." || part === ".."))
-		) {
-			throw new Error("Expected a root-relative path without traversal");
-		}
-		return root;
+		return grantRoot(this.roots, input, call, expected);
 	}
 
-	private async checkRoot(root: Root): Promise<void> {
-		let current: Stats;
-		try {
-			current = await lstat(root.path);
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-			throw new Error("Plugin root disappeared after authorization", { cause: error });
-		}
-		if (!current.isDirectory() || current.dev !== root.identity.dev || current.ino !== root.identity.ino) {
-			throw new Error("Plugin root changed after authorization");
-		}
+	private checkRoot(root: Root): Promise<void> {
+		return checkRoot(root);
 	}
 
-	private async path(root: Root, relativePath: string): Promise<string> {
-		await this.checkRoot(root);
-		let path = root.path;
-		for (const part of relativePath === "" ? [] : relativePath.split("/")) {
-			path = join(path, part);
-			if ((await lstat(path)).isSymbolicLink()) throw new Error("Plugin file reads do not follow symlinks");
-		}
-		const actual = await realpath(path);
-		const suffix = relative(root.path, actual);
-		if (isAbsolute(suffix) || suffix === ".." || suffix.startsWith(`..${sep}`)) {
-			throw new Error("Plugin file escaped its granted root");
-		}
-		return actual;
+	private path(root: Root, relativePath: string): Promise<string> {
+		return resolveRootPath(root, relativePath);
 	}
 
 	private async snapshot(
@@ -263,13 +233,8 @@ export class PluginFileCapabilities {
 	}
 
 	/** Canonical identity for a resource reservation inside an already approved root. */
-	async reservationPath(input: PluginFileInput, call: PluginFileCall): Promise<string> {
-		const registered = this.roots.get(input.root);
-		if (!registered) throw new Error("Plugin root capability was not granted");
-		const root = this.grant(input, call, registered.kind);
-		const result = await this.path(root, input.path);
-		call.signal.throwIfAborted();
-		return result;
+	reservationPath(input: PluginFileInput, call: PluginFileCall): Promise<string> {
+		return reservationPath(this.roots, input, call);
 	}
 
 	/** Describe this activation's approved roots only, without authorizing any new path. */
@@ -297,20 +262,7 @@ export class PluginFileCapabilities {
 
 	/** Reserve an already approved JSON state directory, without creating a resource process. */
 	reserveState(input: PluginFileInput, call: PluginFileCall): Promise<{ reserved: true }> {
-		return this.mutate(call, async () => {
-			const registered = this.roots.get(input.root);
-			if (!registered || (registered.kind !== "state" && registered.kind !== "binary-state"))
-				throw new Error("Plugin state writer access was not granted");
-			const root = this.grant(input, call, registered.kind);
-			if (call.bootstrap || !(root.stateWrite || root.binaryStateWrite))
-				throw new Error("Plugin state writer access was not granted");
-			const directory = await this.path(root, input.path);
-			if (!(await lstat(directory)).isDirectory())
-				throw new Error("State writer requires an existing directory");
-			call.signal.throwIfAborted();
-			this.reservations.reserve("state-writers", [directory]);
-			return { reserved: true };
-		});
+		return this.mutate(call, () => reserveState(this.roots, this.reservations, input, call));
 	}
 
 	/** Drain accepted filesystem mutations and prove cleanup before any activation lease is released. */
@@ -320,10 +272,7 @@ export class PluginFileCapabilities {
 	}
 
 	private assertCleanupComplete(): void {
-		if (this.cleanupFailure)
-			throw new Error("Plugin file cleanup failed; writer reservations retained", {
-				cause: this.cleanupFailure,
-			});
+		assertCleanupComplete(this.cleanupFailure);
 	}
 
 	/** Host final-release hook; call only after successful domain and resource cleanup. */
