@@ -31,6 +31,7 @@ import {
 	sameFile,
 	version,
 } from "./plugin-root-checks";
+import { createPluginWriterAuthorityView, type PluginWriterAuthorityView } from "./plugin-writer-authority";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 import { MAX_FILE_BINARY_BASE64, MAX_FILE_BINARY_BYTES, readStableFileBytes } from "./stable-file-bytes";
 
@@ -95,6 +96,10 @@ export class PluginFileCapabilities {
 		private readonly cacheRoot: { path: string; identity: Stats },
 		private readonly reservations: PluginResourceReservations,
 	) {}
+
+	writerAuthority(): PluginWriterAuthorityView {
+		return createPluginWriterAuthorityView(this.roots, this.reservations);
+	}
 
 	static async create(
 		grants: readonly PluginRootGrant[],
