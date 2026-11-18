@@ -9,6 +9,8 @@ import type { P5ReceiptStore } from "./p5-receipt-store";
 interface HostContext {
 	/** Host-derived background/unattended policy; never taken from request JSON. */
 	readonly metered: boolean;
+	/** Host-owned cancellation; execution settles only after its cleanup is drained. */
+	readonly signal?: AbortSignal;
 }
 interface ItemOutcome {
 	/** True only when the host port verified execution completed successfully. */
@@ -28,7 +30,7 @@ interface Ports {
 	now(): string;
 }
 interface BatchOutcome {
-	readonly status: "complete" | "blocked";
+	readonly status: "complete" | "blocked" | "cancelled";
 	readonly items: readonly Receipt[];
 }
 const operation = "execution.batch.run";
@@ -38,6 +40,24 @@ function failure(code: Failure["code"]): Failure {
 function itemRequest(batch: FrozenP5Batch, item: Item) {
 	// Stable across fresh reviews, while changed plans conflict instead of dispatching again.
 	return { requestId: `p5-item:${contractContentHash([batch.scope, batch.request.requestId, item.id])}` };
+}
+async function batchReceipts(
+	store: P5ReceiptStore,
+	batch: FrozenP5Batch,
+): Promise<Result<readonly (Receipt | null)[]>> {
+	const items: (Receipt | null)[] = [];
+	for (const item of batch.request.items) {
+		const existing = await store.get(itemRequest(batch, item));
+		if (
+			existing &&
+			(existing.inputSha256 !== batch.sha256 ||
+				existing.operation !== operation ||
+				!isDeepStrictEqual(existing.scope, batch.scope))
+		)
+			return failure("DUPLICATE_CONFLICT");
+		items.push(existing ?? null);
+	}
+	return { status: "ok", value: items };
 }
 function itemUsage(
 	item: Item,
@@ -51,7 +71,12 @@ function itemUsage(
 	return verified ? { ...outcome.usage, metered } : { ...outcome.usage, metered, state: "unknown" };
 }
 
-async function runItem(ports: Ports, reviewed: ReviewedP5Batch, item: Item): Promise<Receipt> {
+async function runItem(
+	ports: Ports,
+	reviewed: ReviewedP5Batch,
+	item: Item,
+	context: HostContext,
+): Promise<Receipt> {
 	const { batch } = reviewed;
 	const request = itemRequest(batch, item);
 	const expectedReadback = structuredClone(ports.port.expectedReadback(item, batch));
@@ -73,7 +98,7 @@ async function runItem(ports: Ports, reviewed: ReviewedP5Batch, item: Item): Pro
 			},
 			expectedReadback,
 			execute: async () => {
-				outcome = await ports.port.execute(item, batch, ports.context);
+				outcome = await ports.port.execute(item, batch, context);
 				if (!outcome.verified) throw new Error("P5 item outcome is unverified");
 				return outcome;
 			},
@@ -82,7 +107,7 @@ async function runItem(ports: Ports, reviewed: ReviewedP5Batch, item: Item): Pro
 				verified = isDeepStrictEqual(actual, expectedReadback);
 				return actual;
 			},
-			usage: () => itemUsage(item, ports.context, outcome, verified),
+			usage: () => itemUsage(item, context, outcome, verified),
 		});
 	} catch (error) {
 		// R3 already persisted these content-free outcomes; persistence/internal errors still propagate.
@@ -101,24 +126,30 @@ async function runItem(ports: Ports, reviewed: ReviewedP5Batch, item: Item): Pro
 /** Host-private runner only. T1 supplies live review authority; receipts only suppress repeat effects. */
 export function createP5BatchExecutor(ports: Ports) {
 	return {
-		async run(reviewed: ReviewedP5Batch, candidate: FrozenP5Batch): Promise<Result<BatchOutcome>> {
+		/** Read-only reconciliation; identity mismatches return DUPLICATE_CONFLICT. */
+		receipts(reviewed: ReviewedP5Batch): Promise<Result<readonly (Receipt | null)[]>> {
+			return batchReceipts(ports.store, reviewed.batch);
+		},
+		async run(
+			reviewed: ReviewedP5Batch,
+			candidate: FrozenP5Batch,
+			options?: { signal?: AbortSignal },
+		): Promise<Result<BatchOutcome>> {
 			if (!ports.reviewer.validates(reviewed, candidate)) return failure("DENIED");
 			const batch = reviewed.batch;
 			if (candidate.sha256 !== batch.sha256) return failure("STATE_CONFLICT");
 			if (batch.request.items.some((item) => item.execution.kind === "model"))
 				return failure("MODEL_UNAVAILABLE");
-			for (const item of batch.request.items) {
-				const existing = await ports.store.get(itemRequest(batch, item));
-				if (
-					existing &&
-					(existing.inputSha256 !== batch.sha256 ||
-						existing.operation !== operation ||
-						!isDeepStrictEqual(existing.scope, batch.scope))
-				)
-					return failure("DUPLICATE_CONFLICT");
-			}
+			const existing = await batchReceipts(ports.store, batch);
+			if (existing.status === "failed") return existing;
+			const signal = options?.signal;
+			const context = signal ? { ...ports.context, signal } : ports.context;
 			const items: Receipt[] = [];
-			for (const item of reviewed.batch.request.items) items.push(await runItem(ports, reviewed, item));
+			for (const item of reviewed.batch.request.items) {
+				if (signal?.aborted) break;
+				items.push(await runItem(ports, reviewed, item, context));
+			}
+			if (signal?.aborted) return { status: "ok", value: { status: "cancelled", items } };
 			return {
 				status: "ok",
 				value: { status: items.every((item) => item.status === "succeeded") ? "complete" : "blocked", items },
