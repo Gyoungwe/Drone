@@ -9,6 +9,7 @@ import type {
 	PluginServiceRequirement,
 	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
+import { type InstalledP5Declaration, p5Optins } from "./installed-p5-optins";
 import { installedPackageGraph } from "./installed-package-graph";
 import { type NetworkDeclaration, networkDeclaration } from "./network-declaration";
 
@@ -63,8 +64,7 @@ export function installedPackageHash(root: string): string {
 	walk(canonicalRoot, "");
 	return hash.digest("hex");
 }
-
-export interface InstalledUiRuntimeSource extends NetworkDeclaration {
+export interface InstalledUiRuntimeSource extends NetworkDeclaration, InstalledP5Declaration {
 	pluginId: string;
 	contentHash: string;
 	deliveryProjection?: "required";
@@ -91,7 +91,6 @@ export interface InstalledUiRuntimeSource extends NetworkDeclaration {
 	requestsWorkspaceRead?: boolean;
 	resources?: Readonly<Record<string, string>>;
 }
-
 export type InstalledPackageDiscovery =
 	| { packageName: string; packageRoot: string; uiDir?: string; runtime?: InstalledUiRuntimeSource }
 	| { packageName: string; error: string };
@@ -270,6 +269,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 							requires?: unknown;
 							consumes?: unknown;
 							recordAdoptions?: unknown;
+							p5?: unknown;
 						};
 						permissions?: { filesystem?: unknown; network?: unknown; subprocess?: unknown };
 					},
@@ -336,7 +336,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 						throw new Error("drone.workspaceRead must be session when declared");
 					runtime.requestsWorkspaceRead = true;
 				}
-				Object.assign(runtime, installedServices(manifest.drone ?? {}));
+				Object.assign(runtime, installedServices(manifest.drone ?? {}), p5Optins(manifest.drone?.p5));
 				if (manifest.drone?.recordAdoptions !== undefined)
 					runtime.recordAdoptions = installedRecordAdoptions(
 						manifest.drone.recordAdoptions,
