@@ -41,6 +41,33 @@ afterEach(() => {
 	else process.env.DRONE_REMOTE_ROOT = previousRemoteRoot;
 });
 
+async function createCancelFixture() {
+	const registryBeforeFixture = process.env.DRONE_RUNNER_WORKFLOW_REGISTRY;
+	const remoteRootBeforeFixture = process.env.DRONE_REMOTE_ROOT;
+	const root = await mkdtemp(join(tmpdir(), "drone-cancel-fixture-"));
+	const release = join(root, "release");
+	const script = join(root, "workflow.py");
+	await writeFile(
+		script,
+		`from pathlib import Path\nfrom threading import Event\nwhile not Path(${JSON.stringify(release)}).exists():\n    Event().wait(0.01)\n`,
+	);
+	const registry = join(root, "registry.json");
+	await writeFile(registry, JSON.stringify({ "test/workflow": ["python3", script] }));
+	process.env.DRONE_RUNNER_WORKFLOW_REGISTRY = registry;
+	const remoteRoot = join(root, "remote");
+	process.env.DRONE_REMOTE_ROOT = remoteRoot;
+	return {
+		release,
+		remoteRoot,
+		restore() {
+			if (registryBeforeFixture === undefined) delete process.env.DRONE_RUNNER_WORKFLOW_REGISTRY;
+			else process.env.DRONE_RUNNER_WORKFLOW_REGISTRY = registryBeforeFixture;
+			if (remoteRootBeforeFixture === undefined) delete process.env.DRONE_REMOTE_ROOT;
+			else process.env.DRONE_REMOTE_ROOT = remoteRootBeforeFixture;
+		},
+	};
+}
+
 describe("DefaultComputeExecutor", () => {
 	it("runs the complete local runner lifecycle and collects checksummed outputs", async () => {
 		const executor = new DefaultComputeExecutor();
@@ -69,18 +96,7 @@ describe("DefaultComputeExecutor", () => {
 	});
 
 	it("supports cancellation before the fixture finishes", async () => {
-		const root = await mkdtemp(join(tmpdir(), "drone-cancel-fixture-"));
-		const release = join(root, "release");
-		const script = join(root, "workflow.py");
-		await writeFile(
-			script,
-			`from pathlib import Path\nfrom threading import Event\nwhile not Path(${JSON.stringify(release)}).exists():\n    Event().wait(0.01)\n`,
-		);
-		const registry = join(root, "registry.json");
-		await writeFile(registry, JSON.stringify({ "test/workflow": ["python3", script] }));
-		process.env.DRONE_RUNNER_WORKFLOW_REGISTRY = registry;
-		const remoteRoot = join(root, "remote");
-		process.env.DRONE_REMOTE_ROOT = remoteRoot;
+		const { release, remoteRoot, restore } = await createCancelFixture();
 		const executor = new DefaultComputeExecutor();
 		try {
 			await executor.submit({ ...spec, jobId: "cancel-job" }, host);
@@ -119,6 +135,7 @@ describe("DefaultComputeExecutor", () => {
 				});
 			} finally {
 				await executor.dispose();
+				restore();
 			}
 		}
 	});
