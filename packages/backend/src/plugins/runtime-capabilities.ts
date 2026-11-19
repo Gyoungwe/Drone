@@ -57,7 +57,8 @@ export interface PluginCapabilityHandler {
 	readonly readCallable?: true;
 	/** Only pre-approved application state reads may run while constructing an owner. */
 	readonly bootstrap?: true;
-	/** Host-owned formatter, called only after capability input schema validation. */
+	/** Host-only snapshot used as input to detail, observation and execution after validation. */
+	prepare?(input: unknown, context: PluginCapabilityContext): Promise<unknown>;
 	approvalDetail?(
 		input: unknown,
 		facts: Pick<PluginCapabilityContext, "pluginId" | "applicationId" | "scope">,
@@ -240,29 +241,28 @@ export class PluginCapabilityBroker {
 			if (!handler.bootstrap || handler.effect !== "read")
 				throw new Error(`Plugin capability is unavailable during bootstrap: ${name}`);
 		}
+		const prepared = handler.prepare ? await handler.prepare(input, authority.context) : input;
+		if (handler.prepare) check();
+		const { pluginId, applicationId, scope } = authority.context;
 		const approved =
 			authority.context.bootstrap ||
 			(await authority.authorize(
 				name,
 				input,
 				handler.effect,
-				handler.approvalDetail?.(input, {
-					pluginId: authority.context.pluginId,
-					applicationId: authority.context.applicationId,
-					scope: authority.context.scope,
-				}),
+				handler.approvalDetail?.(prepared, { pluginId, applicationId, scope }),
 				authority.context.signal,
 				handler.approval,
 			));
 		const execute = async () => {
 			if (!approved) throw new Error(`Plugin capability denied: ${name}`);
 			check();
-			const result = await this.calls.run(authority, () => handler.execute(input, authority.context));
+			const result = await this.calls.run(authority, () => handler.execute(prepared, authority.context));
 			check();
 			if (!Check(handler.resultSchema, result)) throw new Error(`Invalid plugin capability result: ${name}`);
 			return result;
 		};
-		if (handler.observe) return handler.observe(input, authority.context, { approved, execute });
+		if (handler.observe) return handler.observe(prepared, authority.context, { approved, execute });
 		return execute();
 	}
 }
