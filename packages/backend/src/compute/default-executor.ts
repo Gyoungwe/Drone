@@ -29,12 +29,12 @@ import type {
 	ComputeTerminalSession,
 } from "../services/compute";
 import {
+	ComputeOperationLifetime,
 	ComputeTransportError,
-	cancelWithRetry,
+	cancelWithEvidence,
 	resolveInside,
 	safeRelativePath,
 	sha256,
-	writeCollectedArtifacts,
 } from "./compute-operation-lifetime";
 
 const MIN_RUNNER_VERSION = "1.0.0";
@@ -1092,6 +1092,7 @@ class OpenSshRunnerTransport implements CollectingTransport {
 }
 
 export class DefaultComputeExecutor implements ComputeExecutor {
+	private readonly lifetime = new ComputeOperationLifetime();
 	private readonly transports = new Map<string, CollectingTransport>();
 	private readonly transportPromises = new Map<string, Promise<CollectingTransport>>();
 	private readonly concurrency = new Map<string, HostConcurrency>();
@@ -1273,11 +1274,7 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 	async cancel(job: JobRecord, host: HostProfile): Promise<ComputeStatusResult> {
 		return await this.limited(host, async () => {
 			const { client } = await this.client(host);
-			const value = (await cancelWithRetry(client, job.remoteId ?? job.jobId)) as {
-				status?: JobRecord["status"];
-				remoteId?: string;
-			};
-			return { status: value.status ?? "cancelled", remoteId: value.remoteId ?? job.remoteId };
+			return await cancelWithEvidence(client, job);
 		});
 	}
 
@@ -1286,6 +1283,8 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 		host: HostProfile,
 		options?: ComputeCollectOptions,
 	): Promise<{ manifest: ArtifactManifest }> {
+		// Admission and write tracking share the executor's disposal fence.
+		this.lifetime.assertActive();
 		const { client, transport } = await this.client(host);
 		const maxBytes = options?.maxBytes ?? this.options.maxCollectBytes ?? DEFAULT_MAX_COLLECT_BYTES;
 		const expected = options?.expected?.map((path) => ({ path }));
@@ -1321,7 +1320,7 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 		});
 		if (!validation.valid) throw new ComputeTransportError("invalid-manifest", validation.errors.join("; "));
 		if (options) {
-			await writeCollectedArtifacts(value.manifest.entries, options.targetDir, maxBytes, (path, maxBytes) => {
+			await this.lifetime.write(value.manifest.entries, options.targetDir, maxBytes, (path, maxBytes) => {
 				const root = this.remoteRoot(host);
 				const source =
 					transport instanceof LocalRunnerTransport
@@ -1384,6 +1383,7 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 	}
 
 	async dispose(): Promise<void> {
+		await this.lifetime.dispose();
 		for (const transport of this.transports.values()) await transport.close?.();
 		this.transports.clear();
 	}

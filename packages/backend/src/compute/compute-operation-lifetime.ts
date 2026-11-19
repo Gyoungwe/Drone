@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { lstat, mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import type { ArtifactManifest, RunnerClient } from "@drone/compute";
+import { type ArtifactManifest, isJobState, type JobRecord, type RunnerClient } from "@drone/compute";
+import type { ComputeStatusResult } from "../services/compute";
 
 export class ComputeTransportError extends Error {
 	readonly code: string;
@@ -53,6 +54,69 @@ export async function cancelWithRetry(client: RunnerClient, remoteId: string): P
 			if (!retryable || attempt >= 4) throw error;
 			await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
 		}
+	}
+}
+
+function runnerRecord(value: unknown): Record<string, unknown> {
+	return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+function validatedCleanup(value: unknown, jobId: string, method: "direct" | "slurm") {
+	const evidence = runnerRecord(value);
+	if (
+		(evidence.state === "confirmed" ||
+			evidence.state === "unknown" ||
+			evidence.state === "failed" ||
+			evidence.state === "unsupported") &&
+		evidence.jobId === jobId &&
+		(evidence.method === "direct" || evidence.method === "slurm") &&
+		typeof evidence.observedAt === "string"
+	) {
+		return { state: evidence.state, jobId, method: evidence.method, observedAt: evidence.observedAt };
+	}
+	return { state: "unknown", jobId, method };
+}
+
+export async function cancelWithEvidence(client: RunnerClient, job: JobRecord): Promise<ComputeStatusResult> {
+	const jobId = job.remoteId ?? job.jobId;
+	const { capabilities } = await client.negotiate();
+	// RunnerClient's normalized capabilities omit cleanupEvidence; inspect the wire advertisement.
+	const advertised = runnerRecord(await client.execute("capabilities"));
+	const method = capabilities.scheduler === "slurm" ? "slurm" : "direct";
+	const value = runnerRecord(await cancelWithRetry(client, jobId));
+	return {
+		status: isJobState(value.state) ? value.state : "unknown",
+		remoteId: typeof value.remoteId === "string" ? value.remoteId : job.remoteId,
+		cleanup:
+			advertised.cleanupEvidence === 1
+				? validatedCleanup(value.cleanup, jobId, method)
+				: { state: "unsupported", jobId, method },
+	};
+}
+
+export class ComputeOperationLifetime {
+	private disposed = false;
+	private readonly writes = new Set<Promise<void>>();
+
+	assertActive(): void {
+		if (this.disposed) throw new ComputeTransportError("executor-disposed", "Compute executor is disposed");
+	}
+
+	async write(...args: Parameters<typeof writeCollectedArtifacts>): Promise<void> {
+		this.assertActive();
+		const write = writeCollectedArtifacts(...args);
+		this.writes.add(write);
+		try {
+			await write;
+		} finally {
+			this.writes.delete(write);
+		}
+	}
+
+	async dispose(): Promise<void> {
+		this.disposed = true;
+		// Collect reports write failures to its caller; disposal must still drain every write.
+		await Promise.allSettled(this.writes);
 	}
 }
 
