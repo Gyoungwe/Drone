@@ -647,9 +647,10 @@ def worker(directory):
             try:
                 exit_code = process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
+                state = "cancelled" if (directory / "cancel-requested.json").exists() else "failed"
                 terminate_process_group(process.pid)
                 exit_code = 124
-                write_status(directory, "failed", exitCode=exit_code, message="wall-time budget exceeded",
+                write_status(directory, state, exitCode=exit_code, message="wall-time budget exceeded",
                              finishedAt=utc_now())
                 return exit_code
     except OSError as error:
@@ -657,6 +658,8 @@ def worker(directory):
                      finishedAt=utc_now())
         return 127
     state = "succeeded" if exit_code == 0 else "failed"
+    if exit_code != 0 and (directory / "cancel-requested.json").exists():
+        state = "cancelled"
     write_status(directory, state, exitCode=exit_code, finishedAt=utc_now())
     return exit_code
 
@@ -989,8 +992,9 @@ def cleanup_slurm(submission, command_runner):
 def cancel(job_id, command_runner=subprocess.run):
     directory = ensure_prepared(job_id)
     value = read_json(status_path(directory), {})
-    if not isinstance(value, dict):
+    if not isinstance(value, dict) or "state" not in value:
         raise RunnerError("corrupt-status", "status.json is missing or invalid", True)
+    atomic_json(directory / "cancel-requested.json", {"jobId": job_id, "requestedAt": utc_now()})
     submission = read_json(directory / "submission.json", {})
     method = "slurm" if submission.get("scheduler") == "slurm" else "direct"
     outcome = "unknown"
@@ -1002,6 +1006,9 @@ def cancel(job_id, command_runner=subprocess.run):
         else:
             outcome = "unsupported"
     evidence = {"state": outcome, "jobId": job_id, "method": method, "observedAt": utc_now()}
+    value = read_json(status_path(directory), {})
+    if not isinstance(value, dict) or "state" not in value:
+        raise RunnerError("corrupt-status", "status.json is missing or invalid", True)
     state = value["state"]
     if outcome == "confirmed" and state not in ("succeeded", "failed", "cancelled"):
         return write_status(directory, "cancelled", cleanup=evidence, finishedAt=utc_now())

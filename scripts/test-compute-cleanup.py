@@ -154,6 +154,99 @@ class CleanupTest(unittest.TestCase):
         with patch.object(self.runner.shutil, "which", return_value=None):
             self.assertEqual(self.runner.capabilities()["cleanupEvidence"], 1)
 
+    def test_cancel_unknown_cleanup_preserves_failure_written_during_cleanup(self):
+        directory = self.slurm()
+        finished_at = "2026-11-19T00:00:00Z"
+
+        def cleanup(submission, command_runner):
+            self.runner.write_status(directory, "failed", exitCode=-15, finishedAt=finished_at)
+            return "unknown"
+
+        with patch.object(self.runner, "cleanup_slurm", side_effect=cleanup):
+            result = self.runner.cancel("slurm-job")
+        self.assertEqual(result["state"], "failed")
+        self.assertEqual(result["exitCode"], -15)
+        self.assertEqual(result["finishedAt"], finished_at)
+        self.assertEqual(result["cleanup"]["state"], "unknown")
+        self.assertEqual(self.runner.read_json(directory / "status.json"), result)
+
+    def test_cancel_confirmed_cleanup_preserves_failure_written_during_cleanup(self):
+        directory = self.slurm()
+        finished_at = "2026-11-19T00:00:00Z"
+
+        def cleanup(submission, command_runner):
+            self.runner.write_status(directory, "failed", exitCode=-15, finishedAt=finished_at)
+            return "confirmed"
+
+        with patch.object(self.runner, "cleanup_slurm", side_effect=cleanup):
+            result = self.runner.cancel("slurm-job")
+        self.assertEqual(result["state"], "failed")
+        self.assertEqual(result["exitCode"], -15)
+        self.assertEqual(result["finishedAt"], finished_at)
+        self.assertEqual(result["cleanup"]["state"], "confirmed")
+        self.assertEqual(self.runner.read_json(directory / "status.json"), result)
+
+    def test_cancel_confirmed_cleanup_cancels_nonterminal_job(self):
+        directory = self.slurm()
+        with patch.object(self.runner, "cleanup_slurm", return_value="confirmed"):
+            result = self.runner.cancel("slurm-job")
+        self.assertEqual(result["state"], "cancelled")
+        self.assertEqual(result["cleanup"]["state"], "confirmed")
+        self.assertIn("finishedAt", result)
+        self.assertNotIn("exitCode", result)
+        self.assertEqual(self.runner.read_json(directory / "status.json"), result)
+
+    def test_cancel_records_request_before_cleanup(self):
+        directory = self.slurm()
+        requested_at = "2026-11-19T00:00:00Z"
+
+        def cleanup(submission, command_runner):
+            self.assertEqual(self.runner.read_json(directory / "cancel-requested.json"), {
+                "jobId": "slurm-job", "requestedAt": requested_at})
+            return "confirmed"
+
+        with patch.object(self.runner, "utc_now", return_value=requested_at), \
+                patch.object(self.runner, "cleanup_slurm", side_effect=cleanup):
+            self.runner.cancel("slurm-job")
+
+    def worker_status(self, exit_code, cancel_requested):
+        job_id = "worker-job"
+        self.runner.prepare({"payload": {"spec": {
+            "jobId": job_id, "workflow": {"name": "fixture"}}}}, job_id)
+        directory = self.runner.run_dir(job_id)
+        self.runner.atomic_json(directory / "argv.json", {
+            "argv": [sys.executable, "-c", "import sys; sys.exit(%d)" % exit_code]})
+        if cancel_requested:
+            self.runner.atomic_json(directory / "cancel-requested.json", {
+                "jobId": job_id, "requestedAt": self.runner.utc_now()})
+        self.assertEqual(self.runner.worker(directory), exit_code)
+        result = self.runner.read_json(directory / "status.json")
+        self.assertEqual(result["exitCode"], exit_code)
+        self.assertIn("finishedAt", result)
+        return result
+
+    def test_worker_nonzero_exit_with_cancel_request_is_cancelled(self):
+        result = self.worker_status(7, cancel_requested=True)
+        self.assertEqual(result["state"], "cancelled")
+
+    def test_worker_nonzero_exit_without_cancel_request_is_failed(self):
+        result = self.worker_status(7, cancel_requested=False)
+        self.assertEqual(result["state"], "failed")
+
+    def test_worker_zero_exit_with_cancel_request_is_succeeded(self):
+        result = self.worker_status(0, cancel_requested=True)
+        self.assertEqual(result["state"], "succeeded")
+
+    def test_cancel_rejects_status_without_state(self):
+        job_id = "missing-state"
+        self.runner.prepare({"payload": {"spec": {
+            "jobId": job_id, "workflow": {"name": "fixture"}}}}, job_id)
+        directory = self.runner.run_dir(job_id)
+        self.runner.atomic_json(directory / "status.json", {"jobId": job_id})
+        with self.assertRaises(self.runner.RunnerError) as error:
+            self.runner.cancel(job_id)
+        self.assertEqual(error.exception.code, "corrupt-status")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
