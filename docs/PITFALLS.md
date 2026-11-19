@@ -579,7 +579,3 @@ Codex 的 workspace-write 沙箱拦截 `ps`，进程清理走的是另一条路�
 ## 2026-11-19: vitest 在 backend 包内要用 `--configLoader runner`
 
 在 `packages/backend` 里直接跑单个测试文件用 `npx vitest run --configLoader runner <file>`（本批工单的验收命令都按这个写法，回执与本机结果才能对上）。
-
-## 2026-11-19: 测试里改 `process.env` 要还原
-
-`default-executor.test.ts` 的取消测试设置了 `DRONE_RUNNER_WORKFLOW_REGISTRY` 和 `DRONE_REMOTE_ROOT` 且没有还原。它目前是文件最后一个用例；在它之后新增用例前，先改成在 `afterEach` 里还原。
