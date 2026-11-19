@@ -11,6 +11,7 @@ import {
 	type PluginRuntimeSource,
 	type StorageRegistry,
 } from "@drone/backend";
+import { registerP5WriterQuery } from "./p5-writer-query";
 
 interface ResourceAccessSelection {
 	readonly profileDirectory: string;
@@ -260,6 +261,7 @@ export function createDesktopResourceCapabilities(
 		}
 		const ports = await PluginFileCapabilities.create(grants, cache);
 		activation.signal.throwIfAborted();
+		const disposeWriterQuery = registerP5WriterQuery(activation, grants, ports);
 		const resources =
 			declaredResources && hasResources
 				? new PluginResourceManager({
@@ -331,6 +333,7 @@ export function createDesktopResourceCapabilities(
 					}
 				: {}),
 			dispose: async () => {
+				disposeWriterQuery?.();
 				await resources?.disposeResources();
 				await ports.drain();
 			},
