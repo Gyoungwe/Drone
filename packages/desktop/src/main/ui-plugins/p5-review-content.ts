@@ -97,6 +97,32 @@ export function buildP5BundleReviewContent(
 	]);
 }
 
+export function buildP5ByteStageOpenReviewContent(
+	pluginId: string,
+	input: { path: string; bytes: number },
+	root: string,
+	text: Text,
+): P5ReviewContent {
+	return renderReview(text, "title.bundle", pluginId, (field) => [
+		`${field("field.root")}: ${root}`,
+		`${field("field.files")}:`,
+		`  ${input.path}`,
+		`    ${field("field.size")}: ${input.bytes}`,
+	]);
+}
+
+export function buildP5ByteWriteReviewContent(
+	pluginId: string,
+	input: { path: string; source: { bytes: number; sha256: string } },
+	root: string,
+	text: Text,
+): P5ReviewContent {
+	return renderReview(text, "title.bundle", pluginId, (field) => [
+		`${field("field.root")}: ${root}`,
+		...fileLines(field, [{ path: input.path, bytes: input.source.bytes, sha256: input.source.sha256 }]),
+	]);
+}
+
 export function buildP5BatchReviewContent(
 	pluginId: string,
 	batch: FrozenP5Batch,
