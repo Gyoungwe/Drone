@@ -201,23 +201,24 @@ function mockCollect() {
 	return { bytes, downloading, downloaded, close };
 }
 
-it("awaits an in-flight artifact write before closing the transport", async () => {
+it("aborts and drains an in-flight artifact write before closing the transport", async () => {
+	const { readdir } = await import("node:fs/promises");
 	const fixture = mockCollect();
 	const targetDir = await mkdtemp(join(tmpdir(), "drone-collect-lifetime-"));
 	fixture.close.mockImplementationOnce(async () => {
-		expect(await readFile(join(targetDir, "artifact.txt"))).toEqual(fixture.bytes);
+		await expect(readFile(join(targetDir, "artifact.txt"))).rejects.toMatchObject({ code: "ENOENT" });
+		expect((await readdir(targetDir)).filter((entry) => entry.includes(".drone-partial-"))).toEqual([]);
 	});
 	const executor = new DefaultComputeExecutor();
 	const collection = executor.collect(job, host, { targetDir });
+	const rejected = expect(collection).rejects.toMatchObject({ code: "aborted" });
 	await fixture.downloading.promise;
 	const disposed = executor.dispose();
 	await Promise.resolve();
 	expect(fixture.close).not.toHaveBeenCalled();
 	fixture.downloaded.resolve(fixture.bytes);
-	await collection;
-	await disposed;
+	await Promise.all([rejected, disposed]);
 	expect(fixture.close).toHaveBeenCalledOnce();
-	expect(await readFile(join(targetDir, "artifact.txt"))).toEqual(fixture.bytes);
 });
 
 it("settles failed writes before closing and reports the collection failure", async () => {
