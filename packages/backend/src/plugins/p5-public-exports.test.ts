@@ -68,6 +68,7 @@ describe("backend P5 public exports", () => {
 			"P5BundleReviewError",
 			"P5_REVIEW_MAX_TEXT_BYTES",
 			"createP5CriticHandler",
+			"createP5JobSpend",
 			"p5BundleCapability",
 			"createP5RerunSubmitHandler",
 			"p5RerunLifecycleHandlers",
