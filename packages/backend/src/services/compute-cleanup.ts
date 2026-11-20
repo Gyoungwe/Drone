@@ -23,7 +23,7 @@ export interface ComputeCancelHost {
 
 type CancelOutcome = { result: ComputeStatusResult | undefined } | { error: string };
 
-function isCleanupForJob(evidence: unknown, jobId: string): evidence is ComputeCleanupEvidence {
+export function isCleanupForJob(evidence: unknown, jobId: string): evidence is ComputeCleanupEvidence {
 	const cleanup = asRecord(evidence);
 	const { state } = cleanup;
 	return (
