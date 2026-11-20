@@ -61,7 +61,7 @@ function runnerRecord(value: unknown): Record<string, unknown> {
 	return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 }
 
-function validatedCleanup(value: unknown, jobId: string, method: "direct" | "slurm") {
+function validatedCleanup(value: unknown, jobId: string, fallbackMethod?: "direct" | "slurm") {
 	const evidence = runnerRecord(value);
 	if (
 		(evidence.state === "confirmed" ||
@@ -74,7 +74,20 @@ function validatedCleanup(value: unknown, jobId: string, method: "direct" | "slu
 	) {
 		return { state: evidence.state, jobId, method: evidence.method, observedAt: evidence.observedAt };
 	}
+	const method = fallbackMethod ?? (evidence.method === "slurm" ? "slurm" : "direct");
 	return { state: "unknown", jobId, method };
+}
+
+export async function statusWithEvidence(client: RunnerClient, job: JobRecord): Promise<ComputeStatusResult> {
+	const jobId = job.remoteId ?? job.jobId;
+	const value = await client.status(jobId);
+	return {
+		status: value.state ?? "unknown",
+		remoteId: value.remoteId ?? job.remoteId,
+		...(value.pid ? { pid: value.pid } : {}),
+		...(value.message ? { error: value.message } : {}),
+		...("cleanup" in value ? { cleanup: validatedCleanup(value.cleanup, jobId) } : {}),
+	};
 }
 
 export async function cancelWithEvidence(client: RunnerClient, job: JobRecord): Promise<ComputeStatusResult> {

@@ -11,7 +11,6 @@ import type {
 	HostProfile,
 	JobRecord,
 	JobSpec,
-	RemoteJobStatus,
 	RunnerCommand,
 	RunnerTransport,
 	ShellChannel,
@@ -34,6 +33,7 @@ import {
 	cancelWithEvidence,
 	resolveInside,
 	safeRelativePath,
+	statusWithEvidence,
 } from "./compute-operation-lifetime";
 import { deployRunnerScript } from "./runner-deployment";
 
@@ -1240,13 +1240,7 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 	async status(job: JobRecord, host: HostProfile): Promise<ComputeStatusResult> {
 		return await this.limited(host, async () => {
 			const { client } = await this.client(host);
-			const value = (await client.status(job.remoteId ?? job.jobId)) as RemoteJobStatus;
-			return {
-				status: value.state ?? "unknown",
-				remoteId: value.remoteId ?? job.remoteId,
-				...(value.pid ? { pid: value.pid } : {}),
-				...(value.message ? { error: value.message } : {}),
-			};
+			return await statusWithEvidence(client, job);
 		});
 	}
 
