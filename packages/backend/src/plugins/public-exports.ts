@@ -1,3 +1,4 @@
+export type { P5ComputePlan } from "../services/p5-compute-plans";
 export type {
 	PluginNativeBootstrap,
 	PluginNativeIntegration,
@@ -39,6 +40,9 @@ export {
 	type P5ReceiptStore,
 	P5ReceiptStoreError,
 } from "./p5-receipt-store";
+export type { P5RerunRun } from "./p5-rerun-lifecycle";
+export type { P5RerunSource } from "./p5-rerun-submit";
+export type { P5ReviewSnapshot } from "./p5-review-preparation";
 /* biome-ignore format: Keep the baselined barrel line count fixed. */ export { type PluginCredentialSlot, PluginCredentialStore, type PluginEndpointPolicy, resolvePluginEndpointPolicy } from "./plugin-credentials";
 export {
 	createPluginWriterAuthority,
