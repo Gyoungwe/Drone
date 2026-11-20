@@ -13,6 +13,7 @@ import type { UiPluginManager } from "../ui-plugins/manager";
 import type { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
+import { registerBackgroundJobsIpc } from "./background-jobs";
 import { registerComputeIpc } from "./compute";
 import { registerDecisionsIpc } from "./decisions";
 import { registerDiscoveryIpc } from "./discovery";
@@ -105,6 +106,7 @@ export function registerIpc(
 		if (contents && !contents.isDestroyed()) contents.send(IpcChannels.PluginRuntimeEvent, event);
 	});
 	registerMemoryIpc(backendServices);
+	registerBackgroundJobsIpc(backendServices);
 	registerResearchIpc(backendServices);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
 	uiPluginsManager.startWatcher((name) => {

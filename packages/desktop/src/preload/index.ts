@@ -1,5 +1,6 @@
 import {
 	AppContract,
+	BackgroundJobsContract,
 	ComputeContract,
 	DecisionsContract,
 	DiscoveryContract,
@@ -277,6 +278,7 @@ const mcpClient = exposeContract(McpContract, {
 });
 const pluginRuntimeClient = exposeContract(PluginRuntimeContract);
 const pluginCredentialsClient = exposeContract(PluginCredentialsContract);
+const backgroundJobsClient = exposeContract(BackgroundJobsContract);
 const uiPluginsClient = exposeContract(UiPluginsContract, {
 	channelForMethod: (_contract, method) =>
 		channelFrom(
@@ -610,6 +612,7 @@ const api: PiApi = {
 	...invokeApi,
 	...sessionsApi,
 	...pluginCredentialsClient,
+	...backgroundJobsClient,
 	// platform：同步值，preload 注入供 renderer 按平台分流 UI
 	platform: process.platform,
 	onKnowledgeEvent: (cb) => subscribe(IpcChannels.KnowledgeEvent, cb),

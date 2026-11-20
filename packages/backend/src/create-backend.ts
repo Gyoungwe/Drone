@@ -92,6 +92,10 @@ import {
 } from "./services/knowledge-maintenance";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import { LocalExecutionRecorder } from "./services/local-execution";
+import {
+	type BackgroundJobsServicePort,
+	createBackgroundJobsService,
+} from "./services/p5-background-jobs-service";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
@@ -182,6 +186,8 @@ export interface BackendServices {
 	compute: ComputeServicePort;
 	/** 观察记忆：按项目目录读状态、开关、清空。 */
 	memory: MemoryServicePort;
+	/** Per-workspace background jobs settings and daily usage. */
+	backgroundJobs: BackgroundJobsServicePort;
 	/** Optional project research-state ledger; disabled unless inquiryDir is configured. */
 	inquiry: InquiryServicePort;
 	/** Provenance-aware project capture and read-only connector search. */
@@ -320,6 +326,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	// The compute host registry is created after sessions; ssh tools read it lazily at execute time.
 	let listComputeHosts: (() => Promise<ComputeHost[]>) | null = null;
 	const memory = new MemoryStore(join(getAgentDir(), "memory", "memory.db"));
+	const backgroundJobs = createBackgroundJobsService({ agentDir: getAgentDir(), clock: () => new Date() });
 	runtime.registerDisposable?.({ dispose: () => memory.close() });
 	const knowledgeHost = options.knowledgeHostLoader?.load() as KnowledgeHostPort | undefined;
 	// The generic host never imports the legacy knowledge implementation.  An
@@ -819,6 +826,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		subagents: sessions.subagents,
 		projectTrust: sessions.projectTrust,
 		compute,
+		backgroundJobs,
 		memory: {
 			getStatus: (cwd) => memory.status(canonicalProjectId(cwd)),
 			setEnabled: (cwd, enabled) => {

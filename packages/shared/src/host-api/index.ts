@@ -1,5 +1,6 @@
 export * from "../decisions";
 export * from "./app";
+export * from "./background-jobs";
 export * from "./compute";
 export * from "./define";
 export * from "./discovery";

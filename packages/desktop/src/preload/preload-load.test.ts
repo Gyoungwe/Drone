@@ -26,4 +26,15 @@ describe("preload", () => {
 		for (const name of ["memoryList", "memoryRemove", "memoryPromote", "memoryPromoteToKnowledge", "command"])
 			expect(typeof pi[name]).toBe("function");
 	}, 15_000);
+
+	it("exposes the desktop background jobs methods on window.pi", async () => {
+		await import("./index");
+		expect(exposed.pi).toEqual(
+			expect.objectContaining({
+				getBackgroundJobsStatus: expect.any(Function),
+				setBackgroundJobsEnabled: expect.any(Function),
+				setBackgroundJobsDailyLimit: expect.any(Function),
+			}),
+		);
+	});
 });

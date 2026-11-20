@@ -306,6 +306,7 @@ packages/
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
 | `src/ipc.ts` | `IpcChannels`、`PiApi` | 通道名常量 + `window.pi` 完整类型（sessions/settings/packages/app/ui-plugins/login/compute 全域通道 + 同步属性 `platform`） |
+| `src/host-api/background-jobs.ts` | `BackgroundJobsContract`、`BackgroundJobsApi`、`P5BackgroundStatus` | Desktop-only contract for per-workspace status, enablement and daily token limits. |
 | `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`ComputeContract`、`DiscoveryContract`、`DecisionsContract`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract` | TypeBox Host API 域契约；供 desktop bindContract 与适配器复用；`ComputeContract` 覆盖主机登记、健康、作业日志、终端和引导状态，远端副作用由 backend adapter 继续做授权门控；`DiscoveryContract` 提供 B5d–B5f 内核会话、批评、多路径、探索计划和评测的只读投影，关闭会话保留 desktop 权限；`DecisionsContract` 提供项目决策账本的列表、撤销和人工确认；`KnowledgeContract` 覆盖知识库管理、审核、语义索引、研究运行路线与 Zotero 状态；机构访问保留 desktop 权限；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录 |
 | `src/contracts.ts` + `src/research-contracts.ts` | `VersionedRecord`、`ResearchCase`、`KnowledgeSnapshot`、`CapabilityRequest/Version`、`DecisionProposal/Decision`、`RunAttempt` | P0 统一版本合同、SHA-256 内容校验和旧 AnalysisContext/PlanProposal/EvidenceCheckpoint 的无副作用迁移；未来 schema fail closed，RunAttempt 从 unknown 恢复必须显式回到 queued，迁移不会继承执行授权；`contract-hash.ts` 保持浏览器可用 |
 | `src/compute.ts` | `ComputeHost`、`ComputeAuthorization`、`ComputeBudget`、`checkComputeAuthorization` | 远程主机/作业/终端/引导共享 schema，以及任务计算范围、路径和预算的 fail-closed 检查；B1 runner 通过稳定 adapter 接入 |
@@ -490,6 +491,7 @@ src/
 | `src/settings/login.ts` | `LoginService` | provider 交互登录桥接：AuthInteraction → IPC 事件（prompt 挂起等 renderer 应答；浏览器先到则拒挂起 prompt）。支持 OAuth + api_key 交互登录（如 Google Vertex）；`filterAuthSelectOptions` 对 google-vertex 剔除必败的 api-key 选项（Vertex 不接受 API key，见 PITFALLS） |
 | `src/services/packages.ts` | `PackageService` | 社区包搜索/安装/卸载/已配置清单 + 装卸后对非流式会话热重载（对齐 CLI /reload）；npm ENOENT 转带哨兵的可读错误；通过 `BackendServices.packages` 暴露 |
 | `src/services/decision-fanout.ts` | `DecisionFanout` | agent 决策记录分发：补全项目后交给 inquiry 日志；处理器异常不打断会话 |
+| `src/services/p5-background-jobs-service.ts` | `BackgroundJobsServicePort`、`createBackgroundJobsService`、`localDayKey` | Composes settings and the local-day spend ledger for each canonical workspace. |
 | `src/services/approvals.ts` | `ApprovalService` | per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播和 allowRun 队列裁决；通过 `BackendServices.approvals` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/permissions.ts` | `PermissionSettingsService` | `permissions.json` 快照、原子保存、恢复默认、规则试算与审计尾部；通过 `BackendServices.permissions` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/session-permissions.ts` | `SessionPermissionService` | 活跃会话的内存权限模式（default/fullAccess）；关闭会话或重启即归零；通过 `BackendServices.sessionPermissions` 暴露 |
@@ -523,6 +525,7 @@ src/
 | `src/main/dev-agent-dir.ts` | dev/预览态数据隔离：userData 重定向 `*-dev` 后缀 + `PI_CODING_AGENT_DIR = ~/.pi/agent-dev` + 五配置一次性种子拷贝（正式目录零写入） |
 | `src/main/daily.ts` | 日常空间工作台目录（`~/.drone/daily`，全部日常会话的固定 cwd）+ 懒创建；信任链无资源自动信任不弹窗；dev/正式共享工作区（会话列表按 agent dir 天然隔离） |
 | `src/main/ipc/index.ts` | `registerIpc` 组合入口 + backend 事件/updater 状态转发 + UI 插件热重载 watcher 启动。**新增 handler 改对应域文件，不在 index.ts 堆** |
+| `src/main/ipc/background-jobs.ts` | Binds `BackgroundJobsContract` to `BackendServices.backgroundJobs`. |
 | `src/main/ipc/{sessions,settings,permissions,packages,knowledge,compute,discovery,decisions,app,ui-plugins,institutional,subagents}.ts` | 各域 handler（全部薄委托 backend；compute 通过 `ComputeContract` 做参数/结果边界校验并转发健康/作业/终端事件；discovery 通过 `DiscoveryContract` 暴露 B5d–B5f 只读投影并对关闭会话执行主帧校验；decisions 通过 `DecisionsContract` 提供项目决策列表/撤销/人工确认；knowledge 域经 `KnowledgeContract` 做参数/结果边界校验；ui-plugins 域 handler async await 落盘后才返回；permissions 域 = 设置 → 权限 面板 load/save/reset/probe/auditTail + `openLocation` 用 shell 定位文件） |
 | `src/main/tabs.ts` / `ui-state.ts` | tabs.json / ui-state.json 读写（JsonStore 原子写；ui-state 补丁式合并 + normalize 补缺省） |
 | `src/main/background.ts` | 背景图选图（dialog → 拷贝 `userData/backgrounds/` 并清理旧图） |
