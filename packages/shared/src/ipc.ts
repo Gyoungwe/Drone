@@ -13,12 +13,7 @@ import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
 import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
-import type {
-	CatalogPackageType,
-	CatalogSearchResult,
-	ConfiguredPackageInfo,
-	PackageLifecycleReceipt,
-} from "./packages";
+import type { CatalogPackageType, CatalogSearchResult, PackageLifecycleReceipt } from "./packages";
 import type {
 	PermissionAuditTailEntry,
 	PermissionProbeInput,
@@ -482,7 +477,7 @@ export interface PiApi
 	/** 卸载已配置的包（按 source + scope 移除并持久化）；返回可审计的生命周期回执 */
 	removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt>;
 	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
-	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
+	listConfiguredPackages(): Promise<import("./packages").ConfiguredPackageInfo[]>;
 	/** 查询 npm 上的最新版本（离线或失败返回 null）。 */
 	latestPackageVersions(names: string[]): Promise<Record<string, string | null>>;
 	pluginPackageMetadata(

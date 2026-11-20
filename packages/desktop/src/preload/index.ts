@@ -275,17 +275,7 @@ const mcpClient = exposeContract(McpContract, {
 			method,
 		),
 });
-const pluginRuntimeClient = exposeContract(PluginRuntimeContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				selectSession: IpcChannels.PluginRuntimeSelectSession,
-				invoke: IpcChannels.PluginRuntimeInvoke,
-				cancel: IpcChannels.PluginRuntimeCancel,
-			},
-			method,
-		),
-});
+const pluginRuntimeClient = exposeContract(PluginRuntimeContract);
 const pluginCredentialsClient = exposeContract(PluginCredentialsContract);
 const uiPluginsClient = exposeContract(UiPluginsContract, {
 	channelForMethod: (_contract, method) =>

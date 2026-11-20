@@ -441,6 +441,7 @@ src/
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
 | `src/create-backend.ts` | `BackendServices`、`createBackend` | 组合根：注入每 host `DroneRuntime`，组装 session、knowledge、zotero、institutional、subagents、mcp、settings、models、login、packages、permissions、approvals、B5 discovery 与 B7 data-design 服务；compute preflight/experience bridge 通过显式 host 端口接入，desktop IPC 优先消费这些端口 |
+| `src/session-service-port.ts` | `SessionServicePort` | Defines the host-facing session boundary, re-exported by the composition root. |
 | `src/plugins/public-exports.ts` | Plugin runtime, capability and caller exports | Collects the existing public plugin exports for re-export through `src/index.ts`. |
 | `src/plugins/agent-slot-capabilities.ts` | `agentSlotCapabilityHandlers` | Read-effect native subagent slot acquisition/release, caller-bound leases and invocation settlement cleanup. |
 | `src/discovery/` | `DiscoveryService`、`ContainerKernelRunner` | B5d–B5f 的项目作用域宿主适配：Docker/Podman 无网络、只写 `runs/` 的内核会话，Inquiry 记录，独立批评、多路径稳健性、基线和评测持久化；无容器运行时 fail-closed |
