@@ -29,7 +29,7 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/resource-capabilities.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/runtime-capabilities.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/runtime.test.ts": 2,
-	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/runtime.ts": 3,
+	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/runtime.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/service-capabilities.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/session-adoption-capabilities.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/session-capabilities.ts": 1,

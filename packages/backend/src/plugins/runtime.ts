@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type {
 	PluginNativeRuntimeFactory,
 	PluginNativeRuntimeInstance,
@@ -15,7 +15,7 @@ import type {
 import { Check } from "typebox/value";
 import { hostText } from "../reply-language";
 import type { AskQuestionRoute } from "../session/ask-gate";
-import { onPluginEvent } from "./native-events";
+import { createNativeSessionFacade, type ManagedNativeSession } from "./native-session-facade";
 import {
 	PluginCapabilityBroker,
 	type PluginNativeInvocation,
@@ -23,20 +23,12 @@ import {
 	type PluginRuntimeCapabilitiesProvider,
 } from "./runtime-capabilities";
 
+export type { ManagedNativeSession } from "./native-session-facade";
 export type {
 	PluginCapabilityContext,
 	PluginCapabilityHandler,
 	PluginRuntimeCapabilitiesOptions,
 } from "./runtime-capabilities";
-
-/** Host-only facade; only the registry can borrow a real caller for the source projector. */
-export interface ManagedNativeSession extends PluginNativeSession {
-	readonly hostProjection?: {
-		finalize?(event: unknown, signal: AbortSignal): Promise<unknown>;
-		event(event: unknown, signal?: AbortSignal): Promise<unknown>;
-		snapshot(messages: unknown[], persisted: unknown[], signal?: AbortSignal): Promise<unknown[]>;
-	};
-}
 
 export interface PluginRuntimeActivation {
 	readonly pluginId: string;
@@ -93,7 +85,7 @@ interface Activation extends PluginRuntimeActivation {
 	stopping?: Promise<void>;
 }
 
-type RegistryOperation = PluginRuntimeOperation & { readonly approvalDetail?: string };
+export type RegistryOperation = PluginRuntimeOperation & { readonly approvalDetail?: string };
 
 /** UI approval can outlive its caller; cancellation revokes authority without waiting for the dialog. */
 async function authorize(approval: () => Promise<boolean>, signal: AbortSignal): Promise<boolean> {
@@ -292,164 +284,13 @@ export class PluginRuntimeRegistry {
 		}
 		activation.abort.signal.throwIfAborted();
 		const { native, lifetime } = attached;
-		const nativeSignal = (signal?: AbortSignal) =>
-			AbortSignal.any([lifetime.signal, ...(signal ? [signal] : [])]);
-		const projection = native.projection;
-		const finalizer = projection?.finalize?.bind(projection);
-		const projectionCaller = () => resolveProjectionCaller?.();
-		const finalize = finalizer
-			? (event: unknown, signal: AbortSignal) =>
-					this.call(activation, projectionCaller, "native:projection:finalize", event, signal, {
-						inputSchema: {},
-						resultSchema: {},
-						effect: projection?.finalizeEffect ?? "write",
-						execute: async (_input, call) => finalizer(event, call),
-					})
-			: undefined;
-		const projected = projection
-			? {
-					...projection,
-					...(finalize
-						? {
-								finalize: (
-									event: unknown,
-									context: import("@gyoungwe/plugin-api/runtime").PluginRuntimeContext,
-								) => finalize(event, context.signal),
-							}
-						: {}),
-					event: (event: unknown, signal?: AbortSignal) =>
-						this.call(
-							activation,
-							projectionCaller,
-							"native:projection:event",
-							event,
-							signal,
-							{
-								inputSchema: {},
-								resultSchema: {},
-								effect: "read",
-								execute: async (_input, call) => projection.event(event, call.signal),
-							},
-							true,
-						),
-					snapshot: (messages: unknown[], persisted: unknown[], signal?: AbortSignal) =>
-						this.call(
-							activation,
-							projectionCaller,
-							"native:projection:snapshot",
-							{ messages, persisted },
-							signal,
-							{
-								inputSchema: {},
-								resultSchema: { type: "array" },
-								effect: "read",
-								execute: async (_input, call) => projection.snapshot(messages, persisted, call.signal),
-							},
-							true,
-						) as Promise<unknown[]>,
-				}
-			: undefined;
-		return {
-			...native,
-			nativeOperations: undefined,
-			projection: projected,
-			// Do not pass through a similarly named property from untyped source exports.
-			hostProjection: projected
-				? { ...(finalize ? { finalize } : {}), event: projected.event, snapshot: projected.snapshot }
-				: undefined,
-			extension: (pi) => {
-				const adapted = {} as ExtensionAPI;
-				adapted.registerTool = ((tool: ToolDefinition) =>
-					pi.registerTool({
-						...tool,
-						// The official SDK exposes this per-session declaration to task planning.
-						// Capability authorization still uses the operation/port effects below.
-						annotations: { ...tool.annotations, readOnlyHint: native.toolEffects?.[tool.name] === "read" },
-						execute: (id, input, signal, update, context) =>
-							this.call(
-								activation,
-								() => resolveCaller(context),
-								`native:tool:${tool.name}`,
-								input,
-								nativeSignal(signal),
-								{
-									inputSchema: tool.parameters,
-									resultSchema: {},
-									effect: native.toolEffects?.[tool.name] ?? "write",
-									execute: (_input, call) => tool.execute(id, input, call.signal, update, context),
-								},
-							) as ReturnType<ToolDefinition["execute"]>,
-					})) as ExtensionAPI["registerTool"];
-				adapted.registerCommand = (name, command) =>
-					pi.registerCommand(name, {
-						...command,
-						handler: async (args, context) => {
-							await this.call(
-								activation,
-								() => resolveCaller(context),
-								`native:command:${name}`,
-								args,
-								nativeSignal(context.signal),
-								{
-									inputSchema: { type: "string" },
-									resultSchema: { type: "null" },
-									effect: native.commandEffects?.[name] ?? "write",
-									execute: async (_input, call) => {
-										const scopedContext = new Proxy(context, {
-											get(target, property, receiver) {
-												call.signal.throwIfAborted();
-												return property === "signal" ? call.signal : Reflect.get(target, property, receiver);
-											},
-										});
-										await command.handler(args, scopedContext);
-										return null;
-									},
-								},
-							);
-						},
-					});
-				adapted.on = ((name: string, handler: (event: unknown, context: ExtensionContext) => unknown) =>
-					onPluginEvent(pi, name, async (event, context) => {
-						// Shutdown releases the attachment with no new caller authority or capability grant.
-						if (name === "session_shutdown") return handler(event, context);
-						return this.call(
-							activation,
-							() => resolveCaller(context),
-							`native:event:${name}`,
-							event,
-							nativeSignal(context.signal),
-							{
-								inputSchema: {},
-								resultSchema: {},
-								effect: native.eventEffects?.[name] ?? (name === "session_start" ? "read" : "write"),
-								execute: async (_input, call) =>
-									handler(
-										event,
-										new Proxy(context, {
-											get(target, property, receiver) {
-												call.signal.throwIfAborted();
-												return property === "signal" ? call.signal : Reflect.get(target, property, receiver);
-											},
-										}),
-									),
-							},
-							false,
-							undefined,
-							name === "message_start" || name === "tool_execution_end"
-								? { kind: name, event, attachment: native }
-								: undefined,
-						);
-					})) as ExtensionAPI["on"];
-				return native.extension(
-					new Proxy(adapted, {
-						get: (target, name) => {
-							if (name === "registerTool" || name === "registerCommand" || name === "on") return target[name];
-							throw new Error(`Unsupported native Pi API: ${String(name)}`);
-						},
-					}),
-				);
-			},
-		};
+		return createNativeSessionFacade({
+			native,
+			lifetime,
+			call: (...invocation) => this.call(activation, ...invocation),
+			resolveCaller,
+			resolveProjectionCaller,
+		});
 	}
 
 	/** Source capability routing rechecks the exact still-live attachment, not a serialized event claim. */
