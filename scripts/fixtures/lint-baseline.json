@@ -25,7 +25,6 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/model-capabilities.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/network-capabilities.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/process-runtime.test.ts": 1,
-	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/process-runtime.ts": 2,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/resource-capabilities.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/runtime-capabilities.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/runtime.test.ts": 2,
