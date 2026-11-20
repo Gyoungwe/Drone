@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import * as backend from "../index";
+import type { P5ComputePlan } from "../services/p5-compute-plans";
 import { type FrozenP5Batch, freezeP5Batch } from "./p5-batch-review";
 import { type FrozenP5Bundle, freezeP5Bundle } from "./p5-bundle-review";
 import { createP5FactStore, P5_FACT_STORAGE, P5FactStoreError, p5FactCapabilityHandlers } from "./p5-facts";
@@ -10,6 +11,9 @@ import {
 	type P5ReceiptStore,
 	P5ReceiptStoreError,
 } from "./p5-receipt-store";
+import type { P5RerunRun } from "./p5-rerun-lifecycle";
+import type { P5RerunSource } from "./p5-rerun-submit";
+import type { P5ReviewSnapshot } from "./p5-review-preparation";
 
 const publicP5Values = {
 	createP5ReceiptStore,
@@ -38,6 +42,13 @@ describe("backend P5 public exports", () => {
 		expectTypeOf<backend.FrozenP5Bundle>().toEqualTypeOf<FrozenP5Bundle>();
 	});
 
+	it("exports the rerun review types", () => {
+		expectTypeOf<backend.P5ReviewSnapshot>().toEqualTypeOf<P5ReviewSnapshot>();
+		expectTypeOf<backend.P5RerunRun>().toEqualTypeOf<P5RerunRun>();
+		expectTypeOf<backend.P5RerunSource>().toEqualTypeOf<P5RerunSource>();
+		expectTypeOf<backend.P5ComputePlan>().toEqualTypeOf<P5ComputePlan>();
+	});
+
 	it("keeps unlisted P5 entry points private", () => {
 		for (const name of [
 			"createP5ReceiptObserver",
@@ -57,6 +68,7 @@ describe("backend P5 public exports", () => {
 			"P5BundleReviewError",
 			"P5_REVIEW_MAX_TEXT_BYTES",
 			"createP5CriticHandler",
+			"createP5JobSpend",
 			"p5BundleCapability",
 			"createP5RerunSubmitHandler",
 			"p5RerunLifecycleHandlers",
