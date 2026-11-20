@@ -1,14 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type {
-	PluginNativeRuntimeFactory,
-	PluginNativeRuntimeInstance,
-	PluginNativeSession,
-} from "@gyoungwe/plugin-api/native";
+import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type {
 	PluginNativeSessionFacts,
 	PluginRuntimeChangedEvent,
 	PluginRuntimeClient,
+	PluginRuntimeInstance,
 	PluginRuntimeOperation,
 	PluginRuntimeScope,
 } from "@gyoungwe/plugin-api/runtime";
@@ -16,6 +13,7 @@ import { Check } from "typebox/value";
 import { hostText } from "../reply-language";
 import type { AskQuestionRoute } from "../session/ask-gate";
 import { createNativeSessionFacade, type ManagedNativeSession } from "./native-session-facade";
+import type { HostNativeRuntimeFactory, HostNativeSession } from "./p5-owner-facade";
 import {
 	PluginCapabilityBroker,
 	type PluginNativeInvocation,
@@ -81,7 +79,7 @@ interface Activation extends PluginRuntimeActivation {
 	portsReleased?: Promise<void>;
 	readonly listeners: Set<(event: PluginRuntimeChangedEvent) => void>;
 	revision: number;
-	ready: Promise<PluginNativeRuntimeInstance>;
+	ready: Promise<PluginRuntimeInstance<HostNativeSession>>;
 	stopping?: Promise<void>;
 }
 
@@ -108,7 +106,7 @@ async function authorize(approval: () => Promise<boolean>, signal: AbortSignal):
  * renderer IPC must receive a client already bound to its authenticated owner.
  */
 export class PluginRuntimeRegistry {
-	private readonly factories = new Map<string, PluginNativeRuntimeFactory>();
+	private readonly factories = new Map<string, HostNativeRuntimeFactory>();
 	private readonly activations = new Map<string, Activation>();
 	private readonly nativeCallers = new WeakMap<
 		PluginNativeSession,
@@ -124,7 +122,7 @@ export class PluginRuntimeRegistry {
 	) {}
 
 	/** The factory must defer its dynamic import until called after activation authorization. */
-	register(pluginId: string, factory: PluginNativeRuntimeFactory): void {
+	register(pluginId: string, factory: HostNativeRuntimeFactory): void {
 		if (this.factories.has(pluginId)) throw new Error(`Plugin runtime already registered: ${pluginId}`);
 		this.factories.set(pluginId, factory);
 	}
@@ -276,7 +274,7 @@ export class PluginRuntimeRegistry {
 			return { native: owned, lifetime };
 		});
 		activation.pending.add(creating);
-		let attached: { native: PluginNativeSession; lifetime: AbortController };
+		let attached: { native: HostNativeSession; lifetime: AbortController };
 		try {
 			attached = await creating;
 		} finally {

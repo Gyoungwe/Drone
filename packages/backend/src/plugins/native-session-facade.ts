@@ -2,11 +2,13 @@ import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-w
 import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type { PluginRuntimeContext } from "@gyoungwe/plugin-api/runtime";
 import { onPluginEvent } from "./native-events";
+import { createP5OwnerFacade, type HostNativeSession, type P5CommittedProjection } from "./p5-owner-facade";
 import type { PluginRuntimeCaller, PluginRuntimeCallerResolver, RegistryOperation } from "./runtime";
 import type { PluginNativeInvocation } from "./runtime-capabilities";
 
 /** Host-only facade; only the registry can borrow a real caller for the source projector. */
 export interface ManagedNativeSession extends PluginNativeSession {
+	readonly hostFactOwner?: P5CommittedProjection;
 	readonly hostProjection?: {
 		finalize?(event: unknown, signal: AbortSignal): Promise<unknown>;
 		event(event: unknown, signal?: AbortSignal): Promise<unknown>;
@@ -15,7 +17,7 @@ export interface ManagedNativeSession extends PluginNativeSession {
 }
 
 interface NativeSessionFacadeOptions {
-	native: PluginNativeSession;
+	native: HostNativeSession;
 	lifetime: AbortController;
 	call: (
 		resolveCaller: PluginRuntimeCallerResolver,
@@ -38,9 +40,11 @@ export function createNativeSessionFacade(options: NativeSessionFacadeOptions): 
 	const nativeSignal = (signal?: AbortSignal) =>
 		AbortSignal.any([lifetime.signal, ...(signal ? [signal] : [])]);
 	const { finalize, projected } = adaptNativeProjection(options);
-	return {
+	const managed: ManagedNativeSession & { factOwner: undefined } = {
 		...native,
 		nativeOperations: undefined,
+		factOwner: undefined,
+		...(native.factOwner ? { hostFactOwner: createP5OwnerFacade(native.factOwner, lifetime.signal) } : {}),
 		projection: projected,
 		// Do not pass through a similarly named property from untyped source exports.
 		hostProjection: projected
@@ -48,6 +52,7 @@ export function createNativeSessionFacade(options: NativeSessionFacadeOptions): 
 			: undefined,
 		extension: (pi) => adaptNativeExtension(pi, options, nativeSignal),
 	};
+	return managed;
 }
 
 function adaptNativeProjection({ native, call, resolveProjectionCaller }: NativeSessionFacadeOptions) {
