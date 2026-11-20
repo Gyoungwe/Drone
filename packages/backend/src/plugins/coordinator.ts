@@ -2,26 +2,20 @@ import { randomUUID } from "node:crypto";
 import type { PluginRuntimeEvent } from "@drone/shared";
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type { PluginNativeSessionFacts, PluginProviderInvocationInput } from "@gyoungwe/plugin-api/runtime";
-import type { AskQuestionRoute } from "../session/ask-gate";
 import { type Binding, beginNativeBootstrap, type Runtime } from "./coordinator-native";
-import type { NativeSessionDelivery, SelectedNativeSource } from "./native-delivery";
-import type { HostNativeRuntimeFactory } from "./p5-owner-facade";
+import type { PluginRuntimeBridgeOptions } from "./coordinator-options";
+import type { NativeSessionDelivery } from "./native-delivery";
 import { type PluginRuntimeSource, sameSource } from "./plugin-source";
 import { type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
-import type {
-	PluginCapabilityContext,
-	PluginNativeInvocation,
-	PluginRuntimeCapabilitiesOptions,
-	PluginRuntimeCapabilitiesProvider,
-} from "./runtime-capabilities";
+import type { PluginCapabilityContext, PluginNativeInvocation } from "./runtime-capabilities";
 import {
 	type PluginServiceTarget,
 	resolveRoleMember,
 	serviceCapabilityHandlers,
 } from "./service-capabilities";
 import type { PluginSessionCallerContext } from "./session-caller";
-import type { TaskGrantStore } from "./task-grants";
 
+export type { PluginRuntimeBridgeOptions } from "./coordinator-options";
 export type { PluginRuntimeSource } from "./plugin-source";
 export interface PluginRuntimeOwner {
 	readonly id: number;
@@ -41,36 +35,6 @@ export interface PluginNativeIntegration {
 	/** Native entries of packages that declared read-only child session support. */
 	childExtensionPaths(): readonly string[];
 	extensionPaths?(): readonly string[]; // Host-shipped built-in package entries, read on each session load.
-}
-export interface PluginRuntimeBridgeOptions {
-	classifySelectedPath?(path: string): SelectedNativeSource;
-	questionTransport?(owner: PluginRuntimeOwner): AskQuestionRoute;
-	source(name: string): PluginRuntimeSource | undefined;
-	sources?(): readonly {
-		readonly name: string;
-		readonly source: PluginRuntimeSource;
-		readonly state: "enabled" | "unavailable" | "disabled";
-	}[];
-	requiredSources?(): readonly {
-		readonly source: PluginRuntimeSource;
-		readonly state: "enabled" | "unavailable" | "disabled";
-	}[];
-	enabled(name: string): boolean;
-	factory(source: PluginRuntimeSource): HostNativeRuntimeFactory;
-	capabilities?(
-		source: PluginRuntimeSource,
-		owner: PluginRuntimeOwner,
-	): PluginRuntimeCapabilitiesOptions | PluginRuntimeCapabilitiesProvider;
-	approve(
-		owner: PluginRuntimeOwner,
-		source: PluginRuntimeSource,
-		operation?: string,
-		detail?: string,
-		signal?: AbortSignal,
-	): Promise<boolean>;
-	getSessionContext(sessionId: string): PluginSessionCallerContext | undefined;
-	/** Host task grants; a current grant for this plugin source covers its ordinary writes. */
-	taskGrants?: TaskGrantStore;
 }
 interface Selection {
 	readonly token: string;
