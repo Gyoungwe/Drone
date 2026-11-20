@@ -42,7 +42,6 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/services/compute-adapter.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/services/compute-preflight.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/services/compute.test.ts": 1,
-	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/services/compute.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/services/daily-discovery.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/services/deliverable-reviewer.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/services/execution-route.ts": 2,

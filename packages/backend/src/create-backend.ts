@@ -648,18 +648,18 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const detachInquiryComputeEvents = inquiry.attachEventSource({
 		onComputeEvent: (handler) =>
 			compute.onEvent((event) => {
+				// Cleanup isn't an outcome; Inquiry would record its unchanged terminal status as a new attempt.
+				if (event.type === "cleanup") return;
+				const inquiryEvent = { ...event, type: event.type };
 				void compute
 					.getJob(event.jobId)
-					.then((job) =>
-						handler({
-							...event,
-							projectId: canonicalProjectId(
-								job?.spec.workDir ?? options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
-							),
-							...(job ? computeInquiryMetadata(job) : {}),
-						}),
-					)
-					.catch(() => handler({ ...event, projectId: defaultProjectId }));
+					.then((job) => {
+						const projectId = canonicalProjectId(
+							job?.spec.workDir ?? options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
+						);
+						handler({ ...inquiryEvent, projectId, ...(job ? computeInquiryMetadata(job) : {}) });
+					})
+					.catch(() => handler({ ...inquiryEvent, projectId: defaultProjectId }));
 			}),
 		onTaskTerminal: (handler) =>
 			sessions.onEvent((sessionId, event) => {
