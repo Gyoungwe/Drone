@@ -1,3 +1,4 @@
+import { AsyncResource } from "node:async_hooks";
 import { createInterface, type Interface } from "node:readline";
 import type { Readable } from "node:stream";
 import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
@@ -5,6 +6,7 @@ import type { PluginRuntimeContext, PluginRuntimeFactoryContext } from "@gyoungw
 import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
 import { toolProgressSchema } from "../tool-progress";
+import { callWithMeasuredEnvelope, type HostCapabilityPort } from "./runtime-capabilities";
 
 const declarationSchema = Type.Record(
 	Type.String(),
@@ -60,7 +62,9 @@ const messageSchema = Type.Union([
 		{ additionalProperties: false },
 	),
 ]);
-export type Message = Static<typeof messageSchema>;
+type WorkerMessage = Static<typeof messageSchema>;
+type CapabilityMessage = Extract<WorkerMessage, { type: "capability" }> & { readonly envelopeBytes: number };
+export type Message = Exclude<WorkerMessage, { type: "capability" }> | CapabilityMessage;
 export type Declarations = { operations: Static<typeof declarationSchema>; native: boolean };
 
 export interface PendingInvocation {
@@ -79,7 +83,7 @@ interface ProcessRuntimeMessageHandlers {
 	readonly ready: (declarations: Declarations) => void;
 	readonly disposeResources: (message: Extract<Message, { type: "dispose_resources" }>) => void;
 	readonly cancelCapability: (message: Extract<Message, { type: "cancel_capability" }>) => void;
-	readonly capability: (message: Extract<Message, { type: "capability" }>) => void;
+	readonly capability: (message: CapabilityMessage) => void;
 }
 
 export function readProcessRuntimeMessages(
@@ -99,13 +103,21 @@ export function readProcessRuntimeMessages(
 			handlers.fail(new Error("Plugin runtime emitted an invalid protocol message"));
 			return;
 		}
-		receive(message as Message, handlers);
+		if (handlers.failed()) return;
+		const parsed = message as WorkerMessage;
+		if (parsed.type === "capability") {
+			handlers.capability({ ...parsed, envelopeBytes: Buffer.byteLength(line, "utf8") });
+		} else {
+			receive(parsed, handlers);
+		}
 	});
 	return lines;
 }
 
-function receive(message: Message, handlers: ProcessRuntimeMessageHandlers): void {
-	if (handlers.failed()) return;
+function receive(
+	message: Exclude<Message, { type: "capability" }>,
+	handlers: ProcessRuntimeMessageHandlers,
+): void {
 	if (message.type === "canceled") {
 		handlers.fail(
 			handlers.context.signal.aborted
@@ -120,10 +132,6 @@ function receive(message: Message, handlers: ProcessRuntimeMessageHandlers): voi
 	}
 	if (message.type === "cancel_capability") {
 		handlers.cancelCapability(message);
-		return;
-	}
-	if (message.type === "capability") {
-		handlers.capability(message);
 		return;
 	}
 	if (message.type === "changed") {
@@ -171,15 +179,26 @@ function receiveResult(
 	else pending.reject(new Error(message.error));
 }
 
+export function bindProcessRuntimeCapabilities(capabilities: HostCapabilityPort): HostCapabilityPort {
+	const measuredCall = capabilities[callWithMeasuredEnvelope];
+	return {
+		call: AsyncResource.bind(capabilities.call),
+		...(measuredCall && { [callWithMeasuredEnvelope]: AsyncResource.bind(measuredCall) }),
+	};
+}
+
 export async function executeProcessRuntimeCapability(
-	message: Extract<Message, { type: "capability" }>,
+	message: CapabilityMessage,
 	context: PluginRuntimeFactoryContext | PluginRuntimeContext,
 	abort: AbortController,
 	send: (message: unknown) => void,
 ): Promise<void> {
 	try {
 		context.signal.throwIfAborted();
-		const value = await context.capabilities.call(message.name, message.input, abort.signal);
+		const capabilities: HostCapabilityPort = context.capabilities;
+		const call = capabilities[callWithMeasuredEnvelope];
+		if (!call) throw new Error("Plugin capability port does not support measured envelopes");
+		const value = await call(message.name, message.input, abort.signal, message.envelopeBytes);
 		context.signal.throwIfAborted();
 		send({ type: "capability_result", id: message.id, ok: true, value });
 	} catch (error) {

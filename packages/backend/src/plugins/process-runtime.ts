@@ -1,4 +1,3 @@
-import { AsyncResource } from "node:async_hooks";
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readdirSync, realpathSync } from "node:fs";
@@ -22,6 +21,7 @@ import { canonicalProjectId } from "../project-id";
 import { type NativeEventName, PLUGIN_EVENTS } from "./native-events";
 import { NativeMessageCourier, type NativeMessageReferences } from "./native-message-courier";
 import {
+	bindProcessRuntimeCapabilities,
 	type Declarations,
 	executeProcessRuntimeCapability,
 	type Message,
@@ -339,7 +339,7 @@ class RuntimeProcess {
 	) {
 		this.bootstrapContext = {
 			...context,
-			capabilities: { call: AsyncResource.bind(context.capabilities.call) },
+			capabilities: bindProcessRuntimeCapabilities(context.capabilities),
 		};
 		this.ready = new Promise((resolve, reject) => {
 			this.resolveReady = resolve;
@@ -528,7 +528,7 @@ class RuntimeProcess {
 							execute: (input: unknown, context: PluginRuntimeContext) =>
 								this.request("invoke", { operation: name, input, scope: context.scope }, context.signal, {
 									...context,
-									capabilities: { call: AsyncResource.bind(context.capabilities.call) },
+									capabilities: bindProcessRuntimeCapabilities(context.capabilities),
 								}),
 						},
 					]),
@@ -621,7 +621,7 @@ class RuntimeProcess {
 						workspaceDirectory: ctx.cwd,
 						sessionId: ctx.sessionManager.getSessionId(),
 					},
-					capabilities: { call: AsyncResource.bind(this.context.capabilities.call) },
+					capabilities: bindProcessRuntimeCapabilities(this.context.capabilities),
 				},
 				onUpdate,
 			).then((response) => {
@@ -662,7 +662,7 @@ class RuntimeProcess {
 				},
 				signal,
 				context
-					? { ...context, capabilities: { call: AsyncResource.bind(context.capabilities.call) } }
+					? { ...context, capabilities: bindProcessRuntimeCapabilities(context.capabilities) }
 					: undefined,
 			).then((response) => {
 				signal.throwIfAborted();
@@ -702,7 +702,7 @@ class RuntimeProcess {
 									scope: context.scope,
 								},
 								signal,
-								{ ...context, capabilities: { call: AsyncResource.bind(context.capabilities.call) } },
+								{ ...context, capabilities: bindProcessRuntimeCapabilities(context.capabilities) },
 							).then((response) => {
 								signal.throwIfAborted();
 								return unwrap(response);

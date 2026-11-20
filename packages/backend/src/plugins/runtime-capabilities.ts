@@ -26,6 +26,8 @@ export interface PluginCapabilityContext {
 	readonly invocationToken?: object;
 	/** host-only; never accepted from plugin JSON. */
 	readonly onInvocationSettled?: (finalizer: () => void) => void;
+	/** Host-measured; never accepted from plugin JSON. */
+	readonly envelopeBytes?: number;
 	/** Host-only nested service lineage; never accepted from plugin JSON. */
 	readonly providerChain?: readonly { readonly source: object; readonly operation: string }[];
 	readonly operation?: string;
@@ -41,6 +43,27 @@ export interface PluginCapabilityContext {
 	/** This call only; resource children must receive a fresh port for every subsequent invocation. */
 	readonly capabilities: PluginRuntimeCapabilities;
 }
+
+export const callWithMeasuredEnvelope = Symbol("callWithMeasuredEnvelope");
+
+export interface HostCapabilityPort extends PluginRuntimeCapabilities {
+	[callWithMeasuredEnvelope]?(
+		name: string,
+		input: unknown,
+		signal: AbortSignal,
+		envelopeBytes: number,
+	): Promise<unknown>;
+}
+
+export function hostCapabilityPort(
+	invoke: (name: string, input: unknown, signal?: AbortSignal, envelopeBytes?: number) => Promise<unknown>,
+): HostCapabilityPort {
+	return {
+		call: (name, input, signal) => invoke(name, input, signal),
+		[callWithMeasuredEnvelope]: invoke,
+	};
+}
+
 export interface PluginCapabilityHandler {
 	readonly inputSchema: PluginRuntimeSchema;
 	readonly resultSchema: PluginRuntimeSchema;
@@ -109,7 +132,7 @@ const callerScopeHandler: PluginCapabilityHandler = {
 };
 
 interface Authority {
-	readonly context: PluginCapabilityContext;
+	readonly context: Omit<PluginCapabilityContext, "envelopeBytes">;
 	readonly effect: "read" | "write";
 	readonly authorize: (
 		name: string,
@@ -128,14 +151,7 @@ interface Authority {
 /** Factory-held ports borrow the current call's authority; retaining a port never retains a caller. */
 export class PluginCapabilityBroker {
 	private readonly calls = new AsyncLocalStorage<Authority | undefined>();
-	readonly port: PluginRuntimeCapabilities = {
-		call: (name, input, signal) => {
-			const authority = this.calls.getStore();
-			if (!authority || authority.closed)
-				return Promise.reject(new Error("Plugin capability has no live caller"));
-			return this.trackedCall(authority, name, input, signal);
-		},
-	};
+	readonly port = this.portFor();
 
 	constructor(private readonly options: PluginRuntimeCapabilitiesOptions) {}
 
@@ -145,7 +161,7 @@ export class PluginCapabilityBroker {
 	}
 
 	async run<T>(
-		context: Omit<PluginCapabilityContext, "capabilities">,
+		context: Omit<PluginCapabilityContext, "capabilities" | "envelopeBytes">,
 		effect: "read" | "write",
 		check: () => void,
 		authorize: Authority["authorize"],
@@ -157,7 +173,7 @@ export class PluginCapabilityBroker {
 				invocationToken: {},
 				onInvocationSettled: (finalizer) => authority.finalizers.push(finalizer),
 				invocationEffect: effect,
-				capabilities: { call: (name, input, signal) => this.trackedCall(authority, name, input, signal) },
+				capabilities: this.portFor(() => authority),
 			},
 			effect,
 			check,
@@ -190,11 +206,22 @@ export class PluginCapabilityBroker {
 		return execution.value;
 	}
 
+	private portFor(boundCaller?: () => Authority): HostCapabilityPort {
+		return hostCapabilityPort((name, input, signal, envelopeBytes) => {
+			const authority = boundCaller ? boundCaller() : this.calls.getStore();
+			if (!authority || (!boundCaller && authority.closed)) {
+				return Promise.reject(new Error("Plugin capability has no live caller"));
+			}
+			return this.trackedCall(authority, name, input, signal, envelopeBytes);
+		});
+	}
+
 	private trackedCall(
 		authority: Authority,
 		name: string,
 		input: unknown,
 		signal?: AbortSignal,
+		envelopeBytes?: number,
 	): Promise<unknown> {
 		let current = authority;
 		if (signal) {
@@ -203,7 +230,7 @@ export class PluginCapabilityBroker {
 				context: {
 					...authority.context,
 					signal: AbortSignal.any([authority.context.signal, signal]),
-					capabilities: { call: (name, input, signal) => this.trackedCall(current, name, input, signal) },
+					capabilities: this.portFor(() => current),
 				},
 				check: () => {
 					if (authority.closed) throw new Error("Plugin capability caller completed");
@@ -211,7 +238,7 @@ export class PluginCapabilityBroker {
 				},
 			};
 		}
-		const pending = this.call(current, name, input);
+		const pending = this.call(current, name, input, envelopeBytes);
 		authority.pending.add(pending);
 		void pending.then(
 			() => authority.pending.delete(pending),
@@ -220,10 +247,16 @@ export class PluginCapabilityBroker {
 		return pending;
 	}
 
-	private async call(authority: Authority, name: string, input: unknown): Promise<unknown> {
+	private async call(
+		authority: Authority,
+		name: string,
+		input: unknown,
+		envelopeBytes?: number,
+	): Promise<unknown> {
+		const context = envelopeBytes === undefined ? authority.context : { ...authority.context, envelopeBytes };
 		const check = () => {
 			if (authority.closed) throw new Error("Plugin capability caller completed");
-			authority.context.signal.throwIfAborted();
+			context.signal.throwIfAborted();
 			authority.check();
 		};
 		check();
@@ -237,32 +270,32 @@ export class PluginCapabilityBroker {
 		if (!Check(handler.inputSchema, input)) throw new Error(`Invalid plugin capability input: ${name}`);
 		if (handler.effect === "write" && authority.effect !== "write" && !handler.readCallable)
 			throw new Error(`Read-only plugin invocation cannot use write capability: ${name}`);
-		if (authority.context.bootstrap) {
+		if (context.bootstrap) {
 			if (!handler.bootstrap || handler.effect !== "read")
 				throw new Error(`Plugin capability is unavailable during bootstrap: ${name}`);
 		}
-		const prepared = handler.prepare ? await handler.prepare(input, authority.context) : input;
+		const prepared = handler.prepare ? await handler.prepare(input, context) : input;
 		if (handler.prepare) check();
-		const { pluginId, applicationId, scope } = authority.context;
+		const { pluginId, applicationId, scope } = context;
 		const approved =
-			authority.context.bootstrap ||
+			context.bootstrap ||
 			(await authority.authorize(
 				name,
 				input,
 				handler.effect,
 				handler.approvalDetail?.(prepared, { pluginId, applicationId, scope }),
-				authority.context.signal,
+				context.signal,
 				handler.approval,
 			));
 		const execute = async () => {
 			if (!approved) throw new Error(`Plugin capability denied: ${name}`);
 			check();
-			const result = await this.calls.run(authority, () => handler.execute(prepared, authority.context));
+			const result = await this.calls.run(authority, () => handler.execute(prepared, context));
 			check();
 			if (!Check(handler.resultSchema, result)) throw new Error(`Invalid plugin capability result: ${name}`);
 			return result;
 		};
-		if (handler.observe) return handler.observe(prepared, authority.context, { approved, execute });
+		if (handler.observe) return handler.observe(prepared, context, { approved, execute });
 		return execute();
 	}
 }

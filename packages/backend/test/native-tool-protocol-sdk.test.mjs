@@ -1,6 +1,5 @@
-import { access, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { access, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
 	createAgentSession,
@@ -9,48 +8,12 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { afterEach, expect, it, vi } from "vitest";
-import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
-import { SessionEngine } from "../src/session-engine/engine";
+import { expect, it, vi } from "vitest";
+import { createNativeToolProtocolFixture } from "./native-tool-protocol-fixture.mjs";
 
-const runtimeDirectory = resolve(
-	import.meta.dirname,
-	`../../desktop/plugin-runtime/${process.platform}-${process.arch}`,
-);
-const roots = [],
-	runtimes = [],
-	sessions = [];
-afterEach(async () => {
-	for (const session of sessions.splice(0)) await new SessionEngine().dispose(session);
-	for (const runtime of runtimes.splice(0)) await runtime.dispose();
-	vi.restoreAllMocks();
-	for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
-});
-async function fixture(
-	source,
-	call = async () => {
-		throw new Error("No capabilities requested");
-	},
-) {
-	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-managed-tools-")));
-	roots.push(root);
-	const entrypoint = join(root, "runtime.mjs");
-	await writeFile(entrypoint, source);
-	const runtime = await createProcessPluginRuntime({
-		pluginId: "managed-tools",
-		packageRoot: root,
-		entrypoint,
-		runtimeDirectory,
-	})({
-		applicationId: "managed-tools-test",
-		signal: new AbortController().signal,
-		resources: [],
-		capabilities: { call },
-		events: { changed() {} },
-	});
-	runtimes.push(runtime);
-	return { root, runtime };
-}
+const sessions = [];
+const fixture = createNativeToolProtocolFixture(sessions, { changed() {} });
+
 async function sdk(state, responses) {
 	let native;
 	const settingsManager = SettingsManager.inMemory({});
