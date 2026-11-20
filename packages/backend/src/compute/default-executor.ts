@@ -11,7 +11,6 @@ import type {
 	HostProfile,
 	JobRecord,
 	JobSpec,
-	RemoteJobStatus,
 	RunnerCommand,
 	RunnerTransport,
 	ShellChannel,
@@ -26,6 +25,7 @@ import type {
 	ComputeExecutor,
 	ComputeLogsResult,
 	ComputeStatusResult,
+	ComputeSubmitResult,
 	ComputeTerminalSession,
 } from "../services/compute";
 import {
@@ -34,8 +34,9 @@ import {
 	cancelWithEvidence,
 	resolveInside,
 	safeRelativePath,
-	sha256,
+	statusWithEvidence,
 } from "./compute-operation-lifetime";
+import { deployRunnerScript } from "./runner-deployment";
 
 const MIN_RUNNER_VERSION = "1.0.0";
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -95,7 +96,7 @@ export interface DefaultComputeExecutorOptions {
 	readonly userSshConfigPath?: string;
 }
 
-interface CollectingTransport extends RunnerTransport {
+export interface CollectingTransport extends RunnerTransport {
 	upload(request: {
 		readonly source: Uint8Array | string;
 		readonly destination: string;
@@ -1115,22 +1116,12 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 		const script = runnerScriptPath(this.options);
 		await access(script, fsConstants.R_OK);
 		const source = await readFile(script);
-		const digest = sha256(source);
-		const remote = `${this.remoteRoot(host)}/runner/${digest}/runner.py`;
-		try {
-			if (sha256(await transport.download({ source: remote, maxBytes: source.byteLength + 1 })) === digest)
-				return remote;
-		} catch {
-			/* missing or stale runner */
-		}
-		await transport.upload({
+		return deployRunnerScript(
+			transport,
 			source,
-			destination: remote,
-			maxBytes: this.options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES,
-		});
-		if (sha256(await transport.download({ source: remote, maxBytes: source.byteLength + 1 })) !== digest)
-			throw new ComputeTransportError("runner-checksum", "Remote runner checksum verification failed");
-		return remote;
+			this.remoteRoot(host),
+			this.options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES,
+		);
 	}
 
 	private async transport(host: HostProfile): Promise<CollectingTransport> {
@@ -1233,15 +1224,16 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 		});
 	}
 
-	async submit(
-		spec: JobSpec,
-		host: HostProfile,
-	): Promise<{ remoteId?: string; status?: JobRecord["status"] }> {
+	async submit(spec: JobSpec, host: HostProfile, signal?: AbortSignal): Promise<ComputeSubmitResult> {
+		this.lifetime.assertActive(signal);
 		return await this.limited(host, async () => {
+			this.lifetime.assertActive(signal);
 			const { client, transport } = await this.client(host);
 			if (transport instanceof LocalRunnerTransport) transport.remember(spec);
 			await client.negotiate();
+			this.lifetime.assertActive(signal);
 			await client.prepare(spec);
+			this.lifetime.assertActive(signal);
 			const started = (await client.start(spec)) as { status?: JobRecord["status"]; remoteId?: string };
 			return { remoteId: started.remoteId ?? spec.jobId, status: started.status ?? "queued" };
 		});
@@ -1250,13 +1242,7 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 	async status(job: JobRecord, host: HostProfile): Promise<ComputeStatusResult> {
 		return await this.limited(host, async () => {
 			const { client } = await this.client(host);
-			const value = (await client.status(job.remoteId ?? job.jobId)) as RemoteJobStatus;
-			return {
-				status: value.state ?? "unknown",
-				remoteId: value.remoteId ?? job.remoteId,
-				...(value.pid ? { pid: value.pid } : {}),
-				...(value.message ? { error: value.message } : {}),
-			};
+			return await statusWithEvidence(client, job);
 		});
 	}
 
@@ -1282,19 +1268,18 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 		job: JobRecord,
 		host: HostProfile,
 		options?: ComputeCollectOptions,
+		signal?: AbortSignal,
 	): Promise<{ manifest: ArtifactManifest }> {
 		// Admission and write tracking share the executor's disposal fence.
-		this.lifetime.assertActive();
+		this.lifetime.assertActive(signal);
 		const { client, transport } = await this.client(host);
 		const maxBytes = options?.maxBytes ?? this.options.maxCollectBytes ?? DEFAULT_MAX_COLLECT_BYTES;
 		const expected = options?.expected?.map((path) => ({ path }));
-		const value = (await this.limited(host, () =>
-			client.execute(
-				"collect",
-				{ maxBytes, ...(expected ? { manifest: expected } : {}) },
-				job.remoteId ?? job.jobId,
-			),
-		)) as { manifest?: ArtifactManifest };
+		const request = { maxBytes, ...(expected ? { manifest: expected } : {}) };
+		const value = (await this.limited(host, () => {
+			this.lifetime.assertActive(signal);
+			return client.execute("collect", request, job.remoteId ?? job.jobId);
+		})) as { manifest?: ArtifactManifest };
 		if (value.manifest?.version !== 1)
 			throw new ComputeTransportError("invalid-manifest", "Runner returned no v1 artifact manifest");
 		const seen = new Set<string>();
@@ -1314,19 +1299,17 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 		}
 		if (value.manifest.totalBytes !== undefined && value.manifest.totalBytes !== manifestBytes)
 			throw new ComputeTransportError("invalid-manifest", "Manifest totalBytes does not match entries");
-		const validation = validateArtifactManifest(value.manifest, {
-			maxTotalBytes: maxBytes,
-			expected: options?.expected?.map((path) => ({ path })),
-		});
+		const validation = validateArtifactManifest(value.manifest, { maxTotalBytes: maxBytes, expected });
 		if (!validation.valid) throw new ComputeTransportError("invalid-manifest", validation.errors.join("; "));
 		if (options) {
-			await this.lifetime.write(value.manifest.entries, options.targetDir, maxBytes, (path, maxBytes) => {
+			const { targetDir } = options;
+			await this.lifetime.write(signal, value.manifest.entries, targetDir, maxBytes, (path, limit) => {
 				const root = this.remoteRoot(host);
 				const source =
 					transport instanceof LocalRunnerTransport
 						? path
 						: `${root}/runs/${job.remoteId ?? job.jobId}/outputs/${path}`.replace(/\/+/gu, "/");
-				return transport.download({ source, maxBytes });
+				return transport.download({ source, maxBytes: limit });
 			});
 		}
 		return { manifest: value.manifest };
