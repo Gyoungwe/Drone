@@ -49,6 +49,7 @@ export const nativeDeclarationsSchema = Type.Object({
 	effects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
 	commandEffects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
 	eventEffects: Type.Record(Type.String(), Type.Union([Type.Literal("read"), Type.Literal("write")])),
+	factOwner: Type.Optional(Type.Literal(true)),
 	nativeOperations: Type.Record(
 		Type.String(),
 		Type.Object(

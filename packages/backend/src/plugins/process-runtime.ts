@@ -2,11 +2,7 @@ import { AsyncResource } from "node:async_hooks";
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { readdirSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
-import type {
-	PluginNativeRuntimeFactory,
-	PluginNativeRuntimeInstance,
-	PluginNativeSession,
-} from "@gyoungwe/plugin-api/native";
+import type { PluginNativeRuntimeFactory, PluginNativeRuntimeInstance } from "@gyoungwe/plugin-api/native";
 import type {
 	PluginNativeSessionFacts,
 	PluginRuntimeContext,
@@ -14,6 +10,7 @@ import type {
 	PluginRuntimeFactoryContext,
 } from "@gyoungwe/plugin-api/runtime";
 import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
+import type { HostNativeSession } from "./p5-owner-facade";
 import { attachProcessNative, type ProcessNativeHost } from "./process-native-attachment";
 import {
 	type Declarations,
@@ -408,7 +405,7 @@ class RuntimeProcess {
 		}
 	}
 
-	private attachNative(facts?: PluginNativeSessionFacts): Promise<PluginNativeSession> {
+	private attachNative(facts?: PluginNativeSessionFacts): Promise<HostNativeSession> {
 		return attachProcessNative(
 			{ request: this.request.bind(this), context: this.context, nativeDisposers: this.nativeDisposers },
 			facts,

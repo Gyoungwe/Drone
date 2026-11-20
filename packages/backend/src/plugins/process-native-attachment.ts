@@ -12,6 +12,8 @@ import { Check } from "typebox/value";
 import { canonicalProjectId } from "../project-id";
 import type { NativeEventName } from "./native-events";
 import { NativeMessageCourier, type NativeMessageReferences } from "./native-message-courier";
+import type { HostNativeSession } from "./p5-owner-facade";
+import { createProcessFactCourier } from "./process-fact-delivery";
 import {
 	beforeAgentStartResponseSchema,
 	nativeCallResponseSchema,
@@ -30,6 +32,8 @@ export interface ProcessNativeHost {
 			| "dispose"
 			| "native_attach"
 			| "native_detach"
+			| "native_fact_cursor"
+			| "native_fact_deliver"
 			| "native_call"
 			| "native_projection"
 			| "native_operation",
@@ -55,13 +59,14 @@ interface NativeAttachment {
 export async function attachProcessNative(
 	host: ProcessNativeHost,
 	facts?: PluginNativeSessionFacts,
-): Promise<PluginNativeSession> {
+): Promise<HostNativeSession> {
 	const attachment = randomUUID();
 	const declared = await host.request("native_attach", { attachment, ...(facts ? { facts } : {}) });
 	if (!Check(nativeDeclarationsSchema, declared)) throw new Error("Invalid native plugin declarations");
 	const declarations = declared as NativeDeclarations;
 	const lifecycle = new AbortController();
 	const courier = new NativeMessageCourier();
+	const factCourier = createProcessFactCourier({ attachment, lifecycle, host });
 	const unwrap = (response: unknown, original?: object): unknown => {
 		if (!Check(nativeCallResponseSchema, response)) throw new Error("Invalid native invocation response");
 		const { value, references } = response as { value: unknown; references: NativeMessageReferences };
@@ -74,12 +79,15 @@ export async function attachProcessNative(
 	const dispose = () => {
 		if (!stopping) {
 			lifecycle.abort(new Error("Native attachment closed"));
-			stopping = host.request("native_detach", { attachment }).then(() => {
-				host.nativeDisposers.delete(dispose);
-			});
+			stopping = detach();
 		}
 		return stopping;
 	};
+	async function detach() {
+		await factCourier.drain();
+		await host.request("native_detach", { attachment });
+		host.nativeDisposers.delete(dispose);
+	}
 	host.nativeDisposers.add(dispose);
 	return {
 		toolEffects: declarations.effects,
@@ -87,6 +95,7 @@ export async function attachProcessNative(
 		eventEffects: declarations.eventEffects,
 		nativeOperations: buildNativeOperations(state, declarations.nativeOperations),
 		...buildNativeProjection(state, declarations.projection),
+		...(declarations.factOwner === true ? { factOwner: factCourier.owner } : {}),
 		extension: buildNativeExtension(state, declarations, dispose, () => stopping),
 		dispose,
 	};
