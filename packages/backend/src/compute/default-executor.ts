@@ -28,6 +28,14 @@ import type {
 	ComputeStatusResult,
 	ComputeTerminalSession,
 } from "../services/compute";
+import {
+	ComputeOperationLifetime,
+	ComputeTransportError,
+	cancelWithEvidence,
+	resolveInside,
+	safeRelativePath,
+	sha256,
+} from "./compute-operation-lifetime";
 
 const MIN_RUNNER_VERSION = "1.0.0";
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -101,18 +109,6 @@ interface CollectingTransport extends RunnerTransport {
 	openShell(): Promise<ShellChannel>;
 }
 
-class ComputeTransportError extends Error {
-	readonly code: string;
-	readonly retryable: boolean;
-
-	constructor(code: string, message: string, retryable = false) {
-		super(message);
-		this.name = "ComputeTransportError";
-		this.code = code;
-		this.retryable = retryable;
-	}
-}
-
 class HostConcurrency {
 	private active = 0;
 	private readonly waiters: Array<() => void> = [];
@@ -134,10 +130,6 @@ function toBuffer(value: string | Uint8Array | undefined): Buffer {
 	return typeof value === "string" ? Buffer.from(value) : Buffer.from(value);
 }
 
-function sha256(value: Uint8Array): string {
-	return createHash("sha256").update(value).digest("hex");
-}
-
 function runnerScriptPath(options: DefaultComputeExecutorOptions): string {
 	if (options.runnerPath) return resolve(options.runnerPath);
 	const resourcesPath = (process as NodeJS.Process & { readonly resourcesPath?: string }).resourcesPath;
@@ -146,18 +138,6 @@ function runnerScriptPath(options: DefaultComputeExecutorOptions): string {
 		if (existsSync(packaged)) return packaged;
 	}
 	return resolve(dirname(fileURLToPath(import.meta.url)), "../../resources/compute-runner/runner.py");
-}
-
-function safeRelativePath(value: string): string {
-	if (!value || value.includes("\0"))
-		throw new ComputeTransportError("unsafe-path", "Empty or NUL path is not allowed");
-	const normalized = value.replaceAll("\\", "/");
-	if (normalized.startsWith("/") || /^[A-Za-z]:\//u.test(normalized))
-		throw new ComputeTransportError("unsafe-path", `Absolute path is not allowed: ${value}`);
-	const parts = normalized.split("/");
-	if (parts.some((part) => part.length === 0 || part === "." || part === ".."))
-		throw new ComputeTransportError("unsafe-path", `Traversal path is not allowed: ${value}`);
-	return parts.join("/");
 }
 
 function safeRemoteAbsolutePath(value: string): string {
@@ -204,15 +184,6 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, onTimeout: () =>
 			},
 		);
 	});
-}
-
-function resolveInside(root: string, child: string): string {
-	const resolvedRoot = resolve(root);
-	const resolvedChild = resolve(resolvedRoot, child);
-	const rel = relative(resolvedRoot, resolvedChild);
-	if (rel === "" || rel.startsWith("../") || rel === ".." || isAbsolute(rel))
-		throw new ComputeTransportError("unsafe-path", `Path escapes work directory: ${child}`);
-	return resolvedChild;
 }
 
 function sshKeyAlgorithm(key: Buffer): string {
@@ -1121,6 +1092,7 @@ class OpenSshRunnerTransport implements CollectingTransport {
 }
 
 export class DefaultComputeExecutor implements ComputeExecutor {
+	private readonly lifetime = new ComputeOperationLifetime();
 	private readonly transports = new Map<string, CollectingTransport>();
 	private readonly transportPromises = new Map<string, Promise<CollectingTransport>>();
 	private readonly concurrency = new Map<string, HostConcurrency>();
@@ -1302,23 +1274,7 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 	async cancel(job: JobRecord, host: HostProfile): Promise<ComputeStatusResult> {
 		return await this.limited(host, async () => {
 			const { client } = await this.client(host);
-			// Right after start the runner may not see the worker process yet (slow on Windows) and
-			// answers a retryable "cancel-unknown"; honour that flag with a few short retries.
-			for (let attempt = 0; ; attempt++) {
-				try {
-					const value = (await client.cancel(job.remoteId ?? job.jobId)) as {
-						status?: JobRecord["status"];
-						remoteId?: string;
-					};
-					return { status: value.status ?? "cancelled", remoteId: value.remoteId ?? job.remoteId };
-				} catch (error) {
-					const retryable =
-						(error as { code?: unknown; retryable?: unknown })?.code === "cancel-unknown" &&
-						(error as { retryable?: unknown }).retryable === true;
-					if (!retryable || attempt >= 4) throw error;
-					await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
-				}
-			}
+			return await cancelWithEvidence(client, job);
 		});
 	}
 
@@ -1327,6 +1283,8 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 		host: HostProfile,
 		options?: ComputeCollectOptions,
 	): Promise<{ manifest: ArtifactManifest }> {
+		// Admission and write tracking share the executor's disposal fence.
+		this.lifetime.assertActive();
 		const { client, transport } = await this.client(host);
 		const maxBytes = options?.maxBytes ?? this.options.maxCollectBytes ?? DEFAULT_MAX_COLLECT_BYTES;
 		const expected = options?.expected?.map((path) => ({ path }));
@@ -1362,34 +1320,14 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 		});
 		if (!validation.valid) throw new ComputeTransportError("invalid-manifest", validation.errors.join("; "));
 		if (options) {
-			const targetRoot = resolve(options.targetDir);
-			await mkdir(targetRoot, { recursive: true });
-			for (const entry of value.manifest.entries) {
-				const path = safeRelativePath(entry.path);
+			await this.lifetime.write(value.manifest.entries, options.targetDir, maxBytes, (path, maxBytes) => {
 				const root = this.remoteRoot(host);
 				const source =
 					transport instanceof LocalRunnerTransport
 						? path
 						: `${root}/runs/${job.remoteId ?? job.jobId}/outputs/${path}`.replace(/\/+/gu, "/");
-				const data = await transport.download({ source, maxBytes: entry.bytes ?? entry.size ?? maxBytes });
-				if (entry.symlink)
-					throw new ComputeTransportError("unsafe-artifact", `Symlink artifact is not allowed: ${path}`);
-				if (entry.bytes !== undefined && data.byteLength !== entry.bytes)
-					throw new ComputeTransportError("artifact-size", `Artifact size mismatch: ${path}`);
-				if (entry.sha256 && sha256(data) !== entry.sha256.toLowerCase())
-					throw new ComputeTransportError("artifact-checksum", `Artifact checksum mismatch: ${path}`);
-				const target = resolveInside(targetRoot, path);
-				await mkdir(dirname(target), { recursive: true });
-				const existing = await lstat(target).catch(() => undefined);
-				if (existing?.isSymbolicLink())
-					throw new ComputeTransportError("unsafe-artifact", `Destination is a symlink: ${path}`);
-				await writeFile(target, data, { flag: "wx", mode: 0o600 }).catch(
-					async (error: NodeJS.ErrnoException) => {
-						if (error.code !== "EEXIST") throw error;
-						await writeFile(target, data, { mode: 0o600 });
-					},
-				);
-			}
+				return transport.download({ source, maxBytes });
+			});
 		}
 		return { manifest: value.manifest };
 	}
@@ -1445,6 +1383,7 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 	}
 
 	async dispose(): Promise<void> {
+		await this.lifetime.dispose();
 		for (const transport of this.transports.values()) await transport.close?.();
 		this.transports.clear();
 	}

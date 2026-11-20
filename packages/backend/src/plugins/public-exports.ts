@@ -40,6 +40,11 @@ export {
 	P5ReceiptStoreError,
 } from "./p5-receipt-store";
 /* biome-ignore format: Keep the baselined barrel line count fixed. */ export { type PluginCredentialSlot, PluginCredentialStore, type PluginEndpointPolicy, resolvePluginEndpointPolicy } from "./plugin-credentials";
+export {
+	createPluginWriterAuthority,
+	type P5AdoptedWriter,
+	type PluginWriterAuthorityView,
+} from "./plugin-writer-authority";
 export { createProcessPluginRuntime } from "./process-runtime";
 export { PluginResourceManager, type PluginResourceManagerOptions } from "./resource-capabilities";
 export type {

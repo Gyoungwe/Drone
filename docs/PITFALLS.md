@@ -563,3 +563,19 @@ worktree 的 `node_modules` 若是指向主 checkout 的符号链接，使用的
 ## 2026-11-19: Knowledge UI contract checks bound biome stdin hangs
 
 The contract check can hang on biome stdin; `scripts/generate-knowledge-ui-contract.mjs` now bounds the formatter to 120 s with `SIGKILL` and piped stdio. If it trips, rerun `node scripts/generate-knowledge-ui-contract.mjs --check`, then look for a stuck biome daemon. Timeout errors name biome and the limit without printing the generated contract; other formatter errors propagate unchanged.
+
+## 2026-11-19: 远程 runner 必须保持单文件
+
+`packages/backend/resources/compute-runner/runner.py` 会被原样部署到远程主机，不能拆出 `cleanup.py` 之类的同级模块（远端没有对应的部署和校验）。它超过 400 行的结构限制，改它的工单必须写明文件大小豁免，否则 Codex 会按规则拆文件。
+
+## 2026-11-19: 取消竞态与取消标记语义
+
+runner 的 `cancel()` 在清理前写 `cancel-requested.json`；worker 发现子进程非零退出（或超时）且标记存在时记为 `cancelled`，不是 `failed`。清理后 `cancel()` 重新读取状态，已是终态就保留，避免用旧快照覆盖 worker 刚写下的结果。状态（`cancelled` 等）和清理证据（`cleanup.state`）是两回事：`cancelled` + `unknown` 是合法组合；判断能否安全收尾只看 `cleanup` 字段。测试不要断言“cancelled 当且仅当 confirmed”。
+
+## 2026-11-19: Codex 沙箱里没有 `ps`
+
+Codex 的 workspace-write 沙箱拦截 `ps`，进程清理走的是另一条路径。涉及进程清理的 Python 测试、`pgrep` 残留检查和取消测试循环必须在本机重跑后才算验收。
+
+## 2026-11-19: vitest 在 backend 包内要用 `--configLoader runner`
+
+在 `packages/backend` 里直接跑单个测试文件用 `npx vitest run --configLoader runner <file>`（本批工单的验收命令都按这个写法，回执与本机结果才能对上）。

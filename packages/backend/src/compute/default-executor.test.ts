@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HostProfile, JobSpec } from "@drone/compute";
@@ -41,6 +41,47 @@ afterEach(() => {
 	else process.env.DRONE_REMOTE_ROOT = previousRemoteRoot;
 });
 
+async function createCancelFixture() {
+	const registryBeforeFixture = process.env.DRONE_RUNNER_WORKFLOW_REGISTRY;
+	const remoteRootBeforeFixture = process.env.DRONE_REMOTE_ROOT;
+	const root = await mkdtemp(join(tmpdir(), "drone-cancel-fixture-"));
+	const release = join(root, "release");
+	const script = join(root, "workflow.py");
+	await writeFile(
+		script,
+		`from pathlib import Path\nfrom threading import Event\nwhile not Path(${JSON.stringify(release)}).exists():\n    Event().wait(0.01)\n`,
+	);
+	const registry = join(root, "registry.json");
+	await writeFile(registry, JSON.stringify({ "test/workflow": ["python3", script] }));
+	process.env.DRONE_RUNNER_WORKFLOW_REGISTRY = registry;
+	const remoteRoot = join(root, "remote");
+	process.env.DRONE_REMOTE_ROOT = remoteRoot;
+	return {
+		release,
+		remoteRoot,
+		restore() {
+			if (registryBeforeFixture === undefined) delete process.env.DRONE_RUNNER_WORKFLOW_REGISTRY;
+			else process.env.DRONE_RUNNER_WORKFLOW_REGISTRY = registryBeforeFixture;
+			if (remoteRootBeforeFixture === undefined) delete process.env.DRONE_REMOTE_ROOT;
+			else process.env.DRONE_REMOTE_ROOT = remoteRootBeforeFixture;
+		},
+	};
+}
+
+async function waitForTerminal(remoteRoot: string, jobId: string) {
+	const statusPath = join(remoteRoot, "runs", jobId, "status.json");
+	for (;;) {
+		try {
+			const value = JSON.parse(await readFile(statusPath, "utf8"));
+			if (["succeeded", "failed", "cancelled"].includes(value.state)) return;
+		} catch (error) {
+			// The runner may still be publishing a missing or incomplete status file.
+			if (!(error instanceof SyntaxError) && (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+		}
+		await new Promise((resolve) => setImmediate(resolve));
+	}
+}
+
 describe("DefaultComputeExecutor", () => {
 	it("runs the complete local runner lifecycle and collects checksummed outputs", async () => {
 		const executor = new DefaultComputeExecutor();
@@ -69,19 +110,44 @@ describe("DefaultComputeExecutor", () => {
 	});
 
 	it("supports cancellation before the fixture finishes", async () => {
+		const { release, remoteRoot, restore } = await createCancelFixture();
 		const executor = new DefaultComputeExecutor();
-		await executor.submit({ ...spec, jobId: "cancel-job" }, host);
-		const result = await executor.cancel(
-			{
-				jobId: "cancel-job",
-				hostAlias: spec.hostAlias,
-				spec: { ...spec, jobId: "cancel-job" },
-				status: "running",
-				createdAt: 0,
-				updatedAt: 0,
-			},
-			host,
-		);
-		expect(result.status).toBe("cancelled");
+		try {
+			await executor.submit({ ...spec, jobId: "cancel-job" }, host);
+			const result = await executor.cancel(
+				{
+					jobId: "cancel-job",
+					hostAlias: spec.hostAlias,
+					spec: { ...spec, jobId: "cancel-job" },
+					status: "running",
+					createdAt: 0,
+					updatedAt: 0,
+				},
+				host,
+			);
+			const cleanup = result.cleanup as { state: string; jobId: string; method: string };
+			expect(cleanup.jobId).toBe("cancel-job");
+			expect(["confirmed", "unknown", "failed", "unsupported"]).toContain(cleanup.state);
+			expect(cleanup.method).toBe("direct");
+			expect(result.status).not.toBe("succeeded");
+			if (cleanup.state === "confirmed") expect(result.status).toBe("cancelled");
+			else if (result.status === "cancelled") {
+				const directory = join(remoteRoot, "runs/cancel-job");
+				const status = JSON.parse(await readFile(join(directory, "status.json"), "utf8"));
+				const request = JSON.parse(await readFile(join(directory, "cancel-requested.json"), "utf8"));
+				expect(status.exitCode).toEqual(expect.any(Number));
+				expect(request.jobId).toBe("cancel-job");
+			} else expect(["running", "unknown"]).toContain(result.status);
+			console.info("Local direct cancel result:", JSON.stringify(result));
+		} finally {
+			try {
+				// Release the fixture even when this host cannot confirm process cleanup.
+				await writeFile(release, "release");
+				await waitForTerminal(remoteRoot, "cancel-job");
+			} finally {
+				await executor.dispose();
+				restore();
+			}
+		}
 	});
 });
