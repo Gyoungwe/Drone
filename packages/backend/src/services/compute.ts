@@ -14,6 +14,8 @@ import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
 import { getAgentDir } from "../session-engine/engine";
 import type { StorageRegistry } from "../storage/registry";
+import { type ComputeCancelHost, cancelComputeJob } from "./compute-cleanup";
+import { asRecord, mergeStatus, now, POLLABLE, setRecordFields, statusOf } from "./compute-job-state";
 import { assertComputePreflight, type ComputePreflightJobSpec } from "./compute-preflight";
 
 const log = createLogger("compute-service");
@@ -171,66 +173,6 @@ export interface ComputeServicePort {
 	): Promise<ComputeTerminalSession>;
 	onEvent(handler: (event: ComputeEvent) => void): () => void;
 	dispose(): Promise<void>;
-}
-
-const TERMINAL = new Set<JobState>(["succeeded", "failed", "cancelled", "blocked", "partial"]);
-const POLLABLE = new Set<JobState>([
-	"draft",
-	"authorized",
-	"prepared",
-	"submitting",
-	"queued",
-	"running",
-	"collecting",
-	"cancelling",
-	"unknown",
-	"needs-login",
-	"needs_login",
-]);
-
-function now(): number {
-	return Date.now();
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-	return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-}
-
-function statusOf(value: JobRecord): JobState {
-	const status = asRecord(value).status;
-	return typeof status === "string" ? (status as JobState) : "unknown";
-}
-
-function setRecordFields<T extends object>(value: T, fields: Record<string, unknown>): T {
-	return { ...asRecord(value), ...fields } as T;
-}
-
-function isTerminal(status: JobState): boolean {
-	return TERMINAL.has(status);
-}
-
-const STATUS_RANK: Partial<Record<JobState, number>> = {
-	draft: 0,
-	authorized: 1,
-	prepared: 2,
-	submitting: 3,
-	queued: 4,
-	running: 5,
-	collecting: 6,
-	cancelling: 6,
-};
-
-/** Keep reconciliation monotonic. A stale runner response cannot revive a terminal job. */
-function mergeStatus(previous: JobState, next: JobState): JobState {
-	if (isTerminal(previous)) return previous;
-	if (next === "unknown") return "unknown";
-	if (previous === "unknown") return next;
-	// Terminal runner states are authoritative even though they are not part of
-	// the in-flight rank table. Without this branch a queued job could never
-	// reconcile to succeeded because the fallback rank (-1) looked stale.
-	if (isTerminal(next)) return next;
-	if ((STATUS_RANK[next] ?? -1) < (STATUS_RANK[previous] ?? -1)) return previous;
-	return next;
 }
 
 function safeAlias(alias: string): string {
@@ -676,37 +618,7 @@ export class ComputeService implements ComputeServicePort {
 	}
 
 	async cancel(jobId: string): Promise<JobRecord> {
-		const job = await this.requireJob(jobId);
-		if (isTerminal(statusOf(job))) return job;
-		const host = await this.requireHost(String(asRecord(job).hostAlias));
-		const cancelling = this.updateJob(job, { status: "cancelling", updatedAt: now() });
-		await this.persistJob(cancelling);
-		if (!this.executor?.cancel) return cancelling;
-		try {
-			const result = await this.runExclusive(jobId, () => this.executor?.cancel?.(cancelling, host));
-			const cancelled = this.updateJob(cancelling, {
-				...(result ?? {}),
-				status: result?.status ?? "cancelled",
-				updatedAt: now(),
-			});
-			await this.persistJob(cancelled);
-			await this.appendEvent({
-				id: randomUUID(),
-				jobId,
-				type: "cancelled",
-				at: now(),
-				status: statusOf(cancelled),
-			});
-			return cancelled;
-		} catch (error) {
-			const unknown = this.updateJob(cancelling, {
-				status: "unknown",
-				updatedAt: now(),
-				error: String(error),
-			});
-			await this.persistJob(unknown);
-			return unknown;
-		}
+		return cancelComputeJob(this.cancelHost, jobId);
 	}
 
 	cancelJob(jobId: string): Promise<JobRecord> {
@@ -766,6 +678,18 @@ export class ComputeService implements ComputeServicePort {
 		if (this.pollTimer) clearInterval(this.pollTimer);
 		this.pollTimer = undefined;
 		this.events.clear();
+	}
+
+	private get cancelHost(): ComputeCancelHost {
+		return {
+			executor: this.executor,
+			requireJob: this.requireJob.bind(this),
+			requireHost: this.requireHost.bind(this),
+			updateJob: this.updateJob.bind(this),
+			persistJob: this.persistJob.bind(this),
+			appendEvent: this.appendEvent.bind(this),
+			runExclusive: this.runExclusive.bind(this),
+		};
 	}
 
 	private async requireHost(alias: string): Promise<HostProfile> {

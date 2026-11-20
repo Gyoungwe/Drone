@@ -24,7 +24,7 @@
 	"file-lines\tpackages/backend/src/plugins/state-capabilities.test.ts": 500,
 	"file-lines\tpackages/backend/src/services/analysis-evidence.ts": 692,
 	"file-lines\tpackages/backend/src/services/compute-adapter.ts": 1013,
-	"file-lines\tpackages/backend/src/services/compute.ts": 903,
+	"file-lines\tpackages/backend/src/services/compute.ts": 827,
 	"file-lines\tpackages/backend/src/services/daily-discovery.ts": 463,
 	"file-lines\tpackages/backend/src/services/execution-route.ts": 483,
 	"file-lines\tpackages/backend/src/services/inquiry.test.ts": 436,

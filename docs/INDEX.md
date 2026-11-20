@@ -498,6 +498,7 @@ src/
 | `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |
 | `src/services/subagents.ts` | `SubagentService` | 子代理面板发现、派发、中止与运行记录；通过 `BackendServices.subagents` 暴露 |
 | `src/services/compute-adapter.ts` | `ComputeHostAdapter`、`ComputeServiceAdapter`、`createComputeServiceAdapter` | B2 远程计算 host-facing adapter；默认投影 B1 的持久化主机、作业、日志和健康状态，runner/终端缺失时明确 unavailable，并在远端副作用前执行授权 |
+| `src/services/compute-cleanup.ts` / `src/services/compute-job-state.ts` | `cancelComputeJob` / 作业状态辅助函数 | `src/services/compute.ts` 的 `ComputeService` 委托取消流程；作业状态分类和合并规则独立维护 |
 | `src/mcp/service.ts` | `McpService` | MCP 配置、状态读取和重载边界；通过 `BackendServices.mcp` 暴露 |
 | `src/packages/admin.ts` | `PackageAdmin`（兼容别名） | 旧包管理入口的兼容 re-export；新代码使用 `services/packages.ts` |
 | `src/packages/catalog.ts` | `fetchPackageCatalog` | pi.dev 目录抓取：无 JSON API，解析 SSR HTML 的 `<article data-package-card>` |
