@@ -15,8 +15,9 @@ import { createLogger } from "../log";
 import { getAgentDir } from "../session-engine/engine";
 import type { StorageRegistry } from "../storage/registry";
 import { type ComputeCancelHost, cancelComputeJob } from "./compute-cleanup";
-import { asRecord, mergeStatus, now, POLLABLE, setRecordFields, statusOf } from "./compute-job-state";
+import { asRecord, now, setRecordFields, statusOf } from "./compute-job-state";
 import { assertComputePreflight, type ComputePreflightJobSpec } from "./compute-preflight";
+import { type ComputeReconcileHost, reconcileComputeJob } from "./compute-reconcile";
 
 const log = createLogger("compute-service");
 
@@ -544,57 +545,7 @@ export class ComputeService implements ComputeServicePort {
 		const result: JobRecord[] = [];
 		for (const current of candidates) {
 			if (!current) continue;
-			const status = statusOf(current);
-			if (!POLLABLE.has(status) || !this.executor) {
-				result.push({ ...current });
-				continue;
-			}
-			const host = this.hostCache.get(String(asRecord(current).hostAlias));
-			if (!host) {
-				result.push({ ...current });
-				continue;
-			}
-			try {
-				const remote = await this.runExclusive(String(asRecord(current).jobId), () =>
-					this.executor?.status(current, host),
-				);
-				if (!remote) {
-					result.push({ ...current });
-					continue;
-				}
-				const nextStatus = mergeStatus(status, remote.status);
-				const updated = this.updateJob(current, {
-					...remote,
-					status: nextStatus,
-					updatedAt: now(),
-				});
-				await this.persistJob(updated);
-				if (nextStatus !== status)
-					await this.appendEvent({
-						id: randomUUID(),
-						jobId: String(asRecord(current).jobId),
-						type: "status",
-						at: now(),
-						status: nextStatus,
-					});
-				result.push({ ...updated });
-			} catch (error) {
-				const updated = this.updateJob(current, {
-					status: "unknown",
-					updatedAt: now(),
-					error: String(error),
-				});
-				await this.persistJob(updated);
-				await this.appendEvent({
-					id: randomUUID(),
-					jobId: String(asRecord(current).jobId),
-					type: "error",
-					at: now(),
-					status: "unknown",
-					detail: String(error),
-				});
-				result.push({ ...updated });
-			}
+			result.push(await reconcileComputeJob(this.reconcileHost, current));
 		}
 		return result;
 	}
@@ -685,6 +636,17 @@ export class ComputeService implements ComputeServicePort {
 			executor: this.executor,
 			requireJob: this.requireJob.bind(this),
 			requireHost: this.requireHost.bind(this),
+			updateJob: this.updateJob.bind(this),
+			persistJob: this.persistJob.bind(this),
+			appendEvent: this.appendEvent.bind(this),
+			runExclusive: this.runExclusive.bind(this),
+		};
+	}
+
+	private get reconcileHost(): ComputeReconcileHost {
+		return {
+			executor: this.executor,
+			hostFor: this.hostCache.get.bind(this.hostCache),
 			updateJob: this.updateJob.bind(this),
 			persistJob: this.persistJob.bind(this),
 			appendEvent: this.appendEvent.bind(this),
