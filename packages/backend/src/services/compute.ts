@@ -129,11 +129,11 @@ export type ComputeJobInput = Omit<JobSpec, "jobId"> & {
 	authorization?: unknown;
 	contractHash?: string;
 };
-
+type ComputeEventKind = "created" | "submitted" | "status" | "logs" | "collected" | "cancelled" | "error";
 export interface ComputeEvent {
 	readonly id: string;
 	readonly jobId: string;
-	readonly type: "created" | "submitted" | "status" | "logs" | "collected" | "cancelled" | "error";
+	readonly type: ComputeEventKind | "cleanup";
 	readonly at: number;
 	readonly status?: JobState;
 	readonly cursor?: string;
