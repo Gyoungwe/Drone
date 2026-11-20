@@ -34,8 +34,8 @@ import {
 	cancelWithEvidence,
 	resolveInside,
 	safeRelativePath,
-	sha256,
 } from "./compute-operation-lifetime";
+import { deployRunnerScript } from "./runner-deployment";
 
 const MIN_RUNNER_VERSION = "1.0.0";
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -95,7 +95,7 @@ export interface DefaultComputeExecutorOptions {
 	readonly userSshConfigPath?: string;
 }
 
-interface CollectingTransport extends RunnerTransport {
+export interface CollectingTransport extends RunnerTransport {
 	upload(request: {
 		readonly source: Uint8Array | string;
 		readonly destination: string;
@@ -1115,22 +1115,12 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 		const script = runnerScriptPath(this.options);
 		await access(script, fsConstants.R_OK);
 		const source = await readFile(script);
-		const digest = sha256(source);
-		const remote = `${this.remoteRoot(host)}/runner/${digest}/runner.py`;
-		try {
-			if (sha256(await transport.download({ source: remote, maxBytes: source.byteLength + 1 })) === digest)
-				return remote;
-		} catch {
-			/* missing or stale runner */
-		}
-		await transport.upload({
+		return deployRunnerScript(
+			transport,
 			source,
-			destination: remote,
-			maxBytes: this.options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES,
-		});
-		if (sha256(await transport.download({ source: remote, maxBytes: source.byteLength + 1 })) !== digest)
-			throw new ComputeTransportError("runner-checksum", "Remote runner checksum verification failed");
-		return remote;
+			this.remoteRoot(host),
+			this.options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES,
+		);
 	}
 
 	private async transport(host: HostProfile): Promise<CollectingTransport> {
