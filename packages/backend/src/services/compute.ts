@@ -16,6 +16,7 @@ import { getAgentDir } from "../session-engine/engine";
 import type { StorageRegistry } from "../storage/registry";
 import { validateArtifactManifest, verifyArtifactChecksums } from "./compute-artifact-checks";
 import { type ComputeCancelHost, cancelComputeJob } from "./compute-cleanup";
+import { createComputeInflight } from "./compute-inflight";
 import { asRecord, now, setRecordFields, statusOf } from "./compute-job-state";
 import { assertComputePreflight, type ComputePreflightJobSpec } from "./compute-preflight";
 import { type ComputeReconcileHost, reconcileComputeJob } from "./compute-reconcile";
@@ -80,11 +81,16 @@ export interface ComputeTerminalSession {
 export interface ComputeExecutor {
 	probeHost?(host: HostProfile): Promise<HostCapability>;
 	listWorkflowModules?(): Promise<readonly ComputeWorkflowModule[]>;
-	submit(spec: JobSpec, host: HostProfile): Promise<ComputeSubmitResult>;
+	submit(spec: JobSpec, host: HostProfile, signal?: AbortSignal): Promise<ComputeSubmitResult>;
 	status(job: JobRecord, host: HostProfile): Promise<ComputeStatusResult>;
 	logs?(job: JobRecord, host: HostProfile, cursor?: string): Promise<ComputeLogsResult>;
 	cancel?(job: JobRecord, host: HostProfile): Promise<ComputeStatusResult | undefined>;
-	collect?(job: JobRecord, host: HostProfile, options?: ComputeCollectOptions): Promise<ComputeCollectResult>;
+	collect?(
+		job: JobRecord,
+		host: HostProfile,
+		options?: ComputeCollectOptions,
+		signal?: AbortSignal,
+	): Promise<ComputeCollectResult>;
 	openTerminal?(
 		host: HostProfile,
 		input: { cwd?: string; mode?: "shell" | "command" },
@@ -157,7 +163,7 @@ export interface ComputeServicePort {
 	listJobs(): Promise<JobRecord[]>;
 	getJob(jobId: string): Promise<JobRecord | null>;
 	listEvents(jobId: string): Promise<ComputeEvent[]>;
-	submit(spec: ComputeJobInput): Promise<JobRecord>;
+	submit(spec: ComputeJobInput, signal?: AbortSignal): Promise<JobRecord>;
 	submitJob(spec: ComputeJobInput): Promise<JobRecord>;
 	status(jobId: string): Promise<JobRecord>;
 	getJobStatus(jobId: string): Promise<JobRecord>;
@@ -165,7 +171,7 @@ export interface ComputeServicePort {
 	reconcileJob(jobId?: string): Promise<JobRecord[]>;
 	logs(jobId: string, cursor?: string): Promise<ComputeLogsResult>;
 	cancel(jobId: string): Promise<JobRecord>;
-	collect(jobId: string, options: ComputeCollectOptions): Promise<ComputeCollectResult>;
+	collect(jobId: string, options: ComputeCollectOptions, signal?: AbortSignal): Promise<ComputeCollectResult>;
 	/** ComputeContract naming aliases kept at the backend boundary. */
 	getJobLogs(jobId: string, cursor?: string): Promise<ComputeLogsResult>;
 	cancelJob(jobId: string): Promise<JobRecord>;
@@ -227,6 +233,7 @@ export class ComputeService implements ComputeServicePort {
 	private readonly jobs = new Map<string, JobRecord>();
 	private readonly hostCache = new Map<string, HostProfile>();
 	private readonly events = new Set<(event: ComputeEvent) => void>();
+	private readonly inflight = createComputeInflight();
 	private readonly executor?: ComputeExecutor;
 	private readonly preflight?: (spec: ComputePreflightJobSpec) => void | Promise<void>;
 	private readonly experienceRecorder?: ComputeExperienceRecorder;
@@ -346,6 +353,14 @@ export class ComputeService implements ComputeServicePort {
 
 	async init(): Promise<void> {
 		if (this.initialized) return;
+		await this.initializeStorage();
+		if (this.disposed) return;
+		this.pollTimer = setInterval(() => void this.reconcile(), this.pollIntervalMs);
+		this.pollTimer.unref?.();
+		await this.reconcile();
+	}
+
+	private async initializeStorage(): Promise<void> {
 		this.initialized = true;
 		await mkdir(join(this.root, "jobs"), { recursive: true });
 		await mkdir(join(this.root, "events"), { recursive: true });
@@ -359,9 +374,6 @@ export class ComputeService implements ComputeServicePort {
 			}
 		}
 		await this.loadPersistedJobs();
-		this.pollTimer = setInterval(() => void this.reconcile(), this.pollIntervalMs);
-		this.pollTimer.unref?.();
-		await this.reconcile();
 	}
 
 	async listHosts(): Promise<HostProfile[]> {
@@ -425,7 +437,11 @@ export class ComputeService implements ComputeServicePort {
 		return await this.eventStore(safeJobId(jobId)).read();
 	}
 
-	async submit(spec: ComputeJobInput): Promise<JobRecord> {
+	submit(spec: ComputeJobInput, signal?: AbortSignal): Promise<JobRecord> {
+		return this.inflight.run(signal, (opSignal) => this.submitActive(spec, opSignal));
+	}
+
+	private async submitActive(spec: ComputeJobInput, signal: AbortSignal): Promise<JobRecord> {
 		// B7 is a host-side gate. Run it before idempotency lookup, persistence,
 		// initialization, or any executor call so an invalid/mismatched design
 		// cannot cause an observable compute side effect or silently alter intent.
@@ -435,52 +451,46 @@ export class ComputeService implements ComputeServicePort {
 		const raw = asRecord(spec);
 		const requestedId = typeof raw.jobId === "string" ? raw.jobId : undefined;
 		const idempotencyKey = typeof raw.idempotencyKey === "string" ? raw.idempotencyKey : undefined;
-		if (requestedId) {
-			const existing = await this.getJob(requestedId);
-			if (existing) {
-				if (specFingerprint(asRecord(existing).spec) !== specFingerprint(spec))
-					throw new Error(`Compute job already exists with a different specification: ${requestedId}`);
-				return existing;
+		const existingById = requestedId ? await this.getJob(requestedId) : null;
+		const existing =
+			existingById ??
+			(idempotencyKey &&
+				[...this.jobs.values()].find((job) => asRecord(job.spec).idempotencyKey === idempotencyKey));
+		if (existing) {
+			if (specFingerprint(asRecord(existing).spec) !== specFingerprint(spec)) {
+				const conflict = existingById ? "job" : "idempotency key";
+				throw new Error(
+					`Compute ${conflict} already exists with a different specification: ${existingById ? requestedId : idempotencyKey}`,
+				);
 			}
-		}
-		if (idempotencyKey) {
-			const existing = [...this.jobs.values()].find(
-				(job) => asRecord(asRecord(job).spec).idempotencyKey === idempotencyKey,
-			);
-			if (existing) {
-				if (specFingerprint(asRecord(existing).spec) !== specFingerprint(spec))
-					throw new Error(
-						`Compute idempotency key already exists with a different specification: ${idempotencyKey}`,
-					);
-				return { ...existing };
-			}
+			return existingById ?? { ...existing };
 		}
 		const jobId = safeJobId(requestedId ?? randomUUID());
 		const hostAlias = String(raw.hostAlias ?? raw.host ?? "");
 		const host = await this.requireHost(hostAlias);
 		const timestamp = now();
-		const normalizedSpec = { ...spec, jobId } as JobSpec;
 		const job = {
 			...raw,
 			jobId,
-			spec: normalizedSpec,
+			spec: { ...spec, jobId },
 			hostAlias,
 			status: "draft",
 			createdAt: timestamp,
 			updatedAt: timestamp,
 		} as unknown as JobRecord;
 		this.jobs.set(jobId, job);
-		await this.persistJob(job);
-		await this.appendEvent({
-			id: randomUUID(),
-			jobId,
-			type: "created",
-			at: timestamp,
-			status: "draft",
-		});
-		if (!this.executor) return { ...job };
+		await this.recordSubmission(job, "created");
+		return this.submitToExecutor(job, host, signal);
+	}
+
+	private async submitToExecutor(job: JobRecord, host: HostProfile, signal: AbortSignal) {
+		const executor = this.executor;
+		if (!executor) return { ...job };
 		try {
-			const result = await this.runExclusive(jobId, () => this.executor?.submit(normalizedSpec, host));
+			const result = await this.runExclusive(job.jobId, () => {
+				signal.throwIfAborted();
+				return executor.submit(job.spec, host, signal);
+			});
 			const submitted = this.updateJob(job, {
 				status: result?.status ?? "queued",
 				remoteId: result?.remoteId,
@@ -489,29 +499,26 @@ export class ComputeService implements ComputeServicePort {
 				...(result?.progress && typeof result.progress === "object" ? { progress: result.progress } : {}),
 				updatedAt: now(),
 			});
-			await this.persistJob(submitted);
-			await this.appendEvent({
-				id: randomUUID(),
-				jobId,
-				type: "submitted",
-				at: now(),
-				status: statusOf(submitted),
-			});
+			await this.recordSubmission(submitted, "submitted");
 			return { ...submitted };
 		} catch (error) {
 			// An unknown side-effect result must be reconciled rather than replayed.
 			const unknown = this.updateJob(job, { status: "unknown", updatedAt: now(), error: String(error) });
-			await this.persistJob(unknown);
-			await this.appendEvent({
-				id: randomUUID(),
-				jobId,
-				type: "error",
-				at: now(),
-				status: "unknown",
-				detail: String(error),
-			});
+			await this.recordSubmission(unknown, "error", String(error));
 			return { ...unknown };
 		}
+	}
+
+	private async recordSubmission(job: JobRecord, type: "created" | "submitted" | "error", detail?: string) {
+		await this.persistJob(job);
+		await this.appendEvent({
+			id: randomUUID(),
+			jobId: job.jobId,
+			type,
+			at: type === "created" ? job.createdAt : now(),
+			status: statusOf(job),
+			...(detail === undefined ? {} : { detail }),
+		});
 	}
 
 	async status(jobId: string): Promise<JobRecord> {
@@ -529,21 +536,7 @@ export class ComputeService implements ComputeServicePort {
 	}
 
 	async reconcile(jobId?: string): Promise<JobRecord[]> {
-		if (!this.initialized) {
-			this.initialized = true;
-			await mkdir(join(this.root, "jobs"), { recursive: true });
-			await mkdir(join(this.root, "events"), { recursive: true });
-			for (const host of await this.hostsStore.read()) {
-				const alias = asRecord(host).alias;
-				if (typeof alias !== "string") continue;
-				try {
-					this.hostCache.set(safeAlias(alias), sanitizeHost(host));
-				} catch {
-					log.warn("skipping invalid persisted compute host", alias);
-				}
-			}
-			await this.loadPersistedJobs();
-		}
+		if (!this.initialized) await this.initializeStorage();
 		const candidates = jobId ? [await this.getJob(jobId)] : [...this.jobs.values()];
 		const result: JobRecord[] = [];
 		for (const current of candidates) {
@@ -579,20 +572,27 @@ export class ComputeService implements ComputeServicePort {
 		return this.cancel(jobId);
 	}
 
-	async collect(jobId: string, options: ComputeCollectOptions): Promise<ComputeCollectResult> {
+	collect(jobId: string, options: ComputeCollectOptions, signal?: AbortSignal) {
+		return this.inflight.run(signal, (opSignal) => this.collectActive(jobId, options, opSignal));
+	}
+
+	private async collectActive(jobId: string, options: ComputeCollectOptions, signal: AbortSignal) {
 		const job = await this.requireJob(jobId);
 		if (statusOf(job) !== "succeeded")
 			throw new Error("Artifacts can only be collected from a succeeded job");
-		if (!this.executor?.collect) throw new Error("Compute runner does not provide artifact collection");
+		const collect = this.executor?.collect?.bind(this.executor);
+		if (!collect) throw new Error("Compute runner does not provide artifact collection");
 		const targetDir = resolve(options.targetDir);
 		await mkdir(targetDir, { recursive: true });
 		const host = await this.requireHost(String(asRecord(job).hostAlias));
-		const result = await this.runExclusive(jobId, async () =>
-			this.executor?.collect?.(job, host, { ...options, targetDir }),
-		);
+		const result = await this.runExclusive(jobId, () => {
+			signal.throwIfAborted();
+			return collect(job, host, { ...options, targetDir }, signal);
+		});
 		if (!result) throw new Error("Compute runner returned no artifact manifest");
 		validateArtifactManifest(result.manifest, targetDir, options.expected, options.maxBytes);
 		await verifyArtifactChecksums(result.manifest, targetDir);
+		signal.throwIfAborted();
 		await this.appendEvent({
 			id: randomUUID(),
 			jobId,
@@ -627,10 +627,10 @@ export class ComputeService implements ComputeServicePort {
 	}
 
 	async dispose(): Promise<void> {
-		if (this.disposed) return;
 		this.disposed = true;
 		if (this.pollTimer) clearInterval(this.pollTimer);
 		this.pollTimer = undefined;
+		await this.inflight.abortAndDrain();
 		this.events.clear();
 	}
 
