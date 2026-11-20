@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import type {
 	PluginRecordAdoptions,
 	PluginServiceProvision,
@@ -5,6 +6,15 @@ import type {
 	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
 import type { PluginCredentialSlot } from "./plugin-credentials";
+
+export interface PluginP5Optins {
+	readonly bytes?: "staged-output";
+	readonly exportBundle?: "request";
+	readonly batch?: "request";
+	readonly rerun?: "request";
+	readonly critic?: "request";
+	readonly delivery?: "request";
+}
 
 export interface PluginRuntimeSource {
 	readonly pluginId: string;
@@ -15,6 +25,7 @@ export interface PluginRuntimeSource {
 	readonly nativeEntrypoint?: string;
 	readonly contentHash?: string;
 	readonly deliveryProjection?: "required";
+	readonly p5?: PluginP5Optins;
 	readonly provides?: Readonly<Record<string, PluginServiceProvision>>;
 	readonly requires?: Readonly<Record<string, PluginServiceRequirement>>;
 	readonly consumes?: Readonly<Record<string, PluginServiceRole>>;
@@ -51,6 +62,7 @@ export function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | unde
 		a.nativeEntrypoint === b.nativeEntrypoint &&
 		a.contentHash === b.contentHash &&
 		a.deliveryProjection === b.deliveryProjection &&
+		isDeepStrictEqual(a.p5 ?? {}, b.p5 ?? {}) &&
 		JSON.stringify(a.provides) === JSON.stringify(b.provides) &&
 		JSON.stringify(a.requires) === JSON.stringify(b.requires) &&
 		JSON.stringify(a.consumes) === JSON.stringify(b.consumes) &&
