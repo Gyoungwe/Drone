@@ -1,4 +1,5 @@
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
+import type { FactsResult, HostFactDeliveryAcknowledgement } from "./p5-inquiry.js";
 import type { PluginRuntimeContext, PluginRuntimeSchema } from "./runtime.js";
 
 /** Called only by the host for the current actual SDK event and its already-bound native attachment.
@@ -13,6 +14,13 @@ export interface PluginNativeOperation {
 	execute(input: unknown, event: unknown, context: PluginRuntimeContext): Promise<unknown>;
 }
 
+/** Host-invoked only. Commit projection and cursor together, then acknowledge.
+ * The signal is the host's revocation/write fence: recheck it before each fact commit, including within a batch. */
+export interface PluginNativeFactOwner {
+	cursor(signal: AbortSignal): Promise<string | null>;
+	deliver(delivery: FactsResult, signal: AbortSignal): Promise<HostFactDeliveryAcknowledgement>;
+}
+
 /** Official Pi registration owned by one real host session, sharing the application's domain owner. */
 export interface PluginNativeSession {
 	readonly extension: ExtensionFactory;
@@ -24,6 +32,7 @@ export interface PluginNativeSession {
 	readonly eventEffects?: Readonly<Record<string, "read" | "write">>;
 	/** Same-owner service callbacks for a host-proven native event; ordinary operations cannot invoke these. */
 	readonly nativeOperations?: Readonly<Record<string, PluginNativeOperation>>;
+	readonly factOwner?: PluginNativeFactOwner;
 	/** Projection executes where the plugin's live proof objects were created; JSON is not a proof. */
 	readonly projection?: {
 		/** Runs once after every official SDK hook and before public delivery or append. */

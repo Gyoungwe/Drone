@@ -1,4 +1,5 @@
 import { PLUGIN_EVENTS } from "./native-events";
+import { WORKER_FACT_DELIVERY } from "./worker-fact-delivery";
 
 /** Executed only in the permission-restricted child, never imported as plugin code by the host. */
 export const PROCESS_RUNTIME_WORKER = String.raw`
@@ -43,6 +44,7 @@ const resourcesLifecycle = {
 };
 const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
 let runtime;
+${WORKER_FACT_DELIVERY}
 // Attachment-private originals; no message/proof JSON field is an authority reference.
 function retainMessages(session, value) {
   const retain = message => {
@@ -131,6 +133,7 @@ input.on("line", async (line) => {
         await adapter.dispose();
         throw new Error("Invalid native publication projection");
       }
+      const factOwner = await validateNativeFactOwner(adapter);
       const tools = new Map(), commands = new Map(), hooks = [];
       const unsupported = (name) => { throw new Error("Unsupported native Pi API: " + name); };
       const pi = new Proxy({
@@ -148,11 +151,12 @@ input.on("line", async (line) => {
       }, {get(target,name){if(name in target)return target[name];return unsupported(String(name));}});
       try { await adapter.extension(pi); }
       catch(error) { await adapter.dispose(); throw error; }
-      nativeSessions.set(message.attachment, {adapter,tools,commands,hooks,pending:new Map(),closed:false,originals:new Map(),references:new WeakMap(),messageSequence:0});
+      nativeSessions.set(message.attachment, {adapter,factOwner,tools,commands,hooks,pending:new Map(),closed:false,originals:new Map(),references:new WeakMap(),messageSequence:0});
       send({type:"result",id:message.id,ok:true,value:{tools:[...tools.values()].map(tool=>Object.fromEntries(
         ["name","label","description","parameters","outputSchema","constrainedSampling","renderShell","promptSnippet","promptGuidelines","exposure","namespace","annotations","defaultActive","executionMode","drone"]
           .filter(key=>tool[key]!==undefined).map(key=>[key,tool[key]])
-      )),commands:[...commands.entries()].map(([name,command])=>({name,...(command.description===undefined?{}:{description:command.description})})),effects:adapter.toolEffects||{},commandEffects:adapter.commandEffects||{},eventEffects:adapter.eventEffects||{},nativeOperations:Object.fromEntries(Object.entries(adapter.nativeOperations||{}).map(([name,operation])=>[name,{event:operation.event,inputSchema:operation.inputSchema,resultSchema:operation.resultSchema,effect:operation.effect}])),...(adapter.projection?{projection:{finalize:typeof adapter.projection.finalize==="function",effect:adapter.projection.finalizeEffect??"write"}}:{}),events:hooks.map(({name},index)=>({name,index}))}});
+      )),commands:[...commands.entries()].map(([name,command])=>({name,...(command.description===undefined?{}:{description:command.description})})),effects:adapter.toolEffects||{},commandEffects:adapter.commandEffects||{},eventEffects:adapter.eventEffects||{},nativeOperations:Object.fromEntries(Object.entries(adapter.nativeOperations||{}).map(([name,operation])=>[name,{event:operation.event,inputSchema:operation.inputSchema,resultSchema:operation.resultSchema,effect:operation.effect}])),...(adapter.projection?{projection:{finalize:typeof adapter.projection.finalize==="function",effect:adapter.projection.finalizeEffect??"write"}}:{}),
+      ...(factOwner === undefined ? {} : {factOwner:true}),events:hooks.map(({name},index)=>({name,index}))}});
       return;
     }
     if (message.type === "native_detach") {
@@ -164,6 +168,10 @@ input.on("line", async (line) => {
       await currentCall.run(message.id,()=>session.adapter.dispose());
       nativeSessions.delete(message.attachment);
       send({type:"result",id:message.id,ok:true,value:null});
+      return;
+    }
+    if (message.type === "native_fact_cursor" || message.type === "native_fact_deliver") {
+      await routeNativeFactRequest(message);
       return;
     }
     if (message.type === "native_call" || message.type === "native_projection" || message.type === "native_operation") {

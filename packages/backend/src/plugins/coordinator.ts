@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { PluginRuntimeEvent } from "@drone/shared";
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
-import type { PluginNativeRuntimeFactory } from "@gyoungwe/plugin-api/native";
 import type { PluginNativeSessionFacts, PluginProviderInvocationInput } from "@gyoungwe/plugin-api/runtime";
 import type { AskQuestionRoute } from "../session/ask-gate";
 import { type Binding, beginNativeBootstrap, type Runtime } from "./coordinator-native";
 import type { NativeSessionDelivery, SelectedNativeSource } from "./native-delivery";
+import type { HostNativeRuntimeFactory } from "./p5-owner-facade";
 import { type PluginRuntimeSource, sameSource } from "./plugin-source";
 import { type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 import type {
@@ -56,7 +56,7 @@ export interface PluginRuntimeBridgeOptions {
 		readonly state: "enabled" | "unavailable" | "disabled";
 	}[];
 	enabled(name: string): boolean;
-	factory(source: PluginRuntimeSource): PluginNativeRuntimeFactory;
+	factory(source: PluginRuntimeSource): HostNativeRuntimeFactory;
 	capabilities?(
 		source: PluginRuntimeSource,
 		owner: PluginRuntimeOwner,

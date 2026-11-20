@@ -6,9 +6,10 @@ export interface P5CommittedProjection extends HostFactDeliveryOwner {
 	cursor(): Promise<string | null>;
 }
 
-export interface HostNativeSession extends PluginNativeSession {
+// Only the worker reaches the guest owner; this handle-bearing host session is not a plugin contract.
+export type HostNativeSession = Omit<PluginNativeSession, "factOwner"> & {
 	readonly factOwner?: P5CommittedProjection;
-}
+};
 
 export type HostNativeRuntimeFactory = PluginRuntimeFactory<HostNativeSession>;
 

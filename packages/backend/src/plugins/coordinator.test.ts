@@ -1,6 +1,6 @@
-import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import { describe, expect, it, vi } from "vitest";
 import { PluginRuntimeBridge } from "./coordinator";
+import type { HostNativeSession } from "./p5-owner-facade";
 
 const source = { pluginId: "example", packageRoot: "/example", entrypoint: "/example/runtime.mjs" };
 const owner = { id: 1, isDestroyed: () => false };
@@ -39,10 +39,10 @@ describe("native bootstrap ownership", () => {
 	});
 	it("waits for pending native creation and disposes its session before the owner", async () => {
 		const order: string[] = [];
-		let finish!: (value: PluginNativeSession) => void;
+		let finish!: (value: HostNativeSession) => void;
 		const createNativeSession = vi.fn(
 			() =>
-				new Promise<PluginNativeSession>((resolve) => {
+				new Promise<HostNativeSession>((resolve) => {
 					finish = resolve;
 				}),
 		);
