@@ -12,6 +12,12 @@ export const AGENT_DIR_ENTRIES: readonly (readonly [string, string, string, Stor
 	["agent-p5-compute-sources", "p5-compute-sources.json", "services/p5-compute-sources", "private"],
 	["agent-p5-facts", "p5-facts.json", "plugins/p5-facts", "private"],
 	["agent-p5-spend-ledger", "p5-spend-ledger.json", "services/p5-spend-ledger", "private"],
+	[
+		"agent-p5-background-settings",
+		"p5-background-settings.json",
+		"services/p5-background-settings",
+		"config",
+	],
 	["agent-zotero-web", "zotero-web.json", "zotero/web-credentials", "secret"],
 	["agent-knowledge-webdav", "knowledge-webdav.json", "knowledge/webdav-credentials", "secret"],
 	["agent-zotero-local", "zotero-local.json", "zotero/local-write", "secret"],

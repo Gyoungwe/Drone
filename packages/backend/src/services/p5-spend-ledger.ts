@@ -25,6 +25,15 @@ export interface SpendGate {
 	record(usage: Usage & { readonly workspaceId: string }): Promise<void>;
 }
 
+export interface P5SpendDay {
+	readonly tokens: number;
+	readonly unknownUsage: boolean;
+}
+
+export interface P5SpendLedger extends SpendGate {
+	today(workspaceId: string): Promise<P5SpendDay>;
+}
+
 interface LedgerEntry {
 	workspaceId: string;
 	dayKey: string;
@@ -132,7 +141,7 @@ function recordUsage(
 	if (!entry) entries.push(next);
 }
 
-export function createP5SpendLedger(options: SpendLedgerOptions): SpendGate {
+export function createP5SpendLedger(options: SpendLedgerOptions): P5SpendLedger {
 	const json = new JsonStore<LedgerEntry[]>({
 		path: options.path,
 		storageId: "agent-p5-spend-ledger",
@@ -163,6 +172,14 @@ export function createP5SpendLedger(options: SpendLedgerOptions): SpendGate {
 			if (!usage.metered) return;
 			const dayKey = options.localDayKey(options.clock());
 			await json.update((entries) => recordUsage(entries, usage, dayKey));
+		},
+		async today(workspaceId) {
+			const dayKey = options.localDayKey(options.clock());
+			const entries = await json.update((current) => current);
+			const entry = entries.find((row) => row.workspaceId === workspaceId && row.dayKey === dayKey);
+			if (!entry) return { tokens: 0, unknownUsage: false };
+			const { tokens, unknownUsage } = entry;
+			return { tokens, unknownUsage };
 		},
 	};
 }

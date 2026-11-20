@@ -139,3 +139,27 @@ describe("JsonStore sync 变体", () => {
 		expect(s.readSync()).toEqual({ fresh: true });
 	});
 });
+
+describe("JsonStore strict sync read", () => {
+	it("returns the default without creating a missing file", () => {
+		expect(store().readStrictSync()).toStrictEqual({ seeded: true });
+		expect(readdirSync(dir)).toStrictEqual([]);
+	});
+
+	it("returns the parsed value", () => {
+		writeFileSync(path, '{"count":4}');
+		expect(store().readStrictSync()).toStrictEqual({ count: 4 });
+	});
+
+	it("throws on corruption without changing the file", () => {
+		const contents = Buffer.from("[broken");
+		writeFileSync(path, contents);
+		expect(() => store().readStrictSync()).toThrow(JsonStoreCorruptedError);
+		expect(readFileSync(path)).toStrictEqual(contents);
+	});
+
+	it("propagates non-ENOENT I/O errors without classifying them as corruption", () => {
+		mkdirSync(path);
+		expect(() => store().readStrictSync()).toThrow(expect.objectContaining({ code: "EISDIR" }));
+	});
+});
