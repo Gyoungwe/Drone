@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { lstat, mkdir, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, mkdir, open, rename, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { type ArtifactManifest, isJobState, type JobRecord, type RunnerClient } from "@drone/compute";
 import type { ComputeStatusResult } from "../services/compute";
@@ -14,6 +14,10 @@ export class ComputeTransportError extends Error {
 		this.code = code;
 		this.retryable = retryable;
 	}
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+	if (signal?.aborted) throw new ComputeTransportError("aborted", "Compute operation was aborted");
 }
 
 export function sha256(value: Uint8Array): string {
@@ -61,7 +65,7 @@ function runnerRecord(value: unknown): Record<string, unknown> {
 	return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 }
 
-function validatedCleanup(value: unknown, jobId: string, method: "direct" | "slurm") {
+function validatedCleanup(value: unknown, jobId: string, fallbackMethod?: "direct" | "slurm") {
 	const evidence = runnerRecord(value);
 	if (
 		(evidence.state === "confirmed" ||
@@ -74,7 +78,20 @@ function validatedCleanup(value: unknown, jobId: string, method: "direct" | "slu
 	) {
 		return { state: evidence.state, jobId, method: evidence.method, observedAt: evidence.observedAt };
 	}
+	const method = fallbackMethod ?? (evidence.method === "slurm" ? "slurm" : "direct");
 	return { state: "unknown", jobId, method };
+}
+
+export async function statusWithEvidence(client: RunnerClient, job: JobRecord): Promise<ComputeStatusResult> {
+	const jobId = job.remoteId ?? job.jobId;
+	const value = await client.status(jobId);
+	return {
+		status: value.state ?? "unknown",
+		remoteId: value.remoteId ?? job.remoteId,
+		...(value.pid ? { pid: value.pid } : {}),
+		...(value.message ? { error: value.message } : {}),
+		...("cleanup" in value ? { cleanup: validatedCleanup(value.cleanup, jobId) } : {}),
+	};
 }
 
 export async function cancelWithEvidence(client: RunnerClient, job: JobRecord): Promise<ComputeStatusResult> {
@@ -94,17 +111,29 @@ export async function cancelWithEvidence(client: RunnerClient, job: JobRecord): 
 	};
 }
 
+type DownloadArtifact = (path: string, maxBytes: number) => Promise<Uint8Array>;
+
 export class ComputeOperationLifetime {
-	private disposed = false;
+	private readonly controller = new AbortController();
 	private readonly writes = new Set<Promise<void>>();
 
-	assertActive(): void {
-		if (this.disposed) throw new ComputeTransportError("executor-disposed", "Compute executor is disposed");
+	assertActive(signal?: AbortSignal): void {
+		if (this.controller.signal.aborted)
+			throw new ComputeTransportError("executor-disposed", "Compute executor is disposed");
+		throwIfAborted(signal);
 	}
 
-	async write(...args: Parameters<typeof writeCollectedArtifacts>): Promise<void> {
-		this.assertActive();
-		const write = writeCollectedArtifacts(...args);
+	async write(
+		callerSignal: AbortSignal | undefined,
+		entries: ArtifactManifest["entries"],
+		targetDir: string,
+		maxBytes: number,
+		download: DownloadArtifact,
+	): Promise<void> {
+		this.assertActive(callerSignal);
+		const lifetimeSignal = this.controller.signal;
+		const signal = callerSignal ? AbortSignal.any([callerSignal, lifetimeSignal]) : lifetimeSignal;
+		const write = writeCollectedArtifacts(entries, targetDir, maxBytes, download, signal);
 		this.writes.add(write);
 		try {
 			await write;
@@ -114,37 +143,51 @@ export class ComputeOperationLifetime {
 	}
 
 	async dispose(): Promise<void> {
-		this.disposed = true;
+		this.controller.abort();
 		// Collect reports write failures to its caller; disposal must still drain every write.
 		await Promise.allSettled(this.writes);
 	}
 }
 
-export async function writeCollectedArtifacts(
+async function writeCollectedArtifacts(
 	entries: ArtifactManifest["entries"],
 	targetDir: string,
 	maxBytes: number,
-	download: (path: string, maxBytes: number) => Promise<Uint8Array>,
+	download: DownloadArtifact,
+	signal: AbortSignal,
 ): Promise<void> {
 	const targetRoot = resolve(targetDir);
 	await mkdir(targetRoot, { recursive: true });
 	for (const entry of entries) {
+		throwIfAborted(signal);
 		const path = safeRelativePath(entry.path);
-		const data = await download(path, entry.bytes ?? entry.size ?? maxBytes);
+		const bytes = await download(path, entry.bytes ?? entry.size ?? maxBytes);
 		if (entry.symlink)
 			throw new ComputeTransportError("unsafe-artifact", `Symlink artifact is not allowed: ${path}`);
-		if (entry.bytes !== undefined && data.byteLength !== entry.bytes)
+		if (entry.bytes !== undefined && bytes.byteLength !== entry.bytes)
 			throw new ComputeTransportError("artifact-size", `Artifact size mismatch: ${path}`);
-		if (entry.sha256 && sha256(data) !== entry.sha256.toLowerCase())
+		if (entry.sha256 && sha256(bytes) !== entry.sha256.toLowerCase())
 			throw new ComputeTransportError("artifact-checksum", `Artifact checksum mismatch: ${path}`);
-		const target = resolveInside(targetRoot, path);
-		await mkdir(dirname(target), { recursive: true });
-		const existing = await lstat(target).catch(() => undefined);
+		await publishArtifact(targetRoot, path, bytes, signal);
+	}
+}
+
+async function publishArtifact(root: string, path: string, bytes: Uint8Array, signal: AbortSignal) {
+	const target = resolveInside(root, path);
+	await mkdir(dirname(target), { recursive: true });
+	const temporary = `${target}.drone-partial-${randomUUID()}`;
+	const file = await open(temporary, "wx", 0o600);
+	try {
+		await file.writeFile(bytes).finally(() => file.close());
+		const existing = await lstat(target).catch((error: NodeJS.ErrnoException) => {
+			if (error.code !== "ENOENT") throw error;
+		});
 		if (existing?.isSymbolicLink())
 			throw new ComputeTransportError("unsafe-artifact", `Destination is a symlink: ${path}`);
-		await writeFile(target, data, { flag: "wx", mode: 0o600 }).catch(async (error: NodeJS.ErrnoException) => {
-			if (error.code !== "EEXIST") throw error;
-			await writeFile(target, data, { mode: 0o600 });
-		});
+		throwIfAborted(signal);
+		await rename(temporary, target);
+	} catch (error) {
+		await unlink(temporary);
+		throw error;
 	}
 }
