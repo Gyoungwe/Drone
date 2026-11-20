@@ -16,7 +16,7 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/permissions/config.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/permissions/extension.ts": 3,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugin-sandbox.ts": 1,
-	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/coordinator.ts": 5,
+	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/coordinator.ts": 2,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/execution-capabilities.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/execution-runner.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/backend/src/plugins/file-capabilities.test.ts": 1,
