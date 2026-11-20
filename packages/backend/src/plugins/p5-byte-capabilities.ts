@@ -13,6 +13,12 @@ interface Grant {
 	readonly transaction: P5ByteTransaction;
 }
 type GrantOf = (context: Context) => Grant | undefined;
+
+export function measuredEnvelopeBytes(context: Context): number {
+	if (context.envelopeBytes === undefined) throw new Error("Plugin capability envelope was not measured");
+	return context.envelopeBytes;
+}
+
 const closed = (properties: Record<string, object>) => ({
 	type: "object",
 	properties,

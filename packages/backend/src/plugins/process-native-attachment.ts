@@ -1,4 +1,3 @@
-import { AsyncResource } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
@@ -23,7 +22,7 @@ import {
 	nativeToolCallResponseSchema,
 	nativeTurnEndResponseSchema,
 } from "./process-native-schemas";
-import type { NativeToolUpdate } from "./process-runtime-messages";
+import { bindProcessRuntimeCapabilities, type NativeToolUpdate } from "./process-runtime-messages";
 
 export interface ProcessNativeHost {
 	request(
@@ -137,7 +136,7 @@ function invokeNative(
 					workspaceDirectory: ctx.cwd,
 					sessionId: ctx.sessionManager.getSessionId(),
 				},
-				capabilities: { call: AsyncResource.bind(host.context.capabilities.call) },
+				capabilities: bindProcessRuntimeCapabilities(host.context.capabilities),
 			},
 			onUpdate,
 		)
@@ -182,7 +181,7 @@ function projectNative(
 			},
 			signal,
 			context
-				? { ...context, capabilities: { call: AsyncResource.bind(context.capabilities.call) } }
+				? { ...context, capabilities: bindProcessRuntimeCapabilities(context.capabilities) }
 				: undefined,
 		)
 		.then((response) => {
@@ -215,7 +214,7 @@ function buildNativeOperations(
 								scope: context.scope,
 							},
 							signal,
-							{ ...context, capabilities: { call: AsyncResource.bind(context.capabilities.call) } },
+							{ ...context, capabilities: bindProcessRuntimeCapabilities(context.capabilities) },
 						)
 						.then((response) => {
 							signal.throwIfAborted();

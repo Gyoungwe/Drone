@@ -1,4 +1,3 @@
-import { AsyncResource } from "node:async_hooks";
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { readdirSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
@@ -13,6 +12,7 @@ import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
 import type { HostNativeSession } from "./p5-owner-facade";
 import { attachProcessNative, type ProcessNativeHost } from "./process-native-attachment";
 import {
+	bindProcessRuntimeCapabilities,
 	type Declarations,
 	executeProcessRuntimeCapability,
 	type Message,
@@ -172,7 +172,7 @@ class RuntimeProcess {
 	) {
 		this.bootstrapContext = {
 			...context,
-			capabilities: { call: AsyncResource.bind(context.capabilities.call) },
+			capabilities: bindProcessRuntimeCapabilities(context.capabilities),
 		};
 		this.ready = new Promise((resolve, reject) => {
 			this.resolveReady = resolve;
@@ -361,7 +361,7 @@ class RuntimeProcess {
 							execute: (input: unknown, context: PluginRuntimeContext) =>
 								this.request("invoke", { operation: name, input, scope: context.scope }, context.signal, {
 									...context,
-									capabilities: { call: AsyncResource.bind(context.capabilities.call) },
+									capabilities: bindProcessRuntimeCapabilities(context.capabilities),
 								}),
 						},
 					]),

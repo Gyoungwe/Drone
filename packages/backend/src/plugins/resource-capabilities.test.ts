@@ -7,7 +7,7 @@ import { fileCapabilityHandlers, PluginFileCapabilities } from "./file-capabilit
 import { createProcessPluginRuntime } from "./process-runtime";
 import { PluginResourceManager } from "./resource-capabilities";
 import { PluginRuntimeRegistry } from "./runtime";
-import type { PluginCapabilityContext } from "./runtime-capabilities";
+import { hostCapabilityPort, type PluginCapabilityContext } from "./runtime-capabilities";
 
 const runtimeDirectory = resolve(
 	import.meta.dirname,
@@ -56,13 +56,11 @@ function caller(workspaceId = "workspace-a"): PluginCapabilityContext {
 		callerIdentity: {},
 		signal: new AbortController().signal,
 		bootstrap: false,
-		capabilities: {
-			call: async (name, input) => {
-				const handler = handlers[name];
-				if (!handler) throw new Error("Unregistered test capability");
-				return handler.execute(input, call);
-			},
-		},
+		capabilities: hostCapabilityPort(async (name, input) => {
+			const handler = handlers[name];
+			if (!handler) throw new Error("Unregistered test capability");
+			return handler.execute(input, call);
+		}),
 	};
 	return call;
 }
@@ -215,13 +213,11 @@ describe.skipIf(!available)("actual isolated resource process", () => {
 		});
 		const slow: PluginCapabilityContext = {
 			...context,
-			capabilities: {
-				call: async (name, input) => {
-					started();
-					await held;
-					return context.capabilities.call(name, input);
-				},
-			},
+			capabilities: hostCapabilityPort(async (name, input) => {
+				started();
+				await held;
+				return context.capabilities.call(name, input);
+			}),
 		};
 		const running = owner.invoke({ ...handle, operation: "read", input: null }, slow);
 		await waiting;
@@ -335,13 +331,11 @@ describe.skipIf(!available)("actual isolated resource process", () => {
 		const late = {
 			...context,
 			signal: canceled.signal,
-			capabilities: {
-				call: async (name: string, value: unknown) => {
-					const result = await context.capabilities.call(name, value);
-					canceled.abort(new Error("caller left after resource initialization"));
-					return result;
-				},
-			},
+			capabilities: hostCapabilityPort(async (name, value) => {
+				const result = await context.capabilities.call(name, value);
+				canceled.abort(new Error("caller left after resource initialization"));
+				return result;
+			}),
 		};
 		await expect(owner.create(input(), late)).rejects.toThrow("caller left");
 		const [directory] = await readdir(cache);
@@ -365,13 +359,11 @@ describe.skipIf(!available)("actual isolated resource process", () => {
 		});
 		const initializing = owner.create(input(), {
 			...context,
-			capabilities: {
-				call: async (name, value) => {
-					entered();
-					await held;
-					return context.capabilities.call(name, value);
-				},
-			},
+			capabilities: hostCapabilityPort(async (name, value) => {
+				entered();
+				await held;
+				return context.capabilities.call(name, value);
+			}),
 		});
 		const rejected = expect(initializing).rejects.toThrow("stopping");
 		await started;
