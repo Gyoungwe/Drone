@@ -1,15 +1,15 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { readdirSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
-import type { PluginNativeRuntimeFactory, PluginNativeRuntimeInstance } from "@gyoungwe/plugin-api/native";
 import type {
 	PluginNativeSessionFacts,
 	PluginRuntimeContext,
 	PluginRuntimeFactory,
 	PluginRuntimeFactoryContext,
+	PluginRuntimeInstance,
 } from "@gyoungwe/plugin-api/runtime";
 import { pluginRuntimeExecutable } from "../plugin-runtime-executable";
-import type { HostNativeSession } from "./p5-owner-facade";
+import type { HostNativeRuntimeFactory, HostNativeSession } from "./p5-owner-facade";
 import { attachProcessNative, type ProcessNativeHost } from "./process-native-attachment";
 import {
 	bindProcessRuntimeCapabilities,
@@ -52,8 +52,8 @@ function checkPackageLinks(root: string, directory = root): void {
 export function createProcessPluginRuntime(
 	options: ProcessPluginRuntimeOptions & { resource: NonNullable<ProcessPluginRuntimeOptions["resource"]> },
 ): PluginRuntimeFactory;
-export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions): PluginNativeRuntimeFactory;
-export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions): PluginNativeRuntimeFactory {
+export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions): HostNativeRuntimeFactory;
+export function createProcessPluginRuntime(options: ProcessPluginRuntimeOptions): HostNativeRuntimeFactory {
 	return async (context) => {
 		context.signal.throwIfAborted();
 		const executable = pluginRuntimeExecutable(options.runtimeDirectory);
@@ -338,7 +338,7 @@ class RuntimeProcess {
 		);
 	}
 
-	async start(): Promise<PluginNativeRuntimeInstance> {
+	async start(): Promise<PluginRuntimeInstance<HostNativeSession>> {
 		const budget = new GuestTimeBudget(() =>
 			this.fail(new Error(`Plugin runtime ${this.pluginId} startup timed out after 15000ms`)),
 		);
