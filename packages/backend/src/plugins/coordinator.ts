@@ -1,16 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { PluginRuntimeEvent } from "@drone/shared";
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
-import type { PluginNativeRuntimeFactory, PluginNativeSession } from "@gyoungwe/plugin-api/native";
-import type {
-	PluginNativeSessionFacts,
-	PluginProviderInvocationInput,
-	PluginRuntimeClient,
-} from "@gyoungwe/plugin-api/runtime";
+import type { PluginNativeRuntimeFactory } from "@gyoungwe/plugin-api/native";
+import type { PluginNativeSessionFacts, PluginProviderInvocationInput } from "@gyoungwe/plugin-api/runtime";
 import type { AskQuestionRoute } from "../session/ask-gate";
-import { NativeSessionDelivery, type SelectedNativeSource } from "./native-delivery";
+import { type Binding, beginNativeBootstrap, type Runtime } from "./coordinator-native";
+import type { NativeSessionDelivery, SelectedNativeSource } from "./native-delivery";
 import { type PluginRuntimeSource, sameSource } from "./plugin-source";
-import { type ManagedNativeSession, type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
+import { type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 import type {
 	PluginCapabilityContext,
 	PluginNativeInvocation,
@@ -80,30 +77,6 @@ interface Selection {
 	readonly owner: PluginRuntimeOwner;
 	readonly session: PluginSessionCallerContext | undefined;
 	readonly abort: AbortController;
-}
-interface Runtime {
-	readonly name: string;
-	readonly source: PluginRuntimeSource;
-	readonly registry: PluginRuntimeRegistry;
-	readonly bindings: Set<Binding>;
-	readonly activationOwner: PluginRuntimeOwner;
-	active: boolean;
-	stopping?: Promise<void>;
-}
-interface Binding {
-	readonly token: string;
-	readonly name: string;
-	readonly owner: PluginRuntimeOwner;
-	readonly runtime: Runtime;
-	readonly abort: AbortController;
-	readonly pending: Set<Promise<unknown>>;
-	readonly ready: Promise<PluginRuntimeClient>;
-	readonly invocations: Map<
-		string,
-		{ selectionToken: string; abort: AbortController; pending: Promise<unknown> }
-	>;
-	unsubscribe?: () => void;
-	nativeAbort?: () => Promise<void>;
 }
 
 /** One domain owner per application/package. Window tokens only grant revocable caller access. */
@@ -529,156 +502,23 @@ export class PluginRuntimeBridge {
 		findName: (path: string) => string | undefined,
 		facts?: PluginNativeSessionFacts,
 	): PluginNativeBootstrap {
-		const attachments = new Set<PluginNativeSession>();
-		const delivery = new NativeSessionDelivery(
-			(path) => {
-				if (this.options.classifySelectedPath) return this.options.classifySelectedPath(path);
-				const name = findName(path);
-				if (!name) return { kind: "unconfirmed" };
-				const source = this.options.source(name);
-				return source
-					? { kind: "managed", source, state: this.options.enabled(name) ? "enabled" : "disabled" }
-					: { kind: "unconfirmed" };
+		return beginNativeBootstrap(
+			{
+				options: this.options,
+				bind: (name, owner) => this.bind(name, owner),
+				getBinding: (token) => this.bindings.get(token),
+				caller: (binding) => this.caller(binding),
+				selectSession: (owner, sessionId) => this.selectSession(owner, sessionId),
+				allowed: (binding) => this.allowed(binding),
+				stopBinding: (binding) => this.stopBinding(binding),
+				removeSelection: (owner) => this.selections.delete(owner),
+				revoke: (name, ownerId) => this.revoke(name, ownerId),
+				nextNativeId: () => --this.nativeSequence,
 			},
-			sameSource,
-			() => this.options.sources?.() ?? this.options.requiredSources?.() ?? [],
+			owner,
+			findName,
+			facts,
 		);
-		const owners = new Set<PluginRuntimeOwner>();
-		const pending = new Set<Promise<ExtensionFactory | undefined>>();
-		const binders = new Set<(session: PluginSessionCallerContext) => void>();
-		let bound: PluginSessionCallerContext | undefined;
-		let abortBound: (() => Promise<void>) | undefined;
-		let closed = false;
-		return {
-			delivery,
-			bindSession: (sessionId, abort) => {
-				const session = this.options.getSessionContext(sessionId);
-				if (
-					facts &&
-					(!session ||
-						session.readOnly !== facts.readOnly ||
-						session.nativeKind !== facts.kind ||
-						(facts.kind === "child" && session.nativeChildFiles !== facts.files))
-				)
-					throw new Error("Native initial facts do not match the actual registered session");
-				if (!session || closed || (bound && bound.identity !== session.identity))
-					throw new Error("Native bootstrap requires its actual live session entry");
-				bound = session;
-				abortBound = abort;
-				for (const bind of binders) bind(session);
-			},
-			factoryForPath: (path) => {
-				const creating = (async () => {
-					if (closed) throw new Error("Native plugin bootstrap is closed");
-					const name = findName(path);
-					if (!name) return undefined;
-					const nativeOwner: PluginRuntimeOwner = {
-						id: --this.nativeSequence,
-						approvalOwner: owner,
-						isDestroyed: () => closed || (bound ? bound.signal.aborted : owner.isDestroyed()),
-						isSessionBound: () => bound !== undefined,
-					};
-					owners.add(nativeOwner);
-					const token = await this.bind(name, nativeOwner);
-					if (!token) throw new Error("Managed native plugin source is unavailable");
-					const binding = this.bindings.get(token);
-					if (!binding) throw new Error("Native plugin binding was revoked");
-					let boundSession: PluginSessionCallerContext | undefined;
-					const resolveNativeCaller = () => {
-						if (!boundSession) return undefined;
-						const current = this.options.getSessionContext(boundSession.scope.sessionId);
-						if (current?.identity !== boundSession.identity) return undefined;
-						return this.caller(binding);
-					};
-					binding.nativeAbort = async () => {
-						if (!boundSession || !abortBound) return;
-						const current = this.options.getSessionContext(boundSession.scope.sessionId);
-						if (current?.identity !== boundSession.identity) return;
-						await abortBound();
-					};
-					const bind = (session: PluginSessionCallerContext) => {
-						boundSession = session;
-						this.selectSession(nativeOwner, session.scope.sessionId);
-					};
-					binders.add(bind);
-					if (bound) bind(bound);
-					let native: ManagedNativeSession;
-					try {
-						native = await binding.runtime.registry.attachNative(
-							binding.runtime.source.pluginId,
-							(ctx) => {
-								if (ctx.sessionManager.getSessionId() !== boundSession?.scope.sessionId) return undefined;
-								return resolveNativeCaller();
-							},
-							resolveNativeCaller,
-							facts,
-						);
-					} catch (error) {
-						await this.stopBinding(binding);
-						throw error;
-					}
-					const detachDelivery = delivery.attach(binding.runtime.source, native, () => this.allowed(binding));
-					let stopping: Promise<void> | undefined;
-					const dispose = () => {
-						stopping ??= (async () => {
-							detachDelivery?.();
-							binding.abort.abort(new Error("Native plugin session closed"));
-							const [released] = await Promise.allSettled([native.dispose()]);
-							const [stopped] = await Promise.allSettled([this.stopBinding(binding)]);
-							this.selections.delete(nativeOwner);
-							attachments.delete(adopted);
-							binders.delete(bind);
-							const failures = [released, stopped].filter((result) => result.status === "rejected");
-							if (failures.length)
-								throw new AggregateError(
-									failures.map((result) => result.reason),
-									"Native plugin session disposal failed",
-								);
-						})();
-						return stopping;
-					};
-					const adopted: PluginNativeSession = {
-						...native,
-						dispose,
-						extension: async (pi) => {
-							await native.extension(pi);
-							pi.on("session_shutdown", dispose);
-						},
-					};
-					attachments.add(adopted);
-					if (closed) {
-						await dispose();
-						throw new Error("Native plugin bootstrap was revoked");
-					}
-					return adopted.extension;
-				})();
-				pending.add(creating);
-				void creating.then(
-					() => pending.delete(creating),
-					() => pending.delete(creating),
-				);
-				return creating;
-			},
-			dispose: async () => {
-				closed = true;
-				const revoked = await Promise.allSettled(
-					[...owners].map((owner) => this.revoke(undefined, owner.id)),
-				);
-				// Each loader retains its error; disposal waits for all pending registration cleanup.
-				await Promise.allSettled([...pending]);
-				const results = [
-					...revoked,
-					...(await Promise.allSettled([delivery.dispose()])),
-					...(await Promise.allSettled([...attachments].map((native) => native.dispose()))),
-				];
-				const failures = results.filter((result) => result.status === "rejected");
-				if (failures.length)
-					throw new AggregateError(
-						failures.map((result) => result.reason),
-						"Native plugin bootstrap disposal failed",
-					);
-			},
-		};
 	}
 
 	async invoke(
