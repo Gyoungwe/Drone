@@ -68,6 +68,20 @@ async function createCancelFixture() {
 	};
 }
 
+async function waitForTerminal(remoteRoot: string, jobId: string) {
+	const statusPath = join(remoteRoot, "runs", jobId, "status.json");
+	for (;;) {
+		try {
+			const value = JSON.parse(await readFile(statusPath, "utf8"));
+			if (["succeeded", "failed", "cancelled"].includes(value.state)) return;
+		} catch (error) {
+			// The runner may still be publishing a missing or incomplete status file.
+			if (!(error instanceof SyntaxError) && (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+		}
+		await new Promise((resolve) => setImmediate(resolve));
+	}
+}
+
 describe("DefaultComputeExecutor", () => {
 	it("runs the complete local runner lifecycle and collects checksummed outputs", async () => {
 		const executor = new DefaultComputeExecutor();
@@ -129,10 +143,7 @@ describe("DefaultComputeExecutor", () => {
 			try {
 				// Release the fixture even when this host cannot confirm process cleanup.
 				await writeFile(release, "release");
-				await vi.waitFor(async () => {
-					const value = JSON.parse(await readFile(join(remoteRoot, "runs/cancel-job/status.json"), "utf8"));
-					expect(["succeeded", "failed", "cancelled"]).toContain(value.state);
-				});
+				await waitForTerminal(remoteRoot, "cancel-job");
 			} finally {
 				await executor.dispose();
 				restore();
