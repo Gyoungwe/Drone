@@ -749,6 +749,9 @@ def status(job_id):
         if isinstance(pid, int) and process_matches(pid, value.get("processStartMarker")):
             value["state"] = "running"
             return value
+        if (directory / "cancel-requested.json").exists():
+            return write_status(directory, "cancelled", finishedAt=utc_now(),
+                                message="worker ended after a cancel request without a terminal record")
         # A missing worker with no terminal status is an unknown outcome.  Do
         # not infer success from process disappearance.
         return write_status(directory, "unknown", message="worker process is no longer present")
@@ -890,12 +893,17 @@ def collect(job_id, payload):
 
 # ---- Identity-bound cancellation evidence (single-file deployment) ----
 
-def cleanup_group_gone(pid, seconds):
+def cleanup_group_gone(pid, seconds, after_signal=False):
     deadline = time.monotonic() + seconds
     while True:
         try:
             os.killpg(pid, 0)
         except ProcessLookupError:
+            return True
+        except PermissionError:
+            # macOS can report EPERM for an unreaped zombie after our signal.
+            if not after_signal:
+                raise
             return True
         if time.monotonic() >= deadline:
             return False
@@ -931,7 +939,7 @@ def cleanup_process(pid, marker):
                 os.killpg(pid, signum)
             except ProcessLookupError:
                 return "confirmed"
-            if cleanup_group_gone(pid, seconds):
+            if cleanup_group_gone(pid, seconds, after_signal=True):
                 return "confirmed"
         return "failed"
     except OSError:
@@ -950,7 +958,16 @@ def cleanup_direct(directory, submission):
         time.sleep(0.05)
         child = read_json(directory / "child.json", {})
     outcomes = [cleanup_process(child.get("pid"), child.get("startMarker"))] if child else []
-    outcomes.append(cleanup_process(submission.get("pid"), submission.get("processStartMarker")))
+    if child and not WINDOWS:
+        # The worker must reap its child and persist the cancel outcome before
+        # we signal it; killing the worker first can leave status at running.
+        deadline = time.monotonic() + 5
+        while process_matches(submission.get("pid"), submission.get("processStartMarker")):
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(0.05)
+    if not child or WINDOWS or process_matches(submission.get("pid"), submission.get("processStartMarker")):
+        outcomes.append(cleanup_process(submission.get("pid"), submission.get("processStartMarker")))
     return "failed" if "failed" in outcomes else "unknown" if "unknown" in outcomes else "confirmed"
 
 

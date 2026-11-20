@@ -10,7 +10,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -246,6 +246,102 @@ class CleanupTest(unittest.TestCase):
         with self.assertRaises(self.runner.RunnerError) as error:
             self.runner.cancel(job_id)
         self.assertEqual(error.exception.code, "corrupt-status")
+
+    def test_cleanup_process_eperm_after_signal_confirms_exit(self):
+        with patch.object(self.runner, "WINDOWS", False), \
+                patch.object(self.runner, "process_matches", return_value=True), \
+                patch.object(self.runner, "process_start_marker", return_value="child-start"), \
+                patch.object(self.runner.os, "getpgid", return_value=456), \
+                patch.object(self.runner.os, "killpg", side_effect=[
+                    None, None, PermissionError(1, "Operation not permitted")]) as killpg:
+            result = self.runner.cleanup_process(456, "child-start")
+        self.assertEqual(result, "confirmed")
+        self.assertEqual(killpg.call_args_list, [
+            call(456, 0), call(456, self.runner.signal.SIGTERM), call(456, 0)])
+
+    def test_cleanup_process_eperm_before_signal_is_unknown(self):
+        with patch.object(self.runner, "WINDOWS", False), \
+                patch.object(self.runner, "process_matches") as matches, \
+                patch.object(self.runner.os, "killpg", side_effect=PermissionError(
+                    1, "Operation not permitted")) as killpg:
+            result = self.runner.cleanup_process(456, "child-start")
+        self.assertEqual(result, "unknown")
+        killpg.assert_called_once_with(456, 0)
+        matches.assert_not_called()
+
+    def mock_direct(self):
+        job_id = "mock-direct-job"
+        self.runner.prepare({"payload": {"spec": {
+            "jobId": job_id, "workflow": {"name": "fixture"}}}}, job_id)
+        directory = self.runner.run_dir(job_id)
+        self.runner.atomic_json(directory / "child.json", {"pid": 456, "startMarker": "child-start"})
+        return directory, {"pid": 123, "processStartMarker": "worker-start"}
+
+    def test_cleanup_direct_waits_for_worker_after_child(self):
+        directory, submission = self.mock_direct()
+        observations = iter([True, False, False])
+
+        def worker_matches(pid, marker):
+            self.assertEqual((pid, marker), (123, "worker-start"))
+            cleanup.assert_called_once_with(456, "child-start")
+            return next(observations)
+
+        with patch.object(self.runner, "WINDOWS", False), \
+                patch.object(self.runner, "cleanup_process", return_value="confirmed") as cleanup, \
+                patch.object(self.runner, "process_matches", side_effect=worker_matches), \
+                patch.object(self.runner.time, "monotonic", return_value=0), \
+                patch.object(self.runner.time, "sleep") as sleep, \
+                patch.object(self.runner.os, "killpg") as killpg:
+            result = self.runner.cleanup_direct(directory, submission)
+        self.assertEqual(result, "confirmed")
+        cleanup.assert_called_once_with(456, "child-start")
+        sleep.assert_called_once_with(0.05)
+        killpg.assert_not_called()
+
+    def test_cleanup_direct_signals_matching_worker_after_bound(self):
+        directory, submission = self.mock_direct()
+
+        def cleanup_process(pid, marker):
+            if pid == 123:
+                self.assertGreaterEqual(clock.return_value, 5)
+                self.assertLessEqual(clock.return_value, 5.05)
+                sleep.assert_called_with(0.05)
+            return "confirmed"
+
+        with patch.object(self.runner, "WINDOWS", False), \
+                patch.object(self.runner, "cleanup_process", side_effect=cleanup_process) as cleanup, \
+                patch.object(self.runner, "process_matches", return_value=True) as matches, \
+                patch.object(self.runner.time, "monotonic", return_value=0) as clock, \
+                patch.object(self.runner.time, "sleep", side_effect=lambda seconds: setattr(
+                    clock, "return_value", clock.return_value + seconds)) as sleep:
+            result = self.runner.cleanup_direct(directory, submission)
+        self.assertEqual(result, "confirmed")
+        self.assertEqual(cleanup.call_args_list, [call(456, "child-start"), call(123, "worker-start")])
+        self.assertEqual(matches.call_args, call(123, "worker-start"))
+
+    def test_status_missing_worker_respects_cancel_request(self):
+        for state, (requested, expected) in itertools.product(
+                ("queued", "running"), ((True, "cancelled"), (False, "unknown"))):
+            with self.subTest(state=state, cancel_requested=requested):
+                job_id = "status-%s-%s" % (state, requested)
+                self.runner.prepare({"payload": {"spec": {
+                    "jobId": job_id, "workflow": {"name": "fixture"}}}}, job_id)
+                directory = self.runner.run_dir(job_id)
+                self.runner.write_status(directory, state, pid=123, processStartMarker="worker-start")
+                if requested:
+                    self.runner.atomic_json(directory / "cancel-requested.json", {"jobId": job_id})
+                with patch.object(self.runner, "process_matches", return_value=False) as matches:
+                    result = self.runner.status(job_id)
+                matches.assert_called_once_with(123, "worker-start")
+                self.assertEqual(result["state"], expected)
+                self.assertEqual(self.runner.read_json(directory / "status.json"), result)
+                if requested:
+                    self.assertIn("finishedAt", result)
+                    self.assertEqual(result["message"],
+                                     "worker ended after a cancel request without a terminal record")
+                else:
+                    self.assertNotIn("finishedAt", result)
+                    self.assertEqual(result["message"], "worker process is no longer present")
 
 
 if __name__ == "__main__":
