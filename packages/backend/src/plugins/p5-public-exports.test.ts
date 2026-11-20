@@ -3,6 +3,9 @@ import * as backend from "../index";
 import type { P5ComputePlan } from "../services/p5-compute-plans";
 import { type FrozenP5Batch, freezeP5Batch } from "./p5-batch-review";
 import { type FrozenP5Bundle, freezeP5Bundle } from "./p5-bundle-review";
+import { measuredEnvelopeBytes, p5ByteCapabilityHandlers } from "./p5-byte-capabilities";
+import { P5ByteStaging } from "./p5-byte-staging";
+import { P5ByteTransaction } from "./p5-byte-transaction";
 import { createP5FactStore, P5_FACT_STORAGE, P5FactStoreError, p5FactCapabilityHandlers } from "./p5-facts";
 import { p5ReceiptCapabilityHandlers } from "./p5-receipt-capabilities";
 import {
@@ -14,6 +17,7 @@ import {
 import type { P5RerunRun } from "./p5-rerun-lifecycle";
 import type { P5RerunSource } from "./p5-rerun-submit";
 import type { P5ReviewSnapshot } from "./p5-review-preparation";
+import { createP5StagingOwners } from "./p5-staging-owners";
 
 const publicP5Values = {
 	createP5ReceiptStore,
@@ -26,6 +30,11 @@ const publicP5Values = {
 	p5FactCapabilityHandlers,
 	freezeP5Batch,
 	freezeP5Bundle,
+	P5ByteStaging,
+	P5ByteTransaction,
+	p5ByteCapabilityHandlers,
+	measuredEnvelopeBytes,
+	createP5StagingOwners,
 };
 
 describe("backend P5 public exports", () => {
@@ -58,9 +67,6 @@ describe("backend P5 public exports", () => {
 			"createP5ComputeFacts",
 			"createP5LocalFacts",
 			"createP5TaskAcceptanceIssuer",
-			"P5ByteStaging",
-			"P5ByteTransaction",
-			"p5ByteCapabilityHandlers",
 			"createP5BatchExecutor",
 			"createP5BatchLifecycle",
 			"createP5BatchReviewer",
@@ -79,7 +85,7 @@ describe("backend P5 public exports", () => {
 		}
 		expect(
 			Object.keys(backend)
-				.filter((name) => /p5/i.test(name))
+				.filter((name) => /p5/i.test(name) || name === "measuredEnvelopeBytes")
 				.sort(),
 		).toEqual(Object.keys(publicP5Values).sort());
 	});

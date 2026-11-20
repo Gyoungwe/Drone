@@ -19,7 +19,10 @@ interface P5RuntimeOptions {
 	getSessionContext(sessionId: string): PluginSessionCallerContext | undefined;
 }
 
-function requireSession(options: P5RuntimeOptions, context: PluginCapabilityContext) {
+export function requireSession(
+	options: Pick<P5RuntimeOptions, "getSessionContext">,
+	context: PluginCapabilityContext,
+) {
 	context.signal.throwIfAborted();
 	if (context.bootstrap || context.scope.kind !== "session")
 		throw new Error("Plugin capability requires a selected live session");
@@ -34,7 +37,7 @@ function requireSession(options: P5RuntimeOptions, context: PluginCapabilityCont
 		selected.scope.workspaceId !== context.scope.workspaceId
 	)
 		throw new Error("Plugin capability caller is stale or belongs to another session");
-	return selected.scope;
+	return selected;
 }
 
 /** Profile path, host inventory and live session resolver are host inputs; pass a canonical installed source per provider. */
@@ -60,7 +63,7 @@ export function createP5RuntimeCapabilities(
 			closed.signal.throwIfAborted();
 			if (context.pluginId !== activation.pluginId || context.applicationId !== activation.applicationId)
 				throw new Error("P5 capability caller belongs to another activation");
-			const selected = requireSession(options, context);
+			const selected = requireSession(options, context).scope;
 			return {
 				workspaceId: selected.workspaceId,
 				sessionId: selected.sessionId,

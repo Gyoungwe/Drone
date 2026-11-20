@@ -27,6 +27,9 @@ export {
 export type { SelectedNativeSource } from "./native-delivery";
 export { type FrozenP5Batch, freezeP5Batch } from "./p5-batch-review";
 export { type FrozenP5Bundle, freezeP5Bundle } from "./p5-bundle-review";
+export { measuredEnvelopeBytes, p5ByteCapabilityHandlers } from "./p5-byte-capabilities";
+export { P5ByteStaging } from "./p5-byte-staging";
+export { P5ByteTransaction } from "./p5-byte-transaction";
 export {
 	createP5FactStore,
 	P5_FACT_STORAGE,
@@ -43,6 +46,7 @@ export {
 export type { P5RerunRun } from "./p5-rerun-lifecycle";
 export type { P5RerunSource } from "./p5-rerun-submit";
 export type { P5ReviewSnapshot } from "./p5-review-preparation";
+export { createP5StagingOwners } from "./p5-staging-owners";
 /* biome-ignore format: Keep the baselined barrel line count fixed. */ export { type PluginCredentialSlot, PluginCredentialStore, type PluginEndpointPolicy, resolvePluginEndpointPolicy } from "./plugin-credentials";
 export {
 	createPluginWriterAuthority,
