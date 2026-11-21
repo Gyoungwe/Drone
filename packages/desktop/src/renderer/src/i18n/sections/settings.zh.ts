@@ -170,6 +170,17 @@ export const zhSettings = {
 		distillHint: "写成知识库中本项目「记忆」分类的笔记（带会话、日期、文件来源），原记录不再注入",
 		distilled: "已沉淀",
 	},
+	backgroundJobs: {
+		section: "后台任务",
+		toggle: "允许此工作区运行后台模型任务",
+		toggleHint:
+			"开启后，插件的后台任务（如审稿、批量模型处理）会排队运行，关闭窗口后仍会继续。你手动发起的任务不受影响。",
+		budget: "每日后台额度（tokens）",
+		budgetHint: "按输入加输出 token 计算，不含缓存读取；每天本地零点重置。额度用完后，当前任务做完即停止。",
+		usage: "今日已用 {used} / {limit}",
+		exhausted: "今日后台额度已用完，零点后恢复。",
+		unknownUsage: "有任务没有报告用量，今天的后台任务已停止。",
+	},
 	channelWatch: "跨会话频道协作（channel-watch）",
 	channelWatchHint:
 		"会话订阅频道后自动监听 .local/agent-work/channel/<主题>/ 的文件更新，另一会话写入时唤醒本会话查收（按 HANDOFF.md 沟通协议）。订阅经 appendEntry 持久化，重开会话自动恢复；内置防环保护。默认开启，对已信任项目完全生效。",
