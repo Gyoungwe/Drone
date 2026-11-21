@@ -1,18 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { inspectHostDependencies } from "./check-host-domain-dependencies.mjs";
+import { inspectHostDependencies, trackedRuntimeDependencies } from "./check-host-domain-dependencies.mjs";
 
-test("accepts the explicitly tracked migration dependencies", () => {
+test("rejects tracked entries absent from runtime dependencies", () => {
+	const tracked = new Set(["@drone/tasks"]);
+	const result = inspectHostDependencies({ dependencies: { "@drone/shared": "*" } }, tracked);
+	assert.equal(result.ok, false);
+	assert.deepEqual(result.staleTrackedDependencies, ["@drone/tasks"]);
+});
+
+test("rejects pi-knowledge as a runtime dependency", () => {
+	const result = inspectHostDependencies({ dependencies: { "@gyoungwe/pi-knowledge": "*" } });
+	assert.equal(result.ok, false);
+	assert.deepEqual(result.unexpectedRuntimeDomainDependencies, ["@gyoungwe/pi-knowledge"]);
+});
+
+test("ignores domain packages in devDependencies", () => {
 	const result = inspectHostDependencies({
-		dependencies: {
+		dependencies: { "@drone/shared": "*" },
+		devDependencies: {
+			"@drone/discovery": "*",
+			"@gyoungwe/pi-analysis": "*",
 			"@gyoungwe/pi-knowledge": "*",
 		},
-		devDependencies: { "@drone/tasks": "*" },
 	});
 	assert.equal(result.ok, true);
-	assert.deepEqual(result.optionalPluginRuntimeDependencies, []);
-	assert.deepEqual(result.runtimeDomainDependencies, ["@gyoungwe/pi-knowledge"]);
-	assert.deepEqual(result.unexpectedRuntimeDomainDependencies, []);
+});
+
+test("tracks no runtime domain dependencies after P6 PR-A", () => {
+	assert.equal(trackedRuntimeDependencies.size, 0);
 });
 
 test("rejects a newly introduced pi package without a migration seam", () => {
