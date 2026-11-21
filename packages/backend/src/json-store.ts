@@ -182,6 +182,13 @@ export class JsonStore<T> {
 		}
 	}
 
+	/** Strict read without writing: missing → default; corrupted → JsonStoreCorruptedError; other IO errors propagate. */
+	readStrictSync(): T {
+		const result = this.readRawSync();
+		if (result.kind === "corrupted") throw new JsonStoreCorruptedError(this.path, result.error);
+		return result.value;
+	}
+
 	/**
 	 * 读改写（串行化）：损坏抛 `JsonStoreCorruptedError`；mutator 可原地改 draft 或返回替换值。
 	 * 返回最终写入的值。

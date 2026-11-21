@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Usage } from "@gyoungwe/plugin-api/p5-receipts";
-import { expect, it } from "vitest";
+import { expect, it, onTestFinished } from "vitest";
 import { JsonStore, JsonStoreCorruptedError } from "../json-store";
 import { createDefaultStorageRegistry } from "../storage/registry";
 import { createP5SpendLedger, P5_SPEND_STORAGE } from "./p5-spend-ledger";
@@ -24,7 +24,9 @@ const unknown: Usage = {
 };
 
 function fixture(limit: number | "default" | undefined) {
-	const path = join(tmpdir(), `drone-p5-spend-${randomUUID()}.json`);
+	const dir = mkdtempSync(join(tmpdir(), "drone-p5-spend-"));
+	onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
+	const path = join(dir, "p5-spend-ledger.json");
 	const clock = { now: new Date("2026-11-18T23:59:59+08:00") };
 	const limits = new Map([
 		["workspace-1", limit],
@@ -309,4 +311,47 @@ it("records available fields of unknown usage while stopping the workspace-day",
 			cacheWriteTokens: 4,
 		},
 	]);
+});
+
+it("reports zero with no entry for the current local day", async () => {
+	const { open, clock } = fixture(10);
+	const ledger = open();
+	const emptyDay = { tokens: 0, unknownUsage: false };
+	await expect(ledger.today(metered.workspaceId)).resolves.toStrictEqual(emptyDay);
+	await ledger.record({ ...known, workspaceId: metered.workspaceId });
+	clock.now = new Date("2026-11-19T00:00:00+08:00");
+	await expect(ledger.today(metered.workspaceId)).resolves.toStrictEqual(emptyDay);
+});
+
+it("waits for pending records and reports the same total that check enforces", async () => {
+	const { open } = fixture(10);
+	const ledger = open();
+	await ledger.record({ ...known, workspaceId: metered.workspaceId, cacheReadTokens: 100 });
+	expect(await ledger.check(metered)).toBe("allowed");
+	const [, day] = await Promise.all([
+		ledger.record({
+			...known,
+			workspaceId: metered.workspaceId,
+			inputTokens: 0,
+			outputTokens: 0,
+			cacheWriteTokens: 1,
+		}),
+		open().today(metered.workspaceId),
+	]);
+	expect(day).toStrictEqual({ tokens: 10, unknownUsage: false });
+	expect(await ledger.check(metered)).toBe("denied");
+});
+
+it("reports unknown usage without losing the counted tokens", async () => {
+	const { open } = fixture(10);
+	const ledger = open();
+	await ledger.record({ ...known, workspaceId: metered.workspaceId });
+	await ledger.record({ ...unknown, workspaceId: metered.workspaceId });
+	await expect(ledger.today(metered.workspaceId)).resolves.toStrictEqual({ tokens: 9, unknownUsage: true });
+});
+
+it("rejects a current-day read when the ledger is corrupt", async () => {
+	const { path, open } = fixture(10);
+	writeFileSync(path, "{");
+	await expect(open().today(metered.workspaceId)).rejects.toBeInstanceOf(JsonStoreCorruptedError);
 });

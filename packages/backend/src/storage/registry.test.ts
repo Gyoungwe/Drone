@@ -62,7 +62,7 @@ describe("StorageRegistry", () => {
 				sites.push(file);
 			}
 		}
-		expect(sites).toHaveLength(36);
+		expect(sites).toHaveLength(37);
 	});
 
 	it("does not register optional discovery storage in the base host", () => {

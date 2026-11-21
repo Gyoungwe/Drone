@@ -5,6 +5,7 @@ import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { HostFileAction } from "./file-actions";
 import type { PreviewKind } from "./file-types";
 import type { ComputeApi, DiscoveryApi, EvidenceApi, InquiryApi, PluginCredentialsApi } from "./host-api";
+import type { BackgroundJobsApi } from "./host-api/background-jobs";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
 import type { PluginRuntimeEvent } from "./host-api/plugin-runtime";
 import type { ResearchApi } from "./host-api/research";
@@ -13,12 +14,7 @@ import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
 import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
-import type {
-	CatalogPackageType,
-	CatalogSearchResult,
-	ConfiguredPackageInfo,
-	PackageLifecycleReceipt,
-} from "./packages";
+import type { CatalogPackageType, CatalogSearchResult, PackageLifecycleReceipt } from "./packages";
 import type {
 	PermissionAuditTailEntry,
 	PermissionProbeInput,
@@ -461,7 +457,8 @@ export interface PiApi
 		InquiryApi,
 		EvidenceApi,
 		ResearchApi,
-		PluginCredentialsApi {
+		PluginCredentialsApi,
+		BackgroundJobsApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */
@@ -482,7 +479,7 @@ export interface PiApi
 	/** 卸载已配置的包（按 source + scope 移除并持久化）；返回可审计的生命周期回执 */
 	removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt>;
 	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
-	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
+	listConfiguredPackages(): Promise<import("./packages").ConfiguredPackageInfo[]>;
 	/** 查询 npm 上的最新版本（离线或失败返回 null）。 */
 	latestPackageVersions(names: string[]): Promise<Record<string, string | null>>;
 	pluginPackageMetadata(

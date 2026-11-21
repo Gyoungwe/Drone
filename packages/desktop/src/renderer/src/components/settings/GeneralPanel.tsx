@@ -3,6 +3,7 @@ import type { Language } from "../../i18n";
 import { useI18nStore, useT } from "../../i18n";
 import { useSettingsStore } from "../../stores/settings";
 import { Switch } from "../ui/Switch";
+import { BackgroundJobsSettingsRow } from "./BackgroundJobsSettingsRow";
 import { DesktopSettings } from "./DesktopSettings";
 import { MemorySettingsRow } from "./MemorySettingsRow";
 import { SettingsRow } from "./SettingsRow";
@@ -69,6 +70,7 @@ export function GeneralPanel() {
 				/>
 			</SettingsRow>
 			<MemorySettingsRow />
+			<BackgroundJobsSettingsRow />
 			<DesktopSettings />
 			<details className="settings-disclosure" data-testid="ssh-guard-card" aria-labelledby="ssh-guard-title">
 				<summary className="settings-disclosure-summary">

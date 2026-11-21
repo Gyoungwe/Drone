@@ -179,6 +179,18 @@ export const enSettings: typeof zhSettings = {
 			"Write it as a note in this project's Memory category of the knowledge base (with session, date and files); the entry stops being injected",
 		distilled: "In knowledge",
 	},
+	backgroundJobs: {
+		section: "Background jobs",
+		toggle: "Allow background model jobs in this workspace",
+		toggleHint:
+			"When on, plugins' background jobs (such as review and model batches) run in a queue and keep running after you close the window. Jobs you start yourself are not affected.",
+		budget: "Daily background budget (tokens)",
+		budgetHint:
+			"Counts input plus output tokens, excluding cache reads. Resets at local midnight. When it runs out, the current job finishes and the queue stops.",
+		usage: "Used today: {used} / {limit}",
+		exhausted: "Today's background budget is used up. Jobs resume after midnight.",
+		unknownUsage: "A job did not report its usage, so background jobs are stopped for today.",
+	},
 	channelWatch: "Cross-session channel collaboration (channel-watch)",
 	channelWatchHint:
 		"After a session subscribes to a channel it watches .local/agent-work/channel/<topic>/ for file updates; writes from another session wake this session to pick them up (per the HANDOFF.md protocol). Subscriptions persist via appendEntry and restore on session reopen; built-in loop protection. On by default, fully effective for trusted projects.",

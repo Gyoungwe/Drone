@@ -3,27 +3,13 @@ import { mkdir, stat, writeFile } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
 import type {
-	AskRequest,
-	AskResponse,
 	ComputeHost,
 	ComputeSshConfigHost,
-	ContextManagerMode,
 	DroneRuntime,
-	LoginEventPayload,
-	McpStatus,
 	MemoryListItem,
 	MemoryProjectStatus,
-	PermissionAnswer,
-	PermissionMode,
-	PermissionRequest,
-	PermissionResolved,
 	ResearchProjectStoragePort,
 	ResearchWriteAdapterRegistryPort,
-	SessionEvent,
-	SessionMessage,
-	SessionsApi,
-	TrustAnswer,
-	TrustRequest,
 } from "@drone/shared";
 import type {
 	AnalysisHostLoader,
@@ -58,7 +44,6 @@ import type { McpServicePort } from "./mcp/service";
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
 import { DomainCapabilityRegistry, type DomainCapabilityRegistryPort } from "./plugins/domain-capabilities";
-import type { PluginSessionCallerContext } from "./plugins/session-caller";
 import { walkProjectFiles } from "./project/files";
 import { writeMemory } from "./project/project-memory";
 import { canonicalProjectId } from "./project-id";
@@ -107,6 +92,10 @@ import {
 } from "./services/knowledge-maintenance";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import { LocalExecutionRecorder } from "./services/local-execution";
+import {
+	type BackgroundJobsServicePort,
+	createBackgroundJobsService,
+} from "./services/p5-background-jobs-service";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
@@ -133,69 +122,14 @@ import type { ZoteroServicePort } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
 import { getAgentDir } from "./session-engine/engine";
 import { SessionService, type SessionServiceOptions } from "./session-service";
+import type { SessionServicePort } from "./session-service-port";
 import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
-import type { StorageRegistry } from "./storage/registry";
 import type { SshHostEntry } from "./tools/ssh";
 import { applyStoredZoteroLocalKey } from "./zotero/local-write";
 
-/**
- * Transitional composition root for the v2 migration.
- *
- * The existing PiBackend remains the compatibility façade while callers move
- * to explicit service groups. Keeping construction here gives desktop
- * and future CLI hosts one place to assemble the runtime and makes the final
- * façade removal an internal change.
- */
-/**
- * Host-facing session boundary. This is deliberately structural: desktop and
- * future hosts depend on the transport/session contract and lifecycle
- * events, while the concrete PiBackend remains an internal composition-root
- * implementation.  Compatibility-only domain delegates are intentionally not
- * part of this port.
- */
-export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupervisor"> {
-	/**
-	 * Host-facing session boundary. Domain services intentionally do not live
-	 * here; consumers should obtain them from BackendServices. The concrete
-	 * PiBackend still exposes compatibility properties at runtime, but they are
-	 * not part of the host contract.
-	 */
-	replySubagentSupervisor(sessionId: string, requestId: string, message: string): void | Promise<void>;
-	init(): Promise<void>;
-	getPluginCallerContext(sessionId: string): PluginSessionCallerContext | undefined;
-	getPluginSessionCapabilities(
-		recordAdoptions?: import("@gyoungwe/plugin-api/runtime").PluginRecordAdoptions,
-	): ReturnType<import("./services/session-api").SessionServiceApi["getPluginSessionCapabilities"]>;
-	getPluginSourceCapabilities(
-		source: import("./plugins/coordinator").PluginRuntimeSource,
-	): ReturnType<import("./services/session-api").SessionServiceApi["getPluginSourceCapabilities"]>;
-	getTaskGrants(): import("./plugins/task-grants").TaskGrantStore;
-	getPluginWorkspaceCapabilities: import("./services/session-api").SessionServiceApi["getPluginWorkspaceCapabilities"];
-	getStorageRegistry(): StorageRegistry;
-	getEventRates(): Map<string, { window60s: number[]; lastEventAt: number }>;
-	onEvent(handler: (sessionId: string, event: SessionEvent) => void): () => void;
-	onAskRequest(handler: (request: AskRequest) => void): () => void;
-	onPermissionRequest(handler: (request: PermissionRequest) => void): () => void;
-	onPermissionResolved(handler: (result: PermissionResolved) => void): () => void;
-	onTrustRequest(handler: (request: TrustRequest) => void): () => void;
-	onLoginEvent(handler: (payload: LoginEventPayload) => void): () => void;
-	onMcpStatus(handler: (cwd: string, status: McpStatus) => void): () => void;
-	respondAsk(requestId: string, response: AskResponse, ownerId?: number): boolean;
-	respondPermission(requestId: string, answer: PermissionAnswer): void;
-	respondTrust(requestId: string, answer: TrustAnswer): void;
-	getSessionPermissionMode(sessionId: string): PermissionMode;
-	setSessionPermissionMode(sessionId: string, mode: PermissionMode): void;
-	getContextManagerConfig(): { mode: ContextManagerMode };
-	setContextManagerMode(mode: ContextManagerMode): void;
-	getChannelWatchConfig(): { enabled: boolean };
-	setChannelWatchEnabled(enabled: boolean): void;
-	peekSessionMessages(sessionId: string): Promise<SessionMessage[] | null>;
-	listActiveSessionRuntime(): Array<{ sessionId: string; streaming: boolean; compacting: boolean }>;
-	getPendingPermissionRequests(): PermissionRequest[];
-	checkSessionWritable(sessionId: string): "ok" | "not_found" | "read_only";
-}
+export type { SessionServicePort } from "./session-service-port";
 
 export interface MemoryServicePort {
 	getStatus(cwd: string): MemoryProjectStatus;
@@ -252,6 +186,8 @@ export interface BackendServices {
 	compute: ComputeServicePort;
 	/** 观察记忆：按项目目录读状态、开关、清空。 */
 	memory: MemoryServicePort;
+	/** Per-workspace background jobs settings and daily usage. */
+	backgroundJobs: BackgroundJobsServicePort;
 	/** Optional project research-state ledger; disabled unless inquiryDir is configured. */
 	inquiry: InquiryServicePort;
 	/** Provenance-aware project capture and read-only connector search. */
@@ -353,6 +289,14 @@ export interface BackendOptions extends SessionServiceOptions {
 	researchWriteAdapterHostLoader?: ResearchWriteAdapterHostLoader;
 }
 
+/**
+ * Transitional composition root for the v2 migration.
+ *
+ * The existing PiBackend remains the compatibility façade while callers move
+ * to explicit service groups. Keeping construction here gives desktop
+ * and future CLI hosts one place to assemble the runtime and makes the final
+ * façade removal an internal change.
+ */
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	// The packaged knowledge capability owns its runtime when installed. The
@@ -382,6 +326,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	// The compute host registry is created after sessions; ssh tools read it lazily at execute time.
 	let listComputeHosts: (() => Promise<ComputeHost[]>) | null = null;
 	const memory = new MemoryStore(join(getAgentDir(), "memory", "memory.db"));
+	const backgroundJobs = createBackgroundJobsService({ agentDir: getAgentDir(), clock: () => new Date() });
 	runtime.registerDisposable?.({ dispose: () => memory.close() });
 	const knowledgeHost = options.knowledgeHostLoader?.load() as KnowledgeHostPort | undefined;
 	// The generic host never imports the legacy knowledge implementation.  An
@@ -881,6 +826,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		subagents: sessions.subagents,
 		projectTrust: sessions.projectTrust,
 		compute,
+		backgroundJobs,
 		memory: {
 			getStatus: (cwd) => memory.status(canonicalProjectId(cwd)),
 			setEnabled: (cwd, enabled) => {

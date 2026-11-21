@@ -50,6 +50,8 @@ P5 P0 host modules (all **implemented, not wired**; Z1–Z3 host composition and
 - `packages/backend/src/plugins/p5-critic-capability.ts` (K2) implements approved structured `model.critic.review` with a provider independent of the primary run, metered spend checks and host receipts.
 - `packages/backend/src/services/p5-spend-ledger.ts` records metered input, output, cache-read and cache-write tokens separately by workspace and local day in `JsonStore` id `agent-p5-spend-ledger`; only input, output and cache writes count toward the daily limit (`P5_DEFAULT_DAILY_TOKEN_LIMIT`, 10M tokens, when `limitFor` returns `"default"`), unknown usage or a missing or reached limit denies metered work, and legacy entries retain their totals with a zero breakdown.
 - `packages/backend/src/services/p5-job-spend.ts` (`createP5JobSpend`) delegates critic budget checks to the ledger and aggregates metered usage within one background job for the scheduler to record once; an empty job or an unknown report produces unknown usage.
+- `packages/backend/src/services/p5-background-settings.ts` stores workspace opt-in and daily token limits; background work defaults to disabled and is denied if settings are corrupt.
+- `packages/backend/src/services/p5-background-status.ts` combines workspace settings with current local-day ledger usage, including usage accrued before background work was disabled.
 - `packages/backend/src/plugins/p5-host-delivery.ts` (F5, `createP5HostDelivery`) delivers scoped journal batches to the authorized active owner from its committed cursor, tracking acknowledgements and stopping on revocation.
 - `packages/backend/src/plugins/p5-owner-attachments.ts` (H15) binds native fact owners to composition-authorized F5 delivery and drains them before native disposal.
 - `packages/backend/src/plugins/native-session-facade.ts` (H12) builds the managed native session facade that `PluginRuntimeRegistry.attachNative` returns; `p5-owner-facade.ts` (H12) wraps a host native session's `factOwner` as a frozen host-only `hostFactOwner` (cursor/deliver) that validates responses and stops when the attachment is released.
@@ -306,6 +308,7 @@ packages/
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
 | `src/ipc.ts` | `IpcChannels`、`PiApi` | 通道名常量 + `window.pi` 完整类型（sessions/settings/packages/app/ui-plugins/login/compute 全域通道 + 同步属性 `platform`） |
+| `src/host-api/background-jobs.ts` | `BackgroundJobsContract`、`BackgroundJobsApi`、`P5BackgroundStatus` | Desktop-only contract for per-workspace status, enablement and daily token limits. |
 | `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`ComputeContract`、`DiscoveryContract`、`DecisionsContract`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract` | TypeBox Host API 域契约；供 desktop bindContract 与适配器复用；`ComputeContract` 覆盖主机登记、健康、作业日志、终端和引导状态，远端副作用由 backend adapter 继续做授权门控；`DiscoveryContract` 提供 B5d–B5f 内核会话、批评、多路径、探索计划和评测的只读投影，关闭会话保留 desktop 权限；`DecisionsContract` 提供项目决策账本的列表、撤销和人工确认；`KnowledgeContract` 覆盖知识库管理、审核、语义索引、研究运行路线与 Zotero 状态；机构访问保留 desktop 权限；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录 |
 | `src/contracts.ts` + `src/research-contracts.ts` | `VersionedRecord`、`ResearchCase`、`KnowledgeSnapshot`、`CapabilityRequest/Version`、`DecisionProposal/Decision`、`RunAttempt` | P0 统一版本合同、SHA-256 内容校验和旧 AnalysisContext/PlanProposal/EvidenceCheckpoint 的无副作用迁移；未来 schema fail closed，RunAttempt 从 unknown 恢复必须显式回到 queued，迁移不会继承执行授权；`contract-hash.ts` 保持浏览器可用 |
 | `src/compute.ts` | `ComputeHost`、`ComputeAuthorization`、`ComputeBudget`、`checkComputeAuthorization` | 远程主机/作业/终端/引导共享 schema，以及任务计算范围、路径和预算的 fail-closed 检查；B1 runner 通过稳定 adapter 接入 |
@@ -441,6 +444,7 @@ src/
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
 | `src/create-backend.ts` | `BackendServices`、`createBackend` | 组合根：注入每 host `DroneRuntime`，组装 session、knowledge、zotero、institutional、subagents、mcp、settings、models、login、packages、permissions、approvals、B5 discovery 与 B7 data-design 服务；compute preflight/experience bridge 通过显式 host 端口接入，desktop IPC 优先消费这些端口 |
+| `src/session-service-port.ts` | `SessionServicePort` | Defines the host-facing session boundary, re-exported by the composition root. |
 | `src/plugins/public-exports.ts` | Plugin runtime, capability and caller exports | Collects the existing public plugin exports for re-export through `src/index.ts`. |
 | `src/plugins/agent-slot-capabilities.ts` | `agentSlotCapabilityHandlers` | Read-effect native subagent slot acquisition/release, caller-bound leases and invocation settlement cleanup. |
 | `src/discovery/` | `DiscoveryService`、`ContainerKernelRunner` | B5d–B5f 的项目作用域宿主适配：Docker/Podman 无网络、只写 `runs/` 的内核会话，Inquiry 记录，独立批评、多路径稳健性、基线和评测持久化；无容器运行时 fail-closed |
@@ -489,6 +493,7 @@ src/
 | `src/settings/login.ts` | `LoginService` | provider 交互登录桥接：AuthInteraction → IPC 事件（prompt 挂起等 renderer 应答；浏览器先到则拒挂起 prompt）。支持 OAuth + api_key 交互登录（如 Google Vertex）；`filterAuthSelectOptions` 对 google-vertex 剔除必败的 api-key 选项（Vertex 不接受 API key，见 PITFALLS） |
 | `src/services/packages.ts` | `PackageService` | 社区包搜索/安装/卸载/已配置清单 + 装卸后对非流式会话热重载（对齐 CLI /reload）；npm ENOENT 转带哨兵的可读错误；通过 `BackendServices.packages` 暴露 |
 | `src/services/decision-fanout.ts` | `DecisionFanout` | agent 决策记录分发：补全项目后交给 inquiry 日志；处理器异常不打断会话 |
+| `src/services/p5-background-jobs-service.ts` | `BackgroundJobsServicePort`、`createBackgroundJobsService`、`localDayKey` | Composes settings and the local-day spend ledger for each canonical workspace. |
 | `src/services/approvals.ts` | `ApprovalService` | per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播和 allowRun 队列裁决；通过 `BackendServices.approvals` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/permissions.ts` | `PermissionSettingsService` | `permissions.json` 快照、原子保存、恢复默认、规则试算与审计尾部；通过 `BackendServices.permissions` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/session-permissions.ts` | `SessionPermissionService` | 活跃会话的内存权限模式（default/fullAccess）；关闭会话或重启即归零；通过 `BackendServices.sessionPermissions` 暴露 |
@@ -522,6 +527,7 @@ src/
 | `src/main/dev-agent-dir.ts` | dev/预览态数据隔离：userData 重定向 `*-dev` 后缀 + `PI_CODING_AGENT_DIR = ~/.pi/agent-dev` + 五配置一次性种子拷贝（正式目录零写入） |
 | `src/main/daily.ts` | 日常空间工作台目录（`~/.drone/daily`，全部日常会话的固定 cwd）+ 懒创建；信任链无资源自动信任不弹窗；dev/正式共享工作区（会话列表按 agent dir 天然隔离） |
 | `src/main/ipc/index.ts` | `registerIpc` 组合入口 + backend 事件/updater 状态转发 + UI 插件热重载 watcher 启动。**新增 handler 改对应域文件，不在 index.ts 堆** |
+| `src/main/ipc/background-jobs.ts` | Binds `BackgroundJobsContract` to `BackendServices.backgroundJobs`. |
 | `src/main/ipc/{sessions,settings,permissions,packages,knowledge,compute,discovery,decisions,app,ui-plugins,institutional,subagents}.ts` | 各域 handler（全部薄委托 backend；compute 通过 `ComputeContract` 做参数/结果边界校验并转发健康/作业/终端事件；discovery 通过 `DiscoveryContract` 暴露 B5d–B5f 只读投影并对关闭会话执行主帧校验；decisions 通过 `DecisionsContract` 提供项目决策列表/撤销/人工确认；knowledge 域经 `KnowledgeContract` 做参数/结果边界校验；ui-plugins 域 handler async await 落盘后才返回；permissions 域 = 设置 → 权限 面板 load/save/reset/probe/auditTail + `openLocation` 用 shell 定位文件） |
 | `src/main/tabs.ts` / `ui-state.ts` | tabs.json / ui-state.json 读写（JsonStore 原子写；ui-state 补丁式合并 + normalize 补缺省） |
 | `src/main/background.ts` | 背景图选图（dialog → 拷贝 `userData/backgrounds/` 并清理旧图） |
@@ -582,6 +588,7 @@ src/
 | `session/` | **SessionTabBar** + SessionTab/TabPill（状态收拢到头像图标；dnd-kit 拖拽排序，DragOverlay ghost + 轴锁定；拖拽期间退出 drag-region）/ **SessionRail**（左侧会话轨道：细线变形胶囊 + dock 波浪；开关在设置-外观）/ **ApprovalDock**（权限审批：async respond 成功才移除面板，失败保留重试）/ **TrustDialog**（项目信任两选项）/ **UpdateButton**（顶栏更新按钮）/ `session-status`（顶栏与轨道共用的状态/标题纯逻辑） |
 | `workbench/SkillsConnectionsView.tsx` | 技能与连接全屏页：按真实 skills/MCP/WebDAV/Zotero/机构访问/UI 插件状态展示能力，开关直接调用现有 IPC；知识库、Zotero 与机构访问配置抽屉通过宿主薄包装挂载 `knowledge.surface`，完整面板在外部 UI 包；状态页不把开关当在线证明 |
 | `settings/` | **SettingsDialog**（知识库和 Zotero 设置经 `knowledge.surface` 渲染插件面板；PANELS 注册表；分类 = 静态 + 「高级」分组〔知识库维护 / UI 插件 / 工作流总览 / SSH 主机〔ComputePane 主机登记，同一份登记表供 `ssh` / `ssh_hosts` 工具使用〕〕+ 插件 settings.panel 贡献动态拼接）/ **GeneralPanel**（语言/上下文管理二态/channel-watch 开关）/ **PermissionsPanel**（编辑全局 permissions.json：工作区边界 / 工具规则 + bash 模式表 **PatternTable**（↑↓✕、自保护行锁定表尾）+ 试算 / 高级（审计尾部、文件位置、恢复默认、放弃/保存）；纯编辑模型 `permissions-model.ts`，`PermissionsEditor` 按 props 渲染可单测）/ **AppearancePanel**（主题三段/背景图/轨道/中央动画；UI 插件管理移到 高级 › UI 插件）/ **SkillsPanel**（Tools & Skills：完整 Skill catalog + 默认折叠的 lazy capability/tool schema footprint/最近调用；工作流总览 **WorkflowOverviewPanel** 在 高级 › 工作流总览） / **McpPanel**（MCP 服务器状态/启停 + 「推荐接入」一键添加预设：shared `MCP_PRESETS`〔Playwright 浏览器控制〕→ IPC `mcp:addPreset` → backend `McpService.addPreset` 写用户级 mcp.json）/ **ExtensionsPanel** + `extensions/`（目录浏览/安装/卸载，subagent 包安装两段式确认）/ **UiPluginsSection**（高级 › UI 插件：总开关/插件卡/槽位指派） / **AboutPanel** / `providers/`（ProvidersPanel + ProviderRow 操作全图标化 / LoginDialog（交互登录对话框：OAuth + api_key 交互流）/ CustomProviderForm + ModelRowsEditor（逐模型行编辑器）/ BuiltinProviderEditForm（内置端点覆写）/ SubagentPanel（子代理模型偏好）+ `model-rows` 纯函数） |
+| `settings/BackgroundJobsSettingsRow.tsx` | Settings → General: per-workspace background job toggle, daily token budget, and today's usage via `window.pi` |
 | `projects/` | ProjectPage / SearchBar（日常选中时占位词取「日常」）/ ProjectSidebar（内置「日常」空间钉顶条目：canvas 底 + 细边框 + 咖啡 glyph，无删除钮）/ SessionPanel（新会话 = createDraftSession）/ SessionRow（hover 出诊断复制/删除）/ `date-groups` / ProjectBranchPicker（仅 draft 态渲染——真实会话项目绑死不可改；日常 draft 隐藏分支选择器，chip 显示「日常」）/ `diagnostics`（buildDiagnosticsText 纯文本） |
 | `ui/` | Button（ghost/primary × sm/md × danger）/ Dropdown / Switch（统一受控开关，支持 indeterminate）/ **Tooltip**（自定义悬浮提示，新增提示一律用它不用原生 title；右缘元素传 `align="end"` 防幻影横向滚动条） |
 | `ui/ActionSurface.tsx` + `ui/dialog-stack.ts` | 统一右侧交互面（Ask / Trust / 示例任务 / Wiki 审核）：顶部色条区分 accent/warn/danger，`height="fit"` 卡片或整高抽屉；焦点陷阱 + 关闭后恢复焦点；全局单栈只显示最上层（下层 `inert`），Esc 只交给栈顶 `onEscape`（未提供则吞掉，防止误关下层） |
