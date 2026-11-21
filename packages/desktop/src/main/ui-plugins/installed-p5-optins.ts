@@ -1,3 +1,7 @@
+import type { PluginRuntimeSource } from "@drone/backend";
+
+export type InstalledP5Optins = NonNullable<PluginRuntimeSource["p5"]>;
+
 const literals = {
 	bytes: "staged-output",
 	exportBundle: "request",
@@ -5,9 +9,7 @@ const literals = {
 	rerun: "request",
 	critic: "request",
 	delivery: "request",
-} as const;
-
-export type InstalledP5Optins = Readonly<Partial<typeof literals>>;
+} as const satisfies Required<InstalledP5Optins>;
 
 export interface InstalledP5Declaration {
 	/** Eligibility declarations only; output grants and approvals come from the host. */

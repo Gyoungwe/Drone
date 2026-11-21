@@ -252,6 +252,32 @@ export async function approveDesktopRuntime(
 	return response.response === 1 && !contents.isDestroyed() && !signal?.aborted;
 }
 
+/**
+ * The owner-window picker for a P5 staged-output directory grant.  It is the
+ * user's only consent to a plugin writing chunked uploads into a directory, so
+ * the copy is fixed and the selection is a single directory.
+ */
+export async function selectStagedOutputDirectory(
+	owner: DesktopRuntimeOwner,
+	pluginId: string,
+): Promise<readonly string[]> {
+	const contents = webContents.fromId(owner.id);
+	if (!contents || contents.isDestroyed()) throw new Error("Plugin approving window is unavailable");
+	const window = BrowserWindow.fromWebContents(contents);
+	if (!window) throw new Error("Plugin directory selection requires its approving window");
+	const result = await dialog.showOpenDialog(window, {
+		title: hostText("授权插件写入暂存输出的目录", "Authorize a directory for plugin staged output"),
+		message: hostText(
+			`${pluginId} 申请通过宿主把分块上传的文件写入所选目录（单次上传最多 64 MiB）。仅授权本次启用；每次开始上传和每次写入仍需批准，并显示路径、大小和 SHA-256。不会授权状态 JSON、笔记或其他目录。取消将终止启用。`,
+			`${pluginId} requests to write files uploaded in chunks (up to 64 MiB per upload) into the selected directory through the host, for this activation only. Each upload start and each write still needs approval showing the path, size and SHA-256. State JSON, notes and other directories are not granted. Cancel to stop activation.`,
+		),
+		properties: ["openDirectory"],
+		buttonLabel: hostText("授权暂存输出写入", "Allow staged output writes"),
+	});
+	if (contents.isDestroyed()) throw new Error("Plugin approving window closed during directory selection");
+	return result.canceled ? [] : result.filePaths;
+}
+
 /** Native and UI discovery both select the same canonical installed package descriptor. */
 export function createNativeRuntimeIntegration(
 	manager: () => UiPluginManager,

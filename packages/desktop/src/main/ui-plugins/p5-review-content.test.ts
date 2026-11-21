@@ -15,6 +15,8 @@ import {
 	buildP5BatchCancelReviewContent,
 	buildP5BatchReviewContent,
 	buildP5BundleReviewContent,
+	buildP5ByteStageOpenReviewContent,
+	buildP5ByteWriteReviewContent,
 	buildP5RerunCancelReviewContent,
 	buildP5RerunReviewContent,
 	P5_REVIEW_COPY,
@@ -302,5 +304,46 @@ it("renders only the source run and profile requested for rerun cancellation", (
 		summary: "Plugin: example.plugin\nSource run:\n  source-run\n  source-receipt\nProfile: local",
 		approve: "Approve",
 		deny: "Deny",
+	});
+});
+
+it("renders the exact English byte stage-open review without a hash", () => {
+	const input = { requestId: "stage-example", path: "reports/result.bin", bytes: 128 };
+	expect(buildP5ByteStageOpenReviewContent(plugin, input, "/exports/demo", en)).toStrictEqual({
+		title: "Plugin wants to write files",
+		summary: "Plugin: example.plugin\nFolder: /exports/demo\nFiles:\n  reports/result.bin\n    Size: 128",
+		approve: "Approve",
+		deny: "Deny",
+	});
+});
+
+it("renders the exact Chinese byte stage-open review without a hash", () => {
+	const input = { requestId: "stage-example", path: "reports/result.bin", bytes: 128 };
+	expect(buildP5ByteStageOpenReviewContent(plugin, input, "/exports/demo", zh)).toStrictEqual({
+		title: "插件请求写入文件",
+		summary: "插件: example.plugin\n目标文件夹: /exports/demo\n文件:\n  reports/result.bin\n    大小: 128",
+		approve: "允许",
+		deny: "拒绝",
+	});
+});
+
+it("renders the exact bilingual byte write review with the staged source hash and size", () => {
+	const hash = sha256("example bytes");
+	const input = {
+		path: "reports/result.bin",
+		source: { fileRef: "stage-example", bytes: 13, sha256: hash },
+		expected: null,
+	};
+	expect(buildP5ByteWriteReviewContent(plugin, input, "/exports/demo", en)).toStrictEqual({
+		title: "Plugin wants to write files",
+		summary: `Plugin: example.plugin\nFolder: /exports/demo\nFiles:\n  reports/result.bin\n    Size: 13\n    SHA-256: ${hash}`,
+		approve: "Approve",
+		deny: "Deny",
+	});
+	expect(buildP5ByteWriteReviewContent(plugin, input, "/exports/demo", zh)).toStrictEqual({
+		title: "插件请求写入文件",
+		summary: `插件: example.plugin\n目标文件夹: /exports/demo\n文件:\n  reports/result.bin\n    大小: 13\n    SHA-256: ${hash}`,
+		approve: "允许",
+		deny: "拒绝",
 	});
 });
