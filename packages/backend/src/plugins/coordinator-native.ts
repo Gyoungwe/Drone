@@ -3,6 +3,7 @@ import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type { PluginNativeSessionFacts, PluginRuntimeClient } from "@gyoungwe/plugin-api/runtime";
 import type { PluginNativeBootstrap, PluginRuntimeBridgeOptions, PluginRuntimeOwner } from "./coordinator";
 import { NativeSessionDelivery } from "./native-delivery";
+import { bindNativeFactOwner } from "./p5-owner-attachments";
 import { type PluginRuntimeSource, sameSource } from "./plugin-source";
 import type { ManagedNativeSession, PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 import type { PluginSessionCallerContext } from "./session-caller";
@@ -35,7 +36,13 @@ export interface Binding {
 interface NativeBootstrapHost {
 	readonly options: Pick<
 		PluginRuntimeBridgeOptions,
-		"classifySelectedPath" | "source" | "enabled" | "sources" | "requiredSources" | "getSessionContext"
+		| "classifySelectedPath"
+		| "source"
+		| "enabled"
+		| "sources"
+		| "requiredSources"
+		| "getSessionContext"
+		| "factOwners"
 	>;
 	bind(name: string, owner: PluginRuntimeOwner): Promise<string | undefined>;
 	getBinding(token: string): Binding | undefined;
@@ -209,9 +216,10 @@ function adoptNative(
 	native: ManagedNativeSession,
 	bind: (session: PluginSessionCallerContext) => void,
 ): PluginNativeSession {
-	const detachDelivery = bootstrap.delivery.attach(binding.runtime.source, native, () =>
-		host.allowed(binding),
-	);
+	const { source } = binding.runtime;
+	const detachDelivery = bootstrap.delivery.attach(source, native, () => host.allowed(binding));
+	const bindFactOwner = bindNativeFactOwner(host.options.factOwners, native, source, binding.abort.signal);
+	if (bindFactOwner && !bootstrap.bound) bootstrap.binders.add(bindFactOwner);
 	let stopping: Promise<void> | undefined;
 	const dispose = () => {
 		stopping ??= (async () => {
@@ -222,6 +230,7 @@ function adoptNative(
 			host.removeSelection(nativeOwner);
 			bootstrap.attachments.delete(adopted);
 			bootstrap.binders.delete(bind);
+			if (bindFactOwner) bootstrap.binders.delete(bindFactOwner);
 			const failures = [released, stopped].filter((result) => result.status === "rejected");
 			if (failures.length)
 				throw new AggregateError(
@@ -240,6 +249,7 @@ function adoptNative(
 		},
 	};
 	bootstrap.attachments.add(adopted);
+	if (bootstrap.bound) bindFactOwner?.(bootstrap.bound);
 	return adopted;
 }
 

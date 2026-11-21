@@ -1,6 +1,8 @@
+import { setImmediate } from "node:timers/promises";
 import { describe, expect, it, vi } from "vitest";
 import { PluginRuntimeBridge } from "./coordinator";
 import type { HostNativeSession } from "./p5-owner-facade";
+import type { PluginSessionCallerContext } from "./session-caller";
 
 const source = { pluginId: "example", packageRoot: "/example", entrypoint: "/example/runtime.mjs" };
 const owner = { id: 1, isDestroyed: () => false };
@@ -12,6 +14,61 @@ const operations = {
 		execute: async () => null,
 	},
 };
+
+it.each([
+	["no owner", false, true, false],
+	["no port", true, false, false],
+	["bound before adoption", true, true, true],
+	["bound after adoption", true, true, false],
+])("binds once and drains before disposal (%s)", async (_name, hasOwner, hasPort, boundFirst) => {
+	const scope = { workspaceId: "workspace-1", sessionId: "session-1" };
+	const session: PluginSessionCallerContext = {
+		identity: {},
+		scope: { ...scope, kind: "session", workspaceDirectory: "/example" },
+		signal: new AbortController().signal,
+		readOnly: false,
+		projectTrusted: true,
+	};
+	const unsubscribe = vi.fn();
+	const subscribe = vi.fn(() => unsubscribe);
+	const scopeOf = () => ({ ...scope, callerSourceHash: "a".repeat(64), providerSourceHash: "b".repeat(64) });
+	const facts = { subscribe, read: async () => ({ facts: [], cursor: null }) };
+	const factOwners = { scopeOf, facts, authorize: async () => true };
+	let finishCursor: () => void = vi.fn();
+	const cursor = new Promise<null>((resolve) => {
+		finishCursor = () => resolve(null);
+	});
+	const dispose = vi.fn(async () => undefined);
+	const factOwner = { cursor: () => cursor, deliver: async () => ({ cursor: "fact-1" }) };
+	const extension = () => undefined;
+	const native = { extension, dispose, factOwner: hasOwner ? factOwner : undefined };
+	const instance = { operations, createNativeSession: () => native, dispose: async () => undefined };
+	const bridge = new PluginRuntimeBridge({
+		source: () => source,
+		enabled: () => true,
+		factory: () => async () => instance,
+		approve: async () => true,
+		getSessionContext: () => session,
+		factOwners: hasPort ? factOwners : undefined,
+	});
+	const bootstrap = bridge.beginNative(owner, () => "example");
+	const bind = () => bootstrap.bindSession(session.scope.sessionId);
+	if (boundFirst) bind();
+	await bootstrap.factoryForPath("/example/extension.mjs");
+	expect(subscribe).toHaveBeenCalledTimes(boundFirst ? 1 : 0);
+	if (!boundFirst) bind();
+	bind();
+	const count = hasPort && hasOwner ? 1 : 0;
+	expect(subscribe).toHaveBeenCalledTimes(count);
+	await setImmediate();
+	const closing = bootstrap.dispose();
+	await setImmediate();
+	expect(unsubscribe).toHaveBeenCalledTimes(count);
+	expect(dispose).toHaveBeenCalledTimes(count === 1 ? 0 : 1);
+	finishCursor();
+	await closing;
+	expect(dispose).toHaveBeenCalledOnce();
+});
 
 describe("native bootstrap ownership", () => {
 	it("cancels outstanding approval without waiting for a dialog response", async () => {
