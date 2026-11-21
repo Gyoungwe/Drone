@@ -1,6 +1,7 @@
 import type { AskQuestionRoute } from "../session/ask-gate";
 import type { PluginRuntimeOwner } from "./coordinator";
 import type { SelectedNativeSource } from "./native-delivery";
+import type { P5OwnerAttachmentPort } from "./p5-owner-attachments";
 import type { HostNativeRuntimeFactory } from "./p5-owner-facade";
 import type { PluginRuntimeSource } from "./plugin-source";
 import type {
@@ -37,6 +38,8 @@ export interface PluginRuntimeBridgeOptions {
 		signal?: AbortSignal,
 	): Promise<boolean>;
 	getSessionContext(sessionId: string): PluginSessionCallerContext | undefined;
+	/** Composition-owned scope, journal and authorization for native fact delivery. */
+	factOwners?: P5OwnerAttachmentPort;
 	/** Host task grants; a current grant for this plugin source covers its ordinary writes. */
 	taskGrants?: TaskGrantStore;
 }

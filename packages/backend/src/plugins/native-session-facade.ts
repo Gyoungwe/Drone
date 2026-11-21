@@ -9,6 +9,7 @@ import type { PluginNativeInvocation } from "./runtime-capabilities";
 /** Host-only facade; only the registry can borrow a real caller for the source projector. */
 export interface ManagedNativeSession extends PluginNativeSession {
 	readonly hostFactOwner?: P5CommittedProjection;
+	retainFactOwner?(release: () => Promise<void>): void;
 	readonly hostProjection?: {
 		finalize?(event: unknown, signal: AbortSignal): Promise<unknown>;
 		event(event: unknown, signal?: AbortSignal): Promise<unknown>;
@@ -44,7 +45,8 @@ export function createNativeSessionFacade(options: NativeSessionFacadeOptions): 
 		...native,
 		nativeOperations: undefined,
 		factOwner: undefined,
-		...(native.factOwner ? { hostFactOwner: createP5OwnerFacade(native.factOwner, lifetime.signal) } : {}),
+		retainFactOwner: undefined,
+		...(native.factOwner ? manageFactOwner(native, native.factOwner, lifetime.signal) : {}),
 		projection: projected,
 		// Do not pass through a similarly named property from untyped source exports.
 		hostProjection: projected
@@ -53,6 +55,33 @@ export function createNativeSessionFacade(options: NativeSessionFacadeOptions): 
 		extension: (pi) => adaptNativeExtension(pi, options, nativeSignal),
 	};
 	return managed;
+}
+
+function manageFactOwner(native: HostNativeSession, owner: P5CommittedProjection, signal: AbortSignal) {
+	const releases: (() => Promise<void>)[] = [];
+	const disposeNative = native.dispose.bind(native);
+	let closing: Promise<void> | undefined;
+	const dispose = () =>
+		(closing ??= Promise.resolve().then(async () => {
+			const released = await Promise.allSettled(releases.map(async (release) => release()));
+			const failures: unknown[] = [];
+			for (const result of released) if (result.status === "rejected") failures.push(result.reason);
+			try {
+				await disposeNative();
+			} catch (error) {
+				failures.push(error);
+			}
+			if (failures.length) throw new AggregateError(failures, "Native fact owner disposal failed");
+		}));
+	// Registry teardown retains the original host record, not the returned facade.
+	native.dispose = dispose;
+	return {
+		hostFactOwner: createP5OwnerFacade(owner, signal),
+		retainFactOwner: (release: () => Promise<void>) => {
+			releases.push(release);
+		},
+		dispose,
+	};
 }
 
 function adaptNativeProjection({ native, call, resolveProjectionCaller }: NativeSessionFacadeOptions) {
