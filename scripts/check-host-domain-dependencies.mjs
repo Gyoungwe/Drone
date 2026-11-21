@@ -2,19 +2,8 @@
 import { readFile } from "node:fs/promises";
 import { isMainModule } from "./is-main-module.mjs";
 
-/**
- * Runtime domain dependencies that still exist while P2–P5 migrate.  Keeping
- * this list explicit prevents a new optional plugin from becoming a silent
- * host requirement; each entry is a named compatibility seam with a removal
- * condition in the native-plugin plan.
- */
-export const trackedRuntimeDependencies = new Set([
-	"@drone/research",
-	"@drone/tasks",
-	"@gyoungwe/pi-core",
-	"@gyoungwe/pi-knowledge",
-	"@gyoungwe/pi-research",
-]);
+/** Empty after P6 PR-A; the runtime dependency allowlist must only shrink. */
+export const trackedRuntimeDependencies = new Set();
 
 /** Packages that must never be promoted to host runtime dependencies. */
 export const optionalPluginPackages = new Set([
@@ -25,20 +14,25 @@ export const optionalPluginPackages = new Set([
 	"@gyoungwe/research-suite",
 ]);
 
-export function inspectHostDependencies(packageJson) {
+export function inspectHostDependencies(packageJson, tracked = trackedRuntimeDependencies) {
 	const dependencies = new Set(Object.keys(packageJson.dependencies ?? {}));
-	const runtimeDomainDependencies = [...dependencies].filter((name) => trackedRuntimeDependencies.has(name));
+	const runtimeDomainDependencies = [...dependencies].filter((name) => tracked.has(name));
+	const staleTrackedDependencies = [...tracked].filter((name) => !dependencies.has(name));
 	const unexpectedRuntimeDomainDependencies = [...dependencies].filter(
-		(name) => name.startsWith("@gyoungwe/pi-") && !trackedRuntimeDependencies.has(name),
+		(name) => name.startsWith("@gyoungwe/pi-") && !tracked.has(name),
 	);
 	const optionalPluginRuntimeDependencies = [...dependencies].filter((name) =>
 		optionalPluginPackages.has(name),
 	);
 	return {
 		runtimeDomainDependencies,
+		staleTrackedDependencies,
 		unexpectedRuntimeDomainDependencies,
 		optionalPluginRuntimeDependencies,
-		ok: unexpectedRuntimeDomainDependencies.length === 0 && optionalPluginRuntimeDependencies.length === 0,
+		ok:
+			staleTrackedDependencies.length === 0 &&
+			unexpectedRuntimeDomainDependencies.length === 0 &&
+			optionalPluginRuntimeDependencies.length === 0,
 	};
 }
 
@@ -48,6 +42,7 @@ if (isMainModule(import.meta.url)) {
 	const result = inspectHostDependencies(packageJson);
 	if (!result.ok) {
 		console.error("Host domain dependency policy failed:");
+		for (const name of result.staleTrackedDependencies) console.error(`- stale tracked dependency: ${name}`);
 		for (const name of result.unexpectedRuntimeDomainDependencies)
 			console.error(`- untracked runtime domain dependency: ${name}`);
 		for (const name of result.optionalPluginRuntimeDependencies)
@@ -59,7 +54,7 @@ if (isMainModule(import.meta.url)) {
 			{
 				status: "PARTIAL",
 				trackedRuntimeDependencies: result.runtimeDomainDependencies,
-				message: "Tracked dependencies remain until their P2–P5 host seams are removed.",
+				message: "This check covers only backend runtime dependencies.",
 			},
 			null,
 			2,
