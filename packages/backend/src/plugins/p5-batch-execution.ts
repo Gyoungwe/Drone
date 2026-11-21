@@ -149,11 +149,9 @@ export function createP5BatchExecutor(ports: Ports) {
 				if (signal?.aborted) break;
 				items.push(await runItem(ports, reviewed, item, context));
 			}
-			if (signal?.aborted) return { status: "ok", value: { status: "cancelled", items } };
-			return {
-				status: "ok",
-				value: { status: items.every((item) => item.status === "succeeded") ? "complete" : "blocked", items },
-			};
+			const completionStatus = signal?.aborted ? "cancelled" : "complete";
+			const status = items.every((item) => item.status === "succeeded") ? completionStatus : "blocked";
+			return { status: "ok", value: { status, items } };
 		},
 	};
 }

@@ -349,7 +349,7 @@ it("passes the host signal and waits for active cleanup and its durable observat
 	}
 	const result = await running;
 	if (result.status !== "ok") throw new Error("Expected batch outcome");
-	expect(result.value.status).toBe("cancelled");
+	expect(result.value.status).toBe("blocked");
 	expect(result.value.items).toHaveLength(1);
 	expect(result.value.items[0]?.status).toBe("outcome-unknown");
 	expect(f.port.execute).toHaveBeenCalledTimes(1);

@@ -172,7 +172,7 @@ it("drains active cleanup and its durable receipt before both cancels resolve", 
 	const result = await first;
 	expect(await second).toEqual(result);
 	expect(await f.call("cancel")).toEqual(result);
-	expect(result).toMatchObject({ status: "ok", value: { status: "cancelled" } });
+	expect(result).toMatchObject({ status: "ok", value: { status: "blocked" } });
 	expect((await running).status).toBe("ok");
 	expect(f.port.execute.mock.calls.map(([item]) => item.id)).toEqual(["one"]);
 	expect(await readFile(f.path, "utf8")).not.toContain("Synthetic private abort diagnostic");
