@@ -248,8 +248,8 @@ function abortablePort(finish: () => { verified: boolean }) {
 
 it("drains two concurrent runs: aborts both and resolves only after both settle", async () => {
 	const batch = await fixture();
-	const first = abortablePort(() => ({ verified: true }), "first");
-	const second = abortablePort(() => ({ verified: true }), "second");
+	const first = abortablePort(() => ({ verified: true }));
+	const second = abortablePort(() => ({ verified: true }));
 	// Dispatch by the batch's own request id, so each run gets its own blocking port.
 	batch.port.execute.mockImplementation(async (item, candidate, context) => {
 		const port = candidate.request.requestId === "other" ? second : first;
@@ -267,8 +267,8 @@ it("drains two concurrent runs: aborts both and resolves only after both settle"
 it("drain resolves only after the in-flight item's durable receipt is written", async () => {
 	const batch = await fixture();
 	const item = abortablePort(() => ({ verified: true }));
-	batch.port.execute.mockImplementation(async (_item, _batch, { signal }) =>
-		item.execute(_item, _batch, { signal }),
+	batch.port.execute.mockImplementation(async (target, candidate, context) =>
+		item.execute(target, candidate, context),
 	);
 	const running = batch.run();
 	await item.inFlight.promise;
@@ -291,8 +291,8 @@ it("drain still resolves when a run's execute throws during the drain", async ()
 	const item = abortablePort(() => {
 		throw new Error("Synthetic abort");
 	});
-	batch.port.execute.mockImplementation(async (_item, _batch, { signal }) =>
-		item.execute(_item, _batch, { signal }),
+	batch.port.execute.mockImplementation(async (target, candidate, context) =>
+		item.execute(target, candidate, context),
 	);
 	const running = batch.run();
 	await item.inFlight.promise;
