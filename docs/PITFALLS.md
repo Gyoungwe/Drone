@@ -818,3 +818,36 @@ assert new in open(p).read(), "the revert did not land"
 ```
 
 回滚实验的目的是看测试变红；回滚没落地时，看到的绿色什么都不能说明。
+
+## 一个 JSON 文件里的多项写入会互相覆盖（2026-11-22 记录）
+
+P5 的 receipt 台账是一个 JSON 文件，里面每个 receipt 占一项。
+`acceptReceipt` / `finishReceipt` 的写法是：
+
+```ts
+const before = await readSnapshot(storage.path);   // 队列外读
+if (existing) return existing;                     // 队列外判断
+return persistReceipt(storage, before, [...before.receipts, receipt], receipt);
+                                                 // 队列内写
+```
+
+`JsonStore` 只串行化**写**。读在队列外，两个并发 accept 会读到同一份 `before`，
+第二个写的 `next` 是基于旧列表构造的，写进去就把第一个 receipt 冲掉了。
+更糟的是提交前的字节版本校验会发现台账变了，于是抛 `STATE_CONFLICT`；
+而这个 requestId 又确实不在文件里，于是调用方把它当成冲突、
+观察者转成 `PERSISTENCE_PENDING`——**effect 从没跑，receipt 也从没写**。
+
+症状是测试挂死，不是报错：等待 `promise` 的那一行永远不 resolve。
+
+修法不是重试。重试分不清「另一个 receipt 并发写进来了」和「文件被外部改了」——
+重试会把外部修改覆盖掉。正确做法是让**读-判断-写成为临界区**：
+
+```ts
+function withLedgerLock<T>(path: string, operation: () => Promise<T>): Promise<T> { … }
+```
+
+锁按台账路径索引，进程内所有 store 实例共享，所以同一个文件上的两个 store 也会互斥。
+锁**永远在 `JsonStore` 队列之前**拿，不能在之后——否则两个队列互相等待，死锁。
+
+教训：只要一个 JSON 文件里存多项、每项的写都要「读全量 → 改一项 → 写全量」，
+读就必须在写队列里面。「`JsonStore` 串行化了写」不等于「读改写是原子的」。
