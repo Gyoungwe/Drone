@@ -606,3 +606,28 @@ Codex 的 workspace-write 沙箱拦截 `ps`，进程清理走的是另一条路�
 
 缺任何一样，失败信息看起来都像代码坏了。**先分清"哪些失败是我的"和"哪些是环境缺件"，
 再动手** —— 用干净树（stash 后）跑一遍同一个失败集合，是最快的分界。
+
+## 旧的工单分支可能停在过期的 base 上（2026-11-22 记录）
+
+`.local/tickets/blocked/` 里的工单带着创建时的 base 提交。工单所属的 worktree 分支
+（如 `codex/T165-p5-batch-ports`）在之前一轮里被创建过，它仍指向旧 base（`77642593`），
+而不是当前的 `origin/main`（`69ddfbf1`）。直接在那个 worktree 里写代码，测试会通过，
+但 PR 会带着一堆与主线脱节的 diff。
+
+开工第一步要确认三件事：`git rev-parse HEAD` 与 `origin/main` 的关系、工作区是否干净、
+分支是否已经存在且指向别处。已经存在的分支用 `git reset --keep origin/main` 重放
+（未跟踪的新文件不受影响，已跟踪的改动先 `git diff > patch` 备份再重放，
+因为 `--keep` 在索引与目标不一致时会拒绝）。
+
+重放后必须重跑全部门禁：base 上可能已经改过同一处的语义。本例中 T2 在
+`df7bc4fc` 改了中止语义——中止的项目状态未知时，批次结果是 `blocked` 而不再是
+`cancelled`，我按旧 base 写的断言因此失败。**测试期望过时和代码有 bug 长得一样，
+先确认 base 上那个函数的当前规则。**
+
+## 新增 JsonStore 必须引用字面量 storage id（2026-11-22 记录）
+
+`packages/backend/src/storage/registry.test.ts` 会扫描每个 `new JsonStore(` 构造点，
+要求它附近出现一个**字面量**的已登记 id（`"agent-..."` / `"desktop-..."`），
+并统计构造点总数。用变量（`storageId: entry.id`）会让这条检查拿到 0 个 id 而失败。
+新登记的条目还要同步 `packages/backend/src/storage/agent-entries.ts`，
+并把该测试里的 site 总数 +1。总数是硬编码的，所以每加一个 JsonStore 都要改。
