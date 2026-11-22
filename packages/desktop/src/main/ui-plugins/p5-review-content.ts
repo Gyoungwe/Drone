@@ -1,4 +1,10 @@
-import type { FrozenP5Batch, FrozenP5Bundle, P5RerunRun, P5ReviewSnapshot } from "@drone/backend";
+import type {
+	FrozenP5Batch,
+	FrozenP5Bundle,
+	P5ApprovalReview,
+	P5RerunRun,
+	P5ReviewSnapshot,
+} from "@drone/backend";
 
 export const P5_REVIEW_COPY = {
 	"title.bundle": { zh: "插件请求写入文件", en: "Plugin wants to write files" },
@@ -33,6 +39,11 @@ type CopyKey = keyof typeof P5_REVIEW_COPY;
 type TitleKey = Extract<CopyKey, `title.${string}`>;
 type Field = (key: Extract<CopyKey, `field.${string}`>) => string;
 type BatchPlan = FrozenP5Batch["plans"][number];
+
+/** The review kind picks the copy row; a kind without a row is not renderable. */
+const REVIEW_TITLES: Readonly<Record<P5ApprovalReview["kind"], TitleKey>> = {
+	"byte-write": "title.bundle",
+};
 
 function renderReview(
 	text: Text,
@@ -178,5 +189,24 @@ export function buildP5BatchCancelReviewContent(
 			`  ${itemId}`,
 			`    ${field("field.profile")}: ${profile}`,
 		]),
+	]);
+}
+
+/**
+ * The review a host capability asked the user to approve.
+ *
+ * The backend supplies the facts and the desktop supplies the copy, so the
+ * summary is rendered here rather than in the backend. Every fact is shown
+ * exactly: the granted folder, the file, its size and its hash. Nothing is
+ * elided, so a long review scrolls instead of being shortened.
+ */
+export function buildP5ApprovalReviewContent(review: P5ApprovalReview, text: Text): P5ReviewContent {
+	const { path, bytes, sha256 } = review.file;
+	return renderReview(text, REVIEW_TITLES[review.kind], review.pluginId, (field) => [
+		`${field("field.root")}: ${review.root}`,
+		`${field("field.files")}:`,
+		`  ${path}`,
+		`    ${field("field.size")}: ${bytes}`,
+		`    ${field("field.sha256")}: ${sha256}`,
 	]);
 }

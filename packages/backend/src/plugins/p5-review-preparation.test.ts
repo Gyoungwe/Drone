@@ -223,5 +223,6 @@ it("preserves the original input and approval policy for capabilities without pr
 		JSON.stringify(request),
 		context.signal,
 		"always",
+		undefined,
 	);
 });

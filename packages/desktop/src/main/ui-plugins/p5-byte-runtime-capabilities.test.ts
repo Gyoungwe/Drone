@@ -224,6 +224,27 @@ it("stages privately across calls and writes exact bytes only after approval", a
 	await dispose(ports);
 });
 
+it("describes the pending write for the user's approval with the granted root and file facts", async () => {
+	const fixtureState = fixture();
+	const ports = await fixtureState.activate();
+	const call = fixtureState.callFor(ports);
+	const plan = await stage(call);
+	const handler = ports.handlers["bytes.write"];
+	if (!handler) throw new Error("Missing byte write handler");
+	const review = handler.approvalReview?.(plan, {
+		pluginId: source.pluginId,
+		applicationId: "app",
+		scope: { kind: "application" },
+	});
+	expect(review).toStrictEqual({
+		kind: "byte-write",
+		pluginId: source.pluginId,
+		root: fs.realpathSync(fixtureState.output),
+		file: { path: plan.path, bytes: bytes.length, sha256 },
+	});
+	await dispose(ports);
+});
+
 it("rejects output that would include the private staging root", async () => {
 	const fixtureState = fixture();
 	fixtureState.select.mockResolvedValueOnce([fixtureState.profile]);
