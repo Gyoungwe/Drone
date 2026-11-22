@@ -196,6 +196,31 @@ it("makes concurrent acceptance of the same request hash idempotent across store
 	expect(await open().get(request)).toEqual(results[0]);
 });
 
+it("keeps both receipts when two different requests are accepted concurrently", async () => {
+	// The ledger is one file, so concurrent acceptances must not lose each other's write.
+	const second = { requestId: "host-request-2" };
+	const results = await Promise.all([
+		open().accept(request, accepted),
+		open().accept(second, { ...accepted, receiptRef: "receipt-ref-2" }),
+	]);
+	expect(results[0].requestId).toBe(request.requestId);
+	expect(results[1].requestId).toBe(second.requestId);
+	expect(await open().get(request)).toEqual(results[0]);
+	expect(await open().get(second)).toEqual(results[1]);
+	const ledger = await readFile(fixture.path, "utf8");
+	expect(JSON.parse(ledger)).toHaveLength(2);
+});
+
+it("keeps both receipts when a request is accepted while another is finished", async () => {
+	const second = { requestId: "host-request-2" };
+	await open().accept(second, { ...accepted, receiptRef: "receipt-ref-2" });
+	const results = await Promise.all([open().accept(request, accepted), open().finish(second, succeeded)]);
+	expect(results[0].status).toBe("accepted");
+	expect(results[1].status).toBe("succeeded");
+	const ledger = await readFile(fixture.path, "utf8");
+	expect(JSON.parse(ledger)).toHaveLength(2);
+});
+
 it("reports a typed duplicate conflict for concurrent acceptance with different hashes", async () => {
 	const results = await Promise.allSettled([
 		open().accept(request, accepted),

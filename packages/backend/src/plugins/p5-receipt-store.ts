@@ -55,6 +55,36 @@ interface Snapshot {
 	readonly version: string | null;
 }
 
+/**
+ * Per-ledger transaction lock.
+ *
+ * Every receipt in the ledger shares one file, so a receipt operation is a read-decide-write
+ * transaction over that file: it must read the ledger, decide against what it read, and write the
+ * result back without another receipt operation interleaving. `JsonStore` serializes the writes
+ * themselves, but it cannot serialize a read that happens before the write is queued — two
+ * concurrent acceptances would both read the same ledger, and the second write would be built on
+ * a stale list and lose the first receipt.
+ *
+ * The lock is keyed by ledger path and shared by every store instance in the process, so two
+ * stores over the same file serialize against each other. It is always taken before the
+ * `JsonStore` queue, never after, so the two cannot deadlock.
+ */
+const ledgerLocks = new Map<string, Promise<void>>();
+
+/** A settled-then handler that swallows both outcomes; the lock only tracks completion. */
+const ignore = (): void => undefined;
+
+function withLedgerLock<T>(path: string, operation: () => Promise<T>): Promise<T> {
+	const previous = ledgerLocks.get(path) ?? Promise.resolve();
+	const next = previous.then(operation, operation);
+	const settled = next.then(ignore, ignore);
+	ledgerLocks.set(path, settled);
+	void settled.then(() => {
+		if (ledgerLocks.get(path) === settled) ledgerLocks.delete(path);
+	});
+	return next;
+}
+
 function validateReceipt(receipt: Receipt): void {
 	if (!validateP5Receipt(receipt).ok)
 		throw new P5ReceiptStoreError("INVALID_INPUT", "Invalid P5 receipt metadata");
@@ -129,44 +159,46 @@ async function acceptReceipt(
 	request: RequestInput,
 	metadata: Acceptance,
 ): Promise<Receipt> {
-	const receipt = structuredClone({ ...metadata, requestId: request.requestId });
-	validateReceipt(receipt);
-	if (receipt.status !== "accepted" && !(receipt.decision === "denied" && receipt.status === "failed"))
-		throw new P5ReceiptStoreError("INVALID_INPUT", "Acceptance requires an accepted or denied receipt");
-	const before = await readSnapshot(storage.path);
-	const existing = before.receipts.find((entry) => entry.requestId === receipt.requestId);
-	if (existing) {
-		if (
-			existing.inputSha256 !== receipt.inputSha256 ||
-			(receipt.usage !== undefined && !isDeepStrictEqual(existing.usage, receipt.usage))
-		)
-			throw new P5ReceiptStoreError(
-				"DUPLICATE_CONFLICT",
-				"P5 request ID has a different input hash or usage",
-			);
-		return existing;
-	}
-	if (before.receipts.some((entry) => entry.receiptRef === receipt.receiptRef))
-		throw new P5ReceiptStoreError("DUPLICATE_CONFLICT", "P5 receipt reference is already in use");
-	return persistReceipt(storage, before, [...before.receipts, receipt], receipt).catch(
-		async (error: unknown) => {
-			if (!(error instanceof P5ReceiptStoreError) || error.code !== "STATE_CONFLICT") throw error;
-			// A concurrent acceptance can satisfy this request; reconciliation never retries the write.
-			const current = (await readSnapshot(storage.path)).receipts.find(
-				(entry) => entry.requestId === receipt.requestId,
-			);
-			if (!current) throw error;
+	return withLedgerLock(storage.path, async () => {
+		const receipt = structuredClone({ ...metadata, requestId: request.requestId });
+		validateReceipt(receipt);
+		if (receipt.status !== "accepted" && !(receipt.decision === "denied" && receipt.status === "failed"))
+			throw new P5ReceiptStoreError("INVALID_INPUT", "Acceptance requires an accepted or denied receipt");
+		const before = await readSnapshot(storage.path);
+		const existing = before.receipts.find((entry) => entry.requestId === receipt.requestId);
+		if (existing) {
 			if (
-				current.inputSha256 !== receipt.inputSha256 ||
-				(receipt.usage !== undefined && !isDeepStrictEqual(current.usage, receipt.usage))
+				existing.inputSha256 !== receipt.inputSha256 ||
+				(receipt.usage !== undefined && !isDeepStrictEqual(existing.usage, receipt.usage))
 			)
 				throw new P5ReceiptStoreError(
 					"DUPLICATE_CONFLICT",
 					"P5 request ID has a different input hash or usage",
 				);
-			return current;
-		},
-	);
+			return existing;
+		}
+		if (before.receipts.some((entry) => entry.receiptRef === receipt.receiptRef))
+			throw new P5ReceiptStoreError("DUPLICATE_CONFLICT", "P5 receipt reference is already in use");
+		return persistReceipt(storage, before, [...before.receipts, receipt], receipt).catch(
+			async (error: unknown) => {
+				if (!(error instanceof P5ReceiptStoreError) || error.code !== "STATE_CONFLICT") throw error;
+				// Another process can accept this request concurrently; reconciliation never retries the write.
+				const current = (await readSnapshot(storage.path)).receipts.find(
+					(entry) => entry.requestId === receipt.requestId,
+				);
+				if (!current) throw error;
+				if (
+					current.inputSha256 !== receipt.inputSha256 ||
+					(receipt.usage !== undefined && !isDeepStrictEqual(current.usage, receipt.usage))
+				)
+					throw new P5ReceiptStoreError(
+						"DUPLICATE_CONFLICT",
+						"P5 request ID has a different input hash or usage",
+					);
+				return current;
+			},
+		);
+	});
 }
 
 async function finishReceipt(
@@ -174,21 +206,23 @@ async function finishReceipt(
 	request: RequestInput,
 	completion: Completion,
 ): Promise<Receipt> {
-	const before = await readSnapshot(storage.path);
-	const existing = before.receipts.find((entry) => entry.requestId === request.requestId);
-	if (existing?.status !== "accepted")
-		throw new P5ReceiptStoreError("STATE_CONFLICT", "P5 request is missing or already terminal");
-	const receipt = structuredClone({
-		...existing,
-		status: completion.status,
-		at: completion.at,
-		resultSha256: completion.resultSha256,
-		readback: completion.readback,
-		...(completion.usage === undefined ? {} : { usage: completion.usage }),
+	return withLedgerLock(storage.path, async () => {
+		const before = await readSnapshot(storage.path);
+		const existing = before.receipts.find((entry) => entry.requestId === request.requestId);
+		if (existing?.status !== "accepted")
+			throw new P5ReceiptStoreError("STATE_CONFLICT", "P5 request is missing or already terminal");
+		const receipt = structuredClone({
+			...existing,
+			status: completion.status,
+			at: completion.at,
+			resultSha256: completion.resultSha256,
+			readback: completion.readback,
+			...(completion.usage === undefined ? {} : { usage: completion.usage }),
+		});
+		validateReceipt(receipt);
+		const next = before.receipts.map((entry) => (entry.requestId === receipt.requestId ? receipt : entry));
+		return persistReceipt(storage, before, next, receipt);
 	});
-	validateReceipt(receipt);
-	const next = before.receipts.map((entry) => (entry.requestId === receipt.requestId ? receipt : entry));
-	return persistReceipt(storage, before, next, receipt);
 }
 
 /** Composition registers the path; no capability, execution ledger or signing key is installed here. */
