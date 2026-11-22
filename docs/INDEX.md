@@ -284,6 +284,7 @@ packages/
 | `scripts/check-public-plugin-host.mjs` | 临时 npm prefix 安装公开 registry 包，并通过 Pi loader、进程沙箱代理和 Desktop UI 宿主验收；独立第三方包需另行授权 |
 | `scripts/check-protocols-readonly.mjs` | 对公开 Protocols.io 协议页执行无凭据 GET；不执行写入 |
 | `packages/backend/test/skill-acceptance-sdk.test.mjs` | `SKILL-01` 真实 Pi SDK + offline faux provider 的 `/skill:research-workflow` invocation、visible skill、provider call 和 `disable-model-invocation` 自动选择反证；显式 slash 的 manual-only 语义 |
+| `packages/backend/test/p5-host-prerequisites-sdk.test.mjs` | `Z3` P5 宿主前提的真实 SDK 验收：真实内置包 + 真实插件运行时 + 真实会话 caller context 下的受限 owner 拒绝（无内容身份即无 scope）、按真实安装包内容哈希的 scope 身份、重开会话是新 scope、被撤销的 owner 不再收到事实且未确认的事实留在日志里；真实产物缺失时报 NOT_RUN，绝不 PASS |
 | `packages/backend/test/redline-acceptance.test.mjs` / `npm run check:redline` | REDLINE-01 隔离验收：通过 publication/orchestration/metacognitive 门禁注入缺来源、stale source、数字/方法漂移、重复数不足、断线和权限拒绝；断言阻断原因、差异路径与 sealed audit proof |
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
 | `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含已安装的 pi-analysis、pi-evidence、pi-connectors） |
