@@ -781,3 +781,40 @@ globalThis.Uint8Array = Object.getPrototypeOf(Buffer.prototype).constructor as n
 
 注意 `Buffer.prototype.constructor` 是 `Buffer` 不是 `Uint8Array`，
 要取它的原型再取构造函数。
+
+## 清单里声明了，不等于有人接（2026-11-22 记录）
+
+`drone.p5` 这个清单块接受六个字面量：`bytes`、`exportBundle`、`batch`、
+`rerun`、`critic`、`delivery`
+（`packages/desktop/src/main/ui-plugins/installed-p5-optins.ts:6`）。
+解码器会认它们，值也对得上，但**只有 `bytes` 真的被任何 handler 读过**
+（`packages/desktop/src/main/ui-plugins/p5-byte-runtime-capabilities.ts:174`）。
+
+另外五个是被解码器收下然后丢掉的。插件声明了 `drone.p5.rerun = "request"`，
+宿主照样什么也不给它——因为没有 handler 去读这个声明。
+
+所以「解码器接受这个字段」和「这个能力可用」是两件事。写注册门禁文档时
+必须按**能力**列，不能按**声明**列；否则文档会声称一个不存在的可用性。
+
+## 补丁脚本断言了子串，却什么都没改（2026-11-22 记录）
+
+验证守卫时用 Python 脚本回滚一行代码，脚本里是：
+
+```python
+old = "\t\t\t\t{masterOn &&"   # 四个 tab
+assert old in s                  # 通过了
+s = s.replace(old, new)          # 但文件里是三个 tab
+```
+
+`assert` 检查的是不带缩进的子串，所以**断言通过而替换没发生**。
+测试全绿，回滚根本没落地——看起来像「守卫不承重」，实际是「守卫没被回滚」。
+
+教训：`assert` 的条件和 `replace` 的条件必须**逐字符相同**，
+或者改完立刻回读校验：
+
+```python
+open(p, "w").write(s)
+assert new in open(p).read(), "the revert did not land"
+```
+
+回滚实验的目的是看测试变红；回滚没落地时，看到的绿色什么都不能说明。
