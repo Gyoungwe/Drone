@@ -285,6 +285,7 @@ packages/
 | `scripts/check-protocols-readonly.mjs` | 对公开 Protocols.io 协议页执行无凭据 GET；不执行写入 |
 | `packages/backend/test/skill-acceptance-sdk.test.mjs` | `SKILL-01` 真实 Pi SDK + offline faux provider 的 `/skill:research-workflow` invocation、visible skill、provider call 和 `disable-model-invocation` 自动选择反证；显式 slash 的 manual-only 语义 |
 | `packages/backend/test/p5-host-prerequisites-sdk.test.mjs` | `Z3` P5 宿主前提的真实 SDK 验收：真实内置包 + 真实插件运行时 + 真实会话 caller context 下的受限 owner 拒绝（无内容身份即无 scope）、按真实安装包内容哈希的 scope 身份、重开会话是新 scope、被撤销的 owner 不再收到事实且未确认的事实留在日志里；真实产物缺失时报 NOT_RUN，绝不 PASS |
+| `packages/desktop/scripts/p5-installed-mounts.test.tsx` | `U4` 已安装挂载验收：真实落盘的安装包（`plugin.manifest.json`）+ 真实构建器产出的构建产物 + 真实导入后，三个 artifact surface（`evidence.overview` / `evidence.pane` / `artifacts.card`）同时挂载该贡献，且与宿主自身渲染共存；总开关关闭移除全部挂载、恢复宿主渲染，重新打开恢复挂载；插件停用移除贡献、启用后恢复且恰好一个；只读 caller 的宿主授权一律拒绝；真实产物缺失时报 NOT_RUN，绝不 PASS |
 | `packages/backend/test/redline-acceptance.test.mjs` / `npm run check:redline` | REDLINE-01 隔离验收：通过 publication/orchestration/metacognitive 门禁注入缺来源、stale source、数字/方法漂移、重复数不足、断线和权限拒绝；断言阻断原因、差异路径与 sealed audit proof |
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
 | `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含已安装的 pi-analysis、pi-evidence、pi-connectors） |
