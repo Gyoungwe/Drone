@@ -579,3 +579,30 @@ Codex 的 workspace-write 沙箱拦截 `ps`，进程清理走的是另一条路�
 ## 2026-11-19: vitest 在 backend 包内要用 `--configLoader runner`
 
 在 `packages/backend` 里直接跑单个测试文件用 `npx vitest run --configLoader runner <file>`（本批工单的验收命令都按这个写法，回执与本机结果才能对上）。
+
+## 2026-11-22: 组合根必须读宿主的存储账本，不能猜宿主的目录布局
+
+`packages/backend/src/services/p5-host-composition.ts`（Z2）第一版把 P5 事实日志放在
+`${userDataDir}/p5-facts.json`。但宿主的存储账本早已把它登记在 `${agentDir}/p5-facts.json`
+（`storage/agent-entries.ts` 的 `agent-p5-facts`）。`createP5FactStore` 会校验路径与账本登记
+一致，不一致就抛 "P5 fact storage registration does not match the journal" —— 在生产里这是
+桌面启动即崩，不是"路径不对"。组合根现在从账本读路径，只有宿主没登记时才退回自己的目录。
+
+单元测试之所以没抓到：fixture 的 `userDataDir` 和 `agentDir` 是同一个目录，两条路径相等。
+**能区分两条路径的 fixture 才能证明这一点** —— 现在测试用两个不同的目录。
+
+教训：**组合根是"宿主怎么放的"唯一权威，自己拼一个路径等于在猜测宿主的布局。**
+
+## 2026-11-22: 新建 worktree 的完整环境清单
+
+一个全新的 git worktree 要跑起测试，缺的东西比想象的多：
+
+- `node_modules`（可从主 checkout 软链，但插件 API 包必须单独构建：`npm run build -w @gyoungwe/plugin-api`）
+- `vendor/plugins/`（被 gitignore，必须 `npm run fetch:plugins`；旧 pi-core 会和 `plugins.lock.json` 对不上）
+- `packages/desktop/plugin-packages/node_modules/`（内置包，由 `fetch:plugins` 顺带 stage；缺了它，
+  `builtin-packages` 和一批 knowledge/zotero 测试会失败）
+- `.pi/extensions/knowledge-worker.mjs`（由 `fetch:plugins` 从 pi-knowledge 复制）
+- `packages/desktop/plugin-packages/node_modules/@gyoungwe/pi-core`（有些测试直接读这个路径）
+
+缺任何一样，失败信息看起来都像代码坏了。**先分清"哪些失败是我的"和"哪些是环境缺件"，
+再动手** —— 用干净树（stash 后）跑一遍同一个失败集合，是最快的分界。
