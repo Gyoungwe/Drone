@@ -12,6 +12,7 @@ export const AGENT_DIR_ENTRIES: readonly (readonly [string, string, string, Stor
 	["agent-p5-compute-sources", "p5-compute-sources.json", "services/p5-compute-sources", "private"],
 	["agent-p5-facts", "p5-facts.json", "plugins/p5-facts", "private"],
 	["agent-p5-spend-ledger", "p5-spend-ledger.json", "services/p5-spend-ledger", "private"],
+	["agent-p5-rerun-bindings", "p5-rerun-bindings.json", "services/p5-rerun-submit-ports", "private"],
 	["agent-p5-batch-index", "p5-batch-index.json", "services/p5-batch-ports", "private"],
 	[
 		"agent-p5-background-settings",
