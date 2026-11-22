@@ -664,3 +664,38 @@ T164 里 `sameKey(binding, key)` 被两处调用：一处传存储的 `RerunBind
 
 比较函数应该只吃**两边都有的那几个字段**，调用前先把 key 投影成同一形状
 （本例是 `keyOf(key)` 把 `key.request.requestId` 提成 `key.requestId`）。
+
+## 插件层会遮蔽端口层的守卫（2026-11-22 记录）
+
+`p5-rerun-lifecycle.ts` 在调用端口**之前**就自己短路了终态
+（`terminal(accepted.run.status) ? accepted.run : await ports.status(...)`）。
+所以一个「终态不被降级」的守卫写在端口里，经由插件的测试**根本碰不到它**：
+插件先返回了，端口的代码从未执行。回滚端口的修复，测试照样全绿。
+
+要验证端口自己的守卫，必须**绕过插件直接调用端口**：
+
+```ts
+const state = await ports.status(run, context);
+expect(state.status).toBe("cancelled");
+```
+
+同理，「cancel 不降级终态」也要直接调 `ports.cancel(run, context)`，
+并断言 compute 的 `cancel` 一次都没被调用。
+
+## collect 之前必须先 reconcile（2026-11-22 记录）
+
+`ComputeService.collect` 读的是**存储里**的作业状态，而这个状态要等
+`compute.status` 触发 reconcile 后才更新。刚跑完的作业在存储里还是 `queued`，
+直接 collect 会失败于 `Artifacts can only be collected from a succeeded job`——
+这条错误信息完全误导人，看不出真正的原因是「状态还没同步」。
+
+端口在 collect 之前先调一次 status，让状态落地，然后再收集。
+
+## 测试夹具的 executor 必须是状态化的（2026-11-22 记录）
+
+固定返回 `{ status: "succeeded" }` 的 executor 会让两件事测不出来：
+cancel 永远无法生效（因为作业看起来已经成功），
+「作业已终态」和「作业仍在运行」两种情形也无法区分。
+
+让 executor 持有一个可变的 `remoteStatus`，cancel 时把它置为 `cancelled`，
+这样 cancel 测试要显式地先让作业处于 running。
