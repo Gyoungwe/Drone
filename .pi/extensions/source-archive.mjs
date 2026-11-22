@@ -199,7 +199,7 @@ __export(host_exports, {
   readReviewMode: () => readReviewMode,
   readSemanticSettings: () => readSemanticSettings,
   readTopic: () => readTopic,
-  recentByCategory: () => recentByCategory,
+  recentByCategory: () => groupRecentByCategory,
   recordTerminalJobExperience: () => recordTerminalJobExperience,
   registerAnswerPublication: () => registerAnswerPublication,
   registerKnowledgeInterface: () => registerKnowledgeInterface,
@@ -268,20 +268,20 @@ __export(host_exports, {
   withSpecialistSlot: () => withSpecialistSlot,
   workspaceProjectId: () => workspaceProjectId
 });
-import { AsyncLocalStorage } from "node:async_hooks";
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
-import { basename, isAbsolute, join, resolve } from "node:path";
-import { readdir, readFile as readFile2, stat } from "node:fs/promises";
-import { join as join2, relative, sep } from "node:path";
-import { createHash as createHash5 } from "node:crypto";
+import { createHash } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat as lstat2, open, realpath as realpath2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute3, join as join5, relative as relative3, sep as sep3 } from "node:path";
-import { createHash as createHash6, randomUUID as randomUUID3 } from "node:crypto";
+import { lstat, open, realpath } from "node:fs/promises";
+import { isAbsolute, join, relative, sep } from "node:path";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash as createHash3, randomUUID } from "node:crypto";
+import { mkdir, readFile, realpath as realpath2, rename, writeFile } from "node:fs/promises";
+import { basename, isAbsolute as isAbsolute2, join as join2, resolve } from "node:path";
+import { readdir, readFile as readFile2, stat } from "node:fs/promises";
+import { join as join3, relative as relative2, sep as sep2 } from "node:path";
+import { createHash as createHash7, randomUUID as randomUUID3 } from "node:crypto";
 import { mkdir as mkdir3, readFile as readFile5, rename as rename3, unlink as unlink2, writeFile as writeFile3 } from "node:fs/promises";
 import { join as join6 } from "node:path";
-import { createHash as createHash7, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash8, randomUUID as randomUUID4 } from "node:crypto";
 import { lstat as lstat3, mkdir as mkdir4, readFile as readFile6, rename as rename4, unlink as unlink3, writeFile as writeFile4 } from "node:fs/promises";
 import { dirname as dirname2, join as join7 } from "node:path";
 import { URL as URL2 } from "node:url";
@@ -290,26 +290,26 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join as join8 } from "node:path";
 import { mkdirSync as mkdirSync2 } from "node:fs";
 import { dirname as dirname3, join as join9 } from "node:path";
-import { createHash as createHash8, randomUUID as randomUUID6 } from "node:crypto";
+import { createHash as createHash9, randomUUID as randomUUID6 } from "node:crypto";
 import { relative as relative4, resolve as resolve4, sep as sep4 } from "node:path";
 import { randomUUID as randomUUID8 } from "node:crypto";
 import { mkdir as mkdir6, readFile as readFile7, rename as rename5, unlink as unlink4, writeFile as writeFile6 } from "node:fs/promises";
 import { join as join11 } from "node:path";
-import { createHash as createHash10, randomUUID as randomUUID10 } from "node:crypto";
+import { createHash as createHash11, randomUUID as randomUUID10 } from "node:crypto";
 import { lstat as lstat6, mkdir as mkdir7, readFile as readFile9, realpath as realpath4, rename as rename6, unlink as unlink5, writeFile as writeFile7 } from "node:fs/promises";
 import { dirname as dirname4, isAbsolute as isAbsolute5, join as join12, relative as relative6, resolve as resolve6, sep as sep6 } from "node:path";
-import { createHash as createHash11 } from "node:crypto";
-import { createHash as createHash12, randomUUID as randomUUID11 } from "node:crypto";
+import { createHash as createHash12 } from "node:crypto";
+import { createHash as createHash13, randomUUID as randomUUID11 } from "node:crypto";
 import { constants as constants2 } from "node:fs";
 import { link, lstat as lstat7, mkdir as mkdir8, open as open2, realpath as realpath5, rename as rename7, unlink as unlink6, writeFile as writeFile8 } from "node:fs/promises";
 import { basename as basename2, dirname as dirname5, isAbsolute as isAbsolute6, join as join13, relative as relative7, resolve as resolve7, sep as sep7 } from "node:path";
-import { createHash as createHash13, randomUUID as randomUUID12 } from "node:crypto";
+import { createHash as createHash14, randomUUID as randomUUID12 } from "node:crypto";
 import { link as link2, lstat as lstat8, mkdir as mkdir9, readdir as readdir2, readFile as readFile10, rename as rename8, rm, unlink as unlink7, writeFile as writeFile9 } from "node:fs/promises";
 import { basename as basename3, dirname as dirname6, join as join14 } from "node:path";
-import { createHash as createHash14 } from "node:crypto";
-import { createHash as createHash15, randomUUID as randomUUID13 } from "node:crypto";
+import { createHash as createHash15 } from "node:crypto";
+import { createHash as createHash16, randomUUID as randomUUID13 } from "node:crypto";
 import { randomUUID as randomUUID14 } from "node:crypto";
-import { createHash as createHash17, randomUUID as randomUUID16 } from "node:crypto";
+import { createHash as createHash18, randomUUID as randomUUID16 } from "node:crypto";
 import { mkdir as mkdir10, rename as rename9, writeFile as writeFile10 } from "node:fs/promises";
 import { dirname as dirname8 } from "node:path";
 import { realpath as realpath6, stat as stat2 } from "node:fs/promises";
@@ -320,21 +320,21 @@ import { createHash as createHash20, randomUUID as randomUUID18 } from "node:cry
 import { lstat as lstat10, mkdir as mkdir11, readFile as readFile11, realpath as realpath8, stat as stat3, writeFile as writeFile11 } from "node:fs/promises";
 import { dirname as dirname9, isAbsolute as isAbsolute9, join as join16, relative as relative10, resolve as resolve11 } from "node:path";
 import { pathToFileURL as pathToFileURL3 } from "node:url";
-import { createHash as createHash2 } from "node:crypto";
-import { createHash as createHash3 } from "node:crypto";
-import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
-import { lstat, mkdir as mkdir2, readFile as readFile3, rename as rename2, unlink, writeFile as writeFile2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute2, join as join3, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
+import { createHash as createHash4 } from "node:crypto";
+import { createHash as createHash5 } from "node:crypto";
+import { createHash as createHash6, randomUUID as randomUUID2 } from "node:crypto";
+import { lstat as lstat2, mkdir as mkdir2, readFile as readFile3, rename as rename2, unlink, writeFile as writeFile2 } from "node:fs/promises";
+import { isAbsolute as isAbsolute3, join as join4, relative as relative3, resolve as resolve2, sep as sep3 } from "node:path";
 import { readFile as readFile4 } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join as join4, resolve as resolve3 } from "node:path";
+import { join as join5, resolve as resolve3 } from "node:path";
 import { randomUUID as randomUUID7 } from "node:crypto";
 import { lstat as lstat4, mkdir as mkdir5, realpath as realpath3, writeFile as writeFile5 } from "node:fs/promises";
 import { isAbsolute as isAbsolute4, join as join10, relative as relative5, resolve as resolve5, sep as sep5 } from "node:path";
 import { randomUUID as randomUUID9 } from "node:crypto";
 import { lstat as lstat5, readFile as readFile8 } from "node:fs/promises";
-import { createHash as createHash9 } from "node:crypto";
-import { createHash as createHash16, randomUUID as randomUUID15 } from "node:crypto";
+import { createHash as createHash10 } from "node:crypto";
+import { createHash as createHash17, randomUUID as randomUUID15 } from "node:crypto";
 import {
   closeSync,
   fstatSync,
@@ -359,6 +359,220 @@ import { dirname as dirname10, join as join17 } from "node:path";
 import { fileURLToPath as fileURLToPath2, pathToFileURL as pathToFileURL4 } from "node:url";
 import { join as join18, resolve as resolve12 } from "node:path";
 import { posix } from "node:path";
+function allowedSegment(name) {
+  return !!name && !name.startsWith(".") && !OMIT.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
+}
+function validateNote(path) {
+  if (typeof path !== "string" || isAbsolute(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment))
+    throw new Error("Expected an allowed Vault-relative Markdown path");
+  const first = path.split("/")[0] ?? "";
+  if (RESERVED.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
+    throw new Error("Reserved Vault directories require canonical casing");
+  return path;
+}
+function noteScope(path) {
+  const parts = path.split("/");
+  return path.startsWith("Projects/") && parts.length > 2 ? parts[1] ?? "shared" : "shared";
+}
+function canRead(path, project) {
+  const scope = noteScope(path);
+  return scope === "shared" || scope === project;
+}
+function fileVersion(stat42) {
+  return `${stat42.mtimeMs}:${stat42.ctimeMs}:${stat42.size}:${stat42.ino}`;
+}
+async function safeNotePath(vault, path) {
+  validateNote(path);
+  let full = vault;
+  for (const part of path.split("/")) {
+    full = join(full, part);
+    if ((await lstat(full)).isSymbolicLink()) throw new Error("Knowledge reads do not follow symlinks");
+  }
+  const actual = await realpath(full);
+  const rel = relative(vault, actual);
+  if (!rel || isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`))
+    throw new Error("Note is outside the bound Vault");
+  return actual;
+}
+async function inspectNote(vault, path) {
+  const full = await safeNotePath(vault, path);
+  const stat42 = await lstat(full);
+  if (!stat42.isFile()) throw new Error("Expected a regular note");
+  return { full, stat: stat42, signature: fileVersion(stat42) };
+}
+async function closeQuietly(handle) {
+  try {
+    await handle.close();
+  } catch {
+  }
+}
+async function readNoteFile(vault, path) {
+  const { full } = await inspectNote(vault, path);
+  const handle = await open(full, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
+  try {
+    const before = await handle.stat();
+    if (!before.isFile() || before.size > MAX_NOTE_BYTES)
+      throw new Error("Note exceeds the 1 MiB indexing limit");
+    const buffer = Buffer.alloc(Number(before.size) + 1);
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    const after = await handle.stat();
+    const current = await inspectNote(vault, path);
+    if (fileVersion(before) !== fileVersion(after) || fileVersion(after) !== current.signature || offset !== before.size)
+      throw new Error("Note changed while reading; retry against its latest version");
+    const bytes = buffer.subarray(0, offset);
+    return {
+      path,
+      text: bytes.toString("utf8"),
+      hash: createHash("sha256").update(bytes).digest("hex"),
+      signature: fileVersion(after),
+      bytes: offset
+    };
+  } catch (error) {
+    await closeQuietly(handle);
+    throw error;
+  } finally {
+    await closeQuietly(handle);
+  }
+}
+function snippet(text43, { startLine = 1, maxChars = 5e3 } = {}) {
+  const lines = text43.split("\n");
+  const start = Math.max(0, Math.floor(startLine) - 1);
+  const selected = [];
+  let chars = 0;
+  for (let i = start; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    if (chars + line.length + 1 > maxChars) {
+      if (!selected.length) selected.push(line.slice(0, maxChars));
+      break;
+    }
+    selected.push(line);
+    chars += line.length + 1;
+  }
+  return {
+    text: selected.join("\n"),
+    startLine: start + 1,
+    endLine: start + selected.length,
+    totalLines: lines.length,
+    truncated: start > 0 || start + selected.length < lines.length || selected.length === 1 && (selected[0]?.length ?? 0) < (lines[start]?.length || 0)
+  };
+}
+function splitFrontmatter(text43) {
+  const source = String(text43 ?? "").replace(/^\uFEFF/, "");
+  const open32 = source.match(/^---[ \t]*\r?\n/);
+  if (!open32) return { raw: null, body: source };
+  const start = open32[0].length;
+  const rest = source.slice(start);
+  const close = rest.match(/^(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/m);
+  if (!close || close.index === void 0) return { raw: null, body: source };
+  return { raw: rest.slice(0, close.index), body: rest.slice(close.index + close[0].length) };
+}
+function stripComment(text43) {
+  let quote = null;
+  for (let i = 0; i < text43.length; i++) {
+    const char = text43[i];
+    if (quote) {
+      if (char === "\\" && quote === '"') i++;
+      else if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === "#" && (i === 0 || /\s/.test(text43[i - 1] ?? ""))) return text43.slice(0, i).trimEnd();
+  }
+  return text43;
+}
+function splitFlow(inner) {
+  const items = [];
+  let current = "";
+  let quote = null;
+  let depth = 0;
+  for (let i = 0; i < inner.length; i++) {
+    const char = inner[i] ?? "";
+    if (quote) {
+      current += char;
+      if (char === "\\" && quote === '"') current += inner[++i] ?? "";
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'") quote = char;
+    else if (char === "[" || char === "{") depth++;
+    else if (char === "]" || char === "}") depth--;
+    if (char === "," && depth === 0) {
+      items.push(current.trim());
+      current = "";
+    } else current += char;
+  }
+  if (current.trim()) items.push(current.trim());
+  return items;
+}
+function parseScalar(raw) {
+  const text43 = raw.trim();
+  if (text43 === "" || text43 === "~" || text43 === "null" || text43 === "Null" || text43 === "NULL") return null;
+  if (text43 === "true" || text43 === "True") return true;
+  if (text43 === "false" || text43 === "False") return false;
+  if (text43.startsWith('"')) {
+    if (text43.endsWith('"') && text43.length >= 2) {
+      try {
+        return JSON.parse(text43);
+      } catch {
+        return text43.slice(1, -1).replace(/\\"/g, '"');
+      }
+    }
+    throw new Error("Unterminated double-quoted string");
+  }
+  if (text43.startsWith("'")) {
+    if (text43.endsWith("'") && text43.length >= 2) return text43.slice(1, -1).replace(/''/g, "'");
+    throw new Error("Unterminated single-quoted string");
+  }
+  if (text43.startsWith("[")) {
+    if (!text43.endsWith("]")) throw new Error("Unterminated flow sequence");
+    const inner = text43.slice(1, -1).trim();
+    return inner ? splitFlow(inner).map(parseScalar) : [];
+  }
+  if (text43.startsWith("{")) {
+    if (!text43.endsWith("}")) throw new Error("Unterminated flow mapping");
+    const inner = text43.slice(1, -1).trim();
+    const out = {};
+    if (!inner) return out;
+    for (const pair of splitFlow(inner)) {
+      const match = pair.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:\s*(.*)$/);
+      if (!match) throw new Error(`Invalid flow mapping entry: ${pair}`);
+      const key = String(parseScalar(match[1] ?? ""));
+      if (!UNSAFE_KEYS.has(key)) out[key] = parseScalar(match[2] ?? "");
+    }
+    return out;
+  }
+  if (/^[&*!|>]/.test(text43)) throw new Error(`Unsupported YAML syntax: ${text43.slice(0, 20)}`);
+  if (/^-?\d+(?:\.\d+)?$/.test(text43) && text43.length <= 15) return Number(text43);
+  return text43;
+}
+function isListItem(line) {
+  return line.text === "-" || line.text.startsWith("- ");
+}
+function toLines(raw) {
+  const lines = [];
+  const source = raw.replace(/\r\n?/g, "\n").split("\n");
+  for (let i = 0; i < source.length; i++) {
+    const text43 = source[i] ?? "";
+    if (!text43.trim() || /^\s*#/.test(text43)) continue;
+    const leading = text43.match(/^[ \t]*/)?.[0] ?? "";
+    if (leading.includes("	")) throw new Error(`Line ${i + 2}: tabs are not allowed for indentation`);
+    lines.push({ indent: leading.length, text: text43.slice(leading.length).trimEnd(), number: i + 2 });
+  }
+  return lines;
+}
+function parseFrontmatter(text43) {
+  const { raw, body } = splitFrontmatter(text43);
+  if (raw === null) return { data: null, body, errors: [] };
+  if (raw.length > MAX_FRONTMATTER_CHARS) return { data: null, body, errors: ["Frontmatter exceeds 64 KiB"] };
+  try {
+    return { data: new Parser2(toLines(raw)).parseDocument(), body, errors: [] };
+  } catch (error) {
+    return { data: null, body, errors: [error instanceof Error ? error.message : String(error)] };
+  }
+}
 function direction(claim) {
   if (claim.direction) return claim.direction;
   const text43 = normalize(`${claim.predicate} ${claim.value || claim.claim}`);
@@ -483,17 +697,17 @@ function errorCode(error) {
 function knowledgeDirectory() {
   const value = process.env.DRONE_KNOWLEDGE_DIR;
   if (!value) return null;
-  if (!isAbsolute(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
+  if (!isAbsolute2(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
   return resolve(value);
 }
 function projectIdentity(cwd, configured2) {
   if (typeof configured2 === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured2)) return configured2;
   const path = resolve(cwd);
   const stem = basename(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
-  return `${stem}-${createHash("sha256").update(path).digest("hex").slice(0, 10)}`;
+  return `${stem}-${createHash3("sha256").update(path).digest("hex").slice(0, 10)}`;
 }
 function validateBinding(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute2(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
     throw new Error("Invalid application knowledge binding; no project fallback was used");
 }
 function parseKnowledgeBinding(value) {
@@ -505,7 +719,7 @@ async function readKnowledgeBindingWithState(state, directory, { fresh = false }
   if (!directory) return null;
   let value;
   try {
-    value = JSON.parse((await readFile(join(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
+    value = JSON.parse((await readFile(join2(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
   } catch (error) {
     if (errorCode(error) === "ENOENT") return null;
     throw new Error(
@@ -525,11 +739,11 @@ async function saveKnowledgeBindingWithState(state, directory, input, expectedRe
     const current = await readKnowledgeBindingWithState(state, directory, { fresh: true });
     if (expectedRevision !== null && (current?.revision || 0) !== expectedRevision)
       throw new Error("Knowledge binding changed while confirming; review the new binding");
-    const vault = await realpath(input.vault);
+    const vault = await realpath2(input.vault);
     const value = {
       version: 1,
       vault,
-      vaultId: createHash("sha256").update(vault).digest("hex").slice(0, 24),
+      vaultId: createHash3("sha256").update(vault).digest("hex").slice(0, 24),
       revision: (current?.revision || 0) + 1,
       profile: input.profile,
       depositMode: input.depositMode,
@@ -538,10 +752,10 @@ async function saveKnowledgeBindingWithState(state, directory, input, expectedRe
     };
     validateBinding(value);
     await mkdir(directory, { recursive: true, mode: 448 });
-    const temporary = join(directory, `binding.${randomUUID()}.tmp`);
+    const temporary = join2(directory, `binding.${randomUUID()}.tmp`);
     await writeFile(temporary, `${JSON.stringify(value, null, 2)}
 `, { mode: 384, flag: "wx" });
-    await rename(temporary, join(directory, "binding.json"));
+    await rename(temporary, join2(directory, "binding.json"));
     return value;
   });
   state.queues.set(directory, operation);
@@ -564,7 +778,7 @@ async function withKnowledgeBinding(binding, operation) {
   return withKnowledgeBindingWithState(defaultState, knowledgeDirectory(), binding, operation);
 }
 function createKnowledgeConfigApi(state = createKnowledgeConfigState(), directory = knowledgeDirectory()) {
-  if (directory !== null && !isAbsolute(directory)) throw new Error("Knowledge directory must be absolute");
+  if (directory !== null && !isAbsolute2(directory)) throw new Error("Knowledge directory must be absolute");
   const fixedDirectory = directory === null ? null : resolve(directory);
   return {
     knowledgeDirectory: () => fixedDirectory,
@@ -588,11 +802,11 @@ async function collectRecentNotes(vault, sinceMs) {
     for (const entry of entries) {
       if (scanned >= DAILY_DISCOVERY_LIMITS.maxScannedFiles) return;
       if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
-      const full = join2(dir, entry.name);
+      const full = join3(dir, entry.name);
       if (entry.isDirectory()) await walk(full);
       else if (entry.isFile() && entry.name.endsWith(".md")) {
         scanned++;
-        const path = relative(vault, full).split(sep).join("/");
+        const path = relative2(vault, full).split(sep2).join("/");
         if (NAVIGATION.test(path)) continue;
         const info = await stat(full).catch(() => null);
         if (info && info.mtimeMs > sinceMs && info.size <= DAILY_DISCOVERY_LIMITS.maxNoteBytes)
@@ -600,11 +814,11 @@ async function collectRecentNotes(vault, sinceMs) {
       }
     }
   }
-  for (const root of SCAN_ROOTS) await walk(join2(vault, root));
+  for (const root of SCAN_ROOTS) await walk(join3(vault, root));
   found.sort((a, b) => b.mtime - a.mtime);
   const notes = [];
   for (const item of found.slice(0, DAILY_DISCOVERY_LIMITS.maxNewNotes)) {
-    const text43 = await readFile2(join2(vault, item.path), "utf8").catch(() => "");
+    const text43 = await readFile2(join3(vault, item.path), "utf8").catch(() => "");
     if (!text43.trim()) continue;
     notes.push({
       path: item.path,
@@ -830,108 +1044,6 @@ function createKnowledgeRuntimeHost() {
     hasPaperCitation: (sources) => hasPaperCitation22(sources)
   };
 }
-function allowedSegment(name) {
-  return !!name && !name.startsWith(".") && !OMIT.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
-}
-function validateNote(path) {
-  if (typeof path !== "string" || isAbsolute3(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment))
-    throw new Error("Expected an allowed Vault-relative Markdown path");
-  const first = path.split("/")[0] ?? "";
-  if (RESERVED2.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
-    throw new Error("Reserved Vault directories require canonical casing");
-  return path;
-}
-function noteScope(path) {
-  const parts = path.split("/");
-  return path.startsWith("Projects/") && parts.length > 2 ? parts[1] ?? "shared" : "shared";
-}
-function canRead(path, project) {
-  const scope = noteScope(path);
-  return scope === "shared" || scope === project;
-}
-function fileVersion(stat42) {
-  return `${stat42.mtimeMs}:${stat42.ctimeMs}:${stat42.size}:${stat42.ino}`;
-}
-async function safeNotePath(vault, path) {
-  validateNote(path);
-  let full = vault;
-  for (const part of path.split("/")) {
-    full = join5(full, part);
-    if ((await lstat2(full)).isSymbolicLink()) throw new Error("Knowledge reads do not follow symlinks");
-  }
-  const actual = await realpath2(full);
-  const rel = relative3(vault, actual);
-  if (!rel || isAbsolute3(rel) || rel === ".." || rel.startsWith(`..${sep3}`))
-    throw new Error("Note is outside the bound Vault");
-  return actual;
-}
-async function inspectNote(vault, path) {
-  const full = await safeNotePath(vault, path);
-  const stat42 = await lstat2(full);
-  if (!stat42.isFile()) throw new Error("Expected a regular note");
-  return { full, stat: stat42, signature: fileVersion(stat42) };
-}
-async function closeQuietly(handle) {
-  try {
-    await handle.close();
-  } catch {
-  }
-}
-async function readNoteFile(vault, path) {
-  const { full } = await inspectNote(vault, path);
-  const handle = await open(full, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
-  try {
-    const before = await handle.stat();
-    if (!before.isFile() || before.size > MAX_NOTE_BYTES)
-      throw new Error("Note exceeds the 1 MiB indexing limit");
-    const buffer = Buffer.alloc(Number(before.size) + 1);
-    let offset = 0;
-    while (offset < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
-      if (!bytesRead) break;
-      offset += bytesRead;
-    }
-    const after = await handle.stat();
-    const current = await inspectNote(vault, path);
-    if (fileVersion(before) !== fileVersion(after) || fileVersion(after) !== current.signature || offset !== before.size)
-      throw new Error("Note changed while reading; retry against its latest version");
-    const bytes = buffer.subarray(0, offset);
-    return {
-      path,
-      text: bytes.toString("utf8"),
-      hash: createHash5("sha256").update(bytes).digest("hex"),
-      signature: fileVersion(after),
-      bytes: offset
-    };
-  } catch (error) {
-    await closeQuietly(handle);
-    throw error;
-  } finally {
-    await closeQuietly(handle);
-  }
-}
-function snippet(text43, { startLine = 1, maxChars = 5e3 } = {}) {
-  const lines = text43.split("\n");
-  const start = Math.max(0, Math.floor(startLine) - 1);
-  const selected = [];
-  let chars = 0;
-  for (let i = start; i < lines.length; i++) {
-    const line = lines[i] ?? "";
-    if (chars + line.length + 1 > maxChars) {
-      if (!selected.length) selected.push(line.slice(0, maxChars));
-      break;
-    }
-    selected.push(line);
-    chars += line.length + 1;
-  }
-  return {
-    text: selected.join("\n"),
-    startLine: start + 1,
-    endLine: start + selected.length,
-    totalLines: lines.length,
-    truncated: start > 0 || start + selected.length < lines.length || selected.length === 1 && (selected[0]?.length ?? 0) < (lines[start]?.length || 0)
-  };
-}
 function statusTone(status) {
   const value = String(status || "");
   if (OK.has(value)) return "ok";
@@ -1059,7 +1171,7 @@ function createLocalReviewPolicyStorage(config) {
     return {
       kind: "value",
       value,
-      version: createHash6("sha256").update(bytes).digest("hex")
+      version: createHash7("sha256").update(bytes).digest("hex")
     };
   }
   return {
@@ -1348,7 +1460,7 @@ function localSemanticStorage(directory) {
       throw error;
     }
     if (Buffer.byteLength(raw) > MAX_FILE_BYTES) throw new Error("Semantic settings file is too large");
-    return { kind: "value", value: JSON.parse(raw), version: createHash7("sha256").update(raw).digest("hex") };
+    return { kind: "value", value: JSON.parse(raw), version: createHash8("sha256").update(raw).digest("hex") };
   }
   const queues2 = /* @__PURE__ */ new Map();
   return {
@@ -2336,7 +2448,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
     };
   }
   function fingerprintFor(settings2) {
-    return createHash8("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
+    return createHash9("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
   }
   function awaitSemanticDeadline(operation, controller) {
     let onAbort;
@@ -2426,7 +2538,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
         this.tickets.set(ticket, {
           cwd: resolve4(cwd),
           project,
-          queryHash: createHash8("sha256").update(query).digest("hex"),
+          queryHash: createHash9("sha256").update(query).digest("hex"),
           query,
           navigation,
           linkedWiki: [...linkedWiki],
@@ -2499,7 +2611,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
           hash: page.hash,
           startLine: page.startLine,
           endLine: page.endLine,
-          excerptHash: createHash8("sha256").update(page.text).digest("hex")
+          excerptHash: createHash9("sha256").update(page.text).digest("hex")
         };
         state.reads.delete(path);
         state.reads.set(path, receipt2);
@@ -4182,7 +4294,7 @@ function targetWikiPath(path, project) {
   return path;
 }
 function immutableWikiProposalHash(proposal) {
-  return createHash11("sha256").update(
+  return createHash12("sha256").update(
     JSON.stringify({
       id: proposal.id,
       vaultId: proposal.vaultId,
@@ -4244,7 +4356,7 @@ async function hashRegularFile(path) {
   const flags = constants2.O_RDONLY | (constants2.O_NOFOLLOW || 0);
   const handle = await open2(path, flags);
   try {
-    return createHash12("sha256").update(await handle.readFile()).digest("hex");
+    return createHash13("sha256").update(await handle.readFile()).digest("hex");
   } finally {
     await handle.close();
   }
@@ -4627,7 +4739,7 @@ function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui, io) {
   const { invalidateKnowledgeUi: invalidateKnowledgeUi2 } = ui;
   const AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
   const START2 = "<!-- pi-agent:managed:start -->", END2 = "<!-- pi-agent:managed:end -->";
-  const digest62 = (text43) => createHash15("sha256").update(text43).digest("hex");
+  const digest62 = (text43) => createHash16("sha256").update(text43).digest("hex");
   const MAX_PENDING2 = 100, MAX_AGE2 = 24 * 60 * 60 * 1e3;
   async function exclusive2(key, operation) {
     return runRuntimeExclusive22("wiki-review", key, operation);
@@ -5419,118 +5531,6 @@ function memoryNoteMarkdown(memory, related = []) {
   return `${lines.join("\n")}
 `;
 }
-function splitFrontmatter(text43) {
-  const source = String(text43 ?? "").replace(/^\uFEFF/, "");
-  const open32 = source.match(/^---[ \t]*\r?\n/);
-  if (!open32) return { raw: null, body: source };
-  const start = open32[0].length;
-  const rest = source.slice(start);
-  const close = rest.match(/^(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/m);
-  if (!close || close.index === void 0) return { raw: null, body: source };
-  return { raw: rest.slice(0, close.index), body: rest.slice(close.index + close[0].length) };
-}
-function stripComment(text43) {
-  let quote = null;
-  for (let i = 0; i < text43.length; i++) {
-    const char = text43[i];
-    if (quote) {
-      if (char === "\\" && quote === '"') i++;
-      else if (char === quote) quote = null;
-    } else if (char === '"' || char === "'") quote = char;
-    else if (char === "#" && (i === 0 || /\s/.test(text43[i - 1] ?? ""))) return text43.slice(0, i).trimEnd();
-  }
-  return text43;
-}
-function splitFlow(inner) {
-  const items = [];
-  let current = "";
-  let quote = null;
-  let depth = 0;
-  for (let i = 0; i < inner.length; i++) {
-    const char = inner[i] ?? "";
-    if (quote) {
-      current += char;
-      if (char === "\\" && quote === '"') current += inner[++i] ?? "";
-      else if (char === quote) quote = null;
-      continue;
-    }
-    if (char === '"' || char === "'") quote = char;
-    else if (char === "[" || char === "{") depth++;
-    else if (char === "]" || char === "}") depth--;
-    if (char === "," && depth === 0) {
-      items.push(current.trim());
-      current = "";
-    } else current += char;
-  }
-  if (current.trim()) items.push(current.trim());
-  return items;
-}
-function parseScalar(raw) {
-  const text43 = raw.trim();
-  if (text43 === "" || text43 === "~" || text43 === "null" || text43 === "Null" || text43 === "NULL") return null;
-  if (text43 === "true" || text43 === "True") return true;
-  if (text43 === "false" || text43 === "False") return false;
-  if (text43.startsWith('"')) {
-    if (text43.endsWith('"') && text43.length >= 2) {
-      try {
-        return JSON.parse(text43);
-      } catch {
-        return text43.slice(1, -1).replace(/\\"/g, '"');
-      }
-    }
-    throw new Error("Unterminated double-quoted string");
-  }
-  if (text43.startsWith("'")) {
-    if (text43.endsWith("'") && text43.length >= 2) return text43.slice(1, -1).replace(/''/g, "'");
-    throw new Error("Unterminated single-quoted string");
-  }
-  if (text43.startsWith("[")) {
-    if (!text43.endsWith("]")) throw new Error("Unterminated flow sequence");
-    const inner = text43.slice(1, -1).trim();
-    return inner ? splitFlow(inner).map(parseScalar) : [];
-  }
-  if (text43.startsWith("{")) {
-    if (!text43.endsWith("}")) throw new Error("Unterminated flow mapping");
-    const inner = text43.slice(1, -1).trim();
-    const out = {};
-    if (!inner) return out;
-    for (const pair of splitFlow(inner)) {
-      const match = pair.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:\s*(.*)$/);
-      if (!match) throw new Error(`Invalid flow mapping entry: ${pair}`);
-      const key = String(parseScalar(match[1] ?? ""));
-      if (!UNSAFE_KEYS.has(key)) out[key] = parseScalar(match[2] ?? "");
-    }
-    return out;
-  }
-  if (/^[&*!|>]/.test(text43)) throw new Error(`Unsupported YAML syntax: ${text43.slice(0, 20)}`);
-  if (/^-?\d+(?:\.\d+)?$/.test(text43) && text43.length <= 15) return Number(text43);
-  return text43;
-}
-function isListItem(line) {
-  return line.text === "-" || line.text.startsWith("- ");
-}
-function toLines(raw) {
-  const lines = [];
-  const source = raw.replace(/\r\n?/g, "\n").split("\n");
-  for (let i = 0; i < source.length; i++) {
-    const text43 = source[i] ?? "";
-    if (!text43.trim() || /^\s*#/.test(text43)) continue;
-    const leading = text43.match(/^[ \t]*/)?.[0] ?? "";
-    if (leading.includes("	")) throw new Error(`Line ${i + 2}: tabs are not allowed for indentation`);
-    lines.push({ indent: leading.length, text: text43.slice(leading.length).trimEnd(), number: i + 2 });
-  }
-  return lines;
-}
-function parseFrontmatter(text43) {
-  const { raw, body } = splitFrontmatter(text43);
-  if (raw === null) return { data: null, body, errors: [] };
-  if (raw.length > MAX_FRONTMATTER_CHARS) return { data: null, body, errors: ["Frontmatter exceeds 64 KiB"] };
-  try {
-    return { data: new Parser2(toLines(raw)).parseDocument(), body, errors: [] };
-  } catch (error) {
-    return { data: null, body, errors: [error instanceof Error ? error.message : String(error)] };
-  }
-}
 function looksLikeFileName(title) {
   const value = String(title || "").trim();
   if (!value) return true;
@@ -5791,15 +5791,15 @@ async function knowledgeOverview({ cwd = null, sessionId = null } = {}) {
       ...project,
       flow: sessionId ? flowFor(sessionId) : null
     };
-  let index = null, error = null, recentNotes = [], recentByCategory2 = null;
+  let index = null, error = null, recentNotes = [], recentByCategory = null;
   try {
     if (!(await stat3(binding.vault)).isDirectory()) throw new Error("Vault is not a directory");
     const service = await getKnowledgeService(binding);
     recentNotes = (await service.request("recentNotes", { project: project.project, limit: 10 }))?.items || [];
     try {
-      recentByCategory2 = (await service.request("recentByCategory", { project: project.project, limit: 10 }))?.groups || null;
+      recentByCategory = (await service.request("recentByCategory", { project: project.project, limit: 10 }))?.groups || null;
     } catch {
-      recentByCategory2 = null;
+      recentByCategory = null;
     }
     index = await service.request("status", { flushPending: true });
   } catch (e) {
@@ -5817,7 +5817,7 @@ async function knowledgeOverview({ cwd = null, sessionId = null } = {}) {
     reviewMode: await readReviewMode(),
     wikiHistory: project.project && !error ? (await wikiHistory(await getKnowledgeService(binding), project.project)).slice(0, 10) : [],
     recentNotes,
-    recentByCategory: recentByCategory2,
+    recentByCategory,
     localAnswerRate: (sessionId ? flowFor(sessionId)?.localAnswerRate : null) ?? knowledgeAnswerRate(),
     scope: "application",
     binding,
@@ -12423,6 +12423,27 @@ async function readCapabilitySources(port, refs) {
   const values = await Promise.all(refs.map((ref) => port.readSource(ref)));
   return values.filter((value) => Boolean(value));
 }
+function groupRecentByCategory(notes, limit = 10) {
+  const groups = {
+    paper: [],
+    software: [],
+    method: [],
+    idea: []
+  };
+  for (const note of notes) {
+    if (note.category === "other") continue;
+    groups[note.category].push({
+      path: note.path,
+      title: note.title,
+      kind: note.kind,
+      updatedAt: note.updatedAt
+    });
+  }
+  const max = Math.max(1, Math.min(24, Math.floor(limit || 10)));
+  for (const key of Object.keys(groups))
+    groups[key] = groups[key].sort((left, right) => right.updatedAt - left.updatedAt || left.path.localeCompare(right.path)).slice(0, max);
+  return groups;
+}
 function buildDailyDiscoveryMessage(fresh, related) {
   const block = (note) => `### ${note.path}
 ${note.text}`;
@@ -12513,7 +12534,7 @@ function locationFor(body, offset, path) {
   };
 }
 function findingId(code, location, subject) {
-  return createHash2("sha256").update(
+  return createHash4("sha256").update(
     `${code}\0${location.line ?? ""}\0${location.paragraph ?? ""}\0${location.artifactId ?? ""}\0${subject}`
   ).digest("hex").slice(0, 24);
 }
@@ -12632,7 +12653,7 @@ function reviewContentHash(snapshot) {
       );
     return value;
   };
-  return createHash2("sha256").update(JSON.stringify(stable(snapshot ?? null))).digest("hex");
+  return createHash4("sha256").update(JSON.stringify(stable(snapshot ?? null))).digest("hex");
 }
 function selectReviewerProvider(mainProvider, providers) {
   const configured2 = providers.filter((item) => typeof item.provider === "string" && item.provider.trim());
@@ -13130,7 +13151,7 @@ function normalizeArtifact(value) {
   if (!sha2562) return null;
   const bytes = typeof item.bytes === "number" && Number.isSafeInteger(item.bytes) && item.bytes >= 0 ? item.bytes : void 0;
   const pathValue = text(item.path, 240).replaceAll("\\", "/");
-  const safePath = pathValue && !isAbsolute2(pathValue) && !pathValue.split("/").includes("..") && !/(?:^|\/)(?:\.env(?:\.[^/]*)?|auth\.json|credentials(?:\.json)?|\.ssh|\.git)(?:\/|$)/i.test(pathValue) ? pathValue : "";
+  const safePath = pathValue && !isAbsolute3(pathValue) && !pathValue.split("/").includes("..") && !/(?:^|\/)(?:\.env(?:\.[^/]*)?|auth\.json|credentials(?:\.json)?|\.ssh|\.git)(?:\/|$)/i.test(pathValue) ? pathValue : "";
   return {
     ...safePath ? { path: safePath } : {},
     sha256: sha2562,
@@ -13261,19 +13282,19 @@ function normalizeRecord(value, vaultId, project, hostId) {
   return result2;
 }
 function pathFor(directory, vaultId, project, hostId) {
-  if (!isAbsolute2(directory)) throw new Error("Experience directory must be absolute");
-  return join3(resolve2(directory), vaultId, "experience", project, `${hostId}.json`);
+  if (!isAbsolute3(directory)) throw new Error("Experience directory must be absolute");
+  return join4(resolve2(directory), vaultId, "experience", project, `${hostId}.json`);
 }
 async function ensureSafePath(directory, path) {
   const root = resolve2(directory);
-  const relativePath = relative2(root, resolve2(path));
-  if (isAbsolute2(relativePath) || relativePath === ".." || relativePath.startsWith(`..${sep2}`))
+  const relativePath = relative3(root, resolve2(path));
+  if (isAbsolute3(relativePath) || relativePath === ".." || relativePath.startsWith(`..${sep3}`))
     throw new Error("Experience path escapes knowledge directory");
   let current = root;
-  for (const segment of relativePath.split(sep2).slice(0, -1)) {
-    current = join3(current, segment);
+  for (const segment of relativePath.split(sep3).slice(0, -1)) {
+    current = join4(current, segment);
     try {
-      const stat42 = await lstat(current);
+      const stat42 = await lstat2(current);
       if (stat42.isSymbolicLink()) throw new Error("Experience path cannot traverse symlinks");
       if (!stat42.isDirectory()) throw new Error("Experience path parent must be a directory");
     } catch (error) {
@@ -13284,7 +13305,7 @@ async function ensureSafePath(directory, path) {
 }
 async function readDocument(path, vaultId, project, hostId) {
   try {
-    const stat42 = await lstat(path);
+    const stat42 = await lstat2(path);
     if (stat42.isSymbolicLink() || !stat42.isFile()) throw new Error("Experience file must be a regular file");
     if (stat42.size > EXPERIENCE_LIMITS.maxFileBytes) throw new Error("Experience file exceeds size limit");
     return validateDocument(JSON.parse(await readFile3(path, "utf8")), vaultId, project, hostId);
@@ -13604,7 +13625,7 @@ async function searchExperiences(options) {
   return store.search(query, { limit, includeObserved, workflow, hostId: hostFilter, failureSignature });
 }
 function isProjectSlug(value) {
-  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED.test(value);
+  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED2.test(value);
 }
 function normalizeProjectSlug(input) {
   if (typeof input !== "string") return null;
@@ -13615,7 +13636,7 @@ function workspaceProjectId(cwd, configured2) {
   return projectIdentity(cwd, isProjectSlug(configured2) ? configured2 : void 0);
 }
 function dailyWorkspaceDir(home = homedir()) {
-  return join4(home, ".drone", "daily");
+  return join5(home, ".drone", "daily");
 }
 function samePath(a, b) {
   const left = resolve3(a).replace(/[\\/]+$/, "");
@@ -13668,7 +13689,7 @@ function resolveProjectIdentity(input) {
 }
 async function readConfiguredProject(cwd) {
   try {
-    const parsed = JSON.parse(await readFile4(join4(cwd, ".pi", "research-workspace.json"), "utf8"));
+    const parsed = JSON.parse(await readFile4(join5(cwd, ".pi", "research-workspace.json"), "utf8"));
     if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
       return parsed.knowledgeProjectId;
   } catch {
@@ -14599,7 +14620,7 @@ function acquireKnowledgeWriterLease(input, leaseDirectory = join15(homedir2(), 
   };
   try {
     for (const resource of resources) {
-      const key = createHash16("sha256").update(resource).digest("hex");
+      const key = createHash17("sha256").update(resource).digest("hex");
       locks.push(acquireFile(join15(leaseDirectory, `${key}.lock`)));
     }
   } catch (error) {
@@ -15671,48 +15692,6 @@ function createManagedKnowledgePublication(ui, reviewPolicy, signal) {
 }
 function createKnowledgePublication(ui, reviewPolicy, config, signal) {
   return createPublicationApi(ui, reviewPolicy, localPublicationPorts(config), (create) => create(), signal);
-}
-function keywordCategory(value) {
-  if (/paper|literature|文献|论文/.test(value)) return "paper";
-  if (/software|tool|软件/.test(value)) return "software";
-  if (/method|protocol|方法/.test(value)) return "method";
-  if (/idea|hypothes|想法|假设/.test(value)) return "idea";
-  return "other";
-}
-function noteCategory(row) {
-  const type = String(parseFrontmatter(row.body).data?.type || "").trim().toLowerCase();
-  if (type) return keywordCategory(type);
-  const segments = row.path.toLowerCase().split("/");
-  const filename = segments.pop();
-  for (const directory of segments.reverse()) {
-    if (/^(papers?|literature|文献|论文|software|tools?|软件|methods?|protocols?|方法|ideas?|hypotheses|想法|假设)$/.test(
-      directory
-    ))
-      return keywordCategory(directory);
-  }
-  return keywordCategory(filename);
-}
-function recentByCategory(rows, limit = 10) {
-  const groups = {
-    paper: [],
-    software: [],
-    method: [],
-    idea: []
-  };
-  for (const row of rows) {
-    const category = noteCategory(row);
-    if (category === "other") continue;
-    groups[category].push({
-      path: row.path,
-      title: row.title,
-      kind: row.kind,
-      updatedAt: Number.parseFloat(String(row.signature).split(":", 1)[0]) || 0
-    });
-  }
-  const max = Math.max(1, Math.min(24, Math.floor(limit || 10)));
-  for (const key of Object.keys(groups))
-    groups[key] = groups[key].sort((left, right) => right.updatedAt - left.updatedAt || left.path.localeCompare(right.path)).slice(0, max);
-  return groups;
 }
 async function findRelatedNotes(title, limit = 5) {
   const query = String(title || "").trim().slice(0, 120);
@@ -18714,7 +18693,7 @@ function createNativeSession(owner) {
 function createNativeExtension(owner) {
   return (pi) => createNativeSession(owner).extension(pi);
 }
-var __defProp2, __getOwnPropNames2, __esm2, __export2, normalize, tokens, overlap, field, init_claim_conflicts, config_exports, defaultState, init_config, DAILY_DISCOVERY_LIMITS, SCAN_ROOTS, SKIP_DIRS, NAVIGATION, init_daily_discovery, runtime_host_exports, KNOWLEDGE_WORKER_LIFECYCLE_EVENT, compatibilityKnowledgeRuntimeHost, configureKnowledgeRuntime, runRuntimeExclusive, emitProcessEvent, runtimeSlot, toolMeta, flowCardBuilder, configureKnowledgeWorker, createKnowledgeWorker, knowledgeWorkerMetadata, emitKnowledgeWorkerLifecycle, configureKnowledgeEvidence, deliveryContract, configureKnowledgeHost, loadWorkspaceConfig, publishExplainer, consumeKnowledgeReviewPreview, specialistSettings, configureKnowledgeSetup, LAYOUT, inspectObsidianSetup, inspectSetupDirectory, resolveSetupVault, researchSetupOptions, requiresPaperEvidence, hasPaperCitation, init_runtime_host, files_exports, MAX_NOTE_BYTES, OMIT, RESERVED2, init_files, OK, ERROR, MUTED, clip, record, ZOTERO_KEY, CHANNEL_LABEL, init_flow_cards, init_review_policy_storage, review_policy_exports, readReviewMode, saveReviewMode, advisoryCodes, init_review_policy, semantic_settings_exports, MAX_FILE_BYTES, ENV_NAME, SETTINGS_KEYS, CONFIG_KEYS, defaultApi, readSemanticSettings, saveSemanticSettings, init_semantic_settings, GRAPH_RETRIEVAL_DEFAULTS, init_graph_retrieval, MAX_BATCH, MAX_CHARS, MAX_RESPONSE, ENV_NAME2, MAX_VECTOR_COMPONENT, MAX_VECTOR_NORM, CONFIG_KEYS2, semanticLimits, init_semantic_provider, STOP, tokens2, init_topic_probe, ui_state_exports, compatibilityKnowledgeUi, subscribeKnowledgeUi, emitKnowledgeUi, flowFor, knowledgeAnswerRate, beginKnowledgeFlow, updateKnowledgeFlow, noteKnowledgeRead, publicationKnowledgeFlow, requestWikiReviewUi, notifyKnowledgeUi, invalidateKnowledgeUi, clearKnowledgeFlow, knowledgeExcerpt, noteKnowledgeSearch, noteKnowledgeOperation, noteKnowledgeSpecialist, init_ui_state, init_worker_transport, service_exports, compatibilityKnowledgeServices, KnowledgeService, getKnowledgeService, notifyKnowledgeChange, closeKnowledgeServices, init_service, specialist_host_exports, compatibilityKnowledgeSpecialists, SPECIALIST_LIMITS, contextSessionId, specialistQueueSnapshot, registerKnowledgeSpecialistHost, knowledgeSpecialistHost, specialistSettings2, setSpecialistSettings, withSpecialistSlot, init_specialist_host, topic_memory_exports, TOPIC_MEMORY_VERSION, TOPIC_MEMORY_LIMITS, digest3, text2, slug, createTopicMemory, listTopics, readTopic, updateTopic, archiveTopic, init_topic_memory, init_redact_diagnostic, MANAGED_START, MANAGED_END, init_wiki_policy, MANAGED_START2, MANAGED_END2, PROJECT_PATTERN, NAVIGATION_TARGETS, VaultFileConflictError, hash2, init_layout, digest4, RENAME_RETRY_CODES, init_wiki_review_node, MAX_PENDING, MAX_AGE, digest5, init_wiki_review_reader, wiki_review_exports, compatibility2, validateWikiSourcePaths2, stageWikiProposal, mergeWikiProposal, previewWikiProposal, listWikiProposals, decideWikiProposal, autoApplyWikiProposal, wikiHistory, undoWikiUpdate, renameWithRetry2, init_wiki_review, wiki_model_review_exports, WIKI_MODEL_REVIEW_CHECKS, compatibility3, lastWikiModelReview, init_wiki_model_review, START, END, hash3, init_maintenance, yaml, init_memory_note, init_ingest_identity, KNOWLEDGE_TYPES, RUN_RESULT_TYPES, NOTE_TYPES, MAX_FRONTMATTER_CHARS, MAX_DEPTH, UNSAFE_KEYS, KEY_LINE, Parser2, init_ingest_frontmatter, clean2, init_note_title, omittedSegments, init_source_links, init_maintenance_topic, ui_service_exports, runtimeState, MAX_PREVIEWS, consumeKnowledgeReviewPreviewEntry, knowledgeSpecialistSettings, init_ui_service, memory_exports, Metrics, guard_exports, globals_exports, guard_default, settings_exports, settings, NeverPattern, arguments_exports, hash_exports, ByteMarker, Accumulator, Prime, Size, Bytes, F64, F64In, F64Out, encoder, locale, EncodeBuilder, DecodeBuilder, BigIntPattern, IntegerPattern, InvalidLiteralValue, NumberPattern, StringPattern, IntegerKey, NumberKey, StringKey, DelimitedDecode, Delimited, Alpha, Zero, NonZero, Digit, WhiteSpace, NewLine, UnderScore, Dot, DollarSign, Hyphen, LineComment, OpenComment, CloseComment, AllowedDigits, Initial, Remaining, AllowedDigits2, If, GenericParameterExtendsEquals, GenericParameterExtends, GenericParameterEquals, GenericParameterIdentifier, GenericParameter, GenericParameterList_0, GenericParameterList, GenericParameters, GenericCallArgumentList_0, GenericCallArgumentList, GenericCallArguments, GenericCall, OptionalSemiColon, KeywordString, KeywordNumber, KeywordBoolean, KeywordUndefined, KeywordNull, KeywordInteger, KeywordBigInt, KeywordUnknown, KeywordAny, KeywordObject, KeywordNever, KeywordSymbol, KeywordVoid, KeywordThis, TemplateInterpolate, TemplateSpan, TemplateBody, TemplateLiteralTypes, TemplateLiteral, Dependent2, LiteralBigInt, LiteralBoolean, LiteralNumber, LiteralString, KeyOf, IndexArray_0, IndexArray, Extends2, Base, With, Factor, ExprTermTail, ExprTerm, ExprTail, Expr, ExprReadonly, ExprPipe, GenericType, InferType, Type, PropertyKeyNumber, PropertyKeyIdent, PropertyKeyQuoted, PropertyKeyIndex, PropertyKey, Readonly2, Optional3, Property, PropertyDelimiter, PropertyList_0, PropertyList, Properties, _Object_2, ElementNamed, ElementReadonlyOptional, ElementReadonly, ElementOptional, ElementBase, Element, ElementList_0, ElementList, _Tuple_, ParameterReadonlyOptional, ParameterReadonly, ParameterOptional, ParameterType, ParameterBase, Parameter2, ParameterList_0, ParameterList, _Function_2, _Constructor_, MappedReadonly, MappedOptional, MappedAs, _Mapped_, Reference, WithBigInt, WithNumber, WithBoolean, WithString, WithNull, WithUndefined, WithProperty, WithPropertyList_0, WithPropertyList, WithObject, WithElementList_0, WithElementList, WithArray, WithValue, PatternBigInt, PatternString, PatternNumber, PatternInteger, PatternNever, PatternText, PatternBase, PatternGroup, PatternUnion, PatternTerm, PatternBody, Pattern, InterfaceDeclarationHeritageList_0, InterfaceDeclarationHeritageList, InterfaceDeclarationHeritage, InterfaceDeclarationGeneric, InterfaceDeclaration, TypeAliasDeclarationGeneric, TypeAliasDeclaration, ExportKeyword, ModuleDeclarationDelimiter, ModuleDeclarationList_0, ModuleDeclarationList, ModuleDeclaration, Module, Script, result_exports, ResultEqual, ResultDisjoint, ResultLeftInside, ResultRightInside, CapitalizeMapping, LowercaseMapping, UncapitalizeMapping, UppercaseMapping, integerKeyPattern, NumericKeyPattern, ReadonlyType, typebox_exports, CheckContext, ErrorContext, AccumulatedErrorContext, format_exports, DAYS, DATE, TIME, Duration, Email, PUNYCODE_BASE, PUNYCODE_TMIN, PUNYCODE_TMAX, PUNYCODE_SKEW, PUNYCODE_DAMP, PUNYCODE_INITIAL_BIAS, PUNYCODE_INITIAL_N, RFC5892_DISALLOWED, VIRAMA_CPS, IdnEmail, JsonPointerUriFragment, JsonPointer, RelativeJsonPointer, UriReference, UriTemplate, Url, Uuid, formats, resolve_exports, pointer_exports, __classPrivateFieldGet, _Stack_instances, _Stack_PushResourceAnchors, _Stack_PopResourceAnchors, _Stack_FromContext, _Stack_FromRef, Stack, AssertError, try_exports, bigintPattern, decimalPattern, integerPattern, maxBigInt, minBigInt, DecodeError, Decoder, EncodeError, Encoder, ParseError2, Parser, Insert2, Update2, Delete2, Edit, SCIENCE_CONTRACT, RESPONSE_CONTRACT, KNOWLEDGE_SPECIALISTS, KNOWLEDGE_REVIEWER, PROTECTED_KNOWLEDGE_AGENTS, ROLES, DAILY_DISCOVERY_SYSTEM, SHA256, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_PER_SESSION, NUMBER, CITATION, BackgroundReviewer, digest, RESEARCH_CONTRACT_SCHEMA_VERSION, EvolutionIndex, EXPERIENCE_VERSION, EXPERIENCE_LIMITS, HASH, now, terminalJobExperienceInput, SESSION_PROJECT_ENTRY, LEGACY_DEFAULT_PROJECT, SLUG, RESERVED, specialist_delivery_exports, contained, saveSpecialistExplainer, specialists_exports, SPECIALIST_DECISIONS, clean, digest2, compatibility, knowledgeReadStart, shouldOrientKnowledge, createKnowledgeSpecialists, MAX_FAILURES, MAX_TEXT, SHA2562, publication_exports, publicationFallbackNotice, publicationNotices, advisoryNotices, compatibility4, projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication, HASH2, ISO_DATE, GRADE_RANK, LEVEL_RANK, KnowledgeReuseIndex, WIDTH, HEIGHT, LAYOUT_MARGIN, INFRASTRUCTURE, MAIN_TYPES, CATEGORY_BY_PATH, SECTOR_ANGLES, replaceControl, clean3, feedbackReason, priority, knowledgeHostLoader, text3, record2, checkpoint, compatibility5, configureKnowledgeExtensionHost, LOCAL_FIRST_GUIDANCE, registerWikiReviewAcceptance, registerKnowledgeInterface, CHILD_READ_REFUSED;
+var __defProp2, __getOwnPropNames2, __esm2, __export2, files_exports, MAX_NOTE_BYTES, OMIT, RESERVED, init_files, init_ingest_identity, KNOWLEDGE_TYPES, RUN_RESULT_TYPES, NOTE_TYPES, MAX_FRONTMATTER_CHARS, MAX_DEPTH, UNSAFE_KEYS, KEY_LINE, Parser2, init_ingest_frontmatter, normalize, tokens, overlap, field, init_claim_conflicts, config_exports, defaultState, init_config, DAILY_DISCOVERY_LIMITS, SCAN_ROOTS, SKIP_DIRS, NAVIGATION, init_daily_discovery, runtime_host_exports, KNOWLEDGE_WORKER_LIFECYCLE_EVENT, compatibilityKnowledgeRuntimeHost, configureKnowledgeRuntime, runRuntimeExclusive, emitProcessEvent, runtimeSlot, toolMeta, flowCardBuilder, configureKnowledgeWorker, createKnowledgeWorker, knowledgeWorkerMetadata, emitKnowledgeWorkerLifecycle, configureKnowledgeEvidence, deliveryContract, configureKnowledgeHost, loadWorkspaceConfig, publishExplainer, consumeKnowledgeReviewPreview, specialistSettings, configureKnowledgeSetup, LAYOUT, inspectObsidianSetup, inspectSetupDirectory, resolveSetupVault, researchSetupOptions, requiresPaperEvidence, hasPaperCitation, init_runtime_host, OK, ERROR, MUTED, clip, record, ZOTERO_KEY, CHANNEL_LABEL, init_flow_cards, init_review_policy_storage, review_policy_exports, readReviewMode, saveReviewMode, advisoryCodes, init_review_policy, semantic_settings_exports, MAX_FILE_BYTES, ENV_NAME, SETTINGS_KEYS, CONFIG_KEYS, defaultApi, readSemanticSettings, saveSemanticSettings, init_semantic_settings, GRAPH_RETRIEVAL_DEFAULTS, init_graph_retrieval, MAX_BATCH, MAX_CHARS, MAX_RESPONSE, ENV_NAME2, MAX_VECTOR_COMPONENT, MAX_VECTOR_NORM, CONFIG_KEYS2, semanticLimits, init_semantic_provider, STOP, tokens2, init_topic_probe, ui_state_exports, compatibilityKnowledgeUi, subscribeKnowledgeUi, emitKnowledgeUi, flowFor, knowledgeAnswerRate, beginKnowledgeFlow, updateKnowledgeFlow, noteKnowledgeRead, publicationKnowledgeFlow, requestWikiReviewUi, notifyKnowledgeUi, invalidateKnowledgeUi, clearKnowledgeFlow, knowledgeExcerpt, noteKnowledgeSearch, noteKnowledgeOperation, noteKnowledgeSpecialist, init_ui_state, init_worker_transport, service_exports, compatibilityKnowledgeServices, KnowledgeService, getKnowledgeService, notifyKnowledgeChange, closeKnowledgeServices, init_service, specialist_host_exports, compatibilityKnowledgeSpecialists, SPECIALIST_LIMITS, contextSessionId, specialistQueueSnapshot, registerKnowledgeSpecialistHost, knowledgeSpecialistHost, specialistSettings2, setSpecialistSettings, withSpecialistSlot, init_specialist_host, topic_memory_exports, TOPIC_MEMORY_VERSION, TOPIC_MEMORY_LIMITS, digest3, text2, slug, createTopicMemory, listTopics, readTopic, updateTopic, archiveTopic, init_topic_memory, init_redact_diagnostic, MANAGED_START, MANAGED_END, init_wiki_policy, MANAGED_START2, MANAGED_END2, PROJECT_PATTERN, NAVIGATION_TARGETS, VaultFileConflictError, hash2, init_layout, digest4, RENAME_RETRY_CODES, init_wiki_review_node, MAX_PENDING, MAX_AGE, digest5, init_wiki_review_reader, wiki_review_exports, compatibility2, validateWikiSourcePaths2, stageWikiProposal, mergeWikiProposal, previewWikiProposal, listWikiProposals, decideWikiProposal, autoApplyWikiProposal, wikiHistory, undoWikiUpdate, renameWithRetry2, init_wiki_review, wiki_model_review_exports, WIKI_MODEL_REVIEW_CHECKS, compatibility3, lastWikiModelReview, init_wiki_model_review, START, END, hash3, init_maintenance, yaml, init_memory_note, clean2, init_note_title, omittedSegments, init_source_links, init_maintenance_topic, ui_service_exports, runtimeState, MAX_PREVIEWS, consumeKnowledgeReviewPreviewEntry, knowledgeSpecialistSettings, init_ui_service, memory_exports, Metrics, guard_exports, globals_exports, guard_default, settings_exports, settings, NeverPattern, arguments_exports, hash_exports, ByteMarker, Accumulator, Prime, Size, Bytes, F64, F64In, F64Out, encoder, locale, EncodeBuilder, DecodeBuilder, BigIntPattern, IntegerPattern, InvalidLiteralValue, NumberPattern, StringPattern, IntegerKey, NumberKey, StringKey, DelimitedDecode, Delimited, Alpha, Zero, NonZero, Digit, WhiteSpace, NewLine, UnderScore, Dot, DollarSign, Hyphen, LineComment, OpenComment, CloseComment, AllowedDigits, Initial, Remaining, AllowedDigits2, If, GenericParameterExtendsEquals, GenericParameterExtends, GenericParameterEquals, GenericParameterIdentifier, GenericParameter, GenericParameterList_0, GenericParameterList, GenericParameters, GenericCallArgumentList_0, GenericCallArgumentList, GenericCallArguments, GenericCall, OptionalSemiColon, KeywordString, KeywordNumber, KeywordBoolean, KeywordUndefined, KeywordNull, KeywordInteger, KeywordBigInt, KeywordUnknown, KeywordAny, KeywordObject, KeywordNever, KeywordSymbol, KeywordVoid, KeywordThis, TemplateInterpolate, TemplateSpan, TemplateBody, TemplateLiteralTypes, TemplateLiteral, Dependent2, LiteralBigInt, LiteralBoolean, LiteralNumber, LiteralString, KeyOf, IndexArray_0, IndexArray, Extends2, Base, With, Factor, ExprTermTail, ExprTerm, ExprTail, Expr, ExprReadonly, ExprPipe, GenericType, InferType, Type, PropertyKeyNumber, PropertyKeyIdent, PropertyKeyQuoted, PropertyKeyIndex, PropertyKey, Readonly2, Optional3, Property, PropertyDelimiter, PropertyList_0, PropertyList, Properties, _Object_2, ElementNamed, ElementReadonlyOptional, ElementReadonly, ElementOptional, ElementBase, Element, ElementList_0, ElementList, _Tuple_, ParameterReadonlyOptional, ParameterReadonly, ParameterOptional, ParameterType, ParameterBase, Parameter2, ParameterList_0, ParameterList, _Function_2, _Constructor_, MappedReadonly, MappedOptional, MappedAs, _Mapped_, Reference, WithBigInt, WithNumber, WithBoolean, WithString, WithNull, WithUndefined, WithProperty, WithPropertyList_0, WithPropertyList, WithObject, WithElementList_0, WithElementList, WithArray, WithValue, PatternBigInt, PatternString, PatternNumber, PatternInteger, PatternNever, PatternText, PatternBase, PatternGroup, PatternUnion, PatternTerm, PatternBody, Pattern, InterfaceDeclarationHeritageList_0, InterfaceDeclarationHeritageList, InterfaceDeclarationHeritage, InterfaceDeclarationGeneric, InterfaceDeclaration, TypeAliasDeclarationGeneric, TypeAliasDeclaration, ExportKeyword, ModuleDeclarationDelimiter, ModuleDeclarationList_0, ModuleDeclarationList, ModuleDeclaration, Module, Script, result_exports, ResultEqual, ResultDisjoint, ResultLeftInside, ResultRightInside, CapitalizeMapping, LowercaseMapping, UncapitalizeMapping, UppercaseMapping, integerKeyPattern, NumericKeyPattern, ReadonlyType, typebox_exports, CheckContext, ErrorContext, AccumulatedErrorContext, format_exports, DAYS, DATE, TIME, Duration, Email, PUNYCODE_BASE, PUNYCODE_TMIN, PUNYCODE_TMAX, PUNYCODE_SKEW, PUNYCODE_DAMP, PUNYCODE_INITIAL_BIAS, PUNYCODE_INITIAL_N, RFC5892_DISALLOWED, VIRAMA_CPS, IdnEmail, JsonPointerUriFragment, JsonPointer, RelativeJsonPointer, UriReference, UriTemplate, Url, Uuid, formats, resolve_exports, pointer_exports, __classPrivateFieldGet, _Stack_instances, _Stack_PushResourceAnchors, _Stack_PopResourceAnchors, _Stack_FromContext, _Stack_FromRef, Stack, AssertError, try_exports, bigintPattern, decimalPattern, integerPattern, maxBigInt, minBigInt, DecodeError, Decoder, EncodeError, Encoder, ParseError2, Parser, Insert2, Update2, Delete2, Edit, SCIENCE_CONTRACT, RESPONSE_CONTRACT, KNOWLEDGE_SPECIALISTS, KNOWLEDGE_REVIEWER, PROTECTED_KNOWLEDGE_AGENTS, ROLES, DAILY_DISCOVERY_SYSTEM, SHA256, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_PER_SESSION, NUMBER, CITATION, BackgroundReviewer, digest, RESEARCH_CONTRACT_SCHEMA_VERSION, EvolutionIndex, EXPERIENCE_VERSION, EXPERIENCE_LIMITS, HASH, now, terminalJobExperienceInput, SESSION_PROJECT_ENTRY, LEGACY_DEFAULT_PROJECT, SLUG, RESERVED2, specialist_delivery_exports, contained, saveSpecialistExplainer, specialists_exports, SPECIALIST_DECISIONS, clean, digest2, compatibility, knowledgeReadStart, shouldOrientKnowledge, createKnowledgeSpecialists, MAX_FAILURES, MAX_TEXT, SHA2562, publication_exports, publicationFallbackNotice, publicationNotices, advisoryNotices, compatibility4, projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication, HASH2, ISO_DATE, GRADE_RANK, LEVEL_RANK, KnowledgeReuseIndex, WIDTH, HEIGHT, LAYOUT_MARGIN, INFRASTRUCTURE, MAIN_TYPES, CATEGORY_BY_PATH, SECTOR_ANGLES, replaceControl, clean3, feedbackReason, priority, knowledgeHostLoader, text3, record2, checkpoint, compatibility5, configureKnowledgeExtensionHost, LOCAL_FIRST_GUIDANCE, registerWikiReviewAcceptance, registerKnowledgeInterface, CHILD_READ_REFUSED;
 var init_host = __esm({
   "node_modules/@gyoungwe/pi-knowledge/dist/host.mjs"() {
     __defProp2 = Object.defineProperty;
@@ -18726,6 +18705,168 @@ var init_host = __esm({
       for (var name in all)
         __defProp2(target, name, { get: all[name], enumerable: true });
     };
+    files_exports = {};
+    __export2(files_exports, {
+      MAX_NOTE_BYTES: () => MAX_NOTE_BYTES,
+      allowedSegment: () => allowedSegment,
+      canRead: () => canRead,
+      fileVersion: () => fileVersion,
+      inspectNote: () => inspectNote,
+      noteScope: () => noteScope,
+      readNoteFile: () => readNoteFile,
+      safeNotePath: () => safeNotePath,
+      snippet: () => snippet,
+      validateNote: () => validateNote
+    });
+    init_files = __esm2({
+      "src/core/files.ts"() {
+        "use strict";
+        MAX_NOTE_BYTES = 1024 * 1024;
+        OMIT = /* @__PURE__ */ new Set([
+          "node_modules",
+          "dist",
+          "build",
+          "out",
+          "coverage",
+          "vendor",
+          "venv",
+          "__pycache__",
+          "Attachments",
+          "Templates",
+          "_template"
+        ]);
+        RESERVED = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
+      }
+    });
+    init_ingest_identity = __esm2({
+      "src/core/ingest-identity.ts"() {
+        "use strict";
+      }
+    });
+    init_ingest_frontmatter = __esm2({
+      "src/core/ingest-frontmatter.ts"() {
+        "use strict";
+        init_ingest_identity();
+        KNOWLEDGE_TYPES = [
+          "paper",
+          "method",
+          "software",
+          "dataset",
+          "concept",
+          "entity",
+          "idea",
+          "claim",
+          "evidence",
+          "decision",
+          "question",
+          "wiki"
+        ];
+        RUN_RESULT_TYPES = ["run", "artifact", "explainer"];
+        NOTE_TYPES = [...KNOWLEDGE_TYPES, ...RUN_RESULT_TYPES];
+        MAX_FRONTMATTER_CHARS = 64 * 1024;
+        MAX_DEPTH = 6;
+        UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+        KEY_LINE = /^("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^\s"'#\-[{][^:#]*?|-[^\s:#][^:#]*?)\s*:(?:\s+(.*)|\s*)$/;
+        Parser2 = class {
+          constructor(lines) {
+            this.lines = lines;
+          }
+          index = 0;
+          parseDocument() {
+            if (!this.lines.length) return {};
+            const first = this.lines[0];
+            if (first.indent !== 0) throw new Error(`Line ${first.number}: top-level key must not be indented`);
+            if (isListItem(first)) throw new Error(`Line ${first.number}: frontmatter must be a mapping`);
+            const value = this.parseMap(0, 0);
+            if (this.index < this.lines.length) {
+              const line = this.lines[this.index];
+              throw new Error(`Line ${line.number}: unexpected indentation`);
+            }
+            return value;
+          }
+          peek() {
+            return this.lines[this.index];
+          }
+          parseBlock(indent, depth) {
+            if (depth > MAX_DEPTH) throw new Error("Frontmatter nesting is too deep");
+            const line = this.peek();
+            if (!line) return null;
+            return isListItem(line) ? this.parseList(line.indent, depth) : this.parseMap(indent, depth);
+          }
+          valueAfterKey(indent, depth, rest) {
+            if (rest !== void 0 && rest.trim() !== "") {
+              const value = stripComment(rest);
+              if (/^[|>][+-]?$/.test(value.trim())) return this.parseBlockScalar(indent, value.trim());
+              return parseScalar(value);
+            }
+            const next = this.peek();
+            if (!next) return null;
+            if (next.indent > indent) return this.parseBlock(next.indent, depth + 1);
+            if (next.indent === indent && isListItem(next)) return this.parseList(indent, depth + 1);
+            return null;
+          }
+          parseBlockScalar(indent, style) {
+            const collected = [];
+            let blockIndent = null;
+            while (this.index < this.lines.length) {
+              const line = this.lines[this.index];
+              if (line.indent <= indent) break;
+              blockIndent ??= line.indent;
+              collected.push(`${" ".repeat(Math.max(0, line.indent - blockIndent))}${line.text}`);
+              this.index++;
+            }
+            const joined = style.startsWith("|") ? collected.join("\n") : collected.join(" ");
+            return style.endsWith("-") ? joined : `${joined}
+`;
+          }
+          parseMap(indent, depth) {
+            const out = {};
+            while (this.index < this.lines.length) {
+              const line = this.lines[this.index];
+              if (line.indent < indent) break;
+              if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
+              if (isListItem(line)) break;
+              const match = line.text.match(KEY_LINE);
+              if (!match) throw new Error(`Line ${line.number}: expected "key: value"`);
+              const key = String(parseScalar(match[1] ?? "")).trim();
+              this.index++;
+              const value = this.valueAfterKey(indent, depth, match[2]);
+              if (UNSAFE_KEYS.has(key)) continue;
+              if (Object.hasOwn(out, key)) throw new Error(`Line ${line.number}: duplicate key "${key}"`);
+              out[key] = value;
+            }
+            return out;
+          }
+          parseList(indent, depth) {
+            const out = [];
+            while (this.index < this.lines.length) {
+              const line = this.lines[this.index];
+              if (line.indent !== indent || !isListItem(line)) {
+                if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
+                break;
+              }
+              const rest = line.text === "-" ? "" : line.text.slice(2);
+              const offset = line.text === "-" ? 1 : 2 + (rest.length - rest.trimStart().length);
+              const content = rest.trim();
+              if (!content) {
+                this.index++;
+                const next = this.peek();
+                out.push(next && next.indent > indent ? this.parseBlock(next.indent, depth + 1) : null);
+                continue;
+              }
+              if (KEY_LINE.test(stripComment(content)) && !/^["'[{]/.test(content)) {
+                this.lines[this.index] = { indent: indent + offset, text: content, number: line.number };
+                out.push(this.parseMap(indent + offset, depth + 1));
+                continue;
+              }
+              this.index++;
+              out.push(parseScalar(stripComment(content)));
+            }
+            return out;
+          }
+        };
+      }
+    });
     init_claim_conflicts = __esm2({
       "src/core/claim-conflicts.ts"() {
         "use strict";
@@ -18841,39 +18982,6 @@ var init_host = __esm({
           requiresPaperEvidence,
           hasPaperCitation
         } = compatibilityKnowledgeRuntimeHost);
-      }
-    });
-    files_exports = {};
-    __export2(files_exports, {
-      MAX_NOTE_BYTES: () => MAX_NOTE_BYTES,
-      allowedSegment: () => allowedSegment,
-      canRead: () => canRead,
-      fileVersion: () => fileVersion,
-      inspectNote: () => inspectNote,
-      noteScope: () => noteScope,
-      readNoteFile: () => readNoteFile,
-      safeNotePath: () => safeNotePath,
-      snippet: () => snippet,
-      validateNote: () => validateNote
-    });
-    init_files = __esm2({
-      "src/core/files.ts"() {
-        "use strict";
-        MAX_NOTE_BYTES = 1024 * 1024;
-        OMIT = /* @__PURE__ */ new Set([
-          "node_modules",
-          "dist",
-          "build",
-          "out",
-          "coverage",
-          "vendor",
-          "venv",
-          "__pycache__",
-          "Attachments",
-          "Templates",
-          "_template"
-        ]);
-        RESERVED2 = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
       }
     });
     init_flow_cards = __esm2({
@@ -19203,7 +19311,7 @@ var init_host = __esm({
           maxConflicts: 32,
           maxFileBytes: 512 * 1024
         });
-        digest3 = (value) => createHash10("sha256").update(String(value)).digest("hex");
+        digest3 = (value) => createHash11("sha256").update(String(value)).digest("hex");
         text2 = (value, limit) => String(value ?? "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, limit);
         slug = (value) => text2(value, 160).toLowerCase().replace(/[^a-z0-9\u0080-\uffff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "topic";
         ({ createTopicMemory, listTopics, readTopic, updateTopic, archiveTopic } = createTopicMemoryApi(
@@ -19239,7 +19347,7 @@ var init_host = __esm({
             this.name = "VaultFileConflictError";
           }
         };
-        hash2 = (text43) => createHash12("sha256").update(text43).digest("hex");
+        hash2 = (text43) => createHash13("sha256").update(text43).digest("hex");
       }
     });
     init_wiki_review_node = __esm2({
@@ -19247,7 +19355,7 @@ var init_host = __esm({
         "use strict";
         init_files();
         init_layout();
-        digest4 = (text43) => createHash13("sha256").update(text43).digest("hex");
+        digest4 = (text43) => createHash14("sha256").update(text43).digest("hex");
         RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
       }
     });
@@ -19259,7 +19367,7 @@ var init_host = __esm({
         init_wiki_policy();
         MAX_PENDING = 100;
         MAX_AGE = 24 * 60 * 60 * 1e3;
-        digest5 = (text43) => createHash14("sha256").update(text43).digest("hex");
+        digest5 = (text43) => createHash15("sha256").update(text43).digest("hex");
       }
     });
     wiki_review_exports = {};
@@ -19350,142 +19458,13 @@ var init_host = __esm({
         init_layout();
         START = "<!-- pi-agent:managed:start -->";
         END = "<!-- pi-agent:managed:end -->";
-        hash3 = (text43) => createHash17("sha256").update(text43).digest("hex");
+        hash3 = (text43) => createHash18("sha256").update(text43).digest("hex");
       }
     });
     init_memory_note = __esm2({
       "src/core/memory-note.ts"() {
         "use strict";
         yaml = (value) => JSON.stringify(value.replace(/\s+/g, " ").trim());
-      }
-    });
-    init_ingest_identity = __esm2({
-      "src/core/ingest-identity.ts"() {
-        "use strict";
-      }
-    });
-    init_ingest_frontmatter = __esm2({
-      "src/core/ingest-frontmatter.ts"() {
-        "use strict";
-        init_ingest_identity();
-        KNOWLEDGE_TYPES = [
-          "paper",
-          "method",
-          "software",
-          "dataset",
-          "concept",
-          "entity",
-          "idea",
-          "claim",
-          "evidence",
-          "decision",
-          "question",
-          "wiki"
-        ];
-        RUN_RESULT_TYPES = ["run", "artifact", "explainer"];
-        NOTE_TYPES = [...KNOWLEDGE_TYPES, ...RUN_RESULT_TYPES];
-        MAX_FRONTMATTER_CHARS = 64 * 1024;
-        MAX_DEPTH = 6;
-        UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-        KEY_LINE = /^("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^\s"'#\-[{][^:#]*?|-[^\s:#][^:#]*?)\s*:(?:\s+(.*)|\s*)$/;
-        Parser2 = class {
-          constructor(lines) {
-            this.lines = lines;
-          }
-          index = 0;
-          parseDocument() {
-            if (!this.lines.length) return {};
-            const first = this.lines[0];
-            if (first.indent !== 0) throw new Error(`Line ${first.number}: top-level key must not be indented`);
-            if (isListItem(first)) throw new Error(`Line ${first.number}: frontmatter must be a mapping`);
-            const value = this.parseMap(0, 0);
-            if (this.index < this.lines.length) {
-              const line = this.lines[this.index];
-              throw new Error(`Line ${line.number}: unexpected indentation`);
-            }
-            return value;
-          }
-          peek() {
-            return this.lines[this.index];
-          }
-          parseBlock(indent, depth) {
-            if (depth > MAX_DEPTH) throw new Error("Frontmatter nesting is too deep");
-            const line = this.peek();
-            if (!line) return null;
-            return isListItem(line) ? this.parseList(line.indent, depth) : this.parseMap(indent, depth);
-          }
-          valueAfterKey(indent, depth, rest) {
-            if (rest !== void 0 && rest.trim() !== "") {
-              const value = stripComment(rest);
-              if (/^[|>][+-]?$/.test(value.trim())) return this.parseBlockScalar(indent, value.trim());
-              return parseScalar(value);
-            }
-            const next = this.peek();
-            if (!next) return null;
-            if (next.indent > indent) return this.parseBlock(next.indent, depth + 1);
-            if (next.indent === indent && isListItem(next)) return this.parseList(indent, depth + 1);
-            return null;
-          }
-          parseBlockScalar(indent, style) {
-            const collected = [];
-            let blockIndent = null;
-            while (this.index < this.lines.length) {
-              const line = this.lines[this.index];
-              if (line.indent <= indent) break;
-              blockIndent ??= line.indent;
-              collected.push(`${" ".repeat(Math.max(0, line.indent - blockIndent))}${line.text}`);
-              this.index++;
-            }
-            const joined = style.startsWith("|") ? collected.join("\n") : collected.join(" ");
-            return style.endsWith("-") ? joined : `${joined}
-`;
-          }
-          parseMap(indent, depth) {
-            const out = {};
-            while (this.index < this.lines.length) {
-              const line = this.lines[this.index];
-              if (line.indent < indent) break;
-              if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
-              if (isListItem(line)) break;
-              const match = line.text.match(KEY_LINE);
-              if (!match) throw new Error(`Line ${line.number}: expected "key: value"`);
-              const key = String(parseScalar(match[1] ?? "")).trim();
-              this.index++;
-              const value = this.valueAfterKey(indent, depth, match[2]);
-              if (UNSAFE_KEYS.has(key)) continue;
-              if (Object.hasOwn(out, key)) throw new Error(`Line ${line.number}: duplicate key "${key}"`);
-              out[key] = value;
-            }
-            return out;
-          }
-          parseList(indent, depth) {
-            const out = [];
-            while (this.index < this.lines.length) {
-              const line = this.lines[this.index];
-              if (line.indent !== indent || !isListItem(line)) {
-                if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
-                break;
-              }
-              const rest = line.text === "-" ? "" : line.text.slice(2);
-              const offset = line.text === "-" ? 1 : 2 + (rest.length - rest.trimStart().length);
-              const content = rest.trim();
-              if (!content) {
-                this.index++;
-                const next = this.peek();
-                out.push(next && next.indent > indent ? this.parseBlock(next.indent, depth + 1) : null);
-                continue;
-              }
-              if (KEY_LINE.test(stripComment(content)) && !/^["'[{]/.test(content)) {
-                this.lines[this.index] = { indent: indent + offset, text: content, number: line.number };
-                out.push(this.parseMap(indent + offset, depth + 1));
-                continue;
-              }
-              this.index++;
-              out.push(parseScalar(stripComment(content)));
-            }
-            return out;
-          }
-        };
       }
     });
     init_note_title = __esm2({
@@ -20500,6 +20479,8 @@ var init_host = __esm({
       wiki: "Draft one focused Wiki candidate using the assigned evidence and current target text. Preserve applicability, contrary evidence, uncertainties and human review. Return proposed generated-block markdown only; no managed markers. This is a draft, never approval. Do not invent citations or silently remove disagreements. Do not output the complete conversation or an execution log.",
       explainer: "Use the provided real show-me skill when present. Explain papers through questions, main claims, methods, evidence and limitations; software through principles, version-matched command examples and documented performance. No local tests are available: say not locally tested, never invent timings. Return one self-contained static HTML with inline CSS and native details/summary interactions. No scripts, external assets, frames, forms, or event handlers. This is presentation, never scientific evidence."
     };
+    init_files();
+    init_ingest_frontmatter();
     init_claim_conflicts();
     init_config();
     init_daily_discovery();
@@ -20659,7 +20640,7 @@ var init_host = __esm({
         this.latest.clear();
       }
     };
-    digest = (text43) => createHash3("sha256").update(text43).digest("hex");
+    digest = (text43) => createHash5("sha256").update(text43).digest("hex");
     RESEARCH_CONTRACT_SCHEMA_VERSION = 1;
     EvolutionIndex = class {
       constructor(store) {
@@ -20781,14 +20762,14 @@ var init_host = __esm({
       maxSchedulerJobIdChars: 180,
       maxQueryChars: 200
     });
-    HASH = (value) => createHash4("sha256").update(value).digest("hex");
+    HASH = (value) => createHash6("sha256").update(value).digest("hex");
     now = () => (/* @__PURE__ */ new Date()).toISOString();
     terminalJobExperienceInput = experienceInputFromTerminalJob;
     init_config();
     SESSION_PROJECT_ENTRY = "drone-session-project-v1";
     LEGACY_DEFAULT_PROJECT = "research-workbench";
     SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-    RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
+    RESERVED2 = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
     init_files();
     init_flow_cards();
     init_review_policy();
@@ -20821,7 +20802,7 @@ var init_host = __esm({
     init_files();
     SPECIALIST_DECISIONS = ["run", "skip", "wait", "ask-user"];
     clean = (value, limit = 120) => [...String(value || "")].map((char) => char.charCodeAt(0) < 32 ? " " : char).join("").trim().slice(0, limit);
-    digest2 = (value) => createHash9("sha256").update(String(value || "")).digest("hex").slice(0, 24);
+    digest2 = (value) => createHash10("sha256").update(String(value || "")).digest("hex").slice(0, 24);
     init_runtime_host();
     init_specialist_host();
     init_ui_state();
@@ -20910,7 +20891,6 @@ var init_host = __esm({
       (create) => runtimeSlot("knowledge", "publication", create)
     );
     ({ projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication } = compatibility4);
-    init_ingest_frontmatter();
     init_config();
     init_service();
     init_config();
@@ -21204,8 +21184,8 @@ init_host();
 import { mkdir as mkdir12, readFile as readFile12, writeFile as writeFile12 } from "node:fs/promises";
 import { homedir as homedir3 } from "node:os";
 import { dirname, join as join19 } from "node:path";
-import { createHash as createHash22, randomUUID as randomUUID19 } from "node:crypto";
-import { createHash as createHash18 } from "node:crypto";
+import { createHash as createHash2, randomUUID as randomUUID19 } from "node:crypto";
+import { createHash as createHash22 } from "node:crypto";
 import { readFile as readFile22, realpath as realpath9, stat as stat4 } from "node:fs/promises";
 import { isAbsolute as isAbsolute10, relative as relative11, resolve as resolve13, sep as sep10 } from "node:path";
 import { realpath as realpath22 } from "node:fs/promises";
@@ -21587,7 +21567,7 @@ async function verifyLiteratureReceipt({
       status: linked && dois.some((item) => normalizeDoi(item.replace(/[.,;]+$/, "")) === normalizedDoi) ? "verified" : "identity-mismatch",
       path: notePath,
       vault: root,
-      hash: createHash18("sha256").update(text6).digest("hex")
+      hash: createHash22("sha256").update(text6).digest("hex")
     };
   } catch (error) {
     if (vaultResolved && error instanceof Error && "code" in error && error.code === "ENOENT") {
@@ -21619,7 +21599,7 @@ function destinationRecovery(receipt2 = {}) {
 function literatureOperationId(vault, revision, doi) {
   const normalized = normalizeDoi(doi);
   if (!normalized) throw new Error("Valid DOI required");
-  return createHash22("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
+  return createHash2("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
 }
 function createLiteratureOperations(ports) {
   const now2 = ports.now || (() => (/* @__PURE__ */ new Date()).toISOString());
