@@ -45,6 +45,9 @@ packages/desktop/resources/research-skills/
 test/fixtures/simulated-user/generated/
 scripts/ui-parity/out/
 
+# Staged real build output of the U4 installed-mount acceptance.
+packages/desktop/scripts/.u4-stage/
+
 # Bound external plugin repository; validate it through explicit plugin gates, not host lint.
 drone-plugins/
 vendor/plugins/
