@@ -735,3 +735,49 @@ it("reports NOT_RUN instead of passing when a real artifact is missing", () => {
 ```
 
 否则这条守卫只是一句注释：它读起来像门禁，实际上一旦失效没人会发现。
+
+## 断言写在 textContent 上，守卫就是空的（2026-11-22 记录）
+
+`textContent` 只有元素的**文本**，没有属性。所以
+
+```ts
+expect(html).toContain("installed-badge")   // html 是 textContent
+```
+
+断言的是「正文里出现了 installed-badge 这几个字」，而不是「挂载了一个
+`data-testid="installed-badge"` 的元素」。宿主自己的默认渲染里没有这几个字，
+于是这条断言在**贡献根本没挂载**时也会通过。
+
+要断言 DOM 结构，用 `innerHTML`：
+
+```ts
+expect(html).toContain(`data-testid="installed-badge">${surface}`);
+```
+
+这条坑和「守卫在产物恰好存在时无效」是同一类：**断言比守卫弱**。
+守卫失效时测试不报警，只因为断言问的问题更小。
+
+## 渲染环境的选择会决定 zustand 读到什么（2026-11-22 记录）
+
+zustand v5 的 `useStore` 在 SSR（`renderToStaticMarkup`）下走
+`getServerSnapshot`，返回的是**初始 state**，不是当前 state。
+所以在 node 环境里用 `renderToStaticMarkup` 渲染 store 驱动的组件，
+读到的永远是初始值——看起来像「注册了但没挂上」。
+
+需要 DOM 的组件断言要在 jsdom 下做。但 jsdom 有自己的 `Uint8Array` realm，
+esbuild 的启动前置检查会失败：
+
+```
+Invariant violation: "new TextEncoder().encode("") instanceof Uint8Array" is incorrectly false
+```
+
+修法是把 Node realm 的 `Uint8Array` 装成全局：
+
+```ts
+globalThis.TextEncoder = TextEncoder;
+globalThis.TextDecoder = TextDecoder;
+globalThis.Uint8Array = Object.getPrototypeOf(Buffer.prototype).constructor as never;
+```
+
+注意 `Buffer.prototype.constructor` 是 `Buffer` 不是 `Uint8Array`，
+要取它的原型再取构造函数。
