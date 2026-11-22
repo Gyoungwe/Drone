@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import * as backend from "../index";
 import type { P5ComputePlan } from "../services/p5-compute-plans";
+import { createP5HostComposition, p5ScopeOf } from "../services/p5-host-composition";
 import { type FrozenP5Batch, freezeP5Batch } from "./p5-batch-review";
 import { type FrozenP5Bundle, freezeP5Bundle } from "./p5-bundle-review";
 import { measuredEnvelopeBytes, p5ByteCapabilityHandlers } from "./p5-byte-capabilities";
@@ -35,6 +36,9 @@ const publicP5Values = {
 	p5ByteCapabilityHandlers,
 	measuredEnvelopeBytes,
 	createP5StagingOwners,
+	// Z2 — the composition root the desktop binds a native fact owner through.
+	createP5HostComposition,
+	p5ScopeOf,
 };
 
 describe("backend P5 public exports", () => {

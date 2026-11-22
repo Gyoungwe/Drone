@@ -295,6 +295,13 @@ export {
 	type KnowledgeSessionServicePort,
 } from "./services/knowledge-session";
 export {
+	createP5HostComposition,
+	type P5AdoptionAuthority,
+	type P5HostComposition,
+	type P5HostCompositionOptions,
+	p5ScopeOf,
+} from "./services/p5-host-composition";
+export {
 	isNpmSpawnEnoent,
 	NPM_NOT_FOUND_SENTINEL,
 	PackageService,

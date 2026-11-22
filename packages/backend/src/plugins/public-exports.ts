@@ -36,6 +36,8 @@ export {
 	P5FactStoreError,
 	p5FactCapabilityHandlers,
 } from "./p5-facts";
+export type { P5ActiveFactOwner } from "./p5-host-delivery";
+export type { P5OwnerAttachmentPort } from "./p5-owner-attachments";
 export { p5ReceiptCapabilityHandlers } from "./p5-receipt-capabilities";
 export {
 	createP5ReceiptStore,
