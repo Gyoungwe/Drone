@@ -851,3 +851,33 @@ function withLedgerLock<T>(path: string, operation: () => Promise<T>): Promise<T
 
 教训：只要一个 JSON 文件里存多项、每项的写都要「读全量 → 改一项 → 写全量」，
 读就必须在写队列里面。「`JsonStore` 串行化了写」不等于「读改写是原子的」。
+
+## 一个 `string` 字段被两层当成两种东西（2026-11-23 记录）
+
+`approvalDetail` 从后端 capability handler 一路传到桌面审批对话框，全程是 `string`，
+但**后端和桌面理解的不是一回事**：
+
+- 后端 `runtime-capabilities.ts` 把它当**审批类别**，比如 `"application-state-write"`，
+  用来标记「这是一次写」；
+- 桌面 `runtime-host.ts` 把它当**给用户看的提示正文**，直接塞进对话框的 `detail`。
+
+于是「一次写」在两层里长得不一样，谁都没错，合起来就是错的：后端以为桌面会解释这个类别，
+桌面以为这是正文。改文案的人找不到地方改，改语义的人不知道会改掉对话框。
+
+这次要接上审批文案时，暴露出来的是第三件事：**已批准的双语文案是一组四元组**
+（`{title, summary, approve, deny}`），而 `showMessageBox` 的现成对话框是
+`{title, message, detail, buttons}`——`summary` 对 `detail`，`approve`/`deny` 对 `buttons`，
+但**标题没有对应位置**。硬塞只能塞一部分。
+
+修法不是把 `approvalDetail` 改成联合类型。改成 `string | 结构体` 会波及
+二十来处生产者、消费者和它们的断言。改成结构体又会让每个生产者都得造一个结构体。
+
+做法是**加一个平行的可选字段**：原有的 `approvalDetail` 一字不改，
+另加 `approvalReview`，类型是 `P5ApprovalReview`——**只有事实，没有文案**。
+后端产出事实，桌面用自己那份已批准的文案表渲染。
+字段一路走 `handler → broker → invocation → coordinator → approve`，全是后端进程内，
+不跨 IPC，所以类型改动只落在后端几个文件里。
+
+教训：一个 `string` 走了五层没人发现它有两种含义，是因为它**在两层都碰巧合法**。
+凡是同一个字段在两端被解释成不同的东西，先把它拆成两个字段——
+一个存机器读的事实，一个存给人看的文案，别让一个字符串同时当两种契约。
