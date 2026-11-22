@@ -12,6 +12,7 @@ import { FileReadback } from "@gyoungwe/plugin-api/p5-receipts";
 import { Check } from "typebox/value";
 import { expect, it } from "vitest";
 import {
+	buildP5ApprovalReviewContent,
 	buildP5BatchCancelReviewContent,
 	buildP5BatchReviewContent,
 	buildP5BundleReviewContent,
@@ -341,6 +342,28 @@ it("renders the exact bilingual byte write review with the staged source hash an
 		deny: "Deny",
 	});
 	expect(buildP5ByteWriteReviewContent(plugin, input, "/exports/demo", zh)).toStrictEqual({
+		title: "插件请求写入文件",
+		summary: `插件: example.plugin\n目标文件夹: /exports/demo\n文件:\n  reports/result.bin\n    大小: 13\n    SHA-256: ${hash}`,
+		approve: "允许",
+		deny: "拒绝",
+	});
+});
+
+it("renders the host-authored approval review with the granted folder and the file facts", () => {
+	const hash = sha256("example bytes");
+	const review = {
+		kind: "byte-write" as const,
+		pluginId: plugin,
+		root: "/exports/demo",
+		file: { path: "reports/result.bin", bytes: 13, sha256: hash },
+	};
+	expect(buildP5ApprovalReviewContent(review, en)).toStrictEqual({
+		title: "Plugin wants to write files",
+		summary: `Plugin: example.plugin\nFolder: /exports/demo\nFiles:\n  reports/result.bin\n    Size: 13\n    SHA-256: ${hash}`,
+		approve: "Approve",
+		deny: "Deny",
+	});
+	expect(buildP5ApprovalReviewContent(review, zh)).toStrictEqual({
 		title: "插件请求写入文件",
 		summary: `插件: example.plugin\n目标文件夹: /exports/demo\n文件:\n  reports/result.bin\n    大小: 13\n    SHA-256: ${hash}`,
 		approve: "允许",

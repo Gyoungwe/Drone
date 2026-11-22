@@ -25,6 +25,7 @@ export {
 	type PluginRootGrant,
 } from "./file-capabilities";
 export type { SelectedNativeSource } from "./native-delivery";
+export type { P5ApprovalReview, P5ApprovalReviewKind } from "./p5-approval-review";
 export { type FrozenP5Batch, freezeP5Batch } from "./p5-batch-review";
 export { type FrozenP5Bundle, freezeP5Bundle } from "./p5-bundle-review";
 export { measuredEnvelopeBytes, p5ByteCapabilityHandlers } from "./p5-byte-capabilities";
@@ -57,11 +58,7 @@ export {
 } from "./plugin-writer-authority";
 export { createProcessPluginRuntime } from "./process-runtime";
 export { PluginResourceManager, type PluginResourceManagerOptions } from "./resource-capabilities";
-export type {
-	PluginRuntimeCaller,
-	PluginRuntimeCallerResolver,
-	PluginRuntimePolicy,
-} from "./runtime";
+export type { PluginRuntimeCaller, PluginRuntimeCallerResolver } from "./runtime";
 export { PluginRuntimeRegistry } from "./runtime";
 export type {
 	PluginCapabilityContext,
@@ -69,4 +66,9 @@ export type {
 	PluginRuntimeCapabilitiesOptions,
 	PluginRuntimeCapabilitiesProvider,
 } from "./runtime-capabilities";
+export type {
+	PluginRuntimeActivation,
+	PluginRuntimeInvocation,
+	PluginRuntimePolicy,
+} from "./runtime-invocation";
 export type { PluginSessionCallerContext } from "./session-caller";

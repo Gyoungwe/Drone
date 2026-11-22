@@ -25,7 +25,7 @@ const handler = (execute: PluginCapabilityHandler["execute"]): PluginCapabilityH
 });
 const policy = () => ({
 	authorizeActivation: vi.fn(async () => true),
-	authorizeInvocation: vi.fn<import("./runtime").PluginRuntimePolicy["authorizeInvocation"]>(
+	authorizeInvocation: vi.fn<import("./runtime-invocation").PluginRuntimePolicy["authorizeInvocation"]>(
 		async () => true,
 	),
 });

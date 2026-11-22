@@ -7,6 +7,7 @@ import {
 	createPluginExecutionCapabilities,
 	createProcessPluginRuntime,
 	hostText,
+	type P5ApprovalReview,
 	type PluginNativeIntegration,
 	type PluginRuntimeSource,
 	type SessionServicePort,
@@ -17,6 +18,7 @@ import { createDesktopResourceCapabilities } from "./desktop-resource-capabiliti
 import type { UiPluginManager } from "./manager";
 import { composeP5Capabilities } from "./p5-capability-composition";
 import { createDesktopP5Composition } from "./p5-host-composition";
+import { buildP5ApprovalReviewContent } from "./p5-review-content";
 import {
 	DesktopRuntimeBridge,
 	type DesktopRuntimeBridgeOptions,
@@ -229,30 +231,40 @@ export function createDesktopRuntime(
 			};
 		},
 		// Starting a built-in's runtime is not a separate permission; every capability it uses still asks.
-		approve: (owner, source, operation, detail, signal) =>
+		approve: (owner, source, operation, detail, signal, review) =>
 			operation === undefined && manager.builtinPackages.has(source.packageRoot)
 				? Promise.resolve(true)
-				: approveDesktopRuntime(owner, source, operation, detail, signal),
+				: approveDesktopRuntime(owner, source, operation, detail, signal, review),
 	});
 }
 
+/**
+ * Ask the user to approve a runtime write.
+ *
+ * A host-authored review replaces the generic prompt with the approved copy
+ * for that lane: its title, the facts of the pending write, and the review's
+ * own Approve and Deny labels. Without one the generic prompt stands.
+ */
 export async function approveDesktopRuntime(
 	owner: DesktopRuntimeOwner,
 	source: PluginRuntimeSource,
 	operation?: string,
 	approvalDetail?: string,
 	signal?: AbortSignal,
+	review?: P5ApprovalReview,
 ): Promise<boolean> {
 	const contents = webContents.fromId(owner.id);
 	if (!contents || contents.isDestroyed()) return false;
 	const window = BrowserWindow.fromWebContents(contents);
 	if (!window) return false;
+	const content = review === undefined ? undefined : buildP5ApprovalReviewContent(review, hostText);
 	const response = await dialog.showMessageBox(window, {
 		type: "question",
 		signal,
-		title: hostText("插件后台权限", "Plugin runtime permission"),
+		title: content?.title ?? hostText("插件后台权限", "Plugin runtime permission"),
 		message:
-			operation === "capability:task.grant.request"
+			content?.summary ??
+			(operation === "capability:task.grant.request"
 				? hostText("开始执行这个任务？", "Start this task?")
 				: operation
 					? hostText(
@@ -262,14 +274,16 @@ export async function approveDesktopRuntime(
 					: hostText(
 							`启动 ${source.pluginId} 的桌面后台？`,
 							`Start the desktop runtime for ${source.pluginId}?`,
-						),
+						)),
 		detail:
 			approvalDetail ??
 			hostText(
 				"领域后台在独立进程中运行，不能直接访问数据目录或联网。声明独立资源的插件会另行选择状态与只读数据目录；状态 JSON 与数据文本的写入和删除必须分别选择目录并明确授权；索引子进程只能写宿主私有缓存。停用插件会撤销访问；窗口关闭撤销该窗口访问，已打开会话随会话关闭释放。",
 				"The domain runtime runs in a separate process without direct data-directory or network access. Plugins declaring resources separately request state and read-only data directories; state JSON and data text writes and deletion require separate explicit directory grants; index subprocesses write only private host caches. Disabling revokes access. Closing a window revokes that window's access; open sessions release their access when closed.",
 			),
-		buttons: [hostText("拒绝", "Deny"), hostText("允许", "Allow")],
+		buttons: content
+			? [content.deny, content.approve]
+			: [hostText("拒绝", "Deny"), hostText("允许", "Allow")],
 		defaultId: 0,
 		cancelId: 0,
 	});

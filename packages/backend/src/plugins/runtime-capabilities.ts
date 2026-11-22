@@ -10,6 +10,7 @@ import type {
 import { Type } from "typebox";
 import { Check } from "typebox/value";
 import type { AskQuestionRoute } from "../session/ask-gate";
+import type { P5ApprovalReview } from "./p5-approval-review";
 
 /** Created only around an actual SDK native callback; never accepted from operation or IPC input. */
 export interface PluginNativeInvocation {
@@ -86,6 +87,16 @@ export interface PluginCapabilityHandler {
 		input: unknown,
 		facts: Pick<PluginCapabilityContext, "pluginId" | "applicationId" | "scope">,
 	): string;
+	/**
+	 * A host-authored review the user is shown before the write. It carries the
+	 * facts of the pending write, never its copy: the desktop renders them with
+	 * the approved bilingual table. A handler with a review still supplies its
+	 * string detail, which the dialog falls back to.
+	 */
+	approvalReview?(
+		input: unknown,
+		facts: Pick<PluginCapabilityContext, "pluginId" | "applicationId" | "scope">,
+	): P5ApprovalReview;
 	/** Host-only observation of the broker's decision and guarded execution; never plugin JSON. */
 	observe?(
 		input: unknown,
@@ -141,6 +152,7 @@ interface Authority {
 		detail?: string,
 		signal?: AbortSignal,
 		approval?: PluginCapabilityHandler["approval"],
+		review?: P5ApprovalReview,
 	) => Promise<boolean>;
 	readonly check: () => void;
 	readonly pending: Set<Promise<unknown>>;
@@ -277,6 +289,7 @@ export class PluginCapabilityBroker {
 		const prepared = handler.prepare ? await handler.prepare(input, context) : input;
 		if (handler.prepare) check();
 		const { pluginId, applicationId, scope } = context;
+		const review = handler.approvalReview?.(prepared, { pluginId, applicationId, scope });
 		const approved =
 			context.bootstrap ||
 			(await authority.authorize(
@@ -286,6 +299,7 @@ export class PluginCapabilityBroker {
 				handler.approvalDetail?.(prepared, { pluginId, applicationId, scope }),
 				context.signal,
 				handler.approval,
+				review,
 			));
 		const execute = async () => {
 			if (!approved) throw new Error(`Plugin capability denied: ${name}`);

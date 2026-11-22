@@ -127,6 +127,7 @@ function createBytePorts(
 	contentHash: string,
 	stagingRoot: () => string,
 	lease: P5ResourceRootLease,
+	pluginId: string,
 ): PluginRuntimeCapabilitiesOptions {
 	const disposed = new AbortController();
 	const grantOf = createGrantResolver(options, activation, disposed.signal, contentHash, stagingRoot, lease);
@@ -137,6 +138,16 @@ function createBytePorts(
 	let stagingRemoved = false;
 	handlers["bytes.write"] = {
 		...write,
+		approvalReview: (input, facts) => ({
+			kind: "byte-write",
+			pluginId: facts.pluginId || pluginId,
+			root: lease.root(),
+			file: {
+				path: String((input as { path?: unknown }).path ?? ""),
+				bytes: Number((input as { source?: { bytes?: unknown } }).source?.bytes ?? 0),
+				sha256: String((input as { source?: { sha256?: unknown } }).source?.sha256 ?? ""),
+			},
+		}),
 		execute: async (input, context) => {
 			const result = await write.execute(input, context);
 			if (
@@ -191,6 +202,6 @@ export function createP5ByteRuntimeCapabilities(
 			await lease.close(async () => undefined);
 			throw error;
 		}
-		return createBytePorts(options, activation, contentHash, stagingRoot, lease);
+		return createBytePorts(options, activation, contentHash, stagingRoot, lease, source.pluginId);
 	};
 }

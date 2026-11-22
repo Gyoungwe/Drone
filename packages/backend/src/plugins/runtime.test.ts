@@ -6,7 +6,7 @@ import type {
 } from "@gyoungwe/plugin-api/runtime";
 import { Type } from "typebox";
 import { describe, expect, it, vi } from "vitest";
-import { type PluginRuntimePolicy, PluginRuntimeRegistry } from "./runtime";
+import { PluginRuntimeRegistry } from "./runtime";
 
 function deferred<T>() {
 	let resolve!: (value: T | PromiseLike<T>) => void;
@@ -18,7 +18,7 @@ function deferred<T>() {
 	return { promise, resolve, reject };
 }
 
-function policy(): PluginRuntimePolicy {
+function policy(): import("./runtime-invocation").PluginRuntimePolicy {
 	return {
 		authorizeActivation: vi.fn(async () => true),
 		authorizeInvocation: vi.fn(async () => true),
