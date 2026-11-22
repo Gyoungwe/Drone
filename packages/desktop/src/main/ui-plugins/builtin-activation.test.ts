@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { StorageRegistry } from "@drone/backend";
 import { expect, it, vi } from "vitest";
 import type { DesktopRuntimeBridgeOptions } from "./runtime-bridge";
 
@@ -27,6 +28,8 @@ import { createDesktopRuntime } from "./runtime-host";
 
 type Sessions = Parameters<typeof createDesktopRuntime>[2];
 
+const storage = new StorageRegistry();
+
 it("starts a built-in package's runtime without asking, and still asks for everything else", async () => {
 	const builtin = {
 		pluginId: "@drone/core",
@@ -41,7 +44,14 @@ it("starts a built-in package's runtime without asking, and still asks for every
 	createDesktopRuntime(
 		{ builtinPackages: new Map([[builtin.packageRoot, builtin.pluginId]]) } as unknown as UiPluginManager,
 		tmpdir(),
-		{ getTaskGrants: () => ({}) } as unknown as Sessions,
+		{
+			getTaskGrants: () => ({}),
+			// The P5 composition registers the fact journal in the host's
+			// storage ledger when the runtime is built, so the stub returns
+			// one stable registry rather than a fresh one per call.
+			getStorageRegistry: () => storage,
+			getPluginCallerContext: () => undefined,
+		} as unknown as Sessions,
 		(owner) => ({ ownerId: owner.id, send: () => false, resolved: () => undefined }),
 	);
 	const owner = { id: 1, isDestroyed: () => false };

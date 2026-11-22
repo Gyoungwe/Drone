@@ -16,6 +16,7 @@ import { app, BrowserWindow, dialog, webContents } from "electron";
 import { createDesktopResourceCapabilities } from "./desktop-resource-capabilities";
 import type { UiPluginManager } from "./manager";
 import { composeP5Capabilities } from "./p5-capability-composition";
+import { createDesktopP5Composition } from "./p5-host-composition";
 import {
 	DesktopRuntimeBridge,
 	type DesktopRuntimeBridgeOptions,
@@ -48,12 +49,17 @@ export function createDesktopRuntime(
 	);
 	const executionIntegrityKey = createExecutionIntegrityKey();
 	const executionAcceptedFacts = new Map<string, ExecutionIdentity>();
+	// Z2 — the P5 fact ownership the coordinator binds a native owner through.
+	// The composition supplies the journal, the scope derivation and the
+	// host's authority; the coordinator never builds any of them itself.
+	const p5Composition = createDesktopP5Composition({ sessions });
 	return new DesktopRuntimeBridge({
 		source: (name) => manager.runtimeSource(name),
 		sources: () => manager.runtimeSources(),
 		classifySelectedPath: (path) => manager.classifyNativeSelection(path),
 		getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
 		taskGrants: sessions.getTaskGrants(),
+		factOwners: p5Composition.factOwners,
 		questionTransport,
 		enabled: (name) => manager.isEnabled(name) || manager.isNativeSourceAvailable(name),
 		factory: (source) => createProcessPluginRuntime({ ...source, runtimeDirectory }),
