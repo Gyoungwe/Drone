@@ -5568,20 +5568,20 @@ function createResearchConnectorHostLoader(options) {
 var researchConnectorHostLoader = createResearchConnectorHostLoader({});
 
 // node_modules/@gyoungwe/pi-knowledge/dist/host.mjs
-import { AsyncLocalStorage } from "node:async_hooks";
-import { createHash as createHash11, randomUUID as randomUUID6 } from "node:crypto";
-import { mkdir as mkdir5, readFile as readFile8, realpath as realpath7, rename as rename5, writeFile as writeFile6 } from "node:fs/promises";
-import { basename as basename5, isAbsolute as isAbsolute8, join as join7, resolve as resolve9 } from "node:path";
-import { readdir as readdir2, readFile as readFile22, stat as stat4 } from "node:fs/promises";
-import { join as join22, relative as relative8, sep as sep8 } from "node:path";
-import { createHash as createHash52 } from "node:crypto";
+import { createHash as createHash11 } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat as lstat2, open as open2, realpath as realpath22 } from "node:fs/promises";
-import { isAbsolute as isAbsolute32, join as join52, relative as relative32, sep as sep32 } from "node:path";
-import { createHash as createHash62, randomUUID as randomUUID32 } from "node:crypto";
+import { lstat as lstat2, open as open2, realpath as realpath7 } from "node:fs/promises";
+import { isAbsolute as isAbsolute8, join as join7, relative as relative8, sep as sep8 } from "node:path";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash as createHash32, randomUUID as randomUUID6 } from "node:crypto";
+import { mkdir as mkdir5, readFile as readFile8, realpath as realpath22, rename as rename5, writeFile as writeFile6 } from "node:fs/promises";
+import { basename as basename5, isAbsolute as isAbsolute22, join as join22, resolve as resolve9 } from "node:path";
+import { readdir as readdir2, readFile as readFile22, stat as stat4 } from "node:fs/promises";
+import { join as join32, relative as relative22, sep as sep22 } from "node:path";
+import { createHash as createHash72, randomUUID as randomUUID32 } from "node:crypto";
 import { mkdir as mkdir32, readFile as readFile52, rename as rename32, unlink as unlink2, writeFile as writeFile32 } from "node:fs/promises";
 import { join as join62 } from "node:path";
-import { createHash as createHash72, randomUUID as randomUUID42 } from "node:crypto";
+import { createHash as createHash82, randomUUID as randomUUID42 } from "node:crypto";
 import { lstat as lstat3, mkdir as mkdir42, readFile as readFile62, rename as rename42, unlink as unlink3, writeFile as writeFile42 } from "node:fs/promises";
 import { dirname as dirname22, join as join72 } from "node:path";
 import { URL as URL2 } from "node:url";
@@ -5590,26 +5590,26 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join as join8 } from "node:path";
 import { mkdirSync as mkdirSync2 } from "node:fs";
 import { dirname as dirname32, join as join9 } from "node:path";
-import { createHash as createHash82, randomUUID as randomUUID62 } from "node:crypto";
+import { createHash as createHash92, randomUUID as randomUUID62 } from "node:crypto";
 import { relative as relative42, resolve as resolve42, sep as sep42 } from "node:path";
 import { randomUUID as randomUUID8 } from "node:crypto";
 import { mkdir as mkdir6, readFile as readFile72, rename as rename52, unlink as unlink4, writeFile as writeFile62 } from "node:fs/promises";
 import { join as join11 } from "node:path";
-import { createHash as createHash102, randomUUID as randomUUID10 } from "node:crypto";
+import { createHash as createHash112, randomUUID as randomUUID10 } from "node:crypto";
 import { lstat as lstat6, mkdir as mkdir7, readFile as readFile9, realpath as realpath42, rename as rename6, unlink as unlink5, writeFile as writeFile7 } from "node:fs/promises";
 import { dirname as dirname42, isAbsolute as isAbsolute52, join as join12, relative as relative62, resolve as resolve62, sep as sep62 } from "node:path";
-import { createHash as createHash112 } from "node:crypto";
-import { createHash as createHash12, randomUUID as randomUUID11 } from "node:crypto";
+import { createHash as createHash12 } from "node:crypto";
+import { createHash as createHash13, randomUUID as randomUUID11 } from "node:crypto";
 import { constants as constants2 } from "node:fs";
 import { link, lstat as lstat7, mkdir as mkdir8, open as open22, realpath as realpath52, rename as rename7, unlink as unlink6, writeFile as writeFile8 } from "node:fs/promises";
 import { basename as basename22, dirname as dirname5, isAbsolute as isAbsolute62, join as join13, relative as relative72, resolve as resolve72, sep as sep72 } from "node:path";
-import { createHash as createHash13, randomUUID as randomUUID12 } from "node:crypto";
+import { createHash as createHash14, randomUUID as randomUUID12 } from "node:crypto";
 import { link as link2, lstat as lstat8, mkdir as mkdir9, readdir as readdir22, readFile as readFile10, rename as rename8, rm, unlink as unlink7, writeFile as writeFile9 } from "node:fs/promises";
 import { basename as basename32, dirname as dirname6, join as join14 } from "node:path";
-import { createHash as createHash14 } from "node:crypto";
-import { createHash as createHash15, randomUUID as randomUUID13 } from "node:crypto";
+import { createHash as createHash15 } from "node:crypto";
+import { createHash as createHash16, randomUUID as randomUUID13 } from "node:crypto";
 import { randomUUID as randomUUID14 } from "node:crypto";
-import { createHash as createHash17, randomUUID as randomUUID16 } from "node:crypto";
+import { createHash as createHash18, randomUUID as randomUUID16 } from "node:crypto";
 import { mkdir as mkdir10, rename as rename9, writeFile as writeFile10 } from "node:fs/promises";
 import { dirname as dirname8 } from "node:path";
 import { realpath as realpath62, stat as stat22 } from "node:fs/promises";
@@ -5620,19 +5620,19 @@ import { createHash as createHash20, randomUUID as randomUUID18 } from "node:cry
 import { lstat as lstat10, mkdir as mkdir11, readFile as readFile11, realpath as realpath8, stat as stat32, writeFile as writeFile11 } from "node:fs/promises";
 import { dirname as dirname9, isAbsolute as isAbsolute9, join as join16, relative as relative10, resolve as resolve11 } from "node:path";
 import { pathToFileURL as pathToFileURL3 } from "node:url";
-import { createHash as createHash32 } from "node:crypto";
-import { createHash as createHash42, randomUUID as randomUUID22 } from "node:crypto";
-import { lstat as lstat4, mkdir as mkdir22, readFile as readFile32, rename as rename22, unlink, writeFile as writeFile22 } from "node:fs/promises";
-import { isAbsolute as isAbsolute22, join as join32, relative as relative22, resolve as resolve22, sep as sep22 } from "node:path";
+import { createHash as createHash52 } from "node:crypto";
+import { createHash as createHash62, randomUUID as randomUUID22 } from "node:crypto";
+import { lstat as lstat22, mkdir as mkdir22, readFile as readFile32, rename as rename22, unlink, writeFile as writeFile22 } from "node:fs/promises";
+import { isAbsolute as isAbsolute32, join as join42, relative as relative32, resolve as resolve22, sep as sep32 } from "node:path";
 import { readFile as readFile42 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
-import { join as join42, resolve as resolve32 } from "node:path";
+import { join as join52, resolve as resolve32 } from "node:path";
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { lstat as lstat42, mkdir as mkdir52, realpath as realpath32, writeFile as writeFile52 } from "node:fs/promises";
+import { lstat as lstat4, mkdir as mkdir52, realpath as realpath32, writeFile as writeFile52 } from "node:fs/promises";
 import { isAbsolute as isAbsolute42, join as join10, relative as relative52, resolve as resolve52, sep as sep52 } from "node:path";
 import { randomUUID as randomUUID9 } from "node:crypto";
 import { lstat as lstat5, readFile as readFile82 } from "node:fs/promises";
-import { createHash as createHash92 } from "node:crypto";
+import { createHash as createHash102 } from "node:crypto";
 import { createHash as createHash19, randomUUID as randomUUID17 } from "node:crypto";
 import { lstat as lstat9, realpath as realpath72 } from "node:fs/promises";
 import { relative as relative9, resolve as resolve10, sep as sep9 } from "node:path";
@@ -5652,6 +5652,361 @@ var __export2 = (target, all) => {
   for (var name in all)
     __defProp2(target, name, { get: all[name], enumerable: true });
 };
+var files_exports = {};
+__export2(files_exports, {
+  MAX_NOTE_BYTES: () => MAX_NOTE_BYTES,
+  allowedSegment: () => allowedSegment,
+  canRead: () => canRead,
+  fileVersion: () => fileVersion,
+  inspectNote: () => inspectNote,
+  noteScope: () => noteScope,
+  readNoteFile: () => readNoteFile,
+  safeNotePath: () => safeNotePath,
+  snippet: () => snippet,
+  validateNote: () => validateNote
+});
+function allowedSegment(name) {
+  return !!name && !name.startsWith(".") && !OMIT.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
+}
+function validateNote(path) {
+  if (typeof path !== "string" || isAbsolute8(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment))
+    throw new Error("Expected an allowed Vault-relative Markdown path");
+  const first = path.split("/")[0] ?? "";
+  if (RESERVED.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
+    throw new Error("Reserved Vault directories require canonical casing");
+  return path;
+}
+function noteScope(path) {
+  const parts = path.split("/");
+  return path.startsWith("Projects/") && parts.length > 2 ? parts[1] ?? "shared" : "shared";
+}
+function canRead(path, project) {
+  const scope = noteScope(path);
+  return scope === "shared" || scope === project;
+}
+function fileVersion(stat42) {
+  return `${stat42.mtimeMs}:${stat42.ctimeMs}:${stat42.size}:${stat42.ino}`;
+}
+async function safeNotePath(vault, path) {
+  validateNote(path);
+  let full = vault;
+  for (const part of path.split("/")) {
+    full = join7(full, part);
+    if ((await lstat2(full)).isSymbolicLink()) throw new Error("Knowledge reads do not follow symlinks");
+  }
+  const actual = await realpath7(full);
+  const rel = relative8(vault, actual);
+  if (!rel || isAbsolute8(rel) || rel === ".." || rel.startsWith(`..${sep8}`))
+    throw new Error("Note is outside the bound Vault");
+  return actual;
+}
+async function inspectNote(vault, path) {
+  const full = await safeNotePath(vault, path);
+  const stat42 = await lstat2(full);
+  if (!stat42.isFile()) throw new Error("Expected a regular note");
+  return { full, stat: stat42, signature: fileVersion(stat42) };
+}
+async function closeQuietly(handle) {
+  try {
+    await handle.close();
+  } catch {
+  }
+}
+async function readNoteFile(vault, path) {
+  const { full } = await inspectNote(vault, path);
+  const handle = await open2(full, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
+  try {
+    const before = await handle.stat();
+    if (!before.isFile() || before.size > MAX_NOTE_BYTES)
+      throw new Error("Note exceeds the 1 MiB indexing limit");
+    const buffer = Buffer.alloc(Number(before.size) + 1);
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    const after = await handle.stat();
+    const current = await inspectNote(vault, path);
+    if (fileVersion(before) !== fileVersion(after) || fileVersion(after) !== current.signature || offset !== before.size)
+      throw new Error("Note changed while reading; retry against its latest version");
+    const bytes = buffer.subarray(0, offset);
+    return {
+      path,
+      text: bytes.toString("utf8"),
+      hash: createHash11("sha256").update(bytes).digest("hex"),
+      signature: fileVersion(after),
+      bytes: offset
+    };
+  } catch (error) {
+    await closeQuietly(handle);
+    throw error;
+  } finally {
+    await closeQuietly(handle);
+  }
+}
+function snippet(text42, { startLine = 1, maxChars = 5e3 } = {}) {
+  const lines = text42.split("\n");
+  const start = Math.max(0, Math.floor(startLine) - 1);
+  const selected = [];
+  let chars = 0;
+  for (let i = start; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    if (chars + line.length + 1 > maxChars) {
+      if (!selected.length) selected.push(line.slice(0, maxChars));
+      break;
+    }
+    selected.push(line);
+    chars += line.length + 1;
+  }
+  return {
+    text: selected.join("\n"),
+    startLine: start + 1,
+    endLine: start + selected.length,
+    totalLines: lines.length,
+    truncated: start > 0 || start + selected.length < lines.length || selected.length === 1 && (selected[0]?.length ?? 0) < (lines[start]?.length || 0)
+  };
+}
+var MAX_NOTE_BYTES;
+var OMIT;
+var RESERVED;
+var init_files = __esm({
+  "src/core/files.ts"() {
+    "use strict";
+    MAX_NOTE_BYTES = 1024 * 1024;
+    OMIT = /* @__PURE__ */ new Set([
+      "node_modules",
+      "dist",
+      "build",
+      "out",
+      "coverage",
+      "vendor",
+      "venv",
+      "__pycache__",
+      "Attachments",
+      "Templates",
+      "_template"
+    ]);
+    RESERVED = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
+  }
+});
+var init_ingest_identity = __esm({
+  "src/core/ingest-identity.ts"() {
+    "use strict";
+  }
+});
+function stripComment(text42) {
+  let quote = null;
+  for (let i = 0; i < text42.length; i++) {
+    const char = text42[i];
+    if (quote) {
+      if (char === "\\" && quote === '"') i++;
+      else if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === "#" && (i === 0 || /\s/.test(text42[i - 1] ?? ""))) return text42.slice(0, i).trimEnd();
+  }
+  return text42;
+}
+function splitFlow(inner) {
+  const items = [];
+  let current = "";
+  let quote = null;
+  let depth = 0;
+  for (let i = 0; i < inner.length; i++) {
+    const char = inner[i] ?? "";
+    if (quote) {
+      current += char;
+      if (char === "\\" && quote === '"') current += inner[++i] ?? "";
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'") quote = char;
+    else if (char === "[" || char === "{") depth++;
+    else if (char === "]" || char === "}") depth--;
+    if (char === "," && depth === 0) {
+      items.push(current.trim());
+      current = "";
+    } else current += char;
+  }
+  if (current.trim()) items.push(current.trim());
+  return items;
+}
+function parseScalar(raw) {
+  const text42 = raw.trim();
+  if (text42 === "" || text42 === "~" || text42 === "null" || text42 === "Null" || text42 === "NULL") return null;
+  if (text42 === "true" || text42 === "True") return true;
+  if (text42 === "false" || text42 === "False") return false;
+  if (text42.startsWith('"')) {
+    if (text42.endsWith('"') && text42.length >= 2) {
+      try {
+        return JSON.parse(text42);
+      } catch {
+        return text42.slice(1, -1).replace(/\\"/g, '"');
+      }
+    }
+    throw new Error("Unterminated double-quoted string");
+  }
+  if (text42.startsWith("'")) {
+    if (text42.endsWith("'") && text42.length >= 2) return text42.slice(1, -1).replace(/''/g, "'");
+    throw new Error("Unterminated single-quoted string");
+  }
+  if (text42.startsWith("[")) {
+    if (!text42.endsWith("]")) throw new Error("Unterminated flow sequence");
+    const inner = text42.slice(1, -1).trim();
+    return inner ? splitFlow(inner).map(parseScalar) : [];
+  }
+  if (text42.startsWith("{")) {
+    if (!text42.endsWith("}")) throw new Error("Unterminated flow mapping");
+    const inner = text42.slice(1, -1).trim();
+    const out = {};
+    if (!inner) return out;
+    for (const pair of splitFlow(inner)) {
+      const match = pair.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:\s*(.*)$/);
+      if (!match) throw new Error(`Invalid flow mapping entry: ${pair}`);
+      const key = String(parseScalar(match[1] ?? ""));
+      if (!UNSAFE_KEYS.has(key)) out[key] = parseScalar(match[2] ?? "");
+    }
+    return out;
+  }
+  if (/^[&*!|>]/.test(text42)) throw new Error(`Unsupported YAML syntax: ${text42.slice(0, 20)}`);
+  if (/^-?\d+(?:\.\d+)?$/.test(text42) && text42.length <= 15) return Number(text42);
+  return text42;
+}
+function isListItem(line) {
+  return line.text === "-" || line.text.startsWith("- ");
+}
+var KNOWLEDGE_TYPES;
+var RUN_RESULT_TYPES;
+var NOTE_TYPES;
+var MAX_FRONTMATTER_CHARS;
+var MAX_DEPTH;
+var UNSAFE_KEYS;
+var KEY_LINE;
+var Parser2;
+var init_ingest_frontmatter = __esm({
+  "src/core/ingest-frontmatter.ts"() {
+    "use strict";
+    init_ingest_identity();
+    KNOWLEDGE_TYPES = [
+      "paper",
+      "method",
+      "software",
+      "dataset",
+      "concept",
+      "entity",
+      "idea",
+      "claim",
+      "evidence",
+      "decision",
+      "question",
+      "wiki"
+    ];
+    RUN_RESULT_TYPES = ["run", "artifact", "explainer"];
+    NOTE_TYPES = [...KNOWLEDGE_TYPES, ...RUN_RESULT_TYPES];
+    MAX_FRONTMATTER_CHARS = 64 * 1024;
+    MAX_DEPTH = 6;
+    UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+    KEY_LINE = /^("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^\s"'#\-[{][^:#]*?|-[^\s:#][^:#]*?)\s*:(?:\s+(.*)|\s*)$/;
+    Parser2 = class {
+      constructor(lines) {
+        this.lines = lines;
+      }
+      index = 0;
+      parseDocument() {
+        if (!this.lines.length) return {};
+        const first = this.lines[0];
+        if (first.indent !== 0) throw new Error(`Line ${first.number}: top-level key must not be indented`);
+        if (isListItem(first)) throw new Error(`Line ${first.number}: frontmatter must be a mapping`);
+        const value = this.parseMap(0, 0);
+        if (this.index < this.lines.length) {
+          const line = this.lines[this.index];
+          throw new Error(`Line ${line.number}: unexpected indentation`);
+        }
+        return value;
+      }
+      peek() {
+        return this.lines[this.index];
+      }
+      parseBlock(indent, depth) {
+        if (depth > MAX_DEPTH) throw new Error("Frontmatter nesting is too deep");
+        const line = this.peek();
+        if (!line) return null;
+        return isListItem(line) ? this.parseList(line.indent, depth) : this.parseMap(indent, depth);
+      }
+      valueAfterKey(indent, depth, rest) {
+        if (rest !== void 0 && rest.trim() !== "") {
+          const value = stripComment(rest);
+          if (/^[|>][+-]?$/.test(value.trim())) return this.parseBlockScalar(indent, value.trim());
+          return parseScalar(value);
+        }
+        const next = this.peek();
+        if (!next) return null;
+        if (next.indent > indent) return this.parseBlock(next.indent, depth + 1);
+        if (next.indent === indent && isListItem(next)) return this.parseList(indent, depth + 1);
+        return null;
+      }
+      parseBlockScalar(indent, style) {
+        const collected = [];
+        let blockIndent = null;
+        while (this.index < this.lines.length) {
+          const line = this.lines[this.index];
+          if (line.indent <= indent) break;
+          blockIndent ??= line.indent;
+          collected.push(`${" ".repeat(Math.max(0, line.indent - blockIndent))}${line.text}`);
+          this.index++;
+        }
+        const joined = style.startsWith("|") ? collected.join("\n") : collected.join(" ");
+        return style.endsWith("-") ? joined : `${joined}
+`;
+      }
+      parseMap(indent, depth) {
+        const out = {};
+        while (this.index < this.lines.length) {
+          const line = this.lines[this.index];
+          if (line.indent < indent) break;
+          if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
+          if (isListItem(line)) break;
+          const match = line.text.match(KEY_LINE);
+          if (!match) throw new Error(`Line ${line.number}: expected "key: value"`);
+          const key = String(parseScalar(match[1] ?? "")).trim();
+          this.index++;
+          const value = this.valueAfterKey(indent, depth, match[2]);
+          if (UNSAFE_KEYS.has(key)) continue;
+          if (Object.hasOwn(out, key)) throw new Error(`Line ${line.number}: duplicate key "${key}"`);
+          out[key] = value;
+        }
+        return out;
+      }
+      parseList(indent, depth) {
+        const out = [];
+        while (this.index < this.lines.length) {
+          const line = this.lines[this.index];
+          if (line.indent !== indent || !isListItem(line)) {
+            if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
+            break;
+          }
+          const rest = line.text === "-" ? "" : line.text.slice(2);
+          const offset = line.text === "-" ? 1 : 2 + (rest.length - rest.trimStart().length);
+          const content = rest.trim();
+          if (!content) {
+            this.index++;
+            const next = this.peek();
+            out.push(next && next.indent > indent ? this.parseBlock(next.indent, depth + 1) : null);
+            continue;
+          }
+          if (KEY_LINE.test(stripComment(content)) && !/^["'[{]/.test(content)) {
+            this.lines[this.index] = { indent: indent + offset, text: content, number: line.number };
+            out.push(this.parseMap(indent + offset, depth + 1));
+            continue;
+          }
+          this.index++;
+          out.push(parseScalar(stripComment(content)));
+        }
+        return out;
+      }
+    };
+  }
+});
 function direction(claim) {
   if (claim.direction) return claim.direction;
   const text42 = normalize(`${claim.predicate} ${claim.value || claim.claim}`);
@@ -5809,17 +6164,17 @@ function errorCode(error) {
 function knowledgeDirectory() {
   const value = process.env.DRONE_KNOWLEDGE_DIR;
   if (!value) return null;
-  if (!isAbsolute8(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
+  if (!isAbsolute22(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
   return resolve9(value);
 }
 function projectIdentity(cwd, configured2) {
   if (typeof configured2 === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured2)) return configured2;
   const path = resolve9(cwd);
   const stem = basename5(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
-  return `${stem}-${createHash11("sha256").update(path).digest("hex").slice(0, 10)}`;
+  return `${stem}-${createHash32("sha256").update(path).digest("hex").slice(0, 10)}`;
 }
 function validateBinding(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute8(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute22(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
     throw new Error("Invalid application knowledge binding; no project fallback was used");
 }
 function parseKnowledgeBinding(value) {
@@ -5831,7 +6186,7 @@ async function readKnowledgeBindingWithState(state, directory, { fresh = false }
   if (!directory) return null;
   let value;
   try {
-    value = JSON.parse((await readFile8(join7(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
+    value = JSON.parse((await readFile8(join22(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
   } catch (error) {
     if (errorCode(error) === "ENOENT") return null;
     throw new Error(
@@ -5851,11 +6206,11 @@ async function saveKnowledgeBindingWithState(state, directory, input, expectedRe
     const current = await readKnowledgeBindingWithState(state, directory, { fresh: true });
     if (expectedRevision !== null && (current?.revision || 0) !== expectedRevision)
       throw new Error("Knowledge binding changed while confirming; review the new binding");
-    const vault = await realpath7(input.vault);
+    const vault = await realpath22(input.vault);
     const value = {
       version: 1,
       vault,
-      vaultId: createHash11("sha256").update(vault).digest("hex").slice(0, 24),
+      vaultId: createHash32("sha256").update(vault).digest("hex").slice(0, 24),
       revision: (current?.revision || 0) + 1,
       profile: input.profile,
       depositMode: input.depositMode,
@@ -5864,10 +6219,10 @@ async function saveKnowledgeBindingWithState(state, directory, input, expectedRe
     };
     validateBinding(value);
     await mkdir5(directory, { recursive: true, mode: 448 });
-    const temporary = join7(directory, `binding.${randomUUID6()}.tmp`);
+    const temporary = join22(directory, `binding.${randomUUID6()}.tmp`);
     await writeFile6(temporary, `${JSON.stringify(value, null, 2)}
 `, { mode: 384, flag: "wx" });
-    await rename5(temporary, join7(directory, "binding.json"));
+    await rename5(temporary, join22(directory, "binding.json"));
     return value;
   });
   state.queues.set(directory, operation);
@@ -5890,7 +6245,7 @@ async function withKnowledgeBinding(binding, operation) {
   return withKnowledgeBindingWithState(defaultState, knowledgeDirectory(), binding, operation);
 }
 function createKnowledgeConfigApi(state = createKnowledgeConfigState(), directory = knowledgeDirectory()) {
-  if (directory !== null && !isAbsolute8(directory)) throw new Error("Knowledge directory must be absolute");
+  if (directory !== null && !isAbsolute22(directory)) throw new Error("Knowledge directory must be absolute");
   const fixedDirectory = directory === null ? null : resolve9(directory);
   return {
     knowledgeDirectory: () => fixedDirectory,
@@ -5921,11 +6276,11 @@ async function collectRecentNotes(vault, sinceMs) {
     for (const entry of entries) {
       if (scanned >= DAILY_DISCOVERY_LIMITS.maxScannedFiles) return;
       if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
-      const full = join22(dir, entry.name);
+      const full = join32(dir, entry.name);
       if (entry.isDirectory()) await walk(full);
       else if (entry.isFile() && entry.name.endsWith(".md")) {
         scanned++;
-        const path = relative8(vault, full).split(sep8).join("/");
+        const path = relative22(vault, full).split(sep22).join("/");
         if (NAVIGATION.test(path)) continue;
         const info = await stat4(full).catch(() => null);
         if (info && info.mtimeMs > sinceMs && info.size <= DAILY_DISCOVERY_LIMITS.maxNoteBytes)
@@ -5933,11 +6288,11 @@ async function collectRecentNotes(vault, sinceMs) {
       }
     }
   }
-  for (const root of SCAN_ROOTS) await walk(join22(vault, root));
+  for (const root of SCAN_ROOTS) await walk(join32(vault, root));
   found.sort((a, b) => b.mtime - a.mtime);
   const notes = [];
   for (const item of found.slice(0, DAILY_DISCOVERY_LIMITS.maxNewNotes)) {
-    const text42 = await readFile22(join22(vault, item.path), "utf8").catch(() => "");
+    const text42 = await readFile22(join32(vault, item.path), "utf8").catch(() => "");
     if (!text42.trim()) continue;
     notes.push({
       path: item.path,
@@ -6276,144 +6631,6 @@ var init_runtime_host = __esm({
     } = compatibilityKnowledgeRuntimeHost);
   }
 });
-var files_exports = {};
-__export2(files_exports, {
-  MAX_NOTE_BYTES: () => MAX_NOTE_BYTES,
-  allowedSegment: () => allowedSegment,
-  canRead: () => canRead,
-  fileVersion: () => fileVersion,
-  inspectNote: () => inspectNote,
-  noteScope: () => noteScope,
-  readNoteFile: () => readNoteFile,
-  safeNotePath: () => safeNotePath,
-  snippet: () => snippet,
-  validateNote: () => validateNote
-});
-function allowedSegment(name) {
-  return !!name && !name.startsWith(".") && !OMIT.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
-}
-function validateNote(path) {
-  if (typeof path !== "string" || isAbsolute32(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment))
-    throw new Error("Expected an allowed Vault-relative Markdown path");
-  const first = path.split("/")[0] ?? "";
-  if (RESERVED2.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
-    throw new Error("Reserved Vault directories require canonical casing");
-  return path;
-}
-function noteScope(path) {
-  const parts = path.split("/");
-  return path.startsWith("Projects/") && parts.length > 2 ? parts[1] ?? "shared" : "shared";
-}
-function canRead(path, project) {
-  const scope = noteScope(path);
-  return scope === "shared" || scope === project;
-}
-function fileVersion(stat42) {
-  return `${stat42.mtimeMs}:${stat42.ctimeMs}:${stat42.size}:${stat42.ino}`;
-}
-async function safeNotePath(vault, path) {
-  validateNote(path);
-  let full = vault;
-  for (const part of path.split("/")) {
-    full = join52(full, part);
-    if ((await lstat2(full)).isSymbolicLink()) throw new Error("Knowledge reads do not follow symlinks");
-  }
-  const actual = await realpath22(full);
-  const rel = relative32(vault, actual);
-  if (!rel || isAbsolute32(rel) || rel === ".." || rel.startsWith(`..${sep32}`))
-    throw new Error("Note is outside the bound Vault");
-  return actual;
-}
-async function inspectNote(vault, path) {
-  const full = await safeNotePath(vault, path);
-  const stat42 = await lstat2(full);
-  if (!stat42.isFile()) throw new Error("Expected a regular note");
-  return { full, stat: stat42, signature: fileVersion(stat42) };
-}
-async function closeQuietly(handle) {
-  try {
-    await handle.close();
-  } catch {
-  }
-}
-async function readNoteFile(vault, path) {
-  const { full } = await inspectNote(vault, path);
-  const handle = await open2(full, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
-  try {
-    const before = await handle.stat();
-    if (!before.isFile() || before.size > MAX_NOTE_BYTES)
-      throw new Error("Note exceeds the 1 MiB indexing limit");
-    const buffer = Buffer.alloc(Number(before.size) + 1);
-    let offset = 0;
-    while (offset < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
-      if (!bytesRead) break;
-      offset += bytesRead;
-    }
-    const after = await handle.stat();
-    const current = await inspectNote(vault, path);
-    if (fileVersion(before) !== fileVersion(after) || fileVersion(after) !== current.signature || offset !== before.size)
-      throw new Error("Note changed while reading; retry against its latest version");
-    const bytes = buffer.subarray(0, offset);
-    return {
-      path,
-      text: bytes.toString("utf8"),
-      hash: createHash52("sha256").update(bytes).digest("hex"),
-      signature: fileVersion(after),
-      bytes: offset
-    };
-  } catch (error) {
-    await closeQuietly(handle);
-    throw error;
-  } finally {
-    await closeQuietly(handle);
-  }
-}
-function snippet(text42, { startLine = 1, maxChars = 5e3 } = {}) {
-  const lines = text42.split("\n");
-  const start = Math.max(0, Math.floor(startLine) - 1);
-  const selected = [];
-  let chars = 0;
-  for (let i = start; i < lines.length; i++) {
-    const line = lines[i] ?? "";
-    if (chars + line.length + 1 > maxChars) {
-      if (!selected.length) selected.push(line.slice(0, maxChars));
-      break;
-    }
-    selected.push(line);
-    chars += line.length + 1;
-  }
-  return {
-    text: selected.join("\n"),
-    startLine: start + 1,
-    endLine: start + selected.length,
-    totalLines: lines.length,
-    truncated: start > 0 || start + selected.length < lines.length || selected.length === 1 && (selected[0]?.length ?? 0) < (lines[start]?.length || 0)
-  };
-}
-var MAX_NOTE_BYTES;
-var OMIT;
-var RESERVED2;
-var init_files = __esm({
-  "src/core/files.ts"() {
-    "use strict";
-    MAX_NOTE_BYTES = 1024 * 1024;
-    OMIT = /* @__PURE__ */ new Set([
-      "node_modules",
-      "dist",
-      "build",
-      "out",
-      "coverage",
-      "vendor",
-      "venv",
-      "__pycache__",
-      "Attachments",
-      "Templates",
-      "_template"
-    ]);
-    RESERVED2 = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
-  }
-});
 function statusTone(status) {
   const value = String(status || "");
   if (OK.has(value)) return "ok";
@@ -6528,7 +6745,7 @@ function createLocalReviewPolicyStorage(config) {
     return {
       kind: "value",
       value,
-      version: createHash62("sha256").update(bytes).digest("hex")
+      version: createHash72("sha256").update(bytes).digest("hex")
     };
   }
   return {
@@ -6865,7 +7082,7 @@ function localSemanticStorage(directory) {
       throw error;
     }
     if (Buffer.byteLength(raw) > MAX_FILE_BYTES) throw new Error("Semantic settings file is too large");
-    return { kind: "value", value: JSON.parse(raw), version: createHash72("sha256").update(raw).digest("hex") };
+    return { kind: "value", value: JSON.parse(raw), version: createHash82("sha256").update(raw).digest("hex") };
   }
   const queues2 = /* @__PURE__ */ new Map();
   return {
@@ -8031,7 +8248,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
     };
   }
   function fingerprintFor(settings2) {
-    return createHash82("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
+    return createHash92("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
   }
   function awaitSemanticDeadline(operation, controller) {
     let onAbort;
@@ -8121,7 +8338,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
         this.tickets.set(ticket, {
           cwd: resolve42(cwd),
           project,
-          queryHash: createHash82("sha256").update(query).digest("hex"),
+          queryHash: createHash92("sha256").update(query).digest("hex"),
           query,
           navigation,
           linkedWiki: [...linkedWiki],
@@ -8194,7 +8411,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
           hash: page.hash,
           startLine: page.startLine,
           endLine: page.endLine,
-          excerptHash: createHash82("sha256").update(page.text).digest("hex")
+          excerptHash: createHash92("sha256").update(page.text).digest("hex")
         };
         state.reads.delete(path);
         state.reads.set(path, receipt2);
@@ -9941,7 +10158,7 @@ var init_topic_memory = __esm({
       maxConflicts: 32,
       maxFileBytes: 512 * 1024
     });
-    digest3 = (value) => createHash102("sha256").update(String(value)).digest("hex");
+    digest3 = (value) => createHash112("sha256").update(String(value)).digest("hex");
     text22 = (value, limit) => String(value ?? "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, limit);
     slug = (value) => text22(value, 160).toLowerCase().replace(/[^a-z0-9\u0080-\uffff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "topic";
     ({ createTopicMemory, listTopics, readTopic, updateTopic, archiveTopic } = createTopicMemoryApi(
@@ -9986,7 +10203,7 @@ function targetWikiPath(path, project) {
   return path;
 }
 function immutableWikiProposalHash(proposal) {
-  return createHash112("sha256").update(
+  return createHash12("sha256").update(
     JSON.stringify({
       id: proposal.id,
       vaultId: proposal.vaultId,
@@ -10036,7 +10253,7 @@ async function hashRegularFile(path) {
   const flags = constants2.O_RDONLY | (constants2.O_NOFOLLOW || 0);
   const handle = await open22(path, flags);
   try {
-    return createHash12("sha256").update(await handle.readFile()).digest("hex");
+    return createHash13("sha256").update(await handle.readFile()).digest("hex");
   } finally {
     await handle.close();
   }
@@ -10102,7 +10319,7 @@ var init_layout = __esm({
         this.name = "VaultFileConflictError";
       }
     };
-    hash2 = (text42) => createHash12("sha256").update(text42).digest("hex");
+    hash2 = (text42) => createHash13("sha256").update(text42).digest("hex");
   }
 });
 async function renameWithRetry(from, to, options = {}) {
@@ -10224,7 +10441,7 @@ var init_wiki_review_node = __esm({
     "use strict";
     init_files();
     init_layout();
-    digest4 = (text42) => createHash13("sha256").update(text42).digest("hex");
+    digest4 = (text42) => createHash14("sha256").update(text42).digest("hex");
     RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
   }
 });
@@ -10342,7 +10559,7 @@ var init_wiki_review_reader = __esm({
     init_wiki_policy();
     MAX_PENDING = 100;
     MAX_AGE = 24 * 60 * 60 * 1e3;
-    digest5 = (text42) => createHash14("sha256").update(text42).digest("hex");
+    digest5 = (text42) => createHash15("sha256").update(text42).digest("hex");
   }
 });
 var wiki_review_exports = {};
@@ -10366,7 +10583,7 @@ function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui, io) {
   const { invalidateKnowledgeUi: invalidateKnowledgeUi2 } = ui;
   const AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
   const START2 = "<!-- pi-agent:managed:start -->", END2 = "<!-- pi-agent:managed:end -->";
-  const digest6 = (text42) => createHash15("sha256").update(text42).digest("hex");
+  const digest6 = (text42) => createHash16("sha256").update(text42).digest("hex");
   const MAX_PENDING2 = 100, MAX_AGE2 = 24 * 60 * 60 * 1e3;
   async function exclusive(key, operation) {
     return runRuntimeExclusive22("wiki-review", key, operation);
@@ -11214,7 +11431,7 @@ var init_maintenance = __esm({
     init_layout();
     START = "<!-- pi-agent:managed:start -->";
     END = "<!-- pi-agent:managed:end -->";
-    hash3 = (text42) => createHash17("sha256").update(text42).digest("hex");
+    hash3 = (text42) => createHash18("sha256").update(text42).digest("hex");
   }
 });
 function memoryNoteSlug(memory) {
@@ -11257,223 +11474,6 @@ var init_memory_note = __esm({
   "src/core/memory-note.ts"() {
     "use strict";
     yaml = (value) => JSON.stringify(value.replace(/\s+/g, " ").trim());
-  }
-});
-var init_ingest_identity = __esm({
-  "src/core/ingest-identity.ts"() {
-    "use strict";
-  }
-});
-function stripComment(text42) {
-  let quote = null;
-  for (let i = 0; i < text42.length; i++) {
-    const char = text42[i];
-    if (quote) {
-      if (char === "\\" && quote === '"') i++;
-      else if (char === quote) quote = null;
-    } else if (char === '"' || char === "'") quote = char;
-    else if (char === "#" && (i === 0 || /\s/.test(text42[i - 1] ?? ""))) return text42.slice(0, i).trimEnd();
-  }
-  return text42;
-}
-function splitFlow(inner) {
-  const items = [];
-  let current = "";
-  let quote = null;
-  let depth = 0;
-  for (let i = 0; i < inner.length; i++) {
-    const char = inner[i] ?? "";
-    if (quote) {
-      current += char;
-      if (char === "\\" && quote === '"') current += inner[++i] ?? "";
-      else if (char === quote) quote = null;
-      continue;
-    }
-    if (char === '"' || char === "'") quote = char;
-    else if (char === "[" || char === "{") depth++;
-    else if (char === "]" || char === "}") depth--;
-    if (char === "," && depth === 0) {
-      items.push(current.trim());
-      current = "";
-    } else current += char;
-  }
-  if (current.trim()) items.push(current.trim());
-  return items;
-}
-function parseScalar(raw) {
-  const text42 = raw.trim();
-  if (text42 === "" || text42 === "~" || text42 === "null" || text42 === "Null" || text42 === "NULL") return null;
-  if (text42 === "true" || text42 === "True") return true;
-  if (text42 === "false" || text42 === "False") return false;
-  if (text42.startsWith('"')) {
-    if (text42.endsWith('"') && text42.length >= 2) {
-      try {
-        return JSON.parse(text42);
-      } catch {
-        return text42.slice(1, -1).replace(/\\"/g, '"');
-      }
-    }
-    throw new Error("Unterminated double-quoted string");
-  }
-  if (text42.startsWith("'")) {
-    if (text42.endsWith("'") && text42.length >= 2) return text42.slice(1, -1).replace(/''/g, "'");
-    throw new Error("Unterminated single-quoted string");
-  }
-  if (text42.startsWith("[")) {
-    if (!text42.endsWith("]")) throw new Error("Unterminated flow sequence");
-    const inner = text42.slice(1, -1).trim();
-    return inner ? splitFlow(inner).map(parseScalar) : [];
-  }
-  if (text42.startsWith("{")) {
-    if (!text42.endsWith("}")) throw new Error("Unterminated flow mapping");
-    const inner = text42.slice(1, -1).trim();
-    const out = {};
-    if (!inner) return out;
-    for (const pair of splitFlow(inner)) {
-      const match = pair.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:\s*(.*)$/);
-      if (!match) throw new Error(`Invalid flow mapping entry: ${pair}`);
-      const key = String(parseScalar(match[1] ?? ""));
-      if (!UNSAFE_KEYS.has(key)) out[key] = parseScalar(match[2] ?? "");
-    }
-    return out;
-  }
-  if (/^[&*!|>]/.test(text42)) throw new Error(`Unsupported YAML syntax: ${text42.slice(0, 20)}`);
-  if (/^-?\d+(?:\.\d+)?$/.test(text42) && text42.length <= 15) return Number(text42);
-  return text42;
-}
-function isListItem(line) {
-  return line.text === "-" || line.text.startsWith("- ");
-}
-var KNOWLEDGE_TYPES;
-var RUN_RESULT_TYPES;
-var NOTE_TYPES;
-var MAX_FRONTMATTER_CHARS;
-var MAX_DEPTH;
-var UNSAFE_KEYS;
-var KEY_LINE;
-var Parser2;
-var init_ingest_frontmatter = __esm({
-  "src/core/ingest-frontmatter.ts"() {
-    "use strict";
-    init_ingest_identity();
-    KNOWLEDGE_TYPES = [
-      "paper",
-      "method",
-      "software",
-      "dataset",
-      "concept",
-      "entity",
-      "idea",
-      "claim",
-      "evidence",
-      "decision",
-      "question",
-      "wiki"
-    ];
-    RUN_RESULT_TYPES = ["run", "artifact", "explainer"];
-    NOTE_TYPES = [...KNOWLEDGE_TYPES, ...RUN_RESULT_TYPES];
-    MAX_FRONTMATTER_CHARS = 64 * 1024;
-    MAX_DEPTH = 6;
-    UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-    KEY_LINE = /^("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^\s"'#\-[{][^:#]*?|-[^\s:#][^:#]*?)\s*:(?:\s+(.*)|\s*)$/;
-    Parser2 = class {
-      constructor(lines) {
-        this.lines = lines;
-      }
-      index = 0;
-      parseDocument() {
-        if (!this.lines.length) return {};
-        const first = this.lines[0];
-        if (first.indent !== 0) throw new Error(`Line ${first.number}: top-level key must not be indented`);
-        if (isListItem(first)) throw new Error(`Line ${first.number}: frontmatter must be a mapping`);
-        const value = this.parseMap(0, 0);
-        if (this.index < this.lines.length) {
-          const line = this.lines[this.index];
-          throw new Error(`Line ${line.number}: unexpected indentation`);
-        }
-        return value;
-      }
-      peek() {
-        return this.lines[this.index];
-      }
-      parseBlock(indent, depth) {
-        if (depth > MAX_DEPTH) throw new Error("Frontmatter nesting is too deep");
-        const line = this.peek();
-        if (!line) return null;
-        return isListItem(line) ? this.parseList(line.indent, depth) : this.parseMap(indent, depth);
-      }
-      valueAfterKey(indent, depth, rest) {
-        if (rest !== void 0 && rest.trim() !== "") {
-          const value = stripComment(rest);
-          if (/^[|>][+-]?$/.test(value.trim())) return this.parseBlockScalar(indent, value.trim());
-          return parseScalar(value);
-        }
-        const next = this.peek();
-        if (!next) return null;
-        if (next.indent > indent) return this.parseBlock(next.indent, depth + 1);
-        if (next.indent === indent && isListItem(next)) return this.parseList(indent, depth + 1);
-        return null;
-      }
-      parseBlockScalar(indent, style) {
-        const collected = [];
-        let blockIndent = null;
-        while (this.index < this.lines.length) {
-          const line = this.lines[this.index];
-          if (line.indent <= indent) break;
-          blockIndent ??= line.indent;
-          collected.push(`${" ".repeat(Math.max(0, line.indent - blockIndent))}${line.text}`);
-          this.index++;
-        }
-        const joined = style.startsWith("|") ? collected.join("\n") : collected.join(" ");
-        return style.endsWith("-") ? joined : `${joined}
-`;
-      }
-      parseMap(indent, depth) {
-        const out = {};
-        while (this.index < this.lines.length) {
-          const line = this.lines[this.index];
-          if (line.indent < indent) break;
-          if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
-          if (isListItem(line)) break;
-          const match = line.text.match(KEY_LINE);
-          if (!match) throw new Error(`Line ${line.number}: expected "key: value"`);
-          const key = String(parseScalar(match[1] ?? "")).trim();
-          this.index++;
-          const value = this.valueAfterKey(indent, depth, match[2]);
-          if (UNSAFE_KEYS.has(key)) continue;
-          if (Object.hasOwn(out, key)) throw new Error(`Line ${line.number}: duplicate key "${key}"`);
-          out[key] = value;
-        }
-        return out;
-      }
-      parseList(indent, depth) {
-        const out = [];
-        while (this.index < this.lines.length) {
-          const line = this.lines[this.index];
-          if (line.indent !== indent || !isListItem(line)) {
-            if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
-            break;
-          }
-          const rest = line.text === "-" ? "" : line.text.slice(2);
-          const offset = line.text === "-" ? 1 : 2 + (rest.length - rest.trimStart().length);
-          const content = rest.trim();
-          if (!content) {
-            this.index++;
-            const next = this.peek();
-            out.push(next && next.indent > indent ? this.parseBlock(next.indent, depth + 1) : null);
-            continue;
-          }
-          if (KEY_LINE.test(stripComment(content)) && !/^["'[{]/.test(content)) {
-            this.lines[this.index] = { indent: indent + offset, text: content, number: line.number };
-            out.push(this.parseMap(indent + offset, depth + 1));
-            continue;
-          }
-          this.index++;
-          out.push(parseScalar(stripComment(content)));
-        }
-        return out;
-      }
-    };
   }
 });
 function looksLikeFileName(title) {
@@ -11791,15 +11791,15 @@ async function knowledgeOverview({ cwd = null, sessionId = null } = {}) {
       ...project,
       flow: sessionId ? flowFor(sessionId) : null
     };
-  let index = null, error = null, recentNotes = [], recentByCategory2 = null;
+  let index = null, error = null, recentNotes = [], recentByCategory = null;
   try {
     if (!(await stat32(binding.vault)).isDirectory()) throw new Error("Vault is not a directory");
     const service = await getKnowledgeService(binding);
     recentNotes = (await service.request("recentNotes", { project: project.project, limit: 10 }))?.items || [];
     try {
-      recentByCategory2 = (await service.request("recentByCategory", { project: project.project, limit: 10 }))?.groups || null;
+      recentByCategory = (await service.request("recentByCategory", { project: project.project, limit: 10 }))?.groups || null;
     } catch {
-      recentByCategory2 = null;
+      recentByCategory = null;
     }
     index = await service.request("status", { flushPending: true });
   } catch (e) {
@@ -11817,7 +11817,7 @@ async function knowledgeOverview({ cwd = null, sessionId = null } = {}) {
     reviewMode: await readReviewMode(),
     wikiHistory: project.project && !error ? (await wikiHistory(await getKnowledgeService(binding), project.project)).slice(0, 10) : [],
     recentNotes,
-    recentByCategory: recentByCategory2,
+    recentByCategory,
     localAnswerRate: (sessionId ? flowFor(sessionId)?.localAnswerRate : null) ?? knowledgeAnswerRate(),
     scope: "application",
     binding,
@@ -19144,6 +19144,8 @@ var KNOWLEDGE_REVIEWER = {
   maxTokens: 2800
 };
 var PROTECTED_KNOWLEDGE_AGENTS = [...KNOWLEDGE_SPECIALISTS, KNOWLEDGE_REVIEWER];
+init_files();
+init_ingest_frontmatter();
 init_claim_conflicts();
 init_config();
 init_daily_discovery();
@@ -19156,7 +19158,7 @@ var DAILY_DISCOVERY_SYSTEM = [
   `Return ONLY a JSON array with at most ${DAILY_DISCOVERY_LIMITS.maxIdeas} objects: {"title": short title, "idea": one or two sentences, "basis": [note paths from the input], "test": how to test it, "whyOverlooked": why it may have been missed}.`,
   "Write title, idea, test and whyOverlooked in the language of the notes. If nothing passes all three checks, return []. Never invent a note path, paper or number."
 ].join("\n");
-var digest2 = (text42) => createHash32("sha256").update(text42).digest("hex");
+var digest2 = (text42) => createHash52("sha256").update(text42).digest("hex");
 function summaryDeliveryClaims(details, markdown) {
   const receipt2 = details.delivery_receipt;
   if (!receipt2 || receipt2.version !== 1 || receipt2.semanticAssessment?.status !== "model-assessed" || receipt2.bodySha256 !== digest2(`${markdown.trim()}
@@ -19212,7 +19214,7 @@ var EXPERIENCE_LIMITS = Object.freeze({
   maxSchedulerJobIdChars: 180,
   maxQueryChars: 200
 });
-var HASH = (value) => createHash42("sha256").update(value).digest("hex");
+var HASH = (value) => createHash62("sha256").update(value).digest("hex");
 var now = () => (/* @__PURE__ */ new Date()).toISOString();
 function text5(value, limit) {
   if (typeof value !== "string" && typeof value !== "number") return "";
@@ -19382,7 +19384,7 @@ function normalizeArtifact(value) {
   if (!sha2562) return null;
   const bytes = typeof item.bytes === "number" && Number.isSafeInteger(item.bytes) && item.bytes >= 0 ? item.bytes : void 0;
   const pathValue = text5(item.path, 240).replaceAll("\\", "/");
-  const safePath = pathValue && !isAbsolute22(pathValue) && !pathValue.split("/").includes("..") && !/(?:^|\/)(?:\.env(?:\.[^/]*)?|auth\.json|credentials(?:\.json)?|\.ssh|\.git)(?:\/|$)/i.test(pathValue) ? pathValue : "";
+  const safePath = pathValue && !isAbsolute32(pathValue) && !pathValue.split("/").includes("..") && !/(?:^|\/)(?:\.env(?:\.[^/]*)?|auth\.json|credentials(?:\.json)?|\.ssh|\.git)(?:\/|$)/i.test(pathValue) ? pathValue : "";
   return {
     ...safePath ? { path: safePath } : {},
     sha256: sha2562,
@@ -19513,19 +19515,19 @@ function normalizeRecord(value, vaultId, project, hostId) {
   return result2;
 }
 function pathFor(directory, vaultId, project, hostId) {
-  if (!isAbsolute22(directory)) throw new Error("Experience directory must be absolute");
-  return join32(resolve22(directory), vaultId, "experience", project, `${hostId}.json`);
+  if (!isAbsolute32(directory)) throw new Error("Experience directory must be absolute");
+  return join42(resolve22(directory), vaultId, "experience", project, `${hostId}.json`);
 }
 async function ensureSafePath(directory, path) {
   const root = resolve22(directory);
-  const relativePath = relative22(root, resolve22(path));
-  if (isAbsolute22(relativePath) || relativePath === ".." || relativePath.startsWith(`..${sep22}`))
+  const relativePath = relative32(root, resolve22(path));
+  if (isAbsolute32(relativePath) || relativePath === ".." || relativePath.startsWith(`..${sep32}`))
     throw new Error("Experience path escapes knowledge directory");
   let current = root;
-  for (const segment of relativePath.split(sep22).slice(0, -1)) {
-    current = join32(current, segment);
+  for (const segment of relativePath.split(sep32).slice(0, -1)) {
+    current = join42(current, segment);
     try {
-      const stat42 = await lstat4(current);
+      const stat42 = await lstat22(current);
       if (stat42.isSymbolicLink()) throw new Error("Experience path cannot traverse symlinks");
       if (!stat42.isDirectory()) throw new Error("Experience path parent must be a directory");
     } catch (error) {
@@ -19536,7 +19538,7 @@ async function ensureSafePath(directory, path) {
 }
 async function readDocument(path, vaultId, project, hostId) {
   try {
-    const stat42 = await lstat4(path);
+    const stat42 = await lstat22(path);
     if (stat42.isSymbolicLink() || !stat42.isFile()) throw new Error("Experience file must be a regular file");
     if (stat42.size > EXPERIENCE_LIMITS.maxFileBytes) throw new Error("Experience file exceeds size limit");
     return validateDocument(JSON.parse(await readFile32(path, "utf8")), vaultId, project, hostId);
@@ -19806,9 +19808,9 @@ async function searchExperiences(options) {
 init_config();
 var SESSION_PROJECT_ENTRY = "drone-session-project-v1";
 var SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-var RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
+var RESERVED2 = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
 function isProjectSlug(value) {
-  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED.test(value);
+  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED2.test(value);
 }
 function normalizeProjectSlug(input) {
   if (typeof input !== "string") return null;
@@ -19819,7 +19821,7 @@ function workspaceProjectId(cwd, configured2) {
   return projectIdentity(cwd, isProjectSlug(configured2) ? configured2 : void 0);
 }
 function dailyWorkspaceDir(home = homedir2()) {
-  return join42(home, ".drone", "daily");
+  return join52(home, ".drone", "daily");
 }
 function samePath(a, b) {
   const left = resolve32(a).replace(/[\\/]+$/, "");
@@ -19872,7 +19874,7 @@ function resolveProjectIdentity(input) {
 }
 async function readConfiguredProject(cwd) {
   try {
-    const parsed = JSON.parse(await readFile42(join42(cwd, ".pi", "research-workspace.json"), "utf8"));
+    const parsed = JSON.parse(await readFile42(join52(cwd, ".pi", "research-workspace.json"), "utf8"));
     if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
       return parsed.knowledgeProjectId;
   } catch {
@@ -19945,7 +19947,7 @@ function createSpecialistDelivery(runtime, bindings) {
     if (answer.status !== "completed") return answer;
     const html = validateSpecialistHtml(answer.data.html), config = await runtime.loadWorkspaceConfig(ctx.cwd);
     const root = await realpath32(config.resultsRoot), run2 = await realpath32(resolve52(ctx.cwd, runDir || ""));
-    if (!contained(root, run2) || relative52(root, run2).split(sep52).length !== 2 || !run2.split(sep52).at(-1).startsWith("run-") || !(await lstat42(join10(run2, "metadata.json"))).isFile())
+    if (!contained(root, run2) || relative52(root, run2).split(sep52).length !== 2 || !run2.split(sep52).at(-1).startsWith("run-") || !(await lstat4(join10(run2, "metadata.json"))).isFile())
       throw new Error("Explainer destination must be an existing research run");
     return bindings.withKnowledgeBinding(c.binding, async () => {
       const artifactPath = join10(run2, `show-me-${randomUUID7()}.html`);
@@ -19985,7 +19987,7 @@ __export2(specialists_exports, {
 init_config();
 init_files();
 var clean = (value, limit = 120) => [...String(value || "")].map((char) => char.charCodeAt(0) < 32 ? " " : char).join("").trim().slice(0, limit);
-var digest22 = (value) => createHash92("sha256").update(String(value || "")).digest("hex").slice(0, 24);
+var digest22 = (value) => createHash102("sha256").update(String(value || "")).digest("hex").slice(0, 24);
 function specialistRequestSignature({
   role,
   task = "",
@@ -21761,7 +21763,6 @@ var compatibility4 = createPublicationApi(
   (create) => runtimeSlot("knowledge", "publication", create)
 );
 var { projectKnowledgeEvent, projectKnowledgeSnapshot, registerAnswerPublication } = compatibility4;
-init_ingest_frontmatter();
 init_config();
 init_service();
 init_config();
