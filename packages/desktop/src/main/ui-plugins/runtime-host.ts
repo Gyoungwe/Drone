@@ -15,6 +15,7 @@ import type { ExecutionIdentity } from "@gyoungwe/plugin-api/node/execution";
 import { app, BrowserWindow, dialog, webContents } from "electron";
 import { createDesktopResourceCapabilities } from "./desktop-resource-capabilities";
 import type { UiPluginManager } from "./manager";
+import { composeP5Capabilities } from "./p5-capability-composition";
 import {
 	DesktopRuntimeBridge,
 	type DesktopRuntimeBridgeOptions,
@@ -155,11 +156,27 @@ export function createDesktopRuntime(
 						})
 					: undefined;
 			const capabilities = sessions.getPluginSessionCapabilities(source.recordAdoptions);
+			// Z1d — the P5 reads and the P5 byte staging are the host's
+			// contribution to the activation.  Each provider gates itself on
+			// the source, so a plugin that declared nothing gets nothing.
+			const p5Capabilities = await composeP5Capabilities(
+				{
+					userDataDir: app.getPath("userData"),
+					profileDirectory: app.getPath("userData"),
+					storageRegistry: sessions.getStorageRegistry(),
+					getSessionContext: (sessionId) => sessions.getPluginCallerContext(sessionId),
+					selectStagedOutputDirectory: (signal) =>
+						selectStagedOutputDirectory(owner, source.pluginId, signal),
+				},
+				source,
+				activation,
+			);
 			return {
 				...resourceCapabilities,
 				handlers: {
 					...resourceCapabilities.handlers,
 					...executionCapabilities?.handlers,
+					...p5Capabilities.handlers,
 					...sessions.getPluginSourceCapabilities(source),
 					...(source.requestsWorkspaceRead
 						? sessions.getPluginWorkspaceCapabilities({ runtimeDirectory, pdfjsRoot })
@@ -186,22 +203,23 @@ export function createDesktopRuntime(
 							}
 						: {}),
 				},
-				...(executionCapabilities
-					? {
-							dispose: async () => {
-								const results = await Promise.allSettled([
-									resourceCapabilities.dispose?.(),
-									executionCapabilities.dispose(),
-								]);
-								const failures = results.filter((result) => result.status === "rejected");
-								if (failures.length)
-									throw new AggregateError(
-										failures.map((result) => result.reason),
-										"Plugin execution or resource cleanup failed",
-									);
-							},
-						}
-					: {}),
+				dispose: async () => {
+					// Every owner of a resource is released, even when one of
+					// them fails: the P5 staging directory, the execution
+					// receipts and the resource leases are independent, and a
+					// failure in one must not strand the others.
+					const results = await Promise.allSettled([
+						p5Capabilities.dispose(),
+						resourceCapabilities.dispose?.(),
+						executionCapabilities?.dispose(),
+					]);
+					const failures = results.filter((result) => result.status === "rejected");
+					if (failures.length)
+						throw new AggregateError(
+							failures.map((result) => result.reason),
+							"Plugin execution or resource cleanup failed",
+						);
+				},
 			};
 		},
 		// Starting a built-in's runtime is not a separate permission; every capability it uses still asks.
@@ -260,7 +278,9 @@ export async function approveDesktopRuntime(
 export async function selectStagedOutputDirectory(
 	owner: DesktopRuntimeOwner,
 	pluginId: string,
+	signal?: AbortSignal,
 ): Promise<readonly string[]> {
+	signal?.throwIfAborted();
 	const contents = webContents.fromId(owner.id);
 	if (!contents || contents.isDestroyed()) throw new Error("Plugin approving window is unavailable");
 	const window = BrowserWindow.fromWebContents(contents);
@@ -275,6 +295,7 @@ export async function selectStagedOutputDirectory(
 		buttonLabel: hostText("授权暂存输出写入", "Allow staged output writes"),
 	});
 	if (contents.isDestroyed()) throw new Error("Plugin approving window closed during directory selection");
+	signal?.throwIfAborted();
 	return result.canceled ? [] : result.filePaths;
 }
 
