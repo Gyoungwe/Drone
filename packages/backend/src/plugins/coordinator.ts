@@ -364,15 +364,15 @@ export class PluginRuntimeBridge {
 						if (grant && sameSource(grant.source, source) && sameSource(source, this.options.source(name)))
 							return permitted();
 					}
-					return (
-						(await this.options.approve(
-							selected.owner.approvalOwner ?? selected.owner,
-							source,
-							request.operation,
-							request.approvalDetail,
-							signal,
-						)) && permitted()
+					const approved = await this.options.approve(
+						selected.owner.approvalOwner ?? selected.owner,
+						source,
+						request.operation,
+						request.approvalDetail,
+						signal,
+						request.approvalReview,
 					);
+					return approved && permitted();
 				},
 			},
 			this.applicationId,

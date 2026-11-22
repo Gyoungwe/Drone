@@ -20,6 +20,11 @@ import {
 	type PluginRuntimeCapabilitiesOptions,
 	type PluginRuntimeCapabilitiesProvider,
 } from "./runtime-capabilities";
+import type {
+	PluginRuntimeActivation,
+	PluginRuntimeInvocation,
+	PluginRuntimePolicy,
+} from "./runtime-invocation";
 
 export type { ManagedNativeSession } from "./native-session-facade";
 export type {
@@ -27,11 +32,6 @@ export type {
 	PluginCapabilityHandler,
 	PluginRuntimeCapabilitiesOptions,
 } from "./runtime-capabilities";
-
-export interface PluginRuntimeActivation {
-	readonly pluginId: string;
-	readonly applicationId: string;
-}
 
 /** Host-only lease; identity is an object owned by the resolved caller generation, never JSON input. */
 
@@ -46,25 +46,6 @@ export interface PluginRuntimeCaller {
 }
 
 export type PluginRuntimeCallerResolver = () => PluginRuntimeCaller | undefined;
-
-export interface PluginRuntimeInvocation extends PluginRuntimeActivation {
-	readonly scope: PluginRuntimeScope;
-	readonly callerIdentity: object;
-	readonly operation: string;
-	readonly effect: PluginRuntimeOperation["effect"];
-	readonly input: unknown;
-	/** Produced by a host capability handler, never taken from plugin operation input. */
-	readonly approvalDetail?: string;
-	/** Host capability approval policy; absent for plugin operations. */
-	readonly approval?: "own" | "always" | "allowance";
-}
-
-export interface PluginRuntimePolicy {
-	/** Recheck enablement/trust before the factory imports or executes any plugin code. */
-	authorizeActivation(request: PluginRuntimeActivation, signal: AbortSignal): Promise<boolean>;
-	/** Enforce caller access and declared permissions; write approval may interact with the user. */
-	authorizeInvocation(request: PluginRuntimeInvocation, signal: AbortSignal): Promise<boolean>;
-}
 
 class ActivationDeniedError extends Error {}
 
@@ -548,7 +529,7 @@ export class PluginRuntimeRegistry {
 					},
 					operation.effect,
 					checkCaller,
-					(name, input, effect, approvalDetail, capabilitySignal = signal, approval) =>
+					(name, input, effect, approvalDetail, capabilitySignal = signal, approval, review) =>
 						authorize(
 							() =>
 								this.policy.authorizeInvocation(
@@ -559,6 +540,7 @@ export class PluginRuntimeRegistry {
 										effect,
 										approvalDetail,
 										...(approval ? { approval } : {}),
+										...(review ? { approvalReview: review } : {}),
 									},
 									capabilitySignal,
 								),

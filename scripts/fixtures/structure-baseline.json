@@ -20,7 +20,7 @@
 	"file-lines\tpackages/backend/src/plugins/process-runtime.test.ts": 793,
 	"file-lines\tpackages/backend/src/plugins/process-runtime.ts": 448,
 	"file-lines\tpackages/backend/src/plugins/runtime.test.ts": 471,
-	"file-lines\tpackages/backend/src/plugins/runtime.ts": 573,
+	"file-lines\tpackages/backend/src/plugins/runtime.ts": 555,
 	"file-lines\tpackages/backend/src/plugins/state-capabilities.test.ts": 500,
 	"file-lines\tpackages/backend/src/services/analysis-evidence.ts": 692,
 	"file-lines\tpackages/backend/src/services/compute-adapter.ts": 1013,
