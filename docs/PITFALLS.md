@@ -631,3 +631,36 @@ Codex 的 workspace-write 沙箱拦截 `ps`，进程清理走的是另一条路�
 并统计构造点总数。用变量（`storageId: entry.id`）会让这条检查拿到 0 个 id 而失败。
 新登记的条目还要同步 `packages/backend/src/storage/agent-entries.ts`，
 并把该测试里的 site 总数 +1。总数是硬编码的，所以每加一个 JsonStore 都要改。
+
+## 接口里的方法签名不能加 readonly（2026-11-22 记录）
+
+`readonly` 只对**属性**和函数签名声明有效。写成
+
+```ts
+interface Ports {
+  readonly jobOf(request: Request, source: Source): Job | undefined;
+}
+```
+
+是 TypeScript 语法错误，biome 会报
+`readonly modifier can only appear on a property or signature declaration`，
+而且因为是解析错误，**同一个文件里的格式问题也会一起报不出来**——
+先看最上面那条解析错误，别被后面一堆格式 diff 带偏。
+
+正确写法是给参数和返回类型加 `readonly`，方法名本身不加：
+
+```ts
+interface Ports {
+  jobOf(request: Request, source: Source): Job | undefined;
+}
+```
+
+## 同名但形状不同的两个对象，别让比较函数吃错形状（2026-11-22 记录）
+
+T164 里 `sameKey(binding, key)` 被两处调用：一处传存储的 `RerunBinding`，
+一处传查找用的 `P5RerunBindingKey`（后者包着 `request` 而不是裸的 `requestId`）。
+类型检查没抓住，因为形参被声明成了宽泛的结构；运行时报
+`Cannot read properties of undefined (reading 'requestId')`。
+
+比较函数应该只吃**两边都有的那几个字段**，调用前先把 key 投影成同一形状
+（本例是 `keyOf(key)` 把 `key.request.requestId` 提成 `key.requestId`）。
