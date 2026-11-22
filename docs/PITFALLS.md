@@ -699,3 +699,39 @@ cancel 永远无法生效（因为作业看起来已经成功），
 
 让 executor 持有一个可变的 `remoteStatus`，cancel 时把它置为 `cancelled`，
 这样 cancel 测试要显式地先让作业处于 running。
+
+## 同一份 JSON 上的第二个 store 不共享订阅者（2026-11-22 记录）
+
+事实日志的 `subscribe` 是**按实例**注册的，不是按文件路径注册的。
+测试里另开一个 `createP5FactStore` 指到同一个文件，然后往它 append，
+组合根持有的那个 store 收不到任何通知，交付机制永远不醒。
+
+于是测试看起来「通过」了——它根本没触发交付。要让 append 唤醒交付，
+必须写进**组合根自己的那个 store**：
+
+```ts
+const composition = createP5HostComposition(options, authority);
+const facts = composition.facts;   // 不是另开一个 store
+```
+
+这个坑的危险之处在于它让守卫**看起来是有效的**：把 release 的修复回滚掉，
+测试照样全绿。只有真正把写入接到组合根的 store 上，回滚才会让测试变红。
+
+## 守卫在「产物恰好存在」时是无效的（2026-11-22 记录）
+
+「真实产物缺失时报 NOT_RUN，绝不 PASS」这条守卫，在产物存在时是**测不出来的**：
+把 `existsSync` 的判断改成 `continue`，测试照样全绿。
+
+要让这条守卫可验证，就得让它对着一条**一定不存在**的路径也跑一遍：
+
+```ts
+it("reports NOT_RUN instead of passing when a real artifact is missing", () => {
+  expect(() => {
+    for (const path of [missingRuntime, shipped]) {
+      if (!existsSync(path)) throw new Error(`NOT_RUN: ...`);
+    }
+  }).toThrow("NOT_RUN");
+});
+```
+
+否则这条守卫只是一句注释：它读起来像门禁，实际上一旦失效没人会发现。
