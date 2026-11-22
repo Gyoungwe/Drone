@@ -8,7 +8,7 @@ import { StorageRegistry } from "../storage/registry";
 import { createP5BatchExecutor, type P5BatchExecutionPort } from "./p5-batch-execution";
 import { createP5BatchLifecycle } from "./p5-batch-lifecycle";
 import { createP5BatchReviewer, freezeP5Batch } from "./p5-batch-review";
-import { createP5ReceiptStore } from "./p5-receipt-store";
+import { createP5ReceiptStore, type P5ReceiptStore } from "./p5-receipt-store";
 import { PluginCapabilityBroker, type PluginCapabilityContext } from "./runtime-capabilities";
 
 const directories: string[] = [];
@@ -25,7 +25,6 @@ const scope: Scope = {
 const now = () => "2026-11-18T00:00:00Z";
 const output = { path: "output.txt", bytes: 1, sha256: "c".repeat(64) };
 const request = { requestId: "batch" };
-const approval = { requestId: "approval" };
 const caller = (): Omit<PluginCapabilityContext, "capabilities"> => ({
 	pluginId: "fixture",
 	applicationId: "fixture",
@@ -43,8 +42,8 @@ function deferred<Value>() {
 	return { promise, resolve };
 }
 
-function frozenBatch() {
-	const cases = ["one", "two"].map((id) => ({
+function frozenBatch(requestId = "batch", ids = ["one", "two"]) {
+	const cases = ids.map((id) => ({
 		id,
 		metric: "rediscovery-rate" as const,
 		datasetId: "fixture",
@@ -53,7 +52,7 @@ function frozenBatch() {
 		description: "Synthetic case",
 	}));
 	const input: BatchInput = {
-		...request,
+		requestId,
 		plan: { kind: "evaluation", runId: "run", cases },
 		items: cases.map(({ id }) => ({
 			id,
@@ -74,6 +73,30 @@ function frozenBatch() {
 	);
 }
 
+/** One approval per batch, keyed by the batch's own sha256. */
+async function approve(
+	store: P5ReceiptStore,
+	approvals: { requestId: string; sha256: string }[],
+): Promise<void> {
+	for (const entry of approvals)
+		await store.accept(
+			{ requestId: entry.requestId },
+			{
+				receiptRef: entry.requestId,
+				operation: "execution.batch.run",
+				inputSha256: entry.sha256,
+				scope,
+				category: "compute-preflight",
+				decision: "approved",
+				status: "accepted",
+				at: now(),
+				resultSha256: null,
+				readback: [],
+				parentReceiptRef: null,
+			},
+		);
+}
+
 async function fixture() {
 	const directory = await mkdtemp(join(tmpdir(), "drone-p5-drain-"));
 	directories.push(directory);
@@ -82,21 +105,20 @@ async function fixture() {
 		registry: new StorageRegistry(),
 	});
 	const batch = frozenBatch();
-	await store.accept(approval, {
-		receiptRef: "approval",
-		operation: "execution.batch.run",
-		inputSha256: batch.sha256,
-		scope,
-		category: "compute-preflight",
-		decision: "approved",
-		status: "accepted",
-		at: now(),
-		resultSha256: null,
-		readback: [],
-		parentReceiptRef: null,
+	// A second batch with its own sha256, so the same lifecycle owns two runs at once.
+	const other = frozenBatch("other", ["three"]);
+	const approvals: { requestId: string; sha256: string }[] = [
+		{ requestId: "approval", sha256: batch.sha256 },
+		{ requestId: "other-approval", sha256: other.sha256 },
+	];
+	await approve(store, approvals);
+	// One reviewer decides by the batch's own sha256, so the same executor serves both batches.
+	const reviewer = createP5BatchReviewer(store, async (candidate) => {
+		const found = approvals.find((entry) => entry.sha256 === candidate.sha256);
+		return { compute: { requestId: found?.requestId ?? "" }, model: null };
 	});
-	const reviewer = createP5BatchReviewer(store, async () => ({ compute: approval, model: null }));
 	const reviewed = await reviewer.review(batch);
+	const otherReviewed = await reviewer.review(other);
 	const port = {
 		expectedReadback: () => [output],
 		execute: vi.fn<P5BatchExecutionPort["execute"]>(),
@@ -106,7 +128,11 @@ async function fixture() {
 	const lifecycle = createP5BatchLifecycle({
 		executor,
 		scope: () => scope,
-		findBatch: async (input) => (input.requestId === request.requestId ? reviewed : undefined),
+		findBatch: async (input) => {
+			if (input.requestId === request.requestId) return reviewed;
+			if (input.requestId === other.request.requestId) return otherReviewed;
+			return undefined;
+		},
 	});
 	const broker = new PluginCapabilityBroker({ handlers: lifecycle.handlers, resources: [] });
 	const call = (action: "status" | "cancel") =>
@@ -121,7 +147,12 @@ async function fixture() {
 		port,
 		call,
 		run: () => lifecycle.run(reviewed, batch),
+		runOther: () => lifecycle.run(otherReviewed, other),
+		reviewedSha: reviewed.batch.sha256,
+		otherSha: otherReviewed.batch.sha256,
 		receipts: () => executor.receipts(reviewed),
+		otherReceipts: () => executor.receipts(otherReviewed),
+		drain: () => lifecycle.drain(),
 	};
 }
 
@@ -197,4 +228,84 @@ it("cancels cleanly when the first item succeeds and the second never starts", a
 	expect(cancelled).toMatchObject(cleanCancellation);
 	expect(await batch.call("status")).toMatchObject(cleanCancellation);
 	expect(await batch.receipts()).toMatchObject({ status: "ok", value: [{ status: "succeeded" }, null] });
+});
+
+/**
+ * A port whose execute blocks until the run is aborted, then settles with `finish`.
+ * `execute` is a plain function, not a mock: the caller installs it on the port.
+ */
+function abortablePort(finish: () => { verified: boolean }) {
+	const inFlight = deferred<void>();
+	const aborted = deferred<void>();
+	const execute: P5BatchExecutionPort["execute"] = async (_item, _batch, { signal }) => {
+		signal?.addEventListener("abort", () => aborted.resolve(), { once: true });
+		inFlight.resolve();
+		await aborted.promise;
+		return finish();
+	};
+	return { execute, inFlight };
+}
+
+it("drains two concurrent runs: aborts both and resolves only after both settle", async () => {
+	const batch = await fixture();
+	const first = abortablePort(() => ({ verified: true }), "first");
+	const second = abortablePort(() => ({ verified: true }), "second");
+	// Dispatch by the batch's own request id, so each run gets its own blocking port.
+	batch.port.execute.mockImplementation(async (item, candidate, context) => {
+		const port = candidate.request.requestId === "other" ? second : first;
+		return port.execute(item, candidate, context);
+	});
+	const running = batch.run();
+	const other = batch.runOther();
+	await first.inFlight.promise;
+	await second.inFlight.promise;
+	await batch.drain();
+	expect(await running).toMatchObject({ status: "ok", value: { status: "cancelled" } });
+	expect(await other).toMatchObject({ status: "ok", value: { status: "cancelled" } });
+});
+
+it("drain resolves only after the in-flight item's durable receipt is written", async () => {
+	const batch = await fixture();
+	const item = abortablePort(() => ({ verified: true }));
+	batch.port.execute.mockImplementation(async (_item, _batch, { signal }) =>
+		item.execute(_item, _batch, { signal }),
+	);
+	const running = batch.run();
+	await item.inFlight.promise;
+	await batch.drain();
+	await running;
+	// The receipt for the in-flight item is on disk by the time drain resolved.
+	expect(await batch.receipts()).toMatchObject({ status: "ok", value: [{ status: "succeeded" }, null] });
+});
+
+it("refuses a new run after drain without calling the executor", async () => {
+	const batch = await fixture();
+	await batch.drain();
+	const result = await batch.run();
+	expect(result).toMatchObject({ status: "failed", code: "STATE_CONFLICT" });
+	expect(batch.port.execute).not.toHaveBeenCalled();
+});
+
+it("drain still resolves when a run's execute throws during the drain", async () => {
+	const batch = await fixture();
+	const item = abortablePort(() => {
+		throw new Error("Synthetic abort");
+	});
+	batch.port.execute.mockImplementation(async (_item, _batch, { signal }) =>
+		item.execute(_item, _batch, { signal }),
+	);
+	const running = batch.run();
+	await item.inFlight.promise;
+	await expect(batch.drain()).resolves.toBeUndefined();
+	expect(await running).toMatchObject({ status: "ok", value: { status: "blocked" } });
+	expect(await batch.call("status")).toMatchObject({
+		status: "ok",
+		value: {
+			status: "blocked",
+			items: [
+				{ itemId: "one", status: "blocked" },
+				{ itemId: "two", status: "pending" },
+			],
+		},
+	});
 });

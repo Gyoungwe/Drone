@@ -111,10 +111,11 @@ function handler(
 export function createP5BatchLifecycle(ports: P5BatchLifecyclePorts) {
 	const runs = new Map<string, OwnedRun>();
 	const used = new WeakSet<ReviewedP5Batch>();
+	let drained = false;
 	return {
 		run(reviewed: ReviewedP5Batch, candidate: FrozenP5Batch): Promise<RunResult> {
 			const previous = runs.get(reviewed.batch.sha256);
-			if (used.has(reviewed) || (previous && !previous.outcome))
+			if (drained || used.has(reviewed) || (previous && !previous.outcome))
 				return Promise.resolve(fail("STATE_CONFLICT"));
 			used.add(reviewed);
 			const controller = new AbortController();
@@ -130,6 +131,16 @@ export function createP5BatchLifecycle(ports: P5BatchLifecyclePorts) {
 			};
 			runs.set(reviewed.batch.sha256, owned);
 			return owned.done;
+		},
+		/**
+		 * Host shutdown: stop every run this host still owns and wait until its receipts are durable.
+		 * `done` never rejects (a throwing execution is mapped to OUTCOME_UNKNOWN), so awaiting every
+		 * owned run cannot reject the shutdown either.
+		 */
+		async drain(): Promise<void> {
+			drained = true;
+			for (const owned of runs.values()) if (!owned.outcome) owned.controller.abort();
+			await Promise.all([...runs.values()].map((owned) => owned.done));
 		},
 		handlers: {
 			"execution.batch.status": handler(ports, runs, "status"),
