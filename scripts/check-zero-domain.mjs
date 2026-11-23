@@ -35,6 +35,15 @@ const domainCommand =
 	/(?:^|[\n;&|()])\s*npm\s+(?:run|run-script)\s+(["']?)(?:build:pi-(?:core|research)|fetch:plugins|check:(?:[\w:-]+-runtime|pi-research|pi-core|builtin-plugins))\1(?=$|[\s;&|()])/;
 const domainChannel =
 	/(["'`])((?:researchSkills|(?:knowledge|research|zotero|analysis|evidence|discovery|inquiry)):[\w:.-]+)\1/g;
+/**
+ * The host's own first-party inventory.
+ *
+ * The host ships these packages, so it owns the list — but the list lives in
+ * data now, not in code. The ratchet keeps seeing it: a package that joins
+ * the inventory is a package the host will offer, and that has to be visible
+ * rather than silently added.
+ */
+const hostCatalogFile = "packages/shared/resources/first-party-packages.json";
 
 function readOptional(file) {
 	if (existsSync(file)) return readFileSync(file, "utf8");
@@ -117,6 +126,17 @@ function inventoryBuilderResources(source) {
 	return findings;
 }
 
+function inventoryHostCatalog(root) {
+	const source = readOptional(join(root, hostCatalogFile));
+	if (source === undefined) return [];
+	const parsed = JSON.parse(source);
+	return Array.isArray(parsed?.packages)
+		? parsed.packages
+				.map((entry) => entry?.name)
+				.filter((name) => typeof name === "string" && name.length > 0)
+		: [];
+}
+
 export function collectZeroDomainFindings(root) {
 	const packagesDir = join(root, "packages");
 	const packageDirs = existsSync(packagesDir)
@@ -134,6 +154,7 @@ export function collectZeroDomainFindings(root) {
 		builtinEntries: plugins.filter((plugin) => plugin.builtin === true).map((plugin) => plugin.name),
 		hostDependencies: inventoryDependencies(root, packageDirs, rootManifest),
 		hostSourceImports: inventorySourceImports(root, packageDirs),
+		hostCatalogEntries: inventoryHostCatalog(root),
 		builderResources: inventoryBuilderResources(builder ?? ""),
 		rootScripts: Object.entries(rootManifest.scripts ?? {})
 			.filter(([, command]) => domainCommand.test(command))
@@ -148,14 +169,29 @@ function difference(keys, otherKeys) {
 	return keys.filter((key) => !other.has(key));
 }
 
+/**
+ * A category the baseline does not know yet is a new category, not a failure
+ * of the comparison: the baseline is a record of what the host has, so a
+ * category that appears is recorded on the next `--update`.
+ */
+function categoryKeys(category, source) {
+	return source[category] ?? [];
+}
+
 export function compareToBaseline(findings, baseline) {
 	const categories = Object.keys(findings);
 	return {
 		added: Object.fromEntries(
-			categories.map((category) => [category, difference(findings[category], baseline[category])]),
+			categories.map((category) => [
+				category,
+				difference(categoryKeys(category, findings), categoryKeys(category, baseline)),
+			]),
 		),
 		removed: Object.fromEntries(
-			categories.map((category) => [category, difference(baseline[category], findings[category])]),
+			categories.map((category) => [
+				category,
+				difference(categoryKeys(category, baseline), categoryKeys(category, findings)),
+			]),
 		),
 	};
 }

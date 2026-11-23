@@ -909,3 +909,36 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 教训：工作区跑出「源码明明一样、主检出却能过」的失败，先怀疑**没进 git 的产物**，
 再查**模块解析到了哪一份**。这两样都不会出现在 `git status` 里，
 `git status --ignored` 才能看到。
+
+## `npm ci --ignore-scripts` 会悄悄拆掉 Pi SDK 的类型面（2026-11-24 记录）
+
+新建 worktree 时为了快，用了 `npm ci --ignore-scripts`。结果 `typecheck` 在
+`native-delivery.ts`、`session-engine/*` 里报一片 `TS7006`/`TS2339`，
+错误信息指向 Pi SDK 的导出不存在，看起来像 SDK 版本对不上。
+
+真因是 `postinstall: patch-package` 没跑。仓库给
+`@earendil-works+pi-coding-agent@1.1.0` 和 `thinking-orbs@0.3.1` 打了补丁；
+补丁没应用，SDK 的类型导出就少了一截。
+
+修法：worktree 里补跑一次 `npx patch-package`。
+
+教训：`--ignore-scripts` 省下的十几秒，会换来一份**看起来像 SDK 坏了**的类型错误。
+判断依据是错误集中在 SDK 的导出成员上，而 `package-lock.json` 没动过——
+先确认 postinstall 跑没跑，再怀疑版本。
+
+## 打包态的第一方包不在 asar 里（2026-11-24 记录）
+
+写「从安装根扫描已安装包」时以为 `require.resolve` 的路径就够了。开发态成立，
+打包态不成立：
+
+- asar 里只有 `@gyoungwe/plugin-api`；第一方包在 `Resources/plugin-packages/node_modules`
+  和 `Resources/pi-packages/node_modules`（`plugin-packages` 是 `plugins.lock.json` 里
+  `builtin: true` 的只读内置，`pi-packages` 是 Pi 包运行时）
+- backend 打包后在 `app.asar` 里，向上走模块链找不到 `Resources/`
+
+所以根列表必须显式包含 `process.resourcesPath`（Electron 打包态才有，checkout 里没有）。
+少了这一条，插件页在开发态全绿、打包后全部退化成 `unavailable`。
+
+教训：凡是「从磁盘发现东西」的逻辑，都要问一句**打包后这个东西在哪**。
+`process.resourcesPath`、`app.getPath("userData")`、`__dirname` 在打包态指向的位置
+完全不同，不能只按 checkout 布局写。

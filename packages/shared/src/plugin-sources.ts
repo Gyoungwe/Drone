@@ -1,3 +1,4 @@
+import firstPartyPackages from "../resources/first-party-packages.json";
 import type { CatalogPackage } from "./packages";
 
 /** The two package origins shown by the Skills & Connections plugin page. */
@@ -5,102 +6,58 @@ export type PiPluginSource = "pi-market" | "drone";
 
 export type PiPluginPackageKind = "pi" | "desktop-ui";
 
+/** The metadata the host keeps for one first-party package. */
+export interface FirstPartyPackageMetadata {
+	readonly version: string;
+	readonly description: string;
+	readonly builtIn?: boolean;
+	readonly packageKind?: PiPluginPackageKind;
+	readonly capabilities?: readonly string[];
+	readonly tools?: readonly string[];
+	readonly permissions?: unknown;
+}
+
+/** One entry of the host's own first-party package inventory. */
+export interface FirstPartyPackage extends FirstPartyPackageMetadata {
+	readonly name: string;
+	/** Which host loads the package; the two hosts load it differently. */
+	readonly host: "desktop" | "pi";
+}
+
+/**
+ * The host's own inventory of the first-party packages it offers.
+ *
+ * The inventory is data, not code: the host is the party that ships these
+ * packages, so it owns the list. Each package still declares what it does in
+ * its own manifest, so a package that joins the inventory has not yet said
+ * anything about its capabilities.
+ */
+export const FIRST_PARTY_PACKAGES: readonly FirstPartyPackage[] =
+	firstPartyPackages.packages as readonly FirstPartyPackage[];
+
 /** Public Drone package names. Manifest details are read from the host or npm registry. */
-export const DRONE_PLUGIN_PACKAGE_NAMES = [
-	"@gyoungwe/pi-core",
-	"@gyoungwe/pi-knowledge",
-	"@gyoungwe/pi-research",
-	"@gyoungwe/pi-analysis",
-	"@gyoungwe/pi-evidence",
-	"@gyoungwe/pi-connectors",
-	"@gyoungwe/desktop-ui-pack",
-	"@gyoungwe/research-suite",
-] as const;
+export const DRONE_PLUGIN_PACKAGE_NAMES: readonly string[] = FIRST_PARTY_PACKAGES.map((entry) => entry.name);
 
 /** Packages whose capabilities are part of the Drone host rather than an optional install. */
-export const DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES = [
-	"@gyoungwe/pi-core",
-	"@gyoungwe/pi-knowledge",
-	"@gyoungwe/pi-research",
-] as const;
+export const DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES: readonly string[] = FIRST_PARTY_PACKAGES.filter(
+	(entry) => entry.builtIn === true,
+).map((entry) => entry.name);
 
 /** Last-known fallback metadata used while the registry request is pending or unavailable. */
-export const DRONE_PLUGIN_METADATA: Readonly<
-	Record<
-		(typeof DRONE_PLUGIN_PACKAGE_NAMES)[number],
+export const DRONE_PLUGIN_METADATA: Readonly<Record<string, FirstPartyPackageMetadata>> = Object.fromEntries(
+	FIRST_PARTY_PACKAGES.map((entry) => [
+		entry.name,
 		{
-			readonly version: string;
-			readonly description: string;
-			readonly builtIn?: boolean;
-			readonly packageKind?: PiPluginPackageKind;
-			readonly capabilities?: readonly string[];
-			readonly tools?: readonly string[];
-			readonly permissions?: unknown;
-		}
-	>
-> = {
-	"@gyoungwe/pi-core": {
-		version: "0.1.6",
-		description: "Portable task, authorization, status, delivery and memory tools for native Pi",
-		builtIn: true,
-		capabilities: ["tasks", "authorization", "memory"],
-		tools: ["task_plan", "task_update"],
-		permissions: { filesystem: "workspace", network: "none" },
-	},
-	"@gyoungwe/pi-knowledge": {
-		version: "0.2.0",
-		description: "Knowledge and Vault tools for native Pi hosts",
-		builtIn: true,
-		capabilities: ["knowledge", "vault"],
-		tools: ["knowledge_search", "knowledge_read", "knowledge_write"],
-		permissions: { filesystem: "vault", network: "none" },
-	},
-	"@gyoungwe/pi-research": {
-		version: "0.1.1",
-		description:
-			"Evidence-gated research retrieval, reading, deposition and source-grounded answer tools for native Pi",
-		builtIn: true,
-		capabilities: ["research", "evidence"],
-		tools: ["research_loop_start", "research_claim_bindings", "research_reconcile"],
-		permissions: { filesystem: "workspace", network: "read" },
-	},
-	"@gyoungwe/pi-analysis": {
-		version: "0.1.1",
-		description: "Portable scientific analysis adapters and readiness gates for native Pi",
-		capabilities: ["analysis", "readiness"],
-		tools: ["analysis_list_adapters", "analysis_assess_readiness"],
-		permissions: { filesystem: "workspace", network: "none" },
-	},
-	"@gyoungwe/pi-evidence": {
-		version: "0.1.1",
-		description: "Portable evidence manifests, provenance, checkpoints and replay proofs for native Pi",
-		capabilities: ["evidence", "provenance", "replay"],
-		tools: ["evidence_manifest", "evidence_checkpoint", "evidence_replay"],
-		permissions: { filesystem: "workspace", network: "none" },
-	},
-	"@gyoungwe/pi-connectors": {
-		version: "0.1.1",
-		description: "Host-neutral, read-only connector declarations and provenance receipts for native Pi",
-		capabilities: ["connectors", "receipts"],
-		tools: ["connector_list", "connector_get"],
-		permissions: { filesystem: "workspace", network: "read" },
-	},
-	"@gyoungwe/desktop-ui-pack": {
-		version: "0.1.1",
-		description: "Optional Drone Desktop UI contributions loaded by the installed package boundary",
-		packageKind: "desktop-ui",
-		capabilities: ["ui"],
-		tools: [],
-		permissions: { filesystem: "none", network: "none" },
-	},
-	"@gyoungwe/research-suite": {
-		version: "0.1.6",
-		description: "Bundled Drone native Pi research suite",
-		capabilities: ["research", "knowledge", "analysis"],
-		tools: ["research_loop_start", "knowledge_search", "analysis_assess_readiness"],
-		permissions: { filesystem: "workspace", network: "read" },
-	},
-};
+			version: entry.version,
+			description: entry.description,
+			...(entry.builtIn ? { builtIn: true } : {}),
+			...(entry.packageKind ? { packageKind: entry.packageKind } : {}),
+			...(entry.capabilities ? { capabilities: entry.capabilities } : {}),
+			...(entry.tools ? { tools: entry.tools } : {}),
+			...(entry.permissions ? { permissions: entry.permissions } : {}),
+		},
+	]),
+);
 
 export type MarketResourceKind = "mcp-official" | "mcp-community" | "skills" | "workflow";
 
@@ -190,6 +147,8 @@ export interface DronePackageManifest {
 		readonly extensions?: readonly string[];
 		readonly skills?: string | readonly string[];
 		readonly ui?: string;
+		/** A separate process the host starts and tracks for this package. */
+		readonly worker?: string;
 	};
 	readonly capabilities?: readonly string[];
 	readonly hosts?: readonly string[];

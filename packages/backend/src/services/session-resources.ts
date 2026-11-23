@@ -1,17 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import {
-	DRONE_PLUGIN_METADATA,
-	type DronePackageManifest,
-	dronePluginSource,
 	type HostPluginPackage,
 	type LoadedResources,
 	type McpStatus,
 	type McpStatus as McpStatusType,
 	normalizeMcpStatus,
-	type PiPackageManifest,
 	RESEARCH_SKILL_SOURCES,
 	type ResourceDiagnosticInfo,
 	researchSkillProfile,
@@ -29,6 +23,13 @@ import type { RegisteredSession, SessionRegistry } from "../session/registry";
 import type { SessionEngine } from "../session-engine/engine";
 import type { SessionServiceOptions } from "../session-service";
 import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "../slash-commands";
+import { attributeWorkerLifecycles, deriveHostPluginPackages } from "./host-plugin-packages";
+import {
+	managedAgentPackageRoot,
+	moduleNodeModulesRoots,
+	packagedResourceRoots,
+	scanInstalledPackages,
+} from "./installed-package-scan";
 
 export interface SessionResourceHost {
 	readonly options: SessionServiceOptions;
@@ -112,134 +113,35 @@ export class SessionResourceService {
 	}
 
 	/**
+	 * The host's own inventory of first-party packages.
+	 *
 	 * Pi's resource loader exposes the extension path, but not the package that
-	 * owns a bundled extension. Keep the host-owned package inventory explicit so
-	 * the desktop Plugins view can account for the capabilities shipped by Drone
-	 * and the optional installed UI pack.
+	 * owns a bundled extension. The host therefore reads the inventory it
+	 * ships (data, not code) and pairs each entry with what the installed
+	 * package declares about itself.
 	 */
 	private hostPluginPackages(): HostPluginPackage[] {
-		const require = createRequire(import.meta.url);
-		const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
-		const entries = [
-			{ name: "@gyoungwe/pi-core", host: "desktop" as const },
-			{ name: "@gyoungwe/pi-knowledge", host: "pi" as const },
-			{ name: "@gyoungwe/pi-research", host: "pi" as const },
-			{ name: "@gyoungwe/pi-analysis", host: "pi" as const },
-			{ name: "@gyoungwe/pi-evidence", host: "pi" as const },
-			{ name: "@gyoungwe/pi-connectors", host: "pi" as const },
-			{ name: "@gyoungwe/desktop-ui-pack", host: "desktop" as const },
-			{ name: "@gyoungwe/research-suite", host: "pi" as const },
+		const installed = scanInstalledPackages(this.packageInstallRoots());
+		return deriveHostPluginPackages(
+			installed,
+			attributeWorkerLifecycles(installed, getKnowledgeWorkerLifecycle()),
+		);
+	}
+
+	/**
+	 * Where installed packages live.
+	 *
+	 * The host's own copies come first — a read-only built-in must not be
+	 * shadowed by a user's copy — then the host's own modules, and last the
+	 * managed Pi install root a user's packages land in. Nothing here names a
+	 * package.
+	 */
+	private packageInstallRoots(): string[] {
+		return [
+			...packagedResourceRoots(),
+			...moduleNodeModulesRoots(import.meta.url),
+			managedAgentPackageRoot(),
 		];
-		const knowledgeLifecycle = getKnowledgeWorkerLifecycle();
-		return entries.map((entry) => {
-			const metadata = DRONE_PLUGIN_METADATA[entry.name as keyof typeof DRONE_PLUGIN_METADATA];
-			const packageJson =
-				entry.name === "@gyoungwe/desktop-ui-pack"
-					? (() => {
-							const candidate = join(
-								agentDir,
-								"npm",
-								"node_modules",
-								"@gyoungwe",
-								"desktop-ui-pack",
-								"package.json",
-							);
-							return existsSync(candidate) ? candidate : null;
-						})()
-					: this.packageJsonPath(require, entry.name);
-			const version = packageJson ? this.readPackageVersion(packageJson) : metadata.version;
-			const packageData = packageJson ? this.readPackage(packageJson) : undefined;
-			const manifestData = packageJson ? this.readManifest(dirname(packageJson)) : undefined;
-			const source = packageData ? dronePluginSource(packageData, manifestData) : undefined;
-			const lifecycle = entry.name === "@gyoungwe/pi-knowledge" ? knowledgeLifecycle : undefined;
-			return {
-				...entry,
-				version,
-				status: packageJson ? "available" : "unavailable",
-				...(lifecycle
-					? {
-							currentVersion: lifecycle.currentVersion,
-							nextSessionVersion: lifecycle.nextSessionVersion,
-							lifecycleState: lifecycle.state,
-							...(lifecycle.lastError ? { lastLifecycleError: lifecycle.lastError } : {}),
-						}
-					: {}),
-				description: metadata.description,
-				...(metadata.packageKind ? { packageKind: metadata.packageKind } : {}),
-				...(metadata.capabilities ? { capabilities: [...metadata.capabilities] } : {}),
-				...(metadata.tools ? { tools: [...metadata.tools] } : {}),
-				...(metadata.permissions ? { permissions: metadata.permissions } : {}),
-				source: source ? "drone" : "unknown",
-				...(source
-					? {
-							packageKind: source.packageKind,
-							description: source.description,
-							capabilities: [...source.capabilities],
-							piApiVersion: source.piApiVersion,
-							pluginApi: source.pluginApi,
-							minHostVersion: source.minHostVersion,
-							hosts: [...source.hosts],
-							tools: [...source.tools],
-							permissions: source.permissions,
-							manifestDeclared: Boolean(manifestData),
-						}
-					: {}),
-			};
-		});
-	}
-
-	private readPackage(path: string): PiPackageManifest | undefined {
-		try {
-			return JSON.parse(readFileSync(path, "utf8")) as PiPackageManifest;
-		} catch {
-			return undefined;
-		}
-	}
-
-	private readManifest(root: string): DronePackageManifest | undefined {
-		try {
-			const manifestPath = existsSync(join(root, "plugin.manifest.json"))
-				? join(root, "plugin.manifest.json")
-				: join(root, "ui", "plugin.json");
-			const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
-			if (manifestPath.endsWith(`${join("ui", "plugin.json")}`)) {
-				return {
-					version: typeof parsed.version === "string" ? parsed.version : undefined,
-					entrypoints: { ui: "./ui/plugin.json" },
-					capabilities: ["ui"],
-					hosts: ["drone-desktop"],
-				};
-			}
-			return parsed as DronePackageManifest;
-		} catch {
-			return undefined;
-		}
-	}
-
-	private packageJsonPath(require: NodeRequire, name: string): string | null {
-		try {
-			const resolved = require.resolve(name);
-			let current = dirname(resolved);
-			for (let i = 0; i < 5; i++) {
-				const candidate = join(current, "package.json");
-				if (existsSync(candidate)) return candidate;
-				const parent = dirname(current);
-				if (parent === current) break;
-				current = parent;
-			}
-		} catch {
-			// An optional package is still shown as unavailable below.
-		}
-		return null;
-	}
-
-	private readPackageVersion(path: string): string {
-		try {
-			const parsed = JSON.parse(readFileSync(path, "utf8")) as { version?: unknown };
-			return typeof parsed.version === "string" ? parsed.version : "unknown";
-		} catch {
-			return "unknown";
-		}
 	}
 
 	/** 列出斜杠命令：内置（标记 supported）+ prompt 模板 + skill + 扩展命令 */
