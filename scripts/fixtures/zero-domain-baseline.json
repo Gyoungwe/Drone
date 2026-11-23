@@ -53,15 +53,17 @@
     "packages/extensions/src/zotero-literature.ts:@gyoungwe/pi-knowledge",
     "packages/extensions/src/zotero-literature.ts:@gyoungwe/pi-research",
     "packages/research/src/connectors.ts:@gyoungwe/pi-research",
-    "packages/research/src/run-summary.ts:@gyoungwe/pi-knowledge",
-    "packages/shared/src/plugin-sources.ts:@gyoungwe/desktop-ui-pack",
-    "packages/shared/src/plugin-sources.ts:@gyoungwe/pi-analysis",
-    "packages/shared/src/plugin-sources.ts:@gyoungwe/pi-connectors",
-    "packages/shared/src/plugin-sources.ts:@gyoungwe/pi-core",
-    "packages/shared/src/plugin-sources.ts:@gyoungwe/pi-evidence",
-    "packages/shared/src/plugin-sources.ts:@gyoungwe/pi-knowledge",
-    "packages/shared/src/plugin-sources.ts:@gyoungwe/pi-research",
-    "packages/shared/src/plugin-sources.ts:@gyoungwe/research-suite"
+    "packages/research/src/run-summary.ts:@gyoungwe/pi-knowledge"
+  ],
+  "hostCatalogEntries": [
+    "@gyoungwe/desktop-ui-pack",
+    "@gyoungwe/pi-analysis",
+    "@gyoungwe/pi-connectors",
+    "@gyoungwe/pi-core",
+    "@gyoungwe/pi-evidence",
+    "@gyoungwe/pi-knowledge",
+    "@gyoungwe/pi-research",
+    "@gyoungwe/research-suite"
   ],
   "builderResources": [
     "../../.pi/extensions",

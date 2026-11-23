@@ -1,0 +1,80 @@
+{
+	"packages": [
+		{
+			"name": "@gyoungwe/pi-core",
+			"host": "desktop",
+			"version": "0.1.6",
+			"description": "Portable task, authorization, status, delivery and memory tools for native Pi",
+			"builtIn": true,
+			"capabilities": ["tasks", "authorization", "memory"],
+			"tools": ["task_plan", "task_update"],
+			"permissions": { "filesystem": "workspace", "network": "none" }
+		},
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"host": "pi",
+			"version": "0.2.0",
+			"description": "Knowledge and Vault tools for native Pi hosts",
+			"builtIn": true,
+			"capabilities": ["knowledge", "vault"],
+			"tools": ["knowledge_search", "knowledge_read", "knowledge_write"],
+			"permissions": { "filesystem": "vault", "network": "none" }
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"host": "pi",
+			"version": "0.1.1",
+			"description": "Evidence-gated research retrieval, reading, deposition and source-grounded answer tools for native Pi",
+			"builtIn": true,
+			"capabilities": ["research", "evidence"],
+			"tools": ["research_loop_start", "research_claim_bindings", "research_reconcile"],
+			"permissions": { "filesystem": "workspace", "network": "read" }
+		},
+		{
+			"name": "@gyoungwe/pi-analysis",
+			"host": "pi",
+			"version": "0.1.1",
+			"description": "Portable scientific analysis adapters and readiness gates for native Pi",
+			"capabilities": ["analysis", "readiness"],
+			"tools": ["analysis_list_adapters", "analysis_assess_readiness"],
+			"permissions": { "filesystem": "workspace", "network": "none" }
+		},
+		{
+			"name": "@gyoungwe/pi-evidence",
+			"host": "pi",
+			"version": "0.1.1",
+			"description": "Portable evidence manifests, provenance, checkpoints and replay proofs for native Pi",
+			"capabilities": ["evidence", "provenance", "replay"],
+			"tools": ["evidence_manifest", "evidence_checkpoint", "evidence_replay"],
+			"permissions": { "filesystem": "workspace", "network": "none" }
+		},
+		{
+			"name": "@gyoungwe/pi-connectors",
+			"host": "pi",
+			"version": "0.1.1",
+			"description": "Host-neutral, read-only connector declarations and provenance receipts for native Pi",
+			"capabilities": ["connectors", "receipts"],
+			"tools": ["connector_list", "connector_get"],
+			"permissions": { "filesystem": "workspace", "network": "read" }
+		},
+		{
+			"name": "@gyoungwe/desktop-ui-pack",
+			"host": "desktop",
+			"version": "0.1.1",
+			"description": "Optional Drone Desktop UI contributions loaded by the installed package boundary",
+			"packageKind": "desktop-ui",
+			"capabilities": ["ui"],
+			"tools": [],
+			"permissions": { "filesystem": "none", "network": "none" }
+		},
+		{
+			"name": "@gyoungwe/research-suite",
+			"host": "pi",
+			"version": "0.1.6",
+			"description": "Bundled Drone native Pi research suite",
+			"capabilities": ["research", "knowledge", "analysis"],
+			"tools": ["research_loop_start", "knowledge_search", "analysis_assess_readiness"],
+			"permissions": { "filesystem": "workspace", "network": "read" }
+		}
+	]
+}

@@ -13,6 +13,7 @@ const emptyBaseline = {
 	builtinEntries: [],
 	hostDependencies: [],
 	hostSourceImports: [],
+	hostCatalogEntries: [],
 	builderResources: [],
 	rootScripts: [],
 	domainIpcChannels: [],
@@ -129,6 +130,7 @@ test("inventories every category, without including host-owned or test seams", (
 			"packages/host/src/entry.mts:@gyoungwe/pi-core",
 			"packages/host/src/entry.mts:@gyoungwe/pi-knowledge",
 		],
+		hostCatalogEntries: [],
 		builderResources: [
 			"../../.pi/extensions",
 			"../../.pi/skills/research-vault",
@@ -227,6 +229,7 @@ test("an empty tree reports ZERO with all counts present", (context) => {
 			builtinEntries: 0,
 			hostDependencies: 0,
 			hostSourceImports: 0,
+			hostCatalogEntries: 0,
 			builderResources: 0,
 			rootScripts: 0,
 			domainIpcChannels: 0,
@@ -248,4 +251,15 @@ test("a research-flavoured IPC channel is ratcheted even when its prefix is not 
 	const result = run();
 	assert.equal(result.status, 1, result.stderr);
 	assert.match(result.stderr, /domainIpcChannels: researchSkills:update/);
+});
+
+test("a package the host offers through its catalog is ratcheted too", (context) => {
+	const { write, run } = fixture(context);
+	write(
+		"packages/shared/resources/first-party-packages.json",
+		JSON.stringify({ packages: [{ name: "@gyoungwe/pi-evidence" }] }),
+	);
+	const result = run();
+	assert.equal(result.status, 1, result.stderr);
+	assert.match(result.stderr, /hostCatalogEntries: @gyoungwe\/pi-evidence/);
 });

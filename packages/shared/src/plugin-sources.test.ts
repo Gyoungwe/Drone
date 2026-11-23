@@ -4,6 +4,7 @@ import {
 	DRONE_PLUGIN_METADATA,
 	DRONE_PLUGIN_PACKAGE_NAMES,
 	dronePluginSource,
+	FIRST_PARTY_PACKAGES,
 	MARKET_RESOURCE_LINKS,
 	mergePiPluginSources,
 	piMarketPluginSource,
@@ -78,8 +79,9 @@ describe("plugin source adapters", () => {
 
 	it("keeps the market metadata complete before Drone packages are installed", () => {
 		for (const name of DRONE_PLUGIN_PACKAGE_NAMES) {
-			expect(DRONE_PLUGIN_METADATA[name].version).toMatch(/^\d+\.\d+\.\d+$/u);
-			expect(DRONE_PLUGIN_METADATA[name].description.length).toBeGreaterThan(0);
+			const metadata = DRONE_PLUGIN_METADATA[name];
+			expect(metadata?.version).toMatch(/^\d+\.\d+\.\d+$/u);
+			expect(metadata?.description.length).toBeGreaterThan(0);
 		}
 		expect(MARKET_RESOURCE_LINKS.some((entry) => entry.kind === "mcp-official")).toBe(true);
 		expect(MARKET_RESOURCE_LINKS.some((entry) => entry.kind === "mcp-community")).toBe(true);
@@ -89,6 +91,18 @@ describe("plugin source adapters", () => {
 			"@gyoungwe/pi-research",
 		]);
 		for (const name of DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES)
-			expect(DRONE_PLUGIN_METADATA[name].builtIn).toBe(true);
+			expect(DRONE_PLUGIN_METADATA[name]?.builtIn).toBe(true);
+	});
+
+	it("keeps the host inventory free of duplicates and of half-declared packages", () => {
+		const names = FIRST_PARTY_PACKAGES.map((entry) => entry.name);
+		expect(new Set(names).size).toBe(names.length);
+		for (const entry of FIRST_PARTY_PACKAGES) {
+			expect(entry.name).toMatch(/^@gyoungwe\/[a-z0-9][a-z0-9._-]*$/u);
+			expect(["desktop", "pi"]).toContain(entry.host);
+			expect(entry.version).toMatch(/^\d+\.\d+\.\d+$/u);
+			expect(entry.description.length).toBeGreaterThan(0);
+		}
+		expect(new Set(DRONE_PLUGIN_PACKAGE_NAMES)).toEqual(new Set(names));
 	});
 });
