@@ -266,9 +266,10 @@ packages/
 | `scripts/check-lint-baseline.mjs` / `check-structure.mjs` | `npm run lint` 的棘轮检查：`any`、非空断言、空块、超 60 行函数，以及超 400 行文件、非 Error 继承、模块级 `let`；基线在 `scripts/fixtures/{lint,structure}-baseline.json`，只降不升（`--update` 只记录下降，遇上升或新条目列出并失败；已有代码原样搬动时用 `--update --allow-moves`，须在 PR 描述里说明） |
 | `scripts/check-architecture.mjs` | `npm run check:arch` 的分层规则棘轮检查；基线在 `scripts/fixtures/architecture-baseline.json`，只减不增（`--update-baseline` 只移除已修复条目，遇新违规列出并失败；已有代码原样搬动时用 `--update-baseline --allow-moves`，须在 PR 描述里说明） |
 | `scripts/check-zero-domain.mjs` | `npm run check:arch` 的 P6 零领域棘轮；按类别记录宿主领域耦合，`--update` 只缩减 `scripts/fixtures/zero-domain-baseline.json`，有新增则失败且不写入；`ZERO` 只表示静态清单为空。宿主源文件的 import 监视**全部**第一方包（`pi-*`、`desktop-ui-pack`、`research-suite`），IPC 通道监视 `researchSkills:` 等以 `research` 之外的前缀出现的领域通道 |。`hostCatalogEntries` 类别监视 `packages/shared/resources/first-party-packages.json`：清单搬进数据后耦合不会消失，只是不再以字面量散落在代码里，新增一个包同样要让棘轮失败 |
-| `.githooks/pre-commit` + `scripts/check-staged.mjs` | 提交前拦截生成文件与源码混提、新增 `.skip(` 和测试超时；`npm install` 经 `prepare` 设置 `core.hooksPath` |
+| `scripts/check-bloat.mjs` | 双仓独立运行的防膨胀棘轮：旧路径禁增、新源码/文档/Skill 体积、生成物及纯瘦身净减；参见 [drone-slimming](../.agents/skills/drone-slimming/SKILL.md) |
+| `.githooks/pre-commit` + `scripts/check-staged.mjs` | 防膨胀检查读取暂存区；保留生成物混提、skip、测试超时和结构检查；`prepare` 设置 `core.hooksPath` |
 | `scripts/is-main-module.mjs` | 脚本判断“自己是否被直接运行”的唯一入口，按真实路径比较；`is-main-module.test.mjs` 经符号链接实际运行检查脚本，并禁止脚本再自己比较 `process.argv[1]` |
-| `.claude/hooks/stop-check.mjs` | Claude Code Stop hook：结束一轮前对改动文件跑 biome、结构基线和所属 workspace 的 typecheck |
+| `.claude/hooks/stop-check.mjs` | Claude Code Stop hook：先跑含未跟踪文件的防膨胀检查，再跑差异 Biome、结构检查和 workspace typecheck |
 | `.claude/jev/` | Jev harness（Claude Code hooks）：权限红线 deny/ask、检查命令输出阶梯（`jev-run.mjs --show <id> --grep`）、按路径注入的上下文规则、UI 技能提示；决策日志在被忽略的 `.claude/jev-state/`，说明见 `.claude/jev/README.md` |
 | `scripts/build-extensions.mjs` | 将 `packages/extensions/src/*.ts` 打包到 `.pi/extensions/*.mjs`（默认保护已有产物，并写入 `.build-manifest.json` 记录源/产物哈希） |
 | `scripts/check-native-pi.mjs` | 静态扫描一方工具注册，按 fixture 映射原生 Pi 可用性、源码位置和目标插件包（不读取生成的 `.pi` 产物） |

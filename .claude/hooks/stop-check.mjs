@@ -1,20 +1,31 @@
 #!/usr/bin/env node
 /**
- * Claude Code Stop hook: before a turn ends, lint the changed files, run the
- * structure baseline and typecheck the changed workspaces. Failures are
- * returned to Claude (exit 2) so they are fixed in the same turn.
+ * Claude Code Stop hook: apply the bloat gate before lint and workspace checks.
+ * Exit 2 surfaces actionable failures in the current turn.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 const input = JSON.parse(readFileSync(0, "utf8"));
 // Already continuing because of this hook: let the turn end instead of looping.
 if (input.stop_hook_active) process.exit(0);
+process.chdir(fileURLToPath(new URL("../../", import.meta.url)));
 
-const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).split("\n").filter(Boolean);
+// Run before the source filter: a docs-only change can exceed the bloat budget.
+const bloat = spawnSync(process.execPath, ["scripts/check-bloat.mjs"], { encoding: "utf8" });
+if (bloat.status !== 0) {
+	console.error(`Stop check failed; fix before finishing:\n\n${bloat.error ?? bloat.stdout + bloat.stderr}`);
+	process.exit(2);
+}
+
+const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).split("\0").slice(0, -1);
 const changed = [
-	...new Set([...git("diff", "--name-only", "HEAD"), ...git("ls-files", "--others", "--exclude-standard")]),
+	...new Set([
+		...git("diff", "--name-only", "-z", "HEAD"),
+		...git("ls-files", "--others", "--exclude-standard", "-z"),
+	]),
 ].filter((file) => /\.(?:[cm]?[jt]sx?|json)$/.test(file) && existsSync(file));
 if (changed.length === 0) process.exit(0);
 
