@@ -13,8 +13,10 @@ const env = (existing = []) => ({
 			? { repo: "drone", key: `drone:${file.slice(ROOT.length + 1)}` }
 			: { repo: null, key: `:${file}` },
 	exists: (file) => existing.includes(file),
+	home: "/h",
 });
-const bash = (command) => decidePermission({ tool_name: "Bash", tool_input: { command } }, env());
+const bash = (command, cwd = ROOT) =>
+	decidePermission({ tool_name: "Bash", tool_input: { command }, cwd }, env());
 const file = (tool, path, existing) =>
 	decidePermission({ tool_name: tool, tool_input: { file_path: path } }, env(existing));
 const answer = (verdict) => (verdict === null ? null : `${verdict.answer}:${verdict.rule}`);
@@ -35,9 +37,28 @@ describe("permission policy", () => {
 
 	it("asks for destructive but legitimate commands", () => {
 		assert.equal(answer(bash("git commit --no-verify -m x")), "ask:no-verify-needs-reason");
-		assert.equal(answer(bash("git push --force-with-lease origin claude/x")), "ask:force-push");
-		assert.equal(answer(bash("git reset --hard HEAD~1")), "ask:reset-hard");
-		assert.equal(answer(bash("rm -rf dist")), "ask:rm-recursive");
+	});
+
+	it("lets recursive deletes and history rewrites through inside a repository or a throwaway place", () => {
+		for (const command of [
+			"rm -rf dist",
+			"rm -rf /w/drone/node_modules && git clean -fdx",
+			"rm -r /private/tmp/claude-501/x",
+			"rm -rf /h/Documents/ChatGPT/Drone-worktrees/drone-T1",
+			"git reset --hard HEAD~1",
+			"git branch -D codex/T1",
+			"git push --force-with-lease origin claude/x",
+		]) {
+			assert.equal(bash(command), null, command);
+		}
+	});
+
+	it("asks before a recursive delete outside the repositories", () => {
+		assert.equal(answer(bash("rm -rf ~/Documents/notes")), "ask:rm-outside-repos");
+		assert.equal(answer(bash("rm -rf ../../outside", "/w/drone/a")), "ask:rm-outside-repos");
+		assert.equal(answer(bash("rm -rf $DIR")), "ask:rm-outside-repos");
+		assert.equal(answer(bash("cd x; sudo rm -fr /etc/thing")), "ask:rm-outside-repos");
+		assert.equal(answer(bash("rm -rf /w/drone")), "ask:rm-outside-repos");
 	});
 
 	it("has no opinion on ordinary commands", () => {
@@ -53,7 +74,7 @@ describe("permission policy", () => {
 	});
 
 	it("lets the strongest rule win", () => {
-		assert.equal(answer(bash("rm -rf x && npm publish")), "deny:no-npm-release");
+		assert.equal(answer(bash("rm -rf /etc/x && npm publish")), "deny:no-npm-release");
 	});
 
 	it("guards files by repository key and existence", () => {
@@ -73,7 +94,8 @@ describe("permission policy", () => {
 			answer(file("Edit", `${ROOT}/.claude/jev/hook.mjs`, [`${ROOT}/.claude/jev/hook.mjs`])),
 			"ask:harness-self",
 		);
-		assert.equal(answer(file("Write", "/tmp/elsewhere.txt")), "ask:outside-repos");
+		assert.equal(answer(file("Write", "/h/elsewhere.txt")), "ask:outside-repos");
+		assert.equal(file("Write", "/tmp/scratch.txt"), null);
 	});
 
 	it("ignores tools it does not know", () => {
