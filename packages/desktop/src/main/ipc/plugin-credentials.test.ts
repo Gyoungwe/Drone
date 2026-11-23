@@ -12,7 +12,7 @@ vi.mock("electron", () => ({
 	},
 }));
 
-import { type PluginCredentialSlot, PluginCredentialStore } from "@drone/backend";
+import { consentForSource, type PluginCredentialSlot, PluginCredentialStore } from "@drone/backend";
 import { channelOf, PluginCredentialsContract } from "@drone/shared";
 import { registerPluginCredentialsIpc } from "./plugin-credentials";
 
@@ -29,17 +29,20 @@ const localSlot: PluginCredentialSlot = {
 	hosts: ["127.0.0.1:23119"],
 	header: "Zotero-API-Key",
 	fields: ["serverId"],
+	custody: "host-environment",
 };
 const pluginId = "@gyoungwe/pi-research";
+/** A listed source; unless told otherwise the user approved its policy at install. */
 const runtime = (
 	credentials: PluginCredentialSlot[],
 	state: "enabled" | "unavailable",
 	sourcePluginId = pluginId,
-) => ({
-	name: `package:/${state}`,
-	source: { pluginId: sourcePluginId, credentials } as never,
-	state,
-});
+	approved = true,
+) => {
+	const declared = { pluginId: sourcePluginId, contentHash: "content-hash-1", credentials };
+	const source = approved ? { ...declared, policyConsent: consentForSource(declared) } : declared;
+	return { name: `package:/${state}`, source: source as never, state };
+};
 const call = (method: keyof typeof PluginCredentialsContract.methods, ...args: unknown[]) =>
 	mocks.handlers.get(channelOf(PluginCredentialsContract, method))?.({}, ...args);
 
@@ -131,26 +134,31 @@ it.each([undefined, "FakeLocalKey123"])(
 );
 
 it.each([
-	{ owner: "@other/plugin", definition: localSlot },
-	{ owner: pluginId, definition: { ...localSlot, hosts: ["evil.example"] } },
-])("keeps the normal store editable for $owner at $definition.hosts", async ({ owner, definition }) => {
-	registerPluginCredentialsIpc(
-		{ runtimeSources: () => [runtime([definition], "enabled", owner)] },
-		new PluginCredentialStore(t.path),
-	);
-	const fields = { serverId: "FakePluginServer123" };
-	await call("savePluginCredential", {
-		pluginId: owner,
-		slot: "zotero-local",
-		secret: "FakePluginKey123",
-		fields,
-	});
-	expect(await call("listPluginCredentials")).toMatchObject([
-		{ pluginId: owner, slot: "zotero-local", configured: true, values: fields },
-	]);
-	await call("clearPluginCredential", { pluginId: owner, slot: "zotero-local" });
-	expect(await call("listPluginCredentials")).toMatchObject([{ configured: false, values: {} }]);
-});
+	// The same shape, but the user never approved this package's policy.
+	{ owner: "@other/plugin", definition: localSlot, approved: false },
+	// Approved, but no host custody has this shape.
+	{ owner: pluginId, definition: { ...localSlot, hosts: ["evil.example"] }, approved: true },
+])(
+	"keeps the normal store editable for $owner at $definition.hosts",
+	async ({ owner, definition, approved }) => {
+		registerPluginCredentialsIpc(
+			{ runtimeSources: () => [runtime([definition], "enabled", owner, approved)] },
+			new PluginCredentialStore(t.path),
+		);
+		const fields = { serverId: "FakePluginServer123" };
+		await call("savePluginCredential", {
+			pluginId: owner,
+			slot: "zotero-local",
+			secret: "FakePluginKey123",
+			fields,
+		});
+		expect(await call("listPluginCredentials")).toMatchObject([
+			{ pluginId: owner, slot: "zotero-local", configured: true, values: fields },
+		]);
+		await call("clearPluginCredential", { pluginId: owner, slot: "zotero-local" });
+		expect(await call("listPluginCredentials")).toMatchObject([{ configured: false, values: {} }]);
+	},
+);
 
 const webdavSlot: PluginCredentialSlot = {
 	slot: "webdav",
@@ -159,6 +167,7 @@ const webdavSlot: PluginCredentialSlot = {
 	header: "Authorization",
 	fields: [],
 	authentication: "http-basic-digest",
+	custody: "host-environment",
 };
 const knowledgeId = "@gyoungwe/pi-knowledge";
 

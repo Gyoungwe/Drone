@@ -9,11 +9,13 @@ import {
 	PluginCredentialStore,
 } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
+import { consentForSource } from "./policy-consent";
 
-const source: PluginRuntimeSource = {
+const source = {
 	pluginId: "@gyoungwe/pi-research",
 	packageRoot: "/pkg",
 	entrypoint: "/pkg/runtime.mjs",
+	contentHash: "content-hash-1",
 };
 const context = { signal: new AbortController().signal } as Parameters<
 	ReturnType<typeof credentialCapabilityHandlers>["credentials.status"]["execute"]
@@ -31,9 +33,16 @@ const localSlot: PluginCredentialSlot = {
 	hosts: ["127.0.0.1:23119"],
 	header: "Zotero-API-Key",
 	fields: ["serverId"],
+	custody: "host-environment",
 };
-const localSource: PluginRuntimeSource = { ...source, credentials: [localSlot] };
 const localUrl = new URL("http://127.0.0.1:23119/api/users/0/items/X");
+
+/** The source with the consent the user gives for its declared policy, bound to its content. */
+function consentFor(current: PluginRuntimeSource & { contentHash: string }): PluginRuntimeSource {
+	return { ...current, policyConsent: consentForSource(current) };
+}
+
+const localSource: PluginRuntimeSource = consentFor({ ...source, credentials: [localSlot] });
 
 beforeEach(() => {
 	vi.stubEnv("ZOTERO_LOCAL_API_KEY", "FakeLocalKey123");
@@ -101,6 +110,7 @@ it.each([undefined, ""])("does not use a stored key when the environment key is 
 });
 
 it("does not share the host-kept key with another plugin", async () => {
+	// The shape matches, but the other package was never approved by the user.
 	const otherSource = { ...localSource, pluginId: "@other/plugin" };
 	const status = credentialCapabilityHandlers(t.store, otherSource)["credentials.status"];
 	expect(await status.execute(null, context)).toEqual({
@@ -127,6 +137,32 @@ it("does not share the host-kept key with another plugin", async () => {
 	});
 });
 
+it("keeps the host's secret when the user did not approve the policy", async () => {
+	const unapproved = { ...source, credentials: [localSlot] };
+	const status = credentialCapabilityHandlers(t.store, unapproved)["credentials.status"];
+	expect(await status.execute(null, context)).toEqual({
+		slots: { "zotero-local": { configured: false, source: null, savedConfigured: false, fields: {} } },
+	});
+	await expect(credentialHeader(t.store, unapproved, "zotero-local", localUrl)).rejects.toThrow(
+		"not configured",
+	);
+});
+
+it("keeps the host's secret when the approval is for different content", async () => {
+	const stale: PluginRuntimeSource = {
+		...localSource,
+		policyConsent: consentForSource({ ...localSource, contentHash: "other-content-hash" }),
+	};
+	await expect(credentialHeader(t.store, stale, "zotero-local", localUrl)).rejects.toThrow("not configured");
+});
+
+it("keeps the host's secret when the policy changed after the approval", async () => {
+	const widened = { ...localSource, credentials: [{ ...localSlot, hosts: ["127.0.0.1:23119", "x"] }] };
+	await expect(credentialHeader(t.store, widened, "zotero-local", localUrl)).rejects.toThrow(
+		"not configured",
+	);
+});
+
 it.each<{ change: string; definition: Partial<PluginCredentialSlot> }>([
 	{ change: "slot name", definition: { slot: "other-local" } },
 	{ change: "host", definition: { hosts: ["evil.example"] } },
@@ -136,7 +172,7 @@ it.each<{ change: string; definition: Partial<PluginCredentialSlot> }>([
 	{ change: "extra field", definition: { fields: ["serverId", "libraryId"] } },
 ])("uses the normal store after changing the $change", async ({ definition }) => {
 	const changedSlot = { ...localSlot, ...definition };
-	const changedSource = { ...localSource, credentials: [changedSlot] };
+	const changedSource = consentFor({ ...source, credentials: [changedSlot] });
 	const url = new URL(`http://${changedSlot.hosts[0]}/api/users/0/items/X`);
 	const status = credentialCapabilityHandlers(t.store, changedSource)["credentials.status"];
 	expect(await status.execute(null, context)).toEqual({
@@ -158,6 +194,7 @@ it.each<{ change: string; definition: Partial<PluginCredentialSlot> }>([
 });
 
 it("allows a different label without changing the host-kept binding", async () => {
+	// The consent given before the relabel still covers it: a label is wording, not policy.
 	const relabeled = {
 		...localSource,
 		credentials: [{ ...localSlot, label: { zh: "Local writes", en: "Local writes" } }],

@@ -32,11 +32,31 @@ export function normalizeUiPluginsConfig(parsed: Partial<UiPluginsConfig>): UiPl
 			installations[name] = { root: installation.root, hash: installation.hash };
 		}
 	}
+	const policyConsents: NonNullable<UiPluginsConfig["policyConsents"]> = {};
+	if (parsed.policyConsents && typeof parsed.policyConsents === "object") {
+		for (const [name, consent] of Object.entries(parsed.policyConsents)) {
+			if (!consent || typeof consent !== "object") continue;
+			if (typeof consent.pluginId !== "string" || consent.pluginId.length === 0) continue;
+			if (typeof consent.contentHash !== "string" || consent.contentHash.length === 0) continue;
+			if (typeof consent.fingerprint !== "string" || consent.fingerprint.length === 0) continue;
+			if (!Array.isArray(consent.custodySlots)) continue;
+			if (!consent.custodySlots.every((slot) => typeof slot === "string")) continue;
+			if (typeof consent.runtimeEndpoint !== "boolean") continue;
+			policyConsents[name] = {
+				pluginId: consent.pluginId,
+				contentHash: consent.contentHash,
+				fingerprint: consent.fingerprint,
+				custodySlots: [...consent.custodySlots],
+				runtimeEndpoint: consent.runtimeEndpoint,
+			};
+		}
+	}
 	return {
 		enabled: typeof parsed.enabled === "boolean" ? parsed.enabled : false,
 		plugins,
 		assignments,
 		...(Object.keys(installations).length > 0 ? { installations } : {}),
+		...(Object.keys(policyConsents).length > 0 ? { policyConsents } : {}),
 	};
 }
 

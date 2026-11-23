@@ -8,6 +8,7 @@ import { authenticatedRequest } from "./http-transport";
 import { networkCapabilityHandlers } from "./network-capabilities";
 import { credentialHeader, credentialHeaders, PluginCredentialStore } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
+import { consentForSource } from "./policy-consent";
 import { sourceCapabilityHandlers } from "./source-capabilities";
 import { TaskGrantStore } from "./task-grants";
 
@@ -19,9 +20,11 @@ const slot = {
 	header: "Authorization",
 	fields: [],
 	authentication: "http-basic-digest" as const,
+	custody: "host-environment" as const,
 };
+// Declares host custody too, but no host custody has its shape: it stays a slot the user fills.
 const literal = { ...slot, slot: "literal", header: "X-Api-Key", authentication: undefined };
-const source: PluginRuntimeSource = {
+const declared = {
 	pluginId: "@gyoungwe/pi-knowledge",
 	packageRoot: "/fixture",
 	entrypoint: "/fixture/runtime.mjs",
@@ -29,6 +32,7 @@ const source: PluginRuntimeSource = {
 	networkHosts: ["dav.test", "other.test"],
 	credentials: [slot, literal],
 };
+const source: PluginRuntimeSource = { ...declared, policyConsent: consentForSource(declared) };
 const request = {
 	method: "PROPFIND",
 	url: "https://dav.test/collection?version=2",

@@ -36,9 +36,10 @@ async function credentialEntries(
 		const policy = resolvePluginEndpointPolicy(source, process.env.DRONE_WEBDAV_ENDPOINT);
 		for (const definition of slots) {
 			const { pluginId } = source;
-			if (PluginCredentialStore.isHostKept(pluginId, definition)) continue;
-			const { credential, savedConfigured } = await store.resolve(pluginId, definition);
-			const endpoint = definition.slot === "webdav" ? endpointStatus(policy) : undefined;
+			if (PluginCredentialStore.isHostKept(definition, source)) continue;
+			const { credential, savedConfigured } = await store.resolve(pluginId, definition, process.env, source);
+			// The endpoint rides on the slot the policy named, not on a hard-coded name.
+			const endpoint = policy.configuration?.slot === definition.slot ? endpointStatus(policy) : undefined;
 			// The resolver builds this map from the same declared slots.
 			const hosts = policy.credentialHosts[definition.slot] as readonly string[];
 			entries.push({
@@ -68,11 +69,10 @@ export function registerPluginCredentialsIpc(
 	store = new PluginCredentialStore(),
 ): void {
 	const slotOf = (pluginId: string, name: string): PluginCredentialSlot => {
-		const slot = declaredCredentials(manager)
-			.get(pluginId)
-			?.slots.find((entry) => entry.slot === name);
-		if (!slot) throw new Error(`Plugin ${pluginId} declares no credential slot ${name}`);
-		if (PluginCredentialStore.isHostKept(pluginId, slot))
+		const declared = declaredCredentials(manager).get(pluginId);
+		const slot = declared?.slots.find((entry) => entry.slot === name);
+		if (!declared || !slot) throw new Error(`Plugin ${pluginId} declares no credential slot ${name}`);
+		if (PluginCredentialStore.isHostKept(slot, declared.source))
 			throw new Error(`Credential ${name} is managed in Zotero settings`);
 		return slot;
 	};

@@ -1,7 +1,9 @@
 import { channelOf, KNOWN_UI_SLOTS, type UiPluginsConfig, UiPluginsContract } from "@drone/shared";
-import { shell } from "electron";
+import { BrowserWindow, shell } from "electron";
 import { loadUiPluginsConfig } from "../ui-plugins/config";
 import type { UiPluginManager } from "../ui-plugins/manager";
+import { requestPolicyApproval } from "../ui-plugins/policy-approval";
+import { consentToRecord } from "../ui-plugins/policy-consent-store";
 import type { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 import { sendToRenderer } from "./index";
@@ -11,12 +13,26 @@ function pushConfigEvent(): void {
 	sendToRenderer(channelOf(UiPluginsContract, "event"), { kind: "config" });
 }
 
+/** The main window when it can carry a dialog; a hidden or closed window leaves the dialog on its own. */
+function visibleWindow(): BrowserWindow | undefined {
+	const window = BrowserWindow.getAllWindows()[0];
+	return window && !window.isDestroyed() && window.isVisible() ? window : undefined;
+}
+
 /**
  * UI 插件域：配置读写 / 列表 / 构建 / 代码读取 / 目录打开。
  * 安全细则（spec §9）：readCode/openDir 只接受 manager 白名单内的合法插件名（禁路径）；
  * 所有参数做类型检查，非法直接 return。
+ *
+ * Returns the install-time policy check: it asks about every package that would
+ * run but waits for the user's approval (approval category
+ * `install-credential-network-policy`), one dialog at a time.
  */
-export function registerUiPluginsIpc(manager: UiPluginManager, runtime: DesktopRuntimeBridge): void {
+export function registerUiPluginsIpc(
+	manager: UiPluginManager,
+	runtime: DesktopRuntimeBridge,
+	ask = requestPolicyApproval,
+): { reconcilePolicies(): Promise<void> } {
 	const changeConfiguration = async <T>(action: () => Promise<T>): Promise<T> => {
 		try {
 			return await runtime.withUiTransition(action);
@@ -25,6 +41,24 @@ export function registerUiPluginsIpc(manager: UiPluginManager, runtime: DesktopR
 			pushConfigEvent();
 		}
 	};
+	// The startup check, a package change and a switch can each want a dialog; one is shown at a time.
+	let dialogs: Promise<unknown> = Promise.resolve();
+	const oneAtATime = <T>(task: () => Promise<T>): Promise<T> => {
+		const result = dialogs.then(task);
+		dialogs = result.catch(() => undefined);
+		return result;
+	};
+	const reconcilePolicies = () =>
+		oneAtATime(async () => {
+			const asked = new Set<string>();
+			for (;;) {
+				const source = manager.pendingPolicyApprovals().find((candidate) => !asked.has(candidate.pluginId));
+				if (!source) return;
+				asked.add(source.pluginId);
+				const approved = await ask(source, visibleWindow());
+				await changeConfiguration(() => manager.recordPolicyDecision(source, approved));
+			}
+		});
 	const implementation = (
 		event: import("electron").IpcMainInvokeEvent,
 	): ContractImplementation<typeof UiPluginsContract> => ({
@@ -54,6 +88,17 @@ export function registerUiPluginsIpc(manager: UiPluginManager, runtime: DesktopR
 			if (enabled && info?.invalidReason) {
 				throw new Error(info.invalidReason);
 			}
+			// Approving the package's policy is a precondition of enabling (D-CRED-2). The user
+			// answered in the host's own dialog, so a refusal leaves the plugin off without an error.
+			const source = enabled ? manager.packageSourceOf(name) : undefined;
+			const approval = source && manager.awaitsPolicyApproval(source) ? source : undefined;
+			if (approval) {
+				const parent = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+				const approved = await oneAtATime(
+					async () => !manager.awaitsPolicyApproval(approval) || ask(approval, parent),
+				);
+				if (!approved) return;
+			}
 			await changeConfiguration(async () => {
 				const config = await loadUiPluginsConfig();
 				const prev = config.plugins[name];
@@ -62,6 +107,9 @@ export function registerUiPluginsIpc(manager: UiPluginManager, runtime: DesktopR
 						...config.plugins,
 						[name]: { enabled, trusted: enabled ? true : (prev?.trusted ?? false) },
 					},
+					...(approval
+						? { policyConsents: { ...config.policyConsents, [approval.pluginId]: consentToRecord(approval) } }
+						: {}),
 				};
 				await manager.updateConfig(patch);
 			});
@@ -92,4 +140,5 @@ export function registerUiPluginsIpc(manager: UiPluginManager, runtime: DesktopR
 		},
 	});
 	bindContract(UiPluginsContract, implementation);
+	return { reconcilePolicies };
 }

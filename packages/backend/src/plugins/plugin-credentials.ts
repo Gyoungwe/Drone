@@ -3,13 +3,12 @@ import { join } from "node:path";
 import { type Static, Type } from "typebox";
 import { JsonStore } from "../json-store";
 import { getAgentDir } from "../session-engine/sdk";
-import { resolvePluginCredential } from "./credential-override";
+import { isHostKeptCredential, resolvePluginCredential } from "./credential-override";
 import {
 	assertEndpointAvailable,
 	type PluginEndpointPolicy,
 	runtimeEndpointMatches,
 } from "./endpoint-policy";
-import { isHostKeptCredential } from "./host-kept-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
 import type { PluginCapabilityHandler } from "./runtime-capabilities";
 
@@ -79,8 +78,9 @@ function credentialKey(
 export class PluginCredentialStore {
 	private readonly store: JsonStore<Record<string, SavedCredential>>;
 
-	static isHostKept(pluginId: string, slot: PluginCredentialSlot): boolean {
-		return isHostKeptCredential(pluginId, slot);
+	/** Whether the host alone fills this slot for this source, so the user has nothing to save for it. */
+	static isHostKept(slot: PluginCredentialSlot, source?: PluginRuntimeSource): boolean {
+		return isHostKeptCredential(slot, source);
 	}
 
 	constructor(path = join(getAgentDir(), "plugin-credentials.json")) {
@@ -96,8 +96,13 @@ export class PluginCredentialStore {
 		return (await this.store.read())[credentialKey(pluginId, slot)];
 	}
 
-	resolve(pluginId: string, slot: PluginCredentialSlot, env: NodeJS.ProcessEnv = process.env) {
-		return resolvePluginCredential(this, pluginId, slot, env);
+	resolve(
+		pluginId: string,
+		slot: PluginCredentialSlot,
+		env: NodeJS.ProcessEnv = process.env,
+		source?: PluginRuntimeSource,
+	) {
+		return resolvePluginCredential(this, pluginId, slot, env, source);
 	}
 
 	async save(
@@ -156,7 +161,7 @@ export async function credentialHeader(
 ): Promise<Record<string, string>> {
 	const slot = credentialSlot(source, name, url, policy);
 	if (slot.authentication) throw new Error(`Credential ${name} requires host HTTP authentication`);
-	const { credential } = await store.resolve(source.pluginId, slot);
+	const { credential } = await store.resolve(source.pluginId, slot, process.env, source);
 	if (!credential) throw new Error(`Credential ${name} is not configured; add it in Drone settings`);
 	return { [slot.header]: credential.secret };
 }
@@ -191,7 +196,12 @@ export function credentialCapabilityHandlers(
 			execute: async () => {
 				const slots: Record<string, Static<typeof slotStatusResult>> = {};
 				for (const slot of source.credentials ?? []) {
-					const { credential, savedConfigured } = await store.resolve(source.pluginId, slot);
+					const { credential, savedConfigured } = await store.resolve(
+						source.pluginId,
+						slot,
+						process.env,
+						source,
+					);
 					slots[slot.slot] = {
 						configured: Boolean(credential),
 						fields: { ...credential?.fields },

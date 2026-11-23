@@ -29,7 +29,7 @@ export function authenticatedRequest(
 	if (!validHttpUsername(username)) throw new Error("Invalid HTTP authentication username");
 	return async (method, send) => {
 		endpointAccess?.check();
-		const { credential } = await store.resolve(source.pluginId, slot);
+		const { credential } = await store.resolve(source.pluginId, slot, process.env, source);
 		endpointAccess?.check();
 		if (!credential) throw new Error(`Credential ${name} is not configured; add it in Drone settings`);
 		let challenges = challengesByStore.get(store);

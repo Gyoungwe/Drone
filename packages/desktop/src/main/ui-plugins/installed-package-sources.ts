@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import type { PluginPolicyConsent } from "@drone/backend";
 import type {
 	PluginRecordAdoptions,
 	PluginServiceProvision,
@@ -89,6 +90,13 @@ export interface InstalledUiRuntimeSource extends NetworkDeclaration, InstalledP
 	requestsExecution?: boolean;
 	requestsTaskGrant?: boolean;
 	requestsWorkspaceRead?: boolean;
+	/**
+	 * The user's approval of this package's credential and network policy.
+	 *
+	 * The host grants it at install time; it is not a manifest declaration, so it
+	 * never comes from the package's own files.
+	 */
+	policyConsent?: PluginPolicyConsent;
 	resources?: Readonly<Record<string, string>>;
 }
 export type InstalledPackageDiscovery =

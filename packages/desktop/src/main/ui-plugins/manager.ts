@@ -31,6 +31,12 @@ import {
 	seedDocs,
 } from "./plugin-dirs";
 import { invalidPluginInfo, readManifest, validateManifest } from "./plugin-manifest";
+import {
+	applyPolicyDecision,
+	awaitsPolicyApproval,
+	pendingPolicyApprovals,
+	sourceWithConsent,
+} from "./policy-consent-store";
 
 export { RETIRED_BUILTIN_PLUGINS, uiPluginsResourcesDir } from "./plugin-dirs";
 
@@ -55,6 +61,8 @@ export class UiPluginManager {
 	private installedPackageHashes = new Map<string, { root: string; hash: string }>();
 	/** Installed package generations observed as changed during this scan; trust must be renewed. */
 	private readonly reconfirmInstallations = new Set<string>();
+	/** Package policies the user refused in this run, by content and policy; they are not asked again. */
+	private readonly declinedPolicies = new Set<string>();
 	/** 随包内置插件名集合（init 时导出到用户目录；此处仅用于合成 builtin 标志 → 面板 badge/启用免确认） */
 	private builtinNames = new Set<string>();
 	/** 持久化配置缓存（updateConfig 后刷新；scanAll 时叠加） */
@@ -111,7 +119,12 @@ export class UiPluginManager {
 			slots: manifest?.slots ?? {},
 			contributions: filterContributions(manifest?.contributions),
 			headless: manifest?.headless === true ? true : undefined,
-			enabled: forceReconfirmation ? false : (this.config.plugins[name]?.enabled ?? builtinPackage),
+			// A package whose policy waits for the user's approval is not enabled until they answer.
+			enabled:
+				forceReconfirmation ||
+				(runtime !== undefined && awaitsPolicyApproval(this.config.policyConsents, runtime))
+					? false
+					: (this.config.plugins[name]?.enabled ?? builtinPackage),
 			trusted: forceReconfirmation ? false : (this.config.plugins[name]?.trusted ?? builtinPackage),
 			invalidReason: invalidReason ?? undefined,
 			buildError: prev?.buildError,
@@ -320,8 +333,42 @@ export class UiPluginManager {
 		return this.infos.get(name) ?? null;
 	}
 
-	/** The source belongs to the installed package selected by the current scan. */
+	/** The package source a UI plugin name belongs to; a local UI plugin has none. */
+	packageSourceOf(name: string): InstalledUiRuntimeSource | undefined {
+		return this.installedSources.get(name)?.runtime;
+	}
+
+	/** Whether a package waits for the user to approve its credential and network policy. */
+	awaitsPolicyApproval(source: InstalledUiRuntimeSource): boolean {
+		return awaitsPolicyApproval(this.config.policyConsents, source);
+	}
+
+	/** Packages that would run but wait for the user's approval, one source per package. */
+	pendingPolicyApprovals(): InstalledUiRuntimeSource[] {
+		const running = [...this.packageSources.keys()].map((name) => this.currentSource(name));
+		const switchedOff = (root: string) => this.uiSwitchedOff(root);
+		return pendingPolicyApprovals(running, this.config.policyConsents, this.declinedPolicies, switchedOff);
+	}
+
+	/** Record the user's answer about a package's policy; a refusal switches its UI plugins off. */
+	async recordPolicyDecision(source: InstalledUiRuntimeSource, approved: boolean): Promise<void> {
+		const names = [...this.installedSources].filter(([, item]) => item.packageRoot === source.packageRoot);
+		const config = await loadUiPluginsConfig();
+		const uiNames = names.map(([name]) => name);
+		await this.updateConfig(applyPolicyDecision(config, source, approved, uiNames, this.declinedPolicies));
+	}
+
+	/** The source of the current scan, once its policy is approved; approval is an enable precondition. */
 	runtimeSource(name: string): InstalledUiRuntimeSource | undefined {
+		const source = this.currentSource(name);
+		const consents = this.config.policyConsents;
+		return source && !awaitsPolicyApproval(consents, source)
+			? sourceWithConsent(consents, source)
+			: undefined;
+	}
+
+	/** The source belongs to the installed package selected by the current scan. */
+	private currentSource(name: string): InstalledUiRuntimeSource | undefined {
 		const native = this.packageSources.get(name);
 		if (native) {
 			if (!native.current || this.builtinDisabled(native.source.packageRoot)) return undefined;
@@ -332,8 +379,7 @@ export class UiPluginManager {
 				return undefined;
 			}
 		}
-		if (!this.installedSourceCurrent(name)) return undefined;
-		return this.installedSources.get(name)?.runtime;
+		return this.installedSourceCurrent(name) ? this.installedSources.get(name)?.runtime : undefined;
 	}
 
 	/** Native and service consumers see the same package descriptors and current content identities. */
@@ -344,7 +390,7 @@ export class UiPluginManager {
 	}[] {
 		return [...this.packageSources].map(([name, item]) => ({
 			name,
-			source: item.source,
+			source: sourceWithConsent(this.config.policyConsents, item.source),
 			state: this.runtimeSource(name) ? "enabled" : "unavailable",
 		}));
 	}
@@ -368,7 +414,11 @@ export class UiPluginManager {
 
 	/** A built-in package is disabled through its UI plugin's switch, which is also its package switch. */
 	private builtinDisabled(packageRoot: string): boolean {
-		if (!this.builtinPackages.has(packageRoot)) return false;
+		return this.builtinPackages.has(packageRoot) && this.uiSwitchedOff(packageRoot);
+	}
+
+	/** Whether the user switched a UI plugin of this package off. */
+	private uiSwitchedOff(packageRoot: string): boolean {
 		for (const [name, item] of this.installedSources)
 			if (item.packageRoot === packageRoot && this.config.plugins[name]?.enabled === false) return true;
 		return false;

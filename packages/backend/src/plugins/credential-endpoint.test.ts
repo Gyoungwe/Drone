@@ -5,6 +5,7 @@ import { resolvePluginEndpointPolicy } from "./endpoint-policy";
 import { authenticatedRequest } from "./http-transport";
 import { credentialHeader, credentialSlot, PluginCredentialStore } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
+import { consentForSource } from "./policy-consent";
 import type { PluginCapabilityContext } from "./runtime-capabilities";
 import { sourceCapabilityHandlers } from "./source-capabilities";
 import { TaskGrantStore } from "./task-grants";
@@ -18,14 +19,19 @@ const slot = {
 	header: "Authorization",
 	fields: [],
 	authentication: "http-basic-digest" as const,
+	custody: "host-environment" as const,
 };
-const source: PluginRuntimeSource = {
+const declared = {
 	pluginId: "@gyoungwe/pi-knowledge",
 	packageRoot: "/fixture",
 	entrypoint: "/fixture/runtime.mjs",
+	contentHash: "content-hash-1",
 	networkHosts: slot.hosts,
 	credentials: [slot],
+	networkPolicy: { runtimeEndpoint: { allowed: true as const, credentialSlot: "webdav" } },
 };
+/** The user approved the package's policy at install: the runtime endpoint and the host's password. */
+const source: PluginRuntimeSource = { ...declared, policyConsent: consentForSource(declared) };
 const context = { signal: new AbortController().signal } as PluginCapabilityContext;
 const sessions = { get: () => undefined, signalFor: () => context.signal };
 const fixture = {} as { root: string; store: PluginCredentialStore };

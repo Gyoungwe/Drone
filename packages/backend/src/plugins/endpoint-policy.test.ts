@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resolvePluginEndpointPolicy } from "./endpoint-policy";
 import type { PluginCredentialSlot } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
+import { consentForSource } from "./policy-consent";
 
 const slot: PluginCredentialSlot = {
 	slot: "webdav",
@@ -11,14 +12,25 @@ const slot: PluginCredentialSlot = {
 	fields: [],
 	authentication: "http-basic-digest",
 };
-const source: PluginRuntimeSource = {
+const networkPolicy = { runtimeEndpoint: { allowed: true, credentialSlot: "webdav" } } as const;
+const declared = {
 	pluginId: "@gyoungwe/pi-knowledge",
 	packageRoot: "/fixture",
 	entrypoint: "/fixture/runtime.mjs",
+	contentHash: "content-hash-1",
 	networkHosts: ["10.126.126.1:8080"],
 	credentials: [slot, { ...slot, slot: "other" }],
+	networkPolicy,
 };
-const invalid = { state: "invalid", endpoint: null, source: "env", reason: "invalid_endpoint" };
+/** The source the user approved: the declaration plus the install-time consent. */
+const source: PluginRuntimeSource = { ...declared, policyConsent: consentForSource(declared) };
+const invalid = {
+	state: "invalid",
+	endpoint: null,
+	source: "env",
+	reason: "invalid_endpoint",
+	slot: "webdav",
+} as const;
 
 describe("endpoint policy", () => {
 	it("uses the default configuration and only declared hosts when unset", () => {
@@ -27,6 +39,7 @@ describe("endpoint policy", () => {
 			state: "ready",
 			endpoint: "http://10.126.126.1:8080",
 			source: "default",
+			slot: "webdav",
 		});
 		expect(policy.networkHosts).toEqual(source.networkHosts);
 		expect(policy.credentialHosts).toEqual({ webdav: slot.hosts, other: slot.hosts });
@@ -56,6 +69,13 @@ describe("endpoint policy", () => {
 	});
 
 	it.each([
+		["an unapproved declaration", declared],
+		["an approval for other content", { ...source, contentHash: "content-hash-2" }],
+		["a package without a runtime endpoint policy", { ...source, networkPolicy: undefined }],
+		[
+			"a policy naming another slot",
+			{ ...source, networkPolicy: { runtimeEndpoint: { allowed: true, credentialSlot: "other" } } },
+		],
 		["another plugin", { ...source, pluginId: "@other/plugin" }],
 		["another slot", { ...source, credentials: [{ ...slot, slot: "other" }] }],
 		["absent slot", { ...source, credentials: [] }],
@@ -85,7 +105,7 @@ describe("endpoint parsing", () => {
 		["https://bücher.example:0443", "https://xn--bcher-kva.example", "xn--bcher-kva.example:443"],
 	])("normalizes accepted root %#", (raw, endpoint, hostPort) => {
 		const policy = resolvePluginEndpointPolicy(source, raw);
-		expect(policy.configuration).toEqual({ state: "ready", endpoint, source: "env" });
+		expect(policy.configuration).toEqual({ state: "ready", endpoint, source: "env", slot: "webdav" });
 		expect(policy.runtimeGrant).toEqual({ endpoint, hostPort, slot: "webdav" });
 	});
 

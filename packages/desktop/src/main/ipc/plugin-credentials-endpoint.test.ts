@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { type PluginCredentialSlot, PluginCredentialStore } from "@drone/backend";
+import { consentForSource, type PluginCredentialSlot, PluginCredentialStore } from "@drone/backend";
 import { channelOf, type PluginCredentialEntry, PluginCredentialsContract } from "@drone/shared";
 import { Check } from "typebox/value";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -25,8 +25,9 @@ const slot: PluginCredentialSlot = {
 	header: "Authorization",
 	fields: [],
 	authentication: "http-basic-digest",
+	custody: "host-environment",
 };
-const source: RuntimeEntry["source"] = {
+const declared: RuntimeEntry["source"] = {
 	pluginId,
 	packageRoot: "/fixture/knowledge",
 	entrypoint: "/fixture/knowledge/runtime.mjs",
@@ -34,7 +35,10 @@ const source: RuntimeEntry["source"] = {
 	installationPath: "/fixture/knowledge",
 	networkHosts: slot.hosts,
 	credentials: [slot],
+	networkPolicy: { runtimeEndpoint: { allowed: true, credentialSlot: "webdav" } },
 };
+/** The user approved the package's policy at install: the runtime endpoint may be configured. */
+const source: RuntimeEntry["source"] = { ...declared, policyConsent: consentForSource(declared) };
 const fixture = {} as { dir: string; store: PluginCredentialStore };
 const runtime = (
 	declared: RuntimeEntry["source"] = source,
@@ -126,7 +130,9 @@ it("omits endpoint for another plugin's webdav slot", async () => {
 
 it("omits endpoint for another pi-knowledge slot", async () => {
 	vi.stubEnv("DRONE_WEBDAV_ENDPOINT", "https://dav.example:8443");
-	register([runtime({ ...source, credentials: [slot, { ...slot, slot: "other" }] })]);
+	// Approved as declared with both slots; the endpoint still rides on the slot the policy names.
+	const both = { ...declared, credentials: [slot, { ...slot, slot: "other" }] };
+	register([runtime({ ...both, policyConsent: consentForSource(both) })]);
 	const entries = await list();
 	expect(entries[0]).toHaveProperty("endpoint");
 	expect(entries[1]).not.toHaveProperty("endpoint");
