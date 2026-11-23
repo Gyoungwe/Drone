@@ -24,7 +24,10 @@ const NOW_FILE = path.join(STATE_DIR, "now.json");
 function meteredAsk(key, meter, label) {
 	return async (state, questions) => {
 		mkdirSync(STATE_DIR, { recursive: true });
-		writeFileSync(NOW_FILE, JSON.stringify({ ts: new Date().toISOString(), ...label, questions: Object.keys(questions) }));
+		writeFileSync(
+			NOW_FILE,
+			JSON.stringify({ ts: new Date().toISOString(), ...label, questions: Object.keys(questions) }),
+		);
 		try {
 			const result = await askJev(state, questions, { key });
 			meter.tokens += result.usage?.input_tokens ?? 0;
@@ -71,7 +74,11 @@ export async function scriptPoint(command, cwd, output) {
 	const cache = jsonCache(CACHE_FILE);
 	try {
 		const meter = { tokens: 0 };
-		const ask = meteredAsk(key, meter, { point: "permission", rule: "jev-script", key: redact(command.slice(0, 120)) });
+		const ask = meteredAsk(key, meter, {
+			point: "permission",
+			rule: "jev-script",
+			key: redact(command.slice(0, 120)),
+		});
 		const result = await inspectScript(command, cwd, { readFile: readScript, ask, cache, redact });
 		if (result === null) return null;
 		cache.save();
