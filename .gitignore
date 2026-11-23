@@ -53,3 +53,6 @@ drone-plugins/
 vendor/plugins/
 .pi/extensions/knowledge-worker.mjs
 .pi/extensions/.knowledge-worker-manifest.json
+
+# Jev harness local state (decision log, output chunks, per-session context marks)
+.claude/jev-state/
