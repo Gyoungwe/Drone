@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
  * The one Claude Code hook entry for the Jev harness; `hook_event_name` picks the decision point:
- *   PreToolUse       permission policy, then routing of check commands through the output ladder
+ *   PreToolUse       permission policy, routing of check commands through the output ladder, then Jev
+ *                    reading any other script the command runs (model-points.mjs)
  *   PostToolUse      path-bound context rules for the file just read or edited
  *   SessionStart     after compact/clear, forget which rules were shown so they come back
- *   UserPromptSubmit name the UI skills only for UI prompts
+ *   UserPromptSubmit Jev classifies the task and names its skills; keywords when no TypeSafe key is set
  * A hook that throws fails open: the tool call proceeds and the error is surfaced as a system message.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -13,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { routeCommand, squeezable } from "./command-route.mjs";
 import { selectRules } from "./context-rules.mjs";
 import { decision, record, STATE_DIR } from "./decision.mjs";
+import { scriptPoint, taskPoint } from "./model-points.mjs";
 import { locate } from "./paths.mjs";
 import { decidePermission } from "./permission-policy.mjs";
 import { skillHint } from "./skill-hints.mjs";
@@ -23,7 +25,7 @@ const WRITE_TOOLS = new Set(["Edit", "Write", "MultiEdit"]);
 const seenFile = (session) => path.join(STATE_DIR, "seen", `${String(session).replace(/[^\w-]/g, "_")}.json`);
 const output = (event, fields) => ({ hookSpecificOutput: { hookEventName: event, ...fields } });
 
-function preToolUse(input) {
+async function preToolUse(input) {
 	const verdict = decidePermission(input, { locate, exists: existsSync });
 	if (verdict !== null) {
 		record(STATE_DIR, { ...verdict, tool: input.tool_name });
@@ -33,7 +35,8 @@ function preToolUse(input) {
 		});
 	}
 	const command = input.tool_name === "Bash" ? String(input.tool_input.command ?? "") : "";
-	if (!squeezable(command)) return null;
+	if (command === "") return null;
+	if (!squeezable(command)) return scriptPoint(command, String(input.cwd ?? process.cwd()), output);
 	record(STATE_DIR, { ...decision("output", "route", "check-command"), command });
 	return output("PreToolUse", {
 		permissionDecision: "allow",
@@ -72,12 +75,16 @@ function sessionStart(input) {
 	return null;
 }
 
-function userPromptSubmit(input) {
-	const hint = skillHint(String(input.prompt ?? ""));
+function keywordHint(prompt) {
+	const hint = skillHint(prompt);
 	if (hint === null) return null;
 	const { text, ...entry } = hint;
 	record(STATE_DIR, entry);
 	return output("UserPromptSubmit", { additionalContext: text });
+}
+
+function userPromptSubmit(input) {
+	return taskPoint(String(input.prompt ?? ""), output, keywordHint);
 }
 
 const HANDLERS = {
@@ -93,7 +100,7 @@ function readStdin() {
 
 try {
 	const input = JSON.parse(readStdin());
-	const result = HANDLERS[input.hook_event_name]?.(input) ?? null;
+	const result = (await HANDLERS[input.hook_event_name]?.(input)) ?? null;
 	if (result !== null) process.stdout.write(JSON.stringify(result));
 } catch (error) {
 	const message = error instanceof Error ? error.message : String(error);
