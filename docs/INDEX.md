@@ -470,6 +470,8 @@ src/
 | `src/slash-commands.ts` | `BUILTIN_SLASH_COMMANDS` | 内置静态表（compact/name/export/settings）+ 模板/skill/扩展命令映射（纯函数） |
 | `src/log.ts` | `createLogger`、`initLogging` | 结构化日志：按天落盘 `main-<本地日期>.log`（`PI_LOG_LEVEL`/`PI_LOG_DIR`） |
 | `src/services/webdav-transport.ts` | `WebDavTransport`、`KnowledgeWebDavError` | Shared host Basic/Digest HTTP/XML transport for knowledge cloud operations and research reversible writes; `knowledge/webdav.ts` re-exports the same error class. |
+| `src/services/installed-package-scan.ts` | `scanInstalledPackages`、`moduleNodeModulesRoots`、`managedAgentPackageRoot`、`packagedResourceRoots`、`readPackageManifest`、`declaresWorker` | 从安装根扫描已安装包：读各包自己的 `package.json` / `plugin.manifest.json`（UI pack 读 `ui/plugin.json`），**不按名字点名任何包**；根的顺序决定谁遮蔽谁（打包态 Resources 里的只读内置优先，其次宿主模块链，最后 Pi 托管安装根）。`declaresWorker` 依据 manifest 的 `entrypoints.worker` 判断该包是否自带独立 worker 进程 |
+| `src/services/host-plugin-packages.ts` | `deriveHostPluginPackages`、`attributeWorkerLifecycles` | 由扫描结果 + 宿主自有清单派生插件页行：已安装用真实版本与该包自己声明的能力/工具/权限，未安装仍列出但标记 unavailable；worker 生命周期按事件里的 worker 路径归属到拥有该路径的包，路径不可归属时只在唯一声明 worker 的包上回退 |
 | `src/session/messages.ts` | `toSessionMessages`、`resolveRecallEntryId`、`resolveForkEntryId`、`block*` | pi 消息 → SessionMessage 解析（纯函数，可独立单测）：toolResult 回填、show_image/subagent 提取、edit `details.patch` → `SessionToolCall.diff`、entryId 配对（user·assistant 分表防同 ms 碰撞）；fork/recall 目标解析 |
 | `src/session/traces.ts` + `trace.ts` | `SessionTraces`、`TraceRecorder` | trace 生命周期 / 批量落盘（500ms/128 条 flush；单事件 >512KB 截断标记、按字节轮转——加固背景见 PITFALLS 0.4.6） |
 | `src/session/event-slim.ts` | `slimMessageUpdate`、`slimBulkyEvent` | 事件瘦身（emitEvent 单点）：剥流式 delta 携带的全量快照、剥 image base64/截断超长 text；details 与终态消息不动（事故背景见 PITFALLS） |
