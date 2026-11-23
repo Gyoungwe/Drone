@@ -30,6 +30,19 @@ export interface PluginCredentialSlot {
 	readonly fields: readonly string[];
 	/** The host handles HTTP challenges instead of attaching a literal secret header. */
 	readonly authentication?: "http-basic-digest";
+	/**
+	 * Where the secret may come from besides the user's saved store.
+	 *
+	 * `user` (the default) means the user saves the secret in the plugin's
+	 * credential store. `host-environment` means the *host* holds the secret and
+	 * fills the slot from its own environment instead — the plugin never reads
+	 * it and never stores it.
+	 *
+	 * The slot does **not** name the environment variable. The host maps the
+	 * custody kind to a secret it already owns, so a manifest cannot make the
+	 * host read an arbitrary variable (D-CRED-1, 2026-11-23).
+	 */
+	readonly custody?: "user" | "host-environment";
 }
 
 interface SavedCredential {
@@ -38,13 +51,27 @@ interface SavedCredential {
 	readonly savedAt: string;
 }
 
-/** A credential belongs to the plugin and the slot definition; a version bump alone keeps it. */
+/**
+ * A credential belongs to the plugin and the slot definition; a version bump alone keeps it.
+ *
+ * `custody` is part of the definition on purpose: a slot that changes its custody changes
+ * where its secret comes from, so the old saved secret must not be reused for it.
+ */
 function credentialKey(
 	pluginId: string,
-	{ slot, hosts, header, fields, authentication }: PluginCredentialSlot,
+	{ slot, hosts, header, fields, authentication, custody }: PluginCredentialSlot,
 ): string {
 	const definition = createHash("sha256")
-		.update(JSON.stringify({ slot, hosts, header, fields, ...(authentication ? { authentication } : {}) }))
+		.update(
+			JSON.stringify({
+				slot,
+				hosts,
+				header,
+				fields,
+				...(authentication ? { authentication } : {}),
+				...(custody ? { custody } : {}),
+			}),
+		)
 		.digest("hex");
 	return `${pluginId}\t${definition}`;
 }
