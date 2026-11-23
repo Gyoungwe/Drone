@@ -11,6 +11,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Classifies the PR diff. Dev-environment-only PRs (Claude Code hooks, agent skills,
+  # git hooks, docs, root-level Markdown) skip the heavy suites; static checks still run
+  # because lint and test:arch cover .claude/jev. Markdown under packages/ or .pi/ ships
+  # as runtime skills, so only root-level *.md counts as dev-only. push and
+  # workflow_dispatch always run everything.
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      - uses: actions/checkout@v6
+        if: github.event_name == 'pull_request'
+        with:
+          # The PR merge commit and its first parent (the current base tip) suffice.
+          fetch-depth: 2
+      - id: classify
+        shell: bash
+        run: |
+          code=true
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            code=false
+            while IFS= read -r f; do
+              case "$f" in
+                .claude/*|.agents/*|.githooks/*|docs/*) ;;
+                */*) code=true ;;
+                *.md) ;;
+                *) code=true ;;
+              esac
+            done < <(git diff --name-only HEAD^1 HEAD)
+          fi
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+
   plugins:
     name: Locked plugin sources (rebuild and verify)
     runs-on: ubuntu-latest
@@ -35,8 +68,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
-    needs: plugins
+        # Dev-env-only PRs skip the Windows leg; the required check is the macOS one.
+        os: ${{ fromJSON(needs.changes.outputs.code == 'true' && '["windows-latest","macos-latest"]' || '["macos-latest"]') }}
+    needs: [changes, plugins]
     # Releases ship macOS only. Windows runs for visibility until its known failures
     # (plugin build spawns, path aliases, file modes) are fixed; see docs/PITFALLS.md.
     continue-on-error: ${{ matrix.os == 'windows-latest' }}
@@ -74,7 +108,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
-    needs: plugins
+    needs: [changes, plugins]
+    if: needs.changes.outputs.code == 'true'
     # Releases ship macOS only. Windows runs for visibility until its known failures
     # (plugin build spawns, path aliases, file modes) are fixed; see docs/PITFALLS.md.
     continue-on-error: ${{ matrix.os == 'windows-latest' }}
@@ -102,7 +137,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
-    needs: plugins
+    needs: [changes, plugins]
+    if: needs.changes.outputs.code == 'true'
     # Releases ship macOS only. Windows runs for visibility until its known failures
     # (plugin build spawns, path aliases, file modes) are fixed; see docs/PITFALLS.md.
     continue-on-error: ${{ matrix.os == 'windows-latest' }}
@@ -132,7 +168,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
-    needs: plugins
+    needs: [changes, plugins]
+    if: needs.changes.outputs.code == 'true'
     # Releases ship macOS only. Windows runs for visibility until its known failures
     # (plugin build spawns, path aliases, file modes) are fixed; see docs/PITFALLS.md.
     continue-on-error: ${{ matrix.os == 'windows-latest' }}
@@ -186,7 +223,8 @@ jobs:
 
   pi-package-format:
     name: Official Pi package format (locked knowledge)
-    needs: plugins
+    needs: [changes, plugins]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -203,3 +241,25 @@ jobs:
       # Pi's own package manager resolves the locked package as a source and loads it
       # without Drone; native Pi closed loops are out of scope (2026-10-29 revision).
       - run: npm run check:pi-package-format
+
+  # The single required check for branch protection. Skipped jobs (dev-env-only PRs) pass;
+  # a failed or cancelled required job fails the gate. Matrix legs with continue-on-error
+  # (Windows) do not fail their job's aggregate result.
+  gate:
+    name: CI gate
+    if: always()
+    needs: [changes, plugins, static, unit, sdk, desktop, pi-package-format]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required job results
+        shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "needs results: $RESULTS"
+          for r in $RESULTS; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "::error::a required job ended with: $r"; exit 1 ;;
+            esac
+          done
