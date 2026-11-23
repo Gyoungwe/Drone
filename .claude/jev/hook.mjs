@@ -9,6 +9,7 @@
  * A hook that throws fails open: the tool call proceeds and the error is surfaced as a system message.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { routeCommand, squeezable } from "./command-route.mjs";
@@ -26,7 +27,7 @@ const seenFile = (session) => path.join(STATE_DIR, "seen", `${String(session).re
 const output = (event, fields) => ({ hookSpecificOutput: { hookEventName: event, ...fields } });
 
 async function preToolUse(input) {
-	const verdict = decidePermission(input, { locate, exists: existsSync });
+	const verdict = decidePermission(input, { locate, exists: existsSync, home: os.homedir() });
 	if (verdict !== null) {
 		record(STATE_DIR, { ...verdict, tool: input.tool_name });
 		return output("PreToolUse", {

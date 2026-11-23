@@ -4,6 +4,7 @@
  * that were previously kept by discipline alone. Pure: repository lookup and file existence come in
  * through `env` so tests need no filesystem.
  */
+import path from "node:path";
 import { decision } from "./decision.mjs";
 
 const SEVERITY = { ask: 1, deny: 2 };
@@ -28,12 +29,10 @@ const BASH_RULES = [
 	[/\b(?:echo|printf)\b[^|;&]*\$\{?[A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)/, "deny", "no-print-secret"],
 	[/\bprintenv\s+[A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)/, "deny", "no-print-secret"],
 	[/--no-verify\b/, "ask", "no-verify-needs-reason"],
-	[/\bgit\s+push\b[^|;&]*\s(?:-f|--force|--force-with-lease)(?:=\S+)?(?=\s|$)/, "ask", "force-push"],
-	[/\bgit\s+reset\b[^|;&]*--hard\b/, "ask", "reset-hard"],
-	[/\bgit\s+clean\s+-\w*f/, "ask", "git-clean"],
-	[/\bgit\s+branch\b[^|;&]*\s-D\b/, "ask", "branch-delete"],
-	[/\brm\s+-\w*r/, "ask", "rm-recursive"],
 ];
+
+/** Throwaway places a recursive delete may clear without asking, besides the repositories themselves. */
+const DISPOSABLE = [/^\/(?:private\/)?tmp\//, /^\/(?:private\/)?var\/folders\//, /\/Drone-worktrees\/[^/]+/];
 
 /** Only for files that do not exist yet. */
 const NEW_FILE_RULES = [
@@ -67,8 +66,34 @@ export function secretRule(file) {
 	return SECRET_PATHS.find(([pattern]) => pattern.test(file))?.[1] ?? null;
 }
 
-function bashDecision(command) {
+/** Paths each `rm -r` in the command would delete; a target the shell would expand first comes back as null. */
+export function recursiveDeleteTargets(command, cwd, home) {
+	return command
+		.split(/[;&|\n]+/)
+		.map((segment) => segment.trim().split(/\s+/))
+		.filter((words) => words[words[0] === "sudo" ? 1 : 0] === "rm")
+		.filter((words) => words.some((w) => /^-\w*[rR]/.test(w) || w === "--recursive"))
+		.flatMap((words) => words.slice(words.indexOf("rm") + 1).filter((w) => !w.startsWith("-")))
+		.map((word) => {
+			if (/[$`*?{]/.test(word)) return null;
+			const expanded = word.replace(/^~(?=\/|$)/, home).replace(/^["']|["']$/g, "");
+			return path.resolve(cwd, expanded);
+		});
+}
+
+/** Recursive deletes pass inside a repository or a throwaway place and ask anywhere else. */
+function deleteDecision(command, cwd, env) {
+	const outside = recursiveDeleteTargets(command, cwd, env.home).some(
+		(target) =>
+			target === null || (env.locate(target).repo === null && !DISPOSABLE.some((p) => p.test(target))),
+	);
+	return outside ? decision("permission", "ask", "rm-outside-repos") : null;
+}
+
+function bashDecision(command, cwd, env) {
 	const found = matching(BASH_RULES, command);
+	const deletion = deleteDecision(command, cwd, env);
+	if (deletion !== null) found.push(deletion);
 	for (const token of command.split(TOKEN_SPLIT)) {
 		const rule = secretRule(token);
 		if (rule !== null) found.push(decision("permission", "deny", rule));
@@ -81,15 +106,16 @@ function fileDecision(tool, file, env) {
 	if (secret !== null) return decision("permission", "deny", secret);
 	if (tool === "Read") return null;
 	const { repo, key } = env.locate(file);
-	if (repo === null) return decision("permission", "ask", "outside-repos");
+	if (repo === null)
+		return DISPOSABLE.some((p) => p.test(file)) ? null : decision("permission", "ask", "outside-repos");
 	const rules = env.exists(file) ? WRITE_RULES : [...NEW_FILE_RULES, ...WRITE_RULES];
 	return strongest(matching(rules, key));
 }
 
-/** `input` is the PreToolUse hook payload; `env` is `{ locate, exists }`. */
+/** `input` is the PreToolUse hook payload; `env` is `{ locate, exists, home }`. */
 export function decidePermission(input, env) {
 	const { tool_name: tool, tool_input: args } = input;
-	if (tool === "Bash") return bashDecision(String(args.command ?? ""));
+	if (tool === "Bash") return bashDecision(String(args.command ?? ""), String(input.cwd ?? "/"), env);
 	if (!FILE_TOOLS.has(tool)) return null;
 	const file = args.file_path ?? args.notebook_path;
 	return typeof file === "string" ? fileDecision(tool, file, env) : null;
