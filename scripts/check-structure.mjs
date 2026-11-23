@@ -15,7 +15,7 @@
  * description.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -83,7 +83,9 @@ function scanRepository() {
 		.filter((file) => SOURCE_RE.test(file) && !GENERATED_RE.test(file));
 	const current = {};
 	for (const file of files) {
-		for (const [rule, count] of Object.entries(scanSource(readFileSync(join(ROOT, file), "utf8")))) {
+		const path = join(ROOT, file);
+		if (!existsSync(path)) continue; // Stop also checks deletions that are not staged yet.
+		for (const [rule, count] of Object.entries(scanSource(readFileSync(path, "utf8")))) {
 			current[`${rule}\t${file}`] = count;
 		}
 	}

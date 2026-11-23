@@ -1,4 +1,5 @@
 #!/bin/sh
 set -e
+node scripts/check-bloat.mjs --staged
 node scripts/check-staged.mjs
 node scripts/check-structure.mjs

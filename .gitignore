@@ -30,6 +30,8 @@ npm-debug.log*
 .agents/skills/*
 !.agents/skills/drone-maintenance/
 !.agents/skills/drone-maintenance/**
+!.agents/skills/drone-slimming/
+!.agents/skills/drone-slimming/**
 
 # Private research workspace state and generated outputs (not a release capability bundle)
 .pi/research-workspace.json
