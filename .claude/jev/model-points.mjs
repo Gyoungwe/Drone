@@ -3,7 +3,7 @@
  * is configured, records `model: "jev"` with its decision, and records `answer: "error"` when the call
  * fails, leaving the deterministic rules in charge.
  */
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { decision, record, STATE_DIR } from "./decision.mjs";
@@ -17,6 +17,23 @@ const SKILLS_DIR = fileURLToPath(new URL("../../.agents/skills/", import.meta.ur
 const CACHE_FILE = path.join(STATE_DIR, "script-answers.json");
 const CACHE_LIMIT = 500;
 const PROMPT_LIMIT = 8000;
+/** Present only while a Jev call is out: what it is being asked about, for the live board. */
+const NOW_FILE = path.join(STATE_DIR, "now.json");
+
+/** askJev that adds the billed input tokens to `meter` and leaves NOW_FILE in place while the call is out. */
+function meteredAsk(key, meter, label) {
+	return async (state, questions) => {
+		mkdirSync(STATE_DIR, { recursive: true });
+		writeFileSync(NOW_FILE, JSON.stringify({ ts: new Date().toISOString(), ...label, questions: Object.keys(questions) }));
+		try {
+			const result = await askJev(state, questions, { key });
+			meter.tokens += result.usage?.input_tokens ?? 0;
+			return result;
+		} finally {
+			rmSync(NOW_FILE, { force: true });
+		}
+	};
+}
 
 /** A JSON file as a bounded `{ get, set, save }` map; the oldest entries fall out first. */
 export function jsonCache(file, limit = CACHE_LIMIT) {
@@ -53,7 +70,8 @@ export async function scriptPoint(command, cwd, output) {
 	if (key === null) return null;
 	const cache = jsonCache(CACHE_FILE);
 	try {
-		const ask = (state, questions) => askJev(state, questions, { key });
+		const meter = { tokens: 0 };
+		const ask = meteredAsk(key, meter, { point: "permission", rule: "jev-script", key: redact(command.slice(0, 120)) });
 		const result = await inspectScript(command, cwd, { readFile: readScript, ask, cache, redact });
 		if (result === null) return null;
 		cache.save();
@@ -62,6 +80,7 @@ export async function scriptPoint(command, cwd, output) {
 			...(verdict ?? decision("permission", "none", "jev-script")),
 			model: "jev",
 			cached,
+			tokens: meter.tokens,
 			key: label,
 		});
 		if (verdict === null) return null;
@@ -81,13 +100,13 @@ export async function taskPoint(prompt, output, fallback) {
 	const key = apiKey();
 	if (key === null || prompt.trim() === "") return fallback(prompt);
 	try {
-		const { answers } = await askJev({ prompt: redact(prompt.slice(0, PROMPT_LIMIT)) }, TASK_QUESTIONS, {
-			key,
-		});
+		const meter = { tokens: 0 };
+		const ask = meteredAsk(key, meter, { point: "skills", rule: "jev-task-kind" });
+		const { answers } = await ask({ prompt: redact(prompt.slice(0, PROMPT_LIMIT)) }, TASK_QUESTIONS);
 		const { entry, text } = taskHint(answers.task_kind, (name) =>
 			existsSync(path.join(SKILLS_DIR, name, "SKILL.md")),
 		);
-		record(STATE_DIR, { ...entry, model: "jev" });
+		record(STATE_DIR, { ...entry, model: "jev", tokens: meter.tokens });
 		return text === null ? null : output("UserPromptSubmit", { additionalContext: text });
 	} catch (error) {
 		const message = failure("skills", "jev-task-kind", error);
