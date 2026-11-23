@@ -1,7 +1,13 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createLogger } from "@drone/backend";
-import { KNOWN_UI_REGIONS, KNOWN_UI_SLOTS, UI_PLUGIN_ANCHORS, type UiPluginManifest } from "@drone/shared";
+import {
+	KNOWN_UI_REGIONS,
+	KNOWN_UI_SLOTS,
+	UI_PLUGIN_ANCHORS,
+	type UiPluginInfo,
+	type UiPluginManifest,
+} from "@drone/shared";
 import type { InstalledUiRuntimeSource } from "./installed-package-sources";
 import { NAME_RE } from "./plugin-dirs";
 
@@ -74,4 +80,17 @@ export async function readManifest(dir: string): Promise<Partial<UiPluginManifes
 	} catch {
 		return null;
 	}
+}
+
+/** 不参与加载的插件条目：只带名字与无效原因，其余一律关闭 */
+export function invalidPluginInfo(name: string, invalidReason: string): UiPluginInfo {
+	return {
+		name,
+		slots: {},
+		contributions: [],
+		enabled: false,
+		trusted: false,
+		built: false,
+		invalidReason,
+	};
 }

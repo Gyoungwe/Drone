@@ -1,10 +1,10 @@
 import { existsSync, type FSWatcher, realpathSync, watch } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { join } from "node:path";
 import { createLogger, type SelectedNativeSource } from "@drone/backend";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig } from "@drone/shared";
 import { app } from "electron";
-import { buildPlugin } from "./build";
+import { buildPlugin, newestMtime } from "./build";
 import { defaultUiPluginsConfig, loadUiPluginsConfig, saveUiPluginsConfig } from "./config";
 import {
 	type InstalledPackageDiscovery,
@@ -14,7 +14,12 @@ import {
 } from "./installed-package-sources";
 import { discoverManagedPackages } from "./managed-roots";
 import { filterContributions } from "./manifest-contributions";
-import { classifyUnmanagedNativePath } from "./native-source-classification";
+import {
+	builtinExtensionPaths,
+	classifyUnmanagedNativePath,
+	nativeChildExtensionPaths,
+	nativeRuntimeName,
+} from "./native-source-classification";
 import {
 	builtinPackageRoot,
 	builtinPluginsDir,
@@ -25,30 +30,11 @@ import {
 	seedBuiltinPlugins,
 	seedDocs,
 } from "./plugin-dirs";
-import { readManifest, validateManifest } from "./plugin-manifest";
+import { invalidPluginInfo, readManifest, validateManifest } from "./plugin-manifest";
 
 export { RETIRED_BUILTIN_PLUGINS, uiPluginsResourcesDir } from "./plugin-dirs";
 
 const log = createLogger("ui-plugins");
-
-/** 目录内所有文件的最新 mtime（构建陈旧性判断：源码比产物新即重建） */
-async function newestMtime(dir: string): Promise<number | null> {
-	let newest: number | null = null;
-	const walk = async (d: string) => {
-		const entries = await readdir(d, { withFileTypes: true }).catch(() => []);
-		for (const entry of entries) {
-			const p = join(d, entry.name);
-			if (entry.isDirectory()) {
-				await walk(p);
-			} else {
-				const s = await stat(p).catch(() => null);
-				if (s && (newest === null || s.mtimeMs > newest)) newest = s.mtimeMs;
-			}
-		}
-	};
-	await walk(dir);
-	return newest;
-}
 
 export class UiPluginManager {
 	private readonly installedPackageRoot: string;
@@ -168,15 +154,7 @@ export class UiPluginManager {
 				// 单插件扫描异常不阻断应用启动与其余插件（B2）：合成 invalid info 继续下一个
 				const msg = err instanceof Error ? err.message : String(err);
 				log.error("scanOne failed", name, err);
-				const info: UiPluginInfo = {
-					name,
-					slots: {},
-					contributions: [],
-					enabled: false,
-					trusted: false,
-					built: false,
-					invalidReason: `扫描异常: ${msg}`,
-				};
+				const info = invalidPluginInfo(name, `扫描异常: ${msg}`);
 				this.infos.set(name, info);
 				out.push(info);
 			}
@@ -243,15 +221,7 @@ export class UiPluginManager {
 				const name = packageDiagnosticName(candidate.packageName);
 				if (seen.has(name)) continue;
 				seen.add(name);
-				const info: UiPluginInfo = {
-					name,
-					slots: {},
-					contributions: [],
-					enabled: false,
-					trusted: false,
-					built: false,
-					invalidReason: `${candidate.packageName}: ${candidate.error}`,
-				};
+				const info = invalidPluginInfo(name, `${candidate.packageName}: ${candidate.error}`);
 				this.infos.set(name, info);
 				out.push(info);
 				continue;
@@ -262,15 +232,7 @@ export class UiPluginManager {
 				continue;
 			const invalidReason = validateManifest(installedName, installedManifest ?? {}, candidate.runtime);
 			if (invalidReason) {
-				const info: UiPluginInfo = {
-					name: installedName,
-					slots: {},
-					contributions: [],
-					enabled: false,
-					trusted: false,
-					built: false,
-					invalidReason: `${candidate.packageName}: ${invalidReason}`,
-				};
+				const info = invalidPluginInfo(installedName, `${candidate.packageName}: ${invalidReason}`);
 				seen.add(installedName);
 				this.infos.set(installedName, info);
 				out.push(info);
@@ -392,21 +354,16 @@ export class UiPluginManager {
 	 * session loads only these; the actual loader selection is still classified per path.
 	 */
 	nativeChildExtensionPaths(): string[] {
-		const paths: string[] = [];
-		for (const [name, item] of this.packageSources) {
-			if (item.source.nativeChildSessions !== "read-only" || !this.runtimeSource(name)) continue;
-			const path = item.source.nativeDeclaredPath ?? item.source.nativeEntrypoint;
-			if (path) paths.push(path);
-		}
-		return paths;
+		return nativeChildExtensionPaths(this.packageSources, (name) => this.runtimeSource(name) !== undefined);
 	}
 
 	/** Native entries of enabled built-in packages; Pi's package manager does not list them. */
 	builtinExtensionPaths(): string[] {
-		return [...this.packageSources].flatMap(([name, { source }]) => {
-			const path = source.nativeDeclaredPath ?? source.nativeEntrypoint;
-			return path && this.builtinPackages.has(source.packageRoot) && this.runtimeSource(name) ? [path] : [];
-		});
+		return builtinExtensionPaths(
+			this.packageSources,
+			new Set(this.builtinPackages.keys()),
+			(name) => this.runtimeSource(name) !== undefined,
+		);
 	}
 
 	/** A built-in package is disabled through its UI plugin's switch, which is also its package switch. */
@@ -419,22 +376,7 @@ export class UiPluginManager {
 
 	/** Called only for a path selected by the actual Pi extension loader. UI visibility grants no native authority. */
 	nativeRuntimeName(path: string): string | undefined {
-		let declared = resolve(path);
-		try {
-			declared = join(realpathSync(dirname(declared)), basename(declared));
-		} catch (error) {
-			log.warn("Selected extension directory is unavailable", path, error);
-		}
-		for (const [name, item] of this.packageSources)
-			if (item.source.nativeDeclaredPath === declared) return name;
-		try {
-			const canonical = realpathSync(path);
-			for (const [name, item] of this.packageSources)
-				if (item.source.nativeEntrypoint === canonical) return name;
-		} catch (error) {
-			log.warn("Selected extension path is unavailable", path, error);
-		}
-		return undefined;
+		return nativeRuntimeName(path, this.packageSources);
 	}
 
 	/** Only paths selected by the real SDK loader enter this host-only source classification. */

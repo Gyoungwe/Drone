@@ -124,7 +124,7 @@ P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享
 完整 managed native publication 的[设计](superpowers/specs/2026-10-28-managed-native-publication-design.md)已批准，完整 owner/consumer 仍待实现；[实际 Pi 1.1.0 时序观察](releases/native-publication-sdk-ordering-2026-10-28.json)证明 awaited hooks 阻塞 prompt/idle，但 SDK abort 本身不拦截迟到正文持久化。后继[SDK 机制回执](releases/native-publication-sdk-fence-2026-10-28.json)记录钉版 host-only 最终边界的真实 RED→GREEN 与七项 SDK 回归，仍不代表完整插件 publication 或正式安装包验收。
 真正历史对象的来源只由 SDK 私有 WeakMap 与当前 branch 提供，宿主入口在 `session-engine/engine.ts:historicalMessageOrigin`；[实际 SDK 来源回执](releases/native-publication-historical-origin-2026-10-28.json)覆盖新 live 复制、reload、branch 切换和 dispose，不能把这个来源当作新的 live proof。
 实际 run 起点和本次 delivery 是否参与 guard 由钉版 host-only callback 管理，见[起点/取消机制回执](releases/native-publication-run-start-2026-10-28.json)；普通 Pi abort 与无 callback 对照一致，实际来源选择和完整 consumer 仍待实现。
-会话实际选择与本次 run 的通用发布机制位于 `backend/src/plugins/native-delivery.ts`；[来源锁定切片](releases/native-publication-selection-2026-10-28.json)覆盖 actual SDK/registry/broker/worker owner proof 和未确认来源关闭。实际 ResourceLoader loading/loaded 回执、缺失入口保留、首次执行前来源拒绝及 create/open 的 run/finalize 接线见[实际选择证据](releases/native-plugin-effective-selection-2026-10-28.json)；分类器位于 `desktop/src/main/ui-plugins/native-source-classification.ts`。完整知识 workflow、整包设置与正式包仍未完成。
+会话实际选择与本次 run 的通用发布机制位于 `backend/src/plugins/native-delivery.ts`；[来源锁定切片](releases/native-publication-selection-2026-10-28.json)覆盖 actual SDK/registry/broker/worker owner proof 和未确认来源关闭。实际 ResourceLoader loading/loaded 回执、缺失入口保留、首次执行前来源拒绝及 create/open 的 run/finalize 接线见[实际选择证据](releases/native-plugin-effective-selection-2026-10-28.json)；分类器位于 `desktop/src/main/ui-plugins/native-source-classification.ts`（原生入口路径反查包名、内置包与只读子会话的入口列表也在这里）。完整知识 workflow、整包设置与正式包仍未完成。
 原生 publication 的[私有对象 courier](pluginization/native-plugin-publication-courier.md)保留同 attachment 的 owner 对象，由真实 owner WeakSet 决策；JSON proof 字段不获得权威。其实际 worker/SDK fixture 仍不替代完整知识工作流与正式包验收。 后继同时记录实际 SDK source revoke→abort/drain 与 UI-only transition 保留 native owner 的边界；完整 required-source policy 与知识 consumer 仍未完成。
 
 ## 硬约束（改代码前必知）
@@ -561,10 +561,10 @@ src/
 | `src/main/background.ts` | 背景图选图（dialog → 拷贝 `userData/backgrounds/` 并清理旧图） |
 | `src/main/window.ts` | BrowserWindow：sandbox + preload；启动底色跟随主题防白闪（已解析主题经 `?theme=` query 传 renderer）；窗口框架按平台分流（mac hiddenInset / Win frameless+titleBarOverlay / Linux 原生）；导出 `resolveTheme`/`applyChromeTheme` |
 | `src/main/ui-plugins/config.ts` | `ui-plugins.json` 读写（normalize 白名单；assignments 指向失效插件保留） |
-| `src/main/ui-plugins/build.ts` | 插件 esbuild 构建器：`loadEsbuild` 懒加载 + `ESBUILD_BINARY_PATH` 指向 asar.unpacked 真实二进制（打包态坑，升级 esbuild 前重评）；react 系四个 specifier 重写到 `window.DroneUI` shim（**与 renderer host-api.ts、resources/drone-ui.d.ts 逐名一致**）；图片/音频资产 dataurl 内联（CSP img-src / media-src 均放行 data:） |
+| `src/main/ui-plugins/build.ts` | 插件 esbuild 构建器：`loadEsbuild` 懒加载 + `ESBUILD_BINARY_PATH` 指向 asar.unpacked 真实二进制（打包态坑，升级 esbuild 前重评）；react 系四个 specifier 重写到 `window.DroneUI` shim（**与 renderer host-api.ts、resources/drone-ui.d.ts 逐名一致**）；图片/音频资产 dataurl 内联（CSP img-src / media-src 均放行 data:）；`newestMtime` 判断源码是否比产物新 |
 | `src/main/ui-plugins/manager.ts` | UiPluginManager：scanAll（manifest 校验 + 单插件 try 不阻断启动）/ ensureBuilt / fs.watch 300ms 防抖热重载 / filterContributions（校验 region/anchor） |
 | `src/main/ui-plugins/managed-roots.ts` | 两个受管包根：Pi 用户 npm 根 + 只读内置根（`plugin-packages/node_modules`）；同名用户副本不覆盖内置包、只报诊断 |
-| `src/main/ui-plugins/plugin-manifest.ts` | UI 插件 `plugin.json` 读取与校验（name/droneUi/main/slots/contributions） |
+| `src/main/ui-plugins/plugin-manifest.ts` | UI 插件 `plugin.json` 读取与校验（name/droneUi/main/slots/contributions）；`invalidPluginInfo` 合成不参与加载的条目 |
 | `src/main/ui-plugins/plugin-dirs.ts` | 插件目录与随包种子：用户插件目录、managed npm 根、seedBuiltinPlugins（resources builtin/ → 用户目录，版本戳幂等）、seedDocs（SPEC.md + symlink `~/.drone/ui-plugins`） |
 | `src/main/ui-plugins/installed-package-graph.ts` | 从 managed npm prefix 的明确安装根沿 Pi 资源引用解析声明依赖（含 npm 提升）；不递归普通库依赖。manager 诊断重复来源、版本或 UI 名冲突，发现不授予信任 |
 | `src/main/git.ts` | git 分支查询/切换三通道 |
@@ -709,7 +709,7 @@ P2 后继的受控 Markdown CAS 写端口（workspace-write）与状态删除已
 
 任务状态路由/managed command、知识模型评审的早期同 tarball 双进程整合切片见[历史回执](releases/native-plugin-managed-knowledge-integration-2026-10-28.json)；后继统一来源与完整门禁状态以顶部 bb918979/1707f6c 检查点为准。
 
-已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。`manager.runtimeSources()` 经 `BridgeOptions.sources` 向 native/service consumer 提供同一包描述与当前 hash 状态；它不把可见性当执行权限，激活仍需批准。UI 设置经 `withUiTransition` 只撤销真实窗口调用，原生会话 owner 保留；扫描同时保留 installationPath/nativeDeclaredPath；本应用内失效后旧描述只作为 unavailable 元数据，不能激活。包级显式启停、跨重启 required 期望及实际 selected-path 生命周期仍在后继实现。
+已安装包的声明文件/入口约束、聚合依赖来源选择和完整内容身份统一位于 `desktop/src/main/ui-plugins/installed-package-sources.ts`（服务 provides/requires/consumes 与 recordAdoptions 的解码在 `installed-package-declarations.ts`）；UI manager消费该模块。`discoverInstalledPackages` 将原生 owner 与可选 UI 投影到同一经过路径验证的包来源，并给运行时描述附完整内容 hash 与 required publication 声明；无 UI 包已接入真实 Pi loader 选中入口的来源解析；UI 编译缓存在 userData/ui-plugin-builds/<内容 hash>/，不修改安装包代次。`manager.runtimeSources()` 经 `BridgeOptions.sources` 向 native/service consumer 提供同一包描述与当前 hash 状态；它不把可见性当执行权限，激活仍需批准。UI 设置经 `withUiTransition` 只撤销真实窗口调用，原生会话 owner 保留；扫描同时保留 installationPath/nativeDeclaredPath；本应用内失效后旧描述只作为 unavailable 元数据，不能激活。包级显式启停、跨重启 required 期望及实际 selected-path 生命周期仍在后继实现。
 
 共享 owner/任务事务、SDK 最终边界、原窗口问答、无 UI 来源发现与通用执行的后继整合及原失败保留见[本批回执](releases/native-plugin-source-owner-integration-2026-10-28.json)。插件 e713409 完整检查与干净五包重建通过；宿主新源码冻结门禁和正式安装包尚未完成，顶部旧门禁基线不变。
 
