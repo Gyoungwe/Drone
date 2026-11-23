@@ -9,17 +9,32 @@ const baselinePath = "scripts/fixtures/zero-domain-baseline.json";
 const sourceExcludes = new Set(["test", "dist", "out", "node_modules"]);
 const domainPackages = new Set([
 	"@gyoungwe/pi-analysis",
+	"@gyoungwe/pi-connectors",
 	"@gyoungwe/pi-core",
+	"@gyoungwe/pi-evidence",
 	"@gyoungwe/pi-knowledge",
 	"@gyoungwe/pi-research",
 ]);
 const hostDependencies = new Set([...domainPackages, "@drone/extensions", "@drone/research"]);
-const packageSpecifier = /(["'`])(@gyoungwe\/pi-[\w.-]+)(?:\/[^"'`\r\n]*)?\1/g;
+/**
+ * Every first-party package the host must not depend on.
+ *
+ * The ratchet has to see the whole class, not only the packages that happen to
+ * be imported today: a package nobody imports yet is exactly the one a later
+ * change would reach for.
+ */
+const hostForbiddenPackages = new Set([
+	...domainPackages,
+	"@gyoungwe/desktop-ui-pack",
+	"@gyoungwe/research-suite",
+]);
+const packageSpecifier =
+	/(["'`])(@gyoungwe\/(?:pi-[\w.-]+|desktop-ui-pack|research-suite))(?:\/[^"'`\r\n]*)?\1/g;
 const domainResource = /research-workbench|\.pi\/(?:extensions|skills\/)|plugin-packages|vendor\/plugins/;
 const domainCommand =
 	/(?:^|[\n;&|()])\s*npm\s+(?:run|run-script)\s+(["']?)(?:build:pi-(?:core|research)|fetch:plugins|check:(?:[\w:-]+-runtime|pi-research|pi-core|builtin-plugins))\1(?=$|[\s;&|()])/;
 const domainChannel =
-	/(["'`])((?:knowledge|research|zotero|analysis|evidence|discovery|inquiry):[\w:.-]+)\1/g;
+	/(["'`])((?:researchSkills|(?:knowledge|research|zotero|analysis|evidence|discovery|inquiry)):[\w:.-]+)\1/g;
 
 function readOptional(file) {
 	if (existsSync(file)) return readFileSync(file, "utf8");
@@ -65,7 +80,7 @@ function inventorySourceImports(root, packageDirs) {
 		for (const file of sourceFiles(directory)) {
 			const path = relative(root, file).split(sep).join("/");
 			for (const [, , packageName] of readFileSync(file, "utf8").matchAll(packageSpecifier)) {
-				if (domainPackages.has(packageName)) findings.push(`${path}:${packageName}`);
+				if (hostForbiddenPackages.has(packageName)) findings.push(`${path}:${packageName}`);
 			}
 		}
 	}

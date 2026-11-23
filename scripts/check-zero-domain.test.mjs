@@ -233,3 +233,19 @@ test("an empty tree reports ZERO with all counts present", (context) => {
 		},
 	});
 });
+
+test("a first-party package the host has not imported yet is still ratcheted", (context) => {
+	const { write, run } = fixture(context);
+	write("packages/backend/src/new.ts", 'import "@gyoungwe/pi-evidence/host";');
+	const result = run();
+	assert.equal(result.status, 1, result.stderr);
+	assert.match(result.stderr, /hostSourceImports: packages\/backend\/src\/new\.ts:@gyoungwe\/pi-evidence/);
+});
+
+test("a research-flavoured IPC channel is ratcheted even when its prefix is not `research`", (context) => {
+	const { write, run } = fixture(context);
+	write("packages/shared/src/ipc.ts", 'export const IpcChannels = { Skills: "researchSkills:update" };');
+	const result = run();
+	assert.equal(result.status, 1, result.stderr);
+	assert.match(result.stderr, /domainIpcChannels: researchSkills:update/);
+});
