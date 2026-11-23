@@ -33,3 +33,4 @@ node .claude/jev/jev-run.mjs --show <id> --grep '<regex>'
 - Paths are keyed by repository (`drone:` or `drone-plugins:`), not by worktree, so the rules hold in
   every worktree and in the sibling plugin checkout.
 - Tests are in `jev.test.mjs` and run under `npm run test:arch`.
+
