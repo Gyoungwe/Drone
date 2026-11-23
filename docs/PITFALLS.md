@@ -881,3 +881,31 @@ function withLedgerLock<T>(path: string, operation: () => Promise<T>): Promise<T
 教训：一个 `string` 走了五层没人发现它有两种含义，是因为它**在两层都碰巧合法**。
 凡是同一个字段在两端被解释成不同的东西，先把它拆成两个字段——
 一个存机器读的事实，一个存给人看的文案，别让一个字符串同时当两种契约。
+
+## 工作区里的构建产物被 gitignore，测试会神秘地失败（2026-11-23 记录）
+
+在 `Drone-worktrees/<repo>-<T>` 里跑测试，150 个用例挂掉，日志里是
+`Tool fixture_webdav not found`——插件明明发现了、运行时明明加载了，工具却没注册。
+主检出跑同一个用例是过的，两个检出的源码逐字节相同。
+
+差别不在源码，在**没进 git 的东西**：
+
+- `packages/desktop/dist/`、`packages/desktop/out/`、`packages/desktop/plugin-runtime/`
+- `packages/desktop/src/lan-web/dist/`、`packages/desktop/resources/research-skills/`
+- `packages/desktop/plugin-packages/node_modules/@gyoungwe/*`（暂存的插件包）
+- `vendor/plugins/`、`packages/plugin-api/dist/`
+
+这些都被 `.gitignore` 排除，`git worktree add` 不会带过去。插件的宿主运行时、
+暂存的包和 MCP 运行时资源都从这里加载，缺一个，插件就**加载了但没能力**——
+比干脆加载失败更难查。
+
+第二个坑更隐蔽：`node_modules` 通常是**软链到主检出**的。这样
+`node_modules/@drone/backend` 指向的是主检出的源码，工作区里新加的
+backend 类型在桌面端的 `typecheck` 里看不见，报的是
+`Property 'x' does not exist on type 'y'`——像是类型写错了，其实是解析到了别的检出。
+`@drone/*` 是工作区包，不能软链主检出，得软链工作区自己；
+其余依赖仍然可以共用主检出的 `node_modules`。
+
+教训：工作区跑出「源码明明一样、主检出却能过」的失败，先怀疑**没进 git 的产物**，
+再查**模块解析到了哪一份**。这两样都不会出现在 `git status` 里，
+`git status --ignored` 才能看到。

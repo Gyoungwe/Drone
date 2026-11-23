@@ -25,6 +25,7 @@ export {
 	type PluginRootGrant,
 } from "./file-capabilities";
 export type { SelectedNativeSource } from "./native-delivery";
+export type { PluginNetworkPolicy } from "./network-policy";
 export type { P5ApprovalReview, P5ApprovalReviewKind } from "./p5-approval-review";
 export { type FrozenP5Batch, freezeP5Batch } from "./p5-batch-review";
 export { type FrozenP5Bundle, freezeP5Bundle } from "./p5-bundle-review";

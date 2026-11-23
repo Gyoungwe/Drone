@@ -5,6 +5,7 @@ import type {
 	PluginServiceRequirement,
 	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
+import type { PluginNetworkPolicy } from "./network-policy";
 import type { PluginCredentialSlot } from "./plugin-credentials";
 
 export interface PluginP5Optins {
@@ -48,6 +49,14 @@ export interface PluginRuntimeSource {
 	readonly networkReads?: readonly string[];
 	/** Manifest `drone.credentials`: secrets the host keeps and adds to `network.*` requests. */
 	readonly credentials?: readonly PluginCredentialSlot[];
+	/**
+	 * Manifest `drone.networkPolicy`: what the user may be asked to approve at install.
+	 *
+	 * A runtime endpoint is a *user-configured* destination, so it is not the same
+	 * thing as the declared `networkHosts`. The policy says whether the package may
+	 * be granted one at all, and which credential slot's secret may ride along.
+	 */
+	readonly networkPolicy?: PluginNetworkPolicy;
 	readonly resources?: Readonly<Record<string, string>>;
 }
 
