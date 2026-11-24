@@ -22,10 +22,13 @@ import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
 import { type CapabilityDrawer, useUiStore } from "../../stores/ui";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
-import { ListIcon, RefreshIcon, TaskBoardIcon, ZoteroIcon } from "../icons";
+import { RefreshIcon } from "../icons";
 import { PageHeader, PageShell } from "../ui/PageHeader";
 import { Switch } from "../ui/Switch";
+import { CapabilityListRow, type CapabilityRow, type CapabilityStatus } from "./CapabilityListRow";
 import { PluginSourcesSection } from "./PluginSourcesSection";
+
+export { type CapabilityStatus, statusTone } from "./CapabilityListRow";
 
 const ExtensionsPanel = lazy(() =>
 	import("../settings/extensions/ExtensionsPanel").then((m) => ({ default: m.ExtensionsPanel })),
@@ -43,15 +46,6 @@ const UiPluginsSection = lazy(() =>
 	import("../settings/UiPluginsSection").then((m) => ({ default: m.UiPluginsSection })),
 );
 
-export type CapabilityStatus =
-	| "available"
-	| "configure"
-	| "running"
-	| "disabled"
-	| "permission"
-	| "stale"
-	| "error"
-	| "incompatible";
 export type CapabilitySection = "market" | "connectors" | "mcp" | "skills";
 
 export function mcpCapabilityStatus(
@@ -81,26 +75,6 @@ export function zoteroCapabilityStatus(status: ZoteroStatus | null, enabled = tr
 	if (!status) return "configure";
 	if (status.localApiReachable) return "running";
 	return status.desktopDetected ? "stale" : "configure";
-}
-
-export function statusTone(status: CapabilityStatus): string {
-	if (status === "running" || status === "available") return "text-ok";
-	if (status === "configure" || status === "permission" || status === "stale") return "text-warn";
-	if (status === "error" || status === "incompatible") return "text-err";
-	return "text-ink-faint";
-}
-
-interface CapabilityRow {
-	id: string;
-	kind: "connector" | "mcp";
-	name: string;
-	description: string;
-	scope: string;
-	status: CapabilityStatus;
-	version?: string;
-	action?: string;
-	connectorId?: string;
-	source?: string;
 }
 
 type DrawerKind = CapabilityDrawer;
@@ -201,12 +175,6 @@ export function skillSource(
 			path: profile?.path ?? "",
 		},
 	};
-}
-
-function IconForKind({ kind }: { kind: CapabilityRow["kind"] }) {
-	if (kind === "connector") return <ZoteroIcon size={17} />;
-	if (kind === "mcp") return <ListIcon size={17} />;
-	return <TaskBoardIcon size={17} />;
 }
 
 /** Market and skills have dedicated sections instead of mixed capability rows. */
@@ -439,8 +407,30 @@ export function SkillsConnectionsView() {
 			}),
 		[settingsSkills],
 	);
-	const statusLabel = (status: CapabilityStatus) => t(`skillsConnections.status.${status}` as never);
 	const openSettings = (category: DrawerKind) => setDrawer(category);
+	const toggleMcp = (serverName: string, enabled: boolean) => {
+		setPendingMcp(serverName);
+		void getPi()
+			.setMcpServerEnabled(serverName, enabled, cwd ?? undefined)
+			.then(() => getPi().getMcpStatus(cwd ?? undefined))
+			.then(setMcp)
+			.catch((reason) => setError(reason instanceof Error ? reason.message : String(reason)))
+			.finally(() => setPendingMcp(null));
+	};
+	const renderCapabilityRow = (row: CapabilityRow) => (
+		<CapabilityListRow
+			key={row.id}
+			row={row}
+			mcp={mcp}
+			connectors={connectors}
+			connectorPending={connectorPending}
+			pendingMcp={pendingMcp}
+			toggleConnector={toggleConnector}
+			toggleMcp={toggleMcp}
+			openSettings={openSettings}
+			t={t}
+		/>
+	);
 	const skillUpdateBusy = skillUpdateState?.phase === "checking" || skillUpdateState?.phase === "downloading";
 	const skillUpdateLabel =
 		skillUpdateState?.phase === "ready" ? t("update.skillsRestart") : t("update.skillsUpdate");
@@ -995,122 +985,7 @@ export function SkillsConnectionsView() {
 								)}
 								{/* Zotero and institutional access live in the same card as the other connectors. */}
 								<div className="-mx-4 mt-1 divide-y divide-border border-t border-border">
-									{visibleRows.map((row) => {
-										const server =
-											row.kind === "mcp" ? mcp?.servers.find((item) => item.name === row.action) : undefined;
-										const connector = row.connectorId
-											? connectors.find((item) => item.id === row.connectorId)
-											: undefined;
-										return (
-											<div
-												key={row.id}
-												className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_120px_136px] md:items-center"
-											>
-												<div className="flex min-w-0 items-start gap-3">
-													<span className="mt-0.5 text-ink-dim">
-														<IconForKind kind={row.kind} />
-													</span>
-													<div className="min-w-0">
-														<p className="truncate text-sm font-medium text-ink">
-															{row.name}
-															{row.version ? (
-																<span className="ml-2 text-xs font-normal text-ink-faint">
-																	v{row.version}
-																</span>
-															) : null}
-														</p>
-														<p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-dim">
-															{row.description}
-														</p>
-													</div>
-												</div>
-												<p className="truncate text-xs text-ink-faint" title={row.scope}>
-													{row.scope}
-												</p>
-												{row.status === "available" ? (
-													<div />
-												) : (
-													<div
-														className={`flex items-center gap-2 text-xs font-medium ${statusTone(row.status)}`}
-													>
-														<span
-															className={`h-2 w-2 rounded-full ${row.status === "running" ? "animate-pulse bg-ok" : row.status === "error" || row.status === "incompatible" ? "bg-err" : row.status === "disabled" ? "bg-ink-faint" : "bg-warn"}`}
-														/>
-														{statusLabel(row.status)}
-													</div>
-												)}
-												<div className="flex justify-end">
-													{connector ? (
-														<div className="flex items-center gap-2">
-															<Switch
-																checked={connector.enabled}
-																disabled={connectorPending === connector.id}
-																onCheckedChange={() => void toggleConnector(connector)}
-																aria-label={
-																	connector.enabled
-																		? t("skillsConnections.disable")
-																		: t("skillsConnections.enable")
-																}
-															/>
-															<button
-																type="button"
-																className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
-																onClick={() => openSettings(row.action as DrawerKind)}
-															>
-																{row.status === "configure" || row.status === "permission"
-																	? t("skillsConnections.configure")
-																	: t("skillsConnections.view")}
-															</button>
-														</div>
-													) : server ? (
-														<div className="flex items-center gap-2">
-															<Switch
-																checked={!server.disabled}
-																disabled={pendingMcp === server.name}
-																onCheckedChange={(enabled) => {
-																	setPendingMcp(server.name);
-																	void getPi()
-																		.setMcpServerEnabled(server.name, enabled, cwd ?? undefined)
-																		.then(() => getPi().getMcpStatus(cwd ?? undefined))
-																		.then(setMcp)
-																		.catch((reason) =>
-																			setError(reason instanceof Error ? reason.message : String(reason)),
-																		)
-																		.finally(() => setPendingMcp(null));
-																}}
-																aria-label={
-																	server.disabled
-																		? t("skillsConnections.enable")
-																		: t("skillsConnections.disable")
-																}
-															/>
-															<button
-																type="button"
-																className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
-																onClick={() => openSettings("mcp")}
-															>
-																{row.status === "configure"
-																	? t("skillsConnections.configure")
-																	: t("skillsConnections.view")}
-															</button>
-														</div>
-													) : (
-														<button
-															type="button"
-															className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
-															onClick={() => openSettings(row.action as DrawerKind)}
-														>
-															{row.status === "configure"
-																? t("skillsConnections.configure")
-																: row.status === "error"
-																	? t("skillsConnections.viewReason")
-																	: t("skillsConnections.view")}
-														</button>
-													)}
-												</div>
-											</div>
-										);
-									})}
+									{visibleRows.map(renderCapabilityRow)}
 								</div>
 							</section>
 						) : null}
@@ -1133,122 +1008,7 @@ export function SkillsConnectionsView() {
 									</button>
 								</div>
 								<div className="divide-y divide-border border-t border-border">
-									{visibleRows.map((row) => {
-										const server =
-											row.kind === "mcp" ? mcp?.servers.find((item) => item.name === row.action) : undefined;
-										const connector = row.connectorId
-											? connectors.find((item) => item.id === row.connectorId)
-											: undefined;
-										return (
-											<div
-												key={row.id}
-												className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_120px_136px] md:items-center"
-											>
-												<div className="flex min-w-0 items-start gap-3">
-													<span className="mt-0.5 text-ink-dim">
-														<IconForKind kind={row.kind} />
-													</span>
-													<div className="min-w-0">
-														<p className="truncate text-sm font-medium text-ink">
-															{row.name}
-															{row.version ? (
-																<span className="ml-2 text-xs font-normal text-ink-faint">
-																	v{row.version}
-																</span>
-															) : null}
-														</p>
-														<p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-dim">
-															{row.description}
-														</p>
-													</div>
-												</div>
-												<p className="truncate text-xs text-ink-faint" title={row.scope}>
-													{row.scope}
-												</p>
-												{row.status === "available" ? (
-													<div />
-												) : (
-													<div
-														className={`flex items-center gap-2 text-xs font-medium ${statusTone(row.status)}`}
-													>
-														<span
-															className={`h-2 w-2 rounded-full ${row.status === "running" ? "animate-pulse bg-ok" : row.status === "error" || row.status === "incompatible" ? "bg-err" : row.status === "disabled" ? "bg-ink-faint" : "bg-warn"}`}
-														/>
-														{statusLabel(row.status)}
-													</div>
-												)}
-												<div className="flex justify-end">
-													{connector ? (
-														<div className="flex items-center gap-2">
-															<Switch
-																checked={connector.enabled}
-																disabled={connectorPending === connector.id}
-																onCheckedChange={() => void toggleConnector(connector)}
-																aria-label={
-																	connector.enabled
-																		? t("skillsConnections.disable")
-																		: t("skillsConnections.enable")
-																}
-															/>
-															<button
-																type="button"
-																className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
-																onClick={() => openSettings(row.action as DrawerKind)}
-															>
-																{row.status === "configure" || row.status === "permission"
-																	? t("skillsConnections.configure")
-																	: t("skillsConnections.view")}
-															</button>
-														</div>
-													) : server ? (
-														<div className="flex items-center gap-2">
-															<Switch
-																checked={!server.disabled}
-																disabled={pendingMcp === server.name}
-																onCheckedChange={(enabled) => {
-																	setPendingMcp(server.name);
-																	void getPi()
-																		.setMcpServerEnabled(server.name, enabled, cwd ?? undefined)
-																		.then(() => getPi().getMcpStatus(cwd ?? undefined))
-																		.then(setMcp)
-																		.catch((reason) =>
-																			setError(reason instanceof Error ? reason.message : String(reason)),
-																		)
-																		.finally(() => setPendingMcp(null));
-																}}
-																aria-label={
-																	server.disabled
-																		? t("skillsConnections.enable")
-																		: t("skillsConnections.disable")
-																}
-															/>
-															<button
-																type="button"
-																className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
-																onClick={() => openSettings("mcp")}
-															>
-																{row.status === "configure"
-																	? t("skillsConnections.configure")
-																	: t("skillsConnections.view")}
-															</button>
-														</div>
-													) : (
-														<button
-															type="button"
-															className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
-															onClick={() => openSettings(row.action as DrawerKind)}
-														>
-															{row.status === "configure"
-																? t("skillsConnections.configure")
-																: row.status === "error"
-																	? t("skillsConnections.viewReason")
-																	: t("skillsConnections.view")}
-														</button>
-													)}
-												</div>
-											</div>
-										);
-									})}
+									{visibleRows.map(renderCapabilityRow)}
 									{!loading && visibleRows.length === 0 ? (
 										<p className="px-5 py-8 text-center text-xs text-ink-faint">
 											{t("skillsConnections.noMcp")}
