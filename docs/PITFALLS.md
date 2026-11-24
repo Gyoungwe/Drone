@@ -988,3 +988,34 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 打包侧无风险：`electron-builder.yml` 是整目录复制
 `.pi/skills/research-workflow` → `research-workbench/skills/research-workflow`，
 `references/` 随目录走，不会漏。
+## 重复类型定义会让生成的公开契约长出 `Host*` / `Contract*` 消歧别名（2026-11-24 记录）
+
+`packages/plugin-api/src/ui-wire.ts` 是生成的（`scripts/generate-knowledge-ui-contract.mjs`
+按 `packages/plugin-api/scripts/knowledge-ui-contract.json` 的有限清单产出）。生成器给
+**同名但来自不同文件**的类型加前缀消歧：plugin-api 拥有的加 `Contract`，shared 拥有的
+加 `Host`。
+
+所以已发布的 plugin-api 1.2.0 里有一批 `HostKnowledgeGraph`、`HostKnowledgeOverview`、
+`HostKnowledgePage`、`HostWikiReviewItem`、`ContractKnowledgeReadRecord` 这样的名字。
+它们**不是有意设计的对外 API**，而是 `packages/shared/src/knowledge.ts` 与
+`packages/plugin-api/src/knowledge.ts` 各存了一份同名词条（`KnowledgeGraph`、
+`KnowledgeReadRecord` 等 17 个）造成的。
+
+删掉 shared 里的第二份定义后，别名自然消失——契约内容逐字不变，变的只是名字。
+但这是**已发布包的导出表面变化**，属于破坏性变更。
+
+判断这类去重是否安全，要看三件事：
+
+- 用 TS Compiler API 做**双向** `isTypeAssignableTo`（单向会漏）。跨声明比较两个结构
+  相同、泛型参数身份不同的接口（`A<T>` / `B<T>`）会得到 false，那是**假阳性**，不是
+  真实差异——用最小复现确认过。
+- 文本比较的"差异"要人工看：内联对象末尾多一个分号（`{ a: number; }` vs
+  `{ a: number }`）在 TS 里是同一个类型。
+- 生成物的前缀变化要用「剥掉前缀后逐条比对 body」来验证，而不是看 diff 长度。
+
+另一个坑：`export type { X } from "..."` **不会**把 `X` 引入当前文件的作用域，同文件里
+其他接口引用 `X` 会报 `TS2304`。要 `import type { X } from "..."` + `export type { X }`
+两步；只写后者 Biome 会报 `noUnusedImports`。
+
+教训：判断"能不能去重"之前，先查生成器/序列化器是否给这类重复起了消歧别名。重复定义
+会把内部冗余泄漏成公开 API 表面，让"内部重构"变成"破坏性变更"。
