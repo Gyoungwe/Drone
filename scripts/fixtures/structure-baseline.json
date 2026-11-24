@@ -85,7 +85,7 @@
 	"file-lines\tpackages/desktop/src/renderer/src/components/session/SessionTabBar.tsx": 556,
 	"file-lines\tpackages/desktop/src/renderer/src/components/settings/PermissionsPanel.tsx": 672,
 	"file-lines\tpackages/desktop/src/renderer/src/components/workbench/PluginSourcesSection.tsx": 457,
-	"file-lines\tpackages/desktop/src/renderer/src/components/workbench/SkillsConnectionsView.tsx": 1435,
+	"file-lines\tpackages/desktop/src/renderer/src/components/workbench/SkillsConnectionsView.tsx": 1195,
 	"file-lines\tpackages/desktop/src/renderer/src/plugins/registry.test.ts": 404,
 	"file-lines\tpackages/desktop/src/renderer/src/stores/sessions.test.ts": 410,
 	"file-lines\tpackages/desktop/src/renderer/src/stores/sessions.ts": 606,

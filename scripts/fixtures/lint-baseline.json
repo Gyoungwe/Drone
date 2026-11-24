@@ -280,7 +280,7 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/renderer/src/components/settings/SkillsPanel.tsx": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/renderer/src/components/tasks/ExampleTaskDialog.tsx": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/renderer/src/components/workbench/PluginSourcesSection.tsx": 2,
-	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/renderer/src/components/workbench/SkillsConnectionsView.tsx": 3,
+	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/renderer/src/components/workbench/SkillsConnectionsView.tsx": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/renderer/src/components/workbench/WorkbenchNav.tsx": 2,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/renderer/src/dev/StatesGallery.tsx": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/renderer/src/hooks/context-usage-refresh.test.ts": 1,
