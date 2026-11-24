@@ -2,125 +2,16 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { SessionManager } from "@earendil-works/pi-coding-agent";
+import { createSyntheticSourceInfo, SessionManager } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 import { makeCapabilityExtension } from "../src/capabilities/extension";
 import { CapabilityResourceLoader, SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime, detectCapabilities } from "../src/capabilities/runtime";
+import { makeLoader, makeSession } from "./capability-runtime-fixture";
 // 测试夹具：让真实扩展把 drone 元数据（libraryMode / readOnly）登记进工具清单（挂钩 1）
 import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
 
 registerResearchToolMeta();
-
-function makeLoader(extraSkills: Record<string, unknown>[] = []) {
-	const skills = [
-		{
-			name: "research-vault",
-			description: "knowledge",
-			filePath: "/skills/research-vault/SKILL.md",
-			baseDir: "/skills/research-vault",
-			disableModelInvocation: false,
-			sourceInfo: { source: "test", scope: "temporary" },
-			// 夹具路径不存在：用进程内声明模拟 SKILL.md 的 `alwaysWith: [knowledge, research]`（挂钩 5）
-			alwaysWith: ["knowledge", "research"],
-		},
-		{
-			name: "research-workflow",
-			description: "research",
-			filePath: "/skills/research-workflow/SKILL.md",
-			baseDir: "/skills/research-workflow",
-			disableModelInvocation: false,
-			sourceInfo: { source: "test", scope: "temporary" },
-			alwaysWith: "research",
-		},
-		{
-			name: "code-review",
-			description: "coding",
-			filePath: "/skills/code-review/SKILL.md",
-			baseDir: "/skills/code-review",
-			disableModelInvocation: false,
-			sourceInfo: { source: "test", scope: "temporary" },
-		},
-		{
-			name: "show-me",
-			description: "visual",
-			filePath: "/skills/show-me/SKILL.md",
-			baseDir: "/skills/show-me",
-			disableModelInvocation: false,
-			sourceInfo: { source: "test", scope: "temporary" },
-		},
-		...extraSkills,
-	];
-	return {
-		getExtensions: () => ({ extensions: [], errors: [], runtime: { flagValues: new Map() } }),
-		getSkills: () => ({ skills, diagnostics: [] }),
-		getPrompts: () => ({ prompts: [], diagnostics: [] }),
-		getThemes: () => ({ themes: [], diagnostics: [] }),
-		getAgentsFiles: () => ({ agentsFiles: [] }),
-		getSystemPrompt: () => undefined,
-		getSystemPromptSource: () => undefined,
-		getAppendSystemPrompt: () => [],
-		getAppendSystemPromptSources: () => [],
-		extendResources: () => undefined,
-		reload: async () => undefined,
-	} as any;
-}
-
-function makeSession(loader: any) {
-	const tools = [
-		{
-			name: "read",
-			description: "read files",
-			parameters: { type: "object", properties: { path: { type: "string" } } },
-		},
-		{
-			name: "bash",
-			description: "run shell",
-			parameters: { type: "object", properties: { command: { type: "string" } } },
-		},
-		{ name: "edit", description: "edit files", parameters: { type: "object", properties: {} } },
-		{ name: "write", description: "write files", parameters: { type: "object", properties: {} } },
-		{
-			name: "webfetch",
-			description: "fetch URL",
-			parameters: { type: "object", properties: { url: { type: "string" } } },
-		},
-		{ name: "show_image", description: "show image", parameters: { type: "object", properties: {} } },
-		{ name: "ask_user", description: "ask", parameters: { type: "object", properties: {} } },
-		{ name: "set_status", description: "status", parameters: { type: "object", properties: {} } },
-		{ name: "todo", description: "todo", parameters: { type: "object", properties: {} } },
-		{
-			name: "capability_load",
-			description: "load capability",
-			parameters: { type: "object", properties: {} },
-		},
-		{
-			name: "research_prepare_knowledge",
-			description: "prepare knowledge",
-			parameters: { type: "object", properties: {} },
-		},
-		{
-			name: "research_search_knowledge",
-			description: "search knowledge",
-			parameters: { type: "object", properties: {} },
-		},
-		{
-			name: "research_archive_source",
-			description: "archive source",
-			parameters: { type: "object", properties: {} },
-		},
-		{ name: "channel_post", description: "external channel", parameters: { type: "object", properties: {} } },
-	];
-	let active = tools.map((tool) => tool.name);
-	return {
-		resourceLoader: loader,
-		getAllTools: () => tools,
-		getActiveToolNames: () => [...active],
-		setActiveToolsByName: (names: string[]) => {
-			active = names.filter((name) => tools.some((tool) => tool.name === name));
-		},
-	};
-}
 
 describe("lazy capability runtime", () => {
 	it("resets idle-turn capability scope over 50 topic switches while keeping in-turn loads additive", () => {
@@ -395,6 +286,24 @@ it("bounds explicit existing-literature reuse without changing normal execution 
 		block: true,
 	});
 	expect(runtime.guardTool("read", { path: ".pi/skills/research-workflow/SKILL.md" })).toBeUndefined();
+	expect(
+		runtime.guardTool("read", { path: ".pi/skills/research-workflow/references/evidence-loop.md" }),
+	).toBeUndefined();
+	for (const path of [
+		".pi/skills/research-workflow/references/../../../../etc/passwd",
+		".pi/skills/research-workflow/references/../notes.md",
+		".pi/skills/research-workflow/notes.md",
+		".pi/skills/research-workflow/references//outside.md",
+		"/outside/skills/research-workflow/references/evidence-loop.md",
+		"C:\\outside\\skills\\research-workflow\\references\\evidence-loop.md",
+		"@/outside/skills/research-workflow/references/evidence-loop.md",
+		"~/skills/research-workflow/references/evidence-loop.md",
+		"file:///outside/skills/research-workflow/references/evidence-loop.md",
+		".pi/skills/research-workflow/references/nested/notes.md",
+		".pi/skills/research-workflow/references/notes.txt",
+	]) {
+		expect(runtime.guardTool("read", { path }), path).toMatchObject({ block: true });
+	}
 	runtime.prepareForPrompt("实现代码并执行测试", false);
 	expect(runtime.state().activeTools).toContain("bash");
 	expect(runtime.guardTool("bash", {})).toBeUndefined();
@@ -418,7 +327,7 @@ describe("skill alwaysWith frontmatter (hook 5)", () => {
 				filePath,
 				baseDir: dirname(filePath),
 				disableModelInvocation: false,
-				sourceInfo: { source: "test", scope: "temporary" },
+				sourceInfo: createSyntheticSourceInfo(filePath, { source: "test" }),
 			});
 			const visibility = new SkillVisibility();
 			const loader = new CapabilityResourceLoader(

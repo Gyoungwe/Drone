@@ -89,3 +89,12 @@ export function skillAlwaysWith(skill: SkillLike, now = Date.now()): ReadonlySet
 export function resetSkillFrontmatterCache(): void {
 	cache.clear();
 }
+
+export function isSkillResourcePath(path: string): boolean {
+	if (/(?:^|[\\/])skills[\\/][^\\/]+[\\/]SKILL\.md$/i.test(path)) return true;
+	const relative = path.replace(/^\.\//, "");
+	return (
+		!/^[@~/]|[:\\]|(?:^|\/)\.[.\s]*(?:\/|$)/.test(relative) &&
+		/(?:^|\/)skills\/[^/]+\/references\/[^/]+\.md$/i.test(relative)
+	);
+}

@@ -30,7 +30,7 @@ import {
 } from "./research-skill-router";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
 import { applySkillBudget } from "./skill-budget";
-import { type SkillLike, skillAlwaysWith } from "./skill-frontmatter";
+import { isSkillResourcePath, type SkillLike, skillAlwaysWith } from "./skill-frontmatter";
 
 const ALWAYS_ON = new Set([
 	"ask_user",
@@ -459,22 +459,12 @@ export class CapabilityRuntime {
 	}
 	guardTool(name: string, input: Record<string, unknown> = {}) {
 		if (!this.readOnlyLibrary) return undefined;
-		if (!this.manifest.allowedInLibraryMode(name))
-			return {
-				block: true,
-				reason:
-					"This is read-only existing-literature reuse. Use native knowledge/identity tools and research_loop.start; no task_plan, shell, downloads or library writes are needed.",
-			};
-		if (
-			name === "read" &&
-			!/(?:^|[\\/])skills[\\/][^\\/]+[\\/]SKILL\.md$/i.test(String(input.path || input.filePath || ""))
-		)
-			return {
-				block: true,
-				reason:
-					"Read paper notes with research_read_knowledge; do not search filesystem run directories. research_loop.start creates the correct run directory.",
-			};
-		return undefined;
+		const reason = !this.manifest.allowedInLibraryMode(name)
+			? "This is read-only existing-literature reuse. Use native knowledge/identity tools and research_loop.start; no task_plan, shell, downloads or library writes are needed."
+			: name === "read" && !isSkillResourcePath(String(input.path || input.filePath || ""))
+				? "Read paper notes with research_read_knowledge; do not search filesystem run directories. research_loop.start creates the correct run directory."
+				: undefined;
+		return reason ? { block: true, reason } : undefined;
 	}
 	noteToolInvocation(name: string, at = Date.now()): void {
 		const previous = this.toolUsage.get(name);
