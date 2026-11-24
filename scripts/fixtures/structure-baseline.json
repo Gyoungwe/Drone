@@ -8,7 +8,6 @@
 	"class-extends\tpackages/desktop/src/renderer/src/components/AppErrorBoundary.tsx": 2,
 	"class-extends\tpackages/desktop/src/renderer/src/plugins/PluginBoundary.tsx": 1,
 	"file-lines\tpackages/backend/src/capabilities/runtime.ts": 735,
-	"file-lines\tpackages/backend/src/compute/default-executor.ts": 1377,
 	"file-lines\tpackages/backend/src/create-backend.test.ts": 998,
 	"file-lines\tpackages/backend/src/create-backend.ts": 935,
 	"file-lines\tpackages/backend/src/discovery/service.test.ts": 417,

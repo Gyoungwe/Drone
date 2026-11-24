@@ -596,7 +596,6 @@
 	"suspicious/noEmptyBlockStatements\tscripts/workflow-catalog-smoke/main.mjs": 1,
 	"suspicious/noEmptyBlockStatements\tscripts/workflow-catalog-smoke/renderer.tsx": 2,
 	"suspicious/noExplicitAny\tpackages/backend/src/capabilities/academic-pi-bridge.ts": 12,
-	"suspicious/noExplicitAny\tpackages/backend/src/compute/default-executor.ts": 1,
 	"suspicious/noExplicitAny\tpackages/backend/src/create-backend.test.ts": 2,
 	"suspicious/noExplicitAny\tpackages/backend/src/institutional/session.ts": 10,
 	"suspicious/noExplicitAny\tpackages/backend/src/knowledge/specialist-bridge.ts": 2,
