@@ -616,7 +616,7 @@
 	"suspicious/noExplicitAny\tpackages/backend/test/bio-routing-coverage.test.ts": 2,
 	"suspicious/noExplicitAny\tpackages/backend/test/capability-routing-samples.test.ts": 2,
 	"suspicious/noExplicitAny\tpackages/backend/test/capability-routing-v0211.test.ts": 7,
-	"suspicious/noExplicitAny\tpackages/backend/test/capability-runtime.test.ts": 26,
+	"suspicious/noExplicitAny\tpackages/backend/test/capability-runtime.test.ts": 24,
 	"suspicious/noExplicitAny\tpackages/backend/test/capability-scoped-skills.test.ts": 8,
 	"suspicious/noExplicitAny\tpackages/backend/test/discovery-native-readback-sdk.test.ts": 1,
 	"suspicious/noExplicitAny\tpackages/backend/test/harness-context.test.ts": 10,
