@@ -1,0 +1,35 @@
+name: Publish plugin-api
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-plugin-api
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the exact release commit
+        uses: actions/checkout@v4
+
+      - name: Set up Node and npm trusted publishing
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check plugin-api package
+        run: npm run check --workspace @gyoungwe/plugin-api
+
+      - name: Publish plugin-api through npm OIDC
+        run: npm publish --workspace @gyoungwe/plugin-api --access public --provenance
