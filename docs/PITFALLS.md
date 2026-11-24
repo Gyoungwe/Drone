@@ -942,3 +942,24 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 教训：凡是「从磁盘发现东西」的逻辑，都要问一句**打包后这个东西在哪**。
 `process.resourcesPath`、`app.getPath("userData")`、`__dirname` 在打包态指向的位置
 完全不同，不能只按 checkout 布局写。
+
+## worktree 重建产物会把软链目标写进绝对路径（2026-11-24 记录）
+
+在 `Drone-worktrees/` 里重建打包产物时，若 `node_modules` 是指向主检出的符号链接，
+打包器会把依赖的真实位置写进产物的注释里：
+
+```text
+// ../../../../../Users/<user>/Documents/ChatGPT/drone-plugins/node_modules/typebox/build/...
+```
+
+原本是 `// node_modules/typebox/build/...`。这类差异在 diff 里会放大成几千行噪音
+（pi-knowledge 一次重建是 2572 行，其中几乎全是路径前缀变化），而且它**不会让构建或测试失败**，
+提交后就会污染下游仓库。
+
+判断方法：重建后 `grep -c "Users/" <产物>`。已提交的产物应当是 0。
+
+修法：在工作区里真正执行一次 `npm ci` 解除软链，再重建，产物就恢复成相对路径。
+解除软链后 diff 会缩到真实变更量（同一例是 415 行）。
+
+教训：工作区里重建产物后，先核对 diff 规模是否与源码改动量相称；
+不相称时先查产物里有没有本机绝对路径，再决定要不要提交。
