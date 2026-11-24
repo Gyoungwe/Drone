@@ -963,3 +963,28 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 
 教训：工作区里重建产物后，先核对 diff 规模是否与源码改动量相称；
 不相称时先查产物里有没有本机绝对路径，再决定要不要提交。
+## 技能瘦身会改掉 WikiSkill 演化门禁的基线语义（2026-11-24 记录）
+
+把 `.pi/skills/research-workflow/SKILL.md` 从 21 KB 拆成 3 KiB 索引加
+`references/*.md` 子卡时，逐字检查发现三处「规则还在，但读它的地方变了」：
+
+- **WikiSkill 演化门禁**：`research-wikiskill.ts` 的 `safetyChecks()` 只检查**候选
+  文件**本身是否含 `local`/`evidence`/`parent`/`archive`/`claim`/`unverified`/`browser`。
+  索引本身缺了 `unverified`，若有人基于瘦身后的索引起草候选，门禁会直接判
+  "missing required safety concept" 拒掉——不是内容丢了，是校验面窄了。
+- **演化基准打分**：`evaluateSkill()` 用 `pi --skill <file> --no-builtin-tools` 评测，
+  被测模型**没有 read 工具**，跟进不了 `references/` 里的子卡。基线分会在拆分后
+  变低，演化门禁的"不劣于基线"阈值也跟着漂。
+- **安全门禁的语义**：常驻技能靠 `alwaysWith: research` 常驻，但 Pi 的
+  `formatSkillsForPrompt` 只投 name/description/location，正文要模型自己 read；
+  `extension.ts` 里 "Read only the selected SKILL.md and task-required references"
+  是这条渐进披露路径的宿主侧表述。
+
+教训：拆技能前先查**三处消费它的地方**——安全校验函数、基准评测、以及注入
+上下文的提示构造。字面完整性检查只能证明「文本没丢」，证明不了「规则还在
+生效路径上」。凡是「内容进子文档」的拆分，都要确认每个消费方要么会跟进子文档，
+要么本来就只读索引。
+
+打包侧无风险：`electron-builder.yml` 是整目录复制
+`.pi/skills/research-workflow` → `research-workbench/skills/research-workflow`，
+`references/` 随目录走，不会漏。
