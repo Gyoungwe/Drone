@@ -2,9 +2,14 @@ import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-w
 import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type { PluginRuntimeContext } from "@gyoungwe/plugin-api/runtime";
 import { onPluginEvent } from "./native-events";
-import { createP5OwnerFacade, type HostNativeSession, type P5CommittedProjection } from "./p5-owner-facade";
+import {
+	createP5OwnerFacade,
+	type HostNativeFactOwner,
+	type HostNativeSession,
+	type P5CommittedProjection,
+} from "./p5-owner-facade";
 import type { PluginRuntimeCaller, PluginRuntimeCallerResolver, RegistryOperation } from "./runtime";
-import type { PluginNativeInvocation } from "./runtime-capabilities";
+import { hostCapabilityPort, type PluginNativeInvocation } from "./runtime-capabilities";
 
 /** Host-only facade; only the registry can borrow a real caller for the source projector. */
 export interface ManagedNativeSession extends PluginNativeSession {
@@ -46,7 +51,7 @@ export function createNativeSessionFacade(options: NativeSessionFacadeOptions): 
 		nativeOperations: undefined,
 		factOwner: undefined,
 		retainFactOwner: undefined,
-		...(native.factOwner ? manageFactOwner(native, native.factOwner, lifetime.signal) : {}),
+		...(native.factOwner ? manageFactOwner(options, native.factOwner) : {}),
 		projection: projected,
 		// Do not pass through a similarly named property from untyped source exports.
 		hostProjection: projected
@@ -57,7 +62,45 @@ export function createNativeSessionFacade(options: NativeSessionFacadeOptions): 
 	return managed;
 }
 
-function manageFactOwner(native: HostNativeSession, owner: P5CommittedProjection, signal: AbortSignal) {
+function factOwnerContext(
+	resolveCaller: PluginRuntimeCallerResolver,
+	call: NativeSessionFacadeOptions["call"],
+): PluginRuntimeContext {
+	const caller = resolveCaller();
+	if (caller?.scope.kind !== "session") throw new Error("Native fact owner session is no longer available");
+	const resolveSameCaller = () => {
+		const current = resolveCaller();
+		return current?.identity === caller.identity && current.sessionIdentity === caller.sessionIdentity
+			? current
+			: undefined;
+	};
+	return {
+		scope: caller.scope,
+		signal: caller.signal,
+		capabilities: hostCapabilityPort(async (name, input, signal) => {
+			if (name !== "caller.scope")
+				throw new Error(`Plugin capability is unavailable during fact delivery: ${name}`);
+			caller.signal.throwIfAborted();
+			return call(resolveSameCaller, "capability:caller.scope", input, signal, {
+				inputSchema: {},
+				resultSchema: {},
+				effect: "read",
+				execute: (value, context) => context.capabilities.call(name, value),
+			});
+		}),
+	};
+}
+
+function manageFactOwner(
+	{ native, lifetime, call, resolveProjectionCaller }: NativeSessionFacadeOptions,
+	owner: HostNativeFactOwner,
+) {
+	const scopedOwner: P5CommittedProjection = resolveProjectionCaller
+		? {
+				cursor: () => owner.cursor(factOwnerContext(resolveProjectionCaller, call)),
+				deliver: (delivery) => owner.deliver(delivery, factOwnerContext(resolveProjectionCaller, call)),
+			}
+		: owner;
 	const releases: (() => Promise<void>)[] = [];
 	const disposeNative = native.dispose.bind(native);
 	let closing: Promise<void> | undefined;
@@ -76,7 +119,7 @@ function manageFactOwner(native: HostNativeSession, owner: P5CommittedProjection
 	// Registry teardown retains the original host record, not the returned facade.
 	native.dispose = dispose;
 	return {
-		hostFactOwner: createP5OwnerFacade(owner, signal),
+		hostFactOwner: createP5OwnerFacade(scopedOwner, lifetime.signal),
 		retainFactOwner: (release: () => Promise<void>) => {
 			releases.push(release);
 		},

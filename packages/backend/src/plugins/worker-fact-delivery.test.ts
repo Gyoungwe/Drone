@@ -61,7 +61,7 @@ const released = Promise.withResolvers();
 const markers = [];
 const state = { cursor: null, received: null };
 const operation = execute => ({ inputSchema: { type: "null" }, resultSchema: {}, effect: "read", execute });
-export default async () => ({
+export default async ({ capabilities }) => ({
   operations: {
     state: operation(async () => ({ markers, received: state.received })),
     entered: operation(async () => { await entered.promise; return null; }),
@@ -114,8 +114,9 @@ async function startRuntime(factOwner = owner) {
 		},
 		signal: new AbortController().signal,
 	};
-	const client = await registry.activate("example", () => caller);
-	return { client, attach: () => registry.attachNative("example", () => caller) };
+	const resolveCaller = () => caller;
+	const client = await registry.activate("example", resolveCaller);
+	return { client, attach: () => registry.attachNative("example", resolveCaller, resolveCaller) };
 }
 
 it("forwards the cursor and acknowledges only the fact payload, without the host handle", async () => {
@@ -130,6 +131,26 @@ it("forwards the cursor and acknowledges only the fact payload, without the host
 		markers: ["deliver:entered", "deliver:settled"],
 		received: { cursor: delivery.cursor, facts: delivery.facts },
 	});
+});
+
+it("lets the worker resolve its bound session during both fact requests", async () => {
+	const { attach } = await startRuntime(`
+    factOwner: {
+      async cursor() { return JSON.stringify(await capabilities.call("caller.scope", null)); },
+      async deliver() { return { cursor: await this.cursor() }; },
+    },
+  `);
+	const { hostFactOwner } = await attach();
+	assert(hostFactOwner);
+	const cursor = await hostFactOwner.cursor();
+	assert(cursor);
+	expect(JSON.parse(cursor)).toEqual({
+		kind: "session",
+		workspaceId: "workspace",
+		workspaceDirectory: "/Work/One",
+		sessionId: "session",
+	});
+	await expect(hostFactOwner.deliver(delivery)).resolves.toEqual({ cursor });
 });
 
 it("does not expose a host fact owner for an adapter without one", async () => {
