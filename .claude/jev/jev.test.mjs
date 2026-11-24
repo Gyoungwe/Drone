@@ -31,6 +31,7 @@ describe("recursive delete scope", () => {
 			"git reset --hard HEAD~1",
 			"git branch -D codex/T1",
 			"git push --force-with-lease origin claude/x",
+			"cd /w/drone/packages/a && rm -rf node_modules/.vite ../../node_modules/.vite 2>/dev/null",
 		]) {
 			assert.equal(bash(command), null, command);
 		}
@@ -42,6 +43,10 @@ describe("recursive delete scope", () => {
 		assert.equal(answer(bash("rm -rf $DIR")), "ask:rm-outside-repos");
 		assert.equal(answer(bash("cd x; sudo rm -fr /etc/thing")), "ask:rm-outside-repos");
 		assert.equal(answer(bash("rm -rf /w/drone")), "ask:rm-outside-repos");
+		assert.equal(answer(bash("cd /etc && rm -rf x")), "ask:rm-outside-repos");
+		assert.equal(answer(bash("cd $X && rm -rf y")), "ask:rm-outside-repos");
+		assert.equal(answer(bash("cd - && rm -rf y")), "ask:rm-outside-repos");
+		assert.equal(answer(bash("cd /w/drone && rm -rf ../../../h/notes")), "ask:rm-outside-repos");
 	});
 });
 

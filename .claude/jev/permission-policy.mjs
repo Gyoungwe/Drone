@@ -66,19 +66,33 @@ export function secretRule(file) {
 	return SECRET_PATHS.find(([pattern]) => pattern.test(file))?.[1] ?? null;
 }
 
-/** Paths each `rm -r` in the command would delete; a target the shell would expand first comes back as null. */
+/** One shell word as an absolute path; null when the shell would expand it first or the directory is unknown. */
+function wordPath(word, cwd, home) {
+	if (cwd === null || word === "-" || /[$`*?{]/.test(word)) return null;
+	const expanded = word.replace(/^~(?=\/|$)/, home).replace(/^["']|["']$/g, "");
+	return path.resolve(cwd, expanded);
+}
+
+/**
+ * Paths each `rm -r` in the command would delete, resolved against the directory any earlier `cd` moved to.
+ * Redirections such as `2>/dev/null` are not targets. A target that cannot be resolved comes back as null.
+ */
 export function recursiveDeleteTargets(command, cwd, home) {
-	return command
-		.split(/[;&|\n]+/)
-		.map((segment) => segment.trim().split(/\s+/))
-		.filter((words) => words[words[0] === "sudo" ? 1 : 0] === "rm")
-		.filter((words) => words.some((w) => /^-\w*[rR]/.test(w) || w === "--recursive"))
-		.flatMap((words) => words.slice(words.indexOf("rm") + 1).filter((w) => !w.startsWith("-")))
-		.map((word) => {
-			if (/[$`*?{]/.test(word)) return null;
-			const expanded = word.replace(/^~(?=\/|$)/, home).replace(/^["']|["']$/g, "");
-			return path.resolve(cwd, expanded);
-		});
+	const targets = [];
+	let dir = cwd;
+	for (const segment of command.split(/[;&|\n]+/)) {
+		const words = segment
+			.trim()
+			.split(/\s+/)
+			.filter((w) => w !== "" && !/[<>]/.test(w));
+		const at = words[0] === "sudo" ? 1 : 0;
+		if (words[at] === "cd") dir = words.length > at + 1 ? wordPath(words[at + 1], dir, home) : home;
+		const recursive = words.some((w) => /^-\w*[rR]/.test(w) || w === "--recursive");
+		if (words[at] !== "rm" || !recursive) continue;
+		const operands = words.slice(at + 1).filter((w) => !w.startsWith("-"));
+		targets.push(...operands.map((w) => wordPath(w, dir, home)));
+	}
+	return targets;
 }
 
 /** Recursive deletes pass inside a repository or a throwaway place and ask anywhere else. */
