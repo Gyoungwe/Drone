@@ -188,6 +188,8 @@ Paper2Agent 生成的 MCP 服务器接入方式和证据边界见 [paper2agent.m
 
 `.pi/skills/research-workflow/SKILL.md` 是常驻索引（AGENTS.md 红线 5 要求 ≤3 KiB），只保留「Always in force」的硬规则，其余细则按需拆分到 `.pi/skills/research-workflow/references/*.md`，索引逐条链接并注明「read this when …」。子卡与索引一起随 skill 目录打包；`packages/backend/test/research-skill-index.test.ts` 钉住索引体积、frontmatter 不变、子卡全链接和安全概念不丢。
 
+只读复用既有文献模式下，宿主放行 `read` 读取技能索引与子卡：`packages/backend/src/capabilities/skill-frontmatter.ts` 的 `isSkillResourcePath` 只承认 `skills/<name>/SKILL.md` 与 `skills/<name>/references/*.md`，拒绝 `..` 逃逸、绝对路径、`~` 展开、`@` 前缀、Windows 盘符、嵌套子目录和非 Markdown 文件。`packages/backend/test/capability-runtime.test.ts` 的放行与拒绝断言各成对存在，`makeLoader`/`makeSession` 夹具移到 `packages/backend/test/capability-runtime-fixture.ts`。
+
 2026-10-19 实机验收问题、截图编号与下一轮修复状态见 [real-device-acceptance-20261019](real-device-acceptance-20261019/README.md)。
 
 插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型、host-neutral analysis contract、版本化 `AnalysisHostPort` registry/loader 合同、research connector/write registry 的 `ResearchConnectorHostLoader`/`ResearchWriteAdapterHostLoader` 合同，以及隔离任务验收 registry 的 `TaskAcceptanceHostPort` 合同。`@gyoungwe/pi-analysis/host` 是宿主唯一的分析 adapter 入口；`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
