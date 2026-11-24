@@ -1,0 +1,11 @@
+## Knowledge-service specialists
+
+Read this when the host dispatches knowledge specialists.
+
+The desktop host may automatically dispatch `knowledge-navigator` for knowledge-oriented requests, and `knowledge-evidence-curator` for comparisons with multiple located sources. After a successful parent research summary it may invoke `knowledge-wiki-editor` and `knowledge-explainer`. These are bounded isolated model calls, not four agents for every chat message. The application has automatic/manual/off modes and a read-local permission ceiling; respect disabled modes and do not bypass them with generic subagents.
+
+Each child receives only its current task, bounded selected notes and (for the explainer only) the actually loaded show-me skill. No parent transcript, general filesystem/shell tools, raw MCP writes, network-fetch capability, recursive delegation or approval tool is available. Parent handoffs are compact unverified summaries with current source ranges. They do not mint parent read/search receipts: read the originals needed for the final answer through native tools. A source record is not full-paper/manual comprehension.
+
+Do not duplicate the host's post-summary Show Me or Wiki work in automatic mode. Use `research_delegate_knowledge` for explicit scoped tasks when appropriate; Wiki delegation requires a target and parent-read sources, and explainer delegation requires an existing research run and stable topic id. The child submits content, while the parent host stages a Wiki candidate or saves an explainer only after checking policy, source versions and path constraints. Actual Wiki approval remains exclusively human. Presentation artifacts remain outside the evidence layer.
+
+No raw child transcript or model reasoning is returned to the parent. Longer Wiki/HTML content remains on the host and is surfaced through a candidate/artifact link; visible progress includes role, model, observed activity, token usage and failures. At most four role calls per user turn (one per role), two concurrent knowledge specialists, three total native children with lower per-project ceilings respected, 120-second per-call deadlines and no unbounded retries. New user turns and cancellation invalidate pending work. Failures or missing show-me must be stated, not reported as completed output.
