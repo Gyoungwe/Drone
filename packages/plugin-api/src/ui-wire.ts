@@ -27,18 +27,18 @@ export interface KnowledgeUiPort {
 	getKnowledgeGraph(input: {
 		revision: number;
 		limit?: number;
-		view?: HostKnowledgeGraphView;
+		view?: KnowledgeGraphView;
 		mergeMirrors?: boolean;
-	}): Promise<HostKnowledgeGraph>;
-	getKnowledgeJobs(input?: KnowledgePageRequest): Promise<HostKnowledgePage<HostKnowledgeJob>>;
+	}): Promise<KnowledgeGraph>;
+	getKnowledgeJobs(input?: KnowledgePageRequest): Promise<KnowledgePage<KnowledgeJob>>;
 	getKnowledgeMaintenanceRuns(): Promise<KnowledgeMaintenanceRun[]>;
 	getKnowledgeMaintenanceSettings(): Promise<KnowledgeMaintenanceSettings>;
-	getKnowledgeNoteLinks(input: { path: string; revision: number }): Promise<HostKnowledgeNoteLinks>;
+	getKnowledgeNoteLinks(input: { path: string; revision: number }): Promise<KnowledgeNoteLinks>;
 	getKnowledgeOverview(input?: {
 		cwd?: string | null;
 		sessionId?: string | null;
-	}): Promise<HostKnowledgeOverview>;
-	getKnowledgeReviews(input: KnowledgePageRequest): Promise<HostKnowledgePage<HostWikiReviewItem>>;
+	}): Promise<KnowledgeOverview>;
+	getKnowledgeReviews(input: KnowledgePageRequest): Promise<KnowledgePage<WikiReviewItem>>;
 	getKnowledgeSemanticStatus(input?: {
 		cwd?: string | null;
 		bindingRevision?: number;
@@ -186,13 +186,6 @@ export type ComputeAuthorization = {
 	workflows: string[];
 };
 
-export interface ContractKnowledgeAnswerMetric {
-	answered: number;
-	total: number;
-	rate: number | null;
-	updatedAt: number | null;
-}
-
 export interface ContractKnowledgeFlow {
 	specialists?: ContractKnowledgeSpecialistRun[];
 	sessionId: string;
@@ -204,8 +197,8 @@ export interface ContractKnowledgeFlow {
 	cards?: ContractKnowledgeFlowCard[];
 	phase: string;
 	updatedAt: number;
-	navigation: ContractKnowledgeReadRecord[];
-	reads: ContractKnowledgeReadRecord[];
+	navigation: KnowledgeReadRecord[];
+	reads: KnowledgeReadRecord[];
 	search: {
 		query: string;
 		wikiOnly: boolean;
@@ -213,7 +206,7 @@ export interface ContractKnowledgeFlow {
 		complete: boolean;
 		coverage: string;
 		revision: number;
-		previews?: ContractKnowledgeReadRecord[];
+		previews?: KnowledgeReadRecord[];
 	} | null;
 	publication: {
 		status: string;
@@ -226,7 +219,7 @@ export interface ContractKnowledgeFlow {
 		scientificallyVerified: false;
 	} | null;
 	localAnswer?: boolean;
-	localAnswerRate?: ContractKnowledgeAnswerMetric | null;
+	localAnswerRate?: KnowledgeAnswerMetric | null;
 	stages?: {
 		navigation: boolean;
 		wiki: boolean;
@@ -267,18 +260,6 @@ export interface ContractKnowledgeFlowCardLink {
 	i18n?: string;
 	kind: "external" | "resource" | "note" | "path";
 	target: string;
-}
-
-export interface ContractKnowledgeReadRecord {
-	path: string;
-	title?: string;
-	excerpt?: string;
-	hash: string | null;
-	startLine: number;
-	endLine: number;
-	missing?: boolean;
-	truncated?: boolean;
-	kind?: string;
 }
 
 export type ContractKnowledgeSpecialistRole = "navigator" | "evidence" | "wiki" | "explainer" | "reviewer";
@@ -398,220 +379,6 @@ export interface DailyDiscoveryState {
 	radar: DailyDiscoveryRadarPaper[];
 }
 
-export interface HostKnowledgeBinding {
-	version: number;
-	vault: string;
-	vaultId: string;
-	revision: number;
-	profile: string;
-	depositMode: string;
-	subagentPolicy: string;
-	updatedAt: string;
-}
-
-/** 知识网络图：旧字段保留；语义投影字段全部为可选，兼容旧 worker/IPC。 */
-export interface HostKnowledgeGraph {
-	nodes: HostKnowledgeGraphNode[];
-	edges: {
-		source: string;
-		target: string;
-		directory?: boolean;
-	}[];
-	totalNotes: number;
-	revision?: number;
-	view?: HostKnowledgeGraphView;
-	mergeMirrors?: boolean;
-	relations?: HostKnowledgeGraphRelation[];
-	duplicates?: {
-		canonical: string;
-		duplicate: string;
-	}[];
-	communities?: Record<string, number>;
-	layout?: Record<
-		string,
-		{
-			x: number;
-			y: number;
-		}
-	>;
-	health?: {
-		isolated: number;
-		duplicates: number;
-		infrastructure: number;
-		missingLinks?: number;
-		truncated?: boolean;
-		candidateNodes?: number;
-		candidateLimit?: number;
-	};
-	semantic?: HostKnowledgeGraphSemantic;
-}
-
-export interface HostKnowledgeGraphNode {
-	path: string;
-	title: string;
-	kind: string;
-	degree: number;
-	/** Optional frontmatter type, kept additive for older runtimes. */
-	type?: string;
-	/** Normalized knowledge category used by the sector layout. */
-	contentType?: string;
-	/** Research topic/question anchor for surrounding category sectors. */
-	isMain?: boolean;
-	/** Paths of main nodes connected through this shared bridge node. */
-	sharedWith?: string[];
-	/** Optional project/shared scope, kept additive for older runtimes. */
-	scope?: string;
-	/** Normalized paper identifiers used to surface likely duplicates. */
-	identifiers?: string[];
-	nodeType?: "note" | "wiki" | "navigation" | "mirror" | "infrastructure" | "memory";
-	isInfrastructure?: boolean;
-	community?: number;
-	x?: number;
-	y?: number;
-	mirrors?: string[];
-	warnings?: string[];
-}
-
-export interface HostKnowledgeGraphRelation {
-	source: string;
-	target: string;
-	type: HostKnowledgeGraphRelationType;
-}
-
-export type HostKnowledgeGraphRelationType = "link" | "directory" | "duplicate";
-
-export interface HostKnowledgeGraphSemantic {
-	nodes: HostKnowledgeGraphNode[];
-	edges: {
-		source: string;
-		target: string;
-		directory?: boolean;
-	}[];
-	totalNotes: number;
-	view: HostKnowledgeGraphView;
-	mergeMirrors: boolean;
-	relations?: HostKnowledgeGraphRelation[];
-	duplicates?: {
-		canonical: string;
-		duplicate: string;
-	}[];
-	communities?: Record<string, number>;
-	layout?: Record<
-		string,
-		{
-			x: number;
-			y: number;
-		}
-	>;
-	health?: {
-		isolated: number;
-		duplicates: number;
-		infrastructure: number;
-		missingLinks?: number;
-		/** Semantic graph was built from a bounded neighbourhood rather than every file. */
-		truncated?: boolean;
-		candidateNodes?: number;
-		candidateLimit?: number;
-	};
-}
-
-export type HostKnowledgeGraphView = "semantic" | "all";
-
-export interface HostKnowledgeIndexStatus {
-	revision: number;
-	coverage: string;
-	noteCount: number;
-	pendingChanges: number;
-	jobs: number;
-	watching: boolean;
-	lastReconciledAt: string | null;
-	problems: {
-		path: string;
-		message: string;
-	}[];
-	/** Counts are computed from the full indexed set, independently of the bounded graph projection. */
-	categoryCounts?: {
-		paper: number;
-		software: number;
-		method: number;
-		idea: number;
-		other: number;
-	};
-}
-
-export interface HostKnowledgeJob {
-	key: string;
-	kind: string;
-	path: string;
-	scope: string;
-	revision: number;
-	updated: string;
-}
-
-/** 双向链接：出链（本笔记链接到的）与反链（链接到本笔记的） */
-export interface HostKnowledgeLinkRef {
-	path: string;
-	title: string;
-	/** false = 链接目标还不存在（未建的笔记） */
-	exists: boolean;
-}
-
-export interface HostKnowledgeNoteLinks {
-	path: string;
-	title: string;
-	outgoing: HostKnowledgeLinkRef[];
-	incoming: HostKnowledgeLinkRef[];
-}
-
-export interface HostKnowledgeOverview {
-	reviewMode?: "automatic" | "strict";
-	wikiHistory?: {
-		id: string;
-		path: string;
-		afterHash: string;
-		reviewedAt: number;
-		reviewMethod: string;
-	}[];
-	recentNotes?: HostKnowledgeRecentNote[];
-	/** Most recent notes per home category tab (paper/software/method/idea). */
-	recentByCategory?: Partial<
-		Record<"paper" | "software" | "method" | "idea", HostKnowledgeRecentNote[]>
-	> | null;
-	localAnswerRate?: KnowledgeAnswerMetric | null;
-	specialistSettings?: HostKnowledgeSpecialistSettings;
-	specialistSettingsError?: string;
-	enabled: boolean;
-	bound: boolean;
-	scope: "application";
-	binding?: HostKnowledgeBinding;
-	cwd: string | null;
-	project: string | null;
-	legacyProjectVault: string | null;
-	projectError?: string;
-	index?: HostKnowledgeIndexStatus | null;
-	error?: string | null;
-	flow: KnowledgeFlow | null;
-}
-
-export interface HostKnowledgePage<T> {
-	items: T[];
-	total: number;
-	offset: number;
-	nextOffset: number | null;
-	problems?: {
-		id: string;
-		error: string;
-	}[];
-}
-
-export interface HostKnowledgeRecentNote {
-	path: string;
-	title: string;
-	kind: "note" | "wiki";
-	/** File mtime observed by the index; this is a display hint, not a provenance receipt. */
-	updatedAt: number;
-}
-
 export type HostKnowledgeSpecialistMode = "automatic" | "manual" | "off";
 
 export interface HostKnowledgeSpecialistSettings {
@@ -628,16 +395,6 @@ export interface HostKnowledgeSpecialistSettings {
 	maxTokensPerSession: number;
 	maxCostPerTurn: number;
 	maxCostPerSession: number;
-}
-
-export interface HostWikiReviewItem {
-	id: string;
-	path: string;
-	title: string;
-	status: string;
-	expiresAt: number;
-	expired: boolean;
-	bindingChanged: boolean;
 }
 
 /** 随消息附带的图片（pi ImageContent；data 为纯 base64，不含 data URL 前缀） */
@@ -1098,7 +855,7 @@ export interface KnowledgeOverview {
 	}[];
 	recentNotes?: KnowledgeRecentNote[];
 	recentByCategory?: Partial<Record<"paper" | "software" | "method" | "idea", KnowledgeRecentNote[]>> | null;
-	localAnswerRate?: ContractKnowledgeAnswerMetric | null;
+	localAnswerRate?: KnowledgeAnswerMetric | null;
 	specialistSettings?: KnowledgeSpecialistSettings;
 	specialistSettingsError?: string;
 	enabled: boolean;
@@ -1132,7 +889,6 @@ export interface KnowledgePageRequest {
 	revision?: number;
 }
 
-/** Host-owned knowledge UI protocol. Reading in the UI never earns model evidence receipts. */
 export interface KnowledgeReadRecord {
 	path: string;
 	title?: string;

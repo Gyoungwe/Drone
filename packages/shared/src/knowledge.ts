@@ -1,4 +1,23 @@
 import type {
+	KnowledgeAnswerMetric,
+	KnowledgeBinding,
+	KnowledgeGraph,
+	KnowledgeGraphNode,
+	KnowledgeGraphRelation,
+	KnowledgeGraphRelationType,
+	KnowledgeGraphSemantic,
+	KnowledgeGraphView,
+	KnowledgeIndexStatus,
+	KnowledgeJob,
+	KnowledgeLinkRef,
+	KnowledgeNoteLinks,
+	KnowledgeOverview,
+	KnowledgePage,
+	KnowledgeReadRecord,
+	KnowledgeRecentNote,
+	WikiReviewItem,
+} from "@gyoungwe/plugin-api/knowledge";
+import type {
 	KnowledgeSpecialistMode,
 	KnowledgeSpecialistRun,
 	KnowledgeSpecialistSettings,
@@ -34,18 +53,33 @@ export type {
 	KnowledgeTopicSource,
 	KnowledgeTopicsRequest,
 } from "./knowledge-upgrade";
-/** Host-owned knowledge UI protocol. Reading in the UI never earns model evidence receipts. */
-export interface KnowledgeReadRecord {
-	path: string;
-	title?: string;
-	excerpt?: string;
-	hash: string | null;
-	startLine: number;
-	endLine: number;
-	missing?: boolean;
-	truncated?: boolean;
-	kind?: string;
-}
+/**
+ * Knowledge contracts owned by the public plugin API. The host re-exports them so
+ * that renderer, backend and plugin packages share one declaration instead of a
+ * second local copy that can drift.
+ *
+ * `KnowledgeReadRecord` stays host-owned knowledge UI protocol: reading in the UI
+ * never earns model evidence receipts.
+ */
+export type {
+	KnowledgeAnswerMetric,
+	KnowledgeBinding,
+	KnowledgeGraph,
+	KnowledgeGraphNode,
+	KnowledgeGraphRelation,
+	KnowledgeGraphRelationType,
+	KnowledgeGraphSemantic,
+	KnowledgeGraphView,
+	KnowledgeIndexStatus,
+	KnowledgeJob,
+	KnowledgeLinkRef,
+	KnowledgeNoteLinks,
+	KnowledgeOverview,
+	KnowledgePage,
+	KnowledgeReadRecord,
+	KnowledgeRecentNote,
+	WikiReviewItem,
+};
 /** 通用回执卡字段：label 为展示名（可附 i18n 键），value 为状态记号或短文本；tone 由生产端按事实给出。 */
 export interface KnowledgeFlowCardField {
 	label: string;
@@ -150,69 +184,6 @@ export type KnowledgeUiEvent = (
 			text: string;
 	  }
 ) & { sequence?: number };
-export interface KnowledgeBinding {
-	version: number;
-	vault: string;
-	vaultId: string;
-	revision: number;
-	profile: string;
-	depositMode: string;
-	subagentPolicy: string;
-	updatedAt: string;
-}
-export interface KnowledgeIndexStatus {
-	revision: number;
-	coverage: string;
-	noteCount: number;
-	pendingChanges: number;
-	jobs: number;
-	watching: boolean;
-	lastReconciledAt: string | null;
-	problems: { path: string; message: string }[];
-	/** Counts are computed from the full indexed set, independently of the bounded graph projection. */
-	categoryCounts?: {
-		paper: number;
-		software: number;
-		method: number;
-		idea: number;
-		other: number;
-	};
-}
-export interface KnowledgeRecentNote {
-	path: string;
-	title: string;
-	kind: "note" | "wiki";
-	/** File mtime observed by the index; this is a display hint, not a provenance receipt. */
-	updatedAt: number;
-}
-export interface KnowledgeAnswerMetric {
-	answered: number;
-	total: number;
-	rate: number | null;
-	updatedAt: number | null;
-}
-export interface KnowledgeOverview {
-	reviewMode?: "automatic" | "strict";
-	wikiHistory?: { id: string; path: string; afterHash: string; reviewedAt: number; reviewMethod: string }[];
-	recentNotes?: KnowledgeRecentNote[];
-	/** Most recent notes per home category tab (paper/software/method/idea). */
-	recentByCategory?: Partial<Record<"paper" | "software" | "method" | "idea", KnowledgeRecentNote[]>> | null;
-	localAnswerRate?: KnowledgeAnswerMetric | null;
-	specialistSettings?: KnowledgeSpecialistSettings;
-	specialistSettingsError?: string;
-	enabled: boolean;
-	bound: boolean;
-	scope: "application";
-	binding?: KnowledgeBinding;
-	cwd: string | null;
-	project: string | null;
-	legacyProjectVault: string | null;
-	projectError?: string;
-	index?: KnowledgeIndexStatus | null;
-	error?: string | null;
-	flow: KnowledgeFlow | null;
-}
-
 export type KnowledgeCloudMode =
 	| "disabled"
 	| "unchecked"
@@ -373,30 +344,6 @@ export interface ResearchRunRequest {
 	runDir?: string | null;
 	runId?: string | null;
 }
-export interface KnowledgePage<T> {
-	items: T[];
-	total: number;
-	offset: number;
-	nextOffset: number | null;
-	problems?: { id: string; error: string }[];
-}
-export interface KnowledgeJob {
-	key: string;
-	kind: string;
-	path: string;
-	scope: string;
-	revision: number;
-	updated: string;
-}
-export interface WikiReviewItem {
-	id: string;
-	path: string;
-	title: string;
-	status: string;
-	expiresAt: number;
-	expired: boolean;
-	bindingChanged: boolean;
-}
 export interface WikiSource extends KnowledgeReadRecord {
 	currentHash: string | null;
 	changed: boolean;
@@ -503,95 +450,6 @@ export interface WikiModelReviewResult {
 	partial?: boolean;
 	writeResult?: WikiReviewResult;
 	sources?: { path: string; hash: string; startLine: number; endLine: number }[];
-}
-/** 双向链接：出链（本笔记链接到的）与反链（链接到本笔记的） */
-export interface KnowledgeLinkRef {
-	path: string;
-	title: string;
-	/** false = 链接目标还不存在（未建的笔记） */
-	exists: boolean;
-}
-export interface KnowledgeNoteLinks {
-	path: string;
-	title: string;
-	outgoing: KnowledgeLinkRef[];
-	incoming: KnowledgeLinkRef[];
-}
-export type KnowledgeGraphView = "semantic" | "all";
-export type KnowledgeGraphRelationType = "link" | "directory" | "duplicate";
-export interface KnowledgeGraphRelation {
-	source: string;
-	target: string;
-	type: KnowledgeGraphRelationType;
-}
-export interface KnowledgeGraphNode {
-	path: string;
-	title: string;
-	kind: string;
-	degree: number;
-	/** Optional frontmatter type, kept additive for older runtimes. */
-	type?: string;
-	/** Normalized knowledge category used by the sector layout. */
-	contentType?: string;
-	/** Research topic/question anchor for surrounding category sectors. */
-	isMain?: boolean;
-	/** Paths of main nodes connected through this shared bridge node. */
-	sharedWith?: string[];
-	/** Optional project/shared scope, kept additive for older runtimes. */
-	scope?: string;
-	/** Normalized paper identifiers used to surface likely duplicates. */
-	identifiers?: string[];
-	nodeType?: "note" | "wiki" | "navigation" | "mirror" | "infrastructure" | "memory";
-	isInfrastructure?: boolean;
-	community?: number;
-	x?: number;
-	y?: number;
-	mirrors?: string[];
-	warnings?: string[];
-}
-export interface KnowledgeGraphSemantic {
-	nodes: KnowledgeGraphNode[];
-	edges: { source: string; target: string; directory?: boolean }[];
-	totalNotes: number;
-	view: KnowledgeGraphView;
-	mergeMirrors: boolean;
-	relations?: KnowledgeGraphRelation[];
-	duplicates?: { canonical: string; duplicate: string }[];
-	communities?: Record<string, number>;
-	layout?: Record<string, { x: number; y: number }>;
-	health?: {
-		isolated: number;
-		duplicates: number;
-		infrastructure: number;
-		missingLinks?: number;
-		/** Semantic graph was built from a bounded neighbourhood rather than every file. */
-		truncated?: boolean;
-		candidateNodes?: number;
-		candidateLimit?: number;
-	};
-}
-/** 知识网络图：旧字段保留；语义投影字段全部为可选，兼容旧 worker/IPC。 */
-export interface KnowledgeGraph {
-	nodes: KnowledgeGraphNode[];
-	edges: { source: string; target: string; directory?: boolean }[];
-	totalNotes: number;
-	revision?: number;
-	view?: KnowledgeGraphView;
-	mergeMirrors?: boolean;
-	relations?: KnowledgeGraphRelation[];
-	duplicates?: { canonical: string; duplicate: string }[];
-	communities?: Record<string, number>;
-	layout?: Record<string, { x: number; y: number }>;
-	health?: {
-		isolated: number;
-		duplicates: number;
-		infrastructure: number;
-		missingLinks?: number;
-		truncated?: boolean;
-		candidateNodes?: number;
-		candidateLimit?: number;
-	};
-	semantic?: KnowledgeGraphSemantic;
 }
 /** 每日发现（新旧对照）提出的一条想法 */
 export interface DailyDiscoveryIdea {
