@@ -1,14 +1,28 @@
 import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
-import type { HostFactDeliveryAcknowledgement, HostFactDeliveryOwner } from "@gyoungwe/plugin-api/p5-inquiry";
-import type { PluginRuntimeFactory } from "@gyoungwe/plugin-api/runtime";
+import type {
+	HostFactDelivery,
+	HostFactDeliveryAcknowledgement,
+	HostFactDeliveryOwner,
+} from "@gyoungwe/plugin-api/p5-inquiry";
+import type { PluginRuntimeContext, PluginRuntimeFactory } from "@gyoungwe/plugin-api/runtime";
 
 export interface P5CommittedProjection extends HostFactDeliveryOwner {
 	cursor(): Promise<string | null>;
 }
 
+export interface HostNativeFactOwner {
+	cursor(): Promise<string | null>;
+	cursor(context: PluginRuntimeContext): Promise<string | null>;
+	deliver(delivery: HostFactDelivery): Promise<HostFactDeliveryAcknowledgement>;
+	deliver(
+		delivery: HostFactDelivery,
+		context: PluginRuntimeContext,
+	): Promise<HostFactDeliveryAcknowledgement>;
+}
+
 // Only the worker reaches the guest owner; this handle-bearing host session is not a plugin contract.
 export type HostNativeSession = Omit<PluginNativeSession, "factOwner"> & {
-	readonly factOwner?: P5CommittedProjection;
+	readonly factOwner?: HostNativeFactOwner;
 };
 
 export type HostNativeRuntimeFactory = PluginRuntimeFactory<HostNativeSession>;

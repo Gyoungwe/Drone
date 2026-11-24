@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import type { HostFactDelivery, HostFactDeliveryHandle } from "@gyoungwe/plugin-api/p5-inquiry";
+import type { PluginRuntimeContext } from "@gyoungwe/plugin-api/runtime";
 import { expect, it } from "vitest";
 import { attachProcessNative, type ProcessNativeHost } from "./process-native-attachment";
-import { PluginRuntimeRegistry } from "./runtime";
+import { type PluginRuntimeCaller, PluginRuntimeRegistry } from "./runtime";
 
 const delivery: HostFactDelivery = {
 	cursor: "fact:1",
@@ -24,6 +25,12 @@ const delivery: HostFactDelivery = {
 	handle: Object.freeze({}) as HostFactDeliveryHandle,
 };
 const acknowledgement = { cursor: "fact:1" };
+const scope = {
+	kind: "session",
+	workspaceId: "workspace",
+	workspaceDirectory: "/test/workspace",
+	sessionId: "bound",
+} as const;
 
 function deferred<Result>() {
 	let handlers: { resolve: (value: Result) => void; reject: (error: Error) => void } | undefined;
@@ -38,8 +45,9 @@ function recordRequest(
 	type: Parameters<ProcessNativeHost["request"]>[0],
 	payload: object,
 	signal?: AbortSignal,
+	context?: PluginRuntimeContext,
 ) {
-	return { type, payload, signal, ...deferred<unknown>() };
+	return { type, payload, signal, context, ...deferred<unknown>() };
 }
 
 function createHost() {
@@ -57,8 +65,8 @@ function createHost() {
 			},
 		},
 		nativeDisposers: new Set(),
-		request(type, payload, signal) {
-			const request = recordRequest(type, payload, signal);
+		request(type, payload, signal, context) {
+			const request = recordRequest(type, payload, signal, context);
 			requests.push(request);
 			if (type === "native_attach") attaching.resolve(request);
 			if (type === "native_detach") detaching.resolve(request);
@@ -98,7 +106,12 @@ async function attach(factOwner?: true) {
 	const transport = createHost();
 	const creating = attachProcessNative(transport.host);
 	const address = await declareNative(transport, factOwner);
-	return { ...transport, address, session: await creating };
+	const context = {
+		scope,
+		signal: new AbortController().signal,
+		capabilities: transport.host.context.capabilities,
+	};
+	return { ...transport, address, context, session: await creating };
 }
 
 it("omits a fact owner unless the child declares one", async () => {
@@ -109,17 +122,17 @@ it("omits a fact owner unless the child declares one", async () => {
 });
 
 it("sends attachment-bound cursor and delivery requests without the live handle", async () => {
-	const { address, latestRequest, session } = await attach(true);
+	const { address, context, latestRequest, session } = await attach(true);
 	const { factOwner } = session;
 	assert(factOwner);
-	const cursor = factOwner.cursor();
+	const cursor = factOwner.cursor(context);
 	const cursorRequest = latestRequest();
 	expect(cursorRequest.type).toBe("native_fact_cursor");
 	expect(cursorRequest.payload).toEqual(address);
 	cursorRequest.resolve(null);
 	await expect(cursor).resolves.toBeNull();
 
-	const delivered = factOwner.deliver(delivery);
+	const delivered = factOwner.deliver(delivery, context);
 	const deliveryRequest = latestRequest();
 	expect(deliveryRequest.type).toBe("native_fact_deliver");
 	expect(deliveryRequest.payload).not.toHaveProperty("facts.handle");
@@ -131,12 +144,12 @@ it("sends attachment-bound cursor and delivery requests without the live handle"
 });
 
 it("aborts and drains all in-flight requests before sending native_detach", async () => {
-	const { address, detaching, host, latestRequest, requestTypes, session } = await attach(true);
+	const { address, context, detaching, host, latestRequest, requestTypes, session } = await attach(true);
 	const { factOwner } = session;
 	assert(factOwner);
-	const cursor = factOwner.cursor();
+	const cursor = factOwner.cursor(context);
 	const cursorRequest = latestRequest();
-	const delivered = factOwner.deliver(delivery);
+	const delivered = factOwner.deliver(delivery, context);
 	const deliveryRequest = latestRequest();
 	const stopping = session.dispose();
 	expect(session.dispose()).toBe(stopping);
@@ -161,10 +174,10 @@ it("aborts and drains all in-flight requests before sending native_detach", asyn
 });
 
 it("still detaches when an in-flight delivery rejects", async () => {
-	const { detaching, latestRequest, session } = await attach(true);
+	const { context, detaching, latestRequest, session } = await attach(true);
 	const { factOwner } = session;
 	assert(factOwner);
-	const delivered = factOwner.deliver(delivery);
+	const delivered = factOwner.deliver(delivery, context);
 	const deliveryRequest = latestRequest();
 	const stopping = session.dispose();
 	const failure = new Error("Child canceled delivery");
@@ -196,8 +209,15 @@ it("rejects delivery after a host abort without sending it", async () => {
 	expect(requestTypes()).toEqual(["native_attach"]);
 });
 
-it("exposes the process owner through the real registry's host fact facade", async () => {
+async function attachRegistryFactOwner() {
 	const transport = createHost();
+	const caller: PluginRuntimeCaller = {
+		identity: {},
+		sessionIdentity: {},
+		scope,
+		signal: new AbortController().signal,
+	};
+	let current: PluginRuntimeCaller | undefined = caller;
 	const registry = new PluginRuntimeRegistry({
 		authorizeActivation: async () => true,
 		authorizeInvocation: async () => false,
@@ -208,15 +228,54 @@ it("exposes the process owner through the real registry's host fact facade", asy
 		createNativeSession: () => attachProcessNative(transport.host),
 	}));
 	await registry.activate("projector", () => undefined);
-	const attaching = registry.attachNative("projector", () => undefined);
+	const attaching = registry.attachNative(
+		"projector",
+		() => undefined,
+		() => current,
+	);
 	await declareNative(transport, true);
 	const { hostFactOwner } = await attaching;
 	assert(hostFactOwner);
+	return {
+		transport,
+		caller,
+		hostFactOwner,
+		closeSession: () => {
+			current = undefined;
+		},
+	};
+}
+
+it("passes the bound session scope and signal through the real registry's host fact facade", async () => {
+	const { transport, caller, hostFactOwner } = await attachRegistryFactOwner();
 	const cursor = hostFactOwner.cursor();
-	transport.latestRequest().resolve("fact:1");
+	const cursorRequest = transport.latestRequest();
+	cursorRequest.resolve("fact:1");
 	await expect(cursor).resolves.toBe("fact:1");
 	const delivered = hostFactOwner.deliver(delivery);
-	transport.latestRequest().resolve({ ...acknowledgement, extra: true });
+	const deliveryRequest = transport.latestRequest();
+	deliveryRequest.resolve({ ...acknowledgement, extra: true });
 	await expect(delivered).resolves.toEqual(acknowledgement);
 	expect(transport.requestTypes()).toEqual(["native_attach", "native_fact_cursor", "native_fact_deliver"]);
+	for (const request of [cursorRequest, deliveryRequest]) {
+		expect(request.context?.scope).toEqual(caller.scope);
+		expect(request.context?.signal).toBe(caller.signal);
+	}
+});
+
+it("refuses both fact requests after the bound session is gone", async () => {
+	const { transport, hostFactOwner, closeSession } = await attachRegistryFactOwner();
+	const initial = hostFactOwner.cursor();
+	transport.latestRequest().resolve(null);
+	await expect(initial).resolves.toBeNull();
+	closeSession();
+
+	const cursor = hostFactOwner.cursor();
+	const delivered = hostFactOwner.deliver(delivery);
+	const rejected = Promise.allSettled([cursor, delivered]);
+	expect(transport.requestTypes()).toEqual(["native_attach", "native_fact_cursor"]);
+	await expect(rejected).resolves.toEqual([
+		{ status: "rejected", reason: expect.any(Error) },
+		{ status: "rejected", reason: expect.any(Error) },
+	]);
 });
