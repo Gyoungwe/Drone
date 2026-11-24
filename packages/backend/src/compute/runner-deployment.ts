@@ -1,5 +1,5 @@
 import { ComputeTransportError, sha256 } from "./compute-operation-lifetime";
-import type { CollectingTransport } from "./default-executor";
+import type { CollectingTransport } from "./runner-helpers";
 
 export async function deployRunnerScript(
 	transport: Pick<CollectingTransport, "download" | "upload">,
