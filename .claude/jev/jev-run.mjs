@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { decision, record, STATE_DIR } from "./decision.mjs";
+import { knownFailures, knownHint } from "./known-failures.mjs";
 import { ladder } from "./output-ladder.mjs";
 
 const RUNNER = fileURLToPath(import.meta.url);
@@ -48,14 +49,21 @@ async function run(command) {
 	mkdirSync(CHUNKS, { recursive: true });
 	writeFileSync(path.join(CHUNKS, `${view.id}.log`), view.stored);
 	writeFileSync(LAST_RUNS, `${JSON.stringify({ ...lastRuns, [key]: view.fingerprint }, null, "\t")}\n`);
+	const shown = view.answer !== "hide";
+	const known = shown ? knownFailures({ output: view.stored, command, exitCode }) : [];
 	record(STATE_DIR, {
 		...decision("output", view.answer, "ladder", view.confidence),
 		command,
 		exitCode,
 		lines: view.lines,
 		chunk: view.id,
+		known: known.map((rule) => rule.id),
 	});
-	process.stdout.write(`${view.text}\n`);
+	const askHint =
+		exitCode !== 0 && known.length === 0 && shown
+			? `⚑ 种子库未命中；查经验库：node .claude/jev/jev-lessons.mjs ask --chunk ${view.id}`
+			: "";
+	process.stdout.write(`${[view.text, knownHint(known), askHint].filter(Boolean).join("\n")}\n`);
 	return exitCode;
 }
 

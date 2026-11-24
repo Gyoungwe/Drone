@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { routeCommand, squeezable } from "./command-route.mjs";
 import { selectRules } from "./context-rules.mjs";
+import { KNOWN_FAILURES, knownFailures, knownHint } from "./known-failures.mjs";
 import { chunkId, FULL_LIMIT, ladder } from "./output-ladder.mjs";
 import { decidePermission } from "./permission-policy.mjs";
 import { skillHint } from "./skill-hints.mjs";
@@ -232,6 +233,59 @@ describe("output ladder", () => {
 
 	it("ignores timings when fingerprinting", () => {
 		assert.equal(chunkId("ok 1 (12ms)\nduration_ms 40.1"), chunkId("ok 1 (9ms)\nduration_ms 38"));
+	});
+});
+
+describe("known failures", () => {
+	const ids = (output, exitCode = 1, command = "npm test") =>
+		knownFailures({ output, command, exitCode }).map((rule) => rule.id);
+
+	it("names a baseline drop as tightening, not a violation", () => {
+		const output = "structure: packages/a.ts file-lines dropped 522 -> 371; run with --update";
+		assert.deepEqual(ids(output, 1, "node scripts/check-structure.mjs"), ["baseline-drop"]);
+		assert.match(
+			knownHint(knownFailures({ output, command: "", exitCode: 1 })),
+			/⚑ 已知 baseline-drop：.*--update/,
+		);
+	});
+
+	it("recognises the environment failures the dispatch sessions diagnosed", () => {
+		assert.deepEqual(ids("Error: EPERM: operation not permitted, open 'node_modules/.vite-temp/x.mjs'"), [
+			"vite-temp-eperm",
+		]);
+		assert.deepEqual(ids("Error: ENOENT: no such file or directory, open '/w/.pi/extensions/a.json'"), [
+			"missing-test-fixtures",
+		]);
+		assert.deepEqual(ids("Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/w/packages/x/dist/host.mjs'"), [
+			"missing-build-output",
+		]);
+		assert.deepEqual(
+			ids(`Error: @gyoungwe/pi-knowledge tarball hash mismatch: expected 0, got ${"a".repeat(64)}`),
+			["tarball-hash-mismatch"],
+		);
+		assert.deepEqual(ids("Error: Test timed out in 5000ms."), ["test-timeout"]);
+	});
+
+	it("flags a check script that exits 0 without printing anything", () => {
+		assert.deepEqual(ids("\n", 0, "node scripts/check-bloat.mjs"), ["silent-check"]);
+		assert.deepEqual(ids("\n", 0, "npm test"), []);
+		assert.deepEqual(ids("bloat: ok", 0, "node scripts/check-bloat.mjs"), []);
+	});
+
+	it("stays quiet on a pass and on failures it does not know", () => {
+		assert.deepEqual(ids("ℹ tests 12\nℹ fail 0", 0), []);
+		assert.deepEqual(ids("structure: a.ts file-lines dropped 9 -> 8; run with --update", 0), []);
+		assert.deepEqual(ids("not ok 3 - rejects bad input\nAssertionError: Expected values to be equal"), []);
+		assert.equal(knownHint([]), "");
+	});
+
+	it("keeps every entry complete and its id unique", () => {
+		for (const rule of KNOWN_FAILURES) {
+			for (const field of ["id", "cause", "fix", "source"])
+				assert.ok(rule[field], `${rule.id} lacks ${field}`);
+			assert.ok(rule.output instanceof RegExp, rule.id);
+		}
+		assert.equal(new Set(KNOWN_FAILURES.map((rule) => rule.id)).size, KNOWN_FAILURES.length);
 	});
 });
 

@@ -6,8 +6,10 @@
  *   PostToolUse      path-bound context rules for the file just read or edited
  *   SessionStart     after compact/clear, forget which rules were shown so they come back
  *   UserPromptSubmit Jev classifies the task and names its skills; keywords when no TypeSafe key is set
+ *   Stop             queue the session's new ★ Insights for the lesson library (jev-lessons.mjs drain)
  * A hook that throws fails open: the tool call proceeds and the error is surfaced as a system message.
  */
+import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -15,12 +17,14 @@ import { fileURLToPath } from "node:url";
 import { routeCommand, squeezable } from "./command-route.mjs";
 import { selectRules } from "./context-rules.mjs";
 import { decision, record, STATE_DIR } from "./decision.mjs";
+import { enqueueInsights, extractInsights } from "./lesson-store.mjs";
 import { scriptPoint, taskPoint } from "./model-points.mjs";
 import { locate } from "./paths.mjs";
 import { decidePermission } from "./permission-policy.mjs";
 import { skillHint } from "./skill-hints.mjs";
 
 const RUNNER = fileURLToPath(new URL("./jev-run.mjs", import.meta.url));
+const LESSONS = fileURLToPath(new URL("./jev-lessons.mjs", import.meta.url));
 const WRITE_TOOLS = new Set(["Edit", "Write", "MultiEdit"]);
 
 const seenFile = (session) => path.join(STATE_DIR, "seen", `${String(session).replace(/[^\w-]/g, "_")}.json`);
@@ -88,11 +92,24 @@ function userPromptSubmit(input) {
 	return taskPoint(String(input.prompt ?? ""), output, keywordHint);
 }
 
+/** Queue this session's new ★ Insights and start a detached drain; the writer never blocks the stop. */
+function stop(input) {
+	const transcript = String(input.transcript_path ?? "");
+	if (transcript === "" || !existsSync(transcript)) return null;
+	const insights = extractInsights(readFileSync(transcript, "utf8"));
+	const queued = enqueueInsights(STATE_DIR, insights, `session:${String(input.session_id).slice(0, 8)}`);
+	if (queued === 0) return null;
+	record(STATE_DIR, { ...decision("lesson", "queue", "stop-insights"), queued });
+	spawn(process.execPath, [LESSONS, "drain"], { detached: true, stdio: "ignore" }).unref();
+	return null;
+}
+
 const HANDLERS = {
 	PreToolUse: preToolUse,
 	PostToolUse: postToolUse,
 	SessionStart: sessionStart,
 	UserPromptSubmit: userPromptSubmit,
+	Stop: stop,
 };
 
 function readStdin() {

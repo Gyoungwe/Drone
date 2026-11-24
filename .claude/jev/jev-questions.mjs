@@ -45,6 +45,30 @@ export const SCRIPT_QUESTIONS = {
 	},
 };
 
+/**
+ * Lesson library (lesson-judge.mjs): one Noul per candidate lesson, the lesson written into the question
+ * so each question is answered on its own. Intake state is `{ new_lesson: { cause, evidence } }`; a query
+ * state is `{ failure }`, the failing output or the problem the model describes.
+ */
+export const LESSON_QUESTIONS = {
+	sameLesson: (lesson) => ({
+		type: "noul",
+		instructions: `Does \`new_lesson\` describe the same failure, with the same cause, as this known lesson? Known lesson cause: "${lesson.cause}" Evidence: "${lesson.evidence}"`,
+		criteria: {
+			true: "Both name the same error and the same underlying cause, even in different words",
+			false: "A different error, or the same error message produced by a different cause",
+		},
+	}),
+	explainsFailure: (lesson) => ({
+		type: "noul",
+		instructions: `Is the problem in \`failure\` caused by this known cause: "${lesson.cause}"?`,
+		criteria: {
+			true: "The failure shows the error this cause produces, in the situation the cause describes",
+			false: "The failure is a different error, or the same tool failing for another reason",
+		},
+	}),
+};
+
 /** Task point at UserPromptSubmit: state is `{ prompt }`. Code maps the kind to skills and rules. */
 export const TASK_QUESTIONS = {
 	task_kind: {
