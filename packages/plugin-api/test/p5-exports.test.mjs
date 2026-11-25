@@ -125,7 +125,7 @@ test("every published export target exists after build", () => {
 	}
 });
 
-test("the 1.3.0 candidate has no runtime dependencies", () => {
-	assert.equal(manifest.version, "1.3.0");
+test("the 2.0.0 candidate has no runtime dependencies", () => {
+	assert.equal(manifest.version, "2.0.0");
 	assert.deepEqual(manifest.dependencies ?? {}, {});
 });

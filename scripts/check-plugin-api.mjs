@@ -58,8 +58,8 @@ function checkPackageManifest() {
 	const manifest = packageJson();
 	assert(manifest.name === "@gyoungwe/plugin-api", `unexpected package name: ${manifest.name}`);
 	assert(
-		manifest.version === "1.3.0",
-		`public API package must match the 1.3.0 additive runtime contract: ${manifest.version}`,
+		manifest.version === "2.0.0",
+		`public API package must match the 2.0.0 routed knowledge contract: ${manifest.version}`,
 	);
 	assert(
 		manifest.exports?.["./runtime"]?.types === "./dist/runtime.d.ts",
