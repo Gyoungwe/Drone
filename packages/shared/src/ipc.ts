@@ -6,13 +6,15 @@ import type { HostFileAction } from "./file-actions";
 import type { PreviewKind } from "./file-types";
 import type { ComputeApi, DiscoveryApi, EvidenceApi, InquiryApi, PluginCredentialsApi } from "./host-api";
 import type { BackgroundJobsApi } from "./host-api/background-jobs";
+import type { KnowledgeRouteInput } from "./host-api/knowledge";
+import type { KnowledgeUiEvent } from "./knowledge";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
 import type { PluginRuntimeEvent } from "./host-api/plugin-runtime";
 import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
-import type { KnowledgeApi } from "./knowledge";
+import type { ZoteroLocalWriteStatus, ZoteroStatus } from "./zotero";
 import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, PackageLifecycleReceipt } from "./packages";
 import type {
@@ -66,12 +68,6 @@ import type {
 } from "./subagent";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
-import type {
-	ZoteroLocalWriteStatus,
-	ZoteroStatus,
-	ZoteroWebApiSaveInput,
-	ZoteroWebApiStatus,
-} from "./zotero";
 
 export interface ResourcePreviewResult {
 	encoding?: string;
@@ -124,48 +120,15 @@ export const IpcChannels = {
 	ResearchExecuteWrite: "research:executeWrite",
 	ResearchRevokeWrite: "research:revokeWrite",
 	ResearchListWriteAudit: "research:listWriteAudit",
-	KnowledgeCloudStatus: "knowledge:cloudStatus",
-	KnowledgeCloudProbe: "knowledge:cloudProbe",
-	KnowledgeCloudInitialize: "knowledge:cloudInitialize",
-	KnowledgeCloudPassword: "knowledge:cloudPassword",
-	KnowledgeCloudReadNote: "knowledge:cloudReadNote",
-	KnowledgeCloudWriteNote: "knowledge:cloudWriteNote",
-	KnowledgeCloudSync: "knowledge:cloudSync",
-	KnowledgeOverview: "knowledge:overview",
-	KnowledgeResearchRuns: "knowledge:researchRuns",
-	KnowledgeResearchRun: "knowledge:researchRun",
-	KnowledgeSpecialistsSettings: "knowledge:specialistsSettings",
-	KnowledgeSetupPreview: "knowledge:setupPreview",
-	KnowledgeSetupStart: "knowledge:setupStart",
-	KnowledgeJobs: "knowledge:jobs",
-	KnowledgeReviews: "knowledge:reviews",
-	KnowledgeReviewPreview: "knowledge:reviewPreview",
-	KnowledgeReviewModel: "knowledge:reviewModel",
-	KnowledgeReviewModelCancel: "knowledge:reviewModelCancel",
-	KnowledgeReviewDecide: "knowledge:reviewDecide",
-	KnowledgeReadNote: "knowledge:readNote",
-	KnowledgeMaintain: "knowledge:maintain",
-	KnowledgeOpen: "knowledge:open",
-	KnowledgeResume: "knowledge:resume",
+	/**
+	 * 知识域中性路由：宿主统筹，每域一个通道。
+	 * 域内的操作名与 schema 归插件所有；宿主只保留操作名清单作为授权边界。
+	 */
+	KnowledgeInvoke: "knowledge:invoke",
+	DailyInvoke: "daily:invoke",
+	ZoteroInvoke: "zotero:invoke",
+	/** 知识事件：宿主向所有窗口广播，通知知识视图失效或打开评审 */
 	KnowledgeEvent: "knowledge:event",
-	KnowledgeSemanticStatus: "knowledge:semanticStatus",
-	KnowledgeSemanticSettingsSave: "knowledge:semanticSettingsSave",
-	KnowledgeSemanticProviderTest: "knowledge:semanticProviderTest",
-	KnowledgeSemanticIndex: "knowledge:semanticIndex",
-	KnowledgeSemanticIndexCancel: "knowledge:semanticIndexCancel",
-	KnowledgeSearch: "knowledge:search",
-	KnowledgeNoteLinks: "knowledge:noteLinks",
-	KnowledgeGraph: "knowledge:graph",
-	KnowledgeDailyDiscovery: "knowledge:dailyDiscovery",
-	KnowledgeDailyDiscoveryUpdate: "knowledge:dailyDiscoveryUpdate",
-	KnowledgeDailyIdeaDecide: "knowledge:dailyIdeaDecide",
-	KnowledgeDailyRadarPaperDecide: "knowledge:dailyRadarPaperDecide",
-	KnowledgeTopics: "knowledge:topics",
-	KnowledgeTopicArchive: "knowledge:topicArchive",
-	KnowledgeMaintenanceSettings: "knowledge:maintenanceSettings",
-	KnowledgeMaintenanceSettingsSave: "knowledge:maintenanceSettingsSave",
-	KnowledgeMaintenanceRun: "knowledge:maintenanceRun",
-	KnowledgeMaintenanceRuns: "knowledge:maintenanceRuns",
 	/** 远程计算：主机、健康、作业、终端与引导（由 ComputeContract 投影） */
 	ComputeListHosts: "compute:listHosts",
 	ComputeListSshConfig: "compute:listSshConfig",
@@ -208,13 +171,7 @@ export const IpcChannels = {
 	InquiryRerunUpdatedEvent: "inquiry:rerunUpdated",
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
-	ZoteroStatus: "zotero:status",
-	ZoteroWebApiGet: "zotero:webApiGet",
-	ZoteroWebApiSave: "zotero:webApiSave",
-	ZoteroWebApiClear: "zotero:webApiClear",
-	ZoteroLocalWriteGet: "zotero:localWriteGet",
-	ZoteroLocalWriteAuthorize: "zotero:localWriteAuthorize",
-	ZoteroLocalWriteClear: "zotero:localWriteClear",
+
 
 	/** 机构访问（合法机构通道，持久登录会话 + EZproxy 模板） */
 	InstitutionalGetStatus: "institutional:getStatus",
@@ -449,8 +406,7 @@ export type PromptReceipt = ({ kind: "agent" } | { kind: "queued" } | { kind: "c
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
 export interface PiApi
-	extends KnowledgeApi,
-		SessionsApi,
+	extends SessionsApi,
 		ComputeApi,
 		DiscoveryApi,
 		DecisionsApi,
@@ -527,18 +483,19 @@ export interface PiApi
 	/** 一键接入预设 MCP（写入用户级 mcp.json，已存在则只重新启用） */
 	addMcpPreset(id: McpPreset["id"]): Promise<McpConfigSnapshot>;
 	onMcpEvent(cb: (event: McpStatusEvent) => void): () => void;
-	/** Zotero 文献库接入状态（注册/启用/本机 API 可达/桌面端检测）；面板用，只读 */
+	/**
+	 * 知识域中性路由：宿主统筹，每域一个通道。
+	 * 域内的操作名与 schema 归插件所有；宿主只保留操作名清单作为授权边界。
+	 */
+	invokeKnowledge(route: KnowledgeRouteInput): Promise<unknown>;
+	invokeDaily(route: KnowledgeRouteInput): Promise<unknown>;
+	invokeZotero(route: KnowledgeRouteInput): Promise<unknown>;
+	/** 知识事件订阅：宿主向所有窗口广播失效与评审打开通知 */
+	onKnowledgeEvent(cb: (event: KnowledgeUiEvent) => void): () => void;
+	/** Zotero 连接状态（宿主自己的技能设置面板用；插件走 invokeZotero 路由） */
 	getZoteroStatus(): Promise<ZoteroStatus>;
-	/** Zotero 网页 API（修改已有条目）配置状态；不返回密钥 */
-	getZoteroWebApi(): Promise<ZoteroWebApiStatus>;
-	/** 校验（须有写权限）后保存网页 API 密钥 */
-	saveZoteroWebApi(input: ZoteroWebApiSaveInput): Promise<ZoteroWebApiStatus>;
-	clearZoteroWebApi(): Promise<ZoteroWebApiStatus>;
-	/** Zotero 10+ 本机写入授权状态；不返回 key */
+	/** Zotero 本地写入授权状态（宿主自己的技能设置面板用） */
 	getZoteroLocalWrite(): Promise<ZoteroLocalWriteStatus>;
-	/** 让 Zotero 弹出授权对话框；选「始终允许」才保存 key */
-	authorizeZoteroLocalWrite(): Promise<ZoteroLocalWriteStatus>;
-	clearZoteroLocalWrite(): Promise<ZoteroLocalWriteStatus>;
 	/** 机构访问状态（配置 + 会话 Cookie + 是否已登录）；文献库面板用 */
 	getInstitutionalStatus(): Promise<InstitutionalStatus>;
 	/** 保存机构访问配置（EZproxy 模板 / OpenURL / 机构名 / 自动下载开关 / 上限） */

@@ -1,12 +1,21 @@
 import type { BackendServices, SessionServicePort } from "@drone/backend";
-import { IpcChannels, KnowledgeContract } from "@drone/shared";
-import { BrowserWindow, shell } from "electron";
-import { bindContract, type ContractImplementation } from "./bind-contract";
+import { IpcChannels } from "@drone/shared";
+import { BrowserWindow } from "electron";
+import { bindKnowledgeRoutes } from "./knowledge-routes";
 
-/** Deliberately desktop-only: approvals are not a model tool or unauthenticated route. */
+/**
+ * Register the routed knowledge contracts.
+ *
+ * The operation tables live in `knowledge-routes.ts`; this module only resolves
+ * the services the host actually has and forwards knowledge events to every
+ * open window.
+ */
 export function registerKnowledgeIpc(
 	backendOrServices: SessionServicePort | BackendServices,
-	services?: Pick<BackendServices, "knowledge" | "knowledgeSession" | "zotero" | "knowledgeMaintenance"> &
+	services?: Pick<
+		BackendServices,
+		"knowledge" | "knowledgeSession" | "zotero" | "knowledgeMaintenance"
+	> &
 		Partial<Pick<BackendServices, "dailyDiscovery">>,
 ): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
@@ -69,161 +78,33 @@ export function registerKnowledgeIpc(
 					resumeCheck: (sessionId) =>
 						legacy.resumeKnowledgeCheck?.(sessionId) ??
 						Promise.reject(new Error("Knowledge session service unavailable")),
+					disposeSession: () => {},
 				}));
 	if (!knowledge || !zotero || !knowledgeSession)
 		throw new Error("Knowledge services are required by the desktop host");
-	const implementation: ContractImplementation<typeof KnowledgeContract> = {
-		getCloudStatus: () => knowledge.getCloudStatus(),
-		probeCloud: () => knowledge.probeCloud(),
-		initializeCloud: () => knowledge.initializeCloud(),
-		setCloudPassword: (input) => knowledge.setCloudPassword(input),
-		readCloudNote: (input) => knowledge.readCloudNote(input),
-		writeCloudNote: (input) => knowledge.writeCloudNote(input),
-		syncCloud: (input) => knowledge.syncCloud(input),
-		setSpecialistSettings: (input) => knowledge.specialistSettings(input),
-		getOverview: (...args) => knowledge.overview(args[0]),
-		getResearchRuns: (...args) => knowledge.researchRuns(args[0]),
-		getResearchRun: (input) => knowledge.researchRun(input),
-		previewSetup: (input) => knowledge.setupPreview(input),
-		startSetup: (input) => knowledgeSession.startSetup(input),
-		getJobs: (...args) => knowledge.jobs(args[0]),
-		getReviews: (input) => knowledge.reviews(input),
-		previewReview: (input) => knowledge.preview(input),
-		reviewWithModel: (input) => knowledgeSession.reviewWithModel(input),
-		cancelModelReview: (input) => knowledgeSession.cancelModelReview(input),
-		decideReview: (input) => knowledge.decide(input),
-		readNote: (input) => knowledge.read(input),
-		maintain: (input) => knowledge.maintain(input),
-		openTarget: async (input) => {
-			const target = await knowledge.openTarget(input);
-			if (target.kind === "note") {
-				await shell.openExternal(`obsidian://open?path=${encodeURIComponent(target.path)}`);
-				return;
-			}
-			const error = await shell.openPath(target.path);
-			if (error) throw new Error(error);
+	bindKnowledgeRoutes(
+		{
+			knowledge,
+			knowledgeSession,
+			zotero,
+			dailyDiscovery: dailyDiscovery as BackendServices["dailyDiscovery"],
+			knowledgeMaintenance: hostServices?.knowledgeMaintenance,
 		},
-		resumeCheck: (sessionId) => knowledgeSession.resumeCheck(sessionId),
-		getSemanticStatus: (...args) => knowledge.semanticStatus(args[0]),
-		saveSemanticSettings: (input) => knowledge.saveSemanticSettings(input),
-		testSemanticProvider: (input) => knowledge.testSemanticProvider(input),
-		indexSemantic: (input) => knowledge.indexSemantic(input),
-		cancelSemanticIndex: (input) => knowledge.cancelSemanticIndex(input),
-		search: (input) => knowledge.search(input),
-		getNoteLinks: (input) => knowledge.noteLinks(input),
-		getGraph: (input) => knowledge.graph(input),
-		getDailyDiscovery: () => dailyDiscovery.getState(),
-		updateDailyDiscovery: async (input) => {
-			if (typeof input.enabled === "boolean") await dailyDiscovery.setEnabled(input.enabled);
-			return input.run ? dailyDiscovery.run() : dailyDiscovery.getState();
+		{
+			beforeInvoke: (event) => {
+				const invokeEvent = event as {
+					sender?: Electron.WebContents;
+					senderFrame?: Electron.WebFrameMain | null;
+				};
+				if (
+					!invokeEvent.sender ||
+					!BrowserWindow.fromWebContents(invokeEvent.sender) ||
+					invokeEvent.senderFrame !== invokeEvent.sender.mainFrame
+				)
+					throw new Error("Knowledge UI requests require the application main frame");
+			},
 		},
-		decideDailyIdea: (input) => dailyDiscovery.decide(input.id, input.action),
-		decideDailyRadarPaper: (input) => dailyDiscovery.decideRadarPaper(input.id, input.action),
-		getTopics: (input) => knowledge.topics(input),
-		archiveTopic: (input) => knowledge.archiveTopic(input),
-		getMaintenanceSettings: () =>
-			hostServices?.knowledgeMaintenance?.getSettings() ??
-			Promise.reject(new Error("Knowledge maintenance service unavailable")),
-		saveMaintenanceSettings: (input) =>
-			hostServices?.knowledgeMaintenance?.saveSettings(input) ??
-			Promise.reject(new Error("Knowledge maintenance service unavailable")),
-		runMaintenance: (input) =>
-			hostServices?.knowledgeMaintenance?.runNow(input.cwd) ??
-			Promise.reject(new Error("Knowledge maintenance service unavailable")),
-		getMaintenanceRuns: () =>
-			hostServices?.knowledgeMaintenance?.getRuns() ??
-			Promise.reject(new Error("Knowledge maintenance service unavailable")),
-		getZoteroStatus: () => zotero.getStatus(),
-		getZoteroWebApi: async () => ({
-			configured: false,
-			source: null,
-			libraryType: "users",
-			libraryId: null,
-			username: null,
-			write: null,
-			keyHint: null,
-		}),
-		saveZoteroWebApi: async () => {
-			throw new Error(
-				"Zotero Web API keys are now saved under Settings → Plugins → pi-research → credentials",
-			);
-		},
-		clearZoteroWebApi: async () => {
-			throw new Error(
-				"Zotero Web API keys are now saved under Settings → Plugins → pi-research → credentials",
-			);
-		},
-		getZoteroLocalWrite: () => (zotero.getLocalWrite ? zotero.getLocalWrite() : unavailable()),
-		authorizeZoteroLocalWrite: () =>
-			zotero.authorizeLocalWrite ? zotero.authorizeLocalWrite() : unavailable(),
-		clearZoteroLocalWrite: () => (zotero.clearLocalWrite ? zotero.clearLocalWrite() : unavailable()),
-	};
-	bindContract(KnowledgeContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				getCloudStatus: IpcChannels.KnowledgeCloudStatus,
-				probeCloud: IpcChannels.KnowledgeCloudProbe,
-				initializeCloud: IpcChannels.KnowledgeCloudInitialize,
-				setCloudPassword: IpcChannels.KnowledgeCloudPassword,
-				readCloudNote: IpcChannels.KnowledgeCloudReadNote,
-				writeCloudNote: IpcChannels.KnowledgeCloudWriteNote,
-				syncCloud: IpcChannels.KnowledgeCloudSync,
-				setSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
-				getOverview: IpcChannels.KnowledgeOverview,
-				getResearchRuns: IpcChannels.KnowledgeResearchRuns,
-				getResearchRun: IpcChannels.KnowledgeResearchRun,
-				previewSetup: IpcChannels.KnowledgeSetupPreview,
-				startSetup: IpcChannels.KnowledgeSetupStart,
-				getJobs: IpcChannels.KnowledgeJobs,
-				getReviews: IpcChannels.KnowledgeReviews,
-				previewReview: IpcChannels.KnowledgeReviewPreview,
-				reviewWithModel: IpcChannels.KnowledgeReviewModel,
-				cancelModelReview: IpcChannels.KnowledgeReviewModelCancel,
-				decideReview: IpcChannels.KnowledgeReviewDecide,
-				readNote: IpcChannels.KnowledgeReadNote,
-				maintain: IpcChannels.KnowledgeMaintain,
-				openTarget: IpcChannels.KnowledgeOpen,
-				resumeCheck: IpcChannels.KnowledgeResume,
-				getSemanticStatus: IpcChannels.KnowledgeSemanticStatus,
-				saveSemanticSettings: IpcChannels.KnowledgeSemanticSettingsSave,
-				testSemanticProvider: IpcChannels.KnowledgeSemanticProviderTest,
-				indexSemantic: IpcChannels.KnowledgeSemanticIndex,
-				cancelSemanticIndex: IpcChannels.KnowledgeSemanticIndexCancel,
-				search: IpcChannels.KnowledgeSearch,
-				getNoteLinks: IpcChannels.KnowledgeNoteLinks,
-				getGraph: IpcChannels.KnowledgeGraph,
-				getDailyDiscovery: IpcChannels.KnowledgeDailyDiscovery,
-				updateDailyDiscovery: IpcChannels.KnowledgeDailyDiscoveryUpdate,
-				decideDailyIdea: IpcChannels.KnowledgeDailyIdeaDecide,
-				decideDailyRadarPaper: IpcChannels.KnowledgeDailyRadarPaperDecide,
-				getTopics: IpcChannels.KnowledgeTopics,
-				archiveTopic: IpcChannels.KnowledgeTopicArchive,
-				getMaintenanceSettings: IpcChannels.KnowledgeMaintenanceSettings,
-				saveMaintenanceSettings: IpcChannels.KnowledgeMaintenanceSettingsSave,
-				runMaintenance: IpcChannels.KnowledgeMaintenanceRun,
-				getMaintenanceRuns: IpcChannels.KnowledgeMaintenanceRuns,
-				getZoteroStatus: IpcChannels.ZoteroStatus,
-				getZoteroWebApi: IpcChannels.ZoteroWebApiGet,
-				saveZoteroWebApi: IpcChannels.ZoteroWebApiSave,
-				clearZoteroWebApi: IpcChannels.ZoteroWebApiClear,
-				getZoteroLocalWrite: IpcChannels.ZoteroLocalWriteGet,
-				authorizeZoteroLocalWrite: IpcChannels.ZoteroLocalWriteAuthorize,
-				clearZoteroLocalWrite: IpcChannels.ZoteroLocalWriteClear,
-			})[method as keyof typeof KnowledgeContract.methods],
-		beforeInvoke: (event, _contract, method) => {
-			if (method === "getZoteroStatus") return;
-			const invokeEvent = event as {
-				sender?: Electron.WebContents;
-				senderFrame?: Electron.WebFrameMain | null;
-			};
-			if (
-				!invokeEvent.sender ||
-				!BrowserWindow.fromWebContents(invokeEvent.sender) ||
-				invokeEvent.senderFrame !== invokeEvent.sender.mainFrame
-			)
-				throw new Error("Knowledge UI requests require the application main frame");
-		},
-	});
+	);
 	knowledge.subscribe((event) => {
 		for (const window of BrowserWindow.getAllWindows()) {
 			if (!window.isDestroyed()) window.webContents.send(IpcChannels.KnowledgeEvent, event);

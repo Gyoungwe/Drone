@@ -34,7 +34,7 @@ const domainResource = /research-workbench|\.pi\/(?:extensions|skills\/)|plugin-
 const domainCommand =
 	/(?:^|[\n;&|()])\s*npm\s+(?:run|run-script)\s+(["']?)(?:build:pi-(?:core|research)|fetch:plugins|check:(?:[\w:-]+-runtime|pi-research|pi-core|builtin-plugins))\1(?=$|[\s;&|()])/;
 const domainChannel =
-	/(["'`])((?:researchSkills|(?:knowledge|research|zotero|analysis|evidence|discovery|inquiry)):[\w:.-]+)\1/g;
+	/(["'`])((?:researchSkills|(?:knowledge|research|zotero|analysis|evidence|discovery|inquiry|daily)):[\w:.-]+)\1/g;
 /**
  * The host's own first-party inventory.
  *
