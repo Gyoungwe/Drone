@@ -13,7 +13,7 @@ concurrency:
 jobs:
   # Classifies the PR diff. Dev-environment-only PRs (Claude Code hooks, agent skills,
   # git hooks, docs, root-level Markdown) skip the heavy suites; static checks still run
-  # because lint and test:arch cover .claude/jev. Markdown under packages/ or .pi/ ships
+  # because lint and test:arch cover the scripts. Markdown under packages/ or .pi/ ships
   # as runtime skills, so only root-level *.md counts as dev-only. push and
   # workflow_dispatch always run everything.
   changes:
