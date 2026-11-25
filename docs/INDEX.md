@@ -275,7 +275,6 @@ packages/
 | `.githooks/pre-commit` + `scripts/check-staged.mjs` | 防膨胀检查读取暂存区；保留生成物混提、skip、测试超时和结构检查；`prepare` 设置 `core.hooksPath` |
 | `scripts/is-main-module.mjs` | 脚本判断“自己是否被直接运行”的唯一入口，按真实路径比较；`is-main-module.test.mjs` 经符号链接实际运行检查脚本，并禁止脚本再自己比较 `process.argv[1]` |
 | `.claude/hooks/stop-check.mjs` | Claude Code Stop hook：先跑含未跟踪文件的防膨胀检查，再跑差异 Biome、结构检查和 workspace typecheck |
-| `.claude/jev/` | Jev harness（Claude Code hooks）：权限红线 deny/ask、检查命令输出阶梯（`jev-run.mjs --show <id> --grep`）、按路径注入的上下文规则、UI 技能提示；决策日志在被忽略的 `.claude/jev-state/`，说明见 `.claude/jev/README.md` |
 | `scripts/build-extensions.mjs` | 将 `packages/extensions/src/*.ts` 打包到 `.pi/extensions/*.mjs`（默认保护已有产物，并写入 `.build-manifest.json` 记录源/产物哈希） |
 | `scripts/check-native-pi.mjs` | 静态扫描一方工具注册，按 fixture 映射原生 Pi 可用性、源码位置和目标插件包（不读取生成的 `.pi` 产物） |
 | `scripts/smoke-backend.mts` | 真实 SDK 冒烟（需 `AI_OPS_API_KEY`） |
