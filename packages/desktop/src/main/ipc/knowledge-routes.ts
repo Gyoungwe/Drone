@@ -79,8 +79,17 @@ export function buildKnowledgeRouteTables(services: KnowledgeRouteServices): {
 	daily: RouteTable;
 	zotero: RouteTable;
 } {
-	const { knowledge, knowledgeSession, zotero, dailyDiscovery, knowledgeMaintenance } = services;
-	const knowledgeRoutes = buildRoutes([
+	return {
+		knowledge: buildKnowledgeRoutes(services),
+		daily: buildDailyRoutes(services),
+		zotero: buildZoteroRoutes(services),
+	};
+}
+
+/** The knowledge group's operations: the plugin's domain plus the host's cloud and session routes. */
+function buildKnowledgeRoutes(services: KnowledgeRouteServices): RouteTable {
+	const { knowledge, knowledgeSession, knowledgeMaintenance } = services;
+	return buildRoutes([
 		{ operation: "cloud.status", run: () => knowledge.getCloudStatus() },
 		{ operation: "cloud.probe", run: () => knowledge.probeCloud() },
 		{ operation: "cloud.initialize", run: () => knowledge.initializeCloud() },
@@ -153,7 +162,12 @@ export function buildKnowledgeRouteTables(services: KnowledgeRouteServices): {
 				Promise.reject(new Error("Knowledge maintenance service unavailable")),
 		},
 	]);
-	const dailyRoutes = buildRoutes([
+}
+
+/** The daily discovery group's operations. */
+function buildDailyRoutes(services: KnowledgeRouteServices): RouteTable {
+	const { dailyDiscovery } = services;
+	return buildRoutes([
 		{ operation: "state", run: () => dailyDiscovery.getState() },
 		{
 			operation: "update",
@@ -178,7 +192,12 @@ export function buildKnowledgeRouteTables(services: KnowledgeRouteServices): {
 			},
 		},
 	]);
-	const zoteroRoutes = buildRoutes([
+}
+
+/** The Zotero group's operations. */
+function buildZoteroRoutes(services: KnowledgeRouteServices): RouteTable {
+	const { zotero } = services;
+	return buildRoutes([
 		{ operation: "status", run: () => zotero.getStatus() },
 		{
 			operation: "webApi.get",
@@ -230,7 +249,6 @@ export function buildKnowledgeRouteTables(services: KnowledgeRouteServices): {
 					: Promise.reject(new Error("Zotero local write is unavailable")),
 		},
 	]);
-	return { knowledge: knowledgeRoutes, daily: dailyRoutes, zotero: zoteroRoutes };
 }
 
 /**
@@ -259,4 +277,5 @@ export function bindKnowledgeRoutes(
 	});
 	bindContract(ZoteroContract, implementation(tables.zotero), {
 		beforeInvoke: options.beforeInvoke,
-	});}
+	});
+}
