@@ -77,19 +77,23 @@
 		"check:research-browser": "node scripts/check-research-browser-acceptance.mjs",
 		"eval:mainline": "node scripts/eval-mainline.mjs",
 		"test:mainline": "node --test scripts/eval-mainline.test.mjs",
-		"check:native-plugin-boundary": "node scripts/check-native-plugin-boundary.mjs"
+		"check:native-plugin-boundary": "node scripts/check-native-plugin-boundary.mjs",
+		"knip": "knip --no-exit-code"
 	},
 	"engines": {
 		"node": ">=22.19"
 	},
 	"devDependencies": {
-		"@gyoungwe/pi-connectors": "0.1.0",
-		"@gyoungwe/pi-evidence": "0.1.0",
-		"@gyoungwe/pi-core": "0.1.9",
+		"@ast-grep/cli": "0.51.3",
 		"@biomejs/biome": "^2.4.0",
-		"patch-package": "^8.0.1",
+		"@gyoungwe/pi-connectors": "0.1.0",
+		"@gyoungwe/pi-core": "0.1.9",
+		"@gyoungwe/pi-evidence": "0.1.0",
 		"@gyoungwe/pi-knowledge": "0.2.1",
-		"@gyoungwe/pi-research": "0.2.0"
+		"@gyoungwe/pi-research": "0.2.0",
+		"knip": "6.48.0",
+		"patch-package": "^8.0.1",
+		"ts-morph": "28.0.0"
 	},
 	"allowScripts": {
 		"electron@43.3.0": true

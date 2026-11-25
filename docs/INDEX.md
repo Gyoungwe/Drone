@@ -4,7 +4,7 @@
 > 排查疑难问题优先看 `docs/PITFALLS.md`（症状索引 + 事故复盘）；打包发版流程见 AGENTS.md 与 `.local/docs/release.md`。
 > 本文件只做**导航**：职责一句话 + 指到源码；实现细节以代码为准，坑记 PITFALLS，不在此堆积。
 
-**P4 任务迁移的最新交接见[handoff-2026-10-29-p4.md](handoff-2026-10-29-p4.md)（接手从这里开始）。**更早的完整交接见[2026-10-29 改动与计划交接](handoff-2026-10-29.md)：区分旧计划交付、当前 P0–P7、公开版本/私有候选、已推分支、验证失败与待整合源，并列出全部计划文档导航。当前新候选结果见[domain-owner 机器回执](releases/native-plugin-domain-owner-cohort-2026-10-29.json)；完整根门禁仍以最近通过的冻结检查点为准。
+**P4 已完成（2026-11-08），§5.2 缺口全部关闭；交接见[handoff-2026-10-29-p4.md](handoff-2026-10-29-p4.md)（#243），剩余测试/冒烟遗留并入[胶水退役计划](glue-retirement-plan.md)。**更早的完整交接见[2026-10-29 改动与计划交接](handoff-2026-10-29.md)：区分旧计划交付、当前 P0–P7、公开版本/私有候选、已推分支、验证失败与待整合源，并列出全部计划文档导航。当前新候选结果见[domain-owner 机器回执](releases/native-plugin-domain-owner-cohort-2026-10-29.json)；完整根门禁仍以最近通过的冻结检查点为准。
 
 当前计划最终状态、九个 npm 公开版本及四项未完成验收的恢复配置，统一见[阶段状态汇总](plan-final-status-2026-10-26.md)。
 下一代“通用 Pi 宿主 + 可卸载功能与 UI 同包”的[架构设计](superpowers/specs/2026-10-26-native-pi-plugin-architecture-design.md)已批准并开始实施；[P0–P7 执行计划](pluginization/native-plugin-implementation-plan.md)记录阶段状态，[SDK 运行时证据](pluginization/native-plugin-runtime-evidence.md)区分真实会话、执行适配与自动发现，[P1 正式安装包切片](pluginization/native-plugin-p1-packaged-evidence.md)记录窗口作用域后台的启停、拒绝、恢复与退出，完整领域迁移仍未完成。[P2 知识只读共享 owner](pluginization/native-plugin-knowledge-readonly-evidence.md)记录候选包、权限/资源边界、实际会话和安装包验收及完整功能缺口。
@@ -151,7 +151,7 @@ P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收敛摘要](a5-impact-summary.md)。
 本轮 A5 生产切片的提交、验收与剩余兼容层见 [A5 迁移验收记录](releases/a5-migration-2026-10-18.json)。
-插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。插件仓库构建、分层热插拔、会话边界重载与回滚的下一阶段设计见 [plugin-hot-reload-plan.md](plugin-hot-reload-plan.md)。双仓库维护、架构红线和 npm 发版执行规约见 [drone-maintenance skill](../.agents/skills/drone-maintenance/SKILL.md)。
+插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。插件仓库构建、分层热插拔、会话边界重载与回滚的下一阶段设计见 [plugin-hot-reload-plan.md](plugin-hot-reload-plan.md)。双仓库维护、架构红线和 npm 发版执行规约见 [drone-maintenance skill](../.agents/skills/drone-maintenance/SKILL.md)。双轨 IPC、barrel 遮蔽、冻结子包与单实现门面的退役顺序和护栏见 [glue-retirement-plan.md](glue-retirement-plan.md)。
 插件化 v2 的 P1 迁移边界与 extensions 归属清单见 [pluginization/p1-inventory.md](pluginization/p1-inventory.md)；执行主计划见 [pluginization/v2-plan.md](pluginization/v2-plan.md)，本轮验收记录见 [pluginization/P1-evidence.md](pluginization/P1-evidence.md)。
 P2 知识源码与插件入口迁移、插件仓库全量门禁和 Git 历史验收见 [pluginization/P2-evidence.md](pluginization/P2-evidence.md)。
 插件平台 v3 的 T1–T7 执行计划见 [pluginization/v3-platform-plan.md](pluginization/v3-platform-plan.md)，插件清单和宿主合同见 `../drone-plugins/docs/PLUGIN-SPEC.md`，实现证据见 [pluginization/v3-evidence.md](pluginization/v3-evidence.md)。下一阶段 P1 的第三方扩展、外部 MCP 与 Protocols.io 真实只读验收见 [pluginization/next-stage-p1-evidence.md](pluginization/next-stage-p1-evidence.md)。
@@ -316,6 +316,8 @@ packages/
 | `docs/real-rnaseq-execution-plan.md` | 从本地 fixture 到真实 RNA-seq 结果的输入、设计、运行、QC、绘图和写作门禁；禁止把演示产物当科研结论 |
 
 依赖补丁：`patches/` + patch-package（root devDep + postinstall）。目前一处 `thinking-orbs+0.3.1.patch`（移除 IntersectionObserver+visibilitychange 门控，Win11 恢复事件丢失会冻住 rAF）。改法：手改 `node_modules/thinking-orbs/dist/index.{es.js,cjs}` 两份 → `npx patch-package thinking-orbs`；升级该包前重评补丁是否仍需要。
+
+代码分析：根 `knip.ts`（Knip 入口配置，`npm run knip` 只报告）+ devDep `ts-morph`、`@ast-grep/cli`；agent 用法与限制见 AGENTS「代码分析工具」，一次性 codemod 放 `.local/codemods/`。
 
 数据与凭证：用户数据在 `~/.pi/agent/`（sessions/*.jsonl、auth.json、models.json、trust.json、workspaces.json），与 CLI pi 共享；**dev/预览态自动隔离**到 `~/.pi/agent-dev/`（`main/dev-agent-dir.ts`，含五配置种子拷贝）。会话事件 trace 在 `sessions/<dir>/traces/trace-<sessionId>.jsonl`。应用自身数据在 Electron `userData/`：tabs.json、ui-state.json、backgrounds/（renderer 经 `pi-bg://background/<文件名>` 协议加载，main 注册）。
 
