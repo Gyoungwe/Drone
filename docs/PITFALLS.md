@@ -1047,3 +1047,26 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 
 另一个坑：改写这类测试要证明它**还能失败**。做法是把 barrel 的显式转发块删掉再跑一次，
 确认报出 9 个缺失，然后按字节还原。
+
+## worktree 里复用的 node_modules 会让类型检查读到主检出的源码（2026-11-26 记录）
+
+`git worktree` 出来的检出默认没有 `node_modules`，惯例是从主检出软链一个过去：
+`ln -s ~/Documents/ChatGPT/Drone/node_modules node_modules`。问题在于 npm workspace
+在仓库根建的 `node_modules/@drone/shared → ../../packages/shared` 是**相对**软链，
+而整个 `node_modules` 目录本身指向别处时，相对软链会相对**真实路径**解析，于是
+`@drone/shared` 落到主检出的 `packages/shared`，而不是当前 worktree 的。
+
+症状极具迷惑性：类型检查报 `@drone/shared` 没有导出 `KnowledgeInvoke`、`FIRST_PARTY_PACKAGES`，
+而当前 worktree 的 `packages/shared/src/ipc.ts` 里明明有。TS 读的确实是另一个目录的源码。
+
+排查这类「符号不存在但源码就在眼前」的错误，第一步是 `readlink -f`（或 `realpath`）
+确认解析路径，而不是改代码。修法是让 worktree 有自己的 `node_modules`：删掉软链，
+在该 worktree 里真跑一次 `npm ci`。代价是时间和磁盘，收益是类型检查和测试读到的是
+同一份代码。
+
+配套的坑：`npm ci` 会因为依赖声明与 registry 不一致而失败。插件包若声明了尚未发布的
+私有版本（例如 `@gyoungwe/plugin-api@^2.0.0` 而 2.0.0 还在 vendor 的 tarball 里），
+`npm ci` 会报 ETARGET。解法是让消费方指向 workspace 内已有的版本，而不是去 registry 找。
+
+教训：worktree 里的环境问题会伪装成代码缺陷。动代码之前，先证明报错与代码无关——
+把 base commit 放进另一个 worktree 跑同一条命令，逐字比较错误集合。
