@@ -12,6 +12,11 @@ import { DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES, NPM_NOT_FOUND_SENTINEL } from "@dro
 import { createLogger } from "../log";
 import { fetchPackageCatalog } from "../packages/catalog";
 import type { SessionRegistry } from "../session/registry";
+import {
+	type PackageReplacementDisk,
+	type PackageReplacementHost,
+	replaceInstalledPackage,
+} from "./package-replacement";
 
 const log = createLogger("backend");
 
@@ -37,6 +42,8 @@ export interface PackageManager {
 	removeAndPersist(source: string, options?: { local?: boolean }): Promise<boolean>;
 	setProgressCallback?(callback: ((event: PackageManagerProgressEvent) => void) | undefined): void;
 	getInstalledPath?(source: string, scope: "user" | "project"): string | undefined;
+	refresh?(): Promise<void>;
+	prepareReplacement?(receipt: PackageLifecycleReceipt): Promise<PackageReplacementDisk>;
 }
 
 /** Pi's progress callback is deliberately mirrored as a small host-neutral type. */
@@ -67,14 +74,23 @@ export interface PackageServiceDependencies {
 export interface PackageServicePort {
 	searchPackages(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
 	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
-	installPackage(name: string): Promise<PackageLifecycleReceipt>;
-	updatePackage(name: string): Promise<PackageLifecycleReceipt>;
-	rollbackPackage(name: string, version: string): Promise<PackageLifecycleReceipt>;
-	removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt>;
+	installPackage(name: string, host?: PackageReplacementHost): Promise<PackageLifecycleReceipt>;
+	updatePackage(name: string, host?: PackageReplacementHost): Promise<PackageLifecycleReceipt>;
+	rollbackPackage(
+		name: string,
+		version: string,
+		host?: PackageReplacementHost,
+	): Promise<PackageLifecycleReceipt>;
+	removePackage(
+		source: string,
+		scope: "user" | "project",
+		host?: PackageReplacementHost,
+	): Promise<PackageLifecycleReceipt>;
 }
 
 export class PackageService implements PackageServicePort {
 	private packageManager: PackageManager | undefined;
+	private mutating = false;
 
 	constructor(private readonly deps: PackageServiceDependencies) {}
 
@@ -104,85 +120,31 @@ export class PackageService implements PackageServicePort {
 	}
 
 	/** 安装社区包（npm:<name>，用户级）；返回结构化生命周期回执。 */
-	async installPackage(name: string): Promise<PackageLifecycleReceipt> {
-		const source = `npm:${name}`;
-		return this.runOperation("install", name, source, "user", async (receipt, manager) => {
-			this.assertInstallableName(name);
-			this.assertNotBuiltin(name);
-			const previousVersion = this.installedVersion(manager, source, "user");
-			if (previousVersion) receipt.previousVersion = previousVersion;
-			await manager.installAndPersist(source);
-			receipt.events.push(event("enabled"));
-		});
+	async installPackage(name: string, host?: PackageReplacementHost): Promise<PackageLifecycleReceipt> {
+		return this.runOperation("install", name, `npm:${name}`, "user", host);
 	}
 
 	/** 更新已配置 npm 包；Pi 的 DefaultPackageManager 保留完整的版本/锁定语义。 */
-	async updatePackage(name: string): Promise<PackageLifecycleReceipt> {
-		const source = `npm:${name}`;
-		const scope = this.configuredScope(source) ?? "user";
-		return this.runOperation("update", name, source, scope, async (receipt, manager) => {
-			this.assertInstallableName(name);
-			this.assertNotBuiltin(name);
-			if (typeof manager.update !== "function")
-				throw new Error("Package updates are unavailable in this host");
-			const previousVersion = this.installedVersion(manager, source, scope);
-			if (previousVersion) receipt.previousVersion = previousVersion;
-			await manager.update(source);
-			// Pi preserves an exact version pin in settings. In that case its update
-			// command can succeed without replacing the managed directory. Reinstall
-			// through the unpinned source so the catalog's latest version is applied;
-			// DefaultPackageManager replaces the existing source by package identity.
-			if (
-				previousVersion &&
-				this.installedVersion(manager, source, scope) === previousVersion &&
-				typeof manager.installAndPersist === "function"
-			) {
-				await manager.installAndPersist(source);
-			}
-			receipt.events.push(event("enabled"));
-		});
+	async updatePackage(name: string, host?: PackageReplacementHost): Promise<PackageLifecycleReceipt> {
+		return this.runOperation("update", name, `npm:${name}`, undefined, host);
 	}
 
 	/** Roll back an installed npm package to an explicitly authorized exact version. */
-	async rollbackPackage(name: string, version: string): Promise<PackageLifecycleReceipt> {
-		const source = `npm:${name}@${version}`;
-		return this.runOperation(
-			"rollback",
-			name,
-			source,
-			this.configuredScope(`npm:${name}`) ?? "user",
-			async (receipt, manager) => {
-				this.assertInstallableName(name);
-				this.assertRollbackVersion(version);
-				this.assertNotBuiltin(name);
-				const previousVersion = this.installedVersion(manager, `npm:${name}`, receipt.scope);
-				if (!previousVersion) {
-					const error = new Error(`Package not installed: npm:${name}`);
-					(error as Error & { code?: string }).code = "not-installed";
-					throw error;
-				}
-				receipt.previousVersion = previousVersion;
-				await manager.installAndPersist(source);
-				receipt.events.push(event("rolled_back", undefined, version));
-			},
-		);
+	async rollbackPackage(
+		name: string,
+		version: string,
+		host?: PackageReplacementHost,
+	): Promise<PackageLifecycleReceipt> {
+		return this.runOperation("rollback", name, `npm:${name}@${version}`, undefined, host);
 	}
 
 	/** 卸载已配置的包（按 source + scope 移除并持久化）；内置包永远不可卸载。 */
-	async removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt> {
-		const packageName = packageNameFromSource(source);
-		return this.runOperation("remove", packageName, source, scope, async (receipt, manager) => {
-			this.assertNotBuiltin(packageName);
-			const previousVersion = this.installedVersion(manager, source, scope);
-			if (previousVersion) receipt.previousVersion = previousVersion;
-			const removed = await manager.removeAndPersist(source, { local: scope === "project" });
-			if (!removed) {
-				const error = new Error(`Package not installed: ${source}`);
-				(error as Error & { code?: string }).code = "not-installed";
-				throw error;
-			}
-			receipt.events.push(event("disabled"));
-		});
+	async removePackage(
+		source: string,
+		scope: "user" | "project",
+		host?: PackageReplacementHost,
+	): Promise<PackageLifecycleReceipt> {
+		return this.runOperation("remove", packageNameFromSource(source), source, scope, host);
 	}
 
 	private assertInstallableName(name: string): void {
@@ -240,54 +202,90 @@ export class PackageService implements PackageServicePort {
 		operation: PackageLifecycleOperation,
 		packageName: string,
 		source: string,
-		scope: "user" | "project",
-		action: (receipt: PackageLifecycleReceipt, manager: PackageManager) => Promise<void>,
+		scope: "user" | "project" | undefined,
+		host: PackageReplacementHost | undefined,
 	): Promise<PackageLifecycleReceipt> {
 		const receipt: PackageLifecycleReceipt = {
 			operation,
 			packageName,
 			source,
-			scope,
+			scope: scope ?? "user",
 			status: "succeeded",
 			effect: "current-session",
 			events: [],
 		};
-		const manager = this.getPackageManager();
-		const previousCallback = this.installProgressCallback(manager, receipt);
+		if (this.mutating) return this.failed(receipt, new Error("A package mutation is already in progress"));
+		this.mutating = true;
 		try {
-			await action(receipt, manager);
-			const reload = await this.reloadSessions();
-			if (reload.reloaded.length) {
-				receipt.reloadedSessionIds = reload.reloaded;
-				for (const sessionId of reload.reloaded) receipt.events.push(event("reloaded", sessionId));
+			this.assertNotBuiltin(packageName);
+			const npm = source.startsWith("npm:");
+			if (npm) this.assertInstallableName(packageName);
+			if (operation === "rollback") this.assertRollbackVersion(source.slice(packageName.length + 5));
+			const manager = this.getPackageManager();
+			await manager.refresh?.();
+			receipt.scope = scope ?? this.configuredScope(source) ?? "user";
+			if (host && npm && manager.prepareReplacement) {
+				const disk = await manager.prepareReplacement(receipt).catch(() => {
+					throw new Error("Package staging could not be prepared");
+				});
+				if (await replaceInstalledPackage(receipt, disk, host, this.deps.registry)) return receipt;
+			} else {
+				const restoreCallback = this.installProgressCallback(manager, receipt);
+				try {
+					await this.applyLegacyOperation(receipt, manager);
+				} finally {
+					restoreCallback();
+				}
+				receipt.version = this.installedVersion(manager, source, receipt.scope);
 			}
-			if (reload.deferred.length) {
-				receipt.deferredSessionIds = reload.deferred;
-				receipt.effect = "next-session";
-				for (const sessionId of reload.deferred) receipt.events.push(event("reload_deferred", sessionId));
-			}
-			if (!reload.reloaded.length && !reload.deferred.length) receipt.effect = "current-session";
-			receipt.version = this.installedVersion(manager, source, scope);
-			log.info(
-				`package ${operation === "remove" ? "removed" : operation === "update" ? "updated" : operation === "rollback" ? "rolled back" : "installed"}`,
-				packageName,
-				{ scope },
-			);
+			await this.reloadSessions(receipt);
 			return receipt;
 		} catch (err) {
-			const normalized = normalizePackageError(err);
-			receipt.status = "failed";
-			receipt.effect = "current-session";
-			receipt.error = {
-				code: normalized.code,
-				message: normalized.message,
-				retryable: normalized.code === "unavailable" || normalized.code === "operation-failed",
-			};
-			receipt.events.push(event("failed", undefined, normalized.message));
-			return receipt;
+			return this.failed(receipt, err);
 		} finally {
-			previousCallback();
+			this.mutating = false;
 		}
+	}
+
+	private async applyLegacyOperation(
+		receipt: PackageLifecycleReceipt,
+		manager: PackageManager,
+	): Promise<void> {
+		const { operation, source, scope } = receipt;
+		const previousVersion = this.installedVersion(manager, source, scope);
+		if (previousVersion) receipt.previousVersion = previousVersion;
+		if (operation === "remove") {
+			if (!(await manager.removeAndPersist(source, { local: scope === "project" })))
+				throw Object.assign(new Error("Package is not installed"), { code: "not-installed" });
+			receipt.events.push(event("disabled"));
+			return;
+		}
+		if (operation === "update") {
+			if (!manager.update) throw new Error("Package updates are unavailable in this host");
+			await manager.update(source);
+			if (previousVersion && this.installedVersion(manager, source, scope) === previousVersion)
+				await manager.installAndPersist(source);
+		} else {
+			if (operation === "rollback" && !previousVersion)
+				throw Object.assign(new Error("Package is not installed"), { code: "not-installed" });
+			await manager.installAndPersist(source);
+		}
+		receipt.events.push(
+			event(
+				operation === "rollback" ? "rolled_back" : "enabled",
+				undefined,
+				operation === "rollback" ? source.slice(receipt.packageName.length + 5) : undefined,
+			),
+		);
+	}
+
+	private failed(receipt: PackageLifecycleReceipt, error: unknown): PackageLifecycleReceipt {
+		const { code, message } = normalizePackageError(error);
+		receipt.status = "failed";
+		receipt.effect = "current-session";
+		receipt.error = { code, message, retryable: code === "unavailable" || code === "operation-failed" };
+		receipt.events.push(event("failed", undefined, message));
+		return receipt;
 	}
 
 	private installProgressCallback(manager: PackageManager, receipt: PackageLifecycleReceipt): () => void {
@@ -309,7 +307,7 @@ export class PackageService implements PackageServicePort {
 	}
 
 	/** 对非流式活跃会话做资源热重载；流式会话明确延迟到下一次会话边界。 */
-	private async reloadSessions(): Promise<{ reloaded: string[]; deferred: string[] }> {
+	private async reloadSessions(receipt: PackageLifecycleReceipt): Promise<void> {
 		const reloaded: string[] = [];
 		const deferred: string[] = [];
 		for (const entry of this.deps.registry.list()) {
@@ -327,7 +325,15 @@ export class PackageService implements PackageServicePort {
 				deferred.push(entry.session.sessionId);
 			}
 		}
-		return { reloaded, deferred };
+		if (reloaded.length) {
+			receipt.reloadedSessionIds = reloaded;
+			for (const sessionId of reloaded) receipt.events.push(event("reloaded", sessionId));
+		}
+		if (deferred.length) {
+			receipt.deferredSessionIds = deferred;
+			receipt.effect = "next-session";
+			for (const sessionId of deferred) receipt.events.push(event("reload_deferred", sessionId));
+		}
 	}
 }
 

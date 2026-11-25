@@ -565,7 +565,7 @@ src/
 | `src/main/ui-plugins/config.ts` | `ui-plugins.json` 读写（normalize 白名单；assignments 指向失效插件保留） |
 | `src/main/ui-plugins/build.ts` | 插件 esbuild 构建器：`loadEsbuild` 懒加载 + `ESBUILD_BINARY_PATH` 指向 asar.unpacked 真实二进制（打包态坑，升级 esbuild 前重评）；react 系四个 specifier 重写到 `window.DroneUI` shim（**与 renderer host-api.ts、resources/drone-ui.d.ts 逐名一致**）；图片/音频资产 dataurl 内联（CSP img-src / media-src 均放行 data:）；`newestMtime` 判断源码是否比产物新 |
 | `src/main/ui-plugins/manager.ts` | UiPluginManager：scanAll（manifest 校验 + 单插件 try 不阻断启动）/ ensureBuilt / fs.watch 300ms 防抖热重载 / filterContributions（校验 region/anchor）/ 包策略批准门槛（`runtimeSource`、`pendingPolicyApprovals`、`recordPolicyDecision`） |
-| `src/main/ui-plugins/managed-roots.ts` | 两个受管包根：Pi 用户 npm 根 + 只读内置根（`plugin-packages/node_modules`）；同名用户副本不覆盖内置包、只报诊断 |
+| `src/main/ui-plugins/managed-roots.ts` | 用户 npm 根与只读内置根的发现及同名诊断；合并项目扫描结果，保留未变更的运行时来源身份 |
 | `src/main/ui-plugins/plugin-manifest.ts` | UI 插件 `plugin.json` 读取与校验（name/droneUi/main/slots/contributions）；`invalidPluginInfo` 合成不参与加载的条目 |
 | `src/main/ui-plugins/plugin-dirs.ts` | 插件目录与随包种子：用户插件目录、managed npm 根、seedBuiltinPlugins（resources builtin/ → 用户目录，版本戳幂等）、seedDocs（SPEC.md + symlink `~/.drone/ui-plugins`） |
 | `src/main/ui-plugins/installed-package-graph.ts` | 从 managed npm prefix 的明确安装根沿 Pi 资源引用解析声明依赖（含 npm 提升）；不递归普通库依赖。manager 诊断重复来源、版本或 UI 名冲突，发现不授予信任 |

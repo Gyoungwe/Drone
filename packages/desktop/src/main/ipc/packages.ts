@@ -1,77 +1,295 @@
-import type { BackendServices, SessionServicePort } from "@drone/backend";
-import { PackagesContract } from "@drone/shared";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdtemp, readFile, realpath, stat } from "node:fs/promises";
+import { isAbsolute, join, relative, sep } from "node:path";
+import { type BackendServices, createProcessPluginRuntime, type SessionServicePort } from "@drone/backend";
+import { type PackageLifecycleReceipt, PackagesContract } from "@drone/shared";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { IpcMainInvokeEvent } from "electron";
 import { latestPackageVersions, registryPluginMetadata } from "../package-versions";
+import { discoverInstalledPackages } from "../ui-plugins/installed-package-sources";
+import type { UiPluginManager } from "../ui-plugins/manager";
+import type {
+	DesktopRuntimeBridge,
+	DesktopRuntimeOwner,
+	DesktopRuntimeSource,
+} from "../ui-plugins/runtime-bridge";
 import { bindContract, type ContractImplementation } from "./bind-contract";
+
+type MutationHost = NonNullable<Parameters<BackendServices["packages"]["updatePackage"]>[1]>;
+type PackageDeclaration = { entrypoints?: { host?: string; worker?: string; desktopRuntime?: string } };
+type PackageServices = Pick<BackendServices, "packages">;
+
+function contains(root: string, path: string): boolean {
+	const suffix = relative(root, path);
+	return !isAbsolute(suffix) && suffix !== ".." && !suffix.startsWith(`..${sep}`);
+}
+
+async function readPackageMetadata<T>(root: string, filename: string): Promise<T | undefined> {
+	try {
+		const value: unknown = JSON.parse(await readFile(join(root, filename), "utf8"));
+		if (!value || typeof value !== "object" || Array.isArray(value))
+			throw new Error("Invalid package metadata");
+		return value as T;
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+		return undefined;
+	}
+}
+
+async function verifyPackageOutputs(root: string): Promise<void> {
+	const build = await readPackageMetadata<{ outputs: Record<string, unknown> }>(root, "build-manifest.json");
+	if (!build) return;
+	for (const [entry, expected] of Object.entries(build.outputs)) {
+		const file = await realpath(join(root, entry));
+		if (
+			typeof expected !== "string" ||
+			!/^[0-9a-f]{64}$/u.test(expected) ||
+			isAbsolute(entry) ||
+			!contains(root, file)
+		)
+			throw new Error("Invalid package output integrity declaration");
+		if (
+			createHash("sha256")
+				.update(await readFile(file))
+				.digest("hex") !== expected
+		)
+			throw new Error("Package output failed integrity verification");
+	}
+}
+
+async function inspectPackage({ modules, path, packageName }: Parameters<MutationHost["inspect"]>[0]) {
+	const root = await realpath(path);
+	const manifest =
+		(await readPackageMetadata<PackageDeclaration>(root, "plugin.manifest.json")) ??
+		(await readPackageMetadata<{ drone?: PackageDeclaration }>(root, "package.json"))?.drone;
+	const { host, worker, desktopRuntime } = manifest?.entrypoints ?? {};
+	const found = await discoverInstalledPackages(modules);
+	const sources = found.flatMap((entry) =>
+		"error" in entry || !entry.runtime || !contains(root, entry.packageRoot) ? [] : [entry.runtime],
+	);
+	if (
+		desktopRuntime !== undefined &&
+		!sources.some((source) => source.pluginId === packageName && source.packageRoot === root)
+	)
+		throw new Error("The declared package worker could not be verified");
+	for (const entry of [host, worker]) {
+		if (entry === undefined) continue;
+		const file = await realpath(join(root, entry));
+		if (isAbsolute(entry) || !contains(root, file) || !(await stat(file)).isFile())
+			throw new Error("Invalid package worker entrypoint");
+	}
+	for (const source of sources) await verifyPackageOutputs(source.packageRoot);
+	if (!sources.length && (host || worker)) await verifyPackageOutputs(root);
+	return { sources, restart: host !== undefined || (worker !== undefined && desktopRuntime === undefined) };
+}
+
+export function packageMutationHost(
+	manager: UiPluginManager,
+	runtime: DesktopRuntimeBridge,
+	owner: DesktopRuntimeOwner,
+	runtimeDirectory: string,
+): MutationHost {
+	return {
+		inspect: inspectPackage,
+		transition: ({ path }, previous, action) =>
+			runtime.withPackageTransition(
+				path,
+				(source) =>
+					contains(path, source.packageRoot) ||
+					previous.some((item) => item.packageRoot === source.packageRoot),
+				owner,
+				action,
+			),
+		probe: async (sources, directory, occupiedTools, quarantine) => {
+			const names = new Set(occupiedTools);
+			for (const source of sources) {
+				const current = () => manager.runtimeSourceCurrent(source);
+				const registry = runtime.packageProbeRegistry(source, owner, current);
+				await verifyCandidateWorker(
+					registry,
+					source,
+					names,
+					async () => {
+						for (const entrypoint of Object.values(source.resources ?? {})) {
+							if (!current()) throw new Error("Candidate source changed");
+							await probeResource(source, entrypoint, directory, runtimeDirectory, quarantine);
+						}
+					},
+					quarantine,
+				);
+			}
+		},
+		rescan: async ({ scope, modules }) => {
+			await manager.scanAll(scope === "project" ? modules : undefined);
+		},
+	};
+}
+
+async function verifyCandidateWorker(
+	registry: ReturnType<DesktopRuntimeBridge["packageProbeRegistry"]>,
+	source: DesktopRuntimeSource,
+	names: Set<string>,
+	readiness: () => Promise<void>,
+	quarantine: () => void,
+): Promise<void> {
+	const { pluginId } = source;
+	try {
+		await registry
+			.activate(pluginId, () => undefined)
+			.catch((error: unknown) => {
+				if (error instanceof AggregateError) quarantine();
+				throw error;
+			});
+		if (source.nativeEntrypoint) {
+			const native = await registry.attachNative(pluginId, () => undefined, undefined, {
+				kind: "primary",
+				readOnly: false,
+			});
+			await native.extension(nativeRegistrationProbe(names));
+		}
+		await readiness();
+	} finally {
+		await registry.deactivate(pluginId).catch((error: unknown) => {
+			quarantine();
+			throw error;
+		});
+	}
+}
+
+function nativeRegistrationProbe(names: Set<string>): ExtensionAPI {
+	const registerTool: ExtensionAPI["registerTool"] = ({ name }) => {
+		if (names.has(name)) throw new Error("Candidate native tool conflicts with the SDK scope");
+		names.add(name);
+	};
+	const probe: Pick<ExtensionAPI, "registerTool" | "registerCommand" | "on" | "events"> = {
+		registerTool,
+		registerCommand: () => undefined,
+		on: () => () => undefined,
+		events: { emit: () => undefined, on: () => () => undefined },
+	};
+	return probe as ExtensionAPI;
+}
+
+async function probeResource(
+	source: DesktopRuntimeSource,
+	entrypoint: string,
+	directory: string,
+	runtimeDirectory: string,
+	quarantine: () => void,
+): Promise<void> {
+	const storageDirectory = await mkdtemp(join(directory, "readiness-"));
+	const abort = new AbortController();
+	const capabilities = {
+		call: async () => {
+			throw new Error("Candidate probe has no data grants");
+		},
+	};
+	const instance = await createProcessPluginRuntime({
+		pluginId: source.pluginId,
+		entrypoint,
+		packageRoot: source.packageRoot,
+		runtimeDirectory,
+		resource: { storageDirectory, parameters: {} },
+	})({
+		applicationId: randomUUID(),
+		signal: abort.signal,
+		capabilities,
+		resources: [],
+		events: { changed: () => undefined },
+	});
+	const timeout = setTimeout(() => abort.abort(new Error("Candidate resource readiness timed out")), 3000);
+	try {
+		const request = instance.operations.request;
+		if (request?.effect !== "read") throw new Error("Candidate resource has no readback operation");
+		const result = await request.execute(
+			{ operation: "status", input: {} },
+			{
+				scope: { kind: "application" },
+				signal: abort.signal,
+				capabilities,
+			},
+		);
+		abort.signal.throwIfAborted();
+		if (
+			!result ||
+			typeof result !== "object" ||
+			Array.isArray(result) ||
+			("ready" in result && result.ready === false)
+		)
+			throw new Error("Candidate resource did not return a status record");
+	} finally {
+		clearTimeout(timeout);
+		abort.abort();
+		await instance.dispose().catch((error: unknown) => {
+			quarantine();
+			throw error;
+		});
+	}
+}
+
+function resolvePackageService(backend: PackageServices | SessionServicePort, services?: PackageServices) {
+	if (services) return services.packages;
+	if ("packages" in backend) return backend.packages;
+	const legacy: SessionServicePort & Partial<BackendServices["packages"]> = backend;
+	if (
+		!legacy.searchPackages ||
+		!legacy.installPackage ||
+		!legacy.updatePackage ||
+		!legacy.removePackage ||
+		!legacy.listConfiguredPackages
+	)
+		throw new Error("Package service is required by the desktop host");
+	return {
+		searchPackages: legacy.searchPackages.bind(backend),
+		installPackage: legacy.installPackage.bind(backend),
+		updatePackage: legacy.updatePackage.bind(backend),
+		rollbackPackage: legacy.rollbackPackage?.bind(backend),
+		removePackage: legacy.removePackage.bind(backend),
+		listConfiguredPackages: legacy.listConfiguredPackages.bind(backend),
+	};
+}
 
 /** 社区包域：pi.dev 目录搜索 + 安装/卸载 + 已配置清单。 */
 export function registerPackagesIpc(
-	backendOrServices: BackendServices | SessionServicePort,
-	services?: Pick<BackendServices, "packages">,
-	onPackagesChanged?: () => Promise<void> | void,
-	withMutation: <T>(action: () => Promise<T>) => Promise<T> = (action) => action(),
+	backend: PackageServices | SessionServicePort,
+	services?: PackageServices,
+	onPackagesChanged?: (receipt: PackageLifecycleReceipt) => Promise<void> | void,
+	mutationHost?: (event: IpcMainInvokeEvent) => MutationHost,
 ): void {
-	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
-	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
-	const legacy = backend as SessionServicePort & {
-		searchPackages?: BackendServices["packages"]["searchPackages"];
-		installPackage?: BackendServices["packages"]["installPackage"];
-		updatePackage?: BackendServices["packages"]["updatePackage"];
-		rollbackPackage?: BackendServices["packages"]["rollbackPackage"];
-		removePackage?: BackendServices["packages"]["removePackage"];
-		listConfiguredPackages?: BackendServices["packages"]["listConfiguredPackages"];
+	const packages = resolvePackageService(backend, services);
+	const notify = async (receipt: PackageLifecycleReceipt) => {
+		if (receipt.status === "succeeded" || receipt.events.some(({ type }) => type === "drained"))
+			await onPackagesChanged?.(receipt);
 	};
-	const packages =
-		hostServices?.packages ??
-		("packages" in backend
-			? (backend as SessionServicePort & Pick<BackendServices, "packages">).packages
-			: legacy.searchPackages &&
-					legacy.installPackage &&
-					legacy.updatePackage &&
-					legacy.removePackage &&
-					legacy.listConfiguredPackages
-				? {
-						searchPackages: legacy.searchPackages.bind(backend),
-						installPackage: legacy.installPackage.bind(backend),
-						updatePackage: legacy.updatePackage.bind(backend),
-						rollbackPackage: legacy.rollbackPackage?.bind(backend),
-						removePackage: legacy.removePackage.bind(backend),
-						listConfiguredPackages: legacy.listConfiguredPackages.bind(backend),
-					}
-				: undefined);
-	if (!packages) throw new Error("Package service is required by the desktop host");
-	const implementation: ContractImplementation<typeof PackagesContract> = {
+	const implementation = (event: IpcMainInvokeEvent): ContractImplementation<typeof PackagesContract> => ({
 		searchCatalog: (...args) => {
 			const [query, type, page] = args;
 			return packages.searchPackages(query, type, page);
 		},
-		installPackage: (name) =>
-			withMutation(async () => {
-				const receipt = await packages.installPackage(name);
-				if (receipt.status === "succeeded") await onPackagesChanged?.();
-				return receipt;
-			}),
-		updatePackage: (name) =>
-			withMutation(async () => {
-				const receipt = await packages.updatePackage(name);
-				if (receipt.status === "succeeded") await onPackagesChanged?.();
-				return receipt;
-			}),
-		rollbackPackage: (name, version) =>
-			withMutation(async () => {
-				if (!packages.rollbackPackage) throw new Error("Package rollback is unavailable in this host");
-				const receipt = await packages.rollbackPackage(name, version);
-				if (receipt.status === "succeeded") await onPackagesChanged?.();
-				return receipt;
-			}),
-		removePackage: (source, scope) =>
-			withMutation(async () => {
-				const receipt = await packages.removePackage(source, scope);
-				if (receipt.status === "succeeded") await onPackagesChanged?.();
-				return receipt;
-			}),
+		installPackage: async (name) => {
+			const receipt = await packages.installPackage(name, mutationHost?.(event));
+			await notify(receipt);
+			return receipt;
+		},
+		updatePackage: async (name) => {
+			const receipt = await packages.updatePackage(name, mutationHost?.(event));
+			await notify(receipt);
+			return receipt;
+		},
+		rollbackPackage: async (name, version) => {
+			if (!packages.rollbackPackage) throw new Error("Package rollback is unavailable in this host");
+			const receipt = await packages.rollbackPackage(name, version, mutationHost?.(event));
+			await notify(receipt);
+			return receipt;
+		},
+		removePackage: async (source, scope) => {
+			const receipt = await packages.removePackage(source, scope, mutationHost?.(event));
+			await notify(receipt);
+			return receipt;
+		},
 		listConfiguredPackages: () => packages.listConfiguredPackages(),
 		latestPackageVersions: (names) => latestPackageVersions(names),
 		pluginPackageMetadata: (names) => registryPluginMetadata(names),
-	};
+	});
 	bindContract(PackagesContract, implementation);
 }

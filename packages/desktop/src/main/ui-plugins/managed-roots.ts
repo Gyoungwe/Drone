@@ -1,4 +1,8 @@
-import { discoverInstalledPackages, type InstalledPackageDiscovery } from "./installed-package-sources";
+import {
+	discoverInstalledPackages,
+	type InstalledPackageDiscovery,
+	type InstalledUiRuntimeSource,
+} from "./installed-package-sources";
 
 /**
  * The two managed package roots: Pi's user npm install and Drone's read-only built-in packages.
@@ -25,4 +29,25 @@ export async function discoverManagedPackages(
 		installed: [...builtins, ...user],
 		builtins: new Map(found.map((item) => [item.packageRoot, item.packageName])),
 	};
+}
+
+export function selectRuntimeSources(
+	previousSelections: ReadonlyMap<string, { source: InstalledUiRuntimeSource; current: boolean }>,
+	candidates: readonly InstalledPackageDiscovery[],
+) {
+	const selections = new Map(
+		[...previousSelections].map(([name, item]) => [name, { ...item, current: false }]),
+	);
+	for (const candidate of candidates) {
+		if ("error" in candidate || !candidate.runtime) continue;
+		const key = `package:${candidate.packageRoot}`;
+		const previous = previousSelections.get(key)?.source;
+		const source =
+			previous?.contentHash === candidate.runtime.contentHash &&
+			previous.installationPath === candidate.runtime.installationPath
+				? previous
+				: candidate.runtime;
+		selections.set(key, { source, current: true });
+	}
+	return selections;
 }

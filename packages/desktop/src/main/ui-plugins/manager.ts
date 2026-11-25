@@ -1,18 +1,18 @@
 import { existsSync, type FSWatcher, realpathSync, watch } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { createLogger, type SelectedNativeSource } from "@drone/backend";
+import { createLogger, type PluginRuntimeSource, type SelectedNativeSource } from "@drone/backend";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig } from "@drone/shared";
 import { app } from "electron";
 import { buildPlugin, newestMtime } from "./build";
 import { defaultUiPluginsConfig, loadUiPluginsConfig, saveUiPluginsConfig } from "./config";
 import {
-	type InstalledPackageDiscovery,
+	discoverInstalledPackages,
 	type InstalledUiDiscovery,
 	type InstalledUiRuntimeSource,
 	installedPackageHash,
 } from "./installed-package-sources";
-import { discoverManagedPackages } from "./managed-roots";
+import { discoverManagedPackages, selectRuntimeSources } from "./managed-roots";
 import { filterContributions } from "./manifest-contributions";
 import {
 	builtinExtensionPaths,
@@ -54,13 +54,12 @@ export class UiPluginManager {
 	private dirNames = new Map<string, string>();
 	/** Installed provenance is never inferred from a local UI directory or its name. */
 	private packageSources = new Map<string, { source: InstalledUiRuntimeSource; current: boolean }>();
+	private readonly projectPackageRoots = new Set<string>();
 	private installedSources = new Map<string, Exclude<InstalledUiDiscovery, { error: string }>>();
 	/** Discovery diagnostics are host-owned metadata; an empty managed root is a valid empty list. */
 	private installedDiagnostics: Array<{ packageName: string; error: string }> = [];
 	/** Name → package generation hash. Local user UI plugins intentionally have no entry here. */
 	private installedPackageHashes = new Map<string, { root: string; hash: string }>();
-	/** Installed package generations observed as changed during this scan; trust must be renewed. */
-	private readonly reconfirmInstallations = new Set<string>();
 	/** Package policies the user refused in this run, by content and policy; they are not asked again. */
 	private readonly declinedPolicies = new Set<string>();
 	/** 随包内置插件名集合（init 时导出到用户目录；此处仅用于合成 builtin 标志 → 面板 badge/启用免确认） */
@@ -98,12 +97,12 @@ export class UiPluginManager {
 	private async scanOne(
 		name: string,
 		srcDir: string,
+		manifest: Partial<UiPluginManifest> | null,
 		runtime?: InstalledUiRuntimeSource,
 		forceReconfirmation = false,
 		packageName?: string,
 		contentHash?: string,
 	): Promise<UiPluginInfo> {
-		const manifest = await readManifest(srcDir);
 		const invalidReason = validateManifest(name, manifest ?? {}, runtime);
 		const prev = this.infos.get(name);
 		// A built-in package is on until the user turns it off; Drone itself vouches for it.
@@ -134,9 +133,10 @@ export class UiPluginManager {
 	}
 
 	/** 扫描 userData/ui-plugins/ 每个子目录：校验 manifest 并合成 UiPluginInfo（叠加 config/产物状态） */
-	async scanAll(): Promise<UiPluginInfo[]> {
+	async scanAll(projectModules?: string): Promise<UiPluginInfo[]> {
+		if (projectModules) this.projectPackageRoots.add(projectModules);
 		this.config = await loadUiPluginsConfig();
-		this.reconfirmInstallations.clear();
+		const reconfirmInstallations = new Set<string>();
 		// 随包内置名单（每次扫描现取，目录静态几乎零开销）
 		const builtinEntries = await readdir(builtinPluginsDir(), { withFileTypes: true }).catch(() => []);
 		this.builtinNames = new Set(
@@ -160,7 +160,7 @@ export class UiPluginManager {
 			try {
 				seen.add(name);
 				this.dirNames.set(name, join(dir, name));
-				const info = await this.scanOne(name, join(dir, name));
+				const info = await this.scanOne(name, join(dir, name), await readManifest(join(dir, name)));
 				this.infos.set(name, info);
 				out.push(info);
 			} catch (err) {
@@ -175,18 +175,12 @@ export class UiPluginManager {
 		// Installed packages are discovered from their own Drone manifest. The host
 		// never names an optional package; a damaged or incompatible package becomes
 		// a diagnostic row and cannot affect the user/built-in plugin scan.
-		const managed = this.legacyInstalledPackageDir
+		const { installed, builtins } = this.legacyInstalledPackageDir
 			? { installed: [], builtins: new Map<string, string>() }
 			: await discoverManagedPackages(this.installedPackageRoot, this.builtinPackageRoot);
-		const installed: InstalledPackageDiscovery[] = managed.installed;
-		this.builtinPackages = managed.builtins;
-		const packageSources = new Map(
-			[...this.packageSources].map(([name, item]) => [name, { source: item.source, current: false }]),
-		);
-		for (const candidate of installed)
-			if (!("error" in candidate) && candidate.runtime)
-				packageSources.set(`package:${candidate.packageRoot}`, { source: candidate.runtime, current: true });
-		this.packageSources = packageSources;
+		this.builtinPackages = builtins;
+		const projects = await Promise.all([...this.projectPackageRoots].map(discoverInstalledPackages));
+		this.packageSources = selectRuntimeSources(this.packageSources, [...installed, ...projects.flat()]);
 		this.installedDiagnostics = installed.filter(
 			(candidate): candidate is { packageName: string; error: string } => "error" in candidate,
 		);
@@ -264,15 +258,16 @@ export class UiPluginManager {
 				// A built-in changes only with Drone itself, so a new generation keeps the user's choice.
 				const changed = previous && (previous.root !== identity.root || previous.hash !== identity.hash);
 				if (changed && !this.builtinPackages.has(identity.root)) {
-					this.reconfirmInstallations.add(installedName);
+					reconfirmInstallations.add(installedName);
 				}
 				nextInstallations[candidate.packageName] = identity;
 				installedPackageHashes.set(installedName, identity);
 				const info = await this.scanOne(
 					installedName,
 					candidate.uiDir,
+					installedManifest,
 					candidate.runtime,
-					this.reconfirmInstallations.has(installedName),
+					reconfirmInstallations.has(installedName),
 					candidate.packageName,
 					identity.hash,
 				);
@@ -283,23 +278,17 @@ export class UiPluginManager {
 			}
 		}
 		// 清理幽灵条目：目录已删除/改名的插件从两个 Map 移除（否则面板显示已删除插件直到重启）
-		for (const stale of [...this.infos.keys()]) {
-			if (!seen.has(stale)) this.infos.delete(stale);
-		}
-		for (const stale of [...this.dirNames.keys()]) {
-			if (!seen.has(stale)) this.dirNames.delete(stale);
-		}
+		for (const map of [this.infos, this.dirNames])
+			for (const stale of map.keys()) if (!seen.has(stale)) map.delete(stale);
 		this.installedSources = installedSources;
 		this.installedPackageHashes = installedPackageHashes;
-		if (this.reconfirmInstallations.size > 0) {
+		if (Object.keys(nextInstallations).length > 0) {
 			const plugins = { ...this.config.plugins };
-			for (const name of this.reconfirmInstallations) {
-				plugins[name] = { enabled: false, trusted: false };
-			}
-			await saveUiPluginsConfig({ plugins, installations: nextInstallations });
-			this.config = await loadUiPluginsConfig();
-		} else if (Object.keys(nextInstallations).length > 0) {
-			await saveUiPluginsConfig({ installations: nextInstallations });
+			for (const name of reconfirmInstallations) plugins[name] = { enabled: false, trusted: false };
+			await saveUiPluginsConfig({
+				installations: nextInstallations,
+				...(reconfirmInstallations.size ? { plugins } : {}),
+			});
 			this.config = await loadUiPluginsConfig();
 		}
 		return out;
@@ -442,8 +431,9 @@ export class UiPluginManager {
 				);
 	}
 
-	private runtimeSourceCurrent(source: InstalledUiRuntimeSource): boolean {
+	runtimeSourceCurrent(source: PluginRuntimeSource): boolean {
 		return (
+			!!source.installationPath &&
 			realpathSync(source.installationPath) === source.packageRoot &&
 			(!source.nativeDeclaredPath || realpathSync(source.nativeDeclaredPath) === source.nativeEntrypoint) &&
 			installedPackageHash(source.packageRoot) === source.contentHash
