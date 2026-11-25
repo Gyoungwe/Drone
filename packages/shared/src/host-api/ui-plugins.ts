@@ -160,6 +160,29 @@ export const UiPluginsContract = defineDomain("uiPlugins", {
 	},
 });
 
+export interface UiPluginsApi {
+	/** 读 UI 插件全局配置（总开关/启用信任表/槽位指派） */
+	uiPluginsGetConfig(): Promise<UiPluginsConfig>;
+	/** 设 UI 插件全局总开关 */
+	uiPluginsSetEnabled(enabled: boolean): Promise<void>;
+	/** 列 UI 插件（含 enabled/trusted/buildError/invalidReason） */
+	uiPluginsList(): Promise<UiPluginInfo[]>;
+	/** 读插件构建产物（name 必须是扫描到的合法插件名，禁路径）；{ manifest, code } 或 { error } */
+	uiPluginsReadCode(
+		name: string,
+	): Promise<{ manifest: UiPluginManifest; code: string; runtimeBinding?: string } | { error: string }>;
+	/** 启用/停用单个插件（启用=信任，同步落盘） */
+	uiPluginsSetPluginEnabled(name: string, enabled: boolean): Promise<void>;
+	/** 槽位指派（pluginName=null 取消指派） */
+	uiPluginsAssignSlot(slot: string, pluginName: string | null): Promise<void>;
+	/** 重新构建插件（构建失败返回错误信息，旧产物保留） */
+	uiPluginsRebuild(name: string): Promise<{ ok: true } | { ok: false; error: string }>;
+	/** 打开插件目录（不传 name 开根目录；shell.openPath） */
+	uiPluginsOpenDir(name?: string): Promise<void>;
+	/** 订阅 UI 插件事件（changed/config）；返回取消函数 */
+	onUiPluginsEvent(cb: (payload: UiPluginsEventPayload) => void): () => void;
+}
+
 export type UiPluginsSchemaTypes = {
 	getConfig: [];
 	setEnabled: [enabled: boolean];

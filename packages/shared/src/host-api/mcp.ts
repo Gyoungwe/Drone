@@ -1,5 +1,5 @@
 import { Type } from "typebox";
-import type { McpConfigSnapshot, McpPreset, McpStatus } from "../mcp";
+import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "../mcp";
 import type { McpDiagnostic } from "../mcp-external";
 import { defineDomain } from "./define";
 
@@ -120,7 +120,22 @@ export const McpContract = defineDomain("mcp", {
 			result: Type.Unsafe<McpConfigSnapshot>(ConfigSchema),
 		},
 	},
+	events: {
+		event: Type.Unsafe<McpStatusEvent>(
+			Type.Object({ cwd: Type.String(), status: StatusSchema }, { additionalProperties: false }),
+		),
+	},
 });
+
+export interface McpApi {
+	getMcpStatus(cwd?: string): Promise<McpStatus>;
+	getMcpConfig(cwd?: string): Promise<McpConfigSnapshot>;
+	setMcpServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot>;
+	openMcpConfig(cwd?: string): Promise<void>;
+	/** 一键接入预设 MCP（写入用户级 mcp.json，已存在则只重新启用） */
+	addMcpPreset(id: McpPreset["id"]): Promise<McpConfigSnapshot>;
+	onMcpEvent(cb: (event: McpStatusEvent) => void): () => void;
+}
 
 export type McpSchemaTypes = {
 	getStatus: [cwd?: string];

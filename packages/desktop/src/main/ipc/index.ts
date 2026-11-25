@@ -6,7 +6,7 @@ import type {
 	PermissionResolved,
 	TrustRequest,
 } from "@drone/shared";
-import { IpcChannels } from "@drone/shared";
+import { channelOf, IpcChannels, McpContract, PluginRuntimeContract, UiPluginsContract } from "@drone/shared";
 import { BrowserWindow, webContents } from "electron";
 import { onResearchSkillUpdateState } from "../research-skill-updater";
 import type { UiPluginManager } from "../ui-plugins/manager";
@@ -92,7 +92,7 @@ export function registerIpc(
 			});
 		} finally {
 			// Notify only after the mutation barrier is released, including a failed update.
-			sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "config" });
+			sendToRenderer(channelOf(UiPluginsContract, "event"), { kind: "config" });
 		}
 	});
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
@@ -103,7 +103,7 @@ export function registerIpc(
 	registerPluginCredentialsIpc(uiPluginsManager);
 	runtime.onEvent((owner, event) => {
 		const contents = webContents.fromId(owner.id);
-		if (contents && !contents.isDestroyed()) contents.send(IpcChannels.PluginRuntimeEvent, event);
+		if (contents && !contents.isDestroyed()) contents.send(channelOf(PluginRuntimeContract, "event"), event);
 	});
 	registerMemoryIpc(backendServices);
 	registerBackgroundJobsIpc(backendServices);
@@ -113,7 +113,7 @@ export function registerIpc(
 		void runtime
 			.revoke(name)
 			.then(() => {
-				sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "changed", name });
+				sendToRenderer(channelOf(UiPluginsContract, "event"), { kind: "changed", name });
 			})
 			.catch((error) =>
 				createLogger("plugin-runtime").error("Plugin reload stopped: runtime disposal failed", error),
@@ -140,7 +140,7 @@ export function registerIpc(
 		sendToRenderer(IpcChannels.SettingsLoginEvent, payload);
 	});
 	backendServices.sessions.onMcpStatus((cwd, status) => {
-		sendToRenderer(IpcChannels.McpEvent, { cwd, status });
+		sendToRenderer(channelOf(McpContract, "event"), { cwd, status });
 	});
 	onUpdateState((state) => {
 		sendToRenderer(IpcChannels.UpdateEvent, state);

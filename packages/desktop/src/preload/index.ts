@@ -156,38 +156,11 @@ const packagesClient = exposeContract(PackagesContract, {
 });
 const institutionalClient = exposeContract(InstitutionalContract);
 const memoryClient = exposeContract(MemoryContract);
-const mcpClient = exposeContract(McpContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getStatus: IpcChannels.McpGetStatus,
-				getConfig: IpcChannels.McpGetConfig,
-				setServerEnabled: IpcChannels.McpSetServerEnabled,
-				openConfig: IpcChannels.McpOpenConfig,
-				addPreset: IpcChannels.McpAddPreset,
-			},
-			method,
-		),
-});
+const mcpClient = exposeContract(McpContract);
 const pluginRuntimeClient = exposeContract(PluginRuntimeContract);
 const pluginCredentialsClient = exposeContract(PluginCredentialsContract);
 const backgroundJobsClient = exposeContract(BackgroundJobsContract);
-const uiPluginsClient = exposeContract(UiPluginsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getConfig: IpcChannels.UiPluginsGetConfig,
-				setEnabled: IpcChannels.UiPluginsSetEnabled,
-				list: IpcChannels.UiPluginsList,
-				readCode: IpcChannels.UiPluginsReadCode,
-				setPluginEnabled: IpcChannels.UiPluginsSetPluginEnabled,
-				assignSlot: IpcChannels.UiPluginsAssignSlot,
-				rebuild: IpcChannels.UiPluginsRebuild,
-				openDir: IpcChannels.UiPluginsOpenDir,
-			},
-			method,
-		),
-});
+const uiPluginsClient = exposeContract(UiPluginsContract);
 const computeClient = exposeContract(ComputeContract);
 const evidenceClient = exposeContract(EvidenceContract);
 const discoveryClient = exposeContract(DiscoveryContract);
@@ -388,12 +361,12 @@ const api: PiApi = {
 	// platform：同步值，preload 注入供 renderer 按平台分流 UI
 	platform: process.platform,
 	onKnowledgeEvent: knowledgeClient.onEvent,
-	onMcpEvent: (cb) => subscribe(IpcChannels.McpEvent, cb),
+	onMcpEvent: mcpClient.onEvent,
 	onProviderLoginEvent: (cb) => subscribe(IpcChannels.SettingsLoginEvent, cb),
 	onAskRequest: (cb) => subscribe(IpcChannels.AskRequest, cb),
 	onAskResolved: (cb) => subscribe(IpcChannels.AskResolved, cb),
-	onUiPluginsEvent: (cb) => subscribe(IpcChannels.UiPluginsEvent, cb),
-	onPluginRuntimeEvent: (cb) => subscribe(IpcChannels.PluginRuntimeEvent, cb),
+	onUiPluginsEvent: uiPluginsClient.onEvent,
+	onPluginRuntimeEvent: pluginRuntimeClient.onEvent,
 	onUpdateEvent: (cb) => subscribe(IpcChannels.UpdateEvent, cb),
 	onResearchSkillUpdateEvent: (cb) => subscribe(IpcChannels.ResearchSkillUpdateEvent, cb),
 	onDesktopCommand: (cb) => subscribe(IpcChannels.DesktopCommand, cb),

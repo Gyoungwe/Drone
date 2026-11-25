@@ -11,16 +11,17 @@ import type {
 	InquiryApi,
 	InstitutionalApi,
 	KnowledgeHostApi,
+	McpApi,
 	MemoryApi,
 	PluginCredentialsApi,
+	PluginRuntimeApi,
 	SubagentsApi,
+	UiPluginsApi,
 } from "./host-api";
 import type { BackgroundJobsApi } from "./host-api/background-jobs";
-import type { PluginRuntimeEvent } from "./host-api/plugin-runtime";
 import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
-import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, PackageLifecycleReceipt } from "./packages";
 import type {
 	PermissionAuditTailEntry,
@@ -65,7 +66,6 @@ import type {
 	SkillRepositoryRecord,
 	SkillRepositoryUpdateResult,
 } from "./skill-repository";
-import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
 
 export interface ResourcePreviewResult {
@@ -160,13 +160,6 @@ export const IpcChannels = {
 	ResourceOpenExternal: "resource:openExternal",
 	ModelsList: "models:list",
 	SettingsListProviders: "settings:listProviders",
-	/** MCP server 状态与用户级配置 */
-	McpGetStatus: "mcp:getStatus",
-	McpGetConfig: "mcp:getConfig",
-	McpSetServerEnabled: "mcp:setServerEnabled",
-	McpAddPreset: "mcp:addPreset",
-	McpOpenConfig: "mcp:openConfig",
-	McpEvent: "mcp:event",
 	SettingsSaveApiKey: "settings:saveApiKey",
 	SettingsRemoveCredential: "settings:removeCredential",
 	SettingsAddCustomProvider: "settings:addCustomProvider",
@@ -266,28 +259,6 @@ export const IpcChannels = {
 	SkillRepositoryRemove: "skillRepositories:remove",
 	/** main 原生菜单 → renderer 桌面命令（P5） */
 	DesktopCommand: "desktop:command",
-	/** UI 插件：读全局配置 */
-	UiPluginsGetConfig: "uiPlugins:getConfig",
-	/** UI 插件：设全局总开关 */
-	UiPluginsSetEnabled: "uiPlugins:setEnabled",
-	/** UI 插件：列插件（含状态） */
-	UiPluginsList: "uiPlugins:list",
-	/** UI 插件：读构建产物代码 */
-	UiPluginsReadCode: "uiPlugins:readCode",
-	PluginRuntimeInvoke: "pluginRuntime:invoke",
-	PluginRuntimeCancel: "pluginRuntime:cancel",
-	PluginRuntimeSelectSession: "pluginRuntime:selectSession",
-	PluginRuntimeEvent: "pluginRuntime:event",
-	/** UI 插件：启用/停用单个插件（启用=信任） */
-	UiPluginsSetPluginEnabled: "uiPlugins:setPluginEnabled",
-	/** UI 插件：槽位指派（pluginName=null 取消指派） */
-	UiPluginsAssignSlot: "uiPlugins:assignSlot",
-	/** UI 插件：重新构建 */
-	UiPluginsRebuild: "uiPlugins:rebuild",
-	/** UI 插件：打开插件目录（shell.openPath） */
-	UiPluginsOpenDir: "uiPlugins:openDir",
-	/** main → renderer UI 插件事件（changed/config） */
-	UiPluginsEvent: "uiPlugins:event",
 	/** main → renderer 事件 */
 	Event: "pi:event",
 	PermissionRequest: "pi:permission-request",
@@ -326,7 +297,10 @@ export interface PiApi
 		KnowledgeHostApi,
 		SubagentsApi,
 		InstitutionalApi,
-		MemoryApi {
+		MemoryApi,
+		McpApi,
+		UiPluginsApi,
+		PluginRuntimeApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 搜索 pi.dev 社区包目录（服务端模糊匹配名称/描述/作者，50 条/页） */
@@ -380,13 +354,6 @@ export interface PiApi
 	setAttentionBadge(count: number, overlayDataUrl: string | null): Promise<void>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
 	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
-	getMcpStatus(cwd?: string): Promise<McpStatus>;
-	getMcpConfig(cwd?: string): Promise<McpConfigSnapshot>;
-	setMcpServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot>;
-	openMcpConfig(cwd?: string): Promise<void>;
-	/** 一键接入预设 MCP（写入用户级 mcp.json，已存在则只重新启用） */
-	addMcpPreset(id: McpPreset["id"]): Promise<McpConfigSnapshot>;
-	onMcpEvent(cb: (event: McpStatusEvent) => void): () => void;
 	saveApiKey(providerId: string, key: string): Promise<void>;
 	removeCredential(providerId: string): Promise<void>;
 	addCustomProvider(input: CustomProviderInput): Promise<void>;
@@ -506,37 +473,6 @@ export interface PiApi
 	removeSkillRepository(id: string): Promise<void>;
 	/** 原生菜单触发的桌面命令（P5） */
 	onDesktopCommand(cb: (command: DesktopCommand) => void): () => void;
-	/** 读 UI 插件全局配置（总开关/启用信任表/槽位指派） */
-	uiPluginsGetConfig(): Promise<UiPluginsConfig>;
-	/** 设 UI 插件全局总开关 */
-	uiPluginsSetEnabled(enabled: boolean): Promise<void>;
-	/** 列 UI 插件（含 enabled/trusted/buildError/invalidReason） */
-	uiPluginsList(): Promise<UiPluginInfo[]>;
-	/** 读插件构建产物（name 必须是扫描到的合法插件名，禁路径）；{ manifest, code } 或 { error } */
-	uiPluginsReadCode(
-		name: string,
-	): Promise<{ manifest: UiPluginManifest; code: string; runtimeBinding?: string } | { error: string }>;
-	/** Opaque main-issued binding; caller cannot select plugin identity or scope. */
-	onPluginRuntimeEvent(cb: (event: PluginRuntimeEvent) => void): () => void;
-	pluginRuntimeSelectSession(sessionId: string | null): Promise<string>;
-	pluginRuntimeInvoke(
-		binding: string,
-		operation: string,
-		input: unknown,
-		selectionToken: string,
-		requestId?: string,
-	): Promise<unknown>;
-	pluginRuntimeCancel(binding: string, selectionToken: string, requestId: string): Promise<boolean>;
-	/** 启用/停用单个插件（启用=信任，同步落盘） */
-	uiPluginsSetPluginEnabled(name: string, enabled: boolean): Promise<void>;
-	/** 槽位指派（pluginName=null 取消指派） */
-	uiPluginsAssignSlot(slot: string, pluginName: string | null): Promise<void>;
-	/** 重新构建插件（构建失败返回错误信息，旧产物保留） */
-	uiPluginsRebuild(name: string): Promise<{ ok: true } | { ok: false; error: string }>;
-	/** 打开插件目录（不传 name 开根目录；shell.openPath） */
-	uiPluginsOpenDir(name?: string): Promise<void>;
-	/** 订阅 UI 插件事件（changed/config）；返回取消函数 */
-	onUiPluginsEvent(cb: (payload: UiPluginsEventPayload) => void): () => void;
 	/** 订阅会话事件；返回取消函数 */
 	onEvent(cb: (payload: SessionEventEnvelope) => void): () => void;
 	onPermissionRequest(cb: (req: PermissionRequest) => void): () => void;
