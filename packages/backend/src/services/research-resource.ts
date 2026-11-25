@@ -2,7 +2,6 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
 	contractContentHash,
-	type KnowledgeSourceReceipt,
 	type ResearchCaptureRecord,
 	type ResearchCaptureRequest,
 	type ResearchCaptureResult,
@@ -12,6 +11,7 @@ import {
 	type ResearchSearchRequest,
 	type ResearchSearchResponse,
 } from "@drone/shared";
+import type { KnowledgeSourceReceipt } from "@gyoungwe/plugin-api/knowledge";
 import {
 	captureId,
 	formatFor,

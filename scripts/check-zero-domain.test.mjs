@@ -1,10 +1,19 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	copyFileSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import process from "node:process";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { collectZeroDomainFindings, compareToBaseline } from "./check-zero-domain.mjs";
 
 const baselinePath = "scripts/fixtures/zero-domain-baseline.json";
@@ -31,6 +40,12 @@ function fixture(context, baseline = emptyBaseline) {
 	for (const file of ["check-zero-domain.mjs", "is-main-module.mjs"]) {
 		copyFileSync(new URL(file, import.meta.url), join(root, "scripts", file));
 	}
+	mkdirSync(join(root, "node_modules"));
+	symlinkSync(
+		fileURLToPath(new URL(".", import.meta.resolve("typescript/package.json"))),
+		join(root, "node_modules/typescript"),
+		"junction",
+	);
 	const run = (...args) =>
 		spawnSync(process.execPath, ["scripts/check-zero-domain.mjs", ...args], { cwd: root, encoding: "utf8" });
 	return { root, write, run, readBaseline: () => readFileSync(join(root, baselinePath)) };
@@ -174,6 +189,40 @@ test("a new domain IPC channel fails the CLI check", (context) => {
 	const result = run();
 	assert.equal(result.status, 1, result.stderr);
 	assert.match(result.stderr, /domainIpcChannels: evidence:list/);
+});
+
+test("moving IPC channels to a host API contract preserves the channel inventory", (context) => {
+	const { root, write } = fixture(context);
+	const ipc = "packages/shared/src/ipc.ts";
+	write(ipc, 'export const IpcChannels = { EvidenceList: "evidence:list" };');
+	write(
+		"packages/shared/src/host-api/evidence.ts",
+		`export const EvidenceContract = defineDomain("evidence", {
+	methods: { list: listSchema },
+	events: { "replay-finished": replaySchema },
+});`,
+	);
+	const channels = ["evidence:list", "evidence:replay-finished"];
+	assert.deepEqual(collectZeroDomainFindings(root).domainIpcChannels, channels);
+	write(ipc, "");
+	assert.deepEqual(collectZeroDomainFindings(root).domainIpcChannels, channels);
+});
+
+test("new domain IPC channels in host API files fail the CLI check", (context) => {
+	const { write, run } = fixture(context);
+	write(
+		"packages/shared/src/host-api/research.ts",
+		`export const legacyChannel = "research:legacy";
+export const ResearchContract = defineDomain("research", {
+	methods: { search: searchSchema },
+	events: { searchFinished: searchFinishedSchema },
+});`,
+	);
+	const result = run();
+	assert.equal(result.status, 1, result.stderr);
+	for (const channel of ["research:legacy", "research:search", "research:searchFinished"]) {
+		assert(result.stderr.split("\n").includes(`New domainIpcChannels: ${channel}`));
+	}
 });
 
 test("a removed lock entry is reported as fixed and can be ratcheted down", (context) => {

@@ -587,13 +587,9 @@ export interface PiApi
 	setChannelWatchEnabled(enabled: boolean): Promise<void>;
 	/** 应答项目信任请求（optionIndex 为 TrustRequest.options 下标） */
 	respondTrust(requestId: string, answer: TrustAnswer): Promise<void>;
-	/** 项目信任前置决策（选目录/切 draft cwd 时调用；未决弹窗，结果落 trust.json） */
-	ensureProjectTrust(cwd: string): Promise<boolean>;
 	pickDirectory(): Promise<string | null>;
 	/** 开发版隔离配置时返回正式版知识库 Vault；正式版或无关联返回 null */
 	formalKnowledgeVault(): Promise<string | null>;
-	/** @ 补全数据源：项目文件相对路径列表（目录带尾 /，TTL 缓存） */
-	listProjectFiles(cwd?: string): Promise<string[]>;
 	getGitBranch(cwd: string): Promise<string | null>;
 	listGitBranches(cwd: string): Promise<GitBranches>;
 	/** 切换分支；返回切换后的当前分支（失败抛错） */
