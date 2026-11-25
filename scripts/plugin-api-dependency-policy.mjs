@@ -23,11 +23,11 @@ function committedArtifact(root, path) {
 	return bytes;
 }
 
-/** Private plugin-api 1.3.0 migration only; retire when the root dev dependency uses public 1.3.0. */
+/** Private plugin-api migration only; retire when the root dev dependency uses a public release. */
 function checkCandidate(value, hostRoot, pluginRoot) {
 	assert(
-		/^file:vendor\/gyoungwe-plugin-api-1\.3\.0-[a-f0-9]{8}\.tgz$/u.test(value),
-		"private API must use the fixed in-repository plugin-api 1.3.0 candidate path",
+		/^file:vendor\/gyoungwe-plugin-api-2\.0\.0-[a-f0-9]{8}\.tgz$/u.test(value),
+		"private API must use the fixed in-repository plugin-api 2.0.0 candidate path",
 	);
 	assert(readJson(join(pluginRoot, "package.json")).private === true, "candidate workspace must be private");
 	const path = value.slice("file:".length);
@@ -37,8 +37,8 @@ function checkCandidate(value, hostRoot, pluginRoot) {
 		execFileSync("tar", ["-xzOf", join(pluginRoot, path), "package/package.json"], { encoding: "utf8" }),
 	);
 	assert(
-		manifest.name === "@gyoungwe/plugin-api" && manifest.version === "1.3.0",
-		"vendored candidate package identity does not match plugin-api 1.3.0",
+		manifest.name === "@gyoungwe/plugin-api" && manifest.version === "2.0.0",
+		"vendored candidate package identity does not match plugin-api 2.0.0",
 	);
 	assert(
 		readJson(join(hostRoot, "packages/plugin-api/package.json")).version === manifest.version,

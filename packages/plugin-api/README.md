@@ -26,11 +26,15 @@ Node.js access from an untrusted plugin. Hosts may additionally load optional
 extensions through Drone's process sandbox proxy; that runtime boundary is a
 host capability and must not be implied by a manifest declaration.
 
-The local candidate package is `1.3.0`; the current public release remains `1.2.0`. API v1 is additive-only: publish a new
-minor or patch only when the contract changes, verify the packed tarball in a
-clean consumer before release, and never overwrite an existing version.
+The local candidate package is `2.0.0`; the current public release remains `1.2.0`. The candidate
+carries a breaking change: `KnowledgeUiPort` replaces its 56 named methods with three
+per-domain channels (`knowledge`, `daily`, `zotero`), each taking `{ operation, input? }`.
+The runtime capability-negotiation version (`PLUGIN_API_VERSION`) is unchanged at 1 — it
+describes the host contract, not the package version. Publish a new version only when
+the contract changes, verify the packed tarball in a clean consumer before release, and
+never overwrite an existing version.
 
-## Analysis lifecycle (1.3.0 candidate)
+## Analysis lifecycle (2.0.0 candidate)
 
 `@gyoungwe/plugin-api/analysis-lifecycle` exports `ANALYSIS_LIFECYCLE_CONTRACT_VERSION` (1), the stateless `AnalysisLifecyclePort` / `AnalysisLifecycleHostLoader` types and `assertAnalysisLifecycleResult(before, command, clock, result)`. The same exports are available from `./runtime`; existing root analysis contracts remain unchanged. The port takes an immutable v1 ledger, a command and an explicit host timestamp and returns a proposed replacement ledger plus the target run's appended event suffix. This package defines the contract and validates proposals; pi-analysis owns lifecycle decisions.
 
@@ -38,7 +42,7 @@ The assertion rejects unsupported versions or fields, malformed nested JSON, unr
 
 At a future host cutover, read the current record within the JsonStore transaction, pass a detached immutable copy and trusted command/time to the plugin, validate its unknown result before committing, and emit events only after durable success. Unsupported stored records must remain on disk for explicit review. This candidate does not switch host callers or authorize effects: readiness/review booleans, publication intent, lifecycle events and binding/lineage strings are ordinary data. The host retains persistence, causal issuance, live authorization, execution preflight and write/readback receipts.
 
-## P5 schemas (1.3.0 candidate)
+## P5 schemas (2.0.0 candidate)
 
 These subpaths expose dependency-free JSON Schema values plus types:
 
@@ -64,13 +68,13 @@ public scope. In the source checkout, run
 `node scripts/generate-knowledge-ui-contract.mjs` after changing a wire type.
 Package build and typecheck reject a stale generated contract.
 
-## Optional desktop runtime (1.3.0 candidate)
+## Optional desktop runtime (2.0.0 candidate)
 
 `@gyoungwe/plugin-api/runtime` provides factory, scope, operation and lifecycle contracts plus the `withPluginAgentSlot` helper. A combined native Pi package may declare `entrypoints.desktopRuntime` in its optional Drone manifest. Drone activates that entry only after explicit approval, in a separate restricted process. The default export returns operations (JSON schemas, read/write effect, execute) and an awaited dispose hook. Inputs/results must be JSON serializable; use null for a void result.
 
 UI modules use `usePluginRuntime()` from the host-provided `@drone/ui` shim. The client is bound by the main process to an installed package, window and activation. It accepts an operation and input, never a package ID or workspace assertion. Revoke invalidates old closures; replacement waits for real disposal. Shared-renderer UI modules remain trusted code, so binding tokens are not an isolation boundary against another UI module.
 
-The unpublished 1.3.0 candidate now gives each application one runtime owner per installed package. The factory receives `{ applicationId, signal, resources, capabilities, events }`; it must not capture a window, workspace or session. Each operation receives `{ scope, signal, capabilities }`, where `scope` is a discriminated union: `{ kind: "application" }`, `{ kind: "workspace", workspaceId, workspaceDirectory }`, or `{ kind: "session", workspaceId, workspaceDirectory, sessionId }`. `workspaceId` is an opaque normalized identity and must never be used as a path. `workspaceDirectory` preserves the actual live session entry’s directory, including case; access still requires an approved root handle. The current desktop path emits application or session scopes. Host code resolves session identity, canonical workspace, project trust, read-only state and lifetime from its live session registry; renderer input cannot provide those facts. Session selection returns an opaque main-issued lease; the internal IPC invocation must echo that lease, so queued input from an earlier selection cannot execute under a later session, including A → B → A.
+The unpublished 2.0.0 candidate now gives each application one runtime owner per installed package. The factory receives `{ applicationId, signal, resources, capabilities, events }`; it must not capture a window, workspace or session. Each operation receives `{ scope, signal, capabilities }`, where `scope` is a discriminated union: `{ kind: "application" }`, `{ kind: "workspace", workspaceId, workspaceDirectory }`, or `{ kind: "session", workspaceId, workspaceDirectory, sessionId }`. `workspaceId` is an opaque normalized identity and must never be used as a path. `workspaceDirectory` preserves the actual live session entry’s directory, including case; access still requires an approved root handle. The current desktop path emits application or session scopes. Host code resolves session identity, canonical workspace, project trust, read-only state and lifetime from its live session registry; renderer input cannot provide those facts. Session selection returns an opaque main-issued lease; the internal IPC invocation must echo that lease, so queued input from an earlier selection cannot execute under a later session, including A → B → A.
 
 Switching the selected session cancels that window's old calls and pending approvals while retaining the shared application owner. Closing a session revokes its registered identity, including when a later session reuses the same ID. If the window providing initial activation approval closes before startup, the pending activation is canceled and surviving windows must obtain fresh approval. Closing one window after activation leaves sibling callers running; releasing the final caller drains and disposes the owner. Disabled/replaced packages revoke every caller before replacement, and failed disposal blocks reactivation. Reads require a live trusted caller; writes also require operation approval and reject read-only sessions. With no selected real session (including a draft), the caller explicitly has application scope and receives no fabricated workspace authority.
 
@@ -87,7 +91,7 @@ The unpublished 1.3 candidate exports `PluginEndpointConfigurationInput`, `Plugi
 `@gyoungwe/plugin-api/resource` describes optional isolated resource factories. The host selects a private derived-data directory and passes it to a resource process; this is not a Vault write grant. Resource requests reuse the caller's capability port and scope. Children must really exit before the activation releases their ownership reservations. The existing 1.2 knowledge UI contract remains available during its documented migration; these candidate ports do not mean all 56 domain methods have migrated.
 
 
-## Optional Node reservation implementation (1.3.0 candidate)
+## Optional Node reservation implementation (2.0.0 candidate)
 
 `@gyoungwe/plugin-api/node/reservations` is an explicit Node-only subpath. It exports the existing `PluginResourceReservations` implementation shared by host and native adapters: exclusive local-user lease files, SHA-256 canonical resource keys, random owner token/PID, identity-checked release, and no automatic stale takeover. The package root, UI, runtime and native contract subpaths do not import it or Node. Importing the helper grants no filesystem permission; callers must authorize and canonicalize resource identities before reserving, drain domain and child work before release, and preserve a failed cleanup for explicit recovery.
 

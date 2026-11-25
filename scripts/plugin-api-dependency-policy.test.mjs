@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 import { checkPluginDependency } from "./plugin-api-dependency-policy.mjs";
 
-const candidate = "vendor/gyoungwe-plugin-api-1.3.0-deadbeef.tgz";
+const candidate = "vendor/gyoungwe-plugin-api-2.0.0-deadbeef.tgz";
 let root, hostRoot, pluginRoot, location;
 const json = (path, value) => writeFile(path, JSON.stringify(value));
 const git = (directory, ...args) => execFileSync("git", ["-C", directory, ...args], { stdio: "pipe" });
@@ -16,7 +16,7 @@ beforeEach(async () => {
 	hostRoot = join(root, "host");
 	pluginRoot = join(root, "plugins");
 	await mkdir(join(root, "archive/package"), { recursive: true });
-	await json(join(root, "archive/package/package.json"), { name: "@gyoungwe/plugin-api", version: "1.3.0" });
+	await json(join(root, "archive/package/package.json"), { name: "@gyoungwe/plugin-api", version: "2.0.0" });
 	for (const directory of [hostRoot, pluginRoot]) {
 		await mkdir(join(directory, "vendor"), { recursive: true });
 		git(directory, "init", "--quiet");
@@ -38,7 +38,7 @@ beforeEach(async () => {
 		);
 	}
 	await mkdir(join(hostRoot, "packages/plugin-api"), { recursive: true });
-	await json(join(hostRoot, "packages/plugin-api/package.json"), { version: "1.3.0" });
+	await json(join(hostRoot, "packages/plugin-api/package.json"), { version: "2.0.0" });
 	await json(join(pluginRoot, "package.json"), { private: true });
 	const value = `file:${candidate}`;
 	const integrity = `sha512-${createHash("sha512")
@@ -47,7 +47,7 @@ beforeEach(async () => {
 	await json(join(pluginRoot, "package-lock.json"), {
 		packages: {
 			"": { devDependencies: { "@gyoungwe/plugin-api": value } },
-			"node_modules/@gyoungwe/plugin-api": { version: "1.3.0", resolved: value, integrity },
+			"node_modules/@gyoungwe/plugin-api": { version: "2.0.0", resolved: value, integrity },
 		},
 	});
 	location = {
@@ -65,7 +65,7 @@ afterEach(async () => {
 test("accepts only the same committed API package with an exact clean-install lock", () => {
 	assert.deepEqual(checkPluginDependency(`file:${candidate}`, location), {
 		path: candidate,
-		version: "1.3.0",
+		version: "2.0.0",
 		sha256: createHash("sha256")
 			.update(execFileSync("git", ["-C", hostRoot, "show", `HEAD:${candidate}`]))
 			.digest("hex"),
@@ -130,7 +130,7 @@ test("rejects stale or forged lock integrity and nonprivate workspaces", async (
 });
 
 test("rejects another package disguised as the private API artifact", async () => {
-	await json(join(root, "archive/package/package.json"), { name: "wrong-package", version: "1.3.0" });
+	await json(join(root, "archive/package/package.json"), { name: "wrong-package", version: "2.0.0" });
 	execFileSync("tar", ["-czf", join(hostRoot, candidate), "-C", join(root, "archive"), "package"]);
 	await copyFile(join(hostRoot, candidate), join(pluginRoot, candidate));
 	for (const directory of [hostRoot, pluginRoot]) {
