@@ -103,7 +103,6 @@
 	"file-lines\tpackages/research/src/connectors.ts": 922,
 	"file-lines\tpackages/shared/src/compute.ts": 755,
 	"file-lines\tpackages/shared/src/harness.ts": 477,
-	"file-lines\tpackages/shared/src/ipc.ts": 482,
 	"file-lines\tpackages/shared/src/knowledge.ts": 641,
 	"file-lines\tpackages/shared/src/process-lanes/reducer.ts": 452,
 	"file-lines\tpackages/shared/src/research-contracts.ts": 1026,

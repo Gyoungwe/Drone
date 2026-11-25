@@ -15,6 +15,11 @@ describe("SettingsContract", () => {
 		expect(Check(SettingsContract.methods.setSubagentModel.args, ["reviewer", null])).toBe(true);
 	});
 
+	it("declares the provider login event on its existing channel", () => {
+		expect(Object.keys(SettingsContract.events)).toEqual(["loginEvent"]);
+		expect(channelOf(SettingsContract, "loginEvent")).toBe("settings:loginEvent");
+	});
+
 	it("rejects malformed provider inputs before backend invocation", () => {
 		expect(
 			Check(SettingsContract.methods.addCustomProvider.args, [

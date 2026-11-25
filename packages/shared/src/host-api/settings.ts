@@ -3,6 +3,7 @@ import type {
 	CustomProviderInput,
 	CustomProviderUpdateInput,
 	ListProvidersOptions,
+	LoginEventPayload,
 	LoginResult,
 	ModelPrefs,
 	ProviderInfo,
@@ -176,7 +177,44 @@ export const SettingsContract = defineDomain("settings", {
 		cancelProviderLogin: { args: Type.Tuple([StringId]), result: Type.Void() },
 		respondProviderLogin: { args: Type.Tuple([StringId, StringId, Type.String()]), result: Type.Void() },
 	},
+	events: { loginEvent: Type.Unsafe<LoginEventPayload>({ type: "object" }) },
 });
+
+export interface SettingsApi {
+	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
+	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
+	saveApiKey(providerId: string, key: string): Promise<void>;
+	removeCredential(providerId: string): Promise<void>;
+	addCustomProvider(input: CustomProviderInput): Promise<void>;
+	/** 更新自定义 provider（ID 不可改；apiKey 留空保持不变） */
+	updateCustomProvider(input: CustomProviderUpdateInput): Promise<void>;
+	removeCustomProvider(providerId: string): Promise<void>;
+	/** 内置 provider 的可选 baseUrl 覆写（pi 官方语义：不写 models，共享官方模型列表）；baseUrl 空串 = 清除覆写回官方 */
+	setProviderBaseUrl(providerId: string, baseUrl: string, apiKey?: string): Promise<void>;
+	testProvider(providerId: string, modelId?: string): Promise<ProviderTestResult>;
+	/** 读取用户级模型可见性与子代理模型偏好 */
+	getModelPrefs(): Promise<ModelPrefs>;
+	/** 设置模型在选择器中的可见性；隐藏不影响已经选中的会话运行 */
+	setModelHidden(provider: string, modelId: string, hidden: boolean): Promise<ModelPrefs>;
+	/** 批量设置一组模型可见性（一键全隐藏/全显示某 provider 的全部模型）；一次写盘 */
+	setModelsHidden(provider: string, modelIds: string[], hidden: boolean): Promise<ModelPrefs>;
+	/** 为子代理指定 provider/model；null = 继承父会话模型 */
+	setSubagentModel(agent: string, modelRef: string | null): Promise<ModelPrefs>;
+	/** 为子代理指定 thinking；null = 跟随父会话 thinking。 */
+	setSubagentThinking(agent: string, level: SubagentThinkingLevel | null): Promise<ModelPrefs>;
+	/** 开关后台模型审稿；关闭时后台审稿只运行纯规则检查。 */
+	setBackgroundReviewerModel(enabled: boolean): Promise<ModelPrefs>;
+	/** 列内置与用户级 subagent 定义（不读项目级定义） */
+	listSubagents(): Promise<SubagentInfo[]>;
+	/** 启动 provider 交互登录（OAuth 浏览器/设备码流 · api_key 提示/选择流）；事件经 onProviderLoginEvent 推送，promise 在流程结束时 resolve（取消不算错误） */
+	startProviderLogin(loginId: string, providerId: string): Promise<LoginResult>;
+	/** 取消进行中的登录流程（未知 loginId 静默忽略） */
+	cancelProviderLogin(loginId: string): Promise<void>;
+	/** 应答登录过程中的输入/选择提示（promptId 已被外部取消时静默忽略） */
+	respondProviderLogin(loginId: string, promptId: string, value: string): Promise<void>;
+	/** 订阅登录流程事件（event/prompt/prompt-cancel，按 loginId 归属）；返回取消函数 */
+	onProviderLoginEvent(cb: (payload: LoginEventPayload) => void): () => void;
+}
 
 export type SettingsSchemaTypes = {
 	listProviders: [options?: ListProvidersOptions];

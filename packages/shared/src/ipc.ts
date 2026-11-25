@@ -13,8 +13,10 @@ import type {
 	KnowledgeHostApi,
 	McpApi,
 	MemoryApi,
+	PackagesApi,
 	PluginCredentialsApi,
 	PluginRuntimeApi,
+	SettingsApi,
 	SubagentsApi,
 	UiPluginsApi,
 } from "./host-api";
@@ -22,7 +24,6 @@ import type { BackgroundJobsApi } from "./host-api/background-jobs";
 import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
-import type { CatalogPackageType, CatalogSearchResult, PackageLifecycleReceipt } from "./packages";
 import type {
 	PermissionAuditTailEntry,
 	PermissionProbeInput,
@@ -49,17 +50,6 @@ import type {
 	TrustRequest,
 	UiState,
 } from "./session";
-import type {
-	CustomProviderInput,
-	CustomProviderUpdateInput,
-	ListProvidersOptions,
-	LoginEventPayload,
-	LoginResult,
-	ModelPrefs,
-	ProviderInfo,
-	ProviderTestResult,
-	SubagentInfo,
-} from "./settings";
 import type {
 	SkillRepositoryAddInput,
 	SkillRepositoryCheckResult,
@@ -136,15 +126,6 @@ export const IpcChannels = {
 	SessionRecall: "session:recall",
 	/** 已加载资源（skills/扩展，设置页展示用） */
 	SessionGetLoadedResources: "session:getLoadedResources",
-	/** pi.dev 社区包目录（设置页扩展面板浏览/安装用） */
-	PackagesSearchCatalog: "packages:searchCatalog",
-	PackagesInstall: "packages:install",
-	PackagesUpdate: "packages:update",
-	PackagesRollback: "packages:rollback",
-	PackagesRemove: "packages:remove",
-	PackagesListConfigured: "packages:listConfigured",
-	PackagesLatestVersions: "packages:latestVersions",
-	PackagesPluginMetadata: "packages:pluginMetadata",
 	FileSaveDialog: "file:saveDialog",
 	FilePickPath: "file:pickPath",
 	FilePreview: "file:preview",
@@ -159,29 +140,6 @@ export const IpcChannels = {
 	FileImportDropped: "file:importDropped",
 	ResourceOpenExternal: "resource:openExternal",
 	ModelsList: "models:list",
-	SettingsListProviders: "settings:listProviders",
-	SettingsSaveApiKey: "settings:saveApiKey",
-	SettingsRemoveCredential: "settings:removeCredential",
-	SettingsAddCustomProvider: "settings:addCustomProvider",
-	SettingsUpdateCustomProvider: "settings:updateCustomProvider",
-	SettingsRemoveCustomProvider: "settings:removeCustomProvider",
-	SettingsSetProviderBaseUrl: "settings:setProviderBaseUrl",
-	SettingsTestProvider: "settings:testProvider",
-	/** 用户级模型偏好：隐藏模型 + 子代理模型覆盖 */
-	SettingsGetModelPrefs: "settings:getModelPrefs",
-	SettingsSetModelHidden: "settings:setModelHidden",
-	SettingsSetModelsHidden: "settings:setModelsHidden",
-	SettingsSetSubagentModel: "settings:setSubagentModel",
-	SettingsSetSubagentThinking: "settings:setSubagentThinking",
-	SettingsSetBackgroundReviewerModel: "settings:setBackgroundReviewerModel",
-	/** 只列内置与用户级 subagent（设置是全局配置，不绑定项目） */
-	SettingsListSubagents: "settings:listSubagents",
-	/** provider 交互登录（OAuth / api_key，后者如 Google Vertex 的 ADC/服务账号）；loginId 由 renderer 生成用于事件归属 */
-	SettingsLoginStart: "settings:loginStart",
-	SettingsLoginCancel: "settings:loginCancel",
-	SettingsLoginRespond: "settings:loginRespond",
-	/** main → renderer 登录流程事件（event/prompt/prompt-cancel） */
-	SettingsLoginEvent: "settings:loginEvent",
 	AskRequest: "ask:request",
 	AskResolved: "ask:resolved",
 	AskRespond: "ask:respond",
@@ -300,25 +258,11 @@ export interface PiApi
 		MemoryApi,
 		McpApi,
 		UiPluginsApi,
-		PluginRuntimeApi {
+		PluginRuntimeApi,
+		PackagesApi,
+		SettingsApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
-	/** 搜索 pi.dev 社区包目录（服务端模糊匹配名称/描述/作者，50 条/页） */
-	searchCatalog(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
-	/** 安装社区包（npm:<name>，用户级）；返回可审计的生命周期回执 */
-	installPackage(name: string): Promise<PackageLifecycleReceipt>;
-	/** 更新已配置社区包到 registry 最新版本；返回可审计的生命周期回执 */
-	updatePackage(name: string): Promise<PackageLifecycleReceipt>;
-	rollbackPackage(name: string, version: string): Promise<PackageLifecycleReceipt>;
-	/** 卸载已配置的包（按 source + scope 移除并持久化）；返回可审计的生命周期回执 */
-	removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt>;
-	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
-	listConfiguredPackages(): Promise<import("./packages").ConfiguredPackageInfo[]>;
-	/** 查询 npm 上的最新版本（离线或失败返回 null）。 */
-	latestPackageVersions(names: string[]): Promise<Record<string, string | null>>;
-	pluginPackageMetadata(
-		names: string[],
-	): Promise<Record<string, import("./plugin-sources").RegistryPluginMetadata | null>>;
 	/** 弹保存对话框并写文件；用户取消返回 null，成功返回写入路径 */
 	saveFileDialog(defaultName: string, content: string): Promise<string | null>;
 	/** 弹打开对话框选文件或文件夹（示例任务表单的路径输入）；用户取消返回 null，不读文件内容 */
@@ -352,42 +296,6 @@ export interface PiApi
 	pickDownloadDir(): Promise<string | null>;
 	/** 待答数角标（P14）：dock / 任务栏；Windows 用 overlay icon */
 	setAttentionBadge(count: number, overlayDataUrl: string | null): Promise<void>;
-	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
-	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
-	saveApiKey(providerId: string, key: string): Promise<void>;
-	removeCredential(providerId: string): Promise<void>;
-	addCustomProvider(input: CustomProviderInput): Promise<void>;
-	/** 更新自定义 provider（ID 不可改；apiKey 留空保持不变） */
-	updateCustomProvider(input: CustomProviderUpdateInput): Promise<void>;
-	removeCustomProvider(providerId: string): Promise<void>;
-	/** 内置 provider 的可选 baseUrl 覆写（pi 官方语义：不写 models，共享官方模型列表）；baseUrl 空串 = 清除覆写回官方 */
-	setProviderBaseUrl(providerId: string, baseUrl: string, apiKey?: string): Promise<void>;
-	testProvider(providerId: string, modelId?: string): Promise<ProviderTestResult>;
-	/** 读取用户级模型可见性与子代理模型偏好 */
-	getModelPrefs(): Promise<ModelPrefs>;
-	/** 设置模型在选择器中的可见性；隐藏不影响已经选中的会话运行 */
-	setModelHidden(provider: string, modelId: string, hidden: boolean): Promise<ModelPrefs>;
-	/** 批量设置一组模型可见性（一键全隐藏/全显示某 provider 的全部模型）；一次写盘 */
-	setModelsHidden(provider: string, modelIds: string[], hidden: boolean): Promise<ModelPrefs>;
-	/** 为子代理指定 provider/model；null = 继承父会话模型 */
-	setSubagentModel(agent: string, modelRef: string | null): Promise<ModelPrefs>;
-	/** 为子代理指定 thinking；null = 跟随父会话 thinking。 */
-	setSubagentThinking(
-		agent: string,
-		level: import("./settings").SubagentThinkingLevel | null,
-	): Promise<ModelPrefs>;
-	/** 开关后台模型审稿；关闭时后台审稿只运行纯规则检查。 */
-	setBackgroundReviewerModel(enabled: boolean): Promise<ModelPrefs>;
-	/** 列内置与用户级 subagent 定义（不读项目级定义） */
-	listSubagents(): Promise<SubagentInfo[]>;
-	/** 启动 provider 交互登录（OAuth 浏览器/设备码流 · api_key 提示/选择流）；事件经 onProviderLoginEvent 推送，promise 在流程结束时 resolve（取消不算错误） */
-	startProviderLogin(loginId: string, providerId: string): Promise<LoginResult>;
-	/** 取消进行中的登录流程（未知 loginId 静默忽略） */
-	cancelProviderLogin(loginId: string): Promise<void>;
-	/** 应答登录过程中的输入/选择提示（promptId 已被外部取消时静默忽略） */
-	respondProviderLogin(loginId: string, promptId: string, value: string): Promise<void>;
-	/** 订阅登录流程事件（event/prompt/prompt-cancel，按 loginId 归属）；返回取消函数 */
-	onProviderLoginEvent(cb: (payload: LoginEventPayload) => void): () => void;
 	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
 	onAskRequest(cb: (req: AskRequest) => void): () => void;
 	onAskResolved(cb: (result: AskResolved) => void): () => void;

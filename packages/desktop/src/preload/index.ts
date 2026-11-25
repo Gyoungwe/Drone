@@ -87,32 +87,8 @@ const knowledgeClient = exposeContract(KnowledgeContract);
 const dailyClient = exposeContract(DailyContract);
 const zoteroClient = exposeContract(ZoteroContract);
 const researchClient = exposeContract(ResearchContract);
-const settingsClient = exposeContract(SettingsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				listProviders: IpcChannels.SettingsListProviders,
-				saveApiKey: IpcChannels.SettingsSaveApiKey,
-				removeCredential: IpcChannels.SettingsRemoveCredential,
-				addCustomProvider: IpcChannels.SettingsAddCustomProvider,
-				updateCustomProvider: IpcChannels.SettingsUpdateCustomProvider,
-				removeCustomProvider: IpcChannels.SettingsRemoveCustomProvider,
-				setProviderBaseUrl: IpcChannels.SettingsSetProviderBaseUrl,
-				testProvider: IpcChannels.SettingsTestProvider,
-				getModelPrefs: IpcChannels.SettingsGetModelPrefs,
-				setModelHidden: IpcChannels.SettingsSetModelHidden,
-				setModelsHidden: IpcChannels.SettingsSetModelsHidden,
-				setSubagentModel: IpcChannels.SettingsSetSubagentModel,
-				setSubagentThinking: IpcChannels.SettingsSetSubagentThinking,
-				setBackgroundReviewerModel: IpcChannels.SettingsSetBackgroundReviewerModel,
-				listSubagents: IpcChannels.SettingsListSubagents,
-				startProviderLogin: IpcChannels.SettingsLoginStart,
-				cancelProviderLogin: IpcChannels.SettingsLoginCancel,
-				respondProviderLogin: IpcChannels.SettingsLoginRespond,
-			},
-			method,
-		),
-});
+const settingsClient = exposeContract(SettingsContract);
+const { onLoginEvent: onProviderLoginEvent, ...settingsMethods } = settingsClient;
 const permissionsClient = exposeContract(PermissionsContract, {
 	channelForMethod: (_contract, method) =>
 		channelFrom(
@@ -138,22 +114,7 @@ const permissionsClient = exposeContract(PermissionsContract, {
 		),
 });
 const subagentsClient = exposeContract(SubagentsContract);
-const packagesClient = exposeContract(PackagesContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				searchCatalog: IpcChannels.PackagesSearchCatalog,
-				installPackage: IpcChannels.PackagesInstall,
-				updatePackage: IpcChannels.PackagesUpdate,
-				rollbackPackage: IpcChannels.PackagesRollback,
-				removePackage: IpcChannels.PackagesRemove,
-				listConfiguredPackages: IpcChannels.PackagesListConfigured,
-				latestPackageVersions: IpcChannels.PackagesLatestVersions,
-				pluginPackageMetadata: IpcChannels.PackagesPluginMetadata,
-			},
-			method,
-		),
-});
+const packagesClient = exposeContract(PackagesContract);
 const institutionalClient = exposeContract(InstitutionalContract);
 const memoryClient = exposeContract(MemoryContract);
 const mcpClient = exposeContract(McpContract);
@@ -191,14 +152,7 @@ const invokeApi = {
 	dispatchSubagents: invoke(subagentsClient, "dispatch"),
 	abortSubagentRun: invoke(subagentsClient, "abort"),
 	listSubagentRuns: invoke(subagentsClient, "runs"),
-	searchCatalog: invoke(packagesClient, "searchCatalog"),
-	installPackage: invoke(packagesClient, "installPackage"),
-	updatePackage: invoke(packagesClient, "updatePackage"),
-	rollbackPackage: invoke(packagesClient, "rollbackPackage"),
-	removePackage: invoke(packagesClient, "removePackage"),
-	listConfiguredPackages: invoke(packagesClient, "listConfiguredPackages"),
-	latestPackageVersions: invoke(packagesClient, "latestPackageVersions"),
-	pluginPackageMetadata: invoke(packagesClient, "pluginPackageMetadata"),
+	...packagesClient,
 	getInstitutionalStatus: invoke(institutionalClient, "getStatus"),
 	saveInstitutionalConfig: invoke(institutionalClient, "saveConfig"),
 	openInstitutionalLogin: invoke(institutionalClient, "openLogin"),
@@ -228,24 +182,7 @@ const invokeApi = {
 	uiPluginsAssignSlot: invoke(uiPluginsClient, "assignSlot"),
 	uiPluginsRebuild: invoke(uiPluginsClient, "rebuild"),
 	uiPluginsOpenDir: invoke(uiPluginsClient, "openDir"),
-	listProviders: invoke(settingsClient, "listProviders"),
-	saveApiKey: invoke(settingsClient, "saveApiKey"),
-	removeCredential: invoke(settingsClient, "removeCredential"),
-	addCustomProvider: invoke(settingsClient, "addCustomProvider"),
-	updateCustomProvider: invoke(settingsClient, "updateCustomProvider"),
-	removeCustomProvider: invoke(settingsClient, "removeCustomProvider"),
-	setProviderBaseUrl: invoke(settingsClient, "setProviderBaseUrl"),
-	testProvider: invoke(settingsClient, "testProvider"),
-	getModelPrefs: invoke(settingsClient, "getModelPrefs"),
-	setModelHidden: invoke(settingsClient, "setModelHidden"),
-	setModelsHidden: invoke(settingsClient, "setModelsHidden"),
-	setSubagentModel: invoke(settingsClient, "setSubagentModel"),
-	setSubagentThinking: invoke(settingsClient, "setSubagentThinking"),
-	setBackgroundReviewerModel: invoke(settingsClient, "setBackgroundReviewerModel"),
-	listSubagents: invoke(settingsClient, "listSubagents"),
-	startProviderLogin: invoke(settingsClient, "startProviderLogin"),
-	cancelProviderLogin: invoke(settingsClient, "cancelProviderLogin"),
-	respondProviderLogin: invoke(settingsClient, "respondProviderLogin"),
+	...settingsMethods,
 	getPermissionConfig: invoke(permissionsClient, "getConfig"),
 	getPermissionSettings: invoke(permissionsClient, "load"),
 	savePermissionSettings: invoke(permissionsClient, "save"),
@@ -362,7 +299,7 @@ const api: PiApi = {
 	platform: process.platform,
 	onKnowledgeEvent: knowledgeClient.onEvent,
 	onMcpEvent: mcpClient.onEvent,
-	onProviderLoginEvent: (cb) => subscribe(IpcChannels.SettingsLoginEvent, cb),
+	onProviderLoginEvent,
 	onAskRequest: (cb) => subscribe(IpcChannels.AskRequest, cb),
 	onAskResolved: (cb) => subscribe(IpcChannels.AskResolved, cb),
 	onUiPluginsEvent: uiPluginsClient.onEvent,

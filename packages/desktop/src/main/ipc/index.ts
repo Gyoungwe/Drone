@@ -6,7 +6,14 @@ import type {
 	PermissionResolved,
 	TrustRequest,
 } from "@drone/shared";
-import { channelOf, IpcChannels, McpContract, PluginRuntimeContract, UiPluginsContract } from "@drone/shared";
+import {
+	channelOf,
+	IpcChannels,
+	McpContract,
+	PluginRuntimeContract,
+	SettingsContract,
+	UiPluginsContract,
+} from "@drone/shared";
 import { BrowserWindow, webContents } from "electron";
 import { onResearchSkillUpdateState } from "../research-skill-updater";
 import type { UiPluginManager } from "../ui-plugins/manager";
@@ -137,7 +144,7 @@ export function registerIpc(
 		sendToRenderer(IpcChannels.TrustRequest, req);
 	});
 	backendServices.sessions.onLoginEvent((payload) => {
-		sendToRenderer(IpcChannels.SettingsLoginEvent, payload);
+		sendToRenderer(channelOf(SettingsContract, "loginEvent"), payload);
 	});
 	backendServices.sessions.onMcpStatus((cwd, status) => {
 		sendToRenderer(channelOf(McpContract, "event"), { cwd, status });
