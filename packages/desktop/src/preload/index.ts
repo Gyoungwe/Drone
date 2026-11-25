@@ -137,18 +137,7 @@ const permissionsClient = exposeContract(PermissionsContract, {
 			method,
 		),
 });
-const subagentsClient = exposeContract(SubagentsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				list: IpcChannels.SubagentsList,
-				dispatch: IpcChannels.SubagentsDispatch,
-				abort: IpcChannels.SubagentsAbort,
-				runs: IpcChannels.SubagentsRuns,
-			},
-			method,
-		),
-});
+const subagentsClient = exposeContract(SubagentsContract);
 const packagesClient = exposeContract(PackagesContract, {
 	channelForMethod: (_contract, method) =>
 		channelFrom(
@@ -165,35 +154,8 @@ const packagesClient = exposeContract(PackagesContract, {
 			method,
 		),
 });
-const institutionalClient = exposeContract(InstitutionalContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getStatus: IpcChannels.InstitutionalGetStatus,
-				saveConfig: IpcChannels.InstitutionalSaveConfig,
-				openLogin: IpcChannels.InstitutionalOpenLogin,
-				openUrl: IpcChannels.InstitutionalOpenUrl,
-				clear: IpcChannels.InstitutionalClear,
-				testAccess: IpcChannels.InstitutionalTestAccess,
-			},
-			method,
-		),
-});
-const memoryClient = exposeContract(MemoryContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getStatus: IpcChannels.MemoryGetStatus,
-				setEnabled: IpcChannels.MemorySetEnabled,
-				clear: IpcChannels.MemoryClear,
-				list: IpcChannels.MemoryList,
-				remove: IpcChannels.MemoryRemove,
-				promote: IpcChannels.MemoryPromote,
-				promoteToKnowledge: IpcChannels.MemoryPromoteToKnowledge,
-			},
-			method,
-		),
-});
+const institutionalClient = exposeContract(InstitutionalContract);
+const memoryClient = exposeContract(MemoryContract);
 const mcpClient = exposeContract(McpContract, {
 	channelForMethod: (_contract, method) =>
 		channelFrom(
@@ -425,7 +387,7 @@ const api: PiApi = {
 	...backgroundJobsClient,
 	// platform：同步值，preload 注入供 renderer 按平台分流 UI
 	platform: process.platform,
-	onKnowledgeEvent: (cb) => subscribe(IpcChannels.KnowledgeEvent, cb),
+	onKnowledgeEvent: knowledgeClient.onEvent,
 	onMcpEvent: (cb) => subscribe(IpcChannels.McpEvent, cb),
 	onProviderLoginEvent: (cb) => subscribe(IpcChannels.SettingsLoginEvent, cb),
 	onAskRequest: (cb) => subscribe(IpcChannels.AskRequest, cb),

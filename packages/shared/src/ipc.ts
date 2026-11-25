@@ -4,16 +4,22 @@ import type { DesktopCommand } from "./desktop-command";
 import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { HostFileAction } from "./file-actions";
 import type { PreviewKind } from "./file-types";
-import type { ComputeApi, DiscoveryApi, EvidenceApi, InquiryApi, PluginCredentialsApi } from "./host-api";
+import type {
+	ComputeApi,
+	DiscoveryApi,
+	EvidenceApi,
+	InquiryApi,
+	InstitutionalApi,
+	KnowledgeHostApi,
+	MemoryApi,
+	PluginCredentialsApi,
+	SubagentsApi,
+} from "./host-api";
 import type { BackgroundJobsApi } from "./host-api/background-jobs";
-import type { KnowledgeRouteInput } from "./host-api/knowledge";
-import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
 import type { PluginRuntimeEvent } from "./host-api/plugin-runtime";
 import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
-import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
-import type { KnowledgeUiEvent } from "./knowledge";
 import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, PackageLifecycleReceipt } from "./packages";
 import type {
@@ -59,15 +65,8 @@ import type {
 	SkillRepositoryRecord,
 	SkillRepositoryUpdateResult,
 } from "./skill-repository";
-import type {
-	SubagentDispatchInput,
-	SubagentDispatchReceipt,
-	SubagentPanelRun,
-	SubagentPanelSnapshot,
-} from "./subagent";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
-import type { ZoteroLocalWriteStatus, ZoteroStatus } from "./zotero";
 
 export interface ResourcePreviewResult {
 	encoding?: string;
@@ -102,26 +101,6 @@ export interface ImportedAttachment {
 
 /** IPC 通道名常量 */
 export const IpcChannels = {
-	/**
-	 * 知识域中性路由：宿主统筹，每域一个通道。
-	 * 域内的操作名与 schema 归插件所有；宿主只保留操作名清单作为授权边界。
-	 */
-	KnowledgeInvoke: "knowledge:invoke",
-	DailyInvoke: "daily:invoke",
-	ZoteroInvoke: "zotero:invoke",
-	/** 知识事件：宿主向所有窗口广播，通知知识视图失效或打开评审 */
-	KnowledgeEvent: "knowledge:event",
-
-	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
-
-	/** 机构访问（合法机构通道，持久登录会话 + EZproxy 模板） */
-	InstitutionalGetStatus: "institutional:getStatus",
-	InstitutionalSaveConfig: "institutional:saveConfig",
-	InstitutionalOpenLogin: "institutional:openLogin",
-	InstitutionalOpenUrl: "institutional:openUrl",
-	InstitutionalClear: "institutional:clear",
-	InstitutionalTestAccess: "institutional:testAccess",
-
 	SessionCreate: "session:create",
 	SessionList: "session:list",
 	SessionListAll: "session:listAll",
@@ -141,11 +120,6 @@ export const IpcChannels = {
 	SessionPeekSubagentMessages: "session:peekSubagentMessages",
 	SessionSteerSubagent: "session:steerSubagent",
 	SessionReplySubagentSupervisor: "session:replySubagentSupervisor",
-	/** 子智能体面板（会话内专属派发）：可用列表 / 派发 / 中止 / 本会话运行 */
-	SubagentsList: "subagents:list",
-	SubagentsDispatch: "subagents:dispatch",
-	SubagentsAbort: "subagents:abort",
-	SubagentsRuns: "subagents:runs",
 	SessionGetTodos: "session:getTodos",
 	SessionCompact: "session:compact",
 	SessionStats: "session:stats",
@@ -215,13 +189,6 @@ export const IpcChannels = {
 	SettingsLoginRespond: "settings:loginRespond",
 	/** main → renderer 登录流程事件（event/prompt/prompt-cancel） */
 	SettingsLoginEvent: "settings:loginEvent",
-	MemoryGetStatus: "memory:getStatus",
-	MemorySetEnabled: "memory:setEnabled",
-	MemoryClear: "memory:clear",
-	MemoryList: "memory:list",
-	MemoryRemove: "memory:remove",
-	MemoryPromote: "memory:promote",
-	MemoryPromoteToKnowledge: "memory:promoteToKnowledge",
 	AskRequest: "ask:request",
 	AskResolved: "ask:resolved",
 	AskRespond: "ask:respond",
@@ -355,17 +322,13 @@ export interface PiApi
 		EvidenceApi,
 		ResearchApi,
 		PluginCredentialsApi,
-		BackgroundJobsApi {
+		BackgroundJobsApi,
+		KnowledgeHostApi,
+		SubagentsApi,
+		InstitutionalApi,
+		MemoryApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
-	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */
-	listSessionSubagents(sessionId: string): Promise<SubagentPanelSnapshot>;
-	/** 子智能体面板：直接派发到会话（与 subagent 工具同一 runner；超出槽位排队） */
-	dispatchSubagents(sessionId: string, input: SubagentDispatchInput): Promise<SubagentDispatchReceipt>;
-	/** 子智能体面板：中止 / 取消一个面板运行（排队中取消，运行中 abort 子会话）；未知 runId 返回 false */
-	abortSubagentRun(runId: string): Promise<boolean>;
-	/** 子智能体面板：本会话的面板运行（切回会话时补水；只含进程内存里的记录） */
-	listSubagentRuns(sessionId: string): Promise<SubagentPanelRun[]>;
 	/** 搜索 pi.dev 社区包目录（服务端模糊匹配名称/描述/作者，50 条/页） */
 	searchCatalog(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
 	/** 安装社区包（npm:<name>，用户级）；返回可审计的生命周期回执 */
@@ -424,31 +387,6 @@ export interface PiApi
 	/** 一键接入预设 MCP（写入用户级 mcp.json，已存在则只重新启用） */
 	addMcpPreset(id: McpPreset["id"]): Promise<McpConfigSnapshot>;
 	onMcpEvent(cb: (event: McpStatusEvent) => void): () => void;
-	/**
-	 * 知识域中性路由：宿主统筹，每域一个通道。
-	 * 域内的操作名与 schema 归插件所有；宿主只保留操作名清单作为授权边界。
-	 */
-	invokeKnowledge(route: KnowledgeRouteInput): Promise<unknown>;
-	invokeDaily(route: KnowledgeRouteInput): Promise<unknown>;
-	invokeZotero(route: KnowledgeRouteInput): Promise<unknown>;
-	/** 知识事件订阅：宿主向所有窗口广播失效与评审打开通知 */
-	onKnowledgeEvent(cb: (event: KnowledgeUiEvent) => void): () => void;
-	/** Zotero 连接状态（宿主自己的技能设置面板用；插件走 invokeZotero 路由） */
-	getZoteroStatus(): Promise<ZoteroStatus>;
-	/** Zotero 本地写入授权状态（宿主自己的技能设置面板用） */
-	getZoteroLocalWrite(): Promise<ZoteroLocalWriteStatus>;
-	/** 机构访问状态（配置 + 会话 Cookie + 是否已登录）；文献库面板用 */
-	getInstitutionalStatus(): Promise<InstitutionalStatus>;
-	/** 保存机构访问配置（EZproxy 模板 / OpenURL / 机构名 / 自动下载开关 / 上限） */
-	saveInstitutionalConfig(input: InstitutionalSaveInput): Promise<InstitutionalStatus>;
-	/** 打开机构登录窗口（可选 URL，未传则用上次或模板） */
-	openInstitutionalLogin(url?: string): Promise<{ url: string }>;
-	/** 在机构会话窗口中打开指定 URL（用于手动下载或测试） */
-	openInstitutionalUrl(url: string): Promise<{ url: string }>;
-	/** 清除机构会话（Cookie + 存储） */
-	clearInstitutionalSession(): Promise<InstitutionalStatus>;
-	/** 测试机构访问是否可达（经 EZproxy 模板与会话） */
-	testInstitutionalAccess(url: string): Promise<InstitutionalTestResult>;
 	saveApiKey(providerId: string, key: string): Promise<void>;
 	removeCredential(providerId: string): Promise<void>;
 	addCustomProvider(input: CustomProviderInput): Promise<void>;
@@ -483,20 +421,6 @@ export interface PiApi
 	respondProviderLogin(loginId: string, promptId: string, value: string): Promise<void>;
 	/** 订阅登录流程事件（event/prompt/prompt-cancel，按 loginId 归属）；返回取消函数 */
 	onProviderLoginEvent(cb: (payload: LoginEventPayload) => void): () => void;
-	/** 读取项目（cwd）观察记忆状态。 */
-	memoryGetStatus(cwd: string): Promise<MemoryProjectStatus>;
-	/** 开关项目观察记忆的捕获与注入。 */
-	memorySetEnabled(cwd: string, enabled: boolean): Promise<MemoryProjectStatus>;
-	/** 清空项目观察记忆。 */
-	memoryClear(cwd: string): Promise<MemoryProjectStatus>;
-	/** 列出项目最近的观察记忆。 */
-	memoryList(cwd: string): Promise<MemoryListItem[]>;
-	/** 删除一条观察记忆。 */
-	memoryRemove(cwd: string, id: number): Promise<MemoryProjectStatus>;
-	/** 把一条观察提升为项目记忆（.pi/memory/）。 */
-	memoryPromote(cwd: string, id: number): Promise<MemoryProjectStatus>;
-	/** 把一条观察沉淀到知识库「记忆」分类。 */
-	memoryPromoteToKnowledge(cwd: string, id: number): Promise<{ path: string }>;
 	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
 	onAskRequest(cb: (req: AskRequest) => void): () => void;
 	onAskResolved(cb: (result: AskResolved) => void): () => void;

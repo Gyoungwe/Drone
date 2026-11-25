@@ -1,5 +1,5 @@
 import type { BackendServices, SessionServicePort } from "@drone/backend";
-import { IpcChannels, SubagentsContract } from "@drone/shared";
+import { SubagentsContract } from "@drone/shared";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /**
@@ -56,13 +56,5 @@ export function registerSubagentsIpc(
 		abort: (runId) => subagents.abort(runId),
 		runs: (sessionId) => subagents.listRuns(sessionId),
 	};
-	bindContract(SubagentsContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				list: IpcChannels.SubagentsList,
-				dispatch: IpcChannels.SubagentsDispatch,
-				abort: IpcChannels.SubagentsAbort,
-				runs: IpcChannels.SubagentsRuns,
-			})[method as keyof typeof SubagentsContract.methods],
-	});
+	bindContract(SubagentsContract, implementation);
 }

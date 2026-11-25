@@ -13,8 +13,15 @@ vi.mock("electron", () => ({
 	},
 }));
 
-import { IpcChannels } from "@drone/shared";
+import { channelOf, SubagentsContract } from "@drone/shared";
 import { registerSubagentsIpc } from "./subagents";
+
+function handlerFor(method: keyof typeof SubagentsContract.methods) {
+	const channel = channelOf(SubagentsContract, method);
+	const handler = mocks.handlers.get(channel);
+	if (!handler) throw new Error(`Missing IPC handler for ${channel}`);
+	return handler;
+}
 
 describe("registerSubagentsIpc", () => {
 	beforeEach(() => {
@@ -44,10 +51,10 @@ describe("registerSubagentsIpc", () => {
 		} as unknown as unknown as Parameters<typeof registerSubagentsIpc>[0];
 
 		registerSubagentsIpc(backend);
-		const list = mocks.handlers.get(IpcChannels.SubagentsList)!;
-		const dispatch = mocks.handlers.get(IpcChannels.SubagentsDispatch)!;
-		const abort = mocks.handlers.get(IpcChannels.SubagentsAbort)!;
-		const runs = mocks.handlers.get(IpcChannels.SubagentsRuns)!;
+		const list = handlerFor("list");
+		const dispatch = handlerFor("dispatch");
+		const abort = handlerFor("abort");
+		const runs = handlerFor("runs");
 
 		expect(await list({}, "session-1")).toMatchObject({ sessionId: "session-1" });
 		expect(await dispatch({}, "session-1", { tasks: [{ agent: "scout", task: "Inspect" }] })).toEqual({
@@ -74,7 +81,7 @@ describe("registerSubagentsIpc", () => {
 		} as unknown as unknown as Parameters<typeof registerSubagentsIpc>[0];
 		registerSubagentsIpc(backend);
 
-		const list = mocks.handlers.get(IpcChannels.SubagentsList)!;
+		const list = handlerFor("list");
 		const invalid = await list({}, "");
 		expect(invalid).toMatchObject({ code: "invalid_arguments", severity: "error" });
 		expect(listSessionSubagents).not.toHaveBeenCalled();
@@ -102,7 +109,7 @@ describe("registerSubagentsIpc", () => {
 		>[0];
 		registerSubagentsIpc(backend);
 
-		const list = mocks.handlers.get(IpcChannels.SubagentsList)!;
+		const list = handlerFor("list");
 		expect(await list({}, "session-2")).toMatchObject({ sessionId: "session-2" });
 		expect(service.listSession).toHaveBeenCalledWith("session-2");
 	});
