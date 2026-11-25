@@ -204,7 +204,6 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/main/ipc/decisions.integration.test.ts": 2,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/main/ipc/evidence.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/main/ipc/institutional.test.ts": 1,
-	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/main/ipc/knowledge.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/main/ipc/packages.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/main/ipc/plugin-runtime.integration.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/desktop/src/main/ipc/settings.ts": 1,

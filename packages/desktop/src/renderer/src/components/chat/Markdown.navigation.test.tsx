@@ -16,7 +16,7 @@ vi.mock("@drone/shared", () => ({
 	parseKnowledgeHref: doubles.parse,
 	splitResourceLink: (path: string) => ({ path }),
 }));
-vi.mock("../../api", () => ({ getPi: () => ({ getKnowledgeOverview: doubles.overview }) }));
+vi.mock("../../api", () => ({ getPi: () => ({ invokeKnowledge: doubles.overview }) }));
 vi.mock("../../lib/knowledge-error", () => ({ reportKnowledgeError: vi.fn() }));
 vi.mock("../../stores/knowledge", () => ({
 	useKnowledgeStore: { getState: () => ({ open: doubles.open }) },

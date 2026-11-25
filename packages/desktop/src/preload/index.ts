@@ -1,7 +1,9 @@
+import type { ZoteroLocalWriteStatus, ZoteroStatus } from "@drone/shared";
 import {
 	AppContract,
 	BackgroundJobsContract,
 	ComputeContract,
+	DailyContract,
 	DecisionsContract,
 	DiscoveryContract,
 	EvidenceContract,
@@ -21,6 +23,7 @@ import {
 	SettingsContract,
 	SubagentsContract,
 	UiPluginsContract,
+	ZoteroContract,
 } from "@drone/shared";
 import { contextBridge, ipcRenderer } from "electron";
 import { exposeContract } from "./expose-contract";
@@ -80,62 +83,9 @@ const appClient = exposeContract(AppContract, {
 			method,
 		),
 });
-const knowledgeClient = exposeContract(KnowledgeContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getCloudStatus: IpcChannels.KnowledgeCloudStatus,
-				probeCloud: IpcChannels.KnowledgeCloudProbe,
-				initializeCloud: IpcChannels.KnowledgeCloudInitialize,
-				setCloudPassword: IpcChannels.KnowledgeCloudPassword,
-				readCloudNote: IpcChannels.KnowledgeCloudReadNote,
-				writeCloudNote: IpcChannels.KnowledgeCloudWriteNote,
-				syncCloud: IpcChannels.KnowledgeCloudSync,
-				setSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
-				getOverview: IpcChannels.KnowledgeOverview,
-				getResearchRuns: IpcChannels.KnowledgeResearchRuns,
-				getResearchRun: IpcChannels.KnowledgeResearchRun,
-				previewSetup: IpcChannels.KnowledgeSetupPreview,
-				startSetup: IpcChannels.KnowledgeSetupStart,
-				getJobs: IpcChannels.KnowledgeJobs,
-				getReviews: IpcChannels.KnowledgeReviews,
-				previewReview: IpcChannels.KnowledgeReviewPreview,
-				reviewWithModel: IpcChannels.KnowledgeReviewModel,
-				cancelModelReview: IpcChannels.KnowledgeReviewModelCancel,
-				decideReview: IpcChannels.KnowledgeReviewDecide,
-				readNote: IpcChannels.KnowledgeReadNote,
-				maintain: IpcChannels.KnowledgeMaintain,
-				openTarget: IpcChannels.KnowledgeOpen,
-				resumeCheck: IpcChannels.KnowledgeResume,
-				getSemanticStatus: IpcChannels.KnowledgeSemanticStatus,
-				saveSemanticSettings: IpcChannels.KnowledgeSemanticSettingsSave,
-				testSemanticProvider: IpcChannels.KnowledgeSemanticProviderTest,
-				indexSemantic: IpcChannels.KnowledgeSemanticIndex,
-				cancelSemanticIndex: IpcChannels.KnowledgeSemanticIndexCancel,
-				search: IpcChannels.KnowledgeSearch,
-				getNoteLinks: IpcChannels.KnowledgeNoteLinks,
-				getGraph: IpcChannels.KnowledgeGraph,
-				getDailyDiscovery: IpcChannels.KnowledgeDailyDiscovery,
-				updateDailyDiscovery: IpcChannels.KnowledgeDailyDiscoveryUpdate,
-				decideDailyIdea: IpcChannels.KnowledgeDailyIdeaDecide,
-				decideDailyRadarPaper: IpcChannels.KnowledgeDailyRadarPaperDecide,
-				getTopics: IpcChannels.KnowledgeTopics,
-				archiveTopic: IpcChannels.KnowledgeTopicArchive,
-				getMaintenanceSettings: IpcChannels.KnowledgeMaintenanceSettings,
-				saveMaintenanceSettings: IpcChannels.KnowledgeMaintenanceSettingsSave,
-				runMaintenance: IpcChannels.KnowledgeMaintenanceRun,
-				getMaintenanceRuns: IpcChannels.KnowledgeMaintenanceRuns,
-				getZoteroStatus: IpcChannels.ZoteroStatus,
-				getZoteroWebApi: IpcChannels.ZoteroWebApiGet,
-				saveZoteroWebApi: IpcChannels.ZoteroWebApiSave,
-				clearZoteroWebApi: IpcChannels.ZoteroWebApiClear,
-				getZoteroLocalWrite: IpcChannels.ZoteroLocalWriteGet,
-				authorizeZoteroLocalWrite: IpcChannels.ZoteroLocalWriteAuthorize,
-				clearZoteroLocalWrite: IpcChannels.ZoteroLocalWriteClear,
-			},
-			method,
-		),
-});
+const knowledgeClient = exposeContract(KnowledgeContract);
+const dailyClient = exposeContract(DailyContract);
+const zoteroClient = exposeContract(ZoteroContract);
 const researchClient = exposeContract(ResearchContract, {
 	channelForMethod: (_contract, method) =>
 		channelFrom(
@@ -373,55 +323,18 @@ const inquiryClient = exposeContract(InquiryContract, {
 			method,
 		),
 });
+/**
+ * 中性路由客户端：域由通道承载，域内操作名由载荷承载。
+ * 宿主只保留操作名清单作为授权边界；域内的 schema 与校验归插件所有。
+ */
 const knowledgeApi = {
-	getKnowledgeCloudStatus: invoke(knowledgeClient, "getCloudStatus"),
-	probeKnowledgeCloud: invoke(knowledgeClient, "probeCloud"),
-	initializeKnowledgeCloud: invoke(knowledgeClient, "initializeCloud"),
-	setKnowledgeCloudPassword: invoke(knowledgeClient, "setCloudPassword"),
-	readKnowledgeCloudNote: invoke(knowledgeClient, "readCloudNote"),
-	writeKnowledgeCloudNote: invoke(knowledgeClient, "writeCloudNote"),
-	syncKnowledgeCloud: invoke(knowledgeClient, "syncCloud"),
-	setKnowledgeSpecialistSettings: invoke(knowledgeClient, "setSpecialistSettings"),
-	getKnowledgeOverview: invoke(knowledgeClient, "getOverview"),
-	getResearchRuns: invoke(knowledgeClient, "getResearchRuns"),
-	getResearchRun: invoke(knowledgeClient, "getResearchRun"),
-	previewKnowledgeSetup: invoke(knowledgeClient, "previewSetup"),
-	startKnowledgeSetup: invoke(knowledgeClient, "startSetup"),
-	getKnowledgeJobs: invoke(knowledgeClient, "getJobs"),
-	getKnowledgeReviews: invoke(knowledgeClient, "getReviews"),
-	previewKnowledgeReview: invoke(knowledgeClient, "previewReview"),
-	reviewKnowledgeWithModel: invoke(knowledgeClient, "reviewWithModel"),
-	cancelKnowledgeModelReview: invoke(knowledgeClient, "cancelModelReview"),
-	decideKnowledgeReview: invoke(knowledgeClient, "decideReview"),
-	readKnowledgeNote: invoke(knowledgeClient, "readNote"),
-	maintainKnowledge: invoke(knowledgeClient, "maintain"),
-	openKnowledgeTarget: invoke(knowledgeClient, "openTarget"),
-	resumeKnowledgeCheck: invoke(knowledgeClient, "resumeCheck"),
-	getKnowledgeSemanticStatus: invoke(knowledgeClient, "getSemanticStatus"),
-	saveKnowledgeSemanticSettings: invoke(knowledgeClient, "saveSemanticSettings"),
-	testKnowledgeSemanticProvider: invoke(knowledgeClient, "testSemanticProvider"),
-	indexKnowledgeSemantic: invoke(knowledgeClient, "indexSemantic"),
-	cancelKnowledgeSemanticIndex: invoke(knowledgeClient, "cancelSemanticIndex"),
-	searchKnowledge: invoke(knowledgeClient, "search"),
-	getKnowledgeNoteLinks: invoke(knowledgeClient, "getNoteLinks"),
-	getKnowledgeGraph: invoke(knowledgeClient, "getGraph"),
-	getDailyDiscovery: invoke(knowledgeClient, "getDailyDiscovery"),
-	updateDailyDiscovery: invoke(knowledgeClient, "updateDailyDiscovery"),
-	decideDailyIdea: invoke(knowledgeClient, "decideDailyIdea"),
-	decideDailyRadarPaper: invoke(knowledgeClient, "decideDailyRadarPaper"),
-	getKnowledgeTopics: invoke(knowledgeClient, "getTopics"),
-	archiveKnowledgeTopic: invoke(knowledgeClient, "archiveTopic"),
-	getKnowledgeMaintenanceSettings: invoke(knowledgeClient, "getMaintenanceSettings"),
-	saveKnowledgeMaintenanceSettings: invoke(knowledgeClient, "saveMaintenanceSettings"),
-	runKnowledgeMaintenance: invoke(knowledgeClient, "runMaintenance"),
-	getKnowledgeMaintenanceRuns: invoke(knowledgeClient, "getMaintenanceRuns"),
-	getZoteroStatus: invoke(knowledgeClient, "getZoteroStatus"),
-	getZoteroWebApi: invoke(knowledgeClient, "getZoteroWebApi"),
-	saveZoteroWebApi: invoke(knowledgeClient, "saveZoteroWebApi"),
-	clearZoteroWebApi: invoke(knowledgeClient, "clearZoteroWebApi"),
-	getZoteroLocalWrite: invoke(knowledgeClient, "getZoteroLocalWrite"),
-	authorizeZoteroLocalWrite: invoke(knowledgeClient, "authorizeZoteroLocalWrite"),
-	clearZoteroLocalWrite: invoke(knowledgeClient, "clearZoteroLocalWrite"),
+	invokeKnowledge: (route: { operation: string; input?: unknown }) => knowledgeClient.invoke(route),
+	invokeDaily: (route: { operation: string; input?: unknown }) => dailyClient.invoke(route),
+	invokeZotero: (route: { operation: string; input?: unknown }) => zoteroClient.invoke(route),
+	/** 宿主自己的技能设置面板直接读 Zotero 状态；插件侧走 invokeZotero 路由。 */
+	getZoteroStatus: () => zoteroClient.invoke({ operation: "status" }) as Promise<ZoteroStatus>,
+	getZoteroLocalWrite: () =>
+		zoteroClient.invoke({ operation: "localWrite.get" }) as Promise<ZoteroLocalWriteStatus>,
 };
 const invokeApi = {
 	...computeClient,

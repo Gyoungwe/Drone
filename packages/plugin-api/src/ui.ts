@@ -7,6 +7,7 @@ import type {
 	ReactNode,
 	RefObject,
 } from "react";
+import type { AppUiPort, InstitutionalUiPort } from "./ui-ports.js";
 import type {
 	AvailableModel,
 	ImageInput,
@@ -25,8 +26,38 @@ import type {
 	WorkbenchTask,
 } from "./ui-wire.js";
 
+/**
+ * The plugin-owned knowledge contract lives in `plugin-api/knowledge.ts`.  A
+ * name declared there is re-exported here so one name keeps one declaration;
+ * the generated wire never restates a domain schema.  Names the wire already
+ * publishes are omitted, because two export paths for one name would shadow.
+ */
+export type {
+	KnowledgeBinding,
+	KnowledgeGraph,
+	KnowledgeGraphNode,
+	KnowledgeGraphRelation,
+	KnowledgeGraphRelationType,
+	KnowledgeGraphSemantic,
+	KnowledgeGraphView,
+	KnowledgeIndexStatus,
+	KnowledgeJob,
+	KnowledgeLinkRef,
+	KnowledgeNoteLinks,
+	KnowledgeOverview,
+	KnowledgePage,
+	KnowledgeRecentNote,
+	KnowledgeSpecialistMode,
+	KnowledgeSpecialistSettings,
+	WikiReviewItem,
+} from "./knowledge.js";
 export type { ArtifactContributionProps, ArtifactSurface } from "./ui-artifact.js";
+export type { AppUiPort, InstitutionalSaveInput, InstitutionalUiPort } from "./ui-ports.js";
 export type * from "./ui-wire.js";
+export type * from "./ui-wire-daily.js";
+export type * from "./ui-wire-knowledge.js";
+export type * from "./ui-wire-review.js";
+export type * from "./ui-wire-services.js";
 
 /** Generic session actions preserve host session authorization and lifecycle boundaries. */
 export interface SessionUiPort {
@@ -307,6 +338,8 @@ export interface KnowledgeUiBindings {
 export interface DroneUiRuntime extends KnowledgeUiBindings, SessionUiBindings {
 	version: 1;
 	knowledge: KnowledgeUiPort;
+	app: AppUiPort;
+	institutional: InstitutionalUiPort;
 }
 
 /** Plugin-owned state only; creating a store grants no host data or runtime authority. */

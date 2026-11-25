@@ -16,13 +16,20 @@ vi.mock("electron", () => ({
 import { IpcChannels } from "@drone/shared";
 import { registerKnowledgeIpc } from "./knowledge";
 
-const channel = (key: string, fallback: string) =>
-	(IpcChannels as unknown as Record<string, string>)[key] || fallback;
+const mainFrame = () => {
+	const frame = {};
+	return { sender: { mainFrame: frame }, senderFrame: frame };
+};
+
+const invoke = (channel: string, route: { operation: string; input?: unknown }) =>
+	mocks.handlers.get(channel)?.(mainFrame(), route);
 
 let backend: any;
 beforeEach(() => {
 	mocks.handlers.clear();
 	mocks.from.mockReturnValue(mocks.window);
+	mocks.openExternal.mockClear();
+	mocks.openPath.mockClear();
 	backend = {
 		knowledge: {
 			overview: vi.fn(async () => ({ bound: false })),
@@ -41,6 +48,7 @@ beforeEach(() => {
 			cancelSemanticIndex: vi.fn(async () => {}),
 			topics: vi.fn(async () => ({ revision: 1, topics: [] })),
 			archiveTopic: vi.fn(async () => ({ status: "archived" })),
+			specialistSettings: vi.fn(async () => ({ mode: "off", revision: 1 })),
 			subscribe: vi.fn(),
 		},
 		startKnowledgeSetup: vi.fn(),
@@ -48,44 +56,48 @@ beforeEach(() => {
 	};
 	registerKnowledgeIpc(backend);
 });
+
+it("binds one neutral channel per domain group", () => {
+	expect(mocks.handlers.has(IpcChannels.KnowledgeInvoke)).toBe(true);
+	expect(mocks.handlers.has(IpcChannels.DailyInvoke)).toBe(true);
+	expect(mocks.handlers.has(IpcChannels.ZoteroInvoke)).toBe(true);
+});
+
 it("rejects requests from child frames and non-application windows", async () => {
 	const frame = {};
-	const handler = mocks.handlers.get(IpcChannels.KnowledgeReviewDecide)!;
-	await expect(handler({ sender: { mainFrame: frame }, senderFrame: {} }, { token: "x" })).rejects.toThrow(
-		"main frame",
-	);
+	const handler = mocks.handlers.get(IpcChannels.KnowledgeInvoke)!;
+	await expect(
+		handler({ sender: { mainFrame: frame }, senderFrame: {} }, { operation: "reviews.decide" }),
+	).rejects.toThrow("main frame");
 	mocks.from.mockReturnValue(null);
-	await expect(handler({ sender: { mainFrame: frame }, senderFrame: frame }, { token: "x" })).rejects.toThrow(
-		"main frame",
-	);
+	await expect(
+		handler({ sender: { mainFrame: frame }, senderFrame: frame }, { operation: "reviews.decide" }),
+	).rejects.toThrow("main frame");
 	expect(backend.knowledge.decide).not.toHaveBeenCalled();
 });
-it("passes the exact preview capability to the host API", async () => {
-	const frame = {},
-		input = { cwd: "/fixture", token: "exact-preview", decision: "apply" };
-	await mocks.handlers.get(IpcChannels.KnowledgeReviewDecide)?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		input,
+
+it("rejects an operation name outside the host allowlist", async () => {
+	await expect(invoke(IpcChannels.KnowledgeInvoke, { operation: "not.allowed" })).rejects.toThrow(
+		"Unknown knowledge operation: not.allowed",
 	);
+});
+
+it("passes the exact payload of a routed call to its implementation", async () => {
+	const input = { cwd: "/fixture", token: "exact-preview", decision: "apply" };
+	await invoke(IpcChannels.KnowledgeInvoke, { operation: "reviews.decide", input });
 	expect(backend.knowledge.decide).toHaveBeenCalledWith(input);
 });
+
 it("opens only backend-resolved knowledge paths", async () => {
-	const frame = {};
-	await mocks.handlers.get(IpcChannels.KnowledgeOpen)?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		{ path: "note.md", revision: 1 },
-	);
+	await invoke(IpcChannels.KnowledgeInvoke, {
+		operation: "openTarget",
+		input: { path: "note.md", revision: 1 },
+	});
 	expect(mocks.openExternal).toHaveBeenCalledWith("obsidian://open?path=%2Ffixture%2FVault%2Fnote.md");
 });
 
 it("returns an unconfigured Zotero Web API status without key material", async () => {
-	const frame = {};
-	await expect(
-		mocks.handlers.get(IpcChannels.ZoteroWebApiGet)?.({
-			sender: { mainFrame: frame },
-			senderFrame: frame,
-		}),
-	).resolves.toEqual({
+	await expect(invoke(IpcChannels.ZoteroInvoke, { operation: "webApi.get" })).resolves.toEqual({
 		configured: false,
 		source: null,
 		libraryType: "users",
@@ -96,94 +108,44 @@ it("returns an unconfigured Zotero Web API status without key material", async (
 	});
 });
 
-it.each([IpcChannels.ZoteroWebApiSave, IpcChannels.ZoteroWebApiClear])(
+it.each(["webApi.save", "webApi.clear"])(
 	"redirects retired Zotero credential writes through %s to plugin credentials",
-	async (name) => {
-		const frame = {};
-		const args = name === IpcChannels.ZoteroWebApiSave ? [{ apiKey: " ".repeat(16) }] : [];
-		await expect(
-			mocks.handlers.get(name)?.({ sender: { mainFrame: frame }, senderFrame: frame }, ...args),
-		).rejects.toThrow(
+	async (operation) => {
+		await expect(invoke(IpcChannels.ZoteroInvoke, { operation })).rejects.toThrow(
 			new Error("Zotero Web API keys are now saved under Settings → Plugins → pi-research → credentials"),
 		);
 	},
 );
 
-it("specialist mode writes require the same main-frame restriction as approvals", async () => {
-	const frame = {};
-	const handler = mocks.handlers.get(IpcChannels.KnowledgeSpecialistsSettings)!;
-	await expect(
-		handler(
-			{ sender: { mainFrame: frame }, senderFrame: {} },
-			{ mode: "automatic", revision: 0, bindingRevision: 1 },
-		),
-	).rejects.toThrow("main frame");
-});
 it("passes explicit specialist settings and both versions to the human host API", async () => {
-	backend.knowledge.specialistSettings = vi.fn(async () => ({ mode: "off", revision: 1 }));
-	const frame = {},
-		input = { mode: "off", revision: 0, bindingRevision: 1 };
-	await mocks.handlers.get(IpcChannels.KnowledgeSpecialistsSettings)?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		input,
-	);
+	const input = { mode: "off", revision: 0, bindingRevision: 1 };
+	await invoke(IpcChannels.KnowledgeInvoke, { operation: "specialist.settings", input });
 	expect(backend.knowledge.specialistSettings).toHaveBeenCalledWith(input);
 });
 
-it("model review and cancellation remain restricted to the application main frame", async () => {
-	const frame = {};
-	for (const name of [IpcChannels.KnowledgeReviewModel, IpcChannels.KnowledgeReviewModelCancel])
-		await expect(
-			mocks.handlers.get(name)?.({ sender: { mainFrame: frame }, senderFrame: {} }, {}),
-		).rejects.toThrow("main frame");
-});
-
 it("guards and forwards semantic and topic human actions exactly", async () => {
-	const frame = {};
 	const input = { cwd: "/fixture", bindingRevision: 4, requestId: "r-1", limit: 8 };
-	await mocks.handlers.get(channel("KnowledgeSemanticIndex", "knowledge:semanticIndex"))?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		input,
-	);
+	await invoke(IpcChannels.KnowledgeInvoke, { operation: "semantic.index", input });
 	expect(backend.knowledge.indexSemantic).toHaveBeenCalledWith(input);
+	const frame = {};
 	await expect(
-		mocks.handlers.get(channel("KnowledgeTopics", "knowledge:topics"))?.(
+		mocks.handlers.get(IpcChannels.KnowledgeInvoke)?.(
 			{ sender: { mainFrame: frame }, senderFrame: {} },
-			input,
+			{ operation: "topics.list", input },
 		),
 	).rejects.toThrow("main frame");
 	const topicInput = { cwd: "/fixture", bindingRevision: 4, id: "topic-1", expectedRevision: 9 };
-	await mocks.handlers.get(channel("KnowledgeTopicArchive", "knowledge:topicArchive"))?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		topicInput,
-	);
+	await invoke(IpcChannels.KnowledgeInvoke, { operation: "topics.archive", input: topicInput });
 	expect(backend.knowledge.archiveTopic).toHaveBeenCalledWith(topicInput);
-});
-it("forwards explicit one-shot model review choices, never granting a model tool approval", async () => {
-	backend.reviewKnowledgeWithModel = vi.fn(async () => ({ applied: false }));
-	const frame = {},
-		input = {
-			cwd: "/fixture",
-			token: "exact",
-			sessionId: "s",
-			requestId: "id",
-			acknowledged: true,
-			autoApply: false,
-		};
-	await mocks.handlers.get(IpcChannels.KnowledgeReviewModel)?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		input,
-	);
-	expect(backend.reviewKnowledgeWithModel).toHaveBeenCalledWith(input);
 });
 
 it("binds session-bound actions from BackendServices when provided", async () => {
-	const frame = {};
 	const knowledgeSession = {
 		startSetup: vi.fn(async () => undefined),
 		reviewWithModel: vi.fn(async () => ({ applied: false })),
 		cancelModelReview: vi.fn(async () => undefined),
 		resumeCheck: vi.fn(async () => undefined),
+		disposeSession: vi.fn(),
 	};
 	registerKnowledgeIpc({
 		sessions: backend,
@@ -199,24 +161,27 @@ it("binds session-bound actions from BackendServices when provided", async () =>
 		acknowledged: true,
 		autoApply: false,
 	};
-	await mocks.handlers.get(IpcChannels.KnowledgeSetupStart)?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		{ sessionId: "s", path: "/fixture/Vault" },
-	);
-	await mocks.handlers.get(IpcChannels.KnowledgeReviewModel)?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		reviewInput,
-	);
-	await mocks.handlers.get(IpcChannels.KnowledgeReviewModelCancel)?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		{ sessionId: "s", requestId: "id" },
-	);
-	await mocks.handlers.get(IpcChannels.KnowledgeResume)?.(
-		{ sender: { mainFrame: frame }, senderFrame: frame },
-		"s",
-	);
+	await invoke(IpcChannels.KnowledgeInvoke, {
+		operation: "setup.start",
+		input: { sessionId: "s", path: "/fixture/Vault" },
+	});
+	await invoke(IpcChannels.KnowledgeInvoke, { operation: "reviews.withModel", input: reviewInput });
+	await invoke(IpcChannels.KnowledgeInvoke, {
+		operation: "reviews.cancelModel",
+		input: { sessionId: "s", requestId: "id" },
+	});
+	await invoke(IpcChannels.KnowledgeInvoke, { operation: "setup.resume", input: "s" });
 	expect(knowledgeSession.startSetup).toHaveBeenCalledWith({ sessionId: "s", path: "/fixture/Vault" });
 	expect(knowledgeSession.reviewWithModel).toHaveBeenCalledWith(reviewInput);
 	expect(knowledgeSession.cancelModelReview).toHaveBeenCalledWith({ sessionId: "s", requestId: "id" });
 	expect(knowledgeSession.resumeCheck).toHaveBeenCalledWith("s");
+});
+
+it("forwards knowledge events to every open window", () => {
+	expect(backend.knowledge.subscribe).toHaveBeenCalled();
+	const listener = backend.knowledge.subscribe.mock.calls[0]![0] as (event: unknown) => void;
+	listener({ kind: "invalidate" });
+	expect(mocks.window.webContents.send).toHaveBeenCalledWith(IpcChannels.KnowledgeEvent, {
+		kind: "invalidate",
+	});
 });

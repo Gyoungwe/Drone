@@ -1,394 +1,67 @@
-import { Type } from "typebox";
-import type {
-	DailyDiscoveryState,
-	KnowledgeApi,
-	KnowledgeCloudNote,
-	KnowledgeCloudStatus,
-	KnowledgeCloudSyncResult,
-	KnowledgeCloudWriteResult,
-	KnowledgeGraph,
-	KnowledgeMaintenanceRun,
-	KnowledgeMaintenanceSettings,
-	KnowledgeNote,
-	KnowledgeNoteLinks,
-	KnowledgeOverview,
-	KnowledgePage,
-	KnowledgePageRequest,
-	KnowledgeSearchRequest,
-	KnowledgeSearchResult,
-	KnowledgeSemanticIndexCancelRequest,
-	KnowledgeSemanticIndexRequest,
-	KnowledgeSemanticIndexResult,
-	KnowledgeSemanticProviderRequest,
-	KnowledgeSemanticProviderResult,
-	KnowledgeSemanticSettings,
-	KnowledgeSemanticSettingsRequest,
-	KnowledgeSemanticStatus,
-	KnowledgeSetupPreview,
-	KnowledgeTopicArchiveRequest,
-	KnowledgeTopicListResult,
-	KnowledgeTopicsRequest,
-	KnowledgeUiEvent,
-	ResearchRunDetail,
-	ResearchRunListItem,
-	ResearchRunRequest,
-	ResearchRunsRequest,
-	WikiModelReviewInput,
-	WikiModelReviewResult,
-	WikiReviewItem,
-	WikiReviewPreview,
-	WikiReviewResult,
-} from "../knowledge";
-import type { KnowledgeSpecialistSettings } from "../knowledge-specialists";
-import type { ZoteroLocalWriteStatus, ZoteroWebApiSaveInput, ZoteroWebApiStatus } from "../zotero";
+import { type Static, Type } from "typebox";
+import type { KnowledgeUiEvent } from "../knowledge";
 import { defineDomain } from "./define";
 
 /**
- * Knowledge payloads are produced by the versioned `.pi` knowledge service.
- * Keep the transport boundary strict about the tuple arity and top-level
- * object shape while allowing the service to evolve additive fields without
- * requiring a desktop release for every new projection field.
+ * Neutral domain routing.
+ *
+ * The host coordinates three domain groups and keeps one channel per group.
+ * Everything inside a group — the operation names beyond the allowlist, their
+ * schemas and their validation — belongs to the plugin that owns the domain.
+ * Adding a domain operation is therefore one entry in the host's route table,
+ * not a new method, schema, IPC channel or generated projection.
+ *
+ * The envelope stays opaque on purpose: restating a domain schema here would
+ * make the host a second owner of it and let the two copies drift.
  */
-const ObjectPayload = <T>() => Type.Unsafe<T>({ type: "object" });
-const ResultObject = <T>() => Type.Unsafe<T>({ type: "object" });
-const OneObject = <T>() => Type.Tuple([ObjectPayload<T>()]);
-const OptionalObject = <T>() => Type.Union([Type.Tuple([]), OneObject<T>()]);
+export const KNOWLEDGE_ROUTE_DOMAINS = ["knowledge", "daily", "zotero"] as const;
 
-const SpecialistSettingsInput = Type.Object(
+export type KnowledgeRouteDomain = (typeof KNOWLEDGE_ROUTE_DOMAINS)[number];
+
+/**
+ * One routed call: the operation name inside the domain plus its opaque payload.
+ * The domain itself is carried by the channel, so a mistyped operation can
+ * never reach another group's implementation.
+ */
+export const KnowledgeRouteInput = Type.Object(
 	{
-		mode: Type.Union([Type.Literal("automatic"), Type.Literal("manual"), Type.Literal("off")]),
-		revision: Type.Integer({ minimum: 0 }),
-		bindingRevision: Type.Integer({ minimum: 0 }),
-		maxRunsPerTurn: Type.Optional(Type.Integer({ minimum: 0 })),
-		maxRunsPerSession: Type.Optional(Type.Integer({ minimum: 0 })),
-		maxToolOperations: Type.Optional(Type.Integer({ minimum: 0 })),
-		concurrency: Type.Optional(Type.Integer({ minimum: 1 })),
-		queueLimit: Type.Optional(Type.Integer({ minimum: 0 })),
-		queueWaitMs: Type.Optional(Type.Integer({ minimum: 0 })),
-		timeoutMs: Type.Optional(Type.Integer({ minimum: 0 })),
-		maxTokensPerTurn: Type.Optional(Type.Integer({ minimum: 0 })),
-		maxTokensPerSession: Type.Optional(Type.Integer({ minimum: 0 })),
-		maxCostPerTurn: Type.Optional(Type.Number({ minimum: 0 })),
-		maxCostPerSession: Type.Optional(Type.Number({ minimum: 0 })),
+		operation: Type.String({ minLength: 1, maxLength: 128 }),
+		input: Type.Optional(Type.Unknown()),
 	},
 	{ additionalProperties: false },
 );
 
-const ZoteroStatusSchema = Type.Object(
-	{
-		registered: Type.Optional(Type.Boolean()),
-		enabled: Type.Optional(Type.Boolean()),
-		command: Type.Union([Type.String(), Type.Null()]),
-		version: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-		localApiReachable: Type.Boolean(),
-		desktopDetected: Type.Boolean(),
-		desktopPath: Type.Union([Type.String(), Type.Null()]),
-		docsUrl: Type.String({ minLength: 1 }),
-		downloadUrl: Type.String({ minLength: 1 }),
-	},
-	{ additionalProperties: false },
-);
+export type KnowledgeRouteInput = Static<typeof KnowledgeRouteInput>;
 
-/** Host API contract for knowledge management, reviews, semantic indexing and Zotero status. */
+/** The routed knowledge group: notes, graph, reviews, semantic, topics, cloud. */
 export const KnowledgeContract = defineDomain("knowledge", {
 	methods: {
-		getCloudStatus: {
-			args: Type.Tuple([]),
-			result: ResultObject<KnowledgeCloudStatus>(),
-		},
-		probeCloud: {
-			args: Type.Tuple([]),
-			result: ResultObject<KnowledgeCloudStatus>(),
-		},
-		initializeCloud: {
-			args: Type.Tuple([]),
-			result: ResultObject<KnowledgeCloudStatus>(),
-		},
-		setCloudPassword: {
-			args: Type.Tuple([
-				Type.Object(
-					{ password: Type.Union([Type.String({ minLength: 1, maxLength: 256 }), Type.Null()]) },
-					{ additionalProperties: false },
-				),
-			]),
-			result: ResultObject<KnowledgeCloudStatus>(),
-		},
-		readCloudNote: {
-			args: Type.Tuple([
-				Type.Object({ path: Type.String({ minLength: 1 }) }, { additionalProperties: false }),
-			]),
-			result: ResultObject<KnowledgeCloudNote>(),
-		},
-		writeCloudNote: {
-			args: Type.Tuple([
-				Type.Object(
-					{
-						path: Type.String({ minLength: 1 }),
-						text: Type.String({ maxLength: 1024 * 1024 }),
-						expectedVersion: Type.Optional(Type.String({ minLength: 1 })),
-					},
-					{ additionalProperties: false },
-				),
-			]),
-			result: ResultObject<KnowledgeCloudWriteResult>(),
-		},
-		syncCloud: {
-			args: Type.Tuple([
-				Type.Object(
-					{
-						cwd: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-						mode: Type.Union([Type.Literal("pull"), Type.Literal("push")]),
-						bindingRevision: Type.Integer({ minimum: 1 }),
-						paths: Type.Array(Type.String({ minLength: 1 }), { minItems: 1, maxItems: 64 }),
-						previews: Type.Optional(
-							Type.Array(
-								Type.Object(
-									{
-										path: Type.String({ minLength: 1 }),
-										localHash: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
-										remoteHash: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
-										remoteVersion: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
-									},
-									{ additionalProperties: false },
-								),
-								{ minItems: 1, maxItems: 64 },
-							),
-						),
-						resolution: Type.Optional(Type.Union([Type.Literal("local"), Type.Literal("remote")])),
-					},
-					{ additionalProperties: false },
-				),
-			]),
-			result: ResultObject<KnowledgeCloudSyncResult>(),
-		},
-		setSpecialistSettings: {
-			args: Type.Tuple([SpecialistSettingsInput]),
-			result: ResultObject<KnowledgeSpecialistSettings>(),
-		},
-		getOverview: {
-			args: OptionalObject<{ cwd?: string | null; sessionId?: string | null }>(),
-			result: ResultObject<KnowledgeOverview>(),
-		},
-		getResearchRuns: {
-			args: OptionalObject<ResearchRunsRequest>(),
-			result: ResultObject<{ items: ResearchRunListItem[]; total: number }>(),
-		},
-		getResearchRun: {
-			args: OneObject<ResearchRunRequest>(),
-			result: ResultObject<ResearchRunDetail>(),
-		},
-		previewSetup: {
-			args: OneObject<{ cwd?: string | null; path?: string | null }>(),
-			result: ResultObject<KnowledgeSetupPreview>(),
-		},
-		startSetup: {
-			args: OneObject<{ sessionId: string; path?: string }>(),
-			result: Type.Void(),
-		},
-		getJobs: {
-			args: OptionalObject<KnowledgePageRequest>(),
-			result: ResultObject<KnowledgePage<unknown>>(),
-		},
-		getReviews: {
-			args: OneObject<KnowledgePageRequest>(),
-			result: ResultObject<KnowledgePage<WikiReviewItem>>(),
-		},
-		previewReview: {
-			args: OneObject<{ cwd: string; id: string; revision: number }>(),
-			result: ResultObject<WikiReviewPreview>(),
-		},
-		reviewWithModel: {
-			args: OneObject<WikiModelReviewInput>(),
-			result: ResultObject<WikiModelReviewResult>(),
-		},
-		cancelModelReview: {
-			args: OneObject<{ sessionId: string; requestId: string }>(),
-			result: Type.Void(),
-		},
-		decideReview: {
-			args: OneObject<{ cwd: string; token: string; decision: "apply" | "reject" }>(),
-			result: ResultObject<WikiReviewResult>(),
-		},
-		readNote: {
-			args: OneObject<{ cwd?: string | null; path: string; startLine?: number; revision: number }>(),
-			result: ResultObject<KnowledgeNote>(),
-		},
-		maintain: {
-			args: OneObject<{
-				cwd?: string | null;
-				action: "reconcile" | "refresh-navigation" | "review-automatic" | "review-strict" | "undo-wiki";
-				id?: string;
-				expectedHash?: string;
-				revision: number;
-			}>(),
+		invoke: {
+			args: Type.Tuple([KnowledgeRouteInput]),
 			result: Type.Unknown(),
-		},
-		openTarget: {
-			args: OneObject<{ cwd?: string | null; path?: string | null; revision: number }>(),
-			result: Type.Void(),
-		},
-		resumeCheck: {
-			args: Type.Tuple([Type.String({ minLength: 1 })]),
-			result: Type.Void(),
-		},
-		getSemanticStatus: {
-			args: OptionalObject<{ cwd?: string | null; bindingRevision?: number }>(),
-			result: ResultObject<KnowledgeSemanticStatus>(),
-		},
-		saveSemanticSettings: {
-			args: OneObject<KnowledgeSemanticSettingsRequest>(),
-			result: ResultObject<KnowledgeSemanticSettings>(),
-		},
-		testSemanticProvider: {
-			args: OneObject<KnowledgeSemanticProviderRequest>(),
-			result: ResultObject<KnowledgeSemanticProviderResult>(),
-		},
-		indexSemantic: {
-			args: OneObject<KnowledgeSemanticIndexRequest>(),
-			result: ResultObject<KnowledgeSemanticIndexResult>(),
-		},
-		cancelSemanticIndex: {
-			args: OneObject<KnowledgeSemanticIndexCancelRequest>(),
-			result: Type.Void(),
-		},
-		search: {
-			args: OneObject<KnowledgeSearchRequest>(),
-			result: ResultObject<KnowledgeSearchResult>(),
-		},
-		getNoteLinks: {
-			args: OneObject<{ path: string; revision: number }>(),
-			result: ResultObject<KnowledgeNoteLinks>(),
-		},
-		getGraph: {
-			args: OneObject<{
-				revision: number;
-				limit?: number;
-				view?: "semantic" | "all";
-				mergeMirrors?: boolean;
-			}>(),
-			result: ResultObject<KnowledgeGraph>(),
-		},
-		getDailyDiscovery: {
-			args: Type.Tuple([]),
-			result: ResultObject<DailyDiscoveryState>(),
-		},
-		updateDailyDiscovery: {
-			args: OneObject<{ enabled?: boolean; run?: boolean }>(),
-			result: ResultObject<DailyDiscoveryState>(),
-		},
-		decideDailyIdea: {
-			args: OneObject<{ id: string; action: "save" | "dismiss" }>(),
-			result: ResultObject<DailyDiscoveryState>(),
-		},
-		decideDailyRadarPaper: {
-			args: OneObject<{ id: string; action: "capture" | "dismiss" }>(),
-			result: ResultObject<DailyDiscoveryState>(),
-		},
-		getTopics: {
-			args: OneObject<KnowledgeTopicsRequest>(),
-			result: ResultObject<KnowledgeTopicListResult>(),
-		},
-		archiveTopic: {
-			args: OneObject<KnowledgeTopicArchiveRequest>(),
-			result: Type.Unknown(),
-		},
-		getMaintenanceSettings: { args: Type.Tuple([]), result: ResultObject<KnowledgeMaintenanceSettings>() },
-		saveMaintenanceSettings: {
-			args: OneObject<KnowledgeMaintenanceSettings>(),
-			result: ResultObject<KnowledgeMaintenanceSettings>(),
-		},
-		runMaintenance: { args: OneObject<{ cwd: string }>(), result: ResultObject<KnowledgeMaintenanceRun>() },
-		getMaintenanceRuns: { args: Type.Tuple([]), result: Type.Array(ResultObject<KnowledgeMaintenanceRun>()) },
-		getZoteroStatus: {
-			args: Type.Tuple([]),
-			result: ZoteroStatusSchema,
-		},
-		getZoteroWebApi: {
-			args: Type.Tuple([]),
-			result: ResultObject<ZoteroWebApiStatus>(),
-		},
-		saveZoteroWebApi: {
-			args: Type.Tuple([
-				Type.Object(
-					{
-						apiKey: Type.String({ minLength: 16, maxLength: 64 }),
-						libraryType: Type.Optional(Type.Union([Type.Literal("users"), Type.Literal("groups")])),
-						libraryId: Type.Optional(Type.String({ maxLength: 20 })),
-					},
-					{ additionalProperties: false },
-				),
-			]),
-			result: ResultObject<ZoteroWebApiStatus>(),
-		},
-		clearZoteroWebApi: {
-			args: Type.Tuple([]),
-			result: ResultObject<ZoteroWebApiStatus>(),
-		},
-		getZoteroLocalWrite: {
-			args: Type.Tuple([]),
-			result: ResultObject<ZoteroLocalWriteStatus>(),
-		},
-		authorizeZoteroLocalWrite: {
-			args: Type.Tuple([]),
-			result: ResultObject<ZoteroLocalWriteStatus>(),
-		},
-		clearZoteroLocalWrite: {
-			args: Type.Tuple([]),
-			result: ResultObject<ZoteroLocalWriteStatus>(),
 		},
 	},
 	events: {
-		event: ObjectPayload<KnowledgeUiEvent>(),
+		event: Type.Unsafe<KnowledgeUiEvent>({ type: "object" }),
 	},
 });
 
-export type KnowledgeSchemaTypes = {
-	getCloudStatus: [];
-	probeCloud: [];
-	initializeCloud: [];
-	setCloudPassword: Parameters<KnowledgeApi["setKnowledgeCloudPassword"]>;
-	readCloudNote: Parameters<KnowledgeApi["readKnowledgeCloudNote"]>;
-	writeCloudNote: Parameters<KnowledgeApi["writeKnowledgeCloudNote"]>;
-	syncCloud: Parameters<KnowledgeApi["syncKnowledgeCloud"]>;
-	setSpecialistSettings: Parameters<KnowledgeApi["setKnowledgeSpecialistSettings"]>;
-	getOverview: Parameters<KnowledgeApi["getKnowledgeOverview"]>;
-	getResearchRuns: Parameters<KnowledgeApi["getResearchRuns"]>;
-	getResearchRun: Parameters<KnowledgeApi["getResearchRun"]>;
-	previewSetup: Parameters<KnowledgeApi["previewKnowledgeSetup"]>;
-	startSetup: [{ sessionId: string; path?: string }];
-	getJobs: Parameters<KnowledgeApi["getKnowledgeJobs"]>;
-	getReviews: Parameters<KnowledgeApi["getKnowledgeReviews"]>;
-	previewReview: Parameters<KnowledgeApi["previewKnowledgeReview"]>;
-	reviewWithModel: Parameters<KnowledgeApi["reviewKnowledgeWithModel"]>;
-	cancelModelReview: Parameters<KnowledgeApi["cancelKnowledgeModelReview"]>;
-	decideReview: Parameters<KnowledgeApi["decideKnowledgeReview"]>;
-	readNote: Parameters<KnowledgeApi["readKnowledgeNote"]>;
-	maintain: Parameters<KnowledgeApi["maintainKnowledge"]>;
-	openTarget: Parameters<KnowledgeApi["openKnowledgeTarget"]>;
-	resumeCheck: [sessionId: string];
-	getSemanticStatus: Parameters<KnowledgeApi["getKnowledgeSemanticStatus"]>;
-	saveSemanticSettings: Parameters<KnowledgeApi["saveKnowledgeSemanticSettings"]>;
-	testSemanticProvider: Parameters<KnowledgeApi["testKnowledgeSemanticProvider"]>;
-	indexSemantic: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>;
-	cancelSemanticIndex: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
-	search: Parameters<KnowledgeApi["searchKnowledge"]>;
-	getNoteLinks: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>;
-	getGraph: Parameters<KnowledgeApi["getKnowledgeGraph"]>;
-	getDailyDiscovery: [];
-	updateDailyDiscovery: Parameters<KnowledgeApi["updateDailyDiscovery"]>;
-	decideDailyIdea: Parameters<KnowledgeApi["decideDailyIdea"]>;
-	decideDailyRadarPaper: Parameters<KnowledgeApi["decideDailyRadarPaper"]>;
-	getTopics: Parameters<KnowledgeApi["getKnowledgeTopics"]>;
-	archiveTopic: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>;
-	getMaintenanceSettings: [];
-	saveMaintenanceSettings: Parameters<KnowledgeApi["saveKnowledgeMaintenanceSettings"]>;
-	runMaintenance: Parameters<KnowledgeApi["runKnowledgeMaintenance"]>;
-	getMaintenanceRuns: [];
-	getZoteroStatus: [];
-	getZoteroWebApi: [];
-	saveZoteroWebApi: [ZoteroWebApiSaveInput];
-	clearZoteroWebApi: [];
-	getZoteroLocalWrite: [];
-	authorizeZoteroLocalWrite: [];
-	clearZoteroLocalWrite: [];
-};
+/** The routed daily-discovery group. */
+export const DailyContract = defineDomain("daily", {
+	methods: {
+		invoke: {
+			args: Type.Tuple([KnowledgeRouteInput]),
+			result: Type.Unknown(),
+		},
+	},
+});
+
+/** The routed Zotero group: local write authorization and status. */
+export const ZoteroContract = defineDomain("zotero", {
+	methods: {
+		invoke: {
+			args: Type.Tuple([KnowledgeRouteInput]),
+			result: Type.Unknown(),
+		},
+	},
+});

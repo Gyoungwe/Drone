@@ -32,7 +32,7 @@ import { useUiStore } from "../stores/ui";
 import { useUiPreferencesStore } from "../stores/ui-preferences";
 import type { DroneUiApi } from "./env";
 import { PLUGIN_HOST_API_MANIFEST } from "./host-api.manifest";
-import { knowledgeUiPort } from "./knowledge-api";
+import { appUiPort, institutionalUiPort, knowledgeUiPort } from "./knowledge-api";
 import { taskArtifactLinks } from "./legacy-task-artifacts";
 import { PluginEntryHost, usePluginEntries } from "./PluginRegions";
 import { usePluginRuntime } from "./runtime";
@@ -116,64 +116,27 @@ window.DroneUI = {
 	// 挂钩 4：插件自带 i18n 条目（flow.status.* / 自定义键），无头插件 activate() 里注册、返回的清理函数里注销
 	// <drone:generated namespace="knowledge">
 	knowledge: {
-		archiveKnowledgeTopic: knowledgeUiPort.archiveKnowledgeTopic,
-		authorizeZoteroLocalWrite: knowledgeUiPort.authorizeZoteroLocalWrite,
-		cancelKnowledgeModelReview: knowledgeUiPort.cancelKnowledgeModelReview,
-		cancelKnowledgeSemanticIndex: knowledgeUiPort.cancelKnowledgeSemanticIndex,
-		clearInstitutionalSession: knowledgeUiPort.clearInstitutionalSession,
-		clearZoteroLocalWrite: knowledgeUiPort.clearZoteroLocalWrite,
-		clearZoteroWebApi: knowledgeUiPort.clearZoteroWebApi,
-		decideDailyIdea: knowledgeUiPort.decideDailyIdea,
-		decideDailyRadarPaper: knowledgeUiPort.decideDailyRadarPaper,
-		decideKnowledgeReview: knowledgeUiPort.decideKnowledgeReview,
-		formalKnowledgeVault: knowledgeUiPort.formalKnowledgeVault,
-		getDailyDiscovery: knowledgeUiPort.getDailyDiscovery,
-		getInstitutionalStatus: knowledgeUiPort.getInstitutionalStatus,
-		getKnowledgeCloudStatus: knowledgeUiPort.getKnowledgeCloudStatus,
-		getKnowledgeGraph: knowledgeUiPort.getKnowledgeGraph,
-		getKnowledgeJobs: knowledgeUiPort.getKnowledgeJobs,
-		getKnowledgeMaintenanceRuns: knowledgeUiPort.getKnowledgeMaintenanceRuns,
-		getKnowledgeMaintenanceSettings: knowledgeUiPort.getKnowledgeMaintenanceSettings,
-		getKnowledgeNoteLinks: knowledgeUiPort.getKnowledgeNoteLinks,
-		getKnowledgeOverview: knowledgeUiPort.getKnowledgeOverview,
-		getKnowledgeReviews: knowledgeUiPort.getKnowledgeReviews,
-		getKnowledgeSemanticStatus: knowledgeUiPort.getKnowledgeSemanticStatus,
-		getKnowledgeTopics: knowledgeUiPort.getKnowledgeTopics,
-		getResearchRun: knowledgeUiPort.getResearchRun,
-		getResearchRuns: knowledgeUiPort.getResearchRuns,
-		getZoteroLocalWrite: knowledgeUiPort.getZoteroLocalWrite,
-		getZoteroStatus: knowledgeUiPort.getZoteroStatus,
-		getZoteroWebApi: knowledgeUiPort.getZoteroWebApi,
-		indexKnowledgeSemantic: knowledgeUiPort.indexKnowledgeSemantic,
-		initializeKnowledgeCloud: knowledgeUiPort.initializeKnowledgeCloud,
-		maintainKnowledge: knowledgeUiPort.maintainKnowledge,
-		onKnowledgeEvent: knowledgeUiPort.onKnowledgeEvent,
-		openExternal: knowledgeUiPort.openExternal,
-		openInstitutionalLogin: knowledgeUiPort.openInstitutionalLogin,
-		openKnowledgeTarget: knowledgeUiPort.openKnowledgeTarget,
-		pickDirectory: knowledgeUiPort.pickDirectory,
-		previewKnowledgeReview: knowledgeUiPort.previewKnowledgeReview,
-		previewKnowledgeSetup: knowledgeUiPort.previewKnowledgeSetup,
-		probeKnowledgeCloud: knowledgeUiPort.probeKnowledgeCloud,
-		prompt: knowledgeUiPort.prompt,
-		readKnowledgeCloudNote: knowledgeUiPort.readKnowledgeCloudNote,
-		readKnowledgeNote: knowledgeUiPort.readKnowledgeNote,
-		resumeKnowledgeCheck: knowledgeUiPort.resumeKnowledgeCheck,
-		reviewKnowledgeWithModel: knowledgeUiPort.reviewKnowledgeWithModel,
-		runKnowledgeMaintenance: knowledgeUiPort.runKnowledgeMaintenance,
-		saveKnowledgeMaintenanceSettings: knowledgeUiPort.saveKnowledgeMaintenanceSettings,
-		saveKnowledgeSemanticSettings: knowledgeUiPort.saveKnowledgeSemanticSettings,
-		saveZoteroWebApi: knowledgeUiPort.saveZoteroWebApi,
-		searchKnowledge: knowledgeUiPort.searchKnowledge,
-		setKnowledgeCloudPassword: knowledgeUiPort.setKnowledgeCloudPassword,
-		setKnowledgeSpecialistSettings: knowledgeUiPort.setKnowledgeSpecialistSettings,
-		startKnowledgeSetup: knowledgeUiPort.startKnowledgeSetup,
-		syncKnowledgeCloud: knowledgeUiPort.syncKnowledgeCloud,
-		testInstitutionalAccess: knowledgeUiPort.testInstitutionalAccess,
-		testKnowledgeSemanticProvider: knowledgeUiPort.testKnowledgeSemanticProvider,
-		updateDailyDiscovery: knowledgeUiPort.updateDailyDiscovery,
+		knowledge: knowledgeUiPort.knowledge,
+		daily: knowledgeUiPort.daily,
+		zotero: knowledgeUiPort.zotero,
 	},
 	// </drone:generated namespace="knowledge">
+	// <drone:generated namespace="app">
+	app: {
+		pickDirectory: appUiPort.pickDirectory,
+		formalKnowledgeVault: appUiPort.formalKnowledgeVault,
+	},
+	// </drone:generated namespace="app">
+	// <drone:generated namespace="institutional">
+	institutional: {
+		getStatus: institutionalUiPort.getStatus,
+		saveConfig: institutionalUiPort.saveConfig,
+		openLogin: institutionalUiPort.openLogin,
+		openUrl: institutionalUiPort.openUrl,
+		clear: institutionalUiPort.clear,
+		testAccess: institutionalUiPort.testAccess,
+	},
+	// </drone:generated namespace="institutional">
 	// <drone:generated namespace="sessions">
 	sessions: {
 		prompt: sessionUiPort.prompt,

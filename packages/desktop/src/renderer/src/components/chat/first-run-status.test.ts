@@ -3,7 +3,7 @@ import { firstRunComplete, probeFirstRunStatus } from "./first-run-status";
 
 const pi = (over: Record<string, unknown> = {}) =>
 	({
-		getKnowledgeOverview: async () => ({ binding: { revision: 2 } }),
+		invokeKnowledge: async () => ({ binding: { revision: 2 } }),
 		getZoteroStatus: async () => ({ enabled: true }),
 		getZoteroWebApi: async () => ({ configured: true }),
 		listHosts: async () => [{ id: "h" }],
