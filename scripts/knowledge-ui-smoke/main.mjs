@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { channelOf, DecisionsContract, IpcChannels } from "@drone/shared";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { KnowledgeUiService } from "../../packages/backend/src/knowledge/ui.ts";
 import { registerKnowledgeIpc } from "../../packages/desktop/src/main/ipc/knowledge.ts";
-import { IpcChannels } from "../../packages/shared/src/ipc.ts";
 import { createTaskFixture } from "./task-owner.mjs";
 
 const root = process.env.DRONE_UI_FIXTURE,
@@ -148,7 +148,7 @@ async function run() {
 		ipcMain.handle(IpcChannels.ProjectPickDirectory, () => join(root, "New Vault"));
 		await mkdir(join(root, "daily"), { recursive: true });
 		ipcMain.handle(IpcChannels.UiStateSave, () => undefined);
-		ipcMain.handle(IpcChannels.DecisionsList, () => []);
+		ipcMain.handle(channelOf(DecisionsContract, "list"), () => []);
 		ipcMain.handle(IpcChannels.SessionListAll, () => []);
 		ipcMain.handle(IpcChannels.AppGetDailyDir, () => join(root, "daily"));
 		let usageReads = 0;

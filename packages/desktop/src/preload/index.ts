@@ -86,26 +86,7 @@ const appClient = exposeContract(AppContract, {
 const knowledgeClient = exposeContract(KnowledgeContract);
 const dailyClient = exposeContract(DailyContract);
 const zoteroClient = exposeContract(ZoteroContract);
-const researchClient = exposeContract(ResearchContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				captureResource: IpcChannels.ResearchCapture,
-				approveCapture: IpcChannels.ResearchApproveCapture,
-				revokeCapture: IpcChannels.ResearchRevokeCapture,
-				listCaptures: IpcChannels.ResearchListCaptures,
-				searchResources: IpcChannels.ResearchSearch,
-				listConnectors: IpcChannels.ResearchListConnectors,
-				setConnectorEnabled: IpcChannels.ResearchSetConnectorEnabled,
-				listWriteAdapters: IpcChannels.ResearchListWriteAdapters,
-				prepareWrite: IpcChannels.ResearchPrepareWrite,
-				executeWrite: IpcChannels.ResearchExecuteWrite,
-				revokeWrite: IpcChannels.ResearchRevokeWrite,
-				listWriteAudit: IpcChannels.ResearchListWriteAudit,
-			},
-			method,
-		),
-});
+const researchClient = exposeContract(ResearchContract);
 const settingsClient = exposeContract(SettingsContract, {
 	channelForMethod: (_contract, method) =>
 		channelFrom(
@@ -245,84 +226,11 @@ const uiPluginsClient = exposeContract(UiPluginsContract, {
 			method,
 		),
 });
-const computeClient = exposeContract(ComputeContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				listHosts: IpcChannels.ComputeListHosts,
-				listSshConfig: IpcChannels.ComputeListSshConfig,
-				getHost: IpcChannels.ComputeGetHost,
-				saveHost: IpcChannels.ComputeSaveHost,
-				removeHost: IpcChannels.ComputeRemoveHost,
-				probeHost: IpcChannels.ComputeProbeHost,
-				getHealthSnapshot: IpcChannels.ComputeHealth,
-				listJobs: IpcChannels.ComputeJobs,
-				getJob: IpcChannels.ComputeJob,
-				submitJob: IpcChannels.ComputeSubmitJob,
-				getLogs: IpcChannels.ComputeLogs,
-				cancelJob: IpcChannels.ComputeCancelJob,
-				openTerminal: IpcChannels.ComputeOpenTerminal,
-				getTerminal: IpcChannels.ComputeGetTerminal,
-				writeTerminal: IpcChannels.ComputeWriteTerminal,
-				closeTerminal: IpcChannels.ComputeCloseTerminal,
-				getOnboardingStatus: IpcChannels.ComputeOnboarding,
-				checkOnboardingStep: IpcChannels.ComputeCheckOnboarding,
-			},
-			method,
-		),
-});
-const evidenceClient = exposeContract(EvidenceContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getEvidenceOverview: IpcChannels.EvidenceOverview,
-				freezeAnalysisEvidence: IpcChannels.EvidenceFreeze,
-				forkEvidenceCheckpoint: IpcChannels.EvidenceFork,
-				exportEvidenceCapsule: IpcChannels.EvidenceExport,
-				importEvidenceCapsule: IpcChannels.EvidenceImport,
-				replayEvidenceCheckpoint: IpcChannels.EvidenceReplay,
-			},
-			method,
-		),
-});
-const discoveryClient = exposeContract(DiscoveryContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getCapabilities: IpcChannels.DiscoveryCapabilities,
-				listKernelSessions: IpcChannels.DiscoveryKernelSessions,
-				getKernelSession: IpcChannels.DiscoveryKernelSession,
-				closeKernelSession: IpcChannels.DiscoveryCloseKernelSession,
-				listCriticReviews: IpcChannels.DiscoveryCriticReviews,
-				listMultipathAssessments: IpcChannels.DiscoveryMultipathAssessments,
-				listExplorationPlans: IpcChannels.DiscoveryExplorationPlans,
-				listEvaluations: IpcChannels.DiscoveryEvaluations,
-			},
-			method,
-		),
-});
-const decisionsClient = exposeContract(DecisionsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				list: IpcChannels.DecisionsList,
-				revoke: IpcChannels.DecisionsRevoke,
-				confirm: IpcChannels.DecisionsConfirm,
-			},
-			method,
-		),
-});
-const inquiryClient = exposeContract(InquiryContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				listArtifacts: IpcChannels.InquiryArtifacts,
-				artifactProvenance: IpcChannels.InquiryArtifactProvenance,
-				rerunArtifact: IpcChannels.InquiryRerunArtifact,
-			},
-			method,
-		),
-});
+const computeClient = exposeContract(ComputeContract);
+const evidenceClient = exposeContract(EvidenceContract);
+const discoveryClient = exposeContract(DiscoveryContract);
+const decisionsClient = exposeContract(DecisionsContract);
+const inquiryClient = exposeContract(InquiryContract);
 /**
  * 中性路由客户端：域由通道承载，域内操作名由载荷承载。
  * 宿主只保留操作名清单作为授权边界；域内的 schema 与校验归插件所有。
@@ -343,18 +251,7 @@ const invokeApi = {
 	...decisionsClient,
 	...inquiryClient,
 	...knowledgeApi,
-	captureResource: invoke(researchClient, "captureResource"),
-	approveCapture: invoke(researchClient, "approveCapture"),
-	revokeCapture: invoke(researchClient, "revokeCapture"),
-	listCaptures: invoke(researchClient, "listCaptures"),
-	searchResources: invoke(researchClient, "searchResources"),
-	listConnectors: invoke(researchClient, "listConnectors"),
-	setConnectorEnabled: invoke(researchClient, "setConnectorEnabled"),
-	listWriteAdapters: invoke(researchClient, "listWriteAdapters"),
-	prepareWrite: invoke(researchClient, "prepareWrite"),
-	executeWrite: invoke(researchClient, "executeWrite"),
-	revokeWrite: invoke(researchClient, "revokeWrite"),
-	listWriteAudit: invoke(researchClient, "listWriteAudit"),
+	...researchClient,
 	listSessionSubagents: invoke(subagentsClient, "list"),
 	dispatchSubagents: invoke(subagentsClient, "dispatch"),
 	abortSubagentRun: invoke(subagentsClient, "abort"),

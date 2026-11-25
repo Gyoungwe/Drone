@@ -102,24 +102,6 @@ export interface ImportedAttachment {
 
 /** IPC 通道名常量 */
 export const IpcChannels = {
-	EvidenceOverview: "evidence:getEvidenceOverview",
-	EvidenceFreeze: "evidence:freezeAnalysisEvidence",
-	EvidenceFork: "evidence:forkEvidenceCheckpoint",
-	EvidenceExport: "evidence:exportEvidenceCapsule",
-	EvidenceImport: "evidence:importEvidenceCapsule",
-	EvidenceReplay: "evidence:replayEvidenceCheckpoint",
-	ResearchCapture: "research:captureResource",
-	ResearchApproveCapture: "research:approveCapture",
-	ResearchRevokeCapture: "research:revokeCapture",
-	ResearchListCaptures: "research:listCaptures",
-	ResearchSearch: "research:searchResources",
-	ResearchListConnectors: "research:listConnectors",
-	ResearchSetConnectorEnabled: "research:setConnectorEnabled",
-	ResearchListWriteAdapters: "research:listWriteAdapters",
-	ResearchPrepareWrite: "research:prepareWrite",
-	ResearchExecuteWrite: "research:executeWrite",
-	ResearchRevokeWrite: "research:revokeWrite",
-	ResearchListWriteAudit: "research:listWriteAudit",
 	/**
 	 * 知识域中性路由：宿主统筹，每域一个通道。
 	 * 域内的操作名与 schema 归插件所有；宿主只保留操作名清单作为授权边界。
@@ -129,46 +111,6 @@ export const IpcChannels = {
 	ZoteroInvoke: "zotero:invoke",
 	/** 知识事件：宿主向所有窗口广播，通知知识视图失效或打开评审 */
 	KnowledgeEvent: "knowledge:event",
-	/** 远程计算：主机、健康、作业、终端与引导（由 ComputeContract 投影） */
-	ComputeListHosts: "compute:listHosts",
-	ComputeListSshConfig: "compute:listSshConfig",
-	ComputeGetHost: "compute:getHost",
-	ComputeSaveHost: "compute:saveHost",
-	ComputeRemoveHost: "compute:removeHost",
-	ComputeProbeHost: "compute:probeHost",
-	ComputeHealth: "compute:getHealthSnapshot",
-	ComputeJobs: "compute:listJobs",
-	ComputeJob: "compute:getJob",
-	ComputeSubmitJob: "compute:submitJob",
-	ComputeLogs: "compute:getLogs",
-	ComputeCancelJob: "compute:cancelJob",
-	ComputeOpenTerminal: "compute:openTerminal",
-	ComputeGetTerminal: "compute:getTerminal",
-	ComputeWriteTerminal: "compute:writeTerminal",
-	ComputeCloseTerminal: "compute:closeTerminal",
-	ComputeOnboarding: "compute:getOnboardingStatus",
-	ComputeCheckOnboarding: "compute:checkOnboardingStep",
-	ComputeHealthEvent: "compute:healthChanged",
-	ComputeJobEvent: "compute:jobUpdated",
-	ComputeLogEvent: "compute:logChunk",
-	ComputeTerminalOutputEvent: "compute:terminalOutput",
-	ComputeTerminalClosedEvent: "compute:terminalClosed",
-	/** 研究发现：内核能力、会话、批评、多路径与评测只读投影。 */
-	DiscoveryCapabilities: "discovery:getCapabilities",
-	DiscoveryKernelSessions: "discovery:listKernelSessions",
-	DiscoveryKernelSession: "discovery:getKernelSession",
-	DiscoveryCloseKernelSession: "discovery:closeKernelSession",
-	DiscoveryCriticReviews: "discovery:listCriticReviews",
-	DiscoveryMultipathAssessments: "discovery:listMultipathAssessments",
-	DiscoveryExplorationPlans: "discovery:listExplorationPlans",
-	DiscoveryEvaluations: "discovery:listEvaluations",
-	DecisionsList: "decisions:list",
-	DecisionsRevoke: "decisions:revoke",
-	DecisionsConfirm: "decisions:confirm",
-	InquiryArtifacts: "inquiry:listArtifacts",
-	InquiryArtifactProvenance: "inquiry:artifactProvenance",
-	InquiryRerunArtifact: "inquiry:rerunArtifact",
-	InquiryRerunUpdatedEvent: "inquiry:rerunUpdated",
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
 

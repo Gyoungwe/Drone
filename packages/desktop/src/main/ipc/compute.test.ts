@@ -15,7 +15,7 @@ vi.mock("electron", () => ({
 	BrowserWindow: { fromWebContents: mocks.fromWebContents },
 }));
 
-import { IpcChannels } from "@drone/shared";
+import { ComputeContract, channelOf } from "@drone/shared";
 import { registerComputeIpc } from "./compute";
 
 const host = {
@@ -88,15 +88,15 @@ describe("registerComputeIpc", () => {
 		const unbind = registerComputeIpc(service as any);
 		const frame = {};
 		const event = { sender: { mainFrame: frame }, senderFrame: frame };
-		expect(await mocks.handlers.get(IpcChannels.ComputeListHosts)!(event)).toEqual([host]);
+		expect(await mocks.handlers.get(channelOf(ComputeContract, "listHosts"))!(event)).toEqual([host]);
 		expect(service.listHosts).toHaveBeenCalledOnce();
-		await mocks.handlers.get(IpcChannels.ComputeProbeHost)!(event, host.id);
+		await mocks.handlers.get(channelOf(ComputeContract, "probeHost"))!(event, host.id);
 		expect(service.authorizeRemoteOperation).toHaveBeenCalledWith({ kind: "probe_host", hostId: host.id });
-		const invalid = await mocks.handlers.get(IpcChannels.ComputeGetHost)!(event, "bad host");
+		const invalid = await mocks.handlers.get(channelOf(ComputeContract, "getHost"))!(event, "bad host");
 		expect(invalid).toMatchObject({ code: "invalid_arguments" });
 		expect(service.getHost).not.toHaveBeenCalled();
 		unbind();
-		expect(mocks.removeHandler).toHaveBeenCalledWith(IpcChannels.ComputeListHosts);
+		expect(mocks.removeHandler).toHaveBeenCalledWith(channelOf(ComputeContract, "listHosts"));
 	});
 
 	it("rejects child frames before invoking the adapter", async () => {
@@ -104,7 +104,10 @@ describe("registerComputeIpc", () => {
 		registerComputeIpc(service as any);
 		const frame = {};
 		await expect(
-			mocks.handlers.get(IpcChannels.ComputeListHosts)!({ sender: { mainFrame: frame }, senderFrame: {} }),
+			mocks.handlers.get(channelOf(ComputeContract, "listHosts"))!({
+				sender: { mainFrame: frame },
+				senderFrame: {},
+			}),
 		).rejects.toThrow("main frame");
 		expect(service.listHosts).not.toHaveBeenCalled();
 	});

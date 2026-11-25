@@ -326,7 +326,7 @@ packages/
 
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
-| `src/ipc.ts` | `IpcChannels`、`PiApi` | 通道名常量 + `window.pi` 完整类型（sessions/settings/packages/app/ui-plugins/login/compute 全域通道 + 同步属性 `platform`） |
+| `src/ipc.ts` | `IpcChannels`、`PiApi` | 旧通道名常量与 `window.pi` 完整类型。compute、research、discovery、evidence、inquiry、decisions 通道由对应的 Host API 契约生成。 |
 | `src/knowledge.ts` | `KnowledgeApi`、`KnowledgeFlow*`、`KnowledgeCloud*`、`ResearchRun*`、`WikiReview*` 等 | 宿主侧知识与研究运行契约。其中 17 个通用知识契约（`KnowledgeReadRecord`、`KnowledgeGraph*`、`KnowledgeIndexStatus`、`KnowledgeJob`、`KnowledgeOverview`、`KnowledgePage`、`KnowledgeLinkRef`、`KnowledgeNoteLinks`、`KnowledgeAnswerMetric`、`KnowledgeBinding`、`KnowledgeRecentNote`、`WikiReviewItem` 等）由 `@gyoungwe/plugin-api/knowledge` 拥有，本文件只做 re-export，不再保留第二份本地定义；依赖方向是 shared → plugin-api，plugin-api 不反向依赖 shared |
 | `src/host-api/background-jobs.ts` | `BackgroundJobsContract`、`BackgroundJobsApi`、`P5BackgroundStatus` | Desktop-only contract for per-workspace status, enablement and daily token limits. |
 | `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`ComputeContract`、`DiscoveryContract`、`DecisionsContract`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract` | TypeBox Host API 域契约；供 desktop bindContract 与适配器复用；`ComputeContract` 覆盖主机登记、健康、作业日志、终端和引导状态，远端副作用由 backend adapter 继续做授权门控；`DiscoveryContract` 提供 B5d–B5f 内核会话、批评、多路径、探索计划和评测的只读投影，关闭会话保留 desktop 权限；`DecisionsContract` 提供项目决策账本的列表、撤销和人工确认；`KnowledgeContract` 覆盖知识库管理、审核、语义索引、研究运行路线与 Zotero 状态；机构访问保留 desktop 权限；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录 |

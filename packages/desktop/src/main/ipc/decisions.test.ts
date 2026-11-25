@@ -15,7 +15,7 @@ vi.mock("electron", () => ({
 	BrowserWindow: { fromWebContents: mocks.fromWebContents },
 }));
 
-import { IpcChannels } from "@drone/shared";
+import { channelOf, DecisionsContract } from "@drone/shared";
 import { registerDecisionsIpc } from "./decisions";
 
 describe("registerDecisionsIpc", () => {
@@ -49,15 +49,17 @@ describe("registerDecisionsIpc", () => {
 		const unbind = registerDecisionsIpc(inquiry as any);
 		const frame = {};
 		const event = { sender: { mainFrame: frame }, senderFrame: frame };
-		expect(await mocks.handlers.get(IpcChannels.DecisionsList)!(event, "project-1")).toEqual([decision]);
+		expect(await mocks.handlers.get(channelOf(DecisionsContract, "list"))!(event, "project-1")).toEqual([
+			decision,
+		]);
 		expect(
-			await mocks.handlers.get(IpcChannels.DecisionsRevoke)!(event, "decision-1", "review"),
+			await mocks.handlers.get(channelOf(DecisionsContract, "revoke"))!(event, "decision-1", "review"),
 		).toMatchObject({
 			status: "revoked",
 		});
-		expect(await mocks.handlers.get(IpcChannels.DecisionsConfirm)!(event, "decision-1", "confirmed")).toEqual(
-			decision,
-		);
+		expect(
+			await mocks.handlers.get(channelOf(DecisionsContract, "confirm"))!(event, "decision-1", "confirmed"),
+		).toEqual(decision);
 		expect(inquiry.listDecisions).toHaveBeenCalledWith("project-1");
 		expect(inquiry.revokeDecision).toHaveBeenCalledWith("decision-1", "review");
 		expect(inquiry.confirmDecision).toHaveBeenCalledWith("decision-1", "confirmed");

@@ -1,5 +1,5 @@
 import type { BackendServices, InquiryServicePort } from "@drone/backend";
-import { InquiryContract, IpcChannels } from "@drone/shared";
+import { channelOf, InquiryContract } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -49,17 +49,11 @@ export function registerInquiryIpc(
 		},
 	};
 	const unbind = bindContract(InquiryContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				listArtifacts: IpcChannels.InquiryArtifacts,
-				artifactProvenance: IpcChannels.InquiryArtifactProvenance,
-				rerunArtifact: IpcChannels.InquiryRerunArtifact,
-			})[method as keyof typeof InquiryContract.methods],
 		beforeInvoke: (event) => requireMainFrame(event),
 	});
 	const unsubscribe =
 		typeof inquiry.onRerunUpdated === "function"
-			? inquiry.onRerunUpdated((result) => sendEvent(IpcChannels.InquiryRerunUpdatedEvent, result))
+			? inquiry.onRerunUpdated((result) => sendEvent(channelOf(InquiryContract, "rerunUpdated"), result))
 			: () => {};
 	return () => {
 		unbind();

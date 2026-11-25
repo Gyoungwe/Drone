@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createBackend } from "@drone/backend";
-import { IpcChannels } from "@drone/shared";
+import { channelOf, DecisionsContract, InquiryContract } from "@drone/shared";
 import { evaluateMetacognitivePublication } from "@gyoungwe/pi-knowledge/host";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -78,7 +78,7 @@ describe("desktop project-scoped inquiry IPC", () => {
 				alias = join(root, "workspace-alias");
 				await symlink(workspace, alias, process.platform === "win32" ? "junction" : "dir");
 			}
-			const list = (await mocks.handlers.get(IpcChannels.DecisionsList)!(event, alias)) as Array<{
+			const list = (await mocks.handlers.get(channelOf(DecisionsContract, "list"))!(event, alias)) as Array<{
 				id: string;
 				projectId: string;
 			}>;
@@ -86,10 +86,13 @@ describe("desktop project-scoped inquiry IPC", () => {
 			expect(list[0]?.projectId).toBe(
 				await import("@drone/backend").then(({ canonicalProjectId }) => canonicalProjectId(workspace)),
 			);
-			const artifacts = (await mocks.handlers.get(IpcChannels.InquiryArtifacts)!(event, alias)) as unknown[];
+			const artifacts = (await mocks.handlers.get(channelOf(InquiryContract, "listArtifacts"))!(
+				event,
+				alias,
+			)) as unknown[];
 			expect(artifacts).toHaveLength(1);
 			const decisionId = (list[0] as { id: string }).id;
-			const revoked = (await mocks.handlers.get(IpcChannels.DecisionsRevoke)!(
+			const revoked = (await mocks.handlers.get(channelOf(DecisionsContract, "revoke"))!(
 				event,
 				decisionId,
 				"Review dispatch",
@@ -103,7 +106,11 @@ describe("desktop project-scoped inquiry IPC", () => {
 			expect(blocked.failures).toEqual(
 				expect.arrayContaining([expect.objectContaining({ code: "artifact-pending-review" })]),
 			);
-			await mocks.handlers.get(IpcChannels.DecisionsConfirm)!(event, decisionId, "Human checked report");
+			await mocks.handlers.get(channelOf(DecisionsContract, "confirm"))!(
+				event,
+				decisionId,
+				"Human checked report",
+			);
 			expect((await backend.inquiry.readOnlySnapshot(alias))?.artifacts[0]?.status).toBe("valid");
 			await backend.sessions.closeSession(session.sessionId);
 		} finally {

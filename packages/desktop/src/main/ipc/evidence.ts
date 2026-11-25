@@ -1,5 +1,5 @@
 import type { AnalysisEvidenceService } from "@drone/backend";
-import { EvidenceContract, IpcChannels } from "@drone/shared";
+import { EvidenceContract } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -21,15 +21,6 @@ export function registerEvidenceIpc(evidence: AnalysisEvidenceService): () => vo
 		},
 	};
 	return bindContract(EvidenceContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				getEvidenceOverview: IpcChannels.EvidenceOverview,
-				freezeAnalysisEvidence: IpcChannels.EvidenceFreeze,
-				forkEvidenceCheckpoint: IpcChannels.EvidenceFork,
-				exportEvidenceCapsule: IpcChannels.EvidenceExport,
-				importEvidenceCapsule: IpcChannels.EvidenceImport,
-				replayEvidenceCheckpoint: IpcChannels.EvidenceReplay,
-			})[method as keyof typeof EvidenceContract.methods],
 		beforeInvoke: (event) => {
 			const request = event as Electron.IpcMainInvokeEvent;
 			if (
