@@ -1019,3 +1019,31 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 
 教训：判断"能不能去重"之前，先查生成器/序列化器是否给这类重复起了消歧别名。重复定义
 会把内部冗余泄漏成公开 API 表面，让"内部重构"变成"破坏性变更"。
+
+## 用类型检查器断言「模块导出了哪些名字」既慢又看不见纯类型导出（2026-11-26 记录）
+
+`packages/shared/src/barrel-shadowing.test.ts` 要钉住一件事：shared 的 barrel 从
+`@gyoungwe/plugin-api/knowledge` 显式转发了 9 个名字，而这 9 个名字同时也能通过
+`export *` 从宿主自己的 contract 模块到达。显式块优先，所以消费者拿到的是 plugin-api
+的那份声明。
+
+原来的写法用 `ts.createProgram` + `checker.getExportsOfModule` 求这个事实。两个坑：
+
+1. **慢**。`origin/main` 上这个测试就要 4.4 秒，逼近 vitest 的 5 秒上限；本分支新增
+   plugin-api 模块后直接超时。profiling 显示 `createProgram` 约 1.5–2 秒，
+   `getExportsOfModule` 在 1178 个导出的 barrel 上单次 1.18 秒。
+   改用语法层读取（`ts.createSourceFile` + 遍历 `ExportDeclaration` 的具名导出）
+   只花 5 毫秒。
+
+2. **看不见纯类型导出**。改写时先用了 `keyof typeof PluginKnowledge` 来断言「plugin-api
+   确实提供了这 9 个名字」——但 `typeof` 拿到的是**值**导出空间，这 9 个名字全是
+   `export type`，一个都不在里面。断言通过却什么都没证明。
+   正确写法是在**类型位置**逐名引用：`expectTypeOf<PluginKnowledge.VersionedRecord>()`。
+   少一个声明就是编译错误，比任何运行时断言都强。
+
+教训：`typeof` 一个模块类型只覆盖该模块的值导出。模块只导出类型时，`typeof M` 的
+`keyof` 是空的或只含常量；「检查模块提供了某个类型」必须用类型位置引用，不能用
+`keyof typeof`。
+
+另一个坑：改写这类测试要证明它**还能失败**。做法是把 barrel 的显式转发块删掉再跑一次，
+确认报出 9 个缺失，然后按字节还原。
