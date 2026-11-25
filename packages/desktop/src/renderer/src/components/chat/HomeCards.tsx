@@ -4,6 +4,7 @@ import {
 	groupRunningFirst,
 	type KnowledgeOverview,
 	type KnowledgeTopic,
+	type KnowledgeTopicListResult,
 	type SessionMeta,
 } from "@drone/shared";
 import { useEffect, useMemo, useState } from "react";
@@ -135,9 +136,9 @@ export function HomeCards() {
 		setDaily(null);
 		setTopics([]);
 		void getPi()
-			.getDailyDiscovery()
+			.invokeDaily({ operation: "state" })
 			.then((next) => {
-				if (live) setDaily(next);
+				if (live) setDaily(next as DailyDiscoveryState);
 			})
 			.catch(() => {
 				if (live) setDaily(null);
@@ -152,15 +153,19 @@ export function HomeCards() {
 		setOverview(null);
 		setOverviewLoading(true);
 		void getPi()
-			.getKnowledgeOverview({ cwd })
-			.then((next) => {
+			.invokeKnowledge({ operation: "overview", input: { cwd } })
+			.then((value) => {
 				if (!live) return;
+				const next = value as KnowledgeOverview;
 				setOverview(next);
 				if (!cwd || !next.binding) return;
 				void getPi()
-					.getKnowledgeTopics({ cwd, bindingRevision: next.binding.revision })
+					.invokeKnowledge({
+						operation: "topics.list",
+						input: { cwd, bindingRevision: next.binding.revision },
+					})
 					.then((result) => {
-						if (live) setTopics(pickActiveTopics(result.topics));
+						if (live) setTopics(pickActiveTopics((result as KnowledgeTopicListResult).topics));
 					})
 					.catch(() => {
 						if (live) setTopics([]);

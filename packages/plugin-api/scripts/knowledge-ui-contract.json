@@ -1,17 +1,50 @@
 {
-	"types": [
-		"AvailableModel",
-		"ImageInput",
-		"KnowledgeFlow",
-		"KnowledgeUiEvent",
-		"ModelPrefs",
-		"PromptIds",
-		"PromptReceipt",
-		"SessionMeta",
-		"SubagentThinkingLevel",
-		"TurnTiming",
-		"UIMessage",
-		"UiPluginAnchor",
-		"WorkbenchTask"
+	"modules": [
+		{
+			"file": "ui-wire.ts",
+			"routes": true,
+			"types": [
+				"AvailableModel",
+				"ImageInput",
+				"KnowledgeFlow",
+				"KnowledgeUiEvent",
+				"ModelPrefs",
+				"PromptIds",
+				"PromptReceipt",
+				"SessionMeta",
+				"SubagentThinkingLevel",
+				"TurnTiming",
+				"UIMessage",
+				"UiPluginAnchor",
+				"WorkbenchTask"
+			]
+		},
+		{
+			"file": "ui-wire-knowledge.ts",
+			"types": [
+				"KnowledgeNote",
+				"KnowledgeSearchResult",
+				"KnowledgeSetupPreview",
+				"KnowledgeSemanticConfig",
+				"KnowledgeSemanticIndexResult",
+				"KnowledgeSemanticStatus",
+				"KnowledgeTopic",
+				"KnowledgeTopicListResult",
+				"ResearchRunDetail",
+				"ResearchRunListItem"
+			]
+		},
+		{
+			"file": "ui-wire-review.ts",
+			"types": ["WikiModelReviewResult", "WikiReviewPreview"]
+		},
+		{
+			"file": "ui-wire-daily.ts",
+			"types": ["DailyDiscoveryState"]
+		},
+		{
+			"file": "ui-wire-services.ts",
+			"types": ["InstitutionalStatus", "InstitutionalTestResult", "ZoteroLocalWriteStatus", "ZoteroStatus"]
+		}
 	]
 }

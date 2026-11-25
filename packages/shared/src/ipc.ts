@@ -7,14 +7,13 @@ import type { PreviewKind } from "./file-types";
 import type { ComputeApi, DiscoveryApi, EvidenceApi, InquiryApi, PluginCredentialsApi } from "./host-api";
 import type { BackgroundJobsApi } from "./host-api/background-jobs";
 import type { KnowledgeRouteInput } from "./host-api/knowledge";
-import type { KnowledgeUiEvent } from "./knowledge";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
 import type { PluginRuntimeEvent } from "./host-api/plugin-runtime";
 import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
-import type { ZoteroLocalWriteStatus, ZoteroStatus } from "./zotero";
+import type { KnowledgeUiEvent } from "./knowledge";
 import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, PackageLifecycleReceipt } from "./packages";
 import type {
@@ -68,6 +67,7 @@ import type {
 } from "./subagent";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
+import type { ZoteroLocalWriteStatus, ZoteroStatus } from "./zotero";
 
 export interface ResourcePreviewResult {
 	encoding?: string;
@@ -171,7 +171,6 @@ export const IpcChannels = {
 	InquiryRerunUpdatedEvent: "inquiry:rerunUpdated",
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
-
 
 	/** 机构访问（合法机构通道，持久登录会话 + EZproxy 模板） */
 	InstitutionalGetStatus: "institutional:getStatus",

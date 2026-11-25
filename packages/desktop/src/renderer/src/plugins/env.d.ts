@@ -3,7 +3,7 @@ import type {
 	PROTECTED_KNOWLEDGE_AGENTS,
 	SUBAGENT_THINKING_LEVELS,
 } from "@drone/shared";
-import type { KnowledgeUiPort, SessionUiPort } from "@gyoungwe/plugin-api/ui";
+import type { AppUiPort, InstitutionalUiPort, KnowledgeUiPort, SessionUiPort } from "@gyoungwe/plugin-api/ui";
 import type { ImagePreviewOverlay } from "../components/chat/ImagePreview";
 import type { Markdown } from "../components/chat/Markdown";
 import type { displayName, summarizeArgs } from "../components/chat/ToolCallCard";
@@ -105,64 +105,27 @@ export interface DroneUiApi {
 	// </drone:generated namespace="stores">
 	// <drone:generated namespace="knowledge">
 	knowledge: {
-		archiveKnowledgeTopic: KnowledgeUiPort["archiveKnowledgeTopic"];
-		authorizeZoteroLocalWrite: KnowledgeUiPort["authorizeZoteroLocalWrite"];
-		cancelKnowledgeModelReview: KnowledgeUiPort["cancelKnowledgeModelReview"];
-		cancelKnowledgeSemanticIndex: KnowledgeUiPort["cancelKnowledgeSemanticIndex"];
-		clearInstitutionalSession: KnowledgeUiPort["clearInstitutionalSession"];
-		clearZoteroLocalWrite: KnowledgeUiPort["clearZoteroLocalWrite"];
-		clearZoteroWebApi: KnowledgeUiPort["clearZoteroWebApi"];
-		decideDailyIdea: KnowledgeUiPort["decideDailyIdea"];
-		decideDailyRadarPaper: KnowledgeUiPort["decideDailyRadarPaper"];
-		decideKnowledgeReview: KnowledgeUiPort["decideKnowledgeReview"];
-		formalKnowledgeVault: KnowledgeUiPort["formalKnowledgeVault"];
-		getDailyDiscovery: KnowledgeUiPort["getDailyDiscovery"];
-		getInstitutionalStatus: KnowledgeUiPort["getInstitutionalStatus"];
-		getKnowledgeCloudStatus: KnowledgeUiPort["getKnowledgeCloudStatus"];
-		getKnowledgeGraph: KnowledgeUiPort["getKnowledgeGraph"];
-		getKnowledgeJobs: KnowledgeUiPort["getKnowledgeJobs"];
-		getKnowledgeMaintenanceRuns: KnowledgeUiPort["getKnowledgeMaintenanceRuns"];
-		getKnowledgeMaintenanceSettings: KnowledgeUiPort["getKnowledgeMaintenanceSettings"];
-		getKnowledgeNoteLinks: KnowledgeUiPort["getKnowledgeNoteLinks"];
-		getKnowledgeOverview: KnowledgeUiPort["getKnowledgeOverview"];
-		getKnowledgeReviews: KnowledgeUiPort["getKnowledgeReviews"];
-		getKnowledgeSemanticStatus: KnowledgeUiPort["getKnowledgeSemanticStatus"];
-		getKnowledgeTopics: KnowledgeUiPort["getKnowledgeTopics"];
-		getResearchRun: KnowledgeUiPort["getResearchRun"];
-		getResearchRuns: KnowledgeUiPort["getResearchRuns"];
-		getZoteroLocalWrite: KnowledgeUiPort["getZoteroLocalWrite"];
-		getZoteroStatus: KnowledgeUiPort["getZoteroStatus"];
-		getZoteroWebApi: KnowledgeUiPort["getZoteroWebApi"];
-		indexKnowledgeSemantic: KnowledgeUiPort["indexKnowledgeSemantic"];
-		initializeKnowledgeCloud: KnowledgeUiPort["initializeKnowledgeCloud"];
-		maintainKnowledge: KnowledgeUiPort["maintainKnowledge"];
-		onKnowledgeEvent: KnowledgeUiPort["onKnowledgeEvent"];
-		openExternal: KnowledgeUiPort["openExternal"];
-		openInstitutionalLogin: KnowledgeUiPort["openInstitutionalLogin"];
-		openKnowledgeTarget: KnowledgeUiPort["openKnowledgeTarget"];
-		pickDirectory: KnowledgeUiPort["pickDirectory"];
-		previewKnowledgeReview: KnowledgeUiPort["previewKnowledgeReview"];
-		previewKnowledgeSetup: KnowledgeUiPort["previewKnowledgeSetup"];
-		probeKnowledgeCloud: KnowledgeUiPort["probeKnowledgeCloud"];
-		prompt: KnowledgeUiPort["prompt"];
-		readKnowledgeCloudNote: KnowledgeUiPort["readKnowledgeCloudNote"];
-		readKnowledgeNote: KnowledgeUiPort["readKnowledgeNote"];
-		resumeKnowledgeCheck: KnowledgeUiPort["resumeKnowledgeCheck"];
-		reviewKnowledgeWithModel: KnowledgeUiPort["reviewKnowledgeWithModel"];
-		runKnowledgeMaintenance: KnowledgeUiPort["runKnowledgeMaintenance"];
-		saveKnowledgeMaintenanceSettings: KnowledgeUiPort["saveKnowledgeMaintenanceSettings"];
-		saveKnowledgeSemanticSettings: KnowledgeUiPort["saveKnowledgeSemanticSettings"];
-		saveZoteroWebApi: KnowledgeUiPort["saveZoteroWebApi"];
-		searchKnowledge: KnowledgeUiPort["searchKnowledge"];
-		setKnowledgeCloudPassword: KnowledgeUiPort["setKnowledgeCloudPassword"];
-		setKnowledgeSpecialistSettings: KnowledgeUiPort["setKnowledgeSpecialistSettings"];
-		startKnowledgeSetup: KnowledgeUiPort["startKnowledgeSetup"];
-		syncKnowledgeCloud: KnowledgeUiPort["syncKnowledgeCloud"];
-		testInstitutionalAccess: KnowledgeUiPort["testInstitutionalAccess"];
-		testKnowledgeSemanticProvider: KnowledgeUiPort["testKnowledgeSemanticProvider"];
-		updateDailyDiscovery: KnowledgeUiPort["updateDailyDiscovery"];
+		knowledge: KnowledgeUiPort["knowledge"];
+		daily: KnowledgeUiPort["daily"];
+		zotero: KnowledgeUiPort["zotero"];
 	};
 	// </drone:generated namespace="knowledge">
+	// <drone:generated namespace="app">
+	app: {
+		pickDirectory: AppUiPort["pickDirectory"];
+		formalKnowledgeVault: AppUiPort["formalKnowledgeVault"];
+	};
+	// </drone:generated namespace="app">
+	// <drone:generated namespace="institutional">
+	institutional: {
+		getStatus: InstitutionalUiPort["getStatus"];
+		saveConfig: InstitutionalUiPort["saveConfig"];
+		openLogin: InstitutionalUiPort["openLogin"];
+		openUrl: InstitutionalUiPort["openUrl"];
+		clear: InstitutionalUiPort["clear"];
+		testAccess: InstitutionalUiPort["testAccess"];
+	};
+	// </drone:generated namespace="institutional">
 	// <drone:generated namespace="sessions">
 	sessions: {
 		prompt: SessionUiPort["prompt"];

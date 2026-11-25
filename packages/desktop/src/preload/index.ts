@@ -1,3 +1,4 @@
+import type { ZoteroLocalWriteStatus, ZoteroStatus } from "@drone/shared";
 import {
 	AppContract,
 	BackgroundJobsContract,
@@ -24,7 +25,6 @@ import {
 	UiPluginsContract,
 	ZoteroContract,
 } from "@drone/shared";
-import type { ZoteroLocalWriteStatus, ZoteroStatus } from "@drone/shared";
 import { contextBridge, ipcRenderer } from "electron";
 import { exposeContract } from "./expose-contract";
 

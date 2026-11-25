@@ -6,9 +6,15 @@ export interface FirstRunStatus {
 	compute: boolean;
 }
 
-/** Probe what the user already configured. Each probe fails closed (false) so a broken IPC never hides the guide. */
+/**
+ * Probe what the user already configured. Each probe fails closed (false) so a broken IPC never hides the guide.
+ *
+ * The knowledge probe goes through the neutral route: the host names no domain
+ * method, so the operation name is the only thing that changes when a domain
+ * operation is added.
+ */
 export async function probeFirstRunStatus(
-	pi: Pick<PiApi, "getZoteroStatus" | "listHosts" | "getKnowledgeOverview">,
+	pi: Pick<PiApi, "getZoteroStatus" | "listHosts" | "invokeKnowledge">,
 	cwd: string | null,
 ): Promise<FirstRunStatus> {
 	const safe = async (fn: () => Promise<boolean>) => {
@@ -19,7 +25,13 @@ export async function probeFirstRunStatus(
 		}
 	};
 	const [knowledge, zotero, compute] = await Promise.all([
-		safe(async () => (cwd ? (await pi.getKnowledgeOverview({ cwd })).binding?.revision != null : false)),
+		safe(async () => {
+			if (!cwd) return false;
+			const overview = (await pi.invokeKnowledge({ operation: "overview", input: { cwd } })) as {
+				binding?: { revision?: number } | null;
+			};
+			return overview.binding?.revision != null;
+		}),
 		safe(async () => Boolean((await pi.getZoteroStatus()).enabled)),
 		safe(async () => (await pi.listHosts()).length > 0),
 	]);

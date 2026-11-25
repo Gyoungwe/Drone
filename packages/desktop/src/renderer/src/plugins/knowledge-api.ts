@@ -1,62 +1,38 @@
-import type { KnowledgeUiPort } from "@gyoungwe/plugin-api/ui";
+import type { AppUiPort, InstitutionalUiPort, KnowledgeUiPort } from "@gyoungwe/plugin-api/ui";
 import { getPi } from "../api";
 
-/** Explicit public port; all calls retain the existing preload authorization boundary. */
+/**
+ * The routed knowledge boundary.
+ *
+ * Each domain group keeps one neutral channel: the operation name inside the
+ * envelope selects the implementation, and the host rejects a name that is not
+ * in its route table.  The host names no domain method here, so a new domain
+ * operation needs no new projection.
+ */
 export const knowledgeUiPort: KnowledgeUiPort = {
-	archiveKnowledgeTopic: (...args) => getPi().archiveKnowledgeTopic(...args),
-	authorizeZoteroLocalWrite: (...args) => getPi().authorizeZoteroLocalWrite(...args),
-	cancelKnowledgeModelReview: (...args) => getPi().cancelKnowledgeModelReview(...args),
-	cancelKnowledgeSemanticIndex: (...args) => getPi().cancelKnowledgeSemanticIndex(...args),
-	clearInstitutionalSession: (...args) => getPi().clearInstitutionalSession(...args),
-	clearZoteroLocalWrite: (...args) => getPi().clearZoteroLocalWrite(...args),
-	clearZoteroWebApi: (...args) => getPi().clearZoteroWebApi(...args),
-	decideDailyIdea: (...args) => getPi().decideDailyIdea(...args),
-	decideDailyRadarPaper: (...args) => getPi().decideDailyRadarPaper(...args),
-	decideKnowledgeReview: (...args) => getPi().decideKnowledgeReview(...args),
-	formalKnowledgeVault: (...args) => getPi().formalKnowledgeVault(...args),
-	getDailyDiscovery: (...args) => getPi().getDailyDiscovery(...args),
-	getInstitutionalStatus: (...args) => getPi().getInstitutionalStatus(...args),
-	getKnowledgeCloudStatus: (...args) => getPi().getKnowledgeCloudStatus(...args),
-	getKnowledgeGraph: (...args) => getPi().getKnowledgeGraph(...args),
-	getKnowledgeJobs: (...args) => getPi().getKnowledgeJobs(...args),
-	getKnowledgeMaintenanceRuns: (...args) => getPi().getKnowledgeMaintenanceRuns(...args),
-	getKnowledgeMaintenanceSettings: (...args) => getPi().getKnowledgeMaintenanceSettings(...args),
-	getKnowledgeNoteLinks: (...args) => getPi().getKnowledgeNoteLinks(...args),
-	getKnowledgeOverview: (...args) => getPi().getKnowledgeOverview(...args),
-	getKnowledgeReviews: (...args) => getPi().getKnowledgeReviews(...args),
-	getKnowledgeSemanticStatus: (...args) => getPi().getKnowledgeSemanticStatus(...args),
-	getKnowledgeTopics: (...args) => getPi().getKnowledgeTopics(...args),
-	getResearchRun: (...args) => getPi().getResearchRun(...args),
-	getResearchRuns: (...args) => getPi().getResearchRuns(...args),
-	getZoteroLocalWrite: (...args) => getPi().getZoteroLocalWrite(...args),
-	getZoteroStatus: (...args) => getPi().getZoteroStatus(...args),
-	getZoteroWebApi: (...args) => getPi().getZoteroWebApi(...args),
-	indexKnowledgeSemantic: (...args) => getPi().indexKnowledgeSemantic(...args),
-	initializeKnowledgeCloud: (...args) => getPi().initializeKnowledgeCloud(...args),
-	maintainKnowledge: (...args) => getPi().maintainKnowledge(...args),
-	onKnowledgeEvent: (...args) => getPi().onKnowledgeEvent(...args),
-	openExternal: (...args) => getPi().openExternal(...args),
-	openInstitutionalLogin: (...args) => getPi().openInstitutionalLogin(...args),
-	openKnowledgeTarget: (...args) => getPi().openKnowledgeTarget(...args),
-	pickDirectory: (...args) => getPi().pickDirectory(...args),
-	previewKnowledgeReview: (...args) => getPi().previewKnowledgeReview(...args),
-	previewKnowledgeSetup: (...args) => getPi().previewKnowledgeSetup(...args),
-	probeKnowledgeCloud: (...args) => getPi().probeKnowledgeCloud(...args),
-	prompt: (...args) => getPi().prompt(...args),
-	readKnowledgeCloudNote: (...args) => getPi().readKnowledgeCloudNote(...args),
-	readKnowledgeNote: (...args) => getPi().readKnowledgeNote(...args),
-	resumeKnowledgeCheck: (...args) => getPi().resumeKnowledgeCheck(...args),
-	reviewKnowledgeWithModel: (...args) => getPi().reviewKnowledgeWithModel(...args),
-	runKnowledgeMaintenance: (...args) => getPi().runKnowledgeMaintenance(...args),
-	saveKnowledgeMaintenanceSettings: (...args) => getPi().saveKnowledgeMaintenanceSettings(...args),
-	saveKnowledgeSemanticSettings: (...args) => getPi().saveKnowledgeSemanticSettings(...args),
-	saveZoteroWebApi: (...args) => getPi().saveZoteroWebApi(...args),
-	searchKnowledge: (...args) => getPi().searchKnowledge(...args),
-	setKnowledgeCloudPassword: (...args) => getPi().setKnowledgeCloudPassword(...args),
-	setKnowledgeSpecialistSettings: (...args) => getPi().setKnowledgeSpecialistSettings(...args),
-	startKnowledgeSetup: (...args) => getPi().startKnowledgeSetup(...args),
-	syncKnowledgeCloud: (...args) => getPi().syncKnowledgeCloud(...args),
-	testInstitutionalAccess: (...args) => getPi().testInstitutionalAccess(...args),
-	testKnowledgeSemanticProvider: (...args) => getPi().testKnowledgeSemanticProvider(...args),
-	updateDailyDiscovery: (...args) => getPi().updateDailyDiscovery(...args),
+	knowledge: {
+		invoke: (operation, input) => getPi().invokeKnowledge({ operation, input }),
+	},
+	daily: {
+		invoke: (operation, input) => getPi().invokeDaily({ operation, input }),
+	},
+	zotero: {
+		invoke: (operation, input) => getPi().invokeZotero({ operation, input }),
+	},
+};
+
+/** Host filesystem mechanisms a plugin may ask for; both resolve to `null` when declined. */
+export const appUiPort: AppUiPort = {
+	pickDirectory: () => getPi().pickDirectory(),
+	formalKnowledgeVault: () => getPi().formalKnowledgeVault(),
+};
+
+/** The legal institutional access channel: configuration, session, and reachability. */
+export const institutionalUiPort: InstitutionalUiPort = {
+	getStatus: () => getPi().getInstitutionalStatus(),
+	saveConfig: (input) => getPi().saveInstitutionalConfig(input),
+	openLogin: (url) => getPi().openInstitutionalLogin(url),
+	openUrl: (url) => getPi().openInstitutionalUrl(url),
+	clear: () => getPi().clearInstitutionalSession(),
+	testAccess: (url) => getPi().testInstitutionalAccess(url),
 };

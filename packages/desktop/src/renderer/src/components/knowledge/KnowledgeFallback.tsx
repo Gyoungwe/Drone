@@ -1,4 +1,4 @@
-import type { KnowledgeBinding } from "@drone/shared";
+import type { KnowledgeBinding, KnowledgeOverview } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -24,10 +24,10 @@ export function KnowledgeFallback() {
 		setError(null);
 		setLoading(true);
 		void getPi()
-			.getKnowledgeOverview({ cwd: currentCwd, sessionId: null })
+			.invokeKnowledge({ operation: "overview", input: { cwd: currentCwd, sessionId: null } })
 			.then(
 				(value) => {
-					if (live) setBinding(value.binding ?? null);
+					if (live) setBinding((value as KnowledgeOverview).binding ?? null);
 				},
 				(failure) => {
 					if (live) setError(failure instanceof Error ? failure.message : String(failure));
@@ -67,7 +67,10 @@ export function KnowledgeFallback() {
 					onClick={() => {
 						if (binding)
 							void getPi()
-								.openKnowledgeTarget({ cwd: currentCwd, revision: binding.revision })
+								.invokeKnowledge({
+									operation: "openTarget",
+									input: { cwd: currentCwd, revision: binding.revision },
+								})
 								.catch(reportKnowledgeError);
 					}}
 				>

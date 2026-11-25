@@ -17,7 +17,17 @@ const projectionPaths = [
 	new URL("./resources/ui-plugins/drone-ui.d.ts", root),
 ];
 const projectionKinds = ["host", "env", "drone"];
-const namespaces = ["components", "helpers", "hooks", "stores", "i18n", "knowledge", "sessions"];
+const namespaces = [
+	"components",
+	"helpers",
+	"hooks",
+	"stores",
+	"i18n",
+	"knowledge",
+	"app",
+	"institutional",
+	"sessions",
+];
 
 function fail(message) {
 	throw new Error(`Plugin host API manifest: ${message}`);
@@ -46,7 +56,10 @@ function validateManifest(manifest) {
 
 function renderTopLevel(manifest) {
 	const lines = [];
-	const exported = new Set();
+	// The namespace objects are exported under their own names, so a member that
+	// shares a namespace name (the `knowledge` route inside the `knowledge`
+	// namespace) must not be exported a second time.
+	const exported = new Set(["version", ...namespaces]);
 	for (const namespace of namespaces) {
 		for (const entry of manifest.namespaces[namespace]) {
 			if (exported.has(entry.name)) continue;
@@ -117,16 +130,21 @@ function projectionNames(source, namespace, declaration) {
 	return [...block[1].matchAll(property)].map((item) => item[1]);
 }
 
-function checkProjectionDrift(sources, manifest) {
+/**
+ * Report the names a projection exposes beyond the manifest.
+ *
+ * The manifest is the single source of truth, so a projection that names a
+ * member the manifest does not declare has drifted.  The check runs against the
+ * rendered projection, never against the file on disk: a manifest edit must be
+ * renderable before the committed projection is allowed to lag.
+ */
+function checkProjectionDrift(rendered, manifest) {
 	const errors = [];
-	for (const [namespace, entries] of Object.entries(manifest.namespaces)) {
-		const expected = new Set(entries.map((entry) => entry.name));
-		for (const [index, source] of sources.entries()) {
-			const path = projectionPaths[index].pathname;
+	for (const [index, source] of rendered.entries()) {
+		const path = projectionPaths[index].pathname;
+		for (const namespace of namespaces) {
+			const expected = new Set(manifest.namespaces[namespace].map((entry) => entry.name));
 			const actual = new Set(projectionNames(source, namespace, projectionKinds[index]));
-			for (const name of expected) {
-				if (!actual.has(name)) errors.push(`${namespace}.${name} missing in ${path}`);
-			}
 			for (const name of actual) {
 				if (!expected.has(name)) errors.push(`${namespace}.${name} is undeclared in ${path}`);
 			}
@@ -138,7 +156,6 @@ function checkProjectionDrift(sources, manifest) {
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 validateManifest(manifest);
 const projectionSources = await Promise.all(projectionPaths.map((path) => readFile(path, "utf8")));
-checkProjectionDrift(projectionSources, manifest);
 
 const generatedProjections = projectionSources.map((source, index) => {
 	let result = source;
@@ -160,6 +177,8 @@ const generatedProjections = projectionSources.map((source, index) => {
 	}
 	return result;
 });
+
+checkProjectionDrift(generatedProjections, manifest);
 
 const names = Object.fromEntries(
 	namespaces.map((namespace) => [namespace, manifest.namespaces[namespace].map((entry) => entry.name)]),

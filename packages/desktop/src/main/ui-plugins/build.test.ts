@@ -25,7 +25,6 @@ describe("ui-plugins build", () => {
 export function bindings() { return { sessionPrompt: sessions.prompt, legacyPrompt: prompt, messages: useSessionMessages }; }`);
 		expect(await buildPlugin(dir, "src/index.tsx")).toEqual({ ok: true });
 		const sessionPrompt = vi.fn(),
-			legacyPrompt = vi.fn(),
 			messages = vi.fn();
 		vi.stubGlobal("window", {
 			DroneUI: {
@@ -35,14 +34,17 @@ export function bindings() { return { sessionPrompt: sessions.prompt, legacyProm
 				stores: {},
 				i18n: {},
 				hooks: { useSessionMessages: messages },
-				knowledge: { prompt: legacyPrompt },
+				knowledge: { knowledge: {}, daily: {}, zotero: {} },
+				app: {},
+				institutional: {},
 				sessions: { prompt: sessionPrompt },
 			},
 		});
 		try {
 			const out = await readFile(join(dir, "dist/index.js"), "utf8");
 			const plugin = await import(`data:text/javascript;base64,${Buffer.from(out).toString("base64")}`);
-			expect(plugin.bindings()).toEqual({ sessionPrompt, legacyPrompt, messages });
+			// The named `prompt` binding now resolves to the sessions namespace.
+			expect(plugin.bindings()).toEqual({ sessionPrompt, legacyPrompt: sessionPrompt, messages });
 		} finally {
 			vi.unstubAllGlobals();
 		}

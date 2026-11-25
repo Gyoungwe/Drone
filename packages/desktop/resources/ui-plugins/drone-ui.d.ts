@@ -288,64 +288,27 @@ declare module "@gyoungwe/plugin-api" {
 	/** 插件自带文案：注册后 useT()(key) 在核心字典找不到时回落到这里；返回注销函数（无头插件在 activate 里注册、清理函数里注销） */
 	// <drone:generated namespace="knowledge">
 	export const knowledge: {
-		archiveKnowledgeTopic: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["archiveKnowledgeTopic"];
-		authorizeZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["authorizeZoteroLocalWrite"];
-		cancelKnowledgeModelReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["cancelKnowledgeModelReview"];
-		cancelKnowledgeSemanticIndex: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["cancelKnowledgeSemanticIndex"];
-		clearInstitutionalSession: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearInstitutionalSession"];
-		clearZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearZoteroLocalWrite"];
-		clearZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearZoteroWebApi"];
-		decideDailyIdea: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideDailyIdea"];
-		decideDailyRadarPaper: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideDailyRadarPaper"];
-		decideKnowledgeReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideKnowledgeReview"];
-		formalKnowledgeVault: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["formalKnowledgeVault"];
-		getDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getDailyDiscovery"];
-		getInstitutionalStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getInstitutionalStatus"];
-		getKnowledgeCloudStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeCloudStatus"];
-		getKnowledgeGraph: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeGraph"];
-		getKnowledgeJobs: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeJobs"];
-		getKnowledgeMaintenanceRuns: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeMaintenanceRuns"];
-		getKnowledgeMaintenanceSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeMaintenanceSettings"];
-		getKnowledgeNoteLinks: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeNoteLinks"];
-		getKnowledgeOverview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeOverview"];
-		getKnowledgeReviews: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeReviews"];
-		getKnowledgeSemanticStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeSemanticStatus"];
-		getKnowledgeTopics: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeTopics"];
-		getResearchRun: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getResearchRun"];
-		getResearchRuns: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getResearchRuns"];
-		getZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroLocalWrite"];
-		getZoteroStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroStatus"];
-		getZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroWebApi"];
-		indexKnowledgeSemantic: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["indexKnowledgeSemantic"];
-		initializeKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["initializeKnowledgeCloud"];
-		maintainKnowledge: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["maintainKnowledge"];
-		onKnowledgeEvent: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["onKnowledgeEvent"];
-		openExternal: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openExternal"];
-		openInstitutionalLogin: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openInstitutionalLogin"];
-		openKnowledgeTarget: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openKnowledgeTarget"];
-		pickDirectory: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["pickDirectory"];
-		previewKnowledgeReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["previewKnowledgeReview"];
-		previewKnowledgeSetup: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["previewKnowledgeSetup"];
-		probeKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["probeKnowledgeCloud"];
-		prompt: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["prompt"];
-		readKnowledgeCloudNote: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["readKnowledgeCloudNote"];
-		readKnowledgeNote: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["readKnowledgeNote"];
-		resumeKnowledgeCheck: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["resumeKnowledgeCheck"];
-		reviewKnowledgeWithModel: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["reviewKnowledgeWithModel"];
-		runKnowledgeMaintenance: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["runKnowledgeMaintenance"];
-		saveKnowledgeMaintenanceSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveKnowledgeMaintenanceSettings"];
-		saveKnowledgeSemanticSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveKnowledgeSemanticSettings"];
-		saveZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveZoteroWebApi"];
-		searchKnowledge: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["searchKnowledge"];
-		setKnowledgeCloudPassword: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["setKnowledgeCloudPassword"];
-		setKnowledgeSpecialistSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["setKnowledgeSpecialistSettings"];
-		startKnowledgeSetup: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["startKnowledgeSetup"];
-		syncKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["syncKnowledgeCloud"];
-		testInstitutionalAccess: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testInstitutionalAccess"];
-		testKnowledgeSemanticProvider: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testKnowledgeSemanticProvider"];
-		updateDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["updateDailyDiscovery"];
+		knowledge: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["knowledge"];
+		daily: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["daily"];
+		zotero: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["zotero"];
 	};
 	// </drone:generated namespace="knowledge">
+	// <drone:generated namespace="app">
+	export const app: {
+		pickDirectory: import("@gyoungwe/plugin-api/ui").AppUiPort["pickDirectory"];
+		formalKnowledgeVault: import("@gyoungwe/plugin-api/ui").AppUiPort["formalKnowledgeVault"];
+	};
+	// </drone:generated namespace="app">
+	// <drone:generated namespace="institutional">
+	export const institutional: {
+		getStatus: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["getStatus"];
+		saveConfig: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["saveConfig"];
+		openLogin: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["openLogin"];
+		openUrl: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["openUrl"];
+		clear: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["clear"];
+		testAccess: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["testAccess"];
+	};
+	// </drone:generated namespace="institutional">
 	// <drone:generated namespace="sessions">
 	export const sessions: {
 		prompt: import("@gyoungwe/plugin-api/ui").SessionUiPort["prompt"];
@@ -409,61 +372,17 @@ declare module "@gyoungwe/plugin-api" {
 		namespace: string,
 		messages: { zh?: Record<string, unknown>; en?: Record<string, unknown> },
 	) => () => void;
-	export const archiveKnowledgeTopic: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["archiveKnowledgeTopic"];
-	export const authorizeZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["authorizeZoteroLocalWrite"];
-	export const cancelKnowledgeModelReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["cancelKnowledgeModelReview"];
-	export const cancelKnowledgeSemanticIndex: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["cancelKnowledgeSemanticIndex"];
-	export const clearInstitutionalSession: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearInstitutionalSession"];
-	export const clearZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearZoteroLocalWrite"];
-	export const clearZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["clearZoteroWebApi"];
-	export const decideDailyIdea: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideDailyIdea"];
-	export const decideDailyRadarPaper: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideDailyRadarPaper"];
-	export const decideKnowledgeReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["decideKnowledgeReview"];
-	export const formalKnowledgeVault: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["formalKnowledgeVault"];
-	export const getDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getDailyDiscovery"];
-	export const getInstitutionalStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getInstitutionalStatus"];
-	export const getKnowledgeCloudStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeCloudStatus"];
-	export const getKnowledgeGraph: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeGraph"];
-	export const getKnowledgeJobs: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeJobs"];
-	export const getKnowledgeMaintenanceRuns: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeMaintenanceRuns"];
-	export const getKnowledgeMaintenanceSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeMaintenanceSettings"];
-	export const getKnowledgeNoteLinks: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeNoteLinks"];
-	export const getKnowledgeOverview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeOverview"];
-	export const getKnowledgeReviews: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeReviews"];
-	export const getKnowledgeSemanticStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeSemanticStatus"];
-	export const getKnowledgeTopics: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getKnowledgeTopics"];
-	export const getResearchRun: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getResearchRun"];
-	export const getResearchRuns: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getResearchRuns"];
-	export const getZoteroLocalWrite: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroLocalWrite"];
-	export const getZoteroStatus: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroStatus"];
-	export const getZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["getZoteroWebApi"];
-	export const indexKnowledgeSemantic: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["indexKnowledgeSemantic"];
-	export const initializeKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["initializeKnowledgeCloud"];
-	export const maintainKnowledge: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["maintainKnowledge"];
-	export const onKnowledgeEvent: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["onKnowledgeEvent"];
-	export const openInstitutionalLogin: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openInstitutionalLogin"];
-	export const openKnowledgeTarget: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["openKnowledgeTarget"];
-	export const pickDirectory: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["pickDirectory"];
-	export const previewKnowledgeReview: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["previewKnowledgeReview"];
-	export const previewKnowledgeSetup: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["previewKnowledgeSetup"];
-	export const probeKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["probeKnowledgeCloud"];
-	export const prompt: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["prompt"];
-	export const readKnowledgeCloudNote: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["readKnowledgeCloudNote"];
-	export const readKnowledgeNote: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["readKnowledgeNote"];
-	export const resumeKnowledgeCheck: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["resumeKnowledgeCheck"];
-	export const reviewKnowledgeWithModel: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["reviewKnowledgeWithModel"];
-	export const runKnowledgeMaintenance: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["runKnowledgeMaintenance"];
-	export const saveKnowledgeMaintenanceSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveKnowledgeMaintenanceSettings"];
-	export const saveKnowledgeSemanticSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveKnowledgeSemanticSettings"];
-	export const saveZoteroWebApi: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["saveZoteroWebApi"];
-	export const searchKnowledge: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["searchKnowledge"];
-	export const setKnowledgeCloudPassword: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["setKnowledgeCloudPassword"];
-	export const setKnowledgeSpecialistSettings: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["setKnowledgeSpecialistSettings"];
-	export const startKnowledgeSetup: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["startKnowledgeSetup"];
-	export const syncKnowledgeCloud: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["syncKnowledgeCloud"];
-	export const testInstitutionalAccess: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testInstitutionalAccess"];
-	export const testKnowledgeSemanticProvider: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["testKnowledgeSemanticProvider"];
-	export const updateDailyDiscovery: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["updateDailyDiscovery"];
+	export const daily: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["daily"];
+	export const zotero: import("@gyoungwe/plugin-api/ui").KnowledgeUiPort["zotero"];
+	export const pickDirectory: import("@gyoungwe/plugin-api/ui").AppUiPort["pickDirectory"];
+	export const formalKnowledgeVault: import("@gyoungwe/plugin-api/ui").AppUiPort["formalKnowledgeVault"];
+	export const getStatus: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["getStatus"];
+	export const saveConfig: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["saveConfig"];
+	export const openLogin: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["openLogin"];
+	export const openUrl: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["openUrl"];
+	export const clear: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["clear"];
+	export const testAccess: import("@gyoungwe/plugin-api/ui").InstitutionalUiPort["testAccess"];
+	export const prompt: import("@gyoungwe/plugin-api/ui").SessionUiPort["prompt"];
 	export const command: import("@gyoungwe/plugin-api/ui").SessionUiPort["command"];
 	// </drone:generated namespace="topLevel">
 	declare const api: unknown;

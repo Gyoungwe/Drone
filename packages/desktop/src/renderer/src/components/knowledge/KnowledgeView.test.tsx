@@ -12,8 +12,7 @@ import { KnowledgeUiRoot } from "./KnowledgeUiRoot";
 import { KnowledgeView } from "./KnowledgeView";
 
 const api = vi.hoisted(() => ({
-	getKnowledgeOverview: vi.fn(),
-	openKnowledgeTarget: vi.fn().mockResolvedValue(undefined),
+	invokeKnowledge: vi.fn(),
 	uiPluginsSetPluginEnabled: vi.fn().mockResolvedValue(undefined),
 	onKnowledgeEvent: vi.fn(),
 }));
@@ -50,7 +49,7 @@ beforeEach(() => {
 	});
 	useKnowledgeStore.setState({ dialog: null, review: null, reviewQueue: [], notice: null, revision: 0 });
 	useSessionsStore.setState({ cwd: "/project-one", activeSessionId: null });
-	api.getKnowledgeOverview.mockResolvedValue({ binding: { vault: "/vault-one", revision: 1 } });
+	api.invokeKnowledge.mockResolvedValue({ binding: { vault: "/vault-one", revision: 1 } });
 });
 afterEach(cleanup);
 
@@ -60,7 +59,10 @@ describe("knowledge UI ownership boundary", () => {
 		render(<KnowledgeView />);
 		expect(await screen.findByText("/vault-one")).toBeTruthy();
 		fireEvent.click(screen.getByText("knowledgeFallback.openFolder"));
-		expect(api.openKnowledgeTarget).toHaveBeenCalledWith({ cwd: "/project-one", revision: 1 });
+		expect(api.invokeKnowledge).toHaveBeenCalledWith({
+			operation: "openTarget",
+			input: { cwd: "/project-one", revision: 1 },
+		});
 		fireEvent.click(screen.getByText("knowledgeFallback.managePlugins"));
 		expect(openSettings).toHaveBeenCalledWith("uiPlugins");
 		expect(screen.queryByRole("tablist")).toBeNull();
@@ -92,14 +94,14 @@ describe("knowledge UI ownership boundary", () => {
 	});
 	it("does not show a previous workspace binding after a slow read resolves", async () => {
 		let finish!: (value: unknown) => void;
-		api.getKnowledgeOverview.mockImplementationOnce(
+		api.invokeKnowledge.mockImplementationOnce(
 			() =>
 				new Promise((resolve) => {
 					finish = resolve;
 				}),
 		);
 		render(<KnowledgeView />);
-		api.getKnowledgeOverview.mockResolvedValue({ binding: { vault: "/vault-two", revision: 2 } });
+		api.invokeKnowledge.mockResolvedValue({ binding: { vault: "/vault-two", revision: 2 } });
 		act(() => useSessionsStore.setState({ cwd: "/project-two" }));
 		expect(await screen.findByText("/vault-two")).toBeTruthy();
 		await act(async () => finish({ binding: { vault: "/vault-one", revision: 1 } }));

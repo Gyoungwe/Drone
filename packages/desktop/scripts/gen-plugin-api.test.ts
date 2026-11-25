@@ -62,8 +62,14 @@ describe("plugin API projections", () => {
 			}
 			if (projection.kind === "drone") {
 				const topLevel = generatedBlock(source, "topLevel");
+				// A member that shares its namespace's name is exported as the
+				// namespace object, so it must not be exported a second time.
+				const namespaceNames = new Set(Object.keys(manifest.namespaces));
 				for (const entries of Object.values(manifest.namespaces)) {
-					for (const entry of entries) expect(topLevel).toContain(`export const ${entry.name}:`);
+					for (const entry of entries) {
+						if (namespaceNames.has(entry.name)) continue;
+						expect(topLevel).toContain(`export const ${entry.name}:`);
+					}
 				}
 			}
 		}

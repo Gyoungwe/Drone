@@ -1,4 +1,9 @@
-import { knowledgeLinksForDisplay, parseKnowledgeHref, splitResourceLink } from "@drone/shared";
+import {
+	type KnowledgeOverview,
+	knowledgeLinksForDisplay,
+	parseKnowledgeHref,
+	splitResourceLink,
+} from "@drone/shared";
 import MarkdownRender, { type SmoothMarkdownStreamOptions } from "markstream-react";
 import { getPi } from "../../api";
 import { reportKnowledgeError } from "../../lib/knowledge-error";
@@ -103,8 +108,9 @@ export function Markdown({
 				event.preventDefault();
 				event.stopPropagation();
 				void getPi()
-					.getKnowledgeOverview({ cwd })
-					.then((overview) => {
+					.invokeKnowledge({ operation: "overview", input: { cwd } })
+					.then((value) => {
+						const overview = value as KnowledgeOverview;
 						if (!overview.binding) throw new Error("No knowledge Vault is bound");
 						useKnowledgeStore.getState().open({
 							cwd,
