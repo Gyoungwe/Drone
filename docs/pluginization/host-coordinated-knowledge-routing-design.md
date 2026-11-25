@@ -31,40 +31,55 @@
 
 ### 宿主侧
 
+实际落地形态是**三个 IPC 通道**（不是一个），因为域边界要落在通道上：
+
 | 位置 | 改造 |
 | --- | --- |
-| `shared/src/knowledge.ts` `KnowledgeApi` | 48 个具名方法 → 1 个 `invokeKnowledge(op, input)` |
-| `shared/src/host-api/knowledge.ts` `KnowledgeContract` | 48 个具名方法 + schema → 1 个 `invoke`；新增 `allowed` 操作名清单 |
-| `shared/src/ipc.ts` `IpcChannels` | 50 个 `knowledge:*` / `zotero:*` → 1 个 `knowledge:invoke` |
-| `desktop/src/main/ipc/knowledge.ts` | 48 个 `invoke(knowledgeClient, "<op>")` → 1 个 `invoke(knowledgeClient, "invoke")` |
-| `desktop/src/preload/index.ts` | 同上 |
-| `desktop/src/renderer/src/plugins/knowledge-api.ts` | 56 个 `getPi().<method>` → 1 个 `invoke` |
-| `desktop/src/renderer/src/plugins/host-api.manifest.json` | knowledge 命名空间 56 条 → 1 条 |
+| `shared/src/ipc.ts` `IpcChannels` | 50 个 `knowledge:*` / `zotero:*` → 3 个：`knowledge:invoke`、`daily:invoke`、`zotero:invoke` |
+| `shared/src/knowledge.ts` `PiApi` | 48 个具名方法 → `invokeKnowledge` / `invokeDaily` / `invokeZotero`，各带 `{ operation, input? }` 信封 |
+| `desktop/src/main/ipc/knowledge-routes.ts` | **路由表**（新增文件）：按域分三张表，每张表一个操作名 → 实现的映射；表外操作名在进入实现前就被拒 |
+| `desktop/src/main/ipc/knowledge.ts` | 只负责解析宿主实际有的服务、挂载三张路由表、转发知识事件 |
+| `desktop/src/preload/index.ts` | 三个 `invoke*` 转发 |
+| `desktop/src/renderer/src/plugins/knowledge-api.ts` | 三个中性通道适配：`knowledge` / `daily` / `zotero`，各只有 `invoke(operation, input)` |
+| `desktop/src/renderer/src/plugins/host-api.manifest.json` | knowledge 命名空间 56 条 → 3 条（三个通道各一条） |
 | `desktop/src/renderer/src/plugins/host-api.ts` / `env.d.ts` / `resources/ui-plugins/drone-ui.d.ts` / `main/ui-plugins/plugin-api-shim.generated.ts` | 生成物，随 manifest 重生成 |
+
+路由表放在 `desktop/src/main/ipc/` 而不是 backend，因为 `openTarget` 需要 `shell.openExternal` / `shell.openPath`，
+而架构规则 R2 禁止 backend 依赖 Electron。
 
 ### 插件侧
 
 | 位置 | 改造 |
 | --- | --- |
-| `plugin-api/scripts/knowledge-ui-contract.json` | 56 方法 / 44 类型 → 中性契约（1 方法 + 少量类型） |
-| `plugin-api/src/ui-wire.ts` | 生成物，2088 行 → ~120 行 |
-| `pi-knowledge/ui/**` | `getKnowledgeApi().<method>(...)` → `getKnowledgeApi().invoke("<op>", ...)` |
+| `plugin-api/scripts/knowledge-ui-contract.json` | 56 方法 / 44 类型 → 中性契约（3 通道 + 少量类型） |
+| `plugin-api/src/ui-ports.ts` | **新增**：定义 `KnowledgeUiRoute` / `KnowledgeUiPort`（三个通道各一个 `invoke`） |
+| `plugin-api/src/ui-wire*.ts` | 生成物：2088 行单文件 → 5 个模块（`ui-wire` / `-knowledge` / `-review` / `-daily` / `-services`），每个声明由**第一个需要它的模块**拥有，后续模块 `import type` |
+| `pi-knowledge/ui/**` | `getKnowledgeApi().<method>(...)` → `getKnowledgeApi().<domain>.invoke("<op>", ...)` |
+
+生成器按模块切分而不是单文件，是为了每个文件都不越过结构基线的 400 行上限；
+「每个声明归第一个需要的模块」这条规则避免了同一类型在多处重复声明。
 
 ### 域边界
 
-知识域按既有语义分成三组，宿主每组一个中性路由：
+知识域按既有语义分成三组，宿主每组一个中性通道：
 
 - **knowledge**：overview / search / read / graph / reviews / semantic / topics / maintenance / setup / specialist / jobs / cloud
 - **daily**：日常发现（`getDailyDiscovery` / `updateDailyDiscovery` / `decideDailyIdea` / `decideDailyRadarPaper`）
 - **zotero**：Zotero 本机写入授权与状态
 
-**宿主自有能力留在原处不动**：`openExternal`、`pickDirectory`、`prompt`、`formalKnowledgeVault`、`onKnowledgeEvent` 本来就不属于知识域（前三个在 `app` / `project` 域，`onKnowledgeEvent` 是事件订阅，`formalKnowledgeVault` 是宿主路径解析）。
+**宿主自有能力移出知识域**，落在 `plugin-api/src/ui-ports.ts` 里两个独立的宿主端口：
+
+- `AppUiPort`（宿主机制）：`pickDirectory` / `formalKnowledgeVault`
+- `InstitutionalUiPort`（机构访问）：配置、会话、可达性
+
+`openExternal` / `openResourceExternal` 归 `helpers`，`prompt` / `command` 归 `sessions`。
+`onKnowledgeEvent` 是宿主内部事件桥，**不再暴露给插件**。
 
 ### 操作名清单
 
-宿主保留每个域的 `allowed` 清单（字符串数组）。它是**授权边界**，不是领域知识：
+宿主保留每个域的路由表（操作名 → 实现的映射）。它是**授权边界**，不是领域知识：
 
-- 宿主拒绝清单外的操作名。
+- 宿主拒绝路由表外的操作名（`Unknown knowledge operation: <op>`），在任何实现运行之前。
 - 新增操作名要在宿主加一行——但只加**一个字符串**，不改 schema、不改类型、不改 IPC 通道、不改生成物。
 
 域内 schema 与校验归插件（计划行要求：keep domain schemas with validation with plugin owners）。
@@ -78,6 +93,8 @@
 
 单一全局 `invoke(op, input)` 会丢掉域这个隔离维度，授权与校验只能全靠插件自报；保留具名方法则完全达不到「只改插件」。
 
+三个通道之间靠 IPC 通道名隔离，宿主在**路由表**这一层再挡一次：通道内的操作名不在表里就拒绝。
+
 ## 破坏性范围
 
 - `plugin-api` 的公开导出面变化（`KnowledgeUiPort` 形状变了）——必须走 **下一个 major**，不能随 1.3.0 发。
@@ -90,3 +107,15 @@
 - `node scripts/generate-knowledge-ui-contract.mjs --check` 与 `packages/desktop/scripts/gen-plugin-api.mjs --check` 幂等。
 - 结构基线 `scripts/fixtures/structure-baseline.json` 的 ui-wire 行收紧。
 - 真实安装包验收：知识面板读路径、评审写入路径、日常发现、Zotero 授权状态四条。
+
+## 未完成
+
+宿主侧已落地（本分支）。插件侧 `pi-knowledge/ui/**` 的 134 处 `getKnowledgeApi()` 调用点尚未迁移，
+它依赖宿主先发布新 major 的 `@gyoungwe/plugin-api`——见工单队列的 `T493`。
+
+## 已知坑
+
+`barrel-shadowing.test.ts` 原来用 `ts.createProgram` + `checker.getExportsOfModule` 解析
+「barrel 到底从 plugin-api 转发了哪些名字」，在 `origin/main` 上就要 4.4 秒，逼近 vitest 的 5 秒上限；
+本分支新增模块后超时。改为**语法层**读 barrel 的具名导出声明（`ts.createSourceFile`），
+耗时 5 毫秒。`checker.getExportsOfModule` 在 1178 个导出的 barrel 上单次就要 1.2 秒。

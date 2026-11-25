@@ -5,8 +5,12 @@ import ts from "typescript";
 import { expect, expectTypeOf, it } from "vitest";
 import type {
 	CapabilitySourceReceipt,
+	ContractParentRef,
+	KnowledgeEvidenceGrade,
+	KnowledgeFreshness,
 	KnowledgeReuseLevel,
 	KnowledgeSnapshot,
+	KnowledgeSourceReceipt,
 	VersionedRecord,
 	VersionedResearchContract,
 } from "./index";
@@ -72,16 +76,25 @@ it("uses plugin-api declarations for all nine shadowed shared exports", () => {
 
 	// The plugin API is the only source of these names for the barrel, so the
 	// host's own contract modules must not export them under the same names.
-	const pluginNames: Array<keyof typeof PluginKnowledge> = [
-		"CapabilitySourceReceipt",
-		"ContractParentRef",
-		"KnowledgeEvidenceGrade",
-		"KnowledgeFreshness",
-		"KnowledgeReuseLevel",
-		"KnowledgeSnapshot",
-		"KnowledgeSourceReceipt",
-		"VersionedRecord",
-		"VersionedResearchContract",
-	];
-	for (const name of pluginNames) expectTypeOf<(typeof PluginKnowledge)[typeof name]>().not.toBeNever();
+	// Each name is referenced in type position: a missing declaration is a
+	// compile error, which is a stronger check than a runtime assertion.
+	expectTypeOf<PluginKnowledge.CapabilitySourceReceipt>().not.toBeNever();
+	expectTypeOf<PluginKnowledge.ContractParentRef>().not.toBeNever();
+	expectTypeOf<PluginKnowledge.KnowledgeEvidenceGrade>().not.toBeNever();
+	expectTypeOf<PluginKnowledge.KnowledgeFreshness>().not.toBeNever();
+	expectTypeOf<PluginKnowledge.KnowledgeReuseLevel>().not.toBeNever();
+	expectTypeOf<PluginKnowledge.KnowledgeSnapshot>().not.toBeNever();
+	expectTypeOf<PluginKnowledge.KnowledgeSourceReceipt>().not.toBeNever();
+	expectTypeOf<PluginKnowledge.VersionedRecord>().not.toBeNever();
+	expectTypeOf<PluginKnowledge.VersionedResearchContract>().not.toBeNever();
+
+	// The barrel must hand consumers the plugin's declaration, not a local
+	// one that happens to share the name.
+	expectTypeOf<CapabilitySourceReceipt>().toEqualTypeOf<PluginKnowledge.CapabilitySourceReceipt>();
+	expectTypeOf<ContractParentRef>().toEqualTypeOf<PluginKnowledge.ContractParentRef>();
+	expectTypeOf<KnowledgeEvidenceGrade>().toEqualTypeOf<PluginKnowledge.KnowledgeEvidenceGrade>();
+	expectTypeOf<KnowledgeFreshness>().toEqualTypeOf<PluginKnowledge.KnowledgeFreshness>();
+	expectTypeOf<KnowledgeSnapshot>().toEqualTypeOf<PluginKnowledge.KnowledgeSnapshot>();
+	expectTypeOf<KnowledgeSourceReceipt>().toEqualTypeOf<PluginKnowledge.KnowledgeSourceReceipt>();
+	expectTypeOf<VersionedResearchContract>().toEqualTypeOf<PluginKnowledge.VersionedResearchContract>();
 });
