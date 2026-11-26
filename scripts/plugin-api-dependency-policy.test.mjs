@@ -8,11 +8,14 @@ import { afterEach, beforeEach, test } from "node:test";
 import { checkPluginDependency } from "./plugin-api-dependency-policy.mjs";
 
 const candidate = "vendor/gyoungwe-plugin-api-2.0.0-deadbeef.tgz";
+const apiName = "@gyoungwe/plugin-api";
+const releaseUrl =
+	"https://github.com/Gyoungwe/Drone/releases/download/plugin-api-v2.0.0/gyoungwe-plugin-api-2.0.0.tgz";
 let root, hostRoot, pluginRoot, location;
 const json = (path, value) => writeFile(path, JSON.stringify(value));
 const git = (directory, ...args) => execFileSync("git", ["-C", directory, ...args], { stdio: "pipe" });
 beforeEach(async () => {
-	root = await mkdtemp(join(tmpdir(), "drone-api-candidate-policy-"));
+	root = await mkdtemp(join(tmpdir(), "drone-api-dependency-policy-"));
 	hostRoot = join(root, "host");
 	pluginRoot = join(root, "plugins");
 	await mkdir(join(root, "archive/package"), { recursive: true });
@@ -38,7 +41,7 @@ beforeEach(async () => {
 		);
 	}
 	await mkdir(join(hostRoot, "packages/plugin-api"), { recursive: true });
-	await json(join(hostRoot, "packages/plugin-api/package.json"), { version: "2.0.0" });
+	await json(join(hostRoot, "packages/plugin-api/package.json"), { name: apiName, version: "2.0.0" });
 	await json(join(pluginRoot, "package.json"), { private: true });
 	const value = `file:${candidate}`;
 	const integrity = `sha512-${createHash("sha512")
@@ -60,6 +63,143 @@ beforeEach(async () => {
 });
 afterEach(async () => {
 	await rm(root, { recursive: true, force: true });
+});
+
+async function releaseFixture() {
+	const tarball = join(hostRoot, candidate);
+	const bytes = await readFile(tarball);
+	const sha256 = createHash("sha256").update(bytes).digest("hex");
+	const integrity = `sha512-${createHash("sha512").update(bytes).digest("base64")}`;
+	const manifest = {
+		private: true,
+		devDependencies: { [apiName]: releaseUrl },
+		dronePluginApiSha256: sha256,
+	};
+	const workspace = "packages/example";
+	const manifestPath = join(pluginRoot, workspace, "package.json");
+	const leaf = { dependencies: { [apiName]: releaseUrl } };
+	const installed = { version: "2.0.0", resolved: releaseUrl, integrity };
+	const lock = {
+		packages: {
+			"": { devDependencies: manifest.devDependencies },
+			[workspace]: leaf,
+			[`node_modules/${apiName}`]: installed,
+		},
+	};
+	const lockPath = join(pluginRoot, "package-lock.json");
+	await mkdir(join(pluginRoot, workspace), { recursive: true });
+	await json(location.manifestPath, manifest);
+	await json(manifestPath, leaf);
+	await json(lockPath, lock);
+	return { tarball, bytes, sha256, manifest, manifestPath, lock, lockPath, installed, workspace };
+}
+
+test("accepts release URL pins when root, workspace, lock and verified bytes agree", async () => {
+	const { tarball, bytes, manifestPath, sha256 } = await releaseFixture();
+	const pin = { url: releaseUrl, version: "2.0.0", sha256 };
+	assert.deepEqual(checkPluginDependency(releaseUrl, { ...location, releaseTarball: tarball }), pin);
+	assert.deepEqual(
+		checkPluginDependency(releaseUrl, {
+			...location,
+			manifestPath,
+			section: "dependencies",
+			releaseTarball: bytes,
+		}),
+		pin,
+	);
+});
+
+test("rejects bogus release hosts, repositories, tags and asset filenames", async () => {
+	await releaseFixture();
+	for (const value of [
+		releaseUrl.replace("github.com", "github.com.example.invalid"),
+		releaseUrl.replace("https:", "http:"),
+		releaseUrl.replace("Gyoungwe/Drone", "Gyoungwe/drone-plugins"),
+		releaseUrl.replace("plugin-api-v2.0.0", "plugin-api-v2.0.1"),
+		releaseUrl.replace("gyoungwe-plugin-api-2.0.0.tgz", "plugin-api.tgz"),
+		`${releaseUrl}?candidate=1`,
+	])
+		assert.throws(() => checkPluginDependency(value, location), /canonical Release URL/u);
+});
+
+test("requires a private release-pinned root with a lowercase SHA-256", async () => {
+	const { manifest } = await releaseFixture();
+	await json(location.manifestPath, { ...manifest, private: false });
+	assert.throws(() => checkPluginDependency(releaseUrl, location), /workspace must be private/u);
+	await json(location.manifestPath, { ...manifest, dronePluginApiSha256: "A".repeat(64) });
+	assert.throws(() => checkPluginDependency(releaseUrl, location), /dronePluginApiSha256/u);
+	await json(location.manifestPath, { ...manifest, devDependencies: {} });
+	assert.throws(() => checkPluginDependency(releaseUrl, location), /root dev dependency/u);
+});
+
+test("verifies supplied release bytes against SHA-256, SHA-512 and package identity", async () => {
+	const { bytes, tarball, lock, lockPath, installed, manifest } = await releaseFixture();
+	assert.throws(
+		() =>
+			checkPluginDependency(releaseUrl, {
+				...location,
+				releaseTarball: Buffer.concat([bytes, Buffer.from("other")]),
+			}),
+		/SHA-256 mismatch/u,
+	);
+	installed.integrity = `sha512-${createHash("sha512").update("other").digest("base64")}`;
+	await json(lockPath, lock);
+	assert.throws(
+		() => checkPluginDependency(releaseUrl, { ...location, releaseTarball: tarball }),
+		/SHA-512 integrity mismatch/u,
+	);
+	await json(join(root, "archive/package/package.json"), { name: apiName, version: "3.0.0" });
+	const wrong = execFileSync("tar", ["-czf", "-", "-C", join(root, "archive"), "package"]);
+	await json(location.manifestPath, {
+		...manifest,
+		dronePluginApiSha256: createHash("sha256").update(wrong).digest("hex"),
+	});
+	installed.integrity = `sha512-${createHash("sha512").update(wrong).digest("base64")}`;
+	await json(lockPath, lock);
+	assert.throws(
+		() => checkPluginDependency(releaseUrl, { ...location, releaseTarball: wrong }),
+		/package identity/u,
+	);
+});
+
+test("requires root and workspace lock specs to equal the release pin", async () => {
+	const { installed, lock, lockPath, manifestPath, workspace } = await releaseFixture();
+	lock.packages[""].devDependencies[apiName] = "2.0.0";
+	await json(lockPath, lock);
+	assert.throws(() => checkPluginDependency(releaseUrl, location), /root lock is stale/u);
+	lock.packages[""].devDependencies[apiName] = releaseUrl;
+	lock.packages[workspace].dependencies[apiName] = "2.0.0";
+	await json(lockPath, lock);
+	const leaf = { ...location, manifestPath, section: "dependencies" };
+	assert.throws(() => checkPluginDependency(releaseUrl, leaf), /workspace lock is stale/u);
+	assert.throws(() => checkPluginDependency("2.0.0", leaf), /canonical Release URL/u);
+	installed.version = "1.3.0";
+	await json(lockPath, lock);
+	assert.throws(() => checkPluginDependency(releaseUrl, location), /lock version is stale/u);
+});
+
+test("checks nested lock resolutions and permits bundled entries without a resolved URL", async () => {
+	const { bytes, lock, lockPath, installed } = await releaseFixture();
+	const nested = `node_modules/parent/node_modules/${apiName}`;
+	lock.packages[nested] = { version: "2.0.0", inBundle: true };
+	await json(lockPath, lock);
+	assert.equal(checkPluginDependency(releaseUrl, { ...location, releaseTarball: bytes }).url, releaseUrl);
+	const registry = "https://registry.npmjs.org/@gyoungwe/plugin-api/-/plugin-api-2.0.0.tgz";
+	for (const inBundle of [false, true]) {
+		lock.packages[nested] = { ...installed, inBundle, resolved: registry };
+		await json(lockPath, lock);
+		assert.throws(() => checkPluginDependency(releaseUrl, location), /lock resolved must equal/u);
+	}
+	lock.packages[nested] = { ...installed, integrity: "sha1-stale" };
+	await json(lockPath, lock);
+	assert.throws(() => checkPluginDependency(releaseUrl, location), /requires SHA-512 integrity/u);
+});
+
+test("release-only mode rejects the otherwise valid committed file candidate", () => {
+	assert.throws(
+		() => checkPluginDependency(`file:${candidate}`, { ...location, releaseOnly: true }),
+		/release-only/u,
+	);
 });
 
 test("accepts only the same committed API package with an exact clean-install lock", () => {
