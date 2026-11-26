@@ -17,6 +17,11 @@ import {
 } from "./measure-desktop-research-baseline-contract.mts";
 import { offlineModel } from "./measure-desktop-research-baseline-faux.mts";
 import { installFixtureFetch } from "./measure-desktop-research-baseline-fixture.mts";
+import {
+	gatewayFetch,
+	scenarioRuntime,
+	withLiveConfig,
+} from "./measure-desktop-research-baseline-provider.mts";
 import { createDesktopSession, loadDesktopAssembly } from "./measure-desktop-research-baseline-sdk.mts";
 
 const fixture = "fixtures/research-desktop-baseline.json";
@@ -235,9 +240,93 @@ async function assertNoOverwrite() {
 	}
 }
 
-if (process.send) serveFixtureChild(probeBreaker);
+async function probeLiveRuntime(prepared, live) {
+	const guard = installFixtureFetch(prepared.identities);
+	const path = join(prepared.agentDir, "models.json");
+	try {
+		const sdk = await import("@earendil-works/pi-coding-agent");
+		await assert.rejects(
+			withLiveConfig(prepared, live, async () => {
+				const config = await readFile(path, "utf8");
+				assert.ok(!config.includes(live.apiKey), "Credential in provider config");
+				assert.deepEqual(JSON.parse(config), {
+					providers: {
+						[live.provider]: {
+							api: "openai-completions",
+							baseUrl: live.baseUrl,
+							models: [{ id: live.model, contextWindow: 1048576, input: ["text"], reasoning: false }],
+						},
+					},
+				});
+				const { modelRuntime, model } = await scenarioRuntime(sdk, prepared.agentDir, live);
+				const auth = await readFile(join(prepared.agentDir, "auth.json"), "utf8");
+				assert.ok(!auth.includes(live.apiKey), "Credential persisted to auth.json");
+				globalThis.fetch = gatewayFetch(
+					live.baseUrl,
+					globalThis.fetch,
+					async (input, init) => {
+						assert.equal(String(input), `${live.baseUrl}/chat/completions`);
+						assert.ok(
+							new Headers(init.headers).get("authorization") === `Bearer ${live.apiKey}`,
+							"Wrong runtime auth",
+						);
+						const chunk = {
+							id: "synthetic",
+							object: "chat.completion.chunk",
+							created: 1,
+							model: model.id,
+							choices: [{ index: 0, delta: { content: "Synthetic output." }, finish_reason: "stop" }],
+							usage: { prompt_tokens: 7, completion_tokens: 11 },
+						};
+						return new Response(`data: ${JSON.stringify(chunk)}\n\ndata: [DONE]\n\n`, {
+							headers: { "Content-Type": "text/event-stream" },
+						});
+					},
+					guard.violations,
+				);
+				const reply = await modelRuntime
+					.streamSimple(model, { messages: [{ role: "user", content: "Synthetic probe.", timestamp: 0 }] })
+					.result();
+				assert.equal(reply.stopReason, "stop");
+				assert.equal(reply.usage.input, 7);
+				assert.equal(reply.usage.output, 11);
+				throw new Error("Synthetic runtime failure");
+			}),
+			/Synthetic runtime failure/,
+		);
+		await assert.rejects(readFile(path), { code: "ENOENT" });
+		guard.assertClean();
+		return { cleaned: true };
+	} finally {
+		guard.restore();
+	}
+}
+
+async function assertLiveRuntime() {
+	const {
+		scenarios: [scenario],
+	} = validateDesktopFixture(JSON.parse(await readFile(fixture, "utf8")));
+	const live = {
+		provider: "magpie",
+		model: "deepseek/deepseek-flash",
+		thinkingLevel: "off",
+		baseUrl: "http://localhost:3425/v1",
+		apiKey: ["synthetic", "placeholder", process.pid].join("-"),
+	};
+	const result = await withDesktopFixture(scenario, (prepared) =>
+		runFixtureChild(prepared, import.meta.filename, live),
+	);
+	assert.deepEqual(result, { cleaned: true });
+}
+
+if (process.send)
+	serveFixtureChild((prepared, live) => (live ? probeLiveRuntime(prepared, live) : probeBreaker(prepared)));
 else {
 	breakerTests();
+	test(
+		"isolated live SDK runtime resolves config, streams mocked usage, and cleans up on failure",
+		assertLiveRuntime,
+	);
 	test("Desktop v2 records four real offline SDK outcomes", assertScenarioReport);
 	test("Desktop v2 does not overwrite an existing report", assertNoOverwrite);
 }
