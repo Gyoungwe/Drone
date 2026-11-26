@@ -380,7 +380,7 @@ packages/
 
 宿主不再进程内创建任务 owner；没有启用内置 pi-core 时任务能力 unavailable，无本地引擎回退。`packages/extensions/src/internal/runtime/` 仅保留旧扩展仍使用的通用 scheduler/slot/tool 声明机制；`packages/tasks`、compiled runtime、反向 workbench handler 和 acceptance collector 已删除。已发布 `plugin-api/tasks` 的旧 helpers/字段保留 1.x 类型兼容，不作为生产 owner。
 
-规则回归位于插件 `packages/pi-core/test/task-runtime/`，宿主的 `test/builtin-core-*-sdk.test.mjs` 检查内置安装包、生产 SessionService、独立会话、停用与重新授权，`test/task-plugin-activation-sdk.test.mjs` 检查未装任务包时的基础权限；`scripts/knowledge-ui-smoke/task-owner.mjs` 从安装包读取 UI fixture 的 journal，不复制算法。任务 UI 已同包，整个可选 native 包生命周期和正式安装包验收仍未完成。
+规则回归位于插件 `packages/pi-core/test/task-runtime/`，宿主的 `test/builtin-core-*-sdk.test.mjs` 检查内置安装包、生产 SessionService、独立会话、停用与重新授权，`test/task-plugin-activation-sdk.test.mjs` 检查未装任务包时的基础权限。任务 UI 已同包，整个可选 native 包生命周期和正式安装包验收仍未完成。
 
 `backend/test/task-manifest-session.test.mjs` checks the independently bundled knowledge extension's read-only declaration in two standalone host runtimes, without a task owner. Task guard behavior belongs to pi-core; this host test does not verify managed idempotency.
 

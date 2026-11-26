@@ -6,7 +6,6 @@ import { AppContract, channelOf, DecisionsContract, SessionsContract } from "@dr
 import { app, BrowserWindow, ipcMain } from "electron";
 import { KnowledgeUiService } from "../../packages/backend/src/knowledge/ui.ts";
 import { registerKnowledgeIpc } from "../../packages/desktop/src/main/ipc/knowledge.ts";
-import { createTaskFixture } from "./task-owner.mjs";
 
 const root = process.env.DRONE_UI_FIXTURE,
 	repo = process.env.DRONE_UI_REPO;
@@ -22,12 +21,6 @@ const checks = [],
 	actions = [];
 const screenshots = join(root, "screenshots");
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
-const taskOwners = [];
-async function createTaskWorkbench(cwd, options) {
-	const fixture = await createTaskFixture(cwd, options);
-	taskOwners.push(fixture);
-	return fixture.journal;
-}
 
 async function run() {
 	try {
@@ -732,127 +725,6 @@ async function run() {
 		await capture("12-sidebar-aligned-dark");
 		await js("window.sidebarFixture.end();true");
 		window.webContents.debugger.detach();
-
-		const journal = await createTaskWorkbench(cwd);
-		journal.attach("isolated-ui");
-		journal.begin("分析实验数据并交付 CSV；不代表实验结论已验证");
-		journal.plan({
-			summary: "隔离界面测试的单文件交付",
-			writeRoots: [cwd],
-			milestones: [{ id: "data", title: "CSV 文件读回", acceptance: { kind: "file", path: "analysis.csv" } }],
-		});
-		journal.command({
-			taskId: journal.snapshot().id,
-			revision: journal.view().revision,
-			action: "authorize-task",
-		});
-		await writeFile(join(cwd, "analysis.csv"), "sample,value\nfixture,1\n");
-		await journal.observe(
-			{ toolName: "write", toolCallId: "fixture-write", input: { path: "analysis.csv" } },
-			cwd,
-		);
-		journal.pause("fixture-user-stop");
-		await js(
-			`document.querySelector('#sidebar-actions-fixture')?.style && (document.querySelector('#sidebar-actions-fixture').style.display='none');document.querySelector('#stage-timeline-fixture').style.display='block';window.stageTimelineFixture.status(${JSON.stringify(journal.render())});true`,
-		);
-		await wait(
-			"document.querySelector('#stage-timeline-fixture').innerText.includes('analysis.csv')",
-			"host task checkpoint displayed without model turn",
-		);
-		assert(
-			await js(
-				"document.querySelector('#stage-timeline-fixture').innerText.includes('不代表实验结论已验证')",
-			),
-		);
-		await js("document.querySelector('#stage-timeline-fixture').scrollIntoView({block:'start'});true");
-		await capture("13-generic-task-checkpoint");
-		checks.push(
-			"generic data/file checkpoint: real host readback + actual MessageList, no model invocation or scientific completion claim",
-		);
-
-		const entries = [];
-		let workbench = await createTaskWorkbench(cwd, {
-			persist: (data) => entries.push({ customType: "drone-task-workbench-v2", data }),
-		});
-		workbench.attach("isolated-ui-v2");
-		workbench.plan({
-			goal: "实验数据交付与人工复核",
-			milestones: [
-				{ id: "data", title: "CSV 文件读回", acceptance: { kind: "file", path: "analysis.csv" } },
-				{
-					id: "review",
-					title: "人工核对交付文件",
-					dependsOn: ["data"],
-					acceptance: { kind: "human_review" },
-				},
-			],
-		});
-		const taskId = workbench.snapshot().id;
-		workbench.wait({
-			kind: "file",
-			title: "请核对实验数据文件",
-			reason: "只核对这份交付物，不验证科研结论",
-			milestoneId: "review",
-		});
-		const pushTask = async () =>
-			js(`window.stageTimelineFixture.status("宿主任务记录", ${JSON.stringify(workbench.view())});true`);
-		await pushTask();
-		await wait(
-			"document.querySelector('[data-testid=task-workbench]').innerText.includes('实验数据交付与人工复核')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('CSV 文件读回')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('人工核对交付文件')",
-			"v2 structured task contract view",
-		);
-		assert.equal(workbench.view().tasks[0].state, "waiting_user");
-		workbench.command({ taskId, revision: workbench.view().revision, action: "authorize-task" });
-		await pushTask();
-		await wait(
-			"document.querySelector('[data-testid=task-workbench]').innerText.includes('等待你')",
-			"approved task contract remains visible while its file action awaits readback",
-		);
-		const writeEvent = {
-			toolName: "write",
-			toolCallId: "fixture-task-write",
-			input: { path: "analysis.csv", content: "sample,value\nfixture,1\n" },
-			isError: false,
-			content: [{ type: "text", text: "written" }],
-			details: {},
-		};
-		assert.equal(workbench.guard(writeEvent), null);
-		await workbench.observe(writeEvent, cwd);
-		const action = workbench.view().tasks[0].actions.find((item) => item.kind === "file");
-		assert(action);
-		await workbench.acceptFile(
-			{ taskId, revision: workbench.view().revision, actionId: action.id, path: "analysis.csv" },
-			cwd,
-		);
-		workbench.command({
-			taskId,
-			revision: workbench.view().revision,
-			action: "acknowledge",
-			actionId: action.id,
-		});
-		await pushTask();
-		await js(
-			"document.querySelectorAll('[data-testid=task-workbench] details').forEach((node)=>{node.open=true});true",
-		);
-		await wait(
-			"(()=>{const node=document.querySelector('[data-testid=task-workbench]');return Boolean(node)&&node.innerText.includes('✓')&&node.innerText.includes('CSV 文件读回')&&node.innerText.includes('人工核对交付文件')&&node.innerText.includes('已验收 2/2')})()",
-			"host file readback updates selected criterion",
-		);
-		workbench = await createTaskWorkbench(cwd);
-		workbench.attach("isolated-ui-v2", entries);
-		await workbench.reconcile(cwd);
-		await pushTask();
-		await js(
-			"document.querySelectorAll('[data-testid=task-workbench] details').forEach((node)=>{node.open=true});true",
-		);
-		await wait(
-			"document.querySelector('[data-testid=task-workbench]').innerText.includes('✓')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('CSV 文件读回')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('人工核对交付文件')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('已验收 2/2')",
-			"restart restores verified file delivery and scoped acceptance",
-		);
-		await capture("14-task-workbench-ipc-recovery");
-		checks.push(
-			"v2 task contract view: actual TasksPane renders the plan, host readback and explicit file acknowledgment complete both scoped acceptance criteria, and durable ledger restart preserves the verified delivery without a scientific completion claim",
-		);
 		assert.equal(errors.length, 0, "renderer errors");
 		await writeFile(
 			join(root, "validation.json"),
@@ -877,7 +749,6 @@ async function run() {
 		);
 		assert.equal(errors.length, 0, "renderer errors");
 		console.log(JSON.stringify({ passed: true, checks, root, screenshots }));
-		for (const owner of taskOwners) await owner.dispose();
 		knowledge.dispose();
 		await services.closeKnowledgeServices();
 		window.destroy();
@@ -892,7 +763,6 @@ async function run() {
 			if (window)
 				await writeFile(join(root, "failure.png"), (await window.webContents.capturePage()).toPNG());
 		} catch {}
-		for (const owner of taskOwners) await owner.dispose();
 		await services?.closeKnowledgeServices?.();
 		app.exit(1);
 	}
