@@ -49,25 +49,6 @@
 			"permissions": { "filesystem": "workspace", "network": "none" }
 		},
 		{
-			"name": "@gyoungwe/pi-connectors",
-			"host": "pi",
-			"version": "0.1.1",
-			"description": "Host-neutral, read-only connector declarations and provenance receipts for native Pi",
-			"capabilities": ["connectors", "receipts"],
-			"tools": ["connector_list", "connector_get"],
-			"permissions": { "filesystem": "workspace", "network": "read" }
-		},
-		{
-			"name": "@gyoungwe/desktop-ui-pack",
-			"host": "desktop",
-			"version": "0.1.1",
-			"description": "Optional Drone Desktop UI contributions loaded by the installed package boundary",
-			"packageKind": "desktop-ui",
-			"capabilities": ["ui"],
-			"tools": [],
-			"permissions": { "filesystem": "none", "network": "none" }
-		},
-		{
 			"name": "@gyoungwe/research-suite",
 			"host": "pi",
 			"version": "0.1.6",

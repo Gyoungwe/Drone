@@ -84,7 +84,6 @@
 	"devDependencies": {
 		"@ast-grep/cli": "0.51.3",
 		"@biomejs/biome": "^2.4.0",
-		"@gyoungwe/pi-connectors": "0.1.0",
 		"@gyoungwe/pi-core": "https://github.com/Gyoungwe/drone-plugins/releases/download/pi-core-v0.3.0/gyoungwe-pi-core-0.3.0.tgz",
 		"@gyoungwe/pi-evidence": "0.1.0",
 		"@gyoungwe/pi-knowledge": "https://github.com/Gyoungwe/drone-plugins/releases/download/pi-knowledge-v0.3.1/gyoungwe-pi-knowledge-0.3.1.tgz",
