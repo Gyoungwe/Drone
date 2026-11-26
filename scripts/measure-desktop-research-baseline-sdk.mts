@@ -1,14 +1,16 @@
 import { join, resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import type * as PiAi from "@earendil-works/pi-ai";
 import type * as Sdk from "@earendil-works/pi-coding-agent";
 import type * as Knowledge from "@gyoungwe/pi-knowledge/host";
 import { type TSchema, Type } from "typebox";
-import { artifactNames, createResultReferences, toolNames } from "./measure-desktop-research-baseline-contract.mts";
+import { artifactNames, createResultReferences, liveObservation, toolNames, unroutedObservation } from "./measure-desktop-research-baseline-contract.mts";
 import {
 	acquireFixtureArchive, assertFixtureRead, type DesktopFixture, type DesktopSetupRunner, installFixtureFetch, setupDesktopFixture,
 } from "./measure-desktop-research-baseline-fixture.mts";
 import { fauxResponses, objectFields, offlineModel } from "./measure-desktop-research-baseline-faux.mts";
 import { finishObservation, observeDesktopEvents, snapshotVault } from "./measure-desktop-research-baseline-observe.mts";
+import { declaredContextWindow, gatewayFetch, type LiveProvider, liveUsage, scenarioRuntime, withLiveConfig } from "./measure-desktop-research-baseline-provider.mts";
 import { checked, readJson } from "./research-baseline-io.mts";
 
 const repo = resolve(import.meta.dirname, "..");
@@ -21,7 +23,6 @@ const text = Type.String({ minLength: 1 });
 const schemaShape = Type.Object({ type: Type.Literal("object"), properties: Type.Object({}), required: Type.Optional(Type.Array(text)) });
 
 type Runtime = { sdk: typeof Sdk; ai: typeof PiAi; knowledge: typeof Knowledge };
-type ModelFactory = (ai: typeof PiAi, responses: PiAi.FauxResponseStep[]) => ReturnType<typeof offlineModel>;
 
 export async function loadDesktopAssembly(sdk: typeof Sdk, fixture: DesktopFixture, factory?: Sdk.ExtensionFactory) {
 	const { workspace: cwd, agentDir, skillPath } = fixture;
@@ -52,13 +53,10 @@ export async function loadDesktopAssembly(sdk: typeof Sdk, fixture: DesktopFixtu
 
 export async function createDesktopSession(
 	sdk: typeof Sdk, fixture: DesktopFixture, assembly: Awaited<ReturnType<typeof loadDesktopAssembly>>,
-	tools: string[], { provider, model }: ReturnType<typeof offlineModel>,
+	tools: string[], selected: ReturnType<typeof offlineModel> | LiveProvider,
 ) {
 	const { workspace: cwd, agentDir } = fixture;
-	const modelRuntime = await sdk.ModelRuntime.create({ authPath: join(agentDir, "auth.json"), modelsPath: null,
-		modelsStorePath: join(agentDir, "model-cache.json"), allowModelNetwork: false, refreshOnCreate: false });
-	modelRuntime.registerNativeProvider(provider);
-	const { session } = await sdk.createAgentSession({ cwd, agentDir, modelRuntime, model, thinkingLevel: "off",
+	const { session } = await sdk.createAgentSession({ cwd, agentDir, ...await scenarioRuntime(sdk, agentDir, selected),
 		settingsManager: assembly.settingsManager, resourceLoader: assembly.loader, tools,
 		sessionManager: sdk.SessionManager.inMemory(cwd) });
 	return session;
@@ -114,9 +112,9 @@ async function verifySetup(knowledge: typeof Knowledge, fixture: DesktopFixture,
 		indexReady: true };
 }
 
-function researchPolicy(fixture: DesktopFixture, references: ReturnType<typeof createResultReferences>) {
+function researchPolicy(fixture: DesktopFixture, references: ReturnType<typeof createResultReferences>, live?: LiveProvider) {
 	const state = { toolCalls: [] as string[], requested: 0, denied: 0, depositExecuteEntered: 0, limitReached: false,
-		runDir: "", error: "", vaultBeforeDeposit: undefined as Awaited<ReturnType<typeof snapshotVault>> | undefined };
+		runDir: "", escalated: false, error: "", vaultBeforeDeposit: undefined as Awaited<ReturnType<typeof snapshotVault>> | undefined };
 	const pending = new Map<string, { name: string; input: Record<string, unknown> }>();
 	const factory: Sdk.ExtensionFactory = (pi) => {
 		pi.registerTool({ name: acquire, label: "Fixture archive acquisition", description: "Copy pinned synthetic instrument records into the active research run; no network.",
@@ -159,11 +157,15 @@ function researchPolicy(fixture: DesktopFixture, references: ReturnType<typeof c
 			const entry = pending.get(toolCallId);
 			pending.delete(toolCallId);
 			if (!entry || isError) return;
-			await references.observe(entry, { isError, details: objectFields(result).details });
+			const details = objectFields(result).details;
+			await references.observe(entry, { isError, details });
+			if (live && entry.name === "research_loop" && entry.input.action === "escalate")
+				state.escalated = objectFields(objectFields(details).metadata).mode === "deep_research";
 			if (entry.name === "research_loop" && entry.input.action === "start") {
 				const runDir = references.resolve("${runDir}");
 				if (typeof runDir !== "string") throw new Error("Native start did not return a run directory");
 				state.runDir = runDir;
+				state.escalated = false;
 			}
 		});
 	};
@@ -189,46 +191,57 @@ function measuredSchemas(sdk: typeof Sdk, fixture: DesktopFixture, definitions: 
 	return schemas;
 }
 
-export async function runDesktopScenario(fixture: DesktopFixture, createModel: ModelFactory = offlineModel) {
+export async function runDesktopScenario(fixture: DesktopFixture, live?: LiveProvider, transport = globalThis.fetch) {
 	const guard = installFixtureFetch(fixture.identities);
 	try {
 		const [sdk, ai, knowledge] = await Promise.all([
 			import("@earendil-works/pi-coding-agent"), import("@earendil-works/pi-ai"), import("@gyoungwe/pi-knowledge/host"),
 		]);
-		return await measure({ sdk, ai, knowledge }, fixture, createModel, guard);
+		return await withLiveConfig(fixture, live, () => measure({ sdk, ai, knowledge }, fixture, guard, live, transport));
 	} finally {
 		guard.restore();
 	}
 }
 
-async function measure({ sdk, ai, knowledge }: Runtime, fixture: DesktopFixture, createModel: ModelFactory,
-	guard: ReturnType<typeof installFixtureFetch>) {
+async function measure({ sdk, ai, knowledge }: Runtime, fixture: DesktopFixture,
+	guard: ReturnType<typeof installFixtureFetch>, live: LiveProvider | undefined, transport: typeof fetch) {
 	const references = createResultReferences(fixture.resultsRoot);
-	const policy = researchPolicy(fixture, references);
+	const { state, factory } = researchPolicy(fixture, references, live);
 	const events = observeDesktopEvents();
+	const usage: ReturnType<typeof liveUsage>[] = [];
 	let session: Sdk.AgentSession | undefined;
 	let unsubscribe: (() => void) | undefined;
 	try {
 		await setupDesktopFixture(fixture, setupRunner({ sdk, ai, knowledge }));
-		const assembly = await loadDesktopAssembly(sdk, fixture, policy.factory);
-		const schemas = measuredSchemas(sdk, fixture, assembly.definitions, policy.state);
-		const model = createModel(ai, fauxResponses(ai, fixture.scenario, schemas, references));
-		session = await createDesktopSession(sdk, fixture, assembly, [...toolNames], model);
+		const assembly = await loadDesktopAssembly(sdk, fixture, factory);
+		const schemas = measuredSchemas(sdk, fixture, assembly.definitions, state);
+		const selected = live ?? offlineModel(ai, fauxResponses(ai, fixture.scenario, schemas, references));
+		if (live) globalThis.fetch = gatewayFetch(live.baseUrl, globalThis.fetch, transport, guard.violations);
+		session = await createDesktopSession(sdk, fixture, assembly, [...toolNames], selected);
 		const errors: string[] = [];
 		await session.bindExtensions({ onError: ({ event }) => errors.push(event ?? "extension-error") });
 		const toolSet = session.getActiveToolNames().sort();
 		if (toolSet.join() !== toolNames.join()) throw new Error("SDK active tool set differs from Desktop allowlist");
-		unsubscribe = session.subscribe(events.observe);
+		unsubscribe = session.subscribe((event) => {
+			events.observe(event);
+			if (live && event.type === "message_end" && event.message.role === "assistant") usage.push(liveUsage(event.message.usage));
+		});
 		const vaultBefore = await snapshotVault(fixture.vault);
 		const started = performance.now();
 		await session.prompt(fixture.scenario.prompt);
-		if (errors.length || policy.state.error) throw new Error(policy.state.error || `Desktop extension event failed: ${errors.join(", ")}`);
-		if (!policy.state.runDir) throw new Error(`Native run did not start (${events.state.failedTools.join(", ")})`);
-		const observation = await finishObservation({ fixture, runDir: policy.state.runDir, toolSet,
-			vaultBefore: policy.state.vaultBeforeDeposit ?? vaultBefore,
-			contextWindow: model.model.contextWindow, events: events.state, counters: policy.state,
-			elapsedMs: Math.round(performance.now() - started), networkViolations: guard.violations.length });
-		return { observation, provider: model.model.provider, model: model.model.id,
+		if (errors.length || state.error) throw new Error(state.error || `Desktop extension event failed: ${errors.join(", ")}`);
+		if (!live && !state.runDir) throw new Error(`Native run did not start (${events.state.failedTools.join(", ")})`);
+		const contextWindow = "apiKey" in selected ? declaredContextWindow : selected.model.contextWindow;
+		const baseline = { toolSet, contextWindow, elapsedMs: Math.round(performance.now() - started), networkViolations: guard.violations.length };
+		const before = state.vaultBeforeDeposit ?? vaultBefore;
+		const { preflight, publication, assistantStop } = events.state;
+		const observed = state.runDir ? await finishObservation({ ...baseline, fixture, runDir: state.runDir,
+			vaultBefore: before, events: events.state, counters: state }) : unroutedObservation({ ...baseline, preflight, publication,
+			scenarioId: fixture.scenario.id, toolCalls: state.toolCalls, usage,
+			approvals: { requested: state.requested, denied: state.denied, approved: 0, depositExecuteEntered: state.depositExecuteEntered,
+				vaultUnchanged: isDeepStrictEqual(before, await snapshotVault(fixture.vault)) } }, assistantStop, state.limitReached);
+		return { observation: live ? liveObservation(observed, fixture.scenario, usage, state.escalated) : observed,
+			provider: "apiKey" in selected ? selected.provider : selected.model.provider, model: "apiKey" in selected ? selected.model : selected.model.id,
 			registeredToolNames: [...schemas.keys(), ...[...assembly.definitions.keys()].filter((name) => !schemas.has(name))].sort() };
 	} finally {
 		try { session?.dispose(); } finally {

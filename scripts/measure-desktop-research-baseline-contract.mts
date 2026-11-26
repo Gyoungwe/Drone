@@ -1,6 +1,7 @@
 import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { type Static, type TSchema, Type } from "typebox";
+import { declaredContextWindow, validateBaseUrl } from "./measure-desktop-research-baseline-provider.mts";
 import { checked, nullable, tokensFor } from "./research-baseline-io.mts";
 
 export const categories = ["local-direct", "deep-research", "stall-loop", "external-write"] as const;
@@ -188,6 +189,26 @@ export function validateDesktopObservation(value: unknown) {
 	return observation;
 }
 
+type Observation = Static<typeof observationSchema>;
+export function liveObservation(observed: Observation, scenario: DesktopScenario, usage: Observation["usage"], escalated: boolean) {
+	const { gateStage, answerable } = observed.evidence;
+	const expected = scenario.expected;
+	return { ...observed, usage, routeObserved: escalated ? "escalated" as const : observed.routeObserved,
+		expectationMatched: expected.gateStage === gateStage && expected.runStatus === observed.runStatus &&
+			expected.stopReason === observed.stop.reason && observed.approvals.requested === Number(scenario.id === "external-write") &&
+			answerable === (expected.runStatus === "completed") };
+}
+
+export function unroutedObservation(data: Pick<Observation, "scenarioId" | "contextWindow" | "usage" | "elapsedMs" | "preflight" | "publication"> & {
+	toolSet: string[]; toolCalls: string[]; networkViolations: number; approvals: { requested: number; denied: number;
+		approved: number; depositExecuteEntered: number; vaultUnchanged: boolean } }, assistantStop: string, limitReached: boolean) {
+	const reason = limitReached ? "harness-tool-limit" : assistantStop === "error" ? "error" : assistantStop === "aborted" ? "user-abort" : "voluntary-stop";
+	return validateDesktopObservation({ ...data, routeObserved: "unrouted", runStatus: "not-started", expectationMatched: false,
+		evidence: { gateStage: "not-started", gateStatus: "not-started", answerable: false, boundSourceCount: 0,
+			identityVerifiedNoteCount: 0, archiveVerifiedCount: 0, publicationCheckedVaultCitationCount: 0,
+			archivedTextRead: false, originalFulltextReadThisTurn: false, scientificallyVerified: false }, stop: { reason, breakerReceipt: null } });
+}
+
 const artifact = Type.Object({ path: text, sha256: hash }, closed);
 const tokenMetrics = Type.Object({ firstTurnInput: nullable(count), cumulativeInput: nullable(count),
 	cumulativeOutput: nullable(count), cacheRead: nullable(count), cacheWrite: nullable(count), reasoning: nullable(count),
@@ -199,8 +220,9 @@ export const reportSchema = Type.Object({ kind: Type.Literal("drone.research.des
 	runId: text, generatedAt: text, mode: Type.Enum(["offline-faux", "live-sdk"]), toolSet,
 	repoState: Type.Object({ droneCommit: text, pluginsCommit: text, piSdkVersion: text }),
 	assembly: Type.Object({ artifacts: Type.Array(artifact, { minItems: 4, maxItems: 4 }), resources: Type.Array(artifact, { minItems: 1 }) }, closed),
-	modelConfig: Type.Object({ provider: text, model: text, thinkingLevel: text, contextWindow: positive, baseUrl: nullable(text),
-		breakerBudget: Type.Object({ maxBilledTokens: Type.Literal(500000) }, closed), budgetEvidence: breaker }, closed),
+	modelConfig: Type.Object({ provider: text, model: text, thinkingLevel: text, contextWindow: Type.Optional(positive),
+		declaredContextWindow: Type.Optional(Type.Literal(declaredContextWindow)), baseUrl: nullable(text),
+		breakerBudget: Type.Object({ maxBilledTokens: Type.Literal(500000) }, closed), budgetEvidence: nullable(breaker) }, closed),
 	policy: Type.Object({ networkPolicy: text, acquisition: Type.Literal("fixture-copy"), identityTransport: Type.Literal("in-memory-zotero"),
 		approvalMechanism: Type.Literal("baseline-tool-call-policy"), breakerUsageSource: Type.Enum(["sdk-faux-estimate", "sdk-provider"]),
 		setupConsent: Type.Literal("synthetic-unmeasured") }, closed),
@@ -208,19 +230,24 @@ export const reportSchema = Type.Object({ kind: Type.Literal("drone.research.des
 
 export function validateDesktopReport(value: unknown) {
 	const report = checked(reportSchema, value, "Desktop report");
-	if (report.modelConfig.budgetEvidence.limits.maxBilledTokens !== 500000 ||
-		report.scenarios.some((item, index) => item.scenarioId !== categories[index]) ||
+	const { baseUrl, contextWindow, declaredContextWindow, budgetEvidence } = report.modelConfig;
+	const offline = report.mode === "offline-faux";
+	if (report.scenarios.some((item, index) => item.scenarioId !== categories[index]) ||
 		report.assembly.artifacts.some((item, index) => item.path !== `.pi/extensions/${artifactNames[index]}`)) throw new Error("Invalid Desktop report provenance");
-	if (!report.scenarios.some((item) => JSON.stringify(item.stop.breakerReceipt) === JSON.stringify(report.modelConfig.budgetEvidence))) throw new Error("Invalid budget receipt reference");
+	if (offline ? baseUrl !== null || contextWindow === undefined || declaredContextWindow !== undefined || !budgetEvidence :
+		baseUrl === null || contextWindow !== undefined || declaredContextWindow === undefined) throw new Error("Invalid Desktop mode model config");
+	if (!offline && baseUrl !== null) validateBaseUrl(baseUrl);
+	const receipts = report.scenarios.flatMap(({ stop }) => stop.breakerReceipt ? [stop.breakerReceipt] : []);
+	if ((offline ? budgetEvidence?.limits.maxBilledTokens !== 500000 : receipts.some((receipt) => receipt.limits.maxBilledTokens !== 500000)) ||
+		(budgetEvidence ? !receipts.some((receipt) => JSON.stringify(receipt) === JSON.stringify(budgetEvidence)) : receipts.length)) throw new Error("Invalid budget receipt reference");
 	for (const item of report.scenarios) {
 		const { tokens, cost, ...observation } = item;
 		validateDesktopObservation(observation);
-		if (item.contextWindow !== report.modelConfig.contextWindow) throw new Error("Invalid context window");
+		if (item.contextWindow !== (contextWindow ?? declaredContextWindow)) throw new Error("Invalid context window");
 		if (report.mode === "offline-faux" && item.usage.some((sample) => sample !== null)) throw new Error("Invalid offline model usage");
 		if (report.mode === "offline-faux" && cost !== null) throw new Error("Invalid offline model cost");
 		const expected = tokensFor(item.usage);
 		if (Object.entries(expected).some(([key, value]) => JSON.stringify(tokens[key as keyof typeof tokens]) !== JSON.stringify(value))) throw new Error("Invalid model token totals");
 	}
-	if (report.mode === "offline-faux" && report.modelConfig.baseUrl !== null) throw new Error("Invalid offline base URL");
 	return report;
 }

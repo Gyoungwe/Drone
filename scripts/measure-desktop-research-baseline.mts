@@ -8,6 +8,7 @@ import { Type } from "typebox";
 import { isMainModule } from "./is-main-module.mjs";
 import { artifactNames, type DesktopScenario, toolNames, validateDesktopFixture, validateDesktopReport } from "./measure-desktop-research-baseline-contract.mts";
 import { type DesktopFixture, prepareDesktopFixture } from "./measure-desktop-research-baseline-fixture.mts";
+import { childEnvironment, declaredContextWindow, type LiveProvider, type LiveSelection, liveSelection, runtimeKey } from "./measure-desktop-research-baseline-provider.mts";
 import { runDesktopScenario } from "./measure-desktop-research-baseline-sdk.mts";
 import { checked, readJson, saveReport, sha256, tokensFor } from "./research-baseline-io.mts";
 
@@ -16,15 +17,9 @@ const text = Type.String({ minLength: 1 });
 const maxBilledTokens = 500000;
 type Result = Awaited<ReturnType<typeof runDesktopScenario>>;
 
-function childEnvironment(fixture: DesktopFixture) {
-	return { HOME: fixture.home, USERPROFILE: fixture.home, PI_CODING_AGENT_DIR: fixture.agentDir,
-		DRONE_KNOWLEDGE_DIR: fixture.app, TMPDIR: fixture.tmp, TMP: fixture.tmp, TEMP: fixture.tmp,
-		XDG_CONFIG_HOME: fixture.config, XDG_CACHE_HOME: fixture.cache, XDG_DATA_HOME: fixture.data };
-}
-
-export function runFixtureChild<ResultType>(fixture: DesktopFixture, entry = import.meta.filename): Promise<ResultType> {
+export function runFixtureChild<ResultType>(fixture: DesktopFixture, entry = import.meta.filename, live?: LiveProvider): Promise<ResultType> {
 	return new Promise((resolveResult, reject) => {
-		const child = fork(entry, [], { cwd: repo, execArgv: [], env: childEnvironment(fixture), stdio: ["ignore", "ignore", "ignore", "ipc"] });
+		const child = fork(entry, [], { cwd: repo, execArgv: [], env: childEnvironment(fixture, live), stdio: ["ignore", "ignore", "ignore", "ipc"] });
 		let response: { result?: ResultType; error?: string } | undefined;
 		let childError: Error | undefined;
 		child.once("message", (message) => { response = message as typeof response; });
@@ -34,17 +29,18 @@ export function runFixtureChild<ResultType>(fixture: DesktopFixture, entry = imp
 			else if (code !== 0 || response?.result === undefined) reject(new Error(`${fixture.scenario.id}: ${response?.error ?? `scenario child exited (${code ?? signal}) without a result`}`));
 			else resolveResult(response.result);
 		});
-		child.send(fixture);
+		const { apiKey: _apiKey, ...selection } = live ?? {};
+		child.send({ fixture, selection: live ? selection : undefined });
 	});
 }
 
-export function serveFixtureChild<ResultType>(run: (fixture: DesktopFixture) => Promise<ResultType>) {
-	process.once("message", async (fixture: DesktopFixture) => {
+export function serveFixtureChild<ResultType>(run: (fixture: DesktopFixture, live?: LiveProvider) => Promise<ResultType>) {
+	process.once("message", async ({ fixture, selection }: { fixture: DesktopFixture; selection?: LiveSelection }) => {
 		try {
-			process.send?.({ result: await run(fixture) });
+			process.send?.({ result: await run(fixture, selection && { ...selection, apiKey: runtimeKey(process.env) }) });
 		} catch (error) {
 			process.exitCode = 1;
-			process.send?.({ error: error instanceof Error ? error.message : "Offline scenario failed" });
+			process.send?.({ error: selection ? "Live scenario failed" : error instanceof Error ? error.message : "Offline scenario failed" });
 		} finally {
 			process.disconnect?.();
 		}
@@ -92,7 +88,8 @@ function printOutcome(result: Result) {
 	console.log(JSON.stringify({ scenarioId, routeObserved, toolCalls, runStatus, evidence, preflight, publication, stop, expectationMatched }));
 }
 
-async function runOffline(fixturePath: string, out: string) {
+type Runner = (fixture: DesktopFixture, live?: LiveProvider) => Promise<Result>;
+async function runBaseline(fixturePath: string, out: string, run: Runner, live?: LiveProvider) {
 	await assertNewOutput(out);
 	await verifySourceBudget();
 	const fixture = validateDesktopFixture(await readJson(fixturePath));
@@ -101,39 +98,52 @@ async function runOffline(fixturePath: string, out: string) {
 	for (const scenario of fixture.scenarios) {
 		const entry = await withDesktopFixture(scenario, async (prepared) => ({
 			resources: prepared.resources.map(({ path, sha256: digest }) => ({ path: relative(prepared.agentDir, path), sha256: digest })),
-			result: await runFixtureChild<Result>(prepared),
+			result: await run(prepared, live),
 		}));
 		printOutcome(entry.result);
-		if (!entry.result.observation.expectationMatched) throw new Error(`${scenario.id}: native terminal state differs from the design`);
+		if (!live && !entry.result.observation.expectationMatched) throw new Error(`${scenario.id}: native terminal state differs from the design`);
 		results.push(entry);
 	}
 	const [first] = results;
-	const budgetEvidence = results.find(({ result }) => result.observation.scenarioId === "stall-loop")?.result.observation.stop.breakerReceipt;
-	if (!first || budgetEvidence?.limits.maxBilledTokens !== maxBilledTokens) throw new Error("Missing native 500000-token breaker evidence");
+	const budgetEvidence = results.find(({ result }) => live ? result.observation.stop.breakerReceipt !== null :
+		result.observation.scenarioId === "stall-loop")?.result.observation.stop.breakerReceipt ?? null;
+	if (!first || (!live && budgetEvidence?.limits.maxBilledTokens !== maxBilledTokens)) throw new Error("Missing native 500000-token breaker evidence");
 	const { provider, model, registeredToolNames } = first.result;
 	if (results.some(({ result }) => result.registeredToolNames.join() !== registeredToolNames.join())) throw new Error("Desktop registered inventory varied by scenario");
 	const report = validateDesktopReport({ kind: "drone.research.desktop-baseline", schemaVersion: 2, runId: randomUUID(),
-		generatedAt: new Date().toISOString(), mode: "offline-faux", toolSet: toolNames,
+		generatedAt: new Date().toISOString(), mode: live ? "live-sdk" : "offline-faux", toolSet: toolNames,
 		repoState: { ...state, registeredToolNames },
 		assembly: { artifacts: await Promise.all(artifactNames.map(async (name) => {
 			const path = `.pi/extensions/${name}`;
 			return { path, sha256: sha256(await readFile(join(repo, path))) };
 		})), resources: first.resources },
-		modelConfig: { provider, model, thinkingLevel: "off", contextWindow: first.result.observation.contextWindow,
-			baseUrl: null, breakerBudget: { maxBilledTokens }, budgetEvidence },
-		policy: { networkPolicy: "deny-network", acquisition: "fixture-copy", identityTransport: "in-memory-zotero",
-			approvalMechanism: "baseline-tool-call-policy", breakerUsageSource: "sdk-faux-estimate", setupConsent: "synthetic-unmeasured" },
+		modelConfig: { provider, model, thinkingLevel: live?.thinkingLevel ?? "off",
+			...(live ? { declaredContextWindow } : { contextWindow: first.result.observation.contextWindow }),
+			baseUrl: live?.baseUrl ?? null, breakerBudget: { maxBilledTokens }, budgetEvidence },
+		policy: { networkPolicy: live ? "loopback-gateway-only" : "deny-network", acquisition: "fixture-copy", identityTransport: "in-memory-zotero",
+			approvalMechanism: "baseline-tool-call-policy", breakerUsageSource: live ? "sdk-provider" : "sdk-faux-estimate", setupConsent: "synthetic-unmeasured" },
 		scenarios: results.map(({ result: { observation } }) => ({ ...observation, tokens: tokensFor(observation.usage), cost: null })),
 	});
 	await saveReport(out, report);
 	console.log(`Saved Desktop baseline report: ${out}`);
 }
 
+export async function runDesktopBaseline(args: string[], env = process.env,
+	run: Runner = (fixture, live) => runFixtureChild(fixture, import.meta.filename, live)) {
+	const { values } = parseArgs({ args, options: { mode: { type: "string" }, fixture: { type: "string" }, out: { type: "string" },
+		provider: { type: "string" }, model: { type: "string" }, thinking: { type: "string" }, "base-url": { type: "string" } } });
+	if ((values.mode !== "offline-faux" && values.mode !== "live-sdk") || !values.fixture || !values.out)
+		throw new Error("Expected --mode offline-faux|live-sdk --fixture PATH --out NEW_PATH");
+	const selection = liveSelection(values);
+	const live = selection && { ...selection, apiKey: runtimeKey(env) };
+	const safeRunner: Runner = async (fixture, selected) => {
+		try { return await run(fixture, selected); }
+		catch (error) { if (selected) throw new Error(`${fixture.scenario.id}: Live scenario failed`); throw error; }
+	};
+	await runBaseline(resolve(values.fixture), resolve(values.out), safeRunner, live);
+}
+
 if (isMainModule(import.meta.url)) {
 	if (process.send) serveFixtureChild(runDesktopScenario);
-	else {
-		const { values } = parseArgs({ options: { mode: { type: "string" }, fixture: { type: "string" }, out: { type: "string" } } });
-		if (values.mode !== "offline-faux" || !values.fixture || !values.out) throw new Error("Expected --mode offline-faux --fixture PATH --out NEW_PATH");
-		await runOffline(resolve(values.fixture), resolve(values.out));
-	}
+	else await runDesktopBaseline(process.argv.slice(2));
 }
