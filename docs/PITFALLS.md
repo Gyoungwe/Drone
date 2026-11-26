@@ -25,7 +25,10 @@
 | LAN 页连接僵死不重连、状态「重连中/已连接」反复跳 | 二 · SSE 心跳必须是命名事件帧 |
 | LAN 对话页正文重复出现在末尾、run 结束又恢复正常 | 二 · 流式增量帧不可重放（healing 兜底差量） |
 | 流式输出时整个 Markdown 区域随 token 节奏闪烁、尾部文字半透明往上爬 | 四 · markstream fade 的临时合成层（已修：组件 API 关闭 fade） |
-| 代码块顶部两行无法拖选、标点偶发橙色框 | 四 · 悬浮 header 命中层 + Monaco Unicode 高亮 |
+| 代码块顶部两行无法拖选、标点偶发橙色框 | 四 · 悬浮 header 命中层 + Monaco Unicode 高亮（Monaco 已于 2026-11 下线，橙框成因随之消失） |
+| 产物里莫名出现几十 MB 的编辑器资源 / 删了代码包体却不降 | 三 · optional peer 只约束运行期，不约束构建期（vite 会把 optional peer 的整棵依赖树打进产物） |
+| 流式代码块期间 renderer 内存冲到几百 MB，settle 后回落 | 四 · 流式代码块每次追加都整段重高亮 = O(n²)（用 `node.loading` 的未闭合标记去抖） |
+| 门禁显示 `same as last run` 的 exit 0，其实早就挂了 | 三 · 门禁输出阶梯会缓存（「same as last run」不是重跑） |
 | onDragStart 里拿不到拖拽尺寸（`active.rect.current.initial` 恒 null） | 四 · dnd-kit rect ref 填充晚于 onDragStart |
 | 报错文案悬在空态页不消失、切新会话还在 | 四 · store 级 error 字段永不清理（已修：改 toast + 乐观回滚） |
 | Google Vertex 填了 key 仍 401「API keys are not supported by this API」 | 二 · Vertex 只支持 ADC/服务账号（api_key 路径必败，桥接层已剔除 api-key 选项） |
@@ -239,6 +242,17 @@ LAN 页重连/中途进入时，快照种子经 `messagesToUIMessages` 重建—
 
 ## 三、构建 · 打包 · 环境
 
+### 门禁输出阶梯会缓存：「same as last run」不是重跑（2026-11-26）
+
+Jev 的输出阶梯会缓存检查命令的结果。`npm run lint` 连续多次输出
+`✓ exit 0 · 274 lines · chunk 3b5356d9 · **same as last run**` 时，那**不是**真实重跑——是缓存命中。真实情况可能是 lint 早已失败（formatter error、函数超长），而缓存让每次都显示 exit 0。
+
+**判据**：看到 `same as last run` 就不要采信它的 exit code。用 `JEV_RAW=1 <命令>` 取原始输出与真实退出码，或直接调底层命令（如 `npx biome check .`）确认。
+
+配套的第二条：**biome 的 lint 诊断默认是 info / warning 级，exit code 由 error 级决定**。排查时先看 severity 分布（`--reporter=json`），别把满屏的 info/warning 当成失败原因——那些在 base 上同样存在、同样不是失败。
+
+（实例：T526 里 `npm run lint` 长期显示 exit 0，实际是 `ChatCodeBlock.tsx` 的 formatter error + `complexity/noExcessiveLinesPerFunction` 超 60 行，被 `scripts/check-lint-baseline.mjs` 拦下。）
+
 ### preload 必须是 CJS
 
 sandbox 下渲染进程不加载 electron-vite 默认的 ESM 产物。config 强制 `format: "cjs", entryFileNames: "index.cjs"`；`main/window.ts` 加载 `../preload/index.cjs`。
@@ -254,6 +268,18 @@ main config 用 `exclude: ["@drone/backend", "@drone/shared"]` 并 alias 到源�
 ### 打包两个坑
 
 pi SDK 必须声明进 `packages/desktop/package.json` dependencies（electron-builder 只从 desktop 依赖树收集）；electron 必须钉精确版本。发版/CI 细节全在 `.local/docs/release.md`（本地文档，不入库）。
+
+### optional peer 只约束运行期，不约束构建期（2026-11-26）
+
+`markstream-react@0.0.55` 把 `stream-monaco` 声明为 **optional peer**，并对它做**动态 `import()`**（运行期失败就回退 null）。但 vite/rollup 打包时只看「`node_modules` 里存在这个包吗」——存在就把整棵依赖树拉进产物：`stream-monaco` 的 chunk **静态** import `monaco-editor/esm/vs/editor/editor.api`，于是 monaco-editor 的 ~19.7 MB worker + 编辑器内核全部进了 `out/renderer/assets`，哪怕运行期永远走不到那条路径。
+
+判定一个包是否真进了产物，不能看 `package.json`，要看产物目录的大文件清单：
+
+```
+find out/renderer/assets -type f -exec stat -f %z {} + | sort -rn | head -20
+```
+
+对策是**构建期替身**：`electron.vite.config.ts` 的 renderer `resolve.alias` 把 `stream-monaco` 指向 `src/renderer/src/vendor/stream-monaco-stub.ts`（只导出空 `preloadMonacoWorkers`）。语义上等价于「该可选依赖缺失」——正是 markstream 自己 `try/catch` 已处理的状态。实测 renderer 产物 59,895,776 → 24,498,752 字节（-59.1%），产物内 monaco 资产清零。
 
 ## 四、Renderer / React
 
@@ -282,6 +308,20 @@ pi SDK 必须声明进 `packages/desktop/package.json` dependencies（electron-b
 两个独立原因。顶部不可选：为保留复制按钮而把 `.code-block-header` 绝对定位到代码块顶部，header 实际高 38px，恰好覆盖 18px 行高的前两行；`:hover/:focus-within` 曾把整条 header 设为 `pointer-events:auto`，透明区域也会截获拖选。修复为 header 始终 `pointer-events:none`，仅 `.code-action-btn` 恢复 `pointer-events:auto`。
 
 标点橙框：Monaco 默认 `unicodeHighlight` 会给全角标点、不可见字符和易混淆字符生成 `.unicode-highlight` 描边，模型输出中混入这类字符时看起来像随机残留框选。只读展示没有可执行的修复动作，桌面与 LAN 的 `Markdown.tsx` 都通过 `monacoOptions` 关闭三类 Unicode 高亮，并一并关闭同词、符号 occurrence 和括号匹配 decoration；真实拖选高亮保留。诊断时用 `elementFromPoint` 检查顶部文本命中、`.view-overlays .selected-text` 检查 Monaco 内部选区；不要用 `window.getSelection()` 判断，Monaco 选区不走浏览器 Selection API。
+
+> 2026-11-26 更新：Monaco 已整体下线（见「optional peer 只约束运行期，不约束构建期」）。标点橙框的成因随 Monaco 一并消失，不再需要 `monacoOptions`；`.code-block-header` 仍保留 `pointer-events:none` + 仅 `.code-action-btn` 恢复 `pointer-events:auto` 的规则（复制按钮改由 `chat/ChatCodeBlock.tsx` 渲染，是 header 的**直接 button 子元素**——再包一层 `div` 就会被「藏掉库的语言胶囊」那条 `> div:first-child{display:none}` 规则一起藏掉）。
+
+### 流式代码块每次追加都整段重高亮 = O(n²)（2026-11-26）
+
+症状：Shiki 版本的聊天代码块在流式期间 renderer 私有内存冲到 ~194 MB（settle 后回落，看起来像泄漏，实为 GC 延迟的垃圾）。
+
+原因：未闭合的围栏每来一个 token，代码段就整体变长一次；若每次变化都重新分词，n 次追加 × O(n) 分词成本 = **O(n²)** 次 token 分配。250 行的块流式期间能堆出几百 MB 临时垃圾。
+
+修复：利用解析器的**未闭合标记**——`stream-markdown-parser@1.1.4` 给未闭合围栏的 `code_block` 节点打 `loading: true`。`chat/ChatCodeBlock.tsx` 据此判断「还在流式」：流式期间先渲染等宽纯文本，内容稳定 200 ms 后只高亮一次；围栏闭合（`loading` 变 false）时立即高亮。
+
+要点：**首帧必须立即出内容**（历史消息不能白闪），只有「后续变化」才去抖。回归测试断言：未闭合围栏连续追加 5 次期间 `highlightCode` 一次都不被调用，内容稳定后恰好被调用 1 次。
+
+（`stream-markdown@0.0.16` 有官方的 `createShikiStreamCachedRenderer` 能复用增量语法状态，但把它加进 `package.json` 就是新增直接依赖，违反「零新依赖」红线，故自行实现去抖。）
 
 ### dnd-kit：`onDragStart` 里 `active.rect.current.initial` 恒为 null（2026-09-05）
 

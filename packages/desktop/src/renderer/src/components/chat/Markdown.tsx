@@ -4,7 +4,7 @@ import {
 	parseKnowledgeHref,
 	splitResourceLink,
 } from "@drone/shared";
-import MarkdownRender, { type SmoothMarkdownStreamOptions } from "markstream-react";
+import MarkdownRender, { type SmoothMarkdownStreamOptions, setCustomComponents } from "markstream-react";
 import { getPi } from "../../api";
 import { reportKnowledgeError } from "../../lib/knowledge-error";
 import { useKnowledgeStore } from "../../stores/knowledge";
@@ -13,6 +13,7 @@ import { type MouseEvent, useCallback, useMemo, useRef } from "react";
 import { useSessionsStore } from "../../stores/sessions";
 import { useThemeStore } from "../../stores/theme";
 import { useUiStore } from "../../stores/ui";
+import { ChatCodeBlock } from "./ChatCodeBlock";
 
 /**
  * 平滑输出速率参数（markstream 内置 smooth streaming controller，grapheme 级 pacing）：
@@ -26,35 +27,9 @@ const SMOOTH_OPTIONS: SmoothMarkdownStreamOptions = {
 	// 其余（targetLatencyMs 900 / catchUpLatencyMs 350 / catchUpThreshold 600 / max 1000cps）用默认
 };
 
-const CODE_BLOCK_PROPS = {
-	// 标题栏在视觉上被 CSS 悬浮化（见 globals.css），这里只裁掉多余按钮：字号三键/全屏/预览/折叠，
-	// 保留复制。不能用 showHeader:false——它会连复制按钮一起去掉。
-	showFontSizeButtons: false,
-	showExpandButton: false,
-	showPreviewButton: false,
-	showCollapseButton: false,
-	// 首行灰底修复：库的 monaco 默认值（renderLineHighlight:"none" 等）只对 diff 块生效
-	//（En() 首行 if(!e) return o），普通块裸奔 —— 只读编辑器光标恒停第一行，当前行高亮
-	// 让首行比其他行多一层灰底。显式关掉。同理关掉右侧概览标尺（overview ruler）——
-	// 光标行在右缘留一枚黑色短杠标记，只读块无导航价值。编辑器式 decoration 也关闭：
-	// 全角标点/不可见字符、同词和括号的描边在只读展示里像残留选区，且没有修复动作。
-	monacoOptions: {
-		renderLineHighlight: "none",
-		selectionHighlight: false,
-		occurrencesHighlight: "off",
-		matchBrackets: "never",
-		bracketPairColorization: { enabled: false },
-		unicodeHighlight: {
-			ambiguousCharacters: false,
-			invisibleCharacters: false,
-			nonBasicASCII: false,
-		},
-		overviewRulerLanes: 0,
-		renderOverviewRuler: false,
-		overviewRulerBorder: false,
-		hideCursorInOverviewRuler: true,
-	},
-} as const;
+/** 聊天 Markdown 的自定义组件注册表（模块级，只注册一次）。 */
+const CHAT_MARKDOWN_ID = "chat-markdown";
+setCustomComponents(CHAT_MARKDOWN_ID, { code_block: ChatCodeBlock });
 
 /** 减速动效偏好：关闭 pacing，直接输出 */
 const REDUCED_MOTION =
@@ -72,9 +47,8 @@ const REDUCED_MOTION =
  * 2. fade 必须关闭：开启后 smooth controller 每次 commit 都会创建带 opacity/will-change 的临时
  *    span；高频合成层切换会让整个文本排版区域看起来闪烁。fade=false 走库内稳定文本 span 分支，
  *    不依赖 animationend 沉淀。样式覆写集中在 globals.css 的 .markdown-body 下。
- * isDark 驱动代码块 shiki 主题（vitesse-light/dark）与容器深浅。注意必须显式传
- * codeBlockLightTheme/codeBlockDarkTheme：不传时 stream-monaco 回退到 themes[0]（默认 vitesse-dark），
- * 浅色模式下代码块也会是深色。
+ * isDark 驱动代码块 shiki 主题（vitesse-light/dark）与容器深浅 —— 主题选择现在在
+ * ChatCodeBlock 内部完成（见 lib/shiki-highlighter 的 CHAT_THEME）。
  */
 export function Markdown({
 	text,
@@ -143,6 +117,7 @@ export function Markdown({
 			    的节点先渲染为 node-placeholder 占位条，等 IntersectionObserver 标记可见后只写 ref 不触发
 			    re-render（非虚拟化路径）；流式期间靠内容更新顺带刷新，流一停占位条就永久残留。 */}
 			<MarkdownRender
+				customId={CHAT_MARKDOWN_ID}
 				content={displayText}
 				onClick={handleClick}
 				final={!streaming}
@@ -150,9 +125,6 @@ export function Markdown({
 				smoothStreaming={smoothableRef.current}
 				smoothStreamingOptions={SMOOTH_OPTIONS}
 				isDark={isDark}
-				codeBlockLightTheme="vitesse-light"
-				codeBlockDarkTheme="vitesse-dark"
-				codeBlockProps={CODE_BLOCK_PROPS}
 				deferNodesUntilVisible={false}
 			/>
 		</div>

@@ -35,6 +35,8 @@ vi.mock("../../stores/ui", () => ({
 		select({ openResourcePreview: doubles.preview }),
 }));
 vi.mock("markstream-react", () => ({
+	// 聊天 Markdown 在模块级注册 code_block 自定义组件（ChatCodeBlock）
+	setCustomComponents: vi.fn(),
 	default: ({ content, onClick }: { content: string; onClick: React.MouseEventHandler<HTMLElement> }) => (
 		<div>
 			<p>{content}</p>

@@ -72,4 +72,4 @@
 |---|---|---|
 | 工程化 | npm workspaces + `patch-package` → pnpm + Turborepo | 装包、补丁或多包构建缓存成为可测瓶颈 |
 | 本地存储 | `JsonStore` → `node:sqlite` + Drizzle ORM | 会话或文献检索实测出现 I/O 或查询瓶颈；迁移保持原子写入与损坏处理语义 |
-| 前端瘦身 | `marked` / `markstream-react` / `stream-markdown` 收口为 1 套；再视内存决定 Monaco → CodeMirror 6 | Markdown 收口可直接做；编辑器替换需先有内存占用数据 |
+| 前端瘦身 | `marked` / `markstream-react` / `stream-markdown` 收口为 1 套 | Markdown 收口可直接做；~~再视内存决定 Monaco → CodeMirror 6~~（2026-11 已用 Shiki 落地：renderer 产物 -59.1%，renderer 私有内存 -77%，零新增依赖） |
