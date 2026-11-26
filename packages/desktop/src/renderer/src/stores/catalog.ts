@@ -1,10 +1,11 @@
-import type {
-	CatalogPackage,
-	CatalogPackageType,
-	ConfiguredPackageInfo,
-	PackageLifecycleOperation,
-	PackageLifecycleReceipt,
-	RegistryPluginMetadata,
+import {
+	type CatalogPackage,
+	type CatalogPackageType,
+	type ConfiguredPackageInfo,
+	npmPackageName,
+	type PackageLifecycleReceipt,
+	packageLifecycleForReview,
+	type RegistryPluginMetadata,
 } from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
@@ -39,6 +40,7 @@ interface CatalogStore {
 	removeErrors: Record<string, string>;
 	/** 最近一次生命周期回执；页面用它显示当前/下一会话生效边界。 */
 	lifecycleReceipts: Record<string, PackageLifecycleReceipt>;
+	recordLifecycleReceipt: (receipt: PackageLifecycleReceipt) => void;
 	/** settings.json 已配置的包（null = 未加载；「已安装」态匹配/卸载用） */
 	configuredPackages: ConfiguredPackageInfo[] | null;
 	setExtensionsTab: (tab: "browse" | "loaded") => void;
@@ -66,6 +68,7 @@ interface CatalogStore {
 export const useCatalogStore = create<CatalogStore>((set, get) => {
 	/** 目录搜索防抖（query/type 变更 300ms 后触发） */
 	let catalogDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+	let configuredRequest = 0;
 	const scheduleCatalogSearch = () => {
 		clearTimeout(catalogDebounceTimer);
 		catalogDebounceTimer = setTimeout(() => void get().searchCatalog(false), 300);
@@ -89,6 +92,16 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 		removingSources: {},
 		removeErrors: {},
 		lifecycleReceipts: {},
+		recordLifecycleReceipt: (receipt) => {
+			const review = packageLifecycleForReview(receipt);
+			if (!review) return;
+			const key = `${review.scope}:${review.packageName}`;
+			set((state) => {
+				const existing = state.lifecycleReceipts[key];
+				if (existing && receiptTime(existing) > receiptTime(review)) return state;
+				return { lifecycleReceipts: { ...state.lifecycleReceipts, [key]: review } };
+			});
+		},
 		configuredPackages: null,
 
 		setExtensionsTab: (extensionsTab) => set({ extensionsTab }),
@@ -140,7 +153,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 			});
 			try {
 				const receipt = await getPi().installPackage(name);
-				set((state) => ({ lifecycleReceipts: { ...state.lifecycleReceipts, [name]: receipt } }));
+				get().recordLifecycleReceipt(receipt);
 				if (receipt.status === "failed") {
 					set((state) => ({
 						installErrors: {
@@ -151,17 +164,12 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 					return;
 				}
 				await get().refreshConfiguredPackages();
-				// backend 已对非流式会话做 session.reload()，刷新已加载资源列表让「已加载」页同步
 				void useSettingsStore.getState().refresh();
 				void useUiPluginsStore.getState().loadAll();
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
 				set((state) => ({
 					installErrors: { ...state.installErrors, [name]: message },
-					lifecycleReceipts: {
-						...state.lifecycleReceipts,
-						[name]: failedReceipt("install", name, `npm:${name}`, "user", message),
-					},
 				}));
 			} finally {
 				set((state) => {
@@ -180,7 +188,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 			});
 			try {
 				const receipt = await getPi().updatePackage(name);
-				set((state) => ({ lifecycleReceipts: { ...state.lifecycleReceipts, [name]: receipt } }));
+				get().recordLifecycleReceipt(receipt);
 				if (receipt.status === "failed") {
 					set((state) => ({
 						updateErrors: {
@@ -197,10 +205,6 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 				const message = error instanceof Error ? error.message : String(error);
 				set((state) => ({
 					updateErrors: { ...state.updateErrors, [name]: message },
-					lifecycleReceipts: {
-						...state.lifecycleReceipts,
-						[name]: failedReceipt("update", name, `npm:${name}`, "user", message),
-					},
 				}));
 			} finally {
 				set((state) => {
@@ -244,11 +248,12 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 		},
 
 		refreshConfiguredPackages: async () => {
+			const request = ++configuredRequest;
 			try {
 				const configured = await getPi().listConfiguredPackages();
-				set({ configuredPackages: configured });
+				if (request === configuredRequest) set({ configuredPackages: configured });
 			} catch {
-				set({ configuredPackages: [] });
+				if (request === configuredRequest) set({ configuredPackages: [] });
 			}
 		},
 
@@ -260,7 +265,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 			});
 			try {
 				const receipt = await getPi().removePackage(source, scope);
-				set((state) => ({ lifecycleReceipts: { ...state.lifecycleReceipts, [source]: receipt } }));
+				get().recordLifecycleReceipt(receipt);
 				if (receipt.status === "failed") {
 					set((state) => ({
 						removeErrors: {
@@ -271,17 +276,12 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 					return;
 				}
 				await get().refreshConfiguredPackages();
-				// backend 已对非流式会话做 session.reload()，刷新已加载资源列表让「已加载」页同步
 				void useSettingsStore.getState().refresh();
 				void useUiPluginsStore.getState().loadAll();
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
 				set((state) => ({
 					removeErrors: { ...state.removeErrors, [source]: message },
-					lifecycleReceipts: {
-						...state.lifecycleReceipts,
-						[source]: failedReceipt("remove", source.replace(/^npm:/u, ""), source, scope, message),
-					},
 				}));
 			} finally {
 				set((state) => {
@@ -294,21 +294,18 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 	};
 });
 
-function failedReceipt(
-	operation: PackageLifecycleOperation,
+function receiptTime(receipt?: PackageLifecycleReceipt): number {
+	return receipt?.events.at(-1)?.at ?? 0;
+}
+
+export function selectLifecycleReceipt(
+	state: Pick<CatalogStore, "lifecycleReceipts">,
 	packageName: string,
-	source: string,
-	scope: "user" | "project",
-	message: string,
-): PackageLifecycleReceipt {
-	return {
-		operation,
-		packageName,
-		source,
-		scope,
-		status: "failed",
-		effect: "current-session",
-		events: [{ type: "failed", at: Date.now(), detail: message.slice(0, 1000) }],
-		error: { code: "operation-failed", message: message.slice(0, 1000), retryable: true },
-	};
+	configured?: ConfiguredPackageInfo | null,
+): PackageLifecycleReceipt | undefined {
+	if (configured)
+		return state.lifecycleReceipts[`${configured.scope}:${npmPackageName(configured.source) ?? packageName}`];
+	const user = state.lifecycleReceipts[`user:${packageName}`];
+	const project = state.lifecycleReceipts[`project:${packageName}`];
+	return receiptTime(project) > receiptTime(user) ? project : user;
 }

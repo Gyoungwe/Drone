@@ -1,4 +1,4 @@
-import type { PiApi } from "@drone/shared";
+import { channelOf, type PiApi, UiPluginsContract, type UiPluginsEventPayload } from "@drone/shared";
 import { describe, expect, it, vi } from "vitest";
 
 /**
@@ -83,4 +83,35 @@ describe("preload", () => {
 			expect(ipc.removeListener).toHaveBeenLastCalledWith(channel, listener);
 		},
 	);
+});
+
+it("forwards config events with and without a package receipt through the existing listener", async () => {
+	await import("./index");
+	const pi = exposed.pi as PiApi;
+	const receive = vi.fn();
+	const off = pi.onUiPluginsEvent(receive);
+	const binding = ipc.on.mock.lastCall;
+	if (!binding) throw new Error("UI plugin event listener was not registered");
+	const [channel, listener] = binding;
+	expect(channel).toBe(channelOf(UiPluginsContract, "event"));
+	const legacy: UiPluginsEventPayload = { kind: "config" };
+	const pending: UiPluginsEventPayload = { kind: "config", reloadUi: false };
+	const withReceipt: UiPluginsEventPayload = {
+		kind: "config",
+		receipt: {
+			operation: "install",
+			packageName: "fixture",
+			source: "npm:fixture",
+			scope: "user",
+			status: "succeeded",
+			effect: "next-session",
+			events: [{ type: "enabled", at: 1 }],
+		},
+	};
+	listener({}, legacy);
+	listener({}, pending);
+	listener({}, withReceipt);
+	expect(receive.mock.calls).toEqual([[legacy], [pending], [withReceipt]]);
+	off();
+	expect(ipc.removeListener).toHaveBeenCalledWith(channel, listener);
 });

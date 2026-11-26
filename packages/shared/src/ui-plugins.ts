@@ -2,6 +2,7 @@
  * UI 插件系统跨进程类型（manifest / 插件信息 / 配置 / 事件载荷）。
  * 设计规范见 .local/docs/design/spec/ui-plugin-system.md §5/§8/§9。
  */
+import type { PackageLifecycleReceipt } from "./packages";
 
 /**
  * 已知槽位名（main 进程校验 manifest.slots 用）。
@@ -164,4 +165,6 @@ export interface UiPluginPolicyConsent {
 }
 
 /** main → renderer 事件载荷 */
-export type UiPluginsEventPayload = { kind: "changed"; name: string } | { kind: "config" };
+export type UiPluginsEventPayload =
+	| { kind: "changed"; name: string }
+	| { kind: "config"; receipt?: PackageLifecycleReceipt; reloadUi?: false };

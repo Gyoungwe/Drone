@@ -3,14 +3,16 @@
 import type {
 	KnowledgeCloudStatus,
 	McpStatus,
+	PackageLifecycleReceipt,
 	PiApi,
 	ResearchConnectorDescriptor,
 	ZoteroStatus,
 } from "@drone/shared";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useI18nStore } from "../../i18n";
+import { useCatalogStore } from "../../stores/catalog";
 import { useSettingsStore } from "../../stores/settings";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
 import {
@@ -23,12 +25,11 @@ import {
 	zoteroCapabilityStatus,
 } from "./SkillsConnectionsView";
 
-vi.mock("./PluginSourcesSection", () => ({ PluginSourcesSection: () => null }));
-
 afterEach(() => {
 	cleanup();
 	vi.restoreAllMocks();
 	vi.unstubAllGlobals();
+	useCatalogStore.setState(useCatalogStore.getInitialState());
 });
 
 const cloud = (mode: KnowledgeCloudStatus["mode"]): KnowledgeCloudStatus => ({
@@ -83,6 +84,8 @@ function installRowBridge() {
 		finishToggle = resolve;
 	});
 	const bridge = {
+		searchCatalog: vi.fn(async () => ({ packages: [], total: 0, page: 1, pageSize: 20 })),
+		listConfiguredPackages: vi.fn<PiApi["listConfiguredPackages"]>().mockResolvedValue([]),
 		getMcpStatus: vi
 			.fn<PiApi["getMcpStatus"]>()
 			.mockResolvedValueOnce(mcpStatus(true))
@@ -106,6 +109,65 @@ function installRowBridge() {
 	vi.stubGlobal("pi", bridge);
 	return { bridge, finishToggle };
 }
+
+const restartReceipt: PackageLifecycleReceipt = {
+	operation: "update",
+	packageName: "@gyoungwe/pi-connectors",
+	source: "npm:@gyoungwe/pi-connectors",
+	scope: "project",
+	status: "succeeded",
+	effect: "app-restart",
+	version: "2.0.0",
+	events: [
+		{ type: "staged", at: 1, detail: "private /fixture/staged" },
+		{ type: "verified", at: 2 },
+		{ type: "drained", at: 3, sessionId: "private-session" },
+		{ type: "enabled", at: 4 },
+	],
+};
+
+it("finds the project outcome after a pinned-source refresh and localizes its bounded steps", async () => {
+	vi.stubGlobal("React", React);
+	useI18nStore.setState({ language: "en" });
+	vi.spyOn(useSettingsStore.getState(), "refresh").mockResolvedValue(undefined);
+	vi.spyOn(useUiPluginsStore.getState(), "loadAll").mockResolvedValue(undefined);
+	const { bridge } = installRowBridge();
+	const catalog = useCatalogStore.getState();
+	useCatalogStore.setState({ catalogType: "extension" });
+	catalog.recordLifecycleReceipt(restartReceipt);
+	catalog.recordLifecycleReceipt({
+		...restartReceipt,
+		scope: "user",
+		effect: "current-session",
+		events: [{ type: "enabled", at: 10 }],
+	});
+	bridge.listConfiguredPackages.mockResolvedValue([
+		{ source: "npm:@gyoungwe/pi-connectors@2.0.0", scope: "project" },
+	]);
+	await catalog.refreshConfiguredPackages();
+	render(<SkillsConnectionsView />);
+	const label = within(screen.getByTestId("plugins-card")).getByText(restartReceipt.packageName);
+	const row = label.closest("li");
+	if (!row) throw new Error("Package row is missing");
+	const item = within(row);
+	expect(item.getByText("Applies after app restart")).toBeTruthy();
+	const details = item.getByText("Lifecycle details").closest("details");
+	if (!details) throw new Error("Lifecycle details are missing");
+	details.open = true;
+	expect(
+		within(details)
+			.getAllByRole("listitem")
+			.map(({ textContent }) => textContent),
+	).toEqual(["Package staged", "Package verified", "Previous worker stopped", "Selection activated"]);
+	act(() => useI18nStore.setState({ language: "zh" }));
+	expect(item.getByText("重启应用后生效")).toBeTruthy();
+	expect(
+		within(details)
+			.getAllByRole("listitem")
+			.map(({ textContent }) => textContent),
+	).toEqual(["插件包已暂存", "插件包已验证", "原工作进程已停止", "已启用选定版本"]);
+	expect(row.outerHTML).not.toMatch(/private-session|private \/fixture/);
+});
 
 it.each([
 	["Connectors", "connector-catalog"],

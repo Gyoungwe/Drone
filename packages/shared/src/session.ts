@@ -1,5 +1,6 @@
 import type { AgentSessionEvent as PiAgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { CapabilityState } from "./capabilities";
+import type { SessionPackageVersion } from "./packages";
 import type { ProgressDisplay } from "./progress-display";
 import type { SkillInvocationDisplay } from "./skill-invocation";
 import type { SubagentPanelRun, SubagentRunData } from "./subagent";
@@ -392,20 +393,19 @@ export interface HostPluginPackage {
 	manifestDeclared?: boolean;
 }
 
-/** 资源加载诊断（collision 冲突/warning/error） */
 export interface ResourceDiagnosticInfo {
 	type: "warning" | "error" | "collision";
 	message: string;
 	path?: string;
 }
 
-/** 会话已加载资源总览（设置页 skills/扩展面板数据，按会话项目加载） */
 export interface LoadedResources {
 	skills: LoadedSkill[];
 	skillDiagnostics: ResourceDiagnosticInfo[];
 	extensions: LoadedExtension[];
 	extensionErrors: { path: string; error: string }[];
 	hostPlugins?: HostPluginPackage[];
+	packageVersions?: SessionPackageVersion[];
 	/** 当前会话模型实际可见的按需能力/工具/skill 与 schema footprint；关闭 lazyCapabilities 时省略。 */
 	capabilities?: CapabilityState;
 }

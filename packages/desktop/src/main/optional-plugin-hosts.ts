@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -17,7 +17,7 @@ export interface DiscoveredPluginHostLoader<T> {
 	readonly discovery: PluginHostLoaderDiscovery;
 }
 
-interface PluginManifest {
+export interface PluginHostDeclaration {
 	capabilities?: unknown;
 	hosts?: unknown;
 	entrypoints?: { host?: unknown };
@@ -25,7 +25,23 @@ interface PluginManifest {
 
 interface PackageJson {
 	name?: unknown;
-	drone?: PluginManifest;
+	drone?: PluginHostDeclaration;
+}
+
+const BOOT_CAPABILITIES = ["analysis", "discovery", "evidence", "knowledge", "research"];
+
+export function requiresPluginHostRestart(
+	root: string,
+	scope: "user" | "project",
+	loaded: readonly PluginHostLoaderDiscovery[],
+	candidate?: PluginHostDeclaration,
+): boolean {
+	return (
+		loaded.some(({ packageRoot }) => packageRoot === root) ||
+		(scope === "user" &&
+			candidate?.entrypoints?.host !== undefined &&
+			BOOT_CAPABILITIES.some((capability) => declaresCapability(candidate, capability)))
+	);
 }
 
 /** Discover a host adapter from installed package declarations, without naming a package. */
@@ -56,7 +72,7 @@ export async function discoverPluginHostLoader<T>(options: {
 					capability: options.capability,
 					exportName,
 					packageName: await packageName(packageRoot),
-					packageRoot,
+					packageRoot: await realpath(packageRoot),
 					entrypoint,
 				},
 			};
@@ -79,11 +95,11 @@ async function packageDirectories(root: string): Promise<string[]> {
 	return directories;
 }
 
-async function readManifest(path: string): Promise<PluginManifest | undefined> {
+async function readManifest(path: string): Promise<PluginHostDeclaration | undefined> {
 	const text = await readFile(path, "utf8").catch(() => undefined);
 	if (!text) return undefined;
 	try {
-		return JSON.parse(text) as PluginManifest;
+		return JSON.parse(text) as PluginHostDeclaration;
 	} catch {
 		return undefined;
 	}
@@ -99,7 +115,7 @@ async function readPackageJson(path: string): Promise<PackageJson | undefined> {
 	}
 }
 
-function declaresCapability(manifest: PluginManifest, capability: string): boolean {
+function declaresCapability(manifest: PluginHostDeclaration, capability: string): boolean {
 	return (
 		Array.isArray(manifest.hosts) &&
 		manifest.hosts.includes("drone-desktop") &&

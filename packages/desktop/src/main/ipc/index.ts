@@ -6,6 +6,7 @@ import type {
 	PermissionRequest,
 	PermissionResolved,
 	TrustRequest,
+	UiPluginsEventPayload,
 } from "@drone/shared";
 import {
 	AppContract,
@@ -13,11 +14,13 @@ import {
 	McpContract,
 	PermissionsContract,
 	PluginRuntimeContract,
+	packageLifecycleForReview,
 	SessionsContract,
 	SettingsContract,
 	UiPluginsContract,
 } from "@drone/shared";
 import { app, BrowserWindow, webContents } from "electron";
+import type { PluginHostLoaderDiscovery } from "../optional-plugin-hosts";
 import { onResearchSkillUpdateState } from "../research-skill-updater";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import type { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
@@ -70,6 +73,33 @@ export function createSessionQuestionTransport(ownerId: number) {
 	};
 }
 
+function registerPackageMutationIpc(
+	services: BackendServices,
+	manager: UiPluginManager,
+	runtime: DesktopRuntimeBridge,
+	bootLoaders: readonly PluginHostLoaderDiscovery[],
+	askPolicies: () => void,
+): void {
+	const runtimeDirectory = app.isPackaged
+		? join(process.resourcesPath, "plugin-runtime")
+		: join(__dirname, `../../plugin-runtime/${process.platform}-${process.arch}`);
+	const publish = (event: UiPluginsEventPayload) =>
+		sendToRenderer(channelOf(UiPluginsContract, "event"), event);
+	registerPackagesIpc(
+		services,
+		undefined,
+		async (receipt) => {
+			if (receipt.status === "succeeded" && !receipt.source.startsWith("npm:")) await manager.scanAll();
+			publish({ kind: "config", receipt: packageLifecycleForReview(receipt) });
+			askPolicies();
+		},
+		({ sender }) => ({
+			...packageMutationHost(manager, runtime, sender, runtimeDirectory, bootLoaders),
+			onCandidatePending: () => publish({ kind: "config", reloadUi: false }),
+		}),
+	);
+}
+
 /**
  * Ask the user about package policies (install-time approval) once the first window is shown,
  * so the dialog has a parent — built-in and already enabled packages never pass the enable
@@ -94,6 +124,7 @@ export function registerIpc(
 	uiPluginsManager: UiPluginManager,
 	runtime: DesktopRuntimeBridge,
 	getIncidentSnapshot?: () => unknown,
+	bootLoaders: readonly PluginHostLoaderDiscovery[] = [],
 ): void {
 	// The desktop host binds contracts from the composition root directly. The
 	// individual IPC modules retain narrow legacy overloads for third-party
@@ -109,19 +140,7 @@ export function registerIpc(
 	registerDiscoveryIpc(backendServices);
 	registerEvidenceIpc(backendServices.analysisEvidence);
 	registerDecisionsIpc(backendServices);
-	const runtimeDirectory = app.isPackaged
-		? join(process.resourcesPath, "plugin-runtime")
-		: join(__dirname, `../../plugin-runtime/${process.platform}-${process.arch}`);
-	registerPackagesIpc(
-		backendServices,
-		undefined,
-		async (receipt) => {
-			if (!receipt.source.startsWith("npm:")) await uiPluginsManager.scanAll();
-			sendToRenderer(channelOf(UiPluginsContract, "event"), { kind: "config" });
-			askPolicies();
-		},
-		({ sender }) => packageMutationHost(uiPluginsManager, runtime, sender, runtimeDirectory),
-	);
+	registerPackageMutationIpc(backendServices, uiPluginsManager, runtime, bootLoaders, askPolicies);
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);
 	registerInquiryIpc(backendServices, sendToRenderer);

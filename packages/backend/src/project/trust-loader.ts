@@ -8,6 +8,7 @@ import {
 import { createProcessSandboxedExtension, type PluginSandboxPolicy } from "../plugin-sandbox";
 import type { PluginNativeBootstrap, PluginNativeIntegration } from "../plugins/coordinator";
 import { replyLanguagePrompt } from "../reply-language";
+import type { SessionPackageSources } from "../services/session-package-sources";
 import { sandboxExtensionFactory } from "../session-engine/sandbox-loader";
 import type {
 	HostExtensionSelectionReceipt,
@@ -63,6 +64,7 @@ export function desktopLoaderOptions(
 	integration: DesktopIntegration | undefined,
 	cwd?: string,
 	nativeBootstrap?: PluginNativeBootstrap,
+	packageSources?: SessionPackageSources,
 ) {
 	if (!integration) return {};
 	const delivery = nativeBootstrap?.delivery;
@@ -106,7 +108,7 @@ export function desktopLoaderOptions(
 							throw new Error("Native extension source is not enabled");
 						if (nativeRuntime?.manages(path))
 							return nativeBootstrap ? nativeBootstrap.factoryForPath(path) : () => {};
-						return sandbox?.(path);
+						return sandbox?.(packageSources?.retainPath(path) ?? path);
 					},
 				}
 			: {}),
@@ -191,6 +193,7 @@ export class ProjectResourceLoader {
 			confirm?: PermissionConfirm;
 			modeRef?: PermissionModeRef;
 			extensionFactories?: InlineExtension[];
+			packageSources?: SessionPackageSources;
 		},
 	): Promise<{
 		settingsManager: SettingsManager;
@@ -200,11 +203,20 @@ export class ProjectResourceLoader {
 		const settingsManager = useUtf8WindowsShell(
 			SettingsManager.create(cwd, agentDir, { projectTrusted: false }),
 		);
-		const desktop = desktopLoaderOptions(this.deps.desktopIntegration, cwd, options?.nativeBootstrap);
+		const packageSources = options?.packageSources;
+		const desktop = desktopLoaderOptions(
+			this.deps.desktopIntegration,
+			cwd,
+			options?.nativeBootstrap,
+			packageSources,
+		);
 		const resourceLoader = new DefaultResourceLoader({
 			cwd,
 			agentDir,
 			settingsManager,
+			...(packageSources
+				? { extensionFactoryForPath: async (path: string) => packageSources.retainPath(path) }
+				: {}),
 			...desktop,
 			// Sandboxed proxies join the built-in list instead of replacing it, and the
 			// permission re-check stays the last tool_call handler of the session.

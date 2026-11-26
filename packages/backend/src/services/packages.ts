@@ -4,35 +4,38 @@ import type {
 	CatalogPackageType,
 	CatalogSearchResult,
 	ConfiguredPackageInfo,
-	PackageLifecycleEvent,
 	PackageLifecycleOperation,
 	PackageLifecycleReceipt,
 } from "@drone/shared";
-import { DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES, NPM_NOT_FOUND_SENTINEL } from "@drone/shared";
+import {
+	DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES,
+	isPackageName,
+	isPackageVersion,
+	npmPackageName,
+} from "@drone/shared";
 import { createLogger } from "../log";
 import { fetchPackageCatalog } from "../packages/catalog";
-import type { SessionRegistry } from "../session/registry";
+import type { RegisteredSession, SessionRegistry } from "../session/registry";
+import type { SessionTraces } from "../session/traces";
+import { packageHasPiResources } from "../session-engine/package-resources";
+import {
+	deferPackageSessions,
+	failPackageOperation,
+	packageEvent,
+	recordPackageLifecycle,
+	relevantPackageSessions,
+} from "./package-lifecycle";
 import {
 	type PackageReplacementDisk,
 	type PackageReplacementHost,
 	replaceInstalledPackage,
 } from "./package-replacement";
+import type { SessionPackageVersions } from "./session-package-versions";
 
 const log = createLogger("backend");
 
-export { NPM_NOT_FOUND_SENTINEL };
-
-/** 判断错误是否为 spawn npm ENOENT（GUI 启动 PATH 不含 npm 安装目录时的典型报错，issue #18） */
-export function isNpmSpawnEnoent(err: unknown): boolean {
-	if (
-		/(^|\b)spawn(\s+[^\s]+)*\s+npm(\.\w+)?\s+ENOENT\b/.test(err instanceof Error ? err.message : String(err))
-	) {
-		return true;
-	}
-	const code = (err as { code?: unknown } | null)?.code;
-	const syscall = (err as { syscall?: unknown } | null)?.syscall;
-	return code === "ENOENT" && typeof syscall === "string" && /\bnpm\b/.test(syscall);
-}
+export { NPM_NOT_FOUND_SENTINEL } from "@drone/shared";
+export { isNpmSpawnEnoent } from "./package-lifecycle";
 
 /** Minimal package-manager boundary kept free of Pi SDK runtime imports. */
 export interface PackageManager {
@@ -60,6 +63,8 @@ export interface PackageServiceDependencies {
 	registry: SessionRegistry;
 	defaultCwd?: string;
 	onSessionReloaded?: (sessionId: string) => void;
+	traces?: Pick<SessionTraces, "recordCustom">;
+	packageVersions?: SessionPackageVersions;
 	packageManagerFactory: PackageManagerFactory;
 }
 
@@ -144,11 +149,11 @@ export class PackageService implements PackageServicePort {
 		scope: "user" | "project",
 		host?: PackageReplacementHost,
 	): Promise<PackageLifecycleReceipt> {
-		return this.runOperation("remove", packageNameFromSource(source), source, scope, host);
+		return this.runOperation("remove", npmPackageName(source) ?? source, source, scope, host);
 	}
 
 	private assertInstallableName(name: string): void {
-		if (!/^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i.test(name)) {
+		if (!isPackageName(name)) {
 			const error = new Error(`Invalid package name: ${name}`);
 			(error as Error & { code?: string }).code = "invalid-source";
 			throw error;
@@ -168,16 +173,17 @@ export class PackageService implements PackageServicePort {
 	}
 
 	private assertRollbackVersion(version: string): void {
-		if (/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(version)) return;
+		if (isPackageVersion(version)) return;
 		const error = new Error(`Invalid package version: ${version}`);
 		(error as Error & { code?: string }).code = "invalid-source";
 		throw error;
 	}
 
 	private configuredScope(source: string): "user" | "project" | undefined {
+		const packageName = npmPackageName(source);
 		const match = this.getPackageManager()
 			.listConfiguredPackages()
-			.find((entry) => packageSourcesMatch(entry.source, source));
+			.find((entry) => packageName && npmPackageName(entry.source) === packageName);
 		return match?.scope;
 	}
 
@@ -214,7 +220,13 @@ export class PackageService implements PackageServicePort {
 			effect: "current-session",
 			events: [],
 		};
-		if (this.mutating) return this.failed(receipt, new Error("A package mutation is already in progress"));
+		if (this.mutating)
+			return failPackageOperation(receipt, new Error("A package mutation is already in progress"));
+		const observed = new Map<RegisteredSession, number>();
+		const observeStages = () => {
+			if (this.deps.traces)
+				recordPackageLifecycle(this.deps.traces, receipt, this.affectedSessions(receipt), observed);
+		};
 		this.mutating = true;
 		try {
 			this.assertNotBuiltin(packageName);
@@ -228,23 +240,57 @@ export class PackageService implements PackageServicePort {
 				const disk = await manager.prepareReplacement(receipt).catch(() => {
 					throw new Error("Package staging could not be prepared");
 				});
-				if (await replaceInstalledPackage(receipt, disk, host, this.deps.registry)) return receipt;
+				await replaceInstalledPackage(
+					receipt,
+					disk,
+					host,
+					this.deps.registry,
+					this.deps.packageVersions,
+					observeStages,
+				);
 			} else {
-				const restoreCallback = this.installProgressCallback(manager, receipt);
-				try {
-					await this.applyLegacyOperation(receipt, manager);
-				} finally {
-					restoreCallback();
-				}
-				receipt.version = this.installedVersion(manager, source, receipt.scope);
+				await this.runLegacy(receipt, manager);
 			}
-			await this.reloadSessions(receipt);
 			return receipt;
 		} catch (err) {
-			return this.failed(receipt, err);
+			return failPackageOperation(receipt, err);
 		} finally {
 			this.mutating = false;
+			observeStages();
 		}
+	}
+
+	private affectedSessions(receipt: PackageLifecycleReceipt) {
+		return relevantPackageSessions(
+			this.deps.registry,
+			receipt,
+			this.deps.packageVersions?.workspace ?? this.deps.defaultCwd ?? process.cwd(),
+		);
+	}
+
+	private async runLegacy(receipt: PackageLifecycleReceipt, manager: PackageManager): Promise<void> {
+		const { packageVersions } = this.deps;
+		const { source, scope, operation } = receipt;
+		const hasPi = async () => {
+			const path = manager.getInstalledPath?.(source, scope);
+			return path ? packageHasPiResources(path) : false;
+		};
+		const mutate = async () => {
+			const previousPi = await hasPi();
+			const restore = this.installProgressCallback(manager, receipt);
+			try {
+				await this.applyLegacyOperation(receipt, manager);
+			} finally {
+				restore();
+			}
+			const hasNext = operation !== "remove" && (await hasPi());
+			const sessionScoped = previousPi || hasNext;
+			packageVersions?.settle(receipt, sessionScoped, hasNext);
+			if (sessionScoped) deferPackageSessions(receipt, this.affectedSessions(receipt));
+			return sessionScoped;
+		};
+		const sessionScoped = await (packageVersions ? packageVersions.withSelection(mutate) : mutate());
+		if (!sessionScoped) await this.reloadSessions(receipt);
 	}
 
 	private async applyLegacyOperation(
@@ -257,7 +303,7 @@ export class PackageService implements PackageServicePort {
 		if (operation === "remove") {
 			if (!(await manager.removeAndPersist(source, { local: scope === "project" })))
 				throw Object.assign(new Error("Package is not installed"), { code: "not-installed" });
-			receipt.events.push(event("disabled"));
+			receipt.events.push(packageEvent("disabled"));
 			return;
 		}
 		if (operation === "update") {
@@ -270,38 +316,18 @@ export class PackageService implements PackageServicePort {
 				throw Object.assign(new Error("Package is not installed"), { code: "not-installed" });
 			await manager.installAndPersist(source);
 		}
-		receipt.events.push(
-			event(
-				operation === "rollback" ? "rolled_back" : "enabled",
-				undefined,
-				operation === "rollback" ? source.slice(receipt.packageName.length + 5) : undefined,
-			),
-		);
-	}
-
-	private failed(receipt: PackageLifecycleReceipt, error: unknown): PackageLifecycleReceipt {
-		const { code, message } = normalizePackageError(error);
-		receipt.status = "failed";
-		receipt.effect = "current-session";
-		receipt.error = { code, message, retryable: code === "unavailable" || code === "operation-failed" };
-		receipt.events.push(event("failed", undefined, message));
-		return receipt;
+		receipt.version = this.installedVersion(manager, source, scope);
+		if (operation === "rollback" && (!receipt.version || !source.endsWith(`@${receipt.version}`)))
+			throw new Error("Restored package version could not be verified");
+		receipt.events.push(packageEvent(operation === "rollback" ? "rolled_back" : "enabled"));
 	}
 
 	private installProgressCallback(manager: PackageManager, receipt: PackageLifecycleReceipt): () => void {
 		if (!manager.setProgressCallback) return () => {};
 		manager.setProgressCallback((progress) => {
-			if (progress.type === "start") {
-				receipt.events.push(
-					event(progress.action === "remove" ? "disabled" : "staged", undefined, progress.message),
-				);
-			} else if (progress.type === "complete") {
-				receipt.events.push(
-					event(progress.action === "remove" ? "drained" : "verified", undefined, progress.message),
-				);
-			} else if (progress.type === "error") {
-				receipt.events.push(event("failed", undefined, progress.message));
-			}
+			if (progress.action === "remove") return;
+			if (progress.type === "start") receipt.events.push(packageEvent("staged"));
+			if (progress.type === "complete") receipt.events.push(packageEvent("verified"));
 		});
 		return () => manager.setProgressCallback?.(undefined);
 	}
@@ -310,7 +336,7 @@ export class PackageService implements PackageServicePort {
 	private async reloadSessions(receipt: PackageLifecycleReceipt): Promise<void> {
 		const reloaded: string[] = [];
 		const deferred: string[] = [];
-		for (const entry of this.deps.registry.list()) {
+		for (const entry of this.affectedSessions(receipt)) {
 			if (entry.session.isStreaming) {
 				log.info("skip reload while streaming", entry.session.sessionId);
 				deferred.push(entry.session.sessionId);
@@ -327,73 +353,12 @@ export class PackageService implements PackageServicePort {
 		}
 		if (reloaded.length) {
 			receipt.reloadedSessionIds = reloaded;
-			for (const sessionId of reloaded) receipt.events.push(event("reloaded", sessionId));
+			for (const sessionId of reloaded) receipt.events.push(packageEvent("reloaded", sessionId));
 		}
 		if (deferred.length) {
 			receipt.deferredSessionIds = deferred;
 			receipt.effect = "next-session";
-			for (const sessionId of deferred) receipt.events.push(event("reload_deferred", sessionId));
+			for (const sessionId of deferred) receipt.events.push(packageEvent("reload_deferred", sessionId));
 		}
 	}
-}
-
-function packageNameFromSource(source: string): string {
-	const normalized = source.replace(/^npm:/u, "");
-	const match = normalized.match(/^(@[^/]+\/[^@]+|[^@]+)(?:@.+)?$/u);
-	return match?.[1] ?? normalized;
-}
-
-function packageSourcesMatch(left: string, right: string): boolean {
-	return (
-		packageNameFromSource(left) === packageNameFromSource(right) &&
-		left.startsWith("npm:") &&
-		right.startsWith("npm:")
-	);
-}
-
-function event(
-	type: PackageLifecycleEvent["type"],
-	sessionId?: string,
-	detail?: string,
-): PackageLifecycleEvent {
-	return {
-		type,
-		at: Date.now(),
-		...(sessionId ? { sessionId } : {}),
-		...(detail ? { detail: safeErrorMessage(detail) } : {}),
-	};
-}
-
-function safeErrorMessage(value: string): string {
-	return value
-		.replace(/([A-Z_]*(?:TOKEN|PASSWORD|SECRET|API[_-]?KEY)[A-Z_]*\s*[=:]\s*)\S+/giu, "$1[redacted]")
-		.slice(0, 1000);
-}
-
-function normalizePackageError(err: unknown): {
-	code: NonNullable<PackageLifecycleReceipt["error"]>["code"];
-	message: string;
-} {
-	const raw = err instanceof Error ? err.message : String(err);
-	const message = safeErrorMessage(
-		isNpmSpawnEnoent(err)
-			? `${NPM_NOT_FOUND_SENTINEL}: npm executable not found on PATH (install Node.js, then restart the app)`
-			: raw,
-	);
-	const explicit = (err as { code?: unknown } | null)?.code;
-	if (
-		explicit === "invalid-source" ||
-		explicit === "builtin" ||
-		explicit === "not-installed" ||
-		explicit === "unavailable"
-	) {
-		return { code: explicit, message };
-	}
-	if (message.includes(NPM_NOT_FOUND_SENTINEL)) return { code: "unavailable", message };
-	if (/invalid package name|unsupported .*source/iu.test(message)) return { code: "invalid-source", message };
-	if (/not installed/iu.test(message)) return { code: "not-installed", message };
-	if (/updates are unavailable|npm.*not found|network|fetch|registry/iu.test(message)) {
-		return { code: "unavailable", message };
-	}
-	return { code: "operation-failed", message };
 }

@@ -14,6 +14,7 @@ vi.mock("../../i18n", () => ({
 	useI18nStore: (selector: (state: { language: "zh" }) => unknown) => selector({ language: "zh" }),
 }));
 vi.mock("../../stores/sessions", () => ({
+	isDraftSessionId: () => false,
 	useSessionsStore: Object.assign(
 		(selector: (state: { cwd: string | null }) => unknown) => selector({ cwd: "/proj" }),
 		{

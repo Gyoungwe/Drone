@@ -1,15 +1,24 @@
-import { createHash, type Hash } from "node:crypto";
-import { lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync } from "node:fs";
+import { realpathSync, renameSync } from "node:fs";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import { dirname, join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import type { PackageLifecycleReceipt } from "@drone/shared";
 import type { PackageSource } from "@earendil-works/pi-coding-agent";
 import { createLogger } from "../log";
 import type { PluginRuntimeSource } from "../plugins/plugin-source";
 import type { SessionRegistry } from "../session/registry";
+import { packageHasPiResources } from "../session-engine/package-resources";
+import {
+	type PackageIdentity,
+	type PackageLocation,
+	packageContainsPath,
+	readPackageIdentity,
+} from "./package-identity";
+import { deferPackageSessions, relevantPackageSessions } from "./package-lifecycle";
+import type { SessionPackageVersions } from "./session-package-versions";
 
-type PackageScope = PackageLifecycleReceipt["scope"];
+export type { PackageLocation } from "./package-identity";
+
 const log = createLogger("packages");
 
 export interface PackageSelection {
@@ -24,20 +33,13 @@ export interface PackageReplacementDisk {
 	configure(expected: PackageSelection, selection: PackageSelection): Promise<void>;
 }
 
-export interface PackageLocation {
-	readonly packageName: string;
-	readonly scope: PackageScope;
-	readonly modules: string;
-	readonly path: string;
-}
-
 interface PackageInspection {
 	readonly sources: readonly PluginRuntimeSource[];
 	readonly restart?: boolean;
 }
 
 export interface PackageReplacementHost {
-	inspect(location: PackageLocation): Promise<PackageInspection>;
+	inspect(location: PackageLocation, candidate?: boolean): Promise<PackageInspection>;
 	transition<T>(
 		location: PackageLocation,
 		sources: readonly PluginRuntimeSource[],
@@ -50,11 +52,7 @@ export interface PackageReplacementHost {
 		quarantine: () => void,
 	): Promise<void>;
 	rescan(location: PackageLocation): Promise<void>;
-}
-
-interface PackageIdentity {
-	readonly version: string;
-	readonly hash: string;
+	onCandidatePending?(): void;
 }
 
 interface Replacement {
@@ -67,6 +65,9 @@ interface Replacement {
 	readonly previous?: PackageIdentity;
 	readonly selection: PackageSelection;
 	readonly occupiedTools: () => ReadonlySet<string>;
+	readonly registry: SessionRegistry;
+	readonly packageVersions?: SessionPackageVersions;
+	readonly observeStages?: () => void;
 	preserveBackup: boolean;
 }
 
@@ -84,60 +85,13 @@ function fail(receipt: PackageLifecycleReceipt, message: string): void {
 	addEvent(receipt, "failed", message);
 }
 
-function inside(root: string, path: string): boolean {
-	const suffix = relative(root, path);
-	return !isAbsolute(suffix) && suffix !== ".." && !suffix.startsWith(`..${sep}`);
-}
-
-function addDirectory(hash: Hash, root: string, directory: string): void {
-	for (const entry of readdirSync(directory, { withFileTypes: true }).sort((left, right) =>
-		left.name.localeCompare(right.name),
-	)) {
-		const path = join(directory, entry.name);
-		hash.update(JSON.stringify([relative(root, path), entry.isDirectory(), entry.isSymbolicLink()]));
-		if (entry.isDirectory()) addDirectory(hash, root, path);
-		else if (entry.isSymbolicLink()) {
-			const link = readlinkSync(path);
-			if (isAbsolute(link) || !inside(root, realpathSync(path)))
-				throw new Error("Package link escaped its directory");
-			hash.update(JSON.stringify(link));
-		} else if (entry.isFile()) {
-			const bytes = readFileSync(path);
-			hash.update(`${bytes.length}\0`).update(bytes);
-		} else throw new Error("Invalid entry in package directory");
-	}
-}
-
-function readIdentity(location: PackageLocation): PackageIdentity | undefined {
-	const stat = lstatSync(location.path, { throwIfNoEntry: false });
-	if (!stat) return undefined;
-	const root = realpathSync(location.path);
-	if (!stat.isDirectory() || root !== location.path || realpathSync(location.modules) !== location.modules)
-		throw new Error("Package root is not a confined directory");
-	const hash = createHash("sha256");
-	addDirectory(hash, root, root);
-	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
-		name?: unknown;
-		version?: unknown;
-	};
-	const { version } = manifest;
-	if (
-		manifest.name !== location.packageName ||
-		typeof version !== "string" ||
-		version.length > 128 ||
-		!/^\d+\.\d+\.\d+(?:-[\dA-Za-z.-]+)?(?:\+[\dA-Za-z.-]+)?$/u.test(version)
-	)
-		throw new Error("Unexpected package identity");
-	return { version, hash: hash.digest("hex") };
-}
-
 function assertReadback(
 	state: Replacement,
 	identity: PackageIdentity | undefined,
 	selection: PackageSelection,
 ) {
 	if (
-		!isDeepStrictEqual(readIdentity(state.location), identity) ||
+		!isDeepStrictEqual(readPackageIdentity(state.location), identity) ||
 		!isDeepStrictEqual(state.disk.read(), selection)
 	)
 		throw new Error("Package selection readback failed");
@@ -183,7 +137,7 @@ async function cutover(
 		if (sources.length) await host.probe(sources, directory, state.occupiedTools(), quarantine);
 		reason = "Package publication failed";
 		assertReadback(state, state.previous, state.selection);
-		if (!isDeepStrictEqual(readIdentity(candidate), identity))
+		if (!isDeepStrictEqual(readPackageIdentity(candidate), identity))
 			throw new Error("Candidate changed after verification");
 		if (state.previous) {
 			renameSync(location.path, backup);
@@ -222,20 +176,49 @@ async function stageCandidate(state: Replacement) {
 	if (state.receipt.operation === "remove") return undefined;
 	await state.disk.stage(state.directory);
 	addEvent(state.receipt, "staged");
-	const identity = readIdentity(state.candidate);
+	const identity = readPackageIdentity(state.candidate);
 	if (
 		!identity ||
 		(state.receipt.operation === "rollback" && !state.receipt.source.endsWith(`@${identity.version}`))
 	)
 		throw new Error("Candidate version did not match the install request");
-	const inspection = await state.host.inspect(state.candidate);
-	if (!isDeepStrictEqual(readIdentity(state.candidate), identity))
+	const inspection = await state.host.inspect(state.candidate, true);
+	const pi = await packageHasPiResources(state.candidate.path, state.selection.entry);
+	if (!isDeepStrictEqual(readPackageIdentity(state.candidate), identity))
 		throw new Error("Candidate changed during verification");
 	addEvent(state.receipt, "verified", identity.version);
-	return { identity, inspection };
+	return { identity, inspection, pi };
 }
 
-async function replace(state: Replacement): Promise<boolean> {
+type Activation = {
+	identity?: PackageIdentity;
+	sources: readonly PluginRuntimeSource[];
+	sessionScoped: boolean;
+	hasNext: boolean;
+	restart: boolean;
+};
+
+function publishSelection(state: Replacement, next: Activation, drained: boolean, quarantine: () => void) {
+	const { receipt, packageVersions, registry, location } = state;
+	const publish = async () => {
+		if (drained) addEvent(receipt, "drained");
+		await cutover(state, next.identity, next.sources, () => {
+			state.preserveBackup = true;
+			quarantine();
+		});
+		if (receipt.status === "succeeded") {
+			if (next.restart) receipt.effect = "app-restart";
+			if (next.sessionScoped) {
+				const workspace = packageVersions?.workspace ?? projectWorkspace(location);
+				deferPackageSessions(receipt, relevantPackageSessions(registry, receipt, workspace));
+			}
+		}
+		packageVersions?.settle(receipt, next.sessionScoped, next.hasNext);
+	};
+	return packageVersions ? packageVersions.withSelection(publish) : publish();
+}
+
+async function replace(state: Replacement): Promise<void> {
 	const { receipt, host, location } = state;
 	const canRemove = receipt.operation === "remove" && state.selection.entry !== undefined;
 	if (!state.previous && receipt.operation !== "install" && !canRemove) {
@@ -246,40 +229,57 @@ async function replace(state: Replacement): Promise<boolean> {
 			retryable: false,
 		};
 		addEvent(receipt, "failed", receipt.error.message);
-		return true;
+		return;
 	}
 	let reason = "Candidate package staging or integrity verification failed";
 	try {
 		const previous = state.previous ? await host.inspect(location) : undefined;
+		const previousPi = state.previous && (await packageHasPiResources(location.path, state.selection.entry));
 		const candidate = await stageCandidate(state);
 		const sources = candidate?.inspection.sources ?? [];
-		const restart = previous?.restart || candidate?.inspection.restart;
+		const priorSources = previous?.sources ?? [];
+		const managed = priorSources.length > 0 || sources.length > 0;
+		const hasNext = Boolean(candidate?.pi || sources.some(({ nativeEntrypoint }) => nativeEntrypoint));
+		const sessionScoped = Boolean(
+			previousPi || hasNext || priorSources.some(({ nativeEntrypoint }) => nativeEntrypoint),
+		);
+		const restart =
+			Boolean(previous?.restart || candidate?.inspection.restart) &&
+			state.previous?.hash !== candidate?.identity.hash;
 		reason = "Previous package selection changed";
 		assertReadback(state, state.previous, state.selection);
 		reason = "Previous worker did not drain safely";
-		await host.transition(location, previous?.sources ?? [], async (drained, quarantine) => {
-			if (drained) addEvent(receipt, "drained");
-			await cutover(state, candidate?.identity, sources, () => {
-				state.preserveBackup = true;
-				quarantine();
-			});
-		});
-		if (restart && receipt.status === "succeeded") receipt.effect = "app-restart";
-		return Boolean(restart || previous?.sources.length || sources.length || receipt.status === "failed");
+		const next = { identity: candidate?.identity, sources, sessionScoped, hasNext, restart };
+		const action = (drained: boolean, quarantine: () => void) =>
+			publishSelection(state, next, drained, quarantine);
+		if (managed) {
+			if (sessionScoped && candidate) {
+				state.packageVersions?.stage(receipt, hasNext ? candidate.identity.version : null);
+				state.observeStages?.();
+				host.onCandidatePending?.();
+			}
+			await host.transition(location, priorSources, action);
+		} else {
+			await action(false, () => undefined);
+		}
 	} catch {
 		fail(receipt, reason);
-		return true;
+		state.packageVersions?.settle(receipt, false);
 	}
 }
 
+function projectWorkspace(location: PackageLocation): string {
+	return dirname(dirname(dirname(location.modules)));
+}
+
 function activeToolNames(registry: SessionRegistry, location: PackageLocation): ReadonlySet<string> {
-	const workspace = dirname(dirname(dirname(location.modules)));
+	const workspace = projectWorkspace(location);
 	return new Set(
 		registry.list().flatMap(({ cwd, session }) => {
 			if (location.scope === "project" && cwd !== workspace) return [];
 			return session
 				.getAllTools()
-				.filter(({ sourceInfo }) => !inside(location.path, sourceInfo.path))
+				.filter(({ sourceInfo }) => !packageContainsPath(location.path, sourceInfo.path))
 				.map(({ name }) => name);
 		}),
 	);
@@ -290,7 +290,9 @@ export async function replaceInstalledPackage(
 	disk: PackageReplacementDisk,
 	host: PackageReplacementHost,
 	registry: SessionRegistry,
-): Promise<boolean> {
+	packageVersions?: SessionPackageVersions,
+	observeStages?: () => void,
+): Promise<void> {
 	const location = {
 		packageName: receipt.packageName,
 		scope: receipt.scope,
@@ -299,7 +301,7 @@ export async function replaceInstalledPackage(
 	};
 	let state: Replacement | undefined;
 	try {
-		const previous = readIdentity(location);
+		const previous = readPackageIdentity(location);
 		receipt.previousVersion = previous?.version;
 		const selection = disk.read();
 		await mkdir(dirname(location.path), { recursive: true, mode: 0o700 });
@@ -315,14 +317,16 @@ export async function replaceInstalledPackage(
 			directory,
 			previous,
 			selection,
+			registry,
+			packageVersions,
+			observeStages,
 			preserveBackup: false,
 			candidate: { ...location, modules, path: join(modules, location.packageName) },
 			occupiedTools: () => activeToolNames(registry, location),
 		};
-		return await replace(state);
+		await replace(state);
 	} catch {
 		fail(receipt, "Installed package selection could not be verified");
-		return true;
 	} finally {
 		if (state && !state.preserveBackup) {
 			await rm(state.directory, { recursive: true, force: true }).catch(() => {

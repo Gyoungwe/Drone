@@ -160,8 +160,8 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loa
      noContextFiles?: boolean;
      systemPrompt?: string;
      appendSystemPrompt?: string[];
-+    /** Drone Pi 1.1.0 patch: intercept file execution before both trust-loading passes. */
-+    extensionFactoryForPath?: (path: string) => Promise<ExtensionFactory | undefined>;
++    /** Host-only proxy factory or retained load path for both trust-loading passes. */
++    extensionFactoryForPath?: (path: string) => Promise<ExtensionFactory | string | undefined>;
 +    hostExtensionSelection?: (receipt: HostExtensionSelectionReceipt) => void;
      extensionsOverride?: (base: LoadExtensionsResult) => LoadExtensionsResult;
      skillsOverride?: (base: {
@@ -203,9 +203,7 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loa
          this.extensionsOverride = options.extensionsOverride;
          this.skillsOverride = options.skillsOverride;
          this.promptsOverride = options.promptsOverride;
-@@ -350,6 +355,7 @@
-         return this.loadCurrentExtensionSet({ includeInlineFactories: true });
-     }
+@@ -352,4 +357,5 @@
      async reload(options) {
 +        this.hostExtensionSelection?.({ phase: "loading" });
          resetTimings("extensions");
@@ -219,33 +217,35 @@ diff --git a/node_modules/@earendil-works/pi-coding-agent/dist/core/resource-loa
      }
      async loadCurrentExtensionSet(options) {
          const resolvedPaths = await this.packageManager.resolve();
-@@ -504,7 +511,7 @@
-             resource.metadata,
-         ]));
+@@ -506,4 +513,4 @@
          const packageWarnings = collectExtensionPackageWarnings(extensionPaths, metadataByPath);
 -        const extensionsResult = await loadExtensionsCached(extensionPaths, this.cwd, this.eventBus);
 +        const extensionsResult = await this.loadExtensionPaths(extensionPaths);
          mergeExtensionWarnings(extensionsResult, packageWarnings);
          if (!options.includeInlineFactories) {
-             return extensionsResult;
-@@ -523,7 +530,27 @@
+@@ -523,7 +530,32 @@
      /** Load extension paths: files from disk and `builtin:<name>` paths from the built-in extensions. */
      async loadExtensionPaths(paths, runtime) {
          const isBuiltinPath = (path) => path.startsWith(BUILTIN_PATH_PREFIX);
 -        const result = await loadExtensionsCached(paths.filter((path) => !isBuiltinPath(path)), this.cwd, this.eventBus, runtime);
-+        const nativePaths = [];
++        const nativePaths = new Map();
 +        const proxies = [];
 +        const errors = [];
 +        for (const path of paths.filter((path) => !isBuiltinPath(path))) {
 +            try {
-+                const factory = await this.extensionFactoryForPath?.(path);
-+                if (factory) proxies.push({ path, factory });
-+                else nativePaths.push(path);
++                const selected = await this.extensionFactoryForPath?.(path);
++                if (typeof selected === "function") proxies.push({ path, factory: selected });
++                else nativePaths.set(selected ?? path, path);
 +            } catch (error) {
 +                errors.push({ path, error: error instanceof Error ? error.message : String(error) });
 +            }
 +        }
-+        const result = await loadExtensionsCached(nativePaths, this.cwd, this.eventBus, runtime);
++        const result = await loadExtensionsCached([...nativePaths.keys()], this.cwd, this.eventBus, runtime);
++        for (const extension of result.extensions) {
++            extension.path = nativePaths.get(extension.path) ?? extension.path;
++            extension.resolvedPath = this.resolveExtensionLoadPath(extension.path);
++        }
++        for (const error of result.errors) error.path = nativePaths.get(error.path) ?? error.path;
 +        result.errors.push(...errors);
 +        for (const {path, factory} of proxies) {
 +            try {

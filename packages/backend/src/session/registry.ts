@@ -1,5 +1,5 @@
 import { statSync } from "node:fs";
-import type { SessionMeta } from "@drone/shared";
+import type { SessionMeta, SessionPackageVersion } from "@drone/shared";
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { NativeSessionDelivery } from "../plugins/native-delivery";
 import type { AskGate } from "./ask-gate";
@@ -10,6 +10,7 @@ export interface RegisteredSession {
 	/** Host-only child policy fact; this is not a filesystem grant. */
 	readonly nativeChildFiles?: "none" | "read";
 	readonly nativeDelivery?: NativeSessionDelivery;
+	readonly packageVersions?: readonly SessionPackageVersion[];
 	session: AgentSession;
 	unsubscribe: () => void;
 	cwd: string;

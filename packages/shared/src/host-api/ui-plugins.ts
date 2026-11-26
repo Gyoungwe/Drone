@@ -7,6 +7,7 @@ import type {
 	UiPluginsEventPayload,
 } from "../ui-plugins";
 import { defineDomain } from "./define";
+import { PackageLifecycleReceiptSchema } from "./packages";
 
 const UiPluginAnchorSchema = Type.Union([
 	Type.Literal("top-left"),
@@ -101,7 +102,14 @@ const UiPluginsEventSchema = Type.Union([
 		{ kind: Type.Literal("changed"), name: Type.String({ minLength: 1 }) },
 		{ additionalProperties: false },
 	),
-	Type.Object({ kind: Type.Literal("config") }, { additionalProperties: false }),
+	Type.Object(
+		{
+			kind: Type.Literal("config"),
+			receipt: Type.Optional(PackageLifecycleReceiptSchema),
+			reloadUi: Type.Optional(Type.Literal(false)),
+		},
+		{ additionalProperties: false },
+	),
 ]);
 
 /** Host API contract for UI plugin discovery, configuration, and hot reload. */

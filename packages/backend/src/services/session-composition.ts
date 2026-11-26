@@ -27,6 +27,7 @@ import type { SessionHost } from "./session-host";
 import { SessionLifecycleService } from "./session-lifecycle";
 import { SessionMessageService } from "./session-messages";
 import { SessionModelsService } from "./session-models";
+import { SessionPackageVersions } from "./session-package-versions";
 import { SessionResourceService } from "./session-resources";
 import { SessionSettingsBoundary } from "./session-settings-boundary";
 import { SubagentService } from "./subagents";
@@ -268,10 +269,16 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 	service.projectTrust = new ProjectTrustService({
 		onRequest: (request) => service.dispatchTrustRequest(request),
 	});
+	const packageVersions = new SessionPackageVersions(
+		service.runtime.scheduler,
+		options.defaultCwd || process.cwd(),
+	);
 	service.packages = new PackageAdmin({
 		registry: service.registry,
 		defaultCwd: options.defaultCwd,
 		onSessionReloaded: (sessionId) => service.reapplyCapabilities(sessionId),
+		traces: service.traces,
+		packageVersions,
 	});
 	service.projectLoader = new ProjectResourceLoader({
 		trustStore: service.projectTrust.store,
@@ -284,7 +291,6 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 	});
 	service.construction = new SessionConstructionService({
 		options: service.options,
-		runtime: service.runtime,
 		sessionEngine: service.sessionEngine,
 		registry: service.registry,
 		approvals: service.approvals,
@@ -293,6 +299,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		traces: service.traces,
 		storage: service.storage,
 		projectLoader: service.projectLoader,
+		packageVersions,
 		getModelRuntime: () => service.getModelRuntime(),
 		sessionExtensionDependencies: () => service.sessionExtensionDependencies(),
 		registerAskGate: (id, gate) => service.registerAskGate(id, gate),
@@ -308,6 +315,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		capabilityRuntimes: service.capabilityRuntimes,
 		mcp: service.mcp,
 		projectLoader: service.projectLoader,
+		packageVersions,
 		requireSession: (id) => service.requireSession(id),
 		reapplyCapabilities: (id) => service.reapplyCapabilities(id),
 		log,

@@ -344,7 +344,7 @@ packages/
 | `src/process-lanes/` | `deriveProcessEvents`、`deriveProcessLaneState`、`deriveProcessLaneTurns`、`estimateProcessLayout`、`PROCESS_DEMO_STEPS` | 公开 transcript 事件到六泳道位置的纯归约器与布局投影；状态只消费可见回执，不读取私有思维或写入任务、研究、引用账本 |
 | `src/errors.ts` | `UiError`、`classifyLlmError`、`buildLlmUiError`、`buildStreamGuardUiError`、`DETAIL_MAX_LENGTH` | 统一报错信封：错误卡数据源（live reducer / 历史回放 mapping / Composer 内联共用）；`classifyLlmError` 按 401/429/context/网络模式分类，误判只影响标题措辞 |
 | `src/ui-plugins.ts` | `UiPluginManifest`、`UiPluginInfo`、`UiPluginsConfig`、`KNOWN_UI_SLOTS`、`KNOWN_UI_REGIONS`、`UI_PLUGIN_ANCHORS` | UI 插件跨进程类型：manifest（slots/contributions/headless 三选一）/ 扫描合成信息 / 持久化配置 / 事件载荷；`KNOWN_*` 供 main 校验，与 renderer `plugins/slots.ts` 对齐（registry.test.ts 断言） |
-| `src/packages.ts` | `CatalogPackage*`、`NPM_NOT_FOUND_SENTINEL`、`isSubagentPackage` | pi.dev 社区包目录类型（设置页扩展面板用；`isSubagentPackage` 启发式仅供安装警示，非安全边界） |
+| `src/packages.ts` | `CatalogPackage*`、`PackageLifecycleReceipt`、`SessionPackageVersion` | Pi 社区目录、操作回执与会话版本。`packageLifecycleForReview` 投影市场详情用的脱敏阶段。 |
 | `src/plugin-sources.ts` + `resources/first-party-packages.json` | `FIRST_PARTY_PACKAGES`、`DRONE_PLUGIN_PACKAGE_NAMES`、`DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES`、`DRONE_PLUGIN_METADATA`、`dronePluginSource`、`mergePiPluginSources` | 第一方包清单是**数据**（`resources/first-party-packages.json`，宿主自有目录：名称、host、版本回退值、描述、builtIn、packageKind、能力、工具、权限），代码不再点名任何包；清单外的包各自在 manifest 里声明自己。`plugin-sources.ts` 导出清单派生出的常量与 pi.dev/Drone 两个来源的投影合并；清单内容同时被 `scripts/check-zero-domain.mjs` 的 `hostCatalogEntries` 类别棘轮 |
 | `src/settings.ts` | `ProviderInfo`、`CustomProviderInput`、`KNOWN_APIS`、`LoginAuthPrompt/LoginEventPayload` 等 | provider 设置类型（含订阅登录 OAuth 镜像） |
 | `src/subagent.ts` | `SubagentRunData`、`extractSubagentRuns`、`isSubagentToolName`、`SubagentPanelRun`/`SubagentPanelAgent`/`SubagentDispatchInput`、`SUBAGENT_DISPATCH/RESULT_CUSTOM_TYPE`、`subagentRunDataFromPanelRun` | 子代理结果提取（结构检测不依赖工具名；single/parallel/management 三形态），backend 历史映射与 renderer 共用；面板派发（会话内专属调用）的运行记录 / 快照 / 派发输入 / 会话文件记录解析，见 [subagents-panel.md](subagents-panel.md) |
@@ -521,7 +521,7 @@ src/
 | `src/settings/settings.ts` | `SettingsService` | provider/模型/凭证读写（key 走环境变量引用，绝不落明文）。listProviders 默认本地 refresh（`allowNetwork:false`），显式 forceNetwork 才联网；custom provider 增改走 `buildCustomEntry`（未设字段不落盘）；模型列表留空 = 覆写 baseUrl 共享官方列表；`setProviderBaseUrl` = 内置 provider 端点覆写专用；移除凭证走 `runtime.logout()`（直接删文件残留内存态）；`apiKeyLogin` 标记 = 内置 provider 有交互式 api_key 登录（UI 显示「登录」入口） |
 | `src/settings/model-prefs.ts` | `ModelPrefsService` | `model-prefs.json`：隐藏模型 + 停用 provider + per-agent 子代理模型；`listModels()` 唯一出口过滤 |
 | `src/settings/login.ts` | `LoginService` | provider 交互登录桥接：AuthInteraction → IPC 事件（prompt 挂起等 renderer 应答；浏览器先到则拒挂起 prompt）。支持 OAuth + api_key 交互登录（如 Google Vertex）；`filterAuthSelectOptions` 对 google-vertex 剔除必败的 api-key 选项（Vertex 不接受 API key，见 PITFALLS） |
-| `src/services/packages.ts` | `PackageService` | 社区包搜索/安装/卸载/已配置清单 + 装卸后对非流式会话热重载（对齐 CLI /reload）；npm ENOENT 转带哨兵的可读错误；通过 `BackendServices.packages` 暴露 |
+| `src/services/packages.ts` | `PackageService` | `package-replacement.ts` 切换版本，`package-identity.ts` 校验包目录与内容，`package-lifecycle.ts` 写入会话 trace。`session-package-sources.ts` 保留打开会话的已加载文件，`session-package-versions.ts` 通过 `getLoadedResources` 投影当前与下一会话版本。 |
 | `src/services/decision-fanout.ts` | `DecisionFanout` | agent 决策记录分发：补全项目后交给 inquiry 日志；处理器异常不打断会话 |
 | `src/services/p5-background-jobs-service.ts` | `BackgroundJobsServicePort`、`createBackgroundJobsService`、`localDayKey` | Composes settings and the local-day spend ledger for each canonical workspace. |
 | `src/services/approvals.ts` | `ApprovalService` | per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播和 allowRun 队列裁决；通过 `BackendServices.approvals` 暴露，`PiBackend` 保留兼容委托 |
@@ -558,6 +558,7 @@ src/
 | `src/main/daily.ts` | 日常空间工作台目录（`~/.drone/daily`，全部日常会话的固定 cwd）+ 懒创建；信任链无资源自动信任不弹窗；dev/正式共享工作区（会话列表按 agent dir 天然隔离） |
 | `src/main/ipc/index.ts` | `registerIpc` 组合入口 + backend 事件/updater 状态转发 + UI 插件热重载 watcher 启动。**新增 handler 改对应域文件，不在 index.ts 堆** |
 | `src/main/ipc/background-jobs.ts` | Binds `BackgroundJobsContract` to `BackendServices.backgroundJobs`. |
+| `src/main/ipc/packages.ts` | `PackagesContract` 经 `bindContract` 校验包操作及回执。更新使用调用窗口的身份执行包级切换，`UiPluginsContract` 的配置事件转发脱敏回执。 |
 | `src/main/ipc/{sessions,settings,permissions,packages,knowledge,compute,discovery,decisions,app,ui-plugins,institutional,subagents}.ts` | 各域 handler（全部薄委托 backend；compute 通过 `ComputeContract` 做参数/结果边界校验并转发健康/作业/终端事件；discovery 通过 `DiscoveryContract` 暴露 B5d–B5f 只读投影并对关闭会话执行主帧校验；decisions 通过 `DecisionsContract` 提供项目决策列表/撤销/人工确认；knowledge 域经 `KnowledgeContract` 做参数/结果边界校验；ui-plugins 域 handler async await 落盘后才返回；permissions 域 = 设置 → 权限 面板 load/save/reset/probe/auditTail + `openLocation` 用 shell 定位文件） |
 | `src/main/tabs.ts` / `ui-state.ts` | tabs.json / ui-state.json 读写（JsonStore 原子写；ui-state 补丁式合并 + normalize 补缺省） |
 | `src/main/background.ts` | 背景图选图（dialog → 拷贝 `userData/backgrounds/` 并清理旧图） |

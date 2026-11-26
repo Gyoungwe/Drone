@@ -56,3 +56,17 @@ describe("zh dictionary", () => {
 			expect(flat).not.toContain(english);
 	});
 });
+
+it("ships matching package lifecycle labels in English and Chinese", async () => {
+	const { en } = await import("./en");
+	const { zh } = await import("./zh");
+	const english = en.settings.extensions;
+	const chinese = zh.settings.extensions;
+	expect(Object.keys(chinese.lifecycleStages)).toEqual(Object.keys(english.lifecycleStages));
+	expect(Object.keys(chinese.lifecycleErrors)).toEqual(Object.keys(english.lifecycleErrors));
+	expect(english.effectiveRestart).toBe(en.skillsConnections.effectiveRestart);
+	expect(chinese.effectiveRestart).toBe(zh.skillsConnections.effectiveRestart);
+	expect(chinese.effectiveRestart).not.toBe(english.effectiveRestart);
+	expect(en.skillsConnections.currentSessionVersion).toContain("{version}");
+	expect(zh.skillsConnections.nextSessionVersion).toContain("{version}");
+});

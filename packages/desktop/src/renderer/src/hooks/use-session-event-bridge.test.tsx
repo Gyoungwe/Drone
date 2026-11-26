@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import type { SessionEventEnvelope } from "@drone/shared";
+import type { SessionEventEnvelope, UiPluginsEventPayload } from "@drone/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import React, { createElement } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Toaster } from "../components/Toaster";
 import { useI18nStore } from "../i18n";
+import { useCatalogStore } from "../stores/catalog";
+import { useSessionsStore } from "../stores/sessions";
 import { useToastsStore } from "../stores/toasts";
 import { useTranscriptStore } from "../stores/transcript";
 import { useSessionEventBridge } from "./use-session-event-bridge";
@@ -26,6 +28,56 @@ afterEach(() => {
 	vi.runOnlyPendingTimers();
 	vi.useRealTimers();
 	vi.unstubAllGlobals();
+	useSessionsStore.setState({ activeSessionId: null });
+	useCatalogStore.setState({ lifecycleReceipts: {}, configuredPackages: null });
+});
+
+it("rereads active resources for old config events and stores the scoped package outcome", async () => {
+	const listeners = new Set<(event: UiPluginsEventPayload) => void>();
+	const getLoadedResources = vi.fn(async () => ({
+		skills: [],
+		skillDiagnostics: [],
+		extensions: [],
+		extensionErrors: [],
+	}));
+	const receipt = {
+		operation: "update",
+		source: "npm:fixture",
+		packageName: "fixture",
+		scope: "project",
+		status: "failed",
+		effect: "current-session",
+		events: [{ at: 1, type: "rolled_back" }],
+	} as const;
+	Object.defineProperty(window, "pi", {
+		configurable: true,
+		value: {
+			onEvent: () => vi.fn(),
+			onPermissionRequest: () => vi.fn(),
+			onPermissionResolved: () => vi.fn(),
+			onTrustRequest: () => vi.fn(),
+			onUiPluginsEvent: (listener: (event: UiPluginsEventPayload) => void) => {
+				listeners.add(listener);
+				return () => listeners.delete(listener);
+			},
+			getLoadedResources,
+			listConfiguredPackages: vi.fn(async () => [{ source: "npm:fixture@1.0.0", scope: "project" }]),
+		},
+	});
+	useSessionsStore.setState({ activeSessionId: "active" });
+	const view = render(createElement(App));
+	await act(async () => {
+		for (const listener of listeners) listener({ kind: "config" });
+		for (const listener of listeners)
+			listener({ kind: "config", receipt: { ...receipt, events: [...receipt.events] } });
+	});
+	expect(getLoadedResources.mock.calls).toEqual([["active"], ["active"]]);
+	expect(useCatalogStore.getState().lifecycleReceipts["project:fixture"]).toEqual(receipt);
+	expect(useCatalogStore.getState().configuredPackages).toEqual([
+		{ source: "npm:fixture@1.0.0", scope: "project" },
+	]);
+	view.unmount();
+	expect(listeners.size).toBe(0);
 });
 it("renders generic session notifications as localized severity toasts and removes its IPC subscription", () => {
 	const listeners = new Set<(event: SessionEventEnvelope) => void>();

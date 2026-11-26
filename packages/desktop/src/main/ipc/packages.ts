@@ -5,6 +5,11 @@ import { type BackendServices, createProcessPluginRuntime, type SessionServicePo
 import { type PackageLifecycleReceipt, PackagesContract } from "@drone/shared";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { IpcMainInvokeEvent } from "electron";
+import {
+	type PluginHostDeclaration,
+	type PluginHostLoaderDiscovery,
+	requiresPluginHostRestart,
+} from "../optional-plugin-hosts";
 import { latestPackageVersions, registryPluginMetadata } from "../package-versions";
 import { discoverInstalledPackages } from "../ui-plugins/installed-package-sources";
 import type { UiPluginManager } from "../ui-plugins/manager";
@@ -16,7 +21,9 @@ import type {
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
 type MutationHost = NonNullable<Parameters<BackendServices["packages"]["updatePackage"]>[1]>;
-type PackageDeclaration = { entrypoints?: { host?: string; worker?: string; desktopRuntime?: string } };
+type PackageDeclaration = PluginHostDeclaration & {
+	entrypoints?: { host?: string; worker?: string; desktopRuntime?: string };
+};
 type PackageServices = Pick<BackendServices, "packages">;
 
 function contains(root: string, path: string): boolean {
@@ -57,7 +64,11 @@ async function verifyPackageOutputs(root: string): Promise<void> {
 	}
 }
 
-async function inspectPackage({ modules, path, packageName }: Parameters<MutationHost["inspect"]>[0]) {
+async function inspectPackage(
+	{ modules, path, packageName, scope }: Parameters<MutationHost["inspect"]>[0],
+	bootLoaders: readonly PluginHostLoaderDiscovery[],
+	candidate?: boolean,
+) {
 	const root = await realpath(path);
 	const manifest =
 		(await readPackageMetadata<PackageDeclaration>(root, "plugin.manifest.json")) ??
@@ -80,7 +91,10 @@ async function inspectPackage({ modules, path, packageName }: Parameters<Mutatio
 	}
 	for (const source of sources) await verifyPackageOutputs(source.packageRoot);
 	if (!sources.length && (host || worker)) await verifyPackageOutputs(root);
-	return { sources, restart: host !== undefined || (worker !== undefined && desktopRuntime === undefined) };
+	return {
+		sources,
+		restart: requiresPluginHostRestart(root, scope, bootLoaders, candidate ? manifest : undefined),
+	};
 }
 
 export function packageMutationHost(
@@ -88,9 +102,10 @@ export function packageMutationHost(
 	runtime: DesktopRuntimeBridge,
 	owner: DesktopRuntimeOwner,
 	runtimeDirectory: string,
+	bootLoaders: readonly PluginHostLoaderDiscovery[] = [],
 ): MutationHost {
 	return {
-		inspect: inspectPackage,
+		inspect: (location, candidate) => inspectPackage(location, bootLoaders, candidate),
 		transition: ({ path }, previous, action) =>
 			runtime.withPackageTransition(
 				path,
@@ -257,36 +272,24 @@ export function registerPackagesIpc(
 	mutationHost?: (event: IpcMainInvokeEvent) => MutationHost,
 ): void {
 	const packages = resolvePackageService(backend, services);
-	const notify = async (receipt: PackageLifecycleReceipt) => {
-		if (receipt.status === "succeeded" || receipt.events.some(({ type }) => type === "drained"))
-			await onPackagesChanged?.(receipt);
+	const notifyAfterMutation = async (operation: Promise<PackageLifecycleReceipt>) => {
+		const receipt = await operation;
+		await onPackagesChanged?.(receipt);
+		return receipt;
 	};
 	const implementation = (event: IpcMainInvokeEvent): ContractImplementation<typeof PackagesContract> => ({
 		searchCatalog: (...args) => {
 			const [query, type, page] = args;
 			return packages.searchPackages(query, type, page);
 		},
-		installPackage: async (name) => {
-			const receipt = await packages.installPackage(name, mutationHost?.(event));
-			await notify(receipt);
-			return receipt;
-		},
-		updatePackage: async (name) => {
-			const receipt = await packages.updatePackage(name, mutationHost?.(event));
-			await notify(receipt);
-			return receipt;
-		},
-		rollbackPackage: async (name, version) => {
+		installPackage: (name) => notifyAfterMutation(packages.installPackage(name, mutationHost?.(event))),
+		updatePackage: (name) => notifyAfterMutation(packages.updatePackage(name, mutationHost?.(event))),
+		rollbackPackage: (name, version) => {
 			if (!packages.rollbackPackage) throw new Error("Package rollback is unavailable in this host");
-			const receipt = await packages.rollbackPackage(name, version, mutationHost?.(event));
-			await notify(receipt);
-			return receipt;
+			return notifyAfterMutation(packages.rollbackPackage(name, version, mutationHost?.(event)));
 		},
-		removePackage: async (source, scope) => {
-			const receipt = await packages.removePackage(source, scope, mutationHost?.(event));
-			await notify(receipt);
-			return receipt;
-		},
+		removePackage: (source, scope) =>
+			notifyAfterMutation(packages.removePackage(source, scope, mutationHost?.(event))),
 		listConfiguredPackages: () => packages.listConfiguredPackages(),
 		latestPackageVersions: (names) => latestPackageVersions(names),
 		pluginPackageMetadata: (names) => registryPluginMetadata(names),

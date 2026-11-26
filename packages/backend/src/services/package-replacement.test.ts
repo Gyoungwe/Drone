@@ -45,7 +45,7 @@ function fixture(root: string) {
 	const drain = vi.fn(async () => true);
 	const quarantine = vi.fn();
 	const host = {
-		inspect: vi.fn(async (location: PackageLocation) => ({
+		inspect: vi.fn<PackageReplacementHost["inspect"]>(async (location: PackageLocation) => ({
 			sources: [
 				{ pluginId: name, packageRoot: location.path, entrypoint: join(location.path, "runtime.mjs") },
 			],
@@ -156,6 +156,24 @@ testReplacement("publishes healthy v2 only after readiness while preserving SDK 
 	});
 	expect(readFileSync(join(state.live, "runtime.mjs"), "utf8")).toBe("candidate bytes\n");
 });
+
+testReplacement(
+	"reports the app restart boundary for changed boot-loaded code after readback",
+	async (state) => {
+		await installed(state);
+		state.host.inspect.mockResolvedValue({ sources: [], restart: true });
+		const receipt = await state.service.updatePackage(name, state.host);
+		expect(receipt).toMatchObject({
+			status: "succeeded",
+			effect: "app-restart",
+			previousVersion: "1.0.0",
+			version: "2.0.0",
+		});
+		expect(receipt.events.map(({ type }) => type)).toEqual(["staged", "verified", "enabled"]);
+		expect(state.read().dependency).toBe("2.0.0");
+		expect(state.drain).not.toHaveBeenCalled();
+	},
+);
 
 testReplacement(
 	"rejects a staged package with the wrong identity before touching the prior worker",

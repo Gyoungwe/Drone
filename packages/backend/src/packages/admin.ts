@@ -53,7 +53,7 @@ function selectionStores(directory: string, npmRoot: string, name: string) {
 	});
 	const npm = new JsonStore<NpmSettings>({
 		path: npmPath,
-		storageId: "agent-settings",
+		storageId: "agent-npm-packages",
 		defaultValue: () => ({ name: "pi-extensions", private: true }),
 	});
 	return { settings, npm, name };

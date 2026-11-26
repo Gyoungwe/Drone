@@ -1,12 +1,25 @@
-import type { SessionEvent, TrustRequest } from "@drone/shared";
+import type { SessionEvent, TrustRequest, UiPluginsEventPayload } from "@drone/shared";
 import { useEffect } from "react";
 import { getPi } from "../api";
+import { useCatalogStore } from "../stores/catalog";
 import { EventConflator } from "../stores/event-conflator";
 import { useSessionsStore } from "../stores/sessions";
+import { useSettingsStore } from "../stores/settings";
 import { useSubagentsStore } from "../stores/subagents";
 import { pushToast } from "../stores/toasts";
 import { useTranscriptStore } from "../stores/transcript";
 import { useUiStore } from "../stores/ui";
+
+function refreshAfterPluginConfig(event: UiPluginsEventPayload): void {
+	if (event.kind !== "config") return;
+	if (event.receipt) {
+		const catalog = useCatalogStore.getState();
+		catalog.recordLifecycleReceipt(event.receipt);
+		void catalog.refreshConfiguredPackages();
+	}
+	const sessionId = useSessionsStore.getState().activeSessionId;
+	if (sessionId) void useSettingsStore.getState().refreshSessionResources(sessionId);
+}
 
 /**
  * 会话事件桥：把 main 转发的事件流接进 renderer stores（App 装配层专用 hook）。
@@ -52,12 +65,14 @@ export function useSessionEventBridge({
 			useTranscriptStore.getState().resolvePermission(result.sessionId, result.requestId);
 		});
 		const offTrust = pi.onTrustRequest(onTrustRequest);
+		const offPluginConfig = pi.onUiPluginsEvent?.(refreshAfterPluginConfig);
 		return () => {
 			offEvent();
 			conflator.dispose();
 			offPermission();
 			offPermissionResolved();
 			offTrust();
+			offPluginConfig?.();
 		};
 	}, [onTrustRequest]);
 }

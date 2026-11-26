@@ -11,6 +11,7 @@ import { EvidencePane } from "./EvidencePane";
 import { ProcessPane } from "./ProcessPane";
 import { ReviewerCard } from "./ReviewerCard";
 import { DecisionsSection, SessionOverviewSections } from "./SessionOverviewSections";
+import { SessionPackageVersionsCard } from "./SessionPackageVersionsCard";
 import { SubagentsPane } from "./SubagentsPane";
 
 /**
@@ -40,6 +41,7 @@ export function OverviewPane({ sessionId }: { sessionId: string | null }) {
 			</section>
 
 			<SessionOverviewSections sessionId={sessionId} embedded includeDecisions={false} />
+			<SessionPackageVersionsCard sessionId={sessionId} />
 
 			{(todos.length > 0 || messages.length > 0 || turns.length > 0) && (
 				<section className="panel-card" data-testid="overview-steps">
