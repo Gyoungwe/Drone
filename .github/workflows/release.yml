@@ -91,6 +91,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             packages/desktop/pi-packages/package-lock.json
+      - run: npm run fetch:plugins -- --prefetch
       - run: npm ci --prefer-offline --no-audit --no-fund
       - run: npm run stage:pi-packages
       # 发版前必跑：用假 electron 真实加载 preload（v0.29.0 白屏回归），失败即阻断发布
@@ -107,18 +108,14 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: Gyoungwe/drone-plugins
-          ref: main
+          ref: be87fdca3141d0c16b4df0fb74220dc9f5c944d9
           path: drone-plugins
-      - run: npm run check:plugin-api
-        env:
-          DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
+      - run: npm run check:plugin-api -- --plugins-dir "${{ github.workspace }}/drone-plugins"
       - run: npm run check:extensions
       - run: npm run check:knowledge-runtime
       - run: npm run check:tasks-runtime
       - run: npm run test:research-packaging
       - run: npm test
-        env:
-          DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
       - run: npm run test:upgrade
       # The desktop job in main CI also verifies the staged MCP tree and a
       # production renderer/main build. stage:pi-packages above is idempotent;
@@ -218,6 +215,7 @@ jobs:
           key: eb-${{ runner.os }}-${{ matrix.platform }}-${{ hashFiles('package-lock.json', 'packages/desktop/package.json', 'packages/desktop/pi-packages/package-lock.json') }}
           restore-keys: |
             eb-${{ runner.os }}-${{ matrix.platform }}-
+      - run: npm run fetch:plugins -- --prefetch
       - run: npm ci --prefer-offline --no-audit --no-fund
       - run: npm run stage:pi-packages
       # Locked plugins: knowledge worker resources and the read-only built-in plugin packages.

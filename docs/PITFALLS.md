@@ -444,7 +444,7 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 
 ## 2026-10-27：候选插件与干净宿主检查
 
-根 `pretypecheck/pretest/prebuild` 会从 `plugins.lock.json` 重建并覆盖已安装插件。本地候选包的定向测试通过后，若锁仍指向旧版，下一次根命令会丢失新 host exports。必须先提交插件源码、从干净依赖构建并记录 tarball SHA-256，再更新源码锁并验证默认 fetch；开发目录 override 不能证明锁定安装通过。源码候选版本与公开 npm 版本分别记录。
+根 `pretypecheck/pretest/prebuild` 会从 v2 `plugins.lock.json` 下载、验证并 staging Release 资产。本地候选包的定向测试通过后，若锁仍指向旧版，下一次根命令会丢失新 host exports。插件先发布并验证 Release，再同步宿主锁、manifest URL 与 npm lock；安装前用 `fetch:plugins -- --prefetch` 验证资产并预热 npm cache。开发仅显式 `--worktree` 配合 `DRONE_PLUGINS_DIR`，不能证明锁定安装通过。
 
 独立宿主 checkout 没有 sibling `drone-plugins` 或已忽略的沙箱二进制。默认 `npm test` 在 pretest 按既有 checksum lock 准备 Node runtime；公开 UI 包集成测试只接受 `check:public-plugin-host` 提供的真实安装目录，默认宿主测试保留空安装根与自包含 fixture 覆盖，不回退读取另一仓库源码。缺少外部包时该集成用例明确跳过，不能算公开包验收通过。
 
@@ -1135,7 +1135,7 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 
 ## 工作区里的软链 node_modules 会让构建产物带上别的检出路径（2026-11-23 记录）
 
-重新锁定 `plugins.lock.json` 要重建插件包的 tarball 并算哈希。把主检出的
+历史 v1 重锁曾要求重建 tarball；当前 v2 只采用已验证 Release 资产的源提交与 SHA-256，禁止用本地重建代替。以下保留为显式 `--worktree` 开发构建的路径漂移教训。把主检出的
 `node_modules` 软链进工作区后重建，`esbuild` 会把**解析到的绝对路径**写进
 `dist/*.mjs`，于是同一个源码在主检出和工作区打出**字节不同**的产物，
 `build-manifest.json` 随之漂移上千行——看起来像改了代码，其实只差一个路径。
@@ -1143,6 +1143,4 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 修法：把主检出的 `node_modules` **复制**进工作区（不是软链），在干净依赖下
 重建；重建后 `diff -rq` 对一遍产物，应当逐字节相同。
 
-配套的坑：**重锁的哈希必须先自证**。先用旧提交按同样流程重建一次 tarball，
-确认算出的 sha256 与现有锁里的值**完全一致**，再信任新提交的哈希。
-否则新哈希可能只是把工作区的路径漂移一起锁了进去。
+当前重锁要核对 Release tag 的源提交、资产元数据、`SHA256SUMS` 和下载字节 SHA-256；npm lock 的 URL 与 SHA-512 SRI 也必须对应同一压缩资产。冷下载与离线复用均需验证，本地重建哈希不能替代这些证据。
