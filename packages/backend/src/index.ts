@@ -139,7 +139,18 @@ export {
 	type TrustOptionInternal,
 	type TrustResponder,
 } from "./project/trust";
-export * from "./project/workspace-store";
+export {
+	addAllowedPattern,
+	addWorkspaceRoot,
+	createWorkspacesLoader,
+	emptyWorkspaces,
+	loadWorkspaces,
+	removeWorkspaceRoot,
+	suggestRootCandidate,
+	type WorkspaceProjectEntry,
+	type WorkspacesConfig,
+	workspaceConfigPath,
+} from "./project/workspace-store";
 export { canonicalProjectId, normalizeProjectId } from "./project-id";
 export {
 	getReplyLanguage,
@@ -149,7 +160,19 @@ export {
 	replyLanguagePrompt,
 	setReplyLanguage,
 } from "./reply-language";
-export * from "./research-host";
+export {
+	createResearchHostPort,
+	type ResearchFileEntry,
+	type ResearchHostAdapter,
+	type ResearchHostLoader,
+	type ResearchHostOperations,
+	type ResearchHostPort,
+	type ResearchRunDetailInput,
+	type ResearchRunListInput,
+	type ResearchRunListResult,
+	type ResearchRunStatusInput,
+	type ResearchRunSummary,
+} from "./research-host";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export {
 	AnalysisEvidenceService,
@@ -251,7 +274,23 @@ export {
 	type ComputeProposalQuestion,
 	preflightComputeSubmission,
 } from "./services/compute-preflight";
-export * from "./services/execution-route";
+export {
+	createRnaseqExecutionService,
+	executeRnaseqFixture,
+	planRnaseqExecution,
+	preflightExecution,
+	preflightRnaseqExecution,
+	type RnaseqExecutionPlan,
+	RnaseqExecutionService,
+	type RnaseqExecutionServiceOptions,
+	type RnaseqIntentInput,
+	type RnaseqPreflight,
+	type RnaseqSubmitResult,
+	type RnaseqSubmitter,
+	routeExecutionIntent,
+	routeRnaseqIntent,
+	runRnaseqFixture,
+} from "./services/execution-route";
 export { InquiryService, type InquiryServiceOptions, type InquiryServicePort } from "./services/inquiry";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {
