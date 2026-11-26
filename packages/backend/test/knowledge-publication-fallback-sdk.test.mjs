@@ -5,9 +5,9 @@ import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-work
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
 import { discoverInstalledPackages } from "../../desktop/src/main/ui-plugins/installed-package-sources";
-import { PiBackend } from "../src/pi-backend";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { getPluginSessionCaller } from "../src/plugins/session-caller";
+import { SessionService } from "../src/session-service";
 
 it("an actually selected required but unavailable owner keeps SDK read and private next-provider protocol while final delivery stays closed", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-native-fallback-sdk-")));
@@ -77,7 +77,7 @@ it("an actually selected required but unavailable owner keeps SDK read and priva
 		},
 		capabilities: () => ({ resources: [], handlers: {} }),
 	});
-	backend = new PiBackend({
+	backend = new SessionService({
 		projectTrust: false,
 		permissionGates: false,
 		lazyCapabilities: false,

@@ -49,7 +49,7 @@ import type { ZoteroService } from "./zotero";
 
 const log = createLogger("backend");
 
-/** Compatibility API retained by the PiBackend façade; implementations live in focused services. */
+/** Session API composed by SessionService; implementations live in focused services. */
 import { SessionSettingsApi } from "./session-api-settings";
 
 export class SessionServiceApi extends SessionSettingsApi {

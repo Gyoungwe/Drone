@@ -121,7 +121,6 @@ export {
 	type PermissionModeRef,
 } from "./permissions/extension";
 export { PermissionGate, type PermissionRequestMeta, type PermissionResponder } from "./permissions/gate";
-export { PiBackend, type PiBackendOptions } from "./pi-backend";
 export {
 	createProcessSandboxedExtension,
 	type PluginSandboxPolicy,

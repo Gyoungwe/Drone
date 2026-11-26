@@ -1,7 +1,7 @@
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import type { SessionRegistry } from "../src/session/registry";
+import { SessionService } from "../src/session-service";
 
 type PromptOptions = Pick<NonNullable<Parameters<AgentSession["prompt"]>[1]>, "preflightResult">;
 type PromptFn = (text: string, options?: PromptOptions) => Promise<void>;
@@ -12,8 +12,8 @@ interface StubSessionOptions {
 }
 
 /** 注入 stub session 到私有 registry（prompt 路径不触网/不依赖 SDK） */
-function makeBackend(sessionId: string, prompt: PromptFn, options: StubSessionOptions = {}): PiBackend {
-	const backend = new PiBackend({ projectTrust: false, permissionGates: false });
+function makeBackend(sessionId: string, prompt: PromptFn, options: StubSessionOptions = {}): SessionService {
+	const backend = new SessionService({ projectTrust: false, permissionGates: false });
 	const registry = (backend as unknown as { registry: SessionRegistry }).registry;
 	const commands = new Set(options.extensionCommands ?? []);
 	registry.add({
@@ -29,7 +29,7 @@ function makeBackend(sessionId: string, prompt: PromptFn, options: StubSessionOp
 	return backend;
 }
 
-describe("PiBackend.prompt 受理回执", () => {
+describe("SessionService.prompt 受理回执", () => {
 	it("preflight ack 后立即返回，不等 run 结束", async () => {
 		let releaseRun!: () => void;
 		const runGate = new Promise<void>((r) => {

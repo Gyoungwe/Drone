@@ -6,8 +6,8 @@ export type { DiagnosticsSnapshot } from "@drone/shared";
 /**
  * Host-facing diagnostics boundary.
  *
- * Desktop and other hosts only need this small port; they should not reach
- * through the PiBackend compatibility façade to collect diagnostics.
+ * Desktop and other hosts collect diagnostics through this small port,
+ * supplied directly by the host composition root.
  */
 export interface DiagnosticsServicePort {
 	getDiagnostics(options?: DiagnosticsOptions): Promise<DiagnosticsSnapshot>;

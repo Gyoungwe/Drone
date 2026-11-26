@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { fauxAssistantMessage, fauxProvider, getCurrentSystemPrompt } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
+import { SessionService } from "../src/session-service";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 const firstPartySkill = join(repoRoot, ".pi/skills/research-workflow/SKILL.md");
@@ -42,7 +42,7 @@ async function makeSession(skillPath) {
 	const faux = fauxProvider({ provider: `skill-01-${roots.length}` });
 	modelRuntime.registerNativeProvider(faux.provider);
 	vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
-	const backend = new PiBackend({
+	const backend = new SessionService({
 		projectTrust: false,
 		permissionGates: false,
 		desktopIntegration: {
@@ -83,7 +83,7 @@ const hasSkillInvocation = (session, name) =>
 			message.content.some((part) => part.type === "text" && part.text.startsWith(`<skill name="${name}"`)),
 	).length;
 
-// This is a real Pi SDK AgentSession through Drone's PiBackend, with the network disabled and a faux provider.
+// This is a real Pi SDK AgentSession through Drone's SessionService, with the network disabled and a faux provider.
 describe("SKILL-01 real invocation and disabled counter-evidence", () => {
 	it("invokes the shipped research-workflow skill and records visible metadata plus invocation evidence", async () => {
 		expect(existsSync(firstPartySkill)).toBe(true);

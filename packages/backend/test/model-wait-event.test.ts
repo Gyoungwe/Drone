@@ -1,13 +1,13 @@
 import type { SessionEvent } from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { NativeSessionDelivery } from "../src/plugins/native-delivery";
 import type { SessionRegistry } from "../src/session/registry";
+import { SessionService } from "../src/session-service";
 
-const backends: PiBackend[] = [];
+const backends: SessionService[] = [];
 function harness(nativeDelivery?: NativeSessionDelivery) {
-	const backend = new PiBackend({ defaultCwd: "/tmp", projectTrust: false, permissionGates: false });
+	const backend = new SessionService({ defaultCwd: "/tmp", projectTrust: false, permissionGates: false });
 	backends.push(backend);
 	const abort = vi.fn(async () => {});
 	const internal = backend as unknown as {

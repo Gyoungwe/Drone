@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
+import { SessionService } from "../src/session-service";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -13,7 +13,7 @@ it("global Obsidian setup has one visible owner in an unrelated project", async 
 	const agentDir = await mkdtemp(join(tmpdir(), "drone-global-agent-"));
 	const workbench = resolve(dirname(fileURLToPath(import.meta.url)), "../../../.pi");
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
-	const backend = new PiBackend({
+	const backend = new SessionService({
 		projectTrust: false,
 		desktopIntegration: {
 			appendSystemPrompt: [],

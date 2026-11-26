@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, onTestFinished, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { PluginCapabilityBroker } from "../src/plugins/runtime-capabilities";
+import { SessionService } from "../src/session-service";
 
 async function setup() {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-model-thinking-")));
@@ -33,7 +33,7 @@ async function setup() {
 	faux.getModel("limited").thinkingLevelMap = { high: null };
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
-	const backend = new PiBackend({
+	const backend = new SessionService({
 		projectTrust: false,
 		lazyCapabilities: false,
 		tools: [],

@@ -14,7 +14,7 @@ import type { SubagentPanelService } from "../tools/subagent/panel";
  * The panel runner remains responsible for session-scoped validation,
  * permission attribution and queueing.  This service only exposes the stable
  * operations consumed by desktop (and future hosts), so those adapters do not
- * need to reach through PiBackend for subagent state.
+ * need to reach through SessionService for subagent state.
  */
 export interface SubagentServicePort {
 	listAvailable(): Promise<SubagentInfo[]>;

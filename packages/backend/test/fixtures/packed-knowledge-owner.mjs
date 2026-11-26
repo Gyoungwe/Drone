@@ -9,7 +9,6 @@ import { fauxProvider } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, vi } from "vitest";
 import { discoverInstalledPackages } from "../../../desktop/src/main/ui-plugins/installed-package-sources";
-import { PiBackend } from "../../src/pi-backend";
 import { PluginRuntimeBridge } from "../../src/plugins/coordinator";
 import { fileCapabilityHandlers, PluginFileCapabilities } from "../../src/plugins/file-capabilities";
 import { modelCapabilityHandlers } from "../../src/plugins/model-capabilities";
@@ -20,6 +19,7 @@ import { sessionCapabilityHandlers } from "../../src/plugins/session-capabilitie
 import { sessionRecordCapabilityHandlers } from "../../src/plugins/session-record-capabilities";
 import { canonicalProjectId } from "../../src/project-id";
 import { SessionRecordStore } from "../../src/session-engine/session-records";
+import { SessionService } from "../../src/session-service";
 import { StorageRegistry } from "../../src/storage/registry";
 
 export const packedKnowledgeAvailable = Boolean(process.env.DRONE_KNOWLEDGE_FULL_TARBALL);
@@ -242,7 +242,7 @@ export async function withPackedKnowledgeOwner(work) {
 		});
 		const window = { id: 101, isDestroyed: () => false };
 		const publicEvents = [];
-		backend = new PiBackend({
+		backend = new SessionService({
 			projectTrust: false,
 			permissionGates: false,
 			lazyCapabilities: false,

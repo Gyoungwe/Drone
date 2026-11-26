@@ -2,9 +2,9 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { createDroneRuntime } from "../src/runtime";
 import { readRawMessagesFromContent, readSessionMessagesFromContent } from "../src/session/messages";
+import { SessionService } from "../src/session-service";
 
 const draft = {
 	role: "assistant",
@@ -38,7 +38,7 @@ describe("persisted history publication boundary", () => {
 	let root: string;
 	let historyFile: string;
 	let subagentFile: string;
-	let backend: PiBackend | undefined;
+	let backend: SessionService | undefined;
 	beforeEach(async () => {
 		root = await mkdtemp(join(tmpdir(), "drone-history-publication-"));
 		vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "knowledge"));
@@ -65,7 +65,7 @@ describe("persisted history publication boundary", () => {
 	};
 	const makeBackend = () => {
 		const runtime = createDroneRuntime();
-		backend = new PiBackend({ runtime });
+		backend = new SessionService({ runtime });
 		vi.spyOn(backend, "listAllSessions").mockResolvedValue([
 			{
 				sessionId: "history",

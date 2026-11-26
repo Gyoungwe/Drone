@@ -20,16 +20,16 @@ import type { StorageRegistry } from "./storage/registry";
 /**
  * Host-facing session boundary. This is deliberately structural: desktop and
  * future hosts depend on the transport/session contract and lifecycle
- * events, while the concrete PiBackend remains an internal composition-root
+ * events, while the concrete SessionService remains an internal composition-root
  * implementation.  Compatibility-only domain delegates are intentionally not
  * part of this port.
  */
 export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupervisor"> {
 	/**
 	 * Host-facing session boundary. Domain services intentionally do not live
-	 * here; consumers should obtain them from BackendServices. The concrete
-	 * PiBackend still exposes compatibility properties at runtime, but they are
-	 * not part of the host contract.
+	 * here; consumers should obtain them from BackendServices. SessionService
+	 * composes the concrete implementation; callers use this typed port
+	 * as the host contract.
 	 */
 	replySubagentSupervisor(sessionId: string, requestId: string, message: string): void | Promise<void>;
 	init(): Promise<void>;

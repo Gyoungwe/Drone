@@ -1,16 +1,16 @@
 import type { McpStatus } from "@drone/shared";
 import { afterEach, describe, expect, it } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import type { SessionRegistry } from "../src/session/registry";
 import { buildSessionCustomTools } from "../src/session-engine/extensions";
+import { SessionService } from "../src/session-service";
 
-const backends: PiBackend[] = [];
+const backends: SessionService[] = [];
 afterEach(async () => {
 	for (const backend of backends.splice(0)) await backend.dispose?.();
 });
 
-function make(options: ConstructorParameters<typeof PiBackend>[0] = {}) {
-	const backend = new PiBackend({
+function make(options: ConstructorParameters<typeof SessionService>[0] = {}) {
+	const backend = new SessionService({
 		defaultCwd: "/tmp",
 		projectTrust: false,
 		permissionGates: false,

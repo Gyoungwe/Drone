@@ -11,8 +11,7 @@ import { getZoteroStatus } from "../zotero/status";
  *
  * The status probe itself remains in the Zotero domain module so existing
  * imports and tests keep working.  This small service gives the composition
- * root an explicit domain object and keeps desktop IPC from reaching through
- * the PiBackend compatibility façade.
+ * root an explicit domain object for desktop IPC to consume directly.
  */
 export interface ZoteroServicePort {
 	getStatus(): Promise<ZoteroStatus>;

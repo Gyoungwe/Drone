@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { AskGate } from "../src/session/ask-gate";
+import { SessionService } from "../src/session-service";
 import { makeAskUserTool } from "../src/tools/ask-user";
 
 const params = {
@@ -163,7 +163,7 @@ describe("desktop ask_user", () => {
 		second.bindSession("same-session");
 		const firstPending = first.ask({ toolCallId: "tc-a", questions: [] });
 		const secondPending = second.ask({ toolCallId: "tc-b", questions: [] });
-		const backend = new PiBackend({ projectTrust: false, permissionGates: false });
+		const backend = new SessionService({ projectTrust: false, permissionGates: false });
 		const gates = (backend as unknown as { askGates: Map<string, Set<AskGate>> }).askGates;
 		gates.set("same-session", new Set([first, second]));
 		expect(backend.respondAsk(firstId, { kind: "answer", answers: {} })).toBe(true);

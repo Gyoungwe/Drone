@@ -131,7 +131,7 @@ Typical commands after reloading the development app:
 
 - `packages/backend/test/research-skill-router.test.ts`: name boundaries, stage precedence, single workflow ownership, comparisons, non-equivalent fallback removal, budgets and continuation behavior.
 - `packages/backend/test/academic-pi-bridge.test.ts`: the real pinned wrapper, real SDK skill expansion and host router with controlled session/tool I/O. Tests idle/streaming behavior, state restoration, source shadowing and generated-command isolation.
-- `packages/backend/test/academic-pi-sdk.test.mjs`: actual PiBackend and SDK sessions with an **offline faux model provider**, temporary project/agent directories, real command registration and final system-prompt assertions. Also rejects duplicate vanilla/bridge registration.
+- `packages/backend/test/academic-pi-sdk.test.mjs`: actual SessionService and SDK sessions with an **offline faux model provider**, temporary project/agent directories, real command registration and final system-prompt assertions. Also rejects duplicate vanilla/bridge registration.
 - `packages/desktop/src/main/research-skill-packs.test.ts`: fail-closed integrity/license checks, prompt registration and ARS packaging inclusion and mandatory release preflight.
 
 The two ARS integration suites explicitly skip when an authorized local ARS pack is absent. Run them after an authorized installation; a skipped suite is not an acceptance pass. No paid model, remote research service or production session is needed for these checks.

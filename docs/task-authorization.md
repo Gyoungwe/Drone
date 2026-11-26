@@ -37,7 +37,7 @@ Hard limits, missing credentials, absent necessary user data and unrecoverable e
 - `packages/backend/test/example-tasks-one-authorization-sdk.test.mjs`: real-SDK simulation of the six example tasks (plus the Zotero branch) asserting exactly one authorization card and zero further interruptions.
 - `packages/tasks/src/runtime/register.ts` and `packages/tasks/src/authorization-policy.ts`: native authorization dialog, cancellable SDK handoff and permission-adapter bridge.
 - `backend/src/permissions/task-consent.ts`: canonical target checks for scoped ordinary writes; called only after existing deny evaluation.
-- `backend/src/permissions/gate.ts`: `allowRun` answer (run-scoped blanket approval for the remaining confirms; cleared on `agent_end` by `PiBackend.emitEvent`).
+- `backend/src/permissions/gate.ts`: `allowRun` answer (run-scoped blanket approval for the remaining confirms; cleared on `agent_end` by `SessionService.emitEvent`).
 - `.pi/skills/research-workflow/SKILL.md` § Interruption budget: front-load all user decisions into one message; decide mid-task with defaults and report them under 我替你决定的.
 - `desktop/.../TaskSidebar.tsx`, `TaskWorkbenchCard.tsx` and shared task types: sidebar progress and localized task actions; no task cards in the transcript.
 

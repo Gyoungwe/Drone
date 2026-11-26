@@ -15,9 +15,9 @@ import { createAntigravityProvider } from "./antigravity/provider";
 /**
  * SDK boundary for session lifecycle operations.
  *
- * PiBackend remains the compatibility façade, while this class owns the
- * runtime import and construction mechanics. Keeping this boundary small lets
- * the host migrate to BackendServices without exposing the Pi SDK to callers.
+ * This class owns the runtime import and construction mechanics used by
+ * SessionService. Keeping this boundary small lets the host compose
+ * BackendServices without exposing the Pi SDK to callers.
  */
 export class SessionEngine {
 	private readonly disposals = new WeakMap<AgentSession, Promise<void>>();

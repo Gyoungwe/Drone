@@ -1,6 +1,6 @@
-// 真实 SDK 冒烟：PiBackend 登录桥接 + google-vertex ADC 交互 -> auth.json 落盘 -> configured
+// 真实 SDK 冒烟：SessionService 登录桥接 + google-vertex ADC 交互 -> auth.json 落盘 -> configured
 // 用法：PI_CODING_AGENT_DIR=<临时目录> npx tsx scripts/verify-vertex-login.mts
-import { PiBackend } from "../packages/backend/src/index.ts";
+import { SessionService } from "../packages/backend/src/session-service.ts";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -23,7 +23,7 @@ async function main() {
     }),
   );
 
-  const backend = new PiBackend({ defaultCwd: "/tmp", projectTrust: false, permissionExtension: false });
+  const backend = new SessionService({ defaultCwd: "/tmp", projectTrust: false, permissionExtension: false });
   await backend.init();
 
   // listProviders 应暴露 apiKeyLogin 能力标记

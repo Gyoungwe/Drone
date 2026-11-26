@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { fauxProvider } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
+import { SessionService } from "../src/session-service";
 
 let root, cwd, agentDir, backend, sid;
 beforeEach(async () => {
@@ -26,7 +26,7 @@ beforeEach(async () => {
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
 	const workbench = resolve(import.meta.dirname, "../../..", ".pi");
 	const manifest = JSON.parse(await readFile(join(workbench, "extensions/workbench-manifest.json"), "utf8"));
-	backend = new PiBackend({
+	backend = new SessionService({
 		projectTrust: false,
 		permissionGates: false,
 		desktopIntegration: {

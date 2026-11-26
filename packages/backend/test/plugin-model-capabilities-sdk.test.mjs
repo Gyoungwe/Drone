@@ -5,8 +5,8 @@ import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-work
 import { getCurrentTools } from "@earendil-works/pi-ai/utils/transcript";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { PluginCapabilityBroker } from "../src/plugins/runtime-capabilities";
+import { SessionService } from "../src/session-service";
 
 let root, backend, session, faux, broker, caller;
 const approvals = [];
@@ -41,7 +41,7 @@ async function setup(customTools = [], { reasoning = false } = {}) {
 	});
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
-	backend = new PiBackend({
+	backend = new SessionService({
 		projectTrust: false,
 		lazyCapabilities: false,
 		tools: ["read", ...customTools.map((tool) => tool.name)],

@@ -5,11 +5,11 @@ import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-work
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
 import { initLogging } from "../src/log";
-import { PiBackend } from "../src/pi-backend";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 import { PluginRuntimeRegistry } from "../src/plugins/runtime";
 import { SessionTraces } from "../src/session/traces";
 import * as sdk from "../src/session-engine/sdk";
+import { SessionService } from "../src/session-service";
 import { runSubagent } from "../src/tools/subagent/runner";
 
 const roots = [],
@@ -123,7 +123,7 @@ it.each([true, false])(
 	async (permissionGates) => {
 		const f = await fixture(String(permissionGates));
 		vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
-		const backend = new PiBackend({
+		const backend = new SessionService({
 			projectTrust: false,
 			permissionGates,
 			lazyCapabilities: false,

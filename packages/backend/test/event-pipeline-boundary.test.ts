@@ -1,17 +1,17 @@
 import type { SessionEvent } from "@drone/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { createDroneRuntime } from "../src/runtime";
 import { StreamGuard } from "../src/session/stream-guard";
 import { createEventPipeline } from "../src/session-engine/event-pipeline";
+import { SessionService } from "../src/session-service";
 
-const emit = (backend: PiBackend, event: unknown) =>
+const emit = (backend: SessionService, event: unknown) =>
 	(backend as unknown as { emitEvent: (sessionId: string, event: SessionEvent) => void }).emitEvent(
 		"s1",
 		event as SessionEvent,
 	);
 
-describe("PiBackend event pipeline boundaries", () => {
+describe("SessionService event pipeline boundaries", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
 	});
@@ -24,7 +24,7 @@ describe("PiBackend event pipeline boundaries", () => {
 				throw new Error("projection failed");
 			},
 		};
-		const backend = new PiBackend({ runtime });
+		const backend = new SessionService({ runtime });
 		const received: SessionEvent[] = [];
 		backend.onEvent((_sessionId, event) => received.push(event));
 
@@ -44,7 +44,7 @@ describe("PiBackend event pipeline boundaries", () => {
 	});
 
 	it("trace failure is open and fanout still receives the projected event", () => {
-		const backend = new PiBackend();
+		const backend = new SessionService();
 		const traces = backend as unknown as { traces: { record: () => void } };
 		traces.traces.record = () => {
 			throw new Error("trace unavailable");

@@ -4,7 +4,7 @@
 
 Application mode is selected by `DRONE_KNOWLEDGE_DIR`. When a Vault is bound, the parent assistant final text is published only after its host-owned current-turn navigation/search/read records are validated. CLI legacy behavior remains unchanged. Unconfigured application responses are marked `unconfigured`, not certified as knowledge-grounded.
 
-The application publication module uses the pinned SDK message_end replacement contract. A replacement occurs before SessionManager persistence. PiBackend applies a fail-closed projection before trace/desktop/LAN fanout; it suppresses incremental assistant message payloads and sanitizes start/final/turn/agent snapshots. Live history polling uses the same publication state and cannot expose an in-flight draft while asynchronous validation is pending. JSONL/HTML exports use finalized persistence. No UI-only hiding is treated as the security boundary.
+The application publication module uses the pinned SDK message_end replacement contract. A replacement occurs before SessionManager persistence. SessionService applies a fail-closed projection before trace/desktop/LAN fanout; it suppresses incremental assistant message payloads and sanitizes start/final/turn/agent snapshots. Live history polling uses the same publication state and cannot expose an in-flight draft while asynchronous validation is pending. JSONL/HTML exports use finalized persistence. No UI-only hiding is treated as the security boundary.
 
 ## Metacognitive publication checks
 
@@ -49,6 +49,6 @@ Read-only or no-Vault-permission subagents return `evidence-only` material with 
 
 The gate rereads metadata/current small navigation and cited sources only; it never asks for a whole-Vault reconciliation per answer. Benchmark publication timings measure a stable index with one cited source and exclude initial watcher settling, model generation, network and graphical rendering. A pending filesystem update must fail closed rather than be hidden to improve the benchmark.
 
-Tests: `knowledge-publication.test.mjs` (native conditions), `knowledge-publication-delivery.test.mjs` (real PiBackend + SDK + offline model; streaming/history/live polling/export/follow-up/protocol), and `knowledge-publication-hooks.test.mjs` (timeout, error, bounded and child behavior). These use temporary Vaults and provider fixtures only.
+Tests: `knowledge-publication.test.mjs` (native conditions), `knowledge-publication-delivery.test.mjs` (real SessionService + SDK + offline model; streaming/history/live polling/export/follow-up/protocol), and `knowledge-publication-hooks.test.mjs` (timeout, error, bounded and child behavior). These use temporary Vaults and provider fixtures only.
 
 No real user notes were migrated, no installed application replaced, no automatic semantic Wiki consolidation scheduled, and no Git commit or push is part of this change.

@@ -9,8 +9,8 @@ import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
+import { SessionService } from "../src/session-service";
 
 let root, backend, bridge;
 afterEach(async () => {
@@ -59,7 +59,7 @@ async function setup() {
 	const faux = fauxProvider({ provider: "task-grant-offline", tokensPerSecond: 0 });
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
-	backend = new PiBackend({
+	backend = new SessionService({
 		projectTrust: false,
 		lazyCapabilities: false,
 		tools: ["read", "write"],

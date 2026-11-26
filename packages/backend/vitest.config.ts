@@ -6,10 +6,10 @@ import { defineConfig } from "vitest/config";
 const PACKAGE_ROOT = dirname(fileURLToPath(import.meta.url));
 const TEST_FILE = /\.(?:test|spec)\.[^/]+$/;
 const REAL_RUNTIME =
-	/\bnew\s+PiBackend\s*\(|\bcreateAgentSession\s*\(|\bnew\s+AgentSession\s*\(|\bstartBuiltinCore\s*\(/;
+	/\bnew\s+SessionService\s*\(|\bcreateAgentSession\s*\(|\bnew\s+AgentSession\s*\(|\bstartBuiltinCore\s*\(/;
 
 /**
- * Keep tests that instantiate PiBackend/createAgentSession in the SDK project
+ * Keep tests that instantiate SessionService/createAgentSession in the SDK project
  * even when their filenames predate the `*-sdk.test.*` convention. This keeps
  * the unit project hermetic while automatically classifying newly added tests.
  */
