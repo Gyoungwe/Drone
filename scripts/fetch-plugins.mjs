@@ -1,44 +1,50 @@
 #!/usr/bin/env node
 
+import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-// Resolve the exact plugin source recorded in plugins.lock.json, build it, and
-// unpack the verified npm artifact into the local vendor boundary. A local
-// DRONE_PLUGINS_DIR is an explicit development override; it skips the lock
-// hash so the host can iterate against an uncommitted plugin checkout.
-import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync, lstatSync, realpathSync } from "node:fs";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import { BUILTIN_PACKAGES_DIR } from "./check-builtin-plugins.mjs";
+import {
+	acquireReleaseTarball,
+	promoteReleaseStaging,
+	sha256,
+	unpackPackageTarball,
+	validatePluginsLockV2,
+	verifyPackageTarball,
+} from "./fetch-plugins-release.mjs";
+import { isMainModule } from "./is-main-module.mjs";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const lockPath = join(root, "plugins.lock.json");
-const lock = JSON.parse(await readFile(lockPath, "utf8"));
-if (lock.version !== 1 || !Array.isArray(lock.plugins) || lock.plugins.length === 0)
-	throw new Error("plugins.lock.json must declare version 1 and at least one plugin");
-
-const override = process.env.DRONE_PLUGINS_DIR ? resolve(process.env.DRONE_PLUGINS_DIR) : null;
-const workspace = await mkdtemp(join(tmpdir(), "drone-plugin-fetch-"));
-const checkouts = new Map();
-const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
-const cacheDir = join(root, "vendor/plugins/.tarballs");
-// Restaged from scratch: a plugin that stops being built-in must not keep shipping.
-await rm(BUILTIN_PACKAGES_DIR, { recursive: true, force: true });
+const hostRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const builtinPath = relative(hostRoot, BUILTIN_PACKAGES_DIR);
+const vendorPath = "vendor/plugins";
+const workerFiles = [
+	["worker.mjs", "knowledge-worker.mjs"],
+	[".knowledge-worker-manifest.json", ".knowledge-worker-manifest.json"],
+];
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: "inherit" });
-// Run npm through the npm that invoked this script (npm_execpath), so Windows needs no shell
-// or npm.cmd shim; a direct `node scripts/fetch-plugins.mjs` falls back to npm on PATH.
-const npm = (args, options) =>
-	process.env.npm_execpath
-		? execFileSync(process.execPath, [process.env.npm_execpath, ...args], options)
-		: execFileSync("npm", args, options);
+const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
+const copyPackage = (source, target) => cp(source, target, { recursive: true, dereference: true });
 
-async function sourceCheckout(plugin) {
+function npm(args, options) {
+	const windowsPath = join(dirname(process.execPath), "node_modules/npm/bin/npm-cli.js");
+	const cli =
+		process.env.npm_execpath ||
+		(process.platform === "win32" && existsSync(windowsPath) ? windowsPath : null);
+	return cli ? execFileSync(process.execPath, [cli, ...args], options) : execFileSync("npm", args, options);
+}
+
+async function sourceCheckout(plugin, { override, workspace, checkouts }) {
 	if (override) {
 		const source = join(override, plugin.path);
-		if (!existsSync(join(source, "package.json")))
-			throw new Error(`Plugin override is missing ${plugin.path}/package.json`);
+		assert(
+			existsSync(join(source, "package.json")),
+			`Plugin override is missing ${plugin.path}/package.json`,
+		);
 		console.warn(
 			`[fetch-plugins] DRONE_PLUGINS_DIR=${override}; lock commit/hash checks are bypassed for development`,
 		);
@@ -47,7 +53,6 @@ async function sourceCheckout(plugin) {
 	let checkout = checkouts.get(plugin.repo);
 	if (!checkout) {
 		checkout = join(workspace, `repo-${checkouts.size}`);
-		// The lock already supplies the exact commit; repository-wide history is not a build input.
 		run("git", ["init", "--quiet", checkout], workspace);
 		run("git", ["remote", "add", "origin", plugin.repo], checkout);
 		checkouts.set(plugin.repo, checkout);
@@ -57,78 +62,263 @@ async function sourceCheckout(plugin) {
 	return join(checkout, plugin.path);
 }
 
-try {
-	for (const plugin of lock.plugins) {
-		// A tarball this script already verified against the lock is reused after re-hashing it.
-		// CI rebuilds from source once on Linux and hands the tarballs to the other platforms,
-		// whose checkouts (CRLF line endings, .cmd shims) cannot reproduce the locked bytes.
-		const cached = join(cacheDir, `${plugin.name.split("/").at(-1)}-${plugin.tarballSha256}.tgz`);
-		let tarball;
-		let digest;
-		if (!override && existsSync(cached) && sha256(await readFile(cached)) === plugin.tarballSha256) {
-			tarball = cached;
-			digest = plugin.tarballSha256;
-			console.log(`[fetch-plugins] ${plugin.name}: verified cached tarball ${digest}`);
-		} else {
-			const source = await sourceCheckout(plugin);
-			const sourceRoot = resolve(source, "..");
-			npm(["ci", "--ignore-scripts", "--no-audit", "--no-fund"], { cwd: sourceRoot, stdio: "inherit" });
-			npm(["run", "build", "--workspace", plugin.name], { cwd: sourceRoot, stdio: "inherit" });
-			const metadata = JSON.parse(
-				npm(["pack", "--json", "--ignore-scripts", "--pack-destination", workspace], {
-					cwd: source,
-					encoding: "utf8",
-				}),
-			)[0];
-			tarball = join(workspace, metadata.filename);
-			digest = sha256(await readFile(tarball));
-			if (!override && digest !== plugin.tarballSha256)
-				throw new Error(
-					`${plugin.name} tarball hash mismatch: expected ${plugin.tarballSha256}, got ${digest}`,
-				);
-			if (!override) {
-				await mkdir(cacheDir, { recursive: true });
-				await cp(tarball, cached);
-			}
-		}
-		const target = join(root, "vendor/plugins", plugin.name.split("/").at(-1));
-		await rm(target, { recursive: true, force: true });
-		await mkdir(target, { recursive: true });
-		run("tar", ["-xzf", tarball, "-C", target, "--strip-components=1"], root);
-		const installed = JSON.parse(await readFile(join(target, "package.json"), "utf8"));
-		if (installed.name !== plugin.name || installed.version !== plugin.version)
-			throw new Error(`${plugin.name} package metadata does not match plugins.lock.json`);
+function buildAndPack(plugin, source, sourceRoot, workspace) {
+	npm(["run", "build", "--workspace", plugin.name], { cwd: sourceRoot, stdio: "inherit" });
+	const [metadata] = JSON.parse(
+		npm(["pack", "--json", "--ignore-scripts", "--pack-destination", workspace], {
+			cwd: source,
+			encoding: "utf8",
+		}),
+	);
+	return join(workspace, metadata.filename);
+}
 
-		// TypeScript and native Pi smoke resolve the package through node_modules;
-		// the shipped Electron resources use vendor/plugins directly.
-		const nodeTarget = join(root, "node_modules", ...plugin.name.split("/"));
-		await rm(nodeTarget, { recursive: true, force: true });
-		await mkdir(dirname(nodeTarget), { recursive: true });
-		await cp(target, nodeTarget, { recursive: true, dereference: true });
-		if (plugin.name === "@gyoungwe/pi-knowledge") {
-			const runtimeDir = join(root, ".pi/extensions");
-			await mkdir(runtimeDir, { recursive: true });
-			await cp(join(target, "lib/knowledge/runtime/worker.mjs"), join(runtimeDir, "knowledge-worker.mjs"));
-			await cp(
-				join(target, "lib/knowledge/runtime/.knowledge-worker-manifest.json"),
-				join(runtimeDir, ".knowledge-worker-manifest.json"),
+async function sourceTarball(plugin, sourceOptions, cached) {
+	const source = await sourceCheckout(plugin, sourceOptions);
+	const sourceRoot = resolve(source, "..");
+	npm(["ci", "--ignore-scripts", "--no-audit", "--no-fund"], { cwd: sourceRoot, stdio: "inherit" });
+	const tarball = buildAndPack(plugin, source, sourceRoot, sourceOptions.workspace);
+	const digest = sha256(await readFile(tarball));
+	if (!sourceOptions.override) {
+		assert(
+			digest === plugin.tarballSha256,
+			`${plugin.name} tarball hash mismatch: expected ${plugin.tarballSha256}, got ${digest}`,
+		);
+		await mkdir(dirname(cached), { recursive: true });
+		await cp(tarball, cached);
+	}
+	return { tarball, digest };
+}
+
+async function checkIdentity(directory, plugin) {
+	const installed = await readJson(join(directory, "package.json"));
+	assert(
+		installed.name === plugin.name && installed.version === plugin.version,
+		`${plugin.name} package metadata does not match plugins.lock.json`,
+	);
+}
+
+async function writeReceipt(directory, commit, digest) {
+	const receipt = { commit, sha256: digest };
+	const path = join(directory, ".drone-fetch.json");
+	await writeFile(path, `${JSON.stringify(receipt, null, "\t")}\n`);
+	return { path, receipt };
+}
+
+async function copyWorker(packageDir, runtimeDir) {
+	await mkdir(runtimeDir, { recursive: true });
+	for (const [source, target] of workerFiles)
+		await cp(join(packageDir, "lib/knowledge/runtime", source), join(runtimeDir, target));
+}
+
+async function stageV1Plugin(root, plugin, slug, { tarball, digest }) {
+	const target = join(root, vendorPath, slug);
+	await rm(target, { recursive: true, force: true });
+	await mkdir(target, { recursive: true });
+	run("tar", ["-xzf", tarball, "-C", target, "--strip-components=1"], root);
+	await checkIdentity(target, plugin);
+	const nodeTarget = join(root, "node_modules", plugin.name);
+	await rm(nodeTarget, { recursive: true, force: true });
+	await mkdir(dirname(nodeTarget), { recursive: true });
+	await copyPackage(target, nodeTarget);
+	if (plugin.name === "@gyoungwe/pi-knowledge") await copyWorker(target, join(root, ".pi/extensions"));
+	await writeReceipt(target, plugin.commit, digest);
+	if (plugin.builtin === true) {
+		const staged = join(root, builtinPath, plugin.name);
+		await rm(staged, { recursive: true, force: true });
+		await mkdir(dirname(staged), { recursive: true });
+		await copyPackage(target, staged);
+	}
+	console.log(`[fetch-plugins] ${plugin.name}@${plugin.version} -> vendor/plugins/${slug} (${digest})`);
+}
+
+async function findV1Cache(plugin, path) {
+	if (existsSync(path) && sha256(await readFile(path)) === plugin.tarballSha256) {
+		console.log(`[fetch-plugins] ${plugin.name}: verified cached tarball ${plugin.tarballSha256}`);
+		return { tarball: path, digest: plugin.tarballSha256 };
+	}
+	return null;
+}
+
+async function fetchV1(root, plugins, { override, offline, cacheDir }) {
+	assert(!offline || !override, "--offline requires a locked cache with no worktree override");
+	const jobs = plugins.map((plugin) => {
+		const slug = plugin.name.split("/").at(-1);
+		return { plugin, slug, cached: join(cacheDir, `${slug}-${plugin.tarballSha256}.tgz`) };
+	});
+	if (offline) {
+		for (const job of jobs) {
+			job.artifact = await findV1Cache(job.plugin, job.cached);
+			assert(job.artifact, `${job.plugin.name}: verified tarball missing or corrupt in offline cache`);
+		}
+	}
+	const workspace = await mkdtemp(join(tmpdir(), "drone-plugin-fetch-"));
+	const sourceOptions = { override, workspace, checkouts: new Map() };
+	try {
+		await rm(join(root, builtinPath), { recursive: true, force: true });
+		for (const { plugin, slug, cached, artifact } of jobs) {
+			const available = artifact ?? (override ? null : await findV1Cache(plugin, cached));
+			await stageV1Plugin(
+				root,
+				plugin,
+				slug,
+				available ?? (await sourceTarball(plugin, sourceOptions, cached)),
 			);
 		}
-		await writeFile(
-			join(target, ".drone-fetch.json"),
-			`${JSON.stringify({ commit: plugin.commit, sha256: digest }, null, "\t")}\n`,
-		);
-		// A built-in plugin ships read-only under <resources>/plugin-packages/node_modules.
-		if (plugin.builtin === true) {
-			const staged = join(BUILTIN_PACKAGES_DIR, ...plugin.name.split("/"));
-			await rm(staged, { recursive: true, force: true });
-			await mkdir(dirname(staged), { recursive: true });
-			await cp(target, staged, { recursive: true, dereference: true });
-		}
-		console.log(
-			`[fetch-plugins] ${plugin.name}@${installed.version} -> vendor/plugins/${plugin.name.split("/").at(-1)} (${digest})`,
-		);
+	} finally {
+		await rm(workspace, { recursive: true, force: true });
 	}
-} finally {
-	await rm(workspace, { recursive: true, force: true });
 }
+
+async function matchesPackedFiles(source, target) {
+	if (!lstatSync(target, { throwIfNoEntry: false })?.isDirectory()) return false;
+	for (const entry of await readdir(source, { withFileTypes: true })) {
+		const from = join(source, entry.name);
+		const to = join(target, entry.name);
+		if (entry.isDirectory()) {
+			if (!(await matchesPackedFiles(from, to))) return false;
+		} else if (
+			!lstatSync(to, { throwIfNoEntry: false })?.isFile() ||
+			!(await readFile(from)).equals(await readFile(to))
+		) {
+			return false;
+		}
+	}
+	return true;
+}
+
+async function stageV2Plugin(root, stage, moves, plugin, { bytes, commit, digest }) {
+	const target = join(root, vendorPath, plugin.slug);
+	const source = join(stage, "vendor", plugin.slug);
+	await mkdir(source, { recursive: true });
+	unpackPackageTarball(bytes, source);
+	await checkIdentity(source, plugin);
+	moves.push({ source, target });
+	const nodeTarget = join(root, "node_modules", plugin.name);
+	if (!(await matchesPackedFiles(source, nodeTarget))) {
+		const nodeSource = join(stage, "npm", plugin.slug);
+		await copyPackage(source, nodeSource);
+		moves.push({ source: nodeSource, target: nodeTarget });
+	}
+	if (plugin.name === "@gyoungwe/pi-knowledge") {
+		const runtime = join(stage, "worker");
+		await copyWorker(source, runtime);
+		for (const [, name] of workerFiles) {
+			moves.push({ source: join(runtime, name), target: join(root, ".pi/extensions", name) });
+		}
+	}
+	const { path, receipt } = await writeReceipt(source, commit, digest);
+	assert.deepEqual(await readJson(path), receipt, `${plugin.name}: fetch receipt failed readback`);
+	if (plugin.builtin) await copyPackage(source, join(stage, "builtins", plugin.name));
+}
+
+async function prepareCheckout(override, checkout) {
+	const source = realpathSync(override);
+	const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: source, encoding: "utf8" }).trim();
+	assert(/^[0-9a-f]{40}$/u.test(commit), "worktree must resolve to a Git commit");
+	await cp(source, checkout, {
+		recursive: true,
+		filter: (path) => ![".git", "node_modules"].includes(basename(path)),
+	});
+	console.warn(`[fetch-plugins] building an explicit development snapshot of ${override}`);
+	npm(["ci", "--ignore-scripts", "--no-audit", "--no-fund"], { cwd: checkout, stdio: "inherit" });
+	return { path: realpathSync(checkout), commit };
+}
+
+async function packWorktree(plugin, checkout, stage) {
+	const source = join(checkout, plugin.path);
+	assert(realpathSync(source) === source, `${plugin.name}: worktree package must stay inside the snapshot`);
+	const tarball = buildAndPack(plugin, source, checkout, stage);
+	assert.equal(tarball, join(stage, plugin.asset), "unexpected worktree archive filename");
+	const bytes = await readFile(tarball);
+	verifyPackageTarball(bytes, plugin);
+	return bytes;
+}
+
+async function stageV2(root, plugins, options) {
+	const stage = join(root, vendorPath, ".fetching");
+	await mkdir(dirname(stage), { recursive: true });
+	await mkdir(stage);
+	try {
+		const checkout = options.override && (await prepareCheckout(options.override, join(stage, "checkout")));
+		const moves = [];
+		const builtins = join(stage, "builtins");
+		await mkdir(builtins);
+		for (const plugin of plugins) {
+			const bytes = checkout
+				? await packWorktree(plugin, checkout.path, stage)
+				: (await acquireReleaseTarball(plugin, options)).bytes;
+			await stageV2Plugin(root, stage, moves, plugin, {
+				bytes,
+				commit: checkout?.commit ?? plugin.commit,
+				digest: checkout ? sha256(bytes) : plugin.tarballSha256,
+			});
+		}
+		moves.push({ source: builtins, target: join(root, builtinPath) });
+		await promoteReleaseStaging(dirname(stage), moves);
+		console.log(`[fetch-plugins] staged ${plugins.length} ${checkout ? "worktree" : "Release"} plugins`);
+	} finally {
+		await rm(stage, { recursive: true, force: true });
+	}
+}
+
+async function prefetchRelease(root, plugins, options, npmCache) {
+	const cacheArgs = npmCache ? ["--cache", resolve(npmCache)] : [];
+	for (const plugin of plugins) {
+		const { tarball } = await acquireReleaseTarball(plugin, options);
+		npm(["cache", "add", tarball, "--offline", "--ignore-scripts", ...cacheArgs], {
+			cwd: root,
+			stdio: "inherit",
+		});
+	}
+}
+
+export async function fetchPlugins({
+	root = hostRoot,
+	args = process.argv.slice(2),
+	env = process.env,
+	fetchImpl,
+	checkRedirect,
+} = {}) {
+	const { values } = parseArgs({
+		args,
+		options: {
+			prefetch: { type: "boolean" },
+			offline: { type: "boolean" },
+			worktree: { type: "boolean" },
+			"npm-cache": { type: "string" },
+		},
+	});
+	const { prefetch, offline, worktree, "npm-cache": npmCache } = values;
+	const local = env.DRONE_PLUGINS_DIR;
+	assert(
+		!prefetch || (!worktree && !local),
+		"--prefetch cannot be combined with --worktree or DRONE_PLUGINS_DIR",
+	);
+	assert(npmCache === undefined || (prefetch && npmCache), "--npm-cache requires --prefetch and a directory");
+	assert(!worktree || local, "--worktree requires DRONE_PLUGINS_DIR");
+	assert(!worktree || !offline, "--worktree cannot be combined with --offline");
+	const lock = await readJson(join(root, "plugins.lock.json"));
+	const cacheDir = join(root, vendorPath, ".tarballs");
+	if (lock?.version === 2) {
+		const plugins = validatePluginsLockV2(lock);
+		const options = {
+			cacheDir,
+			offline,
+			fetchImpl,
+			checkRedirect,
+			override: worktree ? resolve(local) : null,
+		};
+		if (prefetch) await prefetchRelease(root, plugins, options, npmCache);
+		else await stageV2(root, plugins, options);
+		return;
+	}
+	assert(
+		lock?.version === 1 && Array.isArray(lock.plugins) && lock.plugins.length > 0,
+		"plugins.lock.json must declare version 1 or 2 and at least one plugin",
+	);
+	assert(!prefetch, "--prefetch requires a version 2 lock");
+	await fetchV1(root, lock.plugins, { override: local ? resolve(local) : null, offline, cacheDir });
+}
+
+if (isMainModule(import.meta.url)) await fetchPlugins();

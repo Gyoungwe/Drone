@@ -1,22 +1,12 @@
 #!/usr/bin/env node
-/**
- * PR-5 public-contract and migration gate.
- *
- * The check intentionally uses only Node built-ins. It validates the package
- * boundary, installs the packed tarball into a throwaway fixture, and inspects
- * the separately bound drone-plugins workspace for source-repository paths.
- * It never writes to the plugin repository or to a user's package manager
- * state.
- */
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
 	existsSync,
-	lstatSync,
 	mkdirSync,
 	mkdtempSync,
 	readdirSync,
 	readFileSync,
+	realpathSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
@@ -24,45 +14,38 @@ import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { checkPluginDependency } from "./plugin-api-dependency-policy.mjs";
+import {
+	checkPluginDependency,
+	stableVersion,
+	verifyPluginApiTarball,
+} from "./plugin-api-dependency-policy.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKAGE_DIR = join(ROOT, "packages", "plugin-api");
-const NPM = "npm";
+const apiName = "@gyoungwe/plugin-api";
 
 function execNpm(args, options = {}) {
-	return execFileSync(NPM, args, { shell: process.platform === "win32", ...options });
+	return execFileSync("npm", args, { shell: process.platform === "win32", ...options });
 }
 const PLUGIN_REPO_CANDIDATES = [
-	process.env.DRONE_PLUGINS_DIR,
 	join(homedir(), "Documents", "ChatGPT", "drone-plugins"),
 	resolve(ROOT, "../drone-plugins"),
-].filter(Boolean);
+];
 
 function readJson(path) {
 	return JSON.parse(readFileSync(path, "utf8"));
 }
 
-function fail(message) {
-	throw new Error(`[check:plugin-api] ${message}`);
-}
-
 function assert(condition, message) {
-	if (!condition) fail(message);
-}
-
-function packageJson() {
-	const path = join(PACKAGE_DIR, "package.json");
-	assert(existsSync(path), "packages/plugin-api/package.json is missing");
-	return readJson(path);
+	if (!condition) throw new Error(`[check:plugin-api] ${message}`);
 }
 
 function checkPackageManifest() {
-	const manifest = packageJson();
-	assert(manifest.name === "@gyoungwe/plugin-api", `unexpected package name: ${manifest.name}`);
+	const manifest = readJson(join(PACKAGE_DIR, "package.json"));
+	assert(manifest.name === apiName, `unexpected package name: ${manifest.name}`);
 	assert(
-		manifest.version === "2.0.0",
-		`public API package must match the 2.0.0 routed knowledge contract: ${manifest.version}`,
+		typeof manifest.version === "string" && stableVersion.test(manifest.version),
+		`public API package must use a stable version: ${manifest.version}`,
 	);
 	assert(
 		manifest.exports?.["./runtime"]?.types === "./dist/runtime.d.ts",
@@ -75,6 +58,7 @@ function checkPackageManifest() {
 		"exports.types must point at dist/index.d.ts",
 	);
 	assert(!manifest.dependencies && !manifest.devDependencies, "plugin-api must remain dependency-free");
+	return manifest.version;
 }
 
 function checkPackageSource() {
@@ -148,25 +132,9 @@ function checkHostPortContract() {
 	}
 }
 
-function checkPackageOnly() {
-	checkPackageManifest();
-	checkPackageSource();
-	checkDist();
-	checkHostPortContract();
-}
-
 function npmPack(packageDir, destination, env) {
-	const output = execNpm(
-		["pack", "--silent", "--ignore-scripts", packageDir, "--pack-destination", destination],
-		{
-			cwd: ROOT,
-			encoding: "utf8",
-			env,
-		},
-	)
-		.trim()
-		.split(/\r?\n/u)
-		.at(-1);
+	const args = ["pack", "--silent", "--ignore-scripts", packageDir, "--pack-destination", destination];
+	const output = execNpm(args, { cwd: ROOT, encoding: "utf8", env }).trim().split(/\r?\n/u).at(-1);
 	assert(output, `npm pack produced no tarball for ${packageDir}`);
 	return join(destination, output);
 }
@@ -175,7 +143,7 @@ function installTarball(tarball, version, options) {
 	execNpm(["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", tarball], options);
 	const manifest = readJson(join(options.cwd, "node_modules", "@gyoungwe", "plugin-api", "package.json"));
 	assert(
-		manifest.name === "@gyoungwe/plugin-api" && manifest.version === version,
+		manifest.name === apiName && manifest.version === version,
 		`expected installed @gyoungwe/plugin-api@${version}, found ${manifest.name}@${manifest.version}`,
 	);
 	runContractProbe(options.cwd);
@@ -223,22 +191,7 @@ function createRollbackTarball(currentTarball, destination, env) {
 	return npmPack(unpack, destination, env);
 }
 
-function stageReleaseTarball(tarball, sha256, destination) {
-	assert(lstatSync(tarball).isFile(), "release tarball must be a regular file");
-	const bytes = readFileSync(tarball);
-	assert(createHash("sha256").update(bytes).digest("hex") === sha256, "release tarball SHA-256 mismatch");
-	const staged = join(destination, "release.tgz");
-	writeFileSync(staged, bytes);
-	return staged;
-}
-
-/**
- * Exercise the package lifecycle entirely from local tarballs. The sequence
- * intentionally upgrades and then rolls back the same fixture, so a passing
- * result proves that a failed upgrade can be recovered without touching the
- * user's global npm or Pi state.
- */
-function checkLocalLifecycle(releaseTarball, sha256) {
+function checkLocalInstall(version, archive, lifecycle) {
 	const temp = mkdtempSync(join(tmpdir(), "drone-plugin-api-lifecycle-"));
 	try {
 		const env = {
@@ -247,48 +200,40 @@ function checkLocalLifecycle(releaseTarball, sha256) {
 			npm_config_logs: join(temp, "npm-logs"),
 			npm_config_offline: "true",
 		};
-		const currentTarball = releaseTarball
-			? stageReleaseTarball(releaseTarball, sha256, temp)
+		const currentTarball = archive
+			? join(temp, `gyoungwe-plugin-api-${version}.tgz`)
 			: npmPack(PACKAGE_DIR, temp, env);
-		const rollbackTarball = createRollbackTarball(currentTarball, temp, env);
+		if (archive) writeFileSync(currentTarball, archive);
 		const fixture = join(temp, "fixture");
 		const options = { cwd: fixture, stdio: "pipe", env };
-		const version = packageJson().version;
-		const fixtureManifest = {
-			name: "drone-plugin-api-lifecycle-fixture",
-			private: true,
-			version: "0.0.0",
-			type: "module",
-		};
 		mkdirSync(fixture);
-		writeFileSync(join(fixture, "package.json"), `${JSON.stringify(fixtureManifest, null, 2)}\n`);
+		writeFileSync(join(fixture, "package.json"), JSON.stringify({ private: true }));
 		writeContractProbe(fixture);
-		installTarball(rollbackTarball, "0.9.0", options);
-		installTarball(currentTarball, version, options);
-		installTarball(rollbackTarball, "0.9.0", options);
-
-		execNpm(["uninstall", "@gyoungwe/plugin-api", "--ignore-scripts", "--no-audit", "--no-fund"], options);
-		assert(
-			!existsSync(join(fixture, "node_modules", "@gyoungwe", "plugin-api")),
-			"npm uninstall left plugin-api installed",
-		);
-		console.log(
-			JSON.stringify({
-				status: "PASS",
-				mode: releaseTarball ? "release-tarball-lifecycle" : "local-pack-lifecycle",
-				install: "0.9.0",
-				upgrade: version,
-				rollback: "0.9.0",
-				uninstall: "removed",
-			}),
-		);
+		if (lifecycle) {
+			const rollbackTarball = createRollbackTarball(currentTarball, temp, env);
+			installTarball(rollbackTarball, "0.9.0", options);
+			installTarball(currentTarball, version, options);
+			installTarball(rollbackTarball, "0.9.0", options);
+			execNpm(["uninstall", apiName, "--ignore-scripts", "--no-audit", "--no-fund"], options);
+			assert(!existsSync(join(fixture, "node_modules", apiName)), "npm uninstall left plugin-api installed");
+		} else {
+			installTarball(currentTarball, version, options);
+		}
+		return basename(currentTarball);
 	} finally {
 		rmSync(temp, { recursive: true, force: true });
 	}
 }
 
-function findPluginRepo() {
-	return PLUGIN_REPO_CANDIDATES.find((candidate) => candidate && existsSync(join(candidate, "package.json")));
+function findPluginRepo(explicit) {
+	const bound = explicit ?? process.env.DRONE_PLUGINS_DIR;
+	if (bound !== undefined) {
+		assert(bound && existsSync(join(bound, "package.json")), `invalid drone-plugins checkout: ${bound}`);
+		return realpathSync(bound);
+	}
+	const found = PLUGIN_REPO_CANDIDATES.find((candidate) => existsSync(join(candidate, "package.json")));
+	assert(found, "bound drone-plugins repository not found; pass --plugins-dir for CI");
+	return realpathSync(found);
 }
 
 function walkPackageJson(dir, out = []) {
@@ -302,15 +247,17 @@ function walkPackageJson(dir, out = []) {
 	return out;
 }
 
-function checkPluginWorkspace(repo) {
+function checkPluginWorkspace(repo, options) {
+	const { releaseTarball, digest, releaseOnly } = options;
 	const rootManifestPath = join(repo, "package.json");
 	const rootManifest = readJson(rootManifestPath);
 	assert(
 		Array.isArray(rootManifest.workspaces) && rootManifest.workspaces.includes("packages/*"),
 		"drone-plugins must remain one workspace",
 	);
-	let apiCandidate;
-	for (const path of walkPackageJson(repo)) {
+	const paths = walkPackageJson(repo);
+	let pin;
+	for (const path of paths) {
 		const manifest = readJson(path);
 		for (const section of [
 			"dependencies",
@@ -320,49 +267,28 @@ function checkPluginWorkspace(repo) {
 			"overrides",
 		]) {
 			for (const [name, value] of Object.entries(manifest[section] ?? {})) {
-				const candidate = checkPluginDependency(value, {
+				const dependency = checkPluginDependency(value, {
 					hostRoot: ROOT,
 					pluginRoot: repo,
 					manifestPath: path,
 					section,
 					name,
+					releaseTarball,
+					releaseOnly,
 				});
-				if (candidate) apiCandidate = candidate;
+				if (path === rootManifestPath && dependency) pin = dependency;
 			}
 		}
 	}
+	if (releaseOnly) assert(pin?.url, "release-only mode requires the root plugin-api Release URL");
+	if (releaseTarball)
+		assert(pin?.sha256 === digest, "supplied tarball does not match the consumer plugin-api pin");
+	const gitRoot = execFileSync("git", ["-C", repo, "rev-parse", "--show-toplevel"], {
+		encoding: "utf8",
+	}).trim();
+	assert(realpathSync(gitRoot) === repo, "--plugins-dir must point to the checkout root");
 	const head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-	assert(/^[0-9a-f]{7,40}$/u.test(head), `unable to resolve drone-plugins HEAD: ${head}`);
-	return { repo, head, packageJsonFiles: walkPackageJson(repo).length, apiCandidate };
-}
-
-function checkTarballInstall() {
-	const temp = mkdtempSync(join(tmpdir(), "drone-plugin-api-gate-"));
-	try {
-		const env = { ...process.env, npm_config_cache: join(temp, "npm-cache") };
-		const tarball = basename(npmPack(PACKAGE_DIR, temp, env));
-		const fixture = {
-			name: "drone-plugin-api-install-fixture",
-			private: true,
-			version: "0.0.0",
-			type: "module",
-			dependencies: { "@gyoungwe/plugin-api": `file:./${tarball}` },
-		};
-		writeFileSync(join(temp, "package.json"), `${JSON.stringify(fixture, null, 2)}\n`);
-		execNpm(["install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"], {
-			cwd: temp,
-			stdio: "pipe",
-			env,
-		});
-		const lock = readJson(join(temp, "package-lock.json"));
-		assert(
-			lock.packages?.["node_modules/@gyoungwe/plugin-api"],
-			"tarball fixture did not resolve @gyoungwe/plugin-api",
-		);
-		return tarball;
-	} finally {
-		rmSync(temp, { recursive: true, force: true });
-	}
+	return { repo, head, packageJsonFiles: paths.length, pin };
 }
 
 const { values } = parseArgs({
@@ -370,30 +296,48 @@ const { values } = parseArgs({
 		"package-only": { type: "boolean" },
 		migration: { type: "boolean" },
 		lifecycle: { type: "boolean" },
+		"plugins-dir": { type: "string" },
+		"release-only": { type: "boolean" },
 		"release-tarball": { type: "string" },
 		sha256: { type: "string" },
 	},
 });
-const { lifecycle, "release-tarball": releaseTarball, sha256 } = values;
+const { lifecycle, "release-tarball": releaseTarball, sha256, "release-only": releaseOnly } = values;
 const migration = values.migration || !values["package-only"];
 if (releaseTarball !== undefined || sha256 !== undefined) {
 	assert(
-		!migration && lifecycle && releaseTarball && /^[0-9a-f]{64}$/u.test(sha256),
-		"use --package-only --lifecycle with both --release-tarball and --sha256",
+		(migration || lifecycle) && releaseTarball && /^[0-9a-f]{64}$/u.test(sha256),
+		"use --migration or --package-only --lifecycle with both --release-tarball and --sha256",
 	);
 }
-checkPackageOnly();
-if (migration) {
-	const tarball = checkTarballInstall();
-	const repo = findPluginRepo();
-	assert(repo, "bound drone-plugins repository not found; set DRONE_PLUGINS_DIR for CI");
-	const plugin = checkPluginWorkspace(repo);
+const version = checkPackageManifest();
+checkPackageSource();
+checkDist();
+checkHostPortContract();
+const archive = releaseTarball ? verifyPluginApiTarball(resolve(releaseTarball), version, sha256) : undefined;
+const plugin = migration
+	? checkPluginWorkspace(findPluginRepo(values["plugins-dir"]), {
+			releaseTarball: archive,
+			releaseOnly,
+			digest: sha256,
+		})
+	: undefined;
+const tarball = migration || lifecycle ? checkLocalInstall(version, archive, lifecycle) : undefined;
+const migrationDetails = plugin
+	? `; tarball=${tarball}; pluginRepo=${plugin.repo}; head=${plugin.head}; manifests=${plugin.packageJsonFiles}`
+	: "";
+console.log(`plugin-api package gate passed${migrationDetails}`);
+const pin = plugin?.pin;
+if (pin) console.log(JSON.stringify({ mode: pin.url ? "release-api" : "private-vendored-dev-api", ...pin }));
+if (lifecycle) {
 	console.log(
-		`plugin-api package gate passed; tarball=${tarball}; pluginRepo=${plugin.repo}; head=${plugin.head}; manifests=${plugin.packageJsonFiles}`,
+		JSON.stringify({
+			status: "PASS",
+			mode: archive ? "release-tarball-lifecycle" : "local-pack-lifecycle",
+			install: "0.9.0",
+			upgrade: version,
+			rollback: "0.9.0",
+			uninstall: "removed",
+		}),
 	);
-	if (plugin.apiCandidate)
-		console.log(JSON.stringify({ mode: "private-vendored-dev-api", ...plugin.apiCandidate }));
-} else {
-	console.log("plugin-api package gate passed");
 }
-if (lifecycle) checkLocalLifecycle(releaseTarball, sha256);
