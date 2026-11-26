@@ -256,8 +256,6 @@ export function registerDatasetVersion(input: DatasetVersionInput): ComputeDatas
 	};
 }
 
-export const createDatasetVersion = registerDatasetVersion;
-
 function validTimestamp(value: string): boolean {
 	return (
 		/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) && Number.isFinite(Date.parse(value))
@@ -748,8 +746,6 @@ export function estimatePower(input: PowerEstimateInput): PowerEstimate {
 	};
 }
 
-export const estimateSampleSize = estimatePower;
-
 export function sampleSheetSchemaHash(schema: ComputeSampleSheet): string {
 	return sha256(schema);
 }
@@ -916,8 +912,6 @@ export function reviewRecordChange(
 	return { requiresReview: reasons.length > 0, reasons, changedFields };
 }
 
-export const reviewVersionChange = reviewRecordChange;
-
 function validateFetchRecord(record: ComputePublicDataFetchRecord): void {
 	validatePublicUri(record.uri);
 	if (!record.source.trim()) throw new Error(`Public data source is required for ${record.id}`);
@@ -1017,11 +1011,7 @@ export function buildROCrateManifest(input: ROCrateInput): ROCrateManifest {
 	return { "@context": "https://w3id.org/ro/crate/1.1/context", "@graph": graph };
 }
 
-export const exportROCrateManifest = buildROCrateManifest;
-
 /** Serializes the manifest with stable key ordering for reproducible artifacts. */
 export function exportROCrate(input: ROCrateInput): string {
 	return canonical(buildROCrateManifest(input));
 }
-
-export const exportRoCrate = exportROCrate;

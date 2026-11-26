@@ -70,10 +70,6 @@ export function migrateAnalysisContext(context: AnalysisContext): ResearchCase {
 	return researchCaseFromAnalysisContext(context);
 }
 
-/** Alias retained for callers that name migrations after their destination type. */
-export const researchCaseFromLegacyAnalysisContext = migrateAnalysisContext;
-export const migrateAnalysisContextToResearchCase = migrateAnalysisContext;
-
 /** Migrate a task proposal into a decision proposal without granting approval. */
 export function migratePlanProposal(
 	input: LegacyPlanProposal,
@@ -148,9 +144,6 @@ export function migratePlanProposal(
 	});
 }
 
-export const decisionProposalFromPlanProposal = migratePlanProposal;
-export const migratePlanProposalToDecisionProposal = migratePlanProposal;
-
 /** Migrate an evidence checkpoint into a source receipt snapshot. */
 export function migrateEvidenceCheckpoint(
 	checkpoint: LegacyEvidenceCheckpoint,
@@ -185,6 +178,3 @@ export function migrateEvidenceCheckpoint(
 		},
 	});
 }
-
-export const knowledgeSnapshotFromEvidenceCheckpoint = migrateEvidenceCheckpoint;
-export const migrateEvidenceCheckpointToKnowledgeSnapshot = migrateEvidenceCheckpoint;

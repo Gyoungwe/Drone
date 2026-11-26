@@ -21,5 +21,3 @@ export const PLUGIN_HOST_API_MANIFEST = {
 		sessions: manifest.namespaces.sessions.map(({ name }) => name),
 	},
 } as const;
-
-export type PluginHostApiManifest = typeof PLUGIN_HOST_API_MANIFEST;

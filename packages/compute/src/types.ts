@@ -197,7 +197,6 @@ export const JOB_TERMINAL_STATES: readonly JobState[] = [
 	"blocked",
 	"partial",
 ];
-export const JOB_TERMINAL_STATUSES = JOB_TERMINAL_STATES;
 export function isTerminalJobState(state: JobState): boolean {
 	return JOB_TERMINAL_STATES.includes(state);
 }

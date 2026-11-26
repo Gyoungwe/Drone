@@ -258,6 +258,3 @@ export async function runAutonomousRepair(options: AutonomousRepairOptions): Pro
 
 	throw new Error("Autonomous repair loop exited unexpectedly");
 }
-
-/** Alias used by host adapters that expose the loop as a workflow repair operation. */
-export const repairWorkflow = runAutonomousRepair;
