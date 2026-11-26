@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
-import type { ControlledKernelRunner } from "@drone/discovery";
 import type {
 	ComputeHost,
 	ComputeSshConfigHost,
@@ -21,6 +20,7 @@ import type {
 import type { ExperienceStorePort } from "@gyoungwe/plugin-api/knowledge";
 import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
+import type { ControlledKernelRunner } from "./discovery/contracts";
 import {
 	createDiscoveryService,
 	type DiscoveryAuthorization,

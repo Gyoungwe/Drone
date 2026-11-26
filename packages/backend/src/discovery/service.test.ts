@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { SubprocessFixtureRunner } from "@drone/discovery";
 import { InquiryService, MemoryInquiryStorage } from "@drone/inquiry";
 import type { DiscoveryHostLoader } from "@gyoungwe/plugin-api";
 import {
@@ -14,6 +13,7 @@ import {
 import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { StorageRegistry } from "../storage/registry";
+import { createPythonFixtureRunner } from "./python-runner.test.fixture";
 import { createDiscoveryService, type DiscoveryServiceOptions } from "./service";
 
 const tarball = process.env.DRONE_DISCOVERY_PLUGIN_TARBALL;
@@ -85,7 +85,7 @@ describe("DiscoveryService composition root", () => {
 					projectId: "project-1",
 					projectRoot: root,
 					authorize: allow,
-					runner: new SubprocessFixtureRunner(),
+					runner: createPythonFixtureRunner(),
 				});
 				const created = await service.createKernelSession({
 					sessionId: "session-1",
@@ -104,7 +104,7 @@ describe("DiscoveryService composition root", () => {
 					projectId: "project-1",
 					projectRoot: root,
 					authorize: allow,
-					runner: new SubprocessFixtureRunner(),
+					runner: createPythonFixtureRunner(),
 				});
 				expect((await reopened.getKernelSession("session-1"))?.executionCount).toBe(1);
 				await service.dispose();
@@ -157,7 +157,7 @@ describe("DiscoveryService composition root", () => {
 					authorize: async () => {
 						if (!authorized) throw new Error("authorization required");
 					},
-					runner: new SubprocessFixtureRunner(),
+					runner: createPythonFixtureRunner(),
 					inquiry,
 					criticProvider: {
 						providerId: "independent",
@@ -202,20 +202,20 @@ describe("DiscoveryService composition root", () => {
 			}
 		},
 	);
-	it("does not create stores or probe a runner without a discovery package", async () => {
+	it("fails closed without an attached discovery provider", async () => {
+		const options = { projectId: "no-plugin", projectRoot: "/tmp/no-discovery" };
 		const runnerFactory = vi.fn();
-		const storage = { register: vi.fn(), get: vi.fn() };
-		const { service } = createDiscoveryService({
-			projectId: "no-plugin",
-			projectRoot: "/tmp/no-discovery",
-			runnerFactory,
-			storage: storage as unknown as DiscoveryServiceOptions["storage"],
-		});
+		const authorize = vi.fn();
+		const storage = new StorageRegistry();
+		const { host, service } = createDiscoveryService({ ...options, runnerFactory, authorize, storage });
+		const unavailable = { code: "DISCOVERY_UNAVAILABLE" };
 		await service.init();
-		await expect(service.listCriticReviews()).rejects.toThrow("Discovery operation is unavailable");
-		await expect(service.getCapabilities("python")).rejects.toThrow("Discovery operation is unavailable");
+		expect(host).toBeUndefined();
+		await expect(service.getCapabilities("python")).rejects.toMatchObject(unavailable);
+		await expect(service.executeKernel("probe", "pass")).rejects.toMatchObject(unavailable);
 		expect(runnerFactory).not.toHaveBeenCalled();
-		expect(storage.register).not.toHaveBeenCalled();
+		expect(authorize).not.toHaveBeenCalled();
+		expect(storage.list()).toEqual([]);
 		await service.dispose();
 	});
 
@@ -272,7 +272,7 @@ describe("DiscoveryService composition root", () => {
 		async () => {
 			const root = await mkdtemp(join(tmpdir(), "discovery-service-boundary-"));
 			let allowed = false;
-			const runner = new SubprocessFixtureRunner();
+			const runner = createPythonFixtureRunner();
 			const run = vi.spyOn(runner, "run");
 			const receipts: unknown[] = [];
 			const options = {
@@ -347,7 +347,7 @@ describe("DiscoveryService composition root", () => {
 		async () => {
 			const root = await mkdtemp(join(tmpdir(), "discovery-journal-registry-"));
 			const storage = new StorageRegistry();
-			const runnerFactory = vi.fn(async () => new SubprocessFixtureRunner());
+			const runnerFactory = vi.fn(async () => createPythonFixtureRunner());
 			const service = installedService({
 				projectId: "project-1",
 				projectRoot: root,
