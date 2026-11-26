@@ -15,7 +15,6 @@ import { getPi } from "../api";
 const EMPTY_HOSTS: ComputeHost[] = [];
 const EMPTY_JOBS: ComputeJob[] = [];
 const EMPTY_ONBOARDING: ComputeOnboardingStatus[] = [];
-const EMPTY_LOG: ComputeLogChunk = { jobId: "", cursor: "", text: "", truncated: false, at: "" };
 
 export interface ComputeState {
 	hosts: ComputeHost[];
@@ -212,8 +211,4 @@ export function selectJobs(state: ComputeState): ComputeJob[] {
 
 export function selectOnboarding(state: ComputeState): ComputeOnboardingStatus[] {
 	return state.onboarding.length ? state.onboarding : EMPTY_ONBOARDING;
-}
-
-export function selectJobLog(state: ComputeState, id: string | null): ComputeLogChunk {
-	return id ? (state.logsByJob[id] ?? EMPTY_LOG) : EMPTY_LOG;
 }

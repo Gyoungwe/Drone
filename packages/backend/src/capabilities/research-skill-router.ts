@@ -86,9 +86,6 @@ export function changesResearchWorkflow(intent: ResearchSkillIntent): boolean {
 		intent.named.some((n) => workflowProfile(n)?.direction !== "internal")
 	);
 }
-export function isResearchWorkflowSkill(name: string): boolean {
-	return WORKFLOW_OWNER_NAMES.has(name);
-}
 export function mergeResearchIntent(a: ResearchSkillIntent, b: ResearchSkillIntent): ResearchSkillIntent {
 	return changesResearchWorkflow(b) ? normalizeResearchIntent(b) : normalizeResearchIntent(a);
 }
@@ -272,14 +269,6 @@ export interface CapabilitySkillList {
  * RESEARCH_SKILL_LIMIT by task relevance. Workflow skills are only filled for explicitly loaded capabilities;
  * non-workflow skills (catalog category, e.g. ~/.agents) obey the same per-capability limit.
  */
-export function selectCapabilitySkills(
-	skills: readonly RoutableSkill[],
-	capabilities: ReadonlySet<CapabilityId>,
-	intent: ResearchSkillIntent,
-	options: CapabilitySkillOptions = {},
-): string[] {
-	return orderedCapabilitySkills(skills, capabilities, intent, options).names;
-}
 export function orderedCapabilitySkills(
 	skills: readonly RoutableSkill[],
 	capabilities: ReadonlySet<CapabilityId>,

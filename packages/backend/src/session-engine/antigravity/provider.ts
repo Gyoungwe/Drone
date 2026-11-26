@@ -1,10 +1,4 @@
-import {
-	type Credential,
-	createProvider,
-	type Model,
-	type Provider,
-	type ProviderStreams,
-} from "@earendil-works/pi-ai";
+import { createProvider, type Model, type Provider, type ProviderStreams } from "@earendil-works/pi-ai";
 import { parseDiscoveredModels, staticAntigravityModels } from "./catalog";
 import { createAntigravityOAuth } from "./oauth";
 import { fetchAvailableModels, streamAntigravity } from "./transport";
@@ -54,12 +48,6 @@ export function createAntigravityProvider(options: AntigravityProviderFactoryOpt
 			return [...byId.values()];
 		},
 	});
-}
-
-export function isAntigravityCredential(
-	value: Credential | undefined,
-): value is Credential & { type: "oauth"; access: string } {
-	return value?.type === "oauth" && typeof value.access === "string" && value.access.length > 0;
 }
 
 export { ANTIGRAVITY_API, ANTIGRAVITY_PROVIDER_ID };

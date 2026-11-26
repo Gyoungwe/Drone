@@ -43,16 +43,6 @@ export function configureResearchSkillUpdater(userDataDir: string): void {
 	config = { userDataDir };
 }
 
-/**
- * Compatibility shim for integrations that imported the old scheduler.
- * Research skill repositories are now checked only after an explicit user
- * action through `checkResearchSkillUpdates`; this function intentionally
- * does not create timers.
- */
-export function scheduleResearchSkillUpdateCheck(): void {
-	return;
-}
-
 export function onResearchSkillUpdateState(cb: Listener): void {
 	listeners.add(cb);
 }

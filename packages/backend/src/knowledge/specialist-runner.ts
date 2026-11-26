@@ -1,8 +1,6 @@
 import type { Model, ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type {
-	LegacyKnowledgeSpecialistAnswer,
-	LegacyKnowledgeSpecialistCapability,
 	LegacyKnowledgeSpecialistLoop,
 	LegacyKnowledgeSpecialistRequest,
 	LegacyKnowledgeSpecialistResult,
@@ -10,8 +8,6 @@ import type {
 import { completeModelToolStep } from "../session-engine/model-tool-step";
 import { getSupportedThinkingLevels } from "../session-engine/sdk";
 
-export type SpecialistCapability = LegacyKnowledgeSpecialistCapability;
-export type SpecialistAnswer = LegacyKnowledgeSpecialistAnswer;
 export type SpecialistResult = LegacyKnowledgeSpecialistResult;
 export interface SpecialistRequest extends LegacyKnowledgeSpecialistRequest {
 	parentModel?: Model<any>;

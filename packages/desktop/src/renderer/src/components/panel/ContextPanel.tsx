@@ -18,9 +18,6 @@ import { ComputePane } from "./ComputePane";
 import { OverviewPane } from "./OverviewPane";
 import { ProcessPane } from "./ProcessPane";
 
-/** 面板宽度（CSS 变量同步 globals.css .context-panel） */
-export const CONTEXT_PANEL_WIDTH = 372;
-
 /**
  * 右侧上下文面板：总览 / 文件 / 变更 三个常驻页签（旧 id 保留以兼容深链接），子智能体仅在本会话有运行时出现，
  * 主机仅在已配置主机或有作业时出现；当前选中的页签总是可见。固定栏位、push 式收展（聊天列自然压缩），永远只有一个右栏。
