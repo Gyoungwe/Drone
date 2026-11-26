@@ -1,10 +1,5 @@
 import { describeProject, resolveWorkspaceProject, sessionEntriesOf } from "@gyoungwe/pi-knowledge/host";
-import {
-	literatureReceipt,
-	type ResearchExtensionPorts,
-	registerResearchExtension,
-	sourceArchive,
-} from "@gyoungwe/pi-research/host";
+import { literatureReceipt, registerResearchExtension, sourceArchive } from "@gyoungwe/pi-research/host";
 import { reviewResearchSummary } from "./internal/research-summary-review";
 import { bindExtensionRuntime, runExtensionExclusive } from "./internal/runtime";
 import { registerTool } from "./internal/runtime/tool-manifest";
@@ -16,8 +11,9 @@ export default function researchLoop(pi: any): void {
 	bindExtensionRuntime(pi);
 	const workspace = async (cwd: string) => (await loadWorkspaceConfig(cwd)) as any;
 	const exclusive = <T>(key: string, work: () => Promise<T>) => runExtensionExclusive(pi, key, work);
-	const ports: ResearchExtensionPorts = {
+	const delivery = registerResearchExtension(pi, {
 		workspace,
+		breakerBudget: { maxBilledTokens: 500_000 },
 		resolveProject: async (cwd) => (await resolveWorkspaceProject({ cwd })).project,
 		resolveSessionProject: (ctx, requested) =>
 			resolveWorkspaceProject({ cwd: ctx.cwd, sessionEntries: sessionEntriesOf(ctx), requested }),
@@ -34,7 +30,6 @@ export default function researchLoop(pi: any): void {
 				},
 				exclusive,
 			}),
-	};
-	const delivery = registerResearchExtension(pi, ports);
+	});
 	if (delivery) registerResearchSummaryTool(pi, delivery);
 }

@@ -12,6 +12,7 @@
 | 流式期间白屏、`error #185`、无限重渲染整树卸载 | 一 · 0.5.0 白屏事故；四 · Zustand selector（#185 另一成因） |
 | 扩展注册的工具模型用不了、模型说「工具列表为 none」 | 二 · createAgentSession tools 白名单 |
 | A managed tool keeps executing an old in-process implementation | 2026-11-12 · First tool registration wins |
+| Desktop `deep_research` stops before summary review | 2026-11-27 · Desktop `deep_research` token budget |
 | 设置页永久 Loading、模型列表为空 | 二 · runtime.refresh 网络挂起 / getAvailable 返回空 |
 | 权限 confirm 弹窗不生效 | 二 · bindExtensions 注入点 |
 | preload 加载失败（sandbox 下 require is not defined） | 三 · preload 必须 CJS |
@@ -588,6 +589,12 @@ Node 会解析主模块的符号链接并对 `import.meta.url` 做百分号编�
 ## 受管插件的写审批与任务授权
 
 受管插件的写调用默认每次弹原生对话框。不要为了让任务编排“能用”去缓存审批或让插件自报授权：插件自己的簿记（会话记录、私有状态）在能力上标 `approval: "own"`；一次任务授权只能由宿主 `task.grant.request` 签发（宿主解析目录、宿主渲染对话框、绑定 live 会话条目与当前安装来源），授权下仍需逐项确认的能力标 `approval: "always"`。新增写能力时必须决定它属于哪一类，缺省即“授权覆盖”。授权从不由插件返回值、JSON 记录或恢复数据产生，会话关闭、插件停用/升级即失效。详见[宿主任务授权](superpowers/specs/2026-10-29-host-task-grant-design.md)。
+
+## Desktop `deep_research` token budget (2026-11-27)
+
+`@gyoungwe/pi-research@0.4.1` defaults to 24,000 billed tokens if Desktop omits `breakerBudget`. It adds input, output, and cache-write tokens (not cache reads), starting with the assistant turn that calls `research_loop(action="start")`. The SDK fixture's first turn alone bills 27,100 tokens; the run becomes `stopped_by_breaker` and terminates before `research_summarize_run`, so summary review is never called. Long production prompts can also hit the default without the fixture's cache-write accounting.
+
+Desktop supplies `maxBilledTokens: 500_000` in `packages/extensions/src/research-loop.ts` to leave room for longer, multi-specialist runs without disabling the breaker. Rebuild `.pi/extensions` with `npm run build:extensions -- --force` before running `packages/backend/test/knowledge-specialists-sdk.test.mjs`: the SDK test loads the generated adapter, not the TypeScript source.
 
 ## 重新锁定插件后要单独跑 `check:extensions`（2026-11-17 记录）
 
