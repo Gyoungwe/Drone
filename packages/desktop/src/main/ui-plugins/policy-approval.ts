@@ -37,14 +37,20 @@ const TITLE: Copy = {
 const ALLOW: Copy = { zh: "允许", en: "Allow" };
 const DENY: Copy = { zh: "拒绝", en: "Deny" };
 
-// TODO(human): write the three policy sentences the user reads, zh and en together.
-// One per kind of secret the host keeps — a package that declares that slot shows
-// that line — and one for the runtime endpoint.
 const CUSTODY_SENTENCES: Readonly<Record<HostCustodyKind, Copy>> = {
-	"webdav-password": { zh: "", en: "" },
-	"zotero-local-key": { zh: "", en: "" },
+	"webdav-password": {
+		zh: "• 由宿主代填你的 WebDAV 同步密码（插件不会直接读取原始环境变量或密钥文件）。",
+		en: "• Let the host fill your WebDAV sync password (the plugin never reads the raw environment variable or secret file).",
+	},
+	"zotero-local-key": {
+		zh: "• 由宿主代填本地 Zotero 写入密钥，仅用于请求本机 Zotero 服务。",
+		en: "• Let the host fill your local Zotero write key for requests to the local Zotero service only.",
+	},
 };
-const RUNTIME_ENDPOINT_SENTENCE: Copy = { zh: "", en: "" };
+const RUNTIME_ENDPOINT_SENTENCE: Copy = {
+	zh: "• 允许该插件连接到你在环境变量中指定的自定义服务端点。",
+	en: "• Allow this plugin to connect to a custom server endpoint you configure via environment variables.",
+};
 
 /** The sentences a request shows, one per policy element, in declaration order. */
 export function policySentences(request: Omit<PolicyApprovalRequest, "pluginId">): readonly Copy[] {
