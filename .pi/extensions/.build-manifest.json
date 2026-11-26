@@ -32,9 +32,9 @@
 			"source": "research-loop.ts",
 			"output": "research-loop.mjs",
 			"status": "generated",
-			"sourceSha256": "9654996d198398b1d4ed464b031f66afdc00e78cfef98a5da3adfcdb459daa7f",
-			"inputsSha256": "5bb5468431bd40861d0041efb09088f6328f822be29a982bef9b5fbc049e3429",
-			"outputSha256": "315bd9bf3c6801667383429a8b3c8a5333e998cb7aae019a9a5e0388bab0b45f"
+			"sourceSha256": "f792d53a7a60bb26eb1e0c32029a29d8cc9a02285487680e1bf81735ad2aa628",
+			"inputsSha256": "c2ebaa155a3f89cc71879bcbb37a7fbd52d9a6bd3d7379436115e3ab60bbaebb",
+			"outputSha256": "cb13f81250cb3fc8fb038c0285e77e459aed0eb0013941944674bcfdd105350f"
 		},
 		"research-policy": {
 			"source": "research-policy.ts",

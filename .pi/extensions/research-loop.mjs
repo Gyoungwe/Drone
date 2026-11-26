@@ -22835,8 +22835,9 @@ function researchLoop(pi2) {
   bindExtensionRuntime(pi2);
   const workspace = async (cwd) => await loadWorkspaceConfig2(cwd);
   const exclusive = (key2, work) => runExtensionExclusive(pi2, key2, work);
-  const ports = {
+  const delivery = Kl(pi2, {
     workspace,
+    breakerBudget: { maxBilledTokens: 5e5 },
     resolveProject: async (cwd) => (await resolveWorkspaceProject({ cwd })).project,
     resolveSessionProject: (ctx, requested) => resolveWorkspaceProject({ cwd: ctx.cwd, sessionEntries: sessionEntriesOf(ctx), requested }),
     describeProject,
@@ -22851,8 +22852,7 @@ function researchLoop(pi2) {
       },
       exclusive
     })
-  };
-  const delivery = Kl(pi2, ports);
+  });
   if (delivery) registerResearchSummaryTool(pi2, delivery);
 }
 export {
