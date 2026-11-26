@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { parse } from "yaml";
 
 const execFileAsync = promisify(execFile);
 const root = new URL("../", import.meta.url);
@@ -75,18 +76,26 @@ async function fixtureRepo(t, baselineFindings, sources) {
 	const dir = await mkdtemp(join(tmpdir(), "drone-architecture-"));
 	t.after(() => rm(dir, { recursive: true, force: true }));
 	await mkdir(join(dir, "scripts/fixtures"), { recursive: true });
-	await mkdir(join(dir, "packages/shared/src"), { recursive: true });
-	await copyFile(fileURLToPath(checker), join(dir, "scripts/check-architecture.mjs"));
+	for (const name of ["check-architecture.mjs", "check-structure.mjs", "is-main-module.mjs"]) {
+		await copyFile(new URL(name, checker), join(dir, "scripts", name));
+	}
+	await symlink(fileURLToPath(new URL("node_modules", root)), join(dir, "node_modules"), "junction");
+	const put = async (file, text) => {
+		const path = join(dir, file);
+		await mkdir(dirname(path), { recursive: true });
+		await writeFile(path, text);
+	};
 	const baselinePath = join(dir, "scripts/fixtures/architecture-baseline.json");
 	await writeFile(baselinePath, `${JSON.stringify({ version: 1, findings: baselineFindings }, null, 2)}\n`);
+	await put("scripts/fixtures/structure-baseline.json", "{}\n");
 	for (const [file, text] of Object.entries(sources)) {
-		await writeFile(join(dir, "packages/shared/src", file), text);
+		await put(`packages/shared/src/${file}`, text);
 	}
 	const run = (...args) =>
 		execFileAsync(process.execPath, [join(dir, "scripts/check-architecture.mjs"), ...args])
 			.then((result) => ({ ...result, code: 0 }))
 			.catch((error) => error);
-	return { run, readBaseline: () => readFile(baselinePath, "utf8") };
+	return { run, put, readBaseline: () => readFile(baselinePath, "utf8") };
 }
 
 function bridgeFinding(name, file = "a.ts", line = 1) {
@@ -148,4 +157,80 @@ test("--allow-moves alone does not update the baseline", async (t) => {
 	const result = await run("--allow-moves");
 	assert.equal(result.code, 1);
 	assert.equal(await readBaseline(), before);
+});
+
+test("architecture rejects the retired shared IPC module across source extensions", async (t) => {
+	const { run, put, readBaseline } = await fixtureRepo(t, [], {});
+	const paths = ["ts", "mts", "mjs", "js", "tsx"].map((ext) => `packages/shared/src/ipc.${ext}`);
+	for (const file of paths) await put(file, "export {};\n");
+	const before = await readBaseline();
+	const result = await run();
+	assert.equal(result.code, 1, result.stdout);
+	for (const file of paths) assert.ok(result.stderr.includes(`${file}:1`), result.stderr);
+	assert.equal((await run("--update-baseline", "--allow-moves")).code, 1);
+	assert.equal(await readBaseline(), before);
+});
+
+test("architecture rejects shared cross-package wildcard exports and permits local barrels", async (t) => {
+	const { run, put } = await fixtureRepo(t, [], {
+		"index.ts": [
+			'export * from "./host-api";',
+			'export * from "./process-lanes/types";',
+			'export { contract } from "@gyoungwe/plugin-api";',
+			'// export * from "@gyoungwe/plugin-api";',
+			'const example = `export * from "@gyoungwe/plugin-api";`;',
+		].join("\n"),
+		"host-api/sessions.ts": "export {};\n",
+		"host-api/index.ts": 'export * as lanes from "../process-lanes/types";\n',
+	});
+	const allowed = await run();
+	assert.equal(allowed.code, 0, allowed.stderr);
+	await put(
+		"packages/shared/src/foreign.ts",
+		[
+			'export * from "@gyoungwe/plugin-api";',
+			"export /* comment */ *\n as knowledge from '@gyoungwe/plugin-api/knowledge';",
+			'export type * from "@drone/types";',
+		].join("\n"),
+	);
+	const result = await run();
+	assert.equal(result.code, 1, result.stdout);
+	assert.match(result.stderr, /foreign\.ts:1.* @gyoungwe\/plugin-api$/m);
+	assert.match(result.stderr, /foreign\.ts:2.* @gyoungwe\/plugin-api\/knowledge$/m);
+	assert.match(result.stderr, /foreign\.ts:4.* @drone\/types$/m);
+});
+
+test("architecture permits the grandfathered legacy filename and P5 modules only", async (t) => {
+	const { run, put } = await fixtureRepo(t, [], {});
+	await put("packages/plugin-api/src/legacy-knowledge.ts", "export {};\n");
+	await put("packages/plugin-api/src/p5-facts.ts", "export {};\n");
+	await put("packages/backend/src/legacy-other.ts", "export {};\n");
+	const allowed = await run("--update-baseline");
+	assert.equal(allowed.code, 0, allowed.stderr);
+	await put("packages/shared/src/legacy-foo.ts", "export {};\n");
+	await put("packages/plugin-api/src/nested/legacy-other.ts", "export {};\n");
+	const result = await run();
+	assert.equal(result.code, 1, result.stdout);
+	assert.match(result.stderr, /packages\/shared\/src\/legacy-foo\.ts:1/);
+	assert.match(result.stderr, /packages\/plugin-api\/src\/nested\/legacy-other\.ts:1/);
+	assert.doesNotMatch(result.stderr, /legacy-knowledge|p5-facts|packages\/backend/);
+});
+
+test("architecture respects the structure baseline's retirement of legacy-knowledge", async (t) => {
+	const { run, put } = await fixtureRepo(t, [], {});
+	const file = "packages/plugin-api/src/legacy-knowledge.ts";
+	await put("scripts/fixtures/structure-baseline.json", JSON.stringify({ [`legacy-file\t${file}`]: 0 }));
+	const removed = await run("--update-baseline");
+	assert.equal(removed.code, 0, removed.stderr);
+	await put(file, "export {};\n");
+	const result = await run("--update-baseline");
+	assert.equal(result.code, 1, result.stdout);
+	assert.ok(result.stderr.includes(`${file}:1`), result.stderr);
+});
+
+test("static CI reports Knip findings without failing on them", async () => {
+	const workflow = parse(await readFile(new URL(".github/workflows/ci.yml", root), "utf8"));
+	const { scripts } = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
+	assert.ok(workflow.jobs.static.steps.some(({ run }) => run === "npm run knip"));
+	assert.equal(scripts.knip, "knip --no-exit-code");
 });

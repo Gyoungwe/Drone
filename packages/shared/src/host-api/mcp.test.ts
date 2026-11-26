@@ -38,6 +38,13 @@ describe("McpContract", () => {
 		expect(Check(McpContract.methods.getConfig.result, config)).toBe(true);
 	});
 
+	it("declares the existing status event channel and payload", () => {
+		expect(McpContract.events).toHaveProperty("event");
+		expect(channelOf(McpContract, "event")).toBe("mcp:event");
+		expect(Check(McpContract.events.event, { cwd: "/tmp/project", status })).toBe(true);
+		expect(Check(McpContract.events.event, { cwd: 42, status })).toBe(false);
+	});
+
 	it("rejects malformed mutation arguments", () => {
 		expect(Check(McpContract.methods.setServerEnabled.args, ["docs", true])).toBe(true);
 		expect(Check(McpContract.methods.setServerEnabled.args, ["docs", false, undefined])).toBe(true);

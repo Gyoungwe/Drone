@@ -1,5 +1,5 @@
 import type { BackendServices, SessionServicePort } from "@drone/backend";
-import { IpcChannels } from "@drone/shared";
+import { channelOf, KnowledgeContract } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import { bindKnowledgeRoutes } from "./knowledge-routes";
 
@@ -143,7 +143,7 @@ export function registerKnowledgeIpc(
 	);
 	knowledge.subscribe((event) => {
 		for (const window of BrowserWindow.getAllWindows()) {
-			if (!window.isDestroyed()) window.webContents.send(IpcChannels.KnowledgeEvent, event);
+			if (!window.isDestroyed()) window.webContents.send(channelOf(KnowledgeContract, "event"), event);
 		}
 	});
 }

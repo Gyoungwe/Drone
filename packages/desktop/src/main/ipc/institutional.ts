@@ -1,5 +1,5 @@
 import type { BackendServices } from "@drone/backend";
-import { InstitutionalContract, IpcChannels } from "@drone/shared";
+import { InstitutionalContract } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import * as institutional from "../institutional-access";
 import { bindContract, type ContractImplementation } from "./bind-contract";
@@ -26,15 +26,6 @@ export function registerInstitutionalIpc(_services?: Pick<BackendServices, "inst
 		testAccess: (url) => (service ? service.testAccess(url) : institutional.testAccess(url)),
 	};
 	bindContract(InstitutionalContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				getStatus: IpcChannels.InstitutionalGetStatus,
-				saveConfig: IpcChannels.InstitutionalSaveConfig,
-				openLogin: IpcChannels.InstitutionalOpenLogin,
-				openUrl: IpcChannels.InstitutionalOpenUrl,
-				clear: IpcChannels.InstitutionalClear,
-				testAccess: IpcChannels.InstitutionalTestAccess,
-			})[method as keyof typeof InstitutionalContract.methods],
 		beforeInvoke: (event, _contract, method) => {
 			if (method !== "getStatus") assertMainFrame(event, _contract, method);
 		},

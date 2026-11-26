@@ -14,7 +14,7 @@ vi.mock("electron", () => ({
 	BrowserWindow: { fromWebContents: mocks.fromWebContents },
 }));
 
-import { IpcChannels } from "@drone/shared";
+import { channelOf, InquiryContract } from "@drone/shared";
 import { registerInquiryIpc } from "./inquiry";
 
 describe("registerInquiryIpc", () => {
@@ -32,7 +32,10 @@ describe("registerInquiryIpc", () => {
 		registerInquiryIpc(service as never);
 		const frame = {};
 		const event = { sender: { mainFrame: frame }, senderFrame: frame };
-		const invalid = await mocks.handlers.get(IpcChannels.InquiryArtifactProvenance)!(event, "\u0000bad");
+		const invalid = await mocks.handlers.get(channelOf(InquiryContract, "artifactProvenance"))!(
+			event,
+			"\u0000bad",
+		);
 		expect(invalid).toMatchObject({
 			code: "invalid_arguments",
 			severity: "error",
@@ -50,7 +53,7 @@ describe("registerInquiryIpc", () => {
 		};
 		registerInquiryIpc(service as never);
 		const frame = {};
-		const result = await mocks.handlers.get(IpcChannels.InquiryArtifactProvenance)!(
+		const result = await mocks.handlers.get(channelOf(InquiryContract, "artifactProvenance"))!(
 			{ sender: { mainFrame: frame }, senderFrame: frame },
 			"artifact-1",
 		);
@@ -70,7 +73,7 @@ describe("registerInquiryIpc", () => {
 		};
 		registerInquiryIpc(service as never);
 		const frame = {};
-		const result = await mocks.handlers.get(IpcChannels.InquiryRerunArtifact)!(
+		const result = await mocks.handlers.get(channelOf(InquiryContract, "rerunArtifact"))!(
 			{ sender: { mainFrame: frame }, senderFrame: frame },
 			"artifact-1",
 		);

@@ -131,7 +131,7 @@ P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享
 
 - renderer 绝不 import pi 包，只经 `window.pi`（preload）通信
 - Pi SDK 运行时值导入统一收敛在 `packages/backend/src/session-engine/**`（钉 1.1.0）；`pi-backend.ts` 仍是兼容门面
-- 新增 IPC 四处同步：`shared/src/ipc.ts` → `desktop/src/preload/index.ts` → `main/ipc/`（按域选文件）→ backend；事件转发在 `main/ipc/index.ts`
+- 新增 IPC 依次同步 `shared/src/host-api/<domain>.ts`、`desktop/src/preload/index.ts`、`main/ipc/` 对应域和 backend，事件在 `main/ipc/index.ts` 转发。
 - preload 必须保持 CJS（sandbox 限制，见 PITFALLS）
 - 新增 UI 文案：`i18n/zh.ts` + `en.ts` 双字典都要加
 - zustand selector 必须返回稳定引用（模块级空对象/数组；#185 无限渲染，见 PITFALLS）
@@ -327,7 +327,10 @@ packages/
 
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
-| `src/ipc.ts` | `IpcChannels`、`PiApi` | 通道名常量 + `window.pi` 完整类型（sessions/settings/packages/app/ui-plugins/login/compute 全域通道 + 同步属性 `platform`） |
+| `src/host-api/index.ts` | `PiApi` | 从 20 个宿主 API 组合 `window.pi` 的类型，经 `@drone/shared` 导出。 |
+| `src/host-api/app.ts` | `AppContract`、`AppApi`、`ResourcePreviewResult`、`FigureAnnotation`、`ImportedAttachment` | 应用、文件、项目和偏好设置的 IPC 契约，以及更新状态和原生菜单事件。 |
+| `src/host-api/sessions.ts` | `SessionsContract`、`SessionsApi`、`PromptReceipt` | 会话方法与 `sessions:event` 通知；`SessionsApi<"desktop">` 提供 `onEvent`，`PromptReceipt` 表示 prompt 预检结果。 |
+| `src/host-api/permissions.ts` | `PermissionsContract`、`PermissionsApi` | 权限设置、会话权限模式、问答、工具审批与项目信任的 IPC 契约。 |
 | `src/knowledge.ts` | `KnowledgeApi`、`KnowledgeFlow*`、`KnowledgeCloud*`、`ResearchRun*`、`WikiReview*` 等 | 宿主侧知识与研究运行契约。其中 17 个通用知识契约（`KnowledgeReadRecord`、`KnowledgeGraph*`、`KnowledgeIndexStatus`、`KnowledgeJob`、`KnowledgeOverview`、`KnowledgePage`、`KnowledgeLinkRef`、`KnowledgeNoteLinks`、`KnowledgeAnswerMetric`、`KnowledgeBinding`、`KnowledgeRecentNote`、`WikiReviewItem` 等）由 `@gyoungwe/plugin-api/knowledge` 拥有，本文件只做 re-export，不再保留第二份本地定义；依赖方向是 shared → plugin-api，plugin-api 不反向依赖 shared |
 | `src/host-api/background-jobs.ts` | `BackgroundJobsContract`、`BackgroundJobsApi`、`P5BackgroundStatus` | Desktop-only contract for per-workspace status, enablement and daily token limits. |
 | `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`ComputeContract`、`DiscoveryContract`、`DecisionsContract`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract` | TypeBox Host API 域契约；供 desktop bindContract 与适配器复用；`ComputeContract` 覆盖主机登记、健康、作业日志、终端和引导状态，远端副作用由 backend adapter 继续做授权门控；`DiscoveryContract` 提供 B5d–B5f 内核会话、批评、多路径、探索计划和评测的只读投影，关闭会话保留 desktop 权限；`DecisionsContract` 提供项目决策账本的列表、撤销和人工确认；`KnowledgeContract` 覆盖知识库管理、审核、语义索引、研究运行路线与 Zotero 状态；机构访问保留 desktop 权限；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录 |
@@ -649,9 +652,9 @@ src/
 | 顶栏 tab / 拖拽排序 | `session/SessionTabBar.tsx`（dnd-kit，DragOverlay ghost 拾起时实测宽度沿用原胶囊 + 轴锁定 + drag-region 退出）+ `stores/sessions.ts` reorderSessions（draft 无 sessionFile 只参与内存序） |
 | 左侧会话轨道 | `session/SessionRail.tsx` + `stores/ui-preferences.ts`（开关持久化）+ `session-status.ts`（状态逻辑与顶栏共用）；逐帧截图 `scripts/shoot-rail.mjs` |
 | 权限审批面板 | `backend/src/permissions/gate.ts`（队列）+ `session/ApprovalDock.tsx`（快捷键 Enter/A/D/Esc；await 成功才移除） |
-| 会话权限模式（默认/完全访问） | 后端：`pi-backend.ts`（`permissionModes` map 内存态 + `get/setSessionPermissionMode`）+ `permissions/extension.ts`（fullAccess 审计分支）+ `permissions/audit.ts`；IPC：`PermissionGetMode/SetMode`；前端：`composer/PermissionPicker.tsx`（chip）+ `stores/sessions.ts`（`permissionModes` map，draft 态转正在 ensureSession 应用）+ `use-composer-send.ts`。模式不落盘、不跨会话继承、重启归零（spec permission-mode D1） |
+| 会话权限模式（默认/完全访问） | 后端：`pi-backend.ts`（`permissionModes` map 内存态 + `get/setSessionPermissionMode`）+ `permissions/extension.ts`（fullAccess 审计分支）+ `permissions/audit.ts`；IPC `permissions:getMode`、`permissions:setMode`；前端：`composer/PermissionPicker.tsx`（chip）+ `stores/sessions.ts`（`permissionModes` map，draft 态转正在 ensureSession 应用）+ `use-composer-send.ts`。模式不落盘、不跨会话继承、重启归零（spec permission-mode D1） |
 | 逐工具权限规则 | `backend/src/permissions/`（求值链在 extension.ts：deny → 临时区 → 多根边界读写分离 → 项目记忆 → ask）+ `project/workspace-store.ts`；enabled=false 只能手改 permissions.json（UI 无入口的逃生舱，设置页只出横幅）；设置页工作区根管理 UI 未实现，手改 workspaces.json |
-| 权限设置页（设置 → 权限，编辑全局 permissions.json） | backend `permissions/settings.ts` + `config.ts`（`parseConfig` 显式布尔 / `serializeConfig` / `validateConfig`）；IPC `permissionSettings:*`（`main/ipc/permissions.ts`）；renderer `settings/PermissionsPanel.tsx` + `PatternTable.tsx` + `permissions-model.ts` + `stores/permissions.ts`；文档 [permissions-settings.md](permissions-settings.md)；冒烟 `scripts/check-permissions-ui.mjs` |
+| 权限设置页（设置 → 权限，编辑全局 permissions.json） | backend `permissions/settings.ts` + `config.ts`（`parseConfig` 显式布尔 / `serializeConfig` / `validateConfig`）；IPC `permissions:*`（`main/ipc/permissions.ts`）；renderer `settings/PermissionsPanel.tsx` + `PatternTable.tsx` + `permissions-model.ts` + `stores/permissions.ts`；文档 [permissions-settings.md](permissions-settings.md)；冒烟 `scripts/check-permissions-ui.mjs` |
 | 项目信任 | backend `project/trust.ts` + `trust-loader.ts`；触发点 `stores/sessions.ts`（createDraftSession/setDraftCwd）与 `stores/projects.ts`（addProject）；弹窗 `session/TrustDialog.tsx` |
 | 日常空间（非项目闲聊维度） | main `daily.ts`（目录）+ IPC `app:getDailyDir` → renderer `lib/daily.ts`（缓存/判定）；侧栏钉顶条目 `projects/ProjectSidebar.tsx`（选中后 selectedCwd=dailyDir，右栏/搜索/新会话全复用）；隔离 = `stores/projects.ts` deriveProjects 过滤 + deleteProject 守卫（有 projects.test.ts）；空态 chip `ProjectBranchPicker.tsx`（下拉钉顶「日常」项，draft 日常 ↔ 项目双向切换）；胶囊/轨道咖啡头像 `SessionTabBar.tsx`/`SessionRail.tsx`（余态白底黑字，状态色优先）；设计稿 `.local/design/ux/daily-space/` |
 | 会话分叉 / 撤回 | backend `forkSession`/`recallMessage`（目标解析在 session/messages.ts；**agent 运行或压缩期间均拒绝**）；renderer `stores/sessions.ts`（fork 新 tab 打开并返回新 sessionId；recall 草稿回填 + COMPOSER_FOCUS_EVENT）+ `chat/message-actions.tsx`（ForkButton 挂轮次末段正文/RecallButton 挂用户气泡，运行/压缩期间禁用） |
@@ -659,8 +662,8 @@ src/
 | todo 面板 + compaction 恢复 | 工具 `tools/todo.ts` + 恢复注入 `tools/todo-reminder.ts` + 读取 `getTodos`；UI `chat/TodoPanel.tsx` + `stores/ui.ts` todoExpanded；reducer 提取 `tool_execution_end`；打开会话恢复 = loadSessionBundle 后 loadTodos |
 | 会话自动命名 | `backend/src/session/naming.ts` |
 | webfetch 工具 | `backend/src/tools/webfetch/`（SSRF 在 ip-guard.ts；截断/超时/重定向参数在 tool.ts） |
-| 社区包目录（浏览/安装/卸载） | backend `packages/catalog.ts` + `admin.ts`；UI `settings/extensions/` + `stores/catalog.ts`（防抖/防陈旧/装卸态） |
-| provider 设置 / 交互登录（OAuth + api_key） | backend `settings/settings.ts` + `login.ts` + shared `settings.ts`（类型）+ IPC `settings:login*`；UI `settings/providers/`（表单/登录对话框）+ `stores/provider-login.ts` + `stores/settings.ts` |
+| 社区包目录（浏览/安装/卸载） | `shared/src/host-api/packages.ts` 导出 `PackagesContract` 和 `PackagesApi`，服务位于 backend `packages/catalog.ts` 和 `admin.ts`，UI 位于 `settings/extensions/` 和 `stores/catalog.ts`。 |
+| provider 设置 / 交互登录（OAuth + api_key） | `shared/src/host-api/settings.ts` 导出 `SettingsContract` 和 `SettingsApi`，preload 以 `onProviderLoginEvent` 订阅 `settings:loginEvent`。服务位于 backend `settings/settings.ts` 和 `login.ts`，UI 位于 `settings/providers/`、`stores/provider-login.ts` 和 `stores/settings.ts`。 |
 | 子代理模型/Thinking 偏好 | backend `settings/model-prefs.ts`；UI `settings/providers/SubagentPanel.tsx`（protected knowledge roles 同页，显式不可用时 fail-closed） |
 | 自动更新 | `main/updater.ts` + `update-policy.ts` + shared `update.ts`；UI `session/UpdateButton.tsx`（顶栏）+ `settings/AboutPanel.tsx`（手动检查） |
 | 主题 / 背景图 / Markdown 代码块主题 | `stores/theme.ts` + `styles/globals.css`（双套 token）；main `background.ts` + `pi-bg://` 协议（CSP img-src 含 pi-bg:）；UI `settings/AppearancePanel.tsx`；代码块主题走 `Markdown.tsx` 的 isDark + 显式双主题 |

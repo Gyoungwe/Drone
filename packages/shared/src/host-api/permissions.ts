@@ -1,5 +1,5 @@
 import { Type } from "typebox";
-import type { AskResponse } from "../ask";
+import type { AskRequest, AskResolved, AskResponse } from "../ask";
 import type {
 	PermissionAuditTailEntry,
 	PermissionProbeInput,
@@ -8,7 +8,18 @@ import type {
 	PermissionSettingsSaveResult,
 	PermissionSettingsSnapshot,
 } from "../permission-settings";
-import type { ChannelWatchConfigInfo, ContextManagerConfigInfo, PermissionConfigInfo } from "../session";
+import type {
+	ChannelWatchConfigInfo,
+	ContextManagerConfigInfo,
+	ContextManagerMode,
+	PermissionAnswer,
+	PermissionConfigInfo,
+	PermissionMode,
+	PermissionRequest,
+	PermissionResolved,
+	TrustAnswer,
+	TrustRequest,
+} from "../session";
 import { defineDomain } from "./define";
 
 const PermissionSettingsSnapshotSchema = Type.Unsafe<PermissionSettingsSnapshot>({ type: "object" });
@@ -100,4 +111,50 @@ export const PermissionsContract = defineDomain("permissions", {
 		},
 		openLocation: { args: Type.Tuple([]), result: Type.Void() },
 	},
+	events: {
+		askRequest: Type.Unsafe<AskRequest>({ type: "object" }),
+		askResolved: Type.Unsafe<AskResolved>({ type: "object" }),
+		permissionRequest: Type.Unsafe<PermissionRequest>({ type: "object" }),
+		permissionResolved: Type.Unsafe<PermissionResolved>({ type: "object" }),
+		trustRequest: Type.Unsafe<TrustRequest>({ type: "object" }),
+	},
 });
+
+export interface PermissionsApi {
+	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
+	onAskRequest(cb: (req: AskRequest) => void): () => void;
+	onAskResolved(cb: (result: AskResolved) => void): () => void;
+	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;
+	/** 读取权限门控配置（enabled=false = 手改 permissions.json 的隐藏逃生舱态，chip 禁用提示用） */
+	getPermissionConfig(): Promise<PermissionConfigInfo>;
+	/** 设置 → 权限：读取规则文件快照（路径 / 原文 / 默认合并视图 / mtime） */
+	getPermissionSettings(): Promise<PermissionSettingsSnapshot>;
+	/** 设置 → 权限：保存（后端二次校验 + mtime 冲突检查；conflict 时不写盘，带回磁盘现状） */
+	savePermissionSettings(input: PermissionSettingsSaveInput): Promise<PermissionSettingsSaveResult>;
+	/** 设置 → 权限：恢复默认（enabled 保留文件原值） */
+	resetPermissionSettings(): Promise<PermissionSettingsSnapshot>;
+	/** 设置 → 权限：试算一条工具调用会命中哪条规则（可传未保存草稿；只跑规则链） */
+	probePermission(input: PermissionProbeInput): Promise<PermissionProbeResult>;
+	/** 设置 → 权限：审计日志尾部（最新在前，默认 20 条） */
+	getPermissionAuditTail(limit?: number): Promise<PermissionAuditTailEntry[]>;
+	/** 设置 → 权限：在文件管理器中定位 permissions.json（不存在则打开所在目录） */
+	openPermissionSettingsLocation(): Promise<void>;
+	/** 读取会话权限模式（default 缺省；关 tab 重开后端已归零，renderer 对齐真值用） */
+	getPermissionMode(sessionId: string): Promise<PermissionMode>;
+	/** 设置会话权限模式（内存态即时生效、不落盘、重启归零） */
+	setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void>;
+	/** 读取上下文管理模式（evaporation / off 二态派生） */
+	getContextManagerConfig(): Promise<ContextManagerConfigInfo>;
+	/** 设置上下文管理模式（写后 ≤2s 生效，无需重开会话） */
+	setContextManagerMode(mode: ContextManagerMode): Promise<void>;
+	/** 读取 channel-watch 频道唤醒开关状态 */
+	getChannelWatchConfig(): Promise<ChannelWatchConfigInfo>;
+	/** 设置 channel-watch 开关（下一 session_start 生效：目录 init/watcher/工具注册全部跟随） */
+	setChannelWatchEnabled(enabled: boolean): Promise<void>;
+	/** 应答项目信任请求（optionIndex 为 TrustRequest.options 下标） */
+	respondTrust(requestId: string, answer: TrustAnswer): Promise<void>;
+	onPermissionRequest(cb: (req: PermissionRequest) => void): () => void;
+	onPermissionResolved(cb: (result: PermissionResolved) => void): () => void;
+	/** 订阅项目信任请求；返回取消函数 */
+	onTrustRequest(cb: (req: TrustRequest) => void): () => void;
+}

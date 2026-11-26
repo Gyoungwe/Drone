@@ -5,7 +5,7 @@ import type {
 	ListProvidersOptions,
 	SubagentThinkingLevel,
 } from "@drone/shared";
-import { IpcChannels, SettingsContract } from "@drone/shared";
+import { SettingsContract } from "@drone/shared";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
@@ -63,27 +63,5 @@ export function registerSettingsIpc(
 		cancelProviderLogin: (loginId) => login.cancel(loginId),
 		respondProviderLogin: (loginId, promptId, value) => login.respond(loginId, promptId, value),
 	};
-	bindContract(SettingsContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				listProviders: IpcChannels.SettingsListProviders,
-				saveApiKey: IpcChannels.SettingsSaveApiKey,
-				removeCredential: IpcChannels.SettingsRemoveCredential,
-				addCustomProvider: IpcChannels.SettingsAddCustomProvider,
-				updateCustomProvider: IpcChannels.SettingsUpdateCustomProvider,
-				removeCustomProvider: IpcChannels.SettingsRemoveCustomProvider,
-				setProviderBaseUrl: IpcChannels.SettingsSetProviderBaseUrl,
-				testProvider: IpcChannels.SettingsTestProvider,
-				getModelPrefs: IpcChannels.SettingsGetModelPrefs,
-				setModelHidden: IpcChannels.SettingsSetModelHidden,
-				setModelsHidden: IpcChannels.SettingsSetModelsHidden,
-				setSubagentModel: IpcChannels.SettingsSetSubagentModel,
-				setSubagentThinking: IpcChannels.SettingsSetSubagentThinking,
-				setBackgroundReviewerModel: IpcChannels.SettingsSetBackgroundReviewerModel,
-				listSubagents: IpcChannels.SettingsListSubagents,
-				startProviderLogin: IpcChannels.SettingsLoginStart,
-				cancelProviderLogin: IpcChannels.SettingsLoginCancel,
-				respondProviderLogin: IpcChannels.SettingsLoginRespond,
-			})[method as keyof typeof SettingsContract.methods],
-	});
+	bindContract(SettingsContract, implementation);
 }

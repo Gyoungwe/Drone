@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve, sep } from "node:path";
-import { contractContentHash, createKnowledgeSnapshot, type KnowledgeSnapshot } from "@drone/shared";
+import { contractContentHash, createKnowledgeSnapshot } from "@drone/shared";
+import type { KnowledgeSnapshot } from "@gyoungwe/plugin-api/knowledge";
 
 export const TEXT_EXTENSIONS = new Set([
 	".txt",

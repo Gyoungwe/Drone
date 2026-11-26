@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { channelOf, DecisionsContract, SessionsContract } from "@drone/shared";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { registerAppIpc } from "../../packages/desktop/src/main/ipc/app.ts";
-import { IpcChannels } from "../../packages/shared/src/ipc.ts";
 import { verifyResourceReaders } from "./resource-checks.mjs";
 import { verifyScriptReaders } from "./script-checks.mjs";
 
@@ -26,9 +26,9 @@ async function run() {
 		// TasksPane reads the decisions projection on mount.  This acceptance
 		// fixture has no inquiry backend, so return the empty, valid projection
 		// instead of letting an unrelated IPC absence poison the UI console.
-		ipcMain.handle(IpcChannels.DecisionsList, () => []);
+		ipcMain.handle(channelOf(DecisionsContract, "list"), () => []);
 		let prompts = 0;
-		ipcMain.handle(IpcChannels.SessionPrompt, () => {
+		ipcMain.handle(channelOf(SessionsContract, "prompt"), () => {
 			prompts++;
 			return { kind: "command" };
 		});

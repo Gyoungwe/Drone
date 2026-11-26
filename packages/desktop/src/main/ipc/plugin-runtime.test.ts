@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { IpcChannels } from "@drone/shared";
+import { channelOf, PluginRuntimeContract, PluginRuntimeEventSchema } from "@drone/shared";
 import { expect, it, vi } from "vitest";
 import type { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
 
@@ -12,6 +12,18 @@ vi.mock("electron", () => ({
 
 import { registerPluginRuntimeIpc } from "./plugin-runtime";
 
+function handlerFor(method: keyof typeof PluginRuntimeContract.methods) {
+	const channel = channelOf(PluginRuntimeContract, method);
+	const handler = handlers.get(channel);
+	if (!handler) throw new Error(`Missing IPC handler for ${channel}`);
+	return handler;
+}
+
+it("declares the existing plugin runtime event channel", () => {
+	expect(PluginRuntimeContract.events).toEqual({ event: PluginRuntimeEventSchema });
+	expect(channelOf(PluginRuntimeContract, "event")).toBe("pluginRuntime:event");
+});
+
 it("preserves legacy invokes, validates optional request IDs and binds cancellation to the actual IPC sender", async () => {
 	const runtime = {
 		invoke: vi.fn(async () => "receipt"),
@@ -21,8 +33,8 @@ it("preserves legacy invokes, validates optional request IDs and binds cancellat
 	registerPluginRuntimeIpc(runtime as unknown as DesktopRuntimeBridge);
 	const sender = { id: 37 },
 		event = { sender };
-	const invoke = handlers.get(IpcChannels.PluginRuntimeInvoke)!;
-	const cancel = handlers.get(IpcChannels.PluginRuntimeCancel)!;
+	const invoke = handlerFor("invoke");
+	const cancel = handlerFor("cancel");
 	expect(await invoke(event, "binding", "write", null, "selection")).toBe("receipt");
 	expect(runtime.invoke).toHaveBeenLastCalledWith(sender, "binding", "write", null, "selection", undefined);
 	expect(await invoke(event, "binding", "write", null, "selection", "request-1")).toBe("receipt");

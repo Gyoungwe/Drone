@@ -24,8 +24,15 @@ vi.mock("electron", () => ({
 
 vi.mock("../institutional-access", () => mocks.institutional);
 
-import { InstitutionalContract, IpcChannels } from "@drone/shared";
+import { channelOf, InstitutionalContract } from "@drone/shared";
 import { registerInstitutionalIpc } from "./institutional";
+
+function handlerFor(method: keyof typeof InstitutionalContract.methods) {
+	const channel = channelOf(InstitutionalContract, method);
+	const handler = mocks.handlers.get(channel);
+	if (!handler) throw new Error(`Missing IPC handler for ${channel}`);
+	return handler;
+}
 
 const status = {
 	config: { version: 1, autoDownloadEnabled: true, perTaskLimit: 20 },
@@ -52,21 +59,17 @@ describe("registerInstitutionalIpc", () => {
 		mocks.fromWebContents.mockReturnValue({});
 	});
 
-	it("routes legacy channels through InstitutionalContract", async () => {
+	it("routes methods through InstitutionalContract", async () => {
 		registerInstitutionalIpc();
 		const mainFrame = {};
 		const event = { sender: { mainFrame }, senderFrame: mainFrame };
 
-		expect(await mocks.handlers.get(IpcChannels.InstitutionalGetStatus)!({})).toEqual(status);
-		expect(
-			await mocks.handlers.get(IpcChannels.InstitutionalSaveConfig)!(event, { institutionName: "Example" }),
-		).toEqual(status);
-		expect(await mocks.handlers.get(IpcChannels.InstitutionalOpenLogin)!(event)).toEqual({
+		expect(await handlerFor("getStatus")({})).toEqual(status);
+		expect(await handlerFor("saveConfig")(event, { institutionName: "Example" })).toEqual(status);
+		expect(await handlerFor("openLogin")(event)).toEqual({
 			url: "https://login.example.edu",
 		});
-		expect(
-			await mocks.handlers.get(IpcChannels.InstitutionalTestAccess)!(event, "https://example.edu"),
-		).toMatchObject({
+		expect(await handlerFor("testAccess")(event, "https://example.edu")).toMatchObject({
 			ok: true,
 		});
 		expect(mocks.institutional.saveConfig).toHaveBeenCalledWith({ institutionName: "Example" });
@@ -77,7 +80,7 @@ describe("registerInstitutionalIpc", () => {
 		registerInstitutionalIpc();
 		const mainFrame = {};
 		const event = { sender: { mainFrame }, senderFrame: mainFrame };
-		const invalid = await mocks.handlers.get(IpcChannels.InstitutionalTestAccess)!(event, 42);
+		const invalid = await handlerFor("testAccess")(event, 42);
 		expect(invalid).toMatchObject({ code: "invalid_arguments", severity: "error" });
 		expect(mocks.institutional.testAccess).not.toHaveBeenCalled();
 	});
@@ -86,10 +89,7 @@ describe("registerInstitutionalIpc", () => {
 		registerInstitutionalIpc();
 		mocks.fromWebContents.mockReturnValue(null);
 		await expect(
-			mocks.handlers.get(IpcChannels.InstitutionalOpenUrl)!(
-				{ sender: {}, senderFrame: null },
-				"https://example.edu",
-			),
+			handlerFor("openUrl")({ sender: {}, senderFrame: null }, "https://example.edu"),
 		).rejects.toThrow("requires main frame");
 		expect(mocks.institutional.openInstitutionalUrl).not.toHaveBeenCalled();
 	});
@@ -114,7 +114,7 @@ describe("registerInstitutionalIpc", () => {
 			})),
 		};
 		registerInstitutionalIpc({ institutional: service });
-		const result = await mocks.handlers.get(IpcChannels.InstitutionalGetStatus)!({});
+		const result = await handlerFor("getStatus")({});
 		expect(result).toEqual(status);
 		expect(service.getStatus).toHaveBeenCalledOnce();
 	});

@@ -20,15 +20,18 @@ export type NormalizedMethods<TMethods extends HostApiMethods> = {
 	};
 };
 export type HostApiEvents = Readonly<Record<string, TSchema>>;
+type HostApiChannels = Readonly<Record<string, `${string}:${string}`>>;
 
 export interface DomainContract<
 	TName extends string = string,
 	TMethods extends HostApiMethods = HostApiMethods,
 	TEvents extends HostApiEvents = HostApiEvents,
+	TChannels extends HostApiChannels = HostApiChannels,
 > {
 	readonly name: TName;
 	readonly methods: TMethods;
 	readonly events: TEvents;
+	readonly channels?: TChannels;
 }
 
 /**
@@ -39,10 +42,15 @@ export function defineDomain<
 	const TName extends string,
 	const TMethods extends HostApiMethods,
 	const TEvents extends HostApiEvents = Record<never, never>,
+	const TChannels extends HostApiChannels = Record<never, never>,
 >(
 	name: TName,
-	spec: { readonly methods: TMethods; readonly events?: TEvents },
-): DomainContract<TName, NormalizedMethods<TMethods>, TEvents> {
+	spec: {
+		readonly methods: TMethods;
+		readonly events?: TEvents;
+		readonly channels?: TChannels & Record<Exclude<keyof TChannels, keyof TMethods | keyof TEvents>, never>;
+	},
+): DomainContract<TName, NormalizedMethods<TMethods>, TEvents, TChannels> {
 	const methods = Object.fromEntries(
 		Object.entries(spec.methods).map(([methodName, method]) => [
 			methodName,
@@ -53,16 +61,23 @@ export function defineDomain<
 		name,
 		methods,
 		events: (spec.events ?? {}) as TEvents,
+		...(spec.channels && { channels: spec.channels }),
 	};
 }
 
 /** Return the stable channel name for a domain method or event. */
-export function channelOf<const TName extends string, const TMethod extends string>(
-	domain: TName | Pick<DomainContract<TName>, "name">,
+export function channelOf<
+	const TName extends string,
+	const TMethod extends string,
+	const TChannels extends HostApiChannels = Record<never, never>,
+>(
+	domain: TName | { readonly name: TName; readonly channels?: TChannels },
 	method: TMethod,
-): `${TName}:${TMethod}` {
-	const name = typeof domain === "string" ? domain : domain.name;
-	return `${name}:${method}` as `${TName}:${TMethod}`;
+): `${TName}:${TMethod}` | TChannels[TMethod & keyof TChannels] {
+	if (typeof domain === "string") return `${domain}:${method}`;
+	const channels = domain.channels;
+	if (channels && Object.hasOwn(channels, method)) return channels[method as TMethod & keyof TChannels];
+	return `${domain.name}:${method}`;
 }
 
 type MethodArgs<TMethod> =

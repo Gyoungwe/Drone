@@ -43,5 +43,19 @@ export const PluginRuntimeContract = defineDomain("pluginRuntime", {
 			result: Type.Boolean(),
 		},
 	},
-	events: { changed: PluginRuntimeEventSchema },
+	events: { event: PluginRuntimeEventSchema },
 });
+
+export interface PluginRuntimeApi {
+	/** Opaque main-issued binding; caller cannot select plugin identity or scope. */
+	onPluginRuntimeEvent(cb: (event: PluginRuntimeEvent) => void): () => void;
+	pluginRuntimeSelectSession(sessionId: string | null): Promise<string>;
+	pluginRuntimeInvoke(
+		binding: string,
+		operation: string,
+		input: unknown,
+		selectionToken: string,
+		requestId?: string,
+	): Promise<unknown>;
+	pluginRuntimeCancel(binding: string, selectionToken: string, requestId: string): Promise<boolean>;
+}

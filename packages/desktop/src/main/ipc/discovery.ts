@@ -1,5 +1,5 @@
 import type { BackendServices, DiscoveryServicePort } from "@drone/backend";
-import { DiscoveryContract, IpcChannels } from "@drone/shared";
+import { DiscoveryContract } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -20,17 +20,6 @@ function requireMainFrame(event: unknown): void {
 export function registerDiscoveryIpc(backendOrDiscovery: BackendServices | DiscoveryServicePort): () => void {
 	const implementation = createDiscoveryIpcImplementation(backendOrDiscovery);
 	return bindContract(DiscoveryContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				getCapabilities: IpcChannels.DiscoveryCapabilities,
-				listKernelSessions: IpcChannels.DiscoveryKernelSessions,
-				getKernelSession: IpcChannels.DiscoveryKernelSession,
-				closeKernelSession: IpcChannels.DiscoveryCloseKernelSession,
-				listCriticReviews: IpcChannels.DiscoveryCriticReviews,
-				listMultipathAssessments: IpcChannels.DiscoveryMultipathAssessments,
-				listExplorationPlans: IpcChannels.DiscoveryExplorationPlans,
-				listEvaluations: IpcChannels.DiscoveryEvaluations,
-			})[method as keyof typeof DiscoveryContract.methods],
 		beforeInvoke: (event) => requireMainFrame(event),
 	});
 }

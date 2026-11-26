@@ -100,4 +100,19 @@ export type InstitutionalSchemaTypes = {
 	testAccess: [url: string];
 };
 
+export interface InstitutionalApi {
+	/** 机构访问状态（配置 + 会话 Cookie + 是否已登录）；文献库面板用 */
+	getInstitutionalStatus(): Promise<InstitutionalStatus>;
+	/** 保存机构访问配置（EZproxy 模板 / OpenURL / 机构名 / 自动下载开关 / 上限） */
+	saveInstitutionalConfig(input: InstitutionalSaveInput): Promise<InstitutionalStatus>;
+	/** 打开机构登录窗口（可选 URL，未传则用上次或模板） */
+	openInstitutionalLogin(url?: string): Promise<{ url: string }>;
+	/** 在机构会话窗口中打开指定 URL（用于手动下载或测试） */
+	openInstitutionalUrl(url: string): Promise<{ url: string }>;
+	/** 清除机构会话（Cookie + 存储） */
+	clearInstitutionalSession(): Promise<InstitutionalStatus>;
+	/** 测试机构访问是否可达（经 EZproxy 模板与会话） */
+	testInstitutionalAccess(url: string): Promise<InstitutionalTestResult>;
+}
+
 export type { InstitutionalConfig, InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult };

@@ -51,3 +51,20 @@ export const MemoryContract = defineDomain("memory", {
 		},
 	},
 });
+
+export interface MemoryApi {
+	/** 读取项目（cwd）观察记忆状态。 */
+	memoryGetStatus(cwd: string): Promise<MemoryProjectStatus>;
+	/** 开关项目观察记忆的捕获与注入。 */
+	memorySetEnabled(cwd: string, enabled: boolean): Promise<MemoryProjectStatus>;
+	/** 清空项目观察记忆。 */
+	memoryClear(cwd: string): Promise<MemoryProjectStatus>;
+	/** 列出项目最近的观察记忆。 */
+	memoryList(cwd: string): Promise<MemoryListItem[]>;
+	/** 删除一条观察记忆。 */
+	memoryRemove(cwd: string, id: number): Promise<MemoryProjectStatus>;
+	/** 把一条观察提升为项目记忆（.pi/memory/）。 */
+	memoryPromote(cwd: string, id: number): Promise<MemoryProjectStatus>;
+	/** 把一条观察沉淀到知识库「记忆」分类。 */
+	memoryPromoteToKnowledge(cwd: string, id: number): Promise<{ path: string }>;
+}

@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import { isMainModule } from "./is-main-module.mjs";
 
 const baselinePath = "scripts/fixtures/zero-domain-baseline.json";
@@ -33,8 +34,10 @@ const packageSpecifier =
 const domainResource = /research-workbench|\.pi\/(?:extensions|skills\/)|plugin-packages|vendor\/plugins/;
 const domainCommand =
 	/(?:^|[\n;&|()])\s*npm\s+(?:run|run-script)\s+(["']?)(?:build:pi-(?:core|research)|fetch:plugins|check:(?:[\w:-]+-runtime|pi-research|pi-core|builtin-plugins))\1(?=$|[\s;&|()])/;
-const domainChannel =
-	/(["'`])((?:researchSkills|(?:knowledge|research|zotero|analysis|evidence|discovery|inquiry|daily)):[\w:.-]+)\1/g;
+const domainChannelName =
+	/(?:researchSkills|knowledge|research|zotero|analysis|evidence|discovery|inquiry|daily):[\w:.-]+/;
+const domainChannelLiteral = new RegExp(`(["'\`])(${domainChannelName.source})\\1`, "g");
+const domainChannelValue = new RegExp(`^${domainChannelName.source}$`);
 /**
  * The host's own first-party inventory.
  *
@@ -137,6 +140,49 @@ function inventoryHostCatalog(root) {
 		: [];
 }
 
+function ipcChannelLiterals(source) {
+	return Array.from(source.matchAll(domainChannelLiteral), (match) => match[2]);
+}
+
+function channelsFromDomainCall(call) {
+	if (!ts.isIdentifier(call.expression) || call.expression.text !== "defineDomain") return [];
+	const [domain, spec] = call.arguments;
+	if (!domain || !ts.isStringLiteralLike(domain) || !spec || !ts.isObjectLiteralExpression(spec)) return [];
+	return spec.properties
+		.filter(
+			(group) =>
+				ts.isPropertyAssignment(group) &&
+				(group.name.text === "methods" || group.name.text === "events") &&
+				ts.isObjectLiteralExpression(group.initializer),
+		)
+		.flatMap((group) => group.initializer.properties)
+		.flatMap(({ name }) => (name?.text === undefined ? [] : [`${domain.text}:${name.text}`]))
+		.filter((channel) => domainChannelValue.test(channel));
+}
+
+function contractChannels(file, source) {
+	const channels = [];
+	function visit(node) {
+		if (ts.isCallExpression(node)) channels.push(...channelsFromDomainCall(node));
+		ts.forEachChild(node, visit);
+	}
+	visit(ts.createSourceFile(file, source, ts.ScriptTarget.Latest));
+	return channels;
+}
+
+function inventoryDomainChannels(root) {
+	const channels = [];
+	const hostApi = join(root, "packages/shared/src/host-api");
+	if (!existsSync(hostApi)) return channels;
+	for (const entry of readdirSync(hostApi, { withFileTypes: true })) {
+		if (!entry.isFile() || !entry.name.endsWith(".ts") || entry.name.includes(".test.")) continue;
+		const file = join(hostApi, entry.name);
+		const source = readFileSync(file, "utf8");
+		channels.push(...ipcChannelLiterals(source), ...contractChannels(file, source));
+	}
+	return channels;
+}
+
 export function collectZeroDomainFindings(root) {
 	const packagesDir = join(root, "packages");
 	const packageDirs = existsSync(packagesDir)
@@ -148,7 +194,6 @@ export function collectZeroDomainFindings(root) {
 	const lock = readOptional(join(root, "plugins.lock.json"));
 	const plugins = lock === undefined ? [] : JSON.parse(lock).plugins;
 	const builder = readOptional(join(root, "packages/desktop/electron-builder.yml"));
-	const ipc = readOptional(join(root, "packages/shared/src/ipc.ts"));
 	const findings = {
 		lockEntries: plugins.map((plugin) => plugin.name),
 		builtinEntries: plugins.filter((plugin) => plugin.builtin === true).map((plugin) => plugin.name),
@@ -159,7 +204,7 @@ export function collectZeroDomainFindings(root) {
 		rootScripts: Object.entries(rootManifest.scripts ?? {})
 			.filter(([, command]) => domainCommand.test(command))
 			.map(([name]) => name),
-		domainIpcChannels: [...(ipc ?? "").matchAll(domainChannel)].map((match) => match[2]),
+		domainIpcChannels: inventoryDomainChannels(root),
 	};
 	return Object.fromEntries(Object.entries(findings).map(([category, keys]) => [category, sortedKeys(keys)]));
 }

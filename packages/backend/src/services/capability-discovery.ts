@@ -5,9 +5,7 @@ import {
 	type CapabilityEnvironmentProbe,
 	type CapabilityRequest,
 	type CapabilityResearchPlan,
-	type CapabilitySourceReceipt,
 	type CapabilityValidationGate,
-	type ContractParentRef,
 	capabilityReference,
 	createCapabilityRequest,
 	parseCapabilityReference,
@@ -15,6 +13,7 @@ import {
 	type ValidationEvidenceCapsule,
 } from "@drone/shared";
 import type { AnalysisAdapterRegistryPort } from "@gyoungwe/plugin-api";
+import type { CapabilitySourceReceipt, ContractParentRef } from "@gyoungwe/plugin-api/knowledge";
 
 export interface CapabilityRequestStore {
 	get(id: string): Promise<CapabilityRequest | undefined>;

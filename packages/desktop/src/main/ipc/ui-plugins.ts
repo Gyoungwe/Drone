@@ -1,4 +1,4 @@
-import { IpcChannels, KNOWN_UI_SLOTS, type UiPluginsConfig, UiPluginsContract } from "@drone/shared";
+import { channelOf, KNOWN_UI_SLOTS, type UiPluginsConfig, UiPluginsContract } from "@drone/shared";
 import { shell } from "electron";
 import { loadUiPluginsConfig } from "../ui-plugins/config";
 import type { UiPluginManager } from "../ui-plugins/manager";
@@ -8,7 +8,7 @@ import { sendToRenderer } from "./index";
 
 /** 配置类变更（总开关/启用/指派）→ 通知 renderer 全量对齐 */
 function pushConfigEvent(): void {
-	sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "config" });
+	sendToRenderer(channelOf(UiPluginsContract, "event"), { kind: "config" });
 }
 
 /**
@@ -91,17 +91,5 @@ export function registerUiPluginsIpc(manager: UiPluginManager, runtime: DesktopR
 			void shell.openPath(dir);
 		},
 	});
-	bindContract(UiPluginsContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				getConfig: IpcChannels.UiPluginsGetConfig,
-				setEnabled: IpcChannels.UiPluginsSetEnabled,
-				list: IpcChannels.UiPluginsList,
-				readCode: IpcChannels.UiPluginsReadCode,
-				setPluginEnabled: IpcChannels.UiPluginsSetPluginEnabled,
-				assignSlot: IpcChannels.UiPluginsAssignSlot,
-				rebuild: IpcChannels.UiPluginsRebuild,
-				openDir: IpcChannels.UiPluginsOpenDir,
-			})[method as keyof typeof UiPluginsContract.methods],
-	});
+	bindContract(UiPluginsContract, implementation);
 }

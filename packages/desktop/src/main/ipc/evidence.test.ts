@@ -13,8 +13,15 @@ vi.mock("electron", () => ({
 	BrowserWindow: { fromWebContents: mocks.fromWebContents },
 }));
 
-import { IpcChannels } from "@drone/shared";
+import { channelOf, EvidenceContract } from "@drone/shared";
 import { registerEvidenceIpc } from "./evidence";
+
+function handlerFor(method: keyof typeof EvidenceContract.methods) {
+	const channel = channelOf(EvidenceContract, method);
+	const handler = mocks.handlers.get(channel);
+	if (!handler) throw new Error(`Missing IPC handler for ${channel}`);
+	return handler;
+}
 
 describe("evidence IPC", () => {
 	beforeEach(() => {
@@ -71,20 +78,20 @@ describe("evidence IPC", () => {
 		registerEvidenceIpc(service as never);
 		const frame = {};
 		const event = { sender: { mainFrame: frame }, senderFrame: frame };
-		expect(await mocks.handlers.get(IpcChannels.EvidenceOverview)!(event)).toEqual({
+		expect(await handlerFor("getEvidenceOverview")(event)).toEqual({
 			analyses: [],
 			capabilities: [],
 			checkpoints: [],
 			branches: [],
 			replays: [],
 		});
-		await mocks.handlers.get(IpcChannels.EvidenceFreeze)!(event, "run-1", "/tmp/results");
+		await handlerFor("freezeAnalysisEvidence")(event, "run-1", "/tmp/results");
 		expect(service.freezeRecorded).toHaveBeenCalledWith("run-1", "/tmp/results");
-		await mocks.handlers.get(IpcChannels.EvidenceExport)!(event, "a".repeat(64), "private");
+		await handlerFor("exportEvidenceCapsule")(event, "a".repeat(64), "private");
 		expect(service.exportCapsule).toHaveBeenCalledWith("a".repeat(64), "private");
-		await mocks.handlers.get(IpcChannels.EvidenceImport)!(event, "/tmp/capsule.json");
+		await handlerFor("importEvidenceCapsule")(event, "/tmp/capsule.json");
 		expect(service.importCapsule).toHaveBeenCalledWith("/tmp/capsule.json");
-		await mocks.handlers.get(IpcChannels.EvidenceReplay)!(event, "a".repeat(64));
+		await handlerFor("replayEvidenceCheckpoint")(event, "a".repeat(64));
 		expect(service.replay).toHaveBeenCalledWith("a".repeat(64));
 	});
 	it("rejects renderer frames before dispatch", async () => {
@@ -100,7 +107,7 @@ describe("evidence IPC", () => {
 		registerEvidenceIpc(service as never);
 		const frame = {};
 		const event = { sender: { mainFrame: frame }, senderFrame: {} };
-		await expect(mocks.handlers.get(IpcChannels.EvidenceOverview)!(event)).rejects.toThrow("main frame");
+		await expect(handlerFor("getEvidenceOverview")(event)).rejects.toThrow("main frame");
 		expect(service.overview).not.toHaveBeenCalled();
 	});
 });

@@ -1,5 +1,5 @@
 import type { BackendServices } from "@drone/backend";
-import { IpcChannels, ResearchContract } from "@drone/shared";
+import { ResearchContract } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -28,21 +28,6 @@ export function registerResearchIpc(backend: BackendServices): void {
 		listWriteAudit: async () => ({ items: [...(await backend.researchWrites.listAudit())] }),
 	};
 	bindContract(ResearchContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				captureResource: IpcChannels.ResearchCapture,
-				approveCapture: IpcChannels.ResearchApproveCapture,
-				revokeCapture: IpcChannels.ResearchRevokeCapture,
-				listCaptures: IpcChannels.ResearchListCaptures,
-				searchResources: IpcChannels.ResearchSearch,
-				listConnectors: IpcChannels.ResearchListConnectors,
-				setConnectorEnabled: IpcChannels.ResearchSetConnectorEnabled,
-				listWriteAdapters: IpcChannels.ResearchListWriteAdapters,
-				prepareWrite: IpcChannels.ResearchPrepareWrite,
-				executeWrite: IpcChannels.ResearchExecuteWrite,
-				revokeWrite: IpcChannels.ResearchRevokeWrite,
-				listWriteAudit: IpcChannels.ResearchListWriteAudit,
-			})[method as keyof typeof ResearchContract.methods],
 		beforeInvoke: (event) => {
 			const invokeEvent = event as {
 				sender?: Electron.WebContents;

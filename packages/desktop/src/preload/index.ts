@@ -9,7 +9,6 @@ import {
 	EvidenceContract,
 	InquiryContract,
 	InstitutionalContract,
-	IpcChannels,
 	KnowledgeContract,
 	McpContract,
 	MemoryContract,
@@ -25,304 +24,36 @@ import {
 	UiPluginsContract,
 	ZoteroContract,
 } from "@drone/shared";
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge } from "electron";
 import { exposeContract } from "./expose-contract";
 
 type InvokeFn = (...args: any[]) => Promise<any>;
 const invoke = (client: Record<string, unknown>, method: string): InvokeFn =>
 	((...args: any[]) => (client[method] as InvokeFn)(...args)) as InvokeFn;
 
-const channelFrom = (channels: Record<string, string>, method: string): string => {
-	const channel = channels[method];
-	if (!channel) throw new Error(`Missing IPC channel mapping: ${method}`);
-	return channel;
-};
-
-const appClient = exposeContract(AppContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getInfo: IpcChannels.AppGetInfo,
-				getDiagnostics: IpcChannels.AppGetDiagnostics,
-				getDailyDir: IpcChannels.AppGetDailyDir,
-				openExternal: IpcChannels.AppOpenExternal,
-				filePreview: IpcChannels.FilePreview,
-				htmlPreviewUrl: IpcChannels.FileHtmlPreviewUrl,
-				getFigureAnnotations: IpcChannels.FigureAnnotationsGet,
-				saveFigureAnnotations: IpcChannels.FigureAnnotationsSave,
-				importDroppedFile: IpcChannels.FileImportDropped,
-				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
-				fileAction: IpcChannels.FileAction,
-				hostEnvironment: IpcChannels.HostEnvironment,
-				pickDownloadDir: IpcChannels.DownloadDirPick,
-				setAttentionBadge: IpcChannels.AttentionBadgeSet,
-				loadTabs: IpcChannels.TabsLoad,
-				saveTabs: IpcChannels.TabsSave,
-				loadUiState: IpcChannels.UiStateLoad,
-				saveUiState: IpcChannels.UiStateSave,
-				pickBackgroundImage: IpcChannels.BackgroundPick,
-				checkForUpdates: IpcChannels.UpdateCheck,
-				downloadUpdate: IpcChannels.UpdateDownload,
-				installUpdate: IpcChannels.UpdateInstall,
-				checkResearchSkills: IpcChannels.ResearchSkillCheck,
-				updateResearchSkills: IpcChannels.ResearchSkillUpdate,
-				restartForResearchSkills: IpcChannels.ResearchSkillRestart,
-				listSkillRepositories: IpcChannels.SkillRepositoryList,
-				addSkillRepository: IpcChannels.SkillRepositoryAdd,
-				checkSkillRepository: IpcChannels.SkillRepositoryCheck,
-				updateSkillRepository: IpcChannels.SkillRepositoryUpdate,
-				removeSkillRepository: IpcChannels.SkillRepositoryRemove,
-				saveFileDialog: IpcChannels.FileSaveDialog,
-				pickPath: IpcChannels.FilePickPath,
-				pickDirectory: IpcChannels.ProjectPickDirectory,
-				formalKnowledgeVault: IpcChannels.KnowledgeFormalVault,
-				getGitBranch: IpcChannels.ProjectGetGitBranch,
-				listGitBranches: IpcChannels.ProjectListGitBranches,
-				checkoutBranch: IpcChannels.ProjectCheckoutBranch,
-			},
-			method,
-		),
-});
+const { getInfo: getAppInfo, filePreview, resourceOpenExternal, ...appClient } = exposeContract(AppContract);
 const knowledgeClient = exposeContract(KnowledgeContract);
 const dailyClient = exposeContract(DailyContract);
 const zoteroClient = exposeContract(ZoteroContract);
-const researchClient = exposeContract(ResearchContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				captureResource: IpcChannels.ResearchCapture,
-				approveCapture: IpcChannels.ResearchApproveCapture,
-				revokeCapture: IpcChannels.ResearchRevokeCapture,
-				listCaptures: IpcChannels.ResearchListCaptures,
-				searchResources: IpcChannels.ResearchSearch,
-				listConnectors: IpcChannels.ResearchListConnectors,
-				setConnectorEnabled: IpcChannels.ResearchSetConnectorEnabled,
-				listWriteAdapters: IpcChannels.ResearchListWriteAdapters,
-				prepareWrite: IpcChannels.ResearchPrepareWrite,
-				executeWrite: IpcChannels.ResearchExecuteWrite,
-				revokeWrite: IpcChannels.ResearchRevokeWrite,
-				listWriteAudit: IpcChannels.ResearchListWriteAudit,
-			},
-			method,
-		),
-});
-const settingsClient = exposeContract(SettingsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				listProviders: IpcChannels.SettingsListProviders,
-				saveApiKey: IpcChannels.SettingsSaveApiKey,
-				removeCredential: IpcChannels.SettingsRemoveCredential,
-				addCustomProvider: IpcChannels.SettingsAddCustomProvider,
-				updateCustomProvider: IpcChannels.SettingsUpdateCustomProvider,
-				removeCustomProvider: IpcChannels.SettingsRemoveCustomProvider,
-				setProviderBaseUrl: IpcChannels.SettingsSetProviderBaseUrl,
-				testProvider: IpcChannels.SettingsTestProvider,
-				getModelPrefs: IpcChannels.SettingsGetModelPrefs,
-				setModelHidden: IpcChannels.SettingsSetModelHidden,
-				setModelsHidden: IpcChannels.SettingsSetModelsHidden,
-				setSubagentModel: IpcChannels.SettingsSetSubagentModel,
-				setSubagentThinking: IpcChannels.SettingsSetSubagentThinking,
-				setBackgroundReviewerModel: IpcChannels.SettingsSetBackgroundReviewerModel,
-				listSubagents: IpcChannels.SettingsListSubagents,
-				startProviderLogin: IpcChannels.SettingsLoginStart,
-				cancelProviderLogin: IpcChannels.SettingsLoginCancel,
-				respondProviderLogin: IpcChannels.SettingsLoginRespond,
-			},
-			method,
-		),
-});
-const permissionsClient = exposeContract(PermissionsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				load: IpcChannels.PermissionSettingsLoad,
-				save: IpcChannels.PermissionSettingsSave,
-				reset: IpcChannels.PermissionSettingsReset,
-				probe: IpcChannels.PermissionSettingsProbe,
-				auditTail: IpcChannels.PermissionSettingsAuditTail,
-				respondAsk: IpcChannels.AskRespond,
-				respondPermission: IpcChannels.PermissionRespond,
-				getConfig: IpcChannels.PermissionGetConfig,
-				getMode: IpcChannels.PermissionGetMode,
-				setMode: IpcChannels.PermissionSetMode,
-				contextManagerGetConfig: IpcChannels.ContextManagerGetConfig,
-				contextManagerSetMode: IpcChannels.ContextManagerSetMode,
-				channelWatchGetConfig: IpcChannels.ChannelWatchGetConfig,
-				channelWatchSetEnabled: IpcChannels.ChannelWatchSetEnabled,
-				respondTrust: IpcChannels.TrustRespond,
-				openLocation: IpcChannels.PermissionSettingsOpenLocation,
-			},
-			method,
-		),
-});
-const subagentsClient = exposeContract(SubagentsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				list: IpcChannels.SubagentsList,
-				dispatch: IpcChannels.SubagentsDispatch,
-				abort: IpcChannels.SubagentsAbort,
-				runs: IpcChannels.SubagentsRuns,
-			},
-			method,
-		),
-});
-const packagesClient = exposeContract(PackagesContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				searchCatalog: IpcChannels.PackagesSearchCatalog,
-				installPackage: IpcChannels.PackagesInstall,
-				updatePackage: IpcChannels.PackagesUpdate,
-				rollbackPackage: IpcChannels.PackagesRollback,
-				removePackage: IpcChannels.PackagesRemove,
-				listConfiguredPackages: IpcChannels.PackagesListConfigured,
-				latestPackageVersions: IpcChannels.PackagesLatestVersions,
-				pluginPackageMetadata: IpcChannels.PackagesPluginMetadata,
-			},
-			method,
-		),
-});
-const institutionalClient = exposeContract(InstitutionalContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getStatus: IpcChannels.InstitutionalGetStatus,
-				saveConfig: IpcChannels.InstitutionalSaveConfig,
-				openLogin: IpcChannels.InstitutionalOpenLogin,
-				openUrl: IpcChannels.InstitutionalOpenUrl,
-				clear: IpcChannels.InstitutionalClear,
-				testAccess: IpcChannels.InstitutionalTestAccess,
-			},
-			method,
-		),
-});
-const memoryClient = exposeContract(MemoryContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getStatus: IpcChannels.MemoryGetStatus,
-				setEnabled: IpcChannels.MemorySetEnabled,
-				clear: IpcChannels.MemoryClear,
-				list: IpcChannels.MemoryList,
-				remove: IpcChannels.MemoryRemove,
-				promote: IpcChannels.MemoryPromote,
-				promoteToKnowledge: IpcChannels.MemoryPromoteToKnowledge,
-			},
-			method,
-		),
-});
-const mcpClient = exposeContract(McpContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getStatus: IpcChannels.McpGetStatus,
-				getConfig: IpcChannels.McpGetConfig,
-				setServerEnabled: IpcChannels.McpSetServerEnabled,
-				openConfig: IpcChannels.McpOpenConfig,
-				addPreset: IpcChannels.McpAddPreset,
-			},
-			method,
-		),
-});
+const researchClient = exposeContract(ResearchContract);
+const settingsClient = exposeContract(SettingsContract);
+const { onLoginEvent: onProviderLoginEvent, ...settingsMethods } = settingsClient;
+const permissionsClient = exposeContract(PermissionsContract);
+const sessionsClient = exposeContract(SessionsContract);
+const subagentsClient = exposeContract(SubagentsContract);
+const packagesClient = exposeContract(PackagesContract);
+const institutionalClient = exposeContract(InstitutionalContract);
+const memoryClient = exposeContract(MemoryContract);
+const mcpClient = exposeContract(McpContract);
 const pluginRuntimeClient = exposeContract(PluginRuntimeContract);
 const pluginCredentialsClient = exposeContract(PluginCredentialsContract);
 const backgroundJobsClient = exposeContract(BackgroundJobsContract);
-const uiPluginsClient = exposeContract(UiPluginsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getConfig: IpcChannels.UiPluginsGetConfig,
-				setEnabled: IpcChannels.UiPluginsSetEnabled,
-				list: IpcChannels.UiPluginsList,
-				readCode: IpcChannels.UiPluginsReadCode,
-				setPluginEnabled: IpcChannels.UiPluginsSetPluginEnabled,
-				assignSlot: IpcChannels.UiPluginsAssignSlot,
-				rebuild: IpcChannels.UiPluginsRebuild,
-				openDir: IpcChannels.UiPluginsOpenDir,
-			},
-			method,
-		),
-});
-const computeClient = exposeContract(ComputeContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				listHosts: IpcChannels.ComputeListHosts,
-				listSshConfig: IpcChannels.ComputeListSshConfig,
-				getHost: IpcChannels.ComputeGetHost,
-				saveHost: IpcChannels.ComputeSaveHost,
-				removeHost: IpcChannels.ComputeRemoveHost,
-				probeHost: IpcChannels.ComputeProbeHost,
-				getHealthSnapshot: IpcChannels.ComputeHealth,
-				listJobs: IpcChannels.ComputeJobs,
-				getJob: IpcChannels.ComputeJob,
-				submitJob: IpcChannels.ComputeSubmitJob,
-				getLogs: IpcChannels.ComputeLogs,
-				cancelJob: IpcChannels.ComputeCancelJob,
-				openTerminal: IpcChannels.ComputeOpenTerminal,
-				getTerminal: IpcChannels.ComputeGetTerminal,
-				writeTerminal: IpcChannels.ComputeWriteTerminal,
-				closeTerminal: IpcChannels.ComputeCloseTerminal,
-				getOnboardingStatus: IpcChannels.ComputeOnboarding,
-				checkOnboardingStep: IpcChannels.ComputeCheckOnboarding,
-			},
-			method,
-		),
-});
-const evidenceClient = exposeContract(EvidenceContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getEvidenceOverview: IpcChannels.EvidenceOverview,
-				freezeAnalysisEvidence: IpcChannels.EvidenceFreeze,
-				forkEvidenceCheckpoint: IpcChannels.EvidenceFork,
-				exportEvidenceCapsule: IpcChannels.EvidenceExport,
-				importEvidenceCapsule: IpcChannels.EvidenceImport,
-				replayEvidenceCheckpoint: IpcChannels.EvidenceReplay,
-			},
-			method,
-		),
-});
-const discoveryClient = exposeContract(DiscoveryContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getCapabilities: IpcChannels.DiscoveryCapabilities,
-				listKernelSessions: IpcChannels.DiscoveryKernelSessions,
-				getKernelSession: IpcChannels.DiscoveryKernelSession,
-				closeKernelSession: IpcChannels.DiscoveryCloseKernelSession,
-				listCriticReviews: IpcChannels.DiscoveryCriticReviews,
-				listMultipathAssessments: IpcChannels.DiscoveryMultipathAssessments,
-				listExplorationPlans: IpcChannels.DiscoveryExplorationPlans,
-				listEvaluations: IpcChannels.DiscoveryEvaluations,
-			},
-			method,
-		),
-});
-const decisionsClient = exposeContract(DecisionsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				list: IpcChannels.DecisionsList,
-				revoke: IpcChannels.DecisionsRevoke,
-				confirm: IpcChannels.DecisionsConfirm,
-			},
-			method,
-		),
-});
-const inquiryClient = exposeContract(InquiryContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				listArtifacts: IpcChannels.InquiryArtifacts,
-				artifactProvenance: IpcChannels.InquiryArtifactProvenance,
-				rerunArtifact: IpcChannels.InquiryRerunArtifact,
-			},
-			method,
-		),
-});
+const uiPluginsClient = exposeContract(UiPluginsContract);
+const computeClient = exposeContract(ComputeContract);
+const evidenceClient = exposeContract(EvidenceContract);
+const discoveryClient = exposeContract(DiscoveryContract);
+const decisionsClient = exposeContract(DecisionsContract);
+const inquiryClient = exposeContract(InquiryContract);
 /**
  * 中性路由客户端：域由通道承载，域内操作名由载荷承载。
  * 宿主只保留操作名清单作为授权边界；域内的 schema 与校验归插件所有。
@@ -343,30 +74,12 @@ const invokeApi = {
 	...decisionsClient,
 	...inquiryClient,
 	...knowledgeApi,
-	captureResource: invoke(researchClient, "captureResource"),
-	approveCapture: invoke(researchClient, "approveCapture"),
-	revokeCapture: invoke(researchClient, "revokeCapture"),
-	listCaptures: invoke(researchClient, "listCaptures"),
-	searchResources: invoke(researchClient, "searchResources"),
-	listConnectors: invoke(researchClient, "listConnectors"),
-	setConnectorEnabled: invoke(researchClient, "setConnectorEnabled"),
-	listWriteAdapters: invoke(researchClient, "listWriteAdapters"),
-	prepareWrite: invoke(researchClient, "prepareWrite"),
-	executeWrite: invoke(researchClient, "executeWrite"),
-	revokeWrite: invoke(researchClient, "revokeWrite"),
-	listWriteAudit: invoke(researchClient, "listWriteAudit"),
+	...researchClient,
 	listSessionSubagents: invoke(subagentsClient, "list"),
 	dispatchSubagents: invoke(subagentsClient, "dispatch"),
 	abortSubagentRun: invoke(subagentsClient, "abort"),
 	listSubagentRuns: invoke(subagentsClient, "runs"),
-	searchCatalog: invoke(packagesClient, "searchCatalog"),
-	installPackage: invoke(packagesClient, "installPackage"),
-	updatePackage: invoke(packagesClient, "updatePackage"),
-	rollbackPackage: invoke(packagesClient, "rollbackPackage"),
-	removePackage: invoke(packagesClient, "removePackage"),
-	listConfiguredPackages: invoke(packagesClient, "listConfiguredPackages"),
-	latestPackageVersions: invoke(packagesClient, "latestPackageVersions"),
-	pluginPackageMetadata: invoke(packagesClient, "pluginPackageMetadata"),
+	...packagesClient,
 	getInstitutionalStatus: invoke(institutionalClient, "getStatus"),
 	saveInstitutionalConfig: invoke(institutionalClient, "saveConfig"),
 	openInstitutionalLogin: invoke(institutionalClient, "openLogin"),
@@ -396,152 +109,49 @@ const invokeApi = {
 	uiPluginsAssignSlot: invoke(uiPluginsClient, "assignSlot"),
 	uiPluginsRebuild: invoke(uiPluginsClient, "rebuild"),
 	uiPluginsOpenDir: invoke(uiPluginsClient, "openDir"),
-	listProviders: invoke(settingsClient, "listProviders"),
-	saveApiKey: invoke(settingsClient, "saveApiKey"),
-	removeCredential: invoke(settingsClient, "removeCredential"),
-	addCustomProvider: invoke(settingsClient, "addCustomProvider"),
-	updateCustomProvider: invoke(settingsClient, "updateCustomProvider"),
-	removeCustomProvider: invoke(settingsClient, "removeCustomProvider"),
-	setProviderBaseUrl: invoke(settingsClient, "setProviderBaseUrl"),
-	testProvider: invoke(settingsClient, "testProvider"),
-	getModelPrefs: invoke(settingsClient, "getModelPrefs"),
-	setModelHidden: invoke(settingsClient, "setModelHidden"),
-	setModelsHidden: invoke(settingsClient, "setModelsHidden"),
-	setSubagentModel: invoke(settingsClient, "setSubagentModel"),
-	setSubagentThinking: invoke(settingsClient, "setSubagentThinking"),
-	setBackgroundReviewerModel: invoke(settingsClient, "setBackgroundReviewerModel"),
-	listSubagents: invoke(settingsClient, "listSubagents"),
-	startProviderLogin: invoke(settingsClient, "startProviderLogin"),
-	cancelProviderLogin: invoke(settingsClient, "cancelProviderLogin"),
-	respondProviderLogin: invoke(settingsClient, "respondProviderLogin"),
-	getPermissionConfig: invoke(permissionsClient, "getConfig"),
-	getPermissionSettings: invoke(permissionsClient, "load"),
-	savePermissionSettings: invoke(permissionsClient, "save"),
-	resetPermissionSettings: invoke(permissionsClient, "reset"),
-	probePermission: invoke(permissionsClient, "probe"),
-	getPermissionAuditTail: invoke(permissionsClient, "auditTail"),
-	openPermissionSettingsLocation: invoke(permissionsClient, "openLocation"),
-	respondAsk: invoke(permissionsClient, "respondAsk"),
-	respondPermission: invoke(permissionsClient, "respondPermission"),
-	getPermissionMode: invoke(permissionsClient, "getMode"),
-	setPermissionMode: invoke(permissionsClient, "setMode"),
-	getContextManagerConfig: invoke(permissionsClient, "contextManagerGetConfig"),
-	setContextManagerMode: invoke(permissionsClient, "contextManagerSetMode"),
-	getChannelWatchConfig: invoke(permissionsClient, "channelWatchGetConfig"),
-	setChannelWatchEnabled: invoke(permissionsClient, "channelWatchSetEnabled"),
-	respondTrust: invoke(permissionsClient, "respondTrust"),
-	getAppInfo: invoke(appClient, "getInfo"),
-	getDiagnostics: invoke(appClient, "getDiagnostics"),
-	getDailyDir: invoke(appClient, "getDailyDir"),
-	openExternal: invoke(appClient, "openExternal"),
-	saveFileDialog: invoke(appClient, "saveFileDialog"),
-	pickPath: invoke(appClient, "pickPath"),
-	previewFile: invoke(appClient, "filePreview"),
-	htmlPreviewUrl: invoke(appClient, "htmlPreviewUrl"),
-	getFigureAnnotations: invoke(appClient, "getFigureAnnotations"),
-	saveFigureAnnotations: invoke(appClient, "saveFigureAnnotations"),
-	importDroppedFile: invoke(appClient, "importDroppedFile"),
-	openResourceExternal: invoke(appClient, "resourceOpenExternal"),
-	fileAction: invoke(appClient, "fileAction"),
-	hostEnvironment: invoke(appClient, "hostEnvironment"),
-	pickDownloadDir: invoke(appClient, "pickDownloadDir"),
-	setAttentionBadge: invoke(appClient, "setAttentionBadge"),
-	loadTabs: invoke(appClient, "loadTabs"),
-	saveTabs: invoke(appClient, "saveTabs"),
-	loadUiState: invoke(appClient, "loadUiState"),
-	saveUiState: invoke(appClient, "saveUiState"),
-	pickBackgroundImage: invoke(appClient, "pickBackgroundImage"),
-	checkForUpdates: invoke(appClient, "checkForUpdates"),
-	downloadUpdate: invoke(appClient, "downloadUpdate"),
-	installUpdate: invoke(appClient, "installUpdate"),
-	checkResearchSkills: invoke(appClient, "checkResearchSkills"),
-	updateResearchSkills: invoke(appClient, "updateResearchSkills"),
-	restartForResearchSkills: invoke(appClient, "restartForResearchSkills"),
-	listSkillRepositories: invoke(appClient, "listSkillRepositories"),
-	addSkillRepository: invoke(appClient, "addSkillRepository"),
-	checkSkillRepository: invoke(appClient, "checkSkillRepository"),
-	updateSkillRepository: invoke(appClient, "updateSkillRepository"),
-	removeSkillRepository: invoke(appClient, "removeSkillRepository"),
-	pickDirectory: invoke(appClient, "pickDirectory"),
-	formalKnowledgeVault: invoke(appClient, "formalKnowledgeVault"),
-	getGitBranch: invoke(appClient, "getGitBranch"),
-	listGitBranches: invoke(appClient, "listGitBranches"),
-	checkoutBranch: invoke(appClient, "checkoutBranch"),
+	...settingsMethods,
+	getPermissionConfig: permissionsClient.getConfig,
+	getPermissionSettings: permissionsClient.load,
+	savePermissionSettings: permissionsClient.save,
+	resetPermissionSettings: permissionsClient.reset,
+	probePermission: permissionsClient.probe,
+	getPermissionAuditTail: permissionsClient.auditTail as PiApi["getPermissionAuditTail"],
+	openPermissionSettingsLocation: permissionsClient.openLocation,
+	respondAsk: permissionsClient.respondAsk,
+	respondPermission: permissionsClient.respondPermission,
+	getPermissionMode: permissionsClient.getMode,
+	setPermissionMode: permissionsClient.setMode,
+	getContextManagerConfig: permissionsClient.contextManagerGetConfig,
+	setContextManagerMode: permissionsClient.contextManagerSetMode,
+	getChannelWatchConfig: permissionsClient.channelWatchGetConfig,
+	setChannelWatchEnabled: permissionsClient.channelWatchSetEnabled,
+	respondTrust: permissionsClient.respondTrust,
 };
-
-/** Session methods use the historical singular `session:*` channels. */
-const SESSION_CHANNELS: Record<string, string> = {
-	createSession: IpcChannels.SessionCreate,
-	listSessions: IpcChannels.SessionList,
-	listAllSessions: IpcChannels.SessionListAll,
-	openSession: IpcChannels.SessionOpen,
-	closeSession: IpcChannels.SessionClose,
-	deleteSession: IpcChannels.SessionDelete,
-	prompt: IpcChannels.SessionPrompt,
-	command: IpcChannels.SessionCommand,
-	abort: IpcChannels.SessionAbort,
-	retry: IpcChannels.SessionRetry,
-	setModel: IpcChannels.SessionSetModel,
-	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
-	setAgentMode: IpcChannels.SessionSetAgentMode,
-	setSkillNamesEnabled: IpcChannels.SessionSetSkillNamesEnabled,
-	compact: IpcChannels.SessionCompact,
-	getStats: IpcChannels.SessionStats,
-	getContextUsage: IpcChannels.SessionGetContextUsage,
-	clearQueue: IpcChannels.SessionClearQueue,
-	getFollowUpMessages: IpcChannels.SessionGetFollowUpMessages,
-	listSlashCommands: IpcChannels.SessionListSlashCommands,
-	listSlashCommandsForCwd: IpcChannels.SessionListSlashCommandsForCwd,
-	setSessionName: IpcChannels.SessionSetName,
-	exportSession: IpcChannels.SessionExport,
-	forkSession: IpcChannels.SessionFork,
-	recallMessage: IpcChannels.SessionRecall,
-	getLoadedResources: IpcChannels.SessionGetLoadedResources,
-	getSessionMessages: IpcChannels.SessionGetMessages,
-	peekSubagentMessages: IpcChannels.SessionPeekSubagentMessages,
-	steerSubagent: IpcChannels.SessionSteerSubagent,
-	replySubagentSupervisor: IpcChannels.SessionReplySubagentSupervisor,
-	getTodos: IpcChannels.SessionGetTodos,
-	listModels: IpcChannels.ModelsList,
-	listProjectFiles: IpcChannels.ProjectListFiles,
-	ensureProjectTrust: IpcChannels.ProjectEnsureTrust,
-};
-const sessionsApi = exposeContract(SessionsContract, {
-	channelForMethod: (_contract, method) => {
-		const channel = SESSION_CHANNELS[method];
-		if (!channel) throw new Error(`Missing session channel: ${method}`);
-		return channel;
-	},
-});
-
-/** 事件订阅：main → renderer 单向推送，`on` + 退订函数（invoke 之外的第二种 adapter 形态）。 */
-function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
-	const listener = (_event: unknown, payload: T) => cb(payload);
-	ipcRenderer.on(channel, listener);
-	return () => ipcRenderer.removeListener(channel, listener);
-}
 
 const api: PiApi = {
 	...invokeApi,
-	...sessionsApi,
+	...appClient,
+	...sessionsClient,
 	...pluginCredentialsClient,
 	...backgroundJobsClient,
+	getAppInfo,
+	previewFile: filePreview as PiApi["previewFile"],
+	openResourceExternal: resourceOpenExternal as PiApi["openResourceExternal"],
+	pickPath: appClient.pickPath as PiApi["pickPath"],
+	htmlPreviewUrl: appClient.htmlPreviewUrl as PiApi["htmlPreviewUrl"],
+	getFigureAnnotations: appClient.getFigureAnnotations as PiApi["getFigureAnnotations"],
 	// platform：同步值，preload 注入供 renderer 按平台分流 UI
 	platform: process.platform,
-	onKnowledgeEvent: (cb) => subscribe(IpcChannels.KnowledgeEvent, cb),
-	onMcpEvent: (cb) => subscribe(IpcChannels.McpEvent, cb),
-	onProviderLoginEvent: (cb) => subscribe(IpcChannels.SettingsLoginEvent, cb),
-	onAskRequest: (cb) => subscribe(IpcChannels.AskRequest, cb),
-	onAskResolved: (cb) => subscribe(IpcChannels.AskResolved, cb),
-	onUiPluginsEvent: (cb) => subscribe(IpcChannels.UiPluginsEvent, cb),
-	onPluginRuntimeEvent: (cb) => subscribe(IpcChannels.PluginRuntimeEvent, cb),
-	onUpdateEvent: (cb) => subscribe(IpcChannels.UpdateEvent, cb),
-	onResearchSkillUpdateEvent: (cb) => subscribe(IpcChannels.ResearchSkillUpdateEvent, cb),
-	onDesktopCommand: (cb) => subscribe(IpcChannels.DesktopCommand, cb),
-	onEvent: (cb) => subscribe(IpcChannels.Event, cb),
-	onPermissionRequest: (cb) => subscribe(IpcChannels.PermissionRequest, cb),
-	onPermissionResolved: (cb) => subscribe(IpcChannels.PermissionResolved, cb),
-	onTrustRequest: (cb) => subscribe(IpcChannels.TrustRequest, cb),
+	onKnowledgeEvent: knowledgeClient.onEvent,
+	onMcpEvent: mcpClient.onEvent,
+	onProviderLoginEvent,
+	onAskRequest: permissionsClient.onAskRequest,
+	onAskResolved: permissionsClient.onAskResolved,
+	onUiPluginsEvent: uiPluginsClient.onEvent,
+	onPluginRuntimeEvent: pluginRuntimeClient.onEvent,
+	onPermissionRequest: permissionsClient.onPermissionRequest,
+	onPermissionResolved: permissionsClient.onPermissionResolved,
+	onTrustRequest: permissionsClient.onTrustRequest,
 };
 
 contextBridge.exposeInMainWorld("pi", api);

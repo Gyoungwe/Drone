@@ -12,8 +12,15 @@ vi.mock("electron", () => ({
 	},
 }));
 
-import { IpcChannels } from "@drone/shared";
+import { channelOf, PackagesContract } from "@drone/shared";
 import { registerPackagesIpc } from "./packages";
+
+function packageHandler(method: keyof typeof PackagesContract.methods) {
+	const channel = channelOf(PackagesContract, method);
+	const handler = mocks.handlers.get(channel);
+	if (!handler) throw new Error(`No handler registered for ${channel}`);
+	return handler;
+}
 
 const receipt = (operation: "install" | "update" | "rollback" | "remove") => ({
 	operation,
@@ -41,8 +48,10 @@ describe("registerPackagesIpc", () => {
 			typeof registerPackagesIpc
 		>[0]);
 
-		const list = mocks.handlers.get(IpcChannels.PackagesListConfigured)!;
-		expect(await list({})).toEqual([]);
+		expect([...mocks.handlers.keys()]).toEqual(
+			Object.keys(PackagesContract.methods).map((method) => channelOf(PackagesContract, method)),
+		);
+		expect(await packageHandler("listConfiguredPackages")({})).toEqual([]);
 		expect(service.listConfiguredPackages).toHaveBeenCalledOnce();
 	});
 
@@ -61,10 +70,10 @@ describe("registerPackagesIpc", () => {
 			undefined,
 			changed,
 		);
-		await mocks.handlers.get(IpcChannels.PackagesInstall)!({}, "@gyoungwe/desktop-ui-pack");
-		await mocks.handlers.get(IpcChannels.PackagesUpdate)!({}, "@gyoungwe/desktop-ui-pack");
-		await mocks.handlers.get(IpcChannels.PackagesRollback)!({}, "@gyoungwe/desktop-ui-pack", "0.1.0");
-		await mocks.handlers.get(IpcChannels.PackagesRemove)!({}, "npm:@gyoungwe/desktop-ui-pack", "user");
+		await packageHandler("installPackage")({}, "@gyoungwe/desktop-ui-pack");
+		await packageHandler("updatePackage")({}, "@gyoungwe/desktop-ui-pack");
+		await packageHandler("rollbackPackage")({}, "@gyoungwe/desktop-ui-pack", "0.1.0");
+		await packageHandler("removePackage")({}, "npm:@gyoungwe/desktop-ui-pack", "user");
 		expect(changed).toHaveBeenCalledTimes(4);
 	});
 });

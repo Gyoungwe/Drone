@@ -31,9 +31,8 @@ export interface KnowledgeUiPort {
 }`;
 const sharedRoot = resolve(root, "packages/shared/src").replaceAll("\\", "/");
 const indexPath = resolve(sharedRoot, "index.ts");
-const ipcPath = resolve(sharedRoot, "ipc.ts");
 const apiRoot = resolve(root, "packages/plugin-api/src").replaceAll("\\", "/");
-const program = ts.createProgram([indexPath, ipcPath], {
+const program = ts.createProgram([indexPath], {
 	target: ts.ScriptTarget.ES2022,
 	module: ts.ModuleKind.ESNext,
 	moduleResolution: ts.ModuleResolutionKind.Bundler,

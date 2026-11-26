@@ -15,8 +15,15 @@ vi.mock("electron", () => ({
 	shell: { openPath: mocks.openPath },
 }));
 
-import { IpcChannels } from "@drone/shared";
+import { channelOf, McpContract } from "@drone/shared";
 import { registerMcpIpc } from "./mcp";
+
+function handlerFor(method: keyof typeof McpContract.methods) {
+	const channel = channelOf(McpContract, method);
+	const handler = mocks.handlers.get(channel);
+	if (!handler) throw new Error(`Missing IPC handler for ${channel}`);
+	return handler;
+}
 
 const status = {
 	version: 1 as const,
@@ -46,8 +53,8 @@ describe("registerMcpIpc", () => {
 		} as any;
 		registerMcpIpc(backend);
 
-		expect(await mocks.handlers.get(IpcChannels.McpGetStatus)!({}, undefined)).toEqual(status);
-		expect(await mocks.handlers.get(IpcChannels.McpGetConfig)!({}, undefined)).toEqual(config);
+		expect(await handlerFor("getStatus")({}, undefined)).toEqual(status);
+		expect(await handlerFor("getConfig")({}, undefined)).toEqual(config);
 		expect(mcp.getStatus).toHaveBeenCalledWith(undefined);
 		expect(mcp.getConfig).toHaveBeenCalledWith(undefined);
 	});
@@ -59,7 +66,7 @@ describe("registerMcpIpc", () => {
 		} as any;
 		registerMcpIpc(backend);
 
-		const invalid = await mocks.handlers.get(IpcChannels.McpSetServerEnabled)!({}, "docs", "true");
+		const invalid = await handlerFor("setServerEnabled")({}, "docs", "true");
 		expect(invalid).toMatchObject({ code: "invalid_arguments", severity: "error" });
 		expect(backend.setMcpServerEnabled).not.toHaveBeenCalled();
 	});
@@ -70,7 +77,7 @@ describe("registerMcpIpc", () => {
 			setMcpServerEnabled: vi.fn(async () => config),
 		} as any;
 		registerMcpIpc(backend);
-		await mocks.handlers.get(IpcChannels.McpOpenConfig)!({}, undefined);
+		await handlerFor("openConfig")({}, undefined);
 		expect(mocks.openPath).toHaveBeenCalledWith(config.path);
 	});
 
@@ -81,7 +88,7 @@ describe("registerMcpIpc", () => {
 			setServerEnabled: vi.fn(async () => config),
 		};
 		registerMcpIpc({ sessions: {}, mcp } as unknown as Parameters<typeof registerMcpIpc>[0]);
-		await mocks.handlers.get(IpcChannels.McpSetServerEnabled)!({}, "docs", true, undefined);
+		await handlerFor("setServerEnabled")({}, "docs", true, undefined);
 		expect(mcp.setServerEnabled).toHaveBeenCalledWith("docs", true, undefined);
 	});
 
@@ -93,7 +100,7 @@ describe("registerMcpIpc", () => {
 		};
 		const backend = { mcp } as any;
 		registerMcpIpc(backend, { mcp });
-		await mocks.handlers.get(IpcChannels.McpSetServerEnabled)!({}, "docs", true, undefined);
+		await handlerFor("setServerEnabled")({}, "docs", true, undefined);
 		expect(mcp.setServerEnabled).toHaveBeenCalledWith("docs", true, undefined);
 	});
 });

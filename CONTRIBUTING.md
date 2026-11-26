@@ -39,7 +39,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `feat: ...`, `
 These are hard-won lessons — please follow them:
 
 - **Formatting** is enforced by Biome: tabs, double quotes, line width 110. Run `npm run lint` instead of hand-formatting.
-- **Renderer never imports Pi packages.** It only talks to the main process through `window.pi` (preload contextBridge). Channel definitions live in `packages/shared/src/ipc.ts`.
+- **Renderer never imports Pi packages.** It talks to the main process through `window.pi` (preload contextBridge). Domain contracts and the `PiApi` type live in `packages/shared/src/host-api/`.
 - **`packages/backend/src/pi-backend.ts` is the only file** allowed to import the Pi SDK (`@earendil-works/*`). SDK versions are pinned — don't upgrade casually.
 - **i18n**: all user-facing strings go through `useT()` and must be added to **both** the `zh` and `en` dictionaries in `packages/desktop/src/renderer/src/i18n/`.
 - **Zustand selectors must return stable references** (module-level constants for empty values). Inline `?? []` creates a new array every call and causes infinite render loops.

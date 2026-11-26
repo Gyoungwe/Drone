@@ -25,8 +25,6 @@ export interface BindContractOptions {
 	ipc?: Pick<typeof ipcMain, "handle" | "removeHandler">;
 	/** Validate result schemas even when NODE_ENV is production (for tests/host hardening). */
 	validateResult?: boolean;
-	/** Override the default `<domain>:<method>` channel during incremental migrations. */
-	channelForMethod?: (contract: DomainContract, method: string) => string;
 	/** Optional host-level guard evaluated with the raw IPC event before dispatch. */
 	beforeInvoke?: (event: unknown, contract: DomainContract, method: string) => void | Promise<void>;
 }
@@ -63,7 +61,7 @@ export function bindContract<TContract extends DomainContract>(
 		keyof TContract["methods"] & string,
 		HostApiMethod,
 	][]) {
-		const channel = options.channelForMethod?.(contract, methodName) ?? channelOf(contract, methodName);
+		const channel = channelOf(contract, methodName);
 		if (typeof implementation !== "function" && typeof implementation[methodName] !== "function") {
 			throw new Error(`Missing implementation for host method ${channel}`);
 		}

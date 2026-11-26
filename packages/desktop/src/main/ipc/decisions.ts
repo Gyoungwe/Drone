@@ -1,5 +1,5 @@
 import type { BackendServices, InquiryServicePort } from "@drone/backend";
-import { DecisionsContract, IpcChannels } from "@drone/shared";
+import { DecisionsContract } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -29,12 +29,6 @@ export function registerDecisionsIpc(backendOrInquiry: BackendServices | Inquiry
 		confirm: async (id, reason) => transport(await inquiry.confirmDecision(id, reason)),
 	};
 	return bindContract(DecisionsContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				list: IpcChannels.DecisionsList,
-				revoke: IpcChannels.DecisionsRevoke,
-				confirm: IpcChannels.DecisionsConfirm,
-			})[method as keyof typeof DecisionsContract.methods],
 		beforeInvoke: (event) => requireMainFrame(event),
 	});
 }

@@ -1,5 +1,5 @@
 import type { BackendServices, ComputeHostAdapter } from "@drone/backend";
-import { ComputeContract, IpcChannels } from "@drone/shared";
+import { ComputeContract, channelOf } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -69,36 +69,15 @@ export function registerComputeIpc(
 		checkOnboardingStep: (step) => compute.checkOnboardingStep(step),
 	};
 	const unbind = bindContract(ComputeContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				listHosts: IpcChannels.ComputeListHosts,
-				listSshConfig: IpcChannels.ComputeListSshConfig,
-				getHost: IpcChannels.ComputeGetHost,
-				saveHost: IpcChannels.ComputeSaveHost,
-				removeHost: IpcChannels.ComputeRemoveHost,
-				probeHost: IpcChannels.ComputeProbeHost,
-				getHealthSnapshot: IpcChannels.ComputeHealth,
-				listJobs: IpcChannels.ComputeJobs,
-				getJob: IpcChannels.ComputeJob,
-				submitJob: IpcChannels.ComputeSubmitJob,
-				getLogs: IpcChannels.ComputeLogs,
-				cancelJob: IpcChannels.ComputeCancelJob,
-				openTerminal: IpcChannels.ComputeOpenTerminal,
-				getTerminal: IpcChannels.ComputeGetTerminal,
-				writeTerminal: IpcChannels.ComputeWriteTerminal,
-				closeTerminal: IpcChannels.ComputeCloseTerminal,
-				getOnboardingStatus: IpcChannels.ComputeOnboarding,
-				checkOnboardingStep: IpcChannels.ComputeCheckOnboarding,
-			})[method as keyof typeof ComputeContract.methods],
 		beforeInvoke: (event) => requireMainFrame(event),
 	});
 
 	const unsubscribers = [
-		compute.onHealthChanged((snapshot) => sendEvent(IpcChannels.ComputeHealthEvent, snapshot)),
-		compute.onJobUpdated((job) => sendEvent(IpcChannels.ComputeJobEvent, job)),
-		compute.onLogChunk((chunk) => sendEvent(IpcChannels.ComputeLogEvent, chunk)),
-		compute.onTerminalOutput((event) => sendEvent(IpcChannels.ComputeTerminalOutputEvent, event)),
-		compute.onTerminalClosed((event) => sendEvent(IpcChannels.ComputeTerminalClosedEvent, event)),
+		compute.onHealthChanged((snapshot) => sendEvent(channelOf(ComputeContract, "healthChanged"), snapshot)),
+		compute.onJobUpdated((job) => sendEvent(channelOf(ComputeContract, "jobUpdated"), job)),
+		compute.onLogChunk((chunk) => sendEvent(channelOf(ComputeContract, "logChunk"), chunk)),
+		compute.onTerminalOutput((event) => sendEvent(channelOf(ComputeContract, "terminalOutput"), event)),
+		compute.onTerminalClosed((event) => sendEvent(channelOf(ComputeContract, "terminalClosed"), event)),
 	];
 	return () => {
 		unbind();

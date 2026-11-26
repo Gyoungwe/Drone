@@ -1,5 +1,6 @@
 import { type Static, Type } from "typebox";
 import type { KnowledgeUiEvent } from "../knowledge";
+import type { ZoteroLocalWriteStatus, ZoteroStatus } from "../zotero";
 import { defineDomain } from "./define";
 
 /**
@@ -65,3 +66,15 @@ export const ZoteroContract = defineDomain("zotero", {
 		},
 	},
 });
+
+export interface KnowledgeHostApi {
+	invokeKnowledge(route: KnowledgeRouteInput): Promise<unknown>;
+	invokeDaily(route: KnowledgeRouteInput): Promise<unknown>;
+	invokeZotero(route: KnowledgeRouteInput): Promise<unknown>;
+	/** 知识事件订阅：宿主向所有窗口广播失效与评审打开通知 */
+	onKnowledgeEvent(cb: (event: KnowledgeUiEvent) => void): () => void;
+	/** Zotero 连接状态（宿主自己的技能设置面板用；插件走 invokeZotero 路由） */
+	getZoteroStatus(): Promise<ZoteroStatus>;
+	/** Zotero 本地写入授权状态（宿主自己的技能设置面板用） */
+	getZoteroLocalWrite(): Promise<ZoteroLocalWriteStatus>;
+}

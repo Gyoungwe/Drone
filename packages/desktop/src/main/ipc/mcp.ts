@@ -1,5 +1,5 @@
 import type { BackendServices, SessionServicePort } from "@drone/backend";
-import { IpcChannels, McpContract } from "@drone/shared";
+import { McpContract } from "@drone/shared";
 import { shell } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -35,14 +35,5 @@ export function registerMcpIpc(
 			await shell.openPath(config.path);
 		},
 	};
-	bindContract(McpContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				getStatus: IpcChannels.McpGetStatus,
-				getConfig: IpcChannels.McpGetConfig,
-				setServerEnabled: IpcChannels.McpSetServerEnabled,
-				openConfig: IpcChannels.McpOpenConfig,
-				addPreset: IpcChannels.McpAddPreset,
-			})[method as keyof typeof McpContract.methods],
-	});
+	bindContract(McpContract, implementation);
 }

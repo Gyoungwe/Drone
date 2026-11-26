@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, BrowserWindow, ipcMain } from "electron";
-import { IpcChannels } from "../../packages/shared/src/ipc.ts";
+import { AppContract } from "../../packages/shared/src/host-api/app.ts";
+import { channelOf } from "../../packages/shared/src/host-api/define.ts";
+import { KnowledgeContract } from "../../packages/shared/src/host-api/knowledge.ts";
 
 const root = process.env.DRONE_UI_FIXTURE;
 app.setPath("userData", join(root, "electron-profile"));
@@ -21,11 +23,12 @@ app
 		await mkdir(vault);
 		app.dock?.hide();
 		ipcMain.handle("knowledge-fixture:info", () => ({ cwd }));
-		ipcMain.handle(IpcChannels.KnowledgeOverview, () => ({ binding: { vault, revision: 1 } }));
-		ipcMain.handle(IpcChannels.KnowledgeOpen, (_event, input) => {
+		ipcMain.handle(channelOf(KnowledgeContract, "invoke"), (_event, { operation, input }) => {
+			if (operation === "overview") return { binding: { vault, revision: 1 } };
+			assert.equal(operation, "openTarget");
 			opens.push(input);
 		});
-		ipcMain.handle(IpcChannels.UiStateSave, () => {});
+		ipcMain.handle(channelOf(AppContract, "saveUiState"), () => undefined);
 		window = new BrowserWindow({
 			width: 1000,
 			height: 700,

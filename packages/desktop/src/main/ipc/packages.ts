@@ -1,5 +1,5 @@
 import type { BackendServices, SessionServicePort } from "@drone/backend";
-import { IpcChannels, PackagesContract } from "@drone/shared";
+import { PackagesContract } from "@drone/shared";
 import { latestPackageVersions, registryPluginMetadata } from "../package-versions";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -73,17 +73,5 @@ export function registerPackagesIpc(
 		latestPackageVersions: (names) => latestPackageVersions(names),
 		pluginPackageMetadata: (names) => registryPluginMetadata(names),
 	};
-	bindContract(PackagesContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				searchCatalog: IpcChannels.PackagesSearchCatalog,
-				installPackage: IpcChannels.PackagesInstall,
-				updatePackage: IpcChannels.PackagesUpdate,
-				rollbackPackage: IpcChannels.PackagesRollback,
-				removePackage: IpcChannels.PackagesRemove,
-				listConfiguredPackages: IpcChannels.PackagesListConfigured,
-				latestPackageVersions: IpcChannels.PackagesLatestVersions,
-				pluginPackageMetadata: IpcChannels.PackagesPluginMetadata,
-			})[method as keyof typeof PackagesContract.methods],
-	});
+	bindContract(PackagesContract, implementation);
 }

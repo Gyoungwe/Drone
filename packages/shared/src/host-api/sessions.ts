@@ -1,5 +1,4 @@
 import { Type } from "typebox";
-import type { PromptReceipt } from "../ipc";
 import type { PromptIds } from "../run-state";
 import type {
 	AvailableModel,
@@ -7,6 +6,7 @@ import type {
 	CreateSessionOptions,
 	ImageInput,
 	LoadedResources,
+	SessionEventEnvelope,
 	SessionMessage,
 	SessionMeta,
 	SessionStats,
@@ -55,6 +55,21 @@ const SessionMetaSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
+/**
+ * Prompt preflight receipt: tells the renderer whether this input owns an agent run.
+ *
+ * NOT a running-state authority. SDK events (agent_start/agent_end/agent_settled)
+ * own agentActive; this ack can resolve *after* agent_settled on a fast completion,
+ * so driving running-state from it would revive an already-finished run (the exact
+ * v0.7.2 regression). Consumers must keep using `sending` for preflight and SDK
+ * events for the live run — do not set agentActive from this value.
+ */
+export type PromptReceipt = ({ kind: "agent" } | { kind: "queued" } | { kind: "command" }) & {
+	/** P14 Optimistic：回执原样带回客户端生成的 id */
+	clientMessageId?: string;
+	assistantMessageId?: string;
+};
+
 const ReceiptIds = {
 	clientMessageId: Type.Optional(Type.String()),
 	assistantMessageId: Type.Optional(Type.String()),
@@ -95,11 +110,7 @@ const RecallResultSchema = Type.Object(
 const ObjectResult = <T>() => Type.Unsafe<T>({ type: "object" });
 const ArrayResult = <T>() => Type.Unsafe<T[]>({ type: "array" });
 
-/**
- * Host contract for every session IPC method. Method names intentionally match
- * PiApi/backend names so the renderer call sites stay unchanged. The desktop
- * adapter maps these methods to the historical `session:*` channel names.
- */
+/** Host IPC contract for session methods and notifications. */
 export const SessionsContract = defineDomain("sessions", {
 	methods: {
 		createSession: {
@@ -205,6 +216,7 @@ export const SessionsContract = defineDomain("sessions", {
 		},
 		ensureProjectTrust: { args: Type.Tuple([Type.String({ minLength: 1 })]), result: Type.Boolean() },
 	},
+	events: { event: Type.Unsafe<SessionEventEnvelope>({ type: "object" }) },
 });
 
 /**
@@ -215,7 +227,8 @@ export const SessionsContract = defineDomain("sessions", {
  * contract client.
  */
 type SessionClient = ClientOf<typeof SessionsContract>;
-type SessionResult<K extends keyof SessionClient> = Awaited<ReturnType<SessionClient[K]>>;
+type SessionMethod = keyof typeof SessionsContract.methods;
+type SessionResult<K extends SessionMethod> = Awaited<ReturnType<SessionClient[K]>>;
 type OptionalSessionClient = {
 	listSessions(cwd?: string): Promise<SessionResult<"listSessions">>;
 	deleteSession(sessionId: string, sessionFile?: string): Promise<SessionResult<"deleteSession">>;
@@ -239,7 +252,12 @@ type OptionalSessionClient = {
 	): Promise<SessionResult<"steerSubagent">>;
 	listProjectFiles(cwd?: string): Promise<SessionResult<"listProjectFiles">>;
 };
-export type SessionsApi = Omit<SessionClient, keyof OptionalSessionClient> & OptionalSessionClient;
+/** The backend port uses the method surface and dispatches its own two-argument session events. */
+export type SessionsApi<Surface extends "methods" | "desktop" = "methods"> = Omit<
+	Surface extends "desktop" ? SessionClient : Pick<SessionClient, SessionMethod>,
+	keyof OptionalSessionClient
+> &
+	OptionalSessionClient;
 
 /** Shared argument aliases for code that needs the migration boundary explicitly. */
 export type SessionsSchemaTypes = {

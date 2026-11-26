@@ -63,7 +63,6 @@ export * from "./host-api";
 export * from "./host-env";
 export * from "./inquiry";
 export * from "./institutional";
-export * from "./ipc";
 export * from "./knowledge";
 export * from "./knowledge-links";
 export * from "./knowledge-paths";
