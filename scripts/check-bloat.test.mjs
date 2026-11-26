@@ -98,7 +98,7 @@ test("new generated files, process records, oversized docs and source mjs are re
 });
 
 test("tracked bundles may rebuild at the same size or shrink, but must not grow past 50 KiB", (t) => {
-	const path = ".pi/extensions/legacy.mjs";
+	const path = "packages/demo/dist/legacy.mjs";
 	const limit = 50 * 1024;
 	const { git, put, check } = fixture(t, { [path]: "x".repeat(limit) });
 	put(path, "y".repeat(limit));
@@ -127,12 +127,40 @@ test("oversized runtime Skill indexes cannot be added or grow", (t) => {
 	assert.equal(check().status, 0);
 });
 
-test("deleting a tracked bundle from the index is not blocked by its working copy", (t) => {
+test("other generated artifact classes keep the 50 KiB byte ratchet even at zero net lines", (t) => {
+	const limit = 50 * 1024;
+	const paths = [
+		"packages/demo/ui/bundle.js",
+		"packages/demo/ui/styles/generated.ts",
+		".pi/extensions/nested/dist/legacy.mjs",
+	];
+	const { git, put, check } = fixture(t, Object.fromEntries(paths.map((path) => [path, "x".repeat(limit)])));
+	for (const path of paths) put(path, "z".repeat(limit + 1));
+	const worktree = check();
+	git("add", ...paths);
+	const staged = check("--staged");
+	for (const result of [worktree, staged]) {
+		assert.equal(result.status, 1);
+		for (const path of paths)
+			assert.match(result.stderr, new RegExp(`产物拦截.*${path.replace(/\./g, "\\.")}`));
+	}
+});
+
+test("an index deletion offsets extension growth while the untracked working copy is rejected", (t) => {
 	const path = ".pi/extensions/legacy.mjs";
-	const { git, check } = fixture(t, { [path]: "x".repeat(60 * 1024) });
+	const growing = ".pi/extensions/growing.mjs";
+	const { git, put, check } = fixture(t, { [path]: "x".repeat(60 * 1024), [growing]: code(1) });
 	git("rm", "--cached", path);
 	assert.equal(check("--staged").status, 0);
-	assert.match(check().stderr, /产物拦截/);
+	const untracked = check();
+	assert.equal(untracked.status, 1);
+	assert.match(untracked.stderr, /产物拦截.*legacy\.mjs/);
+	put(growing, code(2));
+	git("add", growing);
+	assert.equal(check("--staged").status, 0);
+	const both = check();
+	assert.equal(both.status, 1);
+	assert.match(both.stderr, /产物拦截.*growing\.mjs/);
 });
 
 test("process cleanup and test deletions cannot satisfy a business net decrease", (t) => {
@@ -143,4 +171,114 @@ test("process cleanup and test deletions cannot satisfy a business net decrease"
 	git("rm", "-r", "upgrade-audit", "packages");
 	assert.equal(check("--staged").status, 0);
 	assert.match(check("--staged", "--require-net-decrease").stderr, /业务净减未达标/);
+});
+
+test("tracked extension batches allow bounded byte growth at zero or negative net lines in the selected snapshot", (t) => {
+	const growing = ".pi/extensions/growing.mjs";
+	const shrinking = ".pi/extensions/shrinking.mjs";
+	const lines = 30 * 1024;
+	const denser = (count) => `${"longer\n".repeat(4 * 1024)}${"x\n".repeat(count - 4 * 1024)}`;
+	const { git, put, check } = fixture(t, {
+		[growing]: "x\n".repeat(lines),
+		[shrinking]: "y\n".repeat(lines),
+	});
+	put(growing, denser(lines + 1));
+	put(shrinking, "y\n".repeat(lines - 1));
+	assert.equal(check().status, 0);
+	git("add", growing, shrinking);
+	put(growing, denser(lines + 2));
+	assert.equal(check("--staged").status, 0);
+	assert.match(check().stderr, /产物拦截.*growing\.mjs/);
+	put(shrinking, "y\n".repeat(lines - 3));
+	git("add", growing, shrinking);
+	put(shrinking, "y\n".repeat(lines - 1));
+	assert.equal(check("--staged").status, 0);
+	assert.equal(check().status, 1);
+});
+
+test("new extension artifacts remain rejected even below 50 KiB in a shrinking batch", (t) => {
+	const tracked = ".pi/extensions/tracked.mjs";
+	const { git, put, check } = fixture(t, { [tracked]: code(20) });
+	const path = ".pi/extensions/new.mjs";
+	put(tracked, code(2));
+	put(path, code(5));
+	const worktree = check();
+	git("add", tracked, path);
+	const staged = check("--staged");
+	for (const result of [worktree, staged]) {
+		assert.equal(result.status, 1);
+		assert.match(result.stderr, /产物拦截.*new\.mjs/);
+		assert.doesNotMatch(result.stderr, /tracked\.mjs/);
+	}
+});
+
+test("a net-growing tracked extension batch rejects every member in both snapshots", (t) => {
+	const growing = ".pi/extensions/growing.mjs";
+	const shrinking = ".pi/extensions/shrinking.mjs";
+	const lines = 30 * 1024;
+	const { git, put, check } = fixture(t, {
+		[growing]: "x\n".repeat(lines),
+		[shrinking]: "y\n".repeat(lines),
+	});
+	put(growing, "x\n".repeat(lines + 2));
+	put(shrinking, "y\n".repeat(lines - 1));
+	const worktree = check();
+	assert.equal(worktree.status, 1);
+	assert.match(worktree.stderr, /产物拦截.*growing\.mjs/);
+	assert.match(worktree.stderr, /产物拦截.*shrinking\.mjs/);
+	git("add", growing, shrinking);
+	put(growing, "x\n");
+	const staged = check("--staged");
+	assert.equal(staged.status, 1);
+	assert.match(staged.stderr, /产物拦截.*growing\.mjs/);
+	assert.match(staged.stderr, /产物拦截.*shrinking\.mjs/);
+	assert.equal(check().status, 0);
+});
+
+test("tracked extension batches reject byte growth past 50 KiB, deletion weight smuggling, and binary blobs", (t) => {
+	const dense = ".pi/extensions/dense.mjs";
+	const shrinking = ".pi/extensions/shrinking.mjs";
+	const lines = 30 * 1024;
+	const { git, put, check } = fixture(t, {
+		[dense]: "x\n".repeat(lines),
+		[shrinking]: "y\n".repeat(lines),
+	});
+	put(dense, `${"d".repeat(60 * 1024)}\n${"x\n".repeat(lines - 1)}`);
+	put(shrinking, "y\n".repeat(lines - 1));
+	const worktree = check();
+	git("add", dense, shrinking);
+	const staged = check("--staged");
+	for (const result of [worktree, staged]) {
+		assert.equal(result.status, 1);
+		assert.match(result.stderr, /产物拦截.*dense\.mjs/);
+		assert.match(result.stderr, /产物拦截.*shrinking\.mjs/);
+	}
+
+	const sparse = ".pi/extensions/sparse.mjs";
+	const heavy = ".pi/extensions/heavy.mjs";
+	const smuggle = fixture(t, {
+		[sparse]: "a\n".repeat(2000),
+		[heavy]: "b\n".repeat(100),
+	});
+	smuggle.git("rm", sparse);
+	smuggle.put(heavy, `${"b".repeat(40)}\n`.repeat(2100));
+	const smuggleWorktree = smuggle.check();
+	smuggle.git("add", heavy);
+	const smuggleStaged = smuggle.check("--staged");
+	for (const result of [smuggleWorktree, smuggleStaged]) {
+		assert.equal(result.status, 1);
+		assert.match(result.stderr, /产物拦截.*sparse\.mjs/);
+		assert.match(result.stderr, /产物拦截.*heavy\.mjs/);
+	}
+
+	const bin = ".pi/extensions/bin.mjs";
+	const binaryCase = fixture(t, { [bin]: code(100) });
+	binaryCase.put(bin, Buffer.from("\0".repeat(100)));
+	const binWorktree = binaryCase.check();
+	binaryCase.git("add", bin);
+	const binStaged = binaryCase.check("--staged");
+	for (const result of [binWorktree, binStaged]) {
+		assert.equal(result.status, 1);
+		assert.match(result.stderr, /产物拦截.*bin\.mjs/);
+	}
 });
