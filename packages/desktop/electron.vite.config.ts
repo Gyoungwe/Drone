@@ -43,6 +43,11 @@ export default defineConfig({
 			alias: {
 				"@drone/shared": resolve(__dirname, "../shared/src/index.ts"),
 				"@renderer": resolve(__dirname, "src/renderer/src"),
+				// markstream-react 把 stream-monaco 声明为 optional peer 并动态 import 它；
+				// 只要该包还在 node_modules 里，vite 就会把 monaco-editor（~19 MB worker +
+				// 编辑器内核）打进产物，哪怕运行期永远走不到那条路径。聊天代码块已改由
+				// ChatCodeBlock（Shiki）渲染，这里指向空替身，让 monaco 不再进产物。
+				"stream-monaco": resolve(__dirname, "src/renderer/src/vendor/stream-monaco-stub.ts"),
 			},
 		},
 		plugins: [react(), tailwindcss()],

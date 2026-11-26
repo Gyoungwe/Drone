@@ -582,7 +582,8 @@ src/
 |---|---|
 | `main.tsx` / `App.tsx` | 入口 / 视图切换（chat/projects）+ 事件桥：onEvent → `EventConflator` rAF 合流 → transcript store（桥在 `hooks/use-session-event-bridge.ts`）。订阅纪律：App 只订阅原始值（子树无 memo，订阅 transcript 对象会随每条流式 delta 全级联） |
 | `bootstrap-theme.ts` | 首帧前写 `data-theme`（读 `?theme=` query，防开屏闪色） |
-| `monaco-contribs.ts` | monaco worker 接管 + 懒加载服务补注册（出现新 UNKNOWN service 报错时按同法在此补模块） |
+| `lib/shiki-highlighter.ts` | 唯一的语法高亮入口：共享单个 Shiki highlighter 实例（`createHighlighter` 懒初始化），按需 `loadLanguage`；`CHAT_THEME`（vitesse-light/dark，聊天代码块）+ `RESOURCE_THEME`（github-light/dark，资源预览）；`highlightCode` 未知语言/加载失败返回 null，调用方回退等宽纯文本 |
+| `vendor/stream-monaco-stub.ts` | `stream-monaco` 的构建期空替身（见 PITFALLS「optional peer 也会进产物」）。electron.vite.config.ts 用 `resolve.alias` 指向它，让 monaco 不进产物；运行时语义 = 「该可选依赖缺失」，markstream 自己 try/catch 兜底 |
 | `splash-dom.ts` / `splash.ts` / `styles/splash.css` | 开屏动画三件：DOM/粒子参数（`DOT_COUNT`）→ 时长与单次标记（sessionStorage）→ 全部样式与收场编排（改视觉只动这三个文件） |
 | `api.ts` | `getPi()`：window.pi 类型化访问 |
 | `lib/knowledge-artifacts.ts` / `lib/knowledge-error.ts` | 宿主通用产物面板的知识回执投影与错误通知；完整知识阅读、流程卡和产品页面在外部 UI 包 |
@@ -631,7 +632,7 @@ src/
 | 想改什么 | 改哪 |
 |---|---|
 | 开屏动画（粒子光团 → 散场） | `renderer/src/styles/splash.css`（全部视觉与编排）+ `splash-dom.ts`（DOM/粒子参数）+ `splash.ts`（时长/单次标记）；首帧主题链 = bootstrap-theme.ts + window.ts + main/index.ts（`?theme=` 传参） |
-| 消息气泡 / 代码块 / 高亮 | `components/chat/`（Markdown 样式覆写在 globals.css `.markdown-body`） |
+| 消息气泡 / 代码块 / 高亮 | `components/chat/`（Markdown 样式覆写在 globals.css `.markdown-body`）；聊天代码块 = `chat/ChatCodeBlock.tsx`（Shiki 只读高亮 + 悬浮复制按钮，经 `setCustomComponents("chat-markdown", { code_block })` 注册到 markstream-react） |
 | 首页大字 logo（手稿构造字标） | `chat/WordmarkConstruct.tsx`（空心描边 + 制图构造线静态 SVG，canvas 度量字形墨盒后离线固化；改设计重新烘焙）+ globals.css `--lg-ol/c1/c2/lb`（深浅各一套）；设计稿 `.local/design/pi-logo/wordmark.html`（H2 手稿构造） |
 | 报错卡 / 错误分类 | `chat/ErrorNote.tsx` + globals.css（`.error-note*`/`.retry-note`/`.send-error`/`.toast` 段）+ `shared/src/errors.ts`（classifyLlmError 模式表 + 信封构造）+ i18n `error.*`；severity 色改 `--color-err/warn/info`（深浅各一份） |
 | 工作中预览行 / 状态动画 | `chat/PreviewTicker.tsx` + `activity-ticker.ts`（minDwellMs 350）+ `MetaGroup.tsx`（状态行 orb + liveItems）+ `use-sweep-highlight.ts`（统一扫光）+ `use-shown-working.ts`（1500ms 滞后缓冲）+ `CenterOrb.tsx`/`center-orb-draw.ts`（中央版，开关 ui-preferences）+ shared `transcript/meta-summary.ts`（圆点行/统计行） |
@@ -668,7 +669,7 @@ src/
 | provider 设置 / 交互登录（OAuth + api_key） | `shared/src/host-api/settings.ts` 导出 `SettingsContract` 和 `SettingsApi`，preload 以 `onProviderLoginEvent` 订阅 `settings:loginEvent`。服务位于 backend `settings/settings.ts` 和 `login.ts`，UI 位于 `settings/providers/`、`stores/provider-login.ts` 和 `stores/settings.ts`。 |
 | 子代理模型/Thinking 偏好 | backend `settings/model-prefs.ts`；UI `settings/providers/SubagentPanel.tsx`（protected knowledge roles 同页，显式不可用时 fail-closed） |
 | 自动更新 | `main/updater.ts` + `update-policy.ts` + shared `update.ts`；UI `session/UpdateButton.tsx`（顶栏）+ `settings/AboutPanel.tsx`（手动检查） |
-| 主题 / 背景图 / Markdown 代码块主题 | `stores/theme.ts` + `styles/globals.css`（双套 token）；main `background.ts` + `pi-bg://` 协议（CSP img-src 含 pi-bg:）；UI `settings/AppearancePanel.tsx`；代码块主题走 `Markdown.tsx` 的 isDark + 显式双主题 |
+| 主题 / 背景图 / Markdown 代码块主题 | `stores/theme.ts` + `styles/globals.css`（双套 token）；main `background.ts` + `pi-bg://` 协议（CSP img-src 含 pi-bg:）；UI `settings/AppearancePanel.tsx`；代码块主题走 `lib/shiki-highlighter.ts` 的 CHAT_THEME/RESOURCE_THEME + 组件内读 `stores/theme` |
 | Toast | `stores/toasts.ts` + globals.css `.toast` 样式段 |
 | 通用插件消息呈现 / 会话动作 | `plugins/session-api.ts` 复用现有 prompt IPC 并提供稳定的安全消息 hook；`MessageItem.tsx` 的 `chat.message` 槽位支持直接默认回退，合同见 `plugin-api/src/ui.ts` 与 UI SPEC。 |
 | UI 插件（槽位/区域/面板/无头/热重载） | 运行时 `renderer/src/plugins/`（registry：headless activate/cleanup 生命周期）；构建/扫描 `main/ui-plugins/`（build/manager/config，已安装包完整树内容寻址并在代次变化后要求重新确认）；IPC `main/ipc/ui-plugins.ts`；类型 shared `ui-plugins.ts`；规范与内置插件 `desktop/resources/ui-plugins/`（SPEC.md / drone-ui.d.ts / skills / examples / builtin/，含 voice-alerts 语音提醒） |

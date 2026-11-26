@@ -6,8 +6,6 @@ import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { isGalleryRoute } from "./dev/gallery-route";
 // 宿主 API 挂载（副作用）：必须在任何插件代码可能运行之前执行，因此置于 theme store init 之前
 import "./plugins/host-api";
-// monaco 缺失服务补注册（副作用，详见文件头）：代码块编辑器 UNKNOWN service 报错修复
-import "./monaco-contribs";
 import { initSplash } from "./splash";
 import { useDesktopPrefsStore } from "./stores/desktop-prefs";
 import { useThemeStore } from "./stores/theme";

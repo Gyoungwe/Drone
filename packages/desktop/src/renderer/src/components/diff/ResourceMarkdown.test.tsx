@@ -49,7 +49,7 @@ it.each(["python", "mermaid", "infographic", "d2", "d2lang", "html", "table", "c
 		);
 		expect(screen.getByTestId("resource-code").querySelector("pre")?.textContent).toContain("example source");
 		expect(screen.getByTestId("resource-code").textContent).toContain(language);
-		expect(container.querySelector("svg, iframe, .monaco-editor")).toBeNull();
+		expect(container.querySelector("svg, iframe, [class*='monaco-']")).toBeNull();
 	},
 );
 

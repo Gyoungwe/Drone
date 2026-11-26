@@ -36,12 +36,10 @@
 		"esbuild": "0.25.12",
 		"markstream-react": "^0.0.55",
 		"mermaid": "^11.17.2",
-		"monaco-editor": "^0.55.1",
 		"pdfjs-dist": "6.3.289",
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",
 		"shiki": "4.4.3",
-		"stream-monaco": "^0.0.49",
 		"thinking-orbs": "^0.3.1",
 		"zustand": "^5.0.14"
 	},

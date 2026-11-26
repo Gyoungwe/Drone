@@ -214,7 +214,6 @@
 	"module-let\tpackages/desktop/src/renderer/src/components/chat/center-orb-draw.ts": 3,
 	"module-let\tpackages/desktop/src/renderer/src/components/chat/turn-files.test.ts": 1,
 	"module-let\tpackages/desktop/src/renderer/src/components/chat/turn-timings.test.ts": 1,
-	"module-let\tpackages/desktop/src/renderer/src/components/diff/ResourceCode.tsx": 1,
 	"module-let\tpackages/desktop/src/renderer/src/components/panel/subagents-form.ts": 1,
 	"module-let\tpackages/desktop/src/renderer/src/components/preview/viewers/PdfViewer.tsx": 1,
 	"module-let\tpackages/desktop/src/renderer/src/components/settings/permissions-model.ts": 1,

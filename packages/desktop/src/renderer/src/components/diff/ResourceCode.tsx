@@ -1,18 +1,17 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: Read-only token and line positions are stable within this bounded source snapshot.
 import { useEffect, useMemo, useState } from "react";
-import type { BundledLanguage, ThemedToken } from "shiki";
+import type { ThemedToken } from "shiki";
 import { useT } from "../../i18n";
+import { highlightCode, RESOURCE_THEME } from "../../lib/shiki-highlighter";
 import { useThemeStore } from "../../stores/theme";
 
-let highlighter: ReturnType<typeof import("shiki")["createHighlighter"]> | undefined;
+/**
+ * 高亮走共享 Shiki 实例（lib/shiki-highlighter）：与聊天代码块共用一份 grammar/WASM，
+ * 主题不同（资源预览用 github-*，聊天用 vitesse-*）但实例唯一。
+ */
 async function tokensFor(code: string, language: string, dark: boolean) {
-	const { createHighlighter, bundledLanguages } = await import("shiki");
-	highlighter ||= createHighlighter({ themes: ["github-light", "github-dark"], langs: [] });
-	const h = await highlighter;
-	// Only bundled grammars are loaded, on demand, never a user-provided module or URL.
-	const lang = Object.hasOwn(bundledLanguages, language) ? (language as BundledLanguage) : "text";
-	if (lang !== "text") await h.loadLanguage(lang);
-	return h.codeToTokens(code, { lang, theme: dark ? "github-dark" : "github-light" }).tokens;
+	const highlighted = await highlightCode(code, language, dark ? RESOURCE_THEME.dark : RESOURCE_THEME.light);
+	return highlighted?.lines ?? null;
 }
 export function ResourceCode({ text, language = "text" }: { text: string; language?: string }) {
 	const t = useT();
@@ -30,7 +29,7 @@ export function ResourceCode({ text, language = "text" }: { text: string; langua
 		if (language !== "text")
 			void tokensFor(sample, language, dark)
 				.then((next) => {
-					if (!cancelled) setTokens(next);
+					if (!cancelled) setTokens(next ?? undefined);
 				})
 				.catch(() => {});
 		return () => {

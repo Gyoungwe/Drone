@@ -719,7 +719,9 @@ code {
 .markdown-body .code-block-header .code-action-btn {
 	pointer-events: auto;
 }
-/* 语言标签胶囊：不展示（设计去语言标签） */
+/* 语言标签胶囊：不展示（设计去语言标签）。
+   只藏 div 形态的标签容器；聊天代码块（ChatCodeBlock）的复制按钮是 header 的
+   直接 button 子元素，不受这条规则影响。 */
 .markdown-body .code-block-header > div:first-child {
 	display: none;
 }
@@ -770,12 +772,62 @@ code {
 	color: inherit;
 	opacity: 0.9;
 }
-/* monaco 就绪前/失败时的纯文本 fallback：库默认 font-family/background 全 inherit（混入正文体），
-   补齐等宽字体与主题色表面，加载瞬间不突兀 */
-.markdown-body .code-fallback-plain {
+/* 聊天代码块（只读，Shiki 高亮）：等宽字体 + 横向滚动 + 可选中文本。
+   高亮未就绪时的纯文本与高亮态共用同一套排版，避免切换时高度跳变。 */
+
+/* 容器底色/前景色：库的容器与 header 带 inline style（var(--vscode-editor-*)），
+   那些变量在非 monaco 路径下未定义 → 回退成白底黑字，暗色模式下会翻白。
+   这里改由宿主 token 接管，header 的背景沿用上面的 transparent !important。 */
+.markdown-body .chat-code-block {
+	/* biome-ignore lint/complexity/noImportantStyles: 必须压过库容器 inline style 的 background-color */
+	background: transparent !important;
+	color: var(--color-ink);
+}
+.markdown-body .chat-code-block .code-block-header {
+	color: var(--color-ink-2);
+}
+.markdown-body .chat-code-block .chat-code-plain,
+.markdown-body .chat-code-block .chat-code-highlighted,
+.markdown-body .chat-code-block .chat-code-diff {
+	margin: 0;
+	padding: 0.75rem 1rem;
 	font-family: var(--font-mono);
 	font-size: 13px;
-	padding: 0.75rem 1rem;
+	line-height: 1.55;
+	overflow-x: auto;
+	white-space: pre;
+	background: transparent;
+	color: var(--color-ink-2);
+}
+.markdown-body .chat-code-block .chat-code-diff-line.is-add {
+	background: var(--diff-add-bg);
+	color: var(--diff-add);
+}
+.markdown-body .chat-code-block .chat-code-diff-line.is-del {
+	background: var(--diff-del-bg);
+	color: var(--diff-del);
+}
+.markdown-body .chat-code-block .chat-code-diff-line.is-context {
+	color: var(--color-ink-2);
+}
+.markdown-body .chat-code-block .chat-code-notice {
+	margin: 0;
+	padding: 0.35rem 1rem;
+	font-size: 12px;
+	color: var(--diff-del);
+}
+/* 复制按钮：复用库内 .code-action-btn 外观，仅去掉图标尺寸假设（此处是文字按钮） */
+.markdown-body .chat-code-block .chat-code-copy {
+	font-size: 12px;
+	padding: 0.2rem 0.5rem;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--color-border);
+	background: color-mix(in srgb, var(--color-canvas) 72%, transparent);
+	color: var(--color-ink-2);
+}
+.markdown-body .chat-code-block .chat-code-copy:hover {
+	background: var(--color-hover);
+	color: var(--color-ink);
 }
 .markdown-body .inline-code {
 	padding: 0.125rem 0.25rem;
