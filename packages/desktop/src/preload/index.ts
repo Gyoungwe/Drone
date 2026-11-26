@@ -89,30 +89,8 @@ const zoteroClient = exposeContract(ZoteroContract);
 const researchClient = exposeContract(ResearchContract);
 const settingsClient = exposeContract(SettingsContract);
 const { onLoginEvent: onProviderLoginEvent, ...settingsMethods } = settingsClient;
-const permissionsClient = exposeContract(PermissionsContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				load: IpcChannels.PermissionSettingsLoad,
-				save: IpcChannels.PermissionSettingsSave,
-				reset: IpcChannels.PermissionSettingsReset,
-				probe: IpcChannels.PermissionSettingsProbe,
-				auditTail: IpcChannels.PermissionSettingsAuditTail,
-				respondAsk: IpcChannels.AskRespond,
-				respondPermission: IpcChannels.PermissionRespond,
-				getConfig: IpcChannels.PermissionGetConfig,
-				getMode: IpcChannels.PermissionGetMode,
-				setMode: IpcChannels.PermissionSetMode,
-				contextManagerGetConfig: IpcChannels.ContextManagerGetConfig,
-				contextManagerSetMode: IpcChannels.ContextManagerSetMode,
-				channelWatchGetConfig: IpcChannels.ChannelWatchGetConfig,
-				channelWatchSetEnabled: IpcChannels.ChannelWatchSetEnabled,
-				respondTrust: IpcChannels.TrustRespond,
-				openLocation: IpcChannels.PermissionSettingsOpenLocation,
-			},
-			method,
-		),
-});
+const permissionsClient = exposeContract(PermissionsContract);
+const sessionsClient = exposeContract(SessionsContract);
 const subagentsClient = exposeContract(SubagentsContract);
 const packagesClient = exposeContract(PackagesContract);
 const institutionalClient = exposeContract(InstitutionalContract);
@@ -183,22 +161,22 @@ const invokeApi = {
 	uiPluginsRebuild: invoke(uiPluginsClient, "rebuild"),
 	uiPluginsOpenDir: invoke(uiPluginsClient, "openDir"),
 	...settingsMethods,
-	getPermissionConfig: invoke(permissionsClient, "getConfig"),
-	getPermissionSettings: invoke(permissionsClient, "load"),
-	savePermissionSettings: invoke(permissionsClient, "save"),
-	resetPermissionSettings: invoke(permissionsClient, "reset"),
-	probePermission: invoke(permissionsClient, "probe"),
-	getPermissionAuditTail: invoke(permissionsClient, "auditTail"),
-	openPermissionSettingsLocation: invoke(permissionsClient, "openLocation"),
-	respondAsk: invoke(permissionsClient, "respondAsk"),
-	respondPermission: invoke(permissionsClient, "respondPermission"),
-	getPermissionMode: invoke(permissionsClient, "getMode"),
-	setPermissionMode: invoke(permissionsClient, "setMode"),
-	getContextManagerConfig: invoke(permissionsClient, "contextManagerGetConfig"),
-	setContextManagerMode: invoke(permissionsClient, "contextManagerSetMode"),
-	getChannelWatchConfig: invoke(permissionsClient, "channelWatchGetConfig"),
-	setChannelWatchEnabled: invoke(permissionsClient, "channelWatchSetEnabled"),
-	respondTrust: invoke(permissionsClient, "respondTrust"),
+	getPermissionConfig: permissionsClient.getConfig,
+	getPermissionSettings: permissionsClient.load,
+	savePermissionSettings: permissionsClient.save,
+	resetPermissionSettings: permissionsClient.reset,
+	probePermission: permissionsClient.probe,
+	getPermissionAuditTail: permissionsClient.auditTail as PiApi["getPermissionAuditTail"],
+	openPermissionSettingsLocation: permissionsClient.openLocation,
+	respondAsk: permissionsClient.respondAsk,
+	respondPermission: permissionsClient.respondPermission,
+	getPermissionMode: permissionsClient.getMode,
+	setPermissionMode: permissionsClient.setMode,
+	getContextManagerConfig: permissionsClient.contextManagerGetConfig,
+	setContextManagerMode: permissionsClient.contextManagerSetMode,
+	getChannelWatchConfig: permissionsClient.channelWatchGetConfig,
+	setChannelWatchEnabled: permissionsClient.channelWatchSetEnabled,
+	respondTrust: permissionsClient.respondTrust,
 	getAppInfo: invoke(appClient, "getInfo"),
 	getDiagnostics: invoke(appClient, "getDiagnostics"),
 	getDailyDir: invoke(appClient, "getDailyDir"),
@@ -238,51 +216,6 @@ const invokeApi = {
 	checkoutBranch: invoke(appClient, "checkoutBranch"),
 };
 
-/** Session methods use the historical singular `session:*` channels. */
-const SESSION_CHANNELS: Record<string, string> = {
-	createSession: IpcChannels.SessionCreate,
-	listSessions: IpcChannels.SessionList,
-	listAllSessions: IpcChannels.SessionListAll,
-	openSession: IpcChannels.SessionOpen,
-	closeSession: IpcChannels.SessionClose,
-	deleteSession: IpcChannels.SessionDelete,
-	prompt: IpcChannels.SessionPrompt,
-	command: IpcChannels.SessionCommand,
-	abort: IpcChannels.SessionAbort,
-	retry: IpcChannels.SessionRetry,
-	setModel: IpcChannels.SessionSetModel,
-	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
-	setAgentMode: IpcChannels.SessionSetAgentMode,
-	setSkillNamesEnabled: IpcChannels.SessionSetSkillNamesEnabled,
-	compact: IpcChannels.SessionCompact,
-	getStats: IpcChannels.SessionStats,
-	getContextUsage: IpcChannels.SessionGetContextUsage,
-	clearQueue: IpcChannels.SessionClearQueue,
-	getFollowUpMessages: IpcChannels.SessionGetFollowUpMessages,
-	listSlashCommands: IpcChannels.SessionListSlashCommands,
-	listSlashCommandsForCwd: IpcChannels.SessionListSlashCommandsForCwd,
-	setSessionName: IpcChannels.SessionSetName,
-	exportSession: IpcChannels.SessionExport,
-	forkSession: IpcChannels.SessionFork,
-	recallMessage: IpcChannels.SessionRecall,
-	getLoadedResources: IpcChannels.SessionGetLoadedResources,
-	getSessionMessages: IpcChannels.SessionGetMessages,
-	peekSubagentMessages: IpcChannels.SessionPeekSubagentMessages,
-	steerSubagent: IpcChannels.SessionSteerSubagent,
-	replySubagentSupervisor: IpcChannels.SessionReplySubagentSupervisor,
-	getTodos: IpcChannels.SessionGetTodos,
-	listModels: IpcChannels.ModelsList,
-	listProjectFiles: IpcChannels.ProjectListFiles,
-	ensureProjectTrust: IpcChannels.ProjectEnsureTrust,
-};
-const sessionsApi = exposeContract(SessionsContract, {
-	channelForMethod: (_contract, method) => {
-		const channel = SESSION_CHANNELS[method];
-		if (!channel) throw new Error(`Missing session channel: ${method}`);
-		return channel;
-	},
-});
-
 /** 事件订阅：main → renderer 单向推送，`on` + 退订函数（invoke 之外的第二种 adapter 形态）。 */
 function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
 	const listener = (_event: unknown, payload: T) => cb(payload);
@@ -292,7 +225,7 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
 
 const api: PiApi = {
 	...invokeApi,
-	...sessionsApi,
+	...sessionsClient,
 	...pluginCredentialsClient,
 	...backgroundJobsClient,
 	// platform：同步值，preload 注入供 renderer 按平台分流 UI
@@ -300,17 +233,16 @@ const api: PiApi = {
 	onKnowledgeEvent: knowledgeClient.onEvent,
 	onMcpEvent: mcpClient.onEvent,
 	onProviderLoginEvent,
-	onAskRequest: (cb) => subscribe(IpcChannels.AskRequest, cb),
-	onAskResolved: (cb) => subscribe(IpcChannels.AskResolved, cb),
+	onAskRequest: permissionsClient.onAskRequest,
+	onAskResolved: permissionsClient.onAskResolved,
 	onUiPluginsEvent: uiPluginsClient.onEvent,
 	onPluginRuntimeEvent: pluginRuntimeClient.onEvent,
 	onUpdateEvent: (cb) => subscribe(IpcChannels.UpdateEvent, cb),
 	onResearchSkillUpdateEvent: (cb) => subscribe(IpcChannels.ResearchSkillUpdateEvent, cb),
 	onDesktopCommand: (cb) => subscribe(IpcChannels.DesktopCommand, cb),
-	onEvent: (cb) => subscribe(IpcChannels.Event, cb),
-	onPermissionRequest: (cb) => subscribe(IpcChannels.PermissionRequest, cb),
-	onPermissionResolved: (cb) => subscribe(IpcChannels.PermissionResolved, cb),
-	onTrustRequest: (cb) => subscribe(IpcChannels.TrustRequest, cb),
+	onPermissionRequest: permissionsClient.onPermissionRequest,
+	onPermissionResolved: permissionsClient.onPermissionResolved,
+	onTrustRequest: permissionsClient.onTrustRequest,
 };
 
 contextBridge.exposeInMainWorld("pi", api);

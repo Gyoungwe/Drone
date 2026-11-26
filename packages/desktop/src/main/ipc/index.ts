@@ -10,7 +10,9 @@ import {
 	channelOf,
 	IpcChannels,
 	McpContract,
+	PermissionsContract,
 	PluginRuntimeContract,
+	SessionsContract,
 	SettingsContract,
 	UiPluginsContract,
 } from "@drone/shared";
@@ -55,12 +57,14 @@ export function createSessionQuestionTransport(ownerId: number) {
 		send: (request: AskRequest): boolean => {
 			const contents = webContents.fromId(ownerId);
 			if (!contents || contents.isDestroyed()) return false;
-			contents.send(IpcChannels.AskRequest, request);
+			contents.send(channelOf(PermissionsContract, "askRequest"), request);
 			return true;
 		},
 		resolved: (result: AskResolved): void => {
 			const contents = webContents.fromId(ownerId);
-			if (contents && !contents.isDestroyed()) contents.send(IpcChannels.AskResolved, result);
+			if (contents && !contents.isDestroyed()) {
+				contents.send(channelOf(PermissionsContract, "askResolved"), result);
+			}
 		},
 	};
 }
@@ -128,20 +132,20 @@ export function registerIpc(
 	});
 
 	backendServices.sessions.onEvent((sessionId, event) => {
-		sendToRenderer(IpcChannels.Event, { sessionId, event });
+		sendToRenderer(channelOf(SessionsContract, "event"), { sessionId, event });
 	});
 	backendServices.sessions.onAskRequest((req: AskRequest) => {
-		sendToRenderer(IpcChannels.AskRequest, req);
+		sendToRenderer(channelOf(PermissionsContract, "askRequest"), req);
 	});
 	backendServices.sessions.onPermissionRequest((req: PermissionRequest) => {
-		sendToRenderer(IpcChannels.PermissionRequest, req);
+		sendToRenderer(channelOf(PermissionsContract, "permissionRequest"), req);
 	});
 	// 权限裁决也回投渲染端，桌面卡片要同步撤掉
 	backendServices.sessions.onPermissionResolved((result: PermissionResolved) => {
-		sendToRenderer(IpcChannels.PermissionResolved, result);
+		sendToRenderer(channelOf(PermissionsContract, "permissionResolved"), result);
 	});
 	backendServices.sessions.onTrustRequest((req: TrustRequest) => {
-		sendToRenderer(IpcChannels.TrustRequest, req);
+		sendToRenderer(channelOf(PermissionsContract, "trustRequest"), req);
 	});
 	backendServices.sessions.onLoginEvent((payload) => {
 		sendToRenderer(channelOf(SettingsContract, "loginEvent"), payload);

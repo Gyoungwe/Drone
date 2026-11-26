@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { channelOf, DecisionsContract, IpcChannels } from "@drone/shared";
+import { channelOf, DecisionsContract, IpcChannels, SessionsContract } from "@drone/shared";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { KnowledgeUiService } from "../../packages/backend/src/knowledge/ui.ts";
 import { registerKnowledgeIpc } from "../../packages/desktop/src/main/ipc/knowledge.ts";
@@ -149,10 +149,10 @@ async function run() {
 		await mkdir(join(root, "daily"), { recursive: true });
 		ipcMain.handle(IpcChannels.UiStateSave, () => undefined);
 		ipcMain.handle(channelOf(DecisionsContract, "list"), () => []);
-		ipcMain.handle(IpcChannels.SessionListAll, () => []);
+		ipcMain.handle(channelOf(SessionsContract, "listAllSessions"), () => []);
 		ipcMain.handle(IpcChannels.AppGetDailyDir, () => join(root, "daily"));
 		let usageReads = 0;
-		ipcMain.handle(IpcChannels.SessionStats, () => {
+		ipcMain.handle(channelOf(SessionsContract, "getStats"), () => {
 			usageReads++;
 			return {
 				inputTokens: 200,

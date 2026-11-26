@@ -15,8 +15,15 @@ vi.mock("electron", () => ({
 	shell: { showItemInFolder: mocks.showItemInFolder, openPath: mocks.openPath },
 }));
 
-import { IpcChannels } from "@drone/shared";
+import { channelOf, PermissionsContract } from "@drone/shared";
 import { registerPermissionSettingsIpc } from "./permissions";
+
+function permissionHandler(method: keyof typeof PermissionsContract.methods) {
+	const channel = channelOf(PermissionsContract, method);
+	const handler = mocks.handlers.get(channel);
+	if (!handler) throw new Error(`Missing IPC handler: ${channel}`);
+	return handler;
+}
 
 describe("registerPermissionSettingsIpc", () => {
 	beforeEach(() => mocks.handlers.clear());
@@ -33,17 +40,22 @@ describe("registerPermissionSettingsIpc", () => {
 		const sessions = {
 			getPermissionConfig: vi.fn(() => ({ enabled: false })),
 			getPermissionSettings: vi.fn(() => ({ path: "/tmp/legacy.json" })),
-		} as any;
+		};
 		registerPermissionSettingsIpc({ sessions, permissions } as any);
 
-		const handler = mocks.handlers.get(IpcChannels.PermissionGetConfig)!;
+		expect([...mocks.handlers.keys()].sort()).toEqual(
+			Object.keys(PermissionsContract.methods)
+				.map((method) => channelOf(PermissionsContract, method))
+				.sort(),
+		);
+		const handler = permissionHandler("getConfig");
 		expect(await handler({})).toEqual({ enabled: true });
 		expect(permissions.getConfig).toHaveBeenCalledOnce();
 		expect(sessions.getPermissionConfig).not.toHaveBeenCalled();
 	});
 });
 
-it("authenticates AskRespond with the invoking webContents rather than renderer arguments", async () => {
+it("authenticates respondAsk with the invoking webContents", async () => {
 	const respondAsk = vi.fn(() => false);
 	const permissions = {
 		getConfig: vi.fn(),
@@ -54,7 +66,10 @@ it("authenticates AskRespond with the invoking webContents rather than renderer 
 		getAuditTail: vi.fn(),
 	};
 	registerPermissionSettingsIpc({ sessions: { respondAsk }, permissions } as any);
-	const handler = mocks.handlers.get(IpcChannels.AskRespond)!;
+	const handler = permissionHandler("respondAsk");
 	expect(await handler({ sender: { id: 42 } }, "question-id", { kind: "cancel" })).toBe(false);
-	expect(respondAsk).toHaveBeenCalledWith("question-id", { kind: "cancel" }, 42);
+	expect(await handler({ sender: { id: 42 } }, "question-id", { kind: "cancel" }, 7)).toMatchObject({
+		code: "invalid_arguments",
+	});
+	expect(respondAsk).toHaveBeenCalledExactlyOnceWith("question-id", { kind: "cancel" }, 42);
 });

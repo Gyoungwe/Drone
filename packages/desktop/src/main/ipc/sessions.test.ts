@@ -13,7 +13,7 @@ vi.mock("electron", () => ({
 	},
 }));
 
-import { IpcChannels, SessionsContract } from "@drone/shared";
+import { channelOf, SessionsContract } from "@drone/shared";
 import { registerSessionsIpc } from "./sessions";
 
 function backendForTests(overrides: Record<string, unknown> = {}) {
@@ -31,13 +31,20 @@ function backendForTests(overrides: Record<string, unknown> = {}) {
 	return { ...defaults, ...overrides } as unknown as Parameters<typeof registerSessionsIpc>[0];
 }
 
+function sessionHandler(method: keyof typeof SessionsContract.methods) {
+	const channel = channelOf(SessionsContract, method);
+	const handler = mocks.handlers.get(channel);
+	if (!handler) throw new Error(`Missing IPC handler: ${channel}`);
+	return handler;
+}
+
 describe("registerSessionsIpc", () => {
 	beforeEach(() => {
 		mocks.handlers.clear();
 		mocks.removeHandler.mockClear();
 	});
 
-	it("routes every session method through its legacy session channel", async () => {
+	it("registers every canonical session channel and forwards both list arities", async () => {
 		const createSession = vi.fn(async (options: { cwd: string }) => ({
 			sessionId: "s1",
 			cwd: options.cwd,
@@ -49,8 +56,13 @@ describe("registerSessionsIpc", () => {
 		const backend = backendForTests({ createSession, listSessions });
 
 		registerSessionsIpc(backend);
-		const create = mocks.handlers.get(IpcChannels.SessionCreate)!;
-		const list = mocks.handlers.get(IpcChannels.SessionList)!;
+		expect([...mocks.handlers.keys()].sort()).toEqual(
+			Object.keys(SessionsContract.methods)
+				.map((method) => channelOf(SessionsContract, method))
+				.sort(),
+		);
+		const create = sessionHandler("createSession");
+		const list = sessionHandler("listSessions");
 
 		expect(await create({}, { cwd: "/tmp/project" })).toMatchObject({ sessionId: "s1" });
 		expect(await list({}, "/tmp/project")).toEqual([]);
@@ -58,10 +70,6 @@ describe("registerSessionsIpc", () => {
 		expect(createSession).toHaveBeenCalledWith({ cwd: "/tmp/project" });
 		expect(listSessions).toHaveBeenCalledWith("/tmp/project");
 		expect(listSessions).toHaveBeenCalledWith();
-		expect(mocks.handlers.has("sessions:createSession")).toBe(false);
-		expect(mocks.handlers.has(IpcChannels.SessionOpen)).toBe(true);
-		expect(mocks.handlers.has(IpcChannels.SessionGetMessages)).toBe(true);
-		expect(mocks.handlers.has(IpcChannels.ProjectListFiles)).toBe(true);
 	});
 
 	it("rejects invalid migrated arguments before calling the backend", async () => {
@@ -69,7 +77,7 @@ describe("registerSessionsIpc", () => {
 		const backend = backendForTests({ createSession });
 		registerSessionsIpc(backend);
 
-		const create = mocks.handlers.get(IpcChannels.SessionCreate)!;
+		const create = sessionHandler("createSession");
 		const invalid = await create({}, { cwd: "" });
 		expect(invalid).toMatchObject({ code: "invalid_arguments", severity: "error" });
 		expect(createSession).not.toHaveBeenCalled();
@@ -85,7 +93,7 @@ describe("registerSessionsIpc", () => {
 		}));
 		const backend = backendForTests({ createSession });
 		registerSessionsIpc({ sessions: backend } as unknown as Parameters<typeof registerSessionsIpc>[0]);
-		const create = mocks.handlers.get(IpcChannels.SessionCreate)!;
+		const create = sessionHandler("createSession");
 		expect(await create({}, { cwd: "/tmp/project" })).toMatchObject({ sessionId: "s2" });
 		expect(createSession).toHaveBeenCalledWith({ cwd: "/tmp/project" });
 	});
@@ -95,7 +103,7 @@ it("dispatches explicit commands on their own validated channel and reports fail
 	const command = vi.fn().mockRejectedValue(new Error("Extension command unavailable: removed"));
 	const prompt = vi.fn();
 	registerSessionsIpc(backendForTests({ command, prompt }));
-	const handler = mocks.handlers.get(IpcChannels.SessionCommand)!;
+	const handler = sessionHandler("command");
 	await expect(handler({}, "session", "removed", "input")).rejects.toThrow(
 		"Extension command unavailable: removed",
 	);

@@ -1,4 +1,3 @@
-import type { AskRequest, AskResolved, AskResponse } from "./ask";
 import type { DecisionsApi } from "./decisions";
 import type { DesktopCommand } from "./desktop-command";
 import type { DiagnosticsSnapshot } from "./diagnostics";
@@ -14,6 +13,7 @@ import type {
 	McpApi,
 	MemoryApi,
 	PackagesApi,
+	PermissionsApi,
 	PluginCredentialsApi,
 	PluginRuntimeApi,
 	SettingsApi,
@@ -24,32 +24,8 @@ import type { BackgroundJobsApi } from "./host-api/background-jobs";
 import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
-import type {
-	PermissionAuditTailEntry,
-	PermissionProbeInput,
-	PermissionProbeResult,
-	PermissionSettingsSaveInput,
-	PermissionSettingsSaveResult,
-	PermissionSettingsSnapshot,
-} from "./permission-settings";
 import type { ResearchSkillUpdateState } from "./research-skill-update";
-import type {
-	AppInfo,
-	ChannelWatchConfigInfo,
-	ContextManagerConfigInfo,
-	ContextManagerMode,
-	GitBranches,
-	PermissionAnswer,
-	PermissionConfigInfo,
-	PermissionMode,
-	PermissionRequest,
-	PermissionResolved,
-	SavedTabs,
-	SessionEventEnvelope,
-	TrustAnswer,
-	TrustRequest,
-	UiState,
-} from "./session";
+import type { AppInfo, GitBranches, SavedTabs, UiState } from "./session";
 import type {
 	SkillRepositoryAddInput,
 	SkillRepositoryCheckResult,
@@ -91,41 +67,6 @@ export interface ImportedAttachment {
 
 /** IPC 通道名常量 */
 export const IpcChannels = {
-	SessionCreate: "session:create",
-	SessionList: "session:list",
-	SessionListAll: "session:listAll",
-	SessionOpen: "session:open",
-	SessionClose: "session:close",
-	SessionDelete: "session:delete",
-	SessionPrompt: "session:prompt",
-	SessionCommand: "session:command",
-	SessionAbort: "session:abort",
-	SessionRetry: "session:retry",
-	SessionSetModel: "session:setModel",
-	SessionSetThinkingLevel: "session:setThinkingLevel",
-	SessionSetAgentMode: "session:setAgentMode",
-	SessionSetSkillNamesEnabled: "session:setSkillNamesEnabled",
-	SessionGetMessages: "session:getMessages",
-	/** 只读预览子智能体会话文件，不注册/打开顶栏会话 */
-	SessionPeekSubagentMessages: "session:peekSubagentMessages",
-	SessionSteerSubagent: "session:steerSubagent",
-	SessionReplySubagentSupervisor: "session:replySubagentSupervisor",
-	SessionGetTodos: "session:getTodos",
-	SessionCompact: "session:compact",
-	SessionStats: "session:stats",
-	SessionGetContextUsage: "session:getContextUsage",
-	SessionClearQueue: "session:clearQueue",
-	SessionGetFollowUpMessages: "session:getFollowUpMessages",
-	SessionListSlashCommands: "session:listSlashCommands",
-	/** 无会话斜杠命令列表（draft 新会话按 cwd 拉取；信任未决不弹窗，只含用户级资源） */
-	SessionListSlashCommandsForCwd: "session:listSlashCommandsForCwd",
-	SessionSetName: "session:setName",
-	SessionExport: "session:export",
-	SessionFork: "session:fork",
-	/** 撤回用户消息（回退到该消息之前，内容放回输入框） */
-	SessionRecall: "session:recall",
-	/** 已加载资源（skills/扩展，设置页展示用） */
-	SessionGetLoadedResources: "session:getLoadedResources",
 	FileSaveDialog: "file:saveDialog",
 	FilePickPath: "file:pickPath",
 	FilePreview: "file:preview",
@@ -139,41 +80,12 @@ export const IpcChannels = {
 	FigureAnnotationsSave: "figure:annotationsSave",
 	FileImportDropped: "file:importDropped",
 	ResourceOpenExternal: "resource:openExternal",
-	ModelsList: "models:list",
-	AskRequest: "ask:request",
-	AskResolved: "ask:resolved",
-	AskRespond: "ask:respond",
-	PermissionRespond: "permission:respond",
-	/** 权限门控配置（enabled 解析保留，UI 无入口；chip 逃生舱禁用态感知用） */
-	PermissionGetConfig: "permission:getConfig",
-	/** 设置 → 权限 面板：可视化编辑全局 ~/.pi/agent/permissions.json（保存即生效，无需重启） */
-	PermissionSettingsLoad: "permissionSettings:load",
-	PermissionSettingsSave: "permissionSettings:save",
-	PermissionSettingsReset: "permissionSettings:reset",
-	PermissionSettingsProbe: "permissionSettings:probe",
-	PermissionSettingsAuditTail: "permissionSettings:auditTail",
-	PermissionSettingsOpenLocation: "permissionSettings:openLocation",
-	/** 会话权限模式（default / fullAccess；内存态，不落盘） */
-	PermissionGetMode: "permission:getMode",
-	PermissionSetMode: "permission:setMode",
-	/** 上下文管理模式二态（设置 UI「通用」面板，默认蒸发） */
-	ContextManagerGetConfig: "contextManager:getConfig",
-	ContextManagerSetMode: "contextManager:setMode",
-	/** channel-watch 跨会话频道唤醒开关（设置 UI「通用」面板） */
-	ChannelWatchGetConfig: "channelWatch:getConfig",
-	ChannelWatchSetEnabled: "channelWatch:setEnabled",
-	/** 项目信任应答（选项下标） */
-	TrustRespond: "trust:respond",
-	/** 项目信任前置决策（添加项目/切换 draft cwd 时调用，未决则弹窗） */
-	ProjectEnsureTrust: "project:ensureTrust",
 	ProjectPickDirectory: "project:pickDirectory",
 	/** 开发版隔离配置时只读取正式版知识库关联的 Vault 路径 */
 	KnowledgeFormalVault: "knowledge:formalVault",
 	ProjectGetGitBranch: "project:getGitBranch",
 	ProjectListGitBranches: "project:listGitBranches",
 	ProjectCheckoutBranch: "project:checkoutBranch",
-	/** @ 补全数据源：项目文件相对路径列表（目录带尾 /） */
-	ProjectListFiles: "project:listFiles",
 	AppOpenExternal: "app:openExternal",
 	/** 应用信息（版本/运行时版本/仓库地址，设置关于页用） */
 	AppGetInfo: "app:getInfo",
@@ -217,33 +129,11 @@ export const IpcChannels = {
 	SkillRepositoryRemove: "skillRepositories:remove",
 	/** main 原生菜单 → renderer 桌面命令（P5） */
 	DesktopCommand: "desktop:command",
-	/** main → renderer 事件 */
-	Event: "pi:event",
-	PermissionRequest: "pi:permission-request",
-	/** main → renderer 权限请求已裁决（桌面端据此撤卡） */
-	PermissionResolved: "pi:permission-resolved",
-	/** main → renderer 项目信任请求（会话创建前） */
-	TrustRequest: "pi:trust-request",
 } as const;
-
-/**
- * Prompt preflight receipt: tells the renderer whether this input owns an agent run.
- *
- * NOT a running-state authority. SDK events (agent_start/agent_end/agent_settled)
- * own agentActive; this ack can resolve *after* agent_settled on a fast completion,
- * so driving running-state from it would revive an already-finished run (the exact
- * v0.7.2 regression). Consumers must keep using `sending` for preflight and SDK
- * events for the live run — do not set agentActive from this value.
- */
-export type PromptReceipt = ({ kind: "agent" } | { kind: "queued" } | { kind: "command" }) & {
-	/** P14 Optimistic：回执原样带回客户端生成的 id */
-	clientMessageId?: string;
-	assistantMessageId?: string;
-};
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
 export interface PiApi
-	extends SessionsApi,
+	extends SessionsApi<"desktop">,
 		ComputeApi,
 		DiscoveryApi,
 		DecisionsApi,
@@ -260,7 +150,8 @@ export interface PiApi
 		UiPluginsApi,
 		PluginRuntimeApi,
 		PackagesApi,
-		SettingsApi {
+		SettingsApi,
+		PermissionsApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 弹保存对话框并写文件；用户取消返回 null，成功返回写入路径 */
@@ -296,38 +187,6 @@ export interface PiApi
 	pickDownloadDir(): Promise<string | null>;
 	/** 待答数角标（P14）：dock / 任务栏；Windows 用 overlay icon */
 	setAttentionBadge(count: number, overlayDataUrl: string | null): Promise<void>;
-	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
-	onAskRequest(cb: (req: AskRequest) => void): () => void;
-	onAskResolved(cb: (result: AskResolved) => void): () => void;
-	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;
-	/** 读取权限门控配置（enabled=false = 手改 permissions.json 的隐藏逃生舱态，chip 禁用提示用） */
-	getPermissionConfig(): Promise<PermissionConfigInfo>;
-	/** 设置 → 权限：读取规则文件快照（路径 / 原文 / 默认合并视图 / mtime） */
-	getPermissionSettings(): Promise<PermissionSettingsSnapshot>;
-	/** 设置 → 权限：保存（后端二次校验 + mtime 冲突检查；conflict 时不写盘，带回磁盘现状） */
-	savePermissionSettings(input: PermissionSettingsSaveInput): Promise<PermissionSettingsSaveResult>;
-	/** 设置 → 权限：恢复默认（enabled 保留文件原值） */
-	resetPermissionSettings(): Promise<PermissionSettingsSnapshot>;
-	/** 设置 → 权限：试算一条工具调用会命中哪条规则（可传未保存草稿；只跑规则链） */
-	probePermission(input: PermissionProbeInput): Promise<PermissionProbeResult>;
-	/** 设置 → 权限：审计日志尾部（最新在前，默认 20 条） */
-	getPermissionAuditTail(limit?: number): Promise<PermissionAuditTailEntry[]>;
-	/** 设置 → 权限：在文件管理器中定位 permissions.json（不存在则打开所在目录） */
-	openPermissionSettingsLocation(): Promise<void>;
-	/** 读取会话权限模式（default 缺省；关 tab 重开后端已归零，renderer 对齐真值用） */
-	getPermissionMode(sessionId: string): Promise<PermissionMode>;
-	/** 设置会话权限模式（内存态即时生效、不落盘、重启归零） */
-	setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void>;
-	/** 读取上下文管理模式（evaporation / off 二态派生） */
-	getContextManagerConfig(): Promise<ContextManagerConfigInfo>;
-	/** 设置上下文管理模式（写后 ≤2s 生效，无需重开会话） */
-	setContextManagerMode(mode: ContextManagerMode): Promise<void>;
-	/** 读取 channel-watch 频道唤醒开关状态 */
-	getChannelWatchConfig(): Promise<ChannelWatchConfigInfo>;
-	/** 设置 channel-watch 开关（下一 session_start 生效：目录 init/watcher/工具注册全部跟随） */
-	setChannelWatchEnabled(enabled: boolean): Promise<void>;
-	/** 应答项目信任请求（optionIndex 为 TrustRequest.options 下标） */
-	respondTrust(requestId: string, answer: TrustAnswer): Promise<void>;
 	pickDirectory(): Promise<string | null>;
 	/** 开发版隔离配置时返回正式版知识库 Vault；正式版或无关联返回 null */
 	formalKnowledgeVault(): Promise<string | null>;
@@ -381,10 +240,4 @@ export interface PiApi
 	removeSkillRepository(id: string): Promise<void>;
 	/** 原生菜单触发的桌面命令（P5） */
 	onDesktopCommand(cb: (command: DesktopCommand) => void): () => void;
-	/** 订阅会话事件；返回取消函数 */
-	onEvent(cb: (payload: SessionEventEnvelope) => void): () => void;
-	onPermissionRequest(cb: (req: PermissionRequest) => void): () => void;
-	onPermissionResolved(cb: (result: PermissionResolved) => void): () => void;
-	/** 订阅项目信任请求；返回取消函数 */
-	onTrustRequest(cb: (req: TrustRequest) => void): () => void;
 }
