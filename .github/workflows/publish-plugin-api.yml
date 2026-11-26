@@ -105,11 +105,14 @@ jobs:
           BUILD_SHA256: ${{ needs.build.outputs.sha256 }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          actual_head="$(git rev-parse HEAD)"
+          [[ "$actual_head" == "$GITHUB_SHA" ]] || echo "Expected HEAD $GITHUB_SHA, got $actual_head" >&2
+          test "$actual_head" = "$GITHUB_SHA"
           tag="plugin-api-v$RELEASE_VERSION"
           asset="gyoungwe-plugin-api-$RELEASE_VERSION.tgz"
           asset_dir="$RUNNER_TEMP/plugin-api-release"
           artifact_sha256="$(node scripts/release-plugin-api.mjs --expected-version "$RELEASE_VERSION" --check --pack-dir "$asset_dir")"
+          [[ "$artifact_sha256" == "$BUILD_SHA256" ]] || echo "Artifact SHA-256 mismatch: expected $BUILD_SHA256, got $artifact_sha256" >&2
           test "$artifact_sha256" = "$BUILD_SHA256"
 
           matching_tag() {
@@ -133,22 +136,53 @@ jobs:
           gh release create "$tag" "$asset_dir/$asset" "$asset_dir/SHA256SUMS" \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --latest=false \
             --title "$tag" --notes "Source commit: $GITHUB_SHA"
+          echo "Created draft release $tag targeting $GITHUB_SHA"
 
-          draft="$(tagged_release)"
-          test "$draft" = "$(printf 'true\t%s' "$GITHUB_SHA")"
+          expected_draft="$(printf 'true\t%s' "$GITHUB_SHA")"
+          draft=""
+          for attempt in 1 2 3 4 5 6; do
+            draft="$(tagged_release)"
+            if [[ "$draft" == "$expected_draft" ]]; then
+              break
+            fi
+            if [[ "$attempt" -lt 6 ]]; then
+              echo "Draft release lookup attempt $attempt/6 returned '${draft}'; retrying in 2s..." >&2
+              sleep 2
+            fi
+          done
+          [[ "$draft" == "$expected_draft" ]] || echo "Expected draft release state '$expected_draft', got '$draft'" >&2
+          test "$draft" = "$expected_draft"
+          echo "Verified draft metadata for $tag"
+
           readback="$(mktemp -d "$RUNNER_TEMP/plugin-api-readback.XXXXXX")"
           gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir "$readback"
           readback_sha256="$(node scripts/release-plugin-api.mjs --expected-version "$RELEASE_VERSION" --check --pack-dir "$readback")"
+          [[ "$readback_sha256" == "$BUILD_SHA256" ]] || echo "Downloaded release SHA-256 mismatch: expected $BUILD_SHA256, got $readback_sha256" >&2
           test "$readback_sha256" = "$BUILD_SHA256"
           cmp "$asset_dir/SHA256SUMS" "$readback/SHA256SUMS"
           cmp "$asset_dir/$asset" "$readback/$asset"
+          echo "Verified downloaded release assets byte-for-byte for $tag"
 
           tag_ref="$(matching_tag)"
           if [[ -n "$tag_ref" ]]; then
             draft_commit="$(tag_commit)"
+            [[ "$draft_commit" == "$GITHUB_SHA" ]] || echo "Expected draft tag commit $GITHUB_SHA, got $draft_commit" >&2
             test "$draft_commit" = "$GITHUB_SHA"
           fi
           gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false
 
+          published_commit=""
+          for attempt in 1 2 3 4 5 6; do
+            published_commit="$(tag_commit 2>/dev/null || true)"
+            if [[ "$published_commit" == "$GITHUB_SHA" ]]; then
+              break
+            fi
+            if [[ "$attempt" -lt 6 ]]; then
+              echo "Published tag lookup attempt $attempt/6 returned '${published_commit}'; retrying in 2s..." >&2
+              sleep 2
+            fi
+          done
           published_commit="$(tag_commit)"
+          [[ "$published_commit" == "$GITHUB_SHA" ]] || echo "Expected published tag commit $GITHUB_SHA, got $published_commit" >&2
           test "$published_commit" = "$GITHUB_SHA"
+          echo "Published release $tag at $published_commit"
