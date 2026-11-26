@@ -9,9 +9,9 @@ import { join } from "node:path";
 import { fauxProvider } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, onTestFinished, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { PluginCredentialStore } from "../src/plugins/plugin-credentials";
+import { SessionService } from "../src/session-service";
 
 const SECRET = "fixture-secret-0123456789";
 
@@ -51,7 +51,7 @@ async function startSession() {
 	const faux = fauxProvider({ provider: "plugin-credentials-offline", tokensPerSecond: 0 });
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
-	const backend = new PiBackend({
+	const backend = new SessionService({
 		projectTrust: false,
 		lazyCapabilities: false,
 		tools: ["read"],

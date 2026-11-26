@@ -1,4 +1,4 @@
-// 阶段 0 冒烟：真实 SDK 驱动 PiBackend，验证「LLM 错误事件序列」四断言（spec §9 待验证项）。
+// 阶段 0 冒烟：真实 SDK 驱动 SessionService，验证「LLM 错误事件序列」四断言（spec §9 待验证项）。
 // 用本地 HTTP 服务器伪造 provider 端点（401 / 429 两种响应）——确定性、离线、零凭证。
 //
 //   V1a  恒 401           → turn_end.message.stopReason === "error" 且 errorMessage 非空含 401 信息
@@ -87,9 +87,9 @@ async function main(): Promise<void> {
 		JSON.stringify({ retry: { enabled: true, maxRetries: 2, baseDelayMs: 150 } }),
 	);
 
-	// ---- 驱动 PiBackend（env 先行；动态 import 保模块求值顺序）----
-	const { PiBackend } = await import("../packages/backend/src/index.ts");
-	const backend = new PiBackend({
+	// ---- 驱动 SessionService（env 先行；动态 import 保模块求值顺序）----
+	const { SessionService } = await import("../packages/backend/src/session-service.ts");
+	const backend = new SessionService({
 		defaultCwd: workDir,
 		projectTrust: false,
 		permissionGates: false,

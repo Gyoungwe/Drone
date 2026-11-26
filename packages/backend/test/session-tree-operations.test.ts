@@ -1,7 +1,7 @@
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import type { SessionRegistry } from "../src/session/registry";
+import { SessionService } from "../src/session-service";
 
 interface SessionState {
 	isStreaming: boolean;
@@ -9,8 +9,8 @@ interface SessionState {
 }
 
 /** Inject a minimal session so guard behavior stays isolated from the SDK and filesystem. */
-function makeBackend(state: SessionState): PiBackend {
-	const backend = new PiBackend({ projectTrust: false, permissionGates: false });
+function makeBackend(state: SessionState): SessionService {
+	const backend = new SessionService({ projectTrust: false, permissionGates: false });
 	const registry = (backend as unknown as { registry: SessionRegistry }).registry;
 	registry.add({
 		session: { sessionId: "s1", ...state } as unknown as AgentSession,
@@ -20,7 +20,7 @@ function makeBackend(state: SessionState): PiBackend {
 	return backend;
 }
 
-describe("PiBackend session tree operation guards", () => {
+describe("SessionService session tree operation guards", () => {
 	it("rejects fork while context compaction is rewriting the source session", async () => {
 		const backend = makeBackend({ isStreaming: false, isCompacting: true });
 

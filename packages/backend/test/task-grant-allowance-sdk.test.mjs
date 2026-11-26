@@ -8,9 +8,9 @@ import { join } from "node:path";
 import { fauxProvider } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, onTestFinished, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { networkCapabilityHandlers } from "../src/plugins/network-capabilities";
+import { SessionService } from "../src/session-service";
 
 const LABEL = "Save one item to Zotero";
 const DENIED = "Plugin capability denied: network.write";
@@ -61,7 +61,7 @@ async function startSession() {
 	const faux = fauxProvider({ provider: "task-allowance-offline", tokensPerSecond: 0 });
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
-	const backend = new PiBackend({
+	const backend = new SessionService({
 		projectTrust: false,
 		lazyCapabilities: false,
 		tools: ["read"],

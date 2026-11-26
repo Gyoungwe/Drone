@@ -4,8 +4,8 @@ import { dirname, join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import * as sdk from "../src/session-engine/sdk";
+import { SessionService } from "../src/session-service";
 import { runSubagent } from "../src/tools/subagent/runner";
 
 const childStatusTool = vi.hoisted(() => ({ current: undefined }));
@@ -41,7 +41,7 @@ it("delivers official notifications from real created/restored sessions with no 
 	const faux = fauxProvider({ provider: "generic-notify-offline", tokensPerSecond: 0 });
 	modelRuntime.registerNativeProvider(faux.provider);
 	vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
-	const backend = new PiBackend({
+	const backend = new SessionService({
 		projectTrust: false,
 		lazyCapabilities: false,
 		tools: ["read"],
@@ -143,7 +143,7 @@ it("forwards real child SDK notifications with child identity through the host e
 	const faux = fauxProvider({ provider: "child-notify-offline", tokensPerSecond: 0 });
 	modelRuntime.registerNativeProvider(faux.provider);
 	vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
-	const backend = new PiBackend({
+	const backend = new SessionService({
 		projectTrust: false,
 		lazyCapabilities: false,
 		tools: ["read"],

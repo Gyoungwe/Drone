@@ -14,7 +14,7 @@ import {
 } from "@gyoungwe/pi-knowledge/host";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { KnowledgeUiService } from "../src/knowledge/ui";
-import { PiBackend } from "../src/pi-backend";
+import { SessionService } from "../src/session-service";
 import { defaultKnowledgeCompatibility } from "./knowledge-compat-fixture";
 
 let root, cwd, vault, backend, session, sid, faux, preview;
@@ -54,7 +54,7 @@ beforeEach(async () => {
 	faux = fauxProvider({ provider: "review-fixture" });
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
-	backend = new PiBackend({
+	backend = new SessionService({
 		knowledgeSpecialistModelLoop: runCanonicalKnowledgeSpecialist,
 		projectTrust: true,
 		subagentPreferBuiltin: false,

@@ -4,10 +4,9 @@ import { ModelPrefsService } from "./model-prefs";
 /**
  * Model settings domain service.
  *
- * This service owns the durable, user-level model preferences store while
- * keeping the PiBackend compatibility methods intentionally small.  The
- * service has no session or Electron dependencies, so it can be reused by a
- * future standalone host without pulling the backend facade along.
+ * This service owns the durable, user-level model preferences store and is
+ * composed directly by the host. The service has no session or Electron
+ * dependencies, so a future standalone host can reuse it independently.
  */
 export interface ModelSettingsServicePort {
 	getPrefs(): Promise<ModelPrefs>;

@@ -1,8 +1,8 @@
 // 冒烟测试：真实调用 pi SDK 验证 createSession/prompt/事件流（非自动化测试）
-import { PiBackend } from "../packages/backend/src/index.ts";
+import { SessionService } from "../packages/backend/src/session-service.ts";
 
 async function main() {
-  const backend = new PiBackend({ defaultCwd: "/tmp", projectTrust: false, permissionExtension: false });
+  const backend = new SessionService({ defaultCwd: "/tmp", projectTrust: false, permissionExtension: false });
   await backend.init();
 
   const models = await backend.listModels();

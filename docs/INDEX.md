@@ -132,7 +132,7 @@ P5 同包 UI/native 绑定、计划写入、真实 legacy writer 交接与共享
 ## 硬约束（改代码前必知）
 
 - renderer 绝不 import pi 包，只经 `window.pi`（preload）通信
-- Pi SDK 运行时值导入统一收敛在 `packages/backend/src/session-engine/**`（钉 1.1.0）；`pi-backend.ts` 仍是兼容门面
+- Pi SDK 运行时值导入统一收敛在 `packages/backend/src/session-engine/**`（钉 1.1.0）；会话实现由 `session-service.ts` 持有，host 经 `BackendServices.sessions` 接入
 - 新增 IPC 依次同步 `shared/src/host-api/<domain>.ts`、`desktop/src/preload/index.ts`、`main/ipc/` 对应域和 backend，事件在 `main/ipc/index.ts` 转发。
 - preload 必须保持 CJS（sandbox 限制，见 PITFALLS）
 - 新增 UI 文案：`i18n/zh.ts` + `en.ts` 双字典都要加
@@ -280,7 +280,7 @@ packages/
 | `scripts/build-extensions.mjs` | 将 `packages/extensions/src/*.ts` 打包到 `.pi/extensions/*.mjs`（默认保护已有产物，并写入 `.build-manifest.json` 记录源/产物哈希） |
 | `scripts/check-native-pi.mjs` | 静态扫描一方工具注册，按 fixture 映射原生 Pi 可用性、源码位置和目标插件包（不读取生成的 `.pi` 产物） |
 | `scripts/smoke-backend.mts` | 真实 SDK 冒烟（需 `AI_OPS_API_KEY`） |
-| `scripts/smoke-error-events.mts` | 报错系统冒烟：本地 HTTP 伪造 provider（401/429）驱动 PiBackend，零凭证离线 |
+| `scripts/smoke-error-events.mts` | 报错系统冒烟：本地 HTTP 伪造 provider（401/429）驱动 SessionService，零凭证离线 |
 | `scripts/smoke-subagent.mts` | subagent 冒烟 |
 | `scripts/smoke-evaporation-ui.mjs` | 蒸发设置二态 CDP 冒烟（dev 实例带 `--remote-debugging-port=9224` 运行后执行） |
 | `scripts/check-report-ui.mjs` | 隔离 Electron 验收：桌面长回答贴底、主动上翻、引用短标题/完整路径/点击、运行记录展开；不调用真实模型 |
@@ -307,7 +307,7 @@ packages/
 | `scripts/replay-trace.mts` | 事件 trace 离线重放（`--last` 自动找最新；排查 UI 状态问题首选） |
 | `scripts/replay-evaporation.mts` | 上下文蒸发离线 replay 调参（误杀率/体积曲线；`--core` 与线上实现同构对比；默认数据指 `.local/replay-data/sessions` 副本，指向正式 `~/.pi/agent` 会直接 abort） |
 | `scripts/verify-vertex-auth.mts` | google-vertex 认证链路隔离验证（临时 `PI_CODING_AGENT_DIR`，不碰正式配置）：api_key 路径会 401「API keys are not supported by this API」→ 只有 ADC/服务账号可用 |
-| `scripts/verify-vertex-login.mts` | google-vertex 完整登录桥验证：PiBackend.login 交互（select 剔除 api-key）→ ADC credential 落盘 auth.json → configured |
+| `scripts/verify-vertex-login.mts` | google-vertex 完整登录桥验证：SessionService.login 交互（select 剔除 api-key）→ ADC credential 落盘 auth.json → configured |
 | `scripts/repro-full.mjs` | 把 trace 事件序列直接注入 renderer 复现（#185/白屏类问题，手法见 PITFALLS 0.5.0） |
 | `scripts/shoot-rail.mjs` | UI 动画 CDP 确定性逐帧截图模板（SessionRail 演示，换场景照抄三步：触发状态 → pause 动画钉 currentTime → captureScreenshot） |
 | `scripts/cdp-eval.mjs` / `cdp-shot.mjs` / `shoot-demo-gif.mjs` | CDP 页面单次求值 / 截图 / demo gif |
@@ -448,12 +448,12 @@ Discovery 领域实现位于插件 `pi-discovery/src/service.ts` 与 `src/domain
 
 ## packages/backend — pi SDK 适配层
 
-纯 Node，不依赖 Electron。唯一 import pi SDK 的包，运行时值导入收敛在 `session-engine/**`；`pi-backend.ts` 保留兼容门面。
+纯 Node，不依赖 Electron。唯一 import pi SDK 的包，运行时值导入收敛在 `session-engine/**`；会话实现由 `session-service.ts` 持有，host 经 `BackendServices.sessions` 接入。
 
 ```
 src/
 ├── index.ts            barrel
-├── pi-backend.ts       门面：会话生命周期 + 各域薄委托（desktop main 只 import 这里）
+├── session-service.ts  会话实现：会话生命周期 + 各域委托（host 经 BackendServices.sessions 接入）
 ├── json-store.ts       统一 JSON 持久化原语
 ├── slash-commands.ts   斜杠命令清单（纯函数）
 ├── log.ts              结构化日志
@@ -481,7 +481,7 @@ src/
 | `src/services/execution-route.ts` | `routeRnaseqIntent`、`preflightRnaseqExecution`、`RnaseqExecutionService` | 将受支持的 bulk RNA-seq 自然语言意图绑定到固定 `nf-core/rnaseq` spec；在调用注入的 ComputeService 前完成纯 preflight，并提供离线 fixture 回执 |
 | `src/capabilities/research-skill-router.ts` + `research-skill-topics.ts` | `detectResearchIntent`、`selectResearchSkills`、`orderedCapabilitySkills`、`ResearchTopic` | 研究技能路由：router 放意图检测与技能选择函数，topics 放静态表（`TOPICS` 正则、`STAGE_PRIORITY`、`ACADEMIC`、`TOPIC_SKILLS`、`STOP_WORDS`）；P5 科学路由 provider 将替换 topics 一处 |
 | `src/services/research-resource.ts` + `research-resource-options.ts` + `research-capture-policy.ts` | `ResearchResourceService`、`createUnavailableResearchConnectorRegistry`、`emptyCaptureLedger`、`emptyResearchConnectorSettings` | 研究采集与连接器检索宿主缝：resource 放服务类并再导出原公开名；options 放选项/注册表端口类型与空默认值；capture-policy 放采集路径越界校验、格式判定、捕获 ID/哈希与审批快照辅助函数；P3 owner 切换时整体迁出 |
-| `src/pi-backend.ts` | `PiBackend` | **兼容门面**：create/open/close/delete/prompt（followUp 排队，preflight 回执见 `use-composer-send`）/abort/fork/recall/compact/stats/listModels（附 `thinkingLevels`/`imageInput`）/事件与权限·信任分发。新 host 通过 `BackendServices` 端口接入；兼容期保留旧委托 |
+| `src/session-service.ts` | `SessionService` | **会话实现**：create/open/close/delete/prompt（followUp 排队，preflight 回执见 `use-composer-send`）/abort/fork/recall/compact/stats/listModels（附 `thinkingLevels`/`imageInput`）/事件与权限·信任分发。host 通过 `BackendServices.sessions` 端口接入 |
 | `src/json-store.ts` | `JsonStore`、`JsonStoreCorruptedError` | 统一 JSON 持久化：tmp+rename 原子写；read 损坏回退默认、update 损坏抛 CorruptedError 拒写；async 版 per-path 队列串行化，writeChecked 将能力授权/CAS/回读纳入同队列；sync 变体热路径用；缓存/normalize 不进本层 |
 | `src/slash-commands.ts` | `BUILTIN_SLASH_COMMANDS` | 内置静态表（compact/name/export/settings）+ 模板/skill/扩展命令映射（纯函数） |
 | `src/log.ts` | `createLogger`、`initLogging` | 结构化日志：按天落盘 `main-<本地日期>.log`（`PI_LOG_LEVEL`/`PI_LOG_DIR`） |
@@ -496,7 +496,7 @@ src/
 | `src/session/naming.ts` | `autoNameSession` | 首条用户消息 message_start 即取首行做标题（skill 命令先还原 `/skill:name` 投影，有测试） |
 | `src/session/ui-context.ts` | `makeUiContext` | `ExtensionUIContext` 以 SDK `rpc` 模式桥接基础询问、通知与瞬时 keyed 状态栏；终端专属成员明确拒绝、setTheme 返回失败；对话倒计时未支持时明确拒绝、signal 经门控单请求取消；**theme 必须是真实 `Theme` 类实例**（假对象会让 pi-mcp-adapter 等扩展 `theme.fg()` 抛错、MCP 服务器全连不上）；SDK 接口变化时在此补新成员；[真实 SDK / MCP 状态证据](pluginization/native-plugin-terminal-ui-evidence.md) |
 | `src/session/extension-errors.ts` | `createSessionExtensionDiagnostics` | 主/子会话持续记录 SDK hook 错误到日志与 traces，随关闭解除监听；不依赖知识插件通知 |
-| `src/permissions/gate.ts` | `PermissionGate` | 权限确认队列：allow/deny/allowAlways/allowDir + kind/suggestDir 元数据；signal 单请求取消并经既有审批回执撤卡，respond 前供 PiBackend 持久化 |
+| `src/permissions/gate.ts` | `PermissionGate` | 权限确认队列：allow/deny/allowAlways/allowDir + kind/suggestDir 元数据；signal 单请求取消并经既有审批回执撤卡，respond 前供 SessionService 持久化 |
 | `src/permissions/index.ts`（+ bash-chain/pattern/config/tmp-zone） | `evaluateBashCommand` 等 | 逐工具权限规则引擎：allow/ask/deny × 通配模式；bash 命令链取最严段；自保护（permissions/workspaces/auth/trust 四文件）；tmp-zone = 临时区判定 + rm 豁免（纯函数）。已知天花板：xargs/find -exec/python -c 不覆盖 |
 | `src/permissions/settings.ts`（+ config.ts 的 `parseConfig`/`serializeConfig`/`validateConfig`） | `readPermissionSettings`、`writePermissionSettings`、`resetPermissionSettings`、`probePermission`、`readPermissionAuditTail` | 设置 → 权限 面板后端：快照（路径/原文/默认合并视图/mtime）、整表校验（动作枚举 / 纯数字键 / 自保护四模式存在、非 allow 且未被其后 allow 覆盖）、mtime 冲突检查 + tmp+rename 原子写（留 `.bak`，`enabled` 保留文件原值）、规则试算（同一求值链，只跑规则不模拟边界）。写后 `createPermissionConfigLoader` 下一次 tool_call 重读 = 保存即生效 |
 | `src/permissions/extension.ts` | `makePermissionGateExtension` | 权限门控内置扩展（tool_call 钩子 + 确认通道 + 会话权限模式分支）。求值链：① deny 直接 block → ② 临时区 → ③ 多根边界（projectRoot ∪ workspaces roots）读写分离（读默认放行/写默认确认）→ ④ 项目记忆 allowed[] → ⑤ ask；`getMode` 每次调用实时读，fullAccess 档下 ①⑤ 降级为审计 + 放行（spec permission-mode） |
@@ -524,14 +524,14 @@ src/
 | `src/services/packages.ts` | `PackageService` | `package-replacement.ts` 切换版本，`package-identity.ts` 校验包目录与内容，`package-lifecycle.ts` 写入会话 trace。`session-package-sources.ts` 保留打开会话的已加载文件，`session-package-versions.ts` 通过 `getLoadedResources` 投影当前与下一会话版本。 |
 | `src/services/decision-fanout.ts` | `DecisionFanout` | agent 决策记录分发：补全项目后交给 inquiry 日志；处理器异常不打断会话 |
 | `src/services/p5-background-jobs-service.ts` | `BackgroundJobsServicePort`、`createBackgroundJobsService`、`localDayKey` | Composes settings and the local-day spend ledger for each canonical workspace. |
-| `src/services/approvals.ts` | `ApprovalService` | per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播和 allowRun 队列裁决；通过 `BackendServices.approvals` 暴露，`PiBackend` 保留兼容委托 |
-| `src/services/permissions.ts` | `PermissionSettingsService` | `permissions.json` 快照、原子保存、恢复默认、规则试算与审计尾部；通过 `BackendServices.permissions` 暴露，`PiBackend` 保留兼容委托 |
+| `src/services/approvals.ts` | `ApprovalService` | per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播和 allowRun 队列裁决；通过 `BackendServices.approvals` 暴露（`SessionService` 组合持有并保留会话审批委托） |
+| `src/services/permissions.ts` | `PermissionSettingsService` | `permissions.json` 快照、原子保存、恢复默认、规则试算与审计尾部；通过 `BackendServices.permissions` 暴露（由组合根直接装配） |
 | `src/services/session-permissions.ts` | `SessionPermissionService` | 活跃会话的内存权限模式（default/fullAccess）；关闭会话或重启即归零；通过 `BackendServices.sessionPermissions` 暴露 |
 | `src/services/session-lifecycle.ts` | `SessionLifecycleService` | 会话发现与关闭协调（registry/SDK dispose 顺序和清理 hook）；创建/打开仍由 `SessionService` 装配项目资源与扩展；通过 `BackendServices.lifecycle` 暴露 |
 | `src/services/session-host.ts` + `session-composition.ts` | `SessionHost`、`initializeSessionComposition` | 会话组合根的显式端口类型与装配顺序；把 runtime、权限、MCP、知识、模型、消息、资源和扩展依赖绑定到同一个宿主边界 |
 | `src/services/session-api.ts` + `session-api-settings.ts` + `session-api-diagnostics.ts` | `SessionServiceApi`、`SessionSettingsApi` | 兼容 API 的薄委托层：会话/模型/设置/权限/诊断调用转发到专责服务，避免把业务实现重新集中到门面 |
 | `src/services/session-{construction,control,events,messages,models,resources,settings-boundary,extensions}.ts` | 会话专责服务 | 分别承载 create/open、prompt/abort/fork、事件管线、消息映射、模型偏好、资源/MCP、权限设置边界和扩展构造；单文件保持在 400 行以内 |
-| `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`PiBackend` 的资源加载与旧 `respondTrust` 继续委托 |
+| `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`SessionService` 的资源加载与 `respondTrust` 继续委托 |
 | `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |
 | `src/services/subagents.ts` | `SubagentService` | 子代理面板发现、派发、中止与运行记录；通过 `BackendServices.subagents` 暴露 |
 | `src/services/compute-adapter.ts` | `ComputeHostAdapter`、`ComputeServiceAdapter`、`createComputeServiceAdapter` | B2 远程计算 host-facing adapter；默认投影 B1 的持久化主机、作业、日志和健康状态，runner/终端缺失时明确 unavailable，并在远端副作用前执行授权 |
@@ -644,7 +644,7 @@ src/
 | 结果查看器（侧栏资源预览） | main `desktop/src/main/file-preview.ts`（`previewLocalFile`：kind + 128 KiB 文本前缀 / gzip 解压 / 图片·PDF base64）；IPC `file:preview`；文件类型注册表（扩展名 → mime / text / language / previewKind，P1）`shared/src/file-types.ts`；格式映射 + 表格/序列解析 `shared/src/resource-preview-format.ts`；树（Newick）与多序列比对（Clustal/Stockholm/PHYLIP/比对 FASTA）解析 `shared/src/bio-preview-format.ts`；UI `diff/ResourceSidebar.tsx` → `preview/PreviewHost.tsx`（按 previewKind 分发，`preview/preview-registry.ts` 注册预览器 + 纯函数路由，P2）→ `ResourceTextPreview.tsx`（表格、序列、HTML 隔离 iframe、JSON、代码）+ `ResourceBioViewers.tsx`（`TreeReader` SVG 系统发育图、`AlignmentReader` 分窗着色 + 保守度）；交互 HTML = main `html-preview-protocol.ts`（`drone-html://<token>/` 只服务用户显式打开的 HTML 所在目录，响应 CSP 禁网；iframe `sandbox="allow-scripts"` 无同源）+ IPC `file:htmlPreviewUrl`；图标注 = `diff/FigureAnnotator.tsx`（图片 / HTML 图上点击落点写说明，「发送给 Agent」整理成文字插入输入框）+ main `figure-annotations.ts`（JsonStore `desktop-figure-annotations`，按绝对路径存 userData）+ IPC `figure:annotationsGet/Save`；入口 = 聊天 Markdown 链接 / 任务产物 chip / 卡片路径 → `stores/ui.ts` `openResourcePreview` |
 | show_image 发图 | 工具本体 `backend/src/tools/show-image.ts`；实时 = shared reducer（pendingImages 缓冲，turn_end 固化排 assistant 之后）；历史 = `toSessionMessages` 的 `role:"image"`；渲染 = MessageItem image 分支（缩略图按数量分档） |
 | subagent 独立行 | 工具 `backend/src/tools/subagent/`；提取 shared `src/subagent.ts`（extractSubagentRuns，结构检测不依赖工具名）；互斥通知 `subagent_mutex` → reducer system 消息（dedup by extensionPath）；渲染 `chat/SubagentRunCard.tsx` |
-| 子智能体面板（右栏「子智能体」页签：可用 / 派发 / 本会话运行） | backend `tools/subagent/panel.ts`（`SubagentPanelService`）+ `pi-backend.ts`（`listSessionSubagents/dispatchSubagents/abortSubagentRun/listSubagentRuns`）；IPC `subagents:*`（`main/ipc/subagents.ts`）；事件 `subagent_run`（reducer 原地更新派发行 + `stores/subagents.ts`）；UI `panel/SubagentsPane.tsx` + `subagents-form.ts`、`chat/SubagentAvatar.tsx`（djb2 定色 + data-state 表情）、`chat/SubagentResultCard.tsx`、审批坞来源胶囊；输入框 `@` 选择器 `composer/at-subagents.ts` + `AtMenu.tsx` + `SubagentChip.tsx`（消息开头 `@name 任务` + Enter = 面板单任务派发；草稿 `drafts.subagent`）；文档 [subagents-panel.md](subagents-panel.md)；冒烟 `scripts/check-subagents-ui.mjs` |
+| 子智能体面板（右栏「子智能体」页签：可用 / 派发 / 本会话运行） | backend `tools/subagent/panel.ts`（`SubagentPanelService`）+ `services/subagents.ts`（`SubagentService`：`listAvailable/listSession/dispatch/abort/listRuns`）+ `session-service.ts`（事件 `observe` 与消息并回）；IPC `subagents:*`（`main/ipc/subagents.ts`）；事件 `subagent_run`（reducer 原地更新派发行 + `stores/subagents.ts`）；UI `panel/SubagentsPane.tsx` + `subagents-form.ts`、`chat/SubagentAvatar.tsx`（djb2 定色 + data-state 表情）、`chat/SubagentResultCard.tsx`、审批坞来源胶囊；输入框 `@` 选择器 `composer/at-subagents.ts` + `AtMenu.tsx` + `SubagentChip.tsx`（消息开头 `@name 任务` + Enter = 面板单任务派发；草稿 `drafts.subagent`）；文档 [subagents-panel.md](subagents-panel.md)；冒烟 `scripts/check-subagents-ui.mjs` |
 | 斜杠命令 | 面板 `composer/SlashMenu.tsx` + `slash-filter.ts` + `use-slash-menu.ts`；命令表 backend `slash-commands.ts`（draft 态走 listSlashCommandsForCwd）；**模板/skill/扩展命令 SDK 原生展开无需代码**；`/settings` 定位走 settings store `openWith()` |
 | Zotero 文献库 | Architecture: `docs/zotero-literature.md`; setup and acceptance: `packages/extensions/src/zotero-literature.ts`; status/save/update: built-in `pi-research/dist/desktop-runtime.mjs`; UI: `../drone-plugins/packages/desktop-ui-pack/ui/knowledge/ZoteroPanel.tsx`; the `drone-research-ui` switch also disables the built-in managed package; MCP remains disabled by default. |
 | 上下文压缩 UI | compaction_start/end → shared reducer 生成 system 消息 + compacting 位（**压缩期间 Composer 禁发**，SDK 拒绝压缩中的 prompt）；渲染 `chat/SystemMessage.tsx`（分割线，done 可展开摘要）；手动 `/compact [focus]`（focus 拼入摘要 prompt）；**压缩后 UI 历史完整保留**（SDK 只裁 LLM 上下文，jsonl 完整，reducer 只追加分界线） |
@@ -656,7 +656,7 @@ src/
 | 顶栏 tab / 拖拽排序 | `session/SessionTabBar.tsx`（dnd-kit，DragOverlay ghost 拾起时实测宽度沿用原胶囊 + 轴锁定 + drag-region 退出）+ `stores/sessions.ts` reorderSessions（draft 无 sessionFile 只参与内存序） |
 | 左侧会话轨道 | `session/SessionRail.tsx` + `stores/ui-preferences.ts`（开关持久化）+ `session-status.ts`（状态逻辑与顶栏共用）；逐帧截图 `scripts/shoot-rail.mjs` |
 | 权限审批面板 | `backend/src/permissions/gate.ts`（队列）+ `session/ApprovalDock.tsx`（快捷键 Enter/A/D/Esc；await 成功才移除） |
-| 会话权限模式（默认/完全访问） | 后端：`pi-backend.ts`（`permissionModes` map 内存态 + `get/setSessionPermissionMode`）+ `permissions/extension.ts`（fullAccess 审计分支）+ `permissions/audit.ts`；IPC `permissions:getMode`、`permissions:setMode`；前端：`composer/PermissionPicker.tsx`（chip）+ `stores/sessions.ts`（`permissionModes` map，draft 态转正在 ensureSession 应用）+ `use-composer-send.ts`。模式不落盘、不跨会话继承、重启归零（spec permission-mode D1） |
+| 会话权限模式（默认/完全访问） | 后端：`services/session-permissions.ts`（`SessionPermissionService` 内存态 map）+ `session-service.ts`（`get/setSessionPermissionMode`）+ `permissions/extension.ts`（fullAccess 审计分支）+ `permissions/audit.ts`；IPC `permissions:getMode`、`permissions:setMode`；前端：`composer/PermissionPicker.tsx`（chip）+ `stores/sessions.ts`（`permissionModes` map，draft 态转正在 ensureSession 应用）+ `use-composer-send.ts`。模式不落盘、不跨会话继承、重启归零（spec permission-mode D1） |
 | 逐工具权限规则 | `backend/src/permissions/`（求值链在 extension.ts：deny → 临时区 → 多根边界读写分离 → 项目记忆 → ask）+ `project/workspace-store.ts`；enabled=false 只能手改 permissions.json（UI 无入口的逃生舱，设置页只出横幅）；设置页工作区根管理 UI 未实现，手改 workspaces.json |
 | 权限设置页（设置 → 权限，编辑全局 permissions.json） | backend `permissions/settings.ts` + `config.ts`（`parseConfig` 显式布尔 / `serializeConfig` / `validateConfig`）；IPC `permissions:*`（`main/ipc/permissions.ts`）；renderer `settings/PermissionsPanel.tsx` + `PatternTable.tsx` + `permissions-model.ts` + `stores/permissions.ts`；文档 [permissions-settings.md](permissions-settings.md)；冒烟 `scripts/check-permissions-ui.mjs` |
 | 项目信任 | backend `project/trust.ts` + `trust-loader.ts`；触发点 `stores/sessions.ts`（createDraftSession/setDraftCwd）与 `stores/projects.ts`（addProject）；弹窗 `session/TrustDialog.tsx` |

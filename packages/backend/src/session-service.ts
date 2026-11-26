@@ -138,7 +138,7 @@ type AskHandler = (req: AskRequest) => void;
 type TrustHandler = (req: TrustRequest) => void;
 
 /**
- * PiBackend：pi SDK 的唯一适配层（门面）。不依赖 Electron，
+ * SessionService：组合会话服务的具体实现。不依赖 Electron，
  * 主进程与（未来的）独立 server 均可复用。
  *
  * 领域实现拆在同包模块（各文件单一职责）：

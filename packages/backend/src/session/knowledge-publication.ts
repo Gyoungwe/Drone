@@ -11,7 +11,7 @@ import type { RawMessage } from "./messages";
 /**
  * 发布网关跨模块契约：投影逻辑住在运行时加载的 .pi 知识扩展（publication.mjs），
  * 它把 `projectEvent`/`projectSnapshot` 注入当前 DroneRuntime。后端事件管线
- *（pi-backend emitEvent / getSessionMessages / subagent runner）经本模块的稳定入口调用。
+ *（SessionService emitEvent / getSessionMessages / subagent runner）经本模块的稳定入口调用。
  *
  * 扩展与后端分属两套模块世界（bundled TS ↔ 运行时 .mjs）。runtime 由宿主通过版本化
  * `pi.events` 注入动态扩展，再经显式参数传回这里；把唯一的 untyped 边界收在 `bridge()` 一处，

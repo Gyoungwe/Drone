@@ -43,7 +43,7 @@ registerTool(pi, {
 | `capabilities/runtime.ts` | `capabilities` / `allowedInLibraryMode` |
 | `session/recovery.ts` | `recoverySafe` / 只读 |
 | `tools/subagent/runner.ts` | `describeSubagentActivity(name, args, manifest)`：家族 + activity 文案 |
-| `pi-backend.ts` → `tool_execution_start.hostActivity` | `activity`；`shared/transcript/reducer.ts` 只消费事件字段 |
+| `session-service.ts` → `tool_execution_start.hostActivity` | `activity`；`shared/transcript/reducer.ts` 只消费事件字段 |
 | `.pi/lib/tasks/runtime.mjs`、`tasks/workbench.mjs`、`research-receipt-journal.mjs`、`knowledge/ui-state.mjs` | `isReadOnlyTool` / `toolsWhere` / `toolActivity` / `flowCardBuilder` |
 
 测试夹具：`packages/backend/test/tool-manifest-fixture.mjs` 的 `registerResearchToolMeta()` 让真实扩展把声明登记到桥上。

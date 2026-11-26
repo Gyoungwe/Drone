@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, onTestFinished, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { PluginCapabilityBroker } from "../src/plugins/runtime-capabilities";
+import { SessionService } from "../src/session-service";
 
 const schema = {
 	type: "object",
@@ -35,7 +35,7 @@ async function setup() {
 	observeStreams(harness);
 	runtime.registerNativeProvider(harness.faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
-	harness.backend = new PiBackend({
+	harness.backend = new SessionService({
 		projectTrust: false,
 		lazyCapabilities: false,
 		tools: ["read"],

@@ -146,7 +146,7 @@ export interface BackendServices {
 	domainCapabilities: DomainCapabilityRegistryPort;
 	/** Per-host runtime container; extension bridges must not use process globals. */
 	runtime: DroneRuntime;
-	/** Host-facing diagnostics boundary; keeps desktop IPC independent of PiBackend. */
+	/** Host-facing diagnostics boundary; keeps desktop IPC independent of SessionService. */
 	diagnostics: DiagnosticsServicePort;
 	/** Session lifecycle and compatibility methods during A3 migration. */
 	sessions: SessionServicePort;
@@ -292,10 +292,10 @@ export interface BackendOptions extends SessionServiceOptions {
 /**
  * Transitional composition root for the v2 migration.
  *
- * The existing PiBackend remains the compatibility façade while callers move
- * to explicit service groups. Keeping construction here gives desktop
- * and future CLI hosts one place to assemble the runtime and makes the final
- * façade removal an internal change.
+ * The host composes SessionService and the focused service groups directly.
+ * Keeping construction here gives desktop and future CLI hosts one place
+ * to assemble the runtime. Callers consume the typed service ports
+ * rather than the concrete session implementation.
  */
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();

@@ -20,9 +20,8 @@ import { getAgentDir } from "../session-engine/sdk";
  * Permission settings domain service.
  *
  * The service owns the durable permissions.json boundary used by the settings
- * panel.  Host adapters can consume this object through BackendServices rather
- * than reaching through PiBackend; the façade methods remain as compatibility
- * delegates while the rest of the backend is migrated.
+ * panel. Host adapters consume this object directly through BackendServices,
+ * with construction handled by the host composition root.
  */
 export class PermissionSettingsService {
 	constructor(private readonly agentDir: string = getAgentDir()) {}

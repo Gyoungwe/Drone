@@ -6,12 +6,12 @@ import { fauxAssistantMessage, fauxProvider, getCurrentSystemPrompt } from "@ear
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { researchSkillPackPaths } from "../../desktop/src/main/research-skill-packs";
-import { PiBackend } from "../src/pi-backend";
+import { SessionService } from "../src/session-service";
 
 const packs = resolve(import.meta.dirname, "../../desktop/resources/research-skills");
 const installed = existsSync(join(packs, "academic/.drone-pack.json"));
 let root, backend, modelRuntime, cwd, faux, paths, session, observedSystemPrompt;
-describe.skipIf(!installed)("ARS through the real PiBackend / SDK session (offline faux provider)", () => {
+describe.skipIf(!installed)("ARS through SessionService / SDK (offline faux provider)", () => {
 	beforeEach(async () => {
 		root = await realpath(await mkdtemp(join(tmpdir(), "drone-ars-sdk-")));
 		cwd = join(root, "project");
@@ -45,7 +45,7 @@ describe.skipIf(!installed)("ARS through the real PiBackend / SDK session (offli
 		if (root) await rm(root, { recursive: true, force: true });
 	});
 	function makeBackend(extraExtensions = []) {
-		const value = new PiBackend({
+		const value = new SessionService({
 			projectTrust: false,
 			desktopIntegration: {
 				appendSystemPrompt: [],

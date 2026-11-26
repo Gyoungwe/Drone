@@ -1,11 +1,11 @@
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import type { SessionRegistry } from "../src/session/registry";
+import { SessionService } from "../src/session-service";
 
 /** 注入 stub session 到私有 registry（emitEvent 的 abort 路径不炸） */
-function makeBackend(sessionId: string): PiBackend {
-	const backend = new PiBackend({ defaultCwd: "/tmp", projectTrust: false, permissionGates: false });
+function makeBackend(sessionId: string): SessionService {
+	const backend = new SessionService({ defaultCwd: "/tmp", projectTrust: false, permissionGates: false });
 	const registry = (backend as unknown as { registry: SessionRegistry }).registry;
 	registry.add({
 		session: { sessionId, dispose: () => {}, abort: async () => {} } as unknown as AgentSession,
@@ -20,7 +20,7 @@ const blankDelta = (bytes: number) => ({
 	assistantMessageEvent: { type: "text_delta" as const, delta: "\n".repeat(bytes), contentIndex: 0 },
 });
 
-describe("PiBackend.emitEvent — StreamGuard 熔断合成事件", () => {
+describe("SessionService.emitEvent — StreamGuard 熔断合成事件", () => {
 	it("trip 时 handler 收到 stream_guard_tripped（含 verdict），非 trip 事件不吞", async () => {
 		const backend = makeBackend("s1");
 		const received: Array<{ type: string; verdict?: string }> = [];

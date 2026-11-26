@@ -2,7 +2,7 @@ import type { ProviderInfo } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
-import { PiBackend } from "../src/pi-backend";
+import { SessionService } from "../src/session-service";
 
 const providers: ProviderInfo[] = [
 	{
@@ -37,9 +37,9 @@ function textOnlyModel(id: string): Model<any> {
 	} as Model<any>;
 }
 
-describe("PiBackend.listModels", () => {
+describe("SessionService.listModels", () => {
 	it("在唯一出口过滤隐藏模型", async () => {
-		const backend = new PiBackend({ projectTrust: false });
+		const backend = new SessionService({ projectTrust: false });
 		vi.spyOn(backend.settings, "listProviders").mockResolvedValue(providers);
 		Object.defineProperty(backend, "modelPrefs", {
 			value: {
@@ -62,7 +62,7 @@ describe("PiBackend.listModels", () => {
 	});
 
 	it("imageInput：input 含 image 为 true，纯 text 为 false（fail-closed 数据源）", async () => {
-		const backend = new PiBackend({ projectTrust: false });
+		const backend = new SessionService({ projectTrust: false });
 		vi.spyOn(backend.settings, "listProviders").mockResolvedValue(providers);
 		Object.defineProperty(backend, "modelPrefs", {
 			value: {
@@ -91,7 +91,7 @@ describe("PiBackend.listModels", () => {
 	});
 
 	it("imageInput：getModel 抳错/拿不到 → 字段缺省（UI fail-open 不拦截）", async () => {
-		const backend = new PiBackend({ projectTrust: false });
+		const backend = new SessionService({ projectTrust: false });
 		vi.spyOn(backend.settings, "listProviders").mockResolvedValue(providers);
 		Object.defineProperty(backend, "modelPrefs", {
 			value: {

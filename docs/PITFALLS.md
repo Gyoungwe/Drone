@@ -121,7 +121,7 @@ container digest 会被 B3 authorization/scheduler gate 拒绝，不能作为真
 
 glm-5.3 流式输出病态空白 thinking（纯 `\n    ` 洪流永不终止），pi SDK 每条 `message_update` delta 都携带全量累积快照（`partial`+`message` 两份）→ trace 落盘平方放大，**3 分钟写 12.7GB**；巨型事件再经 IPC 无上限转发 renderer → 堆爆 unresponsive。
 
-修复三层全在 `pi-backend.ts` 的 `emitEvent` 单点：
+修复三层全在 `session-service.ts`（`services/session-events.ts`，原 `pi-backend.ts`）的 `emitEvent` 单点：
 
 1. `session/event-slim.ts` 剥快照（下游只吃 delta 白名单，终态靠 `message_start/end` 全量）
 2. `session/stream-guard.ts` 熔断（连续空白 >8KB / 单消息 >2MB → abort+丢弃后续）
@@ -177,7 +177,7 @@ Gemini CLI 的公开类型表当作完整协议：本机 Antigravity 2.19.1 的 
 
 ### 权限注入点：`session.bindExtensions({ uiContext, mode: "tui" })`（不是 `createAgentSession` 选项）
 
-`pi-backend.ts` 的 `makeUiContext` 已有全量 no-op 实现（约 25 个成员）——只改 `confirm`，别重写。
+`session/ui-context.ts` 的 `makeUiContext` 已有全量 no-op 实现（约 25 个成员）——只改 `confirm`，别重写。
 
 ### `Model`/`ThinkingLevel` 类型来自 `@earendil-works/pi-ai`（coding-agent 不 re-export）
 

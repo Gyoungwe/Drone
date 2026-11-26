@@ -2,9 +2,9 @@ import { formatSkillCommand, parseExpandedSkillInvocation, type SkillInvocation 
 import type { Message } from "@earendil-works/pi-ai";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import { PiBackend } from "../src/pi-backend";
 import { toSessionMessages } from "../src/session/messages";
 import type { SessionRegistry } from "../src/session/registry";
+import { SessionService } from "../src/session-service";
 
 const canonicalSkill = (args?: string) =>
 	`<skill name="mindmap" location="/tmp/skills/mindmap/SKILL.md">\nReferences are relative to /tmp/skills/mindmap.\n\n# Mind map\n\nBody\n</skill>${args ? `\n\n${args}` : ""}`;
@@ -70,7 +70,7 @@ describe("skill invocation history projection", () => {
 	});
 });
 
-describe("PiBackend skill recall", () => {
+describe("SessionService skill recall", () => {
 	it("returns a reusable command while resolving the persisted canonical text", async () => {
 		const sourceText = canonicalSkill("layout");
 		const sessionManager = SessionManager.inMemory();
@@ -79,7 +79,7 @@ describe("PiBackend skill recall", () => {
 			content: sourceText,
 			timestamp: 1,
 		} satisfies Message);
-		const backend = new PiBackend({ projectTrust: false, permissionGates: false });
+		const backend = new SessionService({ projectTrust: false, permissionGates: false });
 		const registry = (backend as unknown as { registry: SessionRegistry }).registry;
 		registry.add({
 			session: {
