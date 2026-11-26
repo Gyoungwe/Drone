@@ -3,11 +3,9 @@ import { existsSync } from "node:fs";
 /**
  * Ratcheting architecture guard for the package and Pi extension boundaries.
  *
- * The checker intentionally has no dependency on the TypeScript compiler. It is
- * run before build/typecheck in CI and reports source locations that need a
- * deliberate migration exception. Existing findings live in the baseline
- * fixture; new findings fail the check while fixed findings are reported so the
- * baseline can shrink over time.
+ * The checker runs before build/typecheck in CI. Existing package boundary
+ * findings live in the baseline fixture. New findings fail the check while
+ * fixed findings are reported so the baseline can shrink over time.
  *
  * `--update-baseline` records fixed findings only: if any finding is new it
  * lists them, writes nothing and fails. `--update-baseline --allow-moves` also
@@ -18,6 +16,12 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import {
+	allowsLegacyKnowledge,
+	isGlueSource,
+	STRUCTURE_BASELINE_FILE,
+	scanGlueSource,
+} from "./check-structure.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BASELINE_PATH = join(ROOT, "scripts/fixtures/architecture-baseline.json");
@@ -43,7 +47,7 @@ function canonical(finding) {
 }
 
 async function walk(dir, files = []) {
-	const entries = await (await import("node:fs/promises")).readdir(dir, { withFileTypes: true });
+	const entries = await readdir(dir, { withFileTypes: true });
 	for (const entry of entries) {
 		if (SKIP_PARTS.has(entry.name)) continue;
 		const path = join(dir, entry.name);
@@ -51,7 +55,8 @@ async function walk(dir, files = []) {
 			await walk(path, files);
 			continue;
 		}
-		if (SOURCE_EXTENSIONS.has(path.slice(path.lastIndexOf(".")))) files.push(path);
+		if (SOURCE_EXTENSIONS.has(path.slice(path.lastIndexOf("."))) || isGlueSource(displayPath(path)))
+			files.push(path);
 	}
 	return files;
 }
@@ -67,14 +72,9 @@ function isRuntimeImport(line, text, offset) {
 	return !/\bimport\s+type\b/.test(text.slice(start, offset));
 }
 
-function scanFile(file, text, findings) {
-	const rel = displayPath(file);
+function scanSdkImports(file, text, rel, findings) {
 	const lines = text.split("\n");
-	const isRenderer = /^packages\/desktop\/src\/renderer\//.test(rel);
 	const isTest = /(?:^|\/)(?:test|tests)\//.test(rel) || /\.(?:test|spec)\.[^.]+$/.test(rel);
-	const domain = rel.match(/^packages\/(knowledge|tasks|research)\//)?.[1];
-	const inquiry = rel.startsWith("packages/inquiry/");
-	const compute = rel.startsWith("packages/compute/");
 
 	// R1: SDK value imports. Keep the check intentionally broad so a newly
 	// added side-effect or dynamic import is caught as well.
@@ -90,6 +90,12 @@ function scanFile(file, text, findings) {
 		const allowed = isTest || rel.startsWith("packages/backend/src/session-engine/");
 		if (!allowed) addFinding(findings, "R1", file, lineNumber(text, offset), `runtime import ${specifier}`);
 	}
+}
+
+function scanFile(file, text, rel, findings) {
+	const isRenderer = /^packages\/desktop\/src\/renderer\//.test(rel);
+	const domain = rel.match(/^packages\/(knowledge|tasks|research)\//)?.[1];
+	scanSdkImports(file, text, rel, findings);
 
 	// R2: domain packages stay independent from host and SDK layers.
 	if (domain) {
@@ -127,6 +133,23 @@ function scanFile(file, text, findings) {
 		const offset = match.index ?? 0;
 		addFinding(findings, "R5", file, lineNumber(text, offset), `relative .pi path ${match[1]}`);
 	}
+	scanDomainRules(file, text, rel, domain, findings);
+
+	// R9 (UI 追平 U1): renderer 组件的 className 只用语义 token —— 禁止 Tailwind 调色板类
+	// （red-600、amber-500…）和任意值 6 位 hex（text-[#c9d3f5]）。canvas/图表的数据配色常量不在此列。
+	if (/^packages\/desktop\/src\/renderer\/.*\.tsx$/.test(rel) && !/\.test\.tsx$/.test(rel)) {
+		const palette =
+			/\b(?:bg|text|border|ring|fill|stroke|outline|from|to|via|divide|decoration|accent)-(?:red|rose|amber|yellow|orange|green|emerald|lime|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|slate|gray|zinc|neutral|stone)-\d{2,3}\b|-\[#[0-9a-fA-F]{6}\]/g;
+		for (const match of text.matchAll(palette)) {
+			const offset = match.index ?? 0;
+			addFinding(findings, "R9", file, lineNumber(text, offset), `palette class ${match[0]}`);
+		}
+	}
+}
+
+function scanDomainRules(file, text, rel, domain, findings) {
+	const inquiry = rel.startsWith("packages/inquiry/");
+	const compute = rel.startsWith("packages/compute/");
 
 	// R6: keep domain dependencies acyclic.
 	if (domain) {
@@ -166,28 +189,29 @@ function scanFile(file, text, findings) {
 			addFinding(findings, "R8", file, lineNumber(text, offset), `inquiry import ${match[1]}`);
 		}
 	}
-	// R9 (UI 追平 U1): renderer 组件的 className 只用语义 token —— 禁止 Tailwind 调色板类
-	// （red-600、amber-500…）和任意值 6 位 hex（text-[#c9d3f5]）。canvas/图表的数据配色常量不在此列。
-	if (/^packages\/desktop\/src\/renderer\/.*\.tsx$/.test(rel) && !/\.test\.tsx$/.test(rel)) {
-		const palette =
-			/\b(?:bg|text|border|ring|fill|stroke|outline|from|to|via|divide|decoration|accent)-(?:red|rose|amber|yellow|orange|green|emerald|lime|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|slate|gray|zinc|neutral|stone)-\d{2,3}\b|-\[#[0-9a-fA-F]{6}\]/g;
-		for (const match of text.matchAll(palette)) {
-			const offset = match.index ?? 0;
-			addFinding(findings, "R9", file, lineNumber(text, offset), `palette class ${match[0]}`);
-		}
-	}
 }
 
-async function scan() {
+async function scan(legacyKnowledgeAllowed) {
 	const files = [];
 	for (const root of SCAN_ROOTS) {
 		const path = join(ROOT, root);
 		if (existsSync(path)) await walk(path, files);
 	}
 	const findings = [];
-	for (const file of files) scanFile(file, await readFile(file, "utf8"), findings);
+	const glueFindings = [];
+	for (const file of files) {
+		const text = await readFile(file, "utf8");
+		const rel = displayPath(file);
+		if (isGlueSource(rel)) {
+			for (const finding of scanGlueSource(rel, text, legacyKnowledgeAllowed)) {
+				glueFindings.push({ ...finding, file: rel });
+			}
+		}
+		scanFile(file, text, rel, findings);
+	}
 	await scanPluginDist(findings);
-	return findings.sort((a, b) => canonical(a).localeCompare(canonical(b)) || a.line - b.line);
+	findings.sort((a, b) => canonical(a).localeCompare(canonical(b)) || a.line - b.line);
+	return { findings, glueFindings };
 }
 
 /**
@@ -260,7 +284,14 @@ function describe(finding) {
 	return `${finding.rule} ${finding.file}:${finding.line} — ${finding.detail}`;
 }
 
-const findings = await scan();
+const structureBaselinePath = join(ROOT, STRUCTURE_BASELINE_FILE);
+const structureBaseline = JSON.parse(await readFile(structureBaselinePath, "utf8"));
+const { findings, glueFindings } = await scan(allowsLegacyKnowledge(structureBaseline));
+if (glueFindings.length > 0) {
+	console.error(`Architecture check failed: ${glueFindings.length} glue violation(s).`);
+	for (const finding of glueFindings) console.error(`- ${describe(finding)}`);
+	process.exit(1);
+}
 const baseline = await loadBaseline();
 const added = unmatched(findings, baseline);
 const removed = unmatched(baseline, findings);

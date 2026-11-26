@@ -96,6 +96,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run check:arch
       - run: npm run test:arch
+      - name: Report unused files and exports
+        run: npm run knip
       - run: npm run check:plugin-api
         env:
           DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins

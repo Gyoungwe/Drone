@@ -337,7 +337,6 @@
 	"complexity/noExcessiveLinesPerFunction\tpackages/shared/src/turn-route.test.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/shared/src/turn-route.ts": 1,
 	"complexity/noExcessiveLinesPerFunction\tpackages/shared/src/v2-closure.test.ts": 1,
-	"complexity/noExcessiveLinesPerFunction\tscripts/check-architecture.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tscripts/check-local-desktop-artifact.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tscripts/check-pi-compat.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tscripts/check-plugin-api.mjs": 1,

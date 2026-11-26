@@ -2,11 +2,19 @@
 /**
  * Pre-commit guard (AGENTS.md hard limits):
  * - generated output and source are committed separately,
- * - no new `.skip(` and no new or longer test timeouts.
+ * - no new `.skip(` and no new or longer test timeouts,
+ * - retired glue stays retired in the staged snapshot.
  * Bypass with `git commit --no-verify` and say why in the PR description.
  */
 import { execFileSync } from "node:child_process";
 import process from "node:process";
+import {
+	allowsLegacyKnowledge,
+	isGlueSource,
+	LEGACY_KNOWLEDGE_FILE,
+	STRUCTURE_BASELINE_FILE,
+	scanGlueSource,
+} from "./check-structure.mjs";
 import { isMainModule } from "./is-main-module.mjs";
 
 const GENERATED_RE = /(?:^|\/)dist\/|^\.pi\/extensions\/|(?:^|\/)\.?build-manifest\.json$/;
@@ -40,13 +48,37 @@ export function parseAddedLines(diff) {
 	return added;
 }
 
+function stagedGlueProblems(git, paths) {
+	const tracked = git("ls-files", "-z", "--", STRUCTURE_BASELINE_FILE, LEGACY_KNOWLEDGE_FILE).split("\0");
+	const hasBaseline = tracked.includes(STRUCTURE_BASELINE_FILE);
+	const hasLegacyKnowledge = tracked.includes(LEGACY_KNOWLEDGE_FILE);
+	const readStaged = (file) => git("cat-file", "blob", `:${file}`);
+	const baseline = hasBaseline ? JSON.parse(readStaged(STRUCTURE_BASELINE_FILE)) : {};
+	const legacyKnowledgeAllowed = allowsLegacyKnowledge(baseline);
+	const files = new Set(paths.filter(isGlueSource));
+	const problems = [];
+	if (hasBaseline && legacyKnowledgeAllowed && !hasLegacyKnowledge) {
+		problems.push(
+			`${LEGACY_KNOWLEDGE_FILE} was removed. Run node scripts/check-structure.mjs --update and stage ${STRUCTURE_BASELINE_FILE}`,
+		);
+	}
+	if (!legacyKnowledgeAllowed && hasLegacyKnowledge) files.add(LEGACY_KNOWLEDGE_FILE);
+	for (const file of files) {
+		for (const { line, detail } of scanGlueSource(file, readStaged(file), legacyKnowledgeAllowed)) {
+			problems.push(`${file}:${line} ${detail}`);
+		}
+	}
+	return problems;
+}
+
 if (isMainModule(import.meta.url)) {
 	const git = (...args) => execFileSync("git", args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
-	const paths = git("diff", "--cached", "--name-only", "--diff-filter=ACMR").split("\n").filter(Boolean);
+	const paths = git("diff", "--cached", "--name-only", "-z", "--diff-filter=ACMR").split("\0").slice(0, -1);
 	const problems = checkStaged(
 		paths,
 		parseAddedLines(git("diff", "--cached", "--unified=0", "--diff-filter=ACMR")),
 	);
+	problems.push(...stagedGlueProblems(git, paths));
 	for (const problem of problems) console.error(`pre-commit: ${problem}`);
 	if (problems.length > 0) {
 		console.error("pre-commit: fix these, or bypass with --no-verify and explain why in the PR description");
