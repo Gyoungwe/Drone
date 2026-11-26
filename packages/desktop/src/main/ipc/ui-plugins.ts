@@ -1,5 +1,5 @@
-import { channelOf, KNOWN_UI_SLOTS, type UiPluginsConfig, UiPluginsContract } from "@drone/shared";
-import { BrowserWindow, shell } from "electron";
+import { channelOf, KNOWN_UI_SLOTS, UiPluginsContract } from "@drone/shared";
+import { BrowserWindow, type IpcMainInvokeEvent, shell, type WebContents } from "electron";
 import { loadUiPluginsConfig } from "../ui-plugins/config";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import { requestPolicyApproval } from "../ui-plugins/policy-approval";
@@ -13,34 +13,13 @@ function pushConfigEvent(): void {
 	sendToRenderer(channelOf(UiPluginsContract, "event"), { kind: "config" });
 }
 
-/** The main window when it can carry a dialog; a hidden or closed window leaves the dialog on its own. */
-function visibleWindow(): BrowserWindow | undefined {
-	const window = BrowserWindow.getAllWindows()[0];
-	return window && !window.isDestroyed() && window.isVisible() ? window : undefined;
-}
+type ChangeConfiguration = <T>(action: () => Promise<T>) => Promise<T>;
 
-/**
- * UI 插件域：配置读写 / 列表 / 构建 / 代码读取 / 目录打开。
- * 安全细则（spec §9）：readCode/openDir 只接受 manager 白名单内的合法插件名（禁路径）；
- * 所有参数做类型检查，非法直接 return。
- *
- * Returns the install-time policy check: it asks about every package that would
- * run but waits for the user's approval (approval category
- * `install-credential-network-policy`), one dialog at a time.
- */
-export function registerUiPluginsIpc(
+function createPolicyApprovalFlow(
 	manager: UiPluginManager,
-	runtime: DesktopRuntimeBridge,
-	ask = requestPolicyApproval,
-): { reconcilePolicies(): Promise<void> } {
-	const changeConfiguration = async <T>(action: () => Promise<T>): Promise<T> => {
-		try {
-			return await runtime.withUiTransition(action);
-		} finally {
-			// Failed persistence still drained old clients. Reload the configuration that actually survived.
-			pushConfigEvent();
-		}
-	};
+	changeConfiguration: ChangeConfiguration,
+	ask: typeof requestPolicyApproval,
+) {
 	// The startup check, a package change and a switch can each want a dialog; one is shown at a time.
 	let dialogs: Promise<unknown> = Promise.resolve();
 	const oneAtATime = <T>(task: () => Promise<T>): Promise<T> => {
@@ -55,65 +34,83 @@ export function registerUiPluginsIpc(
 				const source = manager.pendingPolicyApprovals().find((candidate) => !asked.has(candidate.pluginId));
 				if (!source) return;
 				asked.add(source.pluginId);
-				const approved = await ask(source, visibleWindow());
+				const window = BrowserWindow.getAllWindows()[0];
+				const parent = window && !window.isDestroyed() && window.isVisible() ? window : undefined;
+				const approved = await ask(source, parent);
 				await changeConfiguration(() => manager.recordPolicyDecision(source, approved));
 			}
 		});
-	const implementation = (
-		event: import("electron").IpcMainInvokeEvent,
-	): ContractImplementation<typeof UiPluginsContract> => ({
+	const setPluginEnabled = async (owner: WebContents, name: string, enabled: boolean): Promise<void> => {
+		if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) throw new Error(`invalid plugin name: ${name}`);
+		const info = manager.info(name);
+		if (enabled && info?.invalidReason) throw new Error(info.invalidReason);
+		// Approving the package's policy is a precondition of enabling (D-CRED-2). The user
+		// answered in the host's own dialog, so a refusal leaves the plugin off without an error.
+		const source = enabled ? manager.packageSourceOf(name) : undefined;
+		const approval = source && manager.awaitsPolicyApproval(source) ? source : undefined;
+		if (approval) {
+			const parent = BrowserWindow.fromWebContents(owner) ?? undefined;
+			const approved = await oneAtATime(
+				async () => !manager.awaitsPolicyApproval(approval) || ask(approval, parent),
+			);
+			if (!approved) return;
+		}
+		await changeConfiguration(async () => {
+			const { plugins, policyConsents } = await loadUiPluginsConfig();
+			const trusted = enabled || (plugins[name]?.trusted ?? false);
+			await manager.updateConfig({
+				plugins: { [name]: { enabled, trusted } },
+				...(approval
+					? { policyConsents: { ...policyConsents, [approval.pluginId]: consentToRecord(approval) } }
+					: {}),
+			});
+		});
+	};
+	return { reconcilePolicies, setPluginEnabled };
+}
+
+async function readPluginCode(
+	manager: UiPluginManager,
+	runtime: DesktopRuntimeBridge,
+	name: string,
+	owner: WebContents,
+) {
+	if (!manager.isEnabled(name)) return { error: "UI plugin is not enabled and trusted" };
+	const directory = manager.pluginDirOf(name);
+	const source = manager.runtimeSource(name);
+	const code = await manager.readCode(name);
+	if ("error" in code) return code;
+	if (directory !== manager.pluginDirOf(name) || source !== manager.runtimeSource(name)) {
+		return { error: "UI plugin installation changed while loading; reload required" };
+	}
+	const runtimeBinding = await runtime.bind(name, owner);
+	return { ...code, ...(runtimeBinding === undefined ? {} : { runtimeBinding }) };
+}
+
+/** Binds UI plugin IPC and returns the serialized install-time policy check. */
+export function registerUiPluginsIpc(
+	manager: UiPluginManager,
+	runtime: DesktopRuntimeBridge,
+	ask = requestPolicyApproval,
+): { reconcilePolicies(): Promise<void> } {
+	const changeConfiguration: ChangeConfiguration = async (action) => {
+		try {
+			return await runtime.withUiTransition(action);
+		} finally {
+			// Failed persistence still drained old clients. Reload the configuration that actually survived.
+			pushConfigEvent();
+		}
+	};
+	const { reconcilePolicies, setPluginEnabled } = createPolicyApprovalFlow(manager, changeConfiguration, ask);
+	const implementation = (event: IpcMainInvokeEvent): ContractImplementation<typeof UiPluginsContract> => ({
 		getConfig: () => loadUiPluginsConfig(),
 		setEnabled: async (enabled) => {
 			await changeConfiguration(() => manager.updateConfig({ enabled }));
 		},
 		list: () => manager.list(),
-		readCode: async (name) => {
-			if (!manager.isEnabled(name)) return { error: "UI plugin is not enabled and trusted" };
-			const directory = manager.pluginDirOf(name);
-			const source = manager.runtimeSource(name);
-			const code = await manager.readCode(name);
-			if ("error" in code) return code;
-			if (directory !== manager.pluginDirOf(name) || source !== manager.runtimeSource(name)) {
-				return { error: "UI plugin installation changed while loading; reload required" };
-			}
-			const runtimeBinding = await runtime.bind(name, event.sender);
-			return { ...code, ...(runtimeBinding === undefined ? {} : { runtimeBinding }) };
-		},
+		readCode: (name) => readPluginCode(manager, runtime, name, event.sender),
 		// 启用=信任：enabled=true 时 trusted 一并落盘
-		setPluginEnabled: async (name, enabled) => {
-			if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
-				throw new Error(`invalid plugin name: ${name}`);
-			}
-			const info = manager.info(name);
-			if (enabled && info?.invalidReason) {
-				throw new Error(info.invalidReason);
-			}
-			// Approving the package's policy is a precondition of enabling (D-CRED-2). The user
-			// answered in the host's own dialog, so a refusal leaves the plugin off without an error.
-			const source = enabled ? manager.packageSourceOf(name) : undefined;
-			const approval = source && manager.awaitsPolicyApproval(source) ? source : undefined;
-			if (approval) {
-				const parent = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-				const approved = await oneAtATime(
-					async () => !manager.awaitsPolicyApproval(approval) || ask(approval, parent),
-				);
-				if (!approved) return;
-			}
-			await changeConfiguration(async () => {
-				const config = await loadUiPluginsConfig();
-				const prev = config.plugins[name];
-				const patch: Partial<UiPluginsConfig> = {
-					plugins: {
-						...config.plugins,
-						[name]: { enabled, trusted: enabled ? true : (prev?.trusted ?? false) },
-					},
-					...(approval
-						? { policyConsents: { ...config.policyConsents, [approval.pluginId]: consentToRecord(approval) } }
-						: {}),
-				};
-				await manager.updateConfig(patch);
-			});
-		},
+		setPluginEnabled: (name, enabled) => setPluginEnabled(event.sender, name, enabled),
 		assignSlot: async (slot, pluginName) => {
 			if (!KNOWN_UI_SLOTS.includes(slot)) return;
 			await changeConfiguration(async () => {
