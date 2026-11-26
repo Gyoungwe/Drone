@@ -1,13 +1,14 @@
 import { execFile, execFileSync } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
-import { link, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { parseArgs, promisify } from "node:util";
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
-import { type Static, type TSchema, Type } from "typebox";
+import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
 import { isMainModule } from "./is-main-module.mjs";
+import { checked, nullable, readJson, saveReport, sha256, tokensFor } from "./research-baseline-io.mts";
 
 const root = resolve(import.meta.dirname, "..");
 const runsDir = join(root, ".local/baseline-runs");
@@ -24,7 +25,6 @@ const text = Type.String({ minLength: 1 });
 const count = Type.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
 const bool = Type.Boolean();
 const commit = Type.String({ pattern: "^[a-f0-9]{40}$" });
-const nullable = <Schema extends TSchema>(schema: Schema) => Type.Union([schema, Type.Null()]);
 const toolSchema = Type.Enum(toolNames);
 const toolSetSchema = Type.Array(toolSchema, {
 	minItems: toolNames.length, maxItems: toolNames.length, uniqueItems: true,
@@ -63,25 +63,11 @@ const replaySchema = Type.Object({ config: Type.Object({ name: text }), aggregat
 }) });
 
 type Scenario = Static<typeof scenarioSchema>;
-type Usage = Static<typeof usageSchema>;
 type Observation = Static<typeof observationSchema>;
 type Options = { mode?: string; provider?: string; model?: string; thinking?: string;
 	fixture?: string; out?: string; "replay-summary"?: string };
 type Config = ReturnType<typeof modelConfig>;
 type RunScenario = (scenario: Scenario, config: Config) => Promise<unknown>;
-
-function checked<Schema extends TSchema>(schema: Schema, value: unknown, label: string): Static<Schema> {
-	if (!Check(schema, value)) throw new Error(`Invalid ${label}`);
-	return value;
-}
-
-async function readJson(path: string): Promise<unknown> {
-	return JSON.parse(await readFile(path, "utf8"));
-}
-
-function sha256(value: string | Buffer) {
-	return createHash("sha256").update(value).digest("hex");
-}
 
 function modelConfig(options: Options) {
 	const mode = checked(modeSchema, options.mode ?? "offline-faux", "mode");
@@ -91,22 +77,6 @@ function modelConfig(options: Options) {
 	}
 	return { mode, provider: checked(text, options.provider, "--provider"),
 		model: checked(text, options.model, "--model"), thinkingLevel: checked(thinkingSchema, options.thinking, "--thinking") };
-}
-
-function tokensFor(samples: (Usage | null)[]) {
-	const fields = ["input", "output", "cacheRead", "cacheWrite", "reasoning"] as const;
-	const reportedFields = fields.filter((field) => samples.some((sample) => sample?.[field] !== undefined));
-	const sum = (field: keyof Usage) => samples.reduce<number | null>((total, sample) => {
-		const value = sample?.[field];
-		return total === null || value === undefined ? null : checked(count, total + value, "token total");
-	}, 0);
-	const cumulativeInput = sum("input"), cumulativeOutput = sum("output"), cacheWrite = sum("cacheWrite");
-	const billedTotal = cumulativeInput === null || cumulativeOutput === null || cacheWrite === null
-		? null : checked(count, cumulativeInput + cumulativeOutput + cacheWrite, "billed token total");
-	return { firstTurnInput: samples[0]?.input ?? null, cumulativeInput, cumulativeOutput,
-		cacheRead: sum("cacheRead"), cacheWrite, reasoning: sum("reasoning"), billedTotal,
-		usageReported: reportedFields.length > 0, reportedFields,
-		unknownUsageSteps: samples.filter((sample) => !sample || !fields.some((field) => sample[field] !== undefined)).length };
 }
 
 function scenarioMetric(scenario: Scenario, observed: Observation, mode: Config["mode"]) {
@@ -158,20 +128,6 @@ async function replaySummary(path: string | undefined) {
 	return { config: config.name, sessions: scores.sessions, t1Sessions: scores.sessionsT1,
 		t2Sessions: scores.sessionsT2, t3Sessions: scores.sessionsT3, cacheWriteMeanPerStep: scores.cacheWriteMeanPerStep,
 		plateauSlopeRatio: scores.plateauSlopeRatio };
-}
-
-async function saveReport(out: string, report: object) {
-	await mkdir(dirname(out), { recursive: true });
-	const staging = await mkdtemp(join(dirname(out), ".baseline-"));
-	try {
-		const temp = join(staging, "report.json");
-		const body = `${JSON.stringify(report, null, 2)}\n`;
-		await writeFile(temp, body, { mode: 0o600 });
-		if (await readFile(temp, "utf8") !== body) throw new Error("Baseline report read-back mismatch");
-		await link(temp, out);
-	} finally {
-		await rm(staging, { recursive: true, force: true });
-	}
 }
 
 export async function measureResearchBaseline(options: Options, runScenario: RunScenario = runIsolated) {
