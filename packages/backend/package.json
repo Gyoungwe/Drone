@@ -28,9 +28,9 @@
 	},
 	"devDependencies": {
 		"@drone/discovery": "*",
-		"@gyoungwe/pi-analysis": "0.1.2",
-		"@gyoungwe/pi-knowledge": "*",
-		"@gyoungwe/pi-research": "*",
+		"@gyoungwe/pi-analysis": "https://github.com/Gyoungwe/drone-plugins/releases/download/pi-analysis-v0.3.0/gyoungwe-pi-analysis-0.3.0.tgz",
+		"@gyoungwe/pi-knowledge": "https://github.com/Gyoungwe/drone-plugins/releases/download/pi-knowledge-v0.3.1/gyoungwe-pi-knowledge-0.3.1.tgz",
+		"@gyoungwe/pi-research": "https://github.com/Gyoungwe/drone-plugins/releases/download/pi-research-v0.4.1/gyoungwe-pi-research-0.4.1.tgz",
 		"@types/ssh2": "^1.15.6",
 		"typescript": "^5.9.0",
 		"vitest": "^3.2.0"
