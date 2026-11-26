@@ -38,7 +38,7 @@ import {
 	sourceWithConsent,
 } from "./policy-consent-store";
 
-export { RETIRED_BUILTIN_PLUGINS, uiPluginsResourcesDir } from "./plugin-dirs";
+export { uiPluginsResourcesDir } from "./plugin-dirs";
 
 const log = createLogger("ui-plugins");
 
