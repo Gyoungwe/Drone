@@ -64,6 +64,7 @@ interface Replacement {
 	readonly directory: string;
 	readonly previous?: PackageIdentity;
 	readonly selection: PackageSelection;
+	readonly expectedVersion?: string;
 	readonly occupiedTools: () => ReadonlySet<string>;
 	readonly registry: SessionRegistry;
 	readonly packageVersions?: SessionPackageVersions;
@@ -102,7 +103,11 @@ function nextSelection(state: Replacement, identity: PackageIdentity | undefined
 	if (!identity) return {};
 	const { source } = state.receipt;
 	const { entry } = state.selection;
-	return { entry: typeof entry === "object" ? { ...entry, source } : source, dependency: identity.version };
+	const spec = source.slice(`npm:${state.location.packageName}@`.length);
+	return {
+		entry: typeof entry === "object" ? { ...entry, source } : source,
+		dependency: spec.startsWith("file://") ? spec : identity.version,
+	};
 }
 
 async function restoreSelection(state: Replacement, selected: PackageSelection): Promise<void> {
@@ -177,10 +182,7 @@ async function stageCandidate(state: Replacement) {
 	await state.disk.stage(state.directory);
 	addEvent(state.receipt, "staged");
 	const identity = readPackageIdentity(state.candidate);
-	if (
-		!identity ||
-		(state.receipt.operation === "rollback" && !state.receipt.source.endsWith(`@${identity.version}`))
-	)
+	if (!identity || (state.expectedVersion !== undefined && identity.version !== state.expectedVersion))
 		throw new Error("Candidate version did not match the install request");
 	const inspection = await state.host.inspect(state.candidate, true);
 	const pi = await packageHasPiResources(state.candidate.path, state.selection.entry);
@@ -292,6 +294,7 @@ export async function replaceInstalledPackage(
 	registry: SessionRegistry,
 	packageVersions?: SessionPackageVersions,
 	observeStages?: () => void,
+	expectedVersion?: string,
 ): Promise<void> {
 	const location = {
 		packageName: receipt.packageName,
@@ -317,6 +320,7 @@ export async function replaceInstalledPackage(
 			directory,
 			previous,
 			selection,
+			expectedVersion,
 			registry,
 			packageVersions,
 			observeStages,

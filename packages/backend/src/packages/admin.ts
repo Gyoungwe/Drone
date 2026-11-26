@@ -2,12 +2,13 @@ import { lstatSync } from "node:fs";
 import { mkdir, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import type { PackageLifecycleReceipt } from "@drone/shared";
+import { npmPackageName, type PackageLifecycleReceipt } from "@drone/shared";
 import type { PackageSource } from "@earendil-works/pi-coding-agent";
 import { JsonStore } from "../json-store";
 import type { PackageReplacementDisk, PackageSelection } from "../services/package-replacement";
 import { type PackageManager, PackageService, type PackageServiceDependencies } from "../services/packages";
 import { DefaultPackageManager, getAgentDir, SettingsManager } from "../session-engine/sdk";
+import { createFirstPartyReleaseResolver } from "./first-party-releases";
 
 type PackageSettings = { packages?: PackageSource[] };
 type NpmSettings = { name?: string; private?: boolean; dependencies?: Record<string, string> };
@@ -26,13 +27,12 @@ function createDefaultPackageManager(cwd: string): PackageManager {
 	});
 }
 
-function directNpmEntry(entry: PackageSource, name: string): boolean {
-	const source = typeof entry === "string" ? entry : entry.source;
-	return source === `npm:${name}` || source.startsWith(`npm:${name}@`);
+function entryName(entry: PackageSource): string | undefined {
+	return npmPackageName(typeof entry === "string" ? entry : entry.source);
 }
 
 function configuredNpmEntry(settings: PackageSettings, name: string): PackageSource | undefined {
-	const matches = (settings.packages ?? []).filter((entry) => directNpmEntry(entry, name));
+	const matches = (settings.packages ?? []).filter((entry) => entryName(entry) === name);
 	if (matches.length > 1) throw new Error("Package selection is ambiguous");
 	return matches[0];
 }
@@ -79,7 +79,7 @@ async function configure(
 			if (!isDeepStrictEqual(configuredNpmEntry(current, name), expected.entry))
 				throw new Error("Configured package changed externally");
 			const packages = current.packages ?? [];
-			const index = packages.findIndex((entry) => directNpmEntry(entry, name));
+			const index = packages.findIndex((entry) => entryName(entry) === name);
 			const next = selection.entry;
 			if (index === -1 && next !== undefined) packages.push(next);
 			else if (index !== -1) packages.splice(index, 1, ...(next === undefined ? [] : [next]));
@@ -148,7 +148,12 @@ export class PackageAdmin extends PackageService {
 			packageManagerFactory?: PackageServiceDependencies["packageManagerFactory"];
 		},
 	) {
-		super({ ...deps, packageManagerFactory: deps.packageManagerFactory ?? createDefaultPackageManager });
+		super({
+			...deps,
+			packageManagerFactory: deps.packageManagerFactory ?? createDefaultPackageManager,
+			firstPartyReleaseResolver:
+				deps.firstPartyReleaseResolver ?? createFirstPartyReleaseResolver(getAgentDir()),
+		});
 	}
 }
 

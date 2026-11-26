@@ -1,20 +1,23 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type {
-	CatalogPackageType,
-	CatalogSearchResult,
-	ConfiguredPackageInfo,
-	PackageLifecycleOperation,
-	PackageLifecycleReceipt,
-} from "@drone/shared";
 import {
+	type CatalogPackageType,
+	type CatalogSearchResult,
+	type ConfiguredPackageInfo,
 	DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES,
 	isPackageName,
 	isPackageVersion,
 	npmPackageName,
+	type PackageLifecycleOperation,
+	type PackageLifecycleReceipt,
 } from "@drone/shared";
 import { createLogger } from "../log";
 import { fetchPackageCatalog } from "../packages/catalog";
+import {
+	type FirstPartyReleaseResolver,
+	isFirstPartyPackageName,
+	isInternalDroneScope,
+} from "../packages/first-party-releases";
 import type { RegisteredSession, SessionRegistry } from "../session/registry";
 import type { SessionTraces } from "../session/traces";
 import { packageHasPiResources } from "../session-engine/package-resources";
@@ -37,19 +40,20 @@ const log = createLogger("backend");
 export { NPM_NOT_FOUND_SENTINEL } from "@drone/shared";
 export { isNpmSpawnEnoent } from "./package-lifecycle";
 
+type PackageScope = PackageLifecycleReceipt["scope"];
+
 /** Minimal package-manager boundary kept free of Pi SDK runtime imports. */
 export interface PackageManager {
-	listConfiguredPackages(): ReadonlyArray<{ source: string; scope: "user" | "project" }>;
-	installAndPersist(source: string): Promise<void>;
+	listConfiguredPackages(): readonly ConfiguredPackageInfo[];
+	installAndPersist(source: string, options?: { local?: boolean }): Promise<void>;
 	update?(source?: string): Promise<void>;
 	removeAndPersist(source: string, options?: { local?: boolean }): Promise<boolean>;
 	setProgressCallback?(callback: ((event: PackageManagerProgressEvent) => void) | undefined): void;
-	getInstalledPath?(source: string, scope: "user" | "project"): string | undefined;
+	getInstalledPath?(source: string, scope: PackageScope): string | undefined;
 	refresh?(): Promise<void>;
 	prepareReplacement?(receipt: PackageLifecycleReceipt): Promise<PackageReplacementDisk>;
 }
 
-/** Pi's progress callback is deliberately mirrored as a small host-neutral type. */
 export interface PackageManagerProgressEvent {
 	type: "start" | "progress" | "complete" | "error";
 	action: "install" | "remove" | "update" | "clone" | "pull";
@@ -66,16 +70,9 @@ export interface PackageServiceDependencies {
 	traces?: Pick<SessionTraces, "recordCustom">;
 	packageVersions?: SessionPackageVersions;
 	packageManagerFactory: PackageManagerFactory;
+	firstPartyReleaseResolver?: FirstPartyReleaseResolver;
 }
 
-/**
- * 社区包领域服务：目录搜索、用户级安装/卸载、已配置清单与会话热重载。
- *
- * The service owns the package-manager boundary so host adapters can consume
- * package operations through BackendServices without reaching through PiBackend.
- * The package manager remains lazy because catalog browsing must not touch the
- * user's settings file or spawn npm.
- */
 export interface PackageServicePort {
 	searchPackages(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
 	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
@@ -88,7 +85,7 @@ export interface PackageServicePort {
 	): Promise<PackageLifecycleReceipt>;
 	removePackage(
 		source: string,
-		scope: "user" | "project",
+		scope: PackageScope,
 		host?: PackageReplacementHost,
 	): Promise<PackageLifecycleReceipt>;
 }
@@ -99,16 +96,11 @@ export class PackageService implements PackageServicePort {
 
 	constructor(private readonly deps: PackageServiceDependencies) {}
 
-	/** 包管理器（用户级安装/卸载，懒加载；settingsManager 仅用于读写 settings.json 安装记录） */
 	private getPackageManager(): PackageManager {
-		if (!this.packageManager) {
-			const cwd = this.deps.defaultCwd || process.cwd();
-			this.packageManager = this.deps.packageManagerFactory(cwd);
-		}
+		this.packageManager ??= this.deps.packageManagerFactory(this.deps.defaultCwd || process.cwd());
 		return this.packageManager;
 	}
 
-	/** 搜索 pi.dev 社区包目录（设置页扩展面板浏览用） */
 	async searchPackages(
 		query: string,
 		type?: CatalogPackageType | "",
@@ -117,24 +109,19 @@ export class PackageService implements PackageServicePort {
 		return fetchPackageCatalog({ query, type: type || undefined, page });
 	}
 
-	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
 	async listConfiguredPackages(): Promise<ConfiguredPackageInfo[]> {
-		return this.getPackageManager()
-			.listConfiguredPackages()
-			.map((p) => ({ source: p.source, scope: p.scope }));
+		const packages = this.getPackageManager().listConfiguredPackages();
+		return packages.map(({ source, scope }) => ({ source, scope }));
 	}
 
-	/** 安装社区包（npm:<name>，用户级）；返回结构化生命周期回执。 */
 	async installPackage(name: string, host?: PackageReplacementHost): Promise<PackageLifecycleReceipt> {
 		return this.runOperation("install", name, `npm:${name}`, "user", host);
 	}
 
-	/** 更新已配置 npm 包；Pi 的 DefaultPackageManager 保留完整的版本/锁定语义。 */
 	async updatePackage(name: string, host?: PackageReplacementHost): Promise<PackageLifecycleReceipt> {
 		return this.runOperation("update", name, `npm:${name}`, undefined, host);
 	}
 
-	/** Roll back an installed npm package to an explicitly authorized exact version. */
 	async rollbackPackage(
 		name: string,
 		version: string,
@@ -143,72 +130,62 @@ export class PackageService implements PackageServicePort {
 		return this.runOperation("rollback", name, `npm:${name}@${version}`, undefined, host);
 	}
 
-	/** 卸载已配置的包（按 source + scope 移除并持久化）；内置包永远不可卸载。 */
 	async removePackage(
 		source: string,
-		scope: "user" | "project",
+		scope: PackageScope,
 		host?: PackageReplacementHost,
 	): Promise<PackageLifecycleReceipt> {
 		return this.runOperation("remove", npmPackageName(source) ?? source, source, scope, host);
 	}
 
 	private assertInstallableName(name: string): void {
-		if (!isPackageName(name)) {
-			const error = new Error(`Invalid package name: ${name}`);
-			(error as Error & { code?: string }).code = "invalid-source";
-			throw error;
-		}
+		if (!isPackageName(name))
+			throw Object.assign(new Error(`Invalid package name: ${name}`), { code: "invalid-source" });
 	}
 
 	private assertNotBuiltin(name: string): void {
-		if (
-			!DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES.includes(
-				name as (typeof DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES)[number],
-			)
-		)
-			return;
-		const error = new Error(`Built-in package cannot be changed: ${name}`);
-		(error as Error & { code?: string }).code = "builtin";
-		throw error;
+		if (DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES.includes(name))
+			throw Object.assign(new Error(`Built-in package cannot be changed: ${name}`), { code: "builtin" });
 	}
 
 	private assertRollbackVersion(version: string): void {
-		if (isPackageVersion(version)) return;
-		const error = new Error(`Invalid package version: ${version}`);
-		(error as Error & { code?: string }).code = "invalid-source";
-		throw error;
+		if (!isPackageVersion(version))
+			throw Object.assign(new Error(`Invalid package version: ${version}`), { code: "invalid-source" });
 	}
 
-	private configuredScope(source: string): "user" | "project" | undefined {
-		const packageName = npmPackageName(source);
-		const match = this.getPackageManager()
-			.listConfiguredPackages()
-			.find((entry) => packageName && npmPackageName(entry.source) === packageName);
-		return match?.scope;
+	private configuredScope(manager: PackageManager, name: string): PackageScope | undefined {
+		return manager.listConfiguredPackages().find(({ source }) => npmPackageName(source) === name)?.scope;
 	}
 
-	private installedVersion(
-		manager: PackageManager,
-		source: string,
-		scope: "user" | "project",
-	): string | undefined {
-		const installedPath = manager.getInstalledPath?.(source, scope);
+	private installedVersion(manager: PackageManager, receipt: PackageLifecycleReceipt): string | undefined {
+		const installedPath = manager.getInstalledPath?.(receipt.source, receipt.scope);
 		if (!installedPath) return undefined;
 		try {
-			const value = JSON.parse(readFileSync(join(installedPath, "package.json"), "utf8")) as {
-				version?: unknown;
-			};
-			return typeof value.version === "string" && value.version.length > 0 ? value.version : undefined;
+			const text = readFileSync(join(installedPath, "package.json"), "utf8");
+			const { version } = JSON.parse(text) as { version?: unknown };
+			return typeof version === "string" && version.length > 0 ? version : undefined;
 		} catch {
 			return undefined;
 		}
+	}
+
+	private async resolveOperationSource(receipt: PackageLifecycleReceipt, requestedVersion?: string) {
+		const { operation, packageName } = receipt;
+		const offered = isFirstPartyPackageName(packageName);
+		if (operation === "remove" || (!offered && !isInternalDroneScope(packageName))) return requestedVersion;
+		const resolve = this.deps.firstPartyReleaseResolver;
+		if (!offered || !resolve)
+			throw Object.assign(new Error("No first-party release source is available"), { code: "unavailable" });
+		const release = await resolve(packageName, requestedVersion);
+		receipt.source = release.installSource;
+		return release.version;
 	}
 
 	private async runOperation(
 		operation: PackageLifecycleOperation,
 		packageName: string,
 		source: string,
-		scope: "user" | "project" | undefined,
+		scope: PackageScope | undefined,
 		host: PackageReplacementHost | undefined,
 	): Promise<PackageLifecycleReceipt> {
 		const receipt: PackageLifecycleReceipt = {
@@ -232,10 +209,12 @@ export class PackageService implements PackageServicePort {
 			this.assertNotBuiltin(packageName);
 			const npm = source.startsWith("npm:");
 			if (npm) this.assertInstallableName(packageName);
-			if (operation === "rollback") this.assertRollbackVersion(source.slice(packageName.length + 5));
+			const requestedVersion = operation === "rollback" ? source.slice(packageName.length + 5) : undefined;
+			if (requestedVersion !== undefined) this.assertRollbackVersion(requestedVersion);
+			const expectedVersion = await this.resolveOperationSource(receipt, requestedVersion);
 			const manager = this.getPackageManager();
 			await manager.refresh?.();
-			receipt.scope = scope ?? this.configuredScope(source) ?? "user";
+			receipt.scope = scope ?? this.configuredScope(manager, packageName) ?? "user";
 			if (host && npm && manager.prepareReplacement) {
 				const disk = await manager.prepareReplacement(receipt).catch(() => {
 					throw new Error("Package staging could not be prepared");
@@ -247,9 +226,10 @@ export class PackageService implements PackageServicePort {
 					this.deps.registry,
 					this.deps.packageVersions,
 					observeStages,
+					expectedVersion,
 				);
 			} else {
-				await this.runLegacy(receipt, manager);
+				await this.runLegacy(receipt, manager, expectedVersion);
 			}
 			return receipt;
 		} catch (err) {
@@ -268,7 +248,11 @@ export class PackageService implements PackageServicePort {
 		);
 	}
 
-	private async runLegacy(receipt: PackageLifecycleReceipt, manager: PackageManager): Promise<void> {
+	private async runLegacy(
+		receipt: PackageLifecycleReceipt,
+		manager: PackageManager,
+		expectedVersion?: string,
+	): Promise<void> {
 		const { packageVersions } = this.deps;
 		const { source, scope, operation } = receipt;
 		const hasPi = async () => {
@@ -279,7 +263,7 @@ export class PackageService implements PackageServicePort {
 			const previousPi = await hasPi();
 			const restore = this.installProgressCallback(manager, receipt);
 			try {
-				await this.applyLegacyOperation(receipt, manager);
+				await this.applyLegacyOperation(receipt, manager, expectedVersion);
 			} finally {
 				restore();
 			}
@@ -296,9 +280,10 @@ export class PackageService implements PackageServicePort {
 	private async applyLegacyOperation(
 		receipt: PackageLifecycleReceipt,
 		manager: PackageManager,
+		expectedVersion?: string,
 	): Promise<void> {
 		const { operation, source, scope } = receipt;
-		const previousVersion = this.installedVersion(manager, source, scope);
+		const previousVersion = this.installedVersion(manager, receipt);
 		if (previousVersion) receipt.previousVersion = previousVersion;
 		if (operation === "remove") {
 			if (!(await manager.removeAndPersist(source, { local: scope === "project" })))
@@ -306,19 +291,21 @@ export class PackageService implements PackageServicePort {
 			receipt.events.push(packageEvent("disabled"));
 			return;
 		}
-		if (operation === "update") {
+		if (operation === "update" && expectedVersion === undefined) {
 			if (!manager.update) throw new Error("Package updates are unavailable in this host");
 			await manager.update(source);
-			if (previousVersion && this.installedVersion(manager, source, scope) === previousVersion)
+			if (previousVersion && this.installedVersion(manager, receipt) === previousVersion)
 				await manager.installAndPersist(source);
 		} else {
-			if (operation === "rollback" && !previousVersion)
+			if (operation !== "install" && !previousVersion)
 				throw Object.assign(new Error("Package is not installed"), { code: "not-installed" });
-			await manager.installAndPersist(source);
+			if (scope === "project" && source.startsWith(`npm:${receipt.packageName}@file://`))
+				await manager.installAndPersist(source, { local: true });
+			else await manager.installAndPersist(source);
 		}
-		receipt.version = this.installedVersion(manager, source, scope);
-		if (operation === "rollback" && (!receipt.version || !source.endsWith(`@${receipt.version}`)))
-			throw new Error("Restored package version could not be verified");
+		receipt.version = this.installedVersion(manager, receipt);
+		if (expectedVersion !== undefined && receipt.version !== expectedVersion)
+			throw new Error("Installed package version could not be verified");
 		receipt.events.push(packageEvent(operation === "rollback" ? "rolled_back" : "enabled"));
 	}
 
@@ -332,7 +319,6 @@ export class PackageService implements PackageServicePort {
 		return () => manager.setProgressCallback?.(undefined);
 	}
 
-	/** 对非流式活跃会话做资源热重载；流式会话明确延迟到下一次会话边界。 */
 	private async reloadSessions(receipt: PackageLifecycleReceipt): Promise<void> {
 		const reloaded: string[] = [];
 		const deferred: string[] = [];
