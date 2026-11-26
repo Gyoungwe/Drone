@@ -45,33 +45,3 @@ export function PageHeader({
 		</header>
 	);
 }
-
-/** Section card used inside pages: one card per section, rows inside are divided, never nested cards. */
-export function SectionCard({
-	title,
-	description,
-	actions,
-	children,
-	className = "",
-}: {
-	title?: ReactNode;
-	description?: ReactNode;
-	actions?: ReactNode;
-	children: ReactNode;
-	className?: string;
-}) {
-	return (
-		<section className={`rounded-2xl border border-border bg-surface ${className}`}>
-			{title || actions ? (
-				<div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
-					<div className="min-w-0">
-						{title ? <h2 className="text-sm font-semibold text-ink">{title}</h2> : null}
-						{description ? <p className="mt-1 text-xs leading-relaxed text-ink-dim">{description}</p> : null}
-					</div>
-					{actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-				</div>
-			) : null}
-			{children}
-		</section>
-	);
-}
