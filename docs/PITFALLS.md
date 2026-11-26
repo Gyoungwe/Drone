@@ -604,6 +604,8 @@ The native faux harness loads the standalone plugin, not the Desktop adapter. In
 
 In the deep fixture, record the synthetic searches and inspect the two source references explicitly, after the corresponding tool calls. `research_answer_sources` still checks both session reads and returns its own `answerable` evidence packet; the tracked run only reaches `sources_inspected`. This is an offline fixture protocol, not a substitute for Desktop's observed receipts and structured completion. The v1 report's `completed` is an SDK harness stop label, not proof that the tracked run completed or avoided a breaker.
 
+单独加载的 pi-research ≠ Desktop 组装。用 `node scripts/measure-desktop-research-baseline.mts --mode offline-faux --fixture fixtures/research-desktop-baseline.json --out .local/baseline-runs/desktop-offline.json` 测试 Desktop 的四扩展组合；v2 分开记录原生 gate、run、publication 和 stop，不与 v1 对比结果混用。
+
 ## 重新锁定插件后要单独跑 `check:extensions`（2026-11-17 记录）
 
 修改 `plugins.lock.json` 后，内联 plugin-api/shared 输入的 `.pi/extensions/*.mjs` 可能过期；CI 会运行 `npm run check:extensions` 并失败，但本地常跑的 `lint/typecheck/test/build/check:arch` 不包含它（例：Drone #307）。重新锁定后单独运行 `npm run check:extensions`，过期时用 `npm run build:extensions -- --force` 重建，将 bundles 与 `.pi/extensions/.build-manifest.json` 作为独立的 `build(extensions)` 提交；plugin-api 改动后还要运行 `npm run check:plugin-api`。
