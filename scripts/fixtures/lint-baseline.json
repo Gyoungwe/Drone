@@ -512,7 +512,6 @@
 	"suspicious/noEmptyBlockStatements\tpackages/desktop/src/renderer/src/components/chat/message-actions.tsx": 1,
 	"suspicious/noEmptyBlockStatements\tpackages/desktop/src/renderer/src/components/chat/MessageItem.plugins.test.tsx": 1,
 	"suspicious/noEmptyBlockStatements\tpackages/desktop/src/renderer/src/components/chat/StreamingMarquee.tsx": 2,
-	"suspicious/noEmptyBlockStatements\tpackages/desktop/src/renderer/src/components/chat/use-sweep-highlight.ts": 2,
 	"suspicious/noEmptyBlockStatements\tpackages/desktop/src/renderer/src/components/composer/ComposerStatusBar.test.tsx": 5,
 	"suspicious/noEmptyBlockStatements\tpackages/desktop/src/renderer/src/components/composer/ModePicker.tsx": 1,
 	"suspicious/noEmptyBlockStatements\tpackages/desktop/src/renderer/src/components/composer/use-at-completion.ts": 1,
