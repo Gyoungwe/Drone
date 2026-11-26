@@ -1,0 +1,339 @@
+{
+	"schemaVersion": 2,
+	"toolSet": [
+		"baseline_search_external",
+		"read",
+		"research_check_answer",
+		"research_deposit_knowledge",
+		"research_loop",
+		"research_prepare_knowledge",
+		"research_read_knowledge",
+		"research_search_knowledge",
+		"research_source_status",
+		"research_verify_literature"
+	],
+	"scenarios": [
+		{
+			"id": "local-direct",
+			"prompt": "Which amberwing marker was observed at each station? Use only the two independent local station notes and their navigation. Follow a local-only deep_research route, read and verify both notes, and give an inline read-only answer with citations and limitations. No acquisition, note deposition or explainer is requested.",
+			"files": {
+				"vault/Library/Papers/amberwing-north.md": "# Synthetic amberwing north\nNorth Station recorded amberwing marker A in the synthetic reference panel.\n10.1038/fixturea\nzotero:ABCDEFGH\n",
+				"vault/Library/Papers/amberwing-south.md": "# Synthetic amberwing south\nSouth Station recorded amberwing marker B in the synthetic reference panel.\n10.1038/fixtureb\nzotero:IJKLMNOP\n",
+				"vault/Wiki/Index.md": "# Synthetic navigation\n[[Wiki/amberwing.md]]\n",
+				"vault/Wiki/amberwing.md": "# Synthetic orientation\n[[Library/Papers/amberwing-north.md]] and [[Library/Papers/amberwing-south.md]]. Use the independent station notes for evidence.\n"
+			},
+			"identities": {
+				"ABCDEFGH": { "doi": "10.1038/fixturea", "note_path": "Library/Papers/amberwing-north.md" },
+				"IJKLMNOP": { "doi": "10.1038/fixtureb", "note_path": "Library/Papers/amberwing-south.md" }
+			},
+			"fauxRepeat": 1,
+			"fauxCalls": [
+				{ "name": "research_prepare_knowledge", "input": {} },
+				{ "name": "research_read_knowledge", "input": { "path": "Wiki/amberwing.md" } },
+				{
+					"name": "research_loop",
+					"input": {
+						"action": "start",
+						"mode": "deep_research",
+						"query": "amberwing marker",
+						"result_slug": "amberwing"
+					}
+				},
+				{
+					"name": "research_search_knowledge",
+					"input": { "query": "amberwing marker", "kind": "knowledge" }
+				},
+				{ "name": "research_read_knowledge", "input": { "path": "Library/Papers/amberwing-north.md" } },
+				{ "name": "research_read_knowledge", "input": { "path": "Library/Papers/amberwing-south.md" } },
+				{
+					"name": "research_verify_literature",
+					"input": {
+						"doi": "10.1038/fixturea",
+						"zotero_key": "ABCDEFGH",
+						"note_path": "Library/Papers/amberwing-north.md"
+					}
+				},
+				{
+					"name": "research_verify_literature",
+					"input": {
+						"doi": "10.1038/fixtureb",
+						"zotero_key": "IJKLMNOP",
+						"note_path": "Library/Papers/amberwing-south.md"
+					}
+				},
+				{
+					"name": "research_loop",
+					"input": {
+						"action": "complete",
+						"run_dir": "${runDir}",
+						"claim_bindings": [
+							{
+								"claim": "North Station recorded amberwing marker A in the synthetic reference panel.",
+								"relationship": "direct",
+								"limitations": "Synthetic reference panel only; no broader biological inference.",
+								"sources": [
+									{
+										"path": "Library/Papers/amberwing-north.md",
+										"start_line": 2,
+										"end_line": 2,
+										"quote": "North Station recorded amberwing marker A in the synthetic reference panel."
+									}
+								]
+							},
+							{
+								"claim": "South Station recorded amberwing marker B in the synthetic reference panel.",
+								"relationship": "direct",
+								"limitations": "Synthetic reference panel only; no broader biological inference.",
+								"sources": [
+									{
+										"path": "Library/Papers/amberwing-south.md",
+										"start_line": 2,
+										"end_line": 2,
+										"quote": "South Station recorded amberwing marker B in the synthetic reference panel."
+									}
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "research_check_answer",
+					"input": {
+						"draft": "North Station recorded marker A [[Library/Papers/amberwing-north.md]]. South Station recorded marker B [[Library/Papers/amberwing-south.md]]. These synthetic station observations establish no general biological conclusion."
+					}
+				}
+			],
+			"finalDraft": "North Station recorded marker A [[Library/Papers/amberwing-north.md]]. South Station recorded marker B [[Library/Papers/amberwing-south.md]]. These synthetic station observations establish no general biological conclusion.",
+			"expected": { "gateStage": "answerable", "runStatus": "completed", "stopReason": "completed" }
+		},
+		{
+			"id": "deep-research",
+			"prompt": "How did the two synthetic winterglass instrument calibrations differ? The local inventory has no measurements. Check it, use the synthetic external locator once, read both original archived text records, and give an inline answer with exact source links and limitations. Acquisition is fixture-copy; web search, OA and PDF coverage are excluded. No note deposition or explainer is requested.",
+			"files": {
+				"vault/Wiki/Index.md": "# Synthetic navigation\n[[Wiki/calibration-inventory.md]]\n",
+				"vault/Wiki/calibration-inventory.md": "# Synthetic calibration inventory\nThe equipment inventory contains no instrument measurements.\n",
+				"sources/archive/winterglass-first.md": "# Synthetic instrument record first\nThe winterglass calibration used a 12-unit reference at Station One and two repeats.\n",
+				"sources/archive/winterglass-second.md": "# Synthetic instrument record second\nStation Two repeated the winterglass calibration with a 12-unit reference. No uncertainty interval was supplied.\n"
+			},
+			"identities": {},
+			"fauxRepeat": 1,
+			"fauxCalls": [
+				{ "name": "research_prepare_knowledge", "input": {} },
+				{ "name": "research_read_knowledge", "input": { "path": "Wiki/calibration-inventory.md" } },
+				{
+					"name": "research_loop",
+					"input": {
+						"action": "start",
+						"mode": "deep_research",
+						"query": "winterglass calibration",
+						"result_slug": "winterglass"
+					}
+				},
+				{
+					"name": "research_search_knowledge",
+					"input": { "query": "winterglass calibration", "kind": "knowledge" }
+				},
+				{
+					"name": "baseline_search_external",
+					"input": { "query": "winterglass calibration", "run_dir": "${runDir}" }
+				},
+				{
+					"name": "research_loop",
+					"input": {
+						"action": "record_external",
+						"run_dir": "${runDir}",
+						"query": "winterglass calibration",
+						"notes": "Synthetic fixture acquisition; no network download."
+					}
+				},
+				{ "name": "research_source_status", "input": { "run_dir": "${runDir}" } },
+				{ "name": "read", "input": { "path": "${archiveFirstPath}" } },
+				{ "name": "read", "input": { "path": "${archiveSecondPath}" } },
+				{
+					"name": "research_loop",
+					"input": {
+						"action": "complete",
+						"run_dir": "${runDir}",
+						"claim_bindings": [
+							{
+								"claim": "The winterglass calibration used a 12-unit reference at Station One and two repeats.",
+								"relationship": "direct",
+								"limitations": "Synthetic instrument records only; no uncertainty interval or precision comparison.",
+								"sources": [
+									{
+										"path": "${archiveFirstPath}",
+										"start_line": 2,
+										"end_line": 2,
+										"quote": "The winterglass calibration used a 12-unit reference at Station One and two repeats."
+									}
+								]
+							},
+							{
+								"claim": "Station Two repeated the winterglass calibration with a 12-unit reference. No uncertainty interval was supplied.",
+								"relationship": "direct",
+								"limitations": "Synthetic instrument records only; no uncertainty interval or precision comparison.",
+								"sources": [
+									{
+										"path": "${archiveSecondPath}",
+										"start_line": 2,
+										"end_line": 2,
+										"quote": "Station Two repeated the winterglass calibration with a 12-unit reference. No uncertainty interval was supplied."
+									}
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "research_check_answer",
+					"input": {
+						"draft": "Station One used a 12-unit reference with two repeats [first record](${archiveFirstPath}). Station Two used the same reference [second record](${archiveSecondPath}). No uncertainty interval was supplied; the synthetic records support no precision comparison."
+					}
+				}
+			],
+			"finalDraft": "Station One used a 12-unit reference with two repeats [first record](${archiveFirstPath}). Station Two used the same reference [second record](${archiveSecondPath}). No uncertainty interval was supplied; the synthetic records support no precision comparison.",
+			"expected": { "gateStage": "answerable", "runStatus": "completed", "stopReason": "completed" }
+		},
+		{
+			"id": "stall-loop",
+			"prompt": "Resolve the disputed synthetic grayglass original. The navigation lists three candidate notebooks: gray-glass, greyglass and grayglass-notebook, all under Library/Papers. Check local evidence and these bounded distinct candidates. Stop if evidence does not progress and report the missing identity without claiming resolution; do not acquire or deposit anything.",
+			"files": {
+				"vault/Wiki/Index.md": "# Synthetic navigation\n[[Wiki/grayglass.md]]\n",
+				"vault/Wiki/grayglass.md": "# Synthetic grayglass ambiguity\nGray Glass and Greyglass may refer to different instruments. Candidates are Library/Papers/gray-glass.md, Library/Papers/greyglass.md and Library/Papers/grayglass-notebook.md. The original notebook is missing.\n"
+			},
+			"identities": {},
+			"fauxRepeat": 1,
+			"fauxCalls": [
+				{ "name": "research_prepare_knowledge", "input": {} },
+				{ "name": "research_read_knowledge", "input": { "path": "Wiki/grayglass.md" } },
+				{
+					"name": "research_loop",
+					"input": {
+						"action": "start",
+						"mode": "deep_research",
+						"query": "grayglass original",
+						"result_slug": "grayglass"
+					}
+				},
+				{ "name": "research_search_knowledge", "input": { "query": "grayglass", "kind": "knowledge" } },
+				{ "name": "research_read_knowledge", "input": { "path": "Library/Papers/gray-glass.md" } },
+				{ "name": "research_read_knowledge", "input": { "path": "Library/Papers/greyglass.md" } },
+				{ "name": "research_read_knowledge", "input": { "path": "Library/Papers/grayglass-notebook.md" } },
+				{ "name": "research_loop", "input": { "action": "status", "run_dir": "${runDir}" } }
+			],
+			"finalDraft": "The original grayglass notebook is missing. The three candidate identities remain unresolved; the available synthetic navigation supports no measurement conclusion.",
+			"expected": {
+				"gateStage": "local_query_recorded",
+				"runStatus": "stopped_by_breaker",
+				"stopReason": "stalled"
+			}
+		},
+		{
+			"id": "external-write",
+			"prompt": "What was recorded at the two copperleaf stations? Use both independent local notes, read and verify their identities, then request saving one proposed evidence note linked to both sources. If permission is denied, disclose that nothing was saved and do not retry. Give the bounded evidence inline with the sampling limitation; no explainer is requested.",
+			"files": {
+				"vault/Library/Papers/copperleaf-first.md": "# Synthetic copperleaf first\nThe copperleaf log records one detection at Station A.\n10.1038/fixturec\nzotero:QRSTUVWX\n",
+				"vault/Library/Papers/copperleaf-second.md": "# Synthetic copperleaf second\nThe copperleaf log records two detections at Station B. The sampling design differs from Station A.\n10.1038/fixtured\nzotero:YZABCDEF\n",
+				"vault/Wiki/Index.md": "# Synthetic navigation\n[[Wiki/copperleaf.md]]\n",
+				"vault/Wiki/copperleaf.md": "# Synthetic orientation\n[[Library/Papers/copperleaf-first.md]] and [[Library/Papers/copperleaf-second.md]]. Use the independent station notes for evidence.\n"
+			},
+			"identities": {
+				"QRSTUVWX": { "doi": "10.1038/fixturec", "note_path": "Library/Papers/copperleaf-first.md" },
+				"YZABCDEF": { "doi": "10.1038/fixtured", "note_path": "Library/Papers/copperleaf-second.md" }
+			},
+			"fauxRepeat": 1,
+			"fauxCalls": [
+				{ "name": "research_prepare_knowledge", "input": {} },
+				{ "name": "research_read_knowledge", "input": { "path": "Wiki/copperleaf.md" } },
+				{
+					"name": "research_loop",
+					"input": {
+						"action": "start",
+						"mode": "deep_research",
+						"query": "copperleaf",
+						"result_slug": "copperleaf"
+					}
+				},
+				{ "name": "research_search_knowledge", "input": { "query": "copperleaf", "kind": "knowledge" } },
+				{ "name": "research_read_knowledge", "input": { "path": "Library/Papers/copperleaf-first.md" } },
+				{ "name": "research_read_knowledge", "input": { "path": "Library/Papers/copperleaf-second.md" } },
+				{
+					"name": "research_verify_literature",
+					"input": {
+						"doi": "10.1038/fixturec",
+						"zotero_key": "QRSTUVWX",
+						"note_path": "Library/Papers/copperleaf-first.md"
+					}
+				},
+				{
+					"name": "research_verify_literature",
+					"input": {
+						"doi": "10.1038/fixtured",
+						"zotero_key": "YZABCDEF",
+						"note_path": "Library/Papers/copperleaf-second.md"
+					}
+				},
+				{
+					"name": "research_loop",
+					"input": {
+						"action": "complete",
+						"run_dir": "${runDir}",
+						"claim_bindings": [
+							{
+								"claim": "The copperleaf log records one detection at Station A.",
+								"relationship": "direct",
+								"limitations": "Sampling designs differ; counts do not establish comparable rates.",
+								"sources": [
+									{
+										"path": "Library/Papers/copperleaf-first.md",
+										"start_line": 2,
+										"end_line": 2,
+										"quote": "The copperleaf log records one detection at Station A."
+									}
+								]
+							},
+							{
+								"claim": "The copperleaf log records two detections at Station B. The sampling design differs from Station A.",
+								"relationship": "direct",
+								"limitations": "Sampling designs differ; counts do not establish comparable rates.",
+								"sources": [
+									{
+										"path": "Library/Papers/copperleaf-second.md",
+										"start_line": 2,
+										"end_line": 2,
+										"quote": "The copperleaf log records two detections at Station B. The sampling design differs from Station A."
+									}
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "research_deposit_knowledge",
+					"input": {
+						"type": "evidence",
+						"title": "Copperleaf candidate note",
+						"markdown": "Station A recorded one detection [[Library/Papers/copperleaf-first.md]]. Station B recorded two detections [[Library/Papers/copperleaf-second.md]]. Sampling designs differ, so these synthetic counts cannot establish a rate difference.",
+						"status": "proposed",
+						"source_links": [
+							"[[Library/Papers/copperleaf-first.md]]",
+							"[[Library/Papers/copperleaf-second.md]]"
+						]
+					}
+				},
+				{
+					"name": "research_check_answer",
+					"input": {
+						"draft": "Station A recorded one detection [[Library/Papers/copperleaf-first.md]]. Station B recorded two detections [[Library/Papers/copperleaf-second.md]]. Sampling designs differ, so these synthetic counts cannot establish a rate difference. Permission to save the proposed note was denied; no note was saved."
+					}
+				}
+			],
+			"finalDraft": "Station A recorded one detection [[Library/Papers/copperleaf-first.md]]. Station B recorded two detections [[Library/Papers/copperleaf-second.md]]. Sampling designs differ, so these synthetic counts cannot establish a rate difference. Permission to save the proposed note was denied; no note was saved.",
+			"expected": {
+				"gateStage": "answerable",
+				"runStatus": "completed",
+				"stopReason": "completed-with-write-denied"
+			}
+		}
+	]
+}
