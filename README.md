@@ -60,7 +60,7 @@ flowchart TB
   end
 
   subgraph Backend["packages/backend — Node, only place importing Pi SDK"]
-    PiBackend[PiBackend facade\nsession lifecycle / prompt / abort / fork]
+    SessionService[SessionService\nsession lifecycle / prompt / abort / fork]
     JsonStore[JsonStore\natomic write + corruption semantics]
     Extensions[Extension factories\npermission gate / evap / channel-watch / todo]
     Tools[Built-in tools\nwebfetch / show_image / todo / subagent]
@@ -69,7 +69,7 @@ flowchart TB
   end
 
   subgraph Desktop["packages/desktop — Electron"]
-    Main[main\napp lifecycle / PiBackend / IPC / institutional window / updater / ui-plugins manager]
+    Main[main\napp lifecycle / createBackend / IPC / institutional window / updater / ui-plugins manager]
     Preload[preload\ncontextBridge window.pi\ndomain contracts]
     Renderer[renderer\nReact 19 + Tailwind 4 + Zustand\nchat / task workbench / knowledge / settings / subagents / plugins]
   end
@@ -79,10 +79,10 @@ flowchart TB
     Skills[skills\nresearch-loop / wikiloop / academic / zotero-literature / ...]
   end
 
-  Renderer -- window.pi / IPC --> Preload --> Main --> PiBackend
-  PiBackend -- buildExtensionFactories --> Extensions
-  PiBackend -- buildCustomTools --> Tools
-  PiBackend -- loads --> PiExt
+  Renderer -- window.pi / IPC --> Preload --> Main --> SessionService
+  SessionService -- buildSessionExtensionFactories --> Extensions
+  SessionService -- buildSessionCustomTools --> Tools
+  SessionService -- loads --> PiExt
   InstitutionalBE -- net.fetch session --> Main
   Main -- BrowserWindow partition --> InstitutionalBE
 ```
@@ -97,7 +97,7 @@ flowchart TB
 
 ### 2. `packages/backend` — Pi SDK adapter, pure Node
 
-- `packages/backend/src/session-engine/**` is the only runtime import boundary for `@earendil-works/pi-coding-agent` (Pi baseline 1.1.0); `pi-backend.ts` remains the compatibility facade for session lifecycle: create/open/close/delete/prompt (followUp queue, preflight receipt), abort/fork/recall/compact, model listing, permission mode map (memory, injected via closure into extensions), event/permission/trust distribution (`respondPermission` first gate.respond then persist).
+- `packages/backend/src/session-engine/**` is the only runtime value import boundary for `@earendil-works/pi-coding-agent` (Pi baseline 1.1.0; elsewhere only `import type` is allowed). `create-backend.ts` composes `BackendServices` from focused services under `services/`, while `SessionService` (`session-service.ts`, exposed via `BackendServices.sessions`) implements session lifecycle: create/open/close/delete/prompt (followUp queue, preflight receipt), abort/fork/recall/compact, model listing, in-memory permission mode map (`services/session-permissions.ts`, injected via closure into extensions), and event/permission/trust distribution (`respondPermission` calls `gate.respond` before persisting).
 - `json-store.ts`: unified JSON persistence (tmp+rename atomic, corruption tri-state).
 - `institutional/`: 
   - `config.ts`: loads `~/.pi/agent/institutional.json` via `JsonStore`, `buildProxiedUrl` (supports `%s` and `?url=`), `inferEzproxyTemplateFromUrl` / `detectAndSaveTemplateFromUrl` auto-infers template from navigated URL like `.../login?url=https://www.nature.com/...` → `.../login?url=%s` and saves without manual input.
@@ -108,7 +108,7 @@ flowchart TB
 ### 3. `packages/desktop` — Electron app
 
 **main/**:
-- `index.ts`: app lifecycle, initLogging, `pi-bg://` protocol for custom backgrounds, renderer crash handler (auto-reload, incident snapshot), `new PiBackend()`, `UiPluginManager`, `registerIpc`, updater, `createWindow`. First 3 lines must import `pi-package-dir`, `dev-agent-dir`, `fix-path`.
+- `index.ts`: app lifecycle, initLogging, `pi-bg://` protocol for custom backgrounds, renderer crash handler (auto-reload, incident snapshot), `createBackend()` composition root, `UiPluginManager`, `registerIpc`, updater, `createWindow`. First 3 lines must import `pi-package-dir`, `dev-agent-dir`, `fix-path`.
 - `institutional-access.ts`: re-exports backend window funcs (`openInstitutionalLoginWindow`), plus `testAccess` that tries ezproxy + institutional_session via `institutionalFetch`.
 - `ipc/`: per-domain handlers (sessions, settings, permissions, institutional, knowledge, etc.) — thin delegates to backend; `index.ts` composes them and forwards backend events to renderer.
   - `ui-plugins/`: esbuild builder (shims `window.DroneUI`), manager (scan, build and fs.watch hot-reload).

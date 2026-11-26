@@ -60,7 +60,7 @@ flowchart TB
   end
 
   subgraph Backend["packages/backend — Node，唯一 import Pi SDK 的地方"]
-    PiBackend[PiBackend 门面\n会话生命周期 / prompt / abort / fork]
+    SessionService[SessionService\n会话生命周期 / prompt / abort / fork]
     JsonStore[JsonStore\n原子写 + 损坏语义]
     Extensions[扩展工厂\npermission gate / evap / channel-watch / todo]
     Tools[内置工具\nwebfetch / show_image / todo / subagent]
@@ -69,7 +69,7 @@ flowchart TB
   end
 
   subgraph Desktop["packages/desktop — Electron"]
-    Main[main\n生命周期 / PiBackend / IPC / 机构窗口 / updater / ui-plugins]
+    Main[main\n生命周期 / createBackend / IPC / 机构窗口 / updater / ui-plugins]
     Preload[preload\ncontextBridge window.pi\n按域契约生成]
     Renderer[renderer\nReact 19 + Tailwind 4 + Zustand\nchat / task / knowledge / settings / subagents]
   end
@@ -79,10 +79,10 @@ flowchart TB
     Skills[skills\nresearch-loop / wikiloop / academic / zotero-literature]
   end
 
-  Renderer -- window.pi / IPC --> Preload --> Main --> PiBackend
-  PiBackend -- buildExtensionFactories --> Extensions
-  PiBackend -- buildCustomTools --> Tools
-  PiBackend -- 加载 --> PiExt
+  Renderer -- window.pi / IPC --> Preload --> Main --> SessionService
+  SessionService -- buildSessionExtensionFactories --> Extensions
+  SessionService -- buildSessionCustomTools --> Tools
+  SessionService -- 加载 --> PiExt
   InstitutionalBE -- net.fetch session --> Main
   Main -- BrowserWindow 分区 --> InstitutionalBE
 ```
@@ -97,7 +97,7 @@ flowchart TB
 
 ### 2. `packages/backend` — Pi SDK 适配层，纯 Node
 
-- `packages/backend/src/session-engine/**` 是 Pi SDK 运行时 import 的唯一边界（当前基线为 1.1.0）；`pi-backend.ts` 仍是兼容门面：create/open/close/delete/prompt（followUp 排队、preflight 回执）、abort/fork/recall/compact、模型列表、权限模式 map（内存态，经闭包注入扩展）、事件与权限·信任分发（`respondPermission` 先放行再持久化）。
+- `packages/backend/src/session-engine/**` 是 Pi SDK（`@earendil-works/pi-coding-agent`，当前基线 1.1.0）运行时值导入的唯一边界（其他文件仅允许 `import type`）。`create-backend.ts` 将 `services/` 下的各域服务装配为 `BackendServices`，会话实现由 `SessionService`（`session-service.ts`，host 经 `BackendServices.sessions` 接入）持有：create/open/close/delete/prompt（followUp 排队、preflight 回执）、abort/fork/recall/compact、模型列表、内存态权限模式 map（`services/session-permissions.ts`，经闭包注入扩展）、事件与权限·信任分发（`respondPermission` 先 `gate.respond` 再持久化）。
 - `json-store.ts`：统一 JSON 持久化（tmp+rename 原子写、损坏三态）。
 - `institutional/`：
   - `config.ts`：读 `~/.pi/agent/institutional.json`，`buildProxiedUrl`（支持 `%s` 与 `?url=`），`inferEzproxyTemplateFromUrl` / `detectAndSaveTemplateFromUrl` 自动从导航 URL 如 `.../login?url=https://www.nature.com/...` 推断模板 `.../login?url=%s` 并保存，无需手动。
@@ -108,7 +108,7 @@ flowchart TB
 ### 3. `packages/desktop` — Electron 应用
 
 **main/**：
-- `index.ts`：生命周期、日志、`pi-bg://` 协议、崩溃钩子（自动 reload、incident snapshot）、`new PiBackend()`、`UiPluginManager`、`registerIpc`、updater、建窗。首三行必须 import `pi-package-dir`、`dev-agent-dir`、`fix-path`。
+- `index.ts`：生命周期、日志、`pi-bg://` 协议、崩溃钩子（自动 reload、incident snapshot）、`createBackend()` 组合根、`UiPluginManager`、`registerIpc`、updater、建窗。首三行必须 import `pi-package-dir`、`dev-agent-dir`、`fix-path`。
 - `institutional-access.ts`：复用 backend 窗口函数，`testAccess` 经 ezproxy + institutional_session 尝试。
 - `ipc/`：按域拆分（sessions、settings、permissions、institutional、knowledge 等），薄委托 backend；`index.ts` 拼装并转发事件。
   - `ui-plugins/`：esbuild 构建器（`window.DroneUI` shim）、manager（扫描、构建和 fs.watch 热重载）。
