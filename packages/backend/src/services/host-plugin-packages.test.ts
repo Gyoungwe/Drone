@@ -77,14 +77,15 @@ it("takes the installed version and the package's own manifest instead of the ca
 it("reports a package with no declaration of its own as unknown rather than drone", async () => {
 	const root = temp.root ?? "";
 	const modules = join(root, "node_modules");
-	await writePackage(modules, "@gyoungwe/pi-connectors", { version: "2.0.0" });
+	const name = "@gyoungwe/pi-analysis";
+	await writePackage(modules, name, { version: "2.0.0" });
 
-	const connectors = deriveHostPluginPackages(scanInstalledPackages([modules])).find(
-		(entry) => entry.name === "@gyoungwe/pi-connectors",
+	const plugin = deriveHostPluginPackages(scanInstalledPackages([modules])).find(
+		(entry) => entry.name === name,
 	);
 
-	expect(connectors).toMatchObject({ status: "available", source: "unknown" });
-	expect(connectors?.manifestDeclared).toBeUndefined();
+	expect(plugin).toMatchObject({ status: "available", source: "unknown" });
+	expect(plugin?.manifestDeclared).toBeUndefined();
 });
 
 it("attributes a worker lifecycle to the package that owns the worker path", async () => {

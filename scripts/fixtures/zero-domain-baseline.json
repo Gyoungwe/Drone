@@ -10,7 +10,6 @@
     "@gyoungwe/pi-research"
   ],
   "hostDependencies": [
-    "package.json:@gyoungwe/pi-connectors",
     "package.json:@gyoungwe/pi-core",
     "package.json:@gyoungwe/pi-evidence",
     "package.json:@gyoungwe/pi-knowledge",
@@ -41,9 +40,7 @@
     "packages/extensions/src/zotero-literature.ts:@gyoungwe/pi-research"
   ],
   "hostCatalogEntries": [
-    "@gyoungwe/desktop-ui-pack",
     "@gyoungwe/pi-analysis",
-    "@gyoungwe/pi-connectors",
     "@gyoungwe/pi-core",
     "@gyoungwe/pi-evidence",
     "@gyoungwe/pi-knowledge",
