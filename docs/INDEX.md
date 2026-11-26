@@ -382,9 +382,9 @@ packages/
 
 `backend/test/task-manifest-session.test.mjs` checks the independently bundled knowledge extension's read-only declaration in two standalone host runtimes, without a task owner. Task guard behavior belongs to pi-core; this host test does not verify managed idempotency.
 
-## packages/research — 宿主研究合同与知识桥
+## packages/research — 已退役（D-P7-7 = 4A，2026-11-26）
 
-`@drone/research` 保留 `connectors.ts`、`write-connectors.ts`、`capability-discovery.ts` 的 shared/宿主端口合同，以及 `run-summary.ts` 的知识沉淀组合桥。证据状态机、归档、回执、provenance、Zotero 与 research-run-ui 已由外部 `@gyoungwe/pi-research/host` 提供；宿主不再维护这些领域模块的副本。
+`@drone/research` 与其 Protocols.io、SRA、OSF、Zenodo 连接器已删除；宿主只保留 `@drone/shared` 的连接器/写入端口合同，以及 backend `ResearchResourceService`、`ResearchWriteService` 的启停、审批、预留与审计门禁（测试用 `packages/backend/test/research-host-fixture.ts` 的最小替身）。需要时在 `pi-research` 中重新提供。`check-bloat` 冻结、`check-zero-domain` 与 native-plugin-boundary 守卫继续拦截该包重新进入宿主。
 
 知识项目身份：`@gyoungwe/pi-knowledge/host` 导出的 project identity 是唯一解析器（日常空间会话选择 `/project` → 工作区 `knowledgeProjectId` → 目录派生 `<目录名>-<sha10>`，无 `research-workbench` 回落）；`research_loop`、`research_deposit_knowledge`、`research_summarize_run`、来源 / 讲解归档、知识检索范围与 WikiSkill 共用。规则与旧笔记迁移见 [knowledge-project-identity.md](knowledge-project-identity.md)。
 

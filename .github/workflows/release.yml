@@ -115,7 +115,6 @@ jobs:
       - run: npm run check:extensions
       - run: npm run check:knowledge-runtime
       - run: npm run check:tasks-runtime
-      - run: npm run check:research-runtime
       - run: npm run test:research-packaging
       - run: npm test
         env:

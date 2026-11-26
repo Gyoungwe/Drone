@@ -210,12 +210,10 @@ jobs:
         env:
           DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
       - run: npm test -w @drone/extensions
-      - run: npm test -w @drone/research
       - run: npm test -w @drone/compute
       - run: npm test -w @drone/inquiry
       - run: npm run check:knowledge-runtime
       - run: npm run check:tasks-runtime
-      - run: npm run check:research-runtime
       - run: npm run test:upgrade
       # The installer ships pi-packages/node_modules; verify the mapping, pins and that the adapter loads.
       - run: npm run stage:pi-packages

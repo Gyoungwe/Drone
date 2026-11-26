@@ -2,12 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { type CapabilityResearchPorts, runCapabilityResearch } from "@drone/research";
-import {
-	createCapabilityRequest,
-	createCapabilityResearchPlan,
-	createCapabilitySourceReceipt,
-} from "@drone/shared";
+import type { ResearchConnector } from "@drone/shared";
 import {
 	createAgentSession,
 	DefaultResourceLoader,
@@ -16,8 +11,11 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
+import { JsonStore } from "../src/json-store";
 import { McpService } from "../src/mcp/service";
 import { preferBundledMcpRuntime } from "../src/project/trust-loader";
+import { emptyCaptureLedger, ResearchResourceService } from "../src/services/research-resource";
+import { fixtureConnectorRegistry } from "./research-host-fixture";
 
 // This is the same staged tree electron-builder ships as <resources>/pi-packages/node_modules.
 const PACKAGES = resolve(__dirname, "../../desktop/pi-packages/node_modules");
@@ -160,97 +158,74 @@ describe("remaining pluginization gates", () => {
 		}
 	}, 60_000);
 
-	it("CONN-01 searches a unique term through read-only CapabilityResearchPorts and records close/reopen behavior", async () => {
-		const now = "2026-10-18T00:00:00.000Z";
+	it("CONN-01 searches a unique term through a read-only connector and honours host close/reopen", async () => {
+		const state = await mkdtemp(join(tmpdir(), "drone-conn-gate-"));
 		const sourceUrl = "https://connector.example.test/source/DRONE-CONN-01-UNIQUE";
-		const request = createCapabilityRequest({
-			id: "conn-gate-request",
-			caseRef: { kind: "research-case", id: "conn-gate-case" },
-			assay: "connector-search",
-			question: `Find ${CONNECTOR_MARKER}`,
-			requirements: [],
-			status: "open",
-			createdAt: now,
-			updatedAt: now,
-		});
-		const calls: Array<Record<string, unknown>> = [];
-		let enabled = true;
-		const source = createCapabilitySourceReceipt({
-			id: "source-conn-gate-001",
-			sourceRef: `fixture://read-only-search/${CONNECTOR_MARKER}`,
-			sourceHash: "a".repeat(64),
-			locator: sourceUrl,
-			observedAt: now,
-		});
-		const ports: CapabilityResearchPorts = {
-			async createPlan(input) {
-				calls.push({ action: "plan", connector: "fixture-read-only", objective: input.objective });
-				return createCapabilityResearchPlan({
-					id: `plan-${enabled ? "open" : "closed"}`,
-					requestRef: {
-						kind: input.request.kind,
-						id: input.request.id,
-						contentHash: input.request.contentHash,
+		const queries: string[] = [];
+		const connector: ResearchConnector = {
+			id: "fixture-read-only",
+			kind: "literature",
+			label: "Fixture read-only connector",
+			search: async (query) => {
+				queries.push(query);
+				const sourceReceipt = {
+					sourceRef: `fixture://read-only-search/${CONNECTOR_MARKER}`,
+					locator: sourceUrl,
+					sourceType: "literature" as const,
+					accessedAt: "2026-10-18T00:00:00.000Z",
+					contentHash: "a".repeat(64),
+					readOnly: true as const,
+				};
+				return [
+					{
+						id: "source-conn-gate-001",
+						title: query,
+						summary: "",
+						locator: sourceUrl,
+						sourceType: "literature",
+						sourceReceipt,
 					},
-					objective: input.objective,
-					questions: input.questions,
-					sourceRefs: enabled ? [{ kind: source.kind, id: source.id }] : [],
-					createdAt: now,
-				});
-			},
-			async readSources(input) {
-				const query = input.plan.questions.find((question) => question.includes(CONNECTOR_MARKER)) ?? "";
-				if (!enabled) {
-					calls.push({ action: "search-skipped-disabled", connector: "fixture-read-only", query });
-					return [];
-				}
-				calls.push({
-					action: "search",
-					connector: "fixture-read-only",
-					query,
-					url: sourceUrl,
-					readOnly: true,
-				});
-				return [source];
+				];
 			},
 		};
+		const research = new ResearchResourceService({
+			connectors: fixtureConnectorRegistry([connector]),
+			knowledgeOperations: {
+				resolveContext: () => {
+					throw new Error("capture is not under test");
+				},
+				ingestSnapshot: () => {
+					throw new Error("capture is not under test");
+				},
+			},
+			store: new JsonStore({
+				path: join(state, "captures.json"),
+				storageId: "test-conn-gate-captures",
+				defaultValue: emptyCaptureLedger,
+			}),
+		});
+		const search = () => research.search({ query: CONNECTOR_MARKER, connectorIds: [connector.id] });
+		try {
+			const opened = await search();
+			expect(opened.complete).toBe(true);
+			expect(opened.hits[0]).toMatchObject({ id: "source-conn-gate-001", locator: sourceUrl });
+			expect(opened.hits[0]?.sourceReceipt.readOnly).toBe(true);
+			expect(queries).toEqual([CONNECTOR_MARKER]);
 
-		const opened = await runCapabilityResearch(ports, {
-			request,
-			objective: "read-only unique-term search",
-			questions: [CONNECTOR_MARKER],
-		});
-		expect(opened.sources).toHaveLength(1);
-		expect(opened.sources[0]).toMatchObject({ id: source.id, locator: sourceUrl, readOnly: true });
-		expect(calls).toContainEqual({
-			action: "search",
-			connector: "fixture-read-only",
-			query: CONNECTOR_MARKER,
-			url: sourceUrl,
-			readOnly: true,
-		});
+			await research.setConnectorEnabled(connector.id, false);
+			const closed = await search();
+			expect(closed.hits).toEqual([]);
+			expect(closed.failures).toEqual([
+				expect.objectContaining({ connectorId: connector.id, message: "Research connector is disabled" }),
+			]);
+			expect(queries).toHaveLength(1);
 
-		enabled = false;
-		const closed = await runCapabilityResearch(ports, {
-			request,
-			objective: "read-only unique-term search after close",
-			questions: [CONNECTOR_MARKER],
-		});
-		expect(closed.sources).toEqual([]);
-		expect(calls.at(-1)).toEqual({
-			action: "search-skipped-disabled",
-			connector: "fixture-read-only",
-			query: CONNECTOR_MARKER,
-		});
-		expect(calls.filter((call) => call.action === "search")).toHaveLength(1);
-
-		enabled = true;
-		const reopened = await runCapabilityResearch(ports, {
-			request,
-			objective: "read-only unique-term search after reopen",
-			questions: [CONNECTOR_MARKER],
-		});
-		expect(reopened.sources[0]?.id).toBe(source.id);
-		expect(calls.filter((call) => call.action === "search")).toHaveLength(2);
+			await research.setConnectorEnabled(connector.id, true);
+			const reopened = await search();
+			expect(reopened.hits[0]?.id).toBe("source-conn-gate-001");
+			expect(queries).toHaveLength(2);
+		} finally {
+			await rm(state, { recursive: true, force: true });
+		}
 	});
 });

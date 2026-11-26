@@ -52,7 +52,7 @@ test("new files use the selected snapshot, including untracked names with spaces
 	assert.match(check("--staged").stderr, /超长新文件/);
 });
 
-test("even an empty new file in a frozen directory is rejected", (t) => {
+test("even an empty new file in a frozen or retired directory is rejected", (t) => {
 	const { put, check } = fixture(t);
 	put("packages/research/src/new.ts", "");
 	const result = check();
@@ -61,7 +61,7 @@ test("even an empty new file in a frozen directory is rejected", (t) => {
 });
 
 test("a shrinking legacy file passes while an unrelated edit cannot offset growth", (t) => {
-	const legacy = "packages/research/src/legacy.ts";
+	const legacy = "packages/extensions/src/legacy.ts";
 	const wire = "packages/plugin-api/src/ui-wire.ts";
 	const { put, check } = fixture(t, { [legacy]: code(3), [wire]: code(2) });
 	put(legacy, code(2));
