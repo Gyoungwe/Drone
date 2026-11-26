@@ -345,7 +345,6 @@
 	"complexity/noExcessiveLinesPerFunction\tscripts/check-architecture.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tscripts/check-local-desktop-artifact.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tscripts/check-pi-compat.mjs": 1,
-	"complexity/noExcessiveLinesPerFunction\tscripts/check-plugin-api.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tscripts/check-release-artifacts.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tscripts/check-scientific-external.mjs": 1,
 	"complexity/noExcessiveLinesPerFunction\tscripts/eval-mainline.mjs": 2,

@@ -115,7 +115,6 @@
 	"file-lines\tpackages/shared/src/workflow-catalog.ts": 536,
 	"file-lines\tscripts/check-local-desktop-artifact.mjs": 454,
 	"file-lines\tscripts/check-packaged-desktop.mjs": 561,
-	"file-lines\tscripts/check-plugin-api.mjs": 404,
 	"file-lines\tscripts/check-release-artifacts.mjs": 442,
 	"file-lines\tscripts/knowledge-ui-smoke/main.mjs": 906,
 	"file-lines\tscripts/replay-evaporation.mts": 1497,
