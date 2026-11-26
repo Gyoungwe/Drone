@@ -8,7 +8,6 @@ import type {
 	AnalysisProvenance,
 	AnalysisReadinessInput,
 	AnalysisReview,
-	AnalysisStatus,
 } from "@drone/shared";
 import { AnalysisOrchestrator } from "@drone/shared";
 import type { JsonStore } from "../json-store";
@@ -194,8 +193,4 @@ export class AnalysisOrchestrationService {
 
 export function emptyAnalysisLedger(): AnalysisLedger {
 	return { version: 1, runs: {} };
-}
-
-export function analysisStatus(context: AnalysisContext): AnalysisStatus {
-	return context.status;
 }
