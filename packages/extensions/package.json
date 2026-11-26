@@ -14,8 +14,8 @@
 	},
 	"dependencies": {
 		"@drone/shared": "*",
-		"@gyoungwe/pi-knowledge": "*",
-		"@gyoungwe/pi-research": "*"
+		"@gyoungwe/pi-knowledge": "https://github.com/Gyoungwe/drone-plugins/releases/download/pi-knowledge-v0.3.1/gyoungwe-pi-knowledge-0.3.1.tgz",
+		"@gyoungwe/pi-research": "https://github.com/Gyoungwe/drone-plugins/releases/download/pi-research-v0.4.1/gyoungwe-pi-research-0.4.1.tgz"
 	},
 	"exports": {
 		"./knowledge-extension": "./src/knowledge-extension.ts",

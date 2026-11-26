@@ -137,10 +137,11 @@ if (!process.argv.includes("--probe")) {
 		const runDir = initial[0].result.details.run_dir;
 		assert.equal(initial[0].result.details.metadata.project, "host-session-acceptance");
 		assert.equal(initial[2].result.details.evidence_gate.answerable, false);
+		// pi-research 0.4.1 counts the run-opening start and the SDK read, not the status probe.
 		assert.equal(
 			initial[2].result.details.receipt_journal.buffered,
-			1,
-			"actual SDK read event must reach the host receipt journal",
+			2,
+			"the run-opening start and actual SDK read must both reach the host receipt journal",
 		);
 		const invalid = await turn(first, [
 			research({ action: "bind_claims", run_dir: runDir, claim_bindings: [] }),

@@ -1,38 +1,39 @@
 {
-	"version": 1,
+	"version": 2,
+	"consumerCommit": "0492f9c2f651aac390aa14c5d72979dc032163fd",
 	"plugins": [
 		{
 			"name": "@gyoungwe/pi-knowledge",
 			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
-			"commit": "7334d29939d607daa8f3563d16c54c80932a036f",
+			"commit": "83208e8bf3fbe7dc579fcca3722754d58850d720",
 			"path": "packages/pi-knowledge",
-			"version": "0.3.0",
-			"tarballSha256": "fdc9b0d9cea4c08cfa9891200a7e62a7a56e0d3fd40557547c7d211bcd9bbab8"
+			"version": "0.3.1",
+			"tarballSha256": "00f0d8103acfc812e4b7c802ecfac7722d73bcbad57df761ca3853bc45e1dfec"
 		},
 		{
 			"name": "@gyoungwe/pi-analysis",
 			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
-			"commit": "7334d29939d607daa8f3563d16c54c80932a036f",
+			"commit": "83208e8bf3fbe7dc579fcca3722754d58850d720",
 			"path": "packages/pi-analysis",
-			"version": "0.2.0",
-			"tarballSha256": "1cc86e9e15b1dbbc10bd64dfe96b5d825633f07ab7954fdaff4968ef99225cdf"
+			"version": "0.3.0",
+			"tarballSha256": "50674bdc24a8fbd5a24e5ac6bbef34629db034c303d724a24addc1fbc4cbbc70"
 		},
 		{
 			"name": "@gyoungwe/pi-research",
 			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
-			"commit": "7334d29939d607daa8f3563d16c54c80932a036f",
+			"commit": "be87fdca3141d0c16b4df0fb74220dc9f5c944d9",
 			"path": "packages/pi-research",
-			"version": "0.3.2",
-			"tarballSha256": "37298dfdc46a86cdc824f1e07cd620a0b3ba1876874d7cfd0c8aef1dc368e145",
+			"version": "0.4.1",
+			"tarballSha256": "14fac2e3a3259bfd8520c372a2f3dab4aac13579c701f1e1d61e03d8e5680637",
 			"builtin": true
 		},
 		{
 			"name": "@gyoungwe/pi-core",
 			"repo": "https://github.com/Gyoungwe/drone-plugins.git",
-			"commit": "7334d29939d607daa8f3563d16c54c80932a036f",
+			"commit": "83208e8bf3fbe7dc579fcca3722754d58850d720",
 			"path": "packages/pi-core",
-			"version": "0.2.0",
-			"tarballSha256": "0b8e2022fe3b4f029017546a0666d4f7a3df47d3c8c6152153047c2ab2f45420",
+			"version": "0.3.0",
+			"tarballSha256": "4f50bfa27b0f90cb18f9bdbcdf7eac1359177e7e143c21d80344a880ae8d8d9f",
 			"builtin": true
 		}
 	]

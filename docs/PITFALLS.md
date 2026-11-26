@@ -12,6 +12,7 @@
 | 流式期间白屏、`error #185`、无限重渲染整树卸载 | 一 · 0.5.0 白屏事故；四 · Zustand selector（#185 另一成因） |
 | 扩展注册的工具模型用不了、模型说「工具列表为 none」 | 二 · createAgentSession tools 白名单 |
 | A managed tool keeps executing an old in-process implementation | 2026-11-12 · First tool registration wins |
+| Desktop `deep_research` stops before summary review | 2026-11-27 · Desktop `deep_research` token budget |
 | 设置页永久 Loading、模型列表为空 | 二 · runtime.refresh 网络挂起 / getAvailable 返回空 |
 | 权限 confirm 弹窗不生效 | 二 · bindExtensions 注入点 |
 | preload 加载失败（sandbox 下 require is not defined） | 三 · preload 必须 CJS |
@@ -44,6 +45,11 @@
 | 不装知识插件后扩展通知丢失、旧 context 继续通知 | 2026-10-28 · SDK 退订与通用通知 |
 | 受管任务一轮对话后即 `Task storage failed … requires an idle session` / `caller completed` | 受管插件的状态卡要等运行结束、在调用内等待 |
 | Ordinary native delivery exposes unchecked knowledge drafts or provider protocol | 2026-11-12 · Ordinary native delivery bypassed the legacy publication owner |
+| Research host smoke reports `2 !== 1` for `receipt_journal.buffered` | 2026-11-27 · The research receipt journal counts the run-opening call |
+
+## 2026-11-27: The research receipt journal counts the run-opening call
+
+In `pi-research@0.4.1`, `research_loop(action="start")` is an admitted tool execution that opens the run and counts toward its step budget, even though no run was active at admission. The SDK `read` is a separate in-run step. `research_loop(action="status")` only inspects the journal; it does not add a receipt. Keep the exact expectation of two buffered receipts for the `start → read → status` sequence in `scripts/check-research-host-session.mjs`.
 
 ## 2026-11-12: Ordinary native delivery bypassed the legacy publication owner
 
@@ -444,7 +450,7 @@ artifact 回归现在同时启用真实 SDK、生产 CapabilityRuntime 与只读
 
 ## 2026-10-27：候选插件与干净宿主检查
 
-根 `pretypecheck/pretest/prebuild` 会从 `plugins.lock.json` 重建并覆盖已安装插件。本地候选包的定向测试通过后，若锁仍指向旧版，下一次根命令会丢失新 host exports。必须先提交插件源码、从干净依赖构建并记录 tarball SHA-256，再更新源码锁并验证默认 fetch；开发目录 override 不能证明锁定安装通过。源码候选版本与公开 npm 版本分别记录。
+根 `pretypecheck/pretest/prebuild` 会从 v2 `plugins.lock.json` 下载、验证并 staging Release 资产。本地候选包的定向测试通过后，若锁仍指向旧版，下一次根命令会丢失新 host exports。插件先发布并验证 Release，再同步宿主锁、manifest URL 与 npm lock；安装前用 `fetch:plugins -- --prefetch` 验证资产并预热 npm cache。开发仅显式 `--worktree` 配合 `DRONE_PLUGINS_DIR`，不能证明锁定安装通过。
 
 独立宿主 checkout 没有 sibling `drone-plugins` 或已忽略的沙箱二进制。默认 `npm test` 在 pretest 按既有 checksum lock 准备 Node runtime；公开 UI 包集成测试只接受 `check:public-plugin-host` 提供的真实安装目录，默认宿主测试保留空安装根与自包含 fixture 覆盖，不回退读取另一仓库源码。缺少外部包时该集成用例明确跳过，不能算公开包验收通过。
 
@@ -525,6 +531,8 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 
 外层安装目录被换成指向字节完全相同副本的 symlink 时，仅重新计算 packageRoot 的完整树 hash 仍可能相同。运行时现在同时复验安装位置的 canonical root 与已声明 native 路径的真实入口；原生和 UI alias 都失效。声明入口消失后，本应用内重新扫描保留旧描述为 unavailable，供实际 selected-path 失败诊断使用，绝不从该记录激活代码；跨重启 required 期望和首次 loader 失败仍在后继接线。66 项发现/来源/聚合/UI 检查通过，正式安装包另验。
 
+T555：不要在每个原生钩子上重读并哈希整个包树。管理器只在逐路径元数据与符号链接的真实目标均未变时复用 SHA-256；纳秒级 `ctime` 能检测大小不变、`mtime` 被恢复的普通写入，目录元数据能检测新增或移除。失效后仍哈希完整包树（含嵌套依赖），安装位置和已声明原生入口照常复验。不要用 TTL、仅看根目录 `mtime` 或异步 watcher 代替同步校验。
+
 ### 模型评审必须先验证同意，再消耗预览令牌
 
 `pi-knowledge@0.3.0` 候选的公开评审 wrapper 曾在确认 acknowledged/autoApply 前消耗单次 preview，用户未同意就重试会收到 expired。canonical owner 内校验不能补救 wrapper 的提前副作用。先拒绝缺失的同意，再消费令牌；公开异步 API 保持 Promise rejection，不能让 forged/reused token 同步异常逃出调用方。原宿主 25 项令牌/拒绝/重用断言全部保留，最小修复已进入本批候选，最终整轮门禁另见回执。
@@ -583,6 +591,12 @@ Node 会解析主模块的符号链接并对 `import.meta.url` 做百分号编�
 ## 受管插件的写审批与任务授权
 
 受管插件的写调用默认每次弹原生对话框。不要为了让任务编排“能用”去缓存审批或让插件自报授权：插件自己的簿记（会话记录、私有状态）在能力上标 `approval: "own"`；一次任务授权只能由宿主 `task.grant.request` 签发（宿主解析目录、宿主渲染对话框、绑定 live 会话条目与当前安装来源），授权下仍需逐项确认的能力标 `approval: "always"`。新增写能力时必须决定它属于哪一类，缺省即“授权覆盖”。授权从不由插件返回值、JSON 记录或恢复数据产生，会话关闭、插件停用/升级即失效。详见[宿主任务授权](superpowers/specs/2026-10-29-host-task-grant-design.md)。
+
+## Desktop `deep_research` token budget (2026-11-27)
+
+`@gyoungwe/pi-research@0.4.1` defaults to 24,000 billed tokens if Desktop omits `breakerBudget`. It adds input, output, and cache-write tokens (not cache reads), starting with the assistant turn that calls `research_loop(action="start")`. The SDK fixture's first turn alone bills 27,100 tokens; the run becomes `stopped_by_breaker` and terminates before `research_summarize_run`, so summary review is never called. Long production prompts can also hit the default without the fixture's cache-write accounting.
+
+Desktop supplies `maxBilledTokens: 500_000` in `packages/extensions/src/research-loop.ts` to leave room for longer, multi-specialist runs without disabling the breaker. Rebuild `.pi/extensions` with `npm run build:extensions -- --force` before running `packages/backend/test/knowledge-specialists-sdk.test.mjs`: the SDK test loads the generated adapter, not the TypeScript source.
 
 ## 重新锁定插件后要单独跑 `check:extensions`（2026-11-17 记录）
 
@@ -1135,7 +1149,7 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 
 ## 工作区里的软链 node_modules 会让构建产物带上别的检出路径（2026-11-23 记录）
 
-重新锁定 `plugins.lock.json` 要重建插件包的 tarball 并算哈希。把主检出的
+历史 v1 重锁曾要求重建 tarball；当前 v2 只采用已验证 Release 资产的源提交与 SHA-256，禁止用本地重建代替。以下保留为显式 `--worktree` 开发构建的路径漂移教训。把主检出的
 `node_modules` 软链进工作区后重建，`esbuild` 会把**解析到的绝对路径**写进
 `dist/*.mjs`，于是同一个源码在主检出和工作区打出**字节不同**的产物，
 `build-manifest.json` 随之漂移上千行——看起来像改了代码，其实只差一个路径。
@@ -1143,6 +1157,9 @@ backend 类型在桌面端的 `typecheck` 里看不见，报的是
 修法：把主检出的 `node_modules` **复制**进工作区（不是软链），在干净依赖下
 重建；重建后 `diff -rq` 对一遍产物，应当逐字节相同。
 
-配套的坑：**重锁的哈希必须先自证**。先用旧提交按同样流程重建一次 tarball，
-确认算出的 sha256 与现有锁里的值**完全一致**，再信任新提交的哈希。
-否则新哈希可能只是把工作区的路径漂移一起锁了进去。
+当前重锁要核对 Release tag 的源提交、资产元数据、`SHA256SUMS` 和下载字节 SHA-256；npm lock 的 URL 与 SHA-512 SRI 也必须对应同一压缩资产。冷下载与离线复用均需验证，本地重建哈希不能替代这些证据。
+
+
+## 2026-11-26 · 扩展重建的字节增长与行数棘轮
+
+`check-bloat` 将本次变更中已追踪的顶层 `.pi/extensions/*.mjs` 视为一批，按所选快照相对 `HEAD` 汇总物理行差与字节差。整批无二进制内容、总行差 ≤ 0 且总字节净增 ≤ 50 KiB 时，允许个别 bundle 增加行数或字节数；超限时门禁逐个报告批次成员（包括缩小或删除的文件）。已删除的产物在所选快照中按零行零字节计算。`--staged` 按 index 核算整批。新增扩展产物一律拦截，`dist/`、`ui/bundle.js`、`ui/styles/generated.ts` 与子目录产物继续执行 50 KiB 字节棘轮。业务净减只计算业务源码，因此仅改门禁会在 `--require-net-decrease` 下报 `[业务净减未达标]`。

@@ -45,16 +45,16 @@ jobs:
           echo "code=$code" | tee -a "$GITHUB_OUTPUT"
 
   plugins:
-    name: Locked plugin sources (rebuild and verify)
+    name: Locked plugin Release assets (download and verify)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-      # Rebuild every locked plugin from its exact source commit and verify the tarball
-      # hash once; the other jobs re-verify and unpack these same bytes on every platform.
-      - run: npm run fetch:plugins
+      # Download and verify locked Release bytes once; consumers rehash before npm ci.
+      - run: npm run fetch:plugins -- --prefetch
+      - run: node --test scripts/fetch-plugins-release.test.mjs scripts/host-plugin-lock.test.mjs scripts/plugin-api-dependency-policy.test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: locked-plugin-tarballs
@@ -81,16 +81,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           name: locked-plugin-tarballs
           path: vendor/plugins/.tarballs/
+      - run: npm run fetch:plugins -- --prefetch --offline
+      - run: npm ci
       - name: Checkout bound plugin workspace
         uses: actions/checkout@v6
         with:
           repository: Gyoungwe/drone-plugins
-          ref: main
+          ref: be87fdca3141d0c16b4df0fb74220dc9f5c944d9
           path: drone-plugins
       - run: npm run lint
       - run: npm run typecheck
@@ -98,9 +99,7 @@ jobs:
       - run: npm run test:arch
       - name: Report unused files and exports
         run: npm run knip
-      - run: npm run check:plugin-api
-        env:
-          DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
+      - run: npm run check:plugin-api -- --plugins-dir "${{ github.workspace }}/drone-plugins"
       - run: npm run check:extensions
       - run: npm run test:research-packaging
 
@@ -122,11 +121,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           name: locked-plugin-tarballs
           path: vendor/plugins/.tarballs/
+      - run: npm run fetch:plugins -- --prefetch --offline
+      - run: npm ci
       # Same as the root pretest: build the workspace Plugin API, unpack the plugin artifacts
       # pinned in plugins.lock.json (node_modules/@gyoungwe/* and the gitignored
       # .pi/extensions/knowledge-worker.mjs) and stage the bundled plugin runtime.
@@ -151,11 +151,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           name: locked-plugin-tarballs
           path: vendor/plugins/.tarballs/
+      - run: npm run fetch:plugins -- --prefetch --offline
+      - run: npm ci
       # Same as the root pretest: build the workspace Plugin API, unpack the plugin artifacts
       # pinned in plugins.lock.json (node_modules/@gyoungwe/* and the gitignored
       # .pi/extensions/knowledge-worker.mjs) and stage the bundled plugin runtime.
@@ -185,21 +186,16 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           name: locked-plugin-tarballs
           path: vendor/plugins/.tarballs/
+      - run: npm run fetch:plugins -- --prefetch --offline
+      - run: npm ci
       # Same as the root pretest: build the workspace Plugin API, unpack the plugin artifacts
       # pinned in plugins.lock.json (node_modules/@gyoungwe/* and the gitignored
       # .pi/extensions/knowledge-worker.mjs) and stage the bundled plugin runtime.
       - run: npm run prepare:test
-      - name: Checkout bound plugin workspace
-        uses: actions/checkout@v6
-        with:
-          repository: Gyoungwe/drone-plugins
-          ref: main
-          path: drone-plugins
       # Backend is covered by the parallel unit/sdk jobs. Keep the other
       # workspace suites and the root upgrade/build gates in this job. Knowledge
       # and tasks moved to drone-plugins and are tested by its CI.
@@ -207,8 +203,6 @@ jobs:
         run: npm run test:preload
       - run: npm test -w @drone/shared
       - run: npm test -w @drone/desktop
-        env:
-          DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
       - run: npm test -w @drone/extensions
       - run: npm test -w @drone/compute
       - run: npm test -w @drone/inquiry
@@ -232,11 +226,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           name: locked-plugin-tarballs
           path: vendor/plugins/.tarballs/
+      - run: npm run fetch:plugins -- --prefetch --offline
+      - run: npm ci
       - run: npm run fetch:plugins
       # Pi's own package manager resolves the locked package as a source and loads it
       # without Drone; native Pi closed loops are out of scope (2026-10-29 revision).

@@ -33,6 +33,7 @@ const MAX_SKILL_BYTES = 3 * 1024;
 const RUNTIME_SKILL = /^(?:\.pi\/skills|packages\/[^/]+\/(?:skills|resources\/skills))\/.+\/SKILL\.md$/;
 const SOURCE = /^packages\/[^/]+\/(?:src|ui)\/.+\.(?:ts|tsx|mts|mjs)$/;
 const NON_BUSINESS = /\/(?:test|tests|fixtures|node_modules)\/|\.(?:test|spec)\.|\.d\.[cm]?ts$/;
+const EXTENSION_BUNDLE = /^\.pi\/extensions\/[^/]+\.mjs$/;
 const GENERATED = /(?:^|\/)dist\/|^\.pi\/extensions\/.+\.mjs$|\/ui\/bundle\.js$|\/ui\/styles\/generated\.ts$/;
 const PROCESS_DOC = /(?:^|\/)inventory-[^/]*\.md$|-evidence\.md$|-\d{4}-\d{2}-\d{2}\.json$|\/screenshots?\//;
 
@@ -88,11 +89,41 @@ function growsPast(path, staged, isNew, limit) {
 	return bytes > limit && (isNew || bytes > blobBytes(`HEAD:${path}`));
 }
 
+function extensionBatchErrors(changes, staged) {
+	const batch = changes.filter(({ path, status }) => status !== "A" && EXTENSION_BUNDLE.test(path));
+	if (batch.length === 0) return [];
+	const { netLines, netBytes, hasBinary } = batch.reduce(
+		(totals, { path, status, binary }) => {
+			const before = git("cat-file", "blob", `HEAD:${path}`);
+			const after = status === "D" ? Buffer.alloc(0) : readSnapshot(path, staged);
+			return {
+				netLines: totals.netLines + lineCount(after) - lineCount(before),
+				netBytes: totals.netBytes + after.length - before.length,
+				hasBinary: totals.hasBinary || (status !== "D" && binary),
+			};
+		},
+		{ netLines: 0, netBytes: 0, hasBinary: false },
+	);
+	const reasons = [];
+	if (hasBinary) reasons.push("包含二进制内容");
+	if (netLines > 0) reasons.push(`净增 ${netLines} 行（须 ≤ 0 行）`);
+	if (netBytes > MAX_ARTIFACT_BYTES) {
+		reasons.push(`净增 ${netBytes} 字节（超过 ${MAX_ARTIFACT_BYTES} 字节上限）`);
+	}
+	if (reasons.length === 0) return [];
+	const detail = reasons.join("，");
+	return batch.map(
+		({ path }) => `[产物拦截] ${path} 所在的已追踪扩展产物批次${detail}；整批须净增 ≤ 0 行且净增 ≤ 50 KiB。`,
+	);
+}
+
 function checkChange(change, staged) {
 	const { path, status, binary } = change;
 	const isNew = status === "A";
 	const removed = status === "D";
-	const business = SOURCE.test(path) && !NON_BUSINESS.test(path) && !GENERATED.test(path);
+	const extension = EXTENSION_BUNDLE.test(path);
+	const generated = GENERATED.test(path);
+	const business = SOURCE.test(path) && !NON_BUSINESS.test(path) && !generated;
 	const lines = business && !removed && !binary ? lineCount(readSnapshot(path, staged)) : 0;
 	const added = change.untracked ? lines : binary ? 0 : change.added;
 	const deleted = binary ? 0 : change.deleted;
@@ -112,7 +143,7 @@ function checkChange(change, staged) {
 	if (business && !isNew && lines > MAX_MODIFIED_CODE_LINES && net > 0) {
 		errors.push(`[超长文件棘轮] ${path} 有 ${lines} 行且净增 ${net} 行；先提取子模块，让该文件净增 ≤ 0。`);
 	}
-	if (GENERATED.test(path) && (isNew || growsPast(path, staged, false, MAX_ARTIFACT_BYTES))) {
+	if (generated && (isNew || (!extension && growsPast(path, staged, false, MAX_ARTIFACT_BYTES)))) {
 		errors.push(
 			`[产物拦截] ${path} 是新增产物或超过 50 KiB 后仍在增长；勿追踪新产物，压缩旧产物或先切换交付路径。`,
 		);
@@ -140,9 +171,10 @@ function main() {
 			.replace(/\r?\n$/, ""),
 	);
 	const staged = process.argv.includes("--staged");
-	const errors = [];
+	const changes = [...changeList(staged)];
+	const errors = extensionBatchErrors(changes, staged);
 	const totals = { added: 0, deleted: 0 };
-	for (const change of changeList(staged)) {
+	for (const change of changes) {
 		const result = checkChange(change, staged);
 		totals.added += result.added;
 		totals.deleted += result.deleted;

@@ -374,11 +374,13 @@ test("rejects prefetch with worktree overrides and requires explicit worktree in
 	);
 });
 
-test("a v1 lock still stages a source-build tarball from the digest cache", async (t) => {
+test("a v1 lock is rejected even when its digest cache is present", async (t) => {
 	const { root } = await fixture(t);
 	const core = release();
 	await put(root, "plugins.lock.json", JSON.stringify({ version: 1, plugins: [core.locked] }));
 	await put(root, `vendor/plugins/.tarballs/pi-core-${core.locked.tarballSha256}.tgz`, core.bytes);
-	await fetchPlugins({ root, args: ["--offline"], env: {}, fetchImpl: noNetwork });
-	assert.deepEqual(verifyBuiltinPackages(join(root, builtins), root), { [row.name]: row.version });
+	await assert.rejects(
+		fetchPlugins({ root, args: ["--offline"], env: {}, fetchImpl: noNetwork }),
+		/version 2/u,
+	);
 });
