@@ -1,13 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type {
-	ControlledKernelRunner,
-	CriticProvider,
-	InquiryDiscoveryPort,
-	KernelLanguage,
-	KernelSession,
-} from "@drone/discovery";
 import type { DiscoveryHostInput, DiscoveryHostServices, DiscoveryJournalName } from "@gyoungwe/plugin-api";
 import {
 	ContainerSandboxRunner as ContainerKernelRunner,
@@ -15,6 +8,13 @@ import {
 } from "@gyoungwe/plugin-api/node/execution";
 import { JsonStore, JsonStoreCorruptedError } from "../json-store";
 import type { StorageRegistry } from "../storage/registry";
+import type {
+	ControlledKernelRunner,
+	CriticProvider,
+	InquiryDiscoveryPort,
+	KernelExecution,
+	KernelLanguage,
+} from "./contracts";
 import { ProjectRunFileWriter } from "./run-files";
 
 export type DiscoveryAuthorizationOperation =
@@ -47,7 +47,7 @@ export interface DiscoveryServiceOptions {
 		readonly runDirectory: string;
 		readonly language: string;
 		readonly code: string;
-		readonly execution: Awaited<ReturnType<KernelSession["execute"]>>;
+		readonly execution: KernelExecution;
 	}) => void | Promise<void>;
 }
 

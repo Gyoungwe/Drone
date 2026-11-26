@@ -504,7 +504,7 @@ export class InquiryService implements InquiryServicePort {
 	discoveryPort(
 		projectId: string,
 		discoveryProjectId: string,
-	): import("@drone/discovery").InquiryDiscoveryPort {
+	): import("../discovery/contracts").InquiryDiscoveryPort {
 		const boundProjectId = canonicalProjectId(projectId);
 		const domain = () => {
 			if (this.disposed) throw new Error("Inquiry service is disposed");

@@ -1,20 +1,6 @@
 import { lstat, mkdir, readFile, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type {
-	CriticRequest,
-	DiscoveryBaselineRecord,
-	DiscoveryEvaluationCase,
-	DiscoveryEvaluationObservation,
-	DiscoveryEvaluationRun,
-	DiscoveryExplorationBudget,
-	DiscoveryLedgerInput,
-	KernelSession,
-	MultipathPathExecutionResult,
-	MultipathPlan,
-	rankExplorationCandidates,
-} from "@drone/discovery";
-import type { QuestionPrior } from "@drone/inquiry";
-import type {
 	DiscoveryCapabilities,
 	DiscoveryCriticReview,
 	DiscoveryDataClassification,
@@ -27,6 +13,18 @@ import type {
 import type { DiscoveryHostLoader, DiscoveryHostPort } from "@gyoungwe/plugin-api";
 import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { canonicalProjectId } from "../project-id";
+import type {
+	CriticRequest,
+	DiscoveryBaselineRecord,
+	DiscoveryEvaluationCase,
+	DiscoveryEvaluationObservation,
+	DiscoveryEvaluationRun,
+	DiscoveryExplorationPlanInput,
+	DiscoveryLedgerInput,
+	KernelExecution,
+	MultipathPathExecutionResult,
+	MultipathPlan,
+} from "./contracts";
 import { createDiscoveryHostInput, type DiscoveryServiceOptions } from "./host-input";
 
 export {
@@ -54,10 +52,7 @@ export interface DiscoveryServicePort {
 	getKernelSession(sessionId: string): Promise<DiscoveryKernelSession | null>;
 	recordDiscovery(input: DiscoveryLedgerInput): Promise<void>;
 	createKernelSession(input: DiscoveryKernelSessionInput): Promise<DiscoveryKernelSession>;
-	executeKernel(
-		sessionId: string,
-		code: string,
-	): Promise<ReturnType<KernelSession["execute"]> extends Promise<infer T> ? T : never>;
+	executeKernel(sessionId: string, code: string): Promise<KernelExecution>;
 	exportKernel(sessionId: string): Promise<{
 		readonly scriptPath: string;
 		readonly notebookPath: string;
@@ -69,13 +64,7 @@ export interface DiscoveryServicePort {
 	listMultipathAssessments(): Promise<readonly DiscoveryMultipathAssessment[]>;
 	listExplorationPlans(): Promise<readonly DiscoveryExplorationPlan[]>;
 	listEvaluations(): Promise<readonly DiscoveryEvaluation[]>;
-	createExplorationPlan(input: {
-		readonly id: string;
-		readonly hypothesisId: string;
-		readonly prior: QuestionPrior;
-		readonly budget: DiscoveryExplorationBudget;
-		readonly candidates: readonly Parameters<typeof rankExplorationCandidates>[0][number][];
-	}): Promise<DiscoveryExplorationPlan>;
+	createExplorationPlan(input: DiscoveryExplorationPlanInput): Promise<DiscoveryExplorationPlan>;
 	runCritic(request: CriticRequest): Promise<DiscoveryCriticReview>;
 	runMultipath(
 		plan: MultipathPlan,
@@ -224,7 +213,10 @@ export function createDiscoveryService(
 		const operation = host?.[method];
 		if (typeof operation !== "function")
 			return Promise.reject(
-				new Error(`Discovery operation is unavailable: ${method}; install and enable a discovery plugin`),
+				Object.assign(
+					new Error(`Discovery operation is unavailable: ${method}; install and enable a discovery plugin`),
+					{ code: "DISCOVERY_UNAVAILABLE" },
+				),
 			);
 		return Promise.resolve(operation.call(host, input)) as Promise<T>;
 	};
