@@ -297,6 +297,7 @@ packages/
 | `packages/desktop/scripts/p5-installed-mounts.test.tsx` | `U4` 已安装挂载验收：真实落盘的安装包（`plugin.manifest.json`）+ 真实构建器产出的构建产物 + 真实导入后，三个 artifact surface（`evidence.overview` / `evidence.pane` / `artifacts.card`）同时挂载该贡献，且与宿主自身渲染共存；总开关关闭移除全部挂载、恢复宿主渲染，重新打开恢复挂载；插件停用移除贡献、启用后恢复且恰好一个；只读 caller 的宿主授权一律拒绝；真实产物缺失时报 NOT_RUN，绝不 PASS |
 | `packages/backend/test/redline-acceptance.test.mjs` / `npm run check:redline` | REDLINE-01 隔离验收：通过 publication/orchestration/metacognitive 门禁注入缺来源、stale source、数字/方法漂移、重复数不足、断线和权限拒绝；断言阻断原因、差异路径与 sealed audit proof |
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
+| `scripts/release-plugin-api.mjs` | 校验发布版本，生成 plugin-api GitHub Release 归档和 SHA256SUMS，并校验回读文件 |
 | `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含已安装的 pi-analysis、pi-evidence、pi-connectors） |
 | `scripts/check-public-plugin-host.mjs` | 从 npm registry 安装三个公开插件包到干净 prefix，验证 Pi loader、工具清单、公开包生命周期和 Desktop UI 生命周期；不调用模型或真实连接器 I/O |
 | `scripts/check-market-plugin-lifecycle.mjs` | 离线真实 npm pack/install/update/uninstall 市场 fixture，输出生命周期回执；公开 Pi/Drone registry 包仅在授权的真实宿主运行中验收 |

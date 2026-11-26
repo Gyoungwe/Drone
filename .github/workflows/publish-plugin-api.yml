@@ -2,34 +2,153 @@ name: Publish plugin-api
 
 on:
   workflow_dispatch:
+    inputs:
+      expected_version:
+        description: Exact plugin-api package version to release
+        required: true
+        type: string
 
-permissions:
-  contents: read
-  id-token: write
+permissions: {}
 
 concurrency:
-  group: npm-publish-plugin-api
+  group: publish-plugin-api
   cancel-in-progress: false
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  build:
+    if: github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      EXPECTED_VERSION: ${{ inputs.expected_version }}
+    outputs:
+      version: ${{ steps.pack.outputs.version }}
+      sha256: ${{ steps.pack.outputs.sha256 }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Check out the exact release commit
-        uses: actions/checkout@v4
-
-      - name: Set up Node and npm trusted publishing
-        uses: actions/setup-node@v4
+        uses: actions/checkout@v6
         with:
-          node-version: 24
-          registry-url: https://registry.npmjs.org
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up the release toolchain
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.23.0'
           package-manager-cache: false
+
+      - name: Verify the source commit, toolchain and expected version
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(npm --version)" = "10.9.8"
+          node scripts/release-plugin-api.mjs --expected-version "$EXPECTED_VERSION"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Check plugin-api package
-        run: npm run check --workspace @gyoungwe/plugin-api
+      - name: Test the package and verify the generated host API
+        run: |
+          npm run test -w @gyoungwe/plugin-api
+          node packages/desktop/scripts/gen-plugin-api.mjs --check
+          node --test scripts/release-plugin-api.test.mjs
 
-      - name: Publish plugin-api through npm OIDC
-        run: npm publish --workspace @gyoungwe/plugin-api --access public --provenance
+      - name: Pack and install the release archive
+        id: pack
+        run: |
+          asset_dir="$RUNNER_TEMP/plugin-api-release"
+          asset="gyoungwe-plugin-api-$EXPECTED_VERSION.tgz"
+          sha256="$(node scripts/release-plugin-api.mjs --expected-version "$EXPECTED_VERSION" --out-dir "$asset_dir")"
+          node scripts/check-plugin-api.mjs --package-only --lifecycle \
+            --release-tarball "$asset_dir/$asset" --sha256 "$sha256"
+          printf 'version=%s\nsha256=%s\n' "$EXPECTED_VERSION" "$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the verified release archive and checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-api-release
+          path: ${{ runner.temp }}/plugin-api-release
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the exact release commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node for checksum verification
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.23.0'
+          package-manager-cache: false
+
+      - name: Download the verified build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: plugin-api-release
+          path: ${{ runner.temp }}/plugin-api-release
+
+      - name: Create, verify and publish the draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+          BUILD_SHA256: ${{ needs.build.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          tag="plugin-api-v$RELEASE_VERSION"
+          asset="gyoungwe-plugin-api-$RELEASE_VERSION.tgz"
+          asset_dir="$RUNNER_TEMP/plugin-api-release"
+          artifact_sha256="$(node scripts/release-plugin-api.mjs --expected-version "$RELEASE_VERSION" --check --pack-dir "$asset_dir")"
+          test "$artifact_sha256" = "$BUILD_SHA256"
+
+          matching_tag() {
+            gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$tag" \
+              --jq ".[] | select(.ref == \"refs/tags/$tag\") | .ref"
+          }
+          tagged_release() {
+            gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq ".[] | select(.tag_name == \"$tag\") | [.draft, .target_commitish] | @tsv"
+          }
+          tag_commit() {
+            gh api "repos/$GITHUB_REPOSITORY/commits/tags/$tag" --jq .sha
+          }
+
+          tag_ref="$(matching_tag)"
+          existing_release="$(tagged_release)"
+          if [[ -n "$tag_ref" || -n "$existing_release" ]]; then
+            echo "A tag or release already exists for $tag" >&2
+            exit 1
+          fi
+          gh release create "$tag" "$asset_dir/$asset" "$asset_dir/SHA256SUMS" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --latest=false \
+            --title "$tag" --notes "Source commit: $GITHUB_SHA"
+
+          draft="$(tagged_release)"
+          test "$draft" = "$(printf 'true\t%s' "$GITHUB_SHA")"
+          readback="$(mktemp -d "$RUNNER_TEMP/plugin-api-readback.XXXXXX")"
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir "$readback"
+          readback_sha256="$(node scripts/release-plugin-api.mjs --expected-version "$RELEASE_VERSION" --check --pack-dir "$readback")"
+          test "$readback_sha256" = "$BUILD_SHA256"
+          cmp "$asset_dir/SHA256SUMS" "$readback/SHA256SUMS"
+          cmp "$asset_dir/$asset" "$readback/$asset"
+
+          tag_ref="$(matching_tag)"
+          if [[ -n "$tag_ref" ]]; then
+            draft_commit="$(tag_commit)"
+            test "$draft_commit" = "$GITHUB_SHA"
+          fi
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false
+
+          published_commit="$(tag_commit)"
+          test "$published_commit" = "$GITHUB_SHA"

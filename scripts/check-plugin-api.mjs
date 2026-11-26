@@ -9,8 +9,10 @@
  * state.
  */
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
 	existsSync,
+	lstatSync,
 	mkdirSync,
 	mkdtempSync,
 	readdirSync,
@@ -21,6 +23,7 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import { checkPluginDependency } from "./plugin-api-dependency-policy.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -153,11 +156,14 @@ function checkPackageOnly() {
 }
 
 function npmPack(packageDir, destination, env) {
-	const output = execNpm(["pack", "--silent", packageDir, "--pack-destination", destination], {
-		cwd: ROOT,
-		encoding: "utf8",
-		env,
-	})
+	const output = execNpm(
+		["pack", "--silent", "--ignore-scripts", packageDir, "--pack-destination", destination],
+		{
+			cwd: ROOT,
+			encoding: "utf8",
+			env,
+		},
+	)
 		.trim()
 		.split(/\r?\n/u)
 		.at(-1);
@@ -165,10 +171,14 @@ function npmPack(packageDir, destination, env) {
 	return join(destination, output);
 }
 
-function installedVersion(fixture, packageName) {
-	const path = join(fixture, "node_modules", ...packageName.split("/"), "package.json");
-	assert(existsSync(path), `${packageName} is not installed in the fixture`);
-	return readJson(path).version;
+function installTarball(tarball, version, options) {
+	execNpm(["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", tarball], options);
+	const manifest = readJson(join(options.cwd, "node_modules", "@gyoungwe", "plugin-api", "package.json"));
+	assert(
+		manifest.name === "@gyoungwe/plugin-api" && manifest.version === version,
+		`expected installed @gyoungwe/plugin-api@${version}, found ${manifest.name}@${manifest.version}`,
+	);
+	runContractProbe(options.cwd);
 }
 
 function writeContractProbe(fixture) {
@@ -213,82 +223,61 @@ function createRollbackTarball(currentTarball, destination, env) {
 	return npmPack(unpack, destination, env);
 }
 
+function stageReleaseTarball(tarball, sha256, destination) {
+	assert(lstatSync(tarball).isFile(), "release tarball must be a regular file");
+	const bytes = readFileSync(tarball);
+	assert(createHash("sha256").update(bytes).digest("hex") === sha256, "release tarball SHA-256 mismatch");
+	const staged = join(destination, "release.tgz");
+	writeFileSync(staged, bytes);
+	return staged;
+}
+
 /**
  * Exercise the package lifecycle entirely from local tarballs. The sequence
  * intentionally upgrades and then rolls back the same fixture, so a passing
  * result proves that a failed upgrade can be recovered without touching the
  * user's global npm or Pi state.
  */
-function checkLocalLifecycle() {
+function checkLocalLifecycle(releaseTarball, sha256) {
 	const temp = mkdtempSync(join(tmpdir(), "drone-plugin-api-lifecycle-"));
 	try {
 		const env = {
 			...process.env,
 			npm_config_cache: join(temp, "npm-cache"),
 			npm_config_logs: join(temp, "npm-logs"),
+			npm_config_offline: "true",
 		};
-		const currentTarball = npmPack(PACKAGE_DIR, temp, env);
+		const currentTarball = releaseTarball
+			? stageReleaseTarball(releaseTarball, sha256, temp)
+			: npmPack(PACKAGE_DIR, temp, env);
 		const rollbackTarball = createRollbackTarball(currentTarball, temp, env);
 		const fixture = join(temp, "fixture");
+		const options = { cwd: fixture, stdio: "pipe", env };
+		const version = packageJson().version;
 		const fixtureManifest = {
 			name: "drone-plugin-api-lifecycle-fixture",
 			private: true,
 			version: "0.0.0",
 			type: "module",
-			dependencies: { "@gyoungwe/plugin-api": `file:../${basename(rollbackTarball)}` },
 		};
-		const fixtureDir = fixture;
-		mkdirSync(fixtureDir, { recursive: true });
-		writeFileSync(join(fixtureDir, "package.json"), `${JSON.stringify(fixtureManifest, null, 2)}\n`);
-		execNpm(["install", "--ignore-scripts", "--no-audit", "--no-fund"], {
-			cwd: fixtureDir,
-			stdio: "pipe",
-			env,
-		});
-		writeContractProbe(fixtureDir);
-		assert(
-			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === "0.9.0",
-			"rollback tarball did not install at 0.9.0",
-		);
-		runContractProbe(fixtureDir);
+		mkdirSync(fixture);
+		writeFileSync(join(fixture, "package.json"), `${JSON.stringify(fixtureManifest, null, 2)}\n`);
+		writeContractProbe(fixture);
+		installTarball(rollbackTarball, "0.9.0", options);
+		installTarball(currentTarball, version, options);
+		installTarball(rollbackTarball, "0.9.0", options);
 
-		execNpm(["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", currentTarball], {
-			cwd: fixtureDir,
-			stdio: "pipe",
-			env,
-		});
+		execNpm(["uninstall", "@gyoungwe/plugin-api", "--ignore-scripts", "--no-audit", "--no-fund"], options);
 		assert(
-			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === packageJson().version,
-			"current tarball did not upgrade to the declared version",
-		);
-		runContractProbe(fixtureDir);
-
-		execNpm(["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", rollbackTarball], {
-			cwd: fixtureDir,
-			stdio: "pipe",
-			env,
-		});
-		assert(
-			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === "0.9.0",
-			"rollback tarball did not restore 0.9.0",
-		);
-		runContractProbe(fixtureDir);
-
-		execNpm(["uninstall", "@gyoungwe/plugin-api", "--ignore-scripts", "--no-audit", "--no-fund"], {
-			cwd: fixtureDir,
-			stdio: "pipe",
-			env,
-		});
-		assert(
-			!existsSync(join(fixtureDir, "node_modules", "@gyoungwe", "plugin-api")),
+			!existsSync(join(fixture, "node_modules", "@gyoungwe", "plugin-api")),
 			"npm uninstall left plugin-api installed",
 		);
 		console.log(
 			JSON.stringify({
 				status: "PASS",
-				mode: "local-pack-lifecycle",
+				mode: releaseTarball ? "release-tarball-lifecycle" : "local-pack-lifecycle",
 				install: "0.9.0",
-				upgrade: packageJson().version,
+				upgrade: version,
 				rollback: "0.9.0",
 				uninstall: "removed",
 			}),
@@ -351,15 +340,7 @@ function checkTarballInstall() {
 	const temp = mkdtempSync(join(tmpdir(), "drone-plugin-api-gate-"));
 	try {
 		const env = { ...process.env, npm_config_cache: join(temp, "npm-cache") };
-		const tarball = execNpm(["pack", "--silent", PACKAGE_DIR, "--pack-destination", temp], {
-			cwd: ROOT,
-			encoding: "utf8",
-			env,
-		})
-			.trim()
-			.split(/\r?\n/)
-			.at(-1);
-		assert(tarball, "npm pack did not produce a tarball name");
+		const tarball = basename(npmPack(PACKAGE_DIR, temp, env));
 		const fixture = {
 			name: "drone-plugin-api-install-fixture",
 			private: true,
@@ -384,9 +365,23 @@ function checkTarballInstall() {
 	}
 }
 
-const packageOnly = process.argv.includes("--package-only");
-const migration = process.argv.includes("--migration") || !packageOnly;
-const lifecycle = process.argv.includes("--lifecycle");
+const { values } = parseArgs({
+	options: {
+		"package-only": { type: "boolean" },
+		migration: { type: "boolean" },
+		lifecycle: { type: "boolean" },
+		"release-tarball": { type: "string" },
+		sha256: { type: "string" },
+	},
+});
+const { lifecycle, "release-tarball": releaseTarball, sha256 } = values;
+const migration = values.migration || !values["package-only"];
+if (releaseTarball !== undefined || sha256 !== undefined) {
+	assert(
+		!migration && lifecycle && releaseTarball && /^[0-9a-f]{64}$/u.test(sha256),
+		"use --package-only --lifecycle with both --release-tarball and --sha256",
+	);
+}
 checkPackageOnly();
 if (migration) {
 	const tarball = checkTarballInstall();
@@ -401,4 +396,4 @@ if (migration) {
 } else {
 	console.log("plugin-api package gate passed");
 }
-if (lifecycle) checkLocalLifecycle();
+if (lifecycle) checkLocalLifecycle(releaseTarball, sha256);
