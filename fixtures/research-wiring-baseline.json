@@ -1,0 +1,110 @@
+{
+	"schemaVersion": 1,
+	"toolSet": [
+		"baseline_search_external",
+		"research_answer_sources",
+		"research_deposit_research_note",
+		"research_loop",
+		"research_read_source",
+		"research_search_sources"
+	],
+	"scenarios": [
+		{
+			"id": "local-direct",
+			"prompt": "Which amberwing marker was observed at each site? Use only the two paper notes and supporting Wiki index in the synthetic vault. Search vault with research_search_sources and read the two paper records before giving citations. Keep the answer read-only.",
+			"files": {
+				"vault/Library/Papers/amberwing-north.md": "---\nid: amberwing-north\ntitle: Amberwing marker at North Station\nuri: https://north.example/amberwing\n---\n\nNorth Station recorded amberwing marker A in the synthetic reference panel.\n",
+				"vault/Library/Papers/amberwing-south.md": "---\nid: amberwing-south\ntitle: Amberwing marker at South Station\nuri: https://south.example/amberwing\n---\n\nSouth Station recorded amberwing marker B in the synthetic reference panel.\n",
+				"vault/Wiki/amberwing.md": "---\nid: amberwing-index\ntitle: Amberwing marker notes index\n---\n\nSee [[amberwing-north]] and [[amberwing-south]] for station-specific amberwing marker records.\n"
+			},
+			"fauxRepeat": 1,
+			"fauxCalls": [
+				{
+					"name": "research_search_sources",
+					"input": { "query": "amberwing marker", "source_dir": "vault" }
+				},
+				{ "name": "research_read_source", "input": { "source_id": "amberwing-north" } },
+				{ "name": "research_read_source", "input": { "source_id": "amberwing-south" } },
+				{
+					"name": "research_answer_sources",
+					"input": {
+						"question": "Which amberwing marker was observed at each site?",
+						"source_ids": ["amberwing-north", "amberwing-south"]
+					}
+				}
+			]
+		},
+		{
+			"id": "deep-research",
+			"prompt": "Run an evidence review of the winterglass calibration. The synthetic vault has no calibration data. After checking local sources, use baseline_search_external for winterglass calibration, inspect the archived originals it locates, bind the claims to both source reads, and complete with citations and limitations.",
+			"files": {
+				"vault/Library/Papers/inventory.md": "# Station inventory\n\nThe equipment register contains no instrument measurements.\n",
+				"sources/archive/winterglass-first.md": "---\nid: winterglass-first\ntitle: Winterglass calibration setup\nuri: https://archive.example/winterglass-first\n---\n\nThe winterglass calibration used a 12-unit reference at Station One and two repeats.\n",
+				"sources/archive/winterglass-second.md": "---\nid: winterglass-second\ntitle: Winterglass calibration replication\nuri: https://archive.example/winterglass-second\n---\n\nStation Two repeated the winterglass calibration with a 12-unit reference. No uncertainty interval was supplied.\n"
+			},
+			"fauxRepeat": 1,
+			"fauxCalls": [
+				{ "name": "research_loop", "input": { "action": "start", "query": "winterglass calibration" } },
+				{
+					"name": "research_search_sources",
+					"input": { "query": "winterglass calibration", "source_dir": "vault" }
+				},
+				{ "name": "baseline_search_external", "input": { "query": "winterglass calibration" } },
+				{
+					"name": "research_search_sources",
+					"input": { "query": "winterglass calibration", "source_dir": "sources/archive" }
+				},
+				{ "name": "research_read_source", "input": { "source_id": "winterglass-first" } },
+				{ "name": "research_read_source", "input": { "source_id": "winterglass-second" } },
+				{
+					"name": "research_answer_sources",
+					"input": {
+						"question": "How was the winterglass calibration performed?",
+						"source_ids": ["winterglass-first", "winterglass-second"]
+					}
+				}
+			]
+		},
+		{
+			"id": "stall-loop",
+			"prompt": "Resolve the disputed grayglass reading. The notebook mentions several ambiguous names but gives no source identity. Try looking up the original and checking the source, then report what the evidence allows.",
+			"files": {
+				"vault/Library/Papers/grayglass-index.md": "# Grayglass index\n\nGray Glass and Greyglass may refer to different instruments. The original notebook is missing.\n"
+			},
+			"fauxRepeat": 13,
+			"fauxCalls": [
+				{ "name": "baseline_search_external", "input": { "query": "grayglass original" } },
+				{ "name": "research_read_source", "input": { "source_id": "missing-grayglass-notebook" } }
+			]
+		},
+		{
+			"id": "external-write",
+			"prompt": "Use the two copperleaf records in sources to prepare a candidate research note. Ground it in both reads, then request that research_deposit_research_note save it. If approval is denied, report that the note could not be saved.",
+			"files": {
+				"sources/copperleaf-first.md": "---\nid: copperleaf-first\ntitle: Copperleaf station log A\nuri: https://archive.example/copperleaf-first\n---\n\nThe copperleaf log records one detection at Station A.\n",
+				"sources/copperleaf-second.md": "---\nid: copperleaf-second\ntitle: Copperleaf station log B\nuri: https://archive.example/copperleaf-second\n---\n\nThe copperleaf log records two detections at Station B. The sampling design differs from Station A.\n"
+			},
+			"fauxRepeat": 1,
+			"fauxCalls": [
+				{ "name": "research_search_sources", "input": { "query": "copperleaf", "source_dir": "sources" } },
+				{ "name": "research_read_source", "input": { "source_id": "copperleaf-first" } },
+				{ "name": "research_read_source", "input": { "source_id": "copperleaf-second" } },
+				{
+					"name": "research_answer_sources",
+					"input": {
+						"question": "What was recorded at each copperleaf station?",
+						"source_ids": ["copperleaf-first", "copperleaf-second"]
+					}
+				},
+				{
+					"name": "research_deposit_research_note",
+					"input": {
+						"title": "Copperleaf candidate note",
+						"markdown": "The station logs report different counts under different sampling designs.",
+						"source_ids": ["copperleaf-first", "copperleaf-second"]
+					}
+				}
+			]
+		}
+	]
+}
