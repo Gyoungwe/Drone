@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type ResearchConnector, ResearchConnectorRegistry } from "@drone/research";
+import type { ResearchConnector } from "@drone/shared";
 import {
 	checkKnowledgeSnapshotReuse,
 	ingestKnowledgeSnapshot,
@@ -15,6 +15,7 @@ import {
 	emptyCaptureLedger,
 	ResearchResourceService,
 } from "../src/services/research-resource";
+import { fixtureConnectorRegistry } from "./research-host-fixture";
 
 const installedKnowledgeOperations = () =>
 	createKnowledgeResearchResourceOperations({
@@ -27,7 +28,7 @@ const installedKnowledgeOperations = () =>
 async function service(): Promise<ResearchResourceService> {
 	const state = await mkdtemp(join(tmpdir(), "drone-research-state-"));
 	return new ResearchResourceService({
-		connectors: new ResearchConnectorRegistry(),
+		connectors: fixtureConnectorRegistry([]),
 		knowledgeOperations: installedKnowledgeOperations(),
 		store: new JsonStore<CaptureLedger>({
 			path: join(state, "captures.json"),
@@ -192,7 +193,7 @@ describe("ResearchResourceService", () => {
 				return [];
 			},
 		};
-		const registry = new ResearchConnectorRegistry([connector]);
+		const registry = fixtureConnectorRegistry([connector]);
 		const settings = new JsonStore({
 			path: join(state, "connectors.json"),
 			storageId: "test-research-connectors",

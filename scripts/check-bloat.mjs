@@ -7,6 +7,7 @@ import process from "node:process";
 const FROZEN_PREFIXES = [
 	"packages/inquiry/",
 	"packages/discovery/",
+	// Retired (D-P7-7); stays frozen so the package cannot quietly return.
 	"packages/research/",
 	"packages/extensions/",
 	"upgrade-audit/",

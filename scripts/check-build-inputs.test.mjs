@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
@@ -57,18 +57,6 @@ test("task resources have no host source or compiled runtime to rebuild", () => 
 	assert.equal(existsSync(join(root, "packages/tasks")), false);
 });
 
-test("research runtime guard rejects a stale compatibility tree", async () => {
-	const legacyDir = join(root, ".pi/lib");
-	await mkdir(legacyDir, { recursive: true });
-	await writeFile(join(legacyDir, "__stale-test-only-module.mjs"), "// stale\n", "utf8");
-	try {
-		const result = await runNode("scripts/build-research-runtime.mjs", ["--check"]);
-		assert.notEqual(result.status, 0, `stale research tree unexpectedly passed:\n${result.output}`);
-	} finally {
-		await rm(join(root, ".pi/lib"), { recursive: true, force: true });
-	}
-});
-
 test("research run UI uses the injected host adapter instead of a deleted runtime artifact", async () => {
 	const backendUi = await readFile(join(root, "packages/backend/src/knowledge/ui.ts"), "utf8");
 	assert.match(backendUi, /ResearchHostLoader/);
@@ -78,6 +66,5 @@ test("research run UI uses the injected host adapter instead of a deleted runtim
 	assert.equal(existsSync(join(root, ".pi/lib/research-run-summary.mjs")), false);
 	assert.equal(existsSync(join(root, ".pi/lib")), false);
 
-	const runtimeBuilder = await readFile(join(root, "scripts/build-research-runtime.mjs"), "utf8");
-	assert.doesNotMatch(runtimeBuilder, /research-run-(?:ui|summary)/);
+	assert.equal(existsSync(join(root, "scripts/build-research-runtime.mjs")), false);
 });

@@ -1,7 +1,6 @@
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createZoteroWriteAdapter, ResearchWriteAdapterRegistry } from "@drone/research";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";
 import {
@@ -9,7 +8,11 @@ import {
 	type ResearchWriteLedger,
 	ResearchWriteService,
 } from "../src/services/research-write";
-import { createProtocolsBookmarkWriteAdapter } from "../src/services/reversible-write-adapters";
+import {
+	createProtocolsBookmarkWriteAdapter,
+	createWebdavWriteAdapter,
+} from "../src/services/reversible-write-adapters";
+import { fixtureWriteRegistry } from "./research-host-fixture";
 
 describe("ResearchWriteService", () => {
 	it("keeps Protocols.io preview, approval and readback explicit", async () => {
@@ -26,7 +29,7 @@ describe("ResearchWriteService", () => {
 			},
 		});
 		const service = new ResearchWriteService({
-			adapters: new ResearchWriteAdapterRegistry([adapter]),
+			adapters: fixtureWriteRegistry([adapter]),
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-writes-protocols",
@@ -58,7 +61,7 @@ describe("ResearchWriteService", () => {
 	it("persists a prepare plan and blocks execution without explicit approval", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-research-write-"));
 		const service = new ResearchWriteService({
-			adapters: new ResearchWriteAdapterRegistry(),
+			adapters: fixtureWriteRegistry([createWebdavWriteAdapter()]),
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-writes",
@@ -66,8 +69,8 @@ describe("ResearchWriteService", () => {
 			}),
 		});
 		const plan = await service.prepare({
-			adapterId: "zotero-write",
-			targetRef: "library:123",
+			adapterId: "webdav-write",
+			targetRef: "library/123.json",
 			action: "prepare",
 			payload: { title: "Bee paper" },
 		});
@@ -84,7 +87,7 @@ describe("ResearchWriteService", () => {
 	it("fails closed and records the adapter failure", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-research-write-"));
 		const service = new ResearchWriteService({
-			adapters: new ResearchWriteAdapterRegistry(),
+			adapters: fixtureWriteRegistry([createWebdavWriteAdapter()]),
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-writes-fail",
@@ -92,8 +95,8 @@ describe("ResearchWriteService", () => {
 			}),
 		});
 		const plan = await service.prepare({
-			adapterId: "zotero-write",
-			targetRef: "library:123",
+			adapterId: "webdav-write",
+			targetRef: "library/123.json",
 			action: "prepare",
 			payload: { title: "Bee paper" },
 		});
@@ -105,15 +108,15 @@ describe("ResearchWriteService", () => {
 	it("reserves a plan before concurrent external writes", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-research-write-"));
 		let writes = 0;
-		const adapter = createZoteroWriteAdapter({
+		const adapter = createWebdavWriteAdapter({
 			write: async ({ targetRef }) => {
 				writes += 1;
 				await new Promise((resolve) => setTimeout(resolve, 25));
-				return { externalRef: `${targetRef}/ITEM1`, readBack: true };
+				return { externalRef: `${targetRef}/ITEM1`, readBack: true, deleted: true };
 			},
 		});
 		const service = new ResearchWriteService({
-			adapters: new ResearchWriteAdapterRegistry([adapter]),
+			adapters: fixtureWriteRegistry([adapter]),
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-write-concurrent",
@@ -121,8 +124,8 @@ describe("ResearchWriteService", () => {
 			}),
 		});
 		const plan = await service.prepare({
-			adapterId: "zotero-write",
-			targetRef: "library:123",
+			adapterId: "webdav-write",
+			targetRef: "library/123.json",
 			action: "prepare",
 			payload: { title: "Bee paper" },
 		});
@@ -138,7 +141,7 @@ describe("ResearchWriteService", () => {
 	it("revokes a plan before it can be executed", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-research-write-"));
 		const service = new ResearchWriteService({
-			adapters: new ResearchWriteAdapterRegistry(),
+			adapters: fixtureWriteRegistry([createWebdavWriteAdapter()]),
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-write-revoke",
@@ -146,8 +149,8 @@ describe("ResearchWriteService", () => {
 			}),
 		});
 		const plan = await service.prepare({
-			adapterId: "zotero-write",
-			targetRef: "library:123",
+			adapterId: "webdav-write",
+			targetRef: "library/123.json",
 			action: "prepare",
 			payload: { title: "Bee paper" },
 		});

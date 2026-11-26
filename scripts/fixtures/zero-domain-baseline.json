@@ -19,9 +19,7 @@
     "packages/backend/package.json:@gyoungwe/pi-knowledge",
     "packages/backend/package.json:@gyoungwe/pi-research",
     "packages/extensions/package.json:@gyoungwe/pi-knowledge",
-    "packages/extensions/package.json:@gyoungwe/pi-research",
-    "packages/research/package.json:@gyoungwe/pi-knowledge",
-    "packages/research/package.json:@gyoungwe/pi-research"
+    "packages/extensions/package.json:@gyoungwe/pi-research"
   ],
   "hostSourceImports": [
     "packages/extensions/src/institutional-access.ts:@gyoungwe/pi-research",
@@ -40,9 +38,7 @@
     "packages/extensions/src/source-archive.ts:@gyoungwe/pi-research",
     "packages/extensions/src/workspace-config.ts:@gyoungwe/pi-knowledge",
     "packages/extensions/src/zotero-literature.ts:@gyoungwe/pi-knowledge",
-    "packages/extensions/src/zotero-literature.ts:@gyoungwe/pi-research",
-    "packages/research/src/connectors.ts:@gyoungwe/pi-research",
-    "packages/research/src/run-summary.ts:@gyoungwe/pi-knowledge"
+    "packages/extensions/src/zotero-literature.ts:@gyoungwe/pi-research"
   ],
   "hostCatalogEntries": [
     "@gyoungwe/desktop-ui-pack",
