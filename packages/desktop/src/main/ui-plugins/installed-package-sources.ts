@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { type BigIntStats, existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { PluginPolicyConsent } from "@drone/backend";
@@ -14,21 +14,43 @@ import { installedRecordAdoptions, installedServices } from "./installed-package
 import { installedPackageGraph } from "./installed-package-graph";
 import { type NetworkDeclaration, networkDeclaration } from "./network-declaration";
 
-/**
- * Content identity for an installed package generation.
- *
- * The package manager may keep the same name, directory and entrypoint while
- * replacing a file in place.  A path-only binding would keep executing that
- * replacement.  Hash every file in the package tree (including nested
- * dependencies) with stable relative names so a later source check can revoke
- * the old binding.  Symlinks are represented by their canonical target; an
- * entrypoint/resource that escapes the package is rejected by discovery before
- * it can be activated.
- */
+type PackageSnapshot = [path: string, metadata: string, target?: string][];
+const statStamp = (stat: BigIntStats) =>
+	`${stat.dev}:${stat.ino}:${stat.mode}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+
+export function createInstalledPackageHasher(): (root: string) => string {
+	const cache = new Map<string, { hash: string; snapshot: PackageSnapshot }>();
+	return (root) => {
+		const canonical = realpathSync(root);
+		const cached = cache.get(canonical);
+		if (
+			cached?.snapshot.every(([path, metadata, target]) => {
+				const stat = lstatSync(path, { bigint: true, throwIfNoEntry: false });
+				return (
+					stat && statStamp(stat) === metadata && (target === undefined || realpathSync(path) === target)
+				);
+			})
+		)
+			return cached.hash;
+		cache.delete(canonical);
+		const snapshot: PackageSnapshot = [];
+		const hash = hashInstalledPackage(canonical, snapshot);
+		const oldest = cache.keys().next().value;
+		if (cache.size >= 64 && oldest !== undefined) cache.delete(oldest);
+		cache.set(canonical, { hash, snapshot });
+		return hash;
+	};
+}
+
+/** Full package identity, including nested dependencies and canonical symlink targets. */
 export function installedPackageHash(root: string): string {
+	return hashInstalledPackage(realpathSync(root));
+}
+
+function hashInstalledPackage(canonicalRoot: string, snapshot?: PackageSnapshot): string {
 	const hash = createHash("sha256");
-	const canonicalRoot = realpathSync(root);
 	const visited = new Set<string>();
+	if (snapshot) snapshot.push([canonicalRoot, statStamp(lstatSync(canonicalRoot, { bigint: true }))]);
 	const walk = (directory: string, relativeDirectory: string): void => {
 		const canonical = realpathSync(directory);
 		if (visited.has(canonical)) return;
@@ -39,9 +61,10 @@ export function installedPackageHash(root: string): string {
 		for (const entry of entries) {
 			const absolute = join(directory, entry.name);
 			const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
-			const stat = lstatSync(absolute);
-			if (stat.isSymbolicLink()) {
-				const target = realpathSync(absolute);
+			const stat = lstatSync(absolute, { bigint: true });
+			const target = stat.isSymbolicLink() ? realpathSync(absolute) : undefined;
+			snapshot?.push([absolute, statStamp(stat), target]);
+			if (target !== undefined) {
 				hash.update(`symlink:${relativePath}\0${target}\0`);
 				const targetRelative = relative(canonicalRoot, target);
 				if (
@@ -49,17 +72,15 @@ export function installedPackageHash(root: string): string {
 					targetRelative !== ".." &&
 					!targetRelative.startsWith(`..${sep}`)
 				) {
-					const targetStat = lstatSync(target);
+					const targetStat = lstatSync(target, { bigint: true });
+					snapshot?.push([target, statStamp(targetStat)]);
 					if (targetStat.isDirectory()) walk(target, targetRelative);
 					else if (targetStat.isFile()) hash.update(readFileSync(target));
 				}
-				continue;
-			}
-			if (stat.isDirectory()) {
+			} else if (stat.isDirectory()) {
 				walk(absolute, relativePath);
-				continue;
-			}
-			if (stat.isFile()) hash.update(`file:${relativePath}\0`).update(readFileSync(absolute)).update("\0");
+			} else if (stat.isFile())
+				hash.update(`file:${relativePath}\0`).update(readFileSync(absolute)).update("\0");
 		}
 	};
 	walk(canonicalRoot, "");

@@ -7,10 +7,10 @@ import { app } from "electron";
 import { buildPlugin, newestMtime } from "./build";
 import { defaultUiPluginsConfig, loadUiPluginsConfig, saveUiPluginsConfig } from "./config";
 import {
+	createInstalledPackageHasher,
 	discoverInstalledPackages,
 	type InstalledUiDiscovery,
 	type InstalledUiRuntimeSource,
-	installedPackageHash,
 } from "./installed-package-sources";
 import { discoverManagedPackages, selectRuntimeSources } from "./managed-roots";
 import { filterContributions } from "./manifest-contributions";
@@ -60,6 +60,7 @@ export class UiPluginManager {
 	private installedDiagnostics: Array<{ packageName: string; error: string }> = [];
 	/** Name → package generation hash. Local user UI plugins intentionally have no entry here. */
 	private installedPackageHashes = new Map<string, { root: string; hash: string }>();
+	private readonly hashInstalledPackage = createInstalledPackageHasher();
 	/** Package policies the user refused in this run, by content and policy; they are not asked again. */
 	private readonly declinedPolicies = new Set<string>();
 	/** 随包内置插件名集合（init 时导出到用户目录；此处仅用于合成 builtin 标志 → 面板 badge/启用免确认） */
@@ -251,7 +252,7 @@ export class UiPluginManager {
 				installedSources.set(installedName, candidate);
 				const identity = {
 					root: candidate.packageRoot,
-					hash: candidate.runtime?.contentHash ?? installedPackageHash(candidate.packageRoot),
+					hash: candidate.runtime?.contentHash ?? this.hashInstalledPackage(candidate.packageRoot),
 				};
 				const previous =
 					this.installedPackageHashes.get(installedName) ?? persistedInstallations[candidate.packageName];
@@ -299,9 +300,8 @@ export class UiPluginManager {
 		if (!identity) return true;
 		try {
 			const runtime = this.installedSources.get(name)?.runtime;
-			return runtime
-				? this.runtimeSourceCurrent(runtime)
-				: installedPackageHash(identity.root) === identity.hash;
+			if (runtime) return this.runtimeSourceCurrent(runtime);
+			return this.hashInstalledPackage(identity.root) === identity.hash;
 		} catch {
 			return false;
 		}
@@ -436,7 +436,7 @@ export class UiPluginManager {
 			!!source.installationPath &&
 			realpathSync(source.installationPath) === source.packageRoot &&
 			(!source.nativeDeclaredPath || realpathSync(source.nativeDeclaredPath) === source.nativeEntrypoint) &&
-			installedPackageHash(source.packageRoot) === source.contentHash
+			this.hashInstalledPackage(source.packageRoot) === source.contentHash
 		);
 	}
 

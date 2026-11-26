@@ -531,6 +531,8 @@ Pi 1.1.0 的 input 在 Enter 时提交原字符串，空串和两侧空格都是
 
 外层安装目录被换成指向字节完全相同副本的 symlink 时，仅重新计算 packageRoot 的完整树 hash 仍可能相同。运行时现在同时复验安装位置的 canonical root 与已声明 native 路径的真实入口；原生和 UI alias 都失效。声明入口消失后，本应用内重新扫描保留旧描述为 unavailable，供实际 selected-path 失败诊断使用，绝不从该记录激活代码；跨重启 required 期望和首次 loader 失败仍在后继接线。66 项发现/来源/聚合/UI 检查通过，正式安装包另验。
 
+T555：不要在每个原生钩子上重读并哈希整个包树。管理器只在逐路径元数据与符号链接的真实目标均未变时复用 SHA-256；纳秒级 `ctime` 能检测大小不变、`mtime` 被恢复的普通写入，目录元数据能检测新增或移除。失效后仍哈希完整包树（含嵌套依赖），安装位置和已声明原生入口照常复验。不要用 TTL、仅看根目录 `mtime` 或异步 watcher 代替同步校验。
+
 ### 模型评审必须先验证同意，再消耗预览令牌
 
 `pi-knowledge@0.3.0` 候选的公开评审 wrapper 曾在确认 acknowledged/autoApply 前消耗单次 preview，用户未同意就重试会收到 expired。canonical owner 内校验不能补救 wrapper 的提前副作用。先拒绝缺失的同意，再消费令牌；公开异步 API 保持 Promise rejection，不能让 forged/reused token 同步异常逃出调用方。原宿主 25 项令牌/拒绝/重用断言全部保留，最小修复已进入本批候选，最终整轮门禁另见回执。
