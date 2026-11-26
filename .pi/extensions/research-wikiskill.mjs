@@ -1,9 +1,9 @@
 // @ts-nocheck
 // packages/extensions/src/research-wikiskill.ts
 import { spawn } from "node:child_process";
-import { createHash as createHash2, randomUUID as randomUUID15 } from "node:crypto";
+import { createHash as createHash2, randomUUID as randomUUID3 } from "node:crypto";
 import { access, appendFile, cp, mkdir as mkdir13, readdir as readdir4, readFile as readFile13, rename as rename11, writeFile as writeFile13 } from "node:fs/promises";
-import { basename as basename4, dirname as dirname7, isAbsolute as isAbsolute10, join as join17, relative as relative12, resolve as resolve13, sep as sep11 } from "node:path";
+import { basename as basename4, dirname as dirname7, isAbsolute as isAbsolute8, join as join7, relative as relative12, resolve as resolve9, sep as sep11 } from "node:path";
 
 // node_modules/@gyoungwe/pi-knowledge/dist/host.mjs
 import { createHash } from "node:crypto";
@@ -16,47 +16,46 @@ import { mkdir, readFile, realpath as realpath2, rename, writeFile } from "node:
 import { basename, isAbsolute as isAbsolute2, join as join2, resolve } from "node:path";
 import { readdir, readFile as readFile2, stat } from "node:fs/promises";
 import { join as join3, relative as relative2, sep as sep2 } from "node:path";
-import { createHash as createHash7, randomUUID as randomUUID3 } from "node:crypto";
-import { mkdir as mkdir3, readFile as readFile5, rename as rename3, unlink as unlink2, writeFile as writeFile3 } from "node:fs/promises";
-import { join as join6 } from "node:path";
 import { createHash as createHash8, randomUUID as randomUUID4 } from "node:crypto";
-import { lstat as lstat3, mkdir as mkdir4, readFile as readFile6, rename as rename4, unlink as unlink3, writeFile as writeFile4 } from "node:fs/promises";
-import { dirname as dirname2, join as join7 } from "node:path";
-import { URL as URL2 } from "node:url";
-import { randomUUID as randomUUID5 } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdir as mkdir4, readFile as readFile5, rename as rename4, unlink as unlink3, writeFile as writeFile3 } from "node:fs/promises";
 import { join as join8 } from "node:path";
+import { createHash as createHash9, randomUUID as randomUUID5 } from "node:crypto";
+import { lstat as lstat4, mkdir as mkdir5, readFile as readFile6, rename as rename5, unlink as unlink4, writeFile as writeFile4 } from "node:fs/promises";
+import { dirname as dirname2, join as join9 } from "node:path";
+import { URL as URL2 } from "node:url";
+import { randomUUID as randomUUID6 } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { join as join10 } from "node:path";
 import { mkdirSync as mkdirSync2 } from "node:fs";
-import { dirname as dirname3, join as join9 } from "node:path";
-import { createHash as createHash9, randomUUID as randomUUID6 } from "node:crypto";
-import { relative as relative4, resolve as resolve4, sep as sep4 } from "node:path";
-import { randomUUID as randomUUID8 } from "node:crypto";
-import { mkdir as mkdir6, readFile as readFile7, rename as rename5, unlink as unlink4, writeFile as writeFile6 } from "node:fs/promises";
-import { join as join11 } from "node:path";
-import { createHash as createHash11, randomUUID as randomUUID10 } from "node:crypto";
-import { lstat as lstat6, mkdir as mkdir7, readFile as readFile9, realpath as realpath4, rename as rename6, unlink as unlink5, writeFile as writeFile7 } from "node:fs/promises";
-import { dirname as dirname4, isAbsolute as isAbsolute5, join as join12, relative as relative6, resolve as resolve6, sep as sep6 } from "node:path";
-import { createHash as createHash12 } from "node:crypto";
-import { createHash as createHash13, randomUUID as randomUUID11 } from "node:crypto";
-import { constants as constants2 } from "node:fs";
-import { link, lstat as lstat7, mkdir as mkdir8, open as open2, realpath as realpath5, rename as rename7, unlink as unlink6, writeFile as writeFile8 } from "node:fs/promises";
-import { basename as basename2, dirname as dirname5, isAbsolute as isAbsolute6, join as join13, relative as relative7, resolve as resolve7, sep as sep7 } from "node:path";
-import { createHash as createHash14, randomUUID as randomUUID12 } from "node:crypto";
-import { link as link2, lstat as lstat8, mkdir as mkdir9, readdir as readdir2, readFile as readFile10, rename as rename8, rm, unlink as unlink7, writeFile as writeFile9 } from "node:fs/promises";
-import { basename as basename3, dirname as dirname6, join as join14 } from "node:path";
-import { createHash as createHash15 } from "node:crypto";
-import { createHash as createHash16, randomUUID as randomUUID13 } from "node:crypto";
-import { randomUUID as randomUUID14 } from "node:crypto";
-import { createHash as createHash18, randomUUID as randomUUID16 } from "node:crypto";
-import { mkdir as mkdir10, rename as rename9, writeFile as writeFile10 } from "node:fs/promises";
+import { dirname as dirname3, join as join11 } from "node:path";
+import { createHash as createHash10, randomUUID as randomUUID7 } from "node:crypto";
+import { relative as relative4, resolve as resolve5, sep as sep4 } from "node:path";
+import { randomUUID as randomUUID9 } from "node:crypto";
+import { mkdir as mkdir7, readFile as readFile7, rename as rename6, unlink as unlink5, writeFile as writeFile6 } from "node:fs/promises";
+import { join as join13 } from "node:path";
+import { createHash as createHash12, randomUUID as randomUUID11 } from "node:crypto";
+import { lstat as lstat7, mkdir as mkdir8, readFile as readFile9, realpath as realpath4, rename as rename7, unlink as unlink6, writeFile as writeFile7 } from "node:fs/promises";
+import { dirname as dirname4, isAbsolute as isAbsolute6, join as join14, relative as relative6, resolve as resolve7, sep as sep6 } from "node:path";
+import { createHash as createHash13 } from "node:crypto";
+import { randomUUID as randomUUID12 } from "node:crypto";
+import { createHash as createHash14, randomUUID as randomUUID13 } from "node:crypto";
+import { constants as constants3 } from "node:fs";
+import { link, lstat as lstat8, mkdir as mkdir9, open as open3, realpath as realpath5, rename as rename8, unlink as unlink7, writeFile as writeFile8 } from "node:fs/promises";
+import { basename as basename2, dirname as dirname5, isAbsolute as isAbsolute7, join as join15, relative as relative7, resolve as resolve8, sep as sep7 } from "node:path";
+import { createHash as createHash15, randomUUID as randomUUID14 } from "node:crypto";
+import { link as link2, lstat as lstat9, mkdir as mkdir10, readdir as readdir2, readFile as readFile10, rename as rename9, rm, unlink as unlink8, writeFile as writeFile9 } from "node:fs/promises";
+import { basename as basename3, dirname as dirname6, join as join16 } from "node:path";
+import { randomUUID as randomUUID15 } from "node:crypto";
+import { createHash as createHash17, randomUUID as randomUUID17 } from "node:crypto";
+import { mkdir as mkdir11, rename as rename10, writeFile as writeFile10 } from "node:fs/promises";
 import { dirname as dirname8 } from "node:path";
 import { realpath as realpath6, stat as stat2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute8, relative as relative8, resolve as resolve9, sep as sep8 } from "node:path";
+import { isAbsolute as isAbsolute9, relative as relative8, resolve as resolve10, sep as sep8 } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { readdir as readdir3 } from "node:fs/promises";
-import { createHash as createHash20, randomUUID as randomUUID18 } from "node:crypto";
-import { lstat as lstat10, mkdir as mkdir11, readFile as readFile11, realpath as realpath8, stat as stat3, writeFile as writeFile11 } from "node:fs/promises";
-import { dirname as dirname9, isAbsolute as isAbsolute9, join as join16, relative as relative10, resolve as resolve11 } from "node:path";
+import { createHash as createHash19, randomUUID as randomUUID19 } from "node:crypto";
+import { lstat as lstat11, mkdir as mkdir12, readFile as readFile11, realpath as realpath8, stat as stat3, writeFile as writeFile11 } from "node:fs/promises";
+import { dirname as dirname9, isAbsolute as isAbsolute10, join as join18, relative as relative10, resolve as resolve12 } from "node:path";
 import { pathToFileURL as pathToFileURL3 } from "node:url";
 import { createHash as createHash5 } from "node:crypto";
 import { createHash as createHash6, randomUUID as randomUUID2 } from "node:crypto";
@@ -65,17 +64,17 @@ import { isAbsolute as isAbsolute3, join as join4, relative as relative3, resolv
 import { readFile as readFile4 } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join as join5, resolve as resolve3 } from "node:path";
-import { randomUUID as randomUUID7 } from "node:crypto";
-import { lstat as lstat4, mkdir as mkdir5, realpath as realpath3, writeFile as writeFile5 } from "node:fs/promises";
-import { isAbsolute as isAbsolute4, join as join10, relative as relative5, resolve as resolve5, sep as sep5 } from "node:path";
-import { randomUUID as randomUUID9 } from "node:crypto";
-import { lstat as lstat5, readFile as readFile8 } from "node:fs/promises";
-import { createHash as createHash10 } from "node:crypto";
-import { createHash as createHash19, randomUUID as randomUUID17 } from "node:crypto";
-import { lstat as lstat9, realpath as realpath7 } from "node:fs/promises";
-import { relative as relative9, resolve as resolve10, sep as sep9 } from "node:path";
+import { randomUUID as randomUUID8 } from "node:crypto";
+import { lstat as lstat5, mkdir as mkdir6, realpath as realpath3, writeFile as writeFile5 } from "node:fs/promises";
+import { isAbsolute as isAbsolute5, join as join12, relative as relative5, resolve as resolve6, sep as sep5 } from "node:path";
+import { randomUUID as randomUUID10 } from "node:crypto";
+import { lstat as lstat6, readFile as readFile8 } from "node:fs/promises";
+import { createHash as createHash11 } from "node:crypto";
+import { createHash as createHash18, randomUUID as randomUUID18 } from "node:crypto";
+import { lstat as lstat10, realpath as realpath7 } from "node:fs/promises";
+import { relative as relative9, resolve as resolve11, sep as sep9 } from "node:path";
 import { pathToFileURL as pathToFileURL2 } from "node:url";
-import { join as join18, resolve as resolve12 } from "node:path";
+import { join as join20, resolve as resolve13 } from "node:path";
 import { posix } from "node:path";
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -297,8 +296,8 @@ function parseScalar(raw) {
     for (const pair of splitFlow(inner)) {
       const match = pair.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:\s*(.*)$/);
       if (!match) throw new Error(`Invalid flow mapping entry: ${pair}`);
-      const key = String(parseScalar(match[1] ?? ""));
-      if (!UNSAFE_KEYS.has(key)) out[key] = parseScalar(match[2] ?? "");
+      const key2 = String(parseScalar(match[1] ?? ""));
+      if (!UNSAFE_KEYS.has(key2)) out[key2] = parseScalar(match[2] ?? "");
     }
     return out;
   }
@@ -402,12 +401,12 @@ var init_ingest_frontmatter = __esm({
           if (isListItem(line)) break;
           const match = line.text.match(KEY_LINE);
           if (!match) throw new Error(`Line ${line.number}: expected "key: value"`);
-          const key = String(parseScalar(match[1] ?? "")).trim();
+          const key2 = String(parseScalar(match[1] ?? "")).trim();
           this.index++;
           const value = this.valueAfterKey(indent, depth, match[2]);
-          if (UNSAFE_KEYS.has(key)) continue;
-          if (Object.hasOwn(out, key)) throw new Error(`Line ${line.number}: duplicate key "${key}"`);
-          out[key] = value;
+          if (UNSAFE_KEYS.has(key2)) continue;
+          if (Object.hasOwn(out, key2)) throw new Error(`Line ${line.number}: duplicate key "${key2}"`);
+          out[key2] = value;
         }
         return out;
       }
@@ -477,9 +476,9 @@ function compareClaims(previous, incoming) {
       blocking: false
     };
   const conditions = ["organism", "tissue", "stage", "method"];
-  const optional = ["endpoint", "unit"].filter((key) => field(previous, key) || field(incoming, key));
+  const optional = ["endpoint", "unit"].filter((key2) => field(previous, key2) || field(incoming, key2));
   const required = [...conditions, ...optional];
-  const missing = required.filter((key) => !field(previous, key) || !field(incoming, key));
+  const missing = required.filter((key2) => !field(previous, key2) || !field(incoming, key2));
   if (missing.length)
     return {
       relation: "unresolved",
@@ -489,7 +488,7 @@ function compareClaims(previous, incoming) {
       reason: `\u7F3A\u5C11\u53EF\u6BD4\u8F83\u6761\u4EF6\uFF08${missing.join("\u3001")}\uFF09\uFF0C\u4E0D\u80FD\u5224\u65AD\u652F\u6301\u6216\u51B2\u7A81\u3002`
     };
   const changed = required.filter(
-    (key) => field(previous, key) && field(incoming, key) && field(previous, key) !== field(incoming, key)
+    (key2) => field(previous, key2) && field(incoming, key2) && field(previous, key2) !== field(incoming, key2)
   );
   if (changed.length)
     return {
@@ -575,7 +574,7 @@ var init_claim_conflicts = __esm({
       for (const token of a) if (b.has(token)) common++;
       return common / Math.max(a.size, b.size);
     };
-    field = (claim, key) => normalize(claim[key]);
+    field = (claim, key2) => normalize(claim[key2]);
   }
 });
 var config_exports = {};
@@ -833,12 +832,12 @@ function diagnosticText(value, limit = 4096) {
 }
 function createKnowledgeRuntimeHost() {
   const locks = /* @__PURE__ */ new Map();
-  const defaultRunRuntimeExclusive = async (namespace, key, work) => {
-    const lockKey = JSON.stringify([namespace, key]);
+  const defaultRunRuntimeExclusive = async (namespace, key2, work) => {
+    const lockKey = JSON.stringify([namespace, key2]);
     const previous = locks.get(lockKey) ?? Promise.resolve();
     let release;
-    const current = new Promise((resolve132) => {
-      release = resolve132;
+    const current = new Promise((resolve14) => {
+      release = resolve14;
     });
     const tail = previous.then(() => current);
     locks.set(lockKey, tail);
@@ -864,34 +863,34 @@ function createKnowledgeRuntimeHost() {
     if (host.deliveryContract) deliveryLookup = host.deliveryContract;
     if (host.runtimeSlot) hostSlotProvider = host.runtimeSlot;
   }
-  const runRuntimeExclusive2 = (namespace, key, work) => runtimeExclusive(namespace, key, work);
+  const runRuntimeExclusive2 = (namespace, key2, work) => runtimeExclusive(namespace, key2, work);
   const emitProcessEvent2 = (event, payload) => processEvent(event, payload);
   const slots = /* @__PURE__ */ new Map();
-  function runtimeSlot2(domain, key, factory) {
+  function runtimeSlot2(domain, key2, factory) {
     let hostProxy;
     let provider;
-    const resolve132 = () => {
+    const resolve14 = () => {
       if (hostSlotProvider) {
         if (provider !== hostSlotProvider) {
           provider = hostSlotProvider;
-          hostProxy = provider(domain, key, factory);
+          hostProxy = provider(domain, key2, factory);
         }
         return hostProxy;
       }
-      const slotKey = `${domain}:${key}`;
+      const slotKey = `${domain}:${key2}`;
       if (!slots.has(slotKey)) slots.set(slotKey, factory());
       return slots.get(slotKey);
     };
     return new Proxy({}, {
       get: (_target, property) => {
-        const state = resolve132();
+        const state = resolve14();
         const value = Reflect.get(state, property);
         return typeof value === "function" ? value.bind(state) : value;
       },
-      set: (_target, property, value) => Reflect.set(resolve132(), property, value),
-      ownKeys: () => Reflect.ownKeys(resolve132()),
+      set: (_target, property, value) => Reflect.set(resolve14(), property, value),
+      ownKeys: () => Reflect.ownKeys(resolve14()),
       getOwnPropertyDescriptor: (_target, property) => {
-        const descriptor = Reflect.getOwnPropertyDescriptor(resolve132(), property);
+        const descriptor = Reflect.getOwnPropertyDescriptor(resolve14(), property);
         return descriptor ? { ...descriptor, configurable: true } : void 0;
       }
     });
@@ -970,7 +969,7 @@ function createKnowledgeRuntimeHost() {
     if (host.researchSetupOptions) setupOptionsReader = host.researchSetupOptions;
   }
   const LAYOUT2 = new Proxy({}, {
-    get: (_target, key) => layoutDefinition[key]
+    get: (_target, key2) => layoutDefinition[key2]
   });
   const inspectObsidianSetup2 = (input) => obsidianSetupInspector(input);
   const inspectSetupDirectory2 = (vault) => setupDirectoryInspector(vault);
@@ -1076,29 +1075,29 @@ function cardLink(kind, target, label2, i18n) {
   if (!["external", "resource", "note", "path"].includes(kind) || typeof target !== "string" || !target)
     return null;
   return {
-    label: clip(label2, 60) || kind,
+    label: clip2(label2, 60) || kind,
     ...i18n ? { i18n } : {},
     kind,
     target: target.slice(0, 4096)
   };
 }
 function flowCard(input) {
-  const { key, kind, title, subtitle, status, tone, detail, path, fields, links, source, provisionalTitle } = input;
-  const state = clip(String(status ?? ""), 32) || "unknown";
-  const safeKind = clip(kind, 40) || "artifact";
+  const { key: key2, kind, title, subtitle, status, tone, detail, path, fields, links, source, provisionalTitle } = input;
+  const state = clip2(String(status ?? ""), 32) || "unknown";
+  const safeKind = clip2(kind, 40) || "artifact";
   return {
-    key: clip(String(key ?? ""), 512) || `${kind}:${title}`,
+    key: clip2(String(key2 ?? ""), 512) || `${kind}:${title}`,
     kind: safeKind,
-    title: clip(String(title ?? ""), 200) || kind || "artifact",
+    title: clip2(String(title ?? ""), 200) || kind || "artifact",
     provisionalTitle: provisionalTitle === true,
-    subtitle: clip(subtitle, 300),
+    subtitle: clip2(subtitle, 300),
     status: state,
     tone: tone || statusTone(state),
-    detail: clip(detail, 400),
-    path: clip(path, 4096),
+    detail: clip2(detail, 400),
+    path: clip2(path, 4096),
     fields: (fields || []).filter(Boolean).slice(0, 12),
     links: (links || []).filter(Boolean).slice(0, 6),
-    source: clip(source, 80),
+    source: clip2(source, 80),
     at: Date.now()
   };
 }
@@ -1116,7 +1115,7 @@ function failureCard(event) {
 var OK;
 var ERROR;
 var MUTED;
-var clip;
+var clip2;
 var record;
 var ZOTERO_KEY;
 var CHANNEL_LABEL;
@@ -1150,7 +1149,7 @@ var init_flow_cards = __esm({
       "error"
     ]);
     MUTED = /* @__PURE__ */ new Set(["unknown", "unavailable", "pending"]);
-    clip = (value, max) => typeof value === "string" && value ? value.slice(0, max) : null;
+    clip2 = (value, max) => typeof value === "string" && value ? value.slice(0, max) : null;
     record = (value) => value && typeof value === "object" ? value : {};
     ZOTERO_KEY = /^[A-Z0-9]{8}$/;
     CHANNEL_LABEL = { connector: "\u8FDE\u63A5\u5668", web: "Web API" };
@@ -1163,7 +1162,7 @@ function createLocalReviewPolicyStorage(config) {
     if (!directory) return { kind: "missing", version: null };
     let bytes;
     try {
-      bytes = await readFile5(join6(directory, "review-policy.json"));
+      bytes = await readFile5(join8(directory, "review-policy.json"));
     } catch (error) {
       if (error.code === "ENOENT") return { kind: "missing", version: null };
       throw error;
@@ -1179,7 +1178,7 @@ function createLocalReviewPolicyStorage(config) {
     return {
       kind: "value",
       value,
-      version: createHash7("sha256").update(bytes).digest("hex")
+      version: createHash8("sha256").update(bytes).digest("hex")
     };
   }
   return {
@@ -1195,16 +1194,16 @@ function createLocalReviewPolicyStorage(config) {
           throw Object.assign(new Error("Review policy changed; refresh before saving"), {
             code: "ESTATECONFLICT"
           });
-        await mkdir3(directory, { recursive: true, mode: 448 });
-        const temporary = join6(directory, `review-policy.${randomUUID3()}.tmp`);
+        await mkdir4(directory, { recursive: true, mode: 448 });
+        const temporary = join8(directory, `review-policy.${randomUUID4()}.tmp`);
         await writeFile3(temporary, JSON.stringify(value), {
           flag: "wx",
           mode: 384
         });
         try {
-          await rename3(temporary, join6(directory, "review-policy.json"));
+          await rename4(temporary, join8(directory, "review-policy.json"));
         } catch (error) {
-          await unlink2(temporary);
+          await unlink3(temporary);
           throw error;
         }
         return read();
@@ -1330,8 +1329,8 @@ function loopback(hostname) {
 function validateSemanticConfig(input = {}) {
   if (!input || typeof input !== "object" || Array.isArray(input))
     throw new Error("Semantic settings must be an object");
-  for (const key of Object.keys(input))
-    if (!CONFIG_KEYS.has(key)) throw new Error(`Unknown semantic setting: ${key}`);
+  for (const key2 of Object.keys(input))
+    if (!CONFIG_KEYS.has(key2)) throw new Error(`Unknown semantic setting: ${key2}`);
   if (input.enabled !== void 0 && typeof input.enabled !== "boolean")
     throw new Error("enabled must be boolean");
   if (input.provider !== void 0 && typeof input.provider !== "string")
@@ -1416,24 +1415,24 @@ function createSemanticSettingsState() {
 function pathFor2(vaultId, directory) {
   if (!/^[a-f0-9]{24}$/.test(vaultId || "")) throw new Error("Invalid Vault binding");
   if (!directory) throw new Error("Application knowledge directory is not configured");
-  return join7(directory, vaultId, "semantic.json");
+  return join9(directory, vaultId, "semantic.json");
 }
 async function assertDirectory(path, create) {
   try {
-    const stat4 = await lstat3(path);
+    const stat4 = await lstat4(path);
     if (!stat4.isDirectory() || stat4.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
     if (create) {
-      await mkdir4(path, { recursive: true, mode: 448 });
-      const stat4 = await lstat3(path);
+      await mkdir5(path, { recursive: true, mode: 448 });
+      const stat4 = await lstat4(path);
       if (!stat4.isDirectory() || stat4.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
     }
   }
   let ancestor = path;
   for (let depth = 0; depth < 8 && ancestor !== dirname2(ancestor); depth++) {
     try {
-      if ((await lstat3(ancestor)).isSymbolicLink()) throw new Error("Semantic settings ancestor is unsafe");
+      if ((await lstat4(ancestor)).isSymbolicLink()) throw new Error("Semantic settings ancestor is unsafe");
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
@@ -1442,19 +1441,19 @@ async function assertDirectory(path, create) {
 }
 async function assertFile(path) {
   try {
-    const stat4 = await lstat3(path);
+    const stat4 = await lstat4(path);
     if (!stat4.isFile() || stat4.isSymbolicLink() || stat4.size > MAX_FILE_BYTES)
       throw new Error("Semantic settings file is unsafe or too large");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
 }
-function normalize2(value, revision, updatedAt = null) {
+function normalize2(value, revision2, updatedAt = null) {
   if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1)
     throw new Error("Invalid or future semantic settings schema");
-  for (const key of Object.keys(value))
-    if (!SETTINGS_KEYS.has(key)) throw new Error(`Unknown semantic setting: ${key}`);
-  if (!Number.isSafeInteger(revision) || Number(revision) < 0)
+  for (const key2 of Object.keys(value))
+    if (!SETTINGS_KEYS.has(key2)) throw new Error(`Unknown semantic setting: ${key2}`);
+  if (!Number.isSafeInteger(revision2) || Number(revision2) < 0)
     throw new Error("Invalid semantic settings revision");
   const raw = value;
   const config = validateSemanticConfig({
@@ -1472,7 +1471,7 @@ function normalize2(value, revision, updatedAt = null) {
     throw new Error("Invalid semantic settings updatedAt");
   return {
     version: 1,
-    revision: Number(revision),
+    revision: Number(revision2),
     ...config,
     updatedAt: updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
   };
@@ -1516,7 +1515,7 @@ function localSemanticStorage(directory) {
       throw error;
     }
     if (Buffer.byteLength(raw) > MAX_FILE_BYTES) throw new Error("Semantic settings file is too large");
-    return { kind: "value", value: JSON.parse(raw), version: createHash8("sha256").update(raw).digest("hex") };
+    return { kind: "value", value: JSON.parse(raw), version: createHash9("sha256").update(raw).digest("hex") };
   }
   const queues = /* @__PURE__ */ new Map();
   return {
@@ -1528,14 +1527,14 @@ function localSemanticStorage(directory) {
         if ((await read(vaultId)).version !== expectedVersion)
           throw new Error("Semantic settings revision is stale");
         await assertDirectory(dirname2(path), true);
-        const temp = join7(dirname2(path), `semantic.${randomUUID4()}.tmp`);
+        const temp = join9(dirname2(path), `semantic.${randomUUID5()}.tmp`);
         try {
           await writeFile4(temp, `${JSON.stringify(value, null, 2)}
 `, { mode: 384, flag: "wx" });
-          await rename4(temp, path);
+          await rename5(temp, path);
         } finally {
           try {
-            await unlink3(temp);
+            await unlink4(temp);
           } catch (error) {
             if (error.code !== "ENOENT") throw error;
           }
@@ -1597,9 +1596,9 @@ var init_semantic_settings = __esm({
     saveSemanticSettings = (vaultId, input, expectedRevision) => defaultApi.saveSemanticSettings(vaultId, input, expectedRevision);
   }
 });
-function centralityBoost(degree, weight, cap) {
+function centralityBoost(degree, weight2, cap) {
   if (!(degree > 0)) return 0;
-  return Math.min(cap, weight * Math.log2(1 + degree));
+  return Math.min(cap, weight2 * Math.log2(1 + degree));
 }
 function baseScore(hit, index) {
   return typeof hit.fusionScore === "number" && Number.isFinite(hit.fusionScore) ? hit.fusionScore : 1 / (60 + index + 1);
@@ -1664,8 +1663,8 @@ function loopback2(hostname) {
 function validateSemanticConfig2(input = {}) {
   if (!input || typeof input !== "object" || Array.isArray(input))
     throw new Error("Semantic settings must be an object");
-  for (const key of Object.keys(input))
-    if (!CONFIG_KEYS2.has(key)) throw new Error(`Unknown semantic setting: ${key}`);
+  for (const key2 of Object.keys(input))
+    if (!CONFIG_KEYS2.has(key2)) throw new Error(`Unknown semantic setting: ${key2}`);
   if (input.enabled !== void 0 && typeof input.enabled !== "boolean")
     throw new Error("enabled must be boolean");
   if (input.provider !== void 0 && typeof input.provider !== "string")
@@ -1980,7 +1979,7 @@ function createKnowledgeUi(runtime, config, metrics) {
   const metricsFile = () => {
     try {
       const dir = knowledgeDirectory2();
-      return dir ? join8(dir, "answer-metrics.json") : null;
+      return dir ? join10(dir, "answer-metrics.json") : null;
     } catch {
       return null;
     }
@@ -2007,7 +2006,7 @@ function createKnowledgeUi(runtime, config, metrics) {
     const file = metricsFile();
     if (!file) return;
     try {
-      mkdirSync(join8(file, ".."), { recursive: true });
+      mkdirSync(join10(file, ".."), { recursive: true });
       const tmp = `${file}.${process.pid}.tmp`;
       writeFileSync(tmp, JSON.stringify(state.localAnswerStats));
       renameSync(tmp, file);
@@ -2024,7 +2023,7 @@ function createKnowledgeUi(runtime, config, metrics) {
     if (!id2) return;
     const flow = {
       sessionId: id2,
-      turnId: randomUUID5(),
+      turnId: randomUUID6(),
       vaultId: binding?.vaultId || null,
       bindingRevision: binding?.revision || null,
       vault: binding?.vault || null,
@@ -2131,7 +2130,7 @@ function createKnowledgeUi(runtime, config, metrics) {
     if (typeof text4 !== "string" || !text4.trim()) return;
     emitKnowledgeUi2({
       kind: "notice",
-      id: randomUUID5(),
+      id: randomUUID6(),
       sessionId: id2,
       severity: ["info", "warning", "error"].includes(severity) ? severity : "info",
       text: text4.slice(0, 2e3)
@@ -2274,12 +2273,12 @@ function createKnowledgeUi(runtime, config, metrics) {
       allowed.filter((k) => run[k] !== void 0).map((k) => [k, typeof run[k] === "string" ? run[k].slice(0, k === "summary" ? 500 : 300) : run[k]])
     );
     if (Array.isArray(run.sources))
-      safe.sources = run.sources.slice(0, 6).filter((ref) => typeof ref.path === "string").map((ref) => ({
-        path: ref.path.slice(0, 512),
-        hash: String(ref.hash || "").slice(0, 64),
-        startLine: Number(ref.startLine) || 0,
-        endLine: Number(ref.endLine) || 0,
-        excerpt: String(ref.excerpt || "").slice(0, 280)
+      safe.sources = run.sources.slice(0, 6).filter((ref2) => typeof ref2.path === "string").map((ref2) => ({
+        path: ref2.path.slice(0, 512),
+        hash: String(ref2.hash || "").slice(0, 64),
+        startLine: Number(ref2.startLine) || 0,
+        endLine: Number(ref2.endLine) || 0,
+        excerpt: String(ref2.excerpt || "").slice(0, 280)
       }));
     const specialists = [...old.specialists || []], at = specialists.findIndex((x) => x.id === safe.id);
     if (at < 0) specialists.push(safe);
@@ -2388,8 +2387,8 @@ function createKnowledgeWorkerTransportFactory(runtime, config, invalidateKnowle
       this.lifecycle = "staged";
       let readyResolve;
       let readyReject;
-      this.readyPromise = new Promise((resolve132, reject) => {
-        readyResolve = resolve132;
+      this.readyPromise = new Promise((resolve14, reject) => {
+        readyResolve = resolve14;
         readyReject = reject;
       });
       this.readyPromise.catch(() => void 0);
@@ -2397,7 +2396,7 @@ function createKnowledgeWorkerTransportFactory(runtime, config, invalidateKnowle
       const workerOptions = {
         workerData: {
           vault: binding.vault,
-          database: join9(directory2, binding.vaultId, "index.sqlite"),
+          database: join11(directory2, binding.vaultId, "index.sqlite"),
           workerVersion: this.version
         },
         execArgv: process.execArgv.filter(
@@ -2537,14 +2536,14 @@ function createKnowledgeWorkerTransportFactory(runtime, config, invalidateKnowle
       });
       this.closePromise = (async () => {
         let drainFailure = null;
-        const exited = new Promise((resolve132) => {
-          if (this.worker.threadId === -1) resolve132();
-          else this.worker.once("exit", resolve132);
+        const exited = new Promise((resolve14) => {
+          if (this.worker.threadId === -1) resolve14();
+          else this.worker.once("exit", resolve14);
         });
         try {
           if (!this.closed) await this.waitUntilReady();
           while (!this.closed && (this.pending.size || this.inFlightRequests))
-            await new Promise((resolve132) => setTimeout(resolve132, 10));
+            await new Promise((resolve14) => setTimeout(resolve14, 10));
           if (!this.closed) await this.request("close");
         } catch (error) {
           drainFailure = error;
@@ -2603,7 +2602,7 @@ function createKnowledgeWorkerTransportFactory(runtime, config, invalidateKnowle
   }
   return {
     metadata: knowledgeWorkerMetadata2,
-    resourceKey: (binding) => join9(directory(), binding.vaultId, "index.sqlite"),
+    resourceKey: (binding) => join11(directory(), binding.vaultId, "index.sqlite"),
     create: ({ binding, workerVersion }) => new KnowledgeWorkerTransport(binding, directory(), { workerVersion })
   };
 }
@@ -2665,8 +2664,8 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
     }
   }
   const MAX_TICKETS = 128;
-  function queueSemantic(key, task) {
-    return runRuntimeExclusive2("semantic-lock", key, task);
+  function queueSemantic(key2, task) {
+    return runRuntimeExclusive2("semantic-lock", key2, task);
   }
   function providerConfig(settings2) {
     return {
@@ -2682,7 +2681,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
     };
   }
   function fingerprintFor(settings2) {
-    return createHash9("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
+    return createHash10("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
   }
   function awaitSemanticDeadline(operation, controller) {
     let onAbort;
@@ -2768,11 +2767,11 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
             ...(related?.hits || []).filter((hit) => hit.kind === "wiki").map((hit) => hit.path)
           ])
         ];
-        const ticket = randomUUID6();
+        const ticket = randomUUID7();
         this.tickets.set(ticket, {
-          cwd: resolve4(cwd),
+          cwd: resolve5(cwd),
           project,
-          queryHash: createHash9("sha256").update(query).digest("hex"),
+          queryHash: createHash10("sha256").update(query).digest("hex"),
           query,
           navigation,
           linkedWiki: [...linkedWiki],
@@ -2803,7 +2802,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
       await withKnowledgeBinding2(this.binding, async () => {
       });
       const state = this.tickets.get(ticket);
-      if (!state || state.cwd !== resolve4(cwd) || Date.now() - state.createdAt > 60 * 60 * 1e3)
+      if (!state || state.cwd !== resolve5(cwd) || Date.now() - state.createdAt > 60 * 60 * 1e3)
         throw new Error("Read current navigation with research_prepare_knowledge first");
       for (const page of state.navigation) {
         const latest = await this.request("read", {
@@ -2845,7 +2844,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
           hash: page.hash,
           startLine: page.startLine,
           endLine: page.endLine,
-          excerptHash: createHash9("sha256").update(page.text).digest("hex")
+          excerptHash: createHash10("sha256").update(page.text).digest("hex")
         };
         state.reads.delete(path);
         state.reads.set(path, receipt);
@@ -3297,7 +3296,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
       await withKnowledgeBinding2(this.binding, async () => {
       });
       const state = this.tickets.get(ticket);
-      if (!state || state.cwd !== resolve4(cwd) || Date.now() - state.createdAt > 60 * 60 * 1e3)
+      if (!state || state.cwd !== resolve5(cwd) || Date.now() - state.createdAt > 60 * 60 * 1e3)
         throw new Error("Read current navigation with research_prepare_knowledge first");
       const cap = Math.max(1, Math.min(12, Number(limit) || 12));
       const sources = [];
@@ -3314,7 +3313,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
     /** A delivery receipt confirms a generated link, not that its text is evidence. Host-only API. */
     async deliveryReceipt(ticket, cwd, absolutePath) {
       const state = await this.check(ticket, cwd);
-      const path = relative4(this.binding.vault, resolve4(absolutePath)).split(sep4).join("/");
+      const path = relative4(this.binding.vault, resolve5(absolutePath)).split(sep4).join("/");
       validateNote(path);
       if (!canRead(path, state.project) || !(path.startsWith("Library/Explainers/") || path.startsWith(`Projects/${state.project}/Runs/`)))
         throw new Error("Not an allowed presentation/run delivery");
@@ -3470,14 +3469,14 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
   async function getKnowledgeServiceNow(binding) {
     binding ||= await readKnowledgeBinding2();
     if (!binding) throw new Error("No application knowledge Vault is bound");
-    const key = transportFactory.resourceKey(binding);
+    const key2 = transportFactory.resourceKey(binding);
     const transitions = pool.transitions || /* @__PURE__ */ new Map();
     pool.transitions = transitions;
-    const transition = transitions.get(key) || (async () => {
-      let service = pool.get(key);
+    const transition = transitions.get(key2) || (async () => {
+      let service = pool.get(key2);
       if (!service || service.closed) {
-        emitLegacyPeerEvent?.(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
-        service = pool.get(key);
+        emitLegacyPeerEvent?.(SERVICE_EVENT, { action: "request", key: key2, origin: serviceModule });
+        service = pool.get(key2);
       }
       let candidate;
       let selectedMetadata;
@@ -3488,7 +3487,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
         if (!needsReplacement) return service;
         if (service) {
           await service.drain();
-          pool.delete(key);
+          pool.delete(key2);
         }
         candidate = new KnowledgeService2(binding);
         await candidate.healthCheck();
@@ -3499,10 +3498,10 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
           source: candidate.workerMetadata.source,
           integrity: candidate.workerMetadata.integrity
         });
-        pool.set(key, candidate);
+        pool.set(key2, candidate);
         emitLegacyPeerEvent?.(SERVICE_EVENT, {
           action: "register",
-          key,
+          key: key2,
           service: candidate,
           origin: serviceModule
         });
@@ -3514,7 +3513,7 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
             integrity: candidate.workerMetadata.integrity
           });
         }
-        const idle = [...pool].filter(([other, value]) => other !== key && value.pendingRequestCount === 0);
+        const idle = [...pool].filter(([other, value]) => other !== key2 && value.pendingRequestCount === 0);
         while (pool.size > 3 && idle.length) {
           const [other, value] = idle.shift();
           pool.delete(other);
@@ -3534,11 +3533,11 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
         throw error;
       }
     })();
-    transitions.set(key, transition);
+    transitions.set(key2, transition);
     try {
       return await transition;
     } finally {
-      if (transitions.get(key) === transition) transitions.delete(key);
+      if (transitions.get(key2) === transition) transitions.delete(key2);
     }
   }
   async function notifyKnowledgeChange2(path) {
@@ -3559,12 +3558,12 @@ function createKnowledgeServicePoolApi(runtime, config, semantic, reviewPolicy, 
     const operation = (async () => {
       const pending = await Promise.allSettled([...pool.requests]);
       const entries = [...pool.entries()];
-      const closed = await Promise.allSettled(entries.map(([, service]) => service.close()));
+      const closed2 = await Promise.allSettled(entries.map(([, service]) => service.close()));
       for (let index = 0; index < entries.length; index++) {
-        const [key, service] = entries[index];
-        if (closed[index].status === "fulfilled" && pool.get(key) === service) pool.delete(key);
+        const [key2, service] = entries[index];
+        if (closed2[index].status === "fulfilled" && pool.get(key2) === service) pool.delete(key2);
       }
-      const failures = [...pending, ...closed].filter((result2) => result2.status === "rejected");
+      const failures = [...pending, ...closed2].filter((result2) => result2.status === "rejected");
       if (failures.length)
         throw new AggregateError(
           failures.map((result2) => result2.reason),
@@ -3701,7 +3700,7 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
       const dir = knowledgeDirectory2();
       if (!dir) return { mode: "off", revision: 0, ...SPECIALIST_LIMITS2 };
       try {
-        data = JSON.parse(await readFile7(join11(dir, "specialists.json"), "utf8"));
+        data = JSON.parse(await readFile7(join13(dir, "specialists.json"), "utf8"));
       } catch (e) {
         if (e.code !== "ENOENT") throw new Error("Knowledge specialist settings cannot be read");
       }
@@ -3719,25 +3718,25 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
       maxTokensPerTurn: [1, SPECIALIST_LIMITS2.maxTokensPerTurn],
       maxTokensPerSession: [1, SPECIALIST_LIMITS2.maxTokensPerSession]
     };
-    for (const key of Object.keys(integerLimits))
-      if (data[key] !== void 0 && (!Number.isSafeInteger(data[key]) || data[key] < integerLimits[key][0]))
+    for (const key2 of Object.keys(integerLimits))
+      if (data[key2] !== void 0 && (!Number.isSafeInteger(data[key2]) || data[key2] < integerLimits[key2][0]))
         throw new Error("Invalid knowledge specialist settings");
     const costLimits = {
       maxCostPerTurn: SPECIALIST_LIMITS2.maxCostPerTurn,
       maxCostPerSession: SPECIALIST_LIMITS2.maxCostPerSession
     };
-    for (const key of Object.keys(costLimits))
-      if (data[key] !== void 0 && (typeof data[key] !== "number" || !Number.isFinite(data[key]) || data[key] < 0))
+    for (const key2 of Object.keys(costLimits))
+      if (data[key2] !== void 0 && (typeof data[key2] !== "number" || !Number.isFinite(data[key2]) || data[key2] < 0))
         throw new Error("Invalid knowledge specialist settings");
     const bounded3 = {};
-    for (const [key, [min, max]] of Object.entries(integerLimits))
-      bounded3[key] = Math.min(max, Math.max(min, data[key] ?? SPECIALIST_LIMITS2[key]));
-    for (const [key, max] of Object.entries(costLimits))
-      bounded3[key] = Math.min(max, Math.max(0, data[key] ?? SPECIALIST_LIMITS2[key]));
+    for (const [key2, [min, max]] of Object.entries(integerLimits))
+      bounded3[key2] = Math.min(max, Math.max(min, data[key2] ?? SPECIALIST_LIMITS2[key2]));
+    for (const [key2, max] of Object.entries(costLimits))
+      bounded3[key2] = Math.min(max, Math.max(0, data[key2] ?? SPECIALIST_LIMITS2[key2]));
     return { ...SPECIALIST_LIMITS2, ...bounded3, mode: data.mode, revision: data.revision };
   }
-  async function setSpecialistSettings2({ mode, revision, bindingRevision, ...requested }) {
-    if (!["automatic", "manual", "off"].includes(mode) || !Number.isSafeInteger(revision))
+  async function setSpecialistSettings2({ mode, revision: revision2, bindingRevision, ...requested }) {
+    if (!["automatic", "manual", "off"].includes(mode) || !Number.isSafeInteger(revision2))
       throw new Error("Invalid specialist setting request");
     const allowedRequested = /* @__PURE__ */ new Set([
       "maxRunsPerTurn",
@@ -3752,16 +3751,16 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
       "maxCostPerTurn",
       "maxCostPerSession"
     ]);
-    for (const key of Object.keys(requested))
-      if (!allowedRequested.has(key)) throw new Error(`Unknown specialist setting: ${key}`);
+    for (const key2 of Object.keys(requested))
+      if (!allowedRequested.has(key2)) throw new Error(`Unknown specialist setting: ${key2}`);
     const operation = state.settingsQueue.catch(() => void 0).then(async () => {
       const binding = await readKnowledgeBinding2({ fresh: true });
       if (!binding || binding.revision !== bindingRevision)
         throw new Error("Knowledge binding changed; refresh settings");
       return withKnowledgeBinding2(binding, async () => {
         const current = await specialistSettings3();
-        if (current.revision !== revision) throw new Error("Specialist settings changed; refresh first");
-        const data = { ...current, ...requested, mode, revision: revision + 1 };
+        if (current.revision !== revision2) throw new Error("Specialist settings changed; refresh first");
+        const data = { ...current, ...requested, mode, revision: revision2 + 1 };
         const minimums = {
           maxRunsPerTurn: 1,
           maxRunsPerSession: 1,
@@ -3773,13 +3772,13 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
           maxTokensPerTurn: 1,
           maxTokensPerSession: 1
         };
-        for (const [key, minimum] of Object.entries(minimums))
-          if (data[key] !== void 0 && (!Number.isSafeInteger(data[key]) || data[key] < minimum))
+        for (const [key2, minimum] of Object.entries(minimums))
+          if (data[key2] !== void 0 && (!Number.isSafeInteger(data[key2]) || data[key2] < minimum))
             throw new Error("Invalid knowledge specialist settings");
-        for (const key of ["maxCostPerTurn", "maxCostPerSession"])
-          if (data[key] !== void 0 && (typeof data[key] !== "number" || !Number.isFinite(data[key]) || data[key] < 0))
+        for (const key2 of ["maxCostPerTurn", "maxCostPerSession"])
+          if (data[key2] !== void 0 && (typeof data[key2] !== "number" || !Number.isFinite(data[key2]) || data[key2] < 0))
             throw new Error("Invalid knowledge specialist settings");
-        for (const key of [
+        for (const key2 of [
           "maxRunsPerTurn",
           "maxRunsPerSession",
           "maxToolOperations",
@@ -3792,19 +3791,19 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
           "maxCostPerTurn",
           "maxCostPerSession"
         ])
-          data[key] = Math.min(data[key] ?? SPECIALIST_LIMITS2[key], SPECIALIST_LIMITS2[key]);
+          data[key2] = Math.min(data[key2] ?? SPECIALIST_LIMITS2[key2], SPECIALIST_LIMITS2[key2]);
         data.mode = mode;
-        data.revision = revision + 1;
-        if (storage) await storage.write(data, revision);
+        data.revision = revision2 + 1;
+        if (storage) await storage.write(data, revision2);
         else {
-          const dir = knowledgeDirectory2(), temp = join11(dir, `specialists.${randomUUID8()}.tmp`);
-          await mkdir6(dir, { recursive: true, mode: 448 });
+          const dir = knowledgeDirectory2(), temp = join13(dir, `specialists.${randomUUID9()}.tmp`);
+          await mkdir7(dir, { recursive: true, mode: 448 });
           try {
             await writeFile6(temp, `${JSON.stringify(data)}
 `, { flag: "wx", mode: 384 });
-            await rename5(temp, join11(dir, "specialists.json"));
+            await rename6(temp, join13(dir, "specialists.json"));
           } finally {
-            await unlink4(temp).catch((e) => {
+            await unlink5(temp).catch((e) => {
               if (e.code !== "ENOENT") throw e;
             });
           }
@@ -3837,7 +3836,7 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
     );
     if (state.active >= concurrency) {
       if (state.queue.length >= queueLimit) throw new Error("Knowledge specialist queue is full");
-      await new Promise((resolve132, reject) => {
+      await new Promise((resolve14, reject) => {
         let settled = false;
         const item = {
           resolve: () => {
@@ -3845,7 +3844,7 @@ function createKnowledgeSpecialistHostApi(runtime, config, ui, emitLegacyPeerEve
             settled = true;
             signal?.removeEventListener("abort", abort);
             clearTimeout(timer);
-            resolve132();
+            resolve14();
           },
           reject: () => {
             if (settled) return;
@@ -3953,24 +3952,24 @@ function projectKey2(project) {
   return value;
 }
 function memoryPath(directory, vaultId, project) {
-  if (!isAbsolute5(directory) || !/^[a-f0-9]{24}$/.test(vaultId))
+  if (!isAbsolute6(directory) || !/^[a-f0-9]{24}$/.test(vaultId))
     throw new Error("Invalid topic memory binding");
-  return join12(resolve6(directory), vaultId, "topic-memory", `${projectKey2(project)}.json`);
+  return join14(resolve7(directory), vaultId, "topic-memory", `${projectKey2(project)}.json`);
 }
 async function ensureWithin(root, target) {
-  const lexicalRoot = resolve6(root);
+  const lexicalRoot = resolve7(root);
   const actualRoot = await realpath4(root).catch(() => lexicalRoot);
-  const lexicalParent = resolve6(dirname4(target));
-  const rebased = lexicalParent.startsWith(lexicalRoot) ? join12(actualRoot, lexicalParent.slice(lexicalRoot.length)) : lexicalParent;
+  const lexicalParent = resolve7(dirname4(target));
+  const rebased = lexicalParent.startsWith(lexicalRoot) ? join14(actualRoot, lexicalParent.slice(lexicalRoot.length)) : lexicalParent;
   const parent = await realpath4(rebased).catch(() => rebased);
   const rel = relative6(actualRoot, parent);
-  if (isAbsolute5(rel) || rel === ".." || rel.startsWith(`..${sep6}`))
+  if (isAbsolute6(rel) || rel === ".." || rel.startsWith(`..${sep6}`))
     throw new Error("Topic memory path escapes knowledge directory");
   let cursor = actualRoot;
   for (const part of relative6(actualRoot, rebased).split(sep6).filter(Boolean)) {
-    cursor = join12(cursor, part);
+    cursor = join14(cursor, part);
     try {
-      if ((await lstat6(cursor)).isSymbolicLink())
+      if ((await lstat7(cursor)).isSymbolicLink())
         throw new Error("Topic memory path cannot traverse symlinks");
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
@@ -3978,7 +3977,7 @@ async function ensureWithin(root, target) {
     }
   }
   try {
-    const stat4 = await lstat6(target);
+    const stat4 = await lstat7(target);
     if (stat4.isSymbolicLink()) throw new Error("Topic memory file cannot be a symlink");
     if (!stat4.isFile()) throw new Error("Topic memory path is not a regular file");
     if (stat4.size > TOPIC_MEMORY_LIMITS.maxFileBytes) throw new Error("Topic memory file exceeds size limit");
@@ -3999,7 +3998,7 @@ function blank2(vaultId, project) {
   };
 }
 function validateSource(source, project = null) {
-  if (!source || typeof source !== "object" || typeof source.path !== "string" || isAbsolute5(source.path) || source.path.includes("\\") || source.path.split("/").includes("..") || !/^[^\0]+\.md$/.test(source.path) || source.path.length > 240 || /(?:^|\/)(?:Runs|Explainers)\//i.test(source.path) || !/^[a-f0-9]{64}$/.test(source.hash || ""))
+  if (!source || typeof source !== "object" || typeof source.path !== "string" || isAbsolute6(source.path) || source.path.includes("\\") || source.path.split("/").includes("..") || !/^[^\0]+\.md$/.test(source.path) || source.path.length > 240 || /(?:^|\/)(?:Runs|Explainers)\//i.test(source.path) || !/^[a-f0-9]{64}$/.test(source.hash || ""))
     return null;
   try {
     validateNote(source.path);
@@ -4080,9 +4079,9 @@ function normalizeClaim(claim, project) {
     subject: text2(claim.subject, 180),
     predicate: text2(claim.predicate, 180),
     ...value ? { value } : {},
-    ...["organism", "tissue", "stage", "method", "endpoint", "unit"].reduce((result2, key) => {
-      const value2 = text2(claim[key], 180);
-      if (value2) result2[key] = value2;
+    ...["organism", "tissue", "stage", "method", "endpoint", "unit"].reduce((result2, key2) => {
+      const value2 = text2(claim[key2], 180);
+      if (value2) result2[key2] = value2;
       return result2;
     }, {}),
     ...claim.direction !== void 0 ? {
@@ -4097,7 +4096,7 @@ function normalizeClaim(claim, project) {
   };
 }
 function validateConflictPath(path, project) {
-  if (typeof path !== "string" || !path || isAbsolute5(path) || path.includes("\\") || path.split("/").includes("..") || /(?:^|\/)(?:Runs|Explainers)\//i.test(path))
+  if (typeof path !== "string" || !path || isAbsolute6(path) || path.includes("\\") || path.split("/").includes("..") || /(?:^|\/)(?:Runs|Explainers)\//i.test(path))
     return false;
   try {
     validateNote(path);
@@ -4143,7 +4142,7 @@ function validateDocument2(value, vaultId, project) {
     topics: value.topics.map((topic) => normalizeTopic(topic, vaultId, project))
   };
 }
-async function readDocument2(path, vaultId, project) {
+async function readDocument3(path, vaultId, project) {
   try {
     const raw = await readFile9(path, "utf8");
     if (Buffer.byteLength(raw) > TOPIC_MEMORY_LIMITS.maxFileBytes)
@@ -4157,17 +4156,17 @@ async function readDocument2(path, vaultId, project) {
   }
 }
 async function atomicWrite2(path, value) {
-  await mkdir7(dirname4(path), { recursive: true, mode: 448 });
-  const temp = join12(dirname4(path), `.${randomUUID10()}.tmp`);
+  await mkdir8(dirname4(path), { recursive: true, mode: 448 });
+  const temp = join14(dirname4(path), `.${randomUUID11()}.tmp`);
   try {
     await writeFile7(temp, `${JSON.stringify(value, null, 2)}
 `, {
       flag: "wx",
       mode: 384
     });
-    await rename6(temp, path);
+    await rename7(temp, path);
   } finally {
-    await unlink5(temp).catch((error) => {
+    await unlink6(temp).catch((error) => {
       if (error.code !== "ENOENT") throw error;
     });
   }
@@ -4201,7 +4200,7 @@ function createTopicMemoryWithHost(runtime, config, { binding, project, director
       return validateDocument2(value, scope.vaultId, scope.project);
     }
     await ensureWithin(directory, path);
-    return readDocument2(path, scope.vaultId, scope.project);
+    return readDocument3(path, scope.vaultId, scope.project);
   };
   const mutate = async (expectedRevision, updater) => runtime.runRuntimeExclusive("topic-memory", path, async () => {
     const current = await read();
@@ -4372,8 +4371,8 @@ function createTopicMemoryWithHost(runtime, config, { binding, project, director
           "keyFindings",
           "claims"
         ]);
-        for (const key of Object.keys(input || {}))
-          if (!allowed.has(key)) throw new Error(`Unsupported topic metadata field: ${key}`);
+        for (const key2 of Object.keys(input || {}))
+          if (!allowed.has(key2)) throw new Error(`Unsupported topic metadata field: ${key2}`);
         const id2 = text2(input.id, 120);
         if (!id2) throw new Error("Topic id is required");
         const index = doc.topics.findIndex((topic) => topic.id === id2);
@@ -4430,9 +4429,9 @@ function createTopicMemoryWithHost(runtime, config, { binding, project, director
       const next = await mutate(expectedRevision, (value) => {
         if (Array.isArray(input.sources) && input.sources.some((source) => !validateSource(source, scope.project)))
           throw new Error("Invalid or out-of-scope topic source");
-        const key = text2(input.topicId || input.title, 180).toLowerCase();
+        const key2 = text2(input.topicId || input.title, 180).toLowerCase();
         const matches = value.topics.filter(
-          (topic) => [topic.id, topic.title, ...topic.aliases].some((v) => v.toLowerCase() === key)
+          (topic) => [topic.id, topic.title, ...topic.aliases].some((v) => v.toLowerCase() === key2)
         );
         if (matches.length > 1) throw new Error("Ambiguous topic identity; choose an exact topic id");
         const existing = matches[0] || (input.topicId ? value.topics.find((topic) => topic.id === text2(input.topicId, 120)) : null);
@@ -4592,7 +4591,7 @@ var init_topic_memory = __esm({
       maxConflicts: 32,
       maxFileBytes: 512 * 1024
     });
-    digest3 = (value) => createHash11("sha256").update(String(value)).digest("hex");
+    digest3 = (value) => createHash12("sha256").update(String(value)).digest("hex");
     text2 = (value, limit) => String(value ?? "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, limit);
     slug = (value) => text2(value, 160).toLowerCase().replace(/[^a-z0-9\u0080-\uffff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "topic";
     ({ createTopicMemory, listTopics, readTopic, updateTopic, archiveTopic } = createTopicMemoryApi(
@@ -4624,6 +4623,29 @@ var init_redact_diagnostic = __esm({
     "use strict";
   }
 });
+function checkWikiProposalId(id2) {
+  if (typeof id2 !== "string" || !/^[0-9a-f-]{36}$/.test(id2)) throw new Error("Invalid Wiki proposal id");
+}
+function checkSources(paths, accepts) {
+  if (!Array.isArray(paths) || !paths.length || paths.length > 12)
+    throw Object.assign(
+      new Error("source_paths: supply 1\u201312 Vault-relative Markdown notes already read this turn"),
+      {
+        code: "source-note-required",
+        field: "source_paths"
+      }
+    );
+  for (let index = 0; index < paths.length; index++) {
+    if (!accepts(paths, index)) {
+      throw Object.assign(
+        new Error(
+          `source_paths[${index}]: expected a Vault-relative Markdown source note (for example Library/Papers/source.md), not a workspace PDF or URL. Read the corresponding source note first; changing the Wiki target path cannot fix this field.`
+        ),
+        { code: "source-note-required", field: `source_paths[${index}]`, retryable: false }
+      );
+    }
+  }
+}
 function targetWikiPath(path, project) {
   if (typeof path !== "string")
     throw new Error("Target must be a shared or current-project Wiki page, not navigation");
@@ -4637,7 +4659,7 @@ function targetWikiPath(path, project) {
   return path;
 }
 function immutableWikiProposalHash(proposal) {
-  return createHash12("sha256").update(
+  return wikiContentHash(
     JSON.stringify({
       id: proposal.id,
       vaultId: proposal.vaultId,
@@ -4651,7 +4673,7 @@ function immutableWikiProposalHash(proposal) {
       after: proposal.after,
       sources: proposal.sources
     })
-  ).digest("hex");
+  );
 }
 function managedParts(text4) {
   const start = text4.indexOf(MANAGED_START);
@@ -4674,52 +4696,187 @@ function stripManagedHeader(body, pageTitle) {
   }
   return text4;
 }
+function withManagedWikiBlock(original, title, body) {
+  const block = `${MANAGED_START}
+${body}
+${MANAGED_END}`;
+  if (original === null)
+    return `---
+type: wiki
+status: unverified
+---
+
+# ${title}
+
+${block}
+
+## Human review
+
+`;
+  const { start, end } = managedParts(original);
+  return start < 0 ? `${original}${original.endsWith("\n") ? "\n" : "\n\n"}${block}
+` : original.slice(0, start) + block + original.slice(end + MANAGED_END.length);
+}
 var MANAGED_START;
 var MANAGED_END;
+var MAX_PENDING_WIKI_PROPOSALS;
+var WIKI_PROPOSAL_MAX_AGE;
+var wikiContentHash;
 var init_wiki_policy = __esm({
   "src/core/wiki-policy.ts"() {
     "use strict";
     MANAGED_START = "<!-- pi-agent:managed:start -->";
     MANAGED_END = "<!-- pi-agent:managed:end -->";
+    MAX_PENDING_WIKI_PROPOSALS = 100;
+    WIKI_PROPOSAL_MAX_AGE = 24 * 60 * 60 * 1e3;
+    wikiContentHash = (text4) => createHash13("sha256").update(text4).digest("hex");
+  }
+});
+function validateWikiSourcePaths2(paths) {
+  checkSources(paths, (entries, index) => {
+    try {
+      validateNote(entries[index]);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+function readWikiDraft(input, sources, path) {
+  if (sources.some((source) => source.path === path || /[[\]#|\r\n]/.test(source.path)))
+    throw new Error("A Wiki cannot cite itself or an ambiguous link path");
+  if (sources.every(
+    (source) => /(?:^|\/)Wiki\//.test(source.path) || /(?:^|\/)(?:Home|Index|Context)\.md$/.test(source.path)
+  ))
+    throw new Error("Read at least one underlying evidence/source note, not only Wiki or navigation");
+  const { title, markdown, rationale } = input;
+  if (typeof title !== "string" || !title.trim() || title.length > 200 || /[\r\n]/.test(title))
+    throw new Error("A single-line Wiki title is required");
+  if (!isDraftMarkdown(markdown, 24e3))
+    throw new Error("Wiki candidate must contain 1\u201324000 characters and no managed markers");
+  if (typeof rationale !== "string" || !rationale.trim() || rationale.length > 1e3)
+    throw new Error("A concise change rationale is required");
+  return { title, markdown, rationale };
+}
+function isDraftMarkdown(markdown, maxLength) {
+  return typeof markdown === "string" && !!markdown.trim() && markdown.length <= maxLength && !markdown.includes("<!-- pi-agent:managed:");
+}
+function proposedText(original, title, body, refs) {
+  return withManagedWikiBlock(original, title, `${body}
+
+## Sources
+${refs}`.trim());
+}
+function sourceReferences(sources) {
+  return sources.map(
+    (source) => `- [[${source.path.slice(0, -3)}]] \xB7 lines ${source.startLine}\u2013${source.endLine} \xB7 sha256 ${source.hash}`
+  ).join("\n");
+}
+function sealWikiDraft(proposal) {
+  return {
+    ...proposal,
+    afterHash: wikiContentHash(proposal.after),
+    proposalHash: immutableWikiProposalHash(proposal)
+  };
+}
+function buildWikiDraft(binding, project, path, { title, markdown, rationale }, original, sources) {
+  if (original && original.bytes > 64 * 1024)
+    throw new Error("Existing Wiki exceeds the bounded review size; split it before editing");
+  if (original && managedParts(original.text).body.length > 24e3)
+    throw new Error("Existing generated block exceeds the review size");
+  const refs = sourceReferences(sources);
+  const after = proposedText(original?.text ?? null, title.trim(), stripManagedHeader(markdown), refs);
+  return sealWikiDraft({
+    id: randomUUID12(),
+    status: "pending",
+    vaultId: binding.vaultId,
+    bindingRevision: binding.revision,
+    project,
+    path,
+    title: title.trim(),
+    rationale: rationale.trim(),
+    createdAt: Date.now(),
+    sources,
+    before: original?.text ?? null,
+    beforeHash: original?.hash ?? null,
+    after
+  });
+}
+function mergeWikiDraft(proposal, newSources, markdown, rationale) {
+  const byPath = new Map(proposal.sources.map((source) => [source.path, source]));
+  for (const source of newSources) byPath.set(source.path, source);
+  const sources = [...byPath.values()];
+  if (sources.length > 12)
+    throw new Error(
+      "Pending topic reached the 12-source review budget; review it before adding another round"
+    );
+  if (!isDraftMarkdown(markdown, 12e3))
+    throw new Error("Incremental topic summary must contain 1\u201312000 characters and no managed markers");
+  if (typeof rationale !== "string" || !rationale.trim() || rationale.length > 1e3)
+    throw new Error("A concise merge rationale is required");
+  const prior = managedParts(proposal.after).body.replace(/\n\n## Sources\n[\s\S]*$/, "").trim();
+  const update = `## Research update \xB7 ${(/* @__PURE__ */ new Date()).toISOString()}
+
+${stripManagedHeader(markdown)}`;
+  const merged = [prior, update].filter(Boolean).join("\n\n");
+  if (merged.length > 22e3)
+    throw new Error("Pending topic synthesis is too large; review it before adding another round");
+  const refs = sourceReferences(sources);
+  const after = proposedText(proposal.before, proposal.title, merged, refs);
+  return sealWikiDraft({
+    ...proposal,
+    createdAt: Date.now(),
+    rationale: `${proposal.rationale}
+
+Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
+    sources,
+    after
+  });
+}
+var init_wiki_review_draft = __esm({
+  "src/core/wiki-review-draft.ts"() {
+    "use strict";
+    init_files();
+    init_wiki_policy();
   }
 });
 async function hashRegularFile(path) {
-  const flags = constants2.O_RDONLY | (constants2.O_NOFOLLOW || 0);
-  const handle = await open2(path, flags);
+  const flags = constants3.O_RDONLY | (constants3.O_NOFOLLOW || 0);
+  const handle = await open3(path, flags);
   try {
-    return createHash13("sha256").update(await handle.readFile()).digest("hex");
+    return createHash14("sha256").update(await handle.readFile()).digest("hex");
   } finally {
     await handle.close();
   }
 }
 function containsPath(root, target) {
   const relativePath = relative7(root, target);
-  return relativePath === "" || !isAbsolute6(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep7}`);
+  return relativePath === "" || !isAbsolute7(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep7}`);
 }
 async function canonicalPath(path) {
   try {
     return await realpath5(path);
   } catch (error) {
     if (error.code !== "ENOENT" || dirname5(path) === path) throw error;
-    return join13(await canonicalPath(dirname5(path)), basename2(path));
+    return join15(await canonicalPath(dirname5(path)), basename2(path));
   }
 }
 async function containedVaultFile(root, path) {
-  const vault = resolve7(root);
-  const target = resolve7(vault, path);
+  const vault = resolve8(root);
+  const target = resolve8(vault, path);
   if (!containsPath(vault, target) || !containsPath(vault, await canonicalPath(target)))
     throw new Error("Path must stay inside Vault");
   return target;
 }
 async function replaceVaultFile(path, content, options = {}) {
-  const current = await lstat7(path);
+  const current = await lstat8(path);
   if (!current.isFile() || current.isSymbolicLink())
     throw new Error(`Expected a regular Vault file: ${path}`);
   if (options.expectedHash !== void 0) {
     const observed = await hashRegularFile(path);
     if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
   }
-  const temporary = `${path}.${randomUUID11()}.tmp`;
+  const temporary = `${path}.${randomUUID13()}.tmp`;
   await writeFile8(temporary, content, { encoding: "utf8", flag: "wx" });
   try {
     await options.beforeCommit?.();
@@ -4727,9 +4884,9 @@ async function replaceVaultFile(path, content, options = {}) {
       const observed = await hashRegularFile(path);
       if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
     }
-    await rename7(temporary, path);
+    await rename8(temporary, path);
   } finally {
-    await unlink6(temporary).catch(() => void 0);
+    await unlink7(temporary).catch(() => void 0);
   }
 }
 var MANAGED_START2;
@@ -4753,11 +4910,11 @@ var init_layout = __esm({
         this.name = "VaultFileConflictError";
       }
     };
-    hash2 = (text4) => createHash13("sha256").update(text4).digest("hex");
+    hash2 = (text4) => createHash14("sha256").update(text4).digest("hex");
   }
 });
 async function renameWithRetry(from, to, options = {}) {
-  const attempts = options.attempts ?? 6, delay = options.delayMs ?? 40, doRename = options.renameImpl ?? rename8;
+  const attempts = options.attempts ?? 6, delay = options.delayMs ?? 40, doRename = options.renameImpl ?? rename9;
   for (let attempt = 1; ; attempt++) {
     try {
       await doRename(from, to);
@@ -4765,7 +4922,7 @@ async function renameWithRetry(from, to, options = {}) {
     } catch (error) {
       const code = error.code;
       if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts) throw error;
-      await new Promise((resolve132) => setTimeout(resolve132, delay * attempt));
+      await new Promise((resolve14) => setTimeout(resolve14, delay * attempt));
     }
   }
 }
@@ -4780,7 +4937,7 @@ function createLocalWikiReviewPorts(config) {
       const full = await statePath(path);
       let bytes;
       try {
-        const info = await lstat8(full);
+        const info = await lstat9(full);
         if (!info.isFile() || info.isSymbolicLink()) throw new Error("Expected a regular review record");
         bytes = await readFile10(full);
       } catch (error) {
@@ -4795,8 +4952,8 @@ function createLocalWikiReviewPorts(config) {
     },
     async write(path, value, expectedVersion) {
       const full = await statePath(path);
-      await mkdir9(dirname6(full), { recursive: true, mode: 448 });
-      const temporary = join14(dirname6(full), `.${randomUUID12()}.tmp`);
+      await mkdir10(dirname6(full), { recursive: true, mode: 448 });
+      const temporary = join16(dirname6(full), `.${randomUUID14()}.tmp`);
       const text4 = `${JSON.stringify(value, null, 2)}
 `;
       await writeFile9(temporary, text4, { flag: "wx", mode: 384 });
@@ -4816,7 +4973,7 @@ function createLocalWikiReviewPorts(config) {
       const current = await state.read(path);
       if (current?.version !== expectedVersion)
         throw new Error("Wiki review state changed; refresh before deleting");
-      await unlink7(await statePath(path));
+      await unlink8(await statePath(path));
       if (await state.read(path)) throw new Error("Wiki review state removal could not be read back");
     }
   };
@@ -4832,19 +4989,19 @@ function createLocalWikiReviewPorts(config) {
     async write(binding, path, text4, expectedHash, check) {
       let parent = binding.vault;
       for (const part of path.split("/").slice(0, -1)) {
-        parent = join14(parent, part);
+        parent = join16(parent, part);
         try {
-          await mkdir9(parent);
+          await mkdir10(parent);
         } catch (error) {
           if (error.code !== "EEXIST") throw error;
         }
-        const info = await lstat8(parent);
+        const info = await lstat9(parent);
         if (!info.isDirectory() || info.isSymbolicLink())
           throw new Error("Wiki parent must be a regular directory");
       }
       const full = await containedVaultFile(binding.vault, path);
-      const temporary = join14(dirname6(full), `.${basename3(full)}.${randomUUID12()}.tmp`);
-      const mode = expectedHash === null ? 384 : (await lstat8(full)).mode & 511;
+      const temporary = join16(dirname6(full), `.${basename3(full)}.${randomUUID14()}.tmp`);
+      const mode = expectedHash === null ? 384 : (await lstat9(full)).mode & 511;
       await writeFile9(temporary, text4, { flag: "wx", mode });
       try {
         await check();
@@ -4862,7 +5019,7 @@ function createLocalWikiReviewPorts(config) {
       await check();
       if ((await files.read(binding, path))?.hash !== expectedHash)
         throw new Error("Wiki changed during undo");
-      await unlink7(await containedVaultFile(binding.vault, path));
+      await unlink8(await containedVaultFile(binding.vault, path));
       if (await files.read(binding, path)) throw new Error("Wiki removal could not be read back");
     }
   };
@@ -4875,13 +5032,13 @@ var init_wiki_review_node = __esm({
     "use strict";
     init_files();
     init_layout();
-    digest4 = (text4) => createHash14("sha256").update(text4).digest("hex");
+    digest4 = (text4) => createHash15("sha256").update(text4).digest("hex");
     RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
   }
 });
 function createWikiReviewReader(storage, currentNote) {
   async function loadProposal(service, id2, project) {
-    if (typeof id2 !== "string" || !/^[0-9a-f-]{36}$/.test(id2)) throw new Error("Invalid Wiki proposal id");
+    checkWikiProposalId(id2);
     const base2 = `${service.binding.vaultId}/wiki-review`;
     const pending = await storage.read(`${base2}/pending/${id2}.json`);
     const p = pending === void 0 ? await storage.read(`${base2}/reviewed/${id2}.json`) : pending;
@@ -4890,7 +5047,7 @@ function createWikiReviewReader(storage, currentNote) {
     if (p.id !== id2 || p.project !== project || p.vaultId !== service.binding.vaultId || p.bindingRevision !== service.binding.revision)
       throw new Error("Proposal belongs to a different project or binding");
     targetWikiPath(p.path, project);
-    if (immutableWikiProposalHash(p) !== p.proposalHash || digest5(p.after) !== p.afterHash || (p.before === null ? p.beforeHash !== null : digest5(p.before) !== p.beforeHash))
+    if (immutableWikiProposalHash(p) !== p.proposalHash || wikiContentHash(p.after) !== p.afterHash || (p.before === null ? p.beforeHash !== null : wikiContentHash(p.before) !== p.beforeHash))
       throw new Error("Wiki proposal content changed");
     return p;
   }
@@ -4909,7 +5066,7 @@ function createWikiReviewReader(storage, currentNote) {
         error: null
       });
     }
-    const expired = now2 > p.createdAt + MAX_AGE, targetChanged = (target?.hash ?? null) !== p.beforeHash && target?.hash !== p.afterHash;
+    const expired = now2 > p.createdAt + WIKI_PROPOSAL_MAX_AGE, targetChanged = (target?.hash ?? null) !== p.beforeHash && target?.hash !== p.afterHash;
     const protectedText = p.before === null ? "" : p.before.replace(
       /<!-- pi-agent:managed:start -->[\s\S]*?<!-- pi-agent:managed:end -->/,
       "\uFF08\u6B64\u5904\u4E3A\u667A\u80FD\u4F53\u6258\u7BA1\u533A\uFF09"
@@ -4929,7 +5086,7 @@ function createWikiReviewReader(storage, currentNote) {
       expired,
       targetChanged,
       canApply: p.status === "pending" && !expired && !targetChanged && !sources.some((s) => s.changed),
-      expiresAt: p.createdAt + MAX_AGE,
+      expiresAt: p.createdAt + WIKI_PROPOSAL_MAX_AGE,
       scientificallyVerified: false
     };
   }
@@ -4942,7 +5099,7 @@ function createWikiReviewReader(storage, currentNote) {
       throw error;
     }
     const items = [], problems = [];
-    for (const name of names.filter((name2) => /^[0-9a-f-]{36}\.json$/.test(name2)).sort().slice(0, MAX_PENDING)) {
+    for (const name of names.filter((name2) => /^[0-9a-f-]{36}\.json$/.test(name2)).sort().slice(0, MAX_PENDING_WIKI_PROPOSALS)) {
       let p;
       try {
         p = await storage.read(`${service.binding.vaultId}/wiki-review/pending/${name}`);
@@ -4963,15 +5120,16 @@ function createWikiReviewReader(storage, currentNote) {
         if (p.vaultId !== service.binding.vaultId || p.id !== name.slice(0, -5))
           throw new Error("Proposal belongs to a different binding or filename");
         targetWikiPath(p.path, project);
-        if (immutableWikiProposalHash(p) !== p.proposalHash) throw new Error("Wiki proposal content changed");
+        if (immutableWikiProposalHash(p) !== p.proposalHash)
+          throw new Error("Wiki proposal content changed");
         items.push({
           id: p.id,
           path: p.path,
           title: p.title,
           proposalHash: p.proposalHash,
           status: p.status,
-          expiresAt: p.createdAt + MAX_AGE,
-          expired: Date.now() > p.createdAt + MAX_AGE,
+          expiresAt: p.createdAt + WIKI_PROPOSAL_MAX_AGE,
+          expired: Date.now() > p.createdAt + WIKI_PROPOSAL_MAX_AGE,
           bindingChanged: p.bindingRevision !== service.binding.revision
         });
       } catch (error) {
@@ -4982,18 +5140,12 @@ function createWikiReviewReader(storage, currentNote) {
   }
   return { loadProposal, previewWikiProposal: previewWikiProposal2, listWikiProposals: listWikiProposals2 };
 }
-var MAX_PENDING;
-var MAX_AGE;
-var digest5;
 var init_wiki_review_reader = __esm({
   "src/core/wiki-review-reader.ts"() {
     "use strict";
     init_files();
     init_wiki_policy();
     init_wiki_policy();
-    MAX_PENDING = 100;
-    MAX_AGE = 24 * 60 * 60 * 1e3;
-    digest5 = (text4) => createHash15("sha256").update(text4).digest("hex");
   }
 });
 var wiki_review_exports = {};
@@ -5007,7 +5159,7 @@ __export(wiki_review_exports, {
   renameWithRetry: () => renameWithRetry2,
   stageWikiProposal: () => stageWikiProposal,
   undoWikiUpdate: () => undoWikiUpdate,
-  validateWikiSourcePaths: () => validateWikiSourcePaths2,
+  validateWikiSourcePaths: () => validateWikiSourcePaths3,
   wikiHistory: () => wikiHistory
 });
 function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui, io) {
@@ -5016,147 +5168,33 @@ function createKnowledgeWikiReview(runtime, config, reviewPolicy, ui, io) {
   const { readReviewMode: readReviewMode2 } = reviewPolicy;
   const { invalidateKnowledgeUi: invalidateKnowledgeUi2 } = ui;
   const AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
-  const START2 = "<!-- pi-agent:managed:start -->", END2 = "<!-- pi-agent:managed:end -->";
-  const digest6 = (text4) => createHash16("sha256").update(text4).digest("hex");
-  const MAX_PENDING2 = 100, MAX_AGE2 = 24 * 60 * 60 * 1e3;
-  async function exclusive(key, operation) {
-    return runRuntimeExclusive2("wiki-review", key, operation);
+  async function exclusive(key2, operation) {
+    return runRuntimeExclusive2("wiki-review", key2, operation);
   }
   function rootFor(service) {
     return `${service.binding.vaultId}/wiki-review`;
-  }
-  function checkId(id2) {
-    if (typeof id2 !== "string" || !/^[0-9a-f-]{36}$/.test(id2)) throw new Error("Invalid Wiki proposal id");
-    return id2;
-  }
-  function immutableHash(p) {
-    return digest6(
-      JSON.stringify({
-        id: p.id,
-        vaultId: p.vaultId,
-        bindingRevision: p.bindingRevision,
-        project: p.project,
-        path: p.path,
-        title: p.title,
-        rationale: p.rationale,
-        createdAt: p.createdAt,
-        before: p.before,
-        after: p.after,
-        sources: p.sources
-      })
-    );
   }
   async function atomicJson2(path, value) {
     const current = await io.state.read(path);
     await io.state.write(path, value, current?.version ?? null);
   }
   const currentNote = (service, path) => io.files.read(service.binding, path);
-  function normalizeCandidate(markdown) {
-    return stripManagedHeader(markdown);
-  }
-  function proposedText(original, title, body) {
-    const block = `${START2}
-${body.trim()}
-${END2}`;
-    if (original === null)
-      return `---
-type: wiki
-status: unverified
----
-
-# ${title}
-
-${block}
-
-## Human review
-
-`;
-    const { start, end } = managedParts(original);
-    return start < 0 ? `${original}${original.endsWith("\n") ? "\n" : "\n\n"}${block}
-` : original.slice(0, start) + block + original.slice(end + END2.length);
-  }
   const reader = createWikiReviewReader(
     { read: async (path) => (await io.state.read(path))?.value, list: (path) => io.state.list(path) },
     currentNote
   );
   const loadProposal = reader.loadProposal;
-  function validateWikiSourcePaths3(paths) {
-    if (!Array.isArray(paths) || !paths.length || paths.length > 12)
-      throw Object.assign(
-        new Error("source_paths: supply 1\u201312 Vault-relative Markdown notes already read this turn"),
-        { code: "source-note-required", field: "source_paths" }
-      );
-    for (let index = 0; index < paths.length; index++) {
-      try {
-        validateNote(paths[index]);
-      } catch {
-        throw Object.assign(
-          new Error(
-            `source_paths[${index}]: expected a Vault-relative Markdown source note (for example Library/Papers/source.md), not a workspace PDF or URL. Read the corresponding source note first; changing the Wiki target path cannot fix this field.`
-          ),
-          {
-            code: "source-note-required",
-            field: `source_paths[${index}]`,
-            retryable: false
-          }
-        );
-      }
-    }
-  }
   async function stageWikiProposal2(service, ticket, cwd, input) {
-    validateWikiSourcePaths3(input.source_paths);
+    validateWikiSourcePaths2(input.source_paths);
     return withKnowledgeBinding2(service.binding, async () => {
       if (service.binding.depositMode === "run-only")
         throw new Error("Wiki proposals are disabled by run-only mode");
       const { project, sources } = await service.evidenceReceipts(ticket, cwd, input.source_paths);
       const path = targetWikiPath(input.path, project);
-      if (sources.some((source) => source.path === path || /[[\]#|\r\n]/.test(source.path)))
-        throw new Error("A Wiki cannot cite itself or an ambiguous link path");
-      if (sources.every(
-        (source) => /(?:^|\/)Wiki\//.test(source.path) || /(?:^|\/)(?:Home|Index|Context)\.md$/.test(source.path)
-      ))
-        throw new Error("Read at least one underlying evidence/source note, not only Wiki or navigation");
-      const { title, markdown, rationale } = input;
-      if (typeof title !== "string" || !title.trim() || title.length > 200 || /[\r\n]/.test(title))
-        throw new Error("A single-line Wiki title is required");
-      if (typeof markdown !== "string" || !markdown.trim() || markdown.length > 24e3 || markdown.includes("<!-- pi-agent:managed:"))
-        throw new Error("Wiki candidate must contain 1\u201324000 characters and no managed markers");
-      if (typeof rationale !== "string" || !rationale.trim() || rationale.length > 1e3)
-        throw new Error("A concise change rationale is required");
+      const draft = readWikiDraft(input, sources, path);
       const original = await currentNote(service, path);
       if (original) await service.evidenceReceipts(ticket, cwd, [path]);
-      if (original && original.bytes > 64 * 1024)
-        throw new Error("Existing Wiki exceeds the bounded review size; split it before editing");
-      if (original && managedParts(original.text).body.length > 24e3)
-        throw new Error("Existing generated block exceeds the review size");
-      const refs = sources.map(
-        (source) => `- [[${source.path.slice(0, -3)}]] \xB7 lines ${source.startLine}\u2013${source.endLine} \xB7 sha256 ${source.hash}`
-      ).join("\n");
-      const after = proposedText(
-        original?.text ?? null,
-        title.trim(),
-        `${normalizeCandidate(markdown)}
-
-## Sources
-${refs}`
-      );
-      const proposal = {
-        id: randomUUID13(),
-        status: "pending",
-        vaultId: service.binding.vaultId,
-        bindingRevision: service.binding.revision,
-        project,
-        path,
-        title: title.trim(),
-        rationale: rationale.trim(),
-        createdAt: Date.now(),
-        sources,
-        before: original?.text ?? null,
-        beforeHash: original?.hash ?? null,
-        after,
-        afterHash: digest6(after)
-      };
-      proposal.proposalHash = immutableHash(proposal);
+      const proposal = buildWikiDraft(service.binding, project, path, draft, original, sources);
       if (Buffer.byteLength(JSON.stringify(proposal, null, 2)) + 1 > 256 * 1024)
         throw new Error("Wiki proposal exceeds the bounded review storage size");
       const root = rootFor(service);
@@ -5169,7 +5207,7 @@ ${refs}`
           if (error.code !== "ENOENT") throw error;
           names = [];
         }
-        if (names.filter((name) => name.endsWith(".json")).length >= MAX_PENDING2)
+        if (names.filter((name) => name.endsWith(".json")).length >= MAX_PENDING_WIKI_PROPOSALS)
           throw new Error("Pending Wiki review limit reached; review existing candidates first");
         await atomicJson2(`${directory}/${proposal.id}.json`, proposal);
       });
@@ -5188,7 +5226,7 @@ ${refs}`
     });
   }
   async function mergeWikiProposal2(service, ticket, cwd, id2, { markdown, rationale, source_paths } = {}) {
-    checkId(id2);
+    checkWikiProposalId(id2);
     return exclusive(
       `${rootFor(service)}:${id2}`,
       () => withKnowledgeBinding2(service.binding, async () => {
@@ -5196,7 +5234,7 @@ ${refs}`
         const p = await loadProposal(service, id2, project);
         if (p.status !== "pending")
           throw new Error("Only a pending Wiki candidate can accumulate another research round");
-        if (Date.now() > p.createdAt + MAX_AGE2)
+        if (Date.now() > p.createdAt + WIKI_PROPOSAL_MAX_AGE)
           throw new Error(
             "Pending Wiki candidate expired; review or replace it before accumulating more rounds"
           );
@@ -5204,42 +5242,7 @@ ${refs}`
         if ((target?.hash ?? null) !== p.beforeHash)
           throw new Error("Wiki changed since the pending candidate was created");
         await verifySources(service, p);
-        const byPath = new Map(p.sources.map((source) => [source.path, source]));
-        for (const source of newSources) byPath.set(source.path, source);
-        const sources = [...byPath.values()];
-        if (sources.length > 12)
-          throw new Error(
-            "Pending topic reached the 12-source review budget; review it before adding another round"
-          );
-        if (typeof markdown !== "string" || !markdown.trim() || markdown.length > 12e3 || markdown.includes("<!-- pi-agent:managed:"))
-          throw new Error("Incremental topic summary must contain 1\u201312000 characters and no managed markers");
-        if (typeof rationale !== "string" || !rationale.trim() || rationale.length > 1e3)
-          throw new Error("A concise merge rationale is required");
-        const prior = managedParts(p.after).body.replace(/\n\n## Sources\n[\s\S]*$/, "").trim();
-        const update = `## Research update \xB7 ${(/* @__PURE__ */ new Date()).toISOString()}
-
-${normalizeCandidate(markdown)}`;
-        const merged = [prior, update].filter(Boolean).join("\n\n");
-        if (merged.length > 22e3)
-          throw new Error("Pending topic synthesis is too large; review it before adding another round");
-        const refs = sources.map(
-          (source) => `- [[${source.path.slice(0, -3)}]] \xB7 lines ${source.startLine}\u2013${source.endLine} \xB7 sha256 ${source.hash}`
-        ).join("\n");
-        const after = proposedText(p.before, p.title, `${merged}
-
-## Sources
-${refs}`);
-        const updated = {
-          ...p,
-          createdAt: Date.now(),
-          rationale: `${p.rationale}
-
-Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
-          sources,
-          after,
-          afterHash: digest6(after)
-        };
-        updated.proposalHash = immutableHash(updated);
+        const updated = mergeWikiDraft(p, newSources, markdown, rationale);
         if (Buffer.byteLength(JSON.stringify(updated, null, 2)) + 1 > 256 * 1024)
           throw new Error("Merged Wiki proposal exceeds the bounded review storage size");
         await exclusive(
@@ -5253,7 +5256,7 @@ Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
           path: p.path,
           project,
           proposalHash: updated.proposalHash,
-          sources,
+          sources: updated.sources,
           merged: true,
           roundAdded: true,
           vaultWritten: false,
@@ -5295,7 +5298,7 @@ Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
     invalidateKnowledgeUi2();
   }
   async function decideWikiProposal2(service, id2, project, expectedHash, decision, review = { actor: "human" }) {
-    checkId(id2);
+    checkWikiProposalId(id2);
     if (!["human", "model", "automatic"].includes(review.actor) || review.actor === "automatic" && review.authority !== AUTOMATIC_AUTHORITY || review.actor === "model" && (!review.auditId || review.verdict !== "approve" || typeof review.checkCurrent !== "function"))
       throw new Error("Invalid model-review authority");
     return exclusive(
@@ -5313,7 +5316,7 @@ Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
         if (decision !== "apply") throw new Error("Unknown review decision");
         if (service.binding.depositMode === "run-only")
           throw new Error("Wiki writes are disabled by run-only mode");
-        if (Date.now() - p.createdAt > MAX_AGE2)
+        if (Date.now() - p.createdAt > WIKI_PROPOSAL_MAX_AGE)
           throw new Error("Wiki proposal expired; regenerate it from current evidence");
         return exclusive(`${service.binding.vault}:wiki:${p.path}`, async () => {
           const current = await currentNote(service, p.path);
@@ -5412,7 +5415,7 @@ Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
     return (await wikiHistory2(service, project)).some((p) => p.path === path && p.afterHash === hash5);
   }
   async function undoWikiUpdate2(service, project, id2, expectedHash) {
-    checkId(id2);
+    checkWikiProposalId(id2);
     return exclusive(
       `${rootFor(service)}:${id2}`,
       () => withKnowledgeBinding2(service.binding, async () => {
@@ -5435,7 +5438,7 @@ Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
     );
   }
   return {
-    validateWikiSourcePaths: validateWikiSourcePaths3,
+    validateWikiSourcePaths: validateWikiSourcePaths2,
     stageWikiProposal: stageWikiProposal2,
     mergeWikiProposal: mergeWikiProposal2,
     previewWikiProposal: previewWikiProposal2,
@@ -5448,7 +5451,7 @@ Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
   };
 }
 var compatibility2;
-var validateWikiSourcePaths2;
+var validateWikiSourcePaths3;
 var stageWikiProposal;
 var mergeWikiProposal;
 var previewWikiProposal;
@@ -5467,6 +5470,7 @@ var init_wiki_review = __esm({
     init_runtime_host();
     init_ui_state();
     init_wiki_policy();
+    init_wiki_review_draft();
     init_wiki_review_node();
     init_wiki_review_reader();
     compatibility2 = createKnowledgeWikiReview(
@@ -5477,7 +5481,7 @@ var init_wiki_review = __esm({
       createLocalWikiReviewPorts(config_exports)
     );
     ({
-      validateWikiSourcePaths: validateWikiSourcePaths2,
+      validateWikiSourcePaths: validateWikiSourcePaths3,
       stageWikiProposal,
       mergeWikiProposal,
       previewWikiProposal,
@@ -5536,10 +5540,10 @@ function createKnowledgeModelReview(runtime, config, wiki, io, specialistSetting
     signal?.throwIfAborted();
     await check();
     const { service, project, id: id2, hash: hash5, binding } = entry;
-    const key = `${binding.vaultId}:${id2}`;
-    if (state.active.has(key)) throw new Error("This Wiki candidate is already being reviewed");
-    state.active.add(key);
-    const startedAt = Date.now(), auditId = randomUUID14();
+    const key2 = `${binding.vaultId}:${id2}`;
+    if (state.active.has(key2)) throw new Error("This Wiki candidate is already being reviewed");
+    state.active.add(key2);
+    const startedAt = Date.now(), auditId = randomUUID15();
     let audit = null;
     const stillCurrent = async () => {
       signal?.throwIfAborted();
@@ -5703,7 +5707,7 @@ function createKnowledgeModelReview(runtime, config, wiki, io, specialistSetting
       if (error instanceof Error && diagnostic === error.message && error.cause === void 0) throw error;
       throw new Error(diagnostic);
     } finally {
-      state.active.delete(key);
+      state.active.delete(key2);
     }
   }
   return { reviewWikiWithModel: reviewWikiWithModel2, lastWikiModelReview: lastWikiModelReview2 };
@@ -5740,7 +5744,7 @@ async function generateWikiModelReview(capabilities, selection, request) {
           verdict: { enum: ["approve", "needs-human", "reject"] },
           checks: {
             type: "object",
-            properties: Object.fromEntries(WIKI_MODEL_REVIEW_CHECKS.map((key) => [key, { type: "boolean" }])),
+            properties: Object.fromEntries(WIKI_MODEL_REVIEW_CHECKS.map((key2) => [key2, { type: "boolean" }])),
             required: WIKI_MODEL_REVIEW_CHECKS,
             additionalProperties: false
           }
@@ -5814,14 +5818,14 @@ ${block}
   if (updated === original) return { path, changed: false };
   if (original !== null && (await readNoteFile(vault, path)).hash !== hash3(original))
     throw new Error("Human navigation changed; update was not applied");
-  await mkdir10(dirname8(full), { recursive: true });
+  await mkdir11(dirname8(full), { recursive: true });
   if (original === null) {
     await writeFile10(full, updated, { flag: "wx" });
     return { path, changed: true };
   }
-  const temporary = `${full}.${randomUUID16()}.tmp`;
+  const temporary = `${full}.${randomUUID17()}.tmp`;
   await writeFile10(temporary, updated, { flag: "wx" });
-  await rename9(temporary, full);
+  await rename10(temporary, full);
   return { path, changed: true };
 }
 async function runNavigationMaintenance(service, project, limit = 3) {
@@ -5865,7 +5869,7 @@ var init_maintenance = __esm({
     init_layout();
     START = "<!-- pi-agent:managed:start -->";
     END = "<!-- pi-agent:managed:end -->";
-    hash3 = (text4) => createHash18("sha256").update(text4).digest("hex");
+    hash3 = (text4) => createHash17("sha256").update(text4).digest("hex");
   }
 });
 function memoryNoteSlug(memory) {
@@ -5927,7 +5931,7 @@ var init_note_title = __esm({
 });
 function inside(root, path) {
   const relativePath = relative8(root, path);
-  return !relativePath || !isAbsolute8(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep8}`);
+  return !relativePath || !isAbsolute9(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep8}`);
 }
 function hasControl(text4) {
   return [...String(text4)].some((char) => char.charCodeAt(0) < 32);
@@ -5941,7 +5945,7 @@ function allowedSegment2(name) {
   return !!name && !name.startsWith(".") && !omittedSegments.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
 }
 function validateNote2(path) {
-  if (typeof path !== "string" || isAbsolute8(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment2))
+  if (typeof path !== "string" || isAbsolute9(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment2))
     throw new Error("Expected an allowed Vault-relative Markdown path");
   const reserved = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
   const first = path.split("/")[0] ?? "";
@@ -5984,7 +5988,7 @@ async function normalizeSourceLinks(values, { cwd, vault, resultsRoot, project }
     if (/^(?:Wiki|Library|Projects|Inbox|Indexes)\//.test(notePath)) {
       validateNote2(notePath);
       if (!canRead2(notePath, project)) throw new Error("Source note is outside project scope");
-      const full = resolve9(vault, notePath);
+      const full = resolve10(vault, notePath);
       try {
         if (!inside(await realpath6(vault), await realpath6(full)) || !(await stat2(full)).isFile())
           throw new Error("not a regular note");
@@ -5994,7 +5998,7 @@ async function normalizeSourceLinks(values, { cwd, vault, resultsRoot, project }
       }
     } else if (!/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("file:")) {
       try {
-        const full = raw.startsWith("file:") ? fileURLToPath(raw) : resolve9(cwd, raw);
+        const full = raw.startsWith("file:") ? fileURLToPath(raw) : resolve10(cwd, raw);
         const actual = await realpath6(full);
         const roots = await Promise.all(
           [vault, resultsRoot].filter((path) => Boolean(path)).map((path) => realpath6(path).catch(() => null))
@@ -6071,10 +6075,10 @@ async function projectMirrors(binding, tail) {
   }
   return mirrors;
 }
-async function knowledgeMaintenanceTopic({ notePath, topic, revision }) {
+async function knowledgeMaintenanceTopic({ notePath, topic, revision: revision2 }) {
   const binding = await readKnowledgeBinding({ fresh: true });
   if (!binding) throw new Error("No application knowledge Vault is bound");
-  if (!Number.isSafeInteger(revision) || revision < 1 || binding.revision !== revision)
+  if (!Number.isSafeInteger(revision2) || revision2 < 1 || binding.revision !== revision2)
     throw new Error("Knowledge binding changed; refresh maintenance before writing");
   const value = topic.replace(/[<>\r\n]/gu, " ").replace(/\s+/gu, " ").trim().slice(0, 120);
   if (value.length < 4) throw new Error("topic must describe the source in a short phrase");
@@ -6153,16 +6157,16 @@ __export(ui_service_exports, {
   testKnowledgeSemanticProvider: () => testKnowledgeSemanticProvider
 });
 function pathCwd(cwd) {
-  if (cwd !== null && cwd !== void 0 && (typeof cwd !== "string" || !isAbsolute9(cwd)))
+  if (cwd !== null && cwd !== void 0 && (typeof cwd !== "string" || !isAbsolute10(cwd)))
     throw new Error("Workspace must be an absolute path");
-  return cwd ? resolve11(cwd) : null;
+  return cwd ? resolve12(cwd) : null;
 }
 async function projectAt(cwd) {
   cwd = pathCwd(cwd);
   if (!cwd) return { cwd: null, project: null, legacyProjectVault: null };
   let raw = {};
   try {
-    raw = JSON.parse(await readFile11(join16(cwd, ".pi/research-workspace.json"), "utf8"));
+    raw = JSON.parse(await readFile11(join18(cwd, ".pi/research-workspace.json"), "utf8"));
   } catch (error) {
     if (error.code !== "ENOENT")
       return {
@@ -6178,10 +6182,10 @@ async function projectAt(cwd) {
     legacyProjectVault: typeof raw.obsidianVault === "string" ? raw.obsidianVault : null
   };
 }
-async function bound(revision) {
+async function bound(revision2) {
   const binding = await readKnowledgeBinding({ fresh: true });
   if (!binding) throw new Error("No application knowledge Vault is bound");
-  if (revision !== void 0 && revision !== binding.revision)
+  if (revision2 !== void 0 && revision2 !== binding.revision)
     throw new Error("Knowledge binding changed; refresh this panel before acting");
   return { binding, service: await getKnowledgeService(binding) };
 }
@@ -6189,11 +6193,11 @@ async function explainerLinksForDisplay(binding, notePath, text4) {
   if (!notePath.startsWith("Library/Explainers/") || typeof text4 !== "string") return null;
   let root;
   try {
-    root = await realpath8(join16(binding.vault, "Attachments", "Explainers"));
+    root = await realpath8(join18(binding.vault, "Attachments", "Explainers"));
   } catch {
     return null;
   }
-  const base2 = dirname9(join16(binding.vault, notePath));
+  const base2 = dirname9(join18(binding.vault, notePath));
   let output = text4, count = 0;
   const matches = [
     ...text4.matchAll(
@@ -6202,8 +6206,8 @@ async function explainerLinksForDisplay(binding, notePath, text4) {
   ].slice(0, 20);
   for (const match of matches) {
     try {
-      const actual = await realpath8(resolve11(base2, match[1])), rel = relative10(root, actual), info = await lstat10(actual);
-      if (!info.isFile() || info.isSymbolicLink() || isAbsolute9(rel) || rel === ".." || rel.startsWith("../"))
+      const actual = await realpath8(resolve12(base2, match[1])), rel = relative10(root, actual), info = await lstat11(actual);
+      if (!info.isFile() || info.isSymbolicLink() || isAbsolute10(rel) || rel === ".." || rel.startsWith("../"))
         continue;
       output = output.replace(`](${match[1]})`, `](${pathToFileURL3(actual).href})`);
       count++;
@@ -6298,12 +6302,12 @@ async function knowledgeSetupPreview({ cwd = null, path = null } = {}) {
     warning: "Read-only preview. Project folders are created for confirmed projects, not automatically for every open directory. Setup still requires the skill interview and a separate write confirmation."
   };
 }
-async function knowledgeJobs({ cwd = null, offset = 0, limit = 20, revision } = {}) {
-  const { service } = await bound(revision), { project } = await projectAt(cwd);
+async function knowledgeJobs({ cwd = null, offset = 0, limit = 20, revision: revision2 } = {}) {
+  const { service } = await bound(revision2), { project } = await projectAt(cwd);
   return service.request("uiJobs", { project, offset, limit });
 }
-async function knowledgeReviews({ cwd, offset = 0, limit = 15, revision }) {
-  const { service } = await bound(revision), { project } = await projectAt(cwd);
+async function knowledgeReviews({ cwd, offset = 0, limit = 15, revision: revision2 }) {
+  const { service } = await bound(revision2), { project } = await projectAt(cwd);
   if (!project) return { items: [], problems: [], total: 0, offset: 0, nextOffset: null };
   if (!Number.isInteger(offset) || offset < 0 || offset > 100 || !Number.isInteger(limit) || limit < 1 || limit > 25)
     throw new Error("Invalid review page");
@@ -6316,16 +6320,16 @@ async function knowledgeReviews({ cwd, offset = 0, limit = 15, revision }) {
     nextOffset: offset + items.length < all.items.length ? offset + items.length : null
   };
 }
-async function knowledgePreviewReview({ cwd, id: id2, revision }) {
-  const { binding, service } = await bound(revision), { project } = await projectAt(cwd);
+async function knowledgePreviewReview({ cwd, id: id2, revision: revision2 }) {
+  const { binding, service } = await bound(revision2), { project } = await projectAt(cwd);
   if (!project) throw new Error("Choose the originating project to review its proposal");
-  const preview = await previewWikiProposal(service, id2, project), token = randomUUID18();
+  const preview = await previewWikiProposal(service, id2, project), token = randomUUID19();
   const expires = Date.now() + 10 * 60 * 1e3;
   runtimeState.previews.set(token, {
     binding,
     service,
     project,
-    cwd: resolve11(cwd),
+    cwd: resolve12(cwd),
     id: id2,
     hash: preview.proposalHash,
     expires
@@ -6356,8 +6360,8 @@ async function knowledgeDecideReview({ cwd, token, decision }) {
   invalidateKnowledgeUi();
   return result2;
 }
-async function knowledgeReadNote({ cwd = null, path, startLine = 1, revision }) {
-  const { binding, service } = await bound(revision), { project } = await projectAt(cwd);
+async function knowledgeReadNote({ cwd = null, path, startLine = 1, revision: revision2 }) {
+  const { binding, service } = await bound(revision2), { project } = await projectAt(cwd);
   if (!Number.isSafeInteger(startLine) || startLine < 1) throw new Error("Invalid start line");
   const page = await service.request("read", {
     path,
@@ -6401,9 +6405,9 @@ async function knowledgeReadNote({ cwd = null, path, startLine = 1, revision }) 
   if (displayText) return { ...page, displayText, displayLinkBase: binding.vault };
   return page;
 }
-async function knowledgeMaintenance({ cwd = null, action, revision, id: id2, expectedHash }) {
-  const { binding, service } = await bound(revision), { project } = await projectAt(cwd);
-  if (!Number.isSafeInteger(revision) || revision < 1)
+async function knowledgeMaintenance({ cwd = null, action, revision: revision2, id: id2, expectedHash }) {
+  const { binding, service } = await bound(revision2), { project } = await projectAt(cwd);
+  if (!Number.isSafeInteger(revision2) || revision2 < 1)
     throw new Error("Refresh binding before changing review settings");
   if (["review-automatic", "review-strict"].includes(action)) {
     const result2 = await withKnowledgeBinding(binding, () => saveReviewMode(action.slice(7)));
@@ -6415,11 +6419,11 @@ async function knowledgeMaintenance({ cwd = null, action, revision, id: id2, exp
     return undoWikiUpdate(service, project, id2, expectedHash);
   }
   if (!["reconcile", "refresh-navigation"].includes(action)) throw new Error("Unknown maintenance action");
-  if (!Number.isSafeInteger(revision) || revision < 1)
+  if (!Number.isSafeInteger(revision2) || revision2 < 1)
     throw new Error("Refresh the binding before maintenance");
-  const key = `${binding.vaultId}:${binding.revision}`;
-  if (runtimeState.maintenance.has(key)) throw new Error("Knowledge maintenance is already running");
-  runtimeState.maintenance.add(key);
+  const key2 = `${binding.vaultId}:${binding.revision}`;
+  if (runtimeState.maintenance.has(key2)) throw new Error("Knowledge maintenance is already running");
+  runtimeState.maintenance.add(key2);
   try {
     const result2 = await withKnowledgeBinding(
       binding,
@@ -6428,7 +6432,7 @@ async function knowledgeMaintenance({ cwd = null, action, revision, id: id2, exp
     invalidateKnowledgeUi();
     return result2;
   } finally {
-    runtimeState.maintenance.delete(key);
+    runtimeState.maintenance.delete(key2);
   }
 }
 async function knowledgeMaintenanceWiki({
@@ -6437,11 +6441,11 @@ async function knowledgeMaintenanceWiki({
   title,
   markdown,
   rationale,
-  revision = null
+  revision: revision2 = null
 }) {
   const binding = await readKnowledgeBinding({ fresh: true });
   if (!binding) throw new Error("No application knowledge Vault is bound");
-  if (!Number.isSafeInteger(revision) || revision < 1 || binding.revision !== revision)
+  if (!Number.isSafeInteger(revision2) || revision2 < 1 || binding.revision !== revision2)
     throw new Error("Knowledge binding changed; refresh maintenance before review");
   const project = requireProject(await projectAt(cwd));
   return withKnowledgeBinding(binding, async () => {
@@ -6459,8 +6463,8 @@ async function knowledgeMaintenanceWiki({
     });
   });
 }
-async function knowledgeOpenTarget({ cwd = null, path = null, revision }) {
-  const { binding } = await bound(revision);
+async function knowledgeOpenTarget({ cwd = null, path = null, revision: revision2 }) {
+  const { binding } = await bound(revision2);
   const { project } = await projectAt(cwd);
   if (path) {
     const { canRead: canRead3, validateNote: validateNote3 } = await Promise.resolve().then(() => (init_files(), files_exports));
@@ -6507,11 +6511,11 @@ async function indexKnowledgeSemantic({ cwd, bindingRevision, requestId, limit =
   if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16)
     throw new Error("Semantic index limit must be 1\u201316");
-  const { binding, service } = await bound(bindingRevision), projectInfo = await projectAt(cwd), project = requireProject(projectInfo), key = `${binding.vaultId}:${project}`;
-  if (runtimeState.semanticJobs.has(key))
+  const { binding, service } = await bound(bindingRevision), projectInfo = await projectAt(cwd), project = requireProject(projectInfo), key2 = `${binding.vaultId}:${project}`;
+  if (runtimeState.semanticJobs.has(key2))
     throw new Error("Semantic indexing is already running for this project");
   const controller = new AbortController(), job = { requestId, controller };
-  runtimeState.semanticJobs.set(key, job);
+  runtimeState.semanticJobs.set(key2, job);
   try {
     return await withKnowledgeBinding(
       binding,
@@ -6522,13 +6526,13 @@ async function indexKnowledgeSemantic({ cwd, bindingRevision, requestId, limit =
       })
     );
   } finally {
-    if (runtimeState.semanticJobs.get(key) === job) runtimeState.semanticJobs.delete(key);
+    if (runtimeState.semanticJobs.get(key2) === job) runtimeState.semanticJobs.delete(key2);
   }
 }
 async function cancelKnowledgeSemanticIndex({ cwd, bindingRevision, requestId } = {}) {
   if (typeof cwd !== "string" || !cwd) throw new Error("Project cwd is required for semantic indexing");
   if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
-  const { binding } = await bound(bindingRevision), project = requireProject(await projectAt(cwd)), key = `${binding.vaultId}:${project}`, job = runtimeState.semanticJobs.get(key);
+  const { binding } = await bound(bindingRevision), project = requireProject(await projectAt(cwd)), key2 = `${binding.vaultId}:${project}`, job = runtimeState.semanticJobs.get(key2);
   if (!job || job.requestId !== requestId) throw new Error("No matching semantic index request is running");
   job.controller.abort();
 }
@@ -6573,13 +6577,13 @@ async function searchKnowledge({ cwd = null, bindingRevision, query, limit = 12 
     };
   });
 }
-async function knowledgeNoteLinks({ path, revision } = {}) {
+async function knowledgeNoteLinks({ path, revision: revision2 } = {}) {
   if (typeof path !== "string" || !path) throw new Error("Note path is required");
-  const { binding, service } = await bound(revision);
+  const { binding, service } = await bound(revision2);
   return withKnowledgeBinding(binding, () => service.request("noteLinks", { path }));
 }
-async function knowledgeGraph({ revision, limit = 200, view = "semantic", mergeMirrors = true } = {}) {
-  const { binding, service } = await bound(revision);
+async function knowledgeGraph({ revision: revision2, limit = 200, view = "semantic", mergeMirrors = true } = {}) {
+  const { binding, service } = await bound(revision2);
   return withKnowledgeBinding(binding, () => service.request("graph", { limit, view, mergeMirrors }));
 }
 async function dailyDiscoveryContext({ sinceMs = 0 } = {}) {
@@ -6619,9 +6623,9 @@ async function saveDiscoveryIdea({ idea } = {}) {
     throw new Error("Idea title is required");
   const binding = await readKnowledgeBinding({ fresh: true });
   if (!binding) throw new Error("No application knowledge Vault is bound");
-  const base2 = idea.title.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || `idea-${createHash20("sha256").update(idea.title).digest("hex").slice(0, 12)}`;
-  const directory = join16(binding.vault, "Library", "Ideas");
-  await mkdir11(directory, { recursive: true });
+  const base2 = idea.title.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || `idea-${createHash19("sha256").update(idea.title).digest("hex").slice(0, 12)}`;
+  const directory = join18(binding.vault, "Library", "Ideas");
+  await mkdir12(directory, { recursive: true });
   const text4 = ideaNoteMarkdown(
     {
       title: idea.title.trim().slice(0, 160),
@@ -6635,7 +6639,7 @@ async function saveDiscoveryIdea({ idea } = {}) {
   for (let attempt = 0; attempt < 20; attempt++) {
     const name = attempt ? `${base2}-${attempt + 1}.md` : `${base2}.md`;
     try {
-      await writeFile11(join16(directory, name), text4, { encoding: "utf8", flag: "wx" });
+      await writeFile11(join18(directory, name), text4, { encoding: "utf8", flag: "wx" });
       const path = `Library/Ideas/${name}`;
       const service = await getKnowledgeService(binding);
       await service.request("changed", { paths: [path] }).catch(() => {
@@ -6679,14 +6683,14 @@ async function saveMemoryNote({ cwd, memory } = {}) {
       related = [];
     }
   });
-  const directory = join16(binding.vault, "Projects", project, "Memory");
-  await mkdir11(directory, { recursive: true });
+  const directory = join18(binding.vault, "Projects", project, "Memory");
+  await mkdir12(directory, { recursive: true });
   const base2 = memoryNoteSlug(memory);
   const text4 = memoryNoteMarkdown(memory, related);
   for (let attempt = 0; attempt < 20; attempt++) {
     const name = attempt ? `${base2}-${attempt + 1}.md` : `${base2}.md`;
     try {
-      await writeFile11(join16(directory, name), text4, { encoding: "utf8", flag: "wx" });
+      await writeFile11(join18(directory, name), text4, { encoding: "utf8", flag: "wx" });
       const path = `Projects/${project}/Memory/${name}`;
       await service.request("changed", { paths: [path] }).catch(() => {
       });
@@ -7010,14 +7014,14 @@ function EveryAll(value, offset, callback) {
 function ShiftLeft(array, true_, false_) {
   return IsEqual(array.length, 0) ? false_() : true_(array[0], array.slice(1));
 }
-function IsUnsafePropertyKey(key) {
-  return IsEqual(key, "__proto__") || IsEqual(key, "constructor") || IsEqual(key, "prototype");
+function IsUnsafePropertyKey(key2) {
+  return IsEqual(key2, "__proto__") || IsEqual(key2, "constructor") || IsEqual(key2, "prototype");
 }
-function HasPropertyKey(value, key) {
-  return IsUnsafePropertyKey(key) ? Object.prototype.hasOwnProperty.call(value, key) : key in value;
+function HasPropertyKey(value, key2) {
+  return IsUnsafePropertyKey(key2) ? Object.prototype.hasOwnProperty.call(value, key2) : key2 in value;
 }
 function EntriesRegExp(value) {
-  return Keys(value).map((key) => [new RegExp(`^${key}$`), value[key]]);
+  return Keys(value).map((key2) => [new RegExp(`^${key2}$`), value[key2]]);
 }
 function Entries(value) {
   return Object.entries(value);
@@ -7035,7 +7039,7 @@ function DeepEqualObject(left, right) {
   if (!IsObject(right))
     return false;
   const keys = Keys(left);
-  return IsEqual(keys.length, Keys(right).length) && keys.every((key) => IsDeepEqual(left[key], right[key]));
+  return IsEqual(keys.length, Keys(right).length) && keys.every((key2) => IsDeepEqual(left[key2], right[key2]));
 }
 function DeepEqualArray(left, right) {
   return IsArray(right) && IsEqual(left.length, right.length) && left.every((_, index) => IsDeepEqual(left[index], right[index]));
@@ -7132,25 +7136,25 @@ function IsTypeObject(value) {
 function FromTypeObject(value) {
   const result2 = {};
   const descriptors = Object.getOwnPropertyDescriptors(value);
-  for (const key of Object.keys(descriptors)) {
-    if (guard_exports.IsUnsafePropertyKey(key))
+  for (const key2 of Object.keys(descriptors)) {
+    if (guard_exports.IsUnsafePropertyKey(key2))
       continue;
-    const descriptor = descriptors[key];
+    const descriptor = descriptors[key2];
     if (guard_exports.HasPropertyKey(descriptor, "value")) {
-      Object.defineProperty(result2, key, { ...descriptor, value: FromValue(descriptor.value) });
+      Object.defineProperty(result2, key2, { ...descriptor, value: FromValue(descriptor.value) });
     }
   }
   return result2;
 }
 function FromPlainObject(value) {
   const result2 = {};
-  for (const key of guard_exports.Keys(value)) {
-    if (guard_exports.IsUnsafePropertyKey(key))
+  for (const key2 of guard_exports.Keys(value)) {
+    if (guard_exports.IsUnsafePropertyKey(key2))
       continue;
-    result2[key] = FromValue(value[key]);
+    result2[key2] = FromValue(value[key2]);
   }
-  for (const key of guard_exports.Symbols(value)) {
-    result2[key] = FromValue(value[key]);
+  for (const key2 of guard_exports.Symbols(value)) {
+    result2[key2] = FromValue(value[key2]);
   }
   return result2;
 }
@@ -7204,10 +7208,10 @@ function Reset() {
   settings.unionPrioritySort = true;
 }
 function Set2(options) {
-  for (const key of guard_exports.Keys(options)) {
-    const value = options[key];
+  for (const key2 of guard_exports.Keys(options)) {
+    const value = options[key2];
     if (value !== void 0) {
-      Object.defineProperty(settings, key, { value });
+      Object.defineProperty(settings, key2, { value });
     }
   }
 }
@@ -7215,12 +7219,12 @@ function Get() {
   return settings;
 }
 function MergeHidden(left, right) {
-  for (const key of Object.keys(right)) {
-    Object.defineProperty(left, key, {
+  for (const key2 of Object.keys(right)) {
+    Object.defineProperty(left, key2, {
       configurable: true,
       writable: true,
       enumerable: false,
-      value: right[key]
+      value: right[key2]
     });
   }
   return left;
@@ -7240,10 +7244,10 @@ function Discard(value, propertyKeys) {
   const result2 = {};
   const descriptors = Object.getOwnPropertyDescriptors(Clone(value));
   const keysToDiscard = new Set(propertyKeys);
-  for (const key of Object.keys(descriptors)) {
-    if (keysToDiscard.has(key))
+  for (const key2 of Object.keys(descriptors)) {
+    if (keysToDiscard.has(key2))
       continue;
-    Object.defineProperty(result2, key, descriptors[key]);
+    Object.defineProperty(result2, key2, descriptors[key2]);
   }
   return result2;
 }
@@ -7251,20 +7255,20 @@ function Update(current, hidden, enumerable) {
   Metrics.update += 1;
   const settings2 = settings_exports.Get();
   const result2 = Clone(current);
-  for (const key of Object.keys(hidden)) {
-    Object.defineProperty(result2, key, {
+  for (const key2 of Object.keys(hidden)) {
+    Object.defineProperty(result2, key2, {
       configurable: true,
       writable: true,
       enumerable: settings2.enumerableKind,
-      value: hidden[key]
+      value: hidden[key2]
     });
   }
-  for (const key of Object.keys(enumerable)) {
-    Object.defineProperty(result2, key, {
+  for (const key2 of Object.keys(enumerable)) {
+    Object.defineProperty(result2, key2, {
       configurable: true,
       enumerable: true,
       writable: true,
-      value: enumerable[key]
+      value: enumerable[key2]
     });
   }
   return result2;
@@ -7330,8 +7334,8 @@ function IsFunction2(value) {
 function FunctionOptions(type) {
   return memory_exports.Discard(type, ["~kind", "type", "parameters", "returnType"]);
 }
-function Ref(ref, options) {
-  return memory_exports.Create({ ["~kind"]: "Ref" }, { $ref: ref }, options);
+function Ref(ref2, options) {
+  return memory_exports.Create({ ["~kind"]: "Ref" }, { $ref: ref2 }, options);
 }
 function IsRef(value) {
   return IsKind(value, "Ref");
@@ -7368,7 +7372,7 @@ function IsOptional(value) {
   return IsSchema(value) && guard_exports.HasPropertyKey(value, "~optional");
 }
 function RequiredArray(properties) {
-  return guard_exports.Keys(properties).filter((key) => !IsOptional(properties[key]));
+  return guard_exports.Keys(properties).filter((key2) => !IsOptional(properties[key2]));
 }
 function PropertyKeys(properties) {
   return guard_exports.Keys(properties);
@@ -7394,8 +7398,8 @@ function IsUnknown(value) {
   return IsKind(value, "Unknown");
 }
 function Cyclic($defs, $ref, options) {
-  const defs = guard_exports.Keys($defs).reduce((result2, key) => {
-    return { ...result2, [key]: memory_exports.Update($defs[key], {}, { $id: key }) };
+  const defs = guard_exports.Keys($defs).reduce((result2, key2) => {
+    return { ...result2, [key2]: memory_exports.Update($defs[key2], {}, { $id: key2 }) };
   }, {});
   return memory_exports.Create({ ["~kind"]: "Cyclic" }, { $defs: defs, $ref }, options);
 }
@@ -7440,8 +7444,8 @@ function IsTypeScriptEnumLike(value) {
   return guard_exports.IsObjectNotArray(value);
 }
 function TypeScriptEnumToEnumValues(type) {
-  const keys = guard_exports.Keys(type).filter((key) => isNaN(key));
-  return keys.reduce((result2, key) => [...result2, type[key]], []);
+  const keys = guard_exports.Keys(type).filter((key2) => isNaN(key2));
+  return keys.reduce((result2, key2) => [...result2, type[key2]], []);
 }
 function IsEnumValue(value) {
   return guard_exports.IsString(value) || guard_exports.IsNumber(value);
@@ -7474,9 +7478,9 @@ function InstanceKeys(value) {
   const propertyKeys = /* @__PURE__ */ new Set();
   let current = value;
   while (current && current !== Object.prototype) {
-    for (const key of Reflect.ownKeys(current)) {
-      if (key !== "constructor" && typeof key !== "symbol")
-        propertyKeys.add(key);
+    for (const key2 of Reflect.ownKeys(current)) {
+      if (key2 !== "constructor" && typeof key2 !== "symbol")
+        propertyKeys.add(key2);
     }
     current = Object.getPrototypeOf(current);
   }
@@ -7561,9 +7565,9 @@ function FromNumber(value) {
 }
 function FromObject2(value) {
   FNV1A64_OP(ByteMarker.Object);
-  for (const key of InstanceKeys(value).sort()) {
-    FromValue2(key);
-    FromValue2(value[key]);
+  for (const key2 of InstanceKeys(value).sort()) {
+    FromValue2(key2);
+    FromValue2(value[key2]);
   }
 }
 function FromRegExp2(value) {
@@ -7922,9 +7926,9 @@ function TemplateLiteralDecode(pattern) {
   const result2 = IsTemplateLiteral(decoded) ? String2() : decoded;
   return result2;
 }
-function CreateRecord(key, value) {
+function CreateRecord(key2, value) {
   const type = "object";
-  const patternProperties = { [key]: value };
+  const patternProperties = { [key2]: value };
   return memory_exports.Create({ ["~kind"]: "Record" }, { type, patternProperties });
 }
 function FromAnyKey(value) {
@@ -8001,13 +8005,13 @@ function CompositeProperty(left, right) {
   const property = RemoveReadonly(RemoveOptional(evaluated));
   return isReadonly && isOptional ? AddReadonly(AddOptional(property)) : isReadonly && !isOptional ? AddReadonly(property) : !isReadonly && isOptional ? AddOptional(property) : property;
 }
-function CompositePropertyKey(left, right, key) {
-  return key in left ? key in right ? CompositeProperty(left[key], right[key]) : left[key] : key in right ? right[key] : Never();
+function CompositePropertyKey(left, right, key2) {
+  return key2 in left ? key2 in right ? CompositeProperty(left[key2], right[key2]) : left[key2] : key2 in right ? right[key2] : Never();
 }
 function CompositeProperties(left, right) {
   const keys = /* @__PURE__ */ new Set([...guard_exports.Keys(right), ...guard_exports.Keys(left)]);
-  return [...keys].reduce((result2, key) => {
-    return { ...result2, [key]: CompositePropertyKey(left, right, key) };
+  return [...keys].reduce((result2, key2) => {
+    return { ...result2, [key2]: CompositePropertyKey(left, right, key2) };
   }, {});
 }
 function GetProperties(type) {
@@ -8115,15 +8119,15 @@ function FromIntersectKey(types, value) {
   const result2 = FromKey(evaluatedKey, value);
   return result2;
 }
-function FromLiteralKey(key, value) {
-  return guard_exports.IsString(key) || guard_exports.IsNumber(key) ? _Object_({ [key]: value }) : guard_exports.IsEqual(key, false) ? _Object_({ false: value }) : guard_exports.IsEqual(key, true) ? _Object_({ true: value }) : _Object_({});
+function FromLiteralKey(key2, value) {
+  return guard_exports.IsString(key2) || guard_exports.IsNumber(key2) ? _Object_({ [key2]: value }) : guard_exports.IsEqual(key2, false) ? _Object_({ false: value }) : guard_exports.IsEqual(key2, true) ? _Object_({ true: value }) : _Object_({});
 }
 function FromNumberKey(_key, value) {
   const result2 = CreateRecord(NumberKey, value);
   return result2;
 }
-function FromStringKey(key, value) {
-  return guard_exports.HasPropertyKey(key, "pattern") && (guard_exports.IsString(key.pattern) || key.pattern instanceof RegExp) ? CreateRecord(key.pattern.toString(), value) : CreateRecord(StringKey, value);
+function FromStringKey(key2, value) {
+  return guard_exports.HasPropertyKey(key2, "pattern") && (guard_exports.IsString(key2.pattern) || key2.pattern instanceof RegExp) ? CreateRecord(key2.pattern.toString(), value) : CreateRecord(StringKey, value);
 }
 function FromTemplateKey(pattern, value) {
   const types = ParsePatternIntoTypes(pattern);
@@ -8161,27 +8165,27 @@ function FromUnionKey(types, value) {
   const record3 = TryBuildRecord(flattened, value);
   return IsSchema(record3) ? record3 : CreateObject(flattened, value);
 }
-function FromKey(key, value) {
-  const result2 = IsAny(key) ? FromAnyKey(value) : IsBoolean3(key) ? FromBooleanKey(value) : IsEnum(key) ? FromEnumKey(key.enum, value) : IsInteger2(key) ? FromIntegerKey(key, value) : IsIntersect(key) ? FromIntersectKey(key.allOf, value) : IsLiteral(key) ? FromLiteralKey(key.const, value) : IsNumber3(key) ? FromNumberKey(key, value) : IsUnion(key) ? FromUnionKey(key.anyOf, value) : IsString3(key) ? FromStringKey(key, value) : IsTemplateLiteral(key) ? FromTemplateKey(key.pattern, value) : _Object_({});
+function FromKey(key2, value) {
+  const result2 = IsAny(key2) ? FromAnyKey(value) : IsBoolean3(key2) ? FromBooleanKey(value) : IsEnum(key2) ? FromEnumKey(key2.enum, value) : IsInteger2(key2) ? FromIntegerKey(key2, value) : IsIntersect(key2) ? FromIntersectKey(key2.allOf, value) : IsLiteral(key2) ? FromLiteralKey(key2.const, value) : IsNumber3(key2) ? FromNumberKey(key2, value) : IsUnion(key2) ? FromUnionKey(key2.anyOf, value) : IsString3(key2) ? FromStringKey(key2, value) : IsTemplateLiteral(key2) ? FromTemplateKey(key2.pattern, value) : _Object_({});
   return result2;
 }
-function RecordAction(key, value, options) {
-  const result2 = CanInstantiate([key]) ? memory_exports.Update(FromKey(key, value), {}, options) : RecordDeferred(key, value, options);
+function RecordAction(key2, value, options) {
+  const result2 = CanInstantiate([key2]) ? memory_exports.Update(FromKey(key2, value), {}, options) : RecordDeferred(key2, value, options);
   return result2;
 }
-function RecordInstantiate(context, state, key, value, options) {
-  const instantiatedKey = InstantiateType(context, state, key);
+function RecordInstantiate(context, state, key2, value, options) {
+  const instantiatedKey = InstantiateType(context, state, key2);
   const instantiatedValue = InstantiateType(context, state, value);
   return RecordAction(instantiatedKey, instantiatedValue, options);
 }
 var IntegerKey = `^${IntegerPattern}$`;
 var NumberKey = `^${NumberPattern}$`;
 var StringKey = `^${StringPattern}$`;
-function RecordDeferred(key, value, options = {}) {
-  return Deferred("Record", [key, value], options);
+function RecordDeferred(key2, value, options = {}) {
+  return Deferred("Record", [key2, value], options);
 }
-function Record(key, value, options = {}) {
-  return RecordAction(key, value, options);
+function Record(key2, value, options = {}) {
+  return RecordAction(key2, value, options);
 }
 function RecordFromPattern(pattern, value) {
   return CreateRecord(pattern, value);
@@ -8228,8 +8232,8 @@ function Void(options) {
 function IsVoid(value) {
   return IsKind(value, "Void");
 }
-function IntrinsicOrCall(ref, parameters) {
-  return guard_exports.IsEqual(ref, "Array") ? _Array_(parameters[0]) : guard_exports.IsEqual(ref, "Capitalize") ? CapitalizeDeferred(parameters[0]) : guard_exports.IsEqual(ref, "ConstructorParameters") ? ConstructorParametersDeferred(parameters[0]) : guard_exports.IsEqual(ref, "Evaluate") ? EvaluateDeferred(parameters[0]) : guard_exports.IsEqual(ref, "Exclude") ? ExcludeDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref, "Extract") ? ExtractDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref, "Index") ? IndexDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref, "InstanceType") ? InstanceTypeDeferred(parameters[0]) : guard_exports.IsEqual(ref, "Lowercase") ? LowercaseDeferred(parameters[0]) : guard_exports.IsEqual(ref, "NonNullable") ? NonNullableDeferred(parameters[0]) : guard_exports.IsEqual(ref, "Omit") ? OmitDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref, "Parameters") ? ParametersDeferred(parameters[0]) : guard_exports.IsEqual(ref, "Partial") ? PartialDeferred(parameters[0]) : guard_exports.IsEqual(ref, "Pick") ? PickDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref, "Readonly") ? ReadonlyObjectDeferred(parameters[0]) : guard_exports.IsEqual(ref, "KeyOf") ? KeyOfDeferred(parameters[0]) : guard_exports.IsEqual(ref, "Record") ? RecordDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref, "Required") ? RequiredDeferred(parameters[0]) : guard_exports.IsEqual(ref, "ReturnType") ? ReturnTypeDeferred(parameters[0]) : guard_exports.IsEqual(ref, "Uncapitalize") ? UncapitalizeDeferred(parameters[0]) : guard_exports.IsEqual(ref, "Uppercase") ? UppercaseDeferred(parameters[0]) : CallConstruct(Ref(ref), parameters);
+function IntrinsicOrCall(ref2, parameters) {
+  return guard_exports.IsEqual(ref2, "Array") ? _Array_(parameters[0]) : guard_exports.IsEqual(ref2, "Capitalize") ? CapitalizeDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "ConstructorParameters") ? ConstructorParametersDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "Evaluate") ? EvaluateDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "Exclude") ? ExcludeDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref2, "Extract") ? ExtractDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref2, "Index") ? IndexDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref2, "InstanceType") ? InstanceTypeDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "Lowercase") ? LowercaseDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "NonNullable") ? NonNullableDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "Omit") ? OmitDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref2, "Parameters") ? ParametersDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "Partial") ? PartialDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "Pick") ? PickDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref2, "Readonly") ? ReadonlyObjectDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "KeyOf") ? KeyOfDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "Record") ? RecordDeferred(parameters[0], parameters[1]) : guard_exports.IsEqual(ref2, "Required") ? RequiredDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "ReturnType") ? ReturnTypeDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "Uncapitalize") ? UncapitalizeDeferred(parameters[0]) : guard_exports.IsEqual(ref2, "Uppercase") ? UppercaseDeferred(parameters[0]) : CallConstruct(Ref(ref2), parameters);
 }
 function Unreachable2() {
   throw Error("Unreachable");
@@ -8445,9 +8449,9 @@ function OptionalMapping(input) {
   return input.length > 0;
 }
 function PropertyMapping(input) {
-  const [isReadonly, key, isOptional, _colon, type] = input;
+  const [isReadonly, key2, isOptional, _colon, type] = input;
   return {
-    [key]: isReadonly && isOptional ? AddReadonlyDeferred(AddOptionalDeferred(type)) : isReadonly && !isOptional ? AddReadonlyDeferred(type) : !isReadonly && isOptional ? AddOptionalDeferred(type) : type
+    [key2]: isReadonly && isOptional ? AddReadonlyDeferred(AddOptionalDeferred(type)) : isReadonly && !isOptional ? AddReadonlyDeferred(type) : !isReadonly && isOptional ? AddOptionalDeferred(type) : type
   };
 }
 function PropertyDelimiterMapping(input) {
@@ -9279,8 +9283,8 @@ function ExtendsProperty(inferred, left, right) {
   );
 }
 function ExtractInferredProperties(keys, properties) {
-  return keys.reduce((result2, key) => {
-    return key in properties ? IsExtendsTrueLike(properties[key]) ? { ...result2, ...properties[key].inferred } : Unreachable() : Unreachable();
+  return keys.reduce((result2, key2) => {
+    return key2 in properties ? IsExtendsTrueLike(properties[key2]) ? { ...result2, ...properties[key2].inferred } : Unreachable() : Unreachable();
   }, {});
 }
 function ExtendsPropertiesComparer(inferred, left, right) {
@@ -9300,10 +9304,10 @@ function ExtendsObjectToObject(inferred, left, right) {
   return ExtendsProperties(inferred, left, right);
 }
 function RecordMergeInferred(left, right) {
-  return guard_exports.Keys(right).reduce((result2, key) => {
+  return guard_exports.Keys(right).reduce((result2, key2) => {
     return {
       ...result2,
-      [key]: guard_exports.HasPropertyKey(left, key) ? IsUnion(result2[key]) ? Union([...result2[key].anyOf, right[key]]) : Union([left[key], right[key]]) : right[key]
+      [key2]: guard_exports.HasPropertyKey(left, key2) ? IsUnion(result2[key2]) ? Union([...result2[key2].anyOf, right[key2]]) : Union([left[key2], right[key2]]) : right[key2]
     };
   }, left);
 }
@@ -9444,8 +9448,8 @@ function IsInterfaceDeferred(value) {
 function Interface(heritage, properties, options = {}) {
   return InterfaceAction(heritage, properties, options);
 }
-function FromRef(stack, context, ref) {
-  return stack.includes(ref) ? true : FromType3([...stack, ref], context, context[ref]);
+function FromRef(stack, context, ref2) {
+  return stack.includes(ref2) ? true : FromType3([...stack, ref2], context, context[ref2]);
 }
 function FromProperties(stack, context, properties) {
   const types = PropertyValues(properties);
@@ -9471,8 +9475,8 @@ function CyclicCandidates(context) {
   const result2 = ResolveCandidateKeys(context, keys);
   return result2;
 }
-function FromRef2(context, ref, result2) {
-  return result2.includes(ref) ? result2 : ref in context ? FromType4(context, context[ref], [...result2, ref]) : Unreachable();
+function FromRef2(context, ref2, result2) {
+  return result2.includes(ref2) ? result2 : ref2 in context ? FromType4(context, context[ref2], [...result2, ref2]) : Unreachable();
 }
 function FromProperties2(context, properties, result2) {
   const types = PropertyValues(properties);
@@ -9486,16 +9490,16 @@ function FromTypes3(context, types, result2) {
 function FromType4(context, type, result2) {
   return IsRef(type) ? FromRef2(context, type.$ref, result2) : IsArray2(type) ? FromType4(context, type.items, result2) : IsConstructor2(type) ? FromTypes3(context, [...type.parameters, type.instanceType], result2) : IsFunction2(type) ? FromTypes3(context, [...type.parameters, type.returnType], result2) : IsInterfaceDeferred(type) ? FromProperties2(context, type.parameters[1], result2) : IsIntersect(type) ? FromTypes3(context, type.allOf, result2) : IsObject2(type) ? FromProperties2(context, type.properties, result2) : IsUnion(type) ? FromTypes3(context, type.anyOf, result2) : IsTuple(type) ? FromTypes3(context, type.items, result2) : IsRecord(type) ? FromType4(context, RecordValue(type), result2) : result2;
 }
-function CyclicDependencies(context, key, type) {
-  const result2 = FromType4(context, type, [key]);
+function CyclicDependencies(context, key2, type) {
+  const result2 = FromType4(context, type, [key2]);
   return result2;
 }
 function FromRef3(_ref) {
   return Any();
 }
 function FromProperties3(properties) {
-  return guard_exports.Keys(properties).reduce((result2, key) => {
-    return { ...result2, [key]: FromType5(properties[key]) };
+  return guard_exports.Keys(properties).reduce((result2, key2) => {
+    return { ...result2, [key2]: FromType5(properties[key2]) };
   }, {});
 }
 function FromTypes4(types) {
@@ -9506,8 +9510,8 @@ function FromTypes4(types) {
 function FromType5(type) {
   return IsRef(type) ? FromRef3(type.$ref) : IsArray2(type) ? _Array_(FromType5(type.items), ArrayOptions(type)) : IsConstructor2(type) ? Constructor(FromTypes4(type.parameters), FromType5(type.instanceType)) : IsFunction2(type) ? _Function_(FromTypes4(type.parameters), FromType5(type.returnType)) : IsIntersect(type) ? Intersect(FromTypes4(type.allOf)) : IsObject2(type) ? _Object_(FromProperties3(type.properties)) : IsRecord(type) ? Record(RecordKey(type), FromType5(RecordValue(type))) : IsUnion(type) ? Union(FromTypes4(type.anyOf)) : IsTuple(type) ? Tuple(FromTypes4(type.items)) : type;
 }
-function CyclicAnyFromParameters(defs, ref) {
-  return ref in defs ? FromType5(defs[ref]) : Unknown();
+function CyclicAnyFromParameters(defs, ref2) {
+  return ref2 in defs ? FromType5(defs[ref2]) : Unknown();
 }
 function CyclicExtends(type) {
   return CyclicAnyFromParameters(type.$defs, type.$ref);
@@ -9519,24 +9523,24 @@ function CyclicInterface(context, heritage, properties) {
   return evaluatedInterface;
 }
 function CyclicDefinitions(context, dependencies) {
-  const keys = guard_exports.Keys(context).filter((key) => dependencies.includes(key));
-  return keys.reduce((result2, key) => {
-    const type = context[key];
+  const keys = guard_exports.Keys(context).filter((key2) => dependencies.includes(key2));
+  return keys.reduce((result2, key2) => {
+    const type = context[key2];
     const instantiatedType = IsInterfaceDeferred(type) ? CyclicInterface(context, type.parameters[0], type.parameters[1]) : type;
-    return { ...result2, [key]: instantiatedType };
+    return { ...result2, [key2]: instantiatedType };
   }, {});
 }
-function InstantiateCyclic(context, ref, type) {
-  const dependencies = CyclicDependencies(context, ref, type);
+function InstantiateCyclic(context, ref2, type) {
+  const dependencies = CyclicDependencies(context, ref2, type);
   const definitions = CyclicDefinitions(context, dependencies);
-  const result2 = Cyclic(definitions, ref);
+  const result2 = Cyclic(definitions, ref2);
   return result2;
 }
-function Resolve(defs, ref) {
-  return ref in defs ? IsRef(defs[ref]) ? Resolve(defs, defs[ref].$ref) : defs[ref] : Never();
+function Resolve(defs, ref2) {
+  return ref2 in defs ? IsRef(defs[ref2]) ? Resolve(defs, defs[ref2].$ref) : defs[ref2] : Never();
 }
-function CyclicTarget(defs, ref) {
-  const result2 = Resolve(defs, ref);
+function CyclicTarget(defs, ref2) {
+  const result2 = Resolve(defs, ref2);
   return result2;
 }
 function Canonical(type) {
@@ -9641,8 +9645,8 @@ function FromNotGeneric() {
 function FromGeneric(name, parameters, expression) {
   return [name, Generic(parameters, expression)];
 }
-function FromRef4(context, ref, arguments_) {
-  return ref in context ? FromType6(context, ref, context[ref], arguments_) : FromNotResolvable();
+function FromRef4(context, ref2, arguments_) {
+  return ref2 in context ? FromType6(context, ref2, context[ref2], arguments_) : FromNotResolvable();
 }
 function FromType6(context, name, target, arguments_) {
   return IsGeneric(target) ? FromGeneric(name, target.parameters, target.expression) : IsRef(target) ? FromRef4(context, target.$ref, arguments_) : FromNotGeneric();
@@ -9903,8 +9907,8 @@ function Index(type, indexer_or_keys, options = {}) {
   const indexer = guard_exports.IsArray(indexer_or_keys) ? KeysToIndexer(indexer_or_keys) : indexer_or_keys;
   return IndexAction(type, indexer, options);
 }
-function FromCyclic(defs, ref) {
-  const target = CyclicTarget(defs, ref);
+function FromCyclic(defs, ref2) {
+  const target = CyclicTarget(defs, ref2);
   const result2 = FromType8(target);
   return result2;
 }
@@ -9914,12 +9918,12 @@ function FromDependent(if_, then_, else_) {
   return result2;
 }
 function CollapseIntersectProperties(left, right) {
-  const leftKeys = guard_exports.Keys(left).filter((key) => !guard_exports.HasPropertyKey(right, key));
-  const rightKeys = guard_exports.Keys(right).filter((key) => !guard_exports.HasPropertyKey(left, key));
-  const sharedKeys = guard_exports.Keys(left).filter((key) => guard_exports.HasPropertyKey(right, key));
-  const leftProperties = leftKeys.reduce((result2, key) => ({ ...result2, [key]: left[key] }), {});
-  const rightProperties = rightKeys.reduce((result2, key) => ({ ...result2, [key]: right[key] }), {});
-  const sharedProperties = sharedKeys.reduce((result2, key) => ({ ...result2, [key]: EvaluateIntersect([left[key], right[key]]) }), {});
+  const leftKeys = guard_exports.Keys(left).filter((key2) => !guard_exports.HasPropertyKey(right, key2));
+  const rightKeys = guard_exports.Keys(right).filter((key2) => !guard_exports.HasPropertyKey(left, key2));
+  const sharedKeys = guard_exports.Keys(left).filter((key2) => guard_exports.HasPropertyKey(right, key2));
+  const leftProperties = leftKeys.reduce((result2, key2) => ({ ...result2, [key2]: left[key2] }), {});
+  const rightProperties = rightKeys.reduce((result2, key2) => ({ ...result2, [key2]: right[key2] }), {});
+  const sharedProperties = sharedKeys.reduce((result2, key2) => ({ ...result2, [key2]: EvaluateIntersect([left[key2], right[key2]]) }), {});
   const unique = memory_exports.Assign(leftProperties, rightProperties);
   const shared = memory_exports.Assign(unique, sharedProperties);
   return shared;
@@ -9938,9 +9942,9 @@ function FromTuple(types) {
   return result2;
 }
 function CollapseUnionProperties(left, right) {
-  const sharedKeys = guard_exports.Keys(left).filter((key) => key in right);
-  const result2 = sharedKeys.reduce((result3, key) => {
-    return { ...result3, [key]: EvaluateUnion([left[key], right[key]]) };
+  const sharedKeys = guard_exports.Keys(left).filter((key2) => key2 in right);
+  const result2 = sharedKeys.reduce((result3, key2) => {
+    return { ...result3, [key2]: EvaluateUnion([left[key2], right[key2]]) };
   }, {});
   return result2;
 }
@@ -9981,8 +9985,8 @@ function FromArray3(type, indexer) {
   );
   return result2;
 }
-function FromCyclic2(defs, ref) {
-  const target = CyclicTarget(defs, ref);
+function FromCyclic2(defs, ref2) {
+  const target = CyclicTarget(defs, ref2);
   const result2 = FromType9(target);
   return result2;
 }
@@ -10032,8 +10036,8 @@ function ExpandThis(properties, type) {
   const result2 = FromType10(properties, type);
   return result2;
 }
-function IndexProperty(properties, key) {
-  const selectedType = key in properties ? properties[key] : Never();
+function IndexProperty(properties, key2) {
+  const selectedType = key2 in properties ? properties[key2] : Never();
   const result2 = ExpandThis(properties, selectedType);
   return result2;
 }
@@ -10050,7 +10054,7 @@ function FromIndexer(properties, indexer) {
 }
 var NumericKeyPattern = new RegExp(IntegerKey);
 function NumericKeys(keys) {
-  const result2 = keys.filter((key) => NumericKeyPattern.test(key));
+  const result2 = keys.filter((key2) => NumericKeyPattern.test(key2));
   return result2;
 }
 function FromIndexerNumber(properties) {
@@ -10242,16 +10246,16 @@ function MappedInstantiate(context, state, identifier, type, as, property, optio
 }
 function InstantiateCyclics(context, declarations, cyclicKeys) {
   const declarationContext = memory_exports.Assign(context, declarations);
-  const declarationKeys = guard_exports.Keys(declarations).filter((key) => cyclicKeys.includes(key));
-  return declarationKeys.reduce((result2, key) => {
-    return { ...result2, [key]: InstantiateCyclic(declarationContext, key, declarations[key]) };
+  const declarationKeys = guard_exports.Keys(declarations).filter((key2) => cyclicKeys.includes(key2));
+  return declarationKeys.reduce((result2, key2) => {
+    return { ...result2, [key2]: InstantiateCyclic(declarationContext, key2, declarations[key2]) };
   }, {});
 }
 function InstantiateNonCyclics(context, declarations, cyclicKeys) {
   const declarationContext = memory_exports.Assign(context, declarations);
-  const declarationKeys = guard_exports.Keys(declarations).filter((key) => !cyclicKeys.includes(key));
-  return declarationKeys.reduce((result2, key) => {
-    return { ...result2, [key]: InstantiateType(declarationContext, State([], []), declarations[key]) };
+  const declarationKeys = guard_exports.Keys(declarations).filter((key2) => !cyclicKeys.includes(key2));
+  return declarationKeys.reduce((result2, key2) => {
+    return { ...result2, [key2]: InstantiateType(declarationContext, State([], []), declarations[key2]) };
   }, {});
 }
 function InstantiateModule(context, declarations, options) {
@@ -10296,8 +10300,8 @@ function ToIndexable(type) {
   return result2;
 }
 function FromKeys(properties, keys) {
-  const result2 = guard_exports.Keys(properties).reduce((result3, key) => {
-    return keys.includes(key) ? result3 : { ...result3, [key]: properties[key] };
+  const result2 = guard_exports.Keys(properties).reduce((result3, key2) => {
+    return keys.includes(key2) ? result3 : { ...result3, [key2]: properties[key2] };
   }, {});
   return result2;
 }
@@ -10343,10 +10347,10 @@ function PartialDeferred(type, options = {}) {
 function Partial(type, options = {}) {
   return PartialAction(type, options);
 }
-function FromCyclic3(defs, ref) {
-  const target = CyclicTarget(defs, ref);
+function FromCyclic3(defs, ref2) {
+  const target = CyclicTarget(defs, ref2);
   const partial = FromType15(target);
-  const result2 = Cyclic(memory_exports.Assign(defs, { [ref]: partial }), ref);
+  const result2 = Cyclic(memory_exports.Assign(defs, { [ref2]: partial }), ref2);
   return result2;
 }
 function FromDependent3(if_, then_, else_) {
@@ -10389,8 +10393,8 @@ function Pick(type, indexer_or_keys, options = {}) {
   return PickAction(type, indexer, options);
 }
 function FromKeys2(properties, keys) {
-  const result2 = guard_exports.Keys(properties).reduce((result3, key) => {
-    return keys.includes(key) ? memory_exports.Assign(result3, { [key]: properties[key] }) : result3;
+  const result2 = guard_exports.Keys(properties).reduce((result3, key2) => {
+    return keys.includes(key2) ? memory_exports.Assign(result3, { [key2]: properties[key2] }) : result3;
   }, {});
   return result2;
 }
@@ -10421,10 +10425,10 @@ function FromArray5(type) {
   const result2 = AddImmutable(_Array_(type));
   return result2;
 }
-function FromCyclic4(defs, ref) {
-  const target = CyclicTarget(defs, ref);
+function FromCyclic4(defs, ref2) {
+  const target = CyclicTarget(defs, ref2);
   const partial = FromType17(target);
-  const result2 = Cyclic(memory_exports.Assign(defs, { [ref]: partial }), ref);
+  const result2 = Cyclic(memory_exports.Assign(defs, { [ref2]: partial }), ref2);
   return result2;
 }
 function FromDependent4(if_, then_, else_) {
@@ -10463,13 +10467,13 @@ function ReadonlyObjectInstantiate(context, state, type, options) {
   const instantiatedType = InstantiateType(context, state, type);
   return ReadonlyObjectAction(instantiatedType, options);
 }
-function RefInstantiate(context, state, type, ref) {
-  return state.visited.includes(ref) ? type : ref in context ? InstantiateType(context, State(state["callstack"], [...state["visited"], ref]), context[ref]) : type;
+function RefInstantiate(context, state, type, ref2) {
+  return state.visited.includes(ref2) ? type : ref2 in context ? InstantiateType(context, State(state["callstack"], [...state["visited"], ref2]), context[ref2]) : type;
 }
-function FromCyclic5(defs, ref) {
-  const target = CyclicTarget(defs, ref);
+function FromCyclic5(defs, ref2) {
+  const target = CyclicTarget(defs, ref2);
   const partial = FromType18(target);
-  const result2 = Cyclic(memory_exports.Assign(defs, { [ref]: partial }), ref);
+  const result2 = Cyclic(memory_exports.Assign(defs, { [ref2]: partial }), ref2);
   return result2;
 }
 function FromDependent5(if_, then_, else_) {
@@ -10558,8 +10562,8 @@ function CanInstantiate(types) {
   return guard_exports.ShiftLeft(types, (left, right) => IsRef(left) ? false : CanInstantiate(right), () => true);
 }
 function InstantiateProperties(context, state, properties) {
-  return guard_exports.Keys(properties).reduce((result2, key) => {
-    return { ...result2, [key]: InstantiateType(context, state, properties[key]) };
+  return guard_exports.Keys(properties).reduce((result2, key2) => {
+    return { ...result2, [key2]: InstantiateType(context, state, properties[key2]) };
   }, {});
 }
 function InstantiateElements(context, state, types) {
@@ -10961,8 +10965,8 @@ var CheckContext = class {
     this.GetIndices().add(index);
     return true;
   }
-  AddKey(key) {
-    this.GetKeys().add(key);
+  AddKey(key2) {
+    this.GetKeys().add(key2);
     return true;
   }
   GetIndices() {
@@ -11038,8 +11042,8 @@ function ErrorAdditionalItems(stack, context, schemaPath, instancePath, schema, 
   });
   return isAdditionalItems;
 }
-function GetPropertyKeyAsPattern(key) {
-  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function GetPropertyKeyAsPattern(key2) {
+  const escaped = key2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return `^${escaped}$`;
 }
 function GetPropertiesPattern(schema) {
@@ -11052,21 +11056,21 @@ function GetPropertiesPattern(schema) {
 }
 function CheckAdditionalProperties(stack, context, schema, value) {
   const regexp = new RegExp(GetPropertiesPattern(schema));
-  const isAdditionalProperties = guard_exports.Every(guard_exports.Keys(value), 0, (key, _index) => {
-    return regexp.test(key) || CheckSchemaPushStack(stack, context, schema.additionalProperties, value[key]) && context.AddKey(key);
+  const isAdditionalProperties = guard_exports.Every(guard_exports.Keys(value), 0, (key2, _index) => {
+    return regexp.test(key2) || CheckSchemaPushStack(stack, context, schema.additionalProperties, value[key2]) && context.AddKey(key2);
   });
   return isAdditionalProperties;
 }
 function ErrorAdditionalProperties(stack, context, schemaPath, instancePath, schema, value) {
   const regexp = new RegExp(GetPropertiesPattern(schema));
   const additionalProperties = [];
-  const isAdditionalProperties = guard_exports.EveryAll(guard_exports.Keys(value), 0, (key, _index) => {
+  const isAdditionalProperties = guard_exports.EveryAll(guard_exports.Keys(value), 0, (key2, _index) => {
     const nextSchemaPath = `${schemaPath}/additionalProperties`;
-    const nextInstancePath = `${instancePath}/${key}`;
+    const nextInstancePath = `${instancePath}/${key2}`;
     const nextContext = new AccumulatedErrorContext();
-    const isAdditionalProperty = regexp.test(key) || ErrorSchemaPushStack(stack, nextContext, nextSchemaPath, nextInstancePath, schema.additionalProperties, value[key]) && context.AddKey(key);
+    const isAdditionalProperty = regexp.test(key2) || ErrorSchemaPushStack(stack, nextContext, nextSchemaPath, nextInstancePath, schema.additionalProperties, value[key2]) && context.AddKey(key2);
     if (!isAdditionalProperty)
-      additionalProperties.push(key);
+      additionalProperties.push(key2);
     return isAdditionalProperty;
   });
   return isAdditionalProperties || context.AddError({
@@ -11165,55 +11169,55 @@ function ErrorContains(stack, context, schemaPath, instancePath, schema, value) 
 }
 function CheckDependencies(stack, context, schema, value) {
   const isLength = guard_exports.IsEqual(guard_exports.Keys(value).length, 0);
-  const isEvery = guard_exports.Every(guard_exports.Entries(schema.dependencies), 0, ([key, schema2]) => {
-    return !guard_exports.HasPropertyKey(value, key) || (guard_exports.IsArray(schema2) ? schema2.every((key2) => guard_exports.HasPropertyKey(value, key2)) : CheckSchema(stack, context, schema2, value));
+  const isEvery = guard_exports.Every(guard_exports.Entries(schema.dependencies), 0, ([key2, schema2]) => {
+    return !guard_exports.HasPropertyKey(value, key2) || (guard_exports.IsArray(schema2) ? schema2.every((key3) => guard_exports.HasPropertyKey(value, key3)) : CheckSchema(stack, context, schema2, value));
   });
   return isLength || isEvery;
 }
 function ErrorDependencies(stack, context, schemaPath, instancePath, schema, value) {
   const isLength = guard_exports.IsEqual(guard_exports.Keys(value).length, 0);
-  const isEvery = guard_exports.EveryAll(guard_exports.Entries(schema.dependencies), 0, ([key, schema2]) => {
-    const nextSchemaPath = `${schemaPath}/dependencies/${key}`;
-    return !guard_exports.HasPropertyKey(value, key) || (guard_exports.IsArray(schema2) ? schema2.every((dependency) => guard_exports.HasPropertyKey(value, dependency) || context.AddError({
+  const isEvery = guard_exports.EveryAll(guard_exports.Entries(schema.dependencies), 0, ([key2, schema2]) => {
+    const nextSchemaPath = `${schemaPath}/dependencies/${key2}`;
+    return !guard_exports.HasPropertyKey(value, key2) || (guard_exports.IsArray(schema2) ? schema2.every((dependency) => guard_exports.HasPropertyKey(value, dependency) || context.AddError({
       keyword: "dependencies",
       schemaPath,
       instancePath,
-      params: { property: key, dependencies: schema2 }
+      params: { property: key2, dependencies: schema2 }
     })) : ErrorSchema(stack, context, nextSchemaPath, instancePath, schema2, value));
   });
   return isLength || isEvery;
 }
 function CheckDependentRequired(_stack, _context, schema, value) {
   const isLength = guard_exports.IsEqual(guard_exports.Keys(value).length, 0);
-  const isEvery = guard_exports.Every(guard_exports.Entries(schema.dependentRequired), 0, ([key, keys]) => {
-    return !guard_exports.HasPropertyKey(value, key) || keys.every((key2) => guard_exports.HasPropertyKey(value, key2));
+  const isEvery = guard_exports.Every(guard_exports.Entries(schema.dependentRequired), 0, ([key2, keys]) => {
+    return !guard_exports.HasPropertyKey(value, key2) || keys.every((key3) => guard_exports.HasPropertyKey(value, key3));
   });
   return isLength || isEvery;
 }
 function ErrorDependentRequired(_stack, context, schemaPath, instancePath, schema, value) {
   const isLength = guard_exports.IsEqual(guard_exports.Keys(value).length, 0);
-  const isEveryEntry = guard_exports.EveryAll(guard_exports.Entries(schema.dependentRequired), 0, ([key, keys]) => {
-    return !guard_exports.HasPropertyKey(value, key) || guard_exports.EveryAll(keys, 0, (dependency) => guard_exports.HasPropertyKey(value, dependency) || context.AddError({
+  const isEveryEntry = guard_exports.EveryAll(guard_exports.Entries(schema.dependentRequired), 0, ([key2, keys]) => {
+    return !guard_exports.HasPropertyKey(value, key2) || guard_exports.EveryAll(keys, 0, (dependency) => guard_exports.HasPropertyKey(value, dependency) || context.AddError({
       keyword: "dependentRequired",
       schemaPath,
       instancePath,
-      params: { property: key, dependencies: keys }
+      params: { property: key2, dependencies: keys }
     }));
   });
   return isLength || isEveryEntry;
 }
 function CheckDependentSchemas(stack, context, schema, value) {
   const isLength = guard_exports.IsEqual(guard_exports.Keys(value).length, 0);
-  const isEvery = guard_exports.Every(guard_exports.Entries(schema.dependentSchemas), 0, ([key, schema2]) => {
-    return !guard_exports.HasPropertyKey(value, key) || CheckSchema(stack, context, schema2, value);
+  const isEvery = guard_exports.Every(guard_exports.Entries(schema.dependentSchemas), 0, ([key2, schema2]) => {
+    return !guard_exports.HasPropertyKey(value, key2) || CheckSchema(stack, context, schema2, value);
   });
   return isLength || isEvery;
 }
 function ErrorDependentSchemas(stack, context, schemaPath, instancePath, schema, value) {
   const isLength = guard_exports.IsEqual(guard_exports.Keys(value).length, 0);
-  const isEvery = guard_exports.EveryAll(guard_exports.Entries(schema.dependentSchemas), 0, ([key, schema2]) => {
-    const nextSchemaPath = `${schemaPath}/dependentSchemas/${key}`;
-    return !guard_exports.HasPropertyKey(value, key) || ErrorSchema(stack, context, nextSchemaPath, instancePath, schema2, value);
+  const isEvery = guard_exports.EveryAll(guard_exports.Entries(schema.dependentSchemas), 0, ([key2, schema2]) => {
+    const nextSchemaPath = `${schemaPath}/dependentSchemas/${key2}`;
+    return !guard_exports.HasPropertyKey(value, key2) || ErrorSchema(stack, context, nextSchemaPath, instancePath, schema2, value);
   });
   return isLength || isEvery;
 }
@@ -12209,8 +12213,8 @@ function ErrorPattern(stack, context, schemaPath, instancePath, schema, value) {
 function CheckPatternProperties(stack, context, schema, value) {
   return guard_exports.Every(guard_exports.Entries(schema.patternProperties), 0, ([pattern, schema2]) => {
     const regexp = new RegExp(pattern, "u");
-    return guard_exports.Every(guard_exports.Entries(value), 0, ([key, prop]) => {
-      return !regexp.test(key) || CheckSchemaPushStack(stack, context, schema2, prop) && context.AddKey(key);
+    return guard_exports.Every(guard_exports.Entries(value), 0, ([key2, prop]) => {
+      return !regexp.test(key2) || CheckSchemaPushStack(stack, context, schema2, prop) && context.AddKey(key2);
     });
   });
 }
@@ -12218,10 +12222,10 @@ function ErrorPatternProperties(stack, context, schemaPath, instancePath, schema
   return guard_exports.EveryAll(guard_exports.Entries(schema.patternProperties), 0, ([pattern, schema2]) => {
     const nextSchemaPath = `${schemaPath}/patternProperties/${pattern}`;
     const regexp = new RegExp(pattern, "u");
-    return guard_exports.EveryAll(guard_exports.Entries(value), 0, ([key, value2]) => {
-      const nextInstancePath = `${instancePath}/${key}`;
-      const notKey = !regexp.test(key);
-      return notKey || ErrorSchemaPushStack(stack, context, nextSchemaPath, nextInstancePath, schema2, value2) && context.AddKey(key);
+    return guard_exports.EveryAll(guard_exports.Entries(value), 0, ([key2, value2]) => {
+      const nextInstancePath = `${instancePath}/${key2}`;
+      const notKey = !regexp.test(key2);
+      return notKey || ErrorSchemaPushStack(stack, context, nextSchemaPath, nextInstancePath, schema2, value2) && context.AddKey(key2);
     });
   });
 }
@@ -12237,42 +12241,42 @@ function ErrorPrefixItems(stack, context, schemaPath, instancePath, schema, valu
     return guard_exports.IsLessEqualThan(value.length, index) || ErrorSchemaPushStack(stack, context, nextSchemaPath, nextInstancePath, schema2, value[index]) && context.AddIndex(index);
   });
 }
-function IsExactOptional(required, key) {
-  return required.includes(key) || settings_exports.Get().exactOptionalPropertyTypes;
+function IsExactOptional(required, key2) {
+  return required.includes(key2) || settings_exports.Get().exactOptionalPropertyTypes;
 }
-function InexactOptionalCheck(value, key) {
-  return guard_exports.IsUndefined(value[key]);
+function InexactOptionalCheck(value, key2) {
+  return guard_exports.IsUndefined(value[key2]);
 }
 function CheckProperties(stack, context, schema, value) {
   const required = IsRequired(schema) ? schema.required : [];
-  const isProperties = guard_exports.Every(guard_exports.Entries(schema.properties), 0, ([key, schema2]) => {
-    const isProperty = !guard_exports.HasPropertyKey(value, key) || CheckSchemaPushStack(stack, context, schema2, value[key]) && context.AddKey(key);
-    return IsExactOptional(required, key) ? isProperty : InexactOptionalCheck(value, key) || isProperty;
+  const isProperties = guard_exports.Every(guard_exports.Entries(schema.properties), 0, ([key2, schema2]) => {
+    const isProperty = !guard_exports.HasPropertyKey(value, key2) || CheckSchemaPushStack(stack, context, schema2, value[key2]) && context.AddKey(key2);
+    return IsExactOptional(required, key2) ? isProperty : InexactOptionalCheck(value, key2) || isProperty;
   });
   return isProperties;
 }
 function ErrorProperties(stack, context, schemaPath, instancePath, schema, value) {
   const required = IsRequired(schema) ? schema.required : [];
-  const isProperties = guard_exports.EveryAll(guard_exports.Entries(schema.properties), 0, ([key, schema2]) => {
-    const nextSchemaPath = `${schemaPath}/properties/${key}`;
-    const nextInstancePath = `${instancePath}/${key}`;
-    const isProperty = () => !guard_exports.HasPropertyKey(value, key) || ErrorSchemaPushStack(stack, context, nextSchemaPath, nextInstancePath, schema2, value[key]) && context.AddKey(key);
-    return IsExactOptional(required, key) ? isProperty() : InexactOptionalCheck(value, key) || isProperty();
+  const isProperties = guard_exports.EveryAll(guard_exports.Entries(schema.properties), 0, ([key2, schema2]) => {
+    const nextSchemaPath = `${schemaPath}/properties/${key2}`;
+    const nextInstancePath = `${instancePath}/${key2}`;
+    const isProperty = () => !guard_exports.HasPropertyKey(value, key2) || ErrorSchemaPushStack(stack, context, nextSchemaPath, nextInstancePath, schema2, value[key2]) && context.AddKey(key2);
+    return IsExactOptional(required, key2) ? isProperty() : InexactOptionalCheck(value, key2) || isProperty();
   });
   return isProperties;
 }
 function CheckPropertyNames(stack, context, schema, value) {
-  return guard_exports.Every(guard_exports.Keys(value), 0, (key, _index) => CheckSchema(stack, context, schema.propertyNames, key));
+  return guard_exports.Every(guard_exports.Keys(value), 0, (key2, _index) => CheckSchema(stack, context, schema.propertyNames, key2));
 }
 function ErrorPropertyNames(stack, context, schemaPath, instancePath, schema, value) {
   const propertyNames = [];
-  const isPropertyNames = guard_exports.EveryAll(guard_exports.Keys(value), 0, (key, _index) => {
-    const nextInstancePath = `${instancePath}/${key}`;
+  const isPropertyNames = guard_exports.EveryAll(guard_exports.Keys(value), 0, (key2, _index) => {
+    const nextInstancePath = `${instancePath}/${key2}`;
     const nextSchemaPath = `${schemaPath}/propertyNames`;
     const nextContext = new AccumulatedErrorContext();
-    const isPropertyName = ErrorSchema(stack, nextContext, nextSchemaPath, nextInstancePath, schema.propertyNames, key);
+    const isPropertyName = ErrorSchema(stack, nextContext, nextSchemaPath, nextInstancePath, schema.propertyNames, key2);
     if (!isPropertyName)
-      propertyNames.push(key);
+      propertyNames.push(key2);
     return isPropertyName;
   });
   return isPropertyNames || context.AddError({
@@ -12309,14 +12313,14 @@ function ErrorRef(stack, context, _schemaPath, instancePath, schema, value) {
   return result2;
 }
 function CheckRequired(_stack, _context, schema, value) {
-  return guard_exports.Every(schema.required, 0, (key) => guard_exports.HasPropertyKey(value, key));
+  return guard_exports.Every(schema.required, 0, (key2) => guard_exports.HasPropertyKey(value, key2));
 }
 function ErrorRequired(_stack, context, schemaPath, instancePath, schema, value) {
   const requiredProperties = [];
-  const isRequired = guard_exports.EveryAll(schema.required, 0, (key) => {
-    const hasKey2 = guard_exports.HasPropertyKey(value, key);
+  const isRequired = guard_exports.EveryAll(schema.required, 0, (key2) => {
+    const hasKey2 = guard_exports.HasPropertyKey(value, key2);
     if (!hasKey2)
-      requiredProperties.push(key);
+      requiredProperties.push(key2);
     return hasKey2;
   });
   return isRequired || context.AddError({
@@ -12375,18 +12379,18 @@ function ErrorUnevaluatedItems(stack, context, schemaPath, instancePath, schema,
 }
 function CheckUnevaluatedProperties(stack, context, schema, value) {
   const keys = context.GetKeys();
-  return guard_exports.Every(guard_exports.Entries(value), 0, ([key, prop]) => {
-    return keys.has(key) || CheckSchema(stack, context, schema.unevaluatedProperties, prop) && context.AddKey(key);
+  return guard_exports.Every(guard_exports.Entries(value), 0, ([key2, prop]) => {
+    return keys.has(key2) || CheckSchema(stack, context, schema.unevaluatedProperties, prop) && context.AddKey(key2);
   });
 }
 function ErrorUnevaluatedProperties(stack, context, schemaPath, instancePath, schema, value) {
   const keys = context.GetKeys();
   const unevaluatedProperties = [];
-  const isUnevaluatedProperties = guard_exports.EveryAll(guard_exports.Entries(value), 0, ([key, prop]) => {
+  const isUnevaluatedProperties = guard_exports.EveryAll(guard_exports.Entries(value), 0, ([key2, prop]) => {
     const nextContext = new AccumulatedErrorContext();
-    const isEvaluatedProperty = keys.has(key) || ErrorSchema(stack, nextContext, schemaPath, instancePath, schema.unevaluatedProperties, prop) && context.AddKey(key);
+    const isEvaluatedProperty = keys.has(key2) || ErrorSchema(stack, nextContext, schemaPath, instancePath, schema.unevaluatedProperties, prop) && context.AddKey(key2);
     if (!isEvaluatedProperty)
-      unevaluatedProperties.push(key);
+      unevaluatedProperties.push(key2);
     return isEvaluatedProperty;
   });
   return isUnevaluatedProperties || context.AddError({
@@ -12533,83 +12537,83 @@ function Delete(value, pointer) {
   }
   return value;
 }
-function MatchId(schema, base2, ref) {
-  if (schema.$id === ref.hash)
+function MatchId(schema, base2, ref2) {
+  if (schema.$id === ref2.hash)
     return schema;
   const absoluteId = new URL(schema.$id, base2.href);
-  const absoluteRef = new URL(ref.href, base2.href);
+  const absoluteRef = new URL(ref2.href, base2.href);
   if (guard_exports.IsEqual(absoluteId.pathname, absoluteRef.pathname)) {
-    return ref.hash.startsWith("#") ? MatchHash(schema, base2, ref) : schema;
+    return ref2.hash.startsWith("#") ? MatchHash(schema, base2, ref2) : schema;
   }
   return void 0;
 }
-function MatchAnchor(schema, base2, ref) {
+function MatchAnchor(schema, base2, ref2) {
   const absoluteAnchor = new URL(`#${schema.$anchor}`, base2.href);
-  const absoluteRef = new URL(ref.href, base2.href);
+  const absoluteRef = new URL(ref2.href, base2.href);
   return guard_exports.IsEqual(absoluteAnchor.href, absoluteRef.href) ? schema : void 0;
 }
-function MatchDynamicAnchor(schema, base2, ref) {
+function MatchDynamicAnchor(schema, base2, ref2) {
   const absoluteAnchor = new URL(`#${schema.$dynamicAnchor}`, base2.href);
-  const absoluteRef = new URL(ref.href, base2.href);
+  const absoluteRef = new URL(ref2.href, base2.href);
   return guard_exports.IsEqual(absoluteAnchor.href, absoluteRef.href) ? schema : void 0;
 }
-function MatchHash(schema, _base, ref) {
-  if (ref.href.endsWith("#"))
+function MatchHash(schema, _base, ref2) {
+  if (ref2.href.endsWith("#"))
     return schema;
-  if (!ref.hash.startsWith("#"))
+  if (!ref2.hash.startsWith("#"))
     return void 0;
-  const fragment = decodeURIComponent(ref.hash.slice(1));
+  const fragment = decodeURIComponent(ref2.hash.slice(1));
   if (!fragment.startsWith("/"))
     return void 0;
   return pointer_exports.Get(schema, fragment);
 }
-function Match4(schema, base2, ref) {
+function Match4(schema, base2, ref2) {
   if (IsId(schema)) {
-    const result2 = MatchId(schema, base2, ref);
+    const result2 = MatchId(schema, base2, ref2);
     if (!guard_exports.IsUndefined(result2))
       return result2;
   }
   if (IsAnchor(schema)) {
-    const result2 = MatchAnchor(schema, base2, ref);
+    const result2 = MatchAnchor(schema, base2, ref2);
     if (!guard_exports.IsUndefined(result2))
       return result2;
   }
   if (IsDynamicAnchor(schema)) {
-    const result2 = MatchDynamicAnchor(schema, base2, ref);
+    const result2 = MatchDynamicAnchor(schema, base2, ref2);
     if (!guard_exports.IsUndefined(result2))
       return result2;
   }
-  return MatchHash(schema, base2, ref);
+  return MatchHash(schema, base2, ref2);
 }
-function FromArray6(schema, base2, ref) {
+function FromArray6(schema, base2, ref2) {
   return schema.reduce((result2, item) => {
-    const match = FromValue3(item, base2, ref);
+    const match = FromValue3(item, base2, ref2);
     return !guard_exports.IsUndefined(match) ? match : result2;
   }, void 0);
 }
-function FromObject10(schema, base2, ref) {
-  return guard_exports.Keys(schema).reduce((result2, key) => {
-    const match = FromValue3(schema[key], base2, ref);
+function FromObject10(schema, base2, ref2) {
+  return guard_exports.Keys(schema).reduce((result2, key2) => {
+    const match = FromValue3(schema[key2], base2, ref2);
     return !guard_exports.IsUndefined(match) ? match : result2;
   }, void 0);
 }
-function FromValue3(schema, base2, ref) {
+function FromValue3(schema, base2, ref2) {
   const nextBase = IsSchemaObject(schema) && IsId(schema) ? new URL(schema.$id, base2.href) : base2;
   if (IsSchemaObject(schema)) {
-    const result2 = Match4(schema, nextBase, ref);
+    const result2 = Match4(schema, nextBase, ref2);
     if (!guard_exports.IsUndefined(result2))
       return result2;
   }
   if (guard_exports.IsArray(schema))
-    return FromArray6(schema, nextBase, ref);
+    return FromArray6(schema, nextBase, ref2);
   if (guard_exports.IsObject(schema))
-    return FromObject10(schema, nextBase, ref);
+    return FromObject10(schema, nextBase, ref2);
   return void 0;
 }
-function Ref2(schema, ref) {
+function Ref2(schema, ref2) {
   const defaultBase = new URL("http://unknown/");
   const initialBase = IsId(schema) ? new URL(schema.$id, defaultBase.href) : defaultBase;
-  const initialRef = new URL(ref, initialBase.href);
+  const initialRef = new URL(ref2, initialBase.href);
   return FromValue3(schema, initialBase, initialRef);
 }
 function DynamicRef(root, base2, dynamicRef, dynamicAnchors) {
@@ -12684,8 +12688,8 @@ var Stack = class {
     if (IsDynamicAnchor(schema))
       this.dynamicAnchors.pop();
   }
-  Ref(ref) {
-    return __classPrivateFieldGet(this, _Stack_instances, "m", _Stack_FromContext).call(this, ref) ?? __classPrivateFieldGet(this, _Stack_instances, "m", _Stack_FromRef).call(this, ref);
+  Ref(ref2) {
+    return __classPrivateFieldGet(this, _Stack_instances, "m", _Stack_FromContext).call(this, ref2) ?? __classPrivateFieldGet(this, _Stack_instances, "m", _Stack_FromRef).call(this, ref2);
   }
   // ----------------------------------------------------------------
   // RecursiveRef
@@ -12709,8 +12713,8 @@ _Stack_instances = /* @__PURE__ */ new WeakSet(), _Stack_PushResourceAnchors = f
     return;
   if (!isRoot && IsDynamicAnchor(current))
     this.dynamicAnchors.push(current);
-  for (const key of guard_exports.Keys(current))
-    __classPrivateFieldGet(this, _Stack_instances, "m", _Stack_PushResourceAnchors2).call(this, current[key], false);
+  for (const key2 of guard_exports.Keys(current))
+    __classPrivateFieldGet(this, _Stack_instances, "m", _Stack_PushResourceAnchors2).call(this, current[key2], false);
 }, _Stack_PopResourceAnchors = function _Stack_PopResourceAnchors2(schema, isRoot = true) {
   if (!IsSchemaObject(schema))
     return;
@@ -12719,13 +12723,13 @@ _Stack_instances = /* @__PURE__ */ new WeakSet(), _Stack_PushResourceAnchors = f
     return;
   if (!isRoot && IsDynamicAnchor(current))
     this.dynamicAnchors.pop();
-  for (const key of guard_exports.Keys(current))
-    __classPrivateFieldGet(this, _Stack_instances, "m", _Stack_PopResourceAnchors2).call(this, current[key], false);
-}, _Stack_FromContext = function _Stack_FromContext2(ref) {
-  return guard_exports.HasPropertyKey(this.context, ref.$ref) ? this.context[ref.$ref] : void 0;
-}, _Stack_FromRef = function _Stack_FromRef2(ref) {
+  for (const key2 of guard_exports.Keys(current))
+    __classPrivateFieldGet(this, _Stack_instances, "m", _Stack_PopResourceAnchors2).call(this, current[key2], false);
+}, _Stack_FromContext = function _Stack_FromContext2(ref2) {
+  return guard_exports.HasPropertyKey(this.context, ref2.$ref) ? this.context[ref2.$ref] : void 0;
+}, _Stack_FromRef = function _Stack_FromRef2(ref2) {
   const root = this.schema;
-  return !ref.$ref.startsWith("#") ? resolve_exports.Ref(root, ref.$ref) : resolve_exports.Ref(this.Base(), ref.$ref);
+  return !ref2.$ref.startsWith("#") ? resolve_exports.Ref(root, ref2.$ref) : resolve_exports.Ref(this.Base(), ref2.$ref);
 };
 function Errors(...args) {
   const [context, schema, value] = arguments_exports.Match(args, {
@@ -12805,20 +12809,20 @@ function FromObject11(context, type, value) {
   if (!guard_exports.IsObject(value) || guard_exports.IsArray(value))
     return value;
   const additionalProperties = GetAdditionalProperties(type);
-  for (const key of guard_exports.Keys(value)) {
-    if (guard_exports.HasPropertyKey(type.properties, key)) {
-      value[key] = FromType19(context, type.properties[key], value[key]);
+  for (const key2 of guard_exports.Keys(value)) {
+    if (guard_exports.HasPropertyKey(type.properties, key2)) {
+      value[key2] = FromType19(context, type.properties[key2], value[key2]);
       continue;
     }
     const unknownCheck = (
       // 1. additionalProperties: true
-      guard_exports.IsBoolean(additionalProperties) && guard_exports.IsEqual(additionalProperties, true) || IsSchema(additionalProperties) && Check2(context, additionalProperties, value[key])
+      guard_exports.IsBoolean(additionalProperties) && guard_exports.IsEqual(additionalProperties, true) || IsSchema(additionalProperties) && Check2(context, additionalProperties, value[key2])
     );
     if (unknownCheck) {
-      value[key] = FromType19(context, additionalProperties, value[key]);
+      value[key2] = FromType19(context, additionalProperties, value[key2]);
       continue;
     }
-    delete value[key];
+    delete value[key2];
   }
   return value;
 }
@@ -12827,20 +12831,20 @@ function FromRecord3(context, type, value) {
     return value;
   const additionalProperties = GetAdditionalProperties(type);
   const [recordPattern, recordValue] = [new RegExp(RecordPattern(type)), RecordValue(type)];
-  for (const key of guard_exports.Keys(value)) {
-    if (recordPattern.test(key)) {
-      value[key] = FromType19(context, recordValue, value[key]);
+  for (const key2 of guard_exports.Keys(value)) {
+    if (recordPattern.test(key2)) {
+      value[key2] = FromType19(context, recordValue, value[key2]);
       continue;
     }
     const unknownCheck = (
       // 1. additionalProperties: true
-      guard_exports.IsBoolean(additionalProperties) && guard_exports.IsEqual(additionalProperties, true) || IsSchema(additionalProperties) && Check2(context, additionalProperties, value[key])
+      guard_exports.IsBoolean(additionalProperties) && guard_exports.IsEqual(additionalProperties, true) || IsSchema(additionalProperties) && Check2(context, additionalProperties, value[key2])
     );
     if (unknownCheck) {
-      value[key] = FromType19(context, additionalProperties, value[key]);
+      value[key2] = FromType19(context, additionalProperties, value[key2]);
       continue;
     }
-    delete value[key];
+    delete value[key2];
   }
   return value;
 }
@@ -12871,17 +12875,17 @@ function FromType19(context, type, value) {
   return IsArray2(type) ? FromArray7(context, type, value) : IsCyclic(type) ? FromCyclic6(context, type, value) : IsIntersect(type) ? FromIntersect6(context, type, value) : IsObject2(type) ? FromObject11(context, type, value) : IsRecord(type) ? FromRecord3(context, type, value) : IsRef(type) ? FromRef5(context, type, value) : IsTuple(type) ? FromTuple5(context, type, value) : IsUnion(type) ? FromUnion9(context, type, value) : value;
 }
 function Modifiers(type, next) {
-  for (const key of guard_default.Keys(type)) {
-    if (guard_default.HasPropertyKey(next, key))
+  for (const key2 of guard_default.Keys(type)) {
+    if (guard_default.HasPropertyKey(next, key2))
       continue;
-    next[key] = type[key];
+    next[key2] = type[key2];
   }
   return next;
 }
 function FromProperties4(properties) {
   const result2 = {};
-  for (const key of guard_default.Keys(properties))
-    result2[key] = FromType20(properties[key]);
+  for (const key2 of guard_default.Keys(properties))
+    result2[key2] = FromType20(properties[key2]);
   return result2;
 }
 function FromPriorityTypes(types) {
@@ -13086,25 +13090,25 @@ function FromNumber5(_context, _type, value) {
 function FromAdditionalProperties(context, entries, additionalProperties, value) {
   const keys = guard_exports.Keys(value);
   for (const [regexp, _] of entries) {
-    for (const key of keys) {
-      if (!regexp.test(key)) {
-        value[key] = FromType21(context, additionalProperties, value[key]);
+    for (const key2 of keys) {
+      if (!regexp.test(key2)) {
+        value[key2] = FromType21(context, additionalProperties, value[key2]);
       }
     }
   }
   return value;
 }
-function IsOptionalUndefined(property, key, value) {
-  return IsOptional(property) && guard_exports.IsUndefined(value[key]);
+function IsOptionalUndefined(property, key2, value) {
+  return IsOptional(property) && guard_exports.IsUndefined(value[key2]);
 }
 function FromProperties5(context, type, value) {
   const entries = guard_exports.EntriesRegExp(type.properties);
   const keys = guard_exports.Keys(value);
   for (const [regexp, property] of entries) {
-    for (const key of keys) {
-      if (!regexp.test(key) || IsOptionalUndefined(property, key, value))
+    for (const key2 of keys) {
+      if (!regexp.test(key2) || IsOptionalUndefined(property, key2, value))
         continue;
-      value[key] = FromType21(context, property, value[key]);
+      value[key2] = FromType21(context, property, value[key2]);
     }
   }
   return guard_exports.HasPropertyKey(type, "additionalProperties") && guard_exports.IsObject(type.additionalProperties) ? FromAdditionalProperties(context, entries, type.additionalProperties, value) : value;
@@ -13116,9 +13120,9 @@ function FromPatternProperties(context, type, value) {
   const entries = guard_exports.EntriesRegExp(type.patternProperties);
   const keys = guard_exports.Keys(value);
   for (const [regexp, schema] of entries) {
-    for (const key of keys) {
-      if (regexp.test(key)) {
-        value[key] = FromType21(context, schema, value[key]);
+    for (const key2 of keys) {
+      if (regexp.test(key2)) {
+        value[key2] = FromType21(context, schema, value[key2]);
       }
     }
   }
@@ -13196,19 +13200,19 @@ function FromObject13(context, type, value) {
   if (!guard_exports.IsObject(value))
     return value;
   const knownPropertyKeys = guard_exports.Keys(type.properties);
-  for (const key of knownPropertyKeys) {
-    const propertyValue = FromType22(context, type.properties[key], value[key]);
-    const isUnassignableUndefined = guard_exports.IsUndefined(propertyValue) && (IsOptional(type.properties[key]) || !guard_exports.HasPropertyKey(type.properties[key], "default"));
+  for (const key2 of knownPropertyKeys) {
+    const propertyValue = FromType22(context, type.properties[key2], value[key2]);
+    const isUnassignableUndefined = guard_exports.IsUndefined(propertyValue) && (IsOptional(type.properties[key2]) || !guard_exports.HasPropertyKey(type.properties[key2], "default"));
     if (isUnassignableUndefined)
       continue;
-    value[key] = propertyValue;
+    value[key2] = propertyValue;
   }
   if (!IsAdditionalProperties(type) || guard_exports.IsBoolean(type.additionalProperties))
     return value;
-  for (const key of guard_exports.Keys(value)) {
-    if (knownPropertyKeys.includes(key))
+  for (const key2 of guard_exports.Keys(value)) {
+    if (knownPropertyKeys.includes(key2))
       continue;
-    value[key] = FromType22(context, type.additionalProperties, value[key]);
+    value[key2] = FromType22(context, type.additionalProperties, value[key2]);
   }
   return value;
 }
@@ -13216,17 +13220,17 @@ function FromRecord5(context, type, value) {
   if (!guard_exports.IsObject(value))
     return value;
   const [recordKey, recordValue] = [new RegExp(RecordPattern(type)), RecordValue(type)];
-  for (const key of guard_exports.Keys(value)) {
-    if (!(recordKey.test(key) && IsDefault(recordValue)))
+  for (const key2 of guard_exports.Keys(value)) {
+    if (!(recordKey.test(key2) && IsDefault(recordValue)))
       continue;
-    value[key] = FromType22(context, recordValue, value[key]);
+    value[key2] = FromType22(context, recordValue, value[key2]);
   }
   if (!IsAdditionalProperties(type))
     return value;
-  for (const key of guard_exports.Keys(value)) {
-    if (recordKey.test(key))
+  for (const key2 of guard_exports.Keys(value)) {
+    if (recordKey.test(key2))
       continue;
-    value[key] = FromType22(context, type.additionalProperties, value[key]);
+    value[key2] = FromType22(context, type.additionalProperties, value[key2]);
   }
   return value;
 }
@@ -13340,10 +13344,10 @@ function FromIntersect9(direction2, context, type, value) {
 function Decode6(direction2, context, type, value) {
   if (!guard_exports.IsObjectNotArray(value))
     return value;
-  for (const key of guard_exports.Keys(type.properties)) {
-    if (!guard_exports.HasPropertyKey(value, key) || IsOptionalUndefined(type.properties[key], key, value))
+  for (const key2 of guard_exports.Keys(type.properties)) {
+    if (!guard_exports.HasPropertyKey(value, key2) || IsOptionalUndefined(type.properties[key2], key2, value))
       continue;
-    value[key] = FromType23(direction2, context, type.properties[key], value[key]);
+    value[key2] = FromType23(direction2, context, type.properties[key2], value[key2]);
   }
   return Callback(direction2, context, type, value);
 }
@@ -13351,10 +13355,10 @@ function Encode5(direction2, context, type, value) {
   const exterior = Callback(direction2, context, type, value);
   if (!guard_exports.IsObjectNotArray(exterior))
     return exterior;
-  for (const key of guard_exports.Keys(type.properties)) {
-    if (!guard_exports.HasPropertyKey(exterior, key) || IsOptionalUndefined(type.properties[key], key, exterior))
+  for (const key2 of guard_exports.Keys(type.properties)) {
+    if (!guard_exports.HasPropertyKey(exterior, key2) || IsOptionalUndefined(type.properties[key2], key2, exterior))
       continue;
-    exterior[key] = FromType23(direction2, context, type.properties[key], exterior[key]);
+    exterior[key2] = FromType23(direction2, context, type.properties[key2], exterior[key2]);
   }
   return exterior;
 }
@@ -13365,10 +13369,10 @@ function Decode7(direction2, context, type, value) {
   if (!guard_exports.IsObjectNotArray(value))
     return value;
   const regexp = new RegExp(RecordPattern(type));
-  for (const key of guard_exports.Keys(value)) {
-    if (!regexp.test(key))
+  for (const key2 of guard_exports.Keys(value)) {
+    if (!regexp.test(key2))
       continue;
-    value[key] = FromType23(direction2, context, RecordValue(type), value[key]);
+    value[key2] = FromType23(direction2, context, RecordValue(type), value[key2]);
   }
   return Callback(direction2, context, type, value);
 }
@@ -13377,10 +13381,10 @@ function Encode6(direction2, context, type, value) {
   if (!guard_exports.IsObjectNotArray(exterior))
     return exterior;
   const regexp = new RegExp(RecordPattern(type));
-  for (const key of guard_exports.Keys(exterior)) {
-    if (!regexp.test(key))
+  for (const key2 of guard_exports.Keys(exterior)) {
+    if (!regexp.test(key2))
       continue;
-    exterior[key] = FromType23(direction2, context, RecordValue(type), exterior[key]);
+    exterior[key2] = FromType23(direction2, context, RecordValue(type), exterior[key2]);
   }
   return exterior;
 }
@@ -13614,8 +13618,8 @@ function summaryDeliveryClaims(details, markdown) {
       throw new Error("Topic memory claim lacks its exact supported scope assessment");
     seen.add(claim.bindingId);
     if (!Array.isArray(assessment.evidence) || !assessment.evidence.some(
-      (ref) => ref.path === claim.sourcePath && ref.sha256 === claim.sourceHash && receipt.sources.some(
-        (source) => source.path === ref.path && source.sha256 === ref.sha256 && source.readReceiptIds.includes(ref.readReceiptId)
+      (ref2) => ref2.path === claim.sourcePath && ref2.sha256 === claim.sourceHash && receipt.sources.some(
+        (source) => source.path === ref2.path && source.sha256 === ref2.sha256 && source.readReceiptIds.includes(ref2.readReceiptId)
       )
     ))
       throw new Error("Topic memory scope assessment lacks a delivered read reference");
@@ -13760,8 +13764,8 @@ function normalizeWorkflowSpecDiff(value) {
 function normalizeResourceUse(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const result2 = {};
-  for (const [key, raw] of Object.entries(value).slice(0, 32)) {
-    const name = text(key, 64);
+  for (const [key2, raw] of Object.entries(value).slice(0, 32)) {
+    const name = text(key2, 64);
     if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(name) || /(token|secret|password|credential|command|output|path|url)/i.test(name))
       continue;
     const number = finiteNonNegative(raw);
@@ -13789,11 +13793,11 @@ function normalizeQcMetrics(value) {
     const distributionInput = item.distribution && typeof item.distribution === "object" ? item.distribution : item;
     const distribution = {};
     for (const [rawKey, rawValue] of Object.entries(distributionInput).slice(0, 16)) {
-      const key = text(rawKey, 32);
-      if (!/^[A-Za-z][A-Za-z0-9_.-]{0,31}$/.test(key) || ["count", "name", "unit", "value", "values"].includes(key))
+      const key2 = text(rawKey, 32);
+      if (!/^[A-Za-z][A-Za-z0-9_.-]{0,31}$/.test(key2) || ["count", "name", "unit", "value", "values"].includes(key2))
         continue;
       const number = finiteNumber(rawValue, 1e12);
-      if (number !== null) distribution[key] = number;
+      if (number !== null) distribution[key2] = number;
     }
     const distributionCount = finiteNonNegative(distributionInput.count, 1e9);
     if (distributionCount !== null) distribution.count = distributionCount;
@@ -13814,14 +13818,14 @@ function normalizeQcMetrics(value) {
 function normalizeArtifact(value) {
   if (!value || typeof value !== "object") return null;
   const item = value;
-  const sha2562 = hash(item.sha256);
-  if (!sha2562) return null;
+  const sha2563 = hash(item.sha256);
+  if (!sha2563) return null;
   const bytes = typeof item.bytes === "number" && Number.isSafeInteger(item.bytes) && item.bytes >= 0 ? item.bytes : void 0;
   const pathValue = text(item.path, 240).replaceAll("\\", "/");
   const safePath = pathValue && !isAbsolute3(pathValue) && !pathValue.split("/").includes("..") && !/(?:^|\/)(?:\.env(?:\.[^/]*)?|auth\.json|credentials(?:\.json)?|\.ssh|\.git)(?:\/|$)/i.test(pathValue) ? pathValue : "";
   return {
     ...safePath ? { path: safePath } : {},
-    sha256: sha2562,
+    sha256: sha2563,
     ...bytes === void 0 ? {} : { bytes }
   };
 }
@@ -14049,7 +14053,7 @@ function createExperienceStore(options) {
       hostId,
       revision: current.revision + 1,
       updatedAt: now(),
-      records: next.document.records.slice(-EXPERIENCE_LIMITS.maxRecords)
+      records: next.document.records.slice(0, EXPERIENCE_LIMITS.maxRecords)
     };
     const document = validateDocument(candidate, vaultId, project, hostId);
     await atomicWrite(path, document);
@@ -14075,7 +14079,7 @@ function createExperienceStore(options) {
       const outcome = observation.outcome;
       if (!["success", "failure", "blocked", "unknown"].includes(outcome))
         throw new Error("Invalid experience outcome");
-      const provenance = normalizeProvenance(input.provenance || observation.provenance || {});
+      const provenance2 = normalizeProvenance(input.provenance || observation.provenance || {});
       const summary = text(input.summary, EXPERIENCE_LIMITS.maxSummaryChars);
       if (!summary) throw new Error("Experience summary is required");
       const failureSignature = text(input.failureSignature ?? observation.failureSignature, 240) || null;
@@ -14104,10 +14108,10 @@ function createExperienceStore(options) {
       const observedAt = text(observation.observedAt, 40) || now();
       const sanitizedTags = boundedStringList(input.tags, EXPERIENCE_LIMITS.maxTags);
       const sanitizedSources = boundedStringList(input.sourceRefs, EXPERIENCE_LIMITS.maxSources);
-      const key = featureKey;
+      const key2 = featureKey;
       const out = await mutate(expectedRevision, (document) => {
         const matching = document.records.filter((record4) => record4.featureKey === featureKey);
-        const existing = document.records.find((record4) => record4.id === HASH(key).slice(0, 32));
+        const existing = document.records.find((record4) => record4.id === HASH(key2).slice(0, 32));
         if (existing?.observationIds.includes(observationId))
           return { document, result: { classification: "duplicate", record: existing }, noop: true };
         const observations = new Set(matching.flatMap((record4) => record4.observationIds));
@@ -14118,7 +14122,7 @@ function createExperienceStore(options) {
         jobs.add(jobId);
         const status = repairSucceeded || jobs.size >= 2 ? "verified" : "observed";
         const record3 = existing || {
-          id: HASH(key).slice(0, 32),
+          id: HASH(key2).slice(0, 32),
           version: EXPERIENCE_VERSION,
           vaultId,
           project,
@@ -14151,7 +14155,7 @@ function createExperienceStore(options) {
           scheduler,
           schedulerJobId,
           artifactRefs,
-          provenance,
+          provenance: provenance2,
           tags: sanitizedTags,
           sourceRefs: sanitizedSources,
           navigationOnly: true,
@@ -14169,7 +14173,7 @@ function createExperienceStore(options) {
         record3.observedAt = observedAt;
         record3.outcome = outcome;
         record3.summary = summary;
-        record3.provenance = provenance;
+        record3.provenance = provenance2;
         record3.tags = sanitizedTags;
         record3.sourceRefs = sanitizedSources;
         if (failureSignature) record3.failureSignature = failureSignature;
@@ -14192,7 +14196,7 @@ function createExperienceStore(options) {
         if (scheduler) record3.scheduler = scheduler;
         if (schedulerJobId) record3.schedulerJobId = schedulerJobId;
         if (artifactRefs.length) record3.artifactRefs = artifactRefs;
-        if (!existing) document.records.unshift(record3);
+        document.records = [record3, ...document.records.filter((item) => item.id !== record3.id)];
         return {
           document,
           result: { classification: existing ? "updated" : "new", record: record3 }
@@ -14353,6 +14357,134 @@ function continuesTopic(prompt, topic) {
   const lower = text4.toLowerCase();
   return [topic.id, topic.title, ...topic.aliases || [], ...topic.entities || []].filter((value) => typeof value === "string" && value.trim().length >= 2).some((value) => lower.includes(value.toLowerCase()));
 }
+init_config();
+var FAILURE_CANDIDATE_VERSION = 1;
+var FAILURE_CANDIDATE_KIND = "drone.knowledge.failure-candidates";
+var FAILURE_CANDIDATE_LIMITS = Object.freeze({
+  maxCandidates: 64,
+  maxFileBytes: 256 * 1024,
+  maxSeenReceipts: 8,
+  maxSummaryChars: 400,
+  maxReasonChars: 240,
+  maxSubjectChars: 180,
+  maxCodeChars: 64,
+  maxTags: 8,
+  maxQueryLimit: 16
+});
+var failureCandidateSafety = Object.freeze({
+  navigationOnly: true,
+  evidenceEligible: false,
+  instructionEligible: false,
+  authorityEligible: false,
+  status: "candidate"
+});
+var HALF_LIFE_MS = 7 * 24 * 60 * 60 * 1e3;
+var MIN_LIVE_WEIGHT = 0.125;
+var HARD_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
+var MAX_WEIGHT = 10;
+var closed = { additionalProperties: false };
+var scopeKind = typebox_exports.String({ pattern: "^[a-z][a-z0-9-]{0,31}$" });
+var ref = typebox_exports.String({ pattern: "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$" });
+var provenance = typebox_exports.Object(
+  {
+    sourcePlugin: typebox_exports.Union([typebox_exports.Literal("drone-pi-research"), typebox_exports.Literal("drone-pi-evidence")]),
+    producer: typebox_exports.Union([
+      typebox_exports.Literal("research-loop"),
+      typebox_exports.Literal("evidence-loop"),
+      typebox_exports.Literal("evidence-validator")
+    ]),
+    receiptId: ref,
+    runId: typebox_exports.Optional(ref),
+    breakerReceiptId: typebox_exports.Optional(ref),
+    sessionHash: typebox_exports.Optional(typebox_exports.String({ pattern: "^[a-f0-9]{16,64}$" }))
+  },
+  closed
+);
+var diagnosticText2 = typebox_exports.String({ minLength: 1, maxLength: 4096 });
+var failureCandidateInputSchema = typebox_exports.Object(
+  {
+    failureCode: diagnosticText2,
+    subject: diagnosticText2,
+    scopeKind,
+    summary: diagnosticText2,
+    reason: typebox_exports.Optional(diagnosticText2),
+    nextHint: typebox_exports.Optional(diagnosticText2),
+    tags: typebox_exports.Optional(typebox_exports.Array(diagnosticText2, { maxItems: 32 })),
+    provenance
+  },
+  closed
+);
+var boundedText = (maxLength) => typebox_exports.String({ minLength: 1, maxLength });
+var candidateFields = {
+  failureCode: boundedText(FAILURE_CANDIDATE_LIMITS.maxCodeChars),
+  subject: boundedText(FAILURE_CANDIDATE_LIMITS.maxSubjectChars),
+  scopeKind,
+  summary: boundedText(FAILURE_CANDIDATE_LIMITS.maxSummaryChars),
+  reason: typebox_exports.Optional(boundedText(FAILURE_CANDIDATE_LIMITS.maxReasonChars)),
+  nextHint: typebox_exports.Optional(boundedText(FAILURE_CANDIDATE_LIMITS.maxReasonChars)),
+  tags: typebox_exports.Array(boundedText(FAILURE_CANDIDATE_LIMITS.maxCodeChars), {
+    maxItems: FAILURE_CANDIDATE_LIMITS.maxTags,
+    uniqueItems: true
+  }),
+  provenance
+};
+var cleanInputSchema = typebox_exports.Object(candidateFields, closed);
+var key = typebox_exports.String({ pattern: "^[a-f0-9]{32}$" });
+var weight = typebox_exports.Number({ minimum: MIN_LIVE_WEIGHT, maximum: MAX_WEIGHT });
+var revision = typebox_exports.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
+var recordFields = {
+  ...candidateFields,
+  id: key,
+  dedupKey: key,
+  firstSeenAt: typebox_exports.String({ minLength: 24, maxLength: 24 }),
+  lastSeenAt: typebox_exports.String({ minLength: 24, maxLength: 24 }),
+  weight: typebox_exports.Number({ minimum: 1, maximum: MAX_WEIGHT }),
+  occurrences: typebox_exports.Integer({ minimum: 1, maximum: 999 }),
+  seenReceiptIds: typebox_exports.Array(ref, {
+    minItems: 1,
+    maxItems: FAILURE_CANDIDATE_LIMITS.maxSeenReceipts,
+    uniqueItems: true
+  }),
+  navigationOnly: typebox_exports.Literal(failureCandidateSafety.navigationOnly),
+  evidenceEligible: typebox_exports.Literal(failureCandidateSafety.evidenceEligible),
+  instructionEligible: typebox_exports.Literal(failureCandidateSafety.instructionEligible),
+  authorityEligible: typebox_exports.Literal(failureCandidateSafety.authorityEligible),
+  status: typebox_exports.Literal(failureCandidateSafety.status)
+};
+var recordSchema = typebox_exports.Object(recordFields, closed);
+var failureCandidateRecordResultSchema = typebox_exports.Object(
+  {
+    classification: typebox_exports.Union([typebox_exports.Literal("created"), typebox_exports.Literal("merged"), typebox_exports.Literal("duplicate")]),
+    revision,
+    candidate: recordSchema
+  },
+  closed
+);
+var failureCandidateQuerySchema = typebox_exports.Object(
+  { limit: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: FAILURE_CANDIDATE_LIMITS.maxQueryLimit })) },
+  closed
+);
+var failureCandidateQueryResultSchema = typebox_exports.Object(
+  {
+    revision,
+    candidates: typebox_exports.Array(typebox_exports.Object({ ...recordFields, effectiveWeight: weight }, closed), {
+      maxItems: FAILURE_CANDIDATE_LIMITS.maxQueryLimit
+    })
+  },
+  closed
+);
+var documentSchema = typebox_exports.Object(
+  {
+    version: typebox_exports.Literal(FAILURE_CANDIDATE_VERSION),
+    kind: typebox_exports.Literal(FAILURE_CANDIDATE_KIND),
+    vaultId: typebox_exports.String(),
+    project: typebox_exports.String(),
+    revision,
+    candidates: typebox_exports.Array(recordSchema, { maxItems: FAILURE_CANDIDATE_LIMITS.maxCandidates })
+  },
+  closed
+);
+init_runtime_host();
 init_files();
 init_flow_cards();
 init_review_policy();
@@ -14368,7 +14500,7 @@ init_config();
 init_runtime_host();
 var contained = (root, path) => {
   const rel = relative5(root, path);
-  return !isAbsolute4(rel) && rel !== ".." && !rel.startsWith(`..${sep5}`);
+  return !isAbsolute5(rel) && rel !== ".." && !rel.startsWith(`..${sep5}`);
 };
 function validateSpecialistHtml(html) {
   if (typeof html !== "string" || html.length > 64e3 || !/<html\b/i.test(html) || !/<body\b/i.test(html))
@@ -14385,13 +14517,13 @@ function createSpecialistDelivery(runtime, bindings) {
   async function saveSpecialistExplainer2(c, ctx, { runDir, topicId, answer }) {
     if (answer.status !== "completed") return answer;
     const html = validateSpecialistHtml(answer.data.html), config = await runtime.loadWorkspaceConfig(ctx.cwd);
-    const root = await realpath3(config.resultsRoot), run = await realpath3(resolve5(ctx.cwd, runDir || ""));
-    if (!contained(root, run) || relative5(root, run).split(sep5).length !== 2 || !run.split(sep5).at(-1).startsWith("run-") || !(await lstat4(join10(run, "metadata.json"))).isFile())
+    const root = await realpath3(config.resultsRoot), run = await realpath3(resolve6(ctx.cwd, runDir || ""));
+    if (!contained(root, run) || relative5(root, run).split(sep5).length !== 2 || !run.split(sep5).at(-1).startsWith("run-") || !(await lstat5(join12(run, "metadata.json"))).isFile())
       throw new Error("Explainer destination must be an existing research run");
     return bindings.withKnowledgeBinding(c.binding, async () => {
-      const artifactPath = join10(run, `show-me-${randomUUID7()}.html`);
+      const artifactPath = join12(run, `show-me-${randomUUID8()}.html`);
       const sources = await c.service.evidenceReceipts(c.ticket, ctx.cwd, answer.data.source_paths);
-      await mkdir5(run, { recursive: true });
+      await mkdir6(run, { recursive: true });
       await writeFile5(artifactPath, html, { flag: "wx", mode: 384 });
       const archived = await runtime.publishExplainer({
         cwd: ctx.cwd,
@@ -14426,7 +14558,7 @@ __export(specialists_exports, {
 init_config();
 init_files();
 var clean = (value, limit = 120) => [...String(value || "")].map((char) => char.charCodeAt(0) < 32 ? " " : char).join("").trim().slice(0, limit);
-var digest2 = (value) => createHash10("sha256").update(String(value || "")).digest("hex").slice(0, 24);
+var digest2 = (value) => createHash11("sha256").update(String(value || "")).digest("hex").slice(0, 24);
 function specialistRequestSignature({
   role,
   task = "",
@@ -14698,7 +14830,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
       const commands = pi.getCommands?.() || [];
       const entry = commands.find((item) => item.source === "skill" && item.name === "skill:show-me") || commands.find((item) => item.source === "skill" && item.name === "skill:research-show-me");
       if (!entry?.sourceInfo?.path) return null;
-      const path = entry.sourceInfo.path, info = await lstat5(path);
+      const path = entry.sourceInfo.path, info = await lstat6(path);
       if (!info.isFile() || info.size > 18e3)
         throw new Error("Loaded show-me skill exceeds the specialist context budget");
       return { text: await readFile8(path, "utf8"), name: entry.name.slice(6) };
@@ -14768,7 +14900,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
       if (!host) return skip("host-unavailable");
       if (decision.decision !== "run") {
         remember({ decision: decision.decision, reasonCode: decision.reasonCode });
-        const id3 = randomUUID9();
+        const id3 = randomUUID10();
         noteKnowledgeSpecialist2(ctx, {
           id: id3,
           role,
@@ -14828,7 +14960,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
       if (parentSignal?.aborted) abort();
       else parentSignal?.addEventListener("abort", abort, { once: true });
       const deadline = setTimeout(abort, settings2.timeoutMs);
-      const [name, label2] = profiles[role], id2 = randomUUID9();
+      const [name, label2] = profiles[role], id2 = randomUUID10();
       let progress = {
         id: id2,
         role,
@@ -14987,7 +15119,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
                   reported: false,
                   reportedFields: []
                 };
-                for (const key of [
+                for (const key2 of [
                   "inputTokens",
                   "outputTokens",
                   "cacheReadTokens",
@@ -14996,7 +15128,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
                   "totalTokens",
                   "cost"
                 ])
-                  resultUsage[key] += usage[key] || 0;
+                  resultUsage[key2] += usage[key2] || 0;
                 resultUsage.reported = resultUsage.reported || usage.reported;
                 resultUsage.reportedFields = [
                   .../* @__PURE__ */ new Set([...resultUsage.reportedFields || [], ...usage.reportedFields || []])
@@ -15051,7 +15183,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
           model: answer.model,
           thinkingLevel: answer.thinkingLevel,
           sourceCount: answer.refs.length,
-          sources: answer.refs.map((ref) => ({ ...ref, excerpt: ref.excerpt.slice(0, 280) })),
+          sources: answer.refs.map((ref2) => ({ ...ref2, excerpt: ref2.excerpt.slice(0, 280) })),
           summary: answer.data.summary.slice(0, 500),
           elapsedMs: Math.max(0, Date.now() - progress.startedAt),
           budget: budget.snapshot
@@ -15086,7 +15218,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
     function visibleUsage(usage) {
       if (!usage) return {};
       const visible = { usageReported: usage.reported === true, reportedFields: usage.reportedFields || [] };
-      for (const key of usage.reportedFields || [])
+      for (const key2 of usage.reportedFields || [])
         if ([
           "inputTokens",
           "outputTokens",
@@ -15095,8 +15227,8 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
           "reasoningTokens",
           "totalTokens",
           "cost"
-        ].includes(key))
-          visible[key] = usage[key];
+        ].includes(key2))
+          visible[key2] = usage[key2];
       return visible;
     }
     function compact(result2) {
@@ -15115,7 +15247,7 @@ function createKnowledgeSpecialistTools(runtime, config, specialists, ui) {
         decision: "run",
         summary: result2.data.summary.slice(0, 1100),
         cautions: result2.data.cautions,
-        refs: result2.refs.slice(0, 4).map((ref) => ({ ...ref, excerpt: ref.excerpt.slice(0, 280) })),
+        refs: result2.refs.slice(0, 4).map((ref2) => ({ ...ref2, excerpt: ref2.excerpt.slice(0, 280) })),
         search: result2.search,
         usageReported: result2.usage?.reported === true,
         elapsedMs: result2.elapsedMs,
@@ -15193,14 +15325,14 @@ function sameValue(left, right) {
     return false;
   }
 }
-function hasKey(value, key) {
-  return Object.hasOwn(value, key);
+function hasKey(value, key2) {
+  return Object.hasOwn(value, key2);
 }
 function subset(expected, observed) {
   if (!expected) return [];
   if (!observed) return Object.keys(expected);
   return Object.keys(expected).filter(
-    (key) => !hasKey(observed, key) || !sameValue(expected[key], observed[key])
+    (key2) => !hasKey(observed, key2) || !sameValue(expected[key2], observed[key2])
   );
 }
 function numberValue(value) {
@@ -15370,11 +15502,11 @@ function evaluateMetacognitivePublication(answer, snapshot) {
           subject: method.id || module,
           detail: `Module ${bounded2(module, 120)} was not observed`
         });
-    for (const key of subset(method.params, executed.params))
+    for (const key2 of subset(method.params, executed.params))
       addFailure(failures, {
         code: "method-mismatch",
-        subject: method.id || key,
-        detail: `Parameter ${bounded2(key, 120)} differs from the observed workflow`
+        subject: method.id || key2,
+        detail: `Parameter ${bounded2(key2, 120)} differs from the observed workflow`
       });
   }
   const findingMap = /* @__PURE__ */ new Map();
@@ -15562,7 +15694,7 @@ function createPublicationApi(ui, reviewPolicy, ports, createState, signal = nul
     })
   );
   const FIELD = "knowledgePublication";
-  const hash5 = (content) => createHash19("sha256").update(JSON.stringify(content ?? [])).digest("hex");
+  const hash5 = (content) => createHash18("sha256").update(JSON.stringify(content ?? [])).digest("hex");
   const protocolKey = (message) => hash5({
     timestamp: message.timestamp,
     api: message.api,
@@ -15597,7 +15729,7 @@ function createPublicationApi(ui, reviewPolicy, ports, createState, signal = nul
   }
   function seal(message, content, detail) {
     signal?.throwIfAborted();
-    const proof = { version: 1, id: randomUUID17(), ...detail, contentHash: hash5(content) };
+    const proof = { version: 1, id: randomUUID18(), ...detail, contentHash: hash5(content) };
     state.proofs.add(proof);
     return { ...base2(message, content), [FIELD]: proof };
   }
@@ -16115,7 +16247,7 @@ ${String(footer).slice(0, 2e3)}` }] : published;
         started = true;
         required = isRequired;
         if (newTurn) {
-          turnId = randomUUID17();
+          turnId = randomUUID18();
           protocol.clear();
           deliveries.clear();
           protocolBytes = 0;
@@ -16291,9 +16423,9 @@ function createTaskFeedback() {
     if (["write", "edit"].includes(String(event.toolName))) path = event.input?.path;
     if (typeof path !== "string") return;
     try {
-      const full = await realpath7(resolve10(ctx.cwd, path));
+      const full = await realpath7(resolve11(ctx.cwd, path));
       const rel = relative9(await realpath7(ctx.cwd), full);
-      if (rel.startsWith(`results${sep9}`) && (await lstat9(full)).isFile()) {
+      if (rel.startsWith(`results${sep9}`) && (await lstat10(full)).isFile()) {
         files.delete(full);
         files.set(full, { name: clean3(rel.split(sep9).at(-1), 100), path: full });
         while (files.size > 8) files.delete(files.keys().next().value);
@@ -16371,9 +16503,9 @@ function createToolBudget(options = {}) {
     recoveries = 0;
     repeats.clear();
   }
-  function consume(kind, key, { recovery = false } = {}) {
+  function consume(kind, key2, { recovery = false } = {}) {
     const recoveryAllowed = recovery && kind === "read" && ++recoveries <= 2;
-    const normalized = String(key ?? "").trim();
+    const normalized = String(key2 ?? "").trim();
     const repeatKey = `${kind}:${normalized}`;
     const seen = (repeats.get(repeatKey) ?? 0) + 1;
     repeats.set(repeatKey, seen);
@@ -16815,7 +16947,7 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
       } else pi.appendEntry("drone-knowledge-recovery-v1", data);
     };
     const attachRecovery = async (ctx) => {
-      const scope = `${sessionIdentity(ctx)}:${resolve12(ctx.cwd)}`;
+      const scope = `${sessionIdentity(ctx)}:${resolve13(ctx.cwd)}`;
       if (scope === recoveryScope) return;
       const result2 = dependencies.session ? await dependencies.session.readRecords(ctx) : null;
       if (result2?.state === "needs-reopen")
@@ -16974,7 +17106,7 @@ function createKnowledgeInterfaceApi(dependencies, initialHost, legacyRuntimeHan
         explicitTopicProposal = true;
         return;
       }
-      if (readOnly || event.toolName !== "research_summarize_run" || event.isError || !event.result?.details?.summary_saved || !current || current.cwd !== resolve12(ctx.cwd) || current.binding.depositMode === "run-only")
+      if (readOnly || event.toolName !== "research_summarize_run" || event.isError || !event.result?.details?.summary_saved || !current || current.cwd !== resolve13(ctx.cwd) || current.binding.depositMode === "run-only")
         return;
       try {
         const deliveredClaims = summaryDeliveryClaims(
@@ -17060,7 +17192,7 @@ Topic memory receipt: ${JSON.stringify({ classification: memoryReceipt.classific
           });
           if (answer.status === "completed") {
             try {
-              const runDir = join18(event.result.details.run, "..");
+              const runDir = join20(event.result.details.run, "..");
               const archived = await saveSpecialistExplainer2(current, ctx, {
                 runDir,
                 topicId: explainerTopicId(
@@ -17243,7 +17375,7 @@ Host delivery status: ${message}` };
         service,
         binding,
         ticket: prepared.ticket,
-        cwd: resolve12(ctx.cwd),
+        cwd: resolve13(ctx.cwd),
         project,
         query: String(query || "")
       };
@@ -17266,14 +17398,14 @@ ${JSON.stringify(visible)}`
     }
     function requireTurn(ctx) {
       assertSessionActive();
-      if (!current || current.cwd !== resolve12(ctx.cwd))
+      if (!current || current.cwd !== resolve13(ctx.cwd))
         throw Object.assign(new Error("Call research_prepare_knowledge first"), { code: "not-prepared" });
       return current;
     }
     let preparing = null;
     async function ensureTurn(ctx, query = "") {
       assertSessionActive();
-      const cwd = resolve12(ctx.cwd);
+      const cwd = resolve13(ctx.cwd);
       if (current && current.cwd === cwd) return current;
       if (preparing) await preparing;
       if (current && current.cwd === cwd) return current;
@@ -18098,10 +18230,12 @@ var {
   registerWikiReviewAcceptance,
   registerKnowledgeInterface
 } = compatibility5;
+init_config();
+init_runtime_host();
 
 // packages/extensions/src/workspace-config.ts
-import { mkdir as mkdir12, readFile as readFile12, realpath as realpath9, rename as rename10, writeFile as writeFile12 } from "node:fs/promises";
-import { dirname, isAbsolute as isAbsolute7, join as join15, relative as relative11, resolve as resolve8, sep as sep10 } from "node:path";
+import { mkdir as mkdir3, readFile as readFile12, realpath as realpath9, rename as rename3, writeFile as writeFile12 } from "node:fs/promises";
+import { dirname, isAbsolute as isAbsolute4, join as join6, relative as relative11, resolve as resolve4, sep as sep10 } from "node:path";
 
 // packages/extensions/src/internal/vault.ts
 var VAULT_PROFILES = {
@@ -18176,11 +18310,11 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 });
 var CONFIG_NAME = ".pi/research-workspace.json";
 function configPath(cwd) {
-  return join15(cwd, CONFIG_NAME);
+  return join6(cwd, CONFIG_NAME);
 }
 function resolveConfiguredPath(cwd, value) {
   if (value == null || value === "") return null;
-  return resolve8(cwd, value);
+  return resolve4(cwd, value);
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
@@ -18214,7 +18348,7 @@ async function loadWorkspaceConfig2(cwd = process.cwd()) {
       mcpStatus: desktop.mcpStatus
     };
   }
-  const projectRoot = resolve8(cwd);
+  const projectRoot = resolve4(cwd);
   let raw = {};
   try {
     raw = JSON.parse(await readFile12(configPath(projectRoot), "utf8"));
@@ -18317,8 +18451,8 @@ function safeSlug(value, label2) {
   return text4;
 }
 function within(root, target) {
-  const rel = relative12(resolve13(root), resolve13(target));
-  return rel === "" || !isAbsolute10(rel) && rel !== ".." && !rel.startsWith(`..${sep11}`);
+  const rel = relative12(resolve9(root), resolve9(target));
+  return rel === "" || !isAbsolute8(rel) && rel !== ".." && !rel.startsWith(`..${sep11}`);
 }
 async function readText(path, fallback = null) {
   try {
@@ -18338,7 +18472,7 @@ async function readJson(path, fallback = null) {
 }
 async function atomicText(path, text4) {
   await mkdir13(dirname7(path), { recursive: true });
-  const temp = `${path}.${randomUUID15()}.tmp`;
+  const temp = `${path}.${randomUUID3()}.tmp`;
   await writeFile13(temp, text4, "utf8");
   await rename11(temp, path);
 }
@@ -18353,15 +18487,15 @@ async function sessionProject(ctx) {
   return (await resolveWorkspaceProject({ cwd: ctx.cwd, sessionEntries: sessionEntriesOf(ctx) })).project;
 }
 function evolutionRoot(resultsRoot, project) {
-  return join17(resultsRoot, ".wikiskill", project);
+  return join7(resultsRoot, ".wikiskill", project);
 }
 function skillPath(cwd, skill) {
-  return join17(cwd, ".pi", "skills", skill, "SKILL.md");
+  return join7(cwd, ".pi", "skills", skill, "SKILL.md");
 }
 var SOURCE_CATEGORIES = Object.freeze(["papers", "supplementary", "software", "manuals"]);
 function validateRunDir(resultsRoot, candidate) {
-  const runDir = resolve13(candidate);
-  const rel = relative12(resolve13(resultsRoot), runDir);
+  const runDir = resolve9(candidate);
+  const rel = relative12(resolve9(resultsRoot), runDir);
   const parts = rel.split(sep11);
   if (!rel || !within(resultsRoot, runDir) || parts.length !== 2 || !parts[1].startsWith("run-")) {
     throw new Error("run_dir must point to a run directory directly inside the configured results root");
@@ -18381,10 +18515,10 @@ async function readSourceManifest(file, runDir) {
 }
 async function sourceStatus({ cwd = process.cwd(), run_dir } = {}) {
   const config = await loadWorkspaceConfig2(cwd);
-  const runDir = run_dir ? validateRunDir(config.resultsRoot, resolve13(cwd, run_dir)) : null;
+  const runDir = run_dir ? validateRunDir(config.resultsRoot, resolve9(cwd, run_dir)) : null;
   if (!runDir) return { results_root: config.resultsRoot, categories: SOURCE_CATEGORIES, run_dir: null };
-  const manifestPath = join17(runDir, "sources", "download-manifest.json");
-  const failuresPath = join17(runDir, "sources", "download-failures.md");
+  const manifestPath = join7(runDir, "sources", "download-manifest.json");
+  const failuresPath = join7(runDir, "sources", "download-failures.md");
   const manifest = await readSourceManifest(manifestPath, runDir);
   let failures = "";
   try {
@@ -18409,26 +18543,26 @@ async function sourceStatus({ cwd = process.cwd(), run_dir } = {}) {
   };
 }
 async function ensureEvolution(root) {
-  await mkdir13(join17(root, "raw"), { recursive: true });
-  await mkdir13(join17(root, "wiki", "patterns"), { recursive: true });
-  await mkdir13(join17(root, "candidates"), { recursive: true });
-  await mkdir13(join17(root, "history"), { recursive: true });
+  await mkdir13(join7(root, "raw"), { recursive: true });
+  await mkdir13(join7(root, "wiki", "patterns"), { recursive: true });
+  await mkdir13(join7(root, "candidates"), { recursive: true });
+  await mkdir13(join7(root, "history"), { recursive: true });
   for (const [name, content] of [
     ["wiki/index.md", "# WikiSkill patterns\n\n"],
     ["wiki/logs.md", "# WikiSkill evolution log\n\n"],
     ["wiki/skill-impact.md", "# WikiSkill skill impact\n\n"]
   ])
-    if (await readText(join17(root, name)) === null) await atomicText(join17(root, name), content);
+    if (await readText(join7(root, name)) === null) await atomicText(join7(root, name), content);
 }
 async function resolveRun(cwd, runDir) {
   const config = await loadWorkspaceConfig2(cwd);
-  const path = resolve13(cwd, runDir || "");
+  const path = resolve9(cwd, runDir || "");
   if (!runDir || !within(config.resultsRoot, path))
     throw new Error("run_dir must stay inside the configured results root");
   const rel = relative12(config.resultsRoot, path).split(sep11);
   if (rel.length !== 2 || !rel[1].startsWith("run-"))
     throw new Error("run_dir must point to one research run");
-  const metadata = await readJson(join17(path, "metadata.json"));
+  const metadata = await readJson(join7(path, "metadata.json"));
   return { config, path, metadata };
 }
 function renderPattern(pattern, occurrence) {
@@ -18470,10 +18604,10 @@ async function recordWikiSkillExperience({
     throw new Error("patterns must contain at least one reusable observation");
   const root = evolutionRoot(config.resultsRoot, project);
   await ensureEvolution(root);
-  const summary = await readText(join17(path, "SUMMARY.md"), "");
+  const summary = await readText(join7(path, "SUMMARY.md"), "");
   const sources = await sourceStatus({ cwd, run_dir: path });
   const raw = {
-    id: randomUUID15(),
+    id: randomUUID3(),
     recorded_at: (/* @__PURE__ */ new Date()).toISOString(),
     project,
     outcome,
@@ -18492,7 +18626,7 @@ async function recordWikiSkillExperience({
     },
     note: "Observable run metadata only; hidden chain-of-thought is intentionally not persisted."
   };
-  const rawPath = join17(root, "raw", `${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}-${raw.id}.json`);
+  const rawPath = join7(root, "raw", `${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}-${raw.id}.json`);
   await atomicJson(rawPath, raw);
   const occurrence = { at: raw.recorded_at, run_id: metadata.run_id, outcome, raw_path: rawPath };
   const touched = [];
@@ -18500,7 +18634,7 @@ async function recordWikiSkillExperience({
     const pattern = { ...item, id: safeSlug(item.id, "pattern id") };
     if (!pattern.title?.trim() || !pattern.problem?.trim() || !pattern.strategy?.trim())
       throw new Error(`pattern ${pattern.id} requires title, problem and strategy`);
-    const patternPath = join17(root, "wiki", "patterns", `${pattern.id}.md`);
+    const patternPath = join7(root, "wiki", "patterns", `${pattern.id}.md`);
     const existing = await readText(patternPath);
     if (existing === null) await atomicText(patternPath, renderPattern(pattern, occurrence));
     else
@@ -18513,13 +18647,13 @@ async function recordWikiSkillExperience({
       );
     touched.push({ id: pattern.id, path: patternPath });
   }
-  const entries = (await readdir4(join17(root, "wiki", "patterns"))).filter((name) => name.endsWith(".md")).sort().map((name) => `- [${basename4(name, ".md")}](patterns/${name})`).join("\n");
-  await atomicText(join17(root, "wiki", "index.md"), `# WikiSkill patterns
+  const entries = (await readdir4(join7(root, "wiki", "patterns"))).filter((name) => name.endsWith(".md")).sort().map((name) => `- [${basename4(name, ".md")}](patterns/${name})`).join("\n");
+  await atomicText(join7(root, "wiki", "index.md"), `# WikiSkill patterns
 
 ${entries}
 `);
   await appendFile(
-    join17(root, "wiki", "logs.md"),
+    join7(root, "wiki", "logs.md"),
     `## ${raw.recorded_at}
 - Run: ${metadata.run_id}
 - Outcome: ${outcome}
@@ -18573,14 +18707,14 @@ async function proposeWikiSkill({
   const root = evolutionRoot(config.resultsRoot, project);
   await ensureEvolution(root);
   for (const id2 of patternIds)
-    await access(join17(root, "wiki", "patterns", `${safeSlug(id2, "pattern id")}.md`));
+    await access(join7(root, "wiki", "patterns", `${safeSlug(id2, "pattern id")}.md`));
   const active = await readText(skillPath(cwd, targetSkill));
   if (active === null) throw new Error(`active skill not found: ${targetSkill}`);
   const safety = safetyChecks(targetSkill, candidateMarkdown);
-  const proposalId = `proposal-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}-${randomUUID15().slice(0, 8)}`;
-  const dir = join17(root, "candidates", proposalId, targetSkill);
+  const proposalId = `proposal-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}-${randomUUID3().slice(0, 8)}`;
+  const dir = join7(root, "candidates", proposalId, targetSkill);
   await mkdir13(dir, { recursive: true });
-  const candidatePath = join17(dir, "SKILL.md");
+  const candidatePath = join7(dir, "SKILL.md");
   await atomicText(candidatePath, `${candidateMarkdown.trimEnd()}
 `);
   const proposal = {
@@ -18596,7 +18730,7 @@ async function proposeWikiSkill({
     candidate_path: candidatePath,
     safety
   };
-  await atomicJson(join17(root, "candidates", proposalId, "proposal.json"), proposal);
+  await atomicJson(join7(root, "candidates", proposalId, "proposal.json"), proposal);
   return { root, proposal };
 }
 async function runAgent({ cwd, skillFile, prompt, provider, model, timeoutMs = 9e4 } = {}) {
@@ -18680,7 +18814,7 @@ async function gateWikiSkillProposal({
   const config = await loadWorkspaceConfig2(cwd);
   const root = evolutionRoot(config.resultsRoot, project);
   await ensureEvolution(root);
-  const proposal = await readJson(join17(root, "candidates", proposalId, "proposal.json"));
+  const proposal = await readJson(join7(root, "candidates", proposalId, "proposal.json"));
   if (!proposal.safety?.ok)
     throw new Error(`candidate safety gate failed: ${(proposal.safety?.errors || []).join("; ")}`);
   const skill = proposal.target_skill;
@@ -18691,10 +18825,10 @@ async function gateWikiSkillProposal({
     throw new Error("active skill changed after proposal; create a fresh proposal");
   const benchmarks = WIKISKILL_BENCHMARKS;
   const tasks = benchmarks[skill];
-  const evalCwd = join17(root, "eval-sandbox");
+  const evalCwd = join7(root, "eval-sandbox");
   await mkdir13(evalCwd, { recursive: true });
   if (!Array.isArray(tasks) || tasks.length === 0) throw new Error(`no validation benchmark for ${skill}`);
-  const statePath = join17(root, "state.json");
+  const statePath = join7(root, "state.json");
   const state = await readJson(statePath, { version: 1, best_scores: {}, baseline_cache: {} });
   const cacheKey = `${skill}:${proposal.active_sha256}:${provider || "default"}:${model || "default"}`;
   let baseline = state.baseline_cache?.[cacheKey];
@@ -18719,7 +18853,7 @@ async function gateWikiSkillProposal({
   const accepted = allCasesRan && changed && performancePass;
   const at = (/* @__PURE__ */ new Date()).toISOString();
   if (accepted) {
-    const backup = join17(
+    const backup = join7(
       root,
       "history",
       `${at.replace(/[:.]/g, "-")}-${skill}-${proposal.active_sha256.slice(0, 12)}.md`
@@ -18744,9 +18878,9 @@ async function gateWikiSkillProposal({
     pattern_ids: proposal.pattern_ids,
     candidate_sha256: proposal.candidate_sha256
   };
-  await atomicJson(join17(root, "candidates", proposal.id, "validation.json"), { impact, baseline, candidate });
+  await atomicJson(join7(root, "candidates", proposal.id, "validation.json"), { impact, baseline, candidate });
   await appendFile(
-    join17(root, "wiki", "skill-impact.md"),
+    join7(root, "wiki", "skill-impact.md"),
     `## ${at} \xB7 ${skill}
 - Proposal: ${proposal.id}
 - Patterns: ${proposal.pattern_ids.join(", ")}
@@ -18768,13 +18902,13 @@ async function wikiSkillStatus({ cwd = process.cwd(), project } = {}) {
   const root = evolutionRoot(config.resultsRoot, project);
   await ensureEvolution(root);
   const count = async (path) => (await readdir4(path).catch((error) => error.code === "ENOENT" ? [] : Promise.reject(error))).length;
-  const state = await readJson(join17(root, "state.json"), { version: 1, best_scores: {}, baseline_cache: {} });
+  const state = await readJson(join7(root, "state.json"), { version: 1, best_scores: {}, baseline_cache: {} });
   return {
     project,
     root,
-    raw_events: await count(join17(root, "raw")),
-    patterns: await count(join17(root, "wiki", "patterns")),
-    proposals: await count(join17(root, "candidates")),
+    raw_events: await count(join7(root, "raw")),
+    patterns: await count(join7(root, "wiki", "patterns")),
+    proposals: await count(join7(root, "candidates")),
     best_scores: state.best_scores || {}
   };
 }
