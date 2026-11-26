@@ -40,14 +40,14 @@ These are hard-won lessons — please follow them:
 
 - **Formatting** is enforced by Biome: tabs, double quotes, line width 110. Run `npm run lint` instead of hand-formatting.
 - **Renderer never imports Pi packages.** It talks to the main process through `window.pi` (preload contextBridge). Domain contracts and the `PiApi` type live in `packages/shared/src/host-api/`.
-- **`packages/backend/src/pi-backend.ts` is the only file** allowed to import the Pi SDK (`@earendil-works/*`). SDK versions are pinned — don't upgrade casually.
+- **`packages/backend/src/session-engine/**` is the only runtime value import boundary** for the Pi SDK (`@earendil-works/*`, baseline 1.1.0); elsewhere only `import type` is allowed. SDK versions are pinned — don't upgrade casually.
 - **i18n**: all user-facing strings go through `useT()` and must be added to **both** the `zh` and `en` dictionaries in `packages/desktop/src/renderer/src/i18n/`.
 - **Zustand selectors must return stable references** (module-level constants for empty values). Inline `?? []` creates a new array every call and causes infinite render loops.
 - **Never commit API keys or secrets.** `models.json` uses environment variable references (`$AI_OPS_API_KEY`); keys live in your shell environment only.
 
 ## Architecture pointers
 
-- Multi-session support: `SessionRegistry` (`packages/backend/src/session-registry.ts`) holds multiple `AgentSession` instances.
+- Multi-session support: `SessionRegistry` (`packages/backend/src/session/registry.ts`) holds multiple `AgentSession` instances inside `SessionService` (`packages/backend/src/session-service.ts`), which `packages/backend/src/create-backend.ts` composes into `BackendServices.sessions` alongside the domain services under `packages/backend/src/services/`.
 - Permission prompts are injected via `session.bindExtensions(...)` — only modify the `confirm` handler in `makeUiContext`, don't rewrite the whole UI context.
 - The preload bundle must stay CJS (`format: "cjs"`, `index.cjs`) or sandboxed renderers won't load it.
 
