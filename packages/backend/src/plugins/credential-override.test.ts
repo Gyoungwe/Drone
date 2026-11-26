@@ -11,6 +11,7 @@ import {
 	PluginCredentialStore,
 } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
+import { consentForSource } from "./policy-consent";
 
 const pluginId = "@gyoungwe/pi-knowledge";
 const slot: PluginCredentialSlot = {
@@ -20,15 +21,19 @@ const slot: PluginCredentialSlot = {
 	header: "Authorization",
 	fields: [],
 	authentication: "http-basic-digest",
+	custody: "host-environment",
 };
 const savedMarker = "TEST_ONLY_SAVED_WEBDAV_MARKER";
 const envMarker = "TEST_ONLY_ENV_WEBDAV_MARKER";
-const source: PluginRuntimeSource = {
+const declared = {
 	pluginId,
 	packageRoot: "/pkg",
 	entrypoint: "/pkg/runtime.mjs",
+	contentHash: "content-hash-1",
 	credentials: [slot],
 };
+/** The user approved the package's policy at install, so the environment password may stand in. */
+const source: PluginRuntimeSource = { ...declared, policyConsent: consentForSource(declared) };
 const context = { signal: new AbortController().signal } as Parameters<
 	ReturnType<typeof credentialCapabilityHandlers>["credentials.status"]["execute"]
 >[1];
@@ -54,13 +59,13 @@ it.each([
 ])("resolves and projects $name without disclosing secrets", async ({ saved, env, effective }) => {
 	if (saved) await t.store.save(pluginId, slot, savedMarker, {});
 	vi.stubEnv("DRONE_WEBDAV_PASSWORD", env);
-	const resolved = await resolvePluginCredential(t.store, pluginId, slot);
+	const resolved = await resolvePluginCredential(t.store, pluginId, slot, process.env, source);
 	expect(resolved.savedConfigured).toBe(saved);
 	expect(resolved.credential?.source ?? null).toBe(effective);
 	expect(resolved.credential?.secret).toBe(
 		effective === "env" ? envMarker : effective === "saved" ? savedMarker : undefined,
 	);
-	expect(await t.store.resolve(pluginId, slot)).toEqual(resolved);
+	expect(await t.store.resolve(pluginId, slot, process.env, source)).toEqual(resolved);
 	const status = credentialCapabilityHandlers(t.store, source)["credentials.status"];
 	const result = await status.execute(null, context);
 	const expected = {
@@ -82,9 +87,24 @@ it.each([
 	for (const marker of [savedMarker, envMarker]) expect(JSON.stringify(result)).not.toContain(marker);
 });
 
+/** A source approved for exactly this declaration, as the host records it at install. */
+function approved(owner: string, definition: PluginCredentialSlot): PluginRuntimeSource {
+	const current = { ...declared, pluginId: owner, credentials: [definition] };
+	return { ...current, policyConsent: consentForSource(current) };
+}
+
 it.each([
-	{ name: "another plugin", owner: "@other/plugin", definition: slot },
-	{ name: "another slot", owner: pluginId, definition: { ...slot, slot: "other" } },
+	// Another package carrying this package's approval: an approval never travels.
+	{
+		name: "another plugin",
+		owner: "@other/plugin",
+		definition: slot,
+		from: () => ({ ...source, pluginId: "@other/plugin" }),
+	},
+	// The same package, the declaration unapproved.
+	{ name: "an unapproved package", owner: pluginId, definition: slot, from: () => declared },
+	// Approved, but no host custody has these shapes.
+	{ name: "another slot", owner: pluginId, definition: { ...slot, slot: "other" }, from: undefined },
 	{
 		name: "a literal-header slot",
 		owner: pluginId,
@@ -94,13 +114,22 @@ it.each([
 			hosts: slot.hosts,
 			header: slot.header,
 			fields: slot.fields,
+			custody: "host-environment" as const,
 		},
+		from: undefined,
 	},
-])("does not override $name", async ({ owner, definition }) => {
+	{
+		name: "a user-custody slot",
+		owner: pluginId,
+		definition: { ...slot, custody: "user" as const },
+		from: undefined,
+	},
+])("does not override $name", async ({ owner, definition, from }) => {
 	const env = { DRONE_WEBDAV_PASSWORD: envMarker };
-	expect(await t.store.resolve(owner, definition, env)).toEqual({ savedConfigured: false });
+	const current = from?.() ?? approved(owner, definition);
+	expect(await t.store.resolve(owner, definition, env, current)).toEqual({ savedConfigured: false });
 	await t.store.save(owner, definition, savedMarker, {});
-	expect(await t.store.resolve(owner, definition, env)).toMatchObject({
+	expect(await t.store.resolve(owner, definition, env, current)).toMatchObject({
 		credential: { secret: savedMarker, source: "saved", fields: {} },
 		savedConfigured: true,
 	});
@@ -110,12 +139,14 @@ it("keeps a wrong env password effective and reads env changes on every call", a
 	await t.store.save(pluginId, slot, savedMarker, {});
 	const status = credentialCapabilityHandlers(t.store, source)["credentials.status"];
 	vi.stubEnv("DRONE_WEBDAV_PASSWORD", "TEST_ONLY_WRONG_PASSWORD_MARKER");
-	expect((await t.store.resolve(pluginId, slot)).credential?.secret).toBe("TEST_ONLY_WRONG_PASSWORD_MARKER");
+	expect((await t.store.resolve(pluginId, slot, process.env, source)).credential?.secret).toBe(
+		"TEST_ONLY_WRONG_PASSWORD_MARKER",
+	);
 	expect(await status.execute(null, context)).toMatchObject({ slots: { webdav: { source: "env" } } });
 	vi.stubEnv("DRONE_WEBDAV_PASSWORD", envMarker);
-	expect((await t.store.resolve(pluginId, slot)).credential?.secret).toBe(envMarker);
+	expect((await t.store.resolve(pluginId, slot, process.env, source)).credential?.secret).toBe(envMarker);
 	vi.stubEnv("DRONE_WEBDAV_PASSWORD", "");
-	expect((await t.store.resolve(pluginId, slot)).credential?.secret).toBe(savedMarker);
+	expect((await t.store.resolve(pluginId, slot, process.env, source)).credential?.secret).toBe(savedMarker);
 	expect(await status.execute(null, context)).toMatchObject({ slots: { webdav: { source: "saved" } } });
 });
 
@@ -124,7 +155,7 @@ it("never copies the env override into storage and save/clear leave env effectiv
 	await t.store.save(pluginId, slot, savedMarker, {});
 	expect(readFileSync(t.path, "utf8")).not.toContain(envMarker);
 	await t.store.clear(pluginId, slot);
-	expect(await t.store.resolve(pluginId, slot)).toEqual({
+	expect(await t.store.resolve(pluginId, slot, process.env, source)).toEqual({
 		credential: { secret: envMarker, fields: {}, source: "env" },
 		savedConfigured: false,
 	});
@@ -139,19 +170,48 @@ it("resolves Zotero host-kept slots from the supplied env without reading saved 
 		hosts: ["127.0.0.1:23119"],
 		header: "Zotero-API-Key",
 		fields: ["serverId"],
+		custody: "host-environment",
 	};
+	const research = approved("@gyoungwe/pi-research", local);
 	const get = vi.spyOn(t.store, "get");
-	expect(await t.store.resolve("@gyoungwe/pi-research", local, {})).toEqual({ savedConfigured: false });
+	expect(await t.store.resolve("@gyoungwe/pi-research", local, {}, research)).toEqual({
+		savedConfigured: false,
+	});
 	expect(
-		await t.store.resolve("@gyoungwe/pi-research", local, {
-			ZOTERO_LOCAL_API_KEY: envMarker,
-			ZOTERO_LOCAL_SERVER_ID: "test-server",
-		}),
+		await t.store.resolve(
+			"@gyoungwe/pi-research",
+			local,
+			{ ZOTERO_LOCAL_API_KEY: envMarker, ZOTERO_LOCAL_SERVER_ID: "test-server" },
+			research,
+		),
 	).toEqual({
 		credential: { secret: envMarker, fields: { serverId: "test-server" }, source: "env" },
 		savedConfigured: false,
 	});
 	expect(get).not.toHaveBeenCalled();
+});
+
+it("keeps the WebDAV slot in the user's settings and gives the Zotero slot to the host only once approved", () => {
+	const local: PluginCredentialSlot = {
+		slot: "zotero-local",
+		label: slot.label,
+		hosts: ["127.0.0.1:23119"],
+		header: "Zotero-API-Key",
+		fields: ["serverId"],
+		custody: "host-environment",
+	};
+	// The environment only overrides the WebDAV password; the user may still save one.
+	expect(PluginCredentialStore.isHostKept(slot, source)).toBe(false);
+	// The Zotero key is the host's alone, but only for the package the user approved.
+	expect(PluginCredentialStore.isHostKept(local, approved("@gyoungwe/pi-research", local))).toBe(true);
+	expect(
+		PluginCredentialStore.isHostKept(local, {
+			...declared,
+			pluginId: "@gyoungwe/pi-research",
+			credentials: [local],
+		}),
+	).toBe(false);
+	expect(PluginCredentialStore.isHostKept(local)).toBe(false);
 });
 
 it.each([false, true])(

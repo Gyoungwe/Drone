@@ -15,6 +15,7 @@ import { discoverInstalledPackages } from "../../desktop/src/main/ui-plugins/ins
 import { createBackend } from "../src/create-backend";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { PluginCredentialStore } from "../src/plugins/plugin-credentials";
+import { consentForSource } from "../src/plugins/policy-consent";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 
 const live = {};
@@ -47,7 +48,9 @@ async function installResearch() {
 	);
 	return (await discoverInstalledPackages(nodeModules)).map((item) => {
 		if ("error" in item || !item.runtime) throw new Error(JSON.stringify(item));
-		return { name: `package:${item.packageRoot}`, source: item.runtime, state: "enabled" };
+		// The user approved the package's policy at install, so the host's Zotero key may stand in.
+		const source = { ...item.runtime, policyConsent: consentForSource(item.runtime) };
+		return { name: `package:${item.packageRoot}`, source, state: "enabled" };
 	});
 }
 

@@ -1,10 +1,10 @@
 import { existsSync, type FSWatcher, realpathSync, watch } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { join } from "node:path";
 import { createLogger, type SelectedNativeSource } from "@drone/backend";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig } from "@drone/shared";
 import { app } from "electron";
-import { buildPlugin } from "./build";
+import { buildPlugin, newestMtime } from "./build";
 import { defaultUiPluginsConfig, loadUiPluginsConfig, saveUiPluginsConfig } from "./config";
 import {
 	type InstalledPackageDiscovery,
@@ -14,7 +14,12 @@ import {
 } from "./installed-package-sources";
 import { discoverManagedPackages } from "./managed-roots";
 import { filterContributions } from "./manifest-contributions";
-import { classifyUnmanagedNativePath } from "./native-source-classification";
+import {
+	builtinExtensionPaths,
+	classifyUnmanagedNativePath,
+	nativeChildExtensionPaths,
+	nativeRuntimeName,
+} from "./native-source-classification";
 import {
 	builtinPackageRoot,
 	builtinPluginsDir,
@@ -25,30 +30,17 @@ import {
 	seedBuiltinPlugins,
 	seedDocs,
 } from "./plugin-dirs";
-import { readManifest, validateManifest } from "./plugin-manifest";
+import { invalidPluginInfo, readManifest, validateManifest } from "./plugin-manifest";
+import {
+	applyPolicyDecision,
+	awaitsPolicyApproval,
+	pendingPolicyApprovals,
+	sourceWithConsent,
+} from "./policy-consent-store";
 
 export { RETIRED_BUILTIN_PLUGINS, uiPluginsResourcesDir } from "./plugin-dirs";
 
 const log = createLogger("ui-plugins");
-
-/** 目录内所有文件的最新 mtime（构建陈旧性判断：源码比产物新即重建） */
-async function newestMtime(dir: string): Promise<number | null> {
-	let newest: number | null = null;
-	const walk = async (d: string) => {
-		const entries = await readdir(d, { withFileTypes: true }).catch(() => []);
-		for (const entry of entries) {
-			const p = join(d, entry.name);
-			if (entry.isDirectory()) {
-				await walk(p);
-			} else {
-				const s = await stat(p).catch(() => null);
-				if (s && (newest === null || s.mtimeMs > newest)) newest = s.mtimeMs;
-			}
-		}
-	};
-	await walk(dir);
-	return newest;
-}
 
 export class UiPluginManager {
 	private readonly installedPackageRoot: string;
@@ -69,6 +61,8 @@ export class UiPluginManager {
 	private installedPackageHashes = new Map<string, { root: string; hash: string }>();
 	/** Installed package generations observed as changed during this scan; trust must be renewed. */
 	private readonly reconfirmInstallations = new Set<string>();
+	/** Package policies the user refused in this run, by content and policy; they are not asked again. */
+	private readonly declinedPolicies = new Set<string>();
 	/** 随包内置插件名集合（init 时导出到用户目录；此处仅用于合成 builtin 标志 → 面板 badge/启用免确认） */
 	private builtinNames = new Set<string>();
 	/** 持久化配置缓存（updateConfig 后刷新；scanAll 时叠加） */
@@ -125,7 +119,12 @@ export class UiPluginManager {
 			slots: manifest?.slots ?? {},
 			contributions: filterContributions(manifest?.contributions),
 			headless: manifest?.headless === true ? true : undefined,
-			enabled: forceReconfirmation ? false : (this.config.plugins[name]?.enabled ?? builtinPackage),
+			// A package whose policy waits for the user's approval is not enabled until they answer.
+			enabled:
+				forceReconfirmation ||
+				(runtime !== undefined && awaitsPolicyApproval(this.config.policyConsents, runtime))
+					? false
+					: (this.config.plugins[name]?.enabled ?? builtinPackage),
 			trusted: forceReconfirmation ? false : (this.config.plugins[name]?.trusted ?? builtinPackage),
 			invalidReason: invalidReason ?? undefined,
 			buildError: prev?.buildError,
@@ -168,15 +167,7 @@ export class UiPluginManager {
 				// 单插件扫描异常不阻断应用启动与其余插件（B2）：合成 invalid info 继续下一个
 				const msg = err instanceof Error ? err.message : String(err);
 				log.error("scanOne failed", name, err);
-				const info: UiPluginInfo = {
-					name,
-					slots: {},
-					contributions: [],
-					enabled: false,
-					trusted: false,
-					built: false,
-					invalidReason: `扫描异常: ${msg}`,
-				};
+				const info = invalidPluginInfo(name, `扫描异常: ${msg}`);
 				this.infos.set(name, info);
 				out.push(info);
 			}
@@ -243,15 +234,7 @@ export class UiPluginManager {
 				const name = packageDiagnosticName(candidate.packageName);
 				if (seen.has(name)) continue;
 				seen.add(name);
-				const info: UiPluginInfo = {
-					name,
-					slots: {},
-					contributions: [],
-					enabled: false,
-					trusted: false,
-					built: false,
-					invalidReason: `${candidate.packageName}: ${candidate.error}`,
-				};
+				const info = invalidPluginInfo(name, `${candidate.packageName}: ${candidate.error}`);
 				this.infos.set(name, info);
 				out.push(info);
 				continue;
@@ -262,15 +245,7 @@ export class UiPluginManager {
 				continue;
 			const invalidReason = validateManifest(installedName, installedManifest ?? {}, candidate.runtime);
 			if (invalidReason) {
-				const info: UiPluginInfo = {
-					name: installedName,
-					slots: {},
-					contributions: [],
-					enabled: false,
-					trusted: false,
-					built: false,
-					invalidReason: `${candidate.packageName}: ${invalidReason}`,
-				};
+				const info = invalidPluginInfo(installedName, `${candidate.packageName}: ${invalidReason}`);
 				seen.add(installedName);
 				this.infos.set(installedName, info);
 				out.push(info);
@@ -358,8 +333,42 @@ export class UiPluginManager {
 		return this.infos.get(name) ?? null;
 	}
 
-	/** The source belongs to the installed package selected by the current scan. */
+	/** The package source a UI plugin name belongs to; a local UI plugin has none. */
+	packageSourceOf(name: string): InstalledUiRuntimeSource | undefined {
+		return this.installedSources.get(name)?.runtime;
+	}
+
+	/** Whether a package waits for the user to approve its credential and network policy. */
+	awaitsPolicyApproval(source: InstalledUiRuntimeSource): boolean {
+		return awaitsPolicyApproval(this.config.policyConsents, source);
+	}
+
+	/** Packages that would run but wait for the user's approval, one source per package. */
+	pendingPolicyApprovals(): InstalledUiRuntimeSource[] {
+		const running = [...this.packageSources.keys()].map((name) => this.currentSource(name));
+		const switchedOff = (root: string) => this.uiSwitchedOff(root);
+		return pendingPolicyApprovals(running, this.config.policyConsents, this.declinedPolicies, switchedOff);
+	}
+
+	/** Record the user's answer about a package's policy; a refusal switches its UI plugins off. */
+	async recordPolicyDecision(source: InstalledUiRuntimeSource, approved: boolean): Promise<void> {
+		const names = [...this.installedSources].filter(([, item]) => item.packageRoot === source.packageRoot);
+		const config = await loadUiPluginsConfig();
+		const uiNames = names.map(([name]) => name);
+		await this.updateConfig(applyPolicyDecision(config, source, approved, uiNames, this.declinedPolicies));
+	}
+
+	/** The source of the current scan, once its policy is approved; approval is an enable precondition. */
 	runtimeSource(name: string): InstalledUiRuntimeSource | undefined {
+		const source = this.currentSource(name);
+		const consents = this.config.policyConsents;
+		return source && !awaitsPolicyApproval(consents, source)
+			? sourceWithConsent(consents, source)
+			: undefined;
+	}
+
+	/** The source belongs to the installed package selected by the current scan. */
+	private currentSource(name: string): InstalledUiRuntimeSource | undefined {
 		const native = this.packageSources.get(name);
 		if (native) {
 			if (!native.current || this.builtinDisabled(native.source.packageRoot)) return undefined;
@@ -370,8 +379,7 @@ export class UiPluginManager {
 				return undefined;
 			}
 		}
-		if (!this.installedSourceCurrent(name)) return undefined;
-		return this.installedSources.get(name)?.runtime;
+		return this.installedSourceCurrent(name) ? this.installedSources.get(name)?.runtime : undefined;
 	}
 
 	/** Native and service consumers see the same package descriptors and current content identities. */
@@ -382,7 +390,7 @@ export class UiPluginManager {
 	}[] {
 		return [...this.packageSources].map(([name, item]) => ({
 			name,
-			source: item.source,
+			source: sourceWithConsent(this.config.policyConsents, item.source),
 			state: this.runtimeSource(name) ? "enabled" : "unavailable",
 		}));
 	}
@@ -392,26 +400,25 @@ export class UiPluginManager {
 	 * session loads only these; the actual loader selection is still classified per path.
 	 */
 	nativeChildExtensionPaths(): string[] {
-		const paths: string[] = [];
-		for (const [name, item] of this.packageSources) {
-			if (item.source.nativeChildSessions !== "read-only" || !this.runtimeSource(name)) continue;
-			const path = item.source.nativeDeclaredPath ?? item.source.nativeEntrypoint;
-			if (path) paths.push(path);
-		}
-		return paths;
+		return nativeChildExtensionPaths(this.packageSources, (name) => this.runtimeSource(name) !== undefined);
 	}
 
 	/** Native entries of enabled built-in packages; Pi's package manager does not list them. */
 	builtinExtensionPaths(): string[] {
-		return [...this.packageSources].flatMap(([name, { source }]) => {
-			const path = source.nativeDeclaredPath ?? source.nativeEntrypoint;
-			return path && this.builtinPackages.has(source.packageRoot) && this.runtimeSource(name) ? [path] : [];
-		});
+		return builtinExtensionPaths(
+			this.packageSources,
+			new Set(this.builtinPackages.keys()),
+			(name) => this.runtimeSource(name) !== undefined,
+		);
 	}
 
 	/** A built-in package is disabled through its UI plugin's switch, which is also its package switch. */
 	private builtinDisabled(packageRoot: string): boolean {
-		if (!this.builtinPackages.has(packageRoot)) return false;
+		return this.builtinPackages.has(packageRoot) && this.uiSwitchedOff(packageRoot);
+	}
+
+	/** Whether the user switched a UI plugin of this package off. */
+	private uiSwitchedOff(packageRoot: string): boolean {
 		for (const [name, item] of this.installedSources)
 			if (item.packageRoot === packageRoot && this.config.plugins[name]?.enabled === false) return true;
 		return false;
@@ -419,22 +426,7 @@ export class UiPluginManager {
 
 	/** Called only for a path selected by the actual Pi extension loader. UI visibility grants no native authority. */
 	nativeRuntimeName(path: string): string | undefined {
-		let declared = resolve(path);
-		try {
-			declared = join(realpathSync(dirname(declared)), basename(declared));
-		} catch (error) {
-			log.warn("Selected extension directory is unavailable", path, error);
-		}
-		for (const [name, item] of this.packageSources)
-			if (item.source.nativeDeclaredPath === declared) return name;
-		try {
-			const canonical = realpathSync(path);
-			for (const [name, item] of this.packageSources)
-				if (item.source.nativeEntrypoint === canonical) return name;
-		} catch (error) {
-			log.warn("Selected extension path is unavailable", path, error);
-		}
-		return undefined;
+		return nativeRuntimeName(path, this.packageSources);
 	}
 
 	/** Only paths selected by the real SDK loader enter this host-only source classification. */

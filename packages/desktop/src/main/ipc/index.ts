@@ -16,7 +16,7 @@ import {
 	SettingsContract,
 	UiPluginsContract,
 } from "@drone/shared";
-import { BrowserWindow, webContents } from "electron";
+import { app, BrowserWindow, webContents } from "electron";
 import { onResearchSkillUpdateState } from "../research-skill-updater";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import type { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
@@ -70,6 +70,21 @@ export function createSessionQuestionTransport(ownerId: number) {
 }
 
 /**
+ * Ask the user about package policies (install-time approval) once the first window is shown,
+ * so the dialog has a parent — built-in and already enabled packages never pass the enable
+ * switch — and again whenever an installed or updated package may need one.
+ */
+function askPoliciesOnShow(uiPlugins: { reconcilePolicies(): Promise<void> }): () => void {
+	const ask = () => {
+		uiPlugins
+			.reconcilePolicies()
+			.catch((error) => createLogger("ui-plugins").error("Plugin policy approval failed", error));
+	};
+	app.once("browser-window-created", (_event, window) => window.once("show", ask));
+	return ask;
+}
+
+/**
  * IPC 注册组合入口：按域拆在 ./sessions ./settings ./permissions ./subagents ./packages ./app ./ui-plugins 等文件，
  * 这里只做拼装 + backend/updater 事件转发到 renderer。
  */
@@ -82,6 +97,7 @@ export function registerIpc(
 	// The desktop host binds contracts from the composition root directly. The
 	// individual IPC modules retain narrow legacy overloads for third-party
 	// integrations, but production wiring never walks through PiBackend fields.
+	const askPolicies = askPoliciesOnShow(registerUiPluginsIpc(uiPluginsManager, runtime));
 	registerSessionsIpc(backendServices);
 	registerSettingsIpc(backendServices);
 	registerMcpIpc(backendServices);
@@ -104,12 +120,12 @@ export function registerIpc(
 		} finally {
 			// Notify only after the mutation barrier is released, including a failed update.
 			sendToRenderer(channelOf(UiPluginsContract, "event"), { kind: "config" });
+			askPolicies();
 		}
 	});
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);
 	registerInquiryIpc(backendServices, sendToRenderer);
-	registerUiPluginsIpc(uiPluginsManager, runtime);
 	registerPluginRuntimeIpc(runtime);
 	registerPluginCredentialsIpc(uiPluginsManager);
 	runtime.onEvent((owner, event) => {

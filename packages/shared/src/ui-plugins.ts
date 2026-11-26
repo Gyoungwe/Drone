@@ -134,6 +134,33 @@ export interface UiPluginsConfig {
 	assignments: Record<string, string>;
 	/** Installed package content identities acknowledged by the user. */
 	installations?: Record<string, { root: string; hash: string }>;
+	/**
+	 * The user's approval of a package's credential and network policy.
+	 *
+	 * The approval is bound to the content it was given for: a different content
+	 * hash or a different declared policy voids it and the user is asked again.
+	 */
+	policyConsents?: Record<string, UiPluginPolicyConsent>;
+}
+
+/**
+ * One package's approved credential and network policy.
+ *
+ * It names a policy *shape*, never a secret: the user agreed to "the host fills
+ * this slot with a secret it keeps" and to "this package may use an address you
+ * set", not to any particular key or URL.
+ */
+export interface UiPluginPolicyConsent {
+	/** The package the approval was given to. */
+	pluginId: string;
+	/** The package content hash the approval was given for. */
+	contentHash: string;
+	/** The fingerprint of the approved policy shape. */
+	fingerprint: string;
+	/** The custody slots the user approved, by slot name. */
+	custodySlots: string[];
+	/** Whether the user approved a runtime endpoint for this package. */
+	runtimeEndpoint: boolean;
 }
 
 /** main → renderer 事件载荷 */

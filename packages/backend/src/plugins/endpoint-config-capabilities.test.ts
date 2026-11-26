@@ -2,14 +2,16 @@ import { Check } from "typebox/value";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { PluginCredentialStore } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
+import { consentForSource } from "./policy-consent";
 import { PluginCapabilityBroker, type PluginCapabilityContext } from "./runtime-capabilities";
 import { sourceCapabilityHandlers } from "./source-capabilities";
 import { TaskGrantStore } from "./task-grants";
 
-const source: PluginRuntimeSource = {
+const declared: PluginRuntimeSource & { contentHash: string } = {
 	pluginId: "@gyoungwe/pi-knowledge",
 	packageRoot: "/fixture",
 	entrypoint: "/fixture/runtime.mjs",
+	contentHash: "content-hash-1",
 	networkHosts: ["10.126.126.1:8080"],
 	credentials: [
 		{
@@ -19,9 +21,13 @@ const source: PluginRuntimeSource = {
 			header: "Authorization",
 			fields: [],
 			authentication: "http-basic-digest",
+			custody: "host-environment",
 		},
 	],
+	networkPolicy: { runtimeEndpoint: { allowed: true, credentialSlot: "webdav" } },
 };
+/** The user approved the package's policy at install, so the runtime endpoint may be configured. */
+const source: PluginRuntimeSource = { ...declared, policyConsent: consentForSource(declared) };
 const context: Omit<PluginCapabilityContext, "capabilities"> = {
 	pluginId: source.pluginId,
 	applicationId: "fixture",

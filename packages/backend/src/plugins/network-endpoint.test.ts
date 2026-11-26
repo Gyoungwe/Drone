@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { PluginCredentialStore } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
+import { consentForSource } from "./policy-consent";
 import { PluginCapabilityBroker, type PluginCapabilityContext } from "./runtime-capabilities";
 import { sourceCapabilityHandlers } from "./source-capabilities";
 import { TaskGrantStore } from "./task-grants";
@@ -15,14 +16,19 @@ const slot = {
 	header: "Authorization",
 	fields: [],
 	authentication: "http-basic-digest" as const,
+	custody: "host-environment" as const,
 };
-const source: PluginRuntimeSource = {
+const declared = {
 	pluginId: "@gyoungwe/pi-knowledge",
 	packageRoot: "/fixture",
 	entrypoint: "/fixture/runtime.mjs",
+	contentHash: "content-hash-1",
 	networkHosts: ["10.126.126.1:8080", "public.example"],
 	credentials: [slot, { ...slot, slot: "other" }],
+	networkPolicy: { runtimeEndpoint: { allowed: true as const, credentialSlot: "webdav" } },
 };
+/** The user approved the package's policy at install: the runtime endpoint and the host's password. */
+const source: PluginRuntimeSource = { ...declared, policyConsent: consentForSource(declared) };
 const context: Omit<PluginCapabilityContext, "capabilities"> = {
 	pluginId: source.pluginId,
 	applicationId: "fixture",

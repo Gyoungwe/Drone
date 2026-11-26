@@ -34,8 +34,12 @@ export function endpointConfigCapabilityHandlers(
 			]),
 			execute: async (raw) => {
 				const { slot } = raw as { slot: string };
-				if (slot !== "webdav") throw endpointPolicyError("EPLUGINENDPOINTSLOT");
-				return readPolicy().policy.configuration;
+				const { configuration } = readPolicy().policy;
+				// The policy names the slot it governs; a slot it does not name is not addressable.
+				if (!configuration || configuration.slot !== slot) throw endpointPolicyError("EPLUGINENDPOINTSLOT");
+				// The slot is host bookkeeping; the plugin API's result has never carried it.
+				const { slot: _governed, ...result } = configuration;
+				return result;
 			},
 		},
 	};

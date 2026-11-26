@@ -7,6 +7,7 @@ import type {
 } from "@gyoungwe/plugin-api/runtime";
 import type { PluginNetworkPolicy } from "./network-policy";
 import type { PluginCredentialSlot } from "./plugin-credentials";
+import type { PluginPolicyConsent } from "./policy-consent";
 
 export interface PluginP5Optins {
 	readonly bytes?: "staged-output";
@@ -57,6 +58,14 @@ export interface PluginRuntimeSource {
 	 * be granted one at all, and which credential slot's secret may ride along.
 	 */
 	readonly networkPolicy?: PluginNetworkPolicy;
+	/**
+	 * The user's approval of this package's credential and network policy.
+	 *
+	 * The host grants it at install time; without it the host keeps its secrets
+	 * to itself, so a package cannot obtain a host-held credential by declaring
+	 * the right shape.
+	 */
+	readonly policyConsent?: PluginPolicyConsent;
 	readonly resources?: Readonly<Record<string, string>>;
 }
 
@@ -89,6 +98,8 @@ export function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | unde
 		JSON.stringify(a.networkHosts) === JSON.stringify(b.networkHosts) &&
 		JSON.stringify(a.networkReads) === JSON.stringify(b.networkReads) &&
 		JSON.stringify(a.credentials) === JSON.stringify(b.credentials) &&
+		JSON.stringify(a.networkPolicy) === JSON.stringify(b.networkPolicy) &&
+		JSON.stringify(a.policyConsent) === JSON.stringify(b.policyConsent) &&
 		JSON.stringify(a.resources) === JSON.stringify(b.resources)
 	);
 }

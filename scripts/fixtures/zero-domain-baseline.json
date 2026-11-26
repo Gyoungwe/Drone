@@ -24,9 +24,6 @@
     "packages/research/package.json:@gyoungwe/pi-research"
   ],
   "hostSourceImports": [
-    "packages/backend/src/plugins/credential-override.ts:@gyoungwe/pi-knowledge",
-    "packages/backend/src/plugins/endpoint-policy.ts:@gyoungwe/pi-knowledge",
-    "packages/backend/src/plugins/host-kept-credentials.ts:@gyoungwe/pi-research",
     "packages/extensions/src/institutional-access.ts:@gyoungwe/pi-research",
     "packages/extensions/src/internal/knowledge-runtime.ts:@gyoungwe/pi-knowledge",
     "packages/extensions/src/internal/knowledge-runtime.ts:@gyoungwe/pi-research",

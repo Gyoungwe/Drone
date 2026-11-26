@@ -1,24 +1,33 @@
 import type { PluginCredentialSlot } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
+import { sourcePolicyApproved } from "./policy-consent";
 
 export type PluginEndpointConfigurationResult =
 	| {
 			readonly state: "ready";
 			readonly endpoint: string;
 			readonly source: "default" | "env";
+			/** The credential slot the endpoint rides on. */
+			readonly slot: string;
 	  }
 	| {
 			readonly state: "invalid";
 			readonly endpoint: null;
 			readonly source: "env";
 			readonly reason: "invalid_endpoint";
+			/** The credential slot the endpoint would have ridden on. */
+			readonly slot: string;
 	  };
 
 export interface PluginEndpointPolicy {
 	readonly configuration?: PluginEndpointConfigurationResult;
 	readonly networkHosts: readonly string[];
 	readonly credentialHosts: Readonly<Record<string, readonly string[]>>;
-	readonly runtimeGrant?: { readonly endpoint: string; readonly hostPort: string; readonly slot: "webdav" };
+	readonly runtimeGrant?: {
+		readonly endpoint: string;
+		readonly hostPort: string;
+		readonly slot: string;
+	};
 }
 
 /** One request's selection and a composition-owned check against the live environment. */
@@ -54,13 +63,29 @@ function parseEndpoint(raw: string): { endpoint: string; hostPort: string } | un
 	return { endpoint: url.origin, hostPort: `${url.hostname}:${port}` };
 }
 
-/** Only this installed package and complete declared slot may gain a runtime destination. */
+/**
+ * The slot a runtime endpoint may ride on.
+ *
+ * The package declares the policy in `drone.networkPolicy.runtimeEndpoint`: it names
+ * the slot whose secret may travel to the endpoint.  The slot must exist in the
+ * package's own credential declarations, it must carry host HTTP authentication — a
+ * literal secret header to a user-configured address would leak the secret to a host
+ * the package never declared — and it must already declare the host the endpoint
+ * replaces.
+ *
+ * The user must also have approved this package's policy at install time.  The
+ * declaration is not the grant: without the approval there is no endpoint to give.
+ */
 function eligibleSlot(source: PluginRuntimeSource): PluginCredentialSlot | undefined {
-	if (source.pluginId !== "@gyoungwe/pi-knowledge" || !source.networkHosts?.includes(DEFAULT_HOST))
-		return undefined;
+	const policy = source.networkPolicy?.runtimeEndpoint;
+	if (!policy?.allowed) return undefined;
+	if (!source.networkHosts?.includes(DEFAULT_HOST)) return undefined;
+	// The user approved this package's policy at install; without that there is
+	// no endpoint to grant, whatever the manifest declares.
+	if (!sourcePolicyApproved(source)) return undefined;
 	return source.credentials?.find(
 		(slot) =>
-			slot.slot === "webdav" &&
+			slot.slot === policy.credentialSlot &&
 			slot.authentication === "http-basic-digest" &&
 			slot.header === "Authorization" &&
 			slot.fields.length === 0 &&
@@ -78,32 +103,57 @@ export function resolvePluginEndpointPolicy(
 		(source.credentials ?? []).map((slot) => [slot.slot, slot.hosts]),
 	);
 	const declared = { networkHosts, credentialHosts };
-	const webdav = eligibleSlot(source);
-	if (!webdav) return declared;
+	const eligible = eligibleSlot(source);
+	if (!eligible) return declared;
 	if (rawEndpoint === undefined)
-		return { ...declared, configuration: { state: "ready", endpoint: DEFAULT_ENDPOINT, source: "default" } };
+		return {
+			...declared,
+			configuration: {
+				state: "ready",
+				endpoint: DEFAULT_ENDPOINT,
+				source: "default",
+				slot: eligible.slot,
+			},
+		};
 	const parsed = parseEndpoint(rawEndpoint);
 	if (!parsed)
 		return {
 			...declared,
-			configuration: { state: "invalid", endpoint: null, source: "env", reason: "invalid_endpoint" },
+			configuration: {
+				state: "invalid",
+				endpoint: null,
+				source: "env",
+				reason: "invalid_endpoint",
+				slot: eligible.slot,
+			},
 		};
 	return {
-		configuration: { state: "ready", endpoint: parsed.endpoint, source: "env" },
+		configuration: {
+			state: "ready",
+			endpoint: parsed.endpoint,
+			source: "env",
+			slot: eligible.slot,
+		},
 		networkHosts: [...new Set([...networkHosts, parsed.hostPort])],
 		credentialHosts: {
 			...credentialHosts,
-			webdav: [...new Set([...webdav.hosts, parsed.hostPort])],
+			[eligible.slot]: [...new Set([...eligible.hosts, parsed.hostPort])],
 		},
-		runtimeGrant: { ...parsed, slot: "webdav" },
+		runtimeGrant: { ...parsed, slot: eligible.slot },
 	};
 }
 
+/**
+ * An invalid endpoint disables the slot the policy named, not every slot.
+ *
+ * The slot comes from the policy's own configuration, so the check follows the
+ * declaration instead of a hard-coded name.
+ */
 export function assertEndpointAvailable(
 	policy: PluginEndpointPolicy | undefined,
 	slot: string | undefined,
 ): void {
-	if (slot === "webdav" && policy?.configuration?.state === "invalid")
+	if (slot !== undefined && slot === policy?.configuration?.slot && policy.configuration.state === "invalid")
 		throw endpointPolicyError("invalid_endpoint");
 }
 
@@ -116,7 +166,11 @@ export function runtimeEndpointMatches(
 	destinations: readonly string[] | undefined,
 ): boolean {
 	const grant = policy?.runtimeGrant;
+	if (!grant) return false;
 	return Boolean(
-		httpAuth && slot === "webdav" && grant?.endpoint === url.origin && destinations?.includes(grant.hostPort),
+		httpAuth &&
+			slot === grant.slot &&
+			grant.endpoint === url.origin &&
+			destinations?.includes(grant.hostPort),
 	);
 }

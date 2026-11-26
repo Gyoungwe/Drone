@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { Plugin } from "esbuild";
 import { PLUGIN_API_SHIM } from "./plugin-api-shim.generated";
@@ -36,6 +37,25 @@ export function loadEsbuild(): Promise<typeof import("esbuild")> {
 		});
 	}
 	return esbuildPromise;
+}
+
+/** 目录内所有文件的最新 mtime（构建陈旧性判断：源码比产物新即重建） */
+export async function newestMtime(dir: string): Promise<number | null> {
+	let newest: number | null = null;
+	const walk = async (d: string) => {
+		const entries = await readdir(d, { withFileTypes: true }).catch(() => []);
+		for (const entry of entries) {
+			const p = join(d, entry.name);
+			if (entry.isDirectory()) {
+				await walk(p);
+			} else {
+				const s = await stat(p).catch(() => null);
+				if (s && (newest === null || s.mtimeMs > newest)) newest = s.mtimeMs;
+			}
+		}
+	};
+	await walk(dir);
+	return newest;
 }
 
 /**

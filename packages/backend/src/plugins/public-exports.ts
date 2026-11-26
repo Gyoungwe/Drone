@@ -7,6 +7,7 @@ export type {
 	PluginRuntimeSource,
 } from "./coordinator";
 export { PluginRuntimeBridge } from "./coordinator";
+export type { HostCustodyKind } from "./credential-custody";
 export {
 	type DomainCapability,
 	type DomainCapabilityRegistration,
@@ -57,6 +58,16 @@ export {
 	type P5AdoptedWriter,
 	type PluginWriterAuthorityView,
 } from "./plugin-writer-authority";
+export {
+	type CustodyGrant,
+	consentCovers,
+	consentForSource,
+	custodyGrants,
+	needsPolicyApproval,
+	type PluginPolicyConsent,
+	policyFingerprint,
+	sourcePolicyApproved,
+} from "./policy-consent";
 export { createProcessPluginRuntime } from "./process-runtime";
 export { PluginResourceManager, type PluginResourceManagerOptions } from "./resource-capabilities";
 export type { PluginRuntimeCaller, PluginRuntimeCallerResolver } from "./runtime";

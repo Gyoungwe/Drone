@@ -127,6 +127,9 @@ async function installResearch(host) {
 		{ recursive: true },
 	);
 	await host.manager.scanAll();
+	// The user approves the package's policy at install, so the host's Zotero key may stand in.
+	for (const source of host.manager.pendingPolicyApprovals())
+		await host.manager.recordPolicyDecision(source, true);
 }
 
 function assertZoteroSaves(messages, zotero, allowances) {

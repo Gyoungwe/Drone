@@ -94,6 +94,9 @@ it("lets the user disable and re-enable the shipped research package", async () 
 	await manager.scanAll();
 	const research = manager.runtimeSources().find(({ source }) => source.pluginId === "@gyoungwe/pi-research");
 	if (!research) throw new Error("The shipped research package was not discovered");
+	// The package declares a host-kept secret, so it waits for the user's approval before it runs.
+	expect(manager.info("drone-research-ui")?.enabled).toBe(false);
+	for (const source of manager.pendingPolicyApprovals()) await manager.recordPolicyDecision(source, true);
 	expect(manager.info("drone-research-ui")).toMatchObject({ enabled: true, trusted: true, builtin: true });
 	const entry = research.source.nativeDeclaredPath;
 	expect(manager.builtinExtensionPaths()).toContain(entry);

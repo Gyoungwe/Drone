@@ -13,6 +13,7 @@ import { discoverInstalledPackages } from "../../desktop/src/main/ui-plugins/ins
 import { createBackend } from "../src/create-backend";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { PluginCredentialStore } from "../src/plugins/plugin-credentials";
+import { consentForSource } from "../src/plugins/policy-consent";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 
 const secrets = {
@@ -160,6 +161,7 @@ async function installFixture(t) {
 						header: "Authorization",
 						fields: [],
 						authentication: "http-basic-digest",
+						custody: "host-environment",
 					},
 				],
 			},
@@ -167,9 +169,11 @@ async function installFixture(t) {
 			tools: [],
 		}),
 	);
+	// The user approved the package's policy at install, so the host's WebDAV password may stand in.
 	t.catalog = (await discoverInstalledPackages(join(t.root, "installed", "node_modules"))).map((item) => {
 		if ("error" in item || !item.runtime) throw new Error("Fixture discovery failed");
-		return { name: `package:${item.packageRoot}`, source: item.runtime, state: "enabled" };
+		const source = { ...item.runtime, policyConsent: consentForSource(item.runtime) };
+		return { name: `package:${item.packageRoot}`, source, state: "enabled" };
 	});
 	[t.plugin] = t.catalog;
 }
