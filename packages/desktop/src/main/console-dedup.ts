@@ -70,8 +70,6 @@ export function createConsoleDeduper(options?: { maxEntries?: number; threshold?
 	};
 }
 
-export type ConsoleDeduper = ReturnType<typeof createConsoleDeduper>;
-
 /** 汇总行的日志参数（message + args，与既有 renderer console 行风格一致） */
 export function consoleDedupLogLine(
 	s: ConsoleDedupSummary,

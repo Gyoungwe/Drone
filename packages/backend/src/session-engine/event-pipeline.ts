@@ -58,7 +58,3 @@ export function runEventPipeline<Event, Context = undefined>(
 ): Event | null {
 	return createEventPipeline(stages, options).run(event, context);
 }
-
-// Short aliases for callers that already use the generic pipeline terminology.
-export const createPipeline = createEventPipeline;
-export const runPipeline = runEventPipeline;

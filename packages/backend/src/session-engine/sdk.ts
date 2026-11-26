@@ -35,9 +35,7 @@ export type {
 export {
 	createAgentSession,
 	DefaultPackageManager,
-	DefaultPackageManager as PackageManagerImpl,
 	DefaultResourceLoader,
-	DefaultResourceLoader as ResourceLoaderImpl,
 	getAgentDir,
 	hasTrustRequiringProjectResources,
 	parseFrontmatter,

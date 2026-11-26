@@ -67,7 +67,7 @@
 	"file-lines\tpackages/compute/src/types.ts": 676,
 	"file-lines\tpackages/compute/src/workflow.ts": 485,
 	"file-lines\tpackages/desktop/src/main/index.ts": 478,
-	"file-lines\tpackages/desktop/src/main/research-skill-updater.ts": 502,
+	"file-lines\tpackages/desktop/src/main/research-skill-updater.ts": 492,
 	"file-lines\tpackages/desktop/src/main/skill-repositories.ts": 554,
 	"file-lines\tpackages/desktop/src/main/ui-plugins/manager.ts": 604,
 	"file-lines\tpackages/desktop/src/main/ui-plugins/runtime-bridge.test.ts": 554,

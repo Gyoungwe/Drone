@@ -81,9 +81,3 @@ export function bindContract<TContract extends DomainContract>(
 		for (const channel of registeredChannels) ipc.removeHandler(channel);
 	};
 }
-
-/** Result type used by adapters that need to expose validation errors explicitly. */
-export type ContractResult<
-	TContract extends DomainContract,
-	TMethod extends keyof TContract["methods"] & string,
-> = ResultOf<TContract, TMethod> | HostApiValidationError;
