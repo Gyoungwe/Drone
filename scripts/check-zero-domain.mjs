@@ -170,9 +170,8 @@ function contractChannels(file, source) {
 	return channels;
 }
 
-function inventoryIpcChannels(root) {
-	const ipc = readOptional(join(root, "packages/shared/src/ipc.ts")) ?? "";
-	const channels = ipcChannelLiterals(ipc);
+function inventoryDomainChannels(root) {
+	const channels = [];
 	const hostApi = join(root, "packages/shared/src/host-api");
 	if (!existsSync(hostApi)) return channels;
 	for (const entry of readdirSync(hostApi, { withFileTypes: true })) {
@@ -205,7 +204,7 @@ export function collectZeroDomainFindings(root) {
 		rootScripts: Object.entries(rootManifest.scripts ?? {})
 			.filter(([, command]) => domainCommand.test(command))
 			.map(([name]) => name),
-		domainIpcChannels: inventoryIpcChannels(root),
+		domainIpcChannels: inventoryDomainChannels(root),
 	};
 	return Object.fromEntries(Object.entries(findings).map(([category, keys]) => [category, sortedKeys(keys)]));
 }

@@ -16,8 +16,6 @@ export interface ExposeContractOptions {
 	ipc?: IpcRendererLike;
 	bridge?: ContextBridgeLike;
 	globalName?: string;
-	/** Override a channel during incremental migrations that preserve legacy names. */
-	channelForMethod?: (contract: DomainContract, method: string) => string;
 }
 
 /**
@@ -60,7 +58,7 @@ export function exposeContract<TContract extends DomainContract>(
 	const renderer = options.ipc ?? ipcRenderer;
 	const api: Record<string, unknown> = {};
 	for (const methodName of Object.keys(contract.methods)) {
-		const channel = options.channelForMethod?.(contract, methodName) ?? channelOf(contract, methodName);
+		const channel = channelOf(contract, methodName);
 		api[methodName] = async (...args: unknown[]) => {
 			const result = await renderer.invoke(channel, ...args);
 			if (isHostApiValidationEnvelope(result)) throw new HostApiValidationFailure(result);

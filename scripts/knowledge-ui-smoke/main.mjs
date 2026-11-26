@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { channelOf, DecisionsContract, IpcChannels, SessionsContract } from "@drone/shared";
+import { AppContract, channelOf, DecisionsContract, SessionsContract } from "@drone/shared";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { KnowledgeUiService } from "../../packages/backend/src/knowledge/ui.ts";
 import { registerKnowledgeIpc } from "../../packages/desktop/src/main/ipc/knowledge.ts";
@@ -145,12 +145,12 @@ async function run() {
 		backend.cancelKnowledgeModelReview = async () => {};
 		app.dock?.hide();
 		registerKnowledgeIpc(backend);
-		ipcMain.handle(IpcChannels.ProjectPickDirectory, () => join(root, "New Vault"));
+		ipcMain.handle(channelOf(AppContract, "pickDirectory"), () => join(root, "New Vault"));
 		await mkdir(join(root, "daily"), { recursive: true });
-		ipcMain.handle(IpcChannels.UiStateSave, () => undefined);
+		ipcMain.handle(channelOf(AppContract, "saveUiState"), () => undefined);
 		ipcMain.handle(channelOf(DecisionsContract, "list"), () => []);
 		ipcMain.handle(channelOf(SessionsContract, "listAllSessions"), () => []);
-		ipcMain.handle(IpcChannels.AppGetDailyDir, () => join(root, "daily"));
+		ipcMain.handle(channelOf(AppContract, "getDailyDir"), () => join(root, "daily"));
 		let usageReads = 0;
 		ipcMain.handle(channelOf(SessionsContract, "getStats"), () => {
 			usageReads++;

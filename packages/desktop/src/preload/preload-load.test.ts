@@ -1,3 +1,4 @@
+import type { PiApi } from "@drone/shared";
 import { describe, expect, it, vi } from "vitest";
 
 /**
@@ -6,12 +7,15 @@ import { describe, expect, it, vi } from "vitest";
  * 确认不抛错、window.pi 被注入，且每个契约方法都有通道。
  */
 const exposed: Record<string, unknown> = {};
+const ipc = vi.hoisted(() => ({
+	invoke: vi.fn(async () => undefined),
+	on: vi.fn<(channel: string, listener: (event: unknown, payload: unknown) => void) => void>(),
+	removeListener: vi.fn(),
+}));
 vi.mock("electron", () => ({
 	contextBridge: { exposeInMainWorld: (key: string, value: unknown) => (exposed[key] = value) },
 	ipcRenderer: {
-		invoke: vi.fn(async () => undefined),
-		on: vi.fn(),
-		removeListener: vi.fn(),
+		...ipc,
 		send: vi.fn(),
 		sendSync: vi.fn(() => undefined),
 	},
@@ -37,4 +41,46 @@ describe("preload", () => {
 			}),
 		);
 	});
+
+	it("routes app aliases through the app contract and forwards optional arguments", async () => {
+		await import("./index");
+		const pi = exposed.pi as PiApi;
+		expect(pi.platform).toBe(process.platform);
+		await pi.getAppInfo();
+		await pi.previewFile("/papers/source.pdf", undefined, true);
+		await pi.openResourceExternal("paper.pdf", "/papers", true);
+		await pi.pickPath("directory");
+		expect(ipc.invoke.mock.calls).toEqual([
+			["app:getInfo"],
+			["app:filePreview", "/papers/source.pdf", undefined, true],
+			["app:resourceOpenExternal", "paper.pdf", "/papers", true],
+			["app:pickPath", "directory"],
+		]);
+	});
+
+	it.each([
+		{ method: "onUpdateEvent", channel: "app:updateEvent", payload: { phase: "checking" } },
+		{
+			method: "onResearchSkillUpdateEvent",
+			channel: "researchSkills:updateEvent",
+			payload: { phase: "checking" },
+		},
+		{ method: "onDesktopCommand", channel: "app:desktopCommand", payload: "new-task" },
+	] as const)(
+		"$method subscribes to $channel and removes its listener",
+		async ({ method, channel, payload }) => {
+			await import("./index");
+			const pi = exposed.pi as PiApi;
+			const receive = vi.fn();
+			const unsubscribe = pi[method](receive);
+			const registration = ipc.on.mock.lastCall;
+			if (!registration) throw new Error(`Missing IPC listener: ${channel}`);
+			const [actualChannel, listener] = registration;
+			expect(actualChannel).toBe(channel);
+			listener({}, payload);
+			expect(receive).toHaveBeenCalledExactlyOnceWith(payload);
+			unsubscribe();
+			expect(ipc.removeListener).toHaveBeenLastCalledWith(channel, listener);
+		},
+	);
 });

@@ -326,7 +326,8 @@ packages/
 
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
-| `src/ipc.ts` | `IpcChannels`、`PiApi` | app 域旧通道名常量与 `window.pi` 完整类型。各已迁移域的通道由对应 Host API 契约生成。 |
+| `src/host-api/index.ts` | `PiApi` | 从 20 个宿主 API 组合 `window.pi` 的类型，经 `@drone/shared` 导出。 |
+| `src/host-api/app.ts` | `AppContract`、`AppApi`、`ResourcePreviewResult`、`FigureAnnotation`、`ImportedAttachment` | 应用、文件、项目和偏好设置的 IPC 契约，以及更新状态和原生菜单事件。 |
 | `src/host-api/sessions.ts` | `SessionsContract`、`SessionsApi`、`PromptReceipt` | 会话方法与 `sessions:event` 通知；`SessionsApi<"desktop">` 提供 `onEvent`，`PromptReceipt` 表示 prompt 预检结果。 |
 | `src/host-api/permissions.ts` | `PermissionsContract`、`PermissionsApi` | 权限设置、会话权限模式、问答、工具审批与项目信任的 IPC 契约。 |
 | `src/knowledge.ts` | `KnowledgeApi`、`KnowledgeFlow*`、`KnowledgeCloud*`、`ResearchRun*`、`WikiReview*` 等 | 宿主侧知识与研究运行契约。其中 17 个通用知识契约（`KnowledgeReadRecord`、`KnowledgeGraph*`、`KnowledgeIndexStatus`、`KnowledgeJob`、`KnowledgeOverview`、`KnowledgePage`、`KnowledgeLinkRef`、`KnowledgeNoteLinks`、`KnowledgeAnswerMetric`、`KnowledgeBinding`、`KnowledgeRecentNote`、`WikiReviewItem` 等）由 `@gyoungwe/plugin-api/knowledge` 拥有，本文件只做 re-export，不再保留第二份本地定义；依赖方向是 shared → plugin-api，plugin-api 不反向依赖 shared |

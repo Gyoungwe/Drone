@@ -114,8 +114,8 @@ mac:
 `,
 	);
 	write(
-		"packages/shared/src/ipc.ts",
-		`export const IpcChannels = {
+		"packages/shared/src/host-api/channels.ts",
+		`export const channels = {
 	KnowledgeRead: "knowledge:read",
 	ResearchSearch: 'research:search',
 	ZoteroStatus: "zotero:status",
@@ -185,16 +185,18 @@ test("a new host import fails the CLI check", (context) => {
 
 test("a new domain IPC channel fails the CLI check", (context) => {
 	const { write, run } = fixture(context);
-	write("packages/shared/src/ipc.ts", 'export const IpcChannels = { EvidenceList: "evidence:list" };');
+	write(
+		"packages/shared/src/host-api/evidence.ts",
+		'export const EvidenceContract = defineDomain("evidence", { methods: { list: listSchema } });',
+	);
 	const result = run();
 	assert.equal(result.status, 1, result.stderr);
 	assert.match(result.stderr, /domainIpcChannels: evidence:list/);
 });
 
-test("moving IPC channels to a host API contract preserves the channel inventory", (context) => {
-	const { root, write } = fixture(context);
-	const ipc = "packages/shared/src/ipc.ts";
-	write(ipc, 'export const IpcChannels = { EvidenceList: "evidence:list" };');
+test("host API contracts provide the full channel inventory", (context) => {
+	const channels = ["evidence:list", "evidence:replay-finished", "researchSkills:updateEvent"];
+	const { root, write, run } = fixture(context, { ...emptyBaseline, domainIpcChannels: channels });
 	write(
 		"packages/shared/src/host-api/evidence.ts",
 		`export const EvidenceContract = defineDomain("evidence", {
@@ -202,10 +204,18 @@ test("moving IPC channels to a host API contract preserves the channel inventory
 	events: { "replay-finished": replaySchema },
 });`,
 	);
-	const channels = ["evidence:list", "evidence:replay-finished"];
+	write(
+		"packages/shared/src/host-api/app.ts",
+		`export const AppContract = defineDomain("app", {
+	methods: {},
+	events: { researchSkillUpdateEvent: updateSchema },
+	channels: { researchSkillUpdateEvent: "researchSkills:updateEvent" },
+});`,
+	);
 	assert.deepEqual(collectZeroDomainFindings(root).domainIpcChannels, channels);
-	write(ipc, "");
-	assert.deepEqual(collectZeroDomainFindings(root).domainIpcChannels, channels);
+	const result = run();
+	assert.equal(result.status, 0, result.stderr);
+	assert.equal(JSON.parse(result.stdout).counts.domainIpcChannels, channels.length);
 });
 
 test("new domain IPC channels in host API files fail the CLI check", (context) => {
@@ -296,7 +306,13 @@ test("a first-party package the host has not imported yet is still ratcheted", (
 
 test("a research-flavoured IPC channel is ratcheted even when its prefix is not `research`", (context) => {
 	const { write, run } = fixture(context);
-	write("packages/shared/src/ipc.ts", 'export const IpcChannels = { Skills: "researchSkills:update" };');
+	write(
+		"packages/shared/src/host-api/app.ts",
+		`export const AppContract = defineDomain("app", {
+	methods: { updateResearchSkills: updateSchema },
+	channels: { updateResearchSkills: "researchSkills:update" },
+});`,
+	);
 	const result = run();
 	assert.equal(result.status, 1, result.stderr);
 	assert.match(result.stderr, /domainIpcChannels: researchSkills:update/);

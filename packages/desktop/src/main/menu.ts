@@ -1,4 +1,4 @@
-import { DESKTOP_COMMANDS, type DesktopCommand, IpcChannels } from "@drone/shared";
+import { AppContract, channelOf, DESKTOP_COMMANDS, type DesktopCommand } from "@drone/shared";
 import type { MenuItemConstructorOptions } from "electron";
 
 /**
@@ -48,4 +48,4 @@ export function buildMenuTemplate(
 	];
 }
 
-export const DESKTOP_COMMAND_CHANNEL = IpcChannels.DesktopCommand;
+export const DESKTOP_COMMAND_CHANNEL = channelOf(AppContract, "desktopCommand");

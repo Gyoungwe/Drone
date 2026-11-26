@@ -7,8 +7,8 @@ import type {
 	TrustRequest,
 } from "@drone/shared";
 import {
+	AppContract,
 	channelOf,
-	IpcChannels,
 	McpContract,
 	PermissionsContract,
 	PluginRuntimeContract,
@@ -154,9 +154,9 @@ export function registerIpc(
 		sendToRenderer(channelOf(McpContract, "event"), { cwd, status });
 	});
 	onUpdateState((state) => {
-		sendToRenderer(IpcChannels.UpdateEvent, state);
+		sendToRenderer(channelOf(AppContract, "updateEvent"), state);
 	});
 	onResearchSkillUpdateState((state) => {
-		sendToRenderer(IpcChannels.ResearchSkillUpdateEvent, state);
+		sendToRenderer(channelOf(AppContract, "researchSkillUpdateEvent"), state);
 	});
 }

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, BrowserWindow, ipcMain } from "electron";
+import { AppContract } from "../../packages/shared/src/host-api/app.ts";
 import { channelOf } from "../../packages/shared/src/host-api/define.ts";
 import { KnowledgeContract } from "../../packages/shared/src/host-api/knowledge.ts";
-import { IpcChannels } from "../../packages/shared/src/ipc.ts";
 
 const root = process.env.DRONE_UI_FIXTURE;
 app.setPath("userData", join(root, "electron-profile"));
@@ -28,7 +28,7 @@ app
 			assert.equal(operation, "openTarget");
 			opens.push(input);
 		});
-		ipcMain.handle(IpcChannels.UiStateSave, () => {});
+		ipcMain.handle(channelOf(AppContract, "saveUiState"), () => undefined);
 		window = new BrowserWindow({
 			width: 1000,
 			height: 700,

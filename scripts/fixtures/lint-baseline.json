@@ -568,7 +568,6 @@
 	"suspicious/noEmptyBlockStatements\tscripts/check-subagents-ui.mjs": 1,
 	"suspicious/noEmptyBlockStatements\tscripts/check-task-delivery-ui.mjs": 1,
 	"suspicious/noEmptyBlockStatements\tscripts/check-workflow-catalog-ui.mjs": 1,
-	"suspicious/noEmptyBlockStatements\tscripts/knowledge-ui-smoke/fallback-main.mjs": 1,
 	"suspicious/noEmptyBlockStatements\tscripts/knowledge-ui-smoke/fallback-renderer.tsx": 1,
 	"suspicious/noEmptyBlockStatements\tscripts/knowledge-ui-smoke/main.mjs": 2,
 	"suspicious/noEmptyBlockStatements\tscripts/knowledge-ui-smoke/sidebar.tsx": 1,

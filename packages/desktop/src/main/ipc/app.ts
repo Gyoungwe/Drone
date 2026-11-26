@@ -3,7 +3,7 @@ import { copyFile, mkdir, readdir, readFile, realpath, stat, writeFile } from "n
 import { basename, join } from "node:path";
 import { type DiagnosticsServicePort, setReplyLanguage } from "@drone/backend";
 import type { HostFileAction, SavedTabs, UiState } from "@drone/shared";
-import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
+import { AppContract, isLocalResourceTarget } from "@drone/shared";
 import { app, BrowserWindow, clipboard, dialog, nativeImage, nativeTheme, shell } from "electron";
 import { applyAttentionBadge } from "../attention-badge";
 import { pickBackgroundImage } from "../background";
@@ -229,46 +229,5 @@ export function registerAppIpc(
 		listGitBranches: (cwd) => listGitBranches(cwd),
 		checkoutBranch: (cwd, branch) => checkoutBranch(cwd, branch),
 	};
-	bindContract(AppContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			({
-				getInfo: IpcChannels.AppGetInfo,
-				getDiagnostics: IpcChannels.AppGetDiagnostics,
-				getDailyDir: IpcChannels.AppGetDailyDir,
-				openExternal: IpcChannels.AppOpenExternal,
-				filePreview: IpcChannels.FilePreview,
-				htmlPreviewUrl: IpcChannels.FileHtmlPreviewUrl,
-				getFigureAnnotations: IpcChannels.FigureAnnotationsGet,
-				saveFigureAnnotations: IpcChannels.FigureAnnotationsSave,
-				importDroppedFile: IpcChannels.FileImportDropped,
-				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
-				fileAction: IpcChannels.FileAction,
-				hostEnvironment: IpcChannels.HostEnvironment,
-				pickDownloadDir: IpcChannels.DownloadDirPick,
-				setAttentionBadge: IpcChannels.AttentionBadgeSet,
-				loadTabs: IpcChannels.TabsLoad,
-				saveTabs: IpcChannels.TabsSave,
-				loadUiState: IpcChannels.UiStateLoad,
-				saveUiState: IpcChannels.UiStateSave,
-				pickBackgroundImage: IpcChannels.BackgroundPick,
-				checkForUpdates: IpcChannels.UpdateCheck,
-				downloadUpdate: IpcChannels.UpdateDownload,
-				installUpdate: IpcChannels.UpdateInstall,
-				checkResearchSkills: IpcChannels.ResearchSkillCheck,
-				updateResearchSkills: IpcChannels.ResearchSkillUpdate,
-				restartForResearchSkills: IpcChannels.ResearchSkillRestart,
-				listSkillRepositories: IpcChannels.SkillRepositoryList,
-				addSkillRepository: IpcChannels.SkillRepositoryAdd,
-				checkSkillRepository: IpcChannels.SkillRepositoryCheck,
-				updateSkillRepository: IpcChannels.SkillRepositoryUpdate,
-				removeSkillRepository: IpcChannels.SkillRepositoryRemove,
-				saveFileDialog: IpcChannels.FileSaveDialog,
-				pickPath: IpcChannels.FilePickPath,
-				pickDirectory: IpcChannels.ProjectPickDirectory,
-				formalKnowledgeVault: IpcChannels.KnowledgeFormalVault,
-				getGitBranch: IpcChannels.ProjectGetGitBranch,
-				listGitBranches: IpcChannels.ProjectListGitBranches,
-				checkoutBranch: IpcChannels.ProjectCheckoutBranch,
-			})[method as keyof typeof AppContract.methods],
-	});
+	bindContract(AppContract, implementation);
 }

@@ -13,7 +13,7 @@ const config = JSON.parse(
 test("knowledge UI exposes only its explicit routes and matches host wire signatures", () => {
 	const file = resolve(root, "packages/plugin-api/test/ui-typecheck.ts");
 	const source = `
-import type { PiApi } from '../../shared/src/ipc';
+import type { PiApi } from '../../shared/src/host-api';
 import type { KnowledgeUiPort, KnowledgeUiRoute, SessionUiPort, ChatMessageProps, SessionMessagesHook, DroneUiRuntime } from '../src/ui';
 const host = null as unknown as PiApi;
 const knowledgeRoute: KnowledgeUiRoute = {

@@ -9,7 +9,6 @@ import {
 	EvidenceContract,
 	InquiryContract,
 	InstitutionalContract,
-	IpcChannels,
 	KnowledgeContract,
 	McpContract,
 	MemoryContract,
@@ -25,64 +24,14 @@ import {
 	UiPluginsContract,
 	ZoteroContract,
 } from "@drone/shared";
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge } from "electron";
 import { exposeContract } from "./expose-contract";
 
 type InvokeFn = (...args: any[]) => Promise<any>;
 const invoke = (client: Record<string, unknown>, method: string): InvokeFn =>
 	((...args: any[]) => (client[method] as InvokeFn)(...args)) as InvokeFn;
 
-const channelFrom = (channels: Record<string, string>, method: string): string => {
-	const channel = channels[method];
-	if (!channel) throw new Error(`Missing IPC channel mapping: ${method}`);
-	return channel;
-};
-
-const appClient = exposeContract(AppContract, {
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getInfo: IpcChannels.AppGetInfo,
-				getDiagnostics: IpcChannels.AppGetDiagnostics,
-				getDailyDir: IpcChannels.AppGetDailyDir,
-				openExternal: IpcChannels.AppOpenExternal,
-				filePreview: IpcChannels.FilePreview,
-				htmlPreviewUrl: IpcChannels.FileHtmlPreviewUrl,
-				getFigureAnnotations: IpcChannels.FigureAnnotationsGet,
-				saveFigureAnnotations: IpcChannels.FigureAnnotationsSave,
-				importDroppedFile: IpcChannels.FileImportDropped,
-				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
-				fileAction: IpcChannels.FileAction,
-				hostEnvironment: IpcChannels.HostEnvironment,
-				pickDownloadDir: IpcChannels.DownloadDirPick,
-				setAttentionBadge: IpcChannels.AttentionBadgeSet,
-				loadTabs: IpcChannels.TabsLoad,
-				saveTabs: IpcChannels.TabsSave,
-				loadUiState: IpcChannels.UiStateLoad,
-				saveUiState: IpcChannels.UiStateSave,
-				pickBackgroundImage: IpcChannels.BackgroundPick,
-				checkForUpdates: IpcChannels.UpdateCheck,
-				downloadUpdate: IpcChannels.UpdateDownload,
-				installUpdate: IpcChannels.UpdateInstall,
-				checkResearchSkills: IpcChannels.ResearchSkillCheck,
-				updateResearchSkills: IpcChannels.ResearchSkillUpdate,
-				restartForResearchSkills: IpcChannels.ResearchSkillRestart,
-				listSkillRepositories: IpcChannels.SkillRepositoryList,
-				addSkillRepository: IpcChannels.SkillRepositoryAdd,
-				checkSkillRepository: IpcChannels.SkillRepositoryCheck,
-				updateSkillRepository: IpcChannels.SkillRepositoryUpdate,
-				removeSkillRepository: IpcChannels.SkillRepositoryRemove,
-				saveFileDialog: IpcChannels.FileSaveDialog,
-				pickPath: IpcChannels.FilePickPath,
-				pickDirectory: IpcChannels.ProjectPickDirectory,
-				formalKnowledgeVault: IpcChannels.KnowledgeFormalVault,
-				getGitBranch: IpcChannels.ProjectGetGitBranch,
-				listGitBranches: IpcChannels.ProjectListGitBranches,
-				checkoutBranch: IpcChannels.ProjectCheckoutBranch,
-			},
-			method,
-		),
-});
+const { getInfo: getAppInfo, filePreview, resourceOpenExternal, ...appClient } = exposeContract(AppContract);
 const knowledgeClient = exposeContract(KnowledgeContract);
 const dailyClient = exposeContract(DailyContract);
 const zoteroClient = exposeContract(ZoteroContract);
@@ -177,57 +126,20 @@ const invokeApi = {
 	getChannelWatchConfig: permissionsClient.channelWatchGetConfig,
 	setChannelWatchEnabled: permissionsClient.channelWatchSetEnabled,
 	respondTrust: permissionsClient.respondTrust,
-	getAppInfo: invoke(appClient, "getInfo"),
-	getDiagnostics: invoke(appClient, "getDiagnostics"),
-	getDailyDir: invoke(appClient, "getDailyDir"),
-	openExternal: invoke(appClient, "openExternal"),
-	saveFileDialog: invoke(appClient, "saveFileDialog"),
-	pickPath: invoke(appClient, "pickPath"),
-	previewFile: invoke(appClient, "filePreview"),
-	htmlPreviewUrl: invoke(appClient, "htmlPreviewUrl"),
-	getFigureAnnotations: invoke(appClient, "getFigureAnnotations"),
-	saveFigureAnnotations: invoke(appClient, "saveFigureAnnotations"),
-	importDroppedFile: invoke(appClient, "importDroppedFile"),
-	openResourceExternal: invoke(appClient, "resourceOpenExternal"),
-	fileAction: invoke(appClient, "fileAction"),
-	hostEnvironment: invoke(appClient, "hostEnvironment"),
-	pickDownloadDir: invoke(appClient, "pickDownloadDir"),
-	setAttentionBadge: invoke(appClient, "setAttentionBadge"),
-	loadTabs: invoke(appClient, "loadTabs"),
-	saveTabs: invoke(appClient, "saveTabs"),
-	loadUiState: invoke(appClient, "loadUiState"),
-	saveUiState: invoke(appClient, "saveUiState"),
-	pickBackgroundImage: invoke(appClient, "pickBackgroundImage"),
-	checkForUpdates: invoke(appClient, "checkForUpdates"),
-	downloadUpdate: invoke(appClient, "downloadUpdate"),
-	installUpdate: invoke(appClient, "installUpdate"),
-	checkResearchSkills: invoke(appClient, "checkResearchSkills"),
-	updateResearchSkills: invoke(appClient, "updateResearchSkills"),
-	restartForResearchSkills: invoke(appClient, "restartForResearchSkills"),
-	listSkillRepositories: invoke(appClient, "listSkillRepositories"),
-	addSkillRepository: invoke(appClient, "addSkillRepository"),
-	checkSkillRepository: invoke(appClient, "checkSkillRepository"),
-	updateSkillRepository: invoke(appClient, "updateSkillRepository"),
-	removeSkillRepository: invoke(appClient, "removeSkillRepository"),
-	pickDirectory: invoke(appClient, "pickDirectory"),
-	formalKnowledgeVault: invoke(appClient, "formalKnowledgeVault"),
-	getGitBranch: invoke(appClient, "getGitBranch"),
-	listGitBranches: invoke(appClient, "listGitBranches"),
-	checkoutBranch: invoke(appClient, "checkoutBranch"),
 };
-
-/** 事件订阅：main → renderer 单向推送，`on` + 退订函数（invoke 之外的第二种 adapter 形态）。 */
-function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
-	const listener = (_event: unknown, payload: T) => cb(payload);
-	ipcRenderer.on(channel, listener);
-	return () => ipcRenderer.removeListener(channel, listener);
-}
 
 const api: PiApi = {
 	...invokeApi,
+	...appClient,
 	...sessionsClient,
 	...pluginCredentialsClient,
 	...backgroundJobsClient,
+	getAppInfo,
+	previewFile: filePreview as PiApi["previewFile"],
+	openResourceExternal: resourceOpenExternal as PiApi["openResourceExternal"],
+	pickPath: appClient.pickPath as PiApi["pickPath"],
+	htmlPreviewUrl: appClient.htmlPreviewUrl as PiApi["htmlPreviewUrl"],
+	getFigureAnnotations: appClient.getFigureAnnotations as PiApi["getFigureAnnotations"],
 	// platform：同步值，preload 注入供 renderer 按平台分流 UI
 	platform: process.platform,
 	onKnowledgeEvent: knowledgeClient.onEvent,
@@ -237,9 +149,6 @@ const api: PiApi = {
 	onAskResolved: permissionsClient.onAskResolved,
 	onUiPluginsEvent: uiPluginsClient.onEvent,
 	onPluginRuntimeEvent: pluginRuntimeClient.onEvent,
-	onUpdateEvent: (cb) => subscribe(IpcChannels.UpdateEvent, cb),
-	onResearchSkillUpdateEvent: (cb) => subscribe(IpcChannels.ResearchSkillUpdateEvent, cb),
-	onDesktopCommand: (cb) => subscribe(IpcChannels.DesktopCommand, cb),
 	onPermissionRequest: permissionsClient.onPermissionRequest,
 	onPermissionResolved: permissionsClient.onPermissionResolved,
 	onTrustRequest: permissionsClient.onTrustRequest,
