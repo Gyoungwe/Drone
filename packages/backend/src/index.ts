@@ -72,6 +72,12 @@ export { createLogger, initLogging, type Logger } from "./log";
 export { McpService, type McpServiceOptions, type McpServicePort } from "./mcp/service";
 export { fetchPackageCatalog, parseCatalogHtml } from "./packages/catalog";
 export {
+	createFirstPartyReleaseDiscovery,
+	type FirstPartyReleaseFetcher,
+	isFirstPartyPackageName,
+	isInternalDroneScope,
+} from "./packages/first-party-releases";
+export {
 	createPermissionConfigLoader,
 	DEFAULT_PERMISSION_CONFIG,
 	evaluateBashCommand,
