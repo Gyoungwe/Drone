@@ -49,13 +49,25 @@
 					"name": "research_search_sources",
 					"input": { "query": "winterglass calibration", "source_dir": "vault" }
 				},
+				{
+					"name": "research_loop",
+					"input": { "action": "record_local", "query": "winterglass calibration" }
+				},
 				{ "name": "baseline_search_external", "input": { "query": "winterglass calibration" } },
 				{
 					"name": "research_search_sources",
 					"input": { "query": "winterglass calibration", "source_dir": "sources/archive" }
 				},
+				{
+					"name": "research_loop",
+					"input": { "action": "record_external", "query": "winterglass calibration" }
+				},
 				{ "name": "research_read_source", "input": { "source_id": "winterglass-first" } },
 				{ "name": "research_read_source", "input": { "source_id": "winterglass-second" } },
+				{
+					"name": "research_loop",
+					"input": { "action": "inspect_sources", "source_refs": ["winterglass-first", "winterglass-second"] }
+				},
 				{
 					"name": "research_answer_sources",
 					"input": {
