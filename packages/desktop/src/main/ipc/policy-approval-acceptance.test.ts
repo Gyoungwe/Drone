@@ -37,8 +37,10 @@ import {
 	PluginCredentialStore,
 	type PluginRuntimeSource,
 } from "@drone/backend";
+import { channelOf, UiPluginsContract } from "@drone/shared";
 import { UiPluginManager } from "../ui-plugins/manager";
 import { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
+import { sendToRenderer } from "./index";
 import { registerUiPluginsIpc } from "./ui-plugins";
 
 /** The package the host ships, staged from the lock. */
@@ -115,6 +117,11 @@ it("the shipped research package waits for the user's approval before it runs", 
 		runtimeEndpoint: false,
 	});
 	expect(manager.info("drone-research-ui")).toMatchObject({ enabled: true });
+	const getConfig = transport.handlers.get(channelOf(UiPluginsContract, "getConfig"));
+	const config = await getConfig?.({});
+	expect(config).toMatchObject({ enabled: expect.any(Boolean), plugins: {}, assignments: {} });
+	expect(config).not.toHaveProperty("policyConsents");
+	expect(sendToRenderer).toHaveBeenCalledWith(channelOf(UiPluginsContract, "event"), { kind: "config" });
 });
 
 it("a refusal leaves the package off, and the host keeps its secret", async () => {

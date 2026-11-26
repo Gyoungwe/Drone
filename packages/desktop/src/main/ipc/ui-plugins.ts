@@ -103,7 +103,10 @@ export function registerUiPluginsIpc(
 	};
 	const { reconcilePolicies, setPluginEnabled } = createPolicyApprovalFlow(manager, changeConfiguration, ask);
 	const implementation = (event: IpcMainInvokeEvent): ContractImplementation<typeof UiPluginsContract> => ({
-		getConfig: () => loadUiPluginsConfig(),
+		getConfig: async () => {
+			const { enabled, plugins, assignments, installations } = await loadUiPluginsConfig();
+			return { enabled, plugins, assignments, ...(installations === undefined ? {} : { installations }) };
+		},
 		setEnabled: async (enabled) => {
 			await changeConfiguration(() => manager.updateConfig({ enabled }));
 		},
