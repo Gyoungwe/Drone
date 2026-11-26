@@ -59,14 +59,13 @@ it.each(["default", "deny", "pattern-ask", "outside"])(
 			on: (n: string, fn: any) => {
 				hooks[n] = fn;
 			},
-			events: {
-				on: vi.fn(),
-				emit: async (n: string, request: any) => {
-					if (n === "drone:task-write-consent") request.respond({ writeRoots: [root] });
-				},
-			},
 		};
-		const extension = makePermissionGateExtensions(agent, { projectRoot: root, confirm }).gate;
+		const taskWriteRoots = () => [root];
+		const extension = makePermissionGateExtensions(agent, {
+			projectRoot: root,
+			confirm,
+			taskWriteRoots,
+		}).gate;
 		await extension.factory(pi);
 		const result = await hooks.tool_call(
 			{
@@ -100,21 +99,16 @@ it("does not automatically approve overwriting an externally hard-linked file", 
 	expect(await taskWriteAllowed([root], target)).toBe(false);
 });
 
-it("prefers the host task grant and never consults the event bus when it applies", async () => {
+it("only the host task grant for the calling session widens writes", async () => {
 	const root = await fixture(),
 		agent = await fixture(),
 		other = await fixture();
 	const hooks: Record<string, (...args: any[]) => any> = {};
 	const confirm = vi.fn(async () => false);
-	const emit = vi.fn(async (n: string, request: any) => {
-		// A third party on the bus tries to widen the grant; the host grant wins.
-		if (n === "drone:task-write-consent") request.respond({ writeRoots: [other] });
-	});
 	const pi: any = {
 		on: (n: string, fn: any) => {
 			hooks[n] = fn;
 		},
-		events: { on: vi.fn(), emit },
 	};
 	const taskWriteRoots = vi.fn((sessionId: string | undefined) => (sessionId === "s" ? [root] : undefined));
 	await makePermissionGateExtensions(agent, { projectRoot: root, confirm, taskWriteRoots }).gate.factory(pi);
@@ -125,6 +119,6 @@ it("prefers the host task grant and never consults the event bus when it applies
 		);
 	expect(await write(join(root, "result.csv"))).toBeUndefined();
 	expect(await write(join(other, "result.csv"))).toMatchObject({ block: true });
-	expect(emit).not.toHaveBeenCalledWith("drone:task-write-consent", expect.anything());
 	expect(confirm).toHaveBeenCalledOnce();
+	expect(taskWriteRoots).toHaveBeenCalledWith("s");
 });

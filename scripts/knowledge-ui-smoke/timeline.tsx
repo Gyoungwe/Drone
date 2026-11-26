@@ -59,19 +59,6 @@ const result = (id: string, name: string, details: Record<string, unknown> = {})
 		result: { details, content: [{ type: "text", text: "Observed fixture result" }] },
 	});
 (window as any).stageTimelineFixture = {
-	status(text: string, taskView?: unknown) {
-		useTranscriptStore.getState().resetSession("fixture");
-		event("message_end", {
-			message: {
-				role: "custom",
-				customType: "drone-task-status",
-				display: true,
-				content: text,
-				timestamp: Date.now(),
-				details: { reportId: "ui-status-1", taskView },
-			},
-		});
-	},
 	start() {
 		useTranscriptStore.getState().resetSession("fixture");
 		event("agent_start");

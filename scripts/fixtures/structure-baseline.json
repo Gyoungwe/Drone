@@ -110,7 +110,7 @@
 	"file-lines\tscripts/check-local-desktop-artifact.mjs": 454,
 	"file-lines\tscripts/check-packaged-desktop.mjs": 448,
 	"file-lines\tscripts/check-release-artifacts.mjs": 442,
-	"file-lines\tscripts/knowledge-ui-smoke/main.mjs": 906,
+	"file-lines\tscripts/knowledge-ui-smoke/main.mjs": 776,
 	"file-lines\tscripts/replay-evaporation.mts": 1497,
 	"file-lines\tscripts/rnaseq-local-demo.ts": 420,
 	"file-lines\tscripts/sim-v19/common.mjs": 530,

@@ -1,6 +1,4 @@
 import "../../packages/desktop/src/renderer/src/plugins/host-api";
-import * as taskUi from "@installed-task-ui";
-import taskUiManifest from "@installed-task-ui-manifest";
 import { createRoot } from "react-dom/client";
 import { ProgressNote } from "../../packages/desktop/src/renderer/src/components/chat/ProgressNote";
 import { RunInspector } from "../../packages/desktop/src/renderer/src/components/chat/RunInspector";
@@ -13,13 +11,9 @@ import { KnowledgePanel } from "../../packages/desktop/src/renderer/src/componen
 import { KnowledgeUiRoot } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgeUiRoot";
 import { KnowledgeView } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgeView";
 import { SkillsPanel } from "../../packages/desktop/src/renderer/src/components/settings/SkillsPanel";
-import {
-	PluginEntryHost,
-	usePluginEntries,
-} from "../../packages/desktop/src/renderer/src/plugins/PluginRegions";
 import { RegionHost } from "../../packages/desktop/src/renderer/src/plugins/RegionHost";
 import { useUiPluginRegistry } from "../../packages/desktop/src/renderer/src/plugins/registry";
-import { UI_REGIONS, UI_SLOTS } from "../../packages/desktop/src/renderer/src/plugins/slots";
+import { UI_REGIONS } from "../../packages/desktop/src/renderer/src/plugins/slots";
 import { useSessionsStore } from "../../packages/desktop/src/renderer/src/stores/sessions";
 import { useSettingsStore } from "../../packages/desktop/src/renderer/src/stores/settings";
 import { useTranscriptStore } from "../../packages/desktop/src/renderer/src/stores/transcript";
@@ -29,9 +23,6 @@ import { reportedUsage, sumReportedUsage } from "../../packages/shared/src/usage
 import { SidebarActionsFixture } from "./sidebar";
 import { StageTimelineFixture } from "./timeline";
 
-const taskApplied = useUiPluginRegistry.getState().applyPlugin(taskUiManifest, taskUi, [UI_SLOTS.Message]);
-if (!taskApplied.ok)
-	throw new Error(`Installed task UI registration failed: ${taskApplied.missing.join(", ")}`);
 const info = await (window as any).knowledgeTest.info();
 const candidateUrl = new URL("./candidate-ui/index.js", window.location.href).href;
 const candidate = await import(/* @vite-ignore */ candidateUrl);
@@ -256,24 +247,8 @@ createRoot(rootEl).render(
 			<SessionUsageFooter sessionId="fixture" />
 		</div>
 		<StageTimelineFixture />
-		<div className="mt-4 rounded-2xl border border-border bg-surface p-4" data-testid="task-workbench">
-			<TaskPanelFixture />
-		</div>
 		<SidebarActionsFixture />
 		<KnowledgeUiRoot />
 		<RegionHost region={UI_REGIONS.AppOverlay} />
 	</div>,
 );
-
-function TaskPanelFixture() {
-	const entries = usePluginEntries(UI_REGIONS.PanelTab);
-	return (
-		<aside className="context-pane">
-			{entries
-				.filter((entry) => entry.pluginName === taskUiManifest.name)
-				.map((entry) => (
-					<PluginEntryHost key={entry.id} entry={entry} />
-				))}
-		</aside>
-	);
-}
