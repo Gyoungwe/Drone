@@ -44,6 +44,11 @@
 | 不装知识插件后扩展通知丢失、旧 context 继续通知 | 2026-10-28 · SDK 退订与通用通知 |
 | 受管任务一轮对话后即 `Task storage failed … requires an idle session` / `caller completed` | 受管插件的状态卡要等运行结束、在调用内等待 |
 | Ordinary native delivery exposes unchecked knowledge drafts or provider protocol | 2026-11-12 · Ordinary native delivery bypassed the legacy publication owner |
+| Research host smoke reports `2 !== 1` for `receipt_journal.buffered` | 2026-11-27 · The research receipt journal counts the run-opening call |
+
+## 2026-11-27: The research receipt journal counts the run-opening call
+
+In `pi-research@0.4.1`, `research_loop(action="start")` is an admitted tool execution that opens the run and counts toward its step budget, even though no run was active at admission. The SDK `read` is a separate in-run step. `research_loop(action="status")` only inspects the journal; it does not add a receipt. Keep the exact expectation of two buffered receipts for the `start → read → status` sequence in `scripts/check-research-host-session.mjs`.
 
 ## 2026-11-12: Ordinary native delivery bypassed the legacy publication owner
 
