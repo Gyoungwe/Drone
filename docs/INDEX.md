@@ -271,6 +271,7 @@ packages/
 | 脚本 | 用途 |
 |---|---|
 | `scripts/measure-desktop-research-baseline.mts` | 单独加载的 pi-research ≠ Desktop 组装；四扩展离线 SDK 基线入口：`node scripts/measure-desktop-research-baseline.mts --mode offline-faux --fixture fixtures/research-desktop-baseline.json --out .local/baseline-runs/desktop-offline.json`（输出须为新路径） |
+| Desktop SDK live 基线 | 同一脚本用 `--mode live-sdk --provider ... --model ... --thinking off --base-url http://127.0.0.1:<port>/v1`；只允许本机网关，`DRONE_BASELINE_API_KEY` 仅在运行时提供。 |
 | `scripts/check-lint-baseline.mjs` / `check-structure.mjs` | `npm run lint` 的棘轮检查：`any`、非空断言、空块、超 60 行函数，以及超 400 行文件、非 Error 继承、模块级 `let`；基线在 `scripts/fixtures/{lint,structure}-baseline.json`，只降不升（`--update` 只记录下降，遇上升或新条目列出并失败；已有代码原样搬动时用 `--update --allow-moves`，须在 PR 描述里说明） |
 | `scripts/check-architecture.mjs` | `npm run check:arch` 的分层规则棘轮检查；基线在 `scripts/fixtures/architecture-baseline.json`，只减不增（`--update-baseline` 只移除已修复条目，遇新违规列出并失败；已有代码原样搬动时用 `--update-baseline --allow-moves`，须在 PR 描述里说明） |
 | `scripts/check-zero-domain.mjs` | `npm run check:arch` 的 P6 零领域棘轮；按类别记录宿主领域耦合，`--update` 只缩减 `scripts/fixtures/zero-domain-baseline.json`，有新增则失败且不写入；`ZERO` 只表示静态清单为空。宿主源文件的 import 监视**全部**第一方包（`pi-*`、`desktop-ui-pack`、`research-suite`），IPC 通道监视 `researchSkills:` 等以 `research` 之外的前缀出现的领域通道 |。`hostCatalogEntries` 类别监视 `packages/shared/resources/first-party-packages.json`：清单搬进数据后耦合不会消失，只是不再以字面量散落在代码里，新增一个包同样要让棘轮失败 |
