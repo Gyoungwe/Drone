@@ -598,6 +598,12 @@ Node 会解析主模块的符号链接并对 `import.meta.url` 做百分号编�
 
 Desktop supplies `maxBilledTokens: 500_000` in `packages/extensions/src/research-loop.ts` to leave room for longer, multi-specialist runs without disabling the breaker. Rebuild `.pi/extensions` with `npm run build:extensions -- --force` before running `packages/backend/test/knowledge-specialists-sdk.test.mjs`: the SDK test loads the generated adapter, not the TypeScript source.
 
+## Offline baseline stalls at `created` on pi-research 0.4.1 (T559)
+
+The native faux harness loads the standalone plugin, not the Desktop adapter. In 0.4.1, a successful `research_loop(action="start")` counts as a step and also as progress. The harness's `research_search_sources`, `research_read_source`, and `baseline_search_external` calls do not advance the tracked run gate automatically. Three consecutive steps without progress trip the stall breaker, even well below the token budget.
+
+In the deep fixture, record the synthetic searches and inspect the two source references explicitly, after the corresponding tool calls. `research_answer_sources` still checks both session reads and returns its own `answerable` evidence packet; the tracked run only reaches `sources_inspected`. This is an offline fixture protocol, not a substitute for Desktop's observed receipts and structured completion. The v1 report's `completed` is an SDK harness stop label, not proof that the tracked run completed or avoided a breaker.
+
 ## 重新锁定插件后要单独跑 `check:extensions`（2026-11-17 记录）
 
 修改 `plugins.lock.json` 后，内联 plugin-api/shared 输入的 `.pi/extensions/*.mjs` 可能过期；CI 会运行 `npm run check:extensions` 并失败，但本地常跑的 `lint/typecheck/test/build/check:arch` 不包含它（例：Drone #307）。重新锁定后单独运行 `npm run check:extensions`，过期时用 `npm run build:extensions -- --force` 重建，将 bundles 与 `.pi/extensions/.build-manifest.json` 作为独立的 `build(extensions)` 提交；plugin-api 改动后还要运行 `npm run check:plugin-api`。
