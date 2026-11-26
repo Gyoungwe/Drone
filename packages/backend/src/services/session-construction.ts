@@ -1,14 +1,12 @@
-import type {
-	AskRequest,
-	CreateSessionOptions,
-	DroneRuntime,
-	SessionEvent,
-	SessionMeta,
-} from "@drone/shared";
+import type { AskRequest, CreateSessionOptions, SessionEvent, SessionMeta } from "@drone/shared";
 import type { ThinkingLevel } from "@earendil-works/pi-ai";
-import type { AgentSession } from "@earendil-works/pi-coding-agent";
+import type {
+	AgentSession,
+	CreateAgentSessionOptions,
+	CreateAgentSessionResult,
+} from "@earendil-works/pi-coding-agent";
 import { CapabilityResourceLoader, SkillVisibility } from "../capabilities/resource-loader";
-import { CapabilityRuntime, type CapabilityRuntime as CapabilityRuntimeType } from "../capabilities/runtime";
+import { CapabilityRuntime } from "../capabilities/runtime";
 import { createLogger } from "../log";
 import type { PermissionConfirm } from "../permissions/extension";
 import type { PluginNativeBootstrap } from "../plugins/coordinator";
@@ -28,9 +26,12 @@ import type { SessionRegistry } from "../session/registry";
 import type { SessionTraces } from "../session/traces";
 import { makeUiContext } from "../session/ui-context";
 import { excludedBuiltinTools } from "../session-engine/builtin-tools";
-import type { ModelRuntime, SessionEngine } from "../session-engine/engine";
-import type { SessionExtensionDependencies } from "../session-engine/extensions";
-import { buildSessionCustomTools, makeCapabilitySessionExtension } from "../session-engine/extensions";
+import { getAgentDir, type ModelRuntime, type SessionEngine } from "../session-engine/engine";
+import {
+	buildSessionCustomTools,
+	makeCapabilitySessionExtension,
+	type SessionExtensionDependencies,
+} from "../session-engine/extensions";
 import type { SessionServiceOptions } from "../session-service";
 import type { StorageRegistry } from "../storage/registry";
 import { agentWorkRoot } from "../tools/channel-watch";
@@ -38,21 +39,23 @@ import { globalToolManifest } from "../tools/manifest";
 import { isSubagentSessionPath } from "../tools/subagent";
 import { applySubagentMutex } from "../tools/subagent/mutex";
 import type { ApprovalService } from "./approvals";
+import { SessionPackageSources } from "./session-package-sources";
+import { capturedPackageVersions, type SessionPackageVersions } from "./session-package-versions";
 import type { SessionPermissionService } from "./session-permissions";
 
 const log = createLogger("backend");
 
 export interface SessionConstructionHost {
 	readonly options: SessionServiceOptions;
-	readonly runtime: DroneRuntime;
 	readonly sessionEngine: SessionEngine;
 	readonly registry: SessionRegistry;
 	readonly approvals: ApprovalService;
 	readonly sessionPermissions: SessionPermissionService;
-	readonly capabilityRuntimes: Map<string, CapabilityRuntimeType>;
+	readonly capabilityRuntimes: Map<string, CapabilityRuntime>;
 	readonly traces: SessionTraces;
 	readonly storage: Pick<StorageRegistry, "registerDiscoveredRoot">;
 	readonly projectLoader: ProjectResourceLoader;
+	readonly packageVersions: SessionPackageVersions;
 	getModelRuntime(): Promise<ModelRuntime>;
 	sessionExtensionDependencies(): SessionExtensionDependencies;
 	registerAskGate(sessionId: string, gate: AskGate): void;
@@ -68,211 +71,45 @@ export class SessionConstructionService {
 	async createSession(options: CreateSessionOptions): Promise<SessionMeta> {
 		const runtime = await this.host.getModelRuntime();
 		const cwd = options.cwd || this.host.options.defaultCwd || process.cwd();
-		this.host.storage.registerDiscoveredRoot(
-			"project-work",
-			agentWorkRoot(cwd),
-			"tools/channel-watch",
-			"private",
-		);
 		const model =
 			options.provider && options.modelId ? runtime.getModel(options.provider, options.modelId) : undefined;
-
-		const gate = this.host.approvals.createGate();
-		const askGate = new AskGate((req) => this.host.dispatchAskRequest(req));
-		// 权限扩展的确认通道直接桥到 gate（携带 kind/suggestDir 元数据，驱动「允许此目录」/持久化）
-		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
-		// 会话权限模式引用：新会话一律 default 起步（D1：不落盘、不继承），随工厂闭包注入求值链
-		const modeRef = this.host.sessionPermissions.createMode();
-
-		const skillVisibility = new SkillVisibility();
-		const capabilities =
-			this.host.options.lazyCapabilities === false && !this.host.options.desktopIntegration?.academicPiRoot
-				? undefined
-				: new CapabilityRuntime(skillVisibility);
-		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin({
-			kind: "primary",
-			readOnly: false,
-		});
-		const nativeDelivery = nativeBootstrap?.delivery;
-		let createdSession: AgentSession | undefined;
-		try {
-			const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(
-				cwd,
-				{
-					confirm: confirmBridge,
-					nativeBootstrap,
-					modeRef,
-					...(capabilities
-						? {
-								extensionFactories: [
-									makeCapabilitySessionExtension(
-										capabilities,
-										this.host.options.desktopIntegration?.academicPiRoot,
-									),
-								],
-							}
-						: {}),
-				},
+		return this.host.packageVersions.withSelection(async () => {
+			const session = await this.construct(cwd, false, (shared) =>
+				this.host.sessionEngine.create(
+					cwd,
+					{
+						...shared,
+						model,
+						thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
+						tools: this.host.options.tools,
+					},
+					runtime,
+				),
 			);
-			const resourceLoader = capabilities
-				? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
-				: baseResourceLoader;
-			const { session, extensionsResult } = await this.host.sessionEngine.create(
-				cwd,
-				{
-					model,
-					thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
-					tools: this.host.options.tools,
-					excludeTools: excludedBuiltinTools(),
-					customTools: buildSessionCustomTools(
-						this.host.sessionExtensionDependencies(),
-						gate,
-						askGate,
-						capabilities,
-					),
-					settingsManager,
-					resourceLoader,
-					...(nativeDelivery
-						? {
-								hostDeliveryRunStart: (signal: AbortSignal) => nativeDelivery.start(signal),
-								hostExportIsOrdinary: () => nativeDelivery.isOrdinaryForExport(),
-								hostExportBoundary: (input: Parameters<(typeof nativeDelivery)["exportProjection"]>[0]) =>
-									nativeDelivery.exportProjection(input),
-								hostDeliveryBoundary: (
-									event: Parameters<(typeof nativeDelivery)["finalize"]>[0],
-									signal: AbortSignal,
-								) => nativeDelivery.finalize(event, signal),
-							}
-						: {}),
-				},
-				runtime,
-			);
-			createdSession = session;
-			const mutex = applySubagentMutex(
-				session,
-				extensionsResult,
-				this.host.options.subagentPreferBuiltin !== false,
-			);
-			if (mutex.shadowed.length > 0) {
-				log.info("third-party subagent tools shadowed", session.sessionId, mutex);
-				for (const shadowed of mutex.shadowed) {
-					this.host.emitEvent(session.sessionId, {
-						type: "subagent_mutex",
-						extensionPath: shadowed.extensionPath,
-						tools: shadowed.tools,
-					});
-				}
-			}
-
-			if (capabilities) {
-				capabilities.bind(session, {
-					excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
-					extraAlwaysOn: this.host.options.tools ?? [],
-				});
-				// P12：技能清单预算按当前模型窗口算
-				capabilities.setContextWindow(session.model?.contextWindow);
-				this.host.capabilityRuntimes.set(session.sessionId, capabilities);
-			}
-
-			gate.bindSession(session.sessionId);
-			askGate.bindSession(session.sessionId);
-			this.host.approvals.register(session.sessionId, gate);
-			this.host.registerAskGate(session.sessionId, askGate);
-			this.host.sessionPermissions.bind(session.sessionId, modeRef);
-
-			const causality = createSessionCausalityContext();
-			const recordIntent = bindToolIntentJournal(
-				session,
-				this.host.capabilityRuntimes.get(session.sessionId)?.tools,
-				() => causality.current(),
-			);
-			const diagnostics = createSessionExtensionDiagnostics(session, this.host.traces);
-			const unsubscribeEvents = session.subscribe((event) => {
-				causality.observe(event);
-				recordIntent(event);
-				observeInbox(session.sessionFile, event);
-				autoNameSession(session, event);
-				this.host.emitEvent(session.sessionId, event);
-			});
-			const unsubscribe = () => {
-				unsubscribeEvents();
-				diagnostics.dispose();
-			};
-			const registration = {
-				session,
-				unsubscribe,
-				cwd,
-				questionGate: askGate,
-				nativeDelivery: nativeBootstrap?.delivery,
-			};
-			this.host.registry.add(registration);
-			const notificationLifetime = this.host.registry.signalFor(registration);
-			notificationLifetime.addEventListener(
-				"abort",
-				() => {
-					this.host.emitEvent(session.sessionId, { type: "extension_status", key: null, text: null });
-				},
-				{ once: true },
-			);
-			nativeBootstrap?.bindSession(session.sessionId, () => this.host.sessionEngine.abort(session));
-			await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
-			await session.bindExtensions({
-				onError: diagnostics.onError,
-				...(this.host.options.permissionGates !== false
-					? {
-							uiContext: makeUiContext(
-								gate,
-								askGate,
-								(text, type) => {
-									// Revocation precedes asynchronous shutdown and also rejects an old
-									// context after another session restores the same persisted id.
-									if (notificationLifetime.aborted) return;
-									this.host.emitEvent(session.sessionId, {
-										type: "extension_notification",
-										severity: type,
-										message: text,
-									});
-								},
-								(key, text) => {
-									if (notificationLifetime.aborted) return;
-									this.host.emitEvent(session.sessionId, {
-										type: "extension_status",
-										key,
-										text: text ?? null,
-									});
-								},
-							),
-							mode: "rpc",
-						}
-					: {}),
-			});
-
 			log.info("session created", session.sessionId, { cwd });
 			return this.host.toMetaOrThrow(session.sessionId);
-		} catch (error) {
-			await this.failedConstruction(error, createdSession, nativeBootstrap);
-			throw error;
-		}
+		});
 	}
 
 	async openSession(filePath: string): Promise<SessionMeta> {
-		// Idempotent: StrictMode / duplicate restore must not bind the same jsonl twice.
-		const already = this.host.registry.list().find((entry) => entry.session.sessionFile === filePath);
-		if (already) return this.host.registry.toMeta(already);
-		const runtime = await this.host.getModelRuntime();
-		const sessionManager = this.host.sessionEngine.openManager(filePath);
-		const cwd = sessionManager.getCwd() || process.cwd();
-		// 进程在工具执行中途退出：先补齐悬空 toolResult（必须早于 createAgentSession 读转录）。
-		let interrupted: InterruptedToolCall[] = [];
-		if (!isSubagentSessionPath(filePath)) {
-			try {
-				interrupted = repairInterruptedToolCalls(sessionManager as never, (name) =>
-					globalToolManifest.replayPolicy(name),
-				);
-			} catch (error) {
-				log.error("interrupted tool repair failed", filePath, { error: String(error) });
-			}
-		}
+		return this.host.packageVersions.withSelection(async () => {
+			const already = this.host.registry.list().find((entry) => entry.session.sessionFile === filePath);
+			if (already) return this.host.registry.toMeta(already);
+			const runtime = await this.host.getModelRuntime();
+			const sessionManager = this.host.sessionEngine.openManager(filePath);
+			const cwd = sessionManager.getCwd() || process.cwd();
+			const readOnly = isSubagentSessionPath(filePath);
+			const interrupted = readOnly ? [] : this.repairInterrupted(filePath, sessionManager);
+			const session = await this.construct(cwd, readOnly, (shared) =>
+				this.host.sessionEngine.open(filePath, shared, runtime),
+			);
+			log.info("session opened", session.sessionId, { file: filePath });
+			this.resume(session, filePath, readOnly, interrupted);
+			return this.host.toMetaOrThrow(session.sessionId);
+		});
+	}
+
+	private prepare(cwd: string, readOnly: boolean) {
 		this.host.storage.registerDiscoveredRoot(
 			"project-work",
 			agentWorkRoot(cwd),
@@ -281,213 +118,235 @@ export class SessionConstructionService {
 		);
 		const gate = this.host.approvals.createGate();
 		const askGate = new AskGate((req) => this.host.dispatchAskRequest(req));
-		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
-		// 重开历史会话同样 default 起步（D1：模式不随会话文件继承）
+		const confirm: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
 		const modeRef = this.host.sessionPermissions.createMode();
 		const skillVisibility = new SkillVisibility();
+		const desktop = this.host.options.desktopIntegration;
 		const capabilities =
-			this.host.options.lazyCapabilities === false && !this.host.options.desktopIntegration?.academicPiRoot
+			this.host.options.lazyCapabilities === false && !desktop?.academicPiRoot
 				? undefined
 				: new CapabilityRuntime(skillVisibility);
-		const readOnly = isSubagentSessionPath(filePath);
-		const nativeBootstrap = this.host.options.desktopIntegration?.nativeRuntime?.begin({
-			kind: "primary",
-			readOnly,
-		});
-		const nativeDelivery = nativeBootstrap?.delivery;
-		let createdSession: AgentSession | undefined;
+		const nativeBootstrap = desktop?.nativeRuntime?.begin({ kind: "primary", readOnly });
+		const extensionFactories = capabilities
+			? [makeCapabilitySessionExtension(capabilities, desktop?.academicPiRoot)]
+			: undefined;
+		return {
+			gate,
+			askGate,
+			confirm,
+			modeRef,
+			skillVisibility,
+			capabilities,
+			nativeBootstrap,
+			extensionFactories,
+		};
+	}
+
+	private async construct(
+		cwd: string,
+		readOnly: boolean,
+		start: (options: CreateAgentSessionOptions) => Promise<CreateAgentSessionResult>,
+	): Promise<AgentSession> {
+		const prepared = this.prepare(cwd, readOnly);
+		const { nativeBootstrap, gate, askGate, capabilities, skillVisibility } = prepared;
+		const agentDir = getAgentDir();
+		const packageSources = new SessionPackageSources(cwd, agentDir);
+		let created: AgentSession | undefined;
 		try {
-			const { settingsManager, resourceLoader: baseResourceLoader } = await this.host.projectLoader.load(
-				cwd,
-				{
-					confirm: confirmBridge,
-					nativeBootstrap,
-					modeRef,
-					...(capabilities
-						? {
-								extensionFactories: [
-									makeCapabilitySessionExtension(
-										capabilities,
-										this.host.options.desktopIntegration?.academicPiRoot,
-									),
-								],
-							}
-						: {}),
-				},
-			);
+			const { settingsManager, resourceLoader: baseLoader } = await this.host.projectLoader.load(cwd, {
+				...prepared,
+				packageSources,
+			});
+			const packageVersions = capturedPackageVersions(baseLoader, agentDir);
+			packageSources.retainSkills(baseLoader);
 			const resourceLoader = capabilities
-				? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
-				: baseResourceLoader;
-			const { session, extensionsResult } = await this.host.sessionEngine.open(
-				filePath,
-				{
-					settingsManager,
-					resourceLoader,
-					...(nativeDelivery
-						? {
-								hostDeliveryRunStart: (signal: AbortSignal) => nativeDelivery.start(signal),
-								hostExportIsOrdinary: () => nativeDelivery.isOrdinaryForExport(),
-								hostExportBoundary: (input: Parameters<(typeof nativeDelivery)["exportProjection"]>[0]) =>
-									nativeDelivery.exportProjection(input),
-								hostDeliveryBoundary: (
-									event: Parameters<(typeof nativeDelivery)["finalize"]>[0],
-									signal: AbortSignal,
-								) => nativeDelivery.finalize(event, signal),
-							}
-						: {}),
-					excludeTools: excludedBuiltinTools(),
-					customTools: buildSessionCustomTools(
-						this.host.sessionExtensionDependencies(),
-						gate,
-						askGate,
-						capabilities,
-					),
-				},
-				runtime,
-			);
-			createdSession = session;
-			const mutex = applySubagentMutex(
-				session,
-				extensionsResult,
-				this.host.options.subagentPreferBuiltin !== false,
-			);
-			if (mutex.shadowed.length > 0) {
-				log.info("third-party subagent tools shadowed", session.sessionId, mutex);
-				for (const shadowed of mutex.shadowed) {
-					this.host.emitEvent(session.sessionId, {
-						type: "subagent_mutex",
-						extensionPath: shadowed.extensionPath,
-						tools: shadowed.tools,
-					});
-				}
-			}
-
-			if (capabilities) {
-				capabilities.bind(session, {
-					excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
-					extraAlwaysOn: this.host.options.tools ?? [],
-				});
-				// P12：技能清单预算按当前模型窗口算
-				capabilities.setContextWindow(session.model?.contextWindow);
-				this.host.capabilityRuntimes.set(session.sessionId, capabilities);
-			}
-
-			gate.bindSession(session.sessionId);
-			askGate.bindSession(session.sessionId);
-			this.host.approvals.register(session.sessionId, gate);
-			this.host.registerAskGate(session.sessionId, askGate);
-			this.host.sessionPermissions.bind(session.sessionId, modeRef);
-
-			const causality = createSessionCausalityContext();
-			const recordIntent = bindToolIntentJournal(
-				session,
-				this.host.capabilityRuntimes.get(session.sessionId)?.tools,
-				() => causality.current(),
-			);
-			const diagnostics = createSessionExtensionDiagnostics(session, this.host.traces);
-			const unsubscribeEvents = session.subscribe((event) => {
-				causality.observe(event);
-				recordIntent(event);
-				observeInbox(session.sessionFile, event);
-				autoNameSession(session, event);
-				this.host.emitEvent(session.sessionId, event);
+				? new CapabilityResourceLoader(baseLoader, skillVisibility)
+				: baseLoader;
+			const { session, extensionsResult } = await start({
+				settingsManager,
+				resourceLoader,
+				excludeTools: excludedBuiltinTools(),
+				customTools: buildSessionCustomTools(
+					this.host.sessionExtensionDependencies(),
+					gate,
+					askGate,
+					capabilities,
+				),
+				...nativeDeliveryOptions(nativeBootstrap),
 			});
-			// 子代理产物目录下的会话文件 = 只读检视（spec §8.1：防能力静默漂移/递归绕过）。
-			// 其运行 trace 由 runner 管理，检视页不可写，故不另建 recorder（避免覆盖运行中的 recorder）。
-
-			const unsubscribe = () => {
-				unsubscribeEvents();
-				diagnostics.dispose();
-			};
-			const registration = {
-				nativeDelivery: nativeBootstrap?.delivery,
-				questionGate: askGate,
-				session,
-				unsubscribe,
-				cwd,
-				readOnly: readOnly || undefined,
-			};
-			this.host.registry.add(registration);
-			const notificationLifetime = this.host.registry.signalFor(registration);
-			notificationLifetime.addEventListener(
-				"abort",
-				() => {
-					this.host.emitEvent(session.sessionId, { type: "extension_status", key: null, text: null });
-				},
-				{ once: true },
-			);
-			nativeBootstrap?.bindSession(session.sessionId, () => this.host.sessionEngine.abort(session));
-			if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
-			await session.bindExtensions({
-				onError: diagnostics.onError,
-				...(this.host.options.permissionGates !== false
-					? {
-							uiContext: makeUiContext(
-								gate,
-								askGate,
-								(text, type) => {
-									// Revocation precedes asynchronous shutdown and also rejects an old
-									// context after another session restores the same persisted id.
-									if (notificationLifetime.aborted) return;
-									this.host.emitEvent(session.sessionId, {
-										type: "extension_notification",
-										severity: type,
-										message: text,
-									});
-								},
-								(key, text) => {
-									if (notificationLifetime.aborted) return;
-									this.host.emitEvent(session.sessionId, {
-										type: "extension_status",
-										key,
-										text: text ?? null,
-									});
-								},
-							),
-							mode: "rpc",
-						}
-					: {}),
-			});
-			log.info("session opened", session.sessionId, { file: filePath });
-			const autoResume = this.host.options.autoResumeInterrupted !== false;
-			let resumed: Promise<unknown> = Promise.resolve();
-			if (interrupted.length) {
-				log.info("interrupted tool calls repaired", session.sessionId, {
-					calls: interrupted.map((c) => ({ tool: c.toolName, replay: c.replay, started: c.started })),
-				});
-				if (autoResume && shouldAutoResume(interrupted))
-					resumed =
-						this.host
-							.resumeInterrupted?.(session, interrupted)
-							?.catch((error) =>
-								log.error("interrupted tool resume failed", session.sessionId, { error: String(error) }),
-							) ?? resumed;
-			}
-			// 崩溃前已受理、未进入上下文的排队消息：最近 24 小时内的按原顺序重新投递，更早的保留在侧车文件里。
-			if (!readOnly && autoResume) {
-				const restored = restorableInbox(filePath);
-				if (restored.length) {
-					log.info("restoring queued messages", session.sessionId, { count: restored.length });
-					void resumed.then(async () => {
-						for (const item of restored)
-							await this.host.sessionEngine
-								.prompt(session, item.text, { streamingBehavior: "followUp" })
-								.catch((error) =>
-									log.error("restored message delivery failed", session.sessionId, { error: String(error) }),
-								);
-					});
-				}
-			}
-			return this.host.toMetaOrThrow(session.sessionId);
+			created = session;
+			this.bindCapabilities(session, extensionsResult, capabilities);
+			await this.register(session, cwd, readOnly, prepared, packageVersions, packageSources);
+			return session;
 		} catch (error) {
-			await this.failedConstruction(error, createdSession, nativeBootstrap);
+			packageSources.dispose();
+			await this.failedConstruction(error, created, nativeBootstrap);
 			throw error;
 		}
 	}
+
+	private bindCapabilities(
+		session: AgentSession,
+		extensions: CreateAgentSessionResult["extensionsResult"],
+		capabilities?: CapabilityRuntime,
+	): void {
+		const mutex = applySubagentMutex(session, extensions, this.host.options.subagentPreferBuiltin !== false);
+		if (mutex.shadowed.length > 0) {
+			log.info("third-party subagent tools shadowed", session.sessionId, mutex);
+			for (const shadowed of mutex.shadowed)
+				this.host.emitEvent(session.sessionId, {
+					type: "subagent_mutex",
+					extensionPath: shadowed.extensionPath,
+					tools: shadowed.tools,
+				});
+		}
+		if (!capabilities) return;
+		capabilities.bind(session, {
+			excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
+			extraAlwaysOn: this.host.options.tools ?? [],
+		});
+		capabilities.setContextWindow(session.model?.contextWindow);
+		this.host.capabilityRuntimes.set(session.sessionId, capabilities);
+	}
+
+	private async register(
+		session: AgentSession,
+		cwd: string,
+		readOnly: boolean,
+		{ gate, askGate, modeRef, nativeBootstrap }: ReturnType<SessionConstructionService["prepare"]>,
+		packageVersions: ReturnType<typeof capturedPackageVersions>,
+		packageSources: SessionPackageSources,
+	): Promise<void> {
+		const { sessionId } = session;
+		gate.bindSession(sessionId);
+		askGate.bindSession(sessionId);
+		this.host.approvals.register(sessionId, gate);
+		this.host.registerAskGate(sessionId, askGate);
+		this.host.sessionPermissions.bind(sessionId, modeRef);
+		const diagnostics = createSessionExtensionDiagnostics(session, this.host.traces);
+		const unsubscribeEvents = this.subscribe(session);
+		const registration = {
+			session,
+			cwd,
+			packageVersions,
+			readOnly: readOnly || undefined,
+			questionGate: askGate,
+			nativeDelivery: nativeBootstrap?.delivery,
+			unsubscribe: () => {
+				unsubscribeEvents();
+				diagnostics.dispose();
+				packageSources.dispose();
+			},
+		};
+		this.host.registry.add(registration);
+		const lifetime = this.host.registry.signalFor(registration);
+		lifetime.addEventListener(
+			"abort",
+			() => this.host.emitEvent(sessionId, { type: "extension_status", key: null, text: null }),
+			{ once: true },
+		);
+		nativeBootstrap?.bindSession(sessionId, () => this.host.sessionEngine.abort(session));
+		if (!readOnly) await this.host.traces.start(sessionId, session.sessionManager.getSessionDir());
+		await session.bindExtensions({
+			onError: diagnostics.onError,
+			...this.extensionUi(sessionId, lifetime, gate, askGate),
+		});
+	}
+
+	private extensionUi(
+		sessionId: string,
+		lifetime: AbortSignal,
+		gate: ReturnType<ApprovalService["createGate"]>,
+		askGate: AskGate,
+	) {
+		if (this.host.options.permissionGates === false) return {};
+		return {
+			uiContext: makeUiContext(
+				gate,
+				askGate,
+				(message, severity) => {
+					if (!lifetime.aborted)
+						this.host.emitEvent(sessionId, { type: "extension_notification", severity, message });
+				},
+				(key, text) => {
+					if (!lifetime.aborted)
+						this.host.emitEvent(sessionId, { type: "extension_status", key, text: text ?? null });
+				},
+			),
+			mode: "rpc" as const,
+		};
+	}
+
+	private subscribe(session: AgentSession) {
+		const causality = createSessionCausalityContext();
+		const recordIntent = bindToolIntentJournal(
+			session,
+			this.host.capabilityRuntimes.get(session.sessionId)?.tools,
+			() => causality.current(),
+		);
+		return session.subscribe((event) => {
+			causality.observe(event);
+			recordIntent(event);
+			observeInbox(session.sessionFile, event);
+			autoNameSession(session, event);
+			this.host.emitEvent(session.sessionId, event);
+		});
+	}
+
+	private repairInterrupted(
+		filePath: string,
+		manager: ReturnType<SessionEngine["openManager"]>,
+	): InterruptedToolCall[] {
+		try {
+			return repairInterruptedToolCalls(manager as never, (name) => globalToolManifest.replayPolicy(name));
+		} catch (error) {
+			log.error("interrupted tool repair failed", filePath, { error: String(error) });
+			return [];
+		}
+	}
+
+	private resume(
+		session: AgentSession,
+		filePath: string,
+		readOnly: boolean,
+		interrupted: InterruptedToolCall[],
+	): void {
+		const autoResume = this.host.options.autoResumeInterrupted !== false;
+		let resumed: Promise<unknown> = Promise.resolve();
+		if (interrupted.length) {
+			log.info("interrupted tool calls repaired", session.sessionId, {
+				calls: interrupted.map((call) => ({
+					tool: call.toolName,
+					replay: call.replay,
+					started: call.started,
+				})),
+			});
+			if (autoResume && shouldAutoResume(interrupted))
+				resumed =
+					this.host
+						.resumeInterrupted?.(session, interrupted)
+						?.catch((error) =>
+							log.error("interrupted tool resume failed", session.sessionId, { error: String(error) }),
+						) ?? resumed;
+		}
+		if (readOnly || !autoResume) return;
+		const restored = restorableInbox(filePath);
+		if (!restored.length) return;
+		log.info("restoring queued messages", session.sessionId, { count: restored.length });
+		void resumed.then(async () => {
+			for (const item of restored)
+				await this.host.sessionEngine
+					.prompt(session, item.text, { streamingBehavior: "followUp" })
+					.catch((error) =>
+						log.error("restored message delivery failed", session.sessionId, { error: String(error) }),
+					);
+		});
+	}
+
 	private async failedConstruction(
 		error: unknown,
-		session: AgentSession | undefined,
-		bootstrap: PluginNativeBootstrap | undefined,
+		session?: AgentSession,
+		bootstrap?: PluginNativeBootstrap,
 	): Promise<void> {
 		if (session) this.host.registry.delete(session.sessionId);
 		const engine = await Promise.allSettled([
@@ -501,6 +360,17 @@ export class SessionConstructionService {
 				"Session creation and native plugin cleanup failed",
 			);
 	}
+}
+
+function nativeDeliveryOptions(bootstrap?: PluginNativeBootstrap): CreateAgentSessionOptions {
+	const delivery = bootstrap?.delivery;
+	if (!delivery) return {};
+	return {
+		hostDeliveryRunStart: (signal) => delivery.start(signal),
+		hostExportIsOrdinary: () => delivery.isOrdinaryForExport(),
+		hostExportBoundary: (input) => delivery.exportProjection(input),
+		hostDeliveryBoundary: (event, signal) => delivery.finalize(event, signal),
+	};
 }
 
 /** 取出可自动恢复的排队消息（最近 24 小时）；取出即清空，避免重复打开时二次投递。 */

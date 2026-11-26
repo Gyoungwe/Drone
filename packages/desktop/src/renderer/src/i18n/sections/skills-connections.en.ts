@@ -165,6 +165,8 @@ export const enSkillsConnections: typeof zhSkillsConnections = {
 		"Pi capability packages and optional Desktop UI contributions currently visible to this host.",
 	currentSessionVersion: "Current session {version}",
 	nextSessionVersion: "Next session {version}",
+	sessionPackages: "Session packages",
+	removedNextSession: "Removed in next session",
 	lifecycleError: "Unavailable: {message}",
 	noInstalledPlugins: "No installed plugin packages",
 	installed: "Installed",
@@ -190,6 +192,7 @@ export const enSkillsConnections: typeof zhSkillsConnections = {
 	operationFailed: "Operation failed",
 	effectiveCurrent: "Active in current session",
 	effectiveNext: "Active in next session",
+	effectiveRestart: "Applies after app restart",
 	uninstall: "Uninstall",
 	removing: "Removing…",
 };

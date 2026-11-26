@@ -2,6 +2,7 @@ import { Check } from "typebox/value";
 import { describe, expect, it } from "vitest";
 import { channelOf } from "./define";
 import { PackagesContract } from "./packages";
+import { UiPluginsContract } from "./ui-plugins";
 
 describe("PackagesContract", () => {
 	it("keeps legacy package channels and call shapes", () => {
@@ -71,6 +72,11 @@ describe("PackagesContract", () => {
 			deferredSessionIds: ["session-1"],
 		};
 		expect(Check(PackagesContract.methods.installPackage.result, receipt)).toBe(true);
+		const config = UiPluginsContract.events.event;
+		expect(Check(config, { kind: "config" })).toBe(true);
+		expect(Check(config, { kind: "config", reloadUi: false })).toBe(true);
+		expect(Check(config, { kind: "config", receipt })).toBe(true);
+		expect(Check(config, { kind: "config", receipt: { ...receipt, events: "enabled" } })).toBe(false);
 		expect(
 			Check(PackagesContract.methods.installPackage.result, {
 				...receipt,
@@ -94,4 +100,37 @@ describe("PackagesContract", () => {
 			}),
 		).toBe(true);
 	});
+});
+
+import { packageLifecycleForReview } from "../packages";
+
+it("projects bounded scopes and steps without paths, pins, session ids or guest diagnostics", () => {
+	const safe = packageLifecycleForReview({
+		operation: "update",
+		packageName: "@example/package",
+		source: "npm:@example/package@private-fixture",
+		scope: "project",
+		status: "failed",
+		effect: "current-session",
+		version: "/private/version",
+		previousVersion: "1.0.0",
+		events: [
+			{ type: "staged", at: 1, detail: "/private/log" },
+			{ type: "verified", at: 2 },
+			{ type: "drained", at: 3, sessionId: "private-session" },
+			{ type: "failed", at: 4, detail: "guest-secret" },
+			{ type: "rolled_back", at: 5, detail: "1.0.0" },
+		],
+		error: { code: "operation-failed", retryable: false, message: "guest-secret" },
+		deferredSessionIds: ["private-session"],
+	});
+	expect(safe?.source).toBe("npm:@example/package");
+	expect(safe?.scope).toBe("project");
+	expect(safe?.events).toEqual(
+		["staged", "verified", "drained", "failed", "rolled_back"].map((type, index) => ({
+			type,
+			at: index + 1,
+		})),
+	);
+	expect(JSON.stringify(safe)).not.toMatch(/private|guest-secret|deferredSessionIds|sessionId|detail/);
 });

@@ -13,7 +13,8 @@ vi.mock("electron", () => ({
 	},
 }));
 
-import { channelOf, SessionsContract } from "@drone/shared";
+import { channelOf, type LoadedResources, SessionsContract } from "@drone/shared";
+import { exposeContract } from "../../preload/expose-contract";
 import { registerSessionsIpc } from "./sessions";
 
 function backendForTests(overrides: Record<string, unknown> = {}) {
@@ -112,4 +113,32 @@ it("dispatches explicit commands on their own validated channel and reports fail
 	const invalid = await handler({}, "session", "/removed");
 	expect(invalid).toMatchObject({ code: "invalid_arguments" });
 	expect(command).toHaveBeenCalledOnce();
+});
+
+it("round-trips session package versions through the existing preload and main resource method", async () => {
+	const legacy: LoadedResources = { skills: [], skillDiagnostics: [], extensions: [], extensionErrors: [] };
+	const current: LoadedResources = {
+		...legacy,
+		packageVersions: [
+			{
+				packageName: "example-plugin",
+				scope: "project",
+				currentVersion: "1.0.0",
+				nextSessionVersion: "2.0.0",
+			},
+		],
+	};
+	const getLoadedResources = vi.fn(async (id: string) => (id === "active" ? current : legacy));
+	registerSessionsIpc(backendForTests({ getLoadedResources }));
+	const invoke = async (channel: string, ...args: unknown[]) => {
+		const handler = mocks.handlers.get(channel);
+		if (!handler) throw new Error(`Missing IPC handler: ${channel}`);
+		return handler({}, ...args);
+	};
+	const api = exposeContract(SessionsContract, {
+		ipc: { invoke, on: vi.fn(), removeListener: vi.fn() },
+	});
+	await expect(api.getLoadedResources("active")).resolves.toEqual(current);
+	await expect(api.getLoadedResources("legacy")).resolves.toEqual(legacy);
+	expect(getLoadedResources.mock.calls).toEqual([["active"], ["legacy"]]);
 });

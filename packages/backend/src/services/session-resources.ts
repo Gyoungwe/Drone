@@ -20,7 +20,7 @@ import { getKnowledgeWorkerLifecycle } from "../knowledge/ui";
 import { describeMcpStatusChange, type McpService } from "./../mcp/service";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import type { RegisteredSession, SessionRegistry } from "../session/registry";
-import type { SessionEngine } from "../session-engine/engine";
+import type { AgentSession, SessionEngine } from "../session-engine/engine";
 import type { SessionServiceOptions } from "../session-service";
 import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "../slash-commands";
 import { attributeWorkerLifecycles, deriveHostPluginPackages } from "./host-plugin-packages";
@@ -30,6 +30,7 @@ import {
 	packagedResourceRoots,
 	scanInstalledPackages,
 } from "./installed-package-scan";
+import type { SessionPackageVersions } from "./session-package-versions";
 
 export interface SessionResourceHost {
 	readonly options: SessionServiceOptions;
@@ -38,6 +39,7 @@ export interface SessionResourceHost {
 	readonly capabilityRuntimes: Map<string, CapabilityRuntime>;
 	readonly mcp: McpService;
 	readonly projectLoader: ProjectResourceLoader;
+	readonly packageVersions?: SessionPackageVersions;
 	requireSession(id: string): RegisteredSession;
 	reapplyCapabilities(id: string): void;
 	log: {
@@ -174,19 +176,12 @@ export class SessionResourceService {
 		return base ?? path;
 	}
 
-	/** 读取会话已加载的资源（skills/扩展；设置页展示用） */
-	async getLoadedResources(sessionId: string): Promise<LoadedResources> {
-		const entry = this.host.requireSession(sessionId);
-		const session = entry.session;
-		const loader = session.resourceLoader as typeof session.resourceLoader & {
-			getAllSkillsIncludingDisabled?: () => ReturnType<typeof session.resourceLoader.getSkills>;
-		};
-		const skillResult =
-			loader.getAllSkillsIncludingDisabled?.() ?? allSkillsFromLoader(session.resourceLoader);
-		const extResult = session.resourceLoader.getExtensions();
+	private toolCollisions(
+		extensions: ReturnType<AgentSession["resourceLoader"]["getExtensions"]>["extensions"],
+	): ResourceDiagnosticInfo[] {
 		const firstToolOwner = new Map<string, { path: string; source: string }>();
 		const toolCollisions: ResourceDiagnosticInfo[] = [];
-		for (const extension of extResult.extensions) {
+		for (const extension of extensions) {
 			for (const toolName of extension.tools.keys()) {
 				const owner = firstToolOwner.get(toolName);
 				if (!owner) {
@@ -201,6 +196,39 @@ export class SessionResourceService {
 				});
 			}
 		}
+		return toolCollisions;
+	}
+
+	private describeExtension(
+		ext: ReturnType<AgentSession["resourceLoader"]["getExtensions"]>["extensions"][number],
+	): LoadedResources["extensions"][number] {
+		return {
+			name: this.extensionDisplayName(ext.path),
+			path: ext.path,
+			scope: ext.sourceInfo.scope,
+			source: ext.sourceInfo.source,
+			hidden: ext.hidden === true,
+			toolsCount: ext.tools.size,
+			tools: [...ext.tools.keys()],
+			commands: presentExtensionCommands(
+				[...ext.commands.values()].map((command) => ({ ...command, invocationName: command.name })),
+			).map((command) => command.name),
+			flagsCount: ext.flags.size,
+			shortcutsCount: ext.shortcuts.size,
+		};
+	}
+
+	/** 读取会话已加载的资源（skills/扩展；设置页展示用） */
+	async getLoadedResources(sessionId: string): Promise<LoadedResources> {
+		const entry = this.host.requireSession(sessionId);
+		const packageVersions = this.host.packageVersions?.forSession(entry);
+		const session = entry.session;
+		const loader = session.resourceLoader as typeof session.resourceLoader & {
+			getAllSkillsIncludingDisabled?: () => ReturnType<typeof session.resourceLoader.getSkills>;
+		};
+		const skillResult =
+			loader.getAllSkillsIncludingDisabled?.() ?? allSkillsFromLoader(session.resourceLoader);
+		const extResult = session.resourceLoader.getExtensions();
 		return {
 			skills: skillResult.skills.map((skill) => {
 				const upstream = this.skillRepository(skill.name, skill.filePath, skill.sourceInfo.source);
@@ -225,27 +253,12 @@ export class SessionResourceService {
 					message: d.message,
 					path: d.path,
 				})),
-				...toolCollisions,
+				...this.toolCollisions(extResult.extensions),
 			],
-			extensions: extResult.extensions.map((ext) => ({
-				name: this.extensionDisplayName(ext.path),
-				path: ext.path,
-				scope: ext.sourceInfo.scope,
-				source: ext.sourceInfo.source,
-				hidden: ext.hidden === true,
-				toolsCount: ext.tools.size,
-				tools: [...ext.tools.keys()],
-				commands: presentExtensionCommands(
-					[...ext.commands.values()].map((command) => ({
-						...command,
-						invocationName: command.name,
-					})),
-				).map((command) => command.name),
-				flagsCount: ext.flags.size,
-				shortcutsCount: ext.shortcuts.size,
-			})),
+			extensions: extResult.extensions.map((ext) => this.describeExtension(ext)),
 			extensionErrors: extResult.errors,
 			hostPlugins: this.hostPluginPackages(),
+			...(packageVersions?.length ? { packageVersions } : {}),
 			...(this.host.capabilityRuntimes.get(sessionId)
 				? { capabilities: this.host.capabilityRuntimes.get(sessionId)?.state() }
 				: {}),

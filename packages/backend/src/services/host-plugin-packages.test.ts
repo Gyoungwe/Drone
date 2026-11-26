@@ -178,3 +178,35 @@ it("carries the worker lifecycle into the package row", async () => {
 		lastLifecycleError: "worker failed to start",
 	});
 });
+
+import { KNOWLEDGE_WORKER_LIFECYCLE_EVENT, type KnowledgeWorkerLifecycleStage } from "@drone/shared";
+import { getKnowledgeWorkerLifecycle } from "../knowledge/ui";
+
+it("keeps a verified Knowledge candidate pending until activation and clears failed candidates", () => {
+	const emit = (stage: KnowledgeWorkerLifecycleStage, version: string) =>
+		Reflect.apply(process.emit, process, [
+			KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
+			{ stage, version, at: new Date().toISOString() },
+		]);
+	emit("enabled", "build1");
+	emit("staged", "build2");
+	emit("verified", "build2");
+	expect(getKnowledgeWorkerLifecycle()).toMatchObject({
+		state: "verified",
+		currentVersion: "build1",
+		nextSessionVersion: "build2",
+	});
+	emit("rolled_back", "build2");
+	expect(getKnowledgeWorkerLifecycle()).toMatchObject({
+		state: "rolled_back",
+		currentVersion: "build1",
+		nextSessionVersion: null,
+	});
+	emit("verified", "build3");
+	emit("enabled", "build3");
+	expect(getKnowledgeWorkerLifecycle()).toMatchObject({
+		state: "enabled",
+		currentVersion: "build3",
+		nextSessionVersion: null,
+	});
+});

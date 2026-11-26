@@ -305,17 +305,7 @@ app.whenReady().then(async () => {
 	];
 	// Tasks run in pi-core's managed runtime from the read-only built-in root (ui-plugins/managed-roots.ts).
 	const analysisHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").AnalysisHostLoader>({
-		packageRoots: [
-			join(
-				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
-				"npm",
-				"node_modules",
-			),
-			app.isPackaged
-				? join(process.resourcesPath, "pi-packages", "node_modules")
-				: join(__dirname, "../../pi-packages/node_modules"),
-			join(app.getAppPath(), "node_modules"),
-		],
+		packageRoots: pluginPackageRoots,
 		capability: "analysis",
 	});
 	if (analysisHost) log.info("Optional analysis host discovered", analysisHost.discovery);
@@ -325,64 +315,24 @@ app.whenReady().then(async () => {
 	});
 	if (discoveryHost) log.info("Optional discovery host discovered", discoveryHost.discovery);
 	const evidenceHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").EvidenceHostLoader>({
-		packageRoots: [
-			join(
-				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
-				"npm",
-				"node_modules",
-			),
-			app.isPackaged
-				? join(process.resourcesPath, "pi-packages", "node_modules")
-				: join(__dirname, "../../pi-packages/node_modules"),
-			join(app.getAppPath(), "node_modules"),
-		],
+		packageRoots: pluginPackageRoots,
 		capability: "evidence",
 	});
 	if (evidenceHost) log.info("Optional evidence host discovered", evidenceHost.discovery);
 	const knowledgeHost = await discoverPluginHostLoader<import("@gyoungwe/plugin-api").KnowledgeHostLoader>({
-		packageRoots: [
-			join(
-				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
-				"npm",
-				"node_modules",
-			),
-			app.isPackaged
-				? join(process.resourcesPath, "pi-packages", "node_modules")
-				: join(__dirname, "../../pi-packages/node_modules"),
-			join(app.getAppPath(), "node_modules"),
-		],
+		packageRoots: pluginPackageRoots,
 		capability: "knowledge",
 	});
 	if (knowledgeHost) log.info("Optional knowledge host discovered", knowledgeHost.discovery);
 	const researchHost = await discoverPluginHostLoader<import("@drone/backend").ResearchHostLoader>({
-		packageRoots: [
-			join(
-				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
-				"npm",
-				"node_modules",
-			),
-			app.isPackaged
-				? join(process.resourcesPath, "pi-packages", "node_modules")
-				: join(__dirname, "../../pi-packages/node_modules"),
-			join(app.getAppPath(), "node_modules"),
-		],
+		packageRoots: pluginPackageRoots,
 		capability: "research",
 	});
 	if (researchHost) log.info("Optional research host discovered", researchHost.discovery);
 	const researchConnectorHost = await discoverPluginHostLoader<
 		import("@gyoungwe/plugin-api").ResearchConnectorHostLoader
 	>({
-		packageRoots: [
-			join(
-				process.env.PI_CODING_AGENT_DIR || join(app.getPath("home"), ".pi", "agent"),
-				"npm",
-				"node_modules",
-			),
-			app.isPackaged
-				? join(process.resourcesPath, "pi-packages", "node_modules")
-				: join(__dirname, "../../pi-packages/node_modules"),
-			join(app.getAppPath(), "node_modules"),
-		],
+		packageRoots: pluginPackageRoots,
 		capability: "research",
 		exportName: "researchConnectorHostLoader",
 	});
@@ -472,7 +422,15 @@ app.whenReady().then(async () => {
 		backendServices.sessions,
 		(owner) => createSessionQuestionTransport(owner.id),
 	);
-	registerIpc(backendServices, uiPluginsManager, pluginRuntime, () => latestIncidentSnapshot);
+	const bootLoaders = [
+		analysisHost,
+		discoveryHost,
+		evidenceHost,
+		knowledgeHost,
+		researchHost,
+		researchConnectorHost,
+	].flatMap((host) => (host ? [host.discovery] : []));
+	registerIpc(backendServices, uiPluginsManager, pluginRuntime, () => latestIncidentSnapshot, bootLoaders);
 	await initUpdater();
 	scheduleAutoUpdateCheck();
 	const uiState = await loadUiState();

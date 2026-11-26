@@ -371,15 +371,13 @@ process.on(KNOWLEDGE_WORKER_LIFECYCLE_EVENT, (value: unknown) => {
 	workerLifecycle.events = [...workerLifecycle.events, bounded].slice(-32);
 	workerLifecycle.state =
 		bounded.stage === "reloaded" ? "enabled" : bounded.stage === "drained" ? "disabled" : bounded.stage;
-	if (
-		bounded.stage === "staged" &&
-		workerLifecycle.currentVersion &&
-		bounded.version !== workerLifecycle.currentVersion
-	)
-		workerLifecycle.nextSessionVersion = bounded.version;
-	if (["enabled", "reloaded", "verified"].includes(bounded.stage)) {
+	if (bounded.stage === "staged" || bounded.stage === "verified")
+		workerLifecycle.nextSessionVersion =
+			bounded.version === workerLifecycle.currentVersion ? null : bounded.version;
+	if (bounded.stage === "enabled" || bounded.stage === "reloaded") {
 		workerLifecycle.currentVersion = bounded.version;
 		workerLifecycle.nextSessionVersion = null;
+		workerLifecycle.lastError = undefined;
 	}
 	if (bounded.stage === "rolled_back") {
 		workerLifecycle.lastError = bounded.reason;

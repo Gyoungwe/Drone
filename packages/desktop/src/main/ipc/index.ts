@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { type BackendServices, createLogger } from "@drone/backend";
 import type {
 	AskRequest,
@@ -5,6 +6,7 @@ import type {
 	PermissionRequest,
 	PermissionResolved,
 	TrustRequest,
+	UiPluginsEventPayload,
 } from "@drone/shared";
 import {
 	AppContract,
@@ -12,11 +14,13 @@ import {
 	McpContract,
 	PermissionsContract,
 	PluginRuntimeContract,
+	packageLifecycleForReview,
 	SessionsContract,
 	SettingsContract,
 	UiPluginsContract,
 } from "@drone/shared";
 import { app, BrowserWindow, webContents } from "electron";
+import type { PluginHostLoaderDiscovery } from "../optional-plugin-hosts";
 import { onResearchSkillUpdateState } from "../research-skill-updater";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import type { DesktopRuntimeBridge } from "../ui-plugins/runtime-bridge";
@@ -32,7 +36,7 @@ import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
 import { registerMcpIpc } from "./mcp";
 import { registerMemoryIpc } from "./memory";
-import { registerPackagesIpc } from "./packages";
+import { packageMutationHost, registerPackagesIpc } from "./packages";
 import { registerPermissionSettingsIpc } from "./permissions";
 import { registerPluginCredentialsIpc } from "./plugin-credentials";
 import { registerPluginRuntimeIpc } from "./plugin-runtime";
@@ -69,6 +73,33 @@ export function createSessionQuestionTransport(ownerId: number) {
 	};
 }
 
+function registerPackageMutationIpc(
+	services: BackendServices,
+	manager: UiPluginManager,
+	runtime: DesktopRuntimeBridge,
+	bootLoaders: readonly PluginHostLoaderDiscovery[],
+	askPolicies: () => void,
+): void {
+	const runtimeDirectory = app.isPackaged
+		? join(process.resourcesPath, "plugin-runtime")
+		: join(__dirname, `../../plugin-runtime/${process.platform}-${process.arch}`);
+	const publish = (event: UiPluginsEventPayload) =>
+		sendToRenderer(channelOf(UiPluginsContract, "event"), event);
+	registerPackagesIpc(
+		services,
+		undefined,
+		async (receipt) => {
+			if (receipt.status === "succeeded" && !receipt.source.startsWith("npm:")) await manager.scanAll();
+			publish({ kind: "config", receipt: packageLifecycleForReview(receipt) });
+			askPolicies();
+		},
+		({ sender }) => ({
+			...packageMutationHost(manager, runtime, sender, runtimeDirectory, bootLoaders),
+			onCandidatePending: () => publish({ kind: "config", reloadUi: false }),
+		}),
+	);
+}
+
 /**
  * Ask the user about package policies (install-time approval) once the first window is shown,
  * so the dialog has a parent — built-in and already enabled packages never pass the enable
@@ -93,6 +124,7 @@ export function registerIpc(
 	uiPluginsManager: UiPluginManager,
 	runtime: DesktopRuntimeBridge,
 	getIncidentSnapshot?: () => unknown,
+	bootLoaders: readonly PluginHostLoaderDiscovery[] = [],
 ): void {
 	// The desktop host binds contracts from the composition root directly. The
 	// individual IPC modules retain narrow legacy overloads for third-party
@@ -108,21 +140,7 @@ export function registerIpc(
 	registerDiscoveryIpc(backendServices);
 	registerEvidenceIpc(backendServices.analysisEvidence);
 	registerDecisionsIpc(backendServices);
-	registerPackagesIpc(backendServices, undefined, undefined, async (action) => {
-		try {
-			return await runtime.withTransition(async () => {
-				try {
-					return await action();
-				} finally {
-					await uiPluginsManager.scanAll();
-				}
-			});
-		} finally {
-			// Notify only after the mutation barrier is released, including a failed update.
-			sendToRenderer(channelOf(UiPluginsContract, "event"), { kind: "config" });
-			askPolicies();
-		}
-	});
+	registerPackageMutationIpc(backendServices, uiPluginsManager, runtime, bootLoaders, askPolicies);
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);
 	registerInquiryIpc(backendServices, sendToRenderer);
@@ -147,32 +165,36 @@ export function registerIpc(
 			);
 	});
 
-	backendServices.sessions.onEvent((sessionId, event) => {
-		sendToRenderer(channelOf(SessionsContract, "event"), { sessionId, event });
-	});
-	backendServices.sessions.onAskRequest((req: AskRequest) => {
-		sendToRenderer(channelOf(PermissionsContract, "askRequest"), req);
-	});
-	backendServices.sessions.onPermissionRequest((req: PermissionRequest) => {
-		sendToRenderer(channelOf(PermissionsContract, "permissionRequest"), req);
-	});
-	// 权限裁决也回投渲染端，桌面卡片要同步撤掉
-	backendServices.sessions.onPermissionResolved((result: PermissionResolved) => {
-		sendToRenderer(channelOf(PermissionsContract, "permissionResolved"), result);
-	});
-	backendServices.sessions.onTrustRequest((req: TrustRequest) => {
-		sendToRenderer(channelOf(PermissionsContract, "trustRequest"), req);
-	});
-	backendServices.sessions.onLoginEvent((payload) => {
-		sendToRenderer(channelOf(SettingsContract, "loginEvent"), payload);
-	});
-	backendServices.sessions.onMcpStatus((cwd, status) => {
-		sendToRenderer(channelOf(McpContract, "event"), { cwd, status });
-	});
+	forwardSessionEvents(backendServices.sessions);
 	onUpdateState((state) => {
 		sendToRenderer(channelOf(AppContract, "updateEvent"), state);
 	});
 	onResearchSkillUpdateState((state) => {
 		sendToRenderer(channelOf(AppContract, "researchSkillUpdateEvent"), state);
+	});
+}
+
+function forwardSessionEvents(sessions: BackendServices["sessions"]): void {
+	sessions.onEvent((sessionId, event) => {
+		sendToRenderer(channelOf(SessionsContract, "event"), { sessionId, event });
+	});
+	sessions.onAskRequest((req: AskRequest) => {
+		sendToRenderer(channelOf(PermissionsContract, "askRequest"), req);
+	});
+	sessions.onPermissionRequest((req: PermissionRequest) => {
+		sendToRenderer(channelOf(PermissionsContract, "permissionRequest"), req);
+	});
+	// 权限裁决也回投渲染端，桌面卡片要同步撤掉
+	sessions.onPermissionResolved((result: PermissionResolved) => {
+		sendToRenderer(channelOf(PermissionsContract, "permissionResolved"), result);
+	});
+	sessions.onTrustRequest((req: TrustRequest) => {
+		sendToRenderer(channelOf(PermissionsContract, "trustRequest"), req);
+	});
+	sessions.onLoginEvent((payload) => {
+		sendToRenderer(channelOf(SettingsContract, "loginEvent"), payload);
+	});
+	sessions.onMcpStatus((cwd, status) => {
+		sendToRenderer(channelOf(McpContract, "event"), { cwd, status });
 	});
 }

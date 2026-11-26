@@ -151,6 +151,8 @@ export const zhSkillsConnections = {
 	installedPluginsHint: "当前宿主可见的 Pi 能力包和可选 Desktop UI 贡献。",
 	currentSessionVersion: "当前会话 {version}",
 	nextSessionVersion: "下一会话 {version}",
+	sessionPackages: "会话插件包",
+	removedNextSession: "下一会话移除",
 	lifecycleError: "不可用：{message}",
 	noInstalledPlugins: "暂无已安装插件包",
 	installed: "已安装",
@@ -176,6 +178,7 @@ export const zhSkillsConnections = {
 	operationFailed: "操作失败",
 	effectiveCurrent: "当前会话已生效",
 	effectiveNext: "下一会话生效",
+	effectiveRestart: "重启应用后生效",
 	uninstall: "卸载",
 	removing: "卸载中…",
 };

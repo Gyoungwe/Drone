@@ -39,9 +39,7 @@ export interface ConfiguredPackageInfo {
 	scope: "user" | "project";
 }
 
-/** A package operation's effective boundary. Pi resources are session-scoped;
- * the desktop host may reload an idle session, while a streaming session waits
- * for its next boundary. */
+/** A package operation's effective boundary for the owner that loads it. */
 export type PackageLifecycleEffect = "current-session" | "next-session" | "app-restart";
 
 export type PackageLifecycleOperation = "install" | "update" | "rollback" | "remove";
@@ -92,6 +90,61 @@ export interface PackageLifecycleReceipt {
 	/** Session ids reloaded or intentionally deferred at the boundary. */
 	reloadedSessionIds?: string[];
 	deferredSessionIds?: string[];
+}
+
+export interface SessionPackageVersion {
+	packageName: string;
+	scope: ConfiguredPackageInfo["scope"];
+	currentVersion?: string;
+	/** Null represents a removal at the next session boundary. */
+	nextSessionVersion?: string | null;
+}
+
+export function isPackageName(value: unknown): value is string {
+	return (
+		typeof value === "string" &&
+		value.length <= 214 &&
+		/^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/iu.test(value)
+	);
+}
+
+export function npmPackageName(source: string): string | undefined {
+	if (!source.startsWith("npm:")) return undefined;
+	const name = source.slice(4).match(/^(@[^/]+\/[^@]+|[^@]+)(?:@.+)?$/u)?.[1];
+	return isPackageName(name) ? name : undefined;
+}
+
+export function isPackageVersion(value: unknown): value is string {
+	return (
+		typeof value === "string" &&
+		value.length <= 128 &&
+		/^\d+\.\d+\.\d+(?:-[\dA-Za-z.-]+)?(?:\+[\dA-Za-z.-]+)?$/u.test(value)
+	);
+}
+
+export function packageLifecycleForReview(
+	receipt: PackageLifecycleReceipt,
+): PackageLifecycleReceipt | undefined {
+	const { operation, packageName, scope, status, effect, version, previousVersion, events, error } = receipt;
+	if (!isPackageName(packageName) || npmPackageName(receipt.source) !== packageName) return undefined;
+	const steps = events
+		.filter((event, index) => event.type !== events[index + 1]?.type)
+		.slice(-32)
+		.map(({ type, at }) => ({ type, at }));
+	return {
+		operation,
+		packageName,
+		source: `npm:${packageName}`,
+		scope,
+		status,
+		effect,
+		...(isPackageVersion(version) ? { version } : {}),
+		...(isPackageVersion(previousVersion) ? { previousVersion } : {}),
+		events: steps,
+		...(error
+			? { error: { code: error.code, retryable: error.retryable, message: "Package operation failed" } }
+			: {}),
+	};
 }
 
 /** Numeric semver comparison (pre-release tags sort before the release). */

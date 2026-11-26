@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { once } from "node:events";
 import type { PluginRuntimeEvent } from "@drone/shared";
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type { PluginNativeSessionFacts, PluginProviderInvocationInput } from "@gyoungwe/plugin-api/runtime";
@@ -42,6 +43,8 @@ interface Selection {
 	readonly session: PluginSessionCallerContext | undefined;
 	readonly abort: AbortController;
 }
+type SourceMatch = (source: PluginRuntimeSource) => boolean;
+type RuntimeMatch = (name: string, owner: PluginRuntimeOwner, source: PluginRuntimeSource) => boolean;
 
 /** One domain owner per application/package. Window tokens only grant revocable caller access. */
 export class PluginRuntimeBridge {
@@ -53,14 +56,18 @@ export class PluginRuntimeBridge {
 		this.listeners.add(listener);
 		return () => this.listeners.delete(listener);
 	}
-	private transitioning = false;
-	private uiTransitioning = false;
 	private closing = false;
 	private transition: Promise<unknown> | undefined;
+	private transitionScope: "all" | "ui" | SourceMatch | undefined;
+	private readonly quarantined = new Map<string, SourceMatch>();
+	private readonly refreshable = new WeakSet<Binding>();
 	private readonly bindings = new Map<string, Binding>();
 	private readonly runtimes = new Map<string, Runtime>();
 	private readonly selections = new Map<PluginRuntimeOwner, Selection>();
-	private readonly requests = new Map<string, { name: string; owner: PluginRuntimeOwner; token: string }>();
+	private readonly requests = new Map<
+		string,
+		{ name: string; owner: PluginRuntimeOwner; source: PluginRuntimeSource; token: string }
+	>();
 	private readonly stopping = new Map<
 		string,
 		{
@@ -83,7 +90,11 @@ export class PluginRuntimeBridge {
 	private sourceCurrent(source: PluginRuntimeSource): boolean {
 		const listed = this.options.sources?.();
 		if (listed) return listed.some((item) => item.state === "enabled" && sameSource(source, item.source));
-		return this.options.enabled(source.pluginId) && sameSource(source, this.options.source(source.pluginId));
+		return this.sourceAvailable(source.pluginId, source);
+	}
+
+	private sourceAvailable(name: string, source: PluginRuntimeSource): boolean {
+		return this.options.enabled(name) && sameSource(source, this.options.source(name));
 	}
 
 	/** Renderer selects an existing session; the backend supplies identity, cwd, trust and lifetime. */
@@ -130,7 +141,14 @@ export class PluginRuntimeBridge {
 	}
 
 	private lifecycleBlocked(owner: PluginRuntimeOwner): boolean {
-		return this.transitioning || (this.uiTransitioning && owner.isSessionBound === undefined);
+		return (
+			this.transitionScope === "all" || (this.transitionScope === "ui" && owner.isSessionBound === undefined)
+		);
+	}
+
+	private packageBlocked(source: PluginRuntimeSource): boolean {
+		if (typeof this.transitionScope === "function" && this.transitionScope(source)) return true;
+		return [...this.quarantined.values()].some((match) => match(source));
 	}
 
 	private allowed(binding: Binding): boolean {
@@ -140,8 +158,7 @@ export class PluginRuntimeBridge {
 			this.bindings.has(binding.token) &&
 			!binding.owner.isDestroyed() &&
 			!binding.abort.signal.aborted &&
-			this.options.enabled(binding.name) &&
-			sameSource(binding.runtime.source, this.options.source(binding.name))
+			this.sourceAvailable(binding.name, binding.runtime.source)
 		);
 	}
 
@@ -206,8 +223,7 @@ export class PluginRuntimeBridge {
 					.some(
 						(item) => item.name === target.name && item.state === "enabled" && item.source === target.source,
 					) ||
-				!this.options.enabled(target.name) ||
-				!sameSource(target.source, this.options.source(target.name))
+				!this.sourceAvailable(target.name, target.source)
 			)
 				throw new Error("Provider source is unavailable or changed");
 		};
@@ -231,11 +247,10 @@ export class PluginRuntimeBridge {
 				this.selections.get(selected.owner) !== selected,
 		};
 		this.selectSession(owner, selected.session?.scope.sessionId ?? null);
-		let abortCleanup: Promise<PromiseSettledResult<void>> | undefined;
+		let cleanup: Promise<PromiseSettledResult<void>[]> | undefined;
+		const stop = () => (cleanup ??= Promise.allSettled([this.revoke(undefined, owner.id)]));
 		const abort = () => {
-			abortCleanup = Promise.allSettled([this.revoke(undefined, owner.id)] as const).then(
-				([result]) => result,
-			);
+			void stop();
 		};
 		context.signal.addEventListener("abort", abort, { once: true });
 		const execution = (async () => {
@@ -280,22 +295,19 @@ export class PluginRuntimeBridge {
 		})();
 		const [result] = await Promise.allSettled([execution] as const);
 		context.signal.removeEventListener("abort", abort);
-		const cleanup = abortCleanup
-			? [await abortCleanup]
-			: await Promise.allSettled([this.revoke(undefined, owner.id)]);
-		const failures = [result, ...cleanup].filter((value) => value.status === "rejected");
-		const [first, ...remaining] = failures;
-		if (first && !remaining.length) throw first.reason;
-		if (first)
-			throw new AggregateError(
-				failures.map((value) => value.reason),
-				"Provider execution and lease cleanup failed",
-			);
+		throwFailures([result, ...(await stop())], "Provider execution and lease cleanup failed", true);
 		return (result as PromiseFulfilledResult<unknown>).value;
 	}
 
-	private createRuntime(name: string, source: PluginRuntimeSource, owner: PluginRuntimeOwner): Runtime {
-		const configuredCapabilities = this.options.capabilities?.(source, owner.approvalOwner ?? owner);
+	private createRuntime(
+		name: string,
+		source: PluginRuntimeSource,
+		owner: PluginRuntimeOwner,
+		candidate?: () => boolean,
+	): Runtime {
+		const bindings = new Set<Binding>();
+		const approver = owner.approvalOwner ?? owner;
+		const configuredCapabilities = this.options.capabilities?.(source, approver);
 		const services = serviceCapabilityHandlers({
 			consumer: source,
 			sources: () => this.options.sources?.() ?? [],
@@ -309,32 +321,22 @@ export class PluginRuntimeBridge {
 		const registry = new PluginRuntimeRegistry(
 			{
 				authorizeActivation: async (_request, signal) => {
-					if (
-						this.closing ||
-						this.lifecycleBlocked(owner) ||
-						owner.isDestroyed() ||
-						!this.options.enabled(name)
-					)
-						return false;
-					const approved = await this.options.approve(
-						owner.approvalOwner ?? owner,
-						source,
-						undefined,
-						undefined,
-						signal,
-					);
-					return (
-						approved &&
-						!signal.aborted &&
+					const available = () =>
+						!this.closing &&
 						!owner.isDestroyed() &&
-						this.options.enabled(name) &&
-						sameSource(source, this.options.source(name))
-					);
+						(candidate
+							? candidate()
+							: !this.lifecycleBlocked(owner) &&
+								!this.packageBlocked(source) &&
+								this.sourceAvailable(name, source));
+					if (!available()) return false;
+					const approved = await this.options.approve(approver, source, undefined, undefined, signal);
+					return approved && !signal.aborted && available();
 				},
 				authorizeInvocation: async (request, signal) => {
 					const selected = [...this.selections.values()].find((value) => value === request.callerIdentity);
 					if (!selected || selected.owner.isDestroyed() || selected.abort.signal.aborted) return false;
-					const binding = [...runtime.bindings].find(
+					const binding = [...bindings].find(
 						(value) => value.owner === selected.owner && this.allowed(value),
 					);
 					if (!binding) return false;
@@ -387,31 +389,28 @@ export class PluginRuntimeBridge {
 			},
 		);
 		registry.register(source.pluginId, this.options.factory(source));
-		const runtime: Runtime = {
-			name,
-			source,
-			registry,
-			bindings: new Set(),
-			activationOwner: owner,
-			active: false,
-		};
-		this.runtimes.set(source.pluginId, runtime);
-		return runtime;
+		return { name, source, registry, bindings, activationOwner: owner, active: false };
 	}
 
 	async bind(name: string, owner: PluginRuntimeOwner): Promise<string | undefined> {
 		if (this.closing || this.lifecycleBlocked(owner)) throw new Error("Plugin runtime unavailable");
 		const source = this.options.source(name);
 		if (!source) return undefined;
+		if (this.packageBlocked(source)) throw new Error("Plugin package is unavailable");
 		const failedStop = [...this.stopping.values()].find(
 			(stop) => stop.failed && stop.source.pluginId === source.pluginId,
 		);
 		if (failedStop) await this.revoke(failedStop.name, failedStop.owner.id, false);
 		if (!this.options.enabled(name) || owner.isDestroyed()) throw new Error("Plugin runtime unavailable");
+		const current = [...this.bindings.values()].find(
+			(binding) => binding.owner === owner && binding.name === name,
+		);
+		if (current?.runtime.active && this.refreshable.delete(current) && this.allowed(current))
+			return current.token;
 		const stopping = this.revoke(name, owner.id, false);
 		const token = randomUUID();
 		const key = JSON.stringify([name, owner.id]);
-		this.requests.set(key, { name, owner, token });
+		this.requests.set(key, { name, owner, source, token });
 		await stopping;
 		if (this.requests.get(key)?.token !== token) throw new Error("Plugin runtime load superseded");
 		let runtime = this.runtimes.get(source.pluginId);
@@ -420,17 +419,17 @@ export class PluginRuntimeBridge {
 		if (
 			this.closing ||
 			this.lifecycleBlocked(owner) ||
+			this.packageBlocked(source) ||
 			owner.isDestroyed() ||
-			!this.options.enabled(name) ||
-			!sameSource(source, this.options.source(name))
+			!this.sourceAvailable(name, source)
 		)
 			throw new Error("Plugin runtime unavailable");
 		runtime = this.runtimes.get(source.pluginId);
 		if (runtime && !sameSource(runtime.source, source))
 			throw new Error("Plugin runtime source replacement requires teardown");
 		runtime ??= this.createRuntime(name, source, owner);
+		this.runtimes.set(source.pluginId, runtime);
 		let binding: Binding;
-		const ready = runtime.registry.activate(source.pluginId, () => this.caller(binding));
 		binding = {
 			token,
 			name,
@@ -439,7 +438,7 @@ export class PluginRuntimeBridge {
 			abort: new AbortController(),
 			pending: new Set(),
 			invocations: new Map(),
-			ready,
+			ready: runtime.registry.activate(source.pluginId, () => this.caller(binding)),
 		};
 		this.bindings.set(token, binding);
 		runtime.bindings.add(binding);
@@ -496,10 +495,7 @@ export class PluginRuntimeBridge {
 		const binding = this.bindings.get(token);
 		if (!binding || binding.owner !== owner || owner.isDestroyed())
 			throw new Error("Plugin runtime binding is invalid for this window");
-		if (
-			!this.options.enabled(binding.name) ||
-			!sameSource(binding.runtime.source, this.options.source(binding.name))
-		) {
+		if (!this.sourceAvailable(binding.name, binding.runtime.source)) {
 			await this.revoke(binding.name);
 			throw new Error("Plugin runtime source is no longer enabled");
 		}
@@ -547,108 +543,113 @@ export class PluginRuntimeBridge {
 		return true;
 	}
 
-	async withTransition<T>(action: () => Promise<T>): Promise<T> {
+	private async runTransition<T>(
+		scope: NonNullable<PluginRuntimeBridge["transitionScope"]>,
+		action: () => Promise<T>,
+	): Promise<T> {
 		if (this.closing) throw new Error("Plugin runtime host is closing");
-		if (this.transitioning || this.uiTransitioning)
-			throw new Error("A plugin lifecycle change is already in progress");
-		this.transitioning = true;
-		const transition = (async () => {
-			await this.revoke();
+		if (this.transition) throw new Error("A plugin lifecycle change is already in progress");
+		this.transitionScope = scope;
+		const transition = Promise.resolve().then(async () => {
+			if (scope === "all") await this.revoke();
+			if (scope === "ui") {
+				const window = (owner: PluginRuntimeOwner) => owner.isSessionBound === undefined;
+				await this.revokeMatching((_name, owner) => window(owner), window);
+			}
 			if (this.closing) throw new Error("Plugin runtime host is closing");
 			return action();
-		})();
+		});
 		this.transition = transition;
 		try {
 			return await transition;
 		} finally {
-			this.transitioning = false;
+			this.transitionScope = undefined;
 			this.transition = undefined;
 		}
 	}
 
-	/** UI settings revoke actual window callers, while adopted native session owners keep running. */
-	async withUiTransition<T>(action: () => Promise<T>): Promise<T> {
-		if (this.closing) throw new Error("Plugin runtime host is closing");
-		if (this.transitioning || this.uiTransitioning)
-			throw new Error("A plugin lifecycle change is already in progress");
-		this.uiTransitioning = true;
-		const transition = (async () => {
-			for (const [key, request] of this.requests)
-				if (request.owner.isSessionBound === undefined) this.requests.delete(key);
-			const stops = new Set(
-				[...this.stopping.values()]
-					.filter((stop) => stop.owner.isSessionBound === undefined)
-					.map((stop) => stop.promise),
+	withTransition<T>(action: () => Promise<T>): Promise<T> {
+		return this.runTransition("all", action);
+	}
+
+	withUiTransition<T>(action: () => Promise<T>): Promise<T> {
+		return this.runTransition("ui", action);
+	}
+
+	withPackageTransition<T>(
+		key: string,
+		match: SourceMatch,
+		owner: PluginRuntimeOwner,
+		action: (drained: boolean, quarantine: () => void) => Promise<T>,
+	): Promise<T> {
+		return this.runTransition(match, async () => {
+			if (this.quarantined.has(key)) throw new Error("Plugin package is quarantined");
+			const affected = [...this.bindings.values()].filter(({ runtime }) => match(runtime.source));
+			if (affected.some(({ name, runtime }) => !this.sourceAvailable(name, runtime.source)))
+				throw new Error("Installed runtime source changed");
+			await Promise.all(
+				affected.map(({ owner, abort: { signal } }) =>
+					owner.isSessionBound?.() && !signal.aborted ? once(signal, "abort") : undefined,
+				),
 			);
+			const drained = affected.length > 0 || [...this.stopping.values()].some(({ source }) => match(source));
+			await this.revokeMatching((_name, _owner, source) => match(source));
+			if (this.closing || owner.isDestroyed()) throw new Error("Plugin package caller is unavailable");
+			const result = await action(drained, () => {
+				this.quarantined.set(key, match);
+			});
 			for (const binding of this.bindings.values())
-				if (binding.owner.isSessionBound === undefined) stops.add(this.stopBinding(binding));
-			for (const [owner, selected] of this.selections) {
-				if (owner.isSessionBound !== undefined) continue;
-				selected.abort.abort(new Error("Plugin UI caller revoked"));
-				this.selections.delete(owner);
-			}
-			const results = await Promise.allSettled(stops);
-			const failures = results.filter((result) => result.status === "rejected");
-			if (failures.length)
-				throw new AggregateError(
-					failures.map((result) => result.reason),
-					"Plugin UI runtime disposal failed",
-				);
-			if (this.closing) throw new Error("Plugin runtime host is closing");
-			return action();
-		})();
-		this.transition = transition;
-		try {
-			return await transition;
-		} finally {
-			this.uiTransitioning = false;
-			this.transition = undefined;
-		}
+				if (binding.owner.isSessionBound === undefined) this.refreshable.add(binding);
+			return result;
+		});
+	}
+
+	packageProbeRegistry(
+		source: PluginRuntimeSource,
+		owner: PluginRuntimeOwner,
+		current: () => boolean,
+	): PluginRuntimeRegistry {
+		if (typeof this.transitionScope !== "function")
+			throw new Error("Package probe requires a scoped transition");
+		return this.createRuntime(source.pluginId, source, owner, current).registry;
 	}
 
 	async close(): Promise<void> {
 		this.closing = true;
 		const results = await Promise.allSettled([this.revoke(), this.transition]);
-		const failures = results.filter((result) => result.status === "rejected");
-		if (failures.length)
-			throw new AggregateError(
-				failures.map((failure) => failure.reason),
-				"Plugin runtime shutdown failed",
-			);
+		throwFailures(results, "Plugin runtime shutdown failed");
 	}
 
 	/** Revoke callers immediately. The final caller also drains and disposes the shared owner. */
-	async revoke(name?: string, ownerId?: number, includeUnadopted = true): Promise<void> {
+	revoke(name?: string, ownerId?: number, includeUnadopted = true): Promise<void> {
 		const matches = (owner: PluginRuntimeOwner) =>
 			ownerId === undefined ||
 			owner.id === ownerId ||
 			(includeUnadopted && owner.approvalOwner?.id === ownerId && !owner.isSessionBound?.());
-		for (const [key, request] of this.requests) {
-			if (name !== undefined && request.name !== name) continue;
-			if (!matches(request.owner)) continue;
-			this.requests.delete(key);
-		}
-		for (const binding of this.bindings.values()) {
-			if (name !== undefined && binding.name !== name) continue;
-			if (!matches(binding.owner)) continue;
-			this.stopBinding(binding);
-		}
-		if (name === undefined)
+		return this.revokeMatching(
+			(runtimeName, owner) => (name === undefined || runtimeName === name) && matches(owner),
+			name === undefined ? (owner) => ownerId === undefined || owner.id === ownerId : undefined,
+		);
+	}
+
+	private async revokeMatching(
+		matches: RuntimeMatch,
+		selection?: (owner: PluginRuntimeOwner) => boolean,
+	): Promise<void> {
+		for (const [key, { name, owner, source }] of this.requests)
+			if (matches(name, owner, source)) this.requests.delete(key);
+		for (const binding of this.bindings.values())
+			if (matches(binding.name, binding.owner, binding.runtime.source)) this.stopBinding(binding);
+		if (selection)
 			for (const [owner, selected] of this.selections) {
-				if (ownerId !== undefined && owner.id !== ownerId) continue;
+				if (!selection(owner)) continue;
 				selected.abort.abort(new Error("Plugin caller window revoked"));
 				this.selections.delete(owner);
 			}
 		const stops = [...this.stopping.values()]
-			.filter((stop) => (name === undefined || stop.name === name) && matches(stop.owner))
+			.filter(({ name, owner, source }) => matches(name, owner, source))
 			.map((stop) => stop.promise);
-		const results = await Promise.allSettled(stops);
-		const failures = results.filter((result) => result.status === "rejected");
-		if (failures.length)
-			throw new AggregateError(
-				failures.map((failure) => failure.reason),
-				"Plugin runtime disposal failed",
-			);
+		throwFailures(await Promise.allSettled(stops), "Plugin runtime disposal failed");
 	}
 
 	private stopBinding(binding: Binding): Promise<void> {
@@ -659,13 +660,10 @@ export class PluginRuntimeBridge {
 		binding.unsubscribe?.();
 		binding.abort.abort(new Error("Plugin caller binding revoked"));
 		const nativeAborted = binding.nativeAbort?.();
-		binding.runtime.bindings.delete(binding);
 		const runtime = binding.runtime;
-		if (
-			(!runtime.bindings.size || (!runtime.active && runtime.activationOwner === binding.owner)) &&
-			!runtime.stopping
-		) {
-			runtime.stopping = runtime.registry.deactivate(runtime.source.pluginId).then(() => {
+		runtime.bindings.delete(binding);
+		if (!runtime.bindings.size || (!runtime.active && runtime.activationOwner === binding.owner)) {
+			runtime.stopping ??= runtime.registry.deactivate(runtime.source.pluginId).then(() => {
 				this.runtimes.delete(runtime.source.pluginId);
 			});
 		}
@@ -673,14 +671,8 @@ export class PluginRuntimeBridge {
 		const promise = (async () => {
 			await Promise.allSettled([...binding.pending]);
 			const results = await Promise.allSettled([nativeAborted, runtime.stopping]);
-			const failures = results.filter((result) => result.status === "rejected");
-			if (failures.length) {
-				failed = true;
-				throw new AggregateError(
-					failures.map((result) => result.reason),
-					"Plugin native run and runtime shutdown failed",
-				);
-			}
+			failed = results.some((result) => result.status === "rejected");
+			throwFailures(results, "Plugin native run and runtime shutdown failed");
 			this.stopping.delete(key);
 		})();
 		this.stopping.set(key, {
@@ -694,4 +686,10 @@ export class PluginRuntimeBridge {
 		});
 		return promise;
 	}
+}
+
+function throwFailures(results: PromiseSettledResult<unknown>[], message: string, unwrap = false): void {
+	const reasons = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+	if (unwrap && reasons.length === 1) throw reasons[0];
+	if (reasons.length) throw new AggregateError(reasons, message);
 }

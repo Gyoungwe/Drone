@@ -149,7 +149,7 @@ export async function initUiPlugins(): Promise<void> {
 	if (!subscribed) {
 		subscribed = true;
 		getPi().onUiPluginsEvent((payload) => {
-			if (payload.kind === "config") enqueueReload(() => reloadAll());
+			if (payload.kind === "config" && payload.reloadUi !== false) enqueueReload(() => reloadAll());
 			else if (payload.kind === "changed") enqueueReload(() => reloadPlugin(payload.name));
 		});
 	}

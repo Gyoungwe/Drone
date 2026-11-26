@@ -9,10 +9,11 @@ import { createServer as createHttpServer } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { lifecycleSentinel, runPackagedPackageLifecycle } from "./packaged-desktop-lifecycle.mjs";
 
 if (process.argv.includes("--help")) {
 	console.log(
-		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app [--lifecycle-package=@scope/name|--lifecycle-fixture]\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used. With --lifecycle-package, installs, updates and removes that explicitly selected public fixture. With --lifecycle-fixture, a temporary local registry serves 1.0.0/1.1.0 and a loopback OpenAI-compatible model keeps one real packaged session streaming while the first install is attempted, so the host must return reload_deferred before the stream is released.",
+		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app [--lifecycle-package=@scope/name|--lifecycle-fixture]\nLaunches the specified package in an isolated profile. With --lifecycle-fixture, a local registry serves two Pi extension versions and a loopback model keeps an existing session streaming during cutover. Checks idle, streaming and new sessions through the preload and the session overview.",
 	);
 	process.exit(0);
 }
@@ -79,7 +80,7 @@ if (lifecycleFixture) {
 		);
 		await writeFile(
 			join(fixtureDir, "dist/index.mjs"),
-			`export const fixtureVersion = ${JSON.stringify(version)};\n`,
+			`export default pi => pi.registerTool({name:${JSON.stringify(lifecycleSentinel(version))},label:'Lifecycle fixture',description:'Lifecycle fixture',parameters:{type:'object'},execute:async()=>({content:[],details:{}})});\n`,
 		);
 		execFileSync("npm", ["pack", "--ignore-scripts", "--pack-destination", destination], {
 			cwd: fixtureDir,
@@ -169,7 +170,6 @@ if (lifecycleFixture) {
 	modelServer.listen(0, "127.0.0.1");
 	await once(modelServer, "listening");
 	modelUrl = `http://127.0.0.1:${modelServer.address().port}/v1`;
-	await mkdir(agent, { recursive: true });
 	await writeFile(
 		join(agent, "models.json"),
 		`${JSON.stringify(
@@ -203,7 +203,15 @@ await new Promise((done) => server.close(done));
 const logFd = openSync(join(root, "launch.log"), "w", 0o600);
 const child = spawn(
 	executable,
-	[`--user-data-dir=${profile}`, "--remote-debugging-address=127.0.0.1", `--remote-debugging-port=${port}`],
+	[
+		`--user-data-dir=${profile}`,
+		"--enable-logging=stderr",
+		"--remote-debugging-address=127.0.0.1",
+		`--remote-debugging-port=${port}`,
+		...(lifecycleFixture
+			? ["--proxy-server=http://127.0.0.1:9", "--proxy-bypass-list=127.0.0.1;localhost"]
+			: []),
+	],
 	{
 		cwd,
 		stdio: ["ignore", logFd, logFd],
@@ -220,7 +228,17 @@ const child = spawn(
 			npm_config_cache: join(root, "npm-cache"),
 			PI_CODING_AGENT_DIR: agent,
 			DRONE_KNOWLEDGE_DIR: knowledge,
-			...(registryUrl ? { NPM_CONFIG_REGISTRY: registryUrl, npm_config_registry: registryUrl } : {}),
+			...(registryUrl
+				? {
+						NPM_CONFIG_REGISTRY: registryUrl,
+						npm_config_registry: registryUrl,
+						HTTP_PROXY: "http://127.0.0.1:9",
+						HTTPS_PROXY: "http://127.0.0.1:9",
+						NO_PROXY: "127.0.0.1,localhost",
+						NODE_USE_ENV_PROXY: "1",
+						PI_OFFLINE: "1",
+					}
+				: {}),
 		},
 	},
 );
@@ -231,14 +249,12 @@ const report = {
 	root,
 	checks: [],
 	liveModel: false,
-	// This smoke intentionally starts with no optional package source.  Keep the
-	// lifecycle acceptance state explicit so a zero-plugin PASS cannot be read as
-	// proof of install/disable/upgrade/rollback behavior.
 	lifecycleAcceptance: {
 		status: "NOT_RUN",
-		operations: ["install", "upgrade", "disable", "restore", "rollback", "destroy-failure"],
-		reason:
-			"A packaged lifecycle run needs an explicitly selected package source and authorized upgrade/rollback fixture; this zero-plugin smoke does not mutate package state.",
+		operations: [],
+		reason: lifecyclePackage
+			? "Application startup has yet to reach the lifecycle checks."
+			: "No package fixture was selected.",
 	},
 	startedAt: new Date().toISOString(),
 };
@@ -247,7 +263,8 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 try {
 	let target;
 	for (let i = 0; i < 160; i++) {
-		if (child.exitCode !== null) throw new Error(`Packaged process exited ${child.exitCode}`);
+		if (child.exitCode !== null || child.signalCode)
+			throw new Error(`Packaged process exited before the debugger (${child.exitCode ?? child.signalCode})`);
 		try {
 			const list = await (
 				await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(500) })
@@ -330,165 +347,35 @@ try {
 	);
 	report.checks.push("fresh Pi managed npm root contains no optional packages");
 	if (lifecyclePackage) {
-		const packagePath = join(managedPackageRoot, ...lifecyclePackage.split("/"));
-		const source = `npm:${lifecyclePackage}`;
-		let lifecycleSessionId;
-		const lifecycle = {
-			package: lifecyclePackage,
-			operations: lifecycleFixture
-				? ["install", "reload-deferred", "upgrade", "rollback", "remove", "restore", "remove"]
-				: ["install", "update", "remove"],
-		};
-		let lifecycleStage = "install";
-		const installedVersion = async () =>
-			JSON.parse(await readFile(join(packagePath, "package.json"), "utf8")).version;
-		try {
-			if (lifecycleFixture) {
-				const lifecycleSession = await evaluate(
-					`window.pi.createSession({cwd:${JSON.stringify(cwd)},provider:"openai",modelId:"drone-packaged-stream"})`,
-				);
-				assert(typeof lifecycleSession?.sessionId === "string" && lifecycleSession.sessionId.length > 0);
-				lifecycleSessionId = lifecycleSession.sessionId;
-				await evaluate(
-					`window.__droneStreamingPromptDone=false; window.__droneStreamingPromptError=null; window.pi.prompt(${JSON.stringify(lifecycleSessionId)}, "streaming lifecycle fixture").then(()=>window.__droneStreamingPromptDone=true, error=>{window.__droneStreamingPromptError=String(error); window.__droneStreamingPromptDone=true;}); undefined`,
-				);
-				await Promise.race([
-					streamingRequestSeen,
-					new Promise((_, reject) =>
-						setTimeout(() => reject(new Error("streaming model request timed out")), 30_000),
-					),
-				]);
-				await streamingResponseReady;
-			}
-			if (lifecycleFixture) fixtureLatest = "1.0.0";
-			const installed = await evaluate(`window.pi.installPackage(${JSON.stringify(lifecyclePackage)})`);
-			assert(installed?.status === "succeeded", `package install failed: ${JSON.stringify(installed)}`);
-			assert(
-				await access(packagePath).then(
-					() => true,
-					() => false,
-				),
-				"installed package directory is missing",
-			);
-			const configured = await evaluate("window.pi.listConfiguredPackages()");
-			assert(configured.some((entry) => entry.source === source && entry.scope === "user"));
-			if (lifecycleFixture) {
-				const version = await installedVersion();
-				assert.equal(version, "1.0.0");
-				assert.equal(installed.effect, "next-session");
-				assert(installed.events.some((event) => event.type === "reload_deferred"));
-				assert.deepEqual(installed.deferredSessionIds, [lifecycleSessionId]);
-				lifecycle.reloadDeferred = installed;
-				releaseStreamingResponse?.();
-				for (let i = 0; i < 300; i++) {
-					if (await evaluate("Boolean(window.__droneStreamingPromptDone)")) break;
-					await delay(100);
+		const controls = lifecycleFixture
+			? {
+					selectVersion: (version) => {
+						fixtureLatest = version;
+						fixtureHasUpgraded ||= version === "1.1.0";
+					},
+					releaseStream: () => releaseStreamingResponse?.(),
+					waitForStream: async () => {
+						await Promise.race([
+							Promise.all([streamingRequestSeen, streamingResponseReady]),
+							once(AbortSignal.timeout(30_000), "abort").then(() => {
+								throw new Error("Streaming model request timed out");
+							}),
+						]);
+					},
 				}
-				assert.equal(await evaluate("Boolean(window.__droneStreamingPromptDone)"), true);
-				assert.equal(await evaluate("window.__droneStreamingPromptError ?? null"), null);
-			}
-			lifecycle.install = installed;
-
-			lifecycleStage = "upgrade";
-			if (lifecycleFixture) {
-				fixtureLatest = "1.1.0";
-				fixtureHasUpgraded = true;
-			}
-			const updated = await evaluate(`window.pi.updatePackage(${JSON.stringify(lifecyclePackage)})`);
-			assert(updated?.status === "succeeded", `package update failed: ${JSON.stringify(updated)}`);
-			assert(
-				await access(packagePath).then(
-					() => true,
-					() => false,
-				),
-				"updated package directory is missing",
-			);
-			const afterUpdate = await evaluate("window.pi.listConfiguredPackages()");
-			assert(afterUpdate.some((entry) => entry.source === source && entry.scope === "user"));
-			if (lifecycleFixture) assert.equal(await installedVersion(), "1.1.0");
-			lifecycle.update = updated;
-
-			lifecycleStage = "rollback";
-			if (lifecycleFixture) {
-				fixtureLatest = "1.0.0";
-				const rollback = await evaluate(
-					`window.pi.rollbackPackage(${JSON.stringify(lifecyclePackage)}, "1.0.0")`,
-				);
-				assert(rollback?.status === "succeeded", `package rollback failed: ${JSON.stringify(rollback)}`);
-				assert.equal(await installedVersion(), "1.0.0");
-				lifecycle.rollback = rollback;
-			}
-
-			lifecycleStage = "remove";
-			const removed = await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`);
-			assert(removed?.status === "succeeded", `package remove failed: ${JSON.stringify(removed)}`);
-			assert(
-				!(await access(packagePath).then(
-					() => true,
-					() => false,
-				)),
-				"removed package directory remains",
-			);
-			const remaining = await evaluate("window.pi.listConfiguredPackages()");
-			assert(!remaining.some((entry) => entry.source === source && entry.scope === "user"));
-			lifecycle.remove = removed;
-			if (lifecycleFixture) {
-				const restored = await evaluate(`window.pi.installPackage(${JSON.stringify(lifecyclePackage)})`);
-				assert(restored?.status === "succeeded", `package restore failed: ${JSON.stringify(restored)}`);
-				assert.equal(await installedVersion(), "1.0.0");
-				const restoredConfigured = await evaluate("window.pi.listConfiguredPackages()");
-				assert(restoredConfigured.some((entry) => entry.source === source && entry.scope === "user"));
-				lifecycle.restore = restored;
-				const removedAgain = await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`);
-				assert(
-					removedAgain?.status === "succeeded",
-					`package final remove failed: ${JSON.stringify(removedAgain)}`,
-				);
-				assert(
-					!(await access(packagePath).then(
-						() => true,
-						() => false,
-					)),
-					"restored package directory remains after final remove",
-				);
-				lifecycle.removeFinal = removedAgain;
-			}
-			report.lifecycleAcceptance = {
-				status: "PASS",
-				operations: lifecycle.operations,
-				package: lifecyclePackage,
-				receipts: lifecycle,
-			};
-			report.checks.push(
-				lifecycleFixture
-					? `isolated packaged host installed, upgraded, rolled back, removed, restored and removed ${lifecyclePackage}`
-					: `isolated packaged host installed and removed ${lifecyclePackage}`,
-			);
-			if (lifecycleSessionId) await evaluate(`window.pi.closeSession(${JSON.stringify(lifecycleSessionId)})`);
-		} catch (error) {
-			const message = String(error);
-			if (lifecycleFixture || /network|registry|npm|fetch|timeout|unavailable|not found/iu.test(message)) {
-				if (lifecycleFixture) {
-					await evaluate(`window.pi.removePackage(${JSON.stringify(source)}, "user")`).catch(() => undefined);
-				}
-				if (lifecycleSessionId)
-					await evaluate(`window.pi.closeSession(${JSON.stringify(lifecycleSessionId)})`).catch(
-						() => undefined,
-					);
-				report.lifecycleAcceptance = {
-					status: "BLOCKED",
-					operations: lifecycle.operations,
-					package: lifecyclePackage,
-					reason: lifecycleFixture
-						? `${lifecycleStage} did not complete; cross-version rollback is unavailable through the host API: ${message}`
-						: message,
-					receipts: lifecycle,
-				};
-				report.checks.push(`packaged lifecycle blocked for ${lifecyclePackage}: ${message}`);
-			} else {
-				throw error;
-			}
-		}
+			: undefined;
+		report.lifecycleAcceptance = await runPackagedPackageLifecycle({
+			evaluate,
+			cwd,
+			packageName: lifecyclePackage,
+			packagePath: join(managedPackageRoot, ...lifecyclePackage.split("/")),
+			controls,
+		});
+		if (lifecycleFixture)
+			assert.equal(report.lifecycleAcceptance.status, "PASS", report.lifecycleAcceptance.reason);
+		report.checks.push(
+			`packaged lifecycle ${report.lifecycleAcceptance.status.toLowerCase()} for ${lifecyclePackage}`,
+		);
 	}
 	const overview = await evaluate(`window.pi.getKnowledgeOverview({cwd:${JSON.stringify(cwd)}})`);
 	assert.equal(overview.enabled, true);

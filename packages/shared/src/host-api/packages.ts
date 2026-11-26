@@ -93,7 +93,7 @@ const PackageLifecycleErrorSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
-const PackageLifecycleReceiptSchema = Type.Object(
+export const PackageLifecycleReceiptSchema = Type.Object(
 	{
 		operation: Type.Union([
 			Type.Literal("install"),

@@ -1,12 +1,13 @@
-import type { CatalogPackage, LoadedExtension, ResourceScope } from "@drone/shared";
-import { isSubagentPackage, isSubagentToolName, NPM_NOT_FOUND_SENTINEL } from "@drone/shared";
+import type { CatalogPackage, ConfiguredPackageInfo, LoadedExtension, ResourceScope } from "@drone/shared";
+import { isSubagentPackage, isSubagentToolName, NPM_NOT_FOUND_SENTINEL, npmPackageName } from "@drone/shared";
 import { useRef, useState } from "react";
 import { useT } from "../../../i18n";
-import { useCatalogStore } from "../../../stores/catalog";
+import { selectLifecycleReceipt, useCatalogStore } from "../../../stores/catalog";
 import { CheckIcon, TrashIcon } from "../../icons";
 import { ActionSurface } from "../../ui/ActionSurface";
 import { Button } from "../../ui/Button";
 import { Tooltip } from "../../ui/Tooltip";
+import { PackageLifecycleDetails, PackageOperationProgress } from "./PackageLifecycleDetails";
 
 /** 下载量格式化：479565 → 479.6K，1234567 → 1.2M */
 export function formatDownloads(n: number): string {
@@ -17,11 +18,7 @@ export function formatDownloads(n: number): string {
 
 /** 已配置 source → 包名（仅 npm: 源能与目录匹配；剥版本后缀，兼容 scoped 名） */
 export function npmSourceToName(source: string): string | null {
-	if (!source.startsWith("npm:")) return null;
-	const spec = source.slice(4);
-	const searchFrom = spec.startsWith("@") ? spec.indexOf("/") + 1 : 1;
-	const at = spec.indexOf("@", searchFrom);
-	return at > 0 ? spec.slice(0, at) : spec;
+	return npmPackageName(source) ?? null;
 }
 
 /** 卸载按钮：点击进入确认态（红字，再点执行）；鼠标移出或 3s 后自动恢复 */
@@ -117,17 +114,6 @@ function Stat({ label }: { label: string }) {
 	return <span className="text-[11px] text-ink-faint">{label}</span>;
 }
 
-function OperationProgress({ label }: { label: string }) {
-	return (
-		<div className="mt-2 flex items-center gap-2" role="progressbar" aria-label={label}>
-			<div className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-full bg-hover">
-				<div className="h-full w-1/2 animate-pulse rounded-full bg-accent" />
-			</div>
-			<span className="text-[10px] text-ink-faint">{label}</span>
-		</div>
-	);
-}
-
 export function ExtensionRow({
 	extension,
 	configured,
@@ -187,131 +173,135 @@ function TypeBadge({ type }: { type: string }) {
 	);
 }
 
-export function CatalogRow({
-	pkg,
-	configured,
-}: {
+type CatalogRowProps = {
 	pkg: CatalogPackage;
-	configured: { source: string; scope: "user" | "project" } | null;
-}) {
+	configured: ConfiguredPackageInfo | null;
+};
+
+function CatalogDetails({ pkg, configured }: CatalogRowProps) {
 	const t = useT();
 	const installing = useCatalogStore((s) => s.installingNames[pkg.name] === true);
 	const installError = useCatalogStore((s) => s.installErrors[pkg.name]);
 	const updating = useCatalogStore((s) => s.updatingNames[pkg.name] === true);
 	const updateError = useCatalogStore((s) => s.updateErrors[pkg.name]);
-	const lifecycle = useCatalogStore((s) => s.lifecycleReceipts[pkg.name]);
-	const sourceLifecycle = useCatalogStore((s) =>
-		configured ? s.lifecycleReceipts[configured.source] : undefined,
-	);
+	const lifecycle = useCatalogStore((state) => selectLifecycleReceipt(state, pkg.name, configured));
 	const removeError = useCatalogStore((s) => (configured ? s.removeErrors[configured.source] : undefined));
-	const installCatalogPackage = useCatalogStore((s) => s.installCatalogPackage);
-	const updateCatalogPackage = useCatalogStore((s) => s.updateCatalogPackage);
-	// subagent 包安装前警示：两段式确认（与 UninstallButton 同模式，不用 window.confirm）
-	const [warnConfirming, setWarnConfirming] = useState(false);
-	const warnTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+	return (
+		<div className="min-w-0 flex-1">
+			<div className="flex items-center gap-2">
+				<span className="min-w-0 truncate text-[13px] font-medium text-ink">{pkg.name}</span>
+				{pkg.types.map((type) => (
+					<TypeBadge key={type} type={type} />
+				))}
+			</div>
+			{pkg.description && (
+				<p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-ink-dim">{pkg.description}</p>
+			)}
+			<div className="mt-1 flex items-center gap-2 text-[11px] text-ink-faint">
+				{pkg.author && <span>{pkg.author}</span>}
+				{pkg.author && <span aria-hidden>·</span>}
+				<span>{t("settings.extensions.downloadsPerMonth", { count: formatDownloads(pkg.downloads) })}</span>
+			</div>
+			{installError && (
+				<p className="mt-1 text-xs text-err">
+					{installError.includes(NPM_NOT_FOUND_SENTINEL)
+						? t("settings.extensions.npmNotFound")
+						: installError}
+				</p>
+			)}
+			{updateError && (
+				<p className="mt-1 text-xs text-err">
+					{t("settings.extensions.updateFailed")}: {updateError}
+				</p>
+			)}
+			{removeError && (
+				<p className="mt-1 text-xs text-err">
+					{t("settings.extensions.removeFailed")}: {removeError}
+				</p>
+			)}
+			<PackageLifecycleDetails receipt={lifecycle} />
+			{installing || updating ? (
+				<PackageOperationProgress
+					label={installing ? t("settings.extensions.installing") : t("settings.extensions.updating")}
+				/>
+			) : null}
+		</div>
+	);
+}
+
+function CatalogInstall({ pkg }: { pkg: CatalogPackage }) {
+	const t = useT();
+	const installing = useCatalogStore((state) => state.installingNames[pkg.name] === true);
+	const install = useCatalogStore((state) => state.installCatalogPackage);
+	const [confirming, setConfirming] = useState(false);
+	const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const isSubagent = isSubagentPackage(pkg);
 	const handleInstall = () => {
-		if (isSubagent && !warnConfirming) {
-			setWarnConfirming(true);
-			clearTimeout(warnTimerRef.current);
-			warnTimerRef.current = setTimeout(() => setWarnConfirming(false), 3000);
+		if (isSubagent && !confirming) {
+			setConfirming(true);
+			clearTimeout(timer.current);
+			timer.current = setTimeout(() => setConfirming(false), 3000);
 			return;
 		}
-		setWarnConfirming(false);
-		void installCatalogPackage(pkg.name);
+		setConfirming(false);
+		void install(pkg.name);
 	};
+	return (
+		<div className="flex flex-col items-end gap-1">
+			<Button
+				variant="primary"
+				size="sm"
+				disabled={installing}
+				title={isSubagent ? t("settings.extensions.subagentInstallWarning") : undefined}
+				onClick={handleInstall}
+			>
+				{installing ? (
+					<span className="inline-flex items-center gap-2">
+						<span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
+						{t("settings.extensions.installing")}
+					</span>
+				) : confirming ? (
+					t("settings.extensions.subagentInstallConfirm")
+				) : (
+					t("settings.extensions.install")
+				)}
+			</Button>
+			{confirming && (
+				<p className="max-w-56 text-right text-xs leading-snug text-ink-dim">
+					{t("settings.extensions.subagentInstallWarning")}
+				</p>
+			)}
+		</div>
+	);
+}
 
+function InstalledCatalogActions({ name, configured }: { name: string; configured: ConfiguredPackageInfo }) {
+	const t = useT();
+	const updating = useCatalogStore((state) => state.updatingNames[name] === true);
+	const update = useCatalogStore((state) => state.updateCatalogPackage);
+	return (
+		<div className="flex items-center gap-0.5">
+			<Button variant="secondary" size="sm" disabled={updating} onClick={() => void update(name)}>
+				{updating ? t("settings.extensions.updating") : t("settings.extensions.update")}
+			</Button>
+			<span className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-ink-faint">
+				<CheckIcon size={11} />
+				{t("settings.extensions.installed")}
+			</span>
+			<UninstallButton itemName={name} source={configured.source} scope={configured.scope} />
+		</div>
+	);
+}
+
+export function CatalogRow({ pkg, configured }: CatalogRowProps) {
 	return (
 		<li className="flex items-start gap-3 py-3">
-			<div className="min-w-0 flex-1">
-				<div className="flex items-center gap-2">
-					<span className="min-w-0 truncate text-[13px] font-medium text-ink">{pkg.name}</span>
-					{pkg.types.map((type) => (
-						<TypeBadge key={type} type={type} />
-					))}
-				</div>
-				{pkg.description && (
-					<p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-ink-dim">{pkg.description}</p>
-				)}
-				<div className="mt-1 flex items-center gap-2 text-[11px] text-ink-faint">
-					{pkg.author && <span>{pkg.author}</span>}
-					{pkg.author && <span aria-hidden>·</span>}
-					<span>{t("settings.extensions.downloadsPerMonth", { count: formatDownloads(pkg.downloads) })}</span>
-				</div>
-				{installError && (
-					<p className="mt-1 text-xs text-err">
-						{installError.includes(NPM_NOT_FOUND_SENTINEL)
-							? t("settings.extensions.npmNotFound")
-							: installError}
-					</p>
-				)}
-				{updateError && (
-					<p className="mt-1 text-xs text-err">
-						{t("settings.extensions.updateFailed")}: {updateError}
-					</p>
-				)}
-				{removeError && (
-					<p className="mt-1 text-xs text-err">
-						{t("settings.extensions.removeFailed")}: {removeError}
-					</p>
-				)}
-				{(lifecycle ?? sourceLifecycle)?.status === "succeeded" &&
-					(lifecycle ?? sourceLifecycle)?.effect !== "app-restart" && (
-						<p className="mt-1 text-[11px] text-ok">
-							{(lifecycle ?? sourceLifecycle)?.effect === "next-session"
-								? t("settings.extensions.effectiveNext")
-								: t("settings.extensions.effectiveCurrent")}
-						</p>
-					)}
-				{installing || updating ? (
-					<OperationProgress
-						label={installing ? t("settings.extensions.installing") : t("settings.extensions.updating")}
-					/>
-				) : null}
-			</div>
+			<CatalogDetails pkg={pkg} configured={configured} />
 			<div className="shrink-0 pt-0.5">
 				{configured ? (
-					<div className="flex items-center gap-0.5">
-						<Button
-							variant="secondary"
-							size="sm"
-							disabled={updating}
-							onClick={() => void updateCatalogPackage(pkg.name)}
-						>
-							{updating ? t("settings.extensions.updating") : t("settings.extensions.update")}
-						</Button>
-						<span className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-ink-faint">
-							<CheckIcon size={11} />
-							{t("settings.extensions.installed")}
-						</span>
-						<UninstallButton itemName={pkg.name} source={configured.source} scope={configured.scope} />
-					</div>
+					<InstalledCatalogActions name={pkg.name} configured={configured} />
 				) : (
-					<div className="flex flex-col items-end gap-1">
-						<Button
-							variant="primary"
-							size="sm"
-							disabled={installing}
-							title={isSubagent ? t("settings.extensions.subagentInstallWarning") : undefined}
-							onClick={handleInstall}
-						>
-							{installing ? (
-								<span className="inline-flex items-center gap-2">
-									<span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
-									{t("settings.extensions.installing")}
-								</span>
-							) : warnConfirming ? (
-								t("settings.extensions.subagentInstallConfirm")
-							) : (
-								t("settings.extensions.install")
-							)}
-						</Button>
-						{warnConfirming && (
-							<p className="max-w-56 text-right text-xs leading-snug text-ink-dim">
-								{t("settings.extensions.subagentInstallWarning")}
-							</p>
-						)}
-					</div>
+					<CatalogInstall pkg={pkg} />
 				)}
 			</div>
 		</li>
