@@ -19,7 +19,7 @@ test("ignores domain packages in devDependencies", () => {
 	const result = inspectHostDependencies({
 		dependencies: { "@drone/shared": "*" },
 		devDependencies: {
-			"@drone/discovery": "*",
+			"@gyoungwe/pi-discovery": "*",
 			"@gyoungwe/pi-analysis": "*",
 			"@gyoungwe/pi-knowledge": "*",
 		},

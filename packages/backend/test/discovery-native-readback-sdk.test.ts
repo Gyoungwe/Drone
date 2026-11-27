@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { SubprocessFixtureRunner } from "@drone/discovery";
 import { readDroneToolMeta } from "@drone/shared";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
@@ -18,6 +17,7 @@ import {
 import type { DiscoveryHostLoader } from "@gyoungwe/plugin-api";
 import { expect, it } from "vitest";
 import { createDiscoveryService } from "../src/discovery/service";
+import { FixtureKernelRunner } from "./fixtures/fixture-kernel-runner";
 
 const tarball = process.env.DRONE_DISCOVERY_PLUGIN_TARBALL;
 const run = promisify(execFile);
@@ -63,7 +63,7 @@ it.skipIf(!tarball)(
 						authorize: async (operation) => {
 							authorizations.push(operation.kind);
 						},
-						runner: new SubprocessFixtureRunner(),
+						runner: new FixtureKernelRunner(),
 					},
 					discoveryHostLoader,
 				);
