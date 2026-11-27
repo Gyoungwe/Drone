@@ -21,6 +21,7 @@ import type {
 import { Type } from "typebox";
 import { JsonStore, JsonStoreCorruptedError } from "../json-store";
 import type { StorageRegistry } from "../storage/registry";
+import { fileMutationHandlers, moveFileWithinRoot, type PluginFileMoveInput } from "./file-move-capability";
 import {
 	assertCleanupComplete,
 	checkRoot,
@@ -437,6 +438,25 @@ export class PluginFileCapabilities {
 		return this.mutateFile(input, call, (root) => this.ensureDirectory(root, input, call));
 	}
 
+	moveFile(
+		input: PluginFileMoveInput,
+		call: PluginFileCall,
+	): Promise<{ moved: true; version: PluginFileVersion }> {
+		const { root: handle, from, to, expectedVersion } = input;
+		const source = { root: handle, path: from };
+		const target = { root: handle, path: to };
+		return this.mutateFile(source, call, (root) => {
+			this.grant(target, call, "files");
+			if (!target.path) throw new Error("Data mutation requires a child path");
+			return moveFileWithinRoot(root, {
+				from,
+				to,
+				expectedVersion,
+				signal: call.signal,
+			});
+		});
+	}
+
 	async readJson(input: PluginFileInput, call: PluginFileCall): Promise<PluginStateReadResult> {
 		const root = this.grant(input, call, "state");
 		// Missing state is allowed; a revoked/replaced root is never missing configuration.
@@ -627,6 +647,7 @@ export function fileCapabilityHandlers(
 		mtimeMs: Type.Number(),
 		ctimeMs: Type.Number(),
 	});
+	const fileMutations = fileMutationHandlers(ports, fileVersion);
 	const fileKind = Type.Union([
 		Type.Literal("file"),
 		Type.Literal("directory"),
@@ -818,30 +839,9 @@ export function fileCapabilityHandlers(
 			execute: (input, call) =>
 				ports.writeText(input as PluginFileInput & { text: string; expectedHash: string | null }, call),
 		},
-		"files.remove": {
-			inputSchema: Type.Object(
-				{
-					root: Type.String({ minLength: 1 }),
-					path: Type.String({ minLength: 1 }),
-					expectedHash: Type.String({ pattern: "^[a-f0-9]{64}$" }),
-				},
-				{ additionalProperties: false },
-			),
-			resultSchema: Type.Object({ removed: Type.Literal(true) }),
-			effect: "write",
-			approval: "always",
-			execute: (input, call) => ports.removeText(input as PluginFileInput & { expectedHash: string }, call),
-		},
-		"files.ensureDirectory": {
-			inputSchema: Type.Object(
-				{ root: Type.String({ minLength: 1 }), path: Type.String({ minLength: 1 }) },
-				{ additionalProperties: false },
-			),
-			resultSchema: Type.Object({ created: Type.Boolean() }),
-			effect: "write",
-			approval: "always",
-			execute: (input, call) => ports.ensureFileDirectory(input as PluginFileInput, call),
-		},
+		"files.move": fileMutations.move,
+		"files.remove": fileMutations.remove,
+		"files.ensureDirectory": fileMutations.ensureDirectory,
 		"files.readBinary": {
 			inputSchema: input,
 			resultSchema: Type.Object(

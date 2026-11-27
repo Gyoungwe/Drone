@@ -27,9 +27,28 @@ const writeOperations = [
 	"state.removeJson",
 	"state.ensureDirectory",
 	"files.writeText",
+	"files.move",
 	"files.remove",
 	"files.ensureDirectory",
 ] as const;
+
+function moveApprovalDetail(directory: string, input: unknown): string {
+	const { from, to, expectedVersion } = input as { from: string; to: string; expectedVersion: unknown };
+	return [
+		hostText("动作：移动文件 (files.move)", "Action: Move file (files.move)"),
+		hostText(
+			`已授权目录：${JSON.stringify(directory)}`,
+			`Authorized directory: ${JSON.stringify(directory)}`,
+		),
+		`from: ${JSON.stringify(from)}`,
+		`to: ${JSON.stringify(to)}`,
+		`expectedVersion: ${JSON.stringify(expectedVersion)}`,
+		hostText(
+			"目标必须不存在；不会覆盖已有文件；跨设备时直接失败，不复制。",
+			"The target must be absent; an existing file will not be overwritten. Cross-device moves fail without copying.",
+		),
+	].join("\n\n");
+}
 
 /** Inputs have passed the capability schema; only selected host grants identify OS directories. */
 function fileWriteApprovalDetail(
@@ -62,6 +81,7 @@ function fileWriteApprovalDetail(
 				: grant.fileWrite)
 	)
 		throw new Error("Plugin write root was not granted");
+	if (operation === "files.move") return moveApprovalDetail(grant.path, input);
 	const action =
 		operation === "state.reserve"
 			? hostText("保留状态目录的独占写者租约", "Reserve the state directory for one writer")

@@ -1,5 +1,10 @@
 // @vitest-environment node
+import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { StorageRegistry } from "@drone/backend";
 import { expect, it, vi } from "vitest";
+import { createDesktopResourceCapabilities } from "./desktop-resource-capabilities";
 
 const desktop = vi.hoisted(() => ({
 	showMessageBox: vi.fn(),
@@ -68,3 +73,59 @@ it("keeps the generic prompt and buttons when no review accompanies the write", 
 		}),
 	);
 });
+
+it.each([
+	["en", "Move file", "will not be overwritten", "without copying"],
+	["zh", "移动文件", "不会覆盖", "不复制"],
+])(
+	"describes both paths and no-overwrite semantics for a file move in %s",
+	async (language, action, overwrite, copy) => {
+		const directory = await realpath(await mkdtemp(join(tmpdir(), "drone-move-approval-")));
+		vi.stubEnv("DRONE_REPLY_LANGUAGE", language);
+		try {
+			const activation = {
+				pluginId: source.pluginId,
+				applicationId: "app",
+				signal: new AbortController().signal,
+				events: { changed: () => undefined },
+			};
+			const ports = await createDesktopResourceCapabilities(
+				{ ...source, requestsFileWrite: true },
+				directory,
+				{
+					profileDirectory: directory,
+					storage: new StorageRegistry(),
+					selectDirectories: async () => [directory],
+				},
+			)(activation);
+			try {
+				const grant = ports.resources.find(({ kind }) => kind === "files");
+				const handler = ports.handlers["files.move"];
+				expect(handler).toMatchObject({ effect: "write", approval: "always" });
+				const expectedVersion = { dev: 1, ino: 2, size: 3, mtimeMs: 4, ctimeMs: 5 };
+				const detail = handler?.approvalDetail?.(
+					{ root: grant?.handle, from: "draft/report.bin", to: "results/report.bin", expectedVersion },
+					{ ...activation, scope: { kind: "application" } },
+				);
+				for (const text of [
+					action,
+					directory,
+					"draft/report.bin",
+					"results/report.bin",
+					JSON.stringify(expectedVersion),
+					overwrite,
+					copy,
+				]) {
+					expect(detail).toContain(text);
+				}
+				expect(detail).not.toContain("undefined");
+			} finally {
+				await ports.dispose?.();
+				await ports.finalRelease?.();
+			}
+		} finally {
+			vi.unstubAllEnvs();
+			await rm(directory, { recursive: true, force: true });
+		}
+	},
+);
