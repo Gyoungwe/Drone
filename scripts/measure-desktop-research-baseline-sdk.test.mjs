@@ -11,6 +11,7 @@ import {
 } from "./measure-desktop-research-baseline.mts";
 import {
 	containedRealPath,
+	createResultReferences,
 	toolNames,
 	validateDesktopFixture,
 	validateDesktopReport,
@@ -26,6 +27,8 @@ import { createDesktopSession, loadDesktopAssembly } from "./measure-desktop-res
 
 const fixture = "fixtures/research-desktop-baseline.json";
 const cli = "scripts/measure-desktop-research-baseline.mts";
+const readScenarios = async () =>
+	validateDesktopFixture(JSON.parse(await readFile(fixture, "utf8"))).scenarios;
 
 function toolReply(ai, name, args) {
 	return ai.fauxAssistantMessage([ai.fauxToolCall(name, args)], { stopReason: "toolUse" });
@@ -146,8 +149,7 @@ function breakerTests() {
 		["stall-loop", "repeated-tool-loop", "repeats"],
 	])
 		test(`loaded Desktop breaker preserves ${reason}`, async () => {
-			const scenarios = validateDesktopFixture(JSON.parse(await readFile(fixture, "utf8"))).scenarios;
-			const scenario = scenarios.find(({ id }) => id === scenarioId);
+			const scenario = (await readScenarios()).find(({ id }) => id === scenarioId);
 			const result = await withDesktopFixture(scenario, (prepared) =>
 				runFixtureChild(prepared, import.meta.filename),
 			);
@@ -177,7 +179,7 @@ async function assertScenarioReport() {
 		assert.deepEqual(report.toolSet, [...toolNames]);
 		assert.equal(report.modelConfig.baseUrl, null);
 		assert.equal(report.policy.breakerUsageSource, "sdk-faux-estimate");
-		const scenarios = validateDesktopFixture(JSON.parse(await readFile(fixture, "utf8"))).scenarios;
+		const scenarios = await readScenarios();
 		const [local, deep, stall, write] = report.scenarios;
 		for (const [index, scenario] of report.scenarios.entries()) {
 			assert.equal(scenario.routeObserved, "deep_research");
@@ -190,6 +192,7 @@ async function assertScenarioReport() {
 			assert.equal(scenario.tokens.billedTotal, null);
 			assert.equal(scenario.evidence.scientificallyVerified, false);
 			assert.equal(scenario.networkViolations, 0);
+			assert.ok(!Object.hasOwn(scenario, "blockedReads"));
 		}
 		for (const scenario of [local, deep, write]) {
 			assert.equal(scenario.runStatus, "completed");
@@ -303,9 +306,7 @@ async function probeLiveRuntime(prepared, live) {
 }
 
 async function assertLiveRuntime() {
-	const {
-		scenarios: [scenario],
-	} = validateDesktopFixture(JSON.parse(await readFile(fixture, "utf8")));
+	const [scenario] = await readScenarios();
 	const live = {
 		provider: "magpie",
 		model: "deepseek/deepseek-flash",
@@ -319,10 +320,27 @@ async function assertLiveRuntime() {
 	assert.deepEqual(result, { cleaned: true });
 }
 
+const assertStartStages = async () =>
+	withDesktopFixture((await readScenarios())[0], async ({ resultsRoot }) => {
+		const entry = { name: "research_loop", input: { action: "start" } };
+		const offline = createResultReferences(resultsRoot);
+		const run_dir = await mkdtemp(join(resultsRoot, "run-"));
+		for (const stage of ["invented", "local_query_recorded", "sources_inspected"]) {
+			const live = createResultReferences(resultsRoot, true);
+			const details = { run_dir, metadata: { status: "running" }, evidence_gate: { stage } };
+			const result = { isError: false, details };
+			await assert.rejects(offline.observe(entry, result), /Invalid start details/);
+			const observed = live.observe(entry, result);
+			if (stage === "invented") await assert.rejects(observed, /Invalid start details/);
+			else assert.equal(await observed.then(() => live.resolve(`\${runDir}`)), run_dir);
+		}
+	});
+
 if (process.send)
 	serveFixtureChild((prepared, live) => (live ? probeLiveRuntime(prepared, live) : probeBreaker(prepared)));
 else {
 	breakerTests();
+	test("live start observes native stages while faux requires created", assertStartStages);
 	test(
 		"isolated live SDK runtime resolves config, streams mocked usage, and cleans up on failure",
 		assertLiveRuntime,

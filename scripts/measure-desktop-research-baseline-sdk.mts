@@ -114,7 +114,7 @@ async function verifySetup(knowledge: typeof Knowledge, fixture: DesktopFixture,
 
 function researchPolicy(fixture: DesktopFixture, references: ReturnType<typeof createResultReferences>, live?: LiveProvider) {
 	const state = { toolCalls: [] as string[], requested: 0, denied: 0, depositExecuteEntered: 0, limitReached: false,
-		runDir: "", escalated: false, error: "", vaultBeforeDeposit: undefined as Awaited<ReturnType<typeof snapshotVault>> | undefined };
+		runDir: "", escalated: false, blockedReads: 0, error: "", vaultBeforeDeposit: undefined as Awaited<ReturnType<typeof snapshotVault>> | undefined };
 	const pending = new Map<string, { name: string; input: Record<string, unknown> }>();
 	const factory: Sdk.ExtensionFactory = (pi) => {
 		pi.registerTool({ name: acquire, label: "Fixture archive acquisition", description: "Copy pinned synthetic instrument records into the active research run; no network.",
@@ -147,8 +147,10 @@ function researchPolicy(fixture: DesktopFixture, references: ReturnType<typeof c
 					if (typeof path !== "string") throw new Error("Invalid read path");
 					await assertFixtureRead(fixture, path, state.runDir || undefined);
 				} catch {
-					state.error = "Raw read outside the verified fixture read boundary";
-					return { block: true, reason: state.error };
+					const reason = "Raw read outside the verified fixture read boundary";
+					if (live) state.blockedReads++;
+					else state.error = reason;
+					return { block: true, reason };
 				}
 			}
 			pending.set(toolCallId, { name: toolName, input });
@@ -205,7 +207,7 @@ export async function runDesktopScenario(fixture: DesktopFixture, live?: LivePro
 
 async function measure({ sdk, ai, knowledge }: Runtime, fixture: DesktopFixture,
 	guard: ReturnType<typeof installFixtureFetch>, live: LiveProvider | undefined, transport: typeof fetch) {
-	const references = createResultReferences(fixture.resultsRoot);
+	const references = createResultReferences(fixture.resultsRoot, Boolean(live));
 	const { state, factory } = researchPolicy(fixture, references, live);
 	const events = observeDesktopEvents();
 	const usage: ReturnType<typeof liveUsage>[] = [];
@@ -240,7 +242,7 @@ async function measure({ sdk, ai, knowledge }: Runtime, fixture: DesktopFixture,
 			scenarioId: fixture.scenario.id, toolCalls: state.toolCalls, usage,
 			approvals: { requested: state.requested, denied: state.denied, approved: 0, depositExecuteEntered: state.depositExecuteEntered,
 				vaultUnchanged: isDeepStrictEqual(before, await snapshotVault(fixture.vault)) } }, assistantStop, state.limitReached);
-		return { observation: live ? liveObservation(observed, fixture.scenario, usage, state.escalated) : observed,
+		return { observation: live ? liveObservation(observed, fixture.scenario, usage, state) : observed,
 			provider: "apiKey" in selected ? selected.provider : selected.model.provider, model: "apiKey" in selected ? selected.model : selected.model.id,
 			registeredToolNames: [...schemas.keys(), ...[...assembly.definitions.keys()].filter((name) => !schemas.has(name))].sort() };
 	} finally {

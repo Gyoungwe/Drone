@@ -17,6 +17,21 @@ const text = Type.String({ minLength: 1 });
 const maxBilledTokens = 500000;
 type Result = Awaited<ReturnType<typeof runDesktopScenario>>;
 
+const liveFailure = Symbol("live scenario failure");
+
+function liveFailureMessage(scenarioId: string, error: unknown, key?: string) {
+	const message = `${scenarioId}: ${error instanceof Error ? error.message : String(error)}`;
+	return (key ? message.replaceAll(key, "<redacted>") : message).slice(0, 500);
+}
+
+function isLiveFailure(error: unknown): error is Error {
+	return error instanceof Error && liveFailure in error;
+}
+
+function liveScenarioError(message: string) {
+	return Object.assign(new Error(message), { [liveFailure]: true, stack: undefined });
+}
+
 export function runFixtureChild<ResultType>(fixture: DesktopFixture, entry = import.meta.filename, live?: LiveProvider): Promise<ResultType> {
 	return new Promise((resolveResult, reject) => {
 		const child = fork(entry, [], { cwd: repo, execArgv: [], env: childEnvironment(fixture, live), stdio: ["ignore", "ignore", "ignore", "ipc"] });
@@ -25,9 +40,13 @@ export function runFixtureChild<ResultType>(fixture: DesktopFixture, entry = imp
 		child.once("message", (message) => { response = message as typeof response; });
 		child.once("error", (error) => { childError = error; });
 		child.once("close", (code, signal) => {
-			if (childError) reject(childError);
-			else if (code !== 0 || response?.result === undefined) reject(new Error(`${fixture.scenario.id}: ${response?.error ?? `scenario child exited (${code ?? signal}) without a result`}`));
-			else resolveResult(response.result);
+			const { id } = fixture.scenario;
+			if (childError) reject(live ? liveScenarioError(liveFailureMessage(id, childError, live.apiKey)) : childError);
+			else if (code !== 0 || response?.result === undefined) {
+				const fallback = `scenario child exited (${code ?? signal}) without a result`;
+				reject(live ? liveScenarioError(response?.error ?? liveFailureMessage(id, fallback, live.apiKey)) :
+					new Error(`${id}: ${response?.error ?? fallback}`));
+			} else resolveResult(response.result);
 		});
 		const { apiKey: _apiKey, ...selection } = live ?? {};
 		child.send({ fixture, selection: live ? selection : undefined });
@@ -40,7 +59,8 @@ export function serveFixtureChild<ResultType>(run: (fixture: DesktopFixture, liv
 			process.send?.({ result: await run(fixture, selection && { ...selection, apiKey: runtimeKey(process.env) }) });
 		} catch (error) {
 			process.exitCode = 1;
-			process.send?.({ error: selection ? "Live scenario failed" : error instanceof Error ? error.message : "Offline scenario failed" });
+			process.send?.({ error: selection ? liveFailureMessage(fixture.scenario.id, error, process.env.DRONE_BASELINE_API_KEY) :
+				error instanceof Error ? error.message : "Offline scenario failed" });
 		} finally {
 			process.disconnect?.();
 		}
@@ -84,8 +104,8 @@ async function verifySourceBudget() {
 }
 
 function printOutcome(result: Result) {
-	const { scenarioId, routeObserved, toolCalls, runStatus, evidence, preflight, publication, stop, expectationMatched } = result.observation;
-	console.log(JSON.stringify({ scenarioId, routeObserved, toolCalls, runStatus, evidence, preflight, publication, stop, expectationMatched }));
+	const { scenarioId, routeObserved, toolCalls, runStatus, evidence, preflight, publication, stop, expectationMatched, blockedReads } = result.observation;
+	console.log(JSON.stringify({ scenarioId, routeObserved, toolCalls, runStatus, evidence, preflight, publication, stop, expectationMatched, blockedReads }));
 }
 
 type Runner = (fixture: DesktopFixture, live?: LiveProvider) => Promise<Result>;
@@ -138,12 +158,22 @@ export async function runDesktopBaseline(args: string[], env = process.env,
 	const live = selection && { ...selection, apiKey: runtimeKey(env) };
 	const safeRunner: Runner = async (fixture, selected) => {
 		try { return await run(fixture, selected); }
-		catch (error) { if (selected) throw new Error(`${fixture.scenario.id}: Live scenario failed`); throw error; }
+		catch (error) {
+			if (selected && !isLiveFailure(error)) throw liveScenarioError(liveFailureMessage(fixture.scenario.id, error, selected.apiKey));
+			throw error;
+		}
 	};
 	await runBaseline(resolve(values.fixture), resolve(values.out), safeRunner, live);
 }
 
 if (isMainModule(import.meta.url)) {
 	if (process.send) serveFixtureChild(runDesktopScenario);
-	else await runDesktopBaseline(process.argv.slice(2));
+	else {
+		try { await runDesktopBaseline(process.argv.slice(2)); }
+		catch (error) {
+			if (!isLiveFailure(error)) throw error;
+			console.error(error.message);
+			process.exitCode = 1;
+		}
+	}
 }

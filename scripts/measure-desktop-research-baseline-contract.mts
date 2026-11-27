@@ -139,14 +139,17 @@ export async function containedRealPath(root: string, path: string) {
 	return target;
 }
 
-export function createResultReferences(resultsRoot: string) {
+const nativeStage = Type.Enum(["created", "local_query_recorded", "external_search_recorded", "sources_inspected",
+	"sources_archived", "sources_reused", "claims_bound", "answerable"]);
+
+export function createResultReferences(resultsRoot: string, live = false) {
 	const references = new Map<string, string>();
 	return { resolve: (value: unknown) => resolveReferences(value, references),
 		async observe(entry: { name: string; input: Record<string, unknown> }, result: { isError: boolean; details: unknown }) {
 			if (result.isError) return;
 			if (entry.name === "research_loop" && entry.input.action === "start") {
 				const details = checked(Type.Object({ run_dir: text, metadata: Type.Object({ status: Type.Literal("running") }),
-					evidence_gate: Type.Object({ stage: Type.Literal("created") }) }), result.details, "start details");
+					evidence_gate: Type.Object({ stage: live ? nativeStage : Type.Literal("created") }) }), result.details, "start details");
 				const run = await containedRealPath(resultsRoot, details.run_dir);
 				references.clear(); references.set("runDir", run);
 			}
@@ -180,7 +183,7 @@ export const observationSchema = Type.Object({ scenarioId: Type.Enum(categories)
 	stop: Type.Object({ reason: Type.Enum(["completed", "completed-with-write-denied", "stalled", "repeated-tool-loop",
 		"budget-exceeded", "quota-unconfirmable", "harness-tool-limit", "voluntary-stop", "user-abort", "error"]), breakerReceipt: nullable(breaker) }, closed),
 	approvals: Type.Object({ requested: count, denied: count, approved: Type.Literal(0), depositExecuteEntered: Type.Literal(0), vaultUnchanged: Type.Literal(true) }, closed),
-	networkViolations: Type.Literal(0), elapsedMs: count, expectationMatched: bool }, closed);
+	networkViolations: Type.Literal(0), elapsedMs: count, expectationMatched: bool, blockedReads: Type.Optional(count) }, closed);
 
 export function validateDesktopObservation(value: unknown) {
 	const observation = checked(observationSchema, value, "Desktop observation");
@@ -190,10 +193,11 @@ export function validateDesktopObservation(value: unknown) {
 }
 
 type Observation = Static<typeof observationSchema>;
-export function liveObservation(observed: Observation, scenario: DesktopScenario, usage: Observation["usage"], escalated: boolean) {
+export function liveObservation(observed: Observation, scenario: DesktopScenario, usage: Observation["usage"],
+	counters: { escalated: boolean; blockedReads: number }) {
 	const { gateStage, answerable } = observed.evidence;
 	const expected = scenario.expected;
-	return { ...observed, usage, routeObserved: escalated ? "escalated" as const : observed.routeObserved,
+	return { ...observed, usage, blockedReads: counters.blockedReads, routeObserved: counters.escalated ? "escalated" as const : observed.routeObserved,
 		expectationMatched: expected.gateStage === gateStage && expected.runStatus === observed.runStatus &&
 			expected.stopReason === observed.stop.reason && observed.approvals.requested === Number(scenario.id === "external-write") &&
 			answerable === (expected.runStatus === "completed") };
@@ -243,6 +247,7 @@ export function validateDesktopReport(value: unknown) {
 	for (const item of report.scenarios) {
 		const { tokens, cost, ...observation } = item;
 		validateDesktopObservation(observation);
+		if ((item.blockedReads === undefined) !== offline) throw new Error("Invalid Desktop read denial count for mode");
 		if (item.contextWindow !== (contextWindow ?? declaredContextWindow)) throw new Error("Invalid context window");
 		if (report.mode === "offline-faux" && item.usage.some((sample) => sample !== null)) throw new Error("Invalid offline model usage");
 		if (report.mode === "offline-faux" && cost !== null) throw new Error("Invalid offline model cost");
