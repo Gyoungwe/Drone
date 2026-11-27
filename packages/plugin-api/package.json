@@ -35,6 +35,11 @@
 			"import": "./dist/runtime.js",
 			"default": "./dist/runtime.js"
 		},
+		"./host-events": {
+			"types": "./dist/host-events.d.ts",
+			"import": "./dist/host-events.js",
+			"default": "./dist/host-events.js"
+		},
 		"./analysis-lifecycle": {
 			"types": "./dist/analysis-lifecycle.d.ts",
 			"import": "./dist/analysis-lifecycle.js",
