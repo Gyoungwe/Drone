@@ -25,6 +25,7 @@ export {
 	PluginFileCapabilities,
 	type PluginRootGrant,
 } from "./file-capabilities";
+export { HOST_EVENT_TOPICS, type HostEventTopic, isHostEventTopic } from "./host-event-topics";
 export type { SelectedNativeSource } from "./native-delivery";
 export type { PluginNetworkPolicy } from "./network-policy";
 export type { P5ApprovalReview, P5ApprovalReviewKind } from "./p5-approval-review";
@@ -63,6 +64,7 @@ export {
 	consentCovers,
 	consentForSource,
 	custodyGrants,
+	hostEventsApproved,
 	needsPolicyApproval,
 	type PluginPolicyConsent,
 	policyFingerprint,

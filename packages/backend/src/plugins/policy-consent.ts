@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { type HostCustodyKind, hostCustodyEntry } from "./credential-custody";
+import type { HostEventTopic } from "./host-event-topics";
 import type { PluginNetworkPolicy } from "./network-policy";
 import type { PluginCredentialSlot } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
@@ -49,15 +50,19 @@ export function custodyGrants(
 	});
 }
 
-/** Whether a source declares anything the user must approve: a host-kept secret or a runtime endpoint. */
+/** Whether a source declares a host-kept secret, runtime endpoint, or host event read. */
 export function needsPolicyApproval(
-	source: Pick<PluginRuntimeSource, "credentials" | "networkPolicy">,
+	source: Pick<PluginRuntimeSource, "credentials" | "networkPolicy" | "hostEvents">,
 ): boolean {
-	return custodyGrants(source.credentials).length > 0 || source.networkPolicy?.runtimeEndpoint !== undefined;
+	return (
+		custodyGrants(source.credentials).length > 0 ||
+		source.networkPolicy?.runtimeEndpoint !== undefined ||
+		(source.hostEvents?.length ?? 0) > 0
+	);
 }
 
 /**
- * The fingerprint of a package's credential and network policy.
+ * The fingerprint of a package's credential, network and host event policy.
  *
  * Every field that changes where a secret may go is hashed: each slot's name,
  * hosts, header, fields, authentication and custody, the kind of secret the host
@@ -68,10 +73,12 @@ export function needsPolicyApproval(
  * The custody kind comes from the host's own table, so a host that starts
  * keeping a secret for a shape it did not keep before changes the fingerprint,
  * and the user is asked before the new secret is handed over.
+ * A nonempty host event declaration is also hashed as the third policy element.
  */
 export function policyFingerprint(
 	credentials: readonly PluginCredentialSlot[] | undefined,
 	networkPolicy: PluginNetworkPolicy | undefined,
+	hostEvents?: readonly string[],
 ): string {
 	const slots = (credentials ?? [])
 		.map((slot) => {
@@ -93,6 +100,7 @@ export function policyFingerprint(
 			JSON.stringify({
 				credentials: slots,
 				...(endpoint ? { runtimeEndpoint: { allowed: true, credentialSlot: endpoint.credentialSlot } } : {}),
+				...(hostEvents?.length ? { hostSessionEventsRead: [...hostEvents].sort() } : {}),
 			}),
 		)
 		.digest("hex");
@@ -100,14 +108,14 @@ export function policyFingerprint(
 
 /** The consent the user gives by approving this source's policy: bound to its package and its content. */
 export function consentForSource(
-	source: Pick<PluginRuntimeSource, "pluginId" | "credentials" | "networkPolicy"> & {
+	source: Pick<PluginRuntimeSource, "pluginId" | "credentials" | "networkPolicy" | "hostEvents"> & {
 		readonly contentHash: string;
 	},
 ): PluginPolicyConsent {
 	return {
 		pluginId: source.pluginId,
 		contentHash: source.contentHash,
-		fingerprint: policyFingerprint(source.credentials, source.networkPolicy),
+		fingerprint: policyFingerprint(source.credentials, source.networkPolicy, source.hostEvents),
 		custodySlots: custodyGrants(source.credentials).map((grant) => grant.slot),
 		runtimeEndpoint: source.networkPolicy?.runtimeEndpoint !== undefined,
 	};
@@ -123,14 +131,17 @@ export function consentForSource(
  */
 export function consentCovers(
 	consent: Pick<PluginPolicyConsent, "pluginId" | "contentHash" | "fingerprint"> | undefined,
-	source: Pick<PluginRuntimeSource, "pluginId" | "contentHash" | "credentials" | "networkPolicy">,
+	source: Pick<
+		PluginRuntimeSource,
+		"pluginId" | "contentHash" | "credentials" | "networkPolicy" | "hostEvents"
+	>,
 ): boolean {
 	return (
 		consent !== undefined &&
 		source.contentHash !== undefined &&
 		consent.pluginId === source.pluginId &&
 		consent.contentHash === source.contentHash &&
-		consent.fingerprint === policyFingerprint(source.credentials, source.networkPolicy)
+		consent.fingerprint === policyFingerprint(source.credentials, source.networkPolicy, source.hostEvents)
 	);
 }
 
@@ -143,4 +154,11 @@ export function consentCovers(
  */
 export function sourcePolicyApproved(source: PluginRuntimeSource): boolean {
 	return consentCovers(source.policyConsent, source);
+}
+
+/** Narrows to a declared nonempty event list covered by the source's policy consent. */
+export function hostEventsApproved(
+	source: PluginRuntimeSource,
+): source is PluginRuntimeSource & { readonly hostEvents: readonly [HostEventTopic, ...HostEventTopic[]] } {
+	return (source.hostEvents?.length ?? 0) > 0 && sourcePolicyApproved(source);
 }

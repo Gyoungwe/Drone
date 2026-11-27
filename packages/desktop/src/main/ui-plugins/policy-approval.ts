@@ -1,5 +1,6 @@
 import {
 	custodyGrants,
+	HOST_EVENT_TOPICS,
 	type HostCustodyKind,
 	hostText,
 	type PluginCredentialSlot,
@@ -7,14 +8,7 @@ import {
 } from "@drone/backend";
 import { type BrowserWindow, dialog, type MessageBoxOptions } from "electron";
 
-/**
- * The install-time policy the host asks the user to approve (approval category
- * `install-credential-network-policy`).
- *
- * The policy names a *shape*, never a secret and never an address: the user
- * agrees to "the host fills this slot with a secret it keeps" and to "this
- * package may use an address you set", not to any particular key or URL.
- */
+/** Install-time policy approval (`install-credential-network-policy`); the user approves policy shape, never secrets or endpoint values. */
 export interface PolicyApprovalRequest {
 	/** The package the policy belongs to. */
 	readonly pluginId: string;
@@ -22,6 +16,7 @@ export interface PolicyApprovalRequest {
 	readonly credentials?: readonly PluginCredentialSlot[];
 	/** The package's declared network policy. */
 	readonly networkPolicy?: PluginNetworkPolicy;
+	readonly hostEvents?: readonly string[];
 }
 
 interface Copy {
@@ -51,12 +46,28 @@ const RUNTIME_ENDPOINT_SENTENCE: Copy = {
 	zh: "• 允许该插件连接到你在环境变量中指定的自定义服务端点。",
 	en: "• Allow this plugin to connect to a custom server endpoint you configure via environment variables.",
 };
-
+const HOST_EVENT_NAMES: Record<(typeof HOST_EVENT_TOPICS)[number], Copy> = {
+	"inquiry.compute": { zh: "计算任务", en: "compute jobs" },
+	"inquiry.task-terminal": { zh: "任务结束", en: "task completion" },
+	"inquiry.local-execution": { zh: "本地执行", en: "local execution" },
+	"inquiry.decision": { zh: "决策", en: "decisions" },
+};
 /** The sentences a request shows, one per policy element, in declaration order. */
 export function policySentences(request: Omit<PolicyApprovalRequest, "pluginId">): readonly Copy[] {
+	const topics = HOST_EVENT_TOPICS.filter((topic) => request.hostEvents?.includes(topic));
+	const hostEvents: Copy[] =
+		topics.length > 0
+			? [
+					{
+						zh: `• 读取你所有会话里的宿主事件（${topics.map((topic) => HOST_EVENT_NAMES[topic].zh).join("、")}），其中包含项目和会话标识、参数、哈希与产物信息。`,
+						en: `• Read host events from all your sessions (${topics.map((topic) => HOST_EVENT_NAMES[topic].en).join(", ")}), including project and session identifiers, parameters, hashes and artifact details.`,
+					},
+				]
+			: [];
 	return [
 		...custodyGrants(request.credentials).map((grant) => CUSTODY_SENTENCES[grant.kind]),
 		...(request.networkPolicy?.runtimeEndpoint ? [RUNTIME_ENDPOINT_SENTENCE] : []),
+		...hostEvents,
 	];
 }
 
@@ -70,12 +81,7 @@ export function policyApprovalMessage(request: PolicyApprovalRequest): Copy {
 	};
 }
 
-/**
- * Ask the user, in the host's own dialog, whether to allow a package's policy.
- *
- * Deny is the default and the cancel answer, as in the host's other approval
- * dialogs: dismissing the dialog never approves anything.
- */
+/** Shows a host-owned approval dialog where dismissing or cancelling means Deny. */
 export async function requestPolicyApproval(
 	request: PolicyApprovalRequest,
 	parent?: BrowserWindow,

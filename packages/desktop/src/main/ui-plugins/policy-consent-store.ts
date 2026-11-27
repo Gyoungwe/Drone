@@ -30,7 +30,7 @@ export function policyApprovalKey(source: InstalledUiRuntimeSource): string {
 	return [
 		source.pluginId,
 		source.contentHash,
-		policyFingerprint(source.credentials, source.networkPolicy),
+		policyFingerprint(source.credentials, source.networkPolicy, source.hostEvents),
 	].join("\t");
 }
 
