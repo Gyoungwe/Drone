@@ -4,10 +4,12 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { PluginNativeFactOwner, PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type { HostFactDelivery, HostFactDeliveryHandle } from "@gyoungwe/plugin-api/p5-inquiry";
-import { expect, it, onTestFinished } from "vitest";
+import { expect, it, onTestFinished, vi } from "vitest";
 import type { HostNativeSession } from "./p5-owner-facade";
 import { createProcessPluginRuntime } from "./process-runtime";
 import { PluginRuntimeRegistry } from "./runtime";
+import type { PluginRuntimeCapabilitiesOptions } from "./runtime-capabilities";
+import type { PluginRuntimePolicy } from "./runtime-invocation";
 
 type GuestSessionWithFactOwner = PluginNativeSession & { readonly factOwner: PluginNativeFactOwner };
 type AcceptsHostSession<Session extends HostNativeSession> = Session;
@@ -63,6 +65,7 @@ const state = { cursor: null, received: null };
 const operation = execute => ({ inputSchema: { type: "null" }, resultSchema: {}, effect: "read", execute });
 export default async ({ capabilities }) => ({
   operations: {
+    untrustedApproval: { ...operation(async () => null), ...JSON.parse('{"effect":"write","approval":"own"}') },
     state: operation(async () => ({ markers, received: state.received })),
     entered: operation(async () => { await entered.promise; return null; }),
     aborted: operation(async () => { await aborted.promise; return null; }),
@@ -80,12 +83,20 @@ export default async ({ capabilities }) => ({
 `;
 }
 
-async function startRuntime(factOwner = owner) {
+async function startRuntime(
+	factOwner = owner,
+	authorizeInvocation: PluginRuntimePolicy["authorizeInvocation"] = async () => true,
+	handlers: PluginRuntimeCapabilitiesOptions["handlers"] = {},
+) {
 	const root = await mkdtemp(join(tmpdir(), "drone-fact-delivery-"));
-	const registry = new PluginRuntimeRegistry({
-		authorizeActivation: async () => true,
-		authorizeInvocation: async () => true,
-	});
+	const registry = new PluginRuntimeRegistry(
+		{ authorizeActivation: async () => true, authorizeInvocation },
+		"app",
+		{
+			handlers,
+			resources: [],
+		},
+	);
 	onTestFinished(async () => {
 		try {
 			await registry.deactivate("example");
@@ -151,6 +162,70 @@ it("lets the worker resolve its bound session during both fact requests", async 
 		sessionId: "session",
 	});
 	await expect(hostFactOwner.deliver(delivery)).resolves.toEqual({ cursor });
+});
+
+it.each(["cursor", "deliver"] as const)("rejects capabilities outside the %s allowlist", async (phase) => {
+	const outside = [
+		"files.writeText",
+		"roots.resolve",
+		"state.removeJson",
+		"state.ensureDirectory",
+		"state.list",
+	];
+	const blocked =
+		phase === "cursor" ? [...outside, "state.writeJson", "state.writeBinary", "state.reserve"] : outside;
+	const handlers = Object.fromEntries(
+		blocked.map(
+			(name) =>
+				[
+					name,
+					{
+						inputSchema: {},
+						resultSchema: {},
+						effect: name === "roots.resolve" || name === "state.list" ? "read" : "write",
+						approval: "own",
+						execute: async () => null,
+					},
+				] satisfies [string, PluginRuntimeCapabilitiesOptions["handlers"][string]],
+		),
+	);
+	const authorizeInvocation = vi.fn(async () => true);
+	const { attach } = await startRuntime(
+		`
+    factOwner: {
+      async cursor() {
+        const names = ${JSON.stringify(blocked)};
+        const results = await Promise.allSettled(names.map(name => capabilities.call(name, null)));
+        return JSON.stringify(results.map(result => result.status === "rejected" ? result.reason.message : null));
+      },
+      async deliver() { return { cursor: await this.cursor() }; },
+    },
+  `,
+		authorizeInvocation,
+		handlers,
+	);
+	const { hostFactOwner } = await attach();
+	assert(hostFactOwner);
+	const errors =
+		phase === "cursor" ? await hostFactOwner.cursor() : (await hostFactOwner.deliver(delivery)).cursor;
+	assert(errors);
+	expect(JSON.parse(errors)).toEqual(
+		blocked.map((name) => `Plugin capability is unavailable during fact delivery: ${name}`),
+	);
+	expect(authorizeInvocation).not.toHaveBeenCalled();
+});
+
+it("ignores approval supplied in a worker operation declaration", async () => {
+	const authorizeInvocation = vi.fn<PluginRuntimePolicy["authorizeInvocation"]>(
+		async (request) => request.effect === "read" || request.approval === "own",
+	);
+	const { client } = await startRuntime(owner, authorizeInvocation);
+	await expect(client.invoke("untrustedApproval", null)).rejects.toThrow(
+		"Plugin operation denied: untrustedApproval",
+	);
+	const request = authorizeInvocation.mock.calls[0]?.[0];
+	expect(request).toMatchObject({ operation: "untrustedApproval", effect: "write" });
+	expect(request).not.toHaveProperty("approval");
 });
 
 it("does not expose a host fact owner for an adapter without one", async () => {
