@@ -9,7 +9,11 @@ import {
 	type P5CommittedProjection,
 } from "./p5-owner-facade";
 import type { PluginRuntimeCaller, PluginRuntimeCallerResolver, RegistryOperation } from "./runtime";
-import { hostCapabilityPort, type PluginNativeInvocation } from "./runtime-capabilities";
+import {
+	hostCapabilityPort,
+	type PluginNativeInvocation,
+	type PluginRuntimeCapabilitiesOptions,
+} from "./runtime-capabilities";
 
 /** Host-only facade; only the registry can borrow a real caller for the source projector. */
 export interface ManagedNativeSession extends PluginNativeSession {
@@ -25,6 +29,7 @@ export interface ManagedNativeSession extends PluginNativeSession {
 interface NativeSessionFacadeOptions {
 	native: HostNativeSession;
 	lifetime: AbortController;
+	capabilityHandlers?: PluginRuntimeCapabilitiesOptions["handlers"];
 	call: (
 		resolveCaller: PluginRuntimeCallerResolver,
 		name: string,
@@ -40,6 +45,29 @@ interface NativeSessionFacadeOptions {
 }
 
 type NativeSignal = (signal?: AbortSignal) => AbortSignal;
+
+const factOwnerEffects = new Map<string, RegistryOperation["effect"]>([
+	["caller.scope", "read"],
+	["roots.describe", "read"],
+	["state.readJson", "read"],
+	["state.readBinary", "read"],
+	["state.reserve", "write"],
+	["state.writeJson", "write"],
+	["state.writeBinary", "write"],
+]);
+
+function allowsFactCapability(
+	name: string,
+	phaseEffect: RegistryOperation["effect"],
+	handlers: NativeSessionFacadeOptions["capabilityHandlers"],
+): boolean {
+	const allowedEffect = factOwnerEffects.get(name);
+	if (!allowedEffect || (phaseEffect === "read" && allowedEffect === "write")) return false;
+	if (name === "caller.scope") return true;
+	if (!handlers || !Object.hasOwn(handlers, name)) return false;
+	const handler = handlers[name];
+	return handler?.effect === allowedEffect && (handler.effect === "read" || handler.approval === "own");
+}
 
 export function createNativeSessionFacade(options: NativeSessionFacadeOptions): ManagedNativeSession {
 	const { native, lifetime } = options;
@@ -64,7 +92,8 @@ export function createNativeSessionFacade(options: NativeSessionFacadeOptions): 
 
 function factOwnerContext(
 	resolveCaller: PluginRuntimeCallerResolver,
-	call: NativeSessionFacadeOptions["call"],
+	{ call, capabilityHandlers }: NativeSessionFacadeOptions,
+	phaseEffect: RegistryOperation["effect"],
 ): PluginRuntimeContext {
 	const caller = resolveCaller();
 	if (caller?.scope.kind !== "session") throw new Error("Native fact owner session is no longer available");
@@ -78,27 +107,28 @@ function factOwnerContext(
 		scope: caller.scope,
 		signal: caller.signal,
 		capabilities: hostCapabilityPort(async (name, input, signal) => {
-			if (name !== "caller.scope")
+			if (!allowsFactCapability(name, phaseEffect, capabilityHandlers)) {
 				throw new Error(`Plugin capability is unavailable during fact delivery: ${name}`);
+			}
 			caller.signal.throwIfAborted();
-			return call(resolveSameCaller, "capability:caller.scope", input, signal, {
+			return call(resolveSameCaller, `capability:${name}`, input, signal, {
 				inputSchema: {},
 				resultSchema: {},
-				effect: "read",
+				effect: phaseEffect,
+				...(phaseEffect === "write" ? { approval: "own" } : {}),
 				execute: (value, context) => context.capabilities.call(name, value),
 			});
 		}),
 	};
 }
 
-function manageFactOwner(
-	{ native, lifetime, call, resolveProjectionCaller }: NativeSessionFacadeOptions,
-	owner: HostNativeFactOwner,
-) {
+function manageFactOwner(options: NativeSessionFacadeOptions, owner: HostNativeFactOwner) {
+	const { native, lifetime, resolveProjectionCaller } = options;
 	const scopedOwner: P5CommittedProjection = resolveProjectionCaller
 		? {
-				cursor: () => owner.cursor(factOwnerContext(resolveProjectionCaller, call)),
-				deliver: (delivery) => owner.deliver(delivery, factOwnerContext(resolveProjectionCaller, call)),
+				cursor: () => owner.cursor(factOwnerContext(resolveProjectionCaller, options, "read")),
+				deliver: (delivery) =>
+					owner.deliver(delivery, factOwnerContext(resolveProjectionCaller, options, "write")),
 			}
 		: owner;
 	const releases: (() => Promise<void>)[] = [];
