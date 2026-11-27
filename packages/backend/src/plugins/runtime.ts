@@ -34,7 +34,6 @@ export type {
 } from "./runtime-capabilities";
 
 /** Host-only lease; identity is an object owned by the resolved caller generation, never JSON input. */
-
 export interface PluginRuntimeCaller {
 	readonly providerChain?: readonly { readonly source: object; readonly operation: string }[];
 	readonly questions?: AskQuestionRoute;
@@ -64,7 +63,8 @@ interface Activation extends PluginRuntimeActivation {
 	stopping?: Promise<void>;
 }
 
-export type RegistryOperation = PluginRuntimeOperation & { readonly approvalDetail?: string };
+export type RegistryOperation = PluginRuntimeOperation &
+	Pick<PluginRuntimeInvocation, "approval" | "approvalDetail">;
 
 /** UI approval can outlive its caller; cancellation revokes authority without waiting for the dialog. */
 async function authorize(approval: () => Promise<boolean>, signal: AbortSignal): Promise<boolean> {
@@ -262,10 +262,9 @@ export class PluginRuntimeRegistry {
 			activation.pending.delete(creating);
 		}
 		activation.abort.signal.throwIfAborted();
-		const { native, lifetime } = attached;
 		return createNativeSessionFacade({
-			native,
-			lifetime,
+			...attached,
+			capabilityHandlers: activation.ports?.handlers,
 			call: (...invocation) => this.call(activation, ...invocation),
 			resolveCaller,
 			resolveProjectionCaller,
@@ -503,6 +502,7 @@ export class PluginRuntimeRegistry {
 			effect: operation.effect,
 			input,
 			...(operationOverride?.approvalDetail ? { approvalDetail: operationOverride.approvalDetail } : {}),
+			...(operationOverride?.approval ? { approval: operationOverride.approval } : {}),
 		};
 		if (!(await authorize(() => this.policy.authorizeInvocation(request, signal), signal))) {
 			throw new Error(`Plugin operation denied: ${name}`);
@@ -539,7 +539,7 @@ export class PluginRuntimeRegistry {
 										input,
 										effect,
 										approvalDetail,
-										...(approval ? { approval } : {}),
+										approval,
 										...(review ? { approvalReview: review } : {}),
 									},
 									capabilitySignal,

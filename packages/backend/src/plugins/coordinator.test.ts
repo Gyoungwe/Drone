@@ -1,7 +1,10 @@
 import { setImmediate } from "node:timers/promises";
-import { describe, expect, it, vi } from "vitest";
-import { PluginRuntimeBridge } from "./coordinator";
+import type { Fact, HostFactDelivery } from "@gyoungwe/plugin-api/p5-inquiry";
+import type { PluginRuntimeContext } from "@gyoungwe/plugin-api/runtime";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { PluginRuntimeBridge, type PluginRuntimeBridgeOptions } from "./coordinator";
 import type { HostNativeSession } from "./p5-owner-facade";
+import type { PluginCapabilityHandler } from "./runtime-capabilities";
 import type { PluginSessionCallerContext } from "./session-caller";
 
 const source = { pluginId: "example", packageRoot: "/example", entrypoint: "/example/runtime.mjs" };
@@ -14,6 +17,16 @@ const operations = {
 		execute: async () => null,
 	},
 };
+
+function deferred<Value>() {
+	let resolve: (value: Value) => void = vi.fn();
+	let reject: (reason: unknown) => void = vi.fn();
+	const promise = new Promise<Value>((complete, fail) => {
+		resolve = complete;
+		reject = fail;
+	});
+	return { promise, resolve, reject };
+}
 
 it.each([
 	["no owner", false, true, false],
@@ -68,6 +81,145 @@ it.each([
 	finishCursor();
 	await closing;
 	expect(dispose).toHaveBeenCalledOnce();
+});
+
+it("closes a native fact owner whose initial cursor reads the granted roots", async () => {
+	const scope = { workspaceId: "workspace-1", sessionId: "session-1" };
+	const session: PluginSessionCallerContext = {
+		identity: {},
+		scope: { ...scope, kind: "session", workspaceDirectory: "/example" },
+		signal: new AbortController().signal,
+		readOnly: false,
+		projectTrusted: true,
+	};
+	const cursorFinished = deferred<void>();
+	const describeRoots = vi.fn(async () => []);
+	const dispose = vi.fn(async () => undefined);
+	const native = {
+		extension: () => undefined,
+		dispose,
+		factOwner: {
+			async cursor(context?: PluginRuntimeContext) {
+				try {
+					if (!context) throw new Error("Expected fact owner context");
+					await context.capabilities.call("roots.describe", null);
+					return null;
+				} finally {
+					cursorFinished.resolve();
+				}
+			},
+			deliver: async () => ({ cursor: "fact-1" }),
+		},
+	};
+	const bridge = new PluginRuntimeBridge({
+		source: () => source,
+		enabled: () => true,
+		factory: () => async () => ({ operations, createNativeSession: () => native, dispose }),
+		approve: async () => true,
+		getSessionContext: () => session,
+		factOwners: {
+			scopeOf: () => ({ ...scope, callerSourceHash: "a".repeat(64), providerSourceHash: "b".repeat(64) }),
+			facts: { subscribe: () => vi.fn(), read: async () => ({ facts: [], cursor: null }) },
+			authorize: async () => true,
+		},
+		capabilities: () => ({
+			resources: [],
+			handlers: {
+				"roots.describe": {
+					inputSchema: { type: "null" },
+					resultSchema: {},
+					effect: "read",
+					execute: describeRoots,
+				},
+			},
+		}),
+	});
+	const bootstrap = bridge.beginNative(owner, () => "example");
+	await bootstrap.factoryForPath("/example/extension.mjs");
+	bootstrap.bindSession(session.scope.sessionId);
+	await cursorFinished.promise;
+	await expect(bridge.close()).resolves.toBeUndefined();
+	expect(describeRoots).toHaveBeenCalledOnce();
+	expect(dispose).toHaveBeenCalledTimes(2);
+});
+
+const fact: Fact = {
+	id: "fact:1",
+	sequence: 1,
+	kind: "compute",
+	entityId: "run:1",
+	at: "2026-11-20T00:00:00Z",
+	status: "succeeded",
+	artifactRefs: [],
+	runReceiptRef: null,
+	decisionKind: null,
+	summary: "Compute succeeded",
+	basis: [],
+};
+
+it("delivers own state writes through the coordinator without a task grant or approval dialog", async () => {
+	const names = ["state.reserve", "state.writeJson", "state.writeBinary"];
+	const execute = vi.fn(async () => null);
+	const handler: PluginCapabilityHandler = {
+		inputSchema: {},
+		resultSchema: {},
+		effect: "write",
+		approval: "own",
+		execute,
+	};
+	const scope = { workspaceId: "workspace-1", sessionId: "session-1" };
+	const session: PluginSessionCallerContext = {
+		identity: {},
+		scope: { ...scope, kind: "session", workspaceDirectory: "/example" },
+		signal: new AbortController().signal,
+		readOnly: false,
+		projectTrusted: true,
+	};
+	const approval = vi.fn<PluginRuntimeBridgeOptions["approve"]>(
+		async (_owner, _source, operation) => !operation,
+	);
+	const delivered = deferred<string>();
+	const deliver = (delivery: HostFactDelivery, context?: PluginRuntimeContext) => {
+		const pending = (async () => {
+			if (!context || !delivery.cursor) throw new Error("Expected a delivery and an active caller");
+			for (const name of names) await context.capabilities.call(name, null);
+			return delivery.cursor;
+		})();
+		void pending.then(delivered.resolve, delivered.reject);
+		return pending.then((cursor) => ({ cursor }));
+	};
+	const bridge = new PluginRuntimeBridge({
+		source: () => source,
+		enabled: () => true,
+		approve: approval,
+		getSessionContext: () => session,
+		capabilities: () => ({
+			resources: [],
+			handlers: Object.fromEntries(names.map((name) => [name, handler])),
+		}),
+		factOwners: {
+			scopeOf: () => ({ ...scope, callerSourceHash: "a".repeat(64), providerSourceHash: "b".repeat(64) }),
+			facts: { subscribe: () => vi.fn(), read: async () => ({ facts: [fact], cursor: fact.id }) },
+			authorize: async () => true,
+		},
+		factory: () => async () => ({
+			operations,
+			createNativeSession: () => ({
+				extension: () => undefined,
+				factOwner: { cursor: async () => null, deliver },
+				dispose: async () => undefined,
+			}),
+			dispose: async () => undefined,
+		}),
+	});
+	onTestFinished(() => bridge.close());
+	const bootstrap = bridge.beginNative(owner, () => "example");
+	await bootstrap.factoryForPath("/example/extension.mjs");
+	bootstrap.bindSession(session.scope.sessionId);
+	await expect(delivered.promise).resolves.toBe(fact.id);
+	await setImmediate();
+	expect(execute).toHaveBeenCalledTimes(3);
+	expect(approval.mock.calls.map(([, , operation]) => operation)).toEqual([undefined]);
 });
 
 describe("native bootstrap ownership", () => {
