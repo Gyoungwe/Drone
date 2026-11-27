@@ -2,13 +2,14 @@ import { createHash } from "node:crypto";
 import { type BigIntStats, existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import type { PluginPolicyConsent } from "@drone/backend";
+import type { HostEventTopic, PluginPolicyConsent } from "@drone/backend";
 import type {
 	PluginRecordAdoptions,
 	PluginServiceProvision,
 	PluginServiceRequirement,
 	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
+import { parseHostEventsDeclaration } from "./host-event-manifest";
 import { type InstalledP5Declaration, p5Optins } from "./installed-p5-optins";
 import { installedRecordAdoptions, installedServices } from "./installed-package-declarations";
 import { installedPackageGraph } from "./installed-package-graph";
@@ -90,6 +91,7 @@ function hashInstalledPackage(canonicalRoot: string, snapshot?: PackageSnapshot)
 export interface InstalledUiRuntimeSource extends NetworkDeclaration, InstalledP5Declaration {
 	pluginId: string;
 	contentHash: string;
+	hostEvents?: readonly HostEventTopic[];
 	deliveryProjection?: "required";
 	/** The package's native entry may serve host subagent child sessions, read-only. */
 	nativeChildSessions?: "read-only";
@@ -222,6 +224,8 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 						throw new Error("drone.workspaceRead must be session when declared");
 					runtime.requestsWorkspaceRead = true;
 				}
+				if (manifest.drone?.hostEvents !== undefined)
+					runtime.hostEvents = parseHostEventsDeclaration(manifest.drone.hostEvents);
 				Object.assign(runtime, installedServices(manifest.drone ?? {}), p5Optins(manifest.drone?.p5));
 				if (manifest.drone?.recordAdoptions !== undefined)
 					runtime.recordAdoptions = installedRecordAdoptions(
@@ -297,6 +301,10 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 		}
 		if (manifest.drone?.workspaceRead !== undefined && !runtime) {
 			discoveries.push({ packageName, error: "drone.workspaceRead requires a desktopRuntime owner" });
+			continue;
+		}
+		if (manifest.drone?.hostEvents !== undefined && !runtime) {
+			discoveries.push({ packageName, error: "drone.hostEvents requires a desktopRuntime owner" });
 			continue;
 		}
 		if (manifest.drone?.networkReads !== undefined && !runtime) {

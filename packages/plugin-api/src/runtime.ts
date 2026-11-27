@@ -1,3 +1,5 @@
+import type { PluginHostEventSource } from "./host-events.js";
+
 export * from "./analysis-lifecycle.js";
 export {
 	type PluginAgentSlotAcquireResult,
@@ -20,7 +22,6 @@ export type {
 	PluginModelToolStepUsage,
 	PluginModelUsage,
 } from "./runtime-model.js";
-
 /** JSON-compatible operations use null for a void result; no Pi or renderer dependency. */
 export type PluginRuntimeSchema = object;
 
@@ -98,6 +99,8 @@ export interface PluginResourcesLifecycle {
 export interface PluginRuntimeFactoryContext {
 	readonly applicationId: string;
 	readonly signal: AbortSignal;
+	/** Requires a declared `drone.hostEvents` and user approval of `host-session-events-read`. */
+	readonly hostEvents?: PluginHostEventSource;
 	/** Present only when this activation owns a resource provider. Owner shutdown only. */
 	readonly resourcesLifecycle?: PluginResourcesLifecycle;
 	readonly resources: readonly PluginRuntimeResource[];

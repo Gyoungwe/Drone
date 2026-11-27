@@ -51,6 +51,10 @@ function checkPackageManifest() {
 		manifest.exports?.["./runtime"]?.types === "./dist/runtime.d.ts",
 		"runtime types subpath must be published",
 	);
+	assert(
+		manifest.exports?.["./host-events"]?.types === "./dist/host-events.d.ts",
+		"host-events types subpath must be published",
+	);
 	assert(!manifest.private, "public plugin-api package must not be private");
 	assert(manifest.types === "./dist/index.d.ts", "types must point at dist/index.d.ts");
 	assert(
@@ -76,6 +80,8 @@ function checkDist() {
 	assert(existsSync(join(dist, "index.d.ts")), "build output is missing dist/index.d.ts");
 	assert(existsSync(join(dist, "runtime.d.ts")), "build output is missing dist/runtime.d.ts");
 	assert(existsSync(join(dist, "runtime.js")), "build output is missing dist/runtime.js");
+	assert(existsSync(join(dist, "host-events.d.ts")), "build output is missing dist/host-events.d.ts");
+	assert(existsSync(join(dist, "host-events.js")), "build output is missing dist/host-events.js");
 	assert(existsSync(join(dist, "index.js")), "build output is missing dist/index.js");
 	const outputs = (directory, prefix = "") =>
 		readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>

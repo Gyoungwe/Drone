@@ -5,6 +5,7 @@ import type {
 	PluginServiceRequirement,
 	PluginServiceRole,
 } from "@gyoungwe/plugin-api/runtime";
+import type { HostEventTopic } from "./host-event-topics";
 import type { PluginNetworkPolicy } from "./network-policy";
 import type { PluginCredentialSlot } from "./plugin-credentials";
 import type { PluginPolicyConsent } from "./policy-consent";
@@ -28,6 +29,8 @@ export interface PluginRuntimeSource {
 	readonly contentHash?: string;
 	readonly deliveryProjection?: "required";
 	readonly p5?: PluginP5Optins;
+	/** Manifest `drone.hostEvents`, validated, deduplicated and sorted; declaration is not authorization. */
+	readonly hostEvents?: readonly HostEventTopic[];
 	readonly provides?: Readonly<Record<string, PluginServiceProvision>>;
 	readonly requires?: Readonly<Record<string, PluginServiceRequirement>>;
 	readonly consumes?: Readonly<Record<string, PluginServiceRole>>;
@@ -81,6 +84,7 @@ export function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | unde
 		a.contentHash === b.contentHash &&
 		a.deliveryProjection === b.deliveryProjection &&
 		isDeepStrictEqual(a.p5 ?? {}, b.p5 ?? {}) &&
+		JSON.stringify(a.hostEvents) === JSON.stringify(b.hostEvents) &&
 		JSON.stringify(a.provides) === JSON.stringify(b.provides) &&
 		JSON.stringify(a.requires) === JSON.stringify(b.requires) &&
 		JSON.stringify(a.consumes) === JSON.stringify(b.consumes) &&

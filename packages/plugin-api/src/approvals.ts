@@ -12,7 +12,10 @@ export type PluginFilesystemPermission =
 	| "binary-state-read"
 	| "binary-state-write";
 
-export type PluginApprovalCategory = "subprocess-install" | "background-model-spend";
+export type PluginApprovalCategory =
+	| "subprocess-install"
+	| "background-model-spend"
+	| "host-session-events-read";
 
 export interface PluginPermissionDeclaration {
 	readonly filesystem: readonly PluginFilesystemPermission[];

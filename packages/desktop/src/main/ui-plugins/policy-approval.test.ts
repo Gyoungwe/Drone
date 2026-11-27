@@ -51,6 +51,17 @@ describe("the policy lines", () => {
 		}
 	});
 
+	it("shows one localized sentence for declared host event topics", () => {
+		const sentences = policySentences({ hostEvents: ["inquiry.decision", "inquiry.compute"] });
+		expect(sentences).toEqual([
+			{
+				zh: "• 读取你所有会话里的宿主事件（计算任务、决策），其中包含项目和会话标识、参数、哈希与产物信息。",
+				en: "• Read host events from all your sessions (compute jobs, decisions), including project and session identifiers, parameters, hashes and artifact details.",
+			},
+		]);
+		expect(policySentences({})).toEqual([]);
+	});
+
 	it("names the package and says the approval lasts for this version only", () => {
 		const message = policyApprovalMessage({ pluginId: "@fixture/research", credentials: [zoteroLocal] });
 		expect(
