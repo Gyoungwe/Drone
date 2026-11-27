@@ -237,3 +237,20 @@ it("rejects a native entrypoint that resolves outside the installed package", as
 		},
 	]);
 });
+
+it("normalizes declared host event topics on a desktopRuntime source", async () => {
+	await manifest({ drone: { hostEvents: ["inquiry.task-terminal", "inquiry.compute"] } });
+	expect(await discoverInstalledPackages(modules)).toMatchObject([
+		{ runtime: { hostEvents: ["inquiry.compute", "inquiry.task-terminal"] } },
+	]);
+});
+
+it("requires a desktopRuntime owner for host event declarations", async () => {
+	await manifest({
+		entrypoints: { extension: "./native.mjs" },
+		drone: { hostEvents: ["inquiry.compute"] },
+	});
+	expect(await discoverInstalledPackages(modules)).toEqual([
+		{ packageName: "@example/native", error: "drone.hostEvents requires a desktopRuntime owner" },
+	]);
+});

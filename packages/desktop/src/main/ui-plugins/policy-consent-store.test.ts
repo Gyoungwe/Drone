@@ -70,6 +70,12 @@ describe("the recorded approval", () => {
 		expect(awaitsPolicyApproval(undefined, endpoint)).toBe(true);
 	});
 
+	it("waits for consent for a host event declaration and stops asking after recording it", () => {
+		const current = source({ credentials: undefined, hostEvents: ["inquiry.compute"] });
+		expect(awaitsPolicyApproval(undefined, current)).toBe(true);
+		expect(awaitsPolicyApproval({ [current.pluginId]: consentToRecord(current) }, current)).toBe(false);
+	});
+
 	it("rides on the source as one stable object while it covers the source", () => {
 		const current = source();
 		const consents = consentsFor(current);

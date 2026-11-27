@@ -29,3 +29,19 @@ it("matches identical P5 opt-ins regardless of object identity or key order", ()
 it("treats absent and empty P5 declarations as no opt-ins", () => {
 	expect(sameSource(source, { ...source, p5: {} })).toBe(true);
 });
+
+it("distinguishes host event declarations", () => {
+	expect(sameSource({ ...source, hostEvents: ["inquiry.compute"] }, source)).toBe(false);
+	expect(
+		sameSource(
+			{ ...source, hostEvents: ["inquiry.compute", "inquiry.decision"] },
+			{ ...source, hostEvents: ["inquiry.compute"] },
+		),
+	).toBe(false);
+	expect(
+		sameSource(
+			{ ...source, hostEvents: ["inquiry.compute", "inquiry.decision"] },
+			{ ...source, hostEvents: ["inquiry.compute", "inquiry.decision"] },
+		),
+	).toBe(true);
+});
