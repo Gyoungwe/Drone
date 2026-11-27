@@ -109,6 +109,7 @@ export async function moveFileWithinRoot(
 }
 
 export function fileMutationHandlers(ports: PluginFileCapabilities, fileVersion: TObject) {
+	const expectedHash = Type.Union([Type.Null(), Type.String({ pattern: "^[a-f0-9]{64}$" })]);
 	return {
 		move: {
 			inputSchema: Type.Object(
@@ -124,6 +125,27 @@ export function fileMutationHandlers(ports: PluginFileCapabilities, fileVersion:
 			effect: "write",
 			approval: "always",
 			execute: (input, call) => ports.moveFile(input as PluginFileMoveInput, call),
+		},
+		writeText: {
+			inputSchema: Type.Object(
+				{
+					root: Type.String({ minLength: 1 }),
+					path: Type.String({ minLength: 1 }),
+					text: Type.String(),
+					expectedHash,
+				},
+				{ additionalProperties: false },
+			),
+			resultSchema: Type.Object({
+				text: Type.String(),
+				sha256: Type.String(),
+				bytes: Type.Number(),
+				version: fileVersion,
+			}),
+			effect: "write",
+			approval: "always",
+			execute: (input, call) =>
+				ports.writeText(input as PluginFileInput & { text: string; expectedHash: string | null }, call),
 		},
 		remove: {
 			inputSchema: Type.Object(

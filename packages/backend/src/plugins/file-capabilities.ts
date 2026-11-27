@@ -21,6 +21,11 @@ import type {
 import { Type } from "typebox";
 import { JsonStore, JsonStoreCorruptedError } from "../json-store";
 import type { StorageRegistry } from "../storage/registry";
+import {
+	fileIndexCapabilityHandler,
+	type PluginFileIndexInput,
+	writeIndexWithinRoot,
+} from "./file-index-capability";
 import { fileMutationHandlers, moveFileWithinRoot, type PluginFileMoveInput } from "./file-move-capability";
 import {
 	assertCleanupComplete,
@@ -418,6 +423,20 @@ export class PluginFileCapabilities {
 			call.signal.throwIfAborted();
 			return result;
 		});
+	}
+
+	/** Writes only the fixed result index through the approved files root. */
+	writeIndex(input: PluginFileIndexInput, call: PluginFileCall) {
+		const target = { root: input.root, path: "results/index.json" };
+		return this.mutateFile(target, call, (root) =>
+			writeIndexWithinRoot(
+				root,
+				input,
+				call,
+				() => this.currentText(root, target),
+				(error) => (this.cleanupFailure = error),
+			),
+		);
 	}
 
 	async removeText(input: PluginFileInput & { expectedHash: string }, call: PluginFileCall) {
@@ -818,27 +837,8 @@ export function fileCapabilityHandlers(
 			bootstrap: true,
 			execute: (input, call) => ports.readJson(input as PluginFileInput, call),
 		},
-		"files.writeText": {
-			inputSchema: Type.Object(
-				{
-					root: Type.String({ minLength: 1 }),
-					path: Type.String({ minLength: 1 }),
-					text: Type.String(),
-					expectedHash: stateVersion,
-				},
-				{ additionalProperties: false },
-			),
-			resultSchema: Type.Object({
-				text: Type.String(),
-				sha256: Type.String(),
-				bytes: Type.Number(),
-				version: fileVersion,
-			}),
-			effect: "write",
-			approval: "always",
-			execute: (input, call) =>
-				ports.writeText(input as PluginFileInput & { text: string; expectedHash: string | null }, call),
-		},
+		"files.writeText": fileMutations.writeText,
+		"files.writeIndex": fileIndexCapabilityHandler(ports),
 		"files.move": fileMutations.move,
 		"files.remove": fileMutations.remove,
 		"files.ensureDirectory": fileMutations.ensureDirectory,
