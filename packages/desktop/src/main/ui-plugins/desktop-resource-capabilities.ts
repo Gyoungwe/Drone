@@ -27,6 +27,7 @@ const writeOperations = [
 	"state.removeJson",
 	"state.ensureDirectory",
 	"files.writeText",
+	"files.writeIndex",
 	"files.move",
 	"files.remove",
 	"files.ensureDirectory",
@@ -50,6 +51,27 @@ function moveApprovalDetail(directory: string, input: unknown): string {
 	].join("\n\n");
 }
 
+function indexApprovalDetail(directory: string, input: unknown): string {
+	const request = input as { entries: readonly { resultPath: string }[]; expectedHash: string | null };
+	const lines = [
+		hostText("动作：写入结果索引 (files.writeIndex)", "Action: Write result index (files.writeIndex)"),
+		hostText(
+			`已授权目录：${JSON.stringify(directory)}`,
+			`Authorized directory: ${JSON.stringify(directory)}`,
+		),
+		hostText("固定路径：results/index.json", "Fixed path: results/index.json"),
+		hostText(`条目数：${request.entries.length}`, `Entry count: ${request.entries.length}`),
+		`expectedHash: ${JSON.stringify(request.expectedHash)}`,
+	];
+	if (request.expectedHash === null)
+		lines.push(hostText("新建，已存在则失败。", "Create new; fail if the file already exists."));
+	for (const entry of request.entries.slice(0, 20))
+		lines.push(`resultPath: ${JSON.stringify(entry.resultPath)}`);
+	const remaining = request.entries.length - 20;
+	if (remaining > 0) lines.push(hostText(`另有 ${remaining} 条`, `${remaining} more entries`));
+	return lines.join("\n\n");
+}
+
 /** Inputs have passed the capability schema; only selected host grants identify OS directories. */
 function fileWriteApprovalDetail(
 	grants: readonly PluginRootGrant[],
@@ -58,7 +80,8 @@ function fileWriteApprovalDetail(
 ): string {
 	const request = input as {
 		root: string;
-		path: string;
+		path?: string;
+		entries?: readonly { resultPath: string }[];
 		value?: unknown;
 		expectedVersion?: string | null;
 		expectedHash?: string | null;
@@ -81,6 +104,7 @@ function fileWriteApprovalDetail(
 				: grant.fileWrite)
 	)
 		throw new Error("Plugin write root was not granted");
+	if (operation === "files.writeIndex") return indexApprovalDetail(grant.path, input);
 	if (operation === "files.move") return moveApprovalDetail(grant.path, input);
 	const action =
 		operation === "state.reserve"

@@ -129,3 +129,70 @@ it.each([
 		}
 	},
 );
+
+it.each([
+	[
+		"en",
+		"Write result index",
+		"Entry count: 21",
+		"Create new; fail if the file already exists.",
+		"1 more entries",
+	],
+	["zh", "写入结果索引", "条目数：21", "新建，已存在则失败。", "另有 1 条"],
+])(
+	"describes the fixed index path, entry count and result paths in %s",
+	async (language, action, count, create, remaining) => {
+		const directory = await realpath(await mkdtemp(join(tmpdir(), "drone-index-approval-")));
+		vi.stubEnv("DRONE_REPLY_LANGUAGE", language);
+		try {
+			const activation = {
+				pluginId: source.pluginId,
+				applicationId: "app",
+				signal: new AbortController().signal,
+				events: { changed: () => undefined },
+			};
+			const ports = await createDesktopResourceCapabilities(
+				{ ...source, requestsFileWrite: true },
+				directory,
+				{
+					profileDirectory: directory,
+					storage: new StorageRegistry(),
+					selectDirectories: async () => [directory],
+				},
+			)(activation);
+			try {
+				const grant = ports.resources.find(({ kind }) => kind === "files");
+				const handler = ports.handlers["files.writeIndex"];
+				expect(handler).toMatchObject({ effect: "write", approval: "always" });
+				const detail = handler?.approvalDetail?.(
+					{
+						root: grant?.handle,
+						entries: Array.from({ length: 21 }, (_, index) => ({
+							resultPath: `results/task/run/${index}.txt`,
+						})),
+						expectedHash: null,
+					},
+					{ ...activation, scope: { kind: "application" } },
+				);
+				for (const text of [
+					action,
+					directory,
+					"results/index.json",
+					count,
+					create,
+					remaining,
+					"results/task/run/0.txt",
+				])
+					expect(detail).toContain(text);
+				expect(detail).not.toContain("results/task/run/20.txt");
+				expect(detail).not.toContain("undefined");
+			} finally {
+				await ports.dispose?.();
+				await ports.finalRelease?.();
+			}
+		} finally {
+			vi.unstubAllEnvs();
+			await rm(directory, { recursive: true, force: true });
+		}
+	},
+);
