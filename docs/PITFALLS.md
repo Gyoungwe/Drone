@@ -46,6 +46,11 @@
 | 受管任务一轮对话后即 `Task storage failed … requires an idle session` / `caller completed` | 受管插件的状态卡要等运行结束、在调用内等待 |
 | Ordinary native delivery exposes unchecked knowledge drafts or provider protocol | 2026-11-12 · Ordinary native delivery bypassed the legacy publication owner |
 | Research host smoke reports `2 !== 1` for `receipt_journal.buffered` | 2026-11-27 · The research receipt journal counts the run-opening call |
+| Packed SDK fixtures fail with `sessions.getTaskGrants is not a function` | 2026-11-27 · Packed session substitutes drift from SessionServicePort |
+
+## 2026-11-27: Packed session substitutes drift from SessionServicePort
+
+The packed Inquiry managed UI and Discovery → Inquiry SDK fixtures kept hand-written session substitutes after `createDesktopRuntime` began requiring `getTaskGrants()` and source/workspace capabilities. Without explicit candidate tarball environment variables these suites skip by design, so ordinary CI cannot detect that drift. Reuse the real `SessionService`, check it against `SessionServicePort`, isolate its state, and run the opt-in installed-package cases before claiming acceptance. Keep the fixture's agent and Desktop profile directories aligned with the P5 storage registrations. Passing setup alone does not prove revocation, recovery, or cleanup; retain those assertions and report later runtime failures separately.
 
 ## 2026-11-27: The research receipt journal counts the run-opening call
 
