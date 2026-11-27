@@ -20,6 +20,7 @@ import {
 	type PluginRuntimeCapabilitiesOptions,
 	type PluginRuntimeCapabilitiesProvider,
 } from "./runtime-capabilities";
+import { createRuntimeFactoryContext } from "./runtime-factory-context";
 import type {
 	PluginRuntimeActivation,
 	PluginRuntimeInvocation,
@@ -160,15 +161,7 @@ export class PluginRuntimeRegistry {
 				"read",
 				() => abort.signal.throwIfAborted(),
 				async () => false,
-				() =>
-					factory({
-						applicationId,
-						signal: abort.signal,
-						resources: ports.resources,
-						...(ports.resourcesLifecycle ? { resourcesLifecycle: ports.resourcesLifecycle } : {}),
-						capabilities: capabilities.port,
-						events,
-					}),
+				() => factory(createRuntimeFactoryContext(applicationId, abort, ports, capabilities, events)),
 			);
 		});
 		const activation: Activation = {

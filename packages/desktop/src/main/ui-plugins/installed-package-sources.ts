@@ -12,6 +12,7 @@ import type {
 import { type InstalledP5Declaration, p5Optins } from "./installed-p5-optins";
 import { installedRecordAdoptions, installedServices } from "./installed-package-declarations";
 import { installedPackageGraph } from "./installed-package-graph";
+import { readInstalledPackageManifest } from "./installed-package-manifest";
 import { type NetworkDeclaration, networkDeclaration } from "./network-declaration";
 
 type PackageSnapshot = [path: string, metadata: string, target?: string][];
@@ -159,34 +160,7 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 			.catch(() => null);
 		const packageName = typeof packageJson?.name === "string" ? packageJson.name : basename(packageDir);
 		versions.set(packageDir, typeof packageJson?.version === "string" ? packageJson.version : undefined);
-		const manifest = await readFile(manifestPath, "utf8")
-			.then(
-				(value) =>
-					JSON.parse(value) as {
-						entrypoints?: {
-							ui?: unknown;
-							desktopRuntime?: unknown;
-							extension?: unknown;
-							resources?: unknown;
-						};
-						hosts?: unknown;
-						drone?: {
-							deliveryProjection?: unknown;
-							nativeChildSessions?: unknown;
-							taskGrants?: unknown;
-							networkReads?: unknown;
-							credentials?: unknown;
-							workspaceRead?: unknown;
-							provides?: unknown;
-							requires?: unknown;
-							consumes?: unknown;
-							recordAdoptions?: unknown;
-							p5?: unknown;
-						};
-						permissions?: { filesystem?: unknown; network?: unknown; subprocess?: unknown };
-					},
-			)
-			.catch(() => null);
+		const manifest = await readInstalledPackageManifest(manifestPath);
 		if (!manifest && existsSync(manifestPath)) {
 			discoveries.push({ packageName, error: "plugin.manifest.json is not valid JSON" });
 			continue;
