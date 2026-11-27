@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { link, lstat, rename, rm, writeFile } from "node:fs/promises";
+import { link, lstat, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { Type } from "typebox";
 import type { PluginFileCall, PluginFileCapabilities } from "./file-capabilities";
@@ -8,7 +8,9 @@ import type { PluginCapabilityHandler } from "./runtime-capabilities";
 
 const INDEX_PATH = "results/index.json";
 const MAX_INDEX_BYTES = 1024 * 1024;
-const purposes = ["input", "draft", "intermediate", "deliverable", "evidence"] as const;
+const indexWriters = new Map<string, Promise<void>>();
+
+// The host validates its index format: paths, uniqueness, size, and version. Entry semantics belong to the writing plugin.
 
 export interface PluginFileIndexEntry {
 	readonly artifactId: string;
@@ -16,7 +18,7 @@ export interface PluginFileIndexEntry {
 	readonly resultPath: string;
 	readonly sha256: string;
 	readonly bytes: number;
-	readonly purpose: (typeof purposes)[number];
+	readonly purpose: string;
 }
 
 export interface PluginFileIndexInput {
@@ -57,7 +59,67 @@ async function indexDirectory(root: Root) {
 	const directory = await resolveRootPath(root, "results");
 	const identity = await lstat(directory);
 	if (!identity.isDirectory()) throw new Error("Plugin index parent must be an existing directory");
-	return { directory, identity };
+	return { directory, realDirectory: await realpath(directory), identity };
+}
+
+async function waitForIndexTurn(previous: Promise<void>, signal: AbortSignal): Promise<void> {
+	signal.throwIfAborted();
+	let removeAbortListener: () => void = () => undefined;
+	const aborted = new Promise<never>((_resolve, reject) => {
+		const onAbort = () => {
+			try {
+				signal.throwIfAborted();
+			} catch (error) {
+				reject(error);
+			}
+		};
+		signal.addEventListener("abort", onAbort, { once: true });
+		removeAbortListener = () => signal.removeEventListener("abort", onAbort);
+	});
+	try {
+		await Promise.race([previous, aborted]);
+		signal.throwIfAborted();
+	} finally {
+		removeAbortListener();
+	}
+}
+
+async function withIndexWriter<T>(
+	directory: string,
+	signal: AbortSignal,
+	execute: () => Promise<T>,
+): Promise<T> {
+	signal.throwIfAborted();
+	const previous = indexWriters.get(directory) ?? Promise.resolve();
+	let release: () => void = () => undefined;
+	const current = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const tail = previous.then(
+		() => current,
+		() => current,
+	);
+	indexWriters.set(directory, tail);
+	let acquired = false;
+	try {
+		await waitForIndexTurn(previous, signal);
+		acquired = true;
+		return await execute();
+	} finally {
+		release();
+		if (acquired) {
+			await tail;
+			if (indexWriters.get(directory) === tail) indexWriters.delete(directory);
+		} else {
+			void tail.then(() => {
+				if (indexWriters.get(directory) === tail) indexWriters.delete(directory);
+			});
+		}
+	}
+}
+
+export function indexWriterCount(): number {
+	return indexWriters.size;
 }
 
 export async function writeIndexWithinRoot(
@@ -72,43 +134,46 @@ export async function writeIndexWithinRoot(
 	const bytes = Buffer.byteLength(serialized);
 	if (bytes > MAX_INDEX_BYTES) throw new Error("Plugin index write exceeds the 1 MiB limit");
 	const parent = await indexDirectory(root);
-	const target = join(parent.directory, basename(INDEX_PATH));
-	const check = async () => {
-		const currentParent = await indexDirectory(root);
-		if (
-			currentParent.directory !== parent.directory ||
-			currentParent.identity.dev !== parent.identity.dev ||
-			currentParent.identity.ino !== parent.identity.ino
-		)
-			throw new Error("Plugin index parent changed during write");
-		if (((await readCurrent())?.sha256 ?? null) !== input.expectedHash)
-			throw new Error("Plugin index version conflict; reread before writing");
-		call.signal.throwIfAborted();
-	};
-	await check();
-	const mode = input.expectedHash === null ? 0o600 : (await lstat(target)).mode & 0o777;
-	const temporary = join(parent.directory, `.${basename(target)}.${randomUUID()}.tmp`);
-	try {
-		await writeFile(temporary, serialized, { flag: "wx", mode });
+	return withIndexWriter(parent.realDirectory, call.signal, async () => {
+		const target = join(parent.directory, basename(INDEX_PATH));
+		const check = async () => {
+			const currentParent = await indexDirectory(root);
+			if (
+				currentParent.directory !== parent.directory ||
+				currentParent.realDirectory !== parent.realDirectory ||
+				currentParent.identity.dev !== parent.identity.dev ||
+				currentParent.identity.ino !== parent.identity.ino
+			)
+				throw new Error("Plugin index parent changed during write");
+			if (((await readCurrent())?.sha256 ?? null) !== input.expectedHash)
+				throw new Error("Plugin index version conflict; reread before writing");
+			call.signal.throwIfAborted();
+		};
 		await check();
-		if (input.expectedHash === null) await link(temporary, target);
-		else await rename(temporary, target);
-	} catch (error) {
-		const [cleanup] = await Promise.allSettled([rm(temporary, { force: true })]);
-		if (cleanup.status === "rejected") {
-			cleanupFailed(cleanup.reason);
-			throw new AggregateError([error, cleanup.reason], "Index write and temporary cleanup failed");
+		const mode = input.expectedHash === null ? 0o600 : (await lstat(target)).mode & 0o777;
+		const temporary = join(parent.directory, `.${basename(target)}.${randomUUID()}.tmp`);
+		try {
+			await writeFile(temporary, serialized, { flag: "wx", mode });
+			await check();
+			if (input.expectedHash === null) await link(temporary, target);
+			else await rename(temporary, target);
+		} catch (error) {
+			const [cleanup] = await Promise.allSettled([rm(temporary, { force: true })]);
+			if (cleanup.status === "rejected") {
+				cleanupFailed(cleanup.reason);
+				throw new AggregateError([error, cleanup.reason], "Index write and temporary cleanup failed");
+			}
+			throw error;
 		}
-		throw error;
-	}
-	await rm(temporary, { force: true }).catch((error) => {
-		cleanupFailed(error);
-		throw error;
+		await rm(temporary, { force: true }).catch((error) => {
+			cleanupFailed(error);
+			throw error;
+		});
+		const sha256 = createHash("sha256").update(serialized).digest("hex");
+		if ((await readCurrent())?.sha256 !== sha256) throw new Error("Plugin index changed after atomic write");
+		call.signal.throwIfAborted();
+		return { written: true, sha256, bytes, entries: input.entries.length };
 	});
-	const sha256 = createHash("sha256").update(serialized).digest("hex");
-	if ((await readCurrent())?.sha256 !== sha256) throw new Error("Plugin index changed after atomic write");
-	call.signal.throwIfAborted();
-	return { written: true, sha256, bytes, entries: input.entries.length };
 }
 
 export function fileIndexCapabilityHandler(
@@ -121,7 +186,7 @@ export function fileIndexCapabilityHandler(
 			resultPath: Type.String({ minLength: 1 }),
 			sha256: Type.String({ pattern: "^[a-f0-9]{64}$" }),
 			bytes: Type.Integer({ minimum: 0 }),
-			purpose: Type.Union(purposes.map((purpose) => Type.Literal(purpose))),
+			purpose: Type.String({ minLength: 1, maxLength: 64 }),
 		},
 		{ additionalProperties: false },
 	);

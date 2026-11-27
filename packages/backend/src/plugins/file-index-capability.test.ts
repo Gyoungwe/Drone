@@ -114,11 +114,17 @@ test("requires a writable files root and rejects bootstrap calls", async ({ fixt
 test.for([
 	{ label: "extra property", value: { ...entry, extra: true } },
 	{ label: "missing property", value: { artifactId: entry.artifactId } },
-	{ label: "invalid purpose", value: { ...entry, purpose: "other" } },
+	{ label: "empty purpose", value: { ...entry, purpose: "" } },
+	{ label: "long purpose", value: { ...entry, purpose: "p".repeat(65) } },
 	{ label: "invalid sha256", value: { ...entry, sha256: "A".repeat(64) } },
 ])("rejects an index entry with $label", async ({ value }, { fixture }) => {
 	await expect(fixture.write([value])).rejects.toThrow("Invalid plugin capability input: files.writeIndex");
 	expect(await fs.readdir(join(fixture.data, "results"))).toEqual([]);
+});
+
+test("accepts any non-empty purpose within the host format limit", async ({ fixture }) => {
+	const custom = { ...entry, purpose: "domain-specific-purpose" };
+	await expect(fixture.write([custom])).resolves.toMatchObject({ written: true, entries: 1 });
 });
 
 test.for([
