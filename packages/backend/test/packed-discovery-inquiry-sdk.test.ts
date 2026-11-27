@@ -5,14 +5,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { SqliteInquiryStorage } from "@drone/inquiry";
-import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
-import {
-	createAgentSession,
-	DefaultResourceLoader,
-	ModelRuntime,
-	SessionManager,
-	SettingsManager,
-} from "@earendil-works/pi-coding-agent";
+import { fauxProvider } from "@earendil-works/pi-ai";
+import { createAgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import React, { createElement } from "react";
 import { expect, it, vi } from "vitest";
@@ -76,12 +70,8 @@ vi.mock("electron", () => ({
 
 import { UiPluginManager } from "../../desktop/src/main/ui-plugins/manager";
 import { createDesktopRuntime } from "../../desktop/src/main/ui-plugins/runtime-host";
-import { modelCapabilityHandlers } from "../src/plugins/model-capabilities";
-import { getPluginSessionCaller } from "../src/plugins/session-caller";
-import { sessionCapabilityHandlers } from "../src/plugins/session-capabilities";
 import { setReplyLanguage } from "../src/reply-language";
-import { SessionRegistry } from "../src/session/registry";
-import { StorageRegistry } from "../src/storage/registry";
+import { callPackedSdk, createPackedSessions, loadPackedExtensions } from "./fixtures/packed-session-service";
 
 const run = promisify(execFile);
 const tarball = process.env.DRONE_INQUIRY_PLUGIN_TARBALL;
@@ -101,6 +91,7 @@ it.skipIf(!tarball || !discoveryTar)(
 		const bootstraps: ReturnType<ReturnType<typeof createDesktopRuntime>["beginNative"]>[] = [];
 		const holders: { bootstrap: ReturnType<ReturnType<typeof createDesktopRuntime>["beginNative"]> }[] = [];
 		let bridge: ReturnType<typeof createDesktopRuntime> | undefined;
+		let service: Awaited<ReturnType<typeof createPackedSessions>>["service"] | undefined;
 		let failure: unknown;
 		try {
 			setReplyLanguage("en");
@@ -149,28 +140,11 @@ it.skipIf(!tarball || !discoveryTar)(
 			});
 			const discoverySource = manager.runtimeSource("discovery-workspace");
 			if (!discoverySource?.nativeEntrypoint) throw new Error("Actual Discovery source missing");
-			const registry = new SessionRegistry(),
-				storage = new StorageRegistry();
-			const modelRuntime = await ModelRuntime.create({
-				authPath: join(root, "offline-auth.json"),
-				modelsPath: null,
-				allowModelNetwork: false,
-				refreshOnCreate: false,
-			});
+			const host = await createPackedSessions(root);
+			service = host.service;
+			const { modelRuntime } = host;
 			const providers: ReturnType<typeof fauxProvider>[] = [];
-			bridge = createDesktopRuntime(manager, runtimeDirectory, {
-				getPluginCallerContext: (id) => getPluginSessionCaller(registry, id),
-				getStorageRegistry: () => storage,
-				getPluginSessionCapabilities: () => ({
-					...sessionCapabilityHandlers(registry),
-					...modelCapabilityHandlers({
-						registry,
-						getRuntime: async () => modelRuntime,
-						getProfileModel: async () => undefined,
-						getProfileThinking: async () => undefined,
-					}),
-				}),
-			});
+			bridge = createDesktopRuntime(manager, runtimeDirectory, service);
 			for (let index = 0; index < 2; index++) {
 				const agentDir = join(root, `agent-${index}`);
 				await mkdir(agentDir);
@@ -178,20 +152,12 @@ it.skipIf(!tarball || !discoveryTar)(
 				bootstraps.push(bootstrap);
 				const holder = { bootstrap };
 				holders.push(holder);
-				const settingsManager = SettingsManager.inMemory({});
-				settingsManager.setProjectTrusted(true);
-				const loader = new DefaultResourceLoader({
+				const { loader, settingsManager } = await loadPackedExtensions({
 					cwd: desktop.workspace,
 					agentDir,
-					settingsManager,
-					noExtensions: true,
-					noSkills: true,
-					noPromptTemplates: true,
 					additionalExtensionPaths: [source.nativeEntrypoint, discoverySource.nativeEntrypoint],
 					extensionFactoryForPath: (path) => holder.bootstrap.factoryForPath(path),
 				});
-				await loader.reload({ resolveProjectTrust: async () => true });
-				expect(loader.getExtensions().errors).toEqual([]);
 				const provider = fauxProvider({ provider: `inquiry-managed-${index}`, tokensPerSecond: 0 });
 				providers.push(provider);
 				modelRuntime.registerNativeProvider(provider.provider);
@@ -206,22 +172,12 @@ it.skipIf(!tarball || !discoveryTar)(
 					model: provider.getModel(),
 				});
 				sessions.push(session);
-				registry.add({ session, cwd: desktop.workspace, unsubscribe: () => {} });
+				service.registry.add({ session, cwd: desktop.workspace, unsubscribe: () => {} });
 				bootstrap.bindSession(session.sessionId);
 				await session.bindExtensions({});
 			}
-			const sdkCall = async (index: number, name: string, input: Record<string, unknown>) => {
-				const session = sessions[index]!;
-				providers[index]!.setResponses([
-					fauxAssistantMessage(fauxToolCall(name, input)),
-					fauxAssistantMessage("Protocol receipt verified"),
-				]);
-				await session.prompt("Use only the requested Inquiry operation on synthetic test data.");
-				await session.waitForIdle();
-				const receipt = session.messages.filter((message) => message.role === "toolResult").at(-1);
-				if (!receipt) throw new Error("Actual SDK did not append a tool result");
-				return receipt;
-			};
+			const sdkCall = (index: number, name: string, input: Record<string, unknown>) =>
+				callPackedSdk(sessions[index], providers[index], name, input);
 			const token = (await bridge.bind(pluginName, desktop.window))!;
 			let selection = bridge.selectSession(desktop.window, sessions[0]!.sessionId);
 			const status = await sdkCall(0, "inquiry_read", { request: { action: "status" } });
@@ -422,7 +378,7 @@ it.skipIf(!tarball || !discoveryTar)(
 			const results = await Promise.allSettled([
 				...bootstraps.map((bootstrap) => bootstrap.dispose()),
 				bridge?.close(),
-				...sessions.map((session) => session.dispose()),
+				service?.dispose(),
 			]);
 			const failed = results.filter((result) => result.status === "rejected");
 			desktop.approval = undefined;
