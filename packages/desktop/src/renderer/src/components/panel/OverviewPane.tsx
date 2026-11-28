@@ -10,7 +10,7 @@ import { ContextUsageMeter } from "./ContextUsageMeter";
 import { EvidencePane } from "./EvidencePane";
 import { ProcessPane } from "./ProcessPane";
 import { ReviewerCard } from "./ReviewerCard";
-import { DecisionsSection, SessionOverviewSections } from "./SessionOverviewSections";
+import { SessionOverviewSections } from "./SessionOverviewSections";
 import { SessionPackageVersionsCard } from "./SessionPackageVersionsCard";
 import { SubagentsPane } from "./SubagentsPane";
 
@@ -40,7 +40,7 @@ export function OverviewPane({ sessionId }: { sessionId: string | null }) {
 				<ContextUsageMeter sessionId={sessionId} />
 			</section>
 
-			<SessionOverviewSections sessionId={sessionId} embedded includeDecisions={false} />
+			<SessionOverviewSections sessionId={sessionId} embedded />
 			<SessionPackageVersionsCard sessionId={sessionId} />
 
 			{(todos.length > 0 || messages.length > 0 || turns.length > 0) && (
@@ -118,8 +118,6 @@ export function OverviewPane({ sessionId }: { sessionId: string | null }) {
 					</div>
 				</details>
 			)}
-
-			<DecisionsSection projectId={cwd} />
 		</div>
 	);
 }

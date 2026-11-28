@@ -4,10 +4,8 @@ import {
 	BackgroundJobsContract,
 	ComputeContract,
 	DailyContract,
-	DecisionsContract,
 	DiscoveryContract,
 	EvidenceContract,
-	InquiryContract,
 	InstitutionalContract,
 	KnowledgeContract,
 	McpContract,
@@ -52,8 +50,6 @@ const uiPluginsClient = exposeContract(UiPluginsContract);
 const computeClient = exposeContract(ComputeContract);
 const evidenceClient = exposeContract(EvidenceContract);
 const discoveryClient = exposeContract(DiscoveryContract);
-const decisionsClient = exposeContract(DecisionsContract);
-const inquiryClient = exposeContract(InquiryContract);
 /**
  * 中性路由客户端：域由通道承载，域内操作名由载荷承载。
  * 宿主只保留操作名清单作为授权边界；域内的 schema 与校验归插件所有。
@@ -71,8 +67,6 @@ const invokeApi = {
 	...computeClient,
 	...discoveryClient,
 	...evidenceClient,
-	...decisionsClient,
-	...inquiryClient,
 	...knowledgeApi,
 	...researchClient,
 	listSessionSubagents: invoke(subagentsClient, "list"),

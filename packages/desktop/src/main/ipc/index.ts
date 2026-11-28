@@ -28,10 +28,8 @@ import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
 import { registerBackgroundJobsIpc } from "./background-jobs";
 import { registerComputeIpc } from "./compute";
-import { registerDecisionsIpc } from "./decisions";
 import { registerDiscoveryIpc } from "./discovery";
 import { registerEvidenceIpc } from "./evidence";
-import { registerInquiryIpc } from "./inquiry";
 import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
 import { registerMcpIpc } from "./mcp";
@@ -139,11 +137,9 @@ export function registerIpc(
 	registerComputeIpc(backendServices, sendToRenderer);
 	registerDiscoveryIpc(backendServices);
 	registerEvidenceIpc(backendServices.analysisEvidence);
-	registerDecisionsIpc(backendServices);
 	registerPackageMutationIpc(backendServices, uiPluginsManager, runtime, bootLoaders, askPolicies);
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);
-	registerInquiryIpc(backendServices, sendToRenderer);
 	registerPluginRuntimeIpc(runtime);
 	registerPluginCredentialsIpc(uiPluginsManager);
 	runtime.onEvent((owner, event) => {

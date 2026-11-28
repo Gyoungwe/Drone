@@ -1,10 +1,8 @@
-import type { DecisionsApi } from "../decisions";
 import type { AppApi } from "./app";
 import type { BackgroundJobsApi } from "./background-jobs";
 import type { ComputeApi } from "./compute";
 import type { DiscoveryApi } from "./discovery";
 import type { EvidenceApi } from "./evidence";
-import type { InquiryApi } from "./inquiry";
 import type { InstitutionalApi } from "./institutional";
 import type { KnowledgeHostApi } from "./knowledge";
 import type { McpApi } from "./mcp";
@@ -19,14 +17,12 @@ import type { SettingsApi } from "./settings";
 import type { SubagentsApi } from "./subagents";
 import type { UiPluginsApi } from "./ui-plugins";
 
-export * from "../decisions";
 export * from "./app";
 export * from "./background-jobs";
 export * from "./compute";
 export * from "./define";
 export * from "./discovery";
 export * from "./evidence";
-export * from "./inquiry";
 export * from "./institutional";
 export * from "./knowledge";
 export * from "./mcp";
@@ -46,8 +42,6 @@ export interface PiApi
 	extends SessionsApi<"desktop">,
 		ComputeApi,
 		DiscoveryApi,
-		DecisionsApi,
-		InquiryApi,
 		EvidenceApi,
 		ResearchApi,
 		PluginCredentialsApi,

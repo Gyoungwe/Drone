@@ -1,16 +1,11 @@
-import type { AskResponse, DecisionRecord, TodoItem } from "@drone/shared";
-import { useEffect, useState } from "react";
-import { getPi } from "../../api";
+import type { TodoItem } from "@drone/shared";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import { useSessionsStore } from "../../stores/sessions";
 import { EMPTY_TODOS, selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { TodoCompleteIcon, TodoPendingIcon, TodoSpinnerIcon } from "../icons";
-import { AskDialog } from "../session/AskDialog";
 import { useAgentActive } from "../session/session-status";
-import { decisionConfirmationChoice, decisionConfirmationRequest } from "./decision-confirm";
-import { stableEmptyConfirmedIds, stableEmptyDecisions } from "./decision-projection";
 import { RunOverviewCard } from "./RunOverviewCard";
 import { runOverview } from "./run-overview";
 
@@ -47,139 +42,6 @@ function TodoLine({ todo, spinnerPaused }: { todo: TodoItem; spinnerPaused: bool
 			<TodoPendingIcon size={14} className="mt-[3px] shrink-0 text-ink-faint" />
 			<span className="min-w-0 flex-1 break-words text-[13px] leading-5 text-ink-2">{todo.content}</span>
 		</li>
-	);
-}
-
-export function DecisionsSection({ projectId }: { projectId: string | null }) {
-	const t = useT();
-	const [decisions, setDecisions] = useState<readonly DecisionRecord[]>([]);
-	const [busyId, setBusyId] = useState<string | null>(null);
-	const [confirmedIds, setConfirmedIds] = useState<ReadonlySet<string>>(new Set());
-	const [confirmation, setConfirmation] = useState<{
-		decision: DecisionRecord;
-		action: "revoke" | "confirm";
-	} | null>(null);
-
-	useEffect(() => {
-		let disposed = false;
-		if (!projectId) {
-			setDecisions(stableEmptyDecisions);
-			setConfirmedIds(stableEmptyConfirmedIds);
-			return () => {
-				disposed = true;
-			};
-		}
-		void getPi()
-			.list(projectId)
-			.then((next) => {
-				if (!disposed) {
-					setDecisions(next);
-					setConfirmedIds(stableEmptyConfirmedIds);
-				}
-			})
-			.catch(() => {
-				if (!disposed) setDecisions(stableEmptyDecisions);
-			});
-		return () => {
-			disposed = true;
-		};
-	}, [projectId]);
-
-	const apply = async () => {
-		const pending = confirmation;
-		if (!pending || busyId) return;
-		setConfirmation(null);
-		const { decision, action } = pending;
-		setBusyId(decision.id);
-		try {
-			if (action === "revoke") {
-				const revoked = await getPi().revoke(decision.id, t("panel.decisionRevokeReason"));
-				setDecisions((current) => current.map((item) => (item.id === revoked.id ? revoked : item)));
-			} else {
-				await getPi().confirm(decision.id, t("panel.decisionConfirmReview"));
-				setConfirmedIds((current) => new Set(current).add(decision.id));
-			}
-		} finally {
-			setBusyId(null);
-		}
-	};
-	const confirmationRequest = confirmation
-		? decisionConfirmationRequest(confirmation.decision, confirmation.action, {
-				title: t("panel.decisionConfirmTitle"),
-				message: t("panel.decisionConfirmMessage", {
-					action:
-						confirmation.action === "revoke"
-							? t("panel.decisionRevoke").toLowerCase()
-							: t("panel.decisionConfirmReview").toLowerCase(),
-				}),
-				confirm: t("panel.decisionConfirmAction"),
-				cancel: t("panel.decisionCancel"),
-			})
-		: null;
-	const respondConfirmation = async (_requestId: string, response: AskResponse) => {
-		if (decisionConfirmationChoice(response) === "confirm") await apply();
-		else setConfirmation(null);
-	};
-
-	// 治理信息默认不打扰：无记录不渲染；仅有待确认项（已撤销、尚未人工确认）时默认展开
-	if (decisions.length === 0 && !confirmationRequest) return null;
-	const pendingCount = decisions.filter(
-		(decision) => decision.status !== "active" && !confirmedIds.has(decision.id),
-	).length;
-
-	return (
-		<details className="panel-card" data-testid="decisions-section" open={pendingCount > 0 || undefined}>
-			<summary className="flex cursor-pointer items-center gap-2">
-				<span className="text-[12px] font-medium text-ink">{t("panel.decisionsTitle")}</span>
-				<span className="text-[11px] tabular-nums text-ink-faint">{decisions.length}</span>
-				{pendingCount > 0 && (
-					<span className="text-xs text-warn">{t("panel.decisionsPending", { count: pendingCount })}</span>
-				)}
-			</summary>
-			{decisions.length > 0 && (
-				<ul className="mt-2 space-y-2">
-					{decisions.map((decision) => (
-						<li
-							key={decision.id}
-							className="rounded-md border border-edge/60 px-2 py-2"
-							data-testid="decision-row"
-						>
-							<div className="flex items-start gap-2">
-								<div className="min-w-0 flex-1">
-									<p className="break-words text-[12px] text-ink">{decision.summary}</p>
-									<p className="text-[11px] text-ink-faint">
-										{t("panel.decisionAffected", { count: decision.affectedArtifactIds.length })} ·{" "}
-										{decision.kind}
-									</p>
-								</div>
-								{decision.status === "active" ? (
-									<button
-										type="button"
-										className="shrink-0 text-xs text-err hover:underline disabled:opacity-50"
-										disabled={busyId !== null}
-										onClick={() => setConfirmation({ decision, action: "revoke" })}
-									>
-										{busyId === decision.id ? t("panel.decisionRevoking") : t("panel.decisionRevoke")}
-									</button>
-								) : confirmedIds.has(decision.id) ? (
-									<span className="shrink-0 text-[11px] text-ink-faint">{t("panel.decisionConfirmed")}</span>
-								) : (
-									<button
-										type="button"
-										className="shrink-0 text-xs text-link hover:underline disabled:opacity-50"
-										disabled={busyId !== null}
-										onClick={() => setConfirmation({ decision, action: "confirm" })}
-									>
-										{busyId === decision.id ? t("panel.decisionRevoking") : t("panel.decisionConfirmReview")}
-									</button>
-								)}
-							</div>
-						</li>
-					))}
-				</ul>
-			)}
-			{confirmationRequest && <AskDialog requests={[confirmationRequest]} onRespond={respondConfirmation} />}
-		</details>
 	);
 }
 
@@ -225,26 +87,22 @@ export function TodoCard() {
 }
 
 /**
- * 通用总览：权限提示、工具待办和决策记录。领域任务界面由已安装插件贡献。
+ * 通用总览：权限提示与工具待办。领域任务界面由已安装插件贡献。
  * 审批本身仍在输入框位置的 ApprovalDock 决策（一处一事），这里只给指向。
  */
 export function SessionOverviewSections({
 	sessionId,
 	embedded = false,
-	includeDecisions = true,
 }: {
 	sessionId: string | null;
 	/** OverviewPane owns the scroll container; keep this pane reusable in the files-era layout. */
 	embedded?: boolean;
-	/** Decisions are rendered after evidence in the overview ordering. */
-	includeDecisions?: boolean;
 }) {
 	const t = useT();
 	const todoCount = useTranscriptStore((s) => (sessionId ? (s.bySession[sessionId]?.todos.length ?? 0) : 0));
 	const pendingCount = useTranscriptStore((s) => selectTranscript(s, sessionId).pendingPermissions.length);
 	const messages = useTranscriptStore((s) => selectTranscript(s, sessionId).messages);
 	const agentActive = useAgentActive(sessionId);
-	const projectId = useSessionsStore((s) => s.cwd);
 	const empty = todoCount === 0;
 	const overview = runOverview(messages);
 
@@ -256,7 +114,6 @@ export function SessionOverviewSections({
 				</div>
 			)}
 			<Slot name={UI_SLOTS.TodoPanel} props={{}} fallback={TodoCard} />
-			{includeDecisions && <DecisionsSection projectId={projectId} />}
 			{empty &&
 				(messages.length > 0 || agentActive ? (
 					<RunOverviewCard
