@@ -74,7 +74,6 @@ describe("createBackend", () => {
 				journal: expect.any(Function),
 				runner: expect.any(Function),
 				authorize: expect.any(Function),
-				inquiry: { recordQuestion: expect.any(Function) },
 			},
 		});
 		await expect(services.discoveryHost?.status?.({})).resolves.toEqual({ status: "plugin" });

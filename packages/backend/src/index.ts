@@ -289,7 +289,6 @@ export {
 	routeRnaseqIntent,
 	runRnaseqFixture,
 } from "./services/execution-route";
-export { InquiryService, type InquiryServiceOptions, type InquiryServicePort } from "./services/inquiry";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {
 	type KnowledgeReviewControl,

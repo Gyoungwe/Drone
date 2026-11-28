@@ -1,16 +1,15 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import type { ArtifactProvenance, ArtifactRerunResult } from "@drone/inquiry";
+import type { JobRecord } from "@drone/compute";
 import type { ComputeJob } from "@drone/shared";
-import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { afterEach, expect, it, vi } from "vitest";
 import { canonicalProjectId } from "../project-id";
 import { clearReplyLanguage, hostText, setReplyLanguage } from "../reply-language";
-import { InquiryService } from "../services/inquiry";
-import { createInquiryComputeRerun } from "../services/inquiry-compute";
 import type { SessionDirectory } from "../session/registry";
-import { type InquiryRerunPort, inquiryRerunCapabilityHandlers } from "./inquiry-rerun-capability";
+import {
+	createComputeInquiryRerunPort,
+	type InquiryArtifactProvenance,
+	type InquiryRerunResult,
+	inquiryRerunCapabilityHandlers,
+} from "./inquiry-rerun-capability";
 import type { PluginCredentialStore } from "./plugin-credentials";
 import type { PluginRuntimeSource } from "./plugin-source";
 import { PluginCapabilityBroker } from "./runtime-capabilities";
@@ -18,54 +17,66 @@ import { sourceCapabilityHandlers } from "./source-capabilities";
 import type { TaskGrantStore } from "./task-grants";
 
 const projectId = canonicalProjectId("/tmp/inquiry-rerun-project");
-const provenance: ArtifactProvenance = {
+const otherProjectId = canonicalProjectId("/tmp/inquiry-rerun-other-project");
+
+function makeJob(overrides: { jobId?: string; workDir?: string; workflowName?: string } = {}): JobRecord {
+	const jobId = overrides.jobId ?? "source-job-1";
+	return {
+		jobId,
+		hostAlias: "hpc-1",
+		status: "succeeded",
+		spec: {
+			workDir: overrides.workDir ?? projectId,
+			workflow: {
+				name: overrides.workflowName ?? "workflow-1",
+				modules: [],
+				steps: [],
+			},
+		},
+	} as unknown as JobRecord;
+}
+
+const provenance: InquiryArtifactProvenance = {
 	artifact: {
 		id: "artifact-1",
-		schemaVersion: 2,
 		projectId,
-		location: "remote",
 		path: "results/result.csv",
-		bytes: 12,
 		sha256: "a".repeat(64),
-		source: { kind: "run", id: "run-1" },
-		purpose: "deliverable",
-		status: "valid",
-		parentIds: [],
-		runProvenance: { workflow: "workflow-1" },
-		createdAt: "2026-11-28T00:00:00.000Z",
-		updatedAt: "2026-11-28T00:00:00.000Z",
+		runId: "source-run-1",
+		runProvenance: { workflow: "fallback-workflow" },
 	},
 	parentChain: [],
 	parentChainTruncated: false,
-	attempts: [],
-	runProvenance: { workflow: "workflow-1" },
+	attempts: [{ parameters: { jobId: "source-job-1" } }],
+	runProvenance: { workflow: "fallback-workflow" },
 	reproducibility: "reproducible",
 };
-const result: ArtifactRerunResult = {
+
+const expectedResult: InquiryRerunResult = {
 	status: "submitted",
 	jobId: "rerun-job-1",
 	previousArtifactId: provenance.artifact.id,
 	previousSha256: provenance.artifact.sha256,
 };
-const roots: string[] = [];
 
-afterEach(async () => {
+afterEach(() => {
 	clearReplyLanguage();
-	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
-function fixture(selected: ArtifactProvenance | undefined = provenance) {
-	let current: ArtifactProvenance | undefined = selected;
+function fixture(options: { job?: JobRecord | null; withResubmit?: boolean } = {}) {
+	let currentJob: JobRecord | null = options.job === undefined ? makeJob() : options.job;
 	const abort = new AbortController().signal;
 	const entry = { cwd: projectId, session: { sessionId: "session-1" } };
 	const sessions = {
 		get: (sessionId: string) => (sessionId === "session-1" ? entry : undefined),
 		signalFor: () => abort,
 	} as unknown as SessionDirectory;
-	const inquiry: InquiryRerunPort = {
-		artifactProvenance: vi.fn(async () => current),
-		rerunArtifact: vi.fn(async () => result),
-	};
+	const getJob = vi.fn(async (jobId: string) => (currentJob?.jobId === jobId ? currentJob : null));
+	const resubmitJob = vi.fn(async () => ({ id: "rerun-job-1" }) as ComputeJob);
+	const inquiry = createComputeInquiryRerunPort(
+		{ getJob },
+		options.withResubmit === false ? {} : { resubmitJob },
+	);
 	const broker = new PluginCapabilityBroker({
 		resources: [],
 		handlers: inquiryRerunCapabilityHandlers({ inquiry, sessions }),
@@ -100,19 +111,21 @@ function fixture(selected: ArtifactProvenance | undefined = provenance) {
 		broker,
 		authorize,
 		inquiry,
+		getJob,
+		resubmitJob,
 		invoke,
-		setCurrent: (next: ArtifactProvenance | undefined) => {
-			current = next;
+		setJob: (next: JobRecord | null) => {
+			currentJob = next;
 		},
 	};
 }
 
-const request = (snapshot = provenance) => ({ artifactId: "artifact-1", provenance: snapshot });
+const request = (snapshot: unknown = provenance) => ({ artifactId: "artifact-1", provenance: snapshot });
 
-it("prepares a host snapshot, requests always approval with bilingual facts, then reruns", async () => {
+it("verifies compute job ownership, shows bilingual approval facts, and submits rerun", async () => {
 	setReplyLanguage("en");
 	const f = fixture();
-	await expect(f.invoke(request())).resolves.toEqual(result);
+	await expect(f.invoke(request())).resolves.toEqual(expectedResult);
 	expect(f.authorize).toHaveBeenCalledWith(
 		"inquiry.rerun",
 		request(),
@@ -128,17 +141,27 @@ it("prepares a host snapshot, requests always approval with bilingual facts, the
 		provenance.artifact.id,
 		provenance.artifact.path,
 		provenance.artifact.sha256,
+		"source-job-1",
 		"workflow-1",
 		"session",
 	])
 		expect(detail).toContain(value);
-	expect(f.inquiry.rerunArtifact).toHaveBeenCalledWith("artifact-1", projectId);
+	expect(f.resubmitJob).toHaveBeenCalledWith("source-job-1");
+	expect(f.getJob).toHaveBeenCalledTimes(3);
+
 	setReplyLanguage("zh");
 	const chinese = fixture();
 	await chinese.invoke(request());
 	const chineseDetail = chinese.authorize.mock.calls[0]?.[3] ?? "";
-	for (const value of ["操作: inquiry.rerun", "项目", "产物", "路径", "SHA-256", "工作流", "会话"])
+	for (const value of ["操作: inquiry.rerun", "项目", "产物", "路径", "SHA-256", "原任务", "工作流", "会话"])
 		expect(chineseDetail).toContain(value);
+});
+
+it("falls back to artifact.runId when attempts have no jobId", async () => {
+	const f = fixture({ job: makeJob({ jobId: "source-run-1" }) });
+	const snapshot: InquiryArtifactProvenance = { ...provenance, attempts: [] };
+	await expect(f.invoke(request(snapshot))).resolves.toEqual(expectedResult);
+	expect(f.resubmitJob).toHaveBeenCalledWith("source-run-1");
 });
 
 it.each([
@@ -153,7 +176,7 @@ it.each([
 	const f = fixture();
 	await expect(f.invoke(input)).rejects.toThrow();
 	expect(f.authorize).not.toHaveBeenCalled();
-	expect(f.inquiry.rerunArtifact).not.toHaveBeenCalled();
+	expect(f.resubmitJob).not.toHaveBeenCalled();
 });
 
 it.each([
@@ -162,7 +185,7 @@ it.each([
 		"stale session",
 		{ kind: "session", workspaceId: projectId, workspaceDirectory: projectId, sessionId: "session-1" },
 	],
-])("rejects an unsupported or stale caller scope before approval (%s)", async (_label, scope) => {
+])("rejects unsupported or stale caller scope before approval (%s)", async (_label, scope) => {
 	const f = fixture();
 	const identity = scope.kind === "session" ? {} : undefined;
 	await expect(f.invoke(request(), scope, identity)).rejects.toThrow();
@@ -170,132 +193,84 @@ it.each([
 });
 
 it.each([
-	["missing", undefined, "Artifact not found"],
+	["not reproducible", { ...provenance, reproducibility: "partial" as const }, "not reproducible"],
 	[
-		"cross-project",
-		{ ...provenance, artifact: { ...provenance.artifact, projectId: "/other-project" } },
+		"mismatched artifact id",
+		{ ...provenance, artifact: { ...provenance.artifact, id: "other-artifact" } },
+		"does not match artifactId",
+	],
+	[
+		"cross-project artifact",
+		{ ...provenance, artifact: { ...provenance.artifact, projectId: otherProjectId } },
 		"does not belong",
 	],
-	["not reproducible", { ...provenance, reproducibility: "partial" as const }, "not reproducible"],
-])("rejects unavailable artifact provenance before approval (%s)", async (_label, current, message) => {
-	const f = fixture(current);
-	if (_label === "missing") f.setCurrent(undefined);
-	await expect(f.invoke(request())).rejects.toThrow(message);
+	["empty path", { ...provenance, artifact: { ...provenance.artifact, path: "  " } }, "non-empty path"],
+	["empty sha256", { ...provenance, artifact: { ...provenance.artifact, sha256: "" } }, "non-empty path"],
+	[
+		"non-array attempts",
+		{ ...provenance, attempts: "not-an-array" as unknown as InquiryArtifactProvenance["attempts"] },
+		"Invalid inquiry rerun attempts provenance",
+	],
+	[
+		"missing original job id",
+		{ ...provenance, attempts: [null as never], artifact: { ...provenance.artifact, runId: undefined } },
+		"No recorded compute job",
+	],
+])("rejects invalid provenance before approval (%s)", async (_label, snapshot, message) => {
+	const f = fixture();
+	await expect(f.invoke(request(snapshot))).rejects.toThrow(message);
 	expect(f.authorize).not.toHaveBeenCalled();
-	expect(f.inquiry.rerunArtifact).not.toHaveBeenCalled();
+	expect(f.resubmitJob).not.toHaveBeenCalled();
 });
 
-it("rejects altered sha256, parentChain, attempts, or reproducibility snapshots before approval", async () => {
-	const variants: ArtifactProvenance[] = [
-		{ ...provenance, artifact: { ...provenance.artifact, sha256: "b".repeat(64) } },
-		{ ...provenance, parentChain: [{ ...provenance.artifact, id: "parent" }] },
-		{
-			...provenance,
-			attempts: [
-				{
-					id: "attempt-1",
-					schemaVersion: 2,
-					projectId,
-					hypothesisIds: [],
-					parameters: {},
-					artifactIds: [],
-					outcome: "succeeded",
-					enteredReport: false,
-					startedAt: "2026-11-28T00:00:00.000Z",
-				},
-			],
-		},
-		{ ...provenance, reproducibility: "partial" },
-	];
-	for (const snapshot of variants) {
-		const f = fixture();
-		await expect(f.invoke(request(snapshot))).rejects.toThrow("does not match current host provenance");
-		expect(f.authorize).not.toHaveBeenCalled();
-	}
+it("rejects unknown, forged cross-project, or unresubmittable compute jobs before approval", async () => {
+	const missing = fixture({ job: null });
+	await expect(missing.invoke(request())).rejects.toThrow("Compute job not found: source-job-1");
+	expect(missing.authorize).not.toHaveBeenCalled();
+
+	const forged = fixture({ job: makeJob({ workDir: otherProjectId }) });
+	await expect(forged.invoke(request())).rejects.toThrow("Compute job does not belong to the caller project");
+	expect(forged.authorize).not.toHaveBeenCalled();
+	expect(forged.resubmitJob).not.toHaveBeenCalled();
+
+	const noResubmit = fixture({ withResubmit: false });
+	await expect(noResubmit.invoke(request())).rejects.toThrow("Compute rerun submission is unavailable");
+	expect(noResubmit.authorize).not.toHaveBeenCalled();
 });
 
-it("does not rerun when the user declines or provenance changes while approval is open", async () => {
+it("does not rerun when declined or when compute job changes during approval", async () => {
 	const declined = fixture();
 	declined.authorize.mockResolvedValue(false);
 	await expect(declined.invoke(request())).rejects.toThrow("Plugin capability denied: inquiry.rerun");
-	expect(declined.inquiry.rerunArtifact).not.toHaveBeenCalled();
+	expect(declined.resubmitJob).not.toHaveBeenCalled();
 
-	const changed = fixture();
-	changed.authorize.mockImplementation(async () => {
-		changed.setCurrent({ ...provenance, artifact: { ...provenance.artifact, sha256: "c".repeat(64) } });
+	const vanished = fixture();
+	vanished.authorize.mockImplementation(async () => {
+		vanished.setJob(null);
 		return true;
 	});
-	await expect(changed.invoke(request())).rejects.toThrow("does not match current host provenance");
-	expect(changed.inquiry.rerunArtifact).not.toHaveBeenCalled();
-});
+	await expect(vanished.invoke(request())).rejects.toThrow("Compute job not found: source-job-1");
+	expect(vanished.resubmitJob).not.toHaveBeenCalled();
 
-it("keeps Inquiry's durable rerun deduplication through the existing compute adapter", async () => {
-	const root = await mkdtemp(join(tmpdir(), "inquiry-rerun-dedup-"));
-	roots.push(root);
-	const inquiry = new InquiryService(
-		{ inquiryDir: join(root, "ledger"), projectId: root },
-		new PluginResourceReservations(join(root, "leases")),
-	);
-	const resubmitJob = vi.fn(async () => ({ id: "rerun-job-1" }) as ComputeJob);
-	inquiry.setRerunHandler(
-		createInquiryComputeRerun({
-			adapter: { resubmitJob },
-			collectionRoot: root,
-			drainEvents: async () => undefined,
-		}),
-	);
-	await inquiry.recordComputeEvent({
-		id: "compute-event-1",
-		jobId: "source-job-1",
-		type: "collected",
-		at: "2026-11-28T00:00:00.000Z",
-		status: "succeeded",
-		projectId: root,
-		runId: "source-run-1",
-		codeFingerprint: "d".repeat(64),
-		runProvenance: { workflow: "workflow-1" },
-		artifacts: [
-			{
-				path: "results/result.csv",
-				bytes: 12,
-				sha256: "a".repeat(64),
-				sourceKind: "run",
-				sourceId: "source-run-1",
-			},
-		],
+	const crossProjectAfterApproval = fixture();
+	crossProjectAfterApproval.authorize.mockImplementation(async () => {
+		crossProjectAfterApproval.setJob(makeJob({ workDir: otherProjectId }));
+		return true;
 	});
-	const artifact = (await inquiry.listArtifacts(root))[0];
-	if (!artifact) throw new Error("Expected a recorded compute artifact");
-	const port: InquiryRerunPort = inquiry;
-	const handler = inquiryRerunCapabilityHandlers({ inquiry: port, sessions: {} as SessionDirectory });
-	const broker = new PluginCapabilityBroker({ resources: [], handlers: handler });
-	const call = (snapshot: ArtifactProvenance) =>
-		broker.run(
-			{
-				pluginId: "plugin",
-				applicationId: "app",
-				callerIdentity: {},
-				bootstrap: false,
-				scope: { kind: "workspace", workspaceId: canonicalProjectId(root), workspaceDirectory: root },
-				signal: new AbortController().signal,
-			},
-			"write",
-			() => undefined,
-			async () => true,
-			() => broker.port.call("inquiry.rerun", { artifactId: artifact.id, provenance: snapshot }),
-		);
-	try {
-		const current = await inquiry.artifactProvenance(artifact.id, canonicalProjectId(root));
-		if (!current) throw new Error("Expected host provenance");
-		expect(await call(current)).toMatchObject({ status: "submitted", jobId: "rerun-job-1" });
-		const refreshed = await inquiry.artifactProvenance(artifact.id, canonicalProjectId(root));
-		if (!refreshed) throw new Error("Expected refreshed host provenance");
-		expect(refreshed.rerun).toBeDefined();
-		expect(await call(refreshed)).toMatchObject({ status: "submitted", jobId: "rerun-job-1" });
-		expect(resubmitJob).toHaveBeenCalledTimes(1);
-	} finally {
-		await inquiry.dispose();
-	}
+	await expect(crossProjectAfterApproval.invoke(request())).rejects.toThrow(
+		"Compute job does not belong to the caller project",
+	);
+	expect(crossProjectAfterApproval.resubmitJob).not.toHaveBeenCalled();
+
+	const workflowChangedAfterApproval = fixture();
+	workflowChangedAfterApproval.authorize.mockImplementation(async () => {
+		workflowChangedAfterApproval.setJob(makeJob({ workflowName: "workflow-tampered" }));
+		return true;
+	});
+	await expect(workflowChangedAfterApproval.invoke(request())).rejects.toThrow(
+		"Compute job changed during approval",
+	);
+	expect(workflowChangedAfterApproval.resubmitJob).not.toHaveBeenCalled();
 });
 
 it("registers the capability only for the dedicated source declaration and available port", () => {

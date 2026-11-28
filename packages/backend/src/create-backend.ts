@@ -80,7 +80,6 @@ import {
 	DailyDiscoveryService,
 } from "./services/daily-discovery";
 import type { BackgroundReviewerPort } from "./services/deliverable-reviewer";
-import { InquiryService, type InquiryServicePort } from "./services/inquiry";
 import type { InstitutionalServicePort } from "./services/institutional";
 import {
 	type KnowledgeMaintenanceOptions,
@@ -183,8 +182,6 @@ export interface BackendServices {
 	memory: MemoryServicePort;
 	/** Per-workspace background jobs settings and daily usage. */
 	backgroundJobs: BackgroundJobsServicePort;
-	/** Optional project research-state ledger; disabled unless inquiryDir is configured. */
-	inquiry: InquiryServicePort;
 	/** Provenance-aware project capture and read-only connector search. */
 	research: ResearchResourceService;
 	/** Explicitly authorized, auditable research write adapters. */
@@ -462,19 +459,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const defaultProjectId = canonicalProjectId(
 		options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
 	);
-	const inquiry = new InquiryService({
-		inquiryDir: options.inquiryDir,
-		projectsDir:
-			options.projectsDir ??
-			(!options.inquiryDir && options.userDataDir
-				? join(options.userDataDir, "inquiry-projects")
-				: undefined),
-		storageRegistry: sessions.storage,
-		projectId: defaultProjectId,
-		legacyInquiryDir: options.legacyInquiryDir,
-	});
 	const localExecution = attachLocalExecutionRecorder(
-		inquiry,
 		sessions,
 		options,
 		(sessionId, paths) =>
@@ -501,7 +486,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			agentDir: options.discoveryAgentDir ?? join(getAgentDir(), "discovery", discoveryProjectKey),
 			...(!options.discoveryAgentDir ? { legacyJournalRoot: join(getAgentDir(), "discovery") } : {}),
 			storage: sessions.getStorageRegistry(),
-			inquiry: inquiry.discoveryPort(options.inquiryProjectId ?? discoveryProjectRoot, discoveryProjectId),
 			...(options.discoveryAuthorize ? { authorize: options.discoveryAuthorize } : {}),
 			...(options.discoveryRunner ? { runner: options.discoveryRunner } : {}),
 			onExecution: (event) =>
@@ -578,7 +562,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		});
 	listComputeHosts = () => computeAdapter.listHosts();
 	const detachInquiryComputeEvents = attachInquiryHostComposition(
-		inquiry,
 		sessions,
 		compute,
 		computeAdapter,
@@ -794,7 +777,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				promoteToKnowledge(memory, sessions.knowledge, cwd, canonicalProjectId(cwd), id),
 		},
 		computeAdapter,
-		inquiry,
 		research,
 		researchWrites,
 		discovery,
@@ -871,7 +853,6 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			await sessions.dispose();
 			await compute.dispose();
 			await computeAdapter.dispose?.();
-			await inquiry.dispose();
 			await discovery.dispose();
 			await runtime.dispose();
 		},

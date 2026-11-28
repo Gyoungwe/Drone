@@ -1,17 +1,18 @@
 // @vitest-environment jsdom
 import { execFile } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, realpath, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { SqliteInquiryStorage } from "@drone/inquiry";
 import { fauxProvider } from "@earendil-works/pi-ai";
 import { createAgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import React, { createElement } from "react";
 import { expect, it, vi } from "vitest";
 import { buildPlugin } from "../../desktop/src/main/ui-plugins/build";
-import { InquiryService } from "../src/services/inquiry";
+import { seedLegacyInquiryLedger } from "./inquiry-sqlite-fixture";
 import "../../desktop/src/renderer/src/plugins/host-api";
 import { useI18nStore } from "../../desktop/src/renderer/src/i18n";
 import { invokePluginRuntime, subscribePluginRuntime } from "../../desktop/src/renderer/src/plugins/caller";
@@ -73,6 +74,10 @@ import { createDesktopRuntime } from "../../desktop/src/main/ui-plugins/runtime-
 import { setReplyLanguage } from "../src/reply-language";
 import { callPackedSdk, createPackedSessions, loadPackedExtensions } from "./fixtures/packed-session-service";
 
+const assertWriterReserved = (dir: string) =>
+	expect(() => new PluginResourceReservations().reserve("state-writers", [realpathSync(dir)])).toThrow(
+		/writer|reserved/,
+	);
 const run = promisify(execFile);
 const tarball = process.env.DRONE_INQUIRY_PLUGIN_TARBALL;
 const api = process.env.DRONE_PLUGIN_API_TARBALL;
@@ -120,8 +125,7 @@ it.skipIf(!tarball || !discoveryTar)(
 				],
 				{ maxBuffer: 8 * 1024 * 1024 },
 			);
-			const seed = new SqliteInquiryStorage("legacy-project", join(desktop.state, "ledger.sqlite"));
-			await seed.close();
+			seedLegacyInquiryLedger("legacy-project", join(desktop.state, "ledger.sqlite"));
 
 			const manager = new UiPluginManager({ installedPackageRoot: join(root, "node_modules") });
 			await mkdir(join(desktop.profile, "ui-plugins"));
@@ -232,9 +236,7 @@ it.skipIf(!tarball || !discoveryTar)(
 				fireEvent.click(screen.getByRole("button", { name: "Bind original directory" }));
 			});
 			await screen.findByText(/Original project.*legacy-project/, {}, { timeout: 10000 });
-			expect(() => new InquiryService({ inquiryDir: desktop.state, projectId: "legacy-project" })).toThrow(
-				/writer|reserved/,
-			);
+			assertWriterReserved(desktop.state);
 			fireEvent.change(screen.getByRole("textbox", { name: "Question ID" }), {
 				target: { value: "ui-question" },
 			});
@@ -346,9 +348,7 @@ it.skipIf(!tarball || !discoveryTar)(
 				attemptId: "recovered-attempt",
 			});
 			expect(resumedWrite.isError, JSON.stringify(resumedWrite)).toBe(false);
-			expect(() => new InquiryService({ inquiryDir: desktop.state, projectId: "legacy-project" })).toThrow(
-				/writer|reserved/,
-			);
+			assertWriterReserved(desktop.state);
 
 			console.log(
 				JSON.stringify({

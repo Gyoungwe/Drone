@@ -2,17 +2,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
-import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { afterEach, expect, it, vi } from "vitest";
 import { attachInquiryHostComposition } from "./inquiry-host-composition";
 import { HostEventBridge } from "./plugins/host-event-bridge";
+import type { InquiryRerunPort } from "./plugins/inquiry-rerun-capability";
 import { canonicalProjectId } from "./project-id";
-import {
-	type InquiryComputeEvent,
-	type InquiryDecisionEvent,
-	InquiryService,
-	type InquiryTaskTerminalEvent,
-} from "./services/inquiry";
+import type { InquiryComputeEvent, InquiryDecisionEvent } from "./services/inquiry-events";
 
 const roots: string[] = [];
 afterEach(async () => rmRoots());
@@ -23,27 +18,9 @@ async function rmRoots(): Promise<void> {
 	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 }
 
-async function fixture(enabled: boolean) {
+async function fixture() {
 	const root = await mkdtemp(join(tmpdir(), "inquiry-host-events-"));
 	roots.push(root);
-	const inquiry = new InquiryService(
-		enabled ? { inquiryDir: root, projectId: root } : {},
-		new PluginResourceReservations(root),
-	);
-	const inquiryEvents = {
-		compute: [] as InquiryComputeEvent[],
-		task: [] as InquiryTaskTerminalEvent[],
-		decision: [] as InquiryDecisionEvent[],
-	};
-	vi.spyOn(inquiry, "recordComputeEvent").mockImplementation(
-		async (event) => void inquiryEvents.compute.push(event),
-	);
-	vi.spyOn(inquiry, "recordTaskTerminal").mockImplementation(
-		async (event) => void inquiryEvents.task.push(event),
-	);
-	vi.spyOn(inquiry, "recordDecision").mockImplementation(
-		async (event) => void inquiryEvents.decision.push(event as InquiryDecisionEvent),
-	);
 	const computeHandlers = new Set<(event: ComputeTestEvent) => void>();
 	const sessionHandlers = new Set<(sessionId: string, event: AgentSessionEvent) => void>();
 	const decisionHandlers = new Set<(event: unknown) => void>();
@@ -75,51 +52,33 @@ async function fixture(enabled: boolean) {
 		},
 	};
 	const detach = attachInquiryHostComposition(
-		inquiry,
 		sessions as never,
 		compute as never,
 		{} as never,
 		{ defaultCwd: root },
 		root,
 	);
-	return {
-		root,
-		inquiry,
-		inquiryEvents,
-		computeHandlers,
-		sessionHandlers,
-		decisionHandlers,
-		hostPayloads,
-		detach,
-	};
+	return { root, computeHandlers, sessionHandlers, decisionHandlers, hostPayloads, detach };
 }
 
-it("attaches and clears the Inquiry rerun port with the host composition", async () => {
-	const inquiry = new InquiryService({});
-	const ports: unknown[] = [];
+it("attaches and clears the compute-backed Inquiry rerun port with the host composition", () => {
+	const ports: Array<InquiryRerunPort | undefined> = [];
 	const sessions = {
 		hostEvents: new HostEventBridge(),
 		registry: { get: () => undefined },
 		onEvent: () => () => undefined,
 		onDecision: () => () => undefined,
-		setInquiryRerunPort: (port: unknown) => ports.push(port),
+		setInquiryRerunPort: (port: InquiryRerunPort | undefined) => ports.push(port),
 	};
-	const compute = { onEvent: () => () => undefined };
-	const detach = attachInquiryHostComposition(
-		inquiry,
-		sessions as never,
-		compute as never,
-		{} as never,
-		{},
-		"",
-	);
-	try {
-		expect(ports).toEqual([inquiry]);
-		detach();
-		expect(ports).toEqual([inquiry, undefined]);
-	} finally {
-		await inquiry.dispose();
-	}
+	const compute = { onEvent: () => () => undefined, getJob: async () => null };
+	const detach = attachInquiryHostComposition(sessions as never, compute as never, {} as never, {}, "");
+	expect(ports).toHaveLength(1);
+	expect(ports[0]).toMatchObject({
+		verifyRerun: expect.any(Function),
+		rerunArtifact: expect.any(Function),
+	});
+	detach();
+	expect(ports).toEqual([ports[0], undefined]);
 });
 
 const computeEvent: InquiryComputeEvent = {
@@ -143,8 +102,8 @@ const computeEvent: InquiryComputeEvent = {
 	projectId: "/old-project",
 };
 
-it("sends the same compute, task-terminal and decision objects to Inquiry and host subscribers", async () => {
-	const test = await fixture(true);
+it("publishes compute, task-terminal and decision events to host subscribers and ignores cleanup", async () => {
+	const test = await fixture();
 	const expectedProjectId = canonicalProjectId(test.root);
 	try {
 		for (const handler of test.computeHandlers) handler({ type: "cleanup", jobId: "job-1" });
@@ -173,9 +132,6 @@ it("sends the same compute, task-terminal and decision objects to Inquiry and ho
 		const decisionEnvelope = test.hostPayloads.find(
 			(value) => (value as { topic: string }).topic === "inquiry.decision",
 		) as { payload: unknown };
-		expect(computeEnvelope.payload).toBe(test.inquiryEvents.compute[0]);
-		expect(taskEnvelope.payload).toBe(test.inquiryEvents.task[0]);
-		expect(decisionEnvelope.payload).toBe(test.inquiryEvents.decision[0]);
 		expect(computeEnvelope.payload).toMatchObject({ ...computeEvent, projectId: expectedProjectId });
 		expect(taskEnvelope.payload).toMatchObject({
 			id: expect.stringMatching(/^session:session-1:/),
@@ -189,35 +145,27 @@ it("sends the same compute, task-terminal and decision objects to Inquiry and ho
 		expect(test.computeHandlers.size).toBe(1);
 	} finally {
 		test.detach();
-		await test.inquiry.dispose();
 	}
 });
 
-it("delivers host events when Inquiry is disabled and detaches both paths", async () => {
-	const test = await fixture(false);
-	try {
-		expect(test.computeHandlers.size).toBe(1);
-		for (const handler of test.computeHandlers) handler(computeEvent);
-		for (const handler of test.sessionHandlers)
-			handler("session-2", { type: "agent_end", messages: [], willRetry: false });
-		for (const handler of test.decisionHandlers)
-			handler({ id: "decision-2", kind: "task-authorization", summary: "observed" });
-		await vi.waitFor(() => expect(test.hostPayloads).toHaveLength(3));
-		expect(test.inquiryEvents.compute).toHaveLength(0);
-		expect(test.inquiryEvents.task).toHaveLength(0);
-		expect(test.inquiryEvents.decision).toHaveLength(0);
-		test.detach();
-		for (const handler of test.computeHandlers) handler(computeEvent);
-		for (const handler of test.sessionHandlers)
-			handler("session-2", { type: "agent_end", messages: [], willRetry: false });
-		for (const handler of test.decisionHandlers)
-			handler({ id: "decision-3", kind: "task-authorization", summary: "detached" });
-		await Promise.resolve();
-		expect(test.hostPayloads).toHaveLength(3);
-		expect(test.computeHandlers.size).toBe(0);
-		expect(test.sessionHandlers.size).toBe(0);
-		expect(test.decisionHandlers.size).toBe(0);
-	} finally {
-		await test.inquiry.dispose();
-	}
+it("detaches all host event listeners cleanly", async () => {
+	const test = await fixture();
+	expect(test.computeHandlers.size).toBe(1);
+	for (const handler of test.computeHandlers) handler(computeEvent);
+	for (const handler of test.sessionHandlers)
+		handler("session-2", { type: "agent_end", messages: [], willRetry: false });
+	for (const handler of test.decisionHandlers)
+		handler({ id: "decision-2", kind: "task-authorization", summary: "observed" });
+	await vi.waitFor(() => expect(test.hostPayloads).toHaveLength(3));
+	test.detach();
+	for (const handler of test.computeHandlers) handler(computeEvent);
+	for (const handler of test.sessionHandlers)
+		handler("session-2", { type: "agent_end", messages: [], willRetry: false });
+	for (const handler of test.decisionHandlers)
+		handler({ id: "decision-3", kind: "task-authorization", summary: "detached" });
+	await Promise.resolve();
+	expect(test.hostPayloads).toHaveLength(3);
+	expect(test.computeHandlers.size).toBe(0);
+	expect(test.sessionHandlers.size).toBe(0);
+	expect(test.decisionHandlers.size).toBe(0);
 });

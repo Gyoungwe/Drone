@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { FactArtifact } from "@gyoungwe/plugin-api/p5-inquiry";
 import type { FileReadback } from "@gyoungwe/plugin-api/p5-receipts";
 import { type createP5FactStore, P5FactStoreError, p5FactSummary } from "../plugins/p5-facts";
-import type { InquiryLocalExecutionEvent } from "./inquiry";
+import type { InquiryLocalExecutionEvent } from "./inquiry-events";
 
 type FactStore = ReturnType<typeof createP5FactStore>;
 type LocalExecution = Pick<InquiryLocalExecutionEvent, "id" | "artifacts"> & {

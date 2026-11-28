@@ -4,34 +4,13 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, extname, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import type { SessionEvent } from "@drone/shared";
-import type { InquiryEventArtifact, InquiryLocalExecutionEvent, InquiryServicePort } from "./inquiry";
+import type { InquiryEventArtifact, InquiryLocalExecutionEvent } from "./inquiry-events";
 
 const execFile = promisify(execFileCallback);
-const SCRIPT_INTERPRETERS = new Set([
-	"python",
-	"python3",
-	"python3.11",
-	"node",
-	"bash",
-	"sh",
-	"zsh",
-	"rscript",
-]);
-const OUTPUT_EXTENSIONS = new Set([
-	".png",
-	".jpg",
-	".jpeg",
-	".gif",
-	".svg",
-	".webp",
-	".pdf",
-	".csv",
-	".json",
-	".html",
-	".md",
-	".txt",
-	".tsv",
-]);
+const SCRIPT_INTERPRETERS = new Set("python,python3,python3.11,node,bash,sh,zsh,rscript".split(","));
+const OUTPUT_EXTENSIONS = new Set(
+	".png,.jpg,.jpeg,.gif,.svg,.webp,.pdf,.csv,.json,.html,.md,.txt,.tsv".split(","),
+);
 const MAX_FILES = 64;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 
@@ -78,7 +57,6 @@ export class LocalExecutionRecorder {
 
 	constructor(
 		private readonly options: {
-			readonly inquiry: InquiryServicePort;
 			readonly getCwd: (sessionId: string) => string | undefined;
 			readonly getProjectId: (sessionId: string) => string | undefined;
 			readonly scheduleReview?: (sessionId: string, paths: readonly string[]) => void;
@@ -144,7 +122,6 @@ export class LocalExecutionRecorder {
 			artifacts,
 		};
 		this.options.publish?.(event);
-		await this.options.inquiry.recordLocalExecution(event);
 		this.options.scheduleReview?.(
 			input.sessionId,
 			artifacts.map((item) => item.path),
@@ -220,7 +197,6 @@ export class LocalExecutionRecorder {
 			artifacts,
 		};
 		this.options.publish?.(event);
-		await this.options.inquiry.recordLocalExecution(event);
 		this.options.scheduleReview?.(
 			sessionId,
 			artifacts.map((item) => item.path),

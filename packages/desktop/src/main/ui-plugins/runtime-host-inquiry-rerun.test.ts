@@ -34,8 +34,16 @@ const baseSource: PluginRuntimeSource = {
 	entrypoint: join(tmpdir(), "runtime.mjs"),
 };
 const provenance = {
-	artifact: { id: "artifact-1", projectId: "/project", path: "results/out.csv", sha256: "a".repeat(64) },
+	artifact: {
+		id: "artifact-1",
+		projectId: "/project",
+		path: "results/out.csv",
+		sha256: "a".repeat(64),
+		runId: "source-job-1",
+	},
+	attempts: [{ parameters: { jobId: "source-job-1" } }],
 	runProvenance: { workflow: "workflow-1" },
+	reproducibility: "reproducible" as const,
 };
 
 function runtimeFor(inquiryRerun = true) {
@@ -46,7 +54,7 @@ function runtimeFor(inquiryRerun = true) {
 		...(inquiryRerun
 			? {
 					inquiryRerun: {
-						artifactProvenance: async () => provenance,
+						verifyRerun: async () => ({ originalJobId: "source-job-1", workflow: "workflow-1" }),
 						rerunArtifact: async () => ({
 							status: "submitted",
 							jobId: "rerun-1",
@@ -119,7 +127,13 @@ describe("desktop Inquiry rerun capability wiring", () => {
 		const handler = options.handlers["inquiry.rerun"];
 		if (!handler?.approvalDetail) throw new Error("Inquiry rerun approval formatter is unavailable");
 		const detail = handler.approvalDetail(
-			{ artifactId: "artifact-1", projectId: "/project", provenance },
+			{
+				artifactId: "artifact-1",
+				projectId: "/project",
+				provenance,
+				originalJobId: "source-job-1",
+				workflow: "workflow-1",
+			},
 			{
 				pluginId: baseSource.pluginId,
 				applicationId: "app",
@@ -129,6 +143,7 @@ describe("desktop Inquiry rerun capability wiring", () => {
 		desktop.showMessageBox.mockResolvedValue({ response: 1 });
 		expect(await approveDesktopRuntime(owner, baseSource, "capability:inquiry.rerun", detail)).toBe(true);
 		expect(desktop.showMessageBox).toHaveBeenCalledWith(desktop.window, expect.objectContaining({ detail }));
+		expect(detail).toContain("source-job-1");
 		expect(detail).toContain("workflow-1");
 	});
 });
