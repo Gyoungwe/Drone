@@ -82,6 +82,7 @@ export class LocalExecutionRecorder {
 			readonly getCwd: (sessionId: string) => string | undefined;
 			readonly getProjectId: (sessionId: string) => string | undefined;
 			readonly scheduleReview?: (sessionId: string, paths: readonly string[]) => void;
+			readonly publish?: (event: InquiryLocalExecutionEvent) => void;
 		},
 	) {}
 
@@ -142,6 +143,7 @@ export class LocalExecutionRecorder {
 			finishedAt: input.execution.finishedAt,
 			artifacts,
 		};
+		this.options.publish?.(event);
 		await this.options.inquiry.recordLocalExecution(event);
 		this.options.scheduleReview?.(
 			input.sessionId,
@@ -217,6 +219,7 @@ export class LocalExecutionRecorder {
 			finishedAt: new Date().toISOString(),
 			artifacts,
 		};
+		this.options.publish?.(event);
 		await this.options.inquiry.recordLocalExecution(event);
 		this.options.scheduleReview?.(
 			sessionId,

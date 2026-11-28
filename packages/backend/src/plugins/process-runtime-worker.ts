@@ -13,6 +13,7 @@ const messageError = (error) => error instanceof Error ? error.message : String(
 const lifecycle = new AbortController();
 const calls = new Map();
 const nativeSessions = new Map();
+const hostEventListeners = new Map();
 const supportedEvents = new Set(${JSON.stringify(PLUGIN_EVENTS)});
 const currentCall = new AsyncLocalStorage();
 const capabilityCalls = new Map();
@@ -30,6 +31,21 @@ const capabilities = {
       signal?.addEventListener("abort",cancel,{once:true});
       send({type:"capability",id,callId,cancelKey,name,input});
     });
+  }
+};
+const hostEvents = {
+  subscribe(topic, listener) {
+    if (typeof listener !== "function") throw new Error("Host event listener must be a function");
+    const id = String(++capabilitySequence);
+    const subscription = { topic, listener, active: true };
+    hostEventListeners.set(id, subscription);
+    send({type:"host_events_subscribe",id,topic});
+    return () => {
+      if (!subscription.active) return;
+      subscription.active = false;
+      hostEventListeners.delete(id);
+      send({type:"host_events_unsubscribe",id});
+    };
   }
 };
 let resourcesStopping;
@@ -103,22 +119,39 @@ input.on("line", async (line) => {
     else { const error = new Error(message.error); if (typeof message.code === "string") error.code = message.code; pending.reject(error); }
     return;
   }
+  if (message.type === "host_event") {
+    const subscription = hostEventListeners.get(message.id);
+    if (!subscription) return;
+    if (subscription.topic !== message.topic) throw new Error("Host event topic did not match its subscription");
+    try { subscription.listener({topic:message.topic,sequence:message.sequence,payload:message.payload}); }
+    catch {
+      subscription.active = false;
+      hostEventListeners.delete(message.id);
+      send({type:"host_events_unsubscribe",id:message.id});
+    }
+    return;
+  }
   if (message.type === "cancel") { calls.get(message.id)?.abort(); return; }
-  if (message.type === "stop") { lifecycle.abort(); return; }
+  if (message.type === "stop") {
+    lifecycle.abort();
+    for (const subscription of hostEventListeners.values()) subscription.active = false;
+    hostEventListeners.clear();
+    return;
+  }
   try {
     if (message.type === "start") {
       lifecycle.signal.throwIfAborted();
       const module = await import(pathToFileURL(process.argv[1]).href);
       const events = { changed() { lifecycle.signal.throwIfAborted(); send({ type: "changed" }); } };
       if (message.resource) {
-        const resource = await currentCall.run("bootstrap", () => module.default({ ...message.resource, signal: lifecycle.signal, capabilities, events }));
+        const resource = await currentCall.run("bootstrap", () => module.default({ ...message.resource, signal: lifecycle.signal, capabilities, events, ...(message.hostEvents ? {hostEvents} : {}) }));
         runtime = {operations:{request:{
           inputSchema:{type:"object",required:["operation","input"],properties:{operation:{type:"string"},input:{}},additionalProperties:false},
           resultSchema:{},effect:"read",
           execute:({operation,input},context)=>resource.invoke(operation,input,{signal:context.signal})
         }},dispose:()=>resource.dispose()};
       } else {
-        runtime = await currentCall.run("bootstrap", () => module.default({ applicationId: message.applicationId, signal: lifecycle.signal, resources: message.resources, ...(message.resourcesLifecycle ? {resourcesLifecycle} : {}), capabilities, events }));
+        runtime = await currentCall.run("bootstrap", () => module.default({ applicationId: message.applicationId, signal: lifecycle.signal, resources: message.resources, ...(message.resourcesLifecycle ? {resourcesLifecycle} : {}), ...(message.hostEvents ? {hostEvents} : {}), capabilities, events }));
       }
       const operations = Object.fromEntries(Object.entries(runtime.operations).map(([name, operation]) => [name, {
         inputSchema: operation.inputSchema, resultSchema: operation.resultSchema, effect: operation.effect,
@@ -232,6 +265,11 @@ input.on("line", async (line) => {
       return;
     }
     if (message.type === "dispose") {
+      for (const id of hostEventListeners.keys()) {
+        hostEventListeners.get(id).active = false;
+        hostEventListeners.delete(id);
+        send({type:"host_events_unsubscribe",id});
+      }
       await currentCall.run(message.id,async()=>{
         for(const session of nativeSessions.values()) await session.adapter.dispose();
         nativeSessions.clear();

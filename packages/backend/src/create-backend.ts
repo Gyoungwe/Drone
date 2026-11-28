@@ -26,7 +26,7 @@ import {
 	type DiscoveryAuthorization,
 	type DiscoveryServicePort,
 } from "./discovery/service";
-import { attachInquiryHostComposition } from "./inquiry-host-composition";
+import { attachInquiryHostComposition, attachLocalExecutionRecorder } from "./inquiry-host-composition";
 import { JsonStore } from "./json-store";
 import {
 	createBackendKnowledgeWorkerSetup,
@@ -87,7 +87,6 @@ import {
 	KnowledgeMaintenanceService,
 } from "./services/knowledge-maintenance";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
-import { LocalExecutionRecorder } from "./services/local-execution";
 import {
 	type BackgroundJobsServicePort,
 	createBackgroundJobsService,
@@ -474,27 +473,19 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		projectId: defaultProjectId,
 		legacyInquiryDir: options.legacyInquiryDir,
 	});
-	const localExecution = new LocalExecutionRecorder({
+	const localExecution = attachLocalExecutionRecorder(
 		inquiry,
-		getCwd: (sessionId) => sessions.registry.get(sessionId)?.cwd,
-		getProjectId: (sessionId) =>
-			canonicalProjectId(
-				sessions.registry.get(sessionId)?.cwd ??
-					options.inquiryProjectId ??
-					options.defaultCwd ??
-					process.cwd(),
-			),
-		scheduleReview: (sessionId, paths) =>
+		sessions,
+		options,
+		(sessionId, paths) =>
 			runtime.knowledge.reviewer?.schedule({
 				sessionId,
 				snapshot: { deliverables: paths.map((path) => ({ id: path, path })) },
 				trigger: "deliverable-write",
 			}),
-	});
-	const detachLocalExecution = sessions.onEvent((sessionId, event) =>
-		localExecution.observe(sessionId, event),
+		(event) => sessions.hostEvents.publish("inquiry.local-execution", event),
+		(dispose) => runtime.registerDisposable?.({ dispose }),
 	);
-	runtime.registerDisposable?.({ dispose: detachLocalExecution });
 	const discoveryProjectRoot = resolve(options.discoveryProjectRoot ?? options.defaultCwd ?? process.cwd());
 	const discoveryProjectKey = createHash("sha256")
 		.update(canonicalProjectId(discoveryProjectRoot))

@@ -1,4 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import { once } from "node:events";
+import type { PluginHostEvent } from "@gyoungwe/plugin-api/host-events";
 import type {
 	PluginNativeSessionFacts,
 	PluginRuntimeContext,
@@ -13,12 +15,21 @@ import {
 	bindProcessRuntimeCapabilities,
 	type Declarations,
 	executeProcessRuntimeCapability,
+	type HostEventSubscribeMessage,
 	type Message,
 	type NativeToolUpdate,
 	type PendingInvocation,
 	readProcessRuntimeMessages,
 } from "./process-runtime-messages";
 
+const MAX_QUEUE_COUNT = 256;
+const MAX_QUEUE_BYTES = 1024 * 1024;
+type HostEventSubscription = {
+	unsubscribe: () => void;
+	queue: { encoded: string; bytes: number }[];
+	queuedBytes: number;
+	draining: boolean;
+};
 export class RuntimeProcess {
 	private sequence = 0;
 	private failure: Error | undefined;
@@ -30,29 +41,21 @@ export class RuntimeProcess {
 	private bootstrapBudget: GuestTimeBudget | undefined;
 	private childClosed = false;
 	private shutdownPending: Promise<void> | undefined;
-	private readonly capabilityIds = new Set<string>();
+	private readonly messageIds = new Set<string>();
+	private readonly hostEventSubscriptions = new Map<string, HostEventSubscription>();
 	private readonly resourceCleanups = new Set<Promise<void>>();
 	private readonly hostCapabilities = new Map<
 		string,
-		{
-			callId: string;
-			cancelKey: string;
-			abort: AbortController;
-			settled: Promise<void>;
-		}
+		Record<"callId" | "cancelKey", string> & { abort: AbortController; settled: Promise<void> }
 	>();
 	private readonly pending = new Map<
 		string,
-		PendingInvocation & {
-			budget: GuestTimeBudget;
-			context?: PluginRuntimeContext;
-		}
+		PendingInvocation & { budget: GuestTimeBudget; context?: PluginRuntimeContext }
 	>();
 	private readonly ready: Promise<Declarations>;
 	private readonly bootstrapContext: PluginRuntimeFactoryContext;
 	private resolveReady!: (operations: Declarations) => void;
 	private rejectReady!: (error: Error) => void;
-
 	constructor(
 		private readonly pluginId: string,
 		private readonly child: ChildProcessWithoutNullStreams,
@@ -79,6 +82,8 @@ export class RuntimeProcess {
 				if (call?.callId === message.callId && call.cancelKey === message.cancelKey)
 					call.abort.abort(new Error("Plugin capability locally canceled"));
 			},
+			subscribeHostEvent: (message) => this.subscribeHostEvent(message),
+			unsubscribeHostEvent: (message) => this.unsubscribeHostEvent(message.id),
 			capability: (message) => this.capability(message),
 		});
 		child.stderr.on("data", (chunk: Buffer) => {
@@ -89,6 +94,7 @@ export class RuntimeProcess {
 		this.closed = new Promise((resolve) =>
 			child.once("close", async (code) => {
 				this.childClosed = true;
+				this.disposeHostEventSubscriptions();
 				clearTimeout(this.shutdownTimer);
 				context.signal.removeEventListener("abort", this.stop);
 				lines.close();
@@ -111,12 +117,11 @@ export class RuntimeProcess {
 		context.signal.addEventListener("abort", this.stop, { once: true });
 		if (context.signal.aborted) this.stop();
 	}
-
 	private readonly stop = () => {
+		this.disposeHostEventSubscriptions();
 		this.send({ type: "stop" });
 		this.boundShutdown();
 	};
-
 	private boundShutdown(): void {
 		if (this.shutdownPending) return;
 		const waiting = this.drainCapabilities();
@@ -129,7 +134,6 @@ export class RuntimeProcess {
 			);
 		});
 	}
-
 	private async drainCapabilities(reason?: Error): Promise<void> {
 		while (this.hostCapabilities.size || this.resourceCleanups.size) {
 			const active = [...this.hostCapabilities.values()];
@@ -137,19 +141,87 @@ export class RuntimeProcess {
 			await Promise.allSettled([...active.map((call) => call.settled), ...this.resourceCleanups]);
 		}
 	}
-
 	private fail(error: Error): void {
 		this.failure ??= error;
+		this.disposeHostEventSubscriptions();
 		this.bootstrapBudget?.dispose();
 		for (const pending of this.pending.values()) pending.budget.dispose();
 		for (const call of this.hostCapabilities.values()) call.abort.abort(this.failure);
 		this.child.kill("SIGKILL");
 	}
-
+	private subscribeHostEvent({ id, topic }: HostEventSubscribeMessage): void {
+		const source = this.context.hostEvents;
+		if (!source) {
+			this.fail(new Error("Requested host events without an approved source"));
+			return;
+		}
+		if (this.messageIds.has(id)) {
+			this.fail(new Error("Plugin reused a host event subscription id"));
+			return;
+		}
+		this.messageIds.add(id);
+		const subscription: HostEventSubscription = {
+			unsubscribe: () => undefined,
+			queue: [],
+			queuedBytes: 0,
+			draining: false,
+		};
+		this.hostEventSubscriptions.set(id, subscription);
+		try {
+			const unsubscribe = source.subscribe(topic, (event) => this.enqueueHostEvent(id, subscription, event));
+			if (this.hostEventSubscriptions.get(id) === subscription) subscription.unsubscribe = unsubscribe;
+			else unsubscribe();
+		} catch (error) {
+			this.hostEventSubscriptions.delete(id);
+			this.fail(error instanceof Error ? error : new Error(String(error)));
+		}
+	}
+	private unsubscribeHostEvent(id: string): void {
+		const subscription = this.hostEventSubscriptions.get(id);
+		if (!subscription) return;
+		this.hostEventSubscriptions.delete(id);
+		subscription.unsubscribe();
+		subscription.queue.length = subscription.queuedBytes = 0;
+	}
+	private disposeHostEventSubscriptions(): void {
+		for (const id of this.hostEventSubscriptions.keys()) this.unsubscribeHostEvent(id);
+	}
+	private enqueueHostEvent(id: string, subscription: HostEventSubscription, event: PluginHostEvent): void {
+		if (this.hostEventSubscriptions.get(id) !== subscription || this.failure) return;
+		const encoded = `${JSON.stringify({ type: "host_event", id, ...event })}\n`;
+		const bytes = Buffer.byteLength(encoded, "utf8");
+		if (subscription.queue.length < MAX_QUEUE_COUNT && subscription.queuedBytes + bytes <= MAX_QUEUE_BYTES) {
+			subscription.queue.push({ encoded, bytes });
+			subscription.queuedBytes += bytes;
+			void this.flushHostEventQueue(id, subscription);
+			return;
+		}
+		this.unsubscribeHostEvent(id);
+		this.fail(new Error(`Plugin host event queue overflow: ${this.pluginId} ${event.topic}`));
+	}
+	private async flushHostEventQueue(id: string, subscription: HostEventSubscription): Promise<void> {
+		if (subscription.draining) return;
+		subscription.draining = true;
+		try {
+			while (subscription.queue.length && !this.failure) {
+				if (this.hostEventSubscriptions.get(id) !== subscription) break;
+				const next = subscription.queue[0];
+				if (!next) break;
+				if (!this.child.stdin.write(next.encoded))
+					await Promise.race([once(this.child.stdin, "drain"), this.closed]);
+				if (this.childClosed || this.hostEventSubscriptions.get(id) !== subscription) return;
+				subscription.queue.shift();
+				subscription.queuedBytes -= next.bytes;
+			}
+		} catch (error) {
+			this.fail(error instanceof Error ? error : new Error(String(error)));
+		} finally {
+			subscription.draining = false;
+		}
+	}
 	private send(message: unknown): void {
 		if (!this.failure) this.child.stdin.write(`${JSON.stringify(message)}\n`);
 	}
-
 	private receiveResourceCleanup(message: Extract<Message, { type: "dispose_resources" }>): void {
 		const budget =
 			message.callId === "bootstrap" ? this.bootstrapBudget : this.pending.get(message.callId)?.budget;
@@ -160,31 +232,23 @@ export class RuntimeProcess {
 		budget.pause();
 		const cleanup = this.disposeResources(message.id);
 		this.resourceCleanups.add(cleanup);
-		void cleanup.then(
-			() => {
-				this.resourceCleanups.delete(cleanup);
-				budget.resume();
-			},
-			() => {
-				this.resourceCleanups.delete(cleanup);
-				budget.resume();
-			},
-		);
+		const finish = () => {
+			this.resourceCleanups.delete(cleanup);
+			budget.resume();
+		};
+		void cleanup.then(finish, finish);
 		if (this.shutdownPending) {
 			clearTimeout(this.shutdownTimer);
-			this.shutdownTimer = undefined;
 			this.shutdownPending = undefined;
 			this.boundShutdown();
 		}
 	}
-
 	private async disposeResources(id: string): Promise<void> {
 		try {
 			if (!this.context.resourcesLifecycle) throw new Error("Plugin resource lifecycle was not granted");
 			await this.context.resourcesLifecycle.dispose();
 			this.send({ type: "capability_result", id, ok: true, value: null });
 		} catch (error) {
-			// This is a cleanup receipt, not a fresh capability invocation after caller revocation.
 			this.send({
 				type: "capability_result",
 				id,
@@ -193,15 +257,14 @@ export class RuntimeProcess {
 			});
 		}
 	}
-
 	private capability(message: Extract<Message, { type: "capability" }>): void {
 		const context =
 			message.callId === "bootstrap" ? this.bootstrapContext : this.pending.get(message.callId)?.context;
-		if (!context || this.capabilityIds.has(message.id)) {
+		if (!context || this.messageIds.has(message.id)) {
 			this.fail(new Error("Plugin capability requested without a unique live host invocation"));
 			return;
 		}
-		this.capabilityIds.add(message.id);
+		this.messageIds.add(message.id);
 		const budget =
 			message.callId === "bootstrap" ? this.bootstrapBudget : this.pending.get(message.callId)?.budget;
 		budget?.pause();
@@ -215,18 +278,12 @@ export class RuntimeProcess {
 			abort,
 			settled,
 		});
-		void settled.then(
-			() => {
-				this.hostCapabilities.delete(message.id);
-				budget?.resume();
-			},
-			() => {
-				this.hostCapabilities.delete(message.id);
-				budget?.resume();
-			},
-		);
+		const finish = () => {
+			this.hostCapabilities.delete(message.id);
+			budget?.resume();
+		};
+		void settled.then(finish, finish);
 	}
-
 	async start(): Promise<PluginRuntimeInstance<HostNativeSession>> {
 		const budget = new GuestTimeBudget(() =>
 			this.fail(new Error(`Plugin runtime ${this.pluginId} startup timed out after 15000ms`)),
@@ -237,6 +294,7 @@ export class RuntimeProcess {
 			applicationId: this.context.applicationId,
 			resources: this.context.resources,
 			resourcesLifecycle: this.context.resourcesLifecycle !== undefined,
+			hostEvents: this.context.hostEvents !== undefined,
 			resource: this.resource,
 		});
 		try {
@@ -293,14 +351,12 @@ export class RuntimeProcess {
 			this.bootstrapBudget = undefined;
 		}
 	}
-
 	private attachNative(facts?: PluginNativeSessionFacts): Promise<HostNativeSession> {
 		return attachProcessNative(
 			{ request: this.request.bind(this), context: this.context, nativeDisposers: this.nativeDisposers },
 			facts,
 		);
 	}
-
 	private request(
 		type: Parameters<ProcessNativeHost["request"]>[0],
 		payload: Record<string, unknown>,

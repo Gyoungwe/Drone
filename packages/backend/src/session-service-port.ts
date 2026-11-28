@@ -40,6 +40,10 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	getPluginSourceCapabilities(
 		source: import("./plugins/coordinator").PluginRuntimeSource,
 	): ReturnType<import("./services/session-api").SessionServiceApi["getPluginSourceCapabilities"]>;
+	getPluginHostEvents(
+		source: import("./plugins/coordinator").PluginRuntimeSource,
+		signal: AbortSignal,
+	): ReturnType<import("./services/session-api").SessionServiceApi["getPluginHostEvents"]>;
 	getTaskGrants(): import("./plugins/task-grants").TaskGrantStore;
 	getPluginWorkspaceCapabilities: import("./services/session-api").SessionServiceApi["getPluginWorkspaceCapabilities"];
 	getStorageRegistry(): StorageRegistry;
