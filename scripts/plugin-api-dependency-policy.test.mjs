@@ -9,8 +9,9 @@ import { checkPluginDependency } from "./plugin-api-dependency-policy.mjs";
 
 const candidate = "vendor/gyoungwe-plugin-api-2.0.0-deadbeef.tgz";
 const apiName = "@gyoungwe/plugin-api";
-const releaseUrl =
-	"https://github.com/Gyoungwe/Drone/releases/download/plugin-api-v2.0.0/gyoungwe-plugin-api-2.0.0.tgz";
+const releaseUrlFor = (version) =>
+	`https://github.com/Gyoungwe/Drone/releases/download/plugin-api-v${version}/gyoungwe-plugin-api-${version}.tgz`;
+const releaseUrl = releaseUrlFor("2.0.0");
 let root, hostRoot, pluginRoot, location;
 const json = (path, value) => writeFile(path, JSON.stringify(value));
 const git = (directory, ...args) => execFileSync("git", ["-C", directory, ...args], { stdio: "pipe" });
@@ -65,20 +66,22 @@ afterEach(async () => {
 	await rm(root, { recursive: true, force: true });
 });
 
-async function releaseFixture() {
+async function releaseFixture({ hostVersion = "2.0.0", pinnedVersion = hostVersion } = {}) {
 	const tarball = join(hostRoot, candidate);
 	const bytes = await readFile(tarball);
 	const sha256 = createHash("sha256").update(bytes).digest("hex");
 	const integrity = `sha512-${createHash("sha512").update(bytes).digest("base64")}`;
+	const url = releaseUrlFor(pinnedVersion);
+	await json(join(hostRoot, "packages/plugin-api/package.json"), { name: apiName, version: hostVersion });
 	const manifest = {
 		private: true,
-		devDependencies: { [apiName]: releaseUrl },
+		devDependencies: { [apiName]: url },
 		dronePluginApiSha256: sha256,
 	};
 	const workspace = "packages/example";
 	const manifestPath = join(pluginRoot, workspace, "package.json");
-	const leaf = { dependencies: { [apiName]: releaseUrl } };
-	const installed = { version: "2.0.0", resolved: releaseUrl, integrity };
+	const leaf = { dependencies: { [apiName]: url } };
+	const installed = { version: pinnedVersion, resolved: url, integrity };
 	const lock = {
 		packages: {
 			"": { devDependencies: manifest.devDependencies },
@@ -91,7 +94,7 @@ async function releaseFixture() {
 	await json(location.manifestPath, manifest);
 	await json(manifestPath, leaf);
 	await json(lockPath, lock);
-	return { tarball, bytes, sha256, manifest, manifestPath, lock, lockPath, installed, workspace };
+	return { tarball, bytes, sha256, url, manifest, manifestPath, lock, lockPath, installed, workspace };
 }
 
 test("accepts release URL pins when root, workspace, lock and verified bytes agree", async () => {
@@ -106,6 +109,42 @@ test("accepts release URL pins when root, workspace, lock and verified bytes agr
 			releaseTarball: bytes,
 		}),
 		pin,
+	);
+});
+
+test("accepts an older same-major release pin before the host release", async () => {
+	const { url, sha256 } = await releaseFixture({ hostVersion: "2.1.0", pinnedVersion: "2.0.0" });
+	assert.deepEqual(checkPluginDependency(url, location), { url, version: "2.0.0", sha256 });
+});
+
+test("rejects cross-major and host-ahead release pins", async () => {
+	for (const pinnedVersion of ["1.2.0", "3.0.0", "2.1.1", "2.2.0"]) {
+		const { url } = await releaseFixture({ hostVersion: "2.1.0", pinnedVersion });
+		assert.throws(() => checkPluginDependency(url, location), /canonical Release URL/u, pinnedVersion);
+	}
+});
+
+test("rejects a workspace release pin that differs from the root pin", async () => {
+	const { manifestPath, workspace, lock, lockPath } = await releaseFixture({
+		hostVersion: "2.1.0",
+		pinnedVersion: "2.0.0",
+	});
+	const workspaceUrl = releaseUrlFor("2.1.0");
+	lock.packages[workspace].dependencies[apiName] = workspaceUrl;
+	await json(lockPath, lock);
+	await json(manifestPath, { dependencies: { [apiName]: workspaceUrl } });
+	const workspaceDependency = { ...location, manifestPath, section: "dependencies" };
+	assert.throws(
+		() => checkPluginDependency(workspaceUrl, workspaceDependency),
+		/root dev dependency must use the Release URL/u,
+	);
+});
+
+test("requires the host version when verifying an explicit release tarball", async () => {
+	const { url, bytes } = await releaseFixture({ hostVersion: "2.1.0", pinnedVersion: "2.0.0" });
+	assert.throws(
+		() => checkPluginDependency(url, { ...location, releaseTarball: bytes }),
+		/canonical Release URL/u,
 	);
 });
 

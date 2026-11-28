@@ -7,6 +7,8 @@ import { sha256, verifyPackageTarball } from "./fetch-plugins-release.mjs";
 const apiName = "@gyoungwe/plugin-api";
 const installPath = `node_modules/${apiName}`;
 export const stableVersion = /^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*)){2}$/u;
+const canonicalReleaseUrl =
+	/^https:\/\/github\.com\/Gyoungwe\/Drone\/releases\/download\/plugin-api-v((?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*)){2})\/gyoungwe-plugin-api-\1\.tgz$/u;
 const sha512Integrity = (bytes) => `sha512-${createHash("sha512").update(bytes).digest("base64")}`;
 
 function assert(condition, message) {
@@ -15,6 +17,31 @@ function assert(condition, message) {
 
 function readJson(path) {
 	return JSON.parse(readFileSync(path, "utf8"));
+}
+
+function compareSemver(left, right) {
+	const leftParts = left.split(".").map(BigInt);
+	const rightParts = right.split(".").map(BigInt);
+	for (let index = 0; index < 3; index += 1) {
+		if (leftParts[index] < rightParts[index]) return -1;
+		if (leftParts[index] > rightParts[index]) return 1;
+	}
+	return 0;
+}
+
+function parseCompatibleReleasePin(value, hostVersion, releaseTarball) {
+	const match = canonicalReleaseUrl.exec(value);
+	assert(match, "plugin-api must use the canonical Release URL with matching tag and asset versions");
+	const pinnedVersion = match[1];
+	const pinnedMajor = pinnedVersion.split(".")[0];
+	const hostMajor = hostVersion.split(".")[0];
+	assert(
+		pinnedMajor === hostMajor &&
+			compareSemver(pinnedVersion, hostVersion) <= 0 &&
+			(releaseTarball === undefined || pinnedVersion === hostVersion),
+		"plugin-api pin must use a compatible canonical Release URL for the host version",
+	);
+	return { pinnedUrl: value, pinnedVersion };
 }
 
 function committedArtifact(root, path) {
@@ -93,34 +120,33 @@ function checkReleaseInstalls(packages, version, url, integrity) {
 
 function checkRelease(value, options, rootManifest, workspace) {
 	const { hostRoot, pluginRoot, releaseTarball } = options;
-	const { name, version } = readJson(join(hostRoot, "packages/plugin-api/package.json"));
+	const { name, version: hostVersion } = readJson(join(hostRoot, "packages/plugin-api/package.json"));
 	assert(
-		name === apiName && typeof version === "string" && stableVersion.test(version),
+		name === apiName && typeof hostVersion === "string" && stableVersion.test(hostVersion),
 		"invalid host plugin-api package identity",
 	);
-	const url = `https://github.com/Gyoungwe/Drone/releases/download/plugin-api-v${version}/gyoungwe-plugin-api-${version}.tgz`;
-	assert(value === url, `plugin-api must use the canonical Release URL: ${url}`);
+	const { pinnedUrl, pinnedVersion } = parseCompatibleReleasePin(value, hostVersion, releaseTarball);
 	assert(rootManifest.private === true, "release workspace must be private");
 	assert(
-		rootManifest.devDependencies?.[apiName] === url,
+		rootManifest.devDependencies?.[apiName] === pinnedUrl,
 		"plugin-api root dev dependency must use the Release URL",
 	);
 	const digest = rootManifest.dronePluginApiSha256;
 	assert(typeof digest === "string" && /^[0-9a-f]{64}$/u.test(digest), "invalid root dronePluginApiSha256");
 	const { packages } = readJson(join(pluginRoot, "package-lock.json"));
-	assert(packages?.[""]?.devDependencies?.[apiName] === url, "plugin-api root lock is stale");
+	assert(packages?.[""]?.devDependencies?.[apiName] === pinnedUrl, "plugin-api root lock is stale");
 	if (workspace) {
 		assert(
-			packages[workspace]?.dependencies?.[apiName] === url,
+			packages[workspace]?.dependencies?.[apiName] === pinnedUrl,
 			`${workspace}: plugin-api workspace lock is stale`,
 		);
 	}
 	const integrity =
 		releaseTarball === undefined
 			? undefined
-			: sha512Integrity(verifyPluginApiTarball(releaseTarball, version, digest));
-	checkReleaseInstalls(packages, version, url, integrity);
-	return { url, version, sha256: digest };
+			: sha512Integrity(verifyPluginApiTarball(releaseTarball, pinnedVersion, digest));
+	checkReleaseInstalls(packages, pinnedVersion, pinnedUrl, integrity);
+	return { url: pinnedUrl, version: pinnedVersion, sha256: digest };
 }
 
 export function checkPluginDependency(value, options) {
