@@ -6,6 +6,7 @@ import type { PluginRuntimeContext, PluginRuntimeFactoryContext } from "@gyoungw
 import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
 import { toolProgressSchema } from "../tool-progress";
+import { isHostEventTopic } from "./host-event-topics";
 import { callWithMeasuredEnvelope, type HostCapabilityPort } from "./runtime-capabilities";
 
 const declarationSchema = Type.Record(
@@ -61,9 +62,26 @@ const messageSchema = Type.Union([
 		},
 		{ additionalProperties: false },
 	),
+	Type.Object(
+		{
+			type: Type.Literal("host_events_subscribe"),
+			id: Type.String({ minLength: 1, maxLength: 128 }),
+			topic: Type.String(),
+		},
+		{ additionalProperties: false },
+	),
+	Type.Object(
+		{
+			type: Type.Literal("host_events_unsubscribe"),
+			id: Type.String({ minLength: 1, maxLength: 128 }),
+		},
+		{ additionalProperties: false },
+	),
 ]);
 type WorkerMessage = Static<typeof messageSchema>;
 type CapabilityMessage = Extract<WorkerMessage, { type: "capability" }> & { readonly envelopeBytes: number };
+export type HostEventSubscribeMessage = Extract<WorkerMessage, { type: "host_events_subscribe" }>;
+export type HostEventUnsubscribeMessage = Extract<WorkerMessage, { type: "host_events_unsubscribe" }>;
 export type Message = Exclude<WorkerMessage, { type: "capability" }> | CapabilityMessage;
 export type Declarations = { operations: Static<typeof declarationSchema>; native: boolean };
 
@@ -83,6 +101,8 @@ interface ProcessRuntimeMessageHandlers {
 	readonly ready: (declarations: Declarations) => void;
 	readonly disposeResources: (message: Extract<Message, { type: "dispose_resources" }>) => void;
 	readonly cancelCapability: (message: Extract<Message, { type: "cancel_capability" }>) => void;
+	readonly subscribeHostEvent: (message: HostEventSubscribeMessage) => void;
+	readonly unsubscribeHostEvent: (message: HostEventUnsubscribeMessage) => void;
 	readonly capability: (message: CapabilityMessage) => void;
 }
 
@@ -101,6 +121,10 @@ export function readProcessRuntimeMessages(
 		}
 		if (!Check(messageSchema, message)) {
 			handlers.fail(new Error("Plugin runtime emitted an invalid protocol message"));
+			return;
+		}
+		if (message.type === "host_events_subscribe" && !isHostEventTopic(message.topic)) {
+			handlers.fail(new Error("Plugin runtime requested an invalid host event topic"));
 			return;
 		}
 		if (handlers.failed()) return;
@@ -132,6 +156,14 @@ function receive(
 	}
 	if (message.type === "cancel_capability") {
 		handlers.cancelCapability(message);
+		return;
+	}
+	if (message.type === "host_events_subscribe") {
+		handlers.subscribeHostEvent(message);
+		return;
+	}
+	if (message.type === "host_events_unsubscribe") {
+		handlers.unsubscribeHostEvent(message);
 		return;
 	}
 	if (message.type === "changed") {

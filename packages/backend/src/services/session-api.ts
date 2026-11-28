@@ -20,9 +20,11 @@ import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
 import { agentSlotCapabilityHandlers } from "../plugins/agent-slot-capabilities";
 import type { PluginRuntimeSource } from "../plugins/coordinator";
+import { HostEventBridge } from "../plugins/host-event-bridge";
 import { modelCapabilityHandlers } from "../plugins/model-capabilities";
 import { pdfTextCapabilityHandlers } from "../plugins/pdf-text-capability";
 import { PluginCredentialStore } from "../plugins/plugin-credentials";
+import { hostEventsApproved } from "../plugins/policy-consent";
 import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
 import {
@@ -55,6 +57,7 @@ import { SessionSettingsApi } from "./session-api-settings";
 export class SessionServiceApi extends SessionSettingsApi {
 	private readonly pluginSessionRecords = new SessionRecordStore();
 	private readonly pluginCredentials = new PluginCredentialStore();
+	readonly hostEvents = new HostEventBridge();
 	async init(): Promise<void> {
 		await this.host.knowledge.connect();
 		await this.host.getModelRuntime();
@@ -106,6 +109,9 @@ export class SessionServiceApi extends SessionSettingsApi {
 	getPluginSourceCapabilities(source: PluginRuntimeSource) {
 		const { taskGrants, pluginSessions: sessions } = this.host;
 		return sourceCapabilityHandlers({ taskGrants, sessions, credentials: this.pluginCredentials }, source);
+	}
+	getPluginHostEvents(source: PluginRuntimeSource, signal: AbortSignal) {
+		return hostEventsApproved(source) ? this.hostEvents.source(source.hostEvents, signal) : undefined;
 	}
 
 	/** Workspace reads under the calling session's current read permissions, and PDF text of what was read. */

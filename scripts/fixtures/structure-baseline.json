@@ -9,7 +9,7 @@
 	"class-extends\tpackages/desktop/src/renderer/src/plugins/PluginBoundary.tsx": 1,
 	"file-lines\tpackages/backend/src/capabilities/runtime.ts": 735,
 	"file-lines\tpackages/backend/src/create-backend.test.ts": 998,
-	"file-lines\tpackages/backend/src/create-backend.ts": 888,
+	"file-lines\tpackages/backend/src/create-backend.ts": 879,
 	"file-lines\tpackages/backend/src/discovery/service.test.ts": 417,
 	"file-lines\tpackages/backend/src/knowledge/ui.ts": 950,
 	"file-lines\tpackages/backend/src/mcp/service.ts": 442,

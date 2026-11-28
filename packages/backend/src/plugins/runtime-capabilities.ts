@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { PluginHostEventSource } from "@gyoungwe/plugin-api/host-events";
 import type { PluginNativeSession } from "@gyoungwe/plugin-api/native";
 import type {
 	PluginResourcesLifecycle,
@@ -108,6 +109,7 @@ export interface PluginCapabilityHandler {
 export interface PluginRuntimeCapabilitiesOptions {
 	readonly handlers: Readonly<Record<string, PluginCapabilityHandler>>;
 	readonly resources: readonly PluginRuntimeResource[];
+	readonly hostEvents?: PluginHostEventSource;
 	readonly resourcesLifecycle?: PluginResourcesLifecycle;
 	/** Drain and close host-owned resources; attempted even if domain disposal fails. */
 	dispose?(): Promise<void>;

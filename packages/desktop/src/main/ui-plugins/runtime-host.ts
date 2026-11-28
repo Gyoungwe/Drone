@@ -37,6 +37,7 @@ export function createDesktopRuntime(
 		| "getStorageRegistry"
 		| "getPluginSessionCapabilities"
 		| "getPluginSourceCapabilities"
+		| "getPluginHostEvents"
 		| "getTaskGrants"
 		| "getPluginWorkspaceCapabilities"
 	>,
@@ -179,8 +180,12 @@ export function createDesktopRuntime(
 				source,
 				activation,
 			);
+			const hostEvents = source.hostEvents?.length
+				? sessions.getPluginHostEvents(source, activation.signal)
+				: undefined;
 			return {
 				...resourceCapabilities,
+				...(hostEvents ? { hostEvents } : {}),
 				handlers: {
 					...resourceCapabilities.handlers,
 					...executionCapabilities?.handlers,

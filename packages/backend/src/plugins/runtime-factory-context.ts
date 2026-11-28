@@ -12,6 +12,7 @@ export function createRuntimeFactoryContext(
 		applicationId,
 		signal: abort.signal,
 		resources: ports.resources,
+		...(ports.hostEvents ? { hostEvents: ports.hostEvents } : {}),
 		...(ports.resourcesLifecycle ? { resourcesLifecycle: ports.resourcesLifecycle } : {}),
 		capabilities: capabilities.port,
 		events,
