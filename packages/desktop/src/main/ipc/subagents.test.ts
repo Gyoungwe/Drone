@@ -13,6 +13,7 @@ vi.mock("electron", () => ({
 	},
 }));
 
+import { canonicalProjectId } from "@drone/backend";
 import { channelOf, SubagentsContract } from "@drone/shared";
 import { registerSubagentsIpc } from "./subagents";
 
@@ -112,5 +113,51 @@ describe("registerSubagentsIpc", () => {
 		const list = handlerFor("list");
 		expect(await list({}, "session-2")).toMatchObject({ sessionId: "session-2" });
 		expect(service.listSession).toHaveBeenCalledWith("session-2");
+	});
+
+	it("publishes inquiry.decision via sessions.hostEvents on dispatch without backend.inquiry", async () => {
+		const publish = vi.fn();
+		const run = {
+			runId: "run-9",
+			dispatchId: "d9",
+			parentSessionId: "session-9",
+			agent: "scout",
+			source: "builtin" as const,
+			task: "Inspect",
+			cwd: "/tmp/subagent-proj",
+			requiredTools: [],
+			followUp: true,
+			status: "running" as const,
+			contextState: "pending" as const,
+			createdAt: 1,
+			pendingApprovalIds: [],
+		};
+		const service = {
+			listSession: vi.fn(),
+			dispatch: vi.fn(async () => ({ dispatchId: "d9", runs: [run] })),
+			abort: vi.fn(async () => true),
+			listRuns: vi.fn(async () => []),
+			listAvailable: vi.fn(async () => []),
+		};
+		const backend = {
+			sessions: { hostEvents: { publish } },
+			subagents: service,
+		} as unknown as Parameters<typeof registerSubagentsIpc>[0];
+		registerSubagentsIpc(backend);
+
+		const dispatch = handlerFor("dispatch");
+		const receipt = await dispatch({}, "session-9", { tasks: [{ agent: "scout", task: "Inspect" }] });
+		expect(receipt).toEqual({ dispatchId: "d9", runs: [run] });
+		expect(publish).toHaveBeenCalledWith(
+			"inquiry.decision",
+			expect.objectContaining({
+				id: "subagent-dispatch:run-9",
+				kind: "subagent-dispatch",
+				summary: "Dispatched 1 subagent run(s)",
+				basis: ["run-9"],
+				projectId: canonicalProjectId("/tmp/subagent-proj"),
+				at: expect.any(String),
+			}),
+		);
 	});
 });

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { channelOf, DecisionsContract, SessionsContract } from "@drone/shared";
+import { channelOf, SessionsContract } from "@drone/shared";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { registerAppIpc } from "../../packages/desktop/src/main/ipc/app.ts";
 import { verifyResourceReaders } from "./resource-checks.mjs";
@@ -23,10 +23,6 @@ async function run() {
 			path = join(cwd, "报告 (1)#100%.csv");
 		await writeFile(path, "sample,value\nfixture,1\n");
 		registerAppIpc({});
-		// TasksPane reads the decisions projection on mount.  This acceptance
-		// fixture has no inquiry backend, so return the empty, valid projection
-		// instead of letting an unrelated IPC absence poison the UI console.
-		ipcMain.handle(channelOf(DecisionsContract, "list"), () => []);
 		let prompts = 0;
 		ipcMain.handle(channelOf(SessionsContract, "prompt"), () => {
 			prompts++;

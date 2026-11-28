@@ -16,7 +16,6 @@ vi.mock("./ProcessPane", () => ({ ProcessPane: () => null }));
 vi.mock("./SubagentsPane", () => ({ SubagentsPane: () => null }));
 vi.mock("./ReviewerCard", () => ({ ReviewerCard: () => null }));
 vi.mock("./SessionOverviewSections", () => ({
-	DecisionsSection: () => null,
 	SessionOverviewSections: () => null,
 }));
 

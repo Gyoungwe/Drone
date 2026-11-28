@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
-import type { InquiryArtifactProvenance, InquiryArtifactRecord } from "@drone/shared";
+import type { UiPluginInfo } from "@drone/shared";
 import type { ArtifactContributionProps } from "@gyoungwe/plugin-api/ui";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import React, { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import React from "react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useUiPluginRegistry } from "../../plugins/registry";
 import { UI_REGIONS } from "../../plugins/slots";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
@@ -30,8 +29,6 @@ vi.mock("../../stores/transcript", () => ({
 vi.mock("../../stores/ui", () => ({ useUiStore: () => ({ openResourcePreview: vi.fn() }) }));
 vi.mock("../../api", () => ({
 	getPi: () => ({
-		listArtifacts: async () => [record, { ...record, id: "artifact-2", path: "results/second.tsv" }],
-		onRerunUpdated: () => vi.fn(),
 		getEvidenceOverview: async () => ({
 			analyses: [
 				{ id: "overview-analysis", question: "fixture", assay: "fixture", stage: "design", artifactCount: 0 },
@@ -49,21 +46,32 @@ vi.mock("./ContextUsageMeter", () => ({ ContextUsageMeter: () => null }));
 vi.mock("../chat/Markdown", () => ({ Markdown: () => null }));
 vi.mock("./SessionOverviewSections", () => ({
 	SessionOverviewSections: () => null,
-	DecisionsSection: () => null,
 }));
 
 vi.stubGlobal("React", React);
 
-import { ArtifactProvenanceCard, ArtifactsPane } from "./ArtifactsPane";
+import { ArtifactsPane } from "./ArtifactsPane";
 import { OverviewPane } from "./OverviewPane";
+
+function inquiryPluginFixture(overrides: Partial<UiPluginInfo> = {}): UiPluginInfo {
+	return {
+		name: "inquiry-fixture",
+		slots: {},
+		contributions: [{ id: "inquiry", region: "panel.tab", title: "Inquiry", export: "InquiryPanel" }],
+		enabled: true,
+		trusted: true,
+		built: true,
+		...overrides,
+	};
+}
 
 afterEach(cleanup);
 beforeEach(() => {
 	useUiPluginRegistry.setState({ contributions: {}, loadNonces: {}, crashCounts: {} });
-	useUiPluginsStore.setState({ config: { enabled: true, plugins: {}, assignments: {} } });
+	useUiPluginsStore.setState({ config: { enabled: true, plugins: {}, assignments: {} }, plugins: [] });
 });
 
-it("mounts each Artifacts contribution once with its surface and host IDs", async () => {
+it("mounts the evidence.pane contribution once with its surface and host IDs", async () => {
 	const Panel = vi.fn((props: ArtifactContributionProps) => (
 		<p data-testid="artifact-contribution">{`${props.surface}:${props.artifactId}`}</p>
 	));
@@ -78,28 +86,10 @@ it("mounts each Artifacts contribution once with its surface and host IDs", asyn
 		[],
 	);
 	render(<ArtifactsPane sessionId="host-session" />);
-	const section = await screen.findByTestId("inquiry-artifacts");
-	expect(section.querySelectorAll('[data-testid="artifact-provenance-card"]')).toHaveLength(2);
-	expect(screen.getByText(record.path)).toBeTruthy();
-	expect(screen.getByTestId("evidence-panel")).toBeTruthy();
+	expect(await screen.findByTestId("evidence-panel")).toBeTruthy();
 	expect(screen.getAllByTestId("artifact-contribution").map((element) => element.textContent)).toEqual([
-		"artifacts.card:artifact-1",
-		"artifacts.card:artifact-2",
 		"evidence.pane:null",
 	]);
-	expect(
-		Panel.mock.calls.map(([props]) => props).filter((props) => props.surface === "artifacts.card"),
-	).toEqual(
-		["artifact-1", "artifact-2"].map((artifactId) => ({
-			surface: "artifacts.card",
-			artifactId,
-			analysisId: null,
-			capabilityId: null,
-			sessionId: "host-session",
-			workspaceId: null,
-			renderDefault: expect.any(Function),
-		})),
-	);
 	const evidenceProps = {
 		surface: "evidence.pane",
 		artifactId: null,
@@ -146,135 +136,38 @@ it("mounts the Overview contribution exactly once on evidence.overview", async (
 	for (const [props] of Panel.mock.calls) expect(props).toEqual(expected);
 });
 
-const record: InquiryArtifactRecord = {
-	id: "artifact-1",
-	schemaVersion: 1,
-	projectId: "project-1",
-	location: "remote",
-	path: "results/report.tsv",
-	bytes: 12,
-	sha256: "a".repeat(64),
-	source: { kind: "run", id: "run-1" },
-	purpose: "deliverable",
-	status: "valid",
-	parentIds: [],
-	createdAt: "2026-01-01T00:00:00.000Z",
-	updatedAt: "2026-01-01T00:00:00.000Z",
-};
-
-function provenance(status: InquiryArtifactProvenance["reproducibility"]): InquiryArtifactProvenance {
-	return {
-		artifact: record,
-		parentChain: [],
-		parentChainTruncated: false,
-		attempts: [
-			{
-				id: "attempt-1",
-				schemaVersion: 1,
-				projectId: "project-1",
-				hypothesisIds: [],
-				parameters: { seed: 1 },
-				artifactIds: [record.id],
-				outcome: "succeeded",
-				enteredReport: false,
-				startedAt: "2026-01-01T00:00:00.000Z",
-			},
-		],
-		reproducibility: status,
-	};
-}
-
-describe("ArtifactProvenanceCard", () => {
-	it("renders all three reproducibility badges", () => {
-		for (const status of ["reproducible", "partial", "not-reproducible"] as const) {
-			const html = renderToStaticMarkup(
-				createElement(ArtifactProvenanceCard, {
-					record,
-					provenance: provenance(status),
-					expanded: true,
-					onToggle: () => {},
-					onRerun: () => {},
-				}),
-			);
-			expect(html).toContain(`data-reproducibility="${status}"`);
-			expect(html).toContain(`panel.artifactProvenance.badge.${status}`);
-		}
+it("shows the Inquiry plugin available hint when a valid built Inquiry panel.tab plugin is enabled", () => {
+	useUiPluginsStore.setState({
+		config: { enabled: true, plugins: {}, assignments: {} },
+		plugins: [inquiryPluginFixture()],
 	});
+	render(<ArtifactsPane sessionId="host-session" />);
+	const status = screen.getByTestId("inquiry-plugin-status");
+	expect(status.getAttribute("data-ready")).toBe("true");
+	expect(screen.getByText("panel.inquiryPlugin.available")).toBeTruthy();
+	expect(screen.getByText("panel.inquiryPlugin.availableHint")).toBeTruthy();
+	expect(status.querySelector("button")).toBeNull();
+});
 
-	it("renders an expandable source section and rerun only for reproducible artifacts", () => {
-		const reproducible = renderToStaticMarkup(
-			createElement(ArtifactProvenanceCard, {
-				record,
-				provenance: provenance("reproducible"),
-				expanded: true,
-				onToggle: () => {},
-				onRerun: () => {},
-			}),
-		);
-		expect(reproducible).toContain('data-testid="artifact-provenance-details"');
-		expect(reproducible).toContain("panel.artifactProvenance.rerun");
-		const superseded = renderToStaticMarkup(
-			createElement(ArtifactProvenanceCard, {
-				record,
-				provenance: provenance("reproducible"),
-				expanded: true,
-				rerunResult: {
-					key: "panel.artifactProvenance.superseded",
-					difference: "sha256 differs",
-					sha256: "b".repeat(64),
-				},
-				onToggle: () => {},
-				onRerun: () => {},
-			}),
-		);
-		expect(superseded).toContain("sha256 differs");
-		const partial = renderToStaticMarkup(
-			createElement(ArtifactProvenanceCard, {
-				record,
-				provenance: provenance("partial"),
-				expanded: true,
-				onToggle: () => {},
-				onRerun: () => {},
-			}),
-		);
-		expect(partial).not.toContain("panel.artifactProvenance.rerun");
-		const local = renderToStaticMarkup(
-			createElement(ArtifactProvenanceCard, {
-				record: { ...record, location: "local" },
-				provenance: provenance("reproducible"),
-				expanded: true,
-				onToggle: () => {},
-				onRerun: () => {},
-			}),
-		);
-		expect(local).not.toContain("panel.artifactProvenance.rerun");
-	});
-
-	it("renders persisted submitted, running, reproduced, inconsistent, and failed states", () => {
-		for (const status of ["submitted", "running", "reproduced", "superseded", "failed"] as const) {
-			const html = renderToStaticMarkup(
-				createElement(ArtifactProvenanceCard, {
-					record,
-					provenance: {
-						...provenance("reproducible"),
-						rerun: {
-							id: "rerun-1",
-							schemaVersion: 1,
-							projectId: "project-1",
-							sourceArtifactId: record.id,
-							jobId: "job-1",
-							status,
-							previousSha256: record.sha256,
-							submittedAt: "2026-01-01T00:00:00.000Z",
-							updatedAt: "2026-01-01T00:00:00.000Z",
-						},
-					},
-					expanded: true,
-					onToggle: () => {},
-					onRerun: () => {},
-				}),
-			);
-			expect(html).toContain(`panel.artifactProvenance.${status}`);
-		}
-	});
+it("shows the Inquiry plugin unavailable hint when disabled, unbuilt, invalid, or globally turned off", () => {
+	const cases: Array<{ enabled: boolean; plugins: UiPluginInfo[] }> = [
+		{ enabled: true, plugins: [] },
+		{ enabled: false, plugins: [inquiryPluginFixture()] },
+		{ enabled: true, plugins: [inquiryPluginFixture({ enabled: false })] },
+		{ enabled: true, plugins: [inquiryPluginFixture({ built: false })] },
+		{ enabled: true, plugins: [inquiryPluginFixture({ buildError: "compile failed" })] },
+		{ enabled: true, plugins: [inquiryPluginFixture({ invalidReason: "bad manifest" })] },
+	];
+	for (const state of cases) {
+		useUiPluginsStore.setState({
+			config: { enabled: state.enabled, plugins: {}, assignments: {} },
+			plugins: state.plugins,
+		});
+		render(<ArtifactsPane sessionId="host-session" />);
+		const status = screen.getByTestId("inquiry-plugin-status");
+		expect(status.getAttribute("data-ready")).toBe("false");
+		expect(screen.getByText("panel.inquiryPlugin.unavailable")).toBeTruthy();
+		expect(screen.getByText("panel.inquiryPlugin.unavailableHint")).toBeTruthy();
+		cleanup();
+	}
 });
