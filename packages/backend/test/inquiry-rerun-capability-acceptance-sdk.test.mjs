@@ -74,7 +74,7 @@ async function offlineModel(agentDir) {
 	return modelRuntime;
 }
 
-async function startBackend(cwd, projectsDir, agentDir, sources) {
+async function startBackend(cwd, projectsDir, agentDir, sources, jobs) {
 	const resubmitJob = vi.fn(async () => ({ id: "rerun-job-1" }));
 	live.resubmitJob = resubmitJob;
 	live.backend = createBackend({
@@ -93,6 +93,7 @@ async function startBackend(cwd, projectsDir, agentDir, sources) {
 			noPromptTemplates: true,
 		},
 	});
+	vi.spyOn(live.backend.compute, "getJob").mockImplementation(async (jobId) => jobs.get(jobId) ?? null);
 	const service = live.backend.sessions;
 	service.modelRuntime = await offlineModel(agentDir);
 	const approvals = [];
@@ -149,34 +150,31 @@ async function createClients(service, registry, sources, cwd) {
 	return { clients, meta };
 }
 
-async function recordArtifact(inquiry, cwd, sha256 = "a".repeat(64)) {
+function makeArtifactFixture(cwd, jobId, sha256 = "a".repeat(64)) {
 	const projectId = canonicalProjectId(cwd);
-	await inquiry.recordComputeEvent({
-		id: "compute-event-1",
-		jobId: "source-job-1",
-		type: "collected",
-		at: "2026-11-28T00:00:00.000Z",
-		status: "succeeded",
+	const artifact = {
+		id: `run:${jobId}:results/result.csv:${sha256}`,
 		projectId,
-		runId: "source-run-1",
-		codeFingerprint: "d".repeat(64),
+		path: "results/result.csv",
+		sha256,
+		runId: jobId,
 		runProvenance: { workflow: "workflow-1" },
-		artifacts: [
-			{
-				path: "results/result.csv",
-				bytes: 12,
-				sha256,
-				sourceKind: "run",
-				sourceId: "source-run-1",
-			},
-		],
-	});
-	await inquiry.drainEvents();
-	const artifact = (await inquiry.listArtifacts(projectId))[0];
-	if (!artifact) throw new Error("Compute event did not persist its artifact");
-	const provenance = await inquiry.artifactProvenance(artifact.id, projectId);
-	if (!provenance) throw new Error("Host artifact provenance was not available");
-	return { artifact, projectId, provenance };
+	};
+	const provenance = {
+		artifact,
+		parentChain: [],
+		parentChainTruncated: false,
+		attempts: [{ parameters: { jobId } }],
+		runProvenance: { workflow: "workflow-1" },
+		reproducibility: "reproducible",
+	};
+	const job = {
+		jobId,
+		hostAlias: "hpc-1",
+		status: "succeeded",
+		spec: { workDir: cwd, workflow: { name: "workflow-1", modules: [], steps: [] } },
+	};
+	return { artifact, projectId, provenance, job };
 }
 
 async function invokeRerun(client, artifactId, provenance, extra = {}) {
@@ -198,12 +196,18 @@ async function verifyGates(
 		"Plugin capability is not registered: inquiry.rerun",
 	);
 	await expect(invokeRerun(rerun, foreignArtifact.artifact.id, foreignArtifact.provenance)).rejects.toThrow(
-		`Artifact not found: ${foreignArtifact.artifact.id}`,
+		"Artifact does not belong to the caller project",
 	);
-	const modified = { ...provenance, artifact: { ...provenance.artifact, sha256: "b".repeat(64) } };
-	await expect(invokeRerun(rerun, artifact.id, modified)).rejects.toThrow(
-		"Artifact provenance does not match current host provenance",
+	const forgedCrossProjectJob = {
+		...provenance,
+		attempts: [{ parameters: { jobId: foreignArtifact.job.jobId } }],
+	};
+	await expect(invokeRerun(rerun, artifact.id, forgedCrossProjectJob)).rejects.toThrow(
+		"Compute job does not belong to the caller project",
 	);
+	await expect(
+		invokeRerun(rerun, artifact.id, { ...provenance, reproducibility: "partial" }),
+	).rejects.toThrow("Artifact is not reproducible");
 	await expect(invokeRerun(rerun, artifact.id, provenance, { projectId })).rejects.toThrow(
 		"Invalid plugin capability input: inquiry.rerun",
 	);
@@ -211,7 +215,7 @@ async function verifyGates(
 	expect(resubmitJob).not.toHaveBeenCalled();
 }
 
-async function verifyApprovalAndRerun(host, clients, artifact, projectId, provenance) {
+async function verifyApprovalAndRerun(host, clients, artifact, projectId, provenance, jobs) {
 	const client = clients.get("@fixture/inquiry-rerun");
 	await expect(invokeRerun(client, artifact.id, provenance)).rejects.toThrow(
 		"Plugin capability denied: inquiry.rerun",
@@ -222,29 +226,36 @@ async function verifyApprovalAndRerun(host, clients, artifact, projectId, proven
 		effect: "write",
 		approval: "always",
 	});
-	for (const value of [projectId, artifact.id, artifact.path, artifact.sha256, "workflow-1", "session"])
+	for (const value of [
+		projectId,
+		artifact.id,
+		artifact.path,
+		artifact.sha256,
+		"source-job-1",
+		"workflow-1",
+		"session",
+	])
 		expect(approval.approvalDetail).toContain(value);
 	expect(host.resubmitJob).not.toHaveBeenCalled();
 	host.setApproval(true);
-	const first = await invokeRerun(client, artifact.id, provenance);
-	expect(first).toMatchObject({
+	const submitted = await invokeRerun(client, artifact.id, provenance);
+	expect(submitted).toMatchObject({
 		status: "submitted",
 		jobId: "rerun-job-1",
 		previousArtifactId: artifact.id,
 		previousSha256: artifact.sha256,
 	});
-	const afterFirst = host.resubmitJob.mock.calls.length;
-	expect(afterFirst).toBe(1);
-	const refreshed = await host.backend.inquiry.artifactProvenance(artifact.id, projectId);
-	if (!refreshed) throw new Error("Rerun did not persist updated host provenance");
-	expect(refreshed.rerun).toBeDefined();
-	const deduplicated = await invokeRerun(client, artifact.id, refreshed);
-	expect(deduplicated).toEqual(first);
 	expect(host.resubmitJob).toHaveBeenCalledTimes(1);
-	return { afterFirst, afterDeduplication: host.resubmitJob.mock.calls.length };
+	expect(host.resubmitJob).toHaveBeenCalledWith("source-job-1");
+	jobs.delete("source-job-1");
+	await expect(invokeRerun(client, artifact.id, provenance)).rejects.toThrow(
+		"Compute job not found: source-job-1",
+	);
+	expect(host.resubmitJob).toHaveBeenCalledTimes(1);
+	return { resubmitCalls: host.resubmitJob.mock.calls.length };
 }
 
-it("accepts only declared SDK reruns with fresh provenance and durable deduplication", async () => {
+it("accepts only declared SDK reruns with verified compute job ownership and approval", async () => {
 	live.root = await realpath(await mkdtemp(join(tmpdir(), "inquiry-rerun-sdk-")));
 	const home = join(live.root, "home");
 	const cwd = join(home, "project-one");
@@ -258,23 +269,34 @@ it("accepts only declared SDK reruns with fresh provenance and durable deduplica
 		vi.stubEnv(key, value);
 	vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
 	vi.stubEnv("DRONE_REPLY_LANGUAGE", "en");
+	const primary = makeArtifactFixture(cwd, "source-job-1");
+	const foreign = makeArtifactFixture(secondProject, "foreign-job-1", "e".repeat(64));
+	const jobs = new Map([
+		[primary.job.jobId, primary.job],
+		[foreign.job.jobId, foreign.job],
+	]);
 	const sources = await discoverFixtureSources();
-	const host = await startBackend(cwd, projectsDir, agentDir, sources);
+	const host = await startBackend(cwd, projectsDir, agentDir, sources, jobs);
 	const { clients } = await createClients(host.service, host.registry, sources, cwd);
-	const { artifact, projectId, provenance } = await recordArtifact(host.backend.inquiry, cwd);
-	const foreignArtifact = await recordArtifact(host.backend.inquiry, secondProject, "e".repeat(64));
 	await verifyGates(
 		clients,
 		host.approvals,
 		host.resubmitJob,
-		artifact,
-		foreignArtifact,
-		projectId,
-		provenance,
+		primary.artifact,
+		foreign,
+		primary.projectId,
+		primary.provenance,
 	);
 	host.setApproval(false);
-	const calls = await verifyApprovalAndRerun(host, clients, artifact, projectId, provenance);
+	const calls = await verifyApprovalAndRerun(
+		host,
+		clients,
+		primary.artifact,
+		primary.projectId,
+		primary.provenance,
+		jobs,
+	);
 	console.log(
-		`SDK inquiry rerun ${JSON.stringify({ p5Only: "not registered", staleProvenanceBlocked: true, extraProjectIdBlocked: true, approval: "always", approvalDetailVerified: true, resubmitAfterDecline: 0, ...calls })}`,
+		`SDK inquiry rerun ${JSON.stringify({ p5Only: "not registered", forgedCrossProjectJobBlocked: true, extraProjectIdBlocked: true, approval: "always", approvalDetailVerified: true, resubmitAfterDecline: 0, ...calls })}`,
 	);
 }, 120000);

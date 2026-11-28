@@ -11,7 +11,24 @@ import type {
 	ReviewReadReceipt,
 } from "@gyoungwe/plugin-api/knowledge";
 import { globalToolManifest } from "../tools/manifest";
-import type { InquiryReadOnlySnapshot } from "./inquiry";
+
+export interface DeliverableReviewLedgerSnapshot {
+	readonly artifacts: readonly {
+		readonly id: string;
+		readonly path: string;
+		readonly sha256: string;
+	}[];
+	readonly findings: readonly {
+		readonly artifactIds: readonly string[];
+		readonly values: readonly { readonly value: number | string | boolean }[];
+	}[];
+	readonly attempts: readonly {
+		readonly id: string;
+		readonly artifactIds: readonly string[];
+		readonly startedAt?: string;
+		readonly finishedAt?: string;
+	}[];
+}
 
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_TEXT_BYTES = 256 * 1024;
@@ -30,7 +47,7 @@ export type BackgroundReviewerFactory = (options: BackgroundReviewerOptions) => 
 interface ReviewerHostOptions {
 	reviewerFactory: BackgroundReviewerFactory;
 	getCwd(sessionId: string): string | undefined;
-	getLedger?(): Promise<InquiryReadOnlySnapshot | undefined>;
+	getLedger?(): Promise<DeliverableReviewLedgerSnapshot | undefined>;
 	getProviders?: () => readonly ReviewerModelProvider[] | Promise<readonly ReviewerModelProvider[]>;
 	getMainProvider?: (sessionId: string) => string | undefined;
 	useModel?: () => boolean | Promise<boolean>;

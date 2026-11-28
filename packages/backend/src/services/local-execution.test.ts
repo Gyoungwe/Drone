@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import type { InquiryLocalExecutionEvent } from "./inquiry";
+import type { InquiryLocalExecutionEvent } from "./inquiry-events";
 import { LocalExecutionRecorder } from "./local-execution";
 
 describe("LocalExecutionRecorder", () => {
@@ -16,11 +16,9 @@ describe("LocalExecutionRecorder", () => {
 			const events: InquiryLocalExecutionEvent[] = [];
 			const scheduleReview = vi.fn();
 			const recorder = new LocalExecutionRecorder({
-				inquiry: {
-					recordLocalExecution: async (event: InquiryLocalExecutionEvent) => void events.push(event),
-				} as never,
 				getCwd: () => root,
 				getProjectId: () => root,
+				publish: (event) => void events.push(event),
 				scheduleReview,
 			});
 			const command = "python scripts/plot_fixed.py --seed 7 --label fixed";
@@ -60,30 +58,27 @@ describe("LocalExecutionRecorder", () => {
 	});
 });
 
-it("LocalExecutionRecorder publishes the bash event before a failing inquiry write", async () => {
+it("LocalExecutionRecorder publishes one bash event and schedules review", async () => {
 	const root = await mkdtemp(join(tmpdir(), "drone-local-execution-publish-"));
 	try {
 		await mkdir(join(root, "scripts"));
 		await mkdir(join(root, "results"));
 		await writeFile(join(root, "scripts", "plot.py"), "print('fixed')\n");
 		await writeFile(join(root, "results", "plot.png"), "png-bytes");
-		const recorded: InquiryLocalExecutionEvent[] = [];
 		const published: InquiryLocalExecutionEvent[] = [];
-		let settleRecord: (() => void) | undefined;
-		const recordDone = new Promise<void>((resolve) => {
-			settleRecord = resolve;
+		const scheduleReview = vi.fn();
+		let settlePublish: (() => void) | undefined;
+		const publishDone = new Promise<void>((resolve) => {
+			settlePublish = resolve;
 		});
 		const recorder = new LocalExecutionRecorder({
-			inquiry: {
-				recordLocalExecution: async (event: InquiryLocalExecutionEvent) => {
-					recorded.push(event);
-					settleRecord?.();
-					throw new Error("inquiry storage failed");
-				},
-			} as never,
 			getCwd: () => root,
 			getProjectId: () => root,
-			publish: (event) => published.push(event),
+			publish: (event) => {
+				published.push(event);
+				settlePublish?.();
+			},
+			scheduleReview,
 		});
 		const command = "python scripts/plot.py";
 		recorder.observe("s1", {
@@ -101,29 +96,27 @@ it("LocalExecutionRecorder publishes the bash event before a failing inquiry wri
 			result: { command },
 		} as never);
 
-		await recordDone;
+		await publishDone;
 		expect(published).toHaveLength(1);
-		expect(recorded).toHaveLength(1);
-		expect(published[0]).toBe(recorded[0]);
+		expect(published[0]?.artifacts?.[0]?.path).toBe("results/plot.png");
+		expect(scheduleReview).toHaveBeenCalledWith("s1", ["results/plot.png"]);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}
 });
 
-it("LocalExecutionRecorder publishes one kernel event with the same object sent to Inquiry", async () => {
+it("LocalExecutionRecorder publishes one kernel event and schedules review", async () => {
 	const root = await mkdtemp(join(tmpdir(), "drone-local-execution-kernel-"));
 	try {
 		await mkdir(join(root, "runs", "kernel"), { recursive: true });
 		await writeFile(join(root, "runs", "kernel", "result.csv"), "value\n1\n");
-		const recorded: InquiryLocalExecutionEvent[] = [];
 		const published: InquiryLocalExecutionEvent[] = [];
+		const scheduleReview = vi.fn();
 		const recorder = new LocalExecutionRecorder({
-			inquiry: {
-				recordLocalExecution: async (event: InquiryLocalExecutionEvent) => void recorded.push(event),
-			} as never,
 			getCwd: () => root,
 			getProjectId: () => root,
 			publish: (event) => published.push(event),
+			scheduleReview,
 		});
 		await recorder.recordKernelExecution({
 			sessionId: "session-1",
@@ -140,9 +133,8 @@ it("LocalExecutionRecorder publishes one kernel event with the same object sent 
 		});
 
 		expect(published).toHaveLength(1);
-		expect(recorded).toHaveLength(1);
-		expect(published[0]).toBe(recorded[0]);
 		expect(published[0]?.artifacts?.[0]?.path).toBe("runs/kernel/result.csv");
+		expect(scheduleReview).toHaveBeenCalledWith("session-1", ["runs/kernel/result.csv"]);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}

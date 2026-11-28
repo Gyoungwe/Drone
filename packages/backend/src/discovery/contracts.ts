@@ -1,10 +1,3 @@
-import type {
-	AttemptRecord,
-	FindingRecord,
-	QuestionPosterior,
-	QuestionPrior,
-	QuestionRecord,
-} from "@drone/inquiry";
 import type { DiscoveryEvaluation, DiscoveryEvaluationMetric, DiscoveryExplorationPlan } from "@drone/shared";
 
 export type {
@@ -12,6 +5,92 @@ export type {
 	DiscoveryLanguage as KernelLanguage,
 	DiscoveryRunner as ControlledKernelRunner,
 } from "@gyoungwe/plugin-api";
+
+export type InquirySchemaVersion = 1 | 2;
+export type PriorDirection = "positive" | "negative" | "none" | "unknown";
+
+export interface QuestionPrior {
+	readonly direction: PriorDirection;
+	readonly magnitude?: number;
+	readonly confidence?: number;
+	readonly recordedAt: string;
+}
+
+export interface QuestionPosterior {
+	readonly direction?: PriorDirection;
+	readonly magnitude?: number;
+	readonly confidence?: number;
+	readonly recordedAt: string;
+}
+
+export interface QuestionRecord {
+	readonly id: string;
+	readonly schemaVersion: InquirySchemaVersion;
+	readonly projectId: string;
+	readonly kind: "question" | "hypothesis" | "anomaly";
+	readonly statement: string;
+	readonly prior?: QuestionPrior;
+	readonly posterior?: QuestionPosterior;
+	readonly surprise?: number;
+	readonly competingExplanations: readonly string[];
+	readonly testsDone: readonly string[];
+	readonly testsPlanned: readonly string[];
+	readonly status: "open" | "supported" | "refuted" | "deferred";
+	readonly proposer: "user" | "agent";
+	readonly priority: number;
+	readonly createdAt: string;
+	readonly updatedAt: string;
+}
+
+export interface AttemptRecord {
+	readonly id: string;
+	readonly schemaVersion: InquirySchemaVersion;
+	readonly projectId: string;
+	readonly hypothesisIds: readonly string[];
+	readonly codeFingerprint?: string;
+	readonly parameters: Readonly<Record<string, string | number | boolean | null>>;
+	readonly artifactIds: readonly string[];
+	readonly resultSummary?: string;
+	readonly sessionId?: string;
+	readonly turn?: number;
+	readonly runProvenance?: {
+		readonly containerDigests?: readonly string[];
+		readonly workflow?: string;
+		readonly modules?: readonly string[];
+		readonly commandSummary?: string;
+		readonly environment?: Readonly<Record<string, string>>;
+	};
+	readonly outcome: "running" | "succeeded" | "failed" | "blocked" | "unknown";
+	readonly enteredReport: boolean;
+	readonly startedAt: string;
+	readonly finishedAt?: string;
+}
+
+export interface FindingRecord {
+	readonly id: string;
+	readonly schemaVersion: InquirySchemaVersion;
+	readonly projectId: string;
+	readonly statement: string;
+	readonly values: readonly {
+		readonly metric: string;
+		readonly value: number | string | boolean;
+		readonly unit?: string;
+		readonly confidenceInterval?: readonly [number, number];
+	}[];
+	readonly conditions: readonly string[];
+	readonly artifactIds: readonly string[];
+	readonly codeFingerprint?: string;
+	readonly label: "exploratory" | "confirmatory";
+	readonly robustness: {
+		readonly attemptCount: number;
+		readonly consistentCount: number;
+		readonly grade: "robust" | "sensitive" | "unstable" | "unknown";
+	};
+	readonly hypothesisIds: readonly string[];
+	readonly reviewStatus: "unreviewed" | "reviewed" | "rejected";
+	readonly createdAt: string;
+	readonly updatedAt: string;
+}
 
 export interface InquiryDiscoveryPort {
 	recordQuestion(record: QuestionRecord): Promise<void>;

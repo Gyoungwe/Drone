@@ -1,17 +1,18 @@
 // @vitest-environment jsdom
 import { execFile } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { SqliteInquiryStorage } from "@drone/inquiry";
 import { fauxProvider } from "@earendil-works/pi-ai";
 import { createAgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React, { createElement } from "react";
 import { expect, it, vi } from "vitest";
 import { buildPlugin } from "../../desktop/src/main/ui-plugins/build";
-import { InquiryService } from "../src/services/inquiry";
+import { seedLegacyInquiryLedger } from "./inquiry-sqlite-fixture";
 import "../../desktop/src/renderer/src/plugins/host-api";
 import { useI18nStore } from "../../desktop/src/renderer/src/i18n";
 import { invokePluginRuntime, subscribePluginRuntime } from "../../desktop/src/renderer/src/plugins/caller";
@@ -109,8 +110,7 @@ it.skipIf(!tarball)(
 				],
 				{ maxBuffer: 8 * 1024 * 1024 },
 			);
-			const seed = new SqliteInquiryStorage("legacy-project", join(desktop.state, "ledger.sqlite"));
-			await seed.close();
+			seedLegacyInquiryLedger("legacy-project", join(desktop.state, "ledger.sqlite"));
 			const original = await readFile(join(desktop.state, "ledger.sqlite"));
 			const manager = new UiPluginManager({ installedPackageRoot: join(root, "node_modules") });
 			await mkdir(join(desktop.profile, "ui-plugins"));
@@ -216,9 +216,14 @@ it.skipIf(!tarball)(
 				fireEvent.click(screen.getByRole("button", { name: "Bind original directory" }));
 			});
 			await screen.findByText(/Original project.*legacy-project/, {}, { timeout: 10000 });
-			expect(() => new InquiryService({ inquiryDir: desktop.state, projectId: "legacy-project" })).toThrow(
-				/writer|reserved/,
-			);
+			const contended = new PluginResourceReservations();
+			try {
+				expect(() => contended.reserve("state-writers", [realpathSync(desktop.state)])).toThrow(
+					/writer|reserved/,
+				);
+			} finally {
+				contended.dispose();
+			}
 			fireEvent.change(screen.getByRole("textbox", { name: "Question ID" }), {
 				target: { value: "ui-question" },
 			});
@@ -278,8 +283,9 @@ it.skipIf(!tarball)(
 					plugins: { [pluginName]: { enabled: false, trusted: true } },
 				}),
 			);
-			const legacy = new InquiryService({ inquiryDir: desktop.state, projectId: "legacy-project" });
-			await legacy.dispose();
+			const released = new PluginResourceReservations();
+			released.reserve("state-writers", [realpathSync(desktop.state)]);
+			released.dispose();
 			await bridge.withTransition(() =>
 				manager.updateConfig({ enabled: true, plugins: { [pluginName]: { enabled: true, trusted: true } } }),
 			);

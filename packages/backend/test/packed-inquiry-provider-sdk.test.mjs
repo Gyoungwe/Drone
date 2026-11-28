@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { SqliteInquiryStorage } from "@drone/inquiry";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
 	createAgentSession,
@@ -12,15 +12,16 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { expect, it, vi } from "vitest";
 import { discoverInstalledPackages } from "../../desktop/src/main/ui-plugins/installed-package-sources";
 import { createDesktopResourceCapabilities } from "../../desktop/src/main/ui-plugins/runtime-host";
 import { PluginRuntimeBridge } from "../src/plugins/coordinator";
 import { createProcessPluginRuntime } from "../src/plugins/process-runtime";
 import { getPluginSessionCaller } from "../src/plugins/session-caller";
-import { InquiryService } from "../src/services/inquiry";
 import { SessionRegistry } from "../src/session/registry";
 import { StorageRegistry } from "../src/storage/registry";
+import { readLegacyInquiryQuestions, seedLegacyInquiryLedger } from "./inquiry-sqlite-fixture";
 
 vi.mock("electron", () => ({ app: {}, BrowserWindow: {}, dialog: {}, webContents: {} }));
 const run = promisify(execFile),
@@ -42,8 +43,7 @@ it.skipIf(!tarball)(
 				workspace = join(root, "workspace"),
 				agent = join(root, "agent");
 			await Promise.all([binary, profile, workspace, agent].map((path) => mkdir(path)));
-			const seed = new SqliteInquiryStorage("legacy-project", join(binary, "ledger.sqlite"));
-			await seed.close();
+			seedLegacyInquiryLedger("legacy-project", join(binary, "ledger.sqlite"));
 			const original = await readFile(join(binary, "ledger.sqlite"));
 			const consumerDir = join(root, "consumer");
 			await mkdir(consumerDir);
@@ -208,9 +208,12 @@ it.skipIf(!tarball)(
 				metadataRoot: metadataRoot.handle,
 				acknowledgeExistingData: true,
 			});
-			expect(() => new InquiryService({ inquiryDir: binary, projectId: "legacy-project" })).toThrow(
-				"already reserved",
-			);
+			const contended = new PluginResourceReservations();
+			try {
+				expect(() => contended.reserve("state-writers", [realpathSync(binary)])).toThrow("already reserved");
+			} finally {
+				contended.dispose();
+			}
 			const date = "2026-10-28T00:00:00.000Z";
 			await call("write", {
 				action: "recordQuestion",
@@ -320,9 +323,10 @@ it.skipIf(!tarball)(
 			expect(await readFile(join(binary, "ledger.sqlite"))).toEqual(original);
 			await bridge.revoke(provider.name);
 			provider.state = "disabled";
-			legacy = new InquiryService({ inquiryDir: binary, projectId: "legacy-project" });
-			expect((await legacy.readOnlySnapshot()).questions).toEqual([]);
-			await legacy.dispose();
+			legacy = new PluginResourceReservations();
+			legacy.reserve("state-writers", [realpathSync(binary)]);
+			expect(readLegacyInquiryQuestions(join(binary, "ledger.sqlite"), "legacy-project")).toEqual([]);
+			legacy.dispose();
 			legacy = undefined;
 			console.log(
 				JSON.stringify({

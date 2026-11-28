@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { SqliteInquiryStorage } from "@drone/inquiry";
 import { readDroneToolMeta } from "@drone/shared";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import {
@@ -13,8 +13,9 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { expect, it, vi } from "vitest";
-import { InquiryService } from "../src/services/inquiry";
+import { readLegacyInquiryQuestions, seedLegacyInquiryLedger } from "./inquiry-sqlite-fixture";
 
 const run = promisify(execFile),
 	tarball = process.env.DRONE_INQUIRY_PLUGIN_TARBALL,
@@ -32,8 +33,7 @@ it.skipIf(!tarball)(
 			await mkdir(cwd);
 			await mkdir(agentDir);
 			await mkdir(state, { recursive: true });
-			const seed = new SqliteInquiryStorage("legacy-project", join(state, "ledger.sqlite"));
-			await seed.close();
+			seedLegacyInquiryLedger("legacy-project", join(state, "ledger.sqlite"));
 			const original = await readFile(join(state, "ledger.sqlite"));
 			const installed = join(root, "installed");
 			await mkdir(installed);
@@ -147,9 +147,12 @@ it.skipIf(!tarball)(
 			expect((await call("inquiry_read", { action: "snapshot" })).value.questions).toMatchObject([
 				{ id: "native-question" },
 			]);
-			expect(() => new InquiryService({ inquiryDir: state, projectId: "legacy-project" })).toThrow(
-				"already reserved",
-			);
+			const contended = new PluginResourceReservations();
+			try {
+				expect(() => contended.reserve("state-writers", [realpathSync(state)])).toThrow("already reserved");
+			} finally {
+				contended.dispose();
+			}
 			const before = await readFile(join(state, "ledger.sqlite"));
 			allowed = false;
 			await call("inquiry_write", { action: "recordQuestion", record: question("denied") }, true);
@@ -186,9 +189,10 @@ it.skipIf(!tarball)(
 			session.extensionRunner.onError((error) => failures.push(error));
 			await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
 			expect(failures).toEqual([]);
-			legacy = new InquiryService({ inquiryDir: state, projectId: "legacy-project" });
-			expect((await legacy.readOnlySnapshot()).questions).toEqual([]);
-			await legacy.dispose();
+			legacy = new PluginResourceReservations();
+			legacy.reserve("state-writers", [realpathSync(state)]);
+			expect(readLegacyInquiryQuestions(join(state, "ledger.sqlite"), "legacy-project")).toEqual([]);
+			legacy.dispose();
 			legacy = undefined;
 			console.log(
 				JSON.stringify({

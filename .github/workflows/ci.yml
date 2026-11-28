@@ -205,7 +205,6 @@ jobs:
       - run: npm test -w @drone/desktop
       - run: npm test -w @drone/extensions
       - run: npm test -w @drone/compute
-      - run: npm test -w @drone/inquiry
       - run: npm run check:knowledge-runtime
       - run: npm run check:tasks-runtime
       - run: npm run test:upgrade

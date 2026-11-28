@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { InquiryService, MemoryInquiryStorage } from "@drone/inquiry";
 import type { DiscoveryHostLoader } from "@gyoungwe/plugin-api";
 import {
 	buildContainerSandboxArgv as buildContainerKernelArgv,
@@ -149,8 +148,7 @@ describe("DiscoveryService composition root", () => {
 			const root = await mkdtemp(join(tmpdir(), "drone-discovery-auth-"));
 			try {
 				let authorized = false;
-				const storage = new MemoryInquiryStorage("project-1");
-				const inquiry = new InquiryService(storage);
+				const questions: string[] = [];
 				const service = installedService({
 					projectId: "project-1",
 					projectRoot: root,
@@ -158,7 +156,10 @@ describe("DiscoveryService composition root", () => {
 						if (!authorized) throw new Error("authorization required");
 					},
 					runner: createPythonFixtureRunner(),
-					inquiry,
+					inquiry: {
+						recordQuestion: async ({ id }) => void questions.push(id),
+						recordAttempt: async () => undefined,
+					},
 					criticProvider: {
 						providerId: "independent",
 						review: async () => [
@@ -194,8 +195,7 @@ describe("DiscoveryService composition root", () => {
 				});
 				expect(review.status).toBe("complete");
 				expect((await service.listCriticReviews())[0]?.findingId).toBe("finding-1");
-				const snapshot = await inquiry.readOnlyState();
-				expect(snapshot.questions.some((question) => question.id === "critic:finding-1:1")).toBe(true);
+				expect(questions).toContain("critic:finding-1:1");
 				await service.dispose();
 			} finally {
 				await rm(root, { recursive: true, force: true });

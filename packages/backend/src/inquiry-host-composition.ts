@@ -1,20 +1,13 @@
+import { createComputeInquiryRerunPort } from "./plugins/inquiry-rerun-capability";
 import { canonicalProjectId } from "./project-id";
 import type { ComputeService } from "./services/compute";
 import type { ComputeHostAdapter } from "./services/compute-adapter";
-import type {
-	InquiryComputeEvent,
-	InquiryDecisionEvent,
-	InquiryLocalExecutionEvent,
-	InquiryService,
-	InquiryTaskTerminalEvent,
-} from "./services/inquiry";
 import {
 	computeInquiryMetadata,
-	createInquiryComputeRerun,
-	createInquiryComputeRerunCompletion,
-} from "./services/inquiry-compute";
+	type InquiryDecisionEvent,
+	type InquiryLocalExecutionEvent,
+} from "./services/inquiry-events";
 import { LocalExecutionRecorder } from "./services/local-execution";
-import { getAgentDir } from "./session-engine/engine";
 import type { SessionService } from "./session-service";
 
 interface InquiryHostCompositionOptions {
@@ -22,113 +15,82 @@ interface InquiryHostCompositionOptions {
 	readonly inquiryProjectId?: string;
 	readonly defaultCwd?: string;
 }
+
 type InquiryHostSessionSource = Pick<SessionService, "onEvent" | "onDecision" | "registry" | "hostEvents"> &
 	Partial<Pick<SessionService, "setInquiryRerunPort">>;
+
 export function attachInquiryHostComposition(
-	inquiry: InquiryService,
 	sessions: InquiryHostSessionSource,
 	compute: ComputeService,
 	computeAdapter: ComputeHostAdapter,
 	options: InquiryHostCompositionOptions,
 	defaultProjectId: string,
 ): () => void {
-	const detachInquiryComputeEvents = attachInquiryComputeEvents(
-		inquiry,
-		sessions,
-		compute,
-		options,
-		defaultProjectId,
-	);
-	attachInquiryComputeReruns(inquiry, compute, computeAdapter, options);
-	sessions.setInquiryRerunPort?.(inquiry);
+	const detachHostEvents = attachInquiryHostEvents(sessions, compute, options, defaultProjectId);
+	sessions.setInquiryRerunPort?.(createComputeInquiryRerunPort(compute, computeAdapter));
 	return () => {
 		sessions.setInquiryRerunPort?.(undefined);
-		detachInquiryComputeEvents();
+		detachHostEvents();
 	};
 }
-function attachInquiryComputeEvents(
-	inquiry: InquiryService,
+
+function attachInquiryHostEvents(
 	sessions: InquiryHostSessionSource,
 	compute: ComputeService,
 	options: InquiryHostCompositionOptions,
 	defaultProjectId: string,
 ): () => void {
-	const computeEvents = createEventFanout<InquiryComputeEvent>((emit) =>
-		compute.onEvent((event) => {
-			if (event.type === "cleanup") return;
-			const inquiryEvent = { ...event, type: event.type };
-			void compute
-				.getJob(event.jobId)
-				.then((job) => {
-					const projectId = canonicalProjectId(
-						job?.spec.workDir ?? options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
-					);
-					emit({ ...inquiryEvent, projectId, ...(job ? computeInquiryMetadata(job) : {}) });
-				})
-				.catch(() => emit({ ...inquiryEvent, projectId: defaultProjectId }));
-		}),
-	);
-	const taskEvents = createEventFanout<InquiryTaskTerminalEvent>((emit) =>
-		sessions.onEvent((sessionId, event) => {
-			const value = event as unknown as { type?: string; willRetry?: boolean };
-			if (value.type !== "agent_end") return;
-			emit({
-				id: `session:${sessionId}:${Date.now()}`,
-				taskId: sessionId,
-				status: value.willRetry ? "partial" : "succeeded",
-				at: Date.now(),
-				projectId: canonicalProjectId(
-					sessions.registry.get(sessionId)?.cwd ??
-						options.inquiryProjectId ??
-						options.defaultCwd ??
-						process.cwd(),
-				),
-				sessionId,
+	let detached = false;
+	const detachCompute = compute.onEvent((event) => {
+		if (event.type === "cleanup") return;
+		const inquiryEvent = { ...event, type: event.type };
+		void compute
+			.getJob(event.jobId)
+			.then((job) => {
+				if (detached) return;
+				const projectId = canonicalProjectId(
+					job?.spec.workDir ?? options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
+				);
+				sessions.hostEvents.publish("inquiry.compute", {
+					...inquiryEvent,
+					projectId,
+					...(job ? computeInquiryMetadata(job) : {}),
+				});
+			})
+			.catch(() => {
+				if (detached) return;
+				sessions.hostEvents.publish("inquiry.compute", { ...inquiryEvent, projectId: defaultProjectId });
 			});
-		}),
-	);
-	const decisionEvents = createEventFanout<InquiryDecisionEvent>((emit) =>
-		sessions.onDecision((event) => emit(event as InquiryDecisionEvent)),
-	);
-	const detachInquiry = inquiry.attachEventSource({
-		onComputeEvent: computeEvents,
-		onTaskTerminal: taskEvents,
-		onDecision: decisionEvents,
 	});
-	const detachHost = [
-		computeEvents((event) => sessions.hostEvents.publish("inquiry.compute", event)),
-		taskEvents((event) => sessions.hostEvents.publish("inquiry.task-terminal", event)),
-		decisionEvents((event) => sessions.hostEvents.publish("inquiry.decision", event)),
-	];
-	return () => {
-		for (const detach of [detachInquiry, ...detachHost]) detach();
-	};
-}
-function createEventFanout<T>(
-	attach: (emit: (event: T) => void) => () => void,
-): (listener: (event: T) => void) => () => void {
-	const listeners = new Set<(event: T) => void>();
-	let detach: (() => void) | undefined;
-	return (listener) => {
-		const subscription = (event: T) => listener(event);
-		listeners.add(subscription);
-		detach ??= attach((event) => {
-			for (const current of [...listeners]) if (listeners.has(current)) current(event);
+	const detachTask = sessions.onEvent((sessionId, event) => {
+		const value = event as unknown as { type?: string; willRetry?: boolean };
+		if (value.type !== "agent_end") return;
+		sessions.hostEvents.publish("inquiry.task-terminal", {
+			id: `session:${sessionId}:${Date.now()}`,
+			taskId: sessionId,
+			status: value.willRetry ? "partial" : "succeeded",
+			at: Date.now(),
+			projectId: canonicalProjectId(
+				sessions.registry.get(sessionId)?.cwd ??
+					options.inquiryProjectId ??
+					options.defaultCwd ??
+					process.cwd(),
+			),
+			sessionId,
 		});
-		let active = true;
-		return () => {
-			if (!active) return;
-			active = false;
-			listeners.delete(subscription);
-			if (!listeners.size) {
-				detach?.();
-				detach = undefined;
-			}
-		};
+	});
+	const detachDecision = sessions.onDecision((event) =>
+		sessions.hostEvents.publish("inquiry.decision", event as InquiryDecisionEvent),
+	);
+	return () => {
+		detached = true;
+		detachCompute();
+		detachTask();
+		detachDecision();
 	};
 }
+
 export function attachLocalExecutionRecorder(
-	inquiry: InquiryService,
 	sessions: Pick<SessionService, "onEvent" | "registry">,
 	options: InquiryHostCompositionOptions,
 	scheduleReview: (sessionId: string, paths: readonly string[]) => void,
@@ -136,7 +98,6 @@ export function attachLocalExecutionRecorder(
 	registerDisposable: (dispose: () => void) => void,
 ): LocalExecutionRecorder {
 	const recorder = new LocalExecutionRecorder({
-		inquiry,
 		getCwd: (sessionId) => sessions.registry.get(sessionId)?.cwd,
 		getProjectId: (sessionId) =>
 			canonicalProjectId(
@@ -150,26 +111,4 @@ export function attachLocalExecutionRecorder(
 	});
 	registerDisposable(sessions.onEvent((sessionId, event) => recorder.observe(sessionId, event)));
 	return recorder;
-}
-function attachInquiryComputeReruns(
-	inquiry: InquiryService,
-	compute: ComputeService,
-	computeAdapter: ComputeHostAdapter,
-	options: InquiryHostCompositionOptions,
-): void {
-	inquiry.setRerunHandler(
-		createInquiryComputeRerun({
-			adapter: computeAdapter,
-			compute,
-			collectionRoot: options.computeAgentDir ?? getAgentDir(),
-			drainEvents: () => inquiry.drainEvents(),
-		}),
-	);
-	inquiry.setRerunCompletionHandler(
-		createInquiryComputeRerunCompletion({
-			compute,
-			collectionRoot: options.computeAgentDir ?? getAgentDir(),
-			drainEvents: () => inquiry.drainEvents(),
-		}),
-	);
 }
