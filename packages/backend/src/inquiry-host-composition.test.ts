@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
+import { PluginResourceReservations } from "@gyoungwe/plugin-api/node/reservations";
 import { afterEach, expect, it, vi } from "vitest";
 import { attachInquiryHostComposition } from "./inquiry-host-composition";
 import { HostEventBridge } from "./plugins/host-event-bridge";
@@ -25,7 +26,10 @@ async function rmRoots(): Promise<void> {
 async function fixture(enabled: boolean) {
 	const root = await mkdtemp(join(tmpdir(), "inquiry-host-events-"));
 	roots.push(root);
-	const inquiry = new InquiryService(enabled ? { inquiryDir: root, projectId: root } : {});
+	const inquiry = new InquiryService(
+		enabled ? { inquiryDir: root, projectId: root } : {},
+		new PluginResourceReservations(root),
+	);
 	const inquiryEvents = {
 		compute: [] as InquiryComputeEvent[],
 		task: [] as InquiryTaskTerminalEvent[],
@@ -89,6 +93,34 @@ async function fixture(enabled: boolean) {
 		detach,
 	};
 }
+
+it("attaches and clears the Inquiry rerun port with the host composition", async () => {
+	const inquiry = new InquiryService({});
+	const ports: unknown[] = [];
+	const sessions = {
+		hostEvents: new HostEventBridge(),
+		registry: { get: () => undefined },
+		onEvent: () => () => undefined,
+		onDecision: () => () => undefined,
+		setInquiryRerunPort: (port: unknown) => ports.push(port),
+	};
+	const compute = { onEvent: () => () => undefined };
+	const detach = attachInquiryHostComposition(
+		inquiry,
+		sessions as never,
+		compute as never,
+		{} as never,
+		{},
+		"",
+	);
+	try {
+		expect(ports).toEqual([inquiry]);
+		detach();
+		expect(ports).toEqual([inquiry, undefined]);
+	} finally {
+		await inquiry.dispose();
+	}
+});
 
 const computeEvent: InquiryComputeEvent = {
 	id: "compute-event",

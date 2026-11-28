@@ -2,6 +2,7 @@ import type { SessionDirectory } from "../session/registry";
 import { endpointConfigCapabilityHandlers } from "./endpoint-config-capabilities";
 import { endpointPolicyError, resolvePluginEndpointPolicy } from "./endpoint-policy";
 import { authenticatedRequest } from "./http-transport";
+import { type InquiryRerunPort, inquiryRerunCapabilityHandlers } from "./inquiry-rerun-capability";
 import { networkCapabilityHandlers } from "./network-capabilities";
 import {
 	credentialCapabilityHandlers,
@@ -15,7 +16,12 @@ import type { TaskGrantStore } from "./task-grants";
 
 /** Capabilities bound to one installed plugin source: task authorization, network and its credentials. */
 export function sourceCapabilityHandlers(
-	host: { taskGrants: TaskGrantStore; sessions: SessionDirectory; credentials: PluginCredentialStore },
+	host: {
+		taskGrants: TaskGrantStore;
+		sessions: SessionDirectory;
+		credentials: PluginCredentialStore;
+		inquiryRerun?: InquiryRerunPort;
+	},
 	source: PluginRuntimeSource,
 ) {
 	const grants = taskGrantCapabilityHandlers(host.taskGrants, host.sessions, source);
@@ -47,5 +53,8 @@ export function sourceCapabilityHandlers(
 			})),
 		...(source.credentials && credentialCapabilityHandlers(host.credentials, source)),
 		...(declaredPolicy.configuration && endpointConfigCapabilityHandlers(endpointPolicy)),
+		...(source.requestsInquiryRerun && host.inquiryRerun
+			? { ...inquiryRerunCapabilityHandlers({ inquiry: host.inquiryRerun, sessions: host.sessions }) }
+			: {}),
 	};
 }

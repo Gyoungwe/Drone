@@ -47,6 +47,8 @@ export interface PluginRuntimeSource {
 	readonly requestsTaskGrant?: boolean;
 	/** Manifest `drone.workspaceRead: "session"`: reads under the session's current read permissions. */
 	readonly requestsWorkspaceRead?: boolean;
+	/** Manifest `drone.inquiryRerun: "request"`: may request host-verified artifact reruns. */
+	readonly requestsInquiryRerun?: boolean;
 	/** Manifest `permissions.network` minus `configured-services`: the only hosts `network.*` may reach. */
 	readonly networkHosts?: readonly string[];
 	/** Manifest `drone.networkReads`: "host/path" POST endpoints that only read, so `network.read` may send them. */
@@ -99,6 +101,7 @@ export function sameSource(a: PluginRuntimeSource, b: PluginRuntimeSource | unde
 		a.requestsExecution === b.requestsExecution &&
 		a.requestsTaskGrant === b.requestsTaskGrant &&
 		a.requestsWorkspaceRead === b.requestsWorkspaceRead &&
+		a.requestsInquiryRerun === b.requestsInquiryRerun &&
 		JSON.stringify(a.networkHosts) === JSON.stringify(b.networkHosts) &&
 		JSON.stringify(a.networkReads) === JSON.stringify(b.networkReads) &&
 		JSON.stringify(a.credentials) === JSON.stringify(b.credentials) &&

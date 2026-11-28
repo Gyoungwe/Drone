@@ -45,3 +45,10 @@ it("distinguishes host event declarations", () => {
 		),
 	).toBe(true);
 });
+
+it("distinguishes an Inquiry rerun request and matches the same declaration", () => {
+	expect(sameSource({ ...source, requestsInquiryRerun: true }, source)).toBe(false);
+	expect(
+		sameSource({ ...source, requestsInquiryRerun: true }, { ...source, requestsInquiryRerun: true }),
+	).toBe(true);
+});

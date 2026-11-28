@@ -20,6 +20,7 @@ import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
 import type { PluginRuntimeSource } from "../plugins/coordinator";
 import { HostEventBridge } from "../plugins/host-event-bridge";
+import type { InquiryRerunPort } from "../plugins/inquiry-rerun-capability";
 import { pdfTextCapabilityHandlers } from "../plugins/pdf-text-capability";
 import { PluginCredentialStore } from "../plugins/plugin-credentials";
 import { hostEventsApproved } from "../plugins/policy-consent";
@@ -50,6 +51,7 @@ import { SessionSettingsApi } from "./session-api-settings";
 export class SessionServiceApi extends SessionSettingsApi {
 	private readonly pluginSessionRecords = new SessionRecordStore();
 	private readonly pluginCredentials = new PluginCredentialStore();
+	private inquiryRerunPort?: InquiryRerunPort;
 	readonly hostEvents = new HostEventBridge();
 	async init(): Promise<void> {
 		await this.host.knowledge.connect();
@@ -81,11 +83,18 @@ export class SessionServiceApi extends SessionSettingsApi {
 	getPluginSessionCapabilities(recordAdoptions?: PluginRecordAdoptions) {
 		return createPluginSessionCapabilities(this.host, this.pluginSessionRecords, recordAdoptions);
 	}
-
 	/** Capabilities bound to one installed plugin source: task authorization, network and its credentials. */
 	getPluginSourceCapabilities(source: PluginRuntimeSource) {
-		const { taskGrants, pluginSessions: sessions } = this.host;
-		return sourceCapabilityHandlers({ taskGrants, sessions, credentials: this.pluginCredentials }, source);
+		const host = {
+			taskGrants: this.host.taskGrants,
+			sessions: this.host.pluginSessions,
+			credentials: this.pluginCredentials,
+			...(this.inquiryRerunPort ? { inquiryRerun: this.inquiryRerunPort } : {}),
+		};
+		return sourceCapabilityHandlers(host, source);
+	}
+	setInquiryRerunPort(port: InquiryRerunPort | undefined): void {
+		this.inquiryRerunPort = port;
 	}
 	getPluginHostEvents(source: PluginRuntimeSource, signal: AbortSignal) {
 		return hostEventsApproved(source) ? this.hostEvents.source(source.hostEvents, signal) : undefined;

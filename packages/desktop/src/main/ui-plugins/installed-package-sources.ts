@@ -114,6 +114,7 @@ export interface InstalledUiRuntimeSource extends NetworkDeclaration, InstalledP
 	requestsExecution?: boolean;
 	requestsTaskGrant?: boolean;
 	requestsWorkspaceRead?: boolean;
+	requestsInquiryRerun?: boolean;
 	/**
 	 * The user's approval of this package's credential and network policy.
 	 *
@@ -219,6 +220,11 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 						throw new Error("drone.taskGrants must be request when declared");
 					runtime.requestsTaskGrant = true;
 				}
+				if (manifest.drone?.inquiryRerun !== undefined) {
+					if (manifest.drone.inquiryRerun !== "request")
+						throw new Error("drone.inquiryRerun must be request when declared");
+					runtime.requestsInquiryRerun = true;
+				}
 				if (manifest.drone?.workspaceRead !== undefined) {
 					if (manifest.drone.workspaceRead !== "session")
 						throw new Error("drone.workspaceRead must be session when declared");
@@ -305,6 +311,10 @@ export async function discoverInstalledPackages(root: string): Promise<Installed
 		}
 		if (manifest.drone?.hostEvents !== undefined && !runtime) {
 			discoveries.push({ packageName, error: "drone.hostEvents requires a desktopRuntime owner" });
+			continue;
+		}
+		if (manifest.drone?.inquiryRerun !== undefined && !runtime) {
+			discoveries.push({ packageName, error: "drone.inquiryRerun requires a desktopRuntime owner" });
 			continue;
 		}
 		if (manifest.drone?.networkReads !== undefined && !runtime) {
