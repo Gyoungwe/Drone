@@ -18,20 +18,12 @@ import type {
 } from "@drone/shared";
 import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
-import { agentSlotCapabilityHandlers } from "../plugins/agent-slot-capabilities";
 import type { PluginRuntimeSource } from "../plugins/coordinator";
 import { HostEventBridge } from "../plugins/host-event-bridge";
-import { modelCapabilityHandlers } from "../plugins/model-capabilities";
 import { pdfTextCapabilityHandlers } from "../plugins/pdf-text-capability";
 import { PluginCredentialStore } from "../plugins/plugin-credentials";
 import { hostEventsApproved } from "../plugins/policy-consent";
-import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
-import {
-	sessionCapabilityHandlers,
-	sessionDecisionCapabilityHandlers,
-} from "../plugins/session-capabilities";
-import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
 import { sourceCapabilityHandlers } from "../plugins/source-capabilities";
 import type { TaskGrantStore } from "../plugins/task-grants";
 import { workspaceCapabilityHandlers } from "../plugins/workspace-capabilities";
@@ -47,6 +39,7 @@ import type {
 	TrustHandler,
 } from "./session-api-types";
 import { SessionMessageService } from "./session-messages";
+import { createPluginSessionCapabilities } from "./session-plugin-capabilities";
 import type { ZoteroService } from "./zotero";
 
 const log = createLogger("backend");
@@ -86,23 +79,7 @@ export class SessionServiceApi extends SessionSettingsApi {
 	}
 
 	getPluginSessionCapabilities(recordAdoptions?: PluginRecordAdoptions) {
-		return {
-			...sessionCapabilityHandlers(this.host.pluginSessions),
-			...sessionDecisionCapabilityHandlers(this.host.pluginSessions, this.host.decisions),
-			...sessionRecordCapabilityHandlers(this.host.pluginSessions, this.pluginSessionRecords),
-			...sessionAdoptionCapabilityHandlers(
-				this.host.pluginSessions,
-				this.pluginSessionRecords,
-				recordAdoptions,
-			),
-			...modelCapabilityHandlers({
-				registry: this.host.pluginSessions,
-				getRuntime: () => this.host.getModelRuntime(),
-				getProfileModel: (name) => this.host.modelSettings.getSubagentModel(name),
-				getProfileThinking: (name) => this.host.modelSettings.getSubagentThinking(name),
-			}),
-			...agentSlotCapabilityHandlers(),
-		};
+		return createPluginSessionCapabilities(this.host, this.pluginSessionRecords, recordAdoptions);
 	}
 
 	/** Capabilities bound to one installed plugin source: task authorization, network and its credentials. */
