@@ -18,20 +18,13 @@ import type {
 } from "@drone/shared";
 import type { PluginRecordAdoptions } from "@gyoungwe/plugin-api/runtime";
 import { createLogger } from "../log";
-import { agentSlotCapabilityHandlers } from "../plugins/agent-slot-capabilities";
 import type { PluginRuntimeSource } from "../plugins/coordinator";
 import { HostEventBridge } from "../plugins/host-event-bridge";
-import { modelCapabilityHandlers } from "../plugins/model-capabilities";
+import type { InquiryRerunPort } from "../plugins/inquiry-rerun-capability";
 import { pdfTextCapabilityHandlers } from "../plugins/pdf-text-capability";
 import { PluginCredentialStore } from "../plugins/plugin-credentials";
 import { hostEventsApproved } from "../plugins/policy-consent";
-import { sessionAdoptionCapabilityHandlers } from "../plugins/session-adoption-capabilities";
 import { getPluginSessionCaller, type PluginSessionCallerContext } from "../plugins/session-caller";
-import {
-	sessionCapabilityHandlers,
-	sessionDecisionCapabilityHandlers,
-} from "../plugins/session-capabilities";
-import { sessionRecordCapabilityHandlers } from "../plugins/session-record-capabilities";
 import { sourceCapabilityHandlers } from "../plugins/source-capabilities";
 import type { TaskGrantStore } from "../plugins/task-grants";
 import { workspaceCapabilityHandlers } from "../plugins/workspace-capabilities";
@@ -47,6 +40,7 @@ import type {
 	TrustHandler,
 } from "./session-api-types";
 import { SessionMessageService } from "./session-messages";
+import { createPluginSessionCapabilities } from "./session-plugin-capabilities";
 import type { ZoteroService } from "./zotero";
 
 const log = createLogger("backend");
@@ -57,6 +51,7 @@ import { SessionSettingsApi } from "./session-api-settings";
 export class SessionServiceApi extends SessionSettingsApi {
 	private readonly pluginSessionRecords = new SessionRecordStore();
 	private readonly pluginCredentials = new PluginCredentialStore();
+	private inquiryRerunPort?: InquiryRerunPort;
 	readonly hostEvents = new HostEventBridge();
 	async init(): Promise<void> {
 		await this.host.knowledge.connect();
@@ -86,29 +81,20 @@ export class SessionServiceApi extends SessionSettingsApi {
 	}
 
 	getPluginSessionCapabilities(recordAdoptions?: PluginRecordAdoptions) {
-		return {
-			...sessionCapabilityHandlers(this.host.pluginSessions),
-			...sessionDecisionCapabilityHandlers(this.host.pluginSessions, this.host.decisions),
-			...sessionRecordCapabilityHandlers(this.host.pluginSessions, this.pluginSessionRecords),
-			...sessionAdoptionCapabilityHandlers(
-				this.host.pluginSessions,
-				this.pluginSessionRecords,
-				recordAdoptions,
-			),
-			...modelCapabilityHandlers({
-				registry: this.host.pluginSessions,
-				getRuntime: () => this.host.getModelRuntime(),
-				getProfileModel: (name) => this.host.modelSettings.getSubagentModel(name),
-				getProfileThinking: (name) => this.host.modelSettings.getSubagentThinking(name),
-			}),
-			...agentSlotCapabilityHandlers(),
-		};
+		return createPluginSessionCapabilities(this.host, this.pluginSessionRecords, recordAdoptions);
 	}
-
 	/** Capabilities bound to one installed plugin source: task authorization, network and its credentials. */
 	getPluginSourceCapabilities(source: PluginRuntimeSource) {
-		const { taskGrants, pluginSessions: sessions } = this.host;
-		return sourceCapabilityHandlers({ taskGrants, sessions, credentials: this.pluginCredentials }, source);
+		const host = {
+			taskGrants: this.host.taskGrants,
+			sessions: this.host.pluginSessions,
+			credentials: this.pluginCredentials,
+			...(this.inquiryRerunPort ? { inquiryRerun: this.inquiryRerunPort } : {}),
+		};
+		return sourceCapabilityHandlers(host, source);
+	}
+	setInquiryRerunPort(port: InquiryRerunPort | undefined): void {
+		this.inquiryRerunPort = port;
 	}
 	getPluginHostEvents(source: PluginRuntimeSource, signal: AbortSignal) {
 		return hostEventsApproved(source) ? this.hostEvents.source(source.hostEvents, signal) : undefined;

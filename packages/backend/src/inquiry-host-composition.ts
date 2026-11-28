@@ -22,7 +22,8 @@ interface InquiryHostCompositionOptions {
 	readonly inquiryProjectId?: string;
 	readonly defaultCwd?: string;
 }
-type InquiryHostSessionSource = Pick<SessionService, "onEvent" | "onDecision" | "registry" | "hostEvents">;
+type InquiryHostSessionSource = Pick<SessionService, "onEvent" | "onDecision" | "registry" | "hostEvents"> &
+	Partial<Pick<SessionService, "setInquiryRerunPort">>;
 export function attachInquiryHostComposition(
 	inquiry: InquiryService,
 	sessions: InquiryHostSessionSource,
@@ -39,7 +40,11 @@ export function attachInquiryHostComposition(
 		defaultProjectId,
 	);
 	attachInquiryComputeReruns(inquiry, compute, computeAdapter, options);
-	return detachInquiryComputeEvents;
+	sessions.setInquiryRerunPort?.(inquiry);
+	return () => {
+		sessions.setInquiryRerunPort?.(undefined);
+		detachInquiryComputeEvents();
+	};
 }
 function attachInquiryComputeEvents(
 	inquiry: InquiryService,

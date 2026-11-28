@@ -254,3 +254,23 @@ it("requires a desktopRuntime owner for host event declarations", async () => {
 		{ packageName: "@example/native", error: "drone.hostEvents requires a desktopRuntime owner" },
 	]);
 });
+
+it("decodes and validates the Inquiry rerun request on a desktopRuntime owner", async () => {
+	await manifest({ drone: { inquiryRerun: "request" } });
+	expect(await discoverInstalledPackages(modules)).toMatchObject([
+		{ runtime: { requestsInquiryRerun: true } },
+	]);
+	for (const value of [true, "auto"]) {
+		await manifest({ drone: { inquiryRerun: value } });
+		expect(await discoverInstalledPackages(modules)).toEqual([
+			{ packageName: "@example/native", error: expect.stringContaining("Invalid desktopRuntime:") },
+		]);
+	}
+	await manifest({ entrypoints: { extension: "./native.mjs" }, drone: { inquiryRerun: "request" } });
+	expect(await discoverInstalledPackages(modules)).toEqual([
+		{
+			packageName: "@example/native",
+			error: "drone.inquiryRerun requires a desktopRuntime owner",
+		},
+	]);
+});

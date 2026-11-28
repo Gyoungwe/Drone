@@ -25,6 +25,7 @@ export function readInstalledPackageManifest(manifestPath: string) {
 						recordAdoptions?: unknown;
 						p5?: unknown;
 						hostEvents?: unknown;
+						inquiryRerun?: unknown;
 					};
 					permissions?: { filesystem?: unknown; network?: unknown; subprocess?: unknown };
 				},
