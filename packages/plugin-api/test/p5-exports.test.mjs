@@ -125,7 +125,12 @@ test("every published export target exists after build", () => {
 	}
 });
 
-test("the 2.0.0 candidate has no runtime dependencies", () => {
-	assert.equal(manifest.version, "2.0.0");
+test("the 2.1.0 package adds host events and has no runtime dependencies", () => {
+	assert.equal(manifest.version, "2.1.0");
 	assert.deepEqual(manifest.dependencies ?? {}, {});
+	assert.deepEqual(manifest.exports["./host-events"], {
+		types: "./dist/host-events.d.ts",
+		import: "./dist/host-events.js",
+		default: "./dist/host-events.js",
+	});
 });

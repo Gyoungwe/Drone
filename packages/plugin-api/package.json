@@ -1,6 +1,6 @@
 {
 	"name": "@gyoungwe/plugin-api",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"description": "Stable host contracts for Drone capability plugins",
 	"license": "MIT",
 	"publishConfig": {

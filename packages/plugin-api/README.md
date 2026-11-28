@@ -26,13 +26,12 @@ Node.js access from an untrusted plugin. Hosts may additionally load optional
 extensions through Drone's process sandbox proxy; that runtime boundary is a
 host capability and must not be implied by a manifest declaration.
 
-The local candidate package is `2.0.0`; the current public release remains `1.2.0`. The candidate
-carries a breaking change: `KnowledgeUiPort` replaces its 56 named methods with three
-per-domain channels (`knowledge`, `daily`, `zotero`), each taking `{ operation, input? }`.
-The runtime capability-negotiation version (`PLUGIN_API_VERSION`) is unchanged at 1 — it
-describes the host contract, not the package version. Publish a new version only when
-the contract changes, verify the packed tarball in a clean consumer before release, and
-never overwrite an existing version.
+The package version is `2.1.0` (following the `2.0.0` public release). On the `2.0.0`
+routing contract, this is a purely additive increment adding the `./host-events` subpath,
+`PluginRuntimeFactoryContext.hostEvents`, and the `host-session-events-read` approval
+category. The runtime capability-negotiation version (`PLUGIN_API_VERSION`) remains 1; it
+describes the host contract, not the package version. Verify the packed tarball in a clean
+consumer before release, and never overwrite an existing version.
 
 ## Analysis lifecycle (2.0.0 candidate)
 
